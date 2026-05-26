@@ -24,7 +24,16 @@ export {
     generateEnvironmentFiles,
     finalizeProject,
     sendCompletionAndCleanup,
+    generateAIContextFiles,
+    openProjectAsWorkspace,
     type FinalizationContext,
 } from './projectFinalizationService';
 
 export { ensureEdsContent } from './edsContentSetup';
+
+export {
+    ensureGlobalMcpRegistration,
+    registerGlobalMcp,
+    GLOBAL_MCP_REG_STATE_KEY,
+    type GlobalMcpRegistrationState,
+} from './mcpConfigWriter';

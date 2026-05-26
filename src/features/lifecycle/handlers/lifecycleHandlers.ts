@@ -12,6 +12,7 @@
 import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
+import * as vscode from 'vscode';
 import { toggleLogsPanel } from '../services/lifecycleService';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { openUrl } from '@/core/utils/browserUtils';
@@ -106,27 +107,22 @@ export async function handleCancelAuthPolling(context: HandlerContext): Promise<
 }
 
 /**
- * openProject - Opens the created project in VS Code workspace
+ * openProject - Returns to the projects list after wizard completion
  *
- * Called after project creation completes.
- * Opens the project directory in VS Code, triggering an Extension Host restart.
+ * Called after project creation/edit completes. Disposes the wizard panel
+ * and returns the user to the projects dashboard.
  */
 export async function handleOpenProject(context: HandlerContext): Promise<SimpleResult> {
-    await import('vscode');
-
-    context.logger.info('[Project Creation] ✅ openProject message received');
-    context.logger.debug(`[Project Creation] Current panel: ${context.panel ? 'exists' : 'undefined'}`);
+    context.logger.info('[Project Creation] openProject message received');
 
     try {
-        // Get current project to access path
         const project = await context.stateManager.getCurrentProject();
-
         if (!project?.path) {
             context.logger.error('[Project Creation] No project found or path missing');
             throw new Error('Project not found');
         }
 
-        // Set flag to reopen dashboard after Extension Host restart
+        // Set flag to reopen dashboard after panel disposal
         try {
             const demoBuilderDir = path.join(os.homedir(), '.demo-builder');
             await fsPromises.mkdir(demoBuilderDir, { recursive: true });
@@ -137,25 +133,19 @@ export async function handleOpenProject(context: HandlerContext): Promise<Simple
                 projectPath: project.path,
                 timestamp: Date.now(),
             }), 'utf8');
-
-            context.logger.debug('[Project Creation] Set dashboard reopen flag');
         } catch (flagError) {
             context.logger.warn('[Project Creation] Could not set reopen flag', toError(flagError).message);
         }
 
-        // Close any existing Projects List webview before opening project
+        // Close any existing Projects List webview before reopening
         const { ShowProjectsListCommand } = await import('../../projects-dashboard/commands/showProjectsList');
         ShowProjectsListCommand.disposeActivePanel();
-        context.logger.debug('[Project Creation] Closed Projects List webview if it was open');
 
-        // Dispose this panel - wizard's dispose() will open projects list automatically
+        // Dispose the wizard panel — triggers projects list to reopen
         context.panel?.dispose();
-        context.logger.debug('[Project Creation] Wizard closed');
-
     } catch (error) {
-        context.logger.error('[Project Creation] Error opening project', error as Error);
-        const vscodeWindow = await import('vscode');
-        vscodeWindow.window.showErrorMessage('Failed to open project. Please use the tree view or status bar to access your project.');
+        context.logger.error('[Project Creation] Error returning to projects', error as Error);
+        vscode.window.showErrorMessage('Failed to return to projects list.');
     }
 
     return { success: true };
@@ -170,7 +160,7 @@ export async function handleBrowseFiles(
     context: HandlerContext,
     payload: { projectPath: string },
 ): Promise<SimpleResult> {
-    const vscode = await import('vscode');
+
 
     try {
         const projectPath = payload.projectPath;
@@ -237,7 +227,7 @@ export async function handleOpenAdobeConsole(
     context: HandlerContext,
     payload?: { orgId?: string; projectId?: string; workspaceId?: string },
 ): Promise<SimpleResult> {
-    const vscode = await import('vscode');
+
 
     try {
         let consoleUrl = 'https://developer.adobe.com/console';

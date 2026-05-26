@@ -39,6 +39,8 @@ export interface EdsResetParams {
         site: string;
         indexPath?: string;
     };
+    /** Optional BYOM content overlay URL (from storefront template). */
+    byomOverlayUrl?: string;
 
     // Project data for config generation
     project: Project;
@@ -128,12 +130,14 @@ export function extractResetParams(project: Project): ExtractParamsResult {
         templateRepo?: string;
         contentSource?: { org: string; site: string; indexPath?: string };
         contentPatches?: string[];
+        byomOverlayUrl?: string;
     }> | undefined;
     const storefront = project.selectedStack ? storefronts?.[project.selectedStack] : undefined;
     const templateOwner = storefront?.templateOwner;
     const templateRepo = storefront?.templateRepo;
     const contentSourceConfig = storefront?.contentSource;
     const contentPatches = storefront?.contentPatches;
+    const byomOverlayUrl = storefront?.byomOverlayUrl;
 
     // Validate required fields
     if (!repoFullName) {
@@ -195,6 +199,7 @@ export function extractResetParams(project: Project): ExtractParamsResult {
             templateOwner,
             templateRepo,
             ...(contentSourceConfig && { contentSource: contentSourceConfig }),
+            ...(byomOverlayUrl && { byomOverlayUrl }),
             project,
             contentPatches,
         },

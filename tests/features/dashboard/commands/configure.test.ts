@@ -113,27 +113,22 @@ describe('ConfigureProjectWebviewCommand - Bundle Loading', () => {
         };
     });
 
-    describe('Webpack Bundle Loading', () => {
-        it('should load all 4 webpack bundles in correct order', async () => {
+    describe('esbuild Bundle Loading', () => {
+        it('should load the single feature bundle', async () => {
             // Set up panel so getWebviewContent can access it
             (command as any).panel = mockPanel;
 
             // Get the HTML content
             const html = await (command as any).getWebviewContent();
 
-            // Extract script tags
+            // Extract script src attributes
             const scriptRegex = /<script[^>]*src="([^"]+)"[^>]*>/g;
             const scriptMatches = [...html.matchAll(scriptRegex)];
             const scriptUrls = scriptMatches.map(match => match[1]);
 
-            // Verify we have exactly 4 script tags
-            expect(scriptUrls).toHaveLength(4);
-
-            // Verify correct order: runtime → vendors → common → configure
-            expect(scriptUrls[0]).toContain('runtime-bundle.js');
-            expect(scriptUrls[1]).toContain('vendors-bundle.js');
-            expect(scriptUrls[2]).toContain('common-bundle.js');
-            expect(scriptUrls[3]).toContain('configure-bundle.js');
+            // Single feature bundle — no runtime/vendors/common split
+            expect(scriptUrls).toHaveLength(1);
+            expect(scriptUrls[0]).toContain('configure-bundle.js');
         });
 
         it('should include nonce attribute on all script tags', async () => {
@@ -145,8 +140,8 @@ describe('ConfigureProjectWebviewCommand - Bundle Loading', () => {
             const scriptRegex = /<script[^>]*>/g;
             const scriptTags = html.match(scriptRegex) || [];
 
-            // Verify we have 5 script tags (4 bundles + 1 baseUri)
-            expect(scriptTags).toHaveLength(5);
+            // 2 script tags: 1 bundle + 1 baseUri inline script
+            expect(scriptTags).toHaveLength(2);
 
             // Verify each has nonce attribute
             scriptTags.forEach((tag: string) => {
@@ -166,20 +161,17 @@ describe('ConfigureProjectWebviewCommand - Bundle Loading', () => {
             expect(html).toMatch(/script-src 'nonce-[^']+'/);
         });
 
-        it('should use asWebviewUri for all bundle paths', async () => {
+        it('should use asWebviewUri for the bundle and baseUri paths', async () => {
             // Set up panel so getWebviewContent can access it
             (command as any).panel = mockPanel;
             await (command as any).getWebviewContent();
 
-            // Verify asWebviewUri was called 5 times (4 bundles + 1 baseUri)
-            expect(mockWebview.asWebviewUri).toHaveBeenCalledTimes(5);
+            // asWebviewUri called twice: feature bundle + baseUri
+            expect(mockWebview.asWebviewUri).toHaveBeenCalledTimes(2);
 
-            // Verify it was called with correct paths
+            // Verify correct paths
             const calls = (mockWebview.asWebviewUri as jest.Mock).mock.calls;
-            expect(calls[0][0].fsPath).toContain('runtime-bundle.js');
-            expect(calls[1][0].fsPath).toContain('vendors-bundle.js');
-            expect(calls[2][0].fsPath).toContain('common-bundle.js');
-            expect(calls[3][0].fsPath).toContain('configure-bundle.js');
+            expect(calls[0][0].fsPath).toContain('configure-bundle.js');
         });
 
         it('should include root div for React mounting', async () => {

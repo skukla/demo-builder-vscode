@@ -56,6 +56,45 @@ jest.mock('@/core/ui/components/layout/TwoColumnLayout', () => ({
     ),
 }));
 
+// Mock store discovery hooks & row — tested separately in ConfigureScreen-store-discovery.test.tsx.
+// Here we just need them to render benignly so the existing rendering assertions still pass.
+jest.mock('@/features/components/ui/hooks/useStoreDiscovery', () => ({
+    useStoreDiscovery: () => ({
+        isFetching: false,
+        fetchError: null,
+        hasStoreData: false,
+        fetchStores: jest.fn(),
+        getWebsiteItems: () => [],
+        getStoreGroupItems: () => [],
+        getStoreViewItems: () => [],
+        isStoreGroup: () => false,
+    }),
+}));
+
+jest.mock('@/features/components/ui/hooks/useAutoStoreDetect', () => ({
+    useAutoStoreDetect: () => ({ autoDetectKey: undefined, forceFetch: jest.fn() }),
+}));
+
+// Minimal stand-in for StoreConfigFieldRow — renders label + input so existing
+// assertions on label text and input values continue to hold.
+jest.mock('@/features/components/ui/components/StoreConfigFieldRow', () => ({
+    StoreConfigFieldRow: ({
+        field,
+        getFieldValue,
+    }: {
+        field: { key: string; label: string; required?: boolean };
+        getFieldValue: (field: { key: string }) => string | boolean | undefined;
+    }) => {
+        const value = getFieldValue(field);
+        return (
+            <div id={`field-${field.key}`}>
+                <label>{field.label}{field.required ? '*' : ''}</label>
+                <input value={value !== undefined && value !== null ? String(value) : ''} readOnly />
+            </div>
+        );
+    },
+}));
+
 // Mock NavigationPanel
 jest.mock('@/core/ui/components/navigation', () => ({
     NavigationPanel: ({ sections }: any) => (
@@ -98,16 +137,6 @@ describe('ConfigureScreen - Rendering', () => {
                 />
             );
             expect(screen.getByText('Configure Project')).toBeInTheDocument();
-        });
-
-        it('should render configuration settings heading', () => {
-            renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                />
-            );
-            expect(screen.getByText('Configuration Settings')).toBeInTheDocument();
         });
 
         it('should render Save button', () => {
@@ -238,6 +267,26 @@ describe('ConfigureScreen - Rendering', () => {
 
             const footerRight = screen.getByTestId('footer-right');
             expect(footerRight).toContainElement(screen.getByText('Save Changes'));
+        });
+    });
+
+    describe('AI Configuration View (removed)', () => {
+        // The AI Configuration tab was removed. The standalone AI surface
+        // (ShowAiCommand → AiOverviewScreen) replaced it. These assertions
+        // guard against regressions that would re-introduce the tab inside
+        // Configure.
+
+        it('does not render an AI tab or AI sidebar inside Configure', () => {
+            renderWithProvider(
+                <ConfigureScreen
+                    project={mockProject as any}
+                    componentsData={mockComponentsData}
+                />
+            );
+
+            expect(screen.queryByTestId('ai-setup-tab')).not.toBeInTheDocument();
+            expect(screen.queryByTestId('ai-config-sidebar')).not.toBeInTheDocument();
+            expect(screen.queryByTestId('ai-surface-sidebar')).not.toBeInTheDocument();
         });
     });
 

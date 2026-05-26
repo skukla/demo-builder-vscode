@@ -277,6 +277,38 @@ export const handleDeployMesh: MessageHandler = async () => {
 };
 
 /**
+ * Handle 'syncStorefront' message - Push storefront changes and refresh Helix preview/live
+ */
+export const handleSyncStorefront: MessageHandler = async () => {
+    await vscode.commands.executeCommand('demoBuilder.syncStorefront');
+    return { success: true };
+};
+
+/**
+ * Handle 'openInClaude' message - Open Claude Code (CLI) harness for the current project
+ *
+ * Delegates to the `demoBuilder.openInClaude` command, which consults the
+ * `demoBuilder.ai.harness` setting to decide between URI launch (extension)
+ * and terminal launch.
+ */
+export const handleOpenInClaude: MessageHandler = async (context) => {
+    const project = await context.stateManager.getCurrentProject();
+    await vscode.commands.executeCommand('demoBuilder.openInClaude', project);
+    return { success: true };
+};
+
+/**
+ * Handle 'openAi' message - Open the standalone AI surface for the current project
+ *
+ * Delegates to the `demoBuilder.openAi` command, which mounts the
+ * AiOverviewScreen webview. Routed from the project dashboard's AI tile.
+ */
+export const handleOpenAi: MessageHandler = async (_context) => {
+    await vscode.commands.executeCommand('demoBuilder.openAi');
+    return { success: true };
+};
+
+/**
  * Handle 'openDevConsole' message - Open Adobe Developer Console
  */
 export const handleOpenDevConsole: MessageHandler = async (context) => {
@@ -512,11 +544,16 @@ export const dashboardHandlers = defineHandlers({
     'viewDebugLogs': handleViewDebugLogs,
     'configure': handleConfigure,
     'openDevConsole': handleOpenDevConsole,
+    'openInClaude': handleOpenInClaude,
+    'openAi': handleOpenAi,
     'navigateBack': handleNavigateBack,
     'viewComponents': handleViewComponents,
 
     // Mesh handlers
     'deployMesh': handleDeployMesh,
+
+    // EDS storefront sync
+    'syncStorefront': handleSyncStorefront,
 
     // Authentication handlers
     'reAuthenticate': handleReAuthenticate,

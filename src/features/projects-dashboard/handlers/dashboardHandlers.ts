@@ -79,9 +79,15 @@ export const handleGetProjects: MessageHandler = async (
             }
         }
 
-        // Sort alphabetically by name for deterministic ordering
-        // (mtime-based scanner order is unstable after mesh enrichment writes)
-        projects.sort((a, b) => a.name.localeCompare(b.name));
+        // Pinned projects first, then alphabetical within each group.
+        // (mtime-based scanner order is unstable after mesh enrichment writes,
+        // so we always re-sort to make the rendered order deterministic.)
+        projects.sort((a, b) => {
+            const aPinned = a.pinned ? 1 : 0;
+            const bPinned = b.pinned ? 1 : 0;
+            if (aPinned !== bPinned) return bPinned - aPinned;
+            return a.name.localeCompare(b.name);
+        });
 
         // Include config in response (avoids race condition with init message)
         // Session override takes precedence over VS Code setting
@@ -107,13 +113,28 @@ export const handleGetProjects: MessageHandler = async (
 };
 
 /**
- * Select a project by path
+ * Select a project by path.
  *
- * Loads the project and sets it as the current project.
+ * Loads the project, sets it as the current project, and anchors the VS Code
+ * workspace to the project root so that Claude Code (and any other workspace-
+ * scoped tooling) reads `.claude/skills/`, `.mcp.json`, and `AGENTS.md` from
+ * the right cwd.
+ *
+ * Behavior:
+ *   - workspace already matches project + `forceNewWindow` falsy → just navigate
+ *     to the project dashboard webview (no reload).
+ *   - workspace differs (or no workspace) + `forceNewWindow` falsy → reopen the
+ *     current window with the project as workspace. The extension reactivates;
+ *     globalState carries `currentProject` across, so the dashboard surfaces
+ *     automatically. We skip the explicit `showProjectDashboard` call because
+ *     the reload makes it racy and unnecessary.
+ *   - `forceNewWindow: true` (shift/cmd-click) → open the project in a NEW
+ *     VS Code window; the current window is left alone (still on the projects
+ *     list).
  */
-export const handleSelectProject: MessageHandler<{ projectPath: string }> = async (
+export const handleSelectProject: MessageHandler<{ projectPath: string; forceNewWindow?: boolean }> = async (
     context: HandlerContext,
-    payload?: { projectPath: string },
+    payload?: { projectPath: string; forceNewWindow?: boolean },
 ): Promise<HandlerResponse> => {
     try {
         if (!payload?.projectPath) {
@@ -150,17 +171,53 @@ export const handleSelectProject: MessageHandler<{ projectPath: string }> = asyn
         await context.stateManager.saveProject(project);
         context.logger.info(`Selected project: ${project.name}`);
 
-        // Navigate to project dashboard
-        await BaseWebviewCommand.startWebviewTransition();
-        try {
-            await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
-        } catch (navError) {
-            context.logger.error(
-                'Failed to navigate to dashboard',
-                navError instanceof Error ? navError : undefined,
-            );
-        } finally {
-            BaseWebviewCommand.endWebviewTransition();
+        const forceNewWindow = payload.forceNewWindow === true;
+        const currentWorkspace = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        const workspaceMatches = currentWorkspace === project.path;
+
+        if (forceNewWindow || !workspaceMatches) {
+            // Open the project folder as a workspace. `forceNewWindow=false`
+            // replaces the current window's workspace (VS Code shows its native
+            // unsaved-changes prompt if needed). `forceNewWindow=true` spawns
+            // a new window and leaves the current one alone.
+            //
+            // When replacing the current window, mark a webview transition so
+            // the outgoing dashboard's dispose() skips its projects-list
+            // auto-reopen — otherwise we'd briefly flash that panel before the
+            // reload completes. New-window opens don't reload us, so no flag.
+            if (!forceNewWindow) {
+                await BaseWebviewCommand.startWebviewTransition();
+            }
+            try {
+                await vscode.commands.executeCommand(
+                    'vscode.openFolder',
+                    vscode.Uri.file(project.path),
+                    forceNewWindow,
+                );
+            } catch (openError) {
+                context.logger.error(
+                    'Failed to open project folder as workspace',
+                    openError instanceof Error ? openError : undefined,
+                );
+                if (!forceNewWindow) {
+                    BaseWebviewCommand.endWebviewTransition();
+                }
+            }
+            // No endWebviewTransition() on the success path — the window is
+            // reloading; this extension instance is going away.
+        } else {
+            // Already in the right workspace — just surface the dashboard webview.
+            await BaseWebviewCommand.startWebviewTransition();
+            try {
+                await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
+            } catch (navError) {
+                context.logger.error(
+                    'Failed to navigate to dashboard',
+                    navError instanceof Error ? navError : undefined,
+                );
+            } finally {
+                BaseWebviewCommand.endWebviewTransition();
+            }
         }
 
         return {
@@ -633,6 +690,61 @@ export const handleOpenBrowser: MessageHandler<{ projectPath: string }> = async 
 };
 
 /**
+ * Open a specific project in the Claude Code (CLI) harness — D4 home-grid menu wiring.
+ *
+ * Loads the project for the given path and dispatches `demoBuilder.openInClaude`
+ * with the project as the first argument. The command itself decides the harness
+ * pathway (URI vs terminal) based on the `demoBuilder.ai.harness` setting.
+ */
+export const handleOpenInClaudeForProject: MessageHandler<{ projectPath: string }> = async (
+    context: HandlerContext,
+    payload?: { projectPath: string },
+): Promise<HandlerResponse> => {
+    if (!payload?.projectPath) {
+        return { success: false, error: 'Project path is required' };
+    }
+
+    const project = await context.stateManager.loadProjectFromPath(
+        payload.projectPath,
+        undefined,
+        { persistAfterLoad: false },
+    );
+    if (!project) {
+        return { success: false, error: 'Project not found' };
+    }
+
+    await vscode.commands.executeCommand('demoBuilder.openInClaude', project);
+    return { success: true };
+};
+
+/**
+ * Open a specific project in the standalone AI surface — E3 home-grid menu wiring.
+ *
+ * Loads the project for the given path and dispatches `demoBuilder.openAi`
+ * with the project as the first argument. Mirrors `handleOpenInClaudeForProject`.
+ */
+export const handleOpenAiForProject: MessageHandler<{ projectPath: string }> = async (
+    context: HandlerContext,
+    payload?: { projectPath: string },
+): Promise<HandlerResponse> => {
+    if (!payload?.projectPath) {
+        return { success: false, error: 'Project path is required' };
+    }
+
+    const project = await context.stateManager.loadProjectFromPath(
+        payload.projectPath,
+        undefined,
+        { persistAfterLoad: false },
+    );
+    if (!project) {
+        return { success: false, error: 'Project not found' };
+    }
+
+    await vscode.commands.executeCommand('demoBuilder.openAi', project);
+    return { success: true };
+};
+
+/**
  * Open EDS live site in browser
  *
  * Opens in incognito/private browsing mode to ensure a clean session
@@ -957,4 +1069,75 @@ export const handleResetProject: MessageHandler<{ projectPath: string }> = async
         context,
         logPrefix: '[ProjectsList]',
     });
+};
+
+// ============================================================================
+// Project Folder Actions (Copy Path)
+// ============================================================================
+
+/**
+ * Copy a project path to the clipboard
+ */
+export const handleCopyProjectPath: MessageHandler<{ projectPath: string }> = async (
+    context: HandlerContext,
+    payload?: { projectPath: string },
+): Promise<HandlerResponse> => {
+    if (!payload?.projectPath) {
+        return { success: false, error: 'Project path is required' };
+    }
+
+    try {
+        validateProjectPath(payload.projectPath);
+        await vscode.env.clipboard.writeText(payload.projectPath);
+        vscode.window.showInformationMessage('Project path copied to clipboard');
+        return { success: true };
+    } catch (error) {
+        context.logger.error('Failed to copy project path', error instanceof Error ? error : undefined);
+        return { success: false, error: 'Failed to copy project path' };
+    }
+};
+
+// ============================================================================
+// Project Pinning
+// ============================================================================
+
+/**
+ * Set the pinned flag on a project.
+ *
+ * Pinned projects render first on the projects dashboard (alphabetical
+ * within the pinned and unpinned groups). The flag is persisted to the
+ * project's `.demo-builder.json` manifest via `stateManager.saveProject`.
+ */
+export const handleSetProjectPinned: MessageHandler<{ projectPath: string; pinned: boolean }> = async (
+    context: HandlerContext,
+    payload?: { projectPath: string; pinned: boolean },
+): Promise<HandlerResponse> => {
+    if (!payload?.projectPath || typeof payload.pinned !== 'boolean') {
+        return { success: false, error: 'projectPath and pinned (boolean) are required' };
+    }
+
+    try {
+        validateProjectPath(payload.projectPath);
+    } catch {
+        return { success: false, error: 'Invalid project path' };
+    }
+
+    try {
+        const project = await context.stateManager.loadProjectFromPath(
+            payload.projectPath,
+            undefined,
+            { persistAfterLoad: false },
+        );
+        if (!project) {
+            return { success: false, error: 'Project not found' };
+        }
+        // Use saveProjectConfigOnly — saveProject would replace currentProject
+        // and fire onProjectChanged, side effects we don't want from the
+        // home-screen kebab.
+        await context.stateManager.saveProjectConfigOnly({ ...project, pinned: payload.pinned });
+        return { success: true };
+    } catch (error) {
+        context.logger.error('Failed to set project pinned state', error instanceof Error ? error : undefined);
+        return { success: false, error: 'Failed to set project pinned state' };
+    }
 };

@@ -30,7 +30,26 @@ jest.mock('@/features/projects-dashboard/commands/showProjectsList', () => {
 });
 jest.mock('@/features/project-creation/commands/createProject');
 jest.mock('@/features/dashboard/commands/showDashboard');
-jest.mock('@/features/dashboard/commands/configure');
+jest.mock('@/features/dashboard/commands/configure', () => {
+    const MockConfigureProjectWebviewCommand = jest.fn().mockImplementation(function(this: any) {
+        this.execute = jest.fn().mockResolvedValue(undefined);
+    });
+    (MockConfigureProjectWebviewCommand as any).disposeActivePanel = jest.fn();
+
+    return {
+        ConfigureProjectWebviewCommand: MockConfigureProjectWebviewCommand,
+    };
+});
+jest.mock('@/features/dashboard/commands/openAi', () => {
+    const MockShowAiCommand = jest.fn().mockImplementation(function(this: any) {
+        this.execute = jest.fn().mockResolvedValue(undefined);
+    });
+    (MockShowAiCommand as any).disposeActivePanel = jest.fn();
+
+    return {
+        ShowAiCommand: MockShowAiCommand,
+    };
+});
 jest.mock('@/commands/configure');
 jest.mock('@/commands/diagnostics');
 jest.mock('@/core/commands/ResetAllCommand');
@@ -118,11 +137,11 @@ describe('CommandManager', () => {
             );
         });
 
-        it('should register all 19 commands (20 total, but resetAll only in dev mode)', () => {
+        it('should register all 23 commands (24 total, but resetAll only in dev mode)', () => {
             commandManager.registerCommands();
 
-            // Verify registerCommand was called 19 times (resetAll excluded - dev mode only)
-            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(19);
+            // Verify registerCommand was called 23 times (resetAll excluded - dev mode only)
+            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(23);
 
             // Verify all commands are registered (in order of registration)
             const expectedCommands = [
@@ -136,8 +155,12 @@ describe('CommandManager', () => {
                 'demoBuilder.viewStatus',
                 'demoBuilder.configure',
                 'demoBuilder.configureProject',
+                'demoBuilder.navigate',
                 'demoBuilder.deployMesh',
+                'demoBuilder.syncStorefront',
                 'demoBuilder.checkForUpdates',
+                'demoBuilder.openInClaude',
+                'demoBuilder.openAi',
                 'demoBuilder.diagnostics',
                 'demoBuilder.setRecommendedZoom',
                 'demoBuilder.resetZoom',
@@ -156,6 +179,55 @@ describe('CommandManager', () => {
             });
         });
 
+        it('should register demoBuilder.openAi command', () => {
+            commandManager.registerCommands();
+
+            expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
+                'demoBuilder.openAi',
+                expect.any(Function),
+            );
+        });
+
+    });
+
+    describe('Navigate Routing', () => {
+        it('should route the ai target to demoBuilder.openAi', async () => {
+            commandManager.registerCommands();
+
+            const navigateHandler = (vscode.commands.registerCommand as jest.Mock).mock.calls
+                .find(call => call[0] === 'demoBuilder.navigate')?.[1];
+            expect(navigateHandler).toBeDefined();
+
+            const ShowAiCmd = require('@/features/dashboard/commands/openAi').ShowAiCommand;
+            const aiInstance = ShowAiCmd.mock.instances[0];
+            aiInstance.execute.mockClear();
+
+            await navigateHandler({ target: 'ai' });
+
+            expect(aiInstance.execute).toHaveBeenCalled();
+        });
+
+        it('should warn on unknown target (legacy ai-setup is no longer routed)', async () => {
+            commandManager.registerCommands();
+
+            const navigateHandler = (vscode.commands.registerCommand as jest.Mock).mock.calls
+                .find(call => call[0] === 'demoBuilder.navigate')?.[1];
+            expect(navigateHandler).toBeDefined();
+
+            const ConfigureCmd = require('@/features/dashboard/commands/configure').ConfigureProjectWebviewCommand;
+            const ShowAiCmd = require('@/features/dashboard/commands/openAi').ShowAiCommand;
+
+            const configureInstance = ConfigureCmd.mock.instances[0];
+            const aiInstance = ShowAiCmd.mock.instances[0];
+            configureInstance.execute.mockClear();
+            aiInstance.execute.mockClear();
+
+            await navigateHandler({ target: 'ai-setup' });
+
+            // The legacy 'ai-setup' route was removed — neither command runs.
+            expect(configureInstance.execute).not.toHaveBeenCalled();
+            expect(aiInstance.execute).not.toHaveBeenCalled();
+        });
     });
 
     describe('Projects List Command Disposal', () => {

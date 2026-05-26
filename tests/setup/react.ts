@@ -60,18 +60,23 @@ beforeEach(() => {
 
 // Clean up after each test
 afterEach(() => {
-    // Run any pending timers to prevent state update warnings
-    try {
-        jest.runOnlyPendingTimers();
-    } catch {
-        // Ignore if timers already cleared
-    }
-
-    // Clear all timers
-    try {
-        jest.clearAllTimers();
-    } catch {
-        // Ignore
+    // Only flush + clear pending timers when fake timers are actually active.
+    // Some tests switch to real timers internally; calling
+    // runOnlyPendingTimers / clearAllTimers against real timers logs a
+    // warning ("timers APIs are not replaced with fake timers") even when
+    // wrapped in try/catch. Guarding here keeps the test output clean.
+    const fakeTimersActive = jest.isMockFunction(setTimeout);
+    if (fakeTimersActive) {
+        try {
+            jest.runOnlyPendingTimers();
+        } catch {
+            // Ignore if timers already cleared
+        }
+        try {
+            jest.clearAllTimers();
+        } catch {
+            // Ignore
+        }
     }
 
     // Always restore real timers for clean state

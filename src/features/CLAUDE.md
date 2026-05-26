@@ -18,6 +18,7 @@ The `features/` directory contains self-contained feature modules organized by b
 
 ```
 features/
+├── ai/                  # AI context verification + standalone MCP server
 ├── authentication/       # Adobe authentication & SDK
 │   ├── index.ts         # Public API exports
 │   ├── services/        # Authentication services
@@ -71,6 +72,27 @@ features/my-feature/
 
 ## Feature Descriptions
 
+### ai
+
+**Purpose**: AI context file verification + AI inventory backend — the harness is Claude Code (CLI), not VS Code Chat
+
+**Key Services:**
+- `verifyAiSetup(projectPath, extensionDistPath)` - Checks that `.claude/CLAUDE.md`, `.claude/mcp.json`, the MCP binary, and `.claude/skills/` are present and valid; returns `AiVerificationResult` with `{ status, checks, inventory }`
+- `gatherInventory(projectPath)` - Orchestrator that runs the three inspectors below via `Promise.allSettled`; failures degrade to empty lists with `*Error` diagnostic fields
+- `inspectSkills(projectPath)` - Walks `.claude/skills/`, parses YAML frontmatter, classifies as `demo-builder` / `adobe` / `unknown`
+- `inspectAllServers(projectPath)` + `clearMcpCache(serverId?)` - Spawns each `.claude/mcp.json` server via `@modelcontextprotocol/sdk` stdio client, returns tool list per server; 15s per-server timeout, 5-min TTL cache (success-only), SDK env allowlist (no host secret leakage)
+- `detectSessionMcps()` - Reads `~/.claude.json::claudeAiMcpEverConnected` + `~/.claude/mcp-needs-auth-cache.json` for Adobe MCPs the user connected via Claude Code's catalog (best-effort; undocumented Claude Code internal state)
+- `dist/mcp-server.js` (compiled from `src/mcp-server.ts`) - Standalone stdio MCP server exposing 7 project tools to AI agents
+
+**Responsibilities:**
+- Verifying project AI context files (used by the standalone AI surface via `AiOverviewScreen`)
+- Providing the skills + project-MCPs + session-MCPs inventory that the Cycle D AI Configuration tab will render
+- Standalone MCP server process for AI agent tool access via Claude Code (CLI), discoverable through `~/.claude.json` (user-scope, consent-gated) and project `.mcp.json`
+
+**Path Alias**: `@/features/ai`
+
+---
+
 ### authentication
 
 **Purpose**: Adobe authentication, Console SDK integration, token management
@@ -113,6 +135,8 @@ features/my-feature/
 **Key Services:**
 - `dashboardHandlers` - Handler map for project dashboard messages
 - `configureHandlers` - Handler map for Configure screen messages (cancel, components data, store discovery)
+- `aiHandlers` - Handler map for the standalone AI surface, 11 handlers: verify-ai-setup (returns inventory + globalMcpRegistration + extensionInstalled + sessionsBrowserAutoShown + surface), inspect-mcp, regenerate-ai-files, register-global-mcp, save-ai-prompt / delete-ai-prompt / list-ai-prompts (scope-routed by `pinned`: `pinned: true` prompts persist in globalState under `demoBuilder.ai.globalPrompts` and appear in every project; unpinned prompts persist in the current project's `.demo-builder.json` manifest; a pin toggle is a cross-scope move, and list returns the merged deduped list), openInClaude, copyAiPrompt (clipboard write for the kebab Copy prompt action), browseClaudeSessions (focus the Claude Code extension's sessions browser with a fallback command), markSessionsBrowserAutoShown (writes the one-time auto-open flag to globalState)
+- `AiSetupTab` - React tab component for the Configure screen that runs AI context file health checks and regeneration
 - Dashboard state management
 - Component browser integration
 - Mesh status display
@@ -124,6 +148,7 @@ features/my-feature/
 - Component file browser (with .env hiding)
 - Mesh deployment status
 - Project configuration editing (Configure screen)
+- AI Configuration tab: verify AI files, inspect skills + MCP servers + session MCPs, manage global MCP registration, regenerate AI context files
 
 **Path Alias**: `@/features/dashboard`
 
@@ -219,6 +244,10 @@ features/my-feature/
 **Key Services:**
 - Demo package loading, storefront resolution, and mesh requirement resolution (`services/demoPackageLoader.ts`)
 - Custom block library URL parsing and validation (`services/customBlockLibraryUtils.ts`)
+- `aiContextWriter.ts` - Generates `AGENTS.md` at the project root with project-specific AI agent context; writes `CLAUDE.md` (root) and `.claude/CLAUDE.md` as one-line `see @AGENTS.md` pointers
+- `mcpConfigWriter.ts` - Generates `.claude/mcp.json`, `.mcp.json`, and `.claude/settings.json` (Cursor and Codex read `.mcp.json` natively — no per-tool config files)
+- `skillsWriter.ts` - Writes three lifecycle skills to `.claude/skills/` (add-component, sync-changes, update-credentials); EDS storefront skills come from Adobe's `@adobe-commerce/commerce-extensibility-tools` package
+- `generateAIContextFiles` (in `projectFinalizationService.ts`) - Orchestrates all three AI writers as project finalization phase 6
 - Project template application
 - Environment file generation
 - Directory structure creation
@@ -234,6 +263,7 @@ features/my-feature/
 - Installing npm dependencies
 - Setting up git repository
 - Initial project configuration
+- Generating AI context files (MCP config, CLAUDE.md, skill files) at project creation and on demand
 
 **Path Alias**: `@/features/project-creation`
 

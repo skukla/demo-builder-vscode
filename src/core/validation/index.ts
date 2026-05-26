@@ -22,6 +22,8 @@ export {
 export {
     validatePathSafety,
     validateProjectPath,
+    assertPathInsideSync,
+    assertPathInside,
 } from './PathSafetyValidator';
 
 // URL validation

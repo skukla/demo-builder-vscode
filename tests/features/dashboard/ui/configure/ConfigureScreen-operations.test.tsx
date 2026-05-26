@@ -57,6 +57,55 @@ jest.mock('@/core/ui/components/layout/TwoColumnLayout', () => ({
     ),
 }));
 
+// Mock store discovery — tested separately in ConfigureScreen-store-discovery.test.tsx.
+// Here, stub the hooks so the connection-aware branching in StoreConfigFieldRow doesn't
+// hide optional store-group fields (operations test interacts with those directly).
+jest.mock('@/features/components/ui/hooks/useStoreDiscovery', () => ({
+    useStoreDiscovery: () => ({
+        isFetching: false,
+        fetchError: null,
+        hasStoreData: false,
+        fetchStores: jest.fn(),
+        getWebsiteItems: () => [],
+        getStoreGroupItems: () => [],
+        getStoreViewItems: () => [],
+        isStoreGroup: () => false,
+    }),
+}));
+
+jest.mock('@/features/components/ui/hooks/useAutoStoreDetect', () => ({
+    useAutoStoreDetect: () => ({ autoDetectKey: undefined, forceFetch: jest.fn() }),
+}));
+
+// Render StoreConfigFieldRow as a simple input so userEvent can interact with it
+jest.mock('@/features/components/ui/components/StoreConfigFieldRow', () => ({
+    StoreConfigFieldRow: ({
+        field,
+        getFieldValue,
+        updateField,
+    }: {
+        field: { key: string; label: string; required?: boolean; placeholder?: string };
+        getFieldValue: (field: { key: string }) => string | boolean | undefined;
+        updateField: (field: { key: string }, value: string) => void;
+    }) => {
+        const value = getFieldValue(field);
+        const displayValue = value !== undefined && value !== null ? String(value) : '';
+        return (
+            <div id={`field-${field.key}`}>
+                <label>
+                    {field.label}
+                    <input
+                        type="text"
+                        value={displayValue}
+                        placeholder={field.placeholder}
+                        onChange={(e) => updateField(field, e.target.value)}
+                    />
+                </label>
+            </div>
+        );
+    },
+}));
+
 // Mock NavigationPanel
 jest.mock('@/core/ui/components/navigation', () => ({
     NavigationPanel: ({ sections }: any) => (

@@ -8,7 +8,8 @@
 // All webview commands should use getWebviewHTMLWithBundles instead
 
 export { getWebviewHTMLWithBundles } from './getWebviewHTMLWithBundles';
-export type { BundleUris, WebviewHTMLWithBundlesOptions } from './getWebviewHTMLWithBundles';
+export type { WebviewHTMLOptions } from './getWebviewHTMLWithBundles';
+export type { BundleUris } from './bundleUri';
 
 export { extractEnvVars, extractEnvVarsSync } from './envVarExtraction';
 

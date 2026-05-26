@@ -94,6 +94,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
         displayName: statusDisplayName,
         status,
         meshStatus,
+        aiReady,
     } = useDashboardStatus({ hasMesh, initialMeshStatus, initialEdsStorefrontStatus }, isEdsStable);
 
     // Action handlers via extracted hook
@@ -102,11 +103,14 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
         handleStopDemo,
         handleViewLogs,
         handleDeployMesh,
+        handleSyncStorefront,
         handleOpenBrowser,
         handleOpenLiveSite,
         handleOpenDaLive,
         handleConfigure,
         handleOpenDevConsole,
+        handleOpenInClaude,
+        handleOpenAi,
         handleDeleteProject,
         handleNavigateBack,
         handleViewComponents,
@@ -193,6 +197,15 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                                         className="dashboard-status-badge"
                                     />
                                 )}
+
+                                {/* AI Ready Status */}
+                                <StatusCard
+                                    label={aiReady.label}
+                                    status={aiReady.text}
+                                    color={aiReady.color}
+                                    size="S"
+                                    className="dashboard-status-badge"
+                                />
                                 </div>
                                 {/* Sign in link - outside grid to avoid disrupting layout */}
                                 {meshStatus === 'needs-auth' && (
@@ -229,9 +242,12 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                             handleOpenDaLive={handleOpenDaLive}
                             handleViewLogs={handleViewLogs}
                             handleDeployMesh={handleDeployMesh}
+                            handleSyncStorefront={handleSyncStorefront}
                             handleConfigure={handleConfigure}
                             handleViewComponents={handleViewComponents}
                             handleOpenDevConsole={handleOpenDevConsole}
+                            handleOpenInClaude={handleOpenInClaude}
+                            handleOpenAi={handleOpenAi}
                             handleDeleteProject={handleDeleteProject}
                         />
                     </div>

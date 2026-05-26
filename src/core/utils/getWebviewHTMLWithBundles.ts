@@ -1,97 +1,42 @@
 /**
- * Webview HTML Generator with 4-Bundle Pattern
+ * Webview HTML Generator
  *
- * This module provides a reusable helper for generating webview HTML with webpack's
- * 4-bundle code-splitting pattern (runtime, vendors, common, feature).
- *
- * This pattern eliminates single-bundle timeout issues that occur when loading
- * large bundles in VS Code webviews.
+ * Generates VS Code webview HTML for a single esbuild IIFE bundle.
+ * CSS is injected at runtime by the bundle itself (via the cssInjectionPlugin
+ * in esbuild.config.js), so no separate <link> tag is needed.
  *
  * @module core/utils/getWebviewHTMLWithBundles
  */
 
 import * as vscode from 'vscode';
 
-/**
- * Bundle URIs for webpack code-split bundles.
- * Must be loaded in this specific order:
- * 1. runtime - Webpack runtime and chunk loading logic
- * 2. vendors - Third-party libraries (React, Spectrum, etc.)
- * 3. common - Shared application code (WebviewClient, shared components)
- * 4. feature - Feature-specific bundle (wizard, dashboard, configure, welcome)
- */
-export interface BundleUris {
-    /** Webpack runtime bundle (chunk loading logic) */
-    runtime: vscode.Uri;
-    /** Third-party vendor libraries (React, Spectrum) */
-    vendors: vscode.Uri;
-    /** Shared application code (WebviewClient) */
-    common: vscode.Uri;
-    /** Feature-specific code (wizard, dashboard, etc.) */
-    feature: vscode.Uri;
-}
-
-/**
- * Options for generating webview HTML with 4-bundle pattern.
- */
-export interface WebviewHTMLWithBundlesOptions {
-    /** Bundle URIs in load order (runtime, vendors, common, feature) */
-    bundleUris: BundleUris;
+export interface WebviewHTMLOptions {
+    /** URI of the feature bundle (e.g. dist/webview/wizard-bundle.js) */
+    scriptUri: vscode.Uri;
 
     /** Cryptographic nonce for CSP script-src directive */
     nonce: string;
 
-    /** CSP source for webview resources (e.g., webview.cspSource) */
+    /** CSP source for webview resources (webview.cspSource) */
     cspSource: string;
 
-    /** Webview title (displays in tab) */
+    /** Document title shown in the webview tab */
     title: string;
 
-    /** Optional: Additional image sources for CSP img-src directive */
+    /** Additional img-src values for the CSP (default: []) */
     additionalImgSources?: string[];
 
-    /** Optional: Base URI for media assets (images, etc.) */
+    /** Base URI for media assets — exposed as window.__WEBVIEW_BASE_URI__ */
     baseUri?: vscode.Uri;
 }
 
 /**
- * Generates HTML for VS Code webview with webpack 4-bundle pattern.
- *
- * This helper provides a reusable function to eliminate single-bundle timeout issues.
- *
- * Bundle loading order is critical:
- * 1. runtime-bundle.js - Webpack runtime and chunk loading logic
- * 2. vendors-bundle.js - React, Spectrum, and third-party libraries
- * 3. common-bundle.js - Shared code including WebviewClient
- * 4. [feature]-bundle.js - Feature-specific code (wizard, dashboard, etc.)
- *
- * CSP Compliance:
- * - All script tags use same nonce for Content-Security-Policy
- * - No inline scripts allowed
- * - cspSource must match webview's cspSource property
- *
- * @param options - Configuration for HTML generation
- * @returns Well-formed HTML5 document string
- * @throws Error if nonce is empty (CSP requirement)
- *
- * @example
- * ```typescript
- * const html = getWebviewHTMLWithBundles({
- *   bundleUris: {
- *     runtime: panel.webview.asWebviewUri(runtimePath),
- *     vendors: panel.webview.asWebviewUri(vendorsPath),
- *     common: panel.webview.asWebviewUri(commonPath),
- *     feature: panel.webview.asWebviewUri(wizardPath)
- *   },
- *   nonce: getNonce(),
- *   cspSource: panel.webview.cspSource,
- *   title: 'Demo Builder Wizard'
- * });
- * ```
+ * Returns a well-formed HTML5 document that loads a single esbuild IIFE
+ * bundle with a CSP-compliant nonce.
  */
-export function getWebviewHTMLWithBundles(options: WebviewHTMLWithBundlesOptions): string {
+export function getWebviewHTML(options: WebviewHTMLOptions): string {
     const {
-        bundleUris,
+        scriptUri,
         nonce,
         cspSource,
         title,
@@ -99,15 +44,12 @@ export function getWebviewHTMLWithBundles(options: WebviewHTMLWithBundlesOptions
         baseUri,
     } = options;
 
-    // Validate required nonce for CSP
     if (!nonce || nonce.trim() === '') {
         throw new Error('Nonce is required for CSP compliance');
     }
 
-    // Build img-src directive: cspSource (for local webview resources) + default sources + additional
     const imgSources = [cspSource, 'https:', 'data:', ...additionalImgSources].join(' ');
 
-    // Optional base URI script for media asset resolution
     const baseUriScript = baseUri
         ? `<script nonce="${nonce}">window.__WEBVIEW_BASE_URI__ = "${baseUri.toString()}";</script>`
         : '';
@@ -129,10 +71,16 @@ export function getWebviewHTMLWithBundles(options: WebviewHTMLWithBundlesOptions
 </head>
 <body style="margin: 0;">
     <div id="root"></div>
-    <script nonce="${nonce}" src="${bundleUris.runtime}"></script>
-    <script nonce="${nonce}" src="${bundleUris.vendors}"></script>
-    <script nonce="${nonce}" src="${bundleUris.common}"></script>
-    <script nonce="${nonce}" src="${bundleUris.feature}"></script>
+    <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
 }
+
+// ---------------------------------------------------------------------------
+// Legacy alias — kept so callers can be migrated incrementally.
+// New code should import getWebviewHTML directly.
+// ---------------------------------------------------------------------------
+/** @deprecated Use {@link getWebviewHTML} instead */
+export const getWebviewHTMLWithBundles = getWebviewHTML as unknown as (
+    opts: WebviewHTMLOptions & { bundleUris?: unknown },
+) => string;

@@ -11,7 +11,9 @@ module.exports = {
     configure: './src/features/dashboard/ui/configure/index.tsx',
     sidebar: './src/features/sidebar/ui/index.tsx',
     // Projects list home screen (card grid view)
-    projectsList: './src/features/projects-dashboard/ui/index.tsx'
+    projectsList: './src/features/projects-dashboard/ui/index.tsx',
+    // Standalone AI surface (Batch E1 — replaces the AI tab inside Configure)
+    aiOverview: './src/features/dashboard/ui/aiSurface/index.tsx'
   },
   output: {
     path: path.resolve(__dirname, 'dist', 'webview'),

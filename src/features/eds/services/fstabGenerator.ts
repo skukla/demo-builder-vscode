@@ -7,10 +7,24 @@
  * fstab.yaml configures Helix 5:
  * - mountpoints: Maps URL paths to DA.live content sources
  *
- * Note: Folder mapping (e.g., /products/ -> /products/default for PDP routing)
- * is configured via the AEM Configuration Service API, not fstab.yaml.
- * The Helix 5 pipeline does not process the fstab.yaml folders section.
- * See configurationService.ts for folder mapping implementation.
+ * ## Why fstab.yaml is still written (audit A1, 2026-05-18)
+ *
+ * Modern Helix content-source registration happens via the Configuration Service
+ * (`PUT /config/{org}/sites/{site}.json` with a `content.source` block). At first
+ * glance fstab.yaml looks legacy. However, the Helix Admin `DELETE /live` endpoint
+ * uses fstab.yaml as a "source exists" guard. Project cleanup (helixService.ts)
+ * relies on this: the DA.live Bearer token bypass is the ONLY auth that succeeds
+ * when fstab declares a content source — GitHub token and API key both return 403
+ * "delete not allowed while source exists" in that scenario.
+ *
+ * Removing fstab.yaml today would break the unpublish/cleanup flow. Removal is
+ * gated on Adobe officially deprecating the fstab-based guard (no announcement
+ * at time of writing).
+ *
+ * Note: Folder mapping (`/products/ -> /products/default` for PDP routing) is
+ * deprecated by Adobe (see aem.live/developer/byom). It was never written to
+ * fstab.yaml; the legacy `folders:` section is not processed by the Helix 5
+ * pipeline. CitiSignal handles `/products/{sku}` via client-side routing.
  */
 
 /**

@@ -15,6 +15,8 @@ import { ComponentTreeProvider } from '@/features/components/providers/component
 import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLiveSites';
 import { manageGitHubReposCommand } from '@/features/eds/commands/manageGitHubRepos';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
+import { PENDING_CLAUDE_LAUNCH_KEY, maybeShowFirstLaunchDialog } from '@/commands/openInClaude';
+import { shouldAutoReopenProjectsList } from '@/features/dashboard/commands/showDashboard';
 import { SidebarProvider } from '@/features/sidebar';
 import type { Logger } from '@/types/logger';
 import { getProjectFrontendPort } from '@/types/typeGuards';
@@ -43,6 +45,122 @@ function shouldAutoOpenProjectsList(
     if (isOpeningProjectsList) return false;
     if (BaseWebviewCommand.isWebviewTransitionInProgress()) return false;
     return true;
+}
+
+/** Shape of the pending-prompt record written by `handleOpenInClaude` when a workspace anchor reload is required. */
+interface PendingClaudeLaunch {
+    projectPath: string;
+    prompt: string;
+    createdAt: number;
+}
+
+/** Pending records older than this are discarded silently on activation. */
+const PENDING_LAUNCH_TTL_MS = 60_000;
+
+/**
+ * Replay a pending Claude launch that was queued before a workspace anchor
+ * reload. Three inline checks gate the dispatch: record present, not stale,
+ * and workspace now matches the recorded `projectPath`. The record is cleared
+ * unconditionally — a stale or mismatched record is dropped silently.
+ */
+async function replayPendingClaudeLaunch(
+    context: vscode.ExtensionContext,
+    workspaceFolderPath: string | undefined,
+    log: Logger,
+): Promise<void> {
+    const pending = context.globalState.get<PendingClaudeLaunch>(PENDING_CLAUDE_LAUNCH_KEY);
+    await context.globalState.update(PENDING_CLAUDE_LAUNCH_KEY, undefined);
+    if (!pending) return;
+    const fresh = Date.now() - pending.createdAt < PENDING_LAUNCH_TTL_MS;
+    const workspaceMatches = workspaceFolderPath === pending.projectPath;
+    if (!fresh || !workspaceMatches) {
+        log.debug(
+            `[Extension] discarded pending Claude launch (fresh=${fresh}, workspaceMatches=${workspaceMatches})`,
+        );
+        return;
+    }
+    log.info('[Extension] replaying pending Claude launch with prompt pre-fill');
+    // Wrap in try/catch — a failed replay must not abort activation.
+    try {
+        await vscode.commands.executeCommand('demoBuilder.openInClaude', { prompt: pending.prompt });
+    } catch (error) {
+        log.warn(
+            `[Extension] pending Claude launch replay failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+    }
+}
+
+/**
+ * Migrate the prior `demoBuilder.ai.harness` setting (3-mode: `auto` /
+ * `extension` / `terminal`) to the new binary `surface` setting. Runs once
+ * per user; the legacy key is cleared per scope after migration.
+ *
+ * Handles workspace and global scopes independently so a user with both
+ * (e.g. a workspace override on top of a global default) migrates correctly
+ * in a single pass without overwriting either with the other's value.
+ *
+ * Skips writing `surface` at any scope where the user already has a value —
+ * an explicit `surface` choice takes precedence over the legacy migration.
+ *
+ * Mapping:
+ *   - `auto` → `surface='extension'` (the new default)
+ *   - `extension` → `surface='extension'`
+ *   - `terminal` → `surface='terminal'`
+ */
+async function migrateHarnessSetting(log: Logger): Promise<void> {
+    let migratedAtLeastOnce = false;
+
+    // Workspace + global scopes share the section-scoped config object.
+    const sectionConfig = vscode.workspace.getConfiguration('demoBuilder.ai');
+    const sectionLegacy = sectionConfig.inspect<'auto' | 'extension' | 'terminal'>('harness');
+    const sectionSurface = sectionConfig.inspect<'extension' | 'terminal'>('surface');
+
+    if (sectionLegacy) {
+        const scopes: Array<{ value: 'auto' | 'extension' | 'terminal' | undefined; surfaceAlreadySet: boolean; target: vscode.ConfigurationTarget; label: string }> = [
+            { value: sectionLegacy.workspaceValue, surfaceAlreadySet: sectionSurface?.workspaceValue !== undefined, target: vscode.ConfigurationTarget.Workspace, label: 'workspace' },
+            { value: sectionLegacy.globalValue, surfaceAlreadySet: sectionSurface?.globalValue !== undefined, target: vscode.ConfigurationTarget.Global, label: 'global' },
+        ];
+        for (const scope of scopes) {
+            if (scope.value === undefined) continue;
+            const newSurface = scope.value === 'terminal' ? 'terminal' : 'extension';
+            if (!scope.surfaceAlreadySet) {
+                await sectionConfig.update('surface', newSurface, scope.target);
+                migratedAtLeastOnce = true;
+                log.info(`[Extension] migrated demoBuilder.ai.harness='${scope.value}' → surface='${newSurface}' at ${scope.label} scope`);
+            } else {
+                log.info(`[Extension] kept explicit surface choice at ${scope.label} scope; cleared legacy harness='${scope.value}'`);
+            }
+            await sectionConfig.update('harness', undefined, scope.target);
+        }
+    }
+
+    // WorkspaceFolder scope (multi-root workspaces): writing at folder scope
+    // requires a resource-scoped config object per folder. Iterate folders;
+    // for each one with a folder-level legacy `harness`, migrate independently.
+    for (const folder of vscode.workspace.workspaceFolders ?? []) {
+        const folderConfig = vscode.workspace.getConfiguration('demoBuilder.ai', folder.uri);
+        const folderLegacy = folderConfig.inspect<'auto' | 'extension' | 'terminal'>('harness');
+        if (!folderLegacy || folderLegacy.workspaceFolderValue === undefined) continue;
+        const folderSurface = folderConfig.inspect<'extension' | 'terminal'>('surface');
+        const value = folderLegacy.workspaceFolderValue;
+        const newSurface = value === 'terminal' ? 'terminal' : 'extension';
+        if (folderSurface?.workspaceFolderValue === undefined) {
+            await folderConfig.update('surface', newSurface, vscode.ConfigurationTarget.WorkspaceFolder);
+            migratedAtLeastOnce = true;
+            log.info(`[Extension] migrated demoBuilder.ai.harness='${value}' → surface='${newSurface}' at folder scope (${folder.uri.fsPath})`);
+        } else {
+            log.info(`[Extension] kept explicit surface choice at folder scope (${folder.uri.fsPath}); cleared legacy harness='${value}'`);
+        }
+        await folderConfig.update('harness', undefined, vscode.ConfigurationTarget.WorkspaceFolder);
+    }
+
+    if (migratedAtLeastOnce) {
+        void vscode.window.showInformationMessage(
+            'Demo Builder: the Claude Code launch setting was simplified. ' +
+            'Open Settings to change between the chat panel (extension) and the terminal CLI.',
+            'Got it',
+        );
+    }
 }
 
 let logger: Logger;
@@ -146,15 +264,19 @@ export async function activate(context: vscode.ExtensionContext) {
         context.subscriptions.push(projectChangeSubscription);
         context.subscriptions.push(treeViewVisibilitySubscription);
 
-        // Set up disposal callback to open Projects List when Dashboard closes
-        // Only fires for non-transition closures (e.g., user clicking X, not Back button)
+        // Set up disposal callback to auto-reopen the Projects List when the
+        // Dashboard closes — the safety net so a user inside a project workspace
+        // never ends up with no Demo Builder navigation surface.
+        //
+        // Guarded by `shouldAutoReopenProjectsList`, which short-circuits when:
+        //   - a webview transition is in progress (user is mid-navigation), or
+        //   - the workspace folder is not a Demo Builder project (the dashboard
+        //     was open in a non-project workspace; nothing to reopen toward).
         BaseWebviewCommand.setDisposalCallback(async (webviewId: string) => {
-            // Skip if we're in a transition (back button navigation handles this itself)
-            if (BaseWebviewCommand.isWebviewTransitionInProgress()) {
-                return;
-            }
-            // When Project Dashboard closes, open Projects List
-            if (webviewId === 'demoBuilder.projectDashboard') {
+            if (webviewId !== 'demoBuilder.projectDashboard') return;
+            const workspaceFolderPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            const transitionInProgress = BaseWebviewCommand.isWebviewTransitionInProgress();
+            if (shouldAutoReopenProjectsList(workspaceFolderPath, transitionInProgress)) {
                 await vscode.commands.executeCommand('demoBuilder.showProjectsList');
             }
         });
@@ -268,6 +390,40 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Note: Update checks are triggered when the sidebar is first activated
         // (see SidebarProvider.resolveWebviewView)
+
+        // Global MCP registration is consent-gated and triggered after first
+        // project creation completes (see executor.ts). The user is asked once;
+        // the choice persists in globalState. No activation-time auto-write.
+
+        // When this window is anchored to a Demo Builder project (e.g. just
+        // opened via tile-click), focus the Demo Builder Activity Bar so the
+        // sidebar becomes visible. The visibility subscription (line 133)
+        // then fires and auto-opens the projects list. Without this, a new
+        // project window inherits whichever Activity Bar view was previously
+        // focused (often Explorer) and the user has no Demo Builder UI until
+        // they click the Activity Bar icon themselves.
+        const activationWorkspace = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (shouldAutoReopenProjectsList(activationWorkspace, false)) {
+            await vscode.commands.executeCommand('workbench.view.extension.demoBuilder');
+        }
+
+        // Migrate any persisted `harness` setting from the prior 3-mode model
+        // (`auto` / `extension` / `terminal`) to the new binary `engine` +
+        // `surface` split. Runs once per user; clears the old key.
+        await migrateHarnessSetting(logger);
+
+        // Replay any pending prompt launch that was queued before a workspace
+        // anchor reload (see handleOpenInClaude in features/dashboard/handlers/
+        // aiHandlers.ts). The record carries `{ projectPath, prompt, createdAt }`
+        // and only fires if all three checks pass: present, not stale (<60s),
+        // and workspace folder now matches the recorded projectPath.
+        await replayPendingClaudeLaunch(context, activationWorkspace, logger);
+
+        // First-launch setup dialog — surface once if the user is in the
+        // default `surface='extension'` mode but the Claude Code extension is
+        // not installed. Fire-and-forget: activation must not block on the
+        // user dismissing this toast.
+        void maybeShowFirstLaunchDialog(context);
 
         logger.info('[Extension] Ready');
 

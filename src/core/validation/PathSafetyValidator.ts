@@ -7,6 +7,7 @@
  * - Access outside allowed directories
  */
 
+import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
@@ -63,42 +64,116 @@ export async function validatePathSafety(
     }
 }
 
+// ─── Path containment (shared by VS Code handlers and standalone MCP server) ──
+
 /**
- * Validates file paths are within allowed demo-builder directory
+ * Verify that `targetPath` resolves to a location inside `allowedBase`,
+ * accounting for symlinks. Returns the canonical (realpath-resolved) target path.
  *
- * Ensures paths cannot escape the demo-builder projects directory via
- * path traversal attacks.
+ * Three-branch resolution strategy:
+ *   1. `realpath(targetPath)` succeeds → file exists, all symlinks resolved
+ *   2. `realpath(targetPath)` throws ENOENT → file is new; resolve parent
+ *      directory to catch intermediate symlinks, then append the leaf name
+ *   3. Parent also doesn't exist → reject (cannot safely verify)
  *
- * @param providedPath - Path to validate
- * @throws Error if path is outside allowed directory
+ * Note: inherent TOCTOU gap between validation and use. A symlink could be
+ * created after this check. Acceptable for a local desktop extension where
+ * an attacker with that access has already compromised the session.
  *
- * @example
- * const safe = path.join(os.homedir(), '.demo-builder', 'projects', 'my-project');
- * validateProjectPath(safe); // OK
- *
- * const dangerous = '/etc/passwd';
- * validateProjectPath(dangerous); // Throws
+ * @param targetPath - Path to validate (absolute or relative)
+ * @param allowedBase - Directory the target must reside within
+ * @returns The canonical resolved path
+ * @throws Error if the path escapes `allowedBase` or cannot be verified
  */
-export function validateProjectPath(providedPath: string): void {
-    if (!providedPath || typeof providedPath !== 'string') {
+export function assertPathInsideSync(targetPath: string, allowedBase: string): string {
+    if (!targetPath || typeof targetPath !== 'string') {
         throw new Error('Path must be a non-empty string');
     }
 
-    // Define allowed base directory
-    const allowedBase = path.join(os.homedir(), '.demo-builder', 'projects');
+    const resolved = path.resolve(path.normalize(targetPath));
 
-    // Normalize and resolve the path to handle ., .., and symlinks
-    const normalizedPath = path.normalize(providedPath);
-    const resolvedPath = path.resolve(normalizedPath);
-
-    // Check if resolved path starts with allowed base
-    if (!resolvedPath.startsWith(allowedBase)) {
-        throw new Error('Access denied: path outside demo-builder projects directory');
+    // Canonicalize the allowed base (handles macOS /tmp → /private/tmp)
+    let realBase: string;
+    try {
+        realBase = fs.realpathSync(allowedBase);
+    } catch {
+        realBase = path.resolve(allowedBase);
     }
 
-    // Additional check: Ensure no attempt to escape via symlinks
-    const relativePath = path.relative(allowedBase, resolvedPath);
-    if (relativePath.startsWith('..')) {
-        throw new Error('Access denied: path traversal attempt detected');
+    // Branch 1: file exists — resolve all symlinks
+    // Branch 2: file doesn't exist — resolve parent to catch intermediate symlinks
+    // Branch 3: parent doesn't exist — reject
+    let realResolved: string;
+    try {
+        realResolved = fs.realpathSync(resolved);
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+            try {
+                const realParent = fs.realpathSync(path.dirname(resolved));
+                realResolved = path.join(realParent, path.basename(resolved));
+            } catch {
+                throw new Error(`Cannot verify path safety: parent directory does not exist for ${resolved}`);
+            }
+        } else {
+            throw error;
+        }
     }
+
+    if (!realResolved.startsWith(realBase + path.sep) && realResolved !== realBase) {
+        throw new Error(`Path escapes allowed directory: ${realResolved}`);
+    }
+
+    return realResolved;
+}
+
+/**
+ * Async variant of {@link assertPathInsideSync}.
+ * Used by the standalone MCP server (which uses async fs throughout).
+ */
+export async function assertPathInside(targetPath: string, allowedBase: string): Promise<string> {
+    if (!targetPath || typeof targetPath !== 'string') {
+        throw new Error('Path must be a non-empty string');
+    }
+
+    const resolved = path.resolve(path.normalize(targetPath));
+
+    let realBase: string;
+    try {
+        realBase = await fsPromises.realpath(allowedBase);
+    } catch {
+        realBase = path.resolve(allowedBase);
+    }
+
+    let realResolved: string;
+    try {
+        realResolved = await fsPromises.realpath(resolved);
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+        try {
+            const realParent = await fsPromises.realpath(path.dirname(resolved));
+            realResolved = path.join(realParent, path.basename(resolved));
+        } catch {
+            throw new Error(`Cannot verify path safety: parent directory does not exist for ${resolved}`);
+        }
+    }
+
+    if (!realResolved.startsWith(realBase + path.sep) && realResolved !== realBase) {
+        throw new Error(`Path escapes allowed directory: ${realResolved}`);
+    }
+
+    return realResolved;
+}
+
+// ─── Convenience wrappers ────────────────────────────────────────────────────
+
+const PROJECTS_BASE = path.join(os.homedir(), '.demo-builder', 'projects');
+
+/**
+ * Validate that a path is inside the demo-builder projects directory.
+ * Thin wrapper over {@link assertPathInsideSync} with the hardcoded base.
+ *
+ * @throws Error if path is outside `~/.demo-builder/projects/`
+ */
+export function validateProjectPath(providedPath: string): void {
+    assertPathInsideSync(providedPath, PROJECTS_BASE);
 }

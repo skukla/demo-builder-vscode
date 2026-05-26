@@ -6,8 +6,9 @@
  */
 
 import { DialogContainer } from '@adobe/react-spectrum';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
+import type { ProjectActions } from './components/ProjectActionsMenu';
 import { RenameProjectDialog } from './components/RenameProjectDialog';
 import { ProjectsDashboard } from './ProjectsDashboard';
 import { WebviewApp } from '@/core/ui/components/WebviewApp';
@@ -125,17 +126,23 @@ const ProjectsDashboardApp: React.FC = () => {
         fetchProjects(true);
     }, [fetchProjects]);
 
-    // Handle project selection
-    const handleSelectProject = useCallback(async (project: Project) => {
-        try {
-            await webviewClient.postMessage('selectProject', {
-                projectPath: project.path,
-            });
-            // Navigation to project detail will be handled by extension
-        } catch (error) {
-            console.error('Failed to select project:', error);
-        }
-    }, []);
+    // Handle project selection. The optional `opts.forceNewWindow` rides along
+    // when the user shift/cmd-clicked the tile — the backend opens the project
+    // as a new VS Code window's workspace instead of replacing the current one.
+    const handleSelectProject = useCallback(
+        async (project: Project, opts?: { forceNewWindow?: boolean }) => {
+            try {
+                await webviewClient.postMessage('selectProject', {
+                    projectPath: project.path,
+                    ...(opts?.forceNewWindow ? { forceNewWindow: true } : {}),
+                });
+                // Navigation to project detail (or window reload) handled by the extension.
+            } catch (error) {
+                console.error('Failed to select project:', error);
+            }
+        },
+        [],
+    );
 
     // Handle create project
     const handleCreateProject = useCallback(async () => {
@@ -336,12 +343,88 @@ const ProjectsDashboardApp: React.FC = () => {
         setProjectToRename(null);
     }, []);
 
+    // Handle copy project path
+    const handleCopyPath = useCallback(async (project: Project) => {
+        try {
+            await webviewClient.postMessage('copy-project-path', {
+                projectPath: project.path,
+            });
+        } catch (error) {
+            console.error('Failed to copy project path:', error);
+        }
+    }, []);
+
+    // Handle Open in Claude Code (CLI harness) - dispatches to the
+    // `demoBuilder.openInClaude` command via the dashboard handler bridge.
+    const handleOpenInClaudeCode = useCallback(async (project: Project) => {
+        try {
+            await webviewClient.postMessage('openInClaude', {
+                projectPath: project.path,
+            });
+        } catch (error) {
+            console.error('Failed to open project in Claude Code:', error);
+        }
+    }, []);
+
+    // Handle Open AI - dispatches to the `demoBuilder.openAi` command
+    // via the dashboard handler bridge. Mirrors handleOpenInClaudeCode exactly.
+    const handleOpenAiForProject = useCallback(async (project: Project) => {
+        try {
+            await webviewClient.postMessage('openAi', {
+                projectPath: project.path,
+            });
+        } catch (error) {
+            console.error('Failed to open AI for project:', error);
+        }
+    }, []);
+
+    // Toggle pinned on a project; the backend persists it to .demo-builder.json
+    // and the next render picks up the new sort order.
+    const handlePinToggle = useCallback(async (project: Project) => {
+        try {
+            const response = await webviewClient.request<{ success: boolean }>('setProjectPinned', {
+                projectPath: project.path,
+                pinned: !project.pinned,
+            });
+            if (response?.success) {
+                // Re-fetch so the sort order + pin indicator update.
+                await fetchProjects(true);
+            }
+        } catch (error) {
+            console.error('Failed to toggle project pinned state:', error);
+        }
+    }, [fetchProjects]);
+
     // Handle view mode override - saves to backend for session persistence
     const handleViewModeOverride = useCallback((mode: 'cards' | 'rows') => {
         setInitialViewMode(mode);
         // Persist to backend so it survives webview recreations
         webviewClient.postMessage('setViewModeOverride', { viewMode: mode });
     }, []);
+
+    // Bundle all project action callbacks into a single object
+    const projectActions: ProjectActions = useMemo(() => ({
+        onStartDemo: handleStartDemo,
+        onStopDemo: handleStopDemo,
+        onOpenBrowser: handleOpenBrowser,
+        onOpenLiveSite: handleOpenLiveSite,
+        onOpenDaLive: handleOpenDaLive,
+        onResetProject: handleResetProject,
+        onRepublishContent: handleRepublishContent,
+        onEdit: handleEditProject,
+        onRename: handleRenameProject,
+        onCopyPath: handleCopyPath,
+        onExport: handleExportProject,
+        onOpenInClaudeCode: handleOpenInClaudeCode,
+        onOpenAi: handleOpenAiForProject,
+        onPinToggle: handlePinToggle,
+        onDelete: handleDeleteProject,
+    }), [
+        handleStartDemo, handleStopDemo, handleOpenBrowser, handleOpenLiveSite,
+        handleOpenDaLive, handleResetProject, handleRepublishContent, handleEditProject,
+        handleRenameProject, handleCopyPath, handleExportProject,
+        handleOpenInClaudeCode, handleOpenAiForProject, handlePinToggle, handleDeleteProject,
+    ]);
 
     return (
         <>
@@ -352,17 +435,7 @@ const ProjectsDashboardApp: React.FC = () => {
                 onCreateProject={handleCreateProject}
                 onCopyFromExisting={handleCopyFromExisting}
                 onImportFromFile={handleImportFromFile}
-                onStartDemo={handleStartDemo}
-                onStopDemo={handleStopDemo}
-                onOpenBrowser={handleOpenBrowser}
-                onOpenLiveSite={handleOpenLiveSite}
-                onOpenDaLive={handleOpenDaLive}
-                onResetProject={handleResetProject}
-                onRepublishContent={handleRepublishContent}
-                onEditProject={handleEditProject}
-                onRenameProject={handleRenameProject}
-                onExportProject={handleExportProject}
-                onDeleteProject={handleDeleteProject}
+                actions={projectActions}
                 isLoading={isLoading}
                 isRefreshing={isRefreshing}
                 onRefresh={handleRefresh}

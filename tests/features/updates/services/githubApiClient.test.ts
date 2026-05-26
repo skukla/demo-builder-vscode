@@ -15,6 +15,7 @@ import {
     compareCommits,
     fetchWithTimeout,
     getLatestBranchCommit,
+    getLatestRelease,
 } from '@/features/updates/services/githubApiClient';
 
 describe('githubApiClient', () => {
@@ -111,6 +112,66 @@ describe('githubApiClient', () => {
             const sha = await getLatestBranchCommit(mockSecrets, 'owner', 'repo', 'main');
 
             expect(sha).toBeNull();
+        });
+    });
+
+    describe('getLatestRelease', () => {
+        const mockSecrets = { get: jest.fn().mockResolvedValue('tok') } as any;
+
+        it('should return tag + version on success and strip a v-prefix', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ tag_name: 'v3.5.0', name: 'Release 3.5.0' }),
+            });
+
+            const result = await getLatestRelease(mockSecrets, 'adobe-commerce', 'commerce-extensibility-tools');
+
+            expect(result).toEqual({ tag: 'v3.5.0', version: '3.5.0' });
+            expect(mockFetch).toHaveBeenCalledWith(
+                'https://api.github.com/repos/adobe-commerce/commerce-extensibility-tools/releases/latest',
+                expect.objectContaining({ headers: expect.any(Object) }),
+            );
+        });
+
+        it('should preserve a tag that has no v-prefix', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ tag_name: '3.5.0' }),
+            });
+
+            const result = await getLatestRelease(mockSecrets, 'owner', 'repo');
+
+            expect(result).toEqual({ tag: '3.5.0', version: '3.5.0' });
+        });
+
+        it('should return null when tag_name is missing', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ name: 'No tag here' }),
+            });
+
+            expect(await getLatestRelease(mockSecrets, 'owner', 'repo')).toBeNull();
+        });
+
+        it('should return null on non-ok response (404, 403, etc.)', async () => {
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
+
+            expect(await getLatestRelease(mockSecrets, 'owner', 'repo')).toBeNull();
+        });
+
+        it('should return null on network error', async () => {
+            mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+            expect(await getLatestRelease(mockSecrets, 'owner', 'repo')).toBeNull();
+        });
+
+        it('should return null when version is not a valid semver string', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ tag_name: 'beta' }),
+            });
+
+            expect(await getLatestRelease(mockSecrets, 'owner', 'repo')).toBeNull();
         });
     });
 

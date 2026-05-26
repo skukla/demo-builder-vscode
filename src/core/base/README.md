@@ -64,12 +64,12 @@ class MyCommand extends BaseCommand {
 - `showStatusMessage(message, timeout?)` - Temporary status bar info
 - `showQuickPick(items, options?)` - Show quick pick menu
 - `showInputBox(options?)` - Show input box
-- `createTerminal(name, cwd?)` - Create terminal instance
+- `createTerminal(name, cwd?, location?)` - Create terminal instance. Pass `location` (e.g. `{ viewColumn: vscode.ViewColumn.Beside }`) to spawn in the editor area instead of the bottom panel.
 - `confirm(message, detail?)` - Show confirmation dialog
 
 **Example**:
 ```typescript
-import { BaseCommand } from '@/shared/base';
+import { BaseCommand } from '@/core/base';
 import * as vscode from 'vscode';
 
 class InstallComponentCommand extends BaseCommand {

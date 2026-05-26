@@ -42,6 +42,8 @@ export interface UseDashboardActionsReturn {
     handleViewLogs: () => void;
     /** Deploy API Mesh */
     handleDeployMesh: () => void;
+    /** Sync storefront — git push + Helix preview/publish (EDS projects only) */
+    handleSyncStorefront: () => void;
     /** Open demo in browser (non-EDS projects) */
     handleOpenBrowser: () => void;
     /** Open live site in browser (EDS projects) */
@@ -52,6 +54,10 @@ export interface UseDashboardActionsReturn {
     handleConfigure: () => void;
     /** Open Adobe Developer Console */
     handleOpenDevConsole: () => void;
+    /** Open the project in the Claude Code (CLI) harness */
+    handleOpenInClaude: () => void;
+    /** Open the AI surface for the project */
+    handleOpenAi: () => void;
     /** Delete the project */
     handleDeleteProject: () => void;
     /** Navigate back to projects list */
@@ -103,6 +109,10 @@ export function useDashboardActions({
         webviewClient.postMessage('deployMesh');
     }, [setIsTransitioning]);
 
+    const handleSyncStorefront = useCallback(() => {
+        webviewClient.postMessage('syncStorefront');
+    }, []);
+
     const handleOpenBrowser = useCallback(() => {
         if (isOpeningBrowser) return; // Prevent double-click
         setIsOpeningBrowser(true);
@@ -135,6 +145,14 @@ export function useDashboardActions({
         webviewClient.postMessage('openDevConsole');
     }, []);
 
+    const handleOpenInClaude = useCallback(() => {
+        webviewClient.postMessage('openInClaude');
+    }, []);
+
+    const handleOpenAi = useCallback(() => {
+        webviewClient.postMessage('openAi');
+    }, []);
+
     const handleDeleteProject = useCallback(() => {
         webviewClient.postMessage('deleteProject');
     }, []);
@@ -156,11 +174,14 @@ export function useDashboardActions({
         handleStopDemo,
         handleViewLogs,
         handleDeployMesh,
+        handleSyncStorefront,
         handleOpenBrowser,
         handleOpenLiveSite,
         handleOpenDaLive,
         handleConfigure,
         handleOpenDevConsole,
+        handleOpenInClaude,
+        handleOpenAi,
         handleDeleteProject,
         handleNavigateBack,
         handleViewComponents,

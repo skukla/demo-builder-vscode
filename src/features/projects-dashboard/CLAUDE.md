@@ -41,7 +41,7 @@ Main container component that orchestrates the dashboard UI.
 
 **Props:**
 - `projects: Project[]` - Array of all projects
-- `onSelectProject: (project: Project) => void` - Called when a card is clicked
+- `onSelectProject: (project: Project, opts?: { forceNewWindow?: boolean }) => void` - Called when a card is clicked; the optional `forceNewWindow` rides along when the user shift/cmd-clicked the tile
 - `onCreateProject: () => void` - Called when "+ New" is clicked
 - `isLoading?: boolean` - Shows loading spinner when true
 
@@ -70,7 +70,7 @@ Responsive grid layout for project cards.
 
 **Props:**
 - `projects: Project[]` - Array of projects
-- `onSelectProject: (project: Project) => void` - Card click handler
+- `onSelectProject: (project: Project, opts?: { forceNewWindow?: boolean }) => void` - Card click handler
 
 **Layout:**
 - Uses CSS Grid with `auto-fill, minmax(280px, 1fr)`
@@ -122,7 +122,7 @@ Object literal handler map for the Projects List view, used with `dispatchHandle
 
 **Registered Handlers:**
 - `getProjects` - Load all projects
-- `selectProject` - Select a project and navigate to dashboard
+- `selectProject` - Select a project. Anchors VS Code's workspace folder to the project (current window unless `forceNewWindow=true`), so subsequent Claude Code launches see per-project skills, `.mcp.json`, and `AGENTS.md` at the right cwd. When workspace already matches, surfaces the project dashboard webview without a reload.
 - `createProject` - Trigger project creation wizard
 
 **Usage:**
@@ -209,8 +209,23 @@ tests/features/projects-dashboard/
 - `@/core/state/stateManager` - Project data
 - `@/types/base` - Project interface
 
+## Workspace Anchoring (Project Tile = VS Code Workspace)
+
+Clicking a project tile opens the project folder as the current VS Code window's workspace (via `vscode.openFolder`). This is the contract that makes the Claude Code chat panel work — without the workspace anchor, the URI handler launches Claude Code with the wrong cwd and per-project skills / `.mcp.json` / `AGENTS.md` don't load.
+
+| Gesture | Effect |
+|---|---|
+| Plain click on a tile | Opens project in **current** window (replaces workspace; VS Code shows its native unsaved-changes prompt if needed) |
+| Shift- or Cmd-click on a tile | Opens project in a **new** window; current window unchanged |
+| Click when workspace already = project | No-op on workspace; just surfaces the dashboard webview |
+| Wizard finish | Same as plain click: anchors the freshly-created project as the workspace |
+
+**Getting back to the projects list.** The Project Dashboard's header has an "All Projects" button — the happy path. As a safety net, closing the dashboard webview inside a project workspace auto-opens the projects list as a new tab (`shouldAutoReopenProjectsList` + `dispose()` override in `src/features/dashboard/commands/showDashboard.ts`). The user never ends up stranded with no Demo Builder navigation surface.
+
+See [ADR-004](../../../docs/architecture/adr/004-claude-code-harness.md#amendment-2026-05-24-workspace-anchoring) for the full design rationale.
+
 ## Related Features
 
-- **sidebar** - Provides navigation context
+- **sidebar** - Provides navigation context (utility bar only in project contexts; no back link — see sidebar/CLAUDE.md)
 - **dashboard** - Project detail view shown when project card is clicked
 - **project-creation** - Wizard triggered by "+ New" button

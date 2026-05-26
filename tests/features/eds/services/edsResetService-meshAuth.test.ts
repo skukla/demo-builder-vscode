@@ -146,9 +146,7 @@ jest.mock('@/features/eds/services/storefrontStalenessDetector', () => ({
 jest.mock('@/features/eds/services/configurationService', () => ({
     ConfigurationService: jest.fn().mockImplementation(() => ({
         updateSiteConfig: jest.fn().mockResolvedValue({ success: true }),
-        setFolderMapping: jest.fn().mockResolvedValue({ success: true }),
     })),
-    DEFAULT_FOLDER_MAPPING: { '/products/': '/products/default' },
     buildSiteConfigParams: (owner: string, repo: string, org: string, site: string) => ({
         org, site, codeOwner: owner, codeRepo: repo,
         contentSourceUrl: `https://content.da.live/${org}/${site}/`,

@@ -12,7 +12,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
     },
 }));
 
-import { ConfigurationService } from '@/features/eds/services/configurationService';
+import { ConfigurationService, buildSiteConfigParams } from '@/features/eds/services/configurationService';
 import type { SiteRegistrationParams } from '@/features/eds/services/configurationService';
 
 // Test fixtures
@@ -163,60 +163,57 @@ describe('ConfigurationService', () => {
             expect(result.success).toBe(false);
             expect(result.error).toContain('DA.live authentication required');
         });
+
+        it('should include content.overlay block when contentOverlayUrl is provided', async () => {
+            await service.registerSite({
+                ...params,
+                contentOverlayUrl: 'https://byom.example.com',
+            });
+
+            const call = fetchSpy.mock.calls[0];
+            const body = JSON.parse(call[1].body);
+            expect(body.content).toEqual({
+                source: {
+                    url: 'https://content.da.live/test-user/my-site/',
+                    type: 'markup',
+                },
+                overlay: {
+                    url: 'https://byom.example.com',
+                    type: 'markup',
+                },
+            });
+        });
+
+        it('should omit content.overlay when contentOverlayUrl is undefined', async () => {
+            await service.registerSite(params);
+
+            const call = fetchSpy.mock.calls[0];
+            const body = JSON.parse(call[1].body);
+            expect(body.content).not.toHaveProperty('overlay');
+            expect(body.content).toEqual({
+                source: {
+                    url: 'https://content.da.live/test-user/my-site/',
+                    type: 'markup',
+                },
+            });
+        });
     });
 
     // ==========================================================
-    // setFolderMapping
+    // buildSiteConfigParams (BYOM overlay)
     // ==========================================================
 
-    describe('setFolderMapping', () => {
-        it('should set folder mapping with correct URL and body', async () => {
-            const folders = { '/products/': '/products/default' };
-
-            const result = await service.setFolderMapping('test-user', 'my-site', folders);
-
-            expect(result.success).toBe(true);
-            expect(fetchSpy).toHaveBeenCalledWith(
-                'https://admin.hlx.page/config/test-user/sites/my-site/folders.json',
-                expect.objectContaining({
-                    method: 'POST',
-                    headers: expect.objectContaining({
-                        Authorization: `Bearer ${MOCK_IMS_TOKEN}`,
-                        'content-type': 'application/json',
-                    }),
-                }),
-            );
-
-            // Verify request body
-            const call = fetchSpy.mock.calls[0];
-            const body = JSON.parse(call[1].body);
-            expect(body).toEqual({ '/products/': '/products/default' });
+    describe('buildSiteConfigParams', () => {
+        it('omits contentOverlayUrl when no overlay URL is provided', () => {
+            const params = buildSiteConfigParams('owner', 'repo', 'org', 'site');
+            expect(params.contentOverlayUrl).toBeUndefined();
         });
 
-        it('should handle multiple folder mappings', async () => {
-            const folders = {
-                '/products/': '/products/default',
-                '/categories/': '/categories/default',
-            };
-
-            const result = await service.setFolderMapping('test-user', 'my-site', folders);
-
-            expect(result.success).toBe(true);
-
-            const call = fetchSpy.mock.calls[0];
-            const body = JSON.parse(call[1].body);
-            expect(body).toEqual(folders);
-        });
-
-        it('should return error for server errors', async () => {
-            fetchSpy.mockResolvedValueOnce(
-                new Response('Internal Server Error', { status: 500 }),
+        it('includes contentOverlayUrl when an overlay URL is provided', () => {
+            const params = buildSiteConfigParams(
+                'owner', 'repo', 'org', 'site', 'https://byom.example.com',
             );
-
-            const result = await service.setFolderMapping('test-user', 'my-site', {});
-
-            expect(result.success).toBe(false);
-            expect(result.statusCode).toBe(500);
+            expect(params.contentOverlayUrl).toBe('https://byom.example.com');
         });
     });
 

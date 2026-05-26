@@ -1,78 +1,53 @@
 /**
- * Unit Tests for getWebviewHTMLWithBundles
- * Step 1: Create 4-Bundle HTML Helper
+ * Unit Tests for getWebviewHTML
  *
- * Tests reusable helper function for generating webview HTML with webpack's
- * 4-bundle pattern (runtime, vendors, common, feature) to eliminate single-bundle
- * timeout issues across all webviews.
+ * Tests the webview HTML generator that produces a VS Code webview document
+ * loading a single esbuild IIFE bundle (CSS is injected at runtime by the
+ * bundle, so no separate <link> tag is needed).
  */
 
 import * as vscode from 'vscode';
 import {
-    getWebviewHTMLWithBundles,
-    type BundleUris,
+    getWebviewHTML,
 } from '@/core/utils/getWebviewHTMLWithBundles';
 
 /**
- * Test helper: Create mock bundle URIs for testing
+ * Test helper: Create a mock script URI for testing
  */
-function createMockBundleURIs(): BundleUris {
-    return {
-        runtime: vscode.Uri.parse('vscode-resource://runtime-bundle.js'),
-        vendors: vscode.Uri.parse('vscode-resource://vendors-bundle.js'),
-        common: vscode.Uri.parse('vscode-resource://common-bundle.js'),
-        feature: vscode.Uri.parse('vscode-resource://wizard-bundle.js')
-    };
+function createMockScriptUri(): vscode.Uri {
+    return vscode.Uri.parse('vscode-resource://wizard-bundle.js');
 }
 
-describe('getWebviewHTMLWithBundles', () => {
+describe('getWebviewHTML', () => {
     describe('HTML Structure and Bundle Loading', () => {
-        it('should generate HTML with all 4 bundles in correct order', () => {
-            // Arrange: Create mock URIs for all 4 bundles
-            const mockURIs = {
-                runtime: vscode.Uri.parse('vscode-resource://runtime-bundle.js'),
-                vendors: vscode.Uri.parse('vscode-resource://vendors-bundle.js'),
-                common: vscode.Uri.parse('vscode-resource://common-bundle.js'),
-                feature: vscode.Uri.parse('vscode-resource://wizard-bundle.js')
-            };
+        it('should generate HTML with the feature bundle', () => {
+            // Arrange
+            const scriptUri = createMockScriptUri();
             const options = {
-                bundleUris: mockURIs,
+                scriptUri,
                 nonce: 'test-nonce-123',
                 cspSource: 'vscode-resource:',
                 title: 'Test Webview'
             };
 
-            // Act: Generate HTML
-            const html = getWebviewHTMLWithBundles(options);
+            // Act
+            const html = getWebviewHTML(options);
 
-            // Assert: Verify all 4 bundles present in correct order
-            expect(html).toContain('runtime-bundle.js');
-            expect(html).toContain('vendors-bundle.js');
-            expect(html).toContain('common-bundle.js');
+            // Assert: feature bundle present
             expect(html).toContain('wizard-bundle.js');
-
-            // Verify order: runtime before vendors before common before feature
-            const runtimeIndex = html.indexOf('runtime-bundle.js');
-            const vendorsIndex = html.indexOf('vendors-bundle.js');
-            const commonIndex = html.indexOf('common-bundle.js');
-            const featureIndex = html.indexOf('wizard-bundle.js');
-
-            expect(runtimeIndex).toBeLessThan(vendorsIndex);
-            expect(vendorsIndex).toBeLessThan(commonIndex);
-            expect(commonIndex).toBeLessThan(featureIndex);
         });
 
         it('should generate well-formed HTML5 document', () => {
             // Arrange
             const options = {
-                bundleUris: createMockBundleURIs(),
+                scriptUri: createMockScriptUri(),
                 nonce: 'test-nonce',
                 cspSource: 'vscode-resource:',
                 title: 'My Test Webview'
             };
 
             // Act
-            const html = getWebviewHTMLWithBundles(options);
+            const html = getWebviewHTML(options);
 
             // Assert: HTML structure
             expect(html).toMatch(/^<!DOCTYPE html>/);
@@ -88,24 +63,24 @@ describe('getWebviewHTMLWithBundles', () => {
     });
 
     describe('CSP Compliance', () => {
-        it('should apply same nonce to all script tags for CSP compliance', () => {
+        it('should apply nonce to the script tag for CSP compliance', () => {
             // Arrange
             const nonce = 'unique-nonce-456';
             const options = {
-                bundleUris: createMockBundleURIs(),
+                scriptUri: createMockScriptUri(),
                 nonce,
                 cspSource: 'vscode-resource:',
                 title: 'Test'
             };
 
             // Act
-            const html = getWebviewHTMLWithBundles(options);
+            const html = getWebviewHTML(options);
 
-            // Assert: All script tags have nonce attribute
+            // Assert: script tag has nonce attribute
             const scriptMatches = html.match(/<script nonce="([^"]+)"/g);
-            expect(scriptMatches).toHaveLength(4); // 4 bundles = 4 script tags
+            expect(scriptMatches).toHaveLength(1); // single esbuild bundle = one script tag
 
-            // Verify all use same nonce
+            // Verify nonce
             scriptMatches?.forEach((match: string) => {
                 expect(match).toContain(`nonce="${nonce}"`);
             });
@@ -116,14 +91,14 @@ describe('getWebviewHTMLWithBundles', () => {
             const nonce = 'test-nonce';
             const cspSource = 'vscode-webview://custom-source';
             const options = {
-                bundleUris: createMockBundleURIs(),
+                scriptUri: createMockScriptUri(),
                 nonce,
                 cspSource,
                 title: 'Test'
             };
 
             // Act
-            const html = getWebviewHTMLWithBundles(options);
+            const html = getWebviewHTML(options);
 
             // Assert: CSP meta tag present
             expect(html).toContain('<meta http-equiv="Content-Security-Policy"');
@@ -142,14 +117,14 @@ describe('getWebviewHTMLWithBundles', () => {
         it('should generate HTML with only required parameters', () => {
             // Arrange: Minimal options without optional parameters
             const minimalOptions = {
-                bundleUris: createMockBundleURIs(),
+                scriptUri: createMockScriptUri(),
                 nonce: 'test',
                 cspSource: 'vscode-resource:',
                 title: 'Test',
             };
 
             // Act
-            const html = getWebviewHTMLWithBundles(minimalOptions);
+            const html = getWebviewHTML(minimalOptions);
 
             // Assert: Should generate valid HTML with minimal required parameters
             expect(html).toContain('<!DOCTYPE html>');
@@ -160,7 +135,7 @@ describe('getWebviewHTMLWithBundles', () => {
         it('should support additional image sources in CSP', () => {
             // Arrange
             const options = {
-                bundleUris: createMockBundleURIs(),
+                scriptUri: createMockScriptUri(),
                 nonce: 'test',
                 cspSource: 'vscode-resource:',
                 title: 'Test',
@@ -168,7 +143,7 @@ describe('getWebviewHTMLWithBundles', () => {
             };
 
             // Act
-            const html = getWebviewHTMLWithBundles(options);
+            const html = getWebviewHTML(options);
 
             // Assert: CSP includes cspSource + default + additional image sources
             expect(html).toContain('img-src vscode-resource: https: data: https://example.com https://cdn.adobe.com');
@@ -179,14 +154,14 @@ describe('getWebviewHTMLWithBundles', () => {
         it('should throw error if nonce is missing', () => {
             // Arrange
             const options = {
-                bundleUris: createMockBundleURIs(),
+                scriptUri: createMockScriptUri(),
                 nonce: '', // Invalid: empty nonce
                 cspSource: 'vscode-resource:',
                 title: 'Test'
             };
 
             // Act & Assert
-            expect(() => getWebviewHTMLWithBundles(options))
+            expect(() => getWebviewHTML(options))
                 .toThrow('Nonce is required for CSP compliance');
         });
     });

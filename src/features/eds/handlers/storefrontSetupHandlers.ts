@@ -85,6 +85,8 @@ export interface StorefrontSetupStartPayload {
             site: string;
             indexPath?: string;
         };
+        // Optional BYOM content overlay URL (from demo-packages.json storefronts)
+        byomOverlayUrl?: string;
         // Selected existing repository (from searchable list)
         selectedRepo?: {
             name: string;

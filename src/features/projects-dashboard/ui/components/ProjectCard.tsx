@@ -9,8 +9,10 @@
  */
 
 import { Flex, Text } from '@adobe/react-spectrum';
+import PinOn from '@spectrum-icons/workflow/PinOn';
 import React, { useCallback, useMemo } from 'react';
 import { ProjectActionsMenu } from './ProjectActionsMenu';
+import type { ProjectActions } from './ProjectActionsMenu';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { getBrandStackSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import {
@@ -30,30 +32,14 @@ export interface ProjectCardProps {
     project: Project;
     /** Whether the project demo is currently running */
     isRunning?: boolean;
-    /** Callback when the card is selected */
-    onSelect: (project: Project) => void;
-    /** Callback to start the demo */
-    onStartDemo?: (project: Project) => void;
-    /** Callback to stop the demo */
-    onStopDemo?: (project: Project) => void;
-    /** Callback to open the demo in browser (for non-EDS projects) */
-    onOpenBrowser?: (project: Project) => void;
-    /** Callback to open the live site (for EDS projects) */
-    onOpenLiveSite?: (project: Project) => void;
-    /** Callback to open DA.live for authoring (for EDS projects) */
-    onOpenDaLive?: (project: Project) => void;
-    /** Callback to reset project (re-clone components or reset from template) */
-    onResetProject?: (project: Project) => void;
-    /** Callback to republish content to CDN (for EDS projects) */
-    onRepublishContent?: (project: Project) => void;
-    /** Callback to edit project settings */
-    onEdit?: (project: Project) => void;
-    /** Callback to rename project */
-    onRename?: (project: Project) => void;
-    /** Callback to export project settings */
-    onExport?: (project: Project) => void;
-    /** Callback to delete project */
-    onDelete?: (project: Project) => void;
+    /**
+     * Callback when the card is selected. The optional `opts` carries modifier
+     * intent — `forceNewWindow: true` indicates the user wants to open the
+     * project in a new VS Code window (shift-click or cmd-click convention).
+     */
+    onSelect: (project: Project, opts?: { forceNewWindow?: boolean }) => void;
+    /** Bundled action callbacks for the kebab menu */
+    actions?: ProjectActions;
 }
 
 /**
@@ -65,27 +51,30 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     project,
     isRunning = false,
     onSelect,
-    onStartDemo,
-    onStopDemo,
-    onOpenBrowser,
-    onOpenLiveSite,
-    onOpenDaLive,
-    onResetProject,
-    onRepublishContent,
-    onEdit,
-    onRename,
-    onExport,
-    onDelete,
+    actions = {},
 }) => {
-    const handleClick = useCallback(() => {
-        onSelect(project);
-    }, [project, onSelect]);
+    const handleClick = useCallback(
+        (e: React.MouseEvent) => {
+            // Shift-click / Cmd-click → open in a new VS Code window (standard
+            // VS Code modifier convention for Open Recent et al.).
+            if (e.shiftKey || e.metaKey) {
+                onSelect(project, { forceNewWindow: true });
+            } else {
+                onSelect(project);
+            }
+        },
+        [project, onSelect],
+    );
 
     const handleKeyDown = useCallback(
         (e: React.KeyboardEvent) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                onSelect(project);
+                if (e.shiftKey) {
+                    onSelect(project, { forceNewWindow: true });
+                } else {
+                    onSelect(project);
+                }
             }
         },
         [project, onSelect],
@@ -111,25 +100,31 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             onKeyDown={handleKeyDown}
             className="project-card-spectrum"
         >
-            {/* Header Row: Name + More Menu */}
-            <Flex alignItems="center" justifyContent="space-between">
-                <Text UNSAFE_className="project-card-spectrum-name">
-                    {project.name}
-                </Text>
+            {/* Header Row: Pin indicator (when pinned) + Name + More Menu */}
+            <Flex alignItems="center" justifyContent="space-between" gap="size-100">
+                <Flex alignItems="center" gap="size-75" minWidth={0}>
+                    {project.pinned && (
+                        <span
+                            data-testid="project-card-pin-indicator"
+                            aria-label="Pinned"
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                flex: '0 0 auto',
+                                color: 'var(--spectrum-global-color-gray-700)',
+                            }}
+                        >
+                            <PinOn size="XS" />
+                        </span>
+                    )}
+                    <Text UNSAFE_className="project-card-spectrum-name">
+                        {project.name}
+                    </Text>
+                </Flex>
                 <ProjectActionsMenu
                     project={project}
                     isRunning={isRunning}
-                    onStartDemo={onStartDemo}
-                    onStopDemo={onStopDemo}
-                    onOpenBrowser={onOpenBrowser}
-                    onOpenLiveSite={onOpenLiveSite}
-                    onOpenDaLive={onOpenDaLive}
-                    onResetProject={onResetProject}
-                    onRepublishContent={onRepublishContent}
-                    onEdit={onEdit}
-                    onRename={onRename}
-                    onExport={onExport}
-                    onDelete={onDelete}
+                    actions={actions}
                     className="project-card-menu-button"
                 />
             </Flex>

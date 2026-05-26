@@ -42,7 +42,7 @@ export interface ConnectStoreStepContentProps {
     selectedStackId: string;
     componentConfigs: ComponentConfigs;
     packageConfigDefaults?: Record<string, string>;
-    adobeOrg?: { id: string };
+    adobeOrg?: { id: string; code?: string };
     onComponentConfigsChange: (configs: ComponentConfigs) => void;
     onValidationChange: (allValid: boolean) => void;
     /** Persisted store structure — skips auto-detect on step re-entry */
@@ -153,6 +153,11 @@ export function ConnectStoreStepContent({
         group => CONNECTION_GROUPS.has(group.id) || storeSelectionComplete,
     );
 
+    // Context for resolving {placeholder} tokens in field-description URLs
+    // (e.g., the ACCS GraphQL Endpoint description includes a link to the
+    // Experience Cloud Commerce instances page for the selected org).
+    const descriptionContext = { orgCode: adobeOrg?.code };
+
     return (
         <SingleColumnLayout>
             <Form UNSAFE_className="container-form">
@@ -177,6 +182,7 @@ export function ConnectStoreStepContent({
                             getStoreViewItems={getStoreViewItems}
                             componentConfigs={liveConfigs ?? {}}
                             onRefresh={forceFetch}
+                            descriptionContext={descriptionContext}
                         />
                     )}
                 />

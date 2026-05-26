@@ -44,6 +44,7 @@ export const AlertCircle = createIconMock('AlertCircle');
 export const InfoCircle = createIconMock('InfoCircle');
 export const Clock = createIconMock('Clock');
 export const Folder = createIconMock('Folder');
+export const FolderOpen = createIconMock('FolderOpen');
 export const Document = createIconMock('Document');
 export const User = createIconMock('User');
 export const Search = createIconMock('Search');

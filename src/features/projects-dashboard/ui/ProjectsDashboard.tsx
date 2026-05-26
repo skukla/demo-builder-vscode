@@ -23,6 +23,7 @@ import Copy from '@spectrum-icons/workflow/Copy';
 import Import from '@spectrum-icons/workflow/Import';
 import React, { useState, useMemo, useEffect } from 'react';
 import { DashboardEmptyState } from './components/DashboardEmptyState';
+import type { ProjectActions } from './components/ProjectActionsMenu';
 import { ProjectRowList } from './components/ProjectRowList';
 import { ProjectsGrid } from './components/ProjectsGrid';
 import { buildMenuItems } from './projectsDashboardHelpers';
@@ -37,36 +38,20 @@ export interface ProjectsDashboardProps {
     projects: Project[];
     /** Path of the currently running project (if any) */
     runningProjectPath?: string;
-    /** Callback when a project is selected */
-    onSelectProject: (project: Project) => void;
+    /**
+     * Callback when a project is selected. `opts.forceNewWindow=true` rides
+     * along on shift/cmd-click so the backend opens the project in a new
+     * VS Code window.
+     */
+    onSelectProject: (project: Project, opts?: { forceNewWindow?: boolean }) => void;
     /** Callback to create a new project */
     onCreateProject: () => void;
     /** Callback to copy settings from existing project */
     onCopyFromExisting?: () => void;
     /** Callback to import settings from file */
     onImportFromFile?: () => void;
-    /** Callback to start a demo */
-    onStartDemo?: (project: Project) => void;
-    /** Callback to stop a demo */
-    onStopDemo?: (project: Project) => void;
-    /** Callback to open demo in browser */
-    onOpenBrowser?: (project: Project) => void;
-    /** Callback to open live site (for EDS projects) */
-    onOpenLiveSite?: (project: Project) => void;
-    /** Callback to open DA.live for authoring (for EDS projects) */
-    onOpenDaLive?: (project: Project) => void;
-    /** Callback to reset project (re-clone components or reset from template) */
-    onResetProject?: (project: Project) => void;
-    /** Callback to republish content to CDN (for EDS projects) */
-    onRepublishContent?: (project: Project) => void;
-    /** Callback to edit project settings */
-    onEditProject?: (project: Project) => void;
-    /** Callback to rename project */
-    onRenameProject?: (project: Project) => void;
-    /** Callback to export project settings */
-    onExportProject?: (project: Project) => void;
-    /** Callback to delete project */
-    onDeleteProject?: (project: Project) => void;
+    /** Bundled action callbacks for project menus */
+    actions?: ProjectActions;
     /** Whether projects are loading (initial load) */
     isLoading?: boolean;
     /** Whether projects are refreshing (background refresh) */
@@ -98,17 +83,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     onCreateProject,
     onCopyFromExisting,
     onImportFromFile,
-    onStartDemo,
-    onStopDemo,
-    onOpenBrowser,
-    onOpenLiveSite,
-    onOpenDaLive,
-    onResetProject,
-    onRepublishContent,
-    onEditProject,
-    onRenameProject,
-    onExportProject,
-    onDeleteProject,
+    actions = {},
     isLoading = false,
     isRefreshing = false,
     onRefresh,
@@ -270,17 +245,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                         projects={filteredProjects}
                         runningProjectPath={runningProjectPath}
                         onSelectProject={onSelectProject}
-                        onStartDemo={onStartDemo}
-                        onStopDemo={onStopDemo}
-                        onOpenBrowser={onOpenBrowser}
-                        onOpenLiveSite={onOpenLiveSite}
-                        onOpenDaLive={onOpenDaLive}
-                        onResetProject={onResetProject}
-                        onRepublishContent={onRepublishContent}
-                        onEditProject={onEditProject}
-                        onRenameProject={onRenameProject}
-                        onExportProject={onExportProject}
-                        onDeleteProject={onDeleteProject}
+                        actions={actions}
                     />
                 )}
                 {viewMode === 'rows' && (
@@ -288,17 +253,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                         projects={filteredProjects}
                         runningProjectPath={runningProjectPath}
                         onSelectProject={onSelectProject}
-                        onStartDemo={onStartDemo}
-                        onStopDemo={onStopDemo}
-                        onOpenBrowser={onOpenBrowser}
-                        onOpenLiveSite={onOpenLiveSite}
-                        onOpenDaLive={onOpenDaLive}
-                        onResetProject={onResetProject}
-                        onRepublishContent={onRepublishContent}
-                        onEditProject={onEditProject}
-                        onRenameProject={onRenameProject}
-                        onExportProject={onExportProject}
-                        onDeleteProject={onDeleteProject}
+                        actions={actions}
                     />
                 )}
 

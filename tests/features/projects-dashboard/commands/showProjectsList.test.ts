@@ -133,8 +133,8 @@ describe('ShowProjectsListCommand', () => {
         });
     });
 
-    describe('HTML Generation - 4-Bundle Pattern', () => {
-        it('should generate webview HTML with all 4 bundles in correct order', async () => {
+    describe('HTML Generation - esbuild Bundle', () => {
+        it('should generate webview HTML with the feature bundle', async () => {
             // Given: Command is executed
             const command = createCommand();
 
@@ -150,24 +150,14 @@ describe('ShowProjectsListCommand', () => {
             // When: Webview HTML is generated
             const html = await (command as any).getWebviewContent();
 
-            // Then: Contains script tags for all 4 bundles in correct order
-            expect(html).toContain('runtime-bundle.js');
-            expect(html).toContain('vendors-bundle.js');
-            expect(html).toContain('common-bundle.js');
+            // Then: Single feature bundle — no runtime/vendors/common split
             expect(html).toContain('projectsList-bundle.js');
-
-            // Verify load order: runtime -> vendors -> common -> projectsList
-            const runtimeIndex = html.indexOf('runtime-bundle.js');
-            const vendorsIndex = html.indexOf('vendors-bundle.js');
-            const commonIndex = html.indexOf('common-bundle.js');
-            const projectsListIndex = html.indexOf('projectsList-bundle.js');
-
-            expect(runtimeIndex).toBeLessThan(vendorsIndex);
-            expect(vendorsIndex).toBeLessThan(commonIndex);
-            expect(commonIndex).toBeLessThan(projectsListIndex);
+            expect(html).not.toContain('runtime-bundle.js');
+            expect(html).not.toContain('vendors-bundle.js');
+            expect(html).not.toContain('common-bundle.js');
         });
 
-        it('should apply nonces to all script tags for CSP compliance', async () => {
+        it('should apply nonce to the script tag for CSP compliance', async () => {
             // Given: Command webview HTML is generated
             const command = createCommand();
 
@@ -183,20 +173,15 @@ describe('ShowProjectsListCommand', () => {
             // When: HTML content is parsed
             const html = await (command as any).getWebviewContent();
 
-            // Then: All script tags have nonce attribute
+            // Then: Single script tag with nonce
             const scriptMatches = html.match(/<script nonce="([^"]+)"/g);
-            expect(scriptMatches).toHaveLength(4); // 4 bundles = 4 script tags
+            expect(scriptMatches).toHaveLength(1); // single esbuild bundle
 
-            // Verify all use same nonce (CSP compliance)
+            // Verify nonce value is present and reasonable length
             const noncePattern = /nonce="([^"]+)"/;
-            const nonces = scriptMatches?.map((match: string) => {
-                const result = noncePattern.exec(match);
-                return result ? result[1] : null;
-            });
-
-            expect(nonces).toBeDefined();
-            expect(new Set(nonces).size).toBe(1); // All same nonce
-            expect(nonces![0].length).toBeGreaterThan(16); // Reasonable nonce length
+            const match = noncePattern.exec(scriptMatches![0]);
+            expect(match).toBeDefined();
+            expect(match![1].length).toBeGreaterThan(16);
         });
     });
 

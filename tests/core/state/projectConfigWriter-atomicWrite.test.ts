@@ -214,5 +214,53 @@ describe('ProjectConfigWriter atomic writes', () => {
                 },
             ]);
         });
+
+        // Regression: persisting aiPrompts. Without these, the F3 prompt CRUD
+        // works in memory but doesn't survive a save+reload — Duplicate then
+        // appears to "replace" the original because the backend reads aiPrompts
+        // back as empty.
+        it('should include aiPrompts in manifest when project has saved prompts', async () => {
+            const project = createTestProject({
+                name: 'project-with-ai-prompts',
+                aiPrompts: [
+                    { id: 'u1', title: 'My first prompt', prompt: 'Do thing one' },
+                    { id: 'u2', title: 'My second prompt', prompt: 'Do thing two' },
+                ],
+            });
+
+            await writer.saveProjectConfig(project, project.path);
+
+            const writeCall = mockFs.writeFile.mock.calls.find(
+                (call) => call[0].toString().endsWith('.tmp'),
+            );
+            expect(writeCall).toBeDefined();
+            const parsed = JSON.parse(writeCall![1] as string);
+            expect(parsed.aiPrompts).toEqual([
+                { id: 'u1', title: 'My first prompt', prompt: 'Do thing one' },
+                { id: 'u2', title: 'My second prompt', prompt: 'Do thing two' },
+            ]);
+        });
+
+        it('should omit aiPrompts from manifest when undefined', async () => {
+            const project = createTestProject({ name: 'no-prompts' });
+            await writer.saveProjectConfig(project, project.path);
+
+            const writeCall = mockFs.writeFile.mock.calls.find(
+                (call) => call[0].toString().endsWith('.tmp'),
+            );
+            const parsed = JSON.parse(writeCall![1] as string);
+            expect(parsed.aiPrompts).toBeUndefined();
+        });
+
+        it('should omit aiPrompts from manifest when empty array', async () => {
+            const project = createTestProject({ name: 'empty-prompts', aiPrompts: [] });
+            await writer.saveProjectConfig(project, project.path);
+
+            const writeCall = mockFs.writeFile.mock.calls.find(
+                (call) => call[0].toString().endsWith('.tmp'),
+            );
+            const parsed = JSON.parse(writeCall![1] as string);
+            expect(parsed.aiPrompts).toBeUndefined();
+        });
     });
 });

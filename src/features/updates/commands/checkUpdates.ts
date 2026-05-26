@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import {
     performAddonUpdates,
+    performAdobeMcpUpdates,
     performComponentUpdates,
     performForkSyncUpdates,
     performTemplateUpdates,
@@ -10,6 +11,8 @@ import {
     buildUpdatePickerItems,
     formatBehindLabel,
     getTemplateSource,
+    toAdobeMcpUpdateItem,
+    type AdobeMcpUpdateItem,
     type BlockLibraryUpdateItem,
     type ForkSyncItem,
     type InspectorUpdateItem,
@@ -20,6 +23,7 @@ import {
 import { BaseCommand } from '@/core/base';
 import { ExecutionLock, TIMEOUTS } from '@/core/utils';
 import { AddonUpdateChecker } from '@/features/updates/services/addonUpdateChecker';
+import { AdobeMcpUpdateChecker } from '@/features/updates/services/adobeMcpUpdateChecker';
 import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
 import { TemplateUpdateChecker, TemplateUpdateResult } from '@/features/updates/services/templateUpdateChecker';
@@ -45,7 +49,7 @@ export class CheckUpdatesCommand extends BaseCommand {
             try {
                 const {
                     extensionUpdate, multiProjectUpdates, templateUpdates,
-                    forkSyncItems, blockLibraryItems, inspectorItems,
+                    forkSyncItems, blockLibraryItems, inspectorItems, adobeMcpItems,
                     currentProject, hasUpdates,
                 } = await vscode.window.withProgress(
                     {
@@ -108,13 +112,20 @@ export class CheckUpdatesCommand extends BaseCommand {
                             allProjects, currentProject ?? null,
                         );
 
+                        // Phase 5: Check Adobe MCP package updates per storefront
+                        progress.report({ message: 'Checking Adobe MCP...' });
+                        const adobeMcpItems = await this.checkAdobeMcpUpdates(
+                            allProjects, currentProject ?? null,
+                        );
+
                         // Check if any updates available
                         const hasUpdates = extensionUpdate.hasUpdate
                             || multiProjectUpdates.length > 0
                             || templateUpdates.length > 0
                             || forkSyncItems.length > 0
                             || blockLibraryItems.length > 0
-                            || inspectorItems.length > 0;
+                            || inspectorItems.length > 0
+                            || adobeMcpItems.length > 0;
 
                         if (!hasUpdates) {
                             progress.report({
@@ -125,7 +136,7 @@ export class CheckUpdatesCommand extends BaseCommand {
 
                         return {
                             extensionUpdate, multiProjectUpdates, templateUpdates,
-                            forkSyncItems, blockLibraryItems, inspectorItems,
+                            forkSyncItems, blockLibraryItems, inspectorItems, adobeMcpItems,
                             currentProject, hasUpdates,
                         };
                     },
@@ -159,7 +170,8 @@ export class CheckUpdatesCommand extends BaseCommand {
                     || templateUpdates.length > 0
                     || forkSyncItems.length > 0
                     || blockLibraryItems.length > 0
-                    || inspectorItems.length > 0;
+                    || inspectorItems.length > 0
+                    || adobeMcpItems.length > 0;
 
                 if (hasNonExtensionUpdates) {
                     await this.showMultiProjectUpdatePicker(
@@ -168,6 +180,7 @@ export class CheckUpdatesCommand extends BaseCommand {
                         forkSyncItems,
                         blockLibraryItems,
                         inspectorItems,
+                        adobeMcpItems,
                         currentProject ?? null,
                     );
                 }
@@ -187,11 +200,12 @@ export class CheckUpdatesCommand extends BaseCommand {
         forkSyncItems: ForkSyncItem[],
         blockLibraryItems: BlockLibraryUpdateItem[],
         inspectorItems: InspectorUpdateItem[],
+        adobeMcpItems: AdobeMcpUpdateItem[],
         currentProject: Project | null,
     ): Promise<void> {
         const { items, title } = buildUpdatePickerItems(
             componentUpdates, templateUpdates, forkSyncItems,
-            blockLibraryItems, inspectorItems, currentProject,
+            blockLibraryItems, inspectorItems, adobeMcpItems, currentProject,
         );
 
         const selected = await vscode.window.showQuickPick(items, {
@@ -225,15 +239,21 @@ export class CheckUpdatesCommand extends BaseCommand {
         const selectedInspectors = selected.filter(
             (item): item is InspectorUpdateItem => 'isInspectorUpdate' in item && item.isInspectorUpdate,
         );
+        const selectedAdobeMcp = selected.filter(
+            (item): item is AdobeMcpUpdateItem => 'isAdobeMcpUpdate' in item && item.isAdobeMcpUpdate,
+        );
 
         this.logger.debug(
             `[Updates] User selected: ${selectedForks.length} fork(s), ${selectedTemplates.length} template(s), `
-            + `${selectedComponents.length} component(s), ${selectedBlockLibraries.length} block lib(s), ${selectedInspectors.length} inspector(s)`,
+            + `${selectedComponents.length} component(s), ${selectedBlockLibraries.length} block lib(s), `
+            + `${selectedInspectors.length} inspector(s), ${selectedAdobeMcp.length} Adobe MCP package(s)`,
         );
 
         const ctx = this.buildUpdateContext();
 
-        // Execution order: fork sync -> template -> components -> add-ons
+        // Execution order: fork sync -> template -> components -> Adobe MCP -> add-ons.
+        // Adobe MCP runs before add-ons so the new MCP version is in place when the
+        // post-update Regenerate AI Files pass writes refreshed skill bundles.
         if (selectedForks.length > 0) {
             await performForkSyncUpdates(selectedForks, ctx);
         }
@@ -246,11 +266,34 @@ export class CheckUpdatesCommand extends BaseCommand {
             await performComponentUpdates(selectedComponents, ctx);
         }
 
+        if (selectedAdobeMcp.length > 0) {
+            await performAdobeMcpUpdates(selectedAdobeMcp, ctx);
+        }
+
         if (selectedBlockLibraries.length > 0 || selectedInspectors.length > 0) {
             await performAddonUpdates(
                 selectedBlockLibraries, selectedInspectors, templateSyncSucceeded, ctx,
             );
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // Adobe MCP package check
+    // -----------------------------------------------------------------------
+
+    private async checkAdobeMcpUpdates(
+        allProjects: Project[],
+        currentProject: Project | null,
+    ): Promise<AdobeMcpUpdateItem[]> {
+        const checker = new AdobeMcpUpdateChecker(this.context.secrets, this.logger);
+        const items: AdobeMcpUpdateItem[] = [];
+        for (const project of allProjects) {
+            const result = await checker.checkForUpdates(project);
+            if (result?.hasUpdate) {
+                items.push(toAdobeMcpUpdateItem(project, result, currentProject));
+            }
+        }
+        return items;
     }
 
     // -----------------------------------------------------------------------

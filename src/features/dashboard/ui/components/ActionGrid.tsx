@@ -17,16 +17,19 @@ import {
     ActionButton,
     Text,
 } from '@adobe/react-spectrum';
+import MagicWand from '@spectrum-icons/workflow/MagicWand';
 import Code from '@spectrum-icons/workflow/Code';
 import Delete from '@spectrum-icons/workflow/Delete';
 import Edit from '@spectrum-icons/workflow/Edit';
 import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
 import Globe from '@spectrum-icons/workflow/Globe';
 import PlayCircle from '@spectrum-icons/workflow/PlayCircle';
+import PublishCheck from '@spectrum-icons/workflow/PublishCheck';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import Settings from '@spectrum-icons/workflow/Settings';
 import StopCircle from '@spectrum-icons/workflow/StopCircle';
 import ViewList from '@spectrum-icons/workflow/ViewList';
+import Wrench from '@spectrum-icons/workflow/Wrench';
 import React from 'react';
 import { GridLayout } from '@/core/ui/components/layout';
 
@@ -64,12 +67,18 @@ export interface ActionGridProps {
     handleViewLogs: () => void;
     /** Handler for Deploy Mesh button */
     handleDeployMesh: () => void;
+    /** Handler for Sync Storefront button (EDS projects only) */
+    handleSyncStorefront?: () => void;
     /** Handler for Configure button */
     handleConfigure: () => void;
     /** Handler for Components button */
     handleViewComponents: () => void;
     /** Handler for Dev Console button */
     handleOpenDevConsole: () => void;
+    /** Handler for Open in Claude Code button */
+    handleOpenInClaude: () => void;
+    /** Handler for AI — opens the standalone AI surface */
+    handleOpenAi: () => void;
     /** Handler for Delete button */
     handleDeleteProject: () => void;
 }
@@ -98,9 +107,12 @@ export function ActionGrid({
     handleOpenDaLive,
     handleViewLogs,
     handleDeployMesh,
+    handleSyncStorefront,
     handleConfigure,
     handleViewComponents,
     handleOpenDevConsole,
+    handleOpenInClaude,
+    handleOpenAi,
     handleDeleteProject,
 }: ActionGridProps): React.ReactElement {
     return (
@@ -192,6 +204,30 @@ export function ActionGrid({
                 </ActionButton>
             )}
 
+            {/* Sync Storefront - EDS projects only (commits + pushes + Helix preview/publish) */}
+            {isEds && handleSyncStorefront && (
+                <ActionButton
+                    onPress={handleSyncStorefront}
+                    isQuiet
+                    UNSAFE_className="dashboard-action-button"
+                    data-action="sync-storefront"
+                >
+                    <PublishCheck size="L" />
+                    <Text UNSAFE_className="icon-label">Sync Storefront</Text>
+                </ActionButton>
+            )}
+
+            {/* AI — standalone AI surface. Position: between Sync Storefront and Configure. */}
+            <ActionButton
+                onPress={handleOpenAi}
+                isQuiet
+                UNSAFE_className="dashboard-action-button"
+                aria-label="AI"
+            >
+                <MagicWand size="L" />
+                <Text UNSAFE_className="icon-label">AI</Text>
+            </ActionButton>
+
             {/* Configure */}
             <ActionButton
                 onPress={handleConfigure}
@@ -221,6 +257,17 @@ export function ActionGrid({
             >
                 <Code size="L" />
                 <Text UNSAFE_className="icon-label">Dev Console</Text>
+            </ActionButton>
+
+            {/* Open in Claude Code (CLI harness) */}
+            <ActionButton
+                onPress={handleOpenInClaude}
+                isQuiet
+                UNSAFE_className="dashboard-action-button"
+                aria-label="Open in Claude Code"
+            >
+                <Wrench size="L" />
+                <Text UNSAFE_className="icon-label">Open in Claude Code</Text>
             </ActionButton>
 
             {/* Delete Project */}

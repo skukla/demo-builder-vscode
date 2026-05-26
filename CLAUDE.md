@@ -54,6 +54,7 @@ demo-builder-vscode/
 ├── src/                    # Source code (→ see src/CLAUDE.md)
 │   ├── commands/          # VS Code commands (→ see src/commands/CLAUDE.md)
 │   ├── features/          # Feature modules (→ see src/features/CLAUDE.md)
+│   │   ├── ai/               # AI context verification & MCP server
 │   │   ├── authentication/   # Adobe authentication
 │   │   ├── components/       # Component management
 │   │   ├── dashboard/        # Project dashboard

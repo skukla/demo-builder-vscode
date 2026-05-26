@@ -8,6 +8,9 @@ import {
     handleGetProjects,
     handleSelectProject,
     handleCreateProject,
+    handleCopyProjectPath,
+    handleOpenInClaudeForProject,
+    handleOpenAiForProject,
 } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import {
     createMockProject,
@@ -35,16 +38,28 @@ jest.mock('vscode', () => ({
             get: jest.fn().mockReturnValue('cards'),
         }),
     },
+    Uri: {
+        file: jest.fn((p: string) => ({ fsPath: p, path: p })),
+    },
+    env: {
+        clipboard: {
+            writeText: jest.fn(),
+        },
+    },
+    window: {
+        showInformationMessage: jest.fn(),
+    },
 }), { virtual: true });
 
 describe('dashboardHandlers', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        // Reset vscode config mock to default
+        // Reset vscode mocks to defaults
         const vscode = require('vscode');
         vscode.workspace.getConfiguration.mockReturnValue({
             get: jest.fn().mockReturnValue('cards'),
         });
+        vscode.commands.executeCommand.mockResolvedValue(undefined);
     });
 
     describe('handleGetProjects', () => {
@@ -375,6 +390,154 @@ describe('dashboardHandlers', () => {
             await handleCreateProject(context as any);
 
             expect(context.sendMessage).not.toHaveBeenCalled();
+        });
+    });
+
+
+    describe('handleCopyProjectPath', () => {
+        it('should copy the project path to clipboard', async () => {
+            const context = createMockHandlerContext([]);
+            const vscode = require('vscode');
+
+            const result = await handleCopyProjectPath(context as any, {
+                projectPath: `${require('os').homedir()}/.demo-builder/projects/test-project`,
+            });
+
+            expect(vscode.env.clipboard.writeText).toHaveBeenCalledWith(
+                `${require('os').homedir()}/.demo-builder/projects/test-project`,
+            );
+            expect(result).toEqual({ success: true });
+        });
+
+        it('should show an information message after copying', async () => {
+            const context = createMockHandlerContext([]);
+            const vscode = require('vscode');
+
+            await handleCopyProjectPath(context as any, {
+                projectPath: `${require('os').homedir()}/.demo-builder/projects/test-project`,
+            });
+
+            expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
+                expect.stringContaining('copied'),
+            );
+        });
+
+        it('should return error when projectPath is missing', async () => {
+            const context = createMockHandlerContext([]);
+
+            const result = await handleCopyProjectPath(context as any, undefined);
+
+            expect(result.success).toBe(false);
+            expect(result.error).toBeDefined();
+        });
+
+        it('should handle clipboard error', async () => {
+            const context = createMockHandlerContext([]);
+            const vscode = require('vscode');
+            vscode.env.clipboard.writeText.mockRejectedValue(
+                new Error('Clipboard failed'),
+            );
+
+            const result = await handleCopyProjectPath(context as any, {
+                projectPath: `${require('os').homedir()}/.demo-builder/projects/test-project`,
+            });
+
+            expect(result.success).toBe(false);
+            expect(context.logger.error).toHaveBeenCalled();
+        });
+    });
+
+    describe('handleOpenInClaudeForProject (D4)', () => {
+        it('should dispatch demoBuilder.openInClaude with the loaded project', async () => {
+            const project = createMockProject({ name: 'Claude Target' });
+            const context = createMockHandlerContext([project]);
+            const vscode = require('vscode');
+
+            const result = await handleOpenInClaudeForProject(context as any, {
+                projectPath: project.path,
+            });
+
+            expect(result.success).toBe(true);
+            expect(context.stateManager.loadProjectFromPath).toHaveBeenCalledWith(
+                project.path,
+                undefined,
+                { persistAfterLoad: false },
+            );
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                'demoBuilder.openInClaude',
+                project,
+            );
+        });
+
+        it('should return error when projectPath is missing', async () => {
+            const context = createMockHandlerContext([]);
+            const vscode = require('vscode');
+
+            const result = await handleOpenInClaudeForProject(context as any, {} as any);
+
+            expect(result.success).toBe(false);
+            expect(result.error).toMatch(/path is required/i);
+            expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+        });
+
+        it('should return error when project cannot be loaded', async () => {
+            const context = createMockHandlerContext([]);
+            const vscode = require('vscode');
+
+            const result = await handleOpenInClaudeForProject(context as any, {
+                projectPath: '/nonexistent/path',
+            });
+
+            expect(result.success).toBe(false);
+            expect(result.error).toMatch(/not found/i);
+            expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('handleOpenAiForProject (E3)', () => {
+        it('should dispatch demoBuilder.openAi with the loaded project', async () => {
+            const project = createMockProject({ name: 'AI Target' });
+            const context = createMockHandlerContext([project]);
+            const vscode = require('vscode');
+
+            const result = await handleOpenAiForProject(context as any, {
+                projectPath: project.path,
+            });
+
+            expect(result.success).toBe(true);
+            expect(context.stateManager.loadProjectFromPath).toHaveBeenCalledWith(
+                project.path,
+                undefined,
+                { persistAfterLoad: false },
+            );
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                'demoBuilder.openAi',
+                project,
+            );
+        });
+
+        it('should return error when projectPath is missing', async () => {
+            const context = createMockHandlerContext([]);
+            const vscode = require('vscode');
+
+            const result = await handleOpenAiForProject(context as any, {} as any);
+
+            expect(result.success).toBe(false);
+            expect(result.error).toMatch(/path is required/i);
+            expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+        });
+
+        it('should return error when project cannot be loaded', async () => {
+            const context = createMockHandlerContext([]);
+            const vscode = require('vscode');
+
+            const result = await handleOpenAiForProject(context as any, {
+                projectPath: '/nonexistent/path',
+            });
+
+            expect(result.success).toBe(false);
+            expect(result.error).toMatch(/not found/i);
+            expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
         });
     });
 });

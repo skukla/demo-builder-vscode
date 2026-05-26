@@ -20,17 +20,15 @@ jest.setTimeout(5000);
 // =============================================================================
 
 const mockUpdateSiteConfig = jest.fn();
-const mockSetFolderMapping = jest.fn();
 
 jest.mock('@/features/eds/services/configurationService', () => ({
     ConfigurationService: jest.fn().mockImplementation(() => ({
         updateSiteConfig: mockUpdateSiteConfig,
-        setFolderMapping: mockSetFolderMapping,
     })),
-    DEFAULT_FOLDER_MAPPING: { '/products/': '/products/default' },
-    buildSiteConfigParams: (owner: string, repo: string, org: string, site: string) => ({
+    buildSiteConfigParams: (owner: string, repo: string, org: string, site: string, overlayUrl?: string) => ({
         org, site, codeOwner: owner, codeRepo: repo,
         contentSourceUrl: `https://content.da.live/${org}/${site}/`,
+        ...(overlayUrl && { contentOverlayUrl: overlayUrl }),
     }),
 }));
 
@@ -245,26 +243,13 @@ describe('executeEdsReset - Configuration Service (Step 6)', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         context = createContext();
-        // Default: both operations succeed
         mockUpdateSiteConfig.mockResolvedValue({ success: true });
-        mockSetFolderMapping.mockResolvedValue({ success: true });
     });
 
-    it('calls updateSiteConfig and setFolderMapping on successful reset', async () => {
+    it('calls updateSiteConfig on successful reset', async () => {
         await executeEdsReset(createParams(), context, mockTokenProvider);
 
         expect(mockUpdateSiteConfig).toHaveBeenCalledTimes(1);
-        expect(mockSetFolderMapping).toHaveBeenCalledTimes(1);
-    });
-
-    it('does NOT call setFolderMapping when updateSiteConfig fails', async () => {
-        mockUpdateSiteConfig.mockResolvedValue({ success: false, error: 'Not authorized' });
-
-        const result = await executeEdsReset(createParams(), context, mockTokenProvider);
-
-        expect(mockSetFolderMapping).not.toHaveBeenCalled();
-        // Reset completes despite Config Service failure
-        expect(result.success).toBe(true);
     });
 
     it('logs warning and continues when updateSiteConfig fails', async () => {
@@ -280,27 +265,20 @@ describe('executeEdsReset - Configuration Service (Step 6)', () => {
         expect(result.success).toBe(true);
     });
 
-    it('logs warning and continues when setFolderMapping fails', async () => {
-        mockSetFolderMapping.mockResolvedValue({ success: false, error: 'Folder mapping not supported' });
+    it('threads byomOverlayUrl into updateSiteConfig params when present', async () => {
+        const params = { ...createParams(), byomOverlayUrl: 'https://byom.example.com' };
 
-        const result = await executeEdsReset(createParams(), context, mockTokenProvider);
+        await executeEdsReset(params, context, mockTokenProvider);
 
-        const warnCalls = (context.logger.warn as jest.Mock).mock.calls;
-        const hasFolderWarning = warnCalls.some(
-            (call: string[]) => call[0].includes('Folder mapping'),
+        expect(mockUpdateSiteConfig).toHaveBeenCalledWith(
+            expect.objectContaining({ contentOverlayUrl: 'https://byom.example.com' }),
         );
-        expect(hasFolderWarning).toBe(true);
-        // Reset must complete — folder mapping failure is non-fatal
-        expect(result.success).toBe(true);
     });
 
-    it('does NOT log folder mapping warning when setFolderMapping succeeds', async () => {
+    it('omits contentOverlayUrl from updateSiteConfig params when byomOverlayUrl absent', async () => {
         await executeEdsReset(createParams(), context, mockTokenProvider);
 
-        const warnCalls = (context.logger.warn as jest.Mock).mock.calls;
-        const hasFolderWarning = warnCalls.some(
-            (call: string[]) => call[0].includes('Folder mapping'),
-        );
-        expect(hasFolderWarning).toBe(false);
+        const callArgs = mockUpdateSiteConfig.mock.calls[0][0];
+        expect(callArgs.contentOverlayUrl).toBeUndefined();
     });
 });

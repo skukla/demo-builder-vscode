@@ -35,7 +35,6 @@ export { CleanupService } from './services/cleanupService';
 export {
     ConfigurationService,
     type SiteRegistrationParams,
-    type FolderMapping,
     type ConfigServiceResult,
 } from './services/configurationService';
 

@@ -1,7 +1,7 @@
 /**
  * ProjectActionsMenu Component
  *
- * Kebab menu (⋮) for project actions like Start/Stop, Open, Export, and Delete.
+ * Kebab menu (three dots) for project actions like Start/Stop, Open, Export, and Delete.
  * Handles click propagation to prevent triggering parent selection.
  * Used by both ProjectCard and ProjectRow components.
  *
@@ -12,15 +12,20 @@
  */
 
 import { Text, ActionButton, MenuTrigger, Menu, Item } from '@adobe/react-spectrum';
+import MagicWand from '@spectrum-icons/workflow/MagicWand';
+import Copy from '@spectrum-icons/workflow/Copy';
 import Delete from '@spectrum-icons/workflow/Delete';
 import Edit from '@spectrum-icons/workflow/Edit';
 import Export from '@spectrum-icons/workflow/Export';
 import Globe from '@spectrum-icons/workflow/Globe';
 import MoreSmallListVert from '@spectrum-icons/workflow/MoreSmallListVert';
+import PinOff from '@spectrum-icons/workflow/PinOff';
+import PinOn from '@spectrum-icons/workflow/PinOn';
 import Play from '@spectrum-icons/workflow/Play';
 import Rename from '@spectrum-icons/workflow/Rename';
 import Revert from '@spectrum-icons/workflow/Revert';
 import Stop from '@spectrum-icons/workflow/Stop';
+import Wrench from '@spectrum-icons/workflow/Wrench';
 import React, { useCallback, useMemo } from 'react';
 import type { Project } from '@/types/base';
 import { isEdsProject } from '@/types/typeGuards';
@@ -29,7 +34,62 @@ import { isEdsProject } from '@/types/typeGuards';
 interface MenuItem {
     key: string;
     label: string;
-    icon: 'play' | 'stop' | 'globe' | 'dalive' | 'edit' | 'rename' | 'export' | 'delete' | 'reset' | 'republish';
+    icon: string;
+}
+
+/**
+ * Bundled project action callbacks.
+ *
+ * Groups the 13 action callbacks that flow through the component tree
+ * (ProjectsDashboard -> Grid/RowList -> Card/Row -> ActionsMenu) into
+ * a single object, reducing prop threading from 13 individual props to 1.
+ *
+ * `onSelect` is intentionally excluded: it is a card/row-level concern,
+ * not a menu action.
+ */
+export interface ProjectActions {
+    onStartDemo?: (project: Project) => void;
+    onStopDemo?: (project: Project) => void;
+    onOpenBrowser?: (project: Project) => void;
+    onOpenLiveSite?: (project: Project) => void;
+    onOpenDaLive?: (project: Project) => void;
+    onResetProject?: (project: Project) => void;
+    onRepublishContent?: (project: Project) => void;
+    onEdit?: (project: Project) => void;
+    onRename?: (project: Project) => void;
+    onCopyPath?: (project: Project) => void;
+    onExport?: (project: Project) => void;
+    onOpenInClaudeCode?: (project: Project) => void;
+    onOpenAi?: (project: Project) => void;
+    /**
+     * Toggle the project's pinned status. The caller flips the boolean
+     * based on the project's current `pinned` field.
+     */
+    onPinToggle?: (project: Project) => void;
+    onDelete?: (project: Project) => void;
+}
+
+/** Icon lookup - maps menu item icon keys to Spectrum icon components */
+const ICON_MAP: Record<string, React.ReactElement> = {
+    play: <Play size="S" />,
+    stop: <Stop size="S" />,
+    globe: <Globe size="S" />,
+    dalive: <Edit size="S" />,
+    edit: <Edit size="S" />,
+    rename: <Rename size="S" />,
+    copy: <Copy size="S" />,
+    reset: <Revert size="S" />,
+    republish: <Globe size="S" />,
+    export: <Export size="S" />,
+    claudeCode: <Wrench size="S" />,
+    ai: <MagicWand size="S" />,
+    pinOn: <PinOn size="S" />,
+    pinOff: <PinOff size="S" />,
+    delete: <Delete size="S" />,
+};
+
+function renderMenuIcon(iconKey: string): React.ReactElement | null {
+    return ICON_MAP[iconKey] ?? null;
 }
 
 export interface ProjectActionsMenuProps {
@@ -37,28 +97,8 @@ export interface ProjectActionsMenuProps {
     project: Project;
     /** Whether the project demo is currently running */
     isRunning?: boolean;
-    /** Callback to start the demo */
-    onStartDemo?: (project: Project) => void;
-    /** Callback to stop the demo */
-    onStopDemo?: (project: Project) => void;
-    /** Callback to open the demo in browser (for non-EDS projects) */
-    onOpenBrowser?: (project: Project) => void;
-    /** Callback to open the live site (for EDS projects) */
-    onOpenLiveSite?: (project: Project) => void;
-    /** Callback to open DA.live for authoring (for EDS projects) */
-    onOpenDaLive?: (project: Project) => void;
-    /** Callback to reset project (re-clone components or reset from template) */
-    onResetProject?: (project: Project) => void;
-    /** Callback to republish content to CDN (for EDS projects) */
-    onRepublishContent?: (project: Project) => void;
-    /** Callback to edit project settings */
-    onEdit?: (project: Project) => void;
-    /** Callback to rename project */
-    onRename?: (project: Project) => void;
-    /** Callback to export project settings */
-    onExport?: (project: Project) => void;
-    /** Callback to delete project */
-    onDelete?: (project: Project) => void;
+    /** Bundled action callbacks */
+    actions: ProjectActions;
     /** Optional CSS class for the menu button */
     className?: string;
 }
@@ -72,58 +112,52 @@ export interface ProjectActionsMenuProps {
 export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     project,
     isRunning = false,
-    onStartDemo,
-    onStopDemo,
-    onOpenBrowser,
-    onOpenLiveSite,
-    onOpenDaLive,
-    onResetProject,
-    onRepublishContent,
-    onEdit,
-    onRename,
-    onExport,
-    onDelete,
+    actions,
     className,
 }) => {
+    const {
+        onStartDemo,
+        onStopDemo,
+        onOpenBrowser,
+        onOpenLiveSite,
+        onOpenDaLive,
+        onResetProject,
+        onRepublishContent,
+        onEdit,
+        onRename,
+        onCopyPath,
+        onExport,
+        onOpenInClaudeCode,
+        onOpenAi,
+        onPinToggle,
+        onDelete,
+    } = actions;
+
     const isEds = isEdsProject(project);
 
+    // Action dispatch map - avoids a 13-case switch statement.
+    // Each key maps to the callback that handles it.
+    const actionMap = useMemo<Record<string, ((p: Project) => void) | undefined>>(() => ({
+        start: onStartDemo,
+        stop: onStopDemo,
+        open: onOpenBrowser,
+        openLive: onOpenLiveSite,
+        openDaLive: onOpenDaLive,
+        resetProject: onResetProject,
+        republishContent: onRepublishContent,
+        edit: onEdit,
+        rename: onRename,
+        copyPath: onCopyPath,
+        export: onExport,
+        openInClaudeCode: onOpenInClaudeCode,
+        openAi: onOpenAi,
+        pinToggle: onPinToggle,
+        delete: onDelete,
+    }), [onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename, onCopyPath, onExport, onOpenInClaudeCode, onOpenAi, onPinToggle, onDelete]);
+
     const handleMenuAction = useCallback((key: React.Key) => {
-        switch (key) {
-            case 'start':
-                onStartDemo?.(project);
-                break;
-            case 'stop':
-                onStopDemo?.(project);
-                break;
-            case 'open':
-                onOpenBrowser?.(project);
-                break;
-            case 'openLive':
-                onOpenLiveSite?.(project);
-                break;
-            case 'openDaLive':
-                onOpenDaLive?.(project);
-                break;
-            case 'resetProject':
-                onResetProject?.(project);
-                break;
-            case 'republishContent':
-                onRepublishContent?.(project);
-                break;
-            case 'edit':
-                onEdit?.(project);
-                break;
-            case 'rename':
-                onRename?.(project);
-                break;
-            case 'export':
-                onExport?.(project);
-                break;
-            case 'delete':
-                onDelete?.(project);
-                break;
-        }
-    }, [project, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename, onExport, onDelete]);
+        actionMap[String(key)]?.(project);
+    }, [project, actionMap]);
 
     // Stop click propagation to prevent triggering parent selection
     const handleMenuClick = useCallback((e: React.MouseEvent) => {
@@ -154,6 +188,10 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             if (onRepublishContent) {
                 items.push({ key: 'republishContent', label: 'Republish Content', icon: 'republish' });
             }
+            // Open Project / Copy Path (available for all)
+            if (onCopyPath) {
+                items.push({ key: 'copyPath', label: 'Copy Path', icon: 'copy' });
+            }
         } else {
             // Non-EDS projects: Start/Stop based on running state
             if (isRunning && onStopDemo) {
@@ -176,9 +214,13 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             if (onRename) {
                 items.push({ key: 'rename', label: 'Rename', icon: 'rename' });
             }
+            // Open Project / Copy Path (available for all)
+            if (onCopyPath) {
+                items.push({ key: 'copyPath', label: 'Copy Path', icon: 'copy' });
+            }
         }
 
-        // Reset project — available for all project types
+        // Reset project - available for all project types
         if (onResetProject) {
             items.push({ key: 'resetProject', label: 'Reset', icon: 'reset' });
         }
@@ -187,11 +229,28 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         if (onExport) {
             items.push({ key: 'export', label: 'Export', icon: 'export' });
         }
+        // Open in Claude Code (CLI harness) - available for all project types when wired
+        if (onOpenInClaudeCode) {
+            items.push({ key: 'openInClaudeCode', label: 'Open in Claude Code', icon: 'claudeCode' });
+        }
+        // Open AI (standalone AI surface) — adjacent to Open in Claude Code
+        if (onOpenAi) {
+            items.push({ key: 'openAi', label: 'Open AI', icon: 'ai' });
+        }
+        // Pin / Unpin — toggle the project's pinned status. Label and
+        // icon flip based on the current state.
+        if (onPinToggle) {
+            items.push({
+                key: 'pinToggle',
+                label: project.pinned ? 'Unpin' : 'Pin',
+                icon: project.pinned ? 'pinOff' : 'pinOn',
+            });
+        }
         if (onDelete) {
             items.push({ key: 'delete', label: 'Delete', icon: 'delete' });
         }
         return items;
-    }, [isEds, isRunning, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename, onExport, onDelete]);
+    }, [isEds, isRunning, project.pinned, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename, onCopyPath, onExport, onOpenInClaudeCode, onOpenAi, onPinToggle, onDelete]);
 
     // Don't render if no actions available
     if (menuItems.length === 0) {
@@ -212,16 +271,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                 <Menu onAction={handleMenuAction} items={menuItems}>
                     {(item) => (
                         <Item key={item.key} textValue={item.label}>
-                            {item.icon === 'play' && <Play size="S" />}
-                            {item.icon === 'stop' && <Stop size="S" />}
-                            {item.icon === 'globe' && <Globe size="S" />}
-                            {item.icon === 'dalive' && <Edit size="S" />}
-                            {item.icon === 'edit' && <Edit size="S" />}
-                            {item.icon === 'rename' && <Rename size="S" />}
-                            {item.icon === 'reset' && <Revert size="S" />}
-                            {item.icon === 'republish' && <Globe size="S" />}
-                            {item.icon === 'export' && <Export size="S" />}
-                            {item.icon === 'delete' && <Delete size="S" />}
+                            {renderMenuIcon(item.icon)}
                             <Text>{item.label}</Text>
                         </Item>
                     )}

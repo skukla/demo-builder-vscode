@@ -128,6 +128,9 @@ export const TIMEOUTS = {
     /** Prerequisites check timeout - reduced for faster failure (10 seconds) */
     PREREQUISITE_CHECK: 10000,
 
+    /** Per-server MCP introspection budget — connect + paginate tools/list (15 seconds) */
+    MCP_INSPECT: 15000,
+
     /** Extract archives timeout (30 seconds) */
     UPDATE_EXTRACT: 30000,
 
@@ -230,9 +233,11 @@ export const TIMEOUTS = {
     /** EDS code sync poll interval (5 seconds) */
     EDS_CODE_SYNC_POLL: 5000,
 
-    /** Delay before retrying Configuration Service registration on new repos (10 seconds)
-     * Allows admin role propagation after GitHub App installation */
-    CONFIG_SERVICE_RETRY_DELAY: 10000,
+    /** Delay before retrying Configuration Service registration on new repos (30 seconds).
+     * Used as the base delay; retryRegistrationAfterDelay multiplies it to 30/45/60s for backoff.
+     * AEM Code Sync GitHub App admin role typically propagates within 30–90 seconds.
+     * Ref: https://www.aem.live/docs/config-service-setup */
+    CONFIG_SERVICE_RETRY_DELAY: 30000,
 
     /** Rate limit window (1 second) */
     RATE_LIMIT_WINDOW: 1000,

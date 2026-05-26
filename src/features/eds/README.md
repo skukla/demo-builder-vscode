@@ -112,7 +112,7 @@ Orchestrates complete EDS project setup through phases:
 | `repository` | 0-15% | Create/configure GitHub repository from template |
 | `storefront-code` | 15-35% | Push fstab.yaml, install block libraries (built-in + custom) with inspector tagging, install feature packs |
 | `code-sync` | 40-45% | Verify code synchronization, publish code to CDN |
-| `site-config` | 46-49% | Configure DA.live permissions, register with Configuration Service, set folder mapping |
+| `site-config` | 46-49% | Configure DA.live permissions, register with Configuration Service (with BYOM overlay support) |
 | `content` | 49-58% | Clear existing DA.live content, copy demo content from source |
 | `block-library` | 58-65% | Create block library in DA.live, apply EDS settings |
 | `publish` | 65-95% | Purge CDN cache, publish content and block library to CDN |

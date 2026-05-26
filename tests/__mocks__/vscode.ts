@@ -23,6 +23,12 @@ export const ProgressLocation = {
     SourceControl: 1,
 };
 
+export const ConfigurationTarget = {
+    Global: 1,
+    Workspace: 2,
+    WorkspaceFolder: 3,
+};
+
 export const Uri = {
     file: jest.fn((path: string) => ({
         fsPath: path,
@@ -94,6 +100,9 @@ export const window = {
         sendText: jest.fn(),
     })),
     registerWebviewViewProvider: jest.fn(),
+    tabGroups: {
+        all: [{ viewColumn: 1 }] as { viewColumn: number }[],
+    },
 };
 
 export const FileType = {
@@ -109,6 +118,16 @@ export const ExtensionMode = {
     Test: 3,
 };
 
+export const chat = {
+    createChatParticipant: jest.fn(() => ({ dispose: jest.fn() })),
+};
+
+export const CancellationTokenSource = jest.fn().mockImplementation(() => ({
+    token: { isCancellationRequested: false, onCancellationRequested: jest.fn() },
+    cancel: jest.fn(),
+    dispose: jest.fn(),
+}));
+
 export const commands = {
     registerCommand: jest.fn(),
     executeCommand: jest.fn(),
@@ -116,6 +135,10 @@ export const commands = {
 
 export const env = {
     openExternal: jest.fn(),
+    clipboard: {
+        writeText: jest.fn(),
+        readText: jest.fn(),
+    },
 };
 
 export const languages = {

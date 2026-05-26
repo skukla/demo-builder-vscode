@@ -94,6 +94,10 @@ export async function installBlockCollections(
         // Per-library: track source commit SHA for version tracking
         const libraryVersions: LibraryVersionInfo[] = [];
 
+        // Total blocks discovered across all source libraries (before destination dedup).
+        // Used to distinguish "source was empty" from "all blocks already present".
+        let totalDiscovered = 0;
+
         // 1. Discover blocks from each library, dedup across libraries
         for (const lib of libraries) {
             const sourceFiles = await githubFileOps.listRepoFiles(
@@ -113,6 +117,8 @@ export async function installBlockCollections(
                     discoveredBlocks.add(parts[1]);
                 }
             }
+
+            totalDiscovered += discoveredBlocks.size;
 
             // Determine which blocks are new (not seen in a prior library)
             const uniqueBlockIds: string[] = [];
@@ -156,8 +162,14 @@ export async function installBlockCollections(
         const sortedBlockIds = allBlockIds.sort();
 
         if (sortedBlockIds.length === 0) {
-            logger.warn('[Block Collection] No block files found across any library');
-            return { success: false, blocksCount: 0, blockIds: [], error: 'No block files found' };
+            if (totalDiscovered > 0) {
+                // All blocks from every source library are already in the destination repo
+                // (added by the template). Nothing to copy — this is a success.
+                logger.info(`[Block Collection] All ${totalDiscovered} blocks already present in destination — nothing to add`);
+                return { success: true, blocksCount: 0, blockIds: [], libraryVersions: [] };
+            }
+            logger.warn('[Block Collection] No blocks found in source libraries');
+            return { success: false, blocksCount: 0, blockIds: [], error: 'No blocks found in source libraries' };
         }
 
         // 2. Fetch file content for all unique block files

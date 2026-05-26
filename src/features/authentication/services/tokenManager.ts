@@ -31,16 +31,30 @@ export class TokenManager {
     }
 
     /**
-     * Clean CLI output by removing fnm messages
+     * Clean CLI output by removing fnm version messages and Adobe CLI warning lines,
+     * then extract the JSON object. Adobe CLI sometimes prefixes output with emoji
+     * warning lines (e.g. "⚠️ Warning: token expired") that break JSON.parse.
      */
     private cleanCommandOutput(output: string): string {
-        return output.trim().split('\n')
-            .filter(line =>
-                !line.startsWith('Using Node') &&
-                !line.includes('fnm') &&
-                line.trim().length > 0,
-            )
-            .join('\n').trim();
+        const lines = output.trim().split('\n').filter(line => {
+            const trimmed = line.trim();
+            if (!trimmed) return false;
+            if (trimmed.startsWith('Using Node')) return false;
+            if (trimmed.includes('fnm')) return false;
+            // Adobe CLI warning lines (emoji prefix or text prefix)
+            if (trimmed.startsWith('⚠') || trimmed.startsWith('Warning') || trimmed.startsWith('!')) return false;
+            return true;
+        });
+
+        const joined = lines.join('\n').trim();
+
+        // If the output doesn't start with a JSON value, extract the first JSON object
+        if (joined && !joined.startsWith('{') && !joined.startsWith('[') && !joined.startsWith('"')) {
+            const match = joined.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+            if (match) return match[0];
+        }
+
+        return joined;
     }
 
     /**

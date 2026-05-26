@@ -1,5 +1,4 @@
 import {
-    Heading,
     Text,
     Form,
     Button,
@@ -8,15 +7,14 @@ import {
     Flex,
     TextField,
 } from '@adobe/react-spectrum';
-import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { useFieldFocusTracking } from './hooks/useFieldFocusTracking';
 import { useSelectedComponents } from './hooks/useSelectedComponents';
 import { useServiceGroups } from './hooks/useServiceGroups';
-import { FormField, ConfigSection } from '@/core/ui/components/forms';
+import { ConfigSection } from '@/core/ui/components/forms';
 import { TwoColumnLayout, PageHeader, PageFooter } from '@/core/ui/components/layout';
 import { NavigationPanel, NavigationSection } from '@/core/ui/components/navigation';
 import { useFocusTrap } from '@/core/ui/hooks';
-import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
-import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import {
     normalizeProjectName,
@@ -25,6 +23,9 @@ import {
 import { url, pattern, normalizeUrl } from '@/core/validation/Validator';
 import { PAAS_URL, PAAS_GRAPHQL_ENDPOINT } from '@/features/components/config/envVarKeys';
 import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelpers';
+import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreConfigFieldRow';
+import { useAutoStoreDetect } from '@/features/components/ui/hooks/useAutoStoreDetect';
+import { useStoreDiscovery } from '@/features/components/ui/hooks/useStoreDiscovery';
 import type { Project } from '@/types/base';
 import { getMeshComponentInstance, hasEntries } from '@/types/typeGuards';
 import { ComponentEnvVar, ComponentConfigs } from '@/types/webview';
@@ -126,58 +127,12 @@ function getSaveButtonLabel(isSaving: boolean, isDeploying: boolean): string {
     return 'Save Changes';
 }
 
-/**
- * Context for rendering form fields
- */
-interface FormFieldRenderContext {
-    getFieldValue: (field: UniqueField) => string | boolean | undefined;
-    validationErrors: Record<string, string>;
-    touchedFields: Set<string>;
-    updateField: (field: UniqueField, value: string | boolean) => void;
-    normalizeUrlField: (field: UniqueField) => void;
-    selectableDefaultProps: Record<string, unknown>;
-}
-
-/**
- * Render a FormField component with proper value/error handling
- *
- * SOP §6: Extracted callback body complexity to named helper
- *
- * @param field - The field definition
- * @param context - Render context with callbacks and state
- * @returns FormField JSX element
- */
-function renderFormField(
-    field: UniqueField,
-    context: FormFieldRenderContext,
-): React.ReactElement {
-    const value = context.getFieldValue(field);
-    const error = context.validationErrors[field.key];
-    const showError = error && context.touchedFields.has(field.key);
-    const hasDefault = value && field.default && value === field.default;
-
-    return (
-        <FormField
-            key={field.key}
-            fieldKey={field.key}
-            label={field.label}
-            type={field.type as 'text' | 'url' | 'password' | 'select' | 'number'}
-            value={value !== undefined && value !== null ? String(value) : ''}
-            onChange={(val) => context.updateField(field, val)}
-            onBlur={field.type === 'url' ? () => context.normalizeUrlField(field) : undefined}
-            placeholder={field.placeholder}
-            description={field.description}
-            required={field.required}
-            error={error}
-            showError={!!showError}
-            options={field.options}
-            selectableDefaultProps={hasDefault ? context.selectableDefaultProps : undefined}
-            help={field.help}
-        />
-    );
-}
-
-export function ConfigureScreen({ project, componentsData, existingEnvValues, existingProjectNames = [] }: ConfigureScreenProps) {
+export function ConfigureScreen({
+    project,
+    componentsData,
+    existingEnvValues,
+    existingProjectNames = [],
+}: ConfigureScreenProps) {
     const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>({});
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
     const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
@@ -186,12 +141,8 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues, ex
     const [expandedNavSections, setExpandedNavSections] = useState<Set<string>>(new Set());
     const [activeSection, setActiveSection] = useState<string | null>(null);
     const [activeField, setActiveField] = useState<string | null>(null);
-    const lastFocusedSectionRef = useRef<string | null>(null);
-    const fieldCountInSectionRef = useRef<number>(0);
     const [projectName, setProjectName] = useState(project.name);
     const [projectNameTouched, setProjectNameTouched] = useState(false);
-
-    const selectableDefaultProps = useSelectableDefault();
 
     // Focus trap for keyboard navigation
     const containerRef = useFocusTrap<HTMLDivElement>({
@@ -238,89 +189,42 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues, ex
     // Deduplicate fields and organize by service group
     const serviceGroups = useServiceGroups({ selectedComponents, componentsData });
 
-    // Handle field focus to scroll section header into view
+    // Commerce store discovery — matches wizard UX. Connection fields (ACCS endpoint,
+    // PaaS URL + credentials) trigger automatic discovery; store-code fields render as
+    // cascading Pickers once results arrive.
+    const {
+        isFetching,
+        fetchError,
+        hasStoreData,
+        fetchStores,
+        getWebsiteItems,
+        getStoreGroupItems,
+        getStoreViewItems,
+        isStoreGroup,
+    } = useStoreDiscovery();
+
+    const { autoDetectKey, forceFetch } = useAutoStoreDetect({
+        configs: componentConfigs,
+        orgId: project.adobe?.organization,
+        fetchStores,
+        hasStoreData,
+        isFetching,
+    });
+
+    // Keep extension-side sharedState.currentComponentConfigs in sync with unsaved edits.
+    // The `discover-store-structure` handler reads credentials from this cache, so fresh
+    // URL / username / password edits must propagate before auto-detect fires.
     useEffect(() => {
-        if (serviceGroups.length === 0) return;
+        webviewClient.postMessage('sync-component-configs', componentConfigs);
+    }, [componentConfigs]);
 
-        const handleFieldFocus = (event: FocusEvent) => {
-            const target = event.target as HTMLElement;
-            const fieldWrapper = target.closest('[id^="field-"]');
-            if (!fieldWrapper) return;
-
-            const fieldId = fieldWrapper.id.replace('field-', '');
-            const section = serviceGroups.find(group =>
-                group.fields.some(f => f.key === fieldId),
-            );
-
-            if (!section) return;
-
-            setActiveField(fieldId);
-
-            const isNewSection = lastFocusedSectionRef.current !== section.id;
-            const fieldIndex = section.fields.findIndex(f => f.key === fieldId);
-            const isFirstFieldInSection = fieldIndex === 0;
-            const isBackwardNavigation = isNewSection && !isFirstFieldInSection;
-
-            if (isNewSection) {
-                fieldCountInSectionRef.current = isFirstFieldInSection ? 1 : fieldIndex + 1;
-                lastFocusedSectionRef.current = section.id;
-            } else {
-                fieldCountInSectionRef.current += 1;
-            }
-
-            setActiveSection(section.id);
-            setExpandedNavSections(prev => {
-                const newSet = new Set(prev);
-                newSet.add(section.id);
-                return newSet;
-            });
-
-            const shouldScroll = isNewSection || (fieldCountInSectionRef.current % 3 === 0);
-
-            if (shouldScroll) {
-                const navSectionElement = document.getElementById(`nav-${section.id}`);
-                if (navSectionElement) {
-                    navSectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-
-                if (isNewSection) {
-                    if (isBackwardNavigation) {
-                        fieldWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    } else {
-                        const sectionElement = document.getElementById(`section-${section.id}`);
-                        if (sectionElement) {
-                            sectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }
-                    }
-                } else {
-                    fieldWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-
-                setTimeout(() => {
-                    const navFieldElement = document.getElementById(`nav-field-${fieldId}`);
-                    if (navFieldElement) {
-                        navFieldElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    }
-                }, FRONTEND_TIMEOUTS.SCROLL_ANIMATION);
-            } else {
-                const navFieldElement = document.getElementById(`nav-field-${fieldId}`);
-                if (navFieldElement) {
-                    navFieldElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }
-            }
-        };
-
-        const inputs = document.querySelectorAll('input, select, textarea');
-        inputs.forEach(input => {
-            input.addEventListener('focus', handleFieldFocus as EventListener);
-        });
-
-        return () => {
-            inputs.forEach(input => {
-                input.removeEventListener('focus', handleFieldFocus as EventListener);
-            });
-        };
-    }, [serviceGroups]);
+    // Delegate field focus tracking and auto-scrolling to extracted hook
+    useFieldFocusTracking({
+        serviceGroups,
+        setActiveSection,
+        setActiveField,
+        setExpandedNavSections,
+    });
 
     /**
      * Get value from componentConfigs for validation purposes
@@ -590,11 +494,6 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues, ex
                     gap={0}
                     leftContent={
                         <div className="flex-column h-full">
-                            <Heading level={2} marginBottom="size-300">Configuration Settings</Heading>
-                            <Text marginBottom="size-300" UNSAFE_className="text-gray-700">
-                                Update the settings for your project components. Required fields are marked with an asterisk.
-                            </Text>
-
                             <Form UNSAFE_className="container-form">
                                 {/* Project Name Field */}
                                 <ConfigSection
@@ -614,46 +513,58 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues, ex
                                     />
                                 </ConfigSection>
 
-                            {serviceGroups.length === 0 ? (
-                                <Text UNSAFE_className="text-gray-600">
-                                    No components requiring configuration were found.
-                                </Text>
-                            ) : (
-                                <>
-                                    {serviceGroups.map((group, index) => (
-                                        <ConfigSection
-                                            key={group.id}
-                                            id={group.id}
-                                            label={group.label}
-                                            showDivider={index > 0}
-                                            footer={group.id === 'adobe-assets' ? (
-                                                <Flex marginTop="size-200">
-                                                    <Text UNSAFE_className="text-gray-600 text-sm">
-                                                        Universal Editor settings are configured in{' '}
-                                                        <Link
-                                                            onPress={() => webviewClient.postMessage('open-eds-settings')}
-                                                            UNSAFE_className="cursor-pointer"
-                                                        >
-                                                            Extension Settings
-                                                        </Link>
-                                                    </Text>
-                                                </Flex>
-                                            ) : undefined}
-                                        >
-                                            {group.fields.map(field =>
-                                                renderFormField(field, {
-                                                    getFieldValue,
-                                                    validationErrors,
-                                                    touchedFields,
-                                                    updateField,
-                                                    normalizeUrlField,
-                                                    selectableDefaultProps,
-                                                }),
-                                            )}
-                                        </ConfigSection>
-                                    ))}
-                                </>
-                            )}
+                                {serviceGroups.length === 0 ? (
+                                    <Text UNSAFE_className="text-gray-600">
+                                        No components requiring configuration were found.
+                                    </Text>
+                                ) : (
+                                    <>
+                                        {serviceGroups.map((group, index) => (
+                                            <ConfigSection
+                                                key={group.id}
+                                                id={group.id}
+                                                label={group.label}
+                                                showDivider={index > 0}
+                                                footer={group.id === 'adobe-assets' ? (
+                                                    <Flex marginTop="size-200">
+                                                        <Text UNSAFE_className="text-gray-600 text-sm">
+                                                            Universal Editor settings are configured in{' '}
+                                                            <Link
+                                                                onPress={() => webviewClient.postMessage('open-eds-settings')}
+                                                                UNSAFE_className="cursor-pointer"
+                                                            >
+                                                                Extension Settings
+                                                            </Link>
+                                                        </Text>
+                                                    </Flex>
+                                                ) : undefined}
+                                            >
+                                                {group.fields.map(field => (
+                                                    <StoreConfigFieldRow
+                                                        key={field.key}
+                                                        field={field}
+                                                        group={group}
+                                                        autoDetectKey={autoDetectKey}
+                                                        isFetching={isFetching}
+                                                        hasStoreData={hasStoreData}
+                                                        fetchError={fetchError}
+                                                        isStoreGroup={isStoreGroup}
+                                                        getFieldValue={getFieldValue}
+                                                        updateField={updateField}
+                                                        validationErrors={validationErrors}
+                                                        touchedFields={touchedFields}
+                                                        normalizeUrlField={normalizeUrlField}
+                                                        getWebsiteItems={getWebsiteItems}
+                                                        getStoreGroupItems={getStoreGroupItems}
+                                                        getStoreViewItems={getStoreViewItems}
+                                                        componentConfigs={componentConfigs}
+                                                        onRefresh={forceFetch}
+                                                    />
+                                                ))}
+                                            </ConfigSection>
+                                        ))}
+                                    </>
+                                )}
                             </Form>
                         </div>
                     }

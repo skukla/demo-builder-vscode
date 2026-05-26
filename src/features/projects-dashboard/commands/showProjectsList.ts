@@ -12,8 +12,8 @@ import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
-import { createBundleUris } from '@/core/utils/bundleUri';
-import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundles';
+import { getBundleUri } from '@/core/utils/bundleUri';
+import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers';
 import { HandlerContext, SharedState } from '@/types/handlers';
 
@@ -49,7 +49,7 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
         if (!this.panel) {
             throw new Error('Panel must be created before getting webview content');
         }
-        const bundleUris = createBundleUris({
+        const scriptUri = getBundleUri({
             webview: this.panel.webview,
             extensionPath: this.context.extensionPath,
             featureBundleName: 'projectsList',
@@ -57,9 +57,8 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
 
         const nonce = this.getNonce();
 
-        // Build HTML with 4-bundle pattern
-        return getWebviewHTMLWithBundles({
-            bundleUris,
+        return getWebviewHTML({
+            scriptUri,
             nonce,
             cspSource: this.panel.webview.cspSource,
             title: 'Projects',

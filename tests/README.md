@@ -358,6 +358,10 @@ A past migration revealed that tests using outdated mock structures can pass whi
 2. Verify `jest.config.js` React project `testMatch` includes file
 3. Check test imports `@testing-library/react` correctly
 
+### Why `--forceExit`?
+
+The `test`, `test:fast`, `test:safe`, and `test:force` scripts in `package.json` all pass `--forceExit` to Jest. See [`docs/testing/jest-force-exit.md`](../docs/testing/jest-force-exit.md) for the rationale — `tests/unit/prerequisites/parallelExecution.test.ts` uses real `setTimeout` to measure timing, which occasionally prevents Jest workers from exiting cleanly.
+
 ## Additional Resources
 
 - **Jest Documentation:** https://jestjs.io/docs/getting-started

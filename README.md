@@ -11,6 +11,7 @@ Create and manage Adobe Commerce demos with ease directly from Visual Studio Cod
 - 🎯 **Guided Setup** - Step-by-step wizard for configuration
 - 🔧 **Prerequisites Management** - Automatic detection and installation guidance
 - ☁️ **API Mesh Integration** - Deploy and manage Adobe API Mesh
+- 🤖 **Claude Code (CLI) Harness** - Open any project in Claude Code with one click; AI Configuration tab introspects skills, project MCP servers, and session MCPs
 
 ## Requirements
 
@@ -61,6 +62,76 @@ See [build documentation](docs/build.md) for detailed build instructions.
 - `Demo Builder: View Status` - Display detailed project status
 - `Demo Builder: Check for Updates` - Manually check for extension updates
 - `Demo Builder: Diagnostics` - Run comprehensive system diagnostics
+- `Demo Builder: Open in Claude Code` - Launch Claude Code on the current project (URI handler if the extension is installed, terminal otherwise)
+
+## AI Configuration & Claude Code Integration
+
+Demo Builder generates AI context files for every project (`AGENTS.md`, `.claude/skills/`, `.mcp.json`, `~/.claude.json` registration) so AI agents can reason about the project and use the Demo Builder MCP server. The intended harness is **Claude Code (CLI)** — either the standalone `claude` binary or Anthropic's official VS Code extension (`anthropic.claude-code`), which bundles the same binary.
+
+### Opening a project in Claude Code
+
+Each project has an **Open in Claude Code** action in two places:
+
+- The project dashboard (under the action grid)
+- The project card kebab menu on the home screen
+
+Clicking it launches Claude Code based on these settings:
+
+- **`demoBuilder.ai.engine`** — which AI tool. Currently only `claude-code` is supported; reserved for future engines (e.g. Codex).
+- **`demoBuilder.ai.surface`** — how Demo Builder launches the configured engine. **Terminal is the baseline** (no VS Code extension required); the Claude Code extension is offered as a convenience layer when detected.
+
+| `surface` | Behavior |
+|---|---|
+| `terminal` (default) | Launch `claude --continue` in a VS Code integrated terminal rooted at the project. The "Claude Code" terminal is reused across launches (one terminal per project per window). For prompt clicks, the prompt is copied to your clipboard so you can paste it into Claude with one keystroke. Works for anyone with the `claude` CLI installed. |
+| `extension` | Launch the Claude Code VS Code extension's chat panel via its URI handler, with the prompt pre-filled when applicable. If you explicitly pick this surface but the extension is missing, a recovery dialog offers "Install Claude Code Extension" or "Switch to Terminal Mode." |
+
+**Capability-aware offer**: the first time you click a prompt while on terminal mode AND the Claude Code extension is installed, Demo Builder offers a one-time switch to the extension surface — "Use the Extension" or "Stay in Terminal." Decline and you stay on the CLI; accept and the current click resolves via the chat panel.
+
+- **`demoBuilder.ai.dockToRight`** — boolean, default `false`. Dock the AI experience to the right side of VS Code, consistently across both surfaces. When `true`, the extension chat panel docks to the right secondary sidebar (Demo Builder syncs `claudeCode.preferredLocation = 'sidebar'` for you), and terminals open as editor tabs beside your code. Set via the one-time "Dock to right side?" toast on first launch, or in settings.
+
+### Recommended layout for AI workflows
+
+**Extension surface (chat panel UX)**
+
+- One prompt click = one new Claude conversation. Each chat appears in the sessions browser **after you send the first message** — until then it's a draft.
+- To continue an existing session with a Demo Builder prompt, use the prompt card's **Copy prompt** kebab action, then paste into the open chat input. The Claude Code URI handler doesn't support injecting text into existing sessions.
+- The sessions browser is independent of the chat panel — drag them to any layout you prefer. Demo Builder surfaces the browser via a **Browse Claude sessions** link on the AI dashboard (visible whenever the extension is installed).
+
+**Terminal surface (CLI UX)**
+
+- One prompt click = one new prompt to your active Claude terminal session. The first click starts the session via `claude --continue`; subsequent clicks reuse the same terminal and refresh the clipboard with the new prompt. Paste at the Claude prompt to send.
+- To browse past sessions, run `claude --resume` directly in your terminal — Claude Code's CLI exposes an interactive picker.
+- The **Browse Claude sessions** link on the AI dashboard is still available if the extension is also installed (you can use the extension's session browser to view, then switch back to the terminal for sending).
+- Demo Builder logs ("Demo Builder: User Logs" and "Demo Builder: Debug Logs") live in VS Code's bottom Output panel regardless of where your Claude terminal lives — you can have Claude as an editor tab on the right and still see logs streaming below.
+
+**CLI ↔ extension session storage is shared** at `~/.claude/projects/<encoded-cwd>/` (the cwd path with non-alphanumeric chars replaced by `-`, e.g. `/Users/me/proj` → `-Users-me-proj`). Sessions created in either surface appear in the other's listing:
+
+| CLI command | Extension UI equivalent |
+|---|---|
+| `claude` | Sessions browser "+ New session" |
+| `claude --continue` | "Open last session" (extension default for prompt clicks) |
+| `claude --resume` | Sessions browser (visual picker) |
+
+### Prompt clicks anchor the project as the VS Code workspace
+
+When you click a prompt from the AI surface, Demo Builder checks whether VS Code's workspace is already the project. If not, it briefly reloads the window with the project as the workspace before launching Claude Code — so the chat panel sees per-project skills, `.mcp.json` MCPs, and `AGENTS.md`. This happens automatically; you click once and the prompt is delivered with full project context.
+
+### AI Configuration tab
+
+The **AI Configuration** tab in `Demo Builder: Configure` shows live inventory for the open project:
+
+- **Skills** — every file in `.claude/skills/`, classified as `demo-builder` (lifecycle), `adobe` (from `@adobe-commerce/commerce-extensibility-tools`), or `unknown`
+- **Project MCP Servers** — each server declared in `.mcp.json`, expanded to show the tools it exposes
+- **Session MCP Servers** — Adobe MCPs the user has connected via Claude Code's catalog (read from `~/.claude.json::claudeAiMcpEverConnected`)
+- **Global MCP Registration** — whether the Demo Builder MCP is registered in `~/.claude.json` so Claude Code can find it from any project
+
+The tab includes actions to **Refresh** the inventory (re-runs `inspect-mcp`), **Regenerate AI Files** (re-runs `aiContextWriter`, `mcpConfigWriter`, and `skillsWriter`), and **Register** the global MCP if it isn't already.
+
+### Adobe MCP updates
+
+`Demo Builder: Check for Updates` includes the `@adobe-commerce/commerce-extensibility-tools` package alongside the existing fork, template, component, and add-on update sources. Applying the update runs `npm update` in the storefront and regenerates AI files so the skills bundle stays in sync.
+
+For architecture and rationale, see [ADR-004: Claude Code (CLI) as the AI Harness](docs/architecture/adr/004-claude-code-harness.md).
 
 ## Configuration
 

@@ -94,11 +94,9 @@ jest.mock('@/features/eds/services/helixService', () => ({
 jest.mock('@/features/eds/services/configurationService', () => ({
     ConfigurationService: jest.fn().mockImplementation(() => ({
         registerSite: jest.fn().mockResolvedValue({ success: true }),
-        setFolderMapping: jest.fn().mockResolvedValue({ success: true }),
         updateSiteConfig: jest.fn().mockResolvedValue({ success: true }),
         deleteSiteConfig: jest.fn().mockResolvedValue({ success: true }),
     })),
-    DEFAULT_FOLDER_MAPPING: { '/products/': '/products/default' },
     buildSiteConfigParams: (owner: string, repo: string, org: string, site: string) => ({
         org: owner, site: repo, codeOwner: owner, codeRepo: repo,
         contentSourceUrl: `https://content.da.live/${org}/${site}/`,

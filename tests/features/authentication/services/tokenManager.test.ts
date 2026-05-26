@@ -158,6 +158,49 @@ ${JSON.stringify({ token, expiry })}`;
             expect(result.token).toBe(token);
         });
 
+        it('should clean Adobe CLI emoji warning lines from output', async () => {
+            const now = Date.now();
+            const expiry = now + (60 * 60 * 1000);
+            const token = 'x'.repeat(150);
+
+            // Adobe CLI outputs "⚠️ Warning: ..." lines when token is near expiry
+            const outputWithWarning = `⚠️ Warning: Your token will expire soon
+${JSON.stringify({ token, expiry })}`;
+
+            mockCommandExecutor.execute.mockResolvedValue({
+                code: 0,
+                stdout: outputWithWarning,
+                stderr: '',
+            } as CommandResult);
+
+            const result = await tokenManager.inspectToken();
+
+            expect(result.valid).toBe(true);
+            expect(result.token).toBe(token);
+        });
+
+        it('should clean multiple warning lines before JSON', async () => {
+            const now = Date.now();
+            const expiry = now + (60 * 60 * 1000);
+            const token = 'x'.repeat(150);
+
+            const outputWithMultipleWarnings = `⚠️ Warning: first warning
+Warning: second warning
+! another warning line
+${JSON.stringify({ token, expiry })}`;
+
+            mockCommandExecutor.execute.mockResolvedValue({
+                code: 0,
+                stdout: outputWithMultipleWarnings,
+                stderr: '',
+            } as CommandResult);
+
+            const result = await tokenManager.inspectToken();
+
+            expect(result.valid).toBe(true);
+            expect(result.token).toBe(token);
+        });
+
         it('should handle invalid JSON in output', async () => {
             mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
