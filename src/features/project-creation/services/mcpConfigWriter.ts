@@ -95,7 +95,7 @@ export async function writeMcpConfigs(
         await fsPromises.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
     };
 
-    const mcpConfig = await buildMcpConfig(extensionDistPath);
+    const mcpConfig = await buildMcpConfig(extensionDistPath, project);
 
     await writeJson(path.join(projectPath, '.claude', 'mcp.json'), mcpConfig);
     await writeJson(path.join(projectPath, '.mcp.json'), mcpConfig);
@@ -259,7 +259,10 @@ async function resolveNodePath(): Promise<string> {
     return process.execPath;
 }
 
-async function buildMcpConfig(extensionDistPath: string): Promise<McpConfig> {
+async function buildMcpConfig(
+    extensionDistPath: string,
+    project: Project,
+): Promise<McpConfig> {
     const nodePath = await resolveNodePath();
     const mcpServers: Record<string, McpServerEntry> = {
         'demo-builder': {
@@ -268,15 +271,23 @@ async function buildMcpConfig(extensionDistPath: string): Promise<McpConfig> {
         },
     };
 
-    // Always-installed MCP servers declared in ai-defaults.json. Each entry's
-    // package is added to the storefront's devDeps before `npm install`, so the
-    // declared args path (e.g., node_modules/@adobe-commerce/...) resolves at
-    // the cwd Claude Code launches from.
-    for (const entry of aiDefaults.mcpServers) {
-        mcpServers[entry.id] = {
-            command: entry.command,
-            args: entry.args,
-        };
+    // ai-defaults.json packages live under the storefront's node_modules
+    // (added as devDeps before `npm install`). Claude Code spawns each MCP
+    // with cwd = wherever it was launched (= project.path, not the storefront
+    // path), so relative `node_modules/...` refs would not resolve. Anchor
+    // each declared arg to the storefront path. Headless projects have no
+    // storefront — skip the entries entirely; the packages are not installed
+    // anywhere for those projects.
+    const storefrontPath = resolveStorefrontPath(project);
+    if (storefrontPath) {
+        for (const entry of aiDefaults.mcpServers) {
+            mcpServers[entry.id] = {
+                command: entry.command,
+                args: entry.args.map(arg =>
+                    path.isAbsolute(arg) ? arg : path.join(storefrontPath, arg),
+                ),
+            };
+        }
     }
 
     return { mcpServers };

@@ -137,7 +137,7 @@ describe('MCP config content', () => {
         expect(Object.keys(config.mcpServers).sort()).toEqual(['commerce-extensibility', 'demo-builder']);
     });
 
-    it('includes the Adobe App Builder MCP from ai-defaults.json with its declared command and args', async () => {
+    it('anchors the Adobe App Builder MCP args to the storefront path so Claude Code (cwd=project.path) can spawn it', async () => {
         const project = makeEdsProject();
         await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
@@ -148,7 +148,19 @@ describe('MCP config content', () => {
 
         expect(entry).toBeDefined();
         expect(entry.command).toBe('node');
-        expect(entry.args).toEqual(['node_modules/@adobe-commerce/commerce-extensibility-tools/index.js']);
+        expect(entry.args).toEqual([
+            `${EDS_STOREFRONT_PATH}/node_modules/@adobe-commerce/commerce-extensibility-tools/index.js`,
+        ]);
+    });
+
+    it('omits ai-defaults MCP entries for headless projects (no storefront, package never installed)', async () => {
+        const project = makeHeadlessProject();
+        await writeMcpConfigs('/projects/headless-project', project, EXTENSION_DIST);
+
+        const config = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, unknown> };
+
+        expect(config.mcpServers['commerce-extensibility']).toBeUndefined();
+        expect(Object.keys(config.mcpServers)).toEqual(['demo-builder']);
     });
 
     it('writes the same ai-defaults entries to both .claude/mcp.json and .mcp.json', async () => {
