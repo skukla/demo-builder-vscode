@@ -53,6 +53,11 @@ export function useDebouncedLoading(isLoading: boolean, delay: number = 300): bo
             const timeout = setTimeout(() => {
                 setShowLoading(true);
             }, delay);
+            // Don't hold the Node event loop open just for a debounced
+            // loading flag — keeps test workers from leaking past teardown.
+            if (typeof (timeout as NodeJS.Timeout).unref === 'function') {
+                (timeout as NodeJS.Timeout).unref();
+            }
 
             // Cleanup timer if loading completes before delay
             return () => clearTimeout(timeout);
