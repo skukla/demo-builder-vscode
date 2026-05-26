@@ -354,20 +354,8 @@ const ProjectsDashboardApp: React.FC = () => {
         }
     }, []);
 
-    // Handle Open in Claude Code (CLI harness) - dispatches to the
-    // `demoBuilder.openInClaude` command via the dashboard handler bridge.
-    const handleOpenInClaudeCode = useCallback(async (project: Project) => {
-        try {
-            await webviewClient.postMessage('openInClaude', {
-                projectPath: project.path,
-            });
-        } catch (error) {
-            console.error('Failed to open project in Claude Code:', error);
-        }
-    }, []);
-
     // Handle Open AI - dispatches to the `demoBuilder.openAi` command
-    // via the dashboard handler bridge. Mirrors handleOpenInClaudeCode exactly.
+    // via the dashboard handler bridge.
     const handleOpenAiForProject = useCallback(async (project: Project) => {
         try {
             await webviewClient.postMessage('openAi', {
@@ -415,7 +403,6 @@ const ProjectsDashboardApp: React.FC = () => {
         onRename: handleRenameProject,
         onCopyPath: handleCopyPath,
         onExport: handleExportProject,
-        onOpenInClaudeCode: handleOpenInClaudeCode,
         onOpenAi: handleOpenAiForProject,
         onPinToggle: handlePinToggle,
         onDelete: handleDeleteProject,
@@ -423,7 +410,7 @@ const ProjectsDashboardApp: React.FC = () => {
         handleStartDemo, handleStopDemo, handleOpenBrowser, handleOpenLiveSite,
         handleOpenDaLive, handleResetProject, handleRepublishContent, handleEditProject,
         handleRenameProject, handleCopyPath, handleExportProject,
-        handleOpenInClaudeCode, handleOpenAiForProject, handlePinToggle, handleDeleteProject,
+        handleOpenAiForProject, handlePinToggle, handleDeleteProject,
     ]);
 
     return (
