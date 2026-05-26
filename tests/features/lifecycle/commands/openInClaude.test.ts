@@ -818,10 +818,11 @@ describe('OpenInClaudeCommand', () => {
             );
             expect(dockCall).toBeDefined();
             const body = String(dockCall![0]).toLowerCase();
-            // Predictive wording — references the chat panel and the right-dock option
-            expect(body).toMatch(/chat panel/);
+            // Predictive wording — describes what dock-right actually does:
+            // chats in a right editor split + sessions browser in the sidebar.
             expect(body).toMatch(/right/);
-            expect(body).toMatch(/editor tab/);
+            expect(body).toMatch(/editor split/);
+            expect(body).toMatch(/sessions browser/);
             // Has both buttons
             const buttons = dockCall!.slice(1).map(String);
             expect(buttons).toEqual(expect.arrayContaining([DOCK_ACTION_LABEL, USE_DEFAULT_LAYOUT_ACTION_LABEL]));
@@ -2056,6 +2057,108 @@ describe('OpenInClaudeCommand', () => {
             // Terminal spawned with --continue (prompt NOT injected via sendText)
             expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
             expect(mocks.terminalSendTextMock).toHaveBeenCalledWith('claude --continue');
+        });
+    });
+
+    // ------------------------------------------------------------------------
+    // Dock-to-right: extension surface chat-tab placement
+    //
+    // Claude Code's URI handler always opens the chat as a new editor tab in
+    // the active group. To put the chat in a right-side editor split (matching
+    // the dock-to-right layout the user opted into), we ensure a second editor
+    // group exists and focus it BEFORE the URI launch.
+    // ------------------------------------------------------------------------
+
+    describe('launchViaUri respects dockToRight by placing the chat in a right editor split', () => {
+        const FOCUS_SECOND = 'workbench.action.focusSecondEditorGroup';
+        const SPLIT_RIGHT = 'workbench.action.splitEditorRight';
+
+        function setTabGroups(columns: number[]): void {
+            (vscode.window as unknown as {
+                tabGroups: { all: { viewColumn: number }[] };
+            }).tabGroups.all = columns.map(c => ({ viewColumn: c }));
+        }
+
+        it('splits the editor right when only one group exists, then focuses the new group before the URI launch', async () => {
+            const mocks = setupVscodeMocks({
+                surface: 'extension',
+                extensionInstalled: true,
+                dockToRight: true,
+            });
+            setTabGroups([1]);
+            const executeCommandMock = vscode.commands.executeCommand as jest.Mock;
+            executeCommandMock.mockResolvedValue(undefined);
+
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute(makeProject() as Project);
+
+            const cmdCalls = executeCommandMock.mock.calls.map(c => c[0] as string);
+            const splitIdx = executeCommandMock.mock.calls.findIndex(c => c[0] === SPLIT_RIGHT);
+            const focusIdx = executeCommandMock.mock.calls.findIndex(c => c[0] === FOCUS_SECOND);
+            const launchOrder = mocks.openExternalMock.mock.invocationCallOrder[0];
+
+            expect(cmdCalls).toEqual(expect.arrayContaining([SPLIT_RIGHT, FOCUS_SECOND]));
+            const splitInvocation = executeCommandMock.mock.invocationCallOrder[splitIdx];
+            const focusInvocation = executeCommandMock.mock.invocationCallOrder[focusIdx];
+            expect(splitInvocation).toBeLessThan(focusInvocation); // split before focus
+            expect(focusInvocation).toBeLessThan(launchOrder); // focus before launch
+            expect(mocks.openExternalMock).toHaveBeenCalledTimes(1);
+        });
+
+        it('skips the split when a second editor group already exists, but still focuses it before launch', async () => {
+            const mocks = setupVscodeMocks({
+                surface: 'extension',
+                extensionInstalled: true,
+                dockToRight: true,
+            });
+            setTabGroups([1, 2]);
+            const executeCommandMock = vscode.commands.executeCommand as jest.Mock;
+            executeCommandMock.mockResolvedValue(undefined);
+
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute(makeProject() as Project);
+
+            const cmdCalls = executeCommandMock.mock.calls.map(c => c[0] as string);
+            expect(cmdCalls).not.toContain(SPLIT_RIGHT);
+            expect(cmdCalls).toContain(FOCUS_SECOND);
+            const focusIdx = executeCommandMock.mock.calls.findIndex(c => c[0] === FOCUS_SECOND);
+            const focusInvocation = executeCommandMock.mock.invocationCallOrder[focusIdx];
+            const launchOrder = mocks.openExternalMock.mock.invocationCallOrder[0];
+            expect(focusInvocation).toBeLessThan(launchOrder);
+        });
+
+        it('does NOT split or focus when dockToRight is false', async () => {
+            const mocks = setupVscodeMocks({
+                surface: 'extension',
+                extensionInstalled: true,
+                dockToRight: false,
+            });
+            setTabGroups([1]);
+            const executeCommandMock = vscode.commands.executeCommand as jest.Mock;
+            executeCommandMock.mockResolvedValue(undefined);
+
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute(makeProject() as Project);
+
+            const cmdCalls = executeCommandMock.mock.calls.map(c => c[0] as string);
+            expect(cmdCalls).not.toContain(SPLIT_RIGHT);
+            expect(cmdCalls).not.toContain(FOCUS_SECOND);
+            expect(mocks.openExternalMock).toHaveBeenCalledTimes(1);
         });
     });
 });

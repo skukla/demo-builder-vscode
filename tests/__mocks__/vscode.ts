@@ -100,6 +100,9 @@ export const window = {
         sendText: jest.fn(),
     })),
     registerWebviewViewProvider: jest.fn(),
+    tabGroups: {
+        all: [{ viewColumn: 1 }] as { viewColumn: number }[],
+    },
 };
 
 export const FileType = {

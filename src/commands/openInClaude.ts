@@ -233,6 +233,39 @@ export class OpenInClaudeCommand extends BaseCommand {
         return config.get<boolean>('dockToRight', false);
     }
 
+    /**
+     * When `dockToRight` is set, ensure a right editor split exists and focus
+     * it so Claude Code's URI handler opens the chat there. Claude Code always
+     * spawns the chat as an editor tab in the active group — seeding the
+     * active group is the only public-API lever for placement.
+     *
+     * Layout cases:
+     *   - 1 group → split right + focus the new (second) group
+     *   - 2+ groups → focus the second group (no extra split)
+     *
+     * No-op when `dockToRight === false`. Errors from the layout commands are
+     * logged and swallowed; the URI launch still fires so the user gets the
+     * chat even if placement fails.
+     */
+    private async placeChatInRightSplitIfDocked(): Promise<void> {
+        if (!this.getDockToRight()) return;
+        const groupCount = vscode.window.tabGroups.all.length;
+        try {
+            if (groupCount < 2) {
+                await vscode.commands.executeCommand('workbench.action.splitEditorRight');
+            }
+            await vscode.commands.executeCommand('workbench.action.focusSecondEditorGroup');
+            this.logger.debug(
+                `[Open in Claude] placed chat in right split (groups before=${groupCount})`,
+            );
+        } catch (err) {
+            this.logger.warn(
+                `[Open in Claude] failed to place chat in right split: ` +
+                    `${err instanceof Error ? err.message : String(err)}`,
+            );
+        }
+    }
+
     /** Detect whether the Claude Code VS Code extension is installed. */
     private isClaudeCodeExtensionInstalled(): boolean {
         return vscode.extensions.getExtension(CLAUDE_CODE_EXTENSION_ID) !== undefined;
@@ -315,6 +348,11 @@ export class OpenInClaudeCommand extends BaseCommand {
      * with the prompt pre-filled in its input.
      */
     private async launchViaUri(project: Project | undefined, prompt?: string): Promise<void> {
+        // If the user has opted into dock-to-right, place the chat in a right
+        // editor split before the URI launch. Claude Code's URI handler opens
+        // the chat in whichever editor group has focus, so seeding the active
+        // group is the only way to control placement.
+        await this.placeChatInRightSplitIfDocked();
         const uri = prompt
             ? `${CLAUDE_CODE_URI}?prompt=${encodeURIComponent(prompt)}`
             : CLAUDE_CODE_URI;
@@ -529,8 +567,8 @@ export class OpenInClaudeCommand extends BaseCommand {
         this.logger.info(`[Open in Claude] dock offer shown (context=${launchContext})`);
 
         const body = launchContext === 'extension'
-            ? 'Where should the Claude Code chat panel open? Docking to the right keeps it visible alongside your code; otherwise it opens as an editor tab.'
-            : 'Where should the Claude terminal open? Docking to the right opens it as an editor tab beside your code; otherwise it opens in the bottom panel.';
+            ? 'Dock Claude Code to the right? Each new chat opens in a right editor split, and the Claude sessions browser docks in the secondary sidebar. (You can drag tabs anywhere later.)'
+            : 'Dock the Claude terminal to the right? Each new terminal opens as an editor tab beside your code; otherwise it opens in the bottom panel.';
 
         const choice = await vscode.window.showInformationMessage(
             body,
