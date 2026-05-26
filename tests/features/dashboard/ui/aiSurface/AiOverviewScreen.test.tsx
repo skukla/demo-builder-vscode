@@ -670,6 +670,63 @@ describe('AiOverviewScreen', () => {
             const browseCalls = calls.filter(c => c[0] === 'browseClaudeSessions');
             expect(browseCalls.length).toBe(1);
         });
+
+        it('appears live when surface flips terminal→extension via a surface-changed push', async () => {
+            const { webviewClient } = jest.requireMock('@/core/ui/utils/WebviewClient') as {
+                webviewClient: { request: jest.Mock; postMessage: jest.Mock; onMessage: jest.Mock };
+            };
+
+            // Capture incoming-message handlers so we can fire `surface-changed`
+            // from the test as if the backend pushed it.
+            const handlers = new Map<string, (data?: unknown) => void>();
+            (webviewClient.onMessage as jest.Mock).mockImplementation(
+                (type: string, handler: (data?: unknown) => void) => {
+                    handlers.set(type, handler);
+                    return () => handlers.delete(type);
+                },
+            );
+
+            // Two successive verify-ai-setup responses: first terminal, then extension.
+            const terminalResponse = {
+                success: true,
+                status: 'ok',
+                checks: [],
+                inventory: makeFullInventory(),
+                globalMcpRegistration: 'registered',
+                extensionInstalled: true,
+                onboardingCompleted: true,
+                surface: 'terminal',
+            };
+            const extensionResponse = { ...terminalResponse, surface: 'extension' };
+            (webviewClient.request as jest.Mock)
+                .mockResolvedValueOnce(terminalResponse)
+                .mockResolvedValue(extensionResponse);
+
+            await act(async () => {
+                render(
+                    <Provider theme={defaultTheme}>
+                        <AiOverviewScreen project={makeProject()} />
+                    </Provider>,
+                );
+                jest.runAllTimers();
+            });
+            await act(async () => {
+                await Promise.resolve();
+                await Promise.resolve();
+            });
+
+            expect(screen.queryByTestId('ai-browse-sessions-trigger')).not.toBeInTheDocument();
+
+            // Backend pushes surface-changed → component re-runs verify and the
+            // next response carries surface='extension'.
+            await act(async () => {
+                handlers.get('surface-changed')?.();
+                await Promise.resolve();
+                await Promise.resolve();
+            });
+
+            expect(screen.getByTestId('ai-browse-sessions-trigger')).toBeInTheDocument();
+        });
     });
 
     // The one-time sessions-browser auto-open is now fired from the

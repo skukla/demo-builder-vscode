@@ -184,6 +184,41 @@ describe('ShowAiCommand', () => {
         });
     });
 
+    describe('surface-change subscription', () => {
+        it('pushes surface-changed to the webview when demoBuilder.ai.surface changes', () => {
+            let capturedCallback: ((e: vscode.ConfigurationChangeEvent) => void) | null = null;
+            const dispose = jest.fn();
+            (vscode.workspace as unknown as { onDidChangeConfiguration: jest.Mock })
+                .onDidChangeConfiguration = jest.fn((cb: (e: vscode.ConfigurationChangeEvent) => void) => {
+                    capturedCallback = cb;
+                    return { dispose };
+                });
+
+            const sendMessageSpy = jest
+                .spyOn(command as unknown as { sendMessage: (t: string) => Promise<void> }, 'sendMessage')
+                .mockResolvedValue(undefined);
+
+            (command as unknown as { subscribeToSurfaceChanges(): void })
+                .subscribeToSurfaceChanges();
+
+            expect(capturedCallback).not.toBeNull();
+
+            // Unrelated config change → no push
+            const unrelatedEvent = {
+                affectsConfiguration: (key: string) => key === 'demoBuilder.someOther',
+            } as vscode.ConfigurationChangeEvent;
+            capturedCallback!(unrelatedEvent);
+            expect(sendMessageSpy).not.toHaveBeenCalled();
+
+            // Surface change → push
+            const surfaceEvent = {
+                affectsConfiguration: (key: string) => key === 'demoBuilder.ai.surface',
+            } as vscode.ConfigurationChangeEvent;
+            capturedCallback!(surfaceEvent);
+            expect(sendMessageSpy).toHaveBeenCalledWith('surface-changed');
+        });
+    });
+
     describe('webview content', () => {
         it('loads the aiOverview-bundle.js feature bundle', async () => {
             (command as unknown as { panel: vscode.WebviewPanel }).panel = mockPanel;

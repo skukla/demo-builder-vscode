@@ -120,6 +120,17 @@ export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.Reac
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [project.path]);
 
+    // Backend pushes `surface-changed` whenever the user toggles the AI
+    // launch surface via VS Code settings. Re-fetch verify-ai-setup so
+    // extension-only affordances (Browse Claude sessions) appear or
+    // disappear without a manual reload.
+    useEffect(() => {
+        const unsubscribe = webviewClient.onMessage('surface-changed', () => {
+            void runVerify();
+        });
+        return unsubscribe;
+    }, [runVerify]);
+
     const handleRegenerate = useCallback(async (): Promise<void> => {
         await regenerateOp.execute(async () => {
             await webviewClient.request('regenerate-ai-files', { projectPath: project.path });

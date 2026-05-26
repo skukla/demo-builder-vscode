@@ -68,10 +68,27 @@ export class ShowAiCommand extends BaseWebviewCommand {
                 await this.initializeCommunication();
             }
 
+            this.subscribeToSurfaceChanges();
+
             this.logger.debug(`[AI] Opened AI overview for project: ${project.name}`);
         } catch (error) {
             await this.showError('Failed to open AI overview', error as Error);
         }
+    }
+
+    /**
+     * Push a `surface-changed` message to the webview when the user toggles
+     * `demoBuilder.ai.surface` via VS Code settings. The webview re-runs
+     * verify-ai-setup so extension-only affordances (Browse Claude sessions)
+     * appear or disappear without a manual reload of the AI dashboard.
+     */
+    private subscribeToSurfaceChanges(): void {
+        const listener = vscode.workspace.onDidChangeConfiguration(event => {
+            if (event.affectsConfiguration('demoBuilder.ai.surface')) {
+                void this.sendMessage('surface-changed');
+            }
+        });
+        this.disposables.add(listener);
     }
 
     protected async getWebviewContent(): Promise<string> {
