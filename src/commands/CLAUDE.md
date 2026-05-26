@@ -191,7 +191,6 @@ comm.on('continue-step', async (payload) => {
 **Migration**: `extension.ts:migrateHarnessSetting` runs once at activation to migrate any persisted `demoBuilder.ai.harness` setting (3-mode: `auto` / `extension` / `terminal`) to the new `demoBuilder.ai.surface` setting per scope (workspace + global handled independently). `auto` maps to `extension`. An explicit `surface` value at any scope takes precedence — the migration won't overwrite a user's deliberate choice. A one-time info toast surfaces when at least one scope was migrated.
 
 **Dispatched from**:
-- The dashboard tile in `ActionGrid.tsx` (calls `webviewClient.postMessage('openInClaude')` via `useDashboardActions`)
 - The project-card kebab menu in `ProjectActionsMenu.tsx` (calls `webviewClient.postMessage('openInClaude', { projectPath })`)
 - The AI surface prompt cards in `PromptCard.tsx` → `AiOverviewScreen.tsx` → `webviewClient.postMessage('openInClaude', { prompt })` → `aiHandlers.handleOpenInClaude` (with the pending-prompt branch above)
 - `extension.ts:replayPendingClaudeLaunch` on activation when a pending record exists

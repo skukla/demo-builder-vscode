@@ -25,6 +25,10 @@ draft  →  ready  →  active  →  shipped/dropped
 
 ## Active backlog
 
+### Project Dashboard tile layout redesign ([`2026-05-26-dashboard-tile-layout.md`](2026-05-26-dashboard-tile-layout.md))
+
+Shrink the dashboard action tiles (160px → ~96px) and replace the flat 4-column grid with labeled, prioritized zones: PRIMARY heroes (Start/Stop, Open in Browser, AI), STOREFRONT (Author DA.live + Sync Storefront; renders for EDS projects only), BUILD (Deploy Mesh, Configure, Logs) + a "More" overflow (Components, Dev Console), and an isolated Delete footer. Removes the redundant Open-in-Claude tile (folds into the AI surface). Layout-only — preserves all `isEds`/`hasMesh`/`isRunning` gating. Main hazard: the hard-coded `712px` status-header width coupling in `custom-spectrum.css`. Scoped from research on 2026-05-26; form, zones, heroes, and overflow all decided. Ready.
+
 ### Multi-locale storefront — Phase 1 ([`2026-05-19-multisite-multilocale.md`](2026-05-19-multisite-multilocale.md))
 
 Phase 1 implementation plan for serving multiple locales (and eventually multiple brands) from a single Demo Builder project. Repurposes the wizard `settings` step as **Business Structure** with progressive sections for Connection, Primary Store, Regions & Locales, and (Phase 2, reserved) Additional Brands. Covers PaaS, ACCS, and the ACO addon. Research base: [`docs/research/2026-05-19-multisite-multillocale-research.md`](../../docs/research/2026-05-19-multisite-multillocale-research.md). Architecture seam: [ADR-003](../../docs/architecture/adr/003-multisite-architecture-seam.md). Phase 2 (repoless multi-brand) deferred.

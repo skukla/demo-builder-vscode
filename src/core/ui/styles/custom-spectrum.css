@@ -1630,10 +1630,32 @@ button[class*="spectrum-Button"][disabled],
     align-items: center !important;
 }
 
-/* Match grid width so status aligns with buttons: 4 × 160px + 3 × 24px = 712px */
+/* Dashboard action-tile geometry. The content width is DERIVED from the tile
+   size + gap (not a hand-typed magic number), sized to the widest action row
+   (4 tiles: the Build row, and the Primary+Storefront clusters which sum to
+   the same width). The status header uses the same width so its badges
+   left-align with the title and "All Projects" right-aligns with the rightmost
+   tile. Change the tile size/gap and everything re-derives. */
+:root {
+    --dashboard-tile-size: 96px;
+    --dashboard-tile-gap: 16px;
+    /* Extra breathing room between the Primary and Storefront clusters in row 1
+       so they read as two distinct groups rather than one row of four. */
+    --dashboard-cluster-gap: 40px;
+    /* Widest action row wins, so the status header right-aligns to the rightmost
+       tile. Candidates: the Build row (4 tiles) and the EDS row-1 clusters
+       (2 + 2 tiles separated by the cluster gap). Derived — no magic number. */
+    --dashboard-content-width: max(
+        calc(4 * var(--dashboard-tile-size) + 3 * var(--dashboard-tile-gap)),
+        calc(2 * (2 * var(--dashboard-tile-size) + var(--dashboard-tile-gap)) + var(--dashboard-cluster-gap))
+    );
+}
+
+/* Status header spans the action-zone width, left-aligned (matches the title's
+   left edge); the inner flex pushes "All Projects" to the right edge. */
 .dashboard-status-content {
-    width: 712px;
-    margin: 0 auto;
+    width: var(--dashboard-content-width);
+    margin: 0;
 }
 
 /* Dashboard status grid - align labels and values across rows */
@@ -1666,17 +1688,72 @@ button[class*="spectrum-Button"][disabled],
     color: var(--spectrum-global-color-gray-600) !important;
 }
 
-/* Dashboard grid - center fixed-width buttons */
+/* Dashboard grid - left-align the stacked action zones so their left edge
+   matches the project title and status badges above. */
 .dashboard-grid-container {
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     padding: 8px; /* Shadow overflow padding */
 }
 
-.dashboard-grid {
-    width: auto !important; /* Override w-full from GridLayout */
-    grid-template-columns: repeat(4, auto) !important; /* 4 columns for 8 buttons */
-    gap: 24px !important; /* Spectrum size-300 - matches project cards */
+/* Stacked, labeled rows + isolated delete footer. Fixed to the derived content
+   width so the status header (same width) aligns badge-left / button-right. */
+.dashboard-zones {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: var(--dashboard-content-width);
+}
+
+/* Row 1 lays its two clusters (Primary + Storefront) side by side. Wraps only
+   if the viewport is too narrow. */
+.dashboard-zone-row {
+    display: flex;
+    flex-flow: row wrap;
+    gap: var(--dashboard-cluster-gap);
+    align-items: flex-start;
+}
+
+.dashboard-zone-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Zone heading — small uppercase label matching status-badge typography */
+.dashboard-zone-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--spectrum-global-color-gray-700);
+}
+
+/* Each zone lays its tiles out in a horizontal row, wrapping only if the
+   row runs out of width. Flex (not auto-fit grid) because the parent is
+   fit-content — an auto-fit grid with no width target collapses to a single
+   column (tiles stack vertically). */
+.dashboard-zone-grid {
+    display: flex;
+    flex-flow: row wrap;
+    gap: var(--dashboard-tile-gap);
+}
+
+/* Subsequent rows (Build, and any future full-width row) spread their tiles
+   evenly across the full content width: a single consistent gap between every
+   tile, the first tile flush left and the last flush right — so the row's
+   edges line up with row 1's edges. No cluster gap; the gaps simply widen to
+   fill the row. */
+.dashboard-zone-grid--aligned {
+    justify-content: space-between;
+}
+
+/* Delete footer — separated from the action zones with a divider + spacing */
+.dashboard-zone-footer {
+    display: flex;
+    margin-top: 8px;
+    padding-top: 16px;
+    border-top: 1px solid var(--spectrum-global-color-gray-300);
 }
 
 /* ===========================================
@@ -1687,15 +1764,15 @@ button[class*="spectrum-Button"][disabled],
     /* Base - lighter background matching cards */
     background: var(--spectrum-global-color-gray-50) !important;
     border-radius: 8px !important;
-    padding: 20px !important;
+    padding: 12px !important;
     border: 1px solid var(--spectrum-global-color-gray-300) !important;
 
     /* Smoother transition matching cards */
     transition: all 0.3s ease !important;
 
-    /* Layout */
+    /* Layout — compact square tiles (icon over label) */
     text-align: center !important;
-    width: 160px !important;
+    width: var(--dashboard-tile-size) !important;
     height: auto !important;
     aspect-ratio: 1 / 1 !important; /* Square buttons */
     box-sizing: border-box !important;
@@ -1703,14 +1780,60 @@ button[class*="spectrum-Button"][disabled],
     flex-direction: column !important;
     justify-content: center !important;
     align-items: center !important;
-    gap: 8px !important;
+    gap: 6px !important;
     cursor: pointer !important;
 }
 
-/* Scale icons */
+/* Scale icons proportionally to the smaller tile */
 .dashboard-action-button svg {
-    width: 28px !important;
-    height: 28px !important;
+    width: 20px !important;
+    height: 20px !important;
+}
+
+/* Tile label — smaller to fit the compact tile. Wraps to multiple lines
+   instead of truncating with an ellipsis (Spectrum's Text otherwise clips
+   long labels like "Open in Browser" / "Author in DA.live"). */
+.dashboard-action-button .icon-label {
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    overflow-wrap: anywhere !important;
+}
+
+/* Hero accent — emphasize the top-tier actions (Start/Stop, Open, AI).
+   A modifier class, NOT a Spectrum variant, to keep the icon-over-label tile look. */
+.dashboard-action-button--hero {
+    background: var(--spectrum-global-color-blue-100) !important;
+    border-color: var(--spectrum-global-color-blue-400) !important;
+}
+
+.dashboard-action-button--hero:hover,
+.dashboard-action-button--hero:focus {
+    background: var(--spectrum-global-color-blue-200) !important;
+    border-color: var(--spectrum-global-color-blue-500) !important;
+}
+
+.dashboard-action-button--hero svg,
+.dashboard-action-button--hero .icon-label {
+    color: var(--spectrum-global-color-blue-700) !important;
+}
+
+/* Destructive — isolate Delete visually with a negative accent */
+.dashboard-action-button--destructive {
+    border-color: var(--spectrum-global-color-red-400) !important;
+}
+
+.dashboard-action-button--destructive:hover,
+.dashboard-action-button--destructive:focus {
+    background: var(--spectrum-global-color-red-100) !important;
+    border-color: var(--spectrum-global-color-red-500) !important;
+}
+
+.dashboard-action-button--destructive svg,
+.dashboard-action-button--destructive .icon-label {
+    color: var(--spectrum-global-color-red-600) !important;
 }
 
 .dashboard-action-button:hover,

@@ -28,6 +28,24 @@ jest.mock('@adobe/react-spectrum', () => ({
     ActionButton: ({ children, onPress, _isQuiet, isDisabled, ...props }: any) => (
         <button onClick={onPress} disabled={isDisabled} {...props}>{children}</button>
     ),
+    MenuTrigger: ({ children }: any) => <div data-testid="menu-trigger">{children}</div>,
+    Menu: ({ children, onAction }: any) => {
+        const r = require('react');
+        return (
+            <div role="menu">
+                {r.Children.map(children, (child: any) => {
+                    if (!child) return null;
+                    const key = child.key ?? child.props?.['data-key'];
+                    return (
+                        <button key={key} role="menuitem" onClick={() => onAction?.(key)}>
+                            {child.props?.children}
+                        </button>
+                    );
+                })}
+            </div>
+        );
+    },
+    Item: ({ children }: any) => <>{children}</>,
     Divider: () => <hr />,
     ProgressCircle: () => <div data-testid="progress-circle" />,
 }));

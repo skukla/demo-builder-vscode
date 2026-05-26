@@ -109,7 +109,6 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
         handleOpenDaLive,
         handleConfigure,
         handleOpenDevConsole,
-        handleOpenInClaude,
         handleOpenAi,
         handleDeleteProject,
         handleNavigateBack,
@@ -246,7 +245,6 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                             handleConfigure={handleConfigure}
                             handleViewComponents={handleViewComponents}
                             handleOpenDevConsole={handleOpenDevConsole}
-                            handleOpenInClaude={handleOpenInClaude}
                             handleOpenAi={handleOpenAi}
                             handleDeleteProject={handleDeleteProject}
                         />
