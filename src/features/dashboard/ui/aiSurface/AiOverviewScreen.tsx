@@ -60,6 +60,12 @@ interface VerifyAiSetupResponse {
      * they've engaged with the AI flow.
      */
     onboardingCompleted?: boolean;
+    /**
+     * The user's saved AI launch surface. Combined with `extensionInstalled`
+     * to gate extension-only affordances: terminal-surface users should not
+     * see extension UI even if they happen to have the extension installed.
+     */
+    surface?: 'terminal' | 'extension';
 }
 
 /**
@@ -232,11 +238,14 @@ export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.Reac
 
     const extensionInstalled = verifyResult?.extensionInstalled === true;
     const onboardingCompleted = verifyResult?.onboardingCompleted === true;
-    // Extension-specific affordances (like Browse Claude sessions) are
-    // hidden until the user has made both onboarding selections — surface
-    // and layout. Otherwise a fresh-state user sees extension UI before
-    // they've actually engaged with the AI flow.
-    const showExtensionAffordances = extensionInstalled && onboardingCompleted;
+    const surfaceIsExtension = verifyResult?.surface === 'extension';
+    // Extension-specific affordances (like Browse Claude sessions) require
+    // the user to have finished onboarding AND kept the extension surface.
+    // A terminal-surface user who happens to have the extension installed
+    // explicitly opted out of the extension UX — don't surface extension
+    // links anyway.
+    const showExtensionAffordances =
+        extensionInstalled && onboardingCompleted && surfaceIsExtension;
 
     const isBusy =
         verifyOp.isExecuting ||

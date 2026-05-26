@@ -342,6 +342,33 @@ describe('aiHandlers', () => {
                 expect(result).toMatchObject({ onboardingCompleted: false });
             });
         });
+
+        // surface drives gating of extension-only affordances on the AI
+        // surface. A terminal-surface user should never see Browse Claude
+        // sessions even when the extension happens to be installed.
+        describe('surface', () => {
+            beforeEach(() => {
+                (verifyAiSetup as jest.Mock).mockResolvedValue({ status: 'ok', checks: [] });
+            });
+
+            it("defaults to 'terminal' when demoBuilder.ai.surface is unset", async () => {
+                const result = await handleVerifyAiSetup(createMockContext());
+                expect(result).toMatchObject({ surface: 'terminal' });
+            });
+
+            it("returns 'extension' when the user has saved that preference", async () => {
+                const vscode = jest.requireMock('vscode') as {
+                    workspace: { getConfiguration: jest.Mock };
+                };
+                vscode.workspace.getConfiguration.mockReturnValueOnce({
+                    get: jest.fn((key: string, fallback: unknown) =>
+                        key === 'surface' ? 'extension' : fallback,
+                    ),
+                });
+                const result = await handleVerifyAiSetup(createMockContext());
+                expect(result).toMatchObject({ surface: 'extension' });
+            });
+        });
     });
 
     describe('handleInspectMcp', () => {

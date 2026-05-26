@@ -112,6 +112,8 @@ async function renderScreen(opts: {
     extensionInstalled?: boolean;
     /** Default true so existing tests (which assume the user has engaged) keep passing. */
     onboardingCompleted?: boolean;
+    /** Default 'extension' so existing extension-flow tests keep passing. */
+    surface?: 'terminal' | 'extension';
     /**
      * Override the response for specific request types. Used in handful of
      * cases where the default verify-ai-setup response shape is wrong for
@@ -130,6 +132,7 @@ async function renderScreen(opts: {
         globalMcpRegistration: 'registered',
         extensionInstalled: opts.extensionInstalled ?? false,
         onboardingCompleted: opts.onboardingCompleted ?? true,
+        surface: opts.surface ?? 'extension',
     };
     webviewClient.request.mockImplementation((type: string) => {
         if (opts.requestOverrides && type in opts.requestOverrides) {
@@ -626,8 +629,12 @@ describe('AiOverviewScreen', () => {
     });
 
     describe('Browse Claude sessions link', () => {
-        it('renders the link when extensionInstalled AND onboardingCompleted are both true', async () => {
-            await renderScreen({ extensionInstalled: true, onboardingCompleted: true });
+        it('renders the link when extensionInstalled AND onboardingCompleted are both true AND surface is extension', async () => {
+            await renderScreen({
+                extensionInstalled: true,
+                onboardingCompleted: true,
+                surface: 'extension',
+            });
             expect(screen.getByTestId('ai-browse-sessions-trigger')).toBeInTheDocument();
         });
 
@@ -638,6 +645,15 @@ describe('AiOverviewScreen', () => {
 
         it('does NOT render the link when onboarding has not been completed (even with extension installed)', async () => {
             await renderScreen({ extensionInstalled: true, onboardingCompleted: false });
+            expect(screen.queryByTestId('ai-browse-sessions-trigger')).not.toBeInTheDocument();
+        });
+
+        it('does NOT render the link when surface is terminal (even with extension installed and onboarding done)', async () => {
+            await renderScreen({
+                extensionInstalled: true,
+                onboardingCompleted: true,
+                surface: 'terminal',
+            });
             expect(screen.queryByTestId('ai-browse-sessions-trigger')).not.toBeInTheDocument();
         });
 
