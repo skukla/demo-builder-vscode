@@ -310,12 +310,6 @@
             "type": "boolean",
             "default": false,
             "description": "Dock the AI experience to the right side of VS Code. Applies to both surfaces: the extension chat panel docks to the right secondary sidebar, and terminals open as editor tabs beside your active code. Demo Builder keeps `claudeCode.preferredLocation` in sync so the Claude Code extension natively respects this preference."
-          },
-          "demoBuilder.ai.spawnInjectDelayMs": {
-            "type": "number",
-            "default": 2500,
-            "minimum": 0,
-            "markdownDescription": "Delay (ms) before a clicked prompt is auto-pasted into a *newly spawned* Claude Code terminal, giving `claude --continue` time to reach its input-ready prompt. Increase it if the prompt doesn't appear on first launch (for example, with many MCP servers or a slow connection). The prompt is always copied to your clipboard as a fallback, so a missed paste is never lost."
           }
         }
       }

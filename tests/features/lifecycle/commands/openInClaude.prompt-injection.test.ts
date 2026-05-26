@@ -1,4 +1,4 @@
-/** Terminal prompt handling: clipboard handoff + bracketed-paste injection — split from openInClaude.test.ts. */
+/** Terminal prompt delivery: spawn launch-arg, reuse bracketed-paste, clipboard handoff — split from openInClaude.test.ts. */
 import * as vscode from 'vscode';
 import { OpenInClaudeCommand } from '@/commands/openInClaude';
 import type { Project } from '@/types/base';
@@ -16,16 +16,6 @@ describe('OpenInClaudeCommand', () => {
     // ------------------------------------------------------------------------
 
     describe('terminal mode + prompt: clipboard handoff', () => {
-        // Spawn-case prompt clicks schedule a setTimeout for bracketed-paste
-        // injection. Use fake timers so the timer doesn't leak past the test.
-        beforeEach(() => {
-            jest.useFakeTimers();
-        });
-        afterEach(() => {
-            jest.runOnlyPendingTimers();
-            jest.useRealTimers();
-        });
-
         it('writes the prompt to the clipboard before launching the terminal', async () => {
             const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
             const command = new OpenInClaudeCommand(
@@ -71,26 +61,97 @@ describe('OpenInClaudeCommand', () => {
     });
 
     // ------------------------------------------------------------------------
-    // Bracketed-paste injection (reuse + spawn) + clipboard-fallback tip
+    // Spawn case: prompt delivered as a `claude --continue` launch argument.
+    // Race-free — no waiting for the REPL to be ready, no bracketed-paste.
     // ------------------------------------------------------------------------
 
-    describe('bracketed-paste prompt injection', () => {
-        const PASTE_START = '[200~';
-        const PASTE_END = '[201~';
+    describe('spawn case: prompt delivered as a launch argument', () => {
+        it('launches `claude --continue` with the prompt as a single-quoted argument', async () => {
+            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute({ project: makeProject() as Project, prompt: 'do the thing' });
+
+            expect(mocks.terminalSendTextMock).toHaveBeenCalledWith("claude --continue -- 'do the thing'");
+        });
+
+        it('escapes single quotes in the prompt so the shell receives it intact', async () => {
+            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute({ project: makeProject() as Project, prompt: "it's a test" });
+
+            // POSIX single-quote escaping: ' becomes '\'' (close, escaped quote, reopen)
+            expect(mocks.terminalSendTextMock).toHaveBeenCalledWith("claude --continue -- 'it'\\''s a test'");
+        });
+
+        it('keeps a multi-line prompt inside the single-quoted argument', async () => {
+            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
+            const multiLine = 'line one\nline two';
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute({ project: makeProject() as Project, prompt: multiLine });
+
+            expect(mocks.terminalSendTextMock).toHaveBeenCalledWith(`claude --continue -- '${multiLine}'`);
+        });
+
+        it('does NOT bracketed-paste inject on spawn (the prompt rides the launch arg)', async () => {
+            setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
+            const executeCommandMock = vscode.commands.executeCommand as jest.Mock;
+            executeCommandMock.mockClear();
+            executeCommandMock.mockResolvedValue(undefined);
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute({ project: makeProject() as Project, prompt: 'do the thing' });
+
+            const sendSequenceCall = executeCommandMock.mock.calls.find(c =>
+                c[0] === 'workbench.action.terminal.sendSequence',
+            );
+            expect(sendSequenceCall).toBeUndefined();
+        });
+
+        it('spawns with a plain `claude --continue` when no prompt is provided', async () => {
+            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute(makeProject() as Project);
+
+            expect(mocks.terminalSendTextMock).toHaveBeenCalledWith('claude --continue');
+        });
+    });
+
+    // ------------------------------------------------------------------------
+    // Reuse case: claude is already at its REPL, so inject via bracketed paste
+    // (CSI 200~/201~) immediately. A running session can't take a new launch
+    // arg, so reuse pre-fills the input for the user to send.
+    // ------------------------------------------------------------------------
+
+    describe('reuse case: bracketed-paste injection', () => {
+        const PASTE_START = '\x1b[200~';
+        const PASTE_END = '\x1b[201~';
         const CLIPBOARD_TIP_KEY = 'demoBuilder.ai.clipboardFallbackTipShown';
-        const DEFAULT_SPAWN_INJECT_DELAY_MS = 2500;
 
-        // The spawn-case uses setTimeout for the delayed inject. Fake timers
-        // let us advance time deterministically without leaking real timers.
-        beforeEach(() => {
-            jest.useFakeTimers();
-        });
-        afterEach(() => {
-            jest.runOnlyPendingTimers();
-            jest.useRealTimers();
-        });
-
-        it('reuse case: injects the prompt via sendSequence immediately (no setTimeout)', async () => {
+        it('injects the prompt via sendSequence immediately when a live terminal exists', async () => {
             const mocks = setupVscodeMocks({
                 surface: 'terminal',
                 extensionInstalled: false,
@@ -115,95 +176,6 @@ describe('OpenInClaudeCommand', () => {
             expect(payload.text).toBe(PASTE_START + 'hello world' + PASTE_END);
             // No spawn — createTerminal not called
             expect(mocks.createTerminalMock).not.toHaveBeenCalled();
-        });
-
-        it('spawn case: injects after the default delay (~2.5s), and not at the old 800ms point', async () => {
-            setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
-            const executeCommandMock = vscode.commands.executeCommand as jest.Mock;
-            executeCommandMock.mockClear();
-            executeCommandMock.mockResolvedValue(undefined);
-            const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
-                makeStateManager(makeProject()) as never,
-                makeLogger() as never,
-            );
-            const findInject = () => executeCommandMock.mock.calls.find(c =>
-                c[0] === 'workbench.action.terminal.sendSequence',
-            );
-
-            await command.execute({ project: makeProject() as Project, prompt: 'spawn-time prompt' });
-
-            // Not fired immediately — the inject is scheduled.
-            expect(findInject()).toBeUndefined();
-
-            // The old 800ms point is now too early: claude --continue is still
-            // bootstrapping, so the inject must NOT have fired yet.
-            jest.advanceTimersByTime(800);
-            expect(findInject()).toBeUndefined();
-
-            // Fires once the full default delay elapses.
-            jest.advanceTimersByTime(DEFAULT_SPAWN_INJECT_DELAY_MS - 800);
-            const call = findInject();
-            expect(call).toBeDefined();
-            const payload = call![1] as { text: string };
-            expect(payload.text).toBe(PASTE_START + 'spawn-time prompt' + PASTE_END);
-        });
-
-        it('spawn case: honors a configured spawnInjectDelayMs override', async () => {
-            setupVscodeMocks({
-                surface: 'terminal',
-                extensionInstalled: false,
-                spawnInjectDelayMs: 1200,
-            });
-            const executeCommandMock = vscode.commands.executeCommand as jest.Mock;
-            executeCommandMock.mockClear();
-            executeCommandMock.mockResolvedValue(undefined);
-            const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
-                makeStateManager(makeProject()) as never,
-                makeLogger() as never,
-            );
-            const findInject = () => executeCommandMock.mock.calls.find(c =>
-                c[0] === 'workbench.action.terminal.sendSequence',
-            );
-
-            await command.execute({ project: makeProject() as Project, prompt: 'configured prompt' });
-
-            // Nothing fires before the configured delay elapses.
-            jest.advanceTimersByTime(1199);
-            expect(findInject()).toBeUndefined();
-
-            // Fires exactly at the configured delay.
-            jest.advanceTimersByTime(1);
-            expect(findInject()).toBeDefined();
-        });
-
-        it('spawn case: skips inject if the terminal has exited before the delay fires', async () => {
-            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
-            const executeCommandMock = vscode.commands.executeCommand as jest.Mock;
-            executeCommandMock.mockClear();
-            executeCommandMock.mockResolvedValue(undefined);
-            const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
-                makeStateManager(makeProject()) as never,
-                makeLogger() as never,
-            );
-
-            await command.execute({ project: makeProject() as Project, prompt: 'spawn prompt' });
-
-            // Simulate the terminal exiting (kill -9 / window close / whatever)
-            const spawnedTerminal = mocks.createTerminalMock.mock.results[0]?.value as {
-                exitStatus?: unknown;
-            };
-            spawnedTerminal.exitStatus = { code: 0 };
-
-            // Advance past the delay — inject should be skipped
-            jest.advanceTimersByTime(DEFAULT_SPAWN_INJECT_DELAY_MS);
-
-            const sendSequenceCall = executeCommandMock.mock.calls.find(c =>
-                c[0] === 'workbench.action.terminal.sendSequence',
-            );
-            expect(sendSequenceCall).toBeUndefined();
         });
 
         it('multi-line prompt: bracketed-paste markers wrap the whole block (including newlines)', async () => {
