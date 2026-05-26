@@ -290,6 +290,7 @@ export class CommandManager {
         this.registerCommand('demoBuilder.setRecommendedZoom', async () => {
             const config = vscode.workspace.getConfiguration('window');
             await config.update('zoomLevel', 1, vscode.ConfigurationTarget.Global);
+            await this.applyConfiguredZoomLevel(config);
             // Use status bar message for auto-dismiss (3 seconds)
             vscode.window.setStatusBarMessage('$(check) Zoom set to 120% for optimal demo visibility', 3000);
         });
@@ -298,6 +299,7 @@ export class CommandManager {
         this.registerCommand('demoBuilder.resetZoom', async () => {
             const config = vscode.workspace.getConfiguration('window');
             await config.update('zoomLevel', 0, vscode.ConfigurationTarget.Global);
+            await this.applyConfiguredZoomLevel(config);
             // Use status bar message for auto-dismiss (3 seconds)
             vscode.window.setStatusBarMessage('$(check) Zoom reset to 100%', 3000);
         });
@@ -379,6 +381,23 @@ export class CommandManager {
         const disposable = vscode.commands.registerCommand(command, callback);
         this.commands.set(command, disposable);
         this.context.subscriptions.push(disposable);
+    }
+
+    /**
+     * Make the configured `window.zoomLevel` take effect on the current window.
+     *
+     * When `window.zoomPerWindow` is on (VS Code's default), Cmd+/Cmd- set a
+     * transient per-window zoom that outranks the `zoomLevel` setting, so writing
+     * the setting alone does nothing visible. `zoomReset` reverts the window to its
+     * configured `zoomLevel`, applying the value we just wrote. In all-windows mode
+     * there is no per-window override and `zoomReset` would force 100%, so it is
+     * skipped there.
+     */
+    private async applyConfiguredZoomLevel(config: vscode.WorkspaceConfiguration): Promise<void> {
+        const zoomPerWindow = config.get<boolean>('zoomPerWindow') ?? true;
+        if (zoomPerWindow) {
+            await vscode.commands.executeCommand('workbench.action.zoomReset');
+        }
     }
 
     public dispose(): void {

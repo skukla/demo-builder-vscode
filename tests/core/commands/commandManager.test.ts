@@ -190,6 +190,113 @@ describe('CommandManager', () => {
 
     });
 
+    describe('Zoom commands', () => {
+        let mockConfig: { update: jest.Mock; get: jest.Mock };
+
+        /**
+         * Stub `getConfiguration('window')` with both `update` (the zoom write)
+         * and `get` (the `zoomPerWindow` read the fix branches on).
+         */
+        const setupConfig = (zoomPerWindow: boolean | undefined): void => {
+            mockConfig = {
+                update: jest.fn().mockResolvedValue(undefined),
+                get: jest.fn().mockReturnValue(zoomPerWindow),
+            };
+            (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue(mockConfig);
+        };
+
+        const invokeZoomCommand = async (commandId: string): Promise<void> => {
+            commandManager.registerCommands();
+            const handler = (vscode.commands.registerCommand as jest.Mock).mock.calls
+                .find(call => call[0] === commandId)?.[1];
+            expect(handler).toBeDefined();
+            await handler();
+        };
+
+        describe('demoBuilder.setRecommendedZoom', () => {
+            it('sets window.zoomLevel to 1 (120%) globally', async () => {
+                setupConfig(true);
+
+                await invokeZoomCommand('demoBuilder.setRecommendedZoom');
+
+                expect(mockConfig.update).toHaveBeenCalledWith(
+                    'zoomLevel',
+                    1,
+                    vscode.ConfigurationTarget.Global,
+                );
+            });
+
+            it('clears the per-window zoom override via zoomReset when zoomPerWindow is on', async () => {
+                // A transient Cmd+/Cmd- override outranks the zoomLevel setting; the
+                // command must reset the window so the new level takes effect.
+                setupConfig(true);
+
+                await invokeZoomCommand('demoBuilder.setRecommendedZoom');
+
+                expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                    'workbench.action.zoomReset',
+                );
+            });
+
+            it('does NOT call zoomReset when zoomPerWindow is off (all-windows mode)', async () => {
+                // In all-windows mode there is no per-window override, and zoomReset
+                // would force 100%, clobbering the 120% we just set.
+                setupConfig(false);
+
+                await invokeZoomCommand('demoBuilder.setRecommendedZoom');
+
+                expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
+                    'workbench.action.zoomReset',
+                );
+            });
+
+            it('defaults to per-window behavior when zoomPerWindow is unset', async () => {
+                // window.zoomPerWindow defaults to true in VS Code.
+                setupConfig(undefined);
+
+                await invokeZoomCommand('demoBuilder.setRecommendedZoom');
+
+                expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                    'workbench.action.zoomReset',
+                );
+            });
+        });
+
+        describe('demoBuilder.resetZoom', () => {
+            it('sets window.zoomLevel to 0 (100%) globally', async () => {
+                setupConfig(true);
+
+                await invokeZoomCommand('demoBuilder.resetZoom');
+
+                expect(mockConfig.update).toHaveBeenCalledWith(
+                    'zoomLevel',
+                    0,
+                    vscode.ConfigurationTarget.Global,
+                );
+            });
+
+            it('clears the per-window zoom override via zoomReset when zoomPerWindow is on', async () => {
+                setupConfig(true);
+
+                await invokeZoomCommand('demoBuilder.resetZoom');
+
+                expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                    'workbench.action.zoomReset',
+                );
+            });
+
+            it('does NOT call zoomReset when zoomPerWindow is off (all-windows mode)', async () => {
+                setupConfig(false);
+
+                await invokeZoomCommand('demoBuilder.resetZoom');
+
+                expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
+                    'workbench.action.zoomReset',
+                );
+            });
+        });
+    });
+
     describe('Navigate Routing', () => {
         it('should route the ai target to demoBuilder.openAi', async () => {
             commandManager.registerCommands();
