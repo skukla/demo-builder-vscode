@@ -238,6 +238,51 @@ export async function handleRegenerateAiFiles(
 // ==========================================================
 
 /**
+ * globalState key holding `AiPrompt[]` for pinned prompts that travel with the
+ * user across every project. Unpinned prompts stay in each project's
+ * `.demo-builder.json` manifest under `project.aiPrompts`.
+ *
+ * Scope rule: `pinned === true` ⇔ stored here. `pinned` falsy ⇔ stored in the
+ * project manifest. A pin toggle moves the prompt across stores.
+ */
+const GLOBAL_AI_PROMPTS_KEY = 'demoBuilder.ai.globalPrompts';
+
+function readGlobalPrompts(context: HandlerContext): AiPrompt[] {
+    return context.context.globalState.get<AiPrompt[]>(GLOBAL_AI_PROMPTS_KEY, []);
+}
+
+async function writeGlobalPrompts(context: HandlerContext, prompts: AiPrompt[]): Promise<void> {
+    await context.context.globalState.update(GLOBAL_AI_PROMPTS_KEY, prompts);
+}
+
+/** Replace by id, or append if absent. Preserves array order otherwise. */
+function upsertById(list: AiPrompt[], incoming: AiPrompt): AiPrompt[] {
+    const idx = list.findIndex(p => p.id === incoming.id);
+    if (idx < 0) return [...list, incoming];
+    return list.map((p, i) => (i === idx ? incoming : p));
+}
+
+function removeById(list: AiPrompt[], id: string): AiPrompt[] {
+    return list.filter(p => p.id !== id);
+}
+
+/**
+ * Merge the two prompt stores for read: globals first, then project, deduped
+ * by id with global winning on collision.
+ *
+ * Dedup is load-bearing for crash recovery, not just defensive paranoia. The
+ * save handler writes the new scope BEFORE removing from the old scope, so a
+ * crash mid-operation leaves a transient duplicate in both stores. The read
+ * path must consistently show the new (global) copy until the next save
+ * settles the state.
+ */
+function mergePromptsForRead(globalPrompts: AiPrompt[], projectPrompts: AiPrompt[]): AiPrompt[] {
+    const globalIds = new Set(globalPrompts.map(p => p.id));
+    const projectFiltered = projectPrompts.filter(p => !globalIds.has(p.id));
+    return [...globalPrompts, ...projectFiltered];
+}
+
+/**
  * Validate an AiPrompt payload — guards against missing fields and empty values.
  * The `pinned` field is optional and defaults to false when absent.
  */
@@ -252,49 +297,25 @@ function isValidPromptPayload(prompt: unknown): prompt is AiPrompt {
 }
 
 /**
- * Insert a prompt into the list, keeping the array in "pinned-first" order.
+ * Handle save-ai-prompt — create or update a single AI prompt, routing the
+ * write to the correct store based on `pinned`.
  *
- * Policy controls where unpinned prompts land:
- *   - `'end-of-list'` (for newly created prompts): appended to the bottom.
- *     Preserves the user's existing manual order; new prompts queue up at
- *     the end of the unpinned section.
- *   - `'pin-boundary'` (for prompts whose pin state just flipped to false):
- *     inserted immediately after the last pinned item. Minimizes the visual
- *     jump when a user unpins — the prompt stays near where it was rather
- *     than skipping to the bottom of the list.
+ * Scope routing (see GLOBAL_AI_PROMPTS_KEY docstring):
+ *   - `pinned: true`  → globalState (visible across every project)
+ *   - `pinned: false` → current project's manifest
  *
- * Pinned prompts always go to the end of the pinned section regardless of
- * policy — that part is symmetric.
- */
-type UnpinnedInsertionPolicy = 'end-of-list' | 'pin-boundary';
-
-function insertIntoSection(
-    list: AiPrompt[],
-    prompt: AiPrompt,
-    policy: UnpinnedInsertionPolicy = 'end-of-list',
-): AiPrompt[] {
-    if (prompt.pinned) {
-        const firstUnpinnedIdx = list.findIndex(p => !p.pinned);
-        if (firstUnpinnedIdx === -1) return [...list, prompt];
-        return [...list.slice(0, firstUnpinnedIdx), prompt, ...list.slice(firstUnpinnedIdx)];
-    }
-    if (policy === 'pin-boundary') {
-        const firstUnpinnedIdx = list.findIndex(p => !p.pinned);
-        if (firstUnpinnedIdx === -1) return [...list, prompt];
-        return [...list.slice(0, firstUnpinnedIdx), prompt, ...list.slice(firstUnpinnedIdx)];
-    }
-    return [...list, prompt];
-}
-
-/**
- * Handle save-ai-prompt — create or update a single AI prompt.
+ * A pin toggle is a cross-scope move. We write the new scope first, then
+ * remove from the old; a crash between the two leaves a transient duplicate
+ * which the list handler dedups (global wins). The reverse order could lose
+ * the prompt entirely on failure.
  *
- * Keeps the array in "pinned-first" order:
- *   - New prompt → appended to end of its pin-group
- *   - Existing prompt, pin state unchanged → replaced in place
- *   - Existing prompt, pin state changed → removed and re-inserted at end of new group
+ * Legacy data: pinned prompts that pre-date this feature remain in their
+ * project manifest until the user manually unpins then re-pins them. Within
+ * the project array, pin-first ordering and the pin-boundary insertion policy
+ * still apply for those legacy prompts.
  *
- * Persists via `stateManager.saveProject`. The webview MUST NOT supply a
+ * Persists via `stateManager.saveProject` for the project store and
+ * `globalState.update` for the global store. The webview MUST NOT supply a
  * project path — server-side `getCurrentProject` is the only source of truth.
  */
 export async function handleSaveAiPrompt(
@@ -308,34 +329,55 @@ export async function handleSaveAiPrompt(
     if (!project) {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
-    const incoming = payload.prompt;
-    const existing = project.aiPrompts ?? [];
-    const idx = existing.findIndex(p => p.id === incoming.id);
 
-    let updated: AiPrompt[];
-    if (idx < 0) {
-        // New prompt — FIFO into its section. Preserves existing manual order.
-        updated = insertIntoSection(existing, incoming, 'end-of-list');
+    const incoming = payload.prompt;
+    const incomingPinned = Boolean(incoming.pinned);
+    const projectPrompts = project.aiPrompts ?? [];
+    const globalPrompts = readGlobalPrompts(context);
+    const prevInProject = projectPrompts.find(p => p.id === incoming.id);
+    const prevInGlobal = globalPrompts.find(p => p.id === incoming.id);
+    const prevPinned = Boolean(prevInGlobal?.pinned ?? prevInProject?.pinned ?? false);
+
+    // Target scope rule:
+    //   - new prompt: follow `incoming.pinned`
+    //   - prev in global: stay in global unless user explicitly unpinned (true→false)
+    //   - prev in project, unpinned → user pinning: migrate to global
+    //   - prev in project, pinned (legacy data): stay in project regardless of
+    //     incoming.pinned. The user opted out of auto-migration; only an
+    //     explicit unpin-then-repin moves legacy data to global.
+    const targetIsGlobal =
+        incomingPinned && (!prevInProject || !prevPinned);
+
+    let nextGlobal = globalPrompts;
+    let nextProject = projectPrompts;
+
+    if (targetIsGlobal) {
+        nextGlobal = upsertById(globalPrompts, incoming);
+        if (prevInProject) {
+            nextProject = removeById(projectPrompts, incoming.id);
+        }
     } else {
-        const wasPinned = Boolean(existing[idx].pinned);
-        const isPinned = Boolean(incoming.pinned);
-        if (wasPinned === isPinned) {
-            updated = existing.map((p, i) => (i === idx ? incoming : p));
-        } else {
-            // Pin state changed — re-position across the group boundary, but
-            // for unpinning, land just past the boundary so the prompt
-            // doesn't visually leap to the bottom of the list.
-            const without = existing.filter((_, i) => i !== idx);
-            updated = insertIntoSection(without, incoming, 'pin-boundary');
+        nextProject = upsertById(projectPrompts, incoming);
+        if (prevInGlobal) {
+            nextGlobal = removeById(globalPrompts, incoming.id);
         }
     }
 
-    await context.stateManager.saveProject({ ...project, aiPrompts: updated });
-    return { success: true, aiPrompts: updated };
+    // Write global first (see docstring rationale on crash recovery).
+    if (nextGlobal !== globalPrompts) {
+        await writeGlobalPrompts(context, nextGlobal);
+    }
+    if (nextProject !== projectPrompts) {
+        await context.stateManager.saveProject({ ...project, aiPrompts: nextProject });
+    }
+
+    return { success: true, aiPrompts: mergePromptsForRead(nextGlobal, nextProject) };
 }
 
 /**
- * Handle delete-ai-prompt — remove a prompt by id and persist.
+ * Handle delete-ai-prompt — remove a prompt by id from whichever store(s)
+ * own it. Defensive: if the same id somehow exists in both stores, removes
+ * from both.
  */
 export async function handleDeleteAiPrompt(
     context: HandlerContext,
@@ -348,14 +390,29 @@ export async function handleDeleteAiPrompt(
     if (!project) {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
-    const existing = project.aiPrompts ?? [];
-    const updated = existing.filter(p => p.id !== payload.promptId);
-    await context.stateManager.saveProject({ ...project, aiPrompts: updated });
-    return { success: true, aiPrompts: updated };
+
+    const promptId = payload.promptId;
+    const projectPrompts = project.aiPrompts ?? [];
+    const globalPrompts = readGlobalPrompts(context);
+    const inProject = projectPrompts.some(p => p.id === promptId);
+    const inGlobal = globalPrompts.some(p => p.id === promptId);
+
+    const nextProject = inProject ? removeById(projectPrompts, promptId) : projectPrompts;
+    const nextGlobal = inGlobal ? removeById(globalPrompts, promptId) : globalPrompts;
+
+    if (inGlobal) {
+        await writeGlobalPrompts(context, nextGlobal);
+    }
+    if (inProject) {
+        await context.stateManager.saveProject({ ...project, aiPrompts: nextProject });
+    }
+
+    return { success: true, aiPrompts: mergePromptsForRead(nextGlobal, nextProject) };
 }
 
 /**
- * Handle list-ai-prompts — return the current project's AI prompts.
+ * Handle list-ai-prompts — return the merged list (globals first, then
+ * project-local, deduped by id with global winning on collision).
  */
 export async function handleListAiPrompts(
     context: HandlerContext,
@@ -364,7 +421,9 @@ export async function handleListAiPrompts(
     if (!project) {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
-    return { success: true, aiPrompts: project.aiPrompts ?? [] };
+    const globalPrompts = readGlobalPrompts(context);
+    const projectPrompts = project.aiPrompts ?? [];
+    return { success: true, aiPrompts: mergePromptsForRead(globalPrompts, projectPrompts) };
 }
 
 // ==========================================================

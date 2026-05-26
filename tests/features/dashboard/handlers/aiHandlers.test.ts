@@ -141,6 +141,73 @@ function createMockContext(overrides?: Partial<HandlerContext>): HandlerContext 
     } as unknown as HandlerContext;
 }
 
+/**
+ * Stateful Memento mock used by the global-pin-store tests. Behaves like the
+ * real VS Code Memento: `update(key, val)` persists, subsequent `get(key)`
+ * returns the persisted value. The bare `createMockContext` memento only
+ * echoes the default — fine for handlers that don't touch globalState, but
+ * useless for handlers that read what they just wrote.
+ */
+function makeStatefulMemento(initial: Record<string, unknown> = {}) {
+    const store = new Map<string, unknown>(Object.entries(initial));
+    return {
+        get: jest.fn((key: string, defaultValue?: unknown) =>
+            store.has(key) ? store.get(key) : defaultValue,
+        ),
+        update: jest.fn((key: string, value: unknown) => {
+            if (value === undefined) {
+                store.delete(key);
+            } else {
+                store.set(key, value);
+            }
+            return Promise.resolve();
+        }),
+        keys: jest.fn(() => Array.from(store.keys())),
+        _store: store,
+    };
+}
+
+/**
+ * Build a context for handleSave/Delete/List with stateful globalState +
+ * stateful saveProject. The returned `project` ref mutates in place so the
+ * handler can observe its own prior writes within a single test (mirrors the
+ * real StateManager behavior).
+ */
+function makeScopedContext(opts: {
+    projectPrompts?: unknown[];
+    globalPrompts?: unknown[];
+} = {}) {
+    const project = {
+        name: 'p',
+        path: '/projects/p',
+        aiPrompts: [...(opts.projectPrompts ?? [])] as unknown[],
+    };
+    const saveProject = jest.fn(async (next: { aiPrompts?: unknown[] }) => {
+        project.aiPrompts = next.aiPrompts ?? [];
+    });
+    const memento = makeStatefulMemento({
+        'demoBuilder.ai.globalPrompts': [...(opts.globalPrompts ?? [])],
+    });
+    const context = createMockContext({
+        context: {
+            extensionPath: '/mock/extension/path',
+            secrets: {
+                get: jest.fn(),
+                store: jest.fn(),
+                delete: jest.fn(),
+                onDidChange: jest.fn(),
+            },
+            globalState: memento,
+            subscriptions: [],
+        } as unknown as HandlerContext['context'],
+        stateManager: {
+            getCurrentProject: jest.fn(async () => project),
+            saveProject,
+        } as unknown as HandlerContext['stateManager'],
+    });
+    return { context, project, saveProject, memento };
+}
+
 // ==========================================================
 // Tests
 // ==========================================================
@@ -812,6 +879,90 @@ describe('aiHandlers', () => {
             });
             expect(result.success).toBe(false);
         });
+
+        // ── Global-pin-store routing ──────────────────────────────────────
+        it('writes a new pinned prompt to globalState, NOT to project.aiPrompts', async () => {
+            const { context, project, memento } = makeScopedContext();
+            await handleSaveAiPrompt(context, {
+                prompt: { id: 'g1', title: 'Pinned', prompt: 'p', pinned: true },
+            });
+            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([
+                { id: 'g1', title: 'Pinned', prompt: 'p', pinned: true },
+            ]);
+            expect(project.aiPrompts).toEqual([]);
+        });
+
+        it('writes a new unpinned prompt to project.aiPrompts, NOT to globalState', async () => {
+            const { context, project, memento } = makeScopedContext();
+            await handleSaveAiPrompt(context, {
+                prompt: { id: 'p1', title: 'Unpinned', prompt: 'p' },
+            });
+            expect(project.aiPrompts).toEqual([
+                { id: 'p1', title: 'Unpinned', prompt: 'p' },
+            ]);
+            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([]);
+        });
+
+        it('moves a prompt project→global when pin toggles false→true', async () => {
+            const { context, project, memento } = makeScopedContext({
+                projectPrompts: [
+                    { id: 'x', title: 'X', prompt: 'x' },
+                    { id: 'y', title: 'Y', prompt: 'y' },
+                ],
+            });
+            await handleSaveAiPrompt(context, {
+                prompt: { id: 'x', title: 'X', prompt: 'x', pinned: true },
+            });
+            // Removed from project
+            expect(project.aiPrompts).toEqual([{ id: 'y', title: 'Y', prompt: 'y' }]);
+            // Added to global
+            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([
+                { id: 'x', title: 'X', prompt: 'x', pinned: true },
+            ]);
+        });
+
+        it('moves a prompt global→project when pin toggles true→false', async () => {
+            const { context, project, memento } = makeScopedContext({
+                projectPrompts: [{ id: 'y', title: 'Y', prompt: 'y' }],
+                globalPrompts: [{ id: 'g', title: 'G', prompt: 'g', pinned: true }],
+            });
+            await handleSaveAiPrompt(context, {
+                prompt: { id: 'g', title: 'G', prompt: 'g', pinned: false },
+            });
+            // Removed from global
+            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([]);
+            // Added to project
+            expect(project.aiPrompts).toEqual([
+                { id: 'y', title: 'Y', prompt: 'y' },
+                { id: 'g', title: 'G', prompt: 'g', pinned: false },
+            ]);
+        });
+
+        it('after a cross-scope move, the merged list contains the prompt exactly once', async () => {
+            const { context } = makeScopedContext({
+                projectPrompts: [{ id: 'x', title: 'X', prompt: 'x' }],
+            });
+            await handleSaveAiPrompt(context, {
+                prompt: { id: 'x', title: 'X', prompt: 'x', pinned: true },
+            });
+            const result = await handleListAiPrompts(context);
+            const matches = (result.aiPrompts as { id: string }[]).filter(p => p.id === 'x');
+            expect(matches).toHaveLength(1);
+            expect(matches[0]).toMatchObject({ pinned: true });
+        });
+
+        it('updates a global prompt in place when pin state is unchanged', async () => {
+            const { context, project, memento } = makeScopedContext({
+                globalPrompts: [{ id: 'g', title: 'Old', prompt: 'old', pinned: true }],
+            });
+            await handleSaveAiPrompt(context, {
+                prompt: { id: 'g', title: 'New', prompt: 'new', pinned: true },
+            });
+            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([
+                { id: 'g', title: 'New', prompt: 'new', pinned: true },
+            ]);
+            expect(project.aiPrompts).toEqual([]);
+        });
     });
 
     describe('handleDeleteAiPrompt', () => {
@@ -875,6 +1026,65 @@ describe('aiHandlers', () => {
             expect(result.success).toBe(true);
             expect(result.aiPrompts).toEqual([]);
         });
+
+        // ── Global-pin-store scope-aware delete ───────────────────────────
+        it('deletes a project-only prompt from the project store; global untouched', async () => {
+            const { context, project, memento } = makeScopedContext({
+                projectPrompts: [
+                    { id: 'a', title: 'A', prompt: 'a' },
+                    { id: 'b', title: 'B', prompt: 'b' },
+                ],
+                globalPrompts: [{ id: 'g', title: 'G', prompt: 'g', pinned: true }],
+            });
+            await handleDeleteAiPrompt(context, { promptId: 'a' });
+            expect(project.aiPrompts).toEqual([{ id: 'b', title: 'B', prompt: 'b' }]);
+            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([
+                { id: 'g', title: 'G', prompt: 'g', pinned: true },
+            ]);
+        });
+
+        it('deletes a global-only prompt from globalState; project untouched', async () => {
+            const { context, project, memento } = makeScopedContext({
+                projectPrompts: [{ id: 'p', title: 'P', prompt: 'p' }],
+                globalPrompts: [
+                    { id: 'g1', title: 'G1', prompt: 'g1', pinned: true },
+                    { id: 'g2', title: 'G2', prompt: 'g2', pinned: true },
+                ],
+            });
+            await handleDeleteAiPrompt(context, { promptId: 'g1' });
+            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([
+                { id: 'g2', title: 'G2', prompt: 'g2', pinned: true },
+            ]);
+            expect(project.aiPrompts).toEqual([{ id: 'p', title: 'P', prompt: 'p' }]);
+        });
+
+        it('removes the prompt from BOTH stores when (defensively) it exists in each', async () => {
+            const { context, project, memento } = makeScopedContext({
+                projectPrompts: [{ id: 'dup', title: 'Project copy', prompt: 'p' }],
+                globalPrompts: [{ id: 'dup', title: 'Global copy', prompt: 'g', pinned: true }],
+            });
+            await handleDeleteAiPrompt(context, { promptId: 'dup' });
+            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([]);
+            expect(project.aiPrompts).toEqual([]);
+        });
+
+        it('is a no-op (success, no error) when the prompt id exists in neither store', async () => {
+            const { context, saveProject, memento } = makeScopedContext({
+                projectPrompts: [{ id: 'p', title: 'P', prompt: 'p' }],
+                globalPrompts: [{ id: 'g', title: 'G', prompt: 'g', pinned: true }],
+            });
+            const updateSpy = memento.update;
+            const result = await handleDeleteAiPrompt(context, { promptId: 'nope' });
+            expect(result.success).toBe(true);
+            // No writes to either store when nothing was found
+            expect(saveProject).not.toHaveBeenCalled();
+            expect(updateSpy).not.toHaveBeenCalled();
+            // Returns the merged list unchanged — global first, then project
+            expect(result.aiPrompts).toEqual([
+                { id: 'g', title: 'G', prompt: 'g', pinned: true },
+                { id: 'p', title: 'P', prompt: 'p' },
+            ]);
+        });
     });
 
     describe('handleListAiPrompts', () => {
@@ -923,9 +1133,60 @@ describe('aiHandlers', () => {
             const result = await handleListAiPrompts(context);
             expect(result.success).toBe(false);
         });
+
+        // ── Global-pin-store merging ──────────────────────────────────────
+        it('returns merged list (globals first, then project) when both stores have entries', async () => {
+            const { context } = makeScopedContext({
+                projectPrompts: [
+                    { id: 'p1', title: 'Project 1', prompt: 'p1' },
+                    { id: 'p2', title: 'Project 2', prompt: 'p2' },
+                ],
+                globalPrompts: [
+                    { id: 'g1', title: 'Global 1', prompt: 'g1', pinned: true },
+                ],
+            });
+            const result = await handleListAiPrompts(context);
+            expect(result.success).toBe(true);
+            expect(result.aiPrompts).toEqual([
+                { id: 'g1', title: 'Global 1', prompt: 'g1', pinned: true },
+                { id: 'p1', title: 'Project 1', prompt: 'p1' },
+                { id: 'p2', title: 'Project 2', prompt: 'p2' },
+            ]);
+        });
+
+        it('returns only global prompts when the project has no prompts', async () => {
+            const { context } = makeScopedContext({
+                globalPrompts: [
+                    { id: 'g1', title: 'Global', prompt: 'g1', pinned: true },
+                ],
+            });
+            const result = await handleListAiPrompts(context);
+            expect(result.aiPrompts).toEqual([
+                { id: 'g1', title: 'Global', prompt: 'g1', pinned: true },
+            ]);
+        });
+
+        it('dedups by id when the same id appears in both stores (global wins)', async () => {
+            const { context } = makeScopedContext({
+                projectPrompts: [
+                    { id: 'dup', title: 'Stale project copy', prompt: 'stale' },
+                ],
+                globalPrompts: [
+                    { id: 'dup', title: 'Fresh global copy', prompt: 'fresh', pinned: true },
+                ],
+            });
+            const result = await handleListAiPrompts(context);
+            expect(result.aiPrompts).toEqual([
+                { id: 'dup', title: 'Fresh global copy', prompt: 'fresh', pinned: true },
+            ]);
+        });
     });
 
-    describe('handleSaveAiPrompt — pin-aware ordering (G2)', () => {
+    // Pin-aware ordering inside the project store still applies for legacy
+    // pinned-in-project prompts (no auto-migration). The three "new pinned"
+    // and "flip false→true" cases moved to the global-pin-store tests above —
+    // those scenarios now cross scopes, not just sort within a single array.
+    describe('handleSaveAiPrompt — pin-aware ordering (G2, legacy project store)', () => {
         function makeContext(aiPrompts: unknown[]) {
             const saveProject = jest.fn().mockResolvedValue(undefined);
             const project = { name: 'p', path: '/projects/p', aiPrompts };
@@ -938,56 +1199,13 @@ describe('aiHandlers', () => {
             return { context, saveProject };
         }
 
-        it('inserts a new pinned prompt before existing unpinned prompts', async () => {
-            const { context, saveProject } = makeContext([
-                { id: 'a', title: 'A', prompt: 'a' },
-                { id: 'b', title: 'B', prompt: 'b' },
-            ]);
-            await handleSaveAiPrompt(context, {
-                prompt: { id: 'c', title: 'C', prompt: 'c', pinned: true },
-            });
-            const saved = saveProject.mock.calls[0][0];
-            expect(saved.aiPrompts).toEqual([
-                { id: 'c', title: 'C', prompt: 'c', pinned: true },
-                { id: 'a', title: 'A', prompt: 'a' },
-                { id: 'b', title: 'B', prompt: 'b' },
-            ]);
-        });
-
-        it('inserts a new pinned prompt at end of existing pinned section', async () => {
-            const { context, saveProject } = makeContext([
-                { id: 'p1', title: 'P1', prompt: 'p1', pinned: true },
-                { id: 'a', title: 'A', prompt: 'a' },
-            ]);
-            await handleSaveAiPrompt(context, {
-                prompt: { id: 'p2', title: 'P2', prompt: 'p2', pinned: true },
-            });
-            const saved = saveProject.mock.calls[0][0];
-            expect(saved.aiPrompts).toEqual([
-                { id: 'p1', title: 'P1', prompt: 'p1', pinned: true },
-                { id: 'p2', title: 'P2', prompt: 'p2', pinned: true },
-                { id: 'a', title: 'A', prompt: 'a' },
-            ]);
-        });
-
-        it('moves a prompt to the pinned section when pin state flips true', async () => {
-            const { context, saveProject } = makeContext([
-                { id: 'a', title: 'A', prompt: 'a' },
-                { id: 'b', title: 'B', prompt: 'b' },
-                { id: 'c', title: 'C', prompt: 'c' },
-            ]);
-            await handleSaveAiPrompt(context, {
-                prompt: { id: 'b', title: 'B', prompt: 'b', pinned: true },
-            });
-            const saved = saveProject.mock.calls[0][0];
-            expect(saved.aiPrompts).toEqual([
-                { id: 'b', title: 'B', prompt: 'b', pinned: true },
-                { id: 'a', title: 'A', prompt: 'a' },
-                { id: 'c', title: 'C', prompt: 'c' },
-            ]);
-        });
-
-        it('lands a newly-unpinned prompt just past the pinned boundary (minimal visual jump)', async () => {
+        it('replaces a legacy pinned-in-project prompt in place when the user unpins it (no migration)', async () => {
+            // Legacy data: the prompt was pinned BEFORE the global-store
+            // feature shipped, so it lives in the project array with
+            // `pinned: true`. Unpinning it does NOT cross scopes — it stays
+            // in the project store with `pinned: false`. The render layer's
+            // pinned-first sort handles visual ordering, so no array
+            // re-shuffle is needed here.
             const { context, saveProject } = makeContext([
                 { id: 'p1', title: 'P1', prompt: 'p1', pinned: true },
                 { id: 'p2', title: 'P2', prompt: 'p2', pinned: true },
@@ -998,31 +1216,9 @@ describe('aiHandlers', () => {
                 prompt: { id: 'p1', title: 'P1', prompt: 'p1', pinned: false },
             });
             const saved = saveProject.mock.calls[0][0];
-            // p1 was at position 0 (pinned). After unpin, it sits at the very
-            // top of the unpinned section (position 1) — just past p2 (the
-            // remaining pinned item) — rather than jumping to the bottom.
             expect(saved.aiPrompts).toEqual([
+                { id: 'p1', title: 'P1', prompt: 'p1', pinned: false },
                 { id: 'p2', title: 'P2', prompt: 'p2', pinned: true },
-                { id: 'p1', title: 'P1', prompt: 'p1', pinned: false },
-                { id: 'a', title: 'A', prompt: 'a' },
-                { id: 'b', title: 'B', prompt: 'b' },
-            ]);
-        });
-
-        it('lands an unpinned-from-only-pinned prompt at top of all-unpinned list', async () => {
-            // Unpinning the sole pinned item should leave it at the top —
-            // no other pinned items remain, so the boundary is at position 0.
-            const { context, saveProject } = makeContext([
-                { id: 'p1', title: 'P1', prompt: 'p1', pinned: true },
-                { id: 'a', title: 'A', prompt: 'a' },
-                { id: 'b', title: 'B', prompt: 'b' },
-            ]);
-            await handleSaveAiPrompt(context, {
-                prompt: { id: 'p1', title: 'P1', prompt: 'p1', pinned: false },
-            });
-            const saved = saveProject.mock.calls[0][0];
-            expect(saved.aiPrompts).toEqual([
-                { id: 'p1', title: 'P1', prompt: 'p1', pinned: false },
                 { id: 'a', title: 'A', prompt: 'a' },
                 { id: 'b', title: 'B', prompt: 'b' },
             ]);
@@ -1042,6 +1238,52 @@ describe('aiHandlers', () => {
                 { id: 'a', title: 'A2', prompt: 'a2' },
                 { id: 'b', title: 'B', prompt: 'b' },
             ]);
+        });
+    });
+
+    // ==========================================================
+    // End-to-end flow: create → pin (project→global) → list → unpin → delete
+    // ==========================================================
+
+    describe('AI prompt scope — full pin/unpin/delete flow', () => {
+        it('walks a prompt through every scope transition and ends with the stores empty', async () => {
+            const { context, project, memento } = makeScopedContext();
+
+            // 1. Create unpinned prompt → lives in project
+            await handleSaveAiPrompt(context, {
+                prompt: { id: 'x', title: 'X', prompt: 'x' },
+            });
+            expect(project.aiPrompts).toEqual([{ id: 'x', title: 'X', prompt: 'x' }]);
+            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([]);
+
+            // 2. Pin it → migrates to global, removed from project
+            await handleSaveAiPrompt(context, {
+                prompt: { id: 'x', title: 'X', prompt: 'x', pinned: true },
+            });
+            expect(project.aiPrompts).toEqual([]);
+            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([
+                { id: 'x', title: 'X', prompt: 'x', pinned: true },
+            ]);
+
+            // 3. List returns it once, with pinned: true
+            const listed = await handleListAiPrompts(context);
+            expect(listed.aiPrompts).toEqual([
+                { id: 'x', title: 'X', prompt: 'x', pinned: true },
+            ]);
+
+            // 4. Unpin → migrates back to current project
+            await handleSaveAiPrompt(context, {
+                prompt: { id: 'x', title: 'X', prompt: 'x', pinned: false },
+            });
+            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([]);
+            expect(project.aiPrompts).toEqual([
+                { id: 'x', title: 'X', prompt: 'x', pinned: false },
+            ]);
+
+            // 5. Delete → gone from both stores
+            await handleDeleteAiPrompt(context, { promptId: 'x' });
+            expect(project.aiPrompts).toEqual([]);
+            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([]);
         });
     });
 

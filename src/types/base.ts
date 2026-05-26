@@ -11,18 +11,28 @@ import type { ServiceDefinition } from './components';
 /**
  * AiPrompt - A user-saved AI prompt
  *
- * Per-project saved prompts the user can create, edit, duplicate, delete,
- * pin, and reorder. Persisted on `Project.aiPrompts` (per-project scope)
- * and `demoBuilder.ai.globalPrompts` setting (global scope, future G3).
+ * Storage is scope-routed by the `pinned` field. Pinned prompts persist in
+ * VS Code globalState under `demoBuilder.ai.globalPrompts` and appear in
+ * every project. Unpinned prompts persist in the current project's
+ * `.demo-builder.json` manifest under `Project.aiPrompts` and stay
+ * project-specific. Toggling pin moves the prompt across stores.
  *
- * Order in the persisted array IS the rendered order. Pinned prompts sort
- * before unpinned within their scope.
+ * Legacy data: prompts pinned before the global-pin feature shipped remain
+ * in their project's manifest until the user manually unpins then re-pins
+ * them — no automatic migration.
+ *
+ * Array order within either store is preserved; render-time pinned-first
+ * sort happens in the UI layer.
  */
 export interface AiPrompt {
     id: string;
     title: string;
     prompt: string;
-    /** When true, sort before unpinned prompts within the same scope. */
+    /**
+     * When true: the prompt lives in globalState and appears in every
+     * project; render-time sort floats it above unpinned prompts.
+     * When falsy: project-scoped, visible only in the current project.
+     */
     pinned?: boolean;
 }
 
