@@ -412,6 +412,10 @@ export const Section: React.FC<any> = ({ children, title, ...props }) => (
     <optgroup label={title} {...filterSpectrumProps(props)}>{children}</optgroup>
 );
 
+// SubmenuTrigger mock — structural marker. Its children are [trigger Item, submenu Menu].
+// The Menu mock interprets it by reading props (it does not render this component directly).
+export const SubmenuTrigger: React.FC<any> = ({ children }) => <>{children}</>;
+
 // Header mock
 export const Header: React.FC<any> = ({ children, ...props }) => (
     <header data-testid="spectrum-header" {...filterSpectrumProps(props)}>{children}</header>
@@ -586,6 +590,77 @@ export const ListView: React.FC<any> = ({
 // Menu components
 export const MenuTrigger: React.FC<any> = ({ children }) => <>{children}</>;
 
+/**
+ * Recursively flatten a menu's static children into <li> rows.
+ *
+ * Supports three node kinds:
+ * - Item: a `<li role="menuitem">` that dispatches `onAction(key)` on click.
+ * - Section: a non-interactive heading (`role="presentation"`) followed by its items.
+ * - SubmenuTrigger: the trigger Item as a menuitem, plus a nested, scoped
+ *   `<ul data-testid="spectrum-submenu">` holding the submenu's items.
+ *
+ * Falsy children are skipped, matching React's handling of `{cond ? <Item/> : null}`.
+ */
+function flattenSpectrumMenuChildren(
+    children: React.ReactNode,
+    onAction?: (key: any) => void,
+): React.ReactNode[] {
+    const rows: React.ReactNode[] = [];
+    React.Children.forEach(children, (child: any) => {
+        if (!child) return;
+
+        if (child.type === Section) {
+            const { title, children: sectionChildren } = child.props ?? {};
+            if (title) {
+                rows.push(
+                    <li key={`section-${title}`} role="presentation" data-testid="spectrum-menu-section">
+                        {title}
+                    </li>,
+                );
+            }
+            rows.push(...flattenSpectrumMenuChildren(sectionChildren, onAction));
+            return;
+        }
+
+        if (child.type === SubmenuTrigger) {
+            const parts = React.Children.toArray(child.props?.children);
+            const trigger: any = parts[0];
+            const submenu: any = parts[1];
+            const triggerKey = getOriginalKey(trigger?.key);
+            rows.push(
+                <li
+                    key={triggerKey || 'submenu-trigger'}
+                    role="menuitem"
+                    tabIndex={0}
+                    aria-haspopup="menu"
+                    data-testid="spectrum-submenu-trigger"
+                    onClick={() => onAction?.(triggerKey)}
+                >
+                    {trigger?.props?.textValue || trigger?.props?.children}
+                </li>,
+            );
+            const submenuOnAction = submenu?.props?.onAction ?? onAction;
+            rows.push(
+                <li key={`${triggerKey || 'submenu'}-items`} role="presentation">
+                    <ul role="menu" data-testid="spectrum-submenu">
+                        {flattenSpectrumMenuChildren(submenu?.props?.children, submenuOnAction)}
+                    </ul>
+                </li>,
+            );
+            return;
+        }
+
+        // Plain Item
+        const key = getOriginalKey(child.key);
+        rows.push(
+            <li key={key} role="menuitem" tabIndex={0} onClick={() => onAction?.(key)}>
+                {child.props?.textValue || child.props?.children}
+            </li>,
+        );
+    });
+    return rows;
+}
+
 export const Menu: React.FC<any> = ({ children, items, onAction, ...props }) => {
     // Handle render function pattern: children is (item) => <Item>...</Item>
     // with items prop providing the data
@@ -610,25 +685,10 @@ export const Menu: React.FC<any> = ({ children, items, onAction, ...props }) => 
             );
         });
     } else {
-        // Static children pattern - children are Item elements.
-        // Skip falsy children (e.g. `{cond ? <Item /> : null}`) to match React's
-        // real rendering, where false/null are valid no-op children.
-        content = React.Children.map(children, (child: any) => {
-            if (!child) return null;
-            const key = getOriginalKey(child.key);
-            // Get the text content for the menu item name
-            const itemText = child.props?.textValue || child.props?.children;
-            return (
-                <li
-                    key={key}
-                    role="menuitem"
-                    onClick={() => onAction?.(key)}
-                    tabIndex={0}
-                >
-                    {itemText}
-                </li>
-            );
-        });
+        // Static children pattern — Items, Sections, and SubmenuTriggers.
+        // Flatten recursively so sections contribute a heading + their items,
+        // and submenu triggers contribute a menuitem + a scoped submenu list.
+        content = flattenSpectrumMenuChildren(children, onAction);
     }
 
     return (
