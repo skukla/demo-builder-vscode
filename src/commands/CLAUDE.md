@@ -167,16 +167,15 @@ comm.on('continue-step', async (payload) => {
 
 **Command ID**: `demoBuilder.openInClaude`
 
-**Behavior** — driven by four settings:
+**Behavior** — driven by three settings:
 
 - **`demoBuilder.ai.engine`** — which AI tool. Currently `'claude-code'` only; reserved for future engines (e.g. Codex).
 - **`demoBuilder.ai.surface`** — how the engine is launched. **Terminal is the baseline** (no VS Code extension required); the extension surface is offered when Demo Builder detects the engine's VS Code extension is installed.
 - **`demoBuilder.ai.dockToRight`** — boolean (default `false`). Single position preference applied across both surfaces. When `true`, the extension chat panel docks to the right secondary sidebar and terminals open as editor tabs beside the active editor. Demo Builder atomically syncs `claudeCode.preferredLocation` to keep the extension's native setting aligned.
-- **`demoBuilder.ai.spawnInjectDelayMs`** — number (default `2500`). Terminal surface only: delay before a clicked prompt is auto-pasted into a freshly spawned terminal, giving `claude --continue` time to reach its input-ready REPL. The clipboard write is the guaranteed fallback for slower starts.
 
 | `surface` | Behavior |
 |---------|----------|
-| `terminal` (default) | Find-or-spawn the "Claude Code" terminal at `project.path`; on spawn, runs `claude --continue`. Reuses an existing live terminal (matched by name + `exitStatus === undefined`) instead of duplicating. When `dockToRight=true`, spawns the terminal as an editor tab beside the active editor; otherwise spawns in the bottom panel. For prompt clicks, writes the prompt to the clipboard before launching + shows a "paste it into Claude" info toast. |
+| `terminal` (default) | Find-or-spawn the "Claude Code" terminal at `project.path`. Reuses an existing live terminal (matched by name + `exitStatus === undefined`) instead of duplicating. When `dockToRight=true`, spawns the terminal as an editor tab beside the active editor; otherwise spawns in the bottom panel. **Prompt delivery:** on spawn, the prompt rides the launch command as `claude --continue -- <prompt>` (race-free — claude runs it on startup; `--` keeps a dash-leading prompt from being read as a flag); on reuse, claude is already running so the prompt is injected into the live REPL via bracketed paste (pre-filled for the user to send). The prompt is always copied to the clipboard as a fallback. With no prompt, spawn runs a bare `claude --continue`. |
 | `extension` | URI handler (`vscode://anthropic.claude-code/open`) when the `anthropic.claude-code` extension is installed. Missing-extension (with explicit user choice of `'extension'`) surfaces a recovery dialog: `INSTALL_ACTION_LABEL` ("Install Claude Code Extension" — opens the marketplace) or `SWITCH_TO_TERMINAL_ACTION_LABEL` ("Switch to Terminal Mode" — updates the setting + retries the launch). |
 
 **Unified dock-to-right offer toast** (`maybeOfferDockToRight`): Fires once after the first successful launch on either surface, gated by `DOCK_OFFER_SHOWN_KEY` (which reuses the legacy `FIRST_TIP_KEY` string value so existing users who already saw the old drag-to-sidebar tip don't re-see the new toast). Surface-aware body wording. "Dock to right side" atomically writes BOTH `demoBuilder.ai.dockToRight = true` AND `claudeCode.preferredLocation = 'sidebar'` (try/catch with rollback if the second write fails). "Keep current layout" or dismissal writes neither.

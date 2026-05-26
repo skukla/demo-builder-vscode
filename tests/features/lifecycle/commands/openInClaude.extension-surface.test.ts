@@ -235,7 +235,7 @@ describe('OpenInClaudeCommand', () => {
             expect(String(uriArg)).toBe('vscode://anthropic.claude-code/open');
         });
 
-        it('terminal-mode hands the prompt off via the clipboard (rather than URI args)', async () => {
+        it('terminal-mode delivers the prompt via the launch arg + clipboard (not URI args)', async () => {
             const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
@@ -247,11 +247,11 @@ describe('OpenInClaudeCommand', () => {
 
             // URI handler never used in terminal mode
             expect(mocks.openExternalMock).not.toHaveBeenCalled();
-            // Prompt copied to clipboard
+            // Prompt copied to clipboard (fallback)
             expect(mocks.clipboardWriteMock).toHaveBeenCalledWith('add a hero block');
-            // Terminal spawned with --continue (prompt NOT injected via sendText)
+            // Terminal spawned with the prompt riding the --continue launch arg
             expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
-            expect(mocks.terminalSendTextMock).toHaveBeenCalledWith('claude --continue');
+            expect(mocks.terminalSendTextMock).toHaveBeenCalledWith("claude --continue -- 'add a hero block'");
         });
     });
 

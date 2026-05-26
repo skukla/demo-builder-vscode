@@ -96,17 +96,6 @@ export const PENDING_CLAUDE_LAUNCH_KEY = 'demoBuilder.ai.pendingClaudeLaunch';
 /** Terminal name displayed in the integrated terminals dropdown. */
 const TERMINAL_NAME = 'Claude Code';
 
-/**
- * Default delay (ms) before the spawn-case prompt injection fires. `claude
- * --continue` must reach its input-ready REPL first (it loads prior session
- * history and initializes MCP servers), and there is no public VS Code or
- * Claude signal for "TUI ready" — terminal shell integration reports the shell
- * command's start/end, not an app's internal readiness. So this is a tuned
- * heuristic; the clipboard write in `launchTerminal` is the guaranteed fallback
- * for starts slower than this. Overridable via `demoBuilder.ai.spawnInjectDelayMs`.
- */
-const DEFAULT_SPAWN_INJECT_DELAY_MS = 2500;
-
 /** Dialog action labels — exported so the activation handler can reuse them. */
 export const INSTALL_ACTION_LABEL = 'Install Claude Code Extension';
 export const SWITCH_TO_TERMINAL_ACTION_LABEL = 'Switch to Terminal Mode';
@@ -242,17 +231,6 @@ export class OpenInClaudeCommand extends BaseCommand {
     private getDockToRight(): boolean {
         const config = vscode.workspace.getConfiguration('demoBuilder.ai');
         return config.get<boolean>('dockToRight', false);
-    }
-
-    /**
-     * Read `demoBuilder.ai.spawnInjectDelayMs` (defaults to
-     * {@link DEFAULT_SPAWN_INJECT_DELAY_MS}). Falls back to the default for a
-     * negative or non-finite hand-edited value so the timer stays sane.
-     */
-    private getSpawnInjectDelayMs(): number {
-        const config = vscode.workspace.getConfiguration('demoBuilder.ai');
-        const value = config.get<number>('spawnInjectDelayMs', DEFAULT_SPAWN_INJECT_DELAY_MS);
-        return Number.isFinite(value) && value >= 0 ? value : DEFAULT_SPAWN_INJECT_DELAY_MS;
     }
 
     /**
@@ -453,12 +431,15 @@ export class OpenInClaudeCommand extends BaseCommand {
      * Launch `claude --continue` in an integrated terminal at `project.path`,
      * reusing an existing "Claude Code" terminal if one is still alive.
      *
-     * When `prompt` is provided, the prompt is auto-inserted into the active
-     * claude REPL via bracketed-paste escape sequences (preserves multi-line,
-     * doesn't auto-submit — user reviews and hits Enter). The clipboard is
-     * always written too as a silent fallback for the spawn-case edge where
-     * claude is blocked on an MCP server confirmation prompt and the inject
-     * lands in the wrong UI.
+     * When `prompt` is provided, delivery depends on spawn vs reuse:
+     *   - Spawn: pass the prompt to `claude --continue <prompt>` as a launch
+     *     argument. Race-free — claude receives it the moment it starts, with
+     *     no waiting for the REPL and nothing to drop. claude runs it
+     *     immediately (auto-submits).
+     *   - Reuse: claude is already running and can't take a new launch arg, so
+     *     inject into the live REPL via bracketed paste, which pre-fills the
+     *     input for the user to send.
+     * The clipboard is always written too as a silent fallback.
      *
      * Terminal location: when `demoBuilder.ai.dockToRight === true`, new
      * spawns open as editor tabs beside the active editor via
@@ -501,18 +482,19 @@ export class OpenInClaudeCommand extends BaseCommand {
             : undefined;
         const terminal = this.createTerminal(TERMINAL_NAME, project.path, location);
         terminal.show();
-        terminal.sendText('claude --continue');
+        // Deliver the prompt as a launch argument so claude runs it on startup —
+        // no waiting for the REPL, no dropped paste. `--` marks end-of-options so
+        // a prompt that starts with a dash is taken as text, not a flag. Falls
+        // back to a bare resume when there's no prompt.
+        const launchCommand = prompt
+            ? `claude --continue -- ${this.quotePromptForShell(prompt)}`
+            : 'claude --continue';
+        terminal.sendText(launchCommand);
         this.logger.info(
-            `[Open in Claude] terminal spawned (project=${project.name}, location=${locationLabel})`,
+            `[Open in Claude] terminal spawned (project=${project.name}, location=${locationLabel}, prompt=${prompt ? 'yes' : 'no'})`,
         );
 
         if (prompt) {
-            // Spawn case: claude is bootstrapping. Wait for it to reach the
-            // REPL before injecting. If claude is blocked on an MCP server
-            // confirmation prompt during this window, the injection lands as
-            // harmless garbage in the MCP UI and the user falls back to the
-            // clipboard. Fire-and-forget — execute() should not block on this.
-            this.scheduleSpawnInject(terminal, prompt);
             this.maybeShowClipboardFallbackTip();
         }
     }
@@ -532,28 +514,13 @@ export class OpenInClaudeCommand extends BaseCommand {
     }
 
     /**
-     * Spawn-case prompt injection: wait for claude to bootstrap, then inject.
-     * Skip if the terminal has exited in the meantime. The delay is a
-     * pragmatic compromise — VS Code's public API offers no signal for
-     * "TUI is ready" (see research/ADR). The clipboard fallback covers cases
-     * where the delay is wrong (MCP confirmation prompt, slow disk, etc.).
+     * POSIX-quote a prompt for use as a single shell argument. Wraps the whole
+     * string in single quotes and escapes any embedded single quote as `'\''`
+     * (close, escaped quote, reopen). Safe for spaces, `$`, backticks, double
+     * quotes, and newlines (all literal inside single quotes).
      */
-    private scheduleSpawnInject(terminal: vscode.Terminal, prompt: string): void {
-        const delayMs = this.getSpawnInjectDelayMs();
-        const handle = setTimeout(() => {
-            if (terminal.exitStatus !== undefined) {
-                this.logger.debug('[Open in Claude] spawn-inject skipped: terminal exited');
-                return;
-            }
-            terminal.show();
-            this.injectPromptViaBracketedPaste(prompt);
-            this.logger.debug(`[Open in Claude] spawn-inject fired after ${delayMs}ms delay`);
-        }, delayMs);
-        // Don't hold the Node event loop open just for a UX-timing timer. If
-        // VS Code is shutting down, the inject is moot.
-        if (typeof (handle as NodeJS.Timeout).unref === 'function') {
-            (handle as NodeJS.Timeout).unref();
-        }
+    private quotePromptForShell(prompt: string): string {
+        return `'${prompt.replace(/'/g, "'\\''")}'`;
     }
 
     /**

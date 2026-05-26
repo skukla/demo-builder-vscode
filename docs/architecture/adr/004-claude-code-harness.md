@@ -364,3 +364,45 @@ explicit-intent case on the no-prompt "Open in Claude Code" tile path.
   Claude sessions" link gated by extension presence; one-time
   auto-open on first mount gated on browse success; surface-aware
   multi-click contract note above the prompt grid.
+
+---
+
+## Amendment (2026-05-26): Terminal Prompt Delivery — Launch Arg on Spawn
+
+**Problem.** A clicked prompt was dropped when Claude Code launched in a
+freshly *spawned* terminal. The implementation pasted the prompt into the REPL
+via bracketed-paste escape sequences after a delay (first 800 ms, later a tuned
+and configurable 2500 ms). `claude --continue` reaches its input-ready REPL
+only after loading prior session history and initializing MCP servers, and that
+time varies by machine, project, and network. Any fixed delay races the
+cold-start and loses.
+
+**Why no readiness signal.** Research (VS Code API docs, 1.93 release notes,
+the relevant GitHub issues) confirmed there is no public signal for "TUI is
+ready for input." Terminal shell integration reports the shell command's
+start/end, not an application's internal readiness; its only relevant event
+fires at claude *launch* (earlier than the old delay), and reading the
+alternate-screen output to detect readiness is fragile and unsupported. A retry
+loop can't help either — without a "landed" signal it would duplicate the
+prompt once claude becomes ready.
+
+**Decision.** Eliminate the race instead of timing it.
+
+- **Spawn:** deliver the prompt as a launch argument —
+  `claude --continue -- <prompt>`. claude receives it the moment it starts; the
+  `--` marks end-of-options so a dash-leading prompt is read as text, not a
+  flag. The prompt is POSIX single-quote escaped (`quotePromptForShell`).
+  Consequence: the prompt **auto-submits** (claude runs it immediately) rather
+  than pre-filling for review — an accepted trade for reliability, and a good
+  fit for curated demo prompts.
+- **Reuse:** a running claude can't take a new launch arg, so the immediate
+  bracketed-paste injection is retained (pre-fills the input for the user to
+  send). This is reliable because claude is already at its REPL.
+- The clipboard write remains the always-on fallback.
+
+**Supersedes.** The `demoBuilder.ai.spawnInjectDelayMs` setting and the
+delayed spawn-inject machinery are removed.
+
+**Files.** `src/commands/openInClaude.ts` (`launchTerminal` spawn path,
+`quotePromptForShell`; removed `scheduleSpawnInject` / `getSpawnInjectDelayMs`),
+`package.json` (setting removed).

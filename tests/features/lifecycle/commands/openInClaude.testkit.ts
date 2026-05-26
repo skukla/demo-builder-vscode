@@ -120,11 +120,6 @@ export function setupVscodeMocks(opts: {
      */
     dockToRight?: boolean;
     /**
-     * Value of the `demoBuilder.ai.spawnInjectDelayMs` setting. When omitted,
-     * the production default applies (mock returns the caller's defaultValue).
-     */
-    spawnInjectDelayMs?: number;
-    /**
      * Value of the `claudeCode.preferredLocation` setting (read-only here;
      * tests assert writes via `claudeCodeUpdateMock`). Defaults to `'panel'`.
      */
@@ -155,9 +150,6 @@ export function setupVscodeMocks(opts: {
         if (key === 'engine') return opts.engine ?? 'claude-code';
         if (key === 'surface') return opts.surface;
         if (key === 'dockToRight') return opts.dockToRight ?? false;
-        if (key === 'spawnInjectDelayMs') {
-            return opts.spawnInjectDelayMs ?? defaultValue;
-        }
         return defaultValue;
     });
     const configUpdateMock = jest.fn().mockResolvedValue(undefined);
