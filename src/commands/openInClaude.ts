@@ -366,15 +366,51 @@ export class OpenInClaudeCommand extends BaseCommand {
             return;
         }
         this.logger.info(`[Open in Claude] URI launch succeeded for ${project?.name ?? '<no project>'}`);
-        await this.maybeOpenSessionsBrowserOnce();
+        // Docked layout expects chat + sessions side-by-side, so reveal the
+        // sessions browser on every launch (idempotent — already-visible is a
+        // no-op). Non-docked keeps the one-time intro so a single-tab user
+        // isn't ambushed by a sidebar on every click.
+        if (this.getDockToRight()) {
+            await this.revealSessionsBrowser();
+        } else {
+            await this.maybeOpenSessionsBrowserOnce();
+        }
+    }
+
+    /**
+     * Reveal the Claude Code sessions browser view. Tries the container-focus
+     * command first, then the auto-generated `<viewId>.focus` fallback for
+     * users who dragged the view out of its default container. Returns whether
+     * either command succeeded. No-op (returns false) when the extension is
+     * not installed.
+     */
+    private async revealSessionsBrowser(): Promise<boolean> {
+        if (!this.isClaudeCodeExtensionInstalled()) return false;
+        try {
+            await vscode.commands.executeCommand('workbench.view.extension.claude-sessions-sidebar');
+            return true;
+        } catch (primaryError) {
+            this.logger.warn(
+                `[Open in Claude] sessions browser primary command failed; trying fallback (${primaryError instanceof Error ? primaryError.message : String(primaryError)})`,
+            );
+            try {
+                await vscode.commands.executeCommand('claudeVSCodeSessionsList.focus');
+                return true;
+            } catch (fallbackError) {
+                this.logger.warn(
+                    `[Open in Claude] sessions browser fallback also failed (${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)})`,
+                );
+                return false;
+            }
+        }
     }
 
     /**
      * One-time auto-open of the Claude Code sessions browser after the user
-     * actively engages the extension surface for the first time. Tied to the
-     * extension-surface launch (not AI dashboard mount) so a terminal-surface
-     * user never sees the extension's sessions browser unexpectedly — that
-     * would imply a mixed-surface UX.
+     * actively engages the extension surface for the first time (non-docked
+     * layout). Tied to the extension-surface launch (not AI dashboard mount)
+     * so a terminal-surface user never sees the extension's sessions browser
+     * unexpectedly — that would imply a mixed-surface UX.
      *
      * Flag is set AFTER the command succeeds so a failed primary+fallback
      * leaves the user a chance to be surfaced next launch.
@@ -385,26 +421,7 @@ export class OpenInClaudeCommand extends BaseCommand {
         if (!this.isClaudeCodeExtensionInstalled()) return;
 
         this.logger.info('[Open in Claude] auto-opening Claude Code sessions browser (first extension launch)');
-        let succeeded = false;
-        try {
-            await vscode.commands.executeCommand('workbench.view.extension.claude-sessions-sidebar');
-            succeeded = true;
-        } catch (primaryError) {
-            this.logger.warn(
-                `[Open in Claude] sessions browser primary command failed; trying fallback (${primaryError instanceof Error ? primaryError.message : String(primaryError)})`,
-            );
-            try {
-                await vscode.commands.executeCommand('claudeVSCodeSessionsList.focus');
-                succeeded = true;
-            } catch (fallbackError) {
-                // Silent failure — the user didn't explicitly request this
-                // auto-open. They can click "Browse Claude sessions" from the
-                // AI dashboard if they want it.
-                this.logger.warn(
-                    `[Open in Claude] sessions browser fallback also failed (${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)})`,
-                );
-            }
-        }
+        const succeeded = await this.revealSessionsBrowser();
         if (succeeded) {
             await this.context.globalState.update(SESSIONS_BROWSER_AUTO_SHOWN_KEY, true);
         }

@@ -1651,6 +1651,37 @@ describe('OpenInClaudeCommand', () => {
             );
             expect(sessionsCall).toBeUndefined();
         });
+
+        it('reveals the sessions browser on EVERY docked launch, even after the once-ever flag is set', async () => {
+            // Docked layout expects chat + sessions side-by-side. Unlike the
+            // non-docked once-ever auto-open, the docked path reveals the
+            // sessions browser on every launch so switching back to the
+            // extension surface restores both panes without a manual click.
+            setupVscodeMocks({
+                surface: 'extension',
+                extensionInstalled: true,
+                dockToRight: true,
+            });
+            const executeCommandMock = vscode.commands.executeCommand as jest.Mock;
+            executeCommandMock.mockClear();
+            executeCommandMock.mockResolvedValue(undefined);
+            // Flag already consumed by a prior launch — the non-docked path
+            // would skip the reveal here.
+            const globalState = makeGlobalState({
+                [SESSIONS_BROWSER_AUTO_SHOWN_KEY]: true,
+            });
+            const command = new OpenInClaudeCommand(
+                makeContext(globalState),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute(makeProject() as Project);
+
+            expect(executeCommandMock).toHaveBeenCalledWith(
+                'workbench.view.extension.claude-sessions-sidebar',
+            );
+        });
     });
 
     // ------------------------------------------------------------------------
