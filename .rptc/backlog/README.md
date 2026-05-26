@@ -16,7 +16,8 @@ This directory is the **single source of truth** for "what's next." If it belong
 ```
 draft  →  ready  →  active  →  shipped/dropped
   │         │          │            │
-  │         │          │            └─ delete the file (git history is the record)
+  │         │          │            └─ move the file to .rptc/complete/ (archive;
+  │         │          │               git history holds the full implementation record)
   │         │          └─ move to .rptc/plans/<topic-slug>/ (multi-step) OR
   │         │             promote in place when starting work
   │         └─ ready for execution; pick up any time
@@ -24,10 +25,6 @@ draft  →  ready  →  active  →  shipped/dropped
 ```
 
 ## Active backlog
-
-### Project Dashboard tile layout redesign ([`2026-05-26-dashboard-tile-layout.md`](2026-05-26-dashboard-tile-layout.md))
-
-Shrink the dashboard action tiles (160px → ~96px) and replace the flat 4-column grid with labeled, prioritized zones: PRIMARY heroes (Start/Stop, Open in Browser, AI), STOREFRONT (Author DA.live + Sync Storefront; renders for EDS projects only), BUILD (Deploy Mesh, Configure, Logs) + a "More" overflow (Components, Dev Console), and an isolated Delete footer. Removes the redundant Open-in-Claude tile (folds into the AI surface). Layout-only — preserves all `isEds`/`hasMesh`/`isRunning` gating. Main hazard: the hard-coded `712px` status-header width coupling in `custom-spectrum.css`. Scoped from research on 2026-05-26; form, zones, heroes, and overflow all decided. Ready.
 
 ### Multi-locale storefront — Phase 1 ([`2026-05-19-multisite-multilocale.md`](2026-05-19-multisite-multilocale.md))
 
