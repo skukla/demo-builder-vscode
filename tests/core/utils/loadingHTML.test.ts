@@ -123,6 +123,20 @@ describe('loadingHTML', () => {
             expect(mockPanel.webview.html).toBe(fastContent);
         });
 
+        it('skips the minimum display floor when minDisplayMs is 0', async () => {
+            const fastContent = '<div>Instant content</div>';
+            const getContent = jest.fn().mockResolvedValue(fastContent);
+
+            // minDisplayMs = 0 (5th arg) — no artificial floor.
+            const promise = setLoadingState(mockPanel, getContent, 'Loading…', undefined, 0);
+
+            // After only INIT_DELAY (100ms), content is shown — not held for 1500ms.
+            await advanceTime(100);
+            await promise;
+
+            expect(mockPanel.webview.html).toBe(fastContent);
+        });
+
         it('should not add extra delay if content takes long to load', async () => {
             const slowContent = '<div>Slow content</div>';
             // Simulate slow content load that takes longer than MIN_DISPLAY_TIME

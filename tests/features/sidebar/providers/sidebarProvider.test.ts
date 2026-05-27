@@ -246,6 +246,12 @@ describe('SidebarProvider', () => {
                 expect.stringContaining('navigate')
             );
         });
+
+        it('should route openAiMenu message to the demoBuilder.aiMenu command', async () => {
+            await messageHandler({ type: 'openAiMenu' });
+
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.aiMenu');
+        });
     });
 
     describe('sendMessage', () => {

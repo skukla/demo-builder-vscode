@@ -96,6 +96,28 @@ export const PENDING_CLAUDE_LAUNCH_KEY = 'demoBuilder.ai.pendingClaudeLaunch';
 /** Terminal name displayed in the integrated terminals dropdown. */
 const TERMINAL_NAME = 'Claude Code';
 
+/**
+ * Find the live "Claude Code" chat terminal, if one is open. "Live" means a
+ * terminal whose name matches and whose `exitStatus` is `undefined` (the shell
+ * is still running). Returns `undefined` when none is open. Shared by the
+ * launch reuse path and the `isClaudeChatOpen` state check so the matching
+ * logic lives in one place.
+ */
+function findLiveClaudeTerminal(): vscode.Terminal | undefined {
+    return vscode.window.terminals.find(
+        (t) => t.name === TERMINAL_NAME && t.exitStatus === undefined,
+    );
+}
+
+/**
+ * Whether a live Claude Code chat terminal is currently open. Backs the
+ * state-aware AI icon: when no chat is open the AI menu opens the chat directly
+ * instead of showing the prompt QuickPick.
+ */
+export function isClaudeChatOpen(): boolean {
+    return findLiveClaudeTerminal() !== undefined;
+}
+
 /** Dialog action labels — exported so the activation handler can reuse them. */
 export const INSTALL_ACTION_LABEL = 'Install Claude Code Extension';
 export const SWITCH_TO_TERMINAL_ACTION_LABEL = 'Switch to Terminal Mode';
@@ -115,9 +137,6 @@ const OPEN_SETTINGS_ACTION_LABEL = 'Open Settings';
  * `{ project?, prompt? }` payload.
  */
 export type OpenInClaudeArg = Project | { project?: Project; prompt?: string };
-
-/** Terminal launch location label used in the spawn log line. */
-type TerminalLocationLabel = 'panel' | 'editor-beside';
 
 /**
  * OpenInClaudeCommand — opens Claude Code for the current project.
@@ -441,9 +460,10 @@ export class OpenInClaudeCommand extends BaseCommand {
      *     input for the user to send.
      * The clipboard is always written too as a silent fallback.
      *
-     * Terminal location: when `demoBuilder.ai.dockToRight === true`, new
-     * spawns open as editor tabs beside the active editor via
-     * `{ viewColumn: ViewColumn.Beside }`. Otherwise default panel placement.
+     * Terminal location (chat-first): new spawns open as a tab in the active
+     * editor group (`{ viewColumn: ViewColumn.Active }`) — next to Project
+     * Dashboard — not a split. Independent of `dockToRight`, which now governs
+     * only the extension chat-panel surface.
      */
     private async launchTerminal(project: Project | undefined, prompt?: string): Promise<void> {
         if (!project || !project.path) {
@@ -461,9 +481,7 @@ export class OpenInClaudeCommand extends BaseCommand {
             this.logger.debug('[Open in Claude] prompt copied to clipboard (silent fallback)');
         }
 
-        const existing = vscode.window.terminals.find(t =>
-            t.name === TERMINAL_NAME && t.exitStatus === undefined,
-        );
+        const existing = findLiveClaudeTerminal();
         if (existing) {
             existing.show();
             this.logger.info(`[Open in Claude] terminal reused (project=${project.name})`);
@@ -475,12 +493,12 @@ export class OpenInClaudeCommand extends BaseCommand {
             return;
         }
 
-        const dockToRight = this.getDockToRight();
-        const locationLabel: TerminalLocationLabel = dockToRight ? 'editor-beside' : 'panel';
-        const location = dockToRight
-            ? { viewColumn: vscode.ViewColumn.Beside }
-            : undefined;
-        const terminal = this.createTerminal(TERMINAL_NAME, project.path, location);
+        // Chat-first: open the terminal as a tab in the active editor group
+        // (next to Project Dashboard), not a side split. Placement is decoupled
+        // from dockToRight, which now governs only the extension chat surface.
+        const terminal = this.createTerminal(TERMINAL_NAME, project.path, {
+            viewColumn: vscode.ViewColumn.Active,
+        });
         terminal.show();
         // Deliver the prompt as a launch argument so claude runs it on startup —
         // no waiting for the REPL, no dropped paste. `--` marks end-of-options so
@@ -491,7 +509,7 @@ export class OpenInClaudeCommand extends BaseCommand {
             : 'claude --continue';
         terminal.sendText(launchCommand);
         this.logger.info(
-            `[Open in Claude] terminal spawned (project=${project.name}, location=${locationLabel}, prompt=${prompt ? 'yes' : 'no'})`,
+            `[Open in Claude] terminal spawned (project=${project.name}, location=editor-active, prompt=${prompt ? 'yes' : 'no'})`,
         );
 
         if (prompt) {

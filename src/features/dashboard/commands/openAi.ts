@@ -16,6 +16,13 @@ import type { HandlerContext, SharedState } from '@/types/handlers';
 interface AiOverviewInitialData {
     theme: 'dark' | 'light';
     project: Project;
+    /**
+     * Deep-link: when the surface is opened to edit a specific prompt (e.g. via
+     * the AI QuickPick's inline edit button), this carries that prompt's id so
+     * a FRESH open can open its edit dialog directly. For an already-open panel,
+     * the id is pushed via an `open-edit-prompt` message instead.
+     */
+    editPromptId?: string;
 }
 
 /**
@@ -28,6 +35,12 @@ interface AiOverviewInitialData {
  * `openInClaude` route.
  */
 export class ShowAiCommand extends BaseWebviewCommand {
+    /**
+     * Deep-link target for a FRESH open. Captured in `execute` and surfaced in
+     * `getInitialData` so the webview opens that prompt's edit dialog on mount.
+     */
+    private editPromptId?: string;
+
     /**
      * Dispose any active AI panel (used during navigation / reset).
      */
@@ -51,10 +64,21 @@ export class ShowAiCommand extends BaseWebviewCommand {
     }
 
     protected getLoadingMessage(): string {
-        return 'Loading AI overview...';
+        // Edit launches render a focused dialog, not the overview — don't
+        // mislabel the brief loading screen as "AI overview".
+        return this.editPromptId ? 'Loading…' : 'Loading AI overview...';
     }
 
-    public async execute(): Promise<void> {
+    /**
+     * Skip the shared loading floor for the AI surface: natural bundle/handshake
+     * time is enough, and the focused edit dialog should appear immediately
+     * rather than behind a 1.5s "Loading…" screen.
+     */
+    protected getMinLoadingMs(): number {
+        return 0;
+    }
+
+    public async execute(arg?: { editPromptId?: string }): Promise<void> {
         try {
             const project = await this.stateManager.getCurrentProject();
             if (!project) {
@@ -62,13 +86,36 @@ export class ShowAiCommand extends BaseWebviewCommand {
                 return;
             }
 
-            await this.createOrRevealPanel();
+            // Capture whether the panel was already open BEFORE createOrRevealPanel
+            // wires up a comm manager. A fresh open re-fetches initial data (which
+            // carries `editPromptId`); an already-open panel does not, so we push
+            // an `open-edit-prompt` message instead.
+            const wasOpen = Boolean(this.communicationManager);
+            this.editPromptId = arg?.editPromptId;
+
+            const panel = await this.createOrRevealPanel();
+
+            // Title reflects intent: a fresh edit launch shows "Edit Prompt"
+            // (the surface renders edit-only); a manage launch shows "AI". On a
+            // manage launch over an already-open (possibly edit-only) panel, push
+            // `set-manage-mode` so the webview drops back to the full grid.
+            if (arg?.editPromptId) {
+                panel.title = 'Edit Prompt';
+            } else {
+                panel.title = 'AI';
+            }
 
             if (!this.communicationManager) {
                 await this.initializeCommunication();
             }
 
             this.subscribeToSurfaceChanges();
+
+            if (wasOpen && arg?.editPromptId) {
+                await this.sendMessage('open-edit-prompt', { promptId: arg.editPromptId });
+            } else if (wasOpen && !arg?.editPromptId) {
+                await this.sendMessage('set-manage-mode');
+            }
 
             this.logger.debug(`[AI] Opened AI overview for project: ${project.name}`);
         } catch (error) {
@@ -128,6 +175,7 @@ export class ShowAiCommand extends BaseWebviewCommand {
         return {
             theme,
             project,
+            editPromptId: this.editPromptId,
         };
     }
 
@@ -139,6 +187,14 @@ export class ShowAiCommand extends BaseWebviewCommand {
                 return dispatchHandler(aiHandlers, context, messageType, data);
             });
         }
+
+        // Edit-only surfaces post `close-ai-panel` when their dialog closes so
+        // the user returns to the chat. Dispose the panel directly — there's no
+        // grid state to preserve.
+        comm.on('close-ai-panel', async () => {
+            this.panel?.dispose();
+            return { success: true };
+        });
     }
 
     /**

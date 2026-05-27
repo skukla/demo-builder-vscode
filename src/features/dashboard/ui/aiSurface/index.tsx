@@ -10,6 +10,7 @@ import '@/core/ui/styles/custom-spectrum.css';
 
 interface AiOverviewInitData extends WebviewInitData {
     project?: Project;
+    editPromptId?: string;
 }
 
 const container = document.getElementById('root');
@@ -22,7 +23,9 @@ root.render(
     <WebviewApp>
         {(initData) => {
             const data = initData as AiOverviewInitData;
-            return data?.project ? <AiOverviewScreen project={data.project} /> : null;
+            return data?.project
+                ? <AiOverviewScreen project={data.project} editPromptId={data.editPromptId} />
+                : null;
         }}
     </WebviewApp>,
 );

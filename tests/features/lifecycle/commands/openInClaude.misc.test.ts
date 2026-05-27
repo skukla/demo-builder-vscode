@@ -120,7 +120,7 @@ describe('OpenInClaudeCommand', () => {
             expect(allWarn).toMatch(/\[Open in Claude\] openExternal returned false/);
         });
 
-        it('logs terminal spawned + location=panel when dockToRight=false', async () => {
+        it('logs terminal spawned + location=editor-active (chat-first tab) when dockToRight=false', async () => {
             setupVscodeMocks({ surface: 'terminal', extensionInstalled: false, dockToRight: false });
             const logger = makeLogger();
             const command = new OpenInClaudeCommand(
@@ -133,10 +133,10 @@ describe('OpenInClaudeCommand', () => {
 
             const allInfo = logger.info.mock.calls.flat().join(' ');
             expect(allInfo).toMatch(/terminal spawned/);
-            expect(allInfo).toMatch(/location=panel/);
+            expect(allInfo).toMatch(/location=editor-active/);
         });
 
-        it('logs terminal spawned + location=editor-beside when dockToRight=true', async () => {
+        it('logs location=editor-active even when dockToRight=true (placement decoupled from dockToRight)', async () => {
             setupVscodeMocks({ surface: 'terminal', extensionInstalled: false, dockToRight: true });
             const logger = makeLogger();
             const command = new OpenInClaudeCommand(
@@ -149,7 +149,7 @@ describe('OpenInClaudeCommand', () => {
 
             const allInfo = logger.info.mock.calls.flat().join(' ');
             expect(allInfo).toMatch(/terminal spawned/);
-            expect(allInfo).toMatch(/location=editor-beside/);
+            expect(allInfo).toMatch(/location=editor-active/);
         });
 
         it('logs terminal reused (no spawn) when existing terminal found', async () => {

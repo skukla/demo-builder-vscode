@@ -120,6 +120,8 @@ async function renderScreen(opts: {
      * the test.
      */
     requestOverrides?: Record<string, unknown>;
+    /** Deep-link: open the edit dialog for this prompt id on mount. */
+    editPromptId?: string;
 } = {}) {
     const { webviewClient } = jest.requireMock('@/core/ui/utils/WebviewClient') as {
         webviewClient: { request: jest.Mock; postMessage: jest.Mock; onMessage: jest.Mock };
@@ -146,7 +148,7 @@ async function renderScreen(opts: {
     await act(async () => {
         result = render(
             <Provider theme={defaultTheme}>
-                <AiOverviewScreen project={project} />
+                <AiOverviewScreen project={project} editPromptId={opts.editPromptId} />
             </Provider>,
         );
         jest.runAllTimers();
@@ -758,6 +760,305 @@ describe('AiOverviewScreen', () => {
             const copyCalls = calls.filter(c => c[0] === 'copyAiPrompt');
             expect(copyCalls.length).toBe(1);
             expect(copyCalls[0][1]).toEqual(expect.objectContaining({ prompt: 'This is the body' }));
+        });
+    });
+
+    describe('deep-link to edit a prompt', () => {
+        function makeProjectWithUserPrompts(): Project {
+            return makeProject({
+                aiPrompts: [
+                    { id: 'u1', title: 'My first user prompt', prompt: 'Do thing one' },
+                    { id: 'u2', title: 'My second user prompt', prompt: 'Do thing two' },
+                ],
+            } as Partial<Project>);
+        }
+
+        it('opens the edit dialog for the matching prompt on mount (fresh-open path)', async () => {
+            await renderScreen({
+                projectOverrides: makeProjectWithUserPrompts(),
+                editPromptId: 'u2',
+            });
+
+            expect(screen.getByRole('heading', { name: /edit prompt/i })).toBeInTheDocument();
+            const titleInput = screen.getByLabelText(/title/i) as HTMLInputElement;
+            const promptInput = screen.getByLabelText(/prompt/i) as HTMLTextAreaElement;
+            expect(titleInput.value).toBe('My second user prompt');
+            expect(promptInput.value).toBe('Do thing two');
+        });
+
+        it('does NOT open the edit dialog on mount when editPromptId is undefined', async () => {
+            await renderScreen({ projectOverrides: makeProjectWithUserPrompts() });
+
+            expect(screen.queryByRole('heading', { name: /edit prompt/i })).not.toBeInTheDocument();
+        });
+
+        it('opens nothing on mount when editPromptId matches no prompt', async () => {
+            await renderScreen({
+                projectOverrides: makeProjectWithUserPrompts(),
+                editPromptId: 'does-not-exist',
+            });
+
+            expect(screen.queryByRole('heading', { name: /edit prompt/i })).not.toBeInTheDocument();
+            expect(screen.queryByRole('heading', { name: /new prompt/i })).not.toBeInTheDocument();
+        });
+
+        it('opens the edit dialog for an already-mounted screen via an open-edit-prompt push', async () => {
+            const { webviewClient } = jest.requireMock('@/core/ui/utils/WebviewClient') as {
+                webviewClient: { request: jest.Mock; postMessage: jest.Mock; onMessage: jest.Mock };
+            };
+
+            // Capture incoming-message handlers so we can fire `open-edit-prompt`
+            // from the test as if the backend pushed it.
+            const handlers = new Map<string, (data?: unknown) => void>();
+            (webviewClient.onMessage as jest.Mock).mockImplementation(
+                (type: string, handler: (data?: unknown) => void) => {
+                    handlers.set(type, handler);
+                    return () => handlers.delete(type);
+                },
+            );
+
+            await renderScreen({ projectOverrides: makeProjectWithUserPrompts() });
+
+            // No dialog before the push.
+            expect(screen.queryByRole('heading', { name: /edit prompt/i })).not.toBeInTheDocument();
+
+            await act(async () => {
+                handlers.get('open-edit-prompt')?.({ promptId: 'u1' });
+                await Promise.resolve();
+            });
+
+            expect(screen.getByRole('heading', { name: /edit prompt/i })).toBeInTheDocument();
+            const titleInput = screen.getByLabelText(/title/i) as HTMLInputElement;
+            expect(titleInput.value).toBe('My first user prompt');
+        });
+
+        it('opens nothing for an already-mounted screen when the pushed id is unknown', async () => {
+            const { webviewClient } = jest.requireMock('@/core/ui/utils/WebviewClient') as {
+                webviewClient: { request: jest.Mock; postMessage: jest.Mock; onMessage: jest.Mock };
+            };
+
+            const handlers = new Map<string, (data?: unknown) => void>();
+            (webviewClient.onMessage as jest.Mock).mockImplementation(
+                (type: string, handler: (data?: unknown) => void) => {
+                    handlers.set(type, handler);
+                    return () => handlers.delete(type);
+                },
+            );
+
+            await renderScreen({ projectOverrides: makeProjectWithUserPrompts() });
+
+            await act(async () => {
+                handlers.get('open-edit-prompt')?.({ promptId: 'nope' });
+                await Promise.resolve();
+            });
+
+            expect(screen.queryByRole('heading', { name: /edit prompt/i })).not.toBeInTheDocument();
+        });
+    });
+
+    describe('edit-only rendering mode', () => {
+        function makeProjectWithUserPrompts(): Project {
+            return makeProject({
+                aiPrompts: [
+                    { id: 'u1', title: 'My first user prompt', prompt: 'Do thing one' },
+                    { id: 'u2', title: 'My second user prompt', prompt: 'Do thing two' },
+                ],
+            } as Partial<Project>);
+        }
+
+        // ─── Fresh edit launch (editOnly = true) ──────────────────────────────
+
+        it('opens the edit dialog AND hides the page chrome on a fresh editPromptId mount', async () => {
+            await renderScreen({
+                projectOverrides: makeProjectWithUserPrompts(),
+                editPromptId: 'u1',
+            });
+
+            // The dialog is open …
+            expect(screen.getByRole('heading', { name: /edit prompt/i })).toBeInTheDocument();
+            // … but NO page chrome: header, grid, skills link, footer all absent.
+            expect(screen.queryByTestId('page-header')).not.toBeInTheDocument();
+            expect(screen.queryByTestId('page-footer')).not.toBeInTheDocument();
+            expect(screen.queryByTestId('ai-new-prompt-tile')).not.toBeInTheDocument();
+            expect(screen.queryByTestId('ai-installed-skills-trigger')).not.toBeInTheDocument();
+        });
+
+        it('does NOT call verify-ai-setup on mount in edit-only mode', async () => {
+            const { webviewClient } = await renderScreen({
+                projectOverrides: makeProjectWithUserPrompts(),
+                editPromptId: 'u1',
+            });
+
+            const verifyCalls = (webviewClient.request as jest.Mock).mock.calls
+                .filter(c => c[0] === 'verify-ai-setup');
+            expect(verifyCalls.length).toBe(0);
+        });
+
+        it('posts close-ai-panel when the dialog is closed in edit-only mode', async () => {
+            const { webviewClient } = await renderScreen({
+                projectOverrides: makeProjectWithUserPrompts(),
+                editPromptId: 'u1',
+            });
+            (webviewClient.postMessage as jest.Mock).mockClear();
+
+            // Close the dialog (the "Close" button inside PromptEditDialog). In
+            // edit-only mode there's no PageFooter, so this is unambiguous.
+            const dialogClose = screen.getByRole('button', { name: /^close$/i });
+            await act(async () => {
+                fireEvent.click(dialogClose);
+                await Promise.resolve();
+            });
+
+            const closeCalls = (webviewClient.postMessage as jest.Mock).mock.calls
+                .filter(c => c[0] === 'close-ai-panel');
+            expect(closeCalls.length).toBe(1);
+        });
+
+        it('posts close-ai-panel after saving in edit-only mode', async () => {
+            const { webviewClient } = await renderScreen({
+                projectOverrides: makeProjectWithUserPrompts(),
+                editPromptId: 'u1',
+            });
+            (webviewClient.request as jest.Mock).mockImplementation((type: string) => {
+                if (type === 'save-ai-prompt') {
+                    return Promise.resolve({
+                        success: true,
+                        aiPrompts: [{ id: 'u1', title: 'Edited', prompt: 'Edited body' }],
+                    });
+                }
+                return Promise.resolve({ success: true });
+            });
+            (webviewClient.postMessage as jest.Mock).mockClear();
+
+            await act(async () => {
+                fireEvent.click(screen.getByRole('button', { name: /^save$/i }));
+                await Promise.resolve();
+                await Promise.resolve();
+            });
+
+            const closeCalls = (webviewClient.postMessage as jest.Mock).mock.calls
+                .filter(c => c[0] === 'close-ai-panel');
+            expect(closeCalls.length).toBe(1);
+        });
+
+        // ─── Manage path (editOnly = false) ───────────────────────────────────
+
+        it('renders the grid and runs verify-ai-setup when mounted WITHOUT editPromptId', async () => {
+            const { webviewClient } = await renderScreen({
+                projectOverrides: makeProjectWithUserPrompts(),
+            });
+
+            expect(screen.getByTestId('page-header')).toBeInTheDocument();
+            expect(screen.getByTestId('ai-installed-skills-trigger')).toBeInTheDocument();
+            const verifyCalls = (webviewClient.request as jest.Mock).mock.calls
+                .filter(c => c[0] === 'verify-ai-setup');
+            expect(verifyCalls.length).toBeGreaterThanOrEqual(1);
+        });
+
+        it('an open-edit-prompt push opens the dialog OVER the grid and does NOT post close-ai-panel on close', async () => {
+            const { webviewClient } = jest.requireMock('@/core/ui/utils/WebviewClient') as {
+                webviewClient: { request: jest.Mock; postMessage: jest.Mock; onMessage: jest.Mock };
+            };
+
+            const handlers = new Map<string, (data?: unknown) => void>();
+            (webviewClient.onMessage as jest.Mock).mockImplementation(
+                (type: string, handler: (data?: unknown) => void) => {
+                    handlers.set(type, handler);
+                    return () => handlers.delete(type);
+                },
+            );
+
+            await renderScreen({ projectOverrides: makeProjectWithUserPrompts() });
+
+            await act(async () => {
+                handlers.get('open-edit-prompt')?.({ promptId: 'u1' });
+                await Promise.resolve();
+            });
+
+            // Dialog open, but the grid (manage chrome) is still present.
+            expect(screen.getByRole('heading', { name: /edit prompt/i })).toBeInTheDocument();
+            expect(screen.getByTestId('page-header')).toBeInTheDocument();
+            expect(screen.getByTestId('ai-installed-skills-trigger')).toBeInTheDocument();
+
+            (webviewClient.postMessage as jest.Mock).mockClear();
+            // Two "Close" buttons exist (page footer + dialog); pick the dialog's.
+            const closeButtons = screen.getAllByRole('button', { name: /^close$/i });
+            const dialogClose = closeButtons.find(b => b.closest('.modal-footer-actions') !== null);
+            await act(async () => {
+                fireEvent.click(dialogClose!);
+                await Promise.resolve();
+            });
+
+            const closeCalls = (webviewClient.postMessage as jest.Mock).mock.calls
+                .filter(c => c[0] === 'close-ai-panel');
+            expect(closeCalls.length).toBe(0);
+        });
+
+        it('in-grid kebab edit opens the dialog OVER the grid and does NOT post close-ai-panel on close', async () => {
+            const { webviewClient } = await renderScreen({
+                projectOverrides: makeProjectWithUserPrompts(),
+            });
+
+            const kebabs = screen.getAllByLabelText(/more actions/i);
+            await act(async () => {
+                kebabs[0].click();
+            });
+            await act(async () => {
+                screen.getAllByText('Edit')[0].click();
+            });
+
+            expect(screen.getByRole('heading', { name: /edit prompt/i })).toBeInTheDocument();
+            // Grid chrome still present.
+            expect(screen.getByTestId('page-header')).toBeInTheDocument();
+
+            (webviewClient.postMessage as jest.Mock).mockClear();
+            // Two "Close" buttons exist (page footer + dialog); pick the dialog's.
+            const closeButtons = screen.getAllByRole('button', { name: /^close$/i });
+            const dialogClose = closeButtons.find(b => b.closest('.modal-footer-actions') !== null);
+            await act(async () => {
+                fireEvent.click(dialogClose!);
+                await Promise.resolve();
+            });
+
+            const closeCalls = (webviewClient.postMessage as jest.Mock).mock.calls
+                .filter(c => c[0] === 'close-ai-panel');
+            expect(closeCalls.length).toBe(0);
+        });
+
+        // ─── set-manage-mode reuse ────────────────────────────────────────────
+
+        it('a set-manage-mode push restores the grid on an edit-only screen', async () => {
+            const { webviewClient } = jest.requireMock('@/core/ui/utils/WebviewClient') as {
+                webviewClient: { request: jest.Mock; postMessage: jest.Mock; onMessage: jest.Mock };
+            };
+
+            const handlers = new Map<string, (data?: unknown) => void>();
+            (webviewClient.onMessage as jest.Mock).mockImplementation(
+                (type: string, handler: (data?: unknown) => void) => {
+                    handlers.set(type, handler);
+                    return () => handlers.delete(type);
+                },
+            );
+
+            await renderScreen({
+                projectOverrides: makeProjectWithUserPrompts(),
+                editPromptId: 'u1',
+            });
+
+            // Edit-only: grid hidden, dialog open.
+            expect(screen.queryByTestId('page-header')).not.toBeInTheDocument();
+            expect(screen.getByRole('heading', { name: /edit prompt/i })).toBeInTheDocument();
+
+            await act(async () => {
+                handlers.get('set-manage-mode')?.();
+                await Promise.resolve();
+                await Promise.resolve();
+            });
+
+            // Grid restored, edit dialog closed.
+            expect(screen.getByTestId('page-header')).toBeInTheDocument();
+            expect(screen.getByTestId('ai-installed-skills-trigger')).toBeInTheDocument();
+            expect(screen.queryByRole('heading', { name: /edit prompt/i })).not.toBeInTheDocument();
         });
     });
 });

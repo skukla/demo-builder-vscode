@@ -1,6 +1,6 @@
 /** Terminal surface: forced launch, find-or-spawn, location selection, terminal behavior — split from openInClaude.test.ts. */
 import * as vscode from 'vscode';
-import { OpenInClaudeCommand } from '@/commands/openInClaude';
+import { OpenInClaudeCommand, isClaudeChatOpen } from '@/commands/openInClaude';
 import type { Project } from '@/types/base';
 import {
     setupVscodeMocks, makeLogger, makeStateManager, makeGlobalState, makeContext, makeProject,
@@ -108,34 +108,12 @@ describe('OpenInClaudeCommand', () => {
     });
 
     // ------------------------------------------------------------------------
-    // launchTerminal location selection
+    // launchTerminal location selection — chat-first: always an editor tab in
+    // the active group (ViewColumn.Active), decoupled from dockToRight.
     // ------------------------------------------------------------------------
 
     describe('launchTerminal location selection', () => {
-        it('when dockToRight=true, createTerminal is called with location: { viewColumn: ViewColumn.Beside }', async () => {
-            const mocks = setupVscodeMocks({
-                surface: 'terminal',
-                extensionInstalled: false,
-                dockToRight: true,
-            });
-            const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
-                makeStateManager(makeProject()) as never,
-                makeLogger() as never,
-            );
-
-            await command.execute(makeProject() as Project);
-
-            expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
-            const createArg = mocks.createTerminalMock.mock.calls[0][0];
-            expect(createArg).toMatchObject({
-                name: 'Claude Code',
-                cwd: '/projects/demo',
-                location: { viewColumn: vscode.ViewColumn.Beside },
-            });
-        });
-
-        it('when dockToRight=false, createTerminal is called WITHOUT location property', async () => {
+        it('opens the terminal as a tab in the active editor group (ViewColumn.Active) when dockToRight=false', async () => {
             const mocks = setupVscodeMocks({
                 surface: 'terminal',
                 extensionInstalled: false,
@@ -151,7 +129,77 @@ describe('OpenInClaudeCommand', () => {
 
             expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
             const createArg = mocks.createTerminalMock.mock.calls[0][0];
-            expect(createArg.location).toBeUndefined();
+            expect(createArg).toMatchObject({
+                name: 'Claude Code',
+                cwd: '/projects/demo',
+                location: { viewColumn: vscode.ViewColumn.Active },
+            });
+        });
+
+        it('still uses ViewColumn.Active even when dockToRight=true (no longer a side split)', async () => {
+            const mocks = setupVscodeMocks({
+                surface: 'terminal',
+                extensionInstalled: false,
+                dockToRight: true,
+            });
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute(makeProject() as Project);
+
+            expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
+            const createArg = mocks.createTerminalMock.mock.calls[0][0];
+            expect(createArg.location).toEqual({ viewColumn: vscode.ViewColumn.Active });
+        });
+    });
+
+    // ------------------------------------------------------------------------
+    // isClaudeChatOpen() — true iff a live "Claude Code" terminal exists
+    // (exitStatus undefined). Backs the state-aware AI icon in aiMenu.
+    // ------------------------------------------------------------------------
+
+    describe('isClaudeChatOpen()', () => {
+        it('returns true when a live "Claude Code" terminal exists', () => {
+            setupVscodeMocks({
+                surface: 'terminal',
+                extensionInstalled: false,
+                existingTerminals: [{ name: 'Claude Code', exitStatus: undefined }],
+            });
+
+            expect(isClaudeChatOpen()).toBe(true);
+        });
+
+        it('returns false when the only "Claude Code" terminal has exited', () => {
+            setupVscodeMocks({
+                surface: 'terminal',
+                extensionInstalled: false,
+                existingTerminals: [{ name: 'Claude Code', exitStatus: { code: 0 } }],
+            });
+
+            expect(isClaudeChatOpen()).toBe(false);
+        });
+
+        it('returns false when no terminals are open', () => {
+            setupVscodeMocks({
+                surface: 'terminal',
+                extensionInstalled: false,
+                existingTerminals: [],
+            });
+
+            expect(isClaudeChatOpen()).toBe(false);
+        });
+
+        it('ignores live terminals with non-matching names', () => {
+            setupVscodeMocks({
+                surface: 'terminal',
+                extensionInstalled: false,
+                existingTerminals: [{ name: 'bash', exitStatus: undefined }],
+            });
+
+            expect(isClaudeChatOpen()).toBe(false);
         });
     });
 

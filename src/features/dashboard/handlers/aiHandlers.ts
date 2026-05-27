@@ -26,7 +26,7 @@ import {
     generateAIContextFiles,
     registerGlobalMcp,
 } from '@/features/project-creation/services';
-import type { AiPrompt } from '@/types/base';
+import type { AiPrompt, Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
@@ -245,7 +245,7 @@ export async function handleRegenerateAiFiles(
  * Scope rule: `pinned === true` ⇔ stored here. `pinned` falsy ⇔ stored in the
  * project manifest. A pin toggle moves the prompt across stores.
  */
-const GLOBAL_AI_PROMPTS_KEY = 'demoBuilder.ai.globalPrompts';
+export const GLOBAL_AI_PROMPTS_KEY = 'demoBuilder.ai.globalPrompts';
 
 function readGlobalPrompts(context: HandlerContext): AiPrompt[] {
     return context.context.globalState.get<AiPrompt[]>(GLOBAL_AI_PROMPTS_KEY, []);
@@ -276,10 +276,57 @@ function removeById(list: AiPrompt[], id: string): AiPrompt[] {
  * path must consistently show the new (global) copy until the next save
  * settles the state.
  */
-function mergePromptsForRead(globalPrompts: AiPrompt[], projectPrompts: AiPrompt[]): AiPrompt[] {
+export function mergePromptsForRead(globalPrompts: AiPrompt[], projectPrompts: AiPrompt[]): AiPrompt[] {
     const globalIds = new Set(globalPrompts.map(p => p.id));
     const projectFiltered = projectPrompts.filter(p => !globalIds.has(p.id));
     return [...globalPrompts, ...projectFiltered];
+}
+
+/**
+ * Read the merged pinned-first prompt list (globals then project-local,
+ * deduped by id with global winning). Tolerates an undefined project — the
+ * QuickPick surface shows global prompts even when no project is loaded, so
+ * project prompts simply degrade to an empty list rather than throwing.
+ */
+export function readMergedAiPrompts(
+    context: HandlerContext,
+    project: Project | undefined,
+): AiPrompt[] {
+    const globalPrompts = readGlobalPrompts(context);
+    const projectPrompts = project?.aiPrompts ?? [];
+    return mergePromptsForRead(globalPrompts, projectPrompts);
+}
+
+/**
+ * Remove a prompt by id from whichever store(s) own it, then return the merged
+ * remaining list. Shared by `handleDeleteAiPrompt` and the AI QuickPick's
+ * inline delete button.
+ *
+ * Defensive: if the same id exists in both stores, removes from both. Tolerates
+ * an undefined project (global-only delete) so the no-project QuickPick path
+ * can still delete pinned prompts.
+ */
+export async function deleteAiPromptById(
+    context: HandlerContext,
+    project: Project | undefined,
+    promptId: string,
+): Promise<AiPrompt[]> {
+    const projectPrompts = project?.aiPrompts ?? [];
+    const globalPrompts = readGlobalPrompts(context);
+    const inProject = projectPrompts.some(p => p.id === promptId);
+    const inGlobal = globalPrompts.some(p => p.id === promptId);
+
+    const nextProject = inProject ? removeById(projectPrompts, promptId) : projectPrompts;
+    const nextGlobal = inGlobal ? removeById(globalPrompts, promptId) : globalPrompts;
+
+    if (inGlobal) {
+        await writeGlobalPrompts(context, nextGlobal);
+    }
+    if (inProject && project) {
+        await context.stateManager.saveProject({ ...project, aiPrompts: nextProject });
+    }
+
+    return mergePromptsForRead(nextGlobal, nextProject);
 }
 
 /**
@@ -391,23 +438,8 @@ export async function handleDeleteAiPrompt(
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
-    const promptId = payload.promptId;
-    const projectPrompts = project.aiPrompts ?? [];
-    const globalPrompts = readGlobalPrompts(context);
-    const inProject = projectPrompts.some(p => p.id === promptId);
-    const inGlobal = globalPrompts.some(p => p.id === promptId);
-
-    const nextProject = inProject ? removeById(projectPrompts, promptId) : projectPrompts;
-    const nextGlobal = inGlobal ? removeById(globalPrompts, promptId) : globalPrompts;
-
-    if (inGlobal) {
-        await writeGlobalPrompts(context, nextGlobal);
-    }
-    if (inProject) {
-        await context.stateManager.saveProject({ ...project, aiPrompts: nextProject });
-    }
-
-    return { success: true, aiPrompts: mergePromptsForRead(nextGlobal, nextProject) };
+    const aiPrompts = await deleteAiPromptById(context, project, payload.promptId);
+    return { success: true, aiPrompts };
 }
 
 /**

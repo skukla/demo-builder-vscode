@@ -50,6 +50,18 @@ jest.mock('@/features/dashboard/commands/openAi', () => {
         ShowAiCommand: MockShowAiCommand,
     };
 });
+jest.mock('@/commands/aiMenu', () => {
+    const MockAiMenuCommand = jest.fn().mockImplementation(function(this: any) {
+        this.execute = jest.fn().mockResolvedValue(undefined);
+    });
+    return { AiMenuCommand: MockAiMenuCommand };
+});
+jest.mock('@/commands/openInClaude', () => {
+    const MockOpenInClaudeCommand = jest.fn().mockImplementation(function(this: any) {
+        this.execute = jest.fn().mockResolvedValue(undefined);
+    });
+    return { OpenInClaudeCommand: MockOpenInClaudeCommand };
+});
 jest.mock('@/commands/configure');
 jest.mock('@/commands/diagnostics');
 jest.mock('@/core/commands/ResetAllCommand');
@@ -137,11 +149,11 @@ describe('CommandManager', () => {
             );
         });
 
-        it('should register all 23 commands (24 total, but resetAll only in dev mode)', () => {
+        it('should register all 25 commands (26 total, but resetAll only in dev mode)', () => {
             commandManager.registerCommands();
 
-            // Verify registerCommand was called 23 times (resetAll excluded - dev mode only)
-            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(23);
+            // Verify registerCommand was called 25 times (resetAll excluded - dev mode only)
+            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(25);
 
             // Verify all commands are registered (in order of registration)
             const expectedCommands = [
@@ -161,6 +173,8 @@ describe('CommandManager', () => {
                 'demoBuilder.checkForUpdates',
                 'demoBuilder.openInClaude',
                 'demoBuilder.openAi',
+                'demoBuilder.openAiExperience',
+                'demoBuilder.aiMenu',
                 'demoBuilder.diagnostics',
                 'demoBuilder.setRecommendedZoom',
                 'demoBuilder.resetZoom',
@@ -186,6 +200,38 @@ describe('CommandManager', () => {
                 'demoBuilder.openAi',
                 expect.any(Function),
             );
+        });
+
+        it('should forward the first arg to ShowAiCommand.execute (deep-link editPromptId)', async () => {
+            commandManager.registerCommands();
+
+            const openAiHandler = (vscode.commands.registerCommand as jest.Mock).mock.calls
+                .find(call => call[0] === 'demoBuilder.openAi')?.[1];
+            expect(openAiHandler).toBeDefined();
+
+            const ShowAiCmd = require('@/features/dashboard/commands/openAi').ShowAiCommand;
+            const aiInstance = ShowAiCmd.mock.instances[0];
+            aiInstance.execute.mockClear();
+
+            await openAiHandler({ editPromptId: 'prompt-abc' });
+
+            expect(aiInstance.execute).toHaveBeenCalledWith({ editPromptId: 'prompt-abc' });
+        });
+
+        it('forwards undefined to ShowAiCommand.execute when openAi is invoked with no arg', async () => {
+            commandManager.registerCommands();
+
+            const openAiHandler = (vscode.commands.registerCommand as jest.Mock).mock.calls
+                .find(call => call[0] === 'demoBuilder.openAi')?.[1];
+            expect(openAiHandler).toBeDefined();
+
+            const ShowAiCmd = require('@/features/dashboard/commands/openAi').ShowAiCommand;
+            const aiInstance = ShowAiCmd.mock.instances[0];
+            aiInstance.execute.mockClear();
+
+            await openAiHandler();
+
+            expect(aiInstance.execute).toHaveBeenCalledWith(undefined);
         });
 
     });
@@ -298,20 +344,20 @@ describe('CommandManager', () => {
     });
 
     describe('Navigate Routing', () => {
-        it('should route the ai target to demoBuilder.openAi', async () => {
+        it('should route the ai target to demoBuilder.openAiExperience (chat-first)', async () => {
             commandManager.registerCommands();
 
             const navigateHandler = (vscode.commands.registerCommand as jest.Mock).mock.calls
                 .find(call => call[0] === 'demoBuilder.navigate')?.[1];
             expect(navigateHandler).toBeDefined();
 
-            const ShowAiCmd = require('@/features/dashboard/commands/openAi').ShowAiCommand;
-            const aiInstance = ShowAiCmd.mock.instances[0];
-            aiInstance.execute.mockClear();
+            (vscode.commands.executeCommand as jest.Mock).mockClear();
 
             await navigateHandler({ target: 'ai' });
 
-            expect(aiInstance.execute).toHaveBeenCalled();
+            // Chat-first: navigate('ai') now opens the AI experience directly.
+            // The prompt manager (openAi) stays reachable via the aiMenu Manage item.
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openAiExperience');
         });
 
         it('should warn on unknown target (legacy ai-setup is no longer routed)', async () => {

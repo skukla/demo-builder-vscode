@@ -41,7 +41,8 @@ export type SidebarMessageType =
     | 'navigate'
     | 'getContext'
     | 'setContext'
-    | 'back';
+    | 'back'
+    | 'openAiMenu';
 
 /**
  * Navigation target

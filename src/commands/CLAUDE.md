@@ -147,10 +147,19 @@ comm.on('continue-step', async (payload) => {
 |--------|-----------|
 | `overview` | `projectDashboard.execute()` |
 | `configure` | `configureProject.execute()` |
-| `ai` | `openAi.execute()` (standalone AI surface) |
+| `ai` | `demoBuilder.openAiExperience` (chat-first: opens the Claude Code terminal tab) |
 | `updates` | `checkUpdates.execute()` |
 
 **Note**: This command is intentionally omitted from `package.json` contributions. It is an internal sidebar-routing command, not a user-facing command palette entry. The sidebar sends `demoBuilder.navigate` messages; the command dispatches to the appropriate webview.
+
+### AI experience (chat-first)
+
+Two internal commands back the chat-first AI surface (also omitted from `package.json` — invoked programmatically, not from the palette):
+
+- **`demoBuilder.openAiExperience`** — "Open Chat". Calls `OpenInClaudeCommand.execute()` with no prompt: settles the once-ever onboarding offers, then opens/reveals the Claude Code terminal as a tab in the active editor group (`ViewColumn.Active`, next to Project Dashboard). `navigate('ai')` and the dashboard AI action route here.
+- **`demoBuilder.aiMenu`** (`src/commands/aiMenu.ts`) — the **state-aware** AI icon (the **wand icon** in the sidebar `UtilityBar`). When no live Claude Code chat terminal is open (`isClaudeChatOpen()` from `openInClaude.ts`), it opens the chat directly (`demoBuilder.openAiExperience`) and shows no menu — there is no redundant "Open Chat" row. When a chat IS open, it shows a prompt QuickPick (built via the shared `showWebviewQuickPick`): the merged prompt list (pinned first) with inline edit/delete buttons, plus Manage / New, and a placeholder. Selecting a prompt dispatches `demoBuilder.openInClaude` with `{ prompt }`; "Manage"/"New"/edit dispatch `demoBuilder.openAi` (the prompt-management webview); delete confirms (modal) then calls `deleteAiPromptById` and refreshes the picker items in place.
+
+The standalone AI webview (`ShowAiCommand` / `demoBuilder.openAi`) is no longer the default AI surface — it is reached on demand as the prompt manager via the QuickPick's "Manage prompts…".
 
 ---
 

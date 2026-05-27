@@ -169,6 +169,16 @@ export abstract class BaseWebviewCommand extends BaseCommand {
     protected abstract getLoadingMessage(): string;
 
     /**
+     * Minimum time (ms) the loading spinner stays visible before the real
+     * content swaps in — prevents jarring flashes. Defaults to the shared
+     * `MIN_LOADING` floor; lightweight surfaces (e.g. a focused edit dialog)
+     * may override with `0` for an instant render.
+     */
+    protected getMinLoadingMs(): number {
+        return TIMEOUTS.UI.MIN_LOADING;
+    }
+
+    /**
      * Create or reveal the webview panel (singleton per webview type)
      */
     protected async createOrRevealPanel(): Promise<vscode.WebviewPanel> {
@@ -256,6 +266,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
             () => this.getWebviewContent(),
             this.getLoadingMessage(),
             this.logger,
+            this.getMinLoadingMs(),
         );
 
         // Create communication manager
