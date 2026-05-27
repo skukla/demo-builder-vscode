@@ -6,14 +6,12 @@
  */
 
 import { screen, waitFor } from '@testing-library/react';
-import { setupTestContext, renderDashboard, TestContext } from './ProjectDashboardScreen.testUtils';
+import { setupTestContext, renderDashboard } from './ProjectDashboardScreen.testUtils';
 
 describe('ProjectDashboardScreen - AI Ready Badge', () => {
-    let ctx: TestContext;
-
     beforeEach(() => {
         jest.clearAllMocks();
-        ctx = setupTestContext();
+        setupTestContext();
     });
 
     describe('Badge Presence', () => {

@@ -12,11 +12,9 @@
  */
 
 import React from 'react';
-import { render, screen, act } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
-import type { UseStoreDiscoveryConfig } from '@/features/components/ui/hooks/useStoreDiscovery';
 
 // ---------------------------------------------------------------------------
 // Types for mock return values
@@ -200,9 +198,6 @@ const catalogServiceGroup: MockServiceGroup = {
 // Mock setup
 // ---------------------------------------------------------------------------
 
-// Track captured config from useStoreDiscovery
-let capturedStoreDiscoveryConfig: UseStoreDiscoveryConfig;
-
 // Track mock return values so tests can modify them
 const mockUseComponentConfig = {
     isLoading: false,
@@ -227,26 +222,14 @@ const mockUseStoreDiscovery = {
     isStoreGroup: jest.fn((groupId: string) => groupId === 'accs' || groupId === 'adobe-commerce'),
 };
 
-// Captured callbacks from useComponentConfig
-let capturedSetCanProceed: ((valid: boolean) => void) | undefined;
-let capturedUpdateState: ((updates: any) => void) | undefined;
-
 jest.mock('@/features/components/ui/hooks/useComponentConfig', () => ({
-    useComponentConfig: (props: any) => {
-        // Capture the narrow-interface callbacks for propagation tests
-        capturedSetCanProceed = props.onValidationChange;
-        capturedUpdateState = props.onConfigsChange;
-        return mockUseComponentConfig;
-    },
+    useComponentConfig: () => mockUseComponentConfig,
     // Re-export types
     __esModule: true,
 }));
 
 jest.mock('@/features/components/ui/hooks/useStoreDiscovery', () => ({
-    useStoreDiscovery: (config: any = {}) => {
-        capturedStoreDiscoveryConfig = config;
-        return mockUseStoreDiscovery;
-    },
+    useStoreDiscovery: () => mockUseStoreDiscovery,
 }));
 
 // Mock ConfigFieldRenderer to simplify testing (avoid Spectrum internals)
@@ -344,9 +327,6 @@ beforeAll(async () => {
 describe('ConnectStoreStepContent', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        capturedSetCanProceed = undefined;
-        capturedUpdateState = undefined;
-        capturedStoreDiscoveryConfig = undefined;
 
         // Reset mock defaults
         mockUseComponentConfig.isLoading = false;

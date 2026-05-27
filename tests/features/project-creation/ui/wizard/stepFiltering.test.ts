@@ -409,7 +409,7 @@ describe('stepFiltering', () => {
 
         it('should show the settings step from wizard-steps.json for all flows (no condition)', () => {
             // Given: The actual wizard-steps.json configuration
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
+
             const wizardStepsConfig = require('@/features/project-creation/config/wizard-steps.json');
             const steps: WizardStepWithCondition[] = wizardStepsConfig.steps;
 
@@ -423,7 +423,7 @@ describe('stepFiltering', () => {
 
         it('should position settings step after adobe-workspace in wizard-steps.json', () => {
             // Given: The actual wizard-steps.json configuration
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
+
             const wizardStepsConfig = require('@/features/project-creation/config/wizard-steps.json');
             const steps: WizardStepWithCondition[] = wizardStepsConfig.steps;
 
