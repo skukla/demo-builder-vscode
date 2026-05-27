@@ -27,7 +27,7 @@ import {
     Flex,
     Link,
 } from '@adobe/react-spectrum';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { InstalledSkillsModal } from './components/InstalledSkillsModal';
 import { PromptEditDialog } from './components/PromptEditDialog';
 import { PromptGrid } from './components/PromptGrid';
@@ -42,12 +42,6 @@ import type { AiPrompt, Project } from '@/types/base';
 
 export interface AiOverviewScreenProps {
     project: Project;
-    /**
-     * Deep-link: when set on a fresh open, the edit dialog opens for this
-     * prompt id on mount. An already-open surface receives the id via an
-     * `open-edit-prompt` message instead (see the listener below).
-     */
-    editPromptId?: string;
 }
 
 type GlobalMcpRegistrationStateValue = 'registered' | 'declined' | 'unregistered';
@@ -94,28 +88,12 @@ interface SavePromptResponse {
     aiPrompts?: AiPrompt[];
 }
 
-export function AiOverviewScreen({ project, editPromptId }: AiOverviewScreenProps): React.ReactElement {
+export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.ReactElement {
     const [verifyResult, setVerifyResult] = useState<VerifyAiSetupResponse | null>(null);
     const [userPrompts, setUserPrompts] = useState<AiPrompt[]>(project.aiPrompts ?? []);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<AiPrompt | null>(null);
     const [skillsModalOpen, setSkillsModalOpen] = useState(false);
-    /**
-     * Edit-only mode: a "fresh edit launch" (initial data carried an
-     * `editPromptId`). The surface renders ONLY the edit dialog over a dark,
-     * empty page — no header, grid, skills link, or footer — because the user
-     * came straight from the chat / QuickPick to edit one prompt. Closing the
-     * dialog disposes the panel so they return to the chat.
-     *
-     * It is true ONLY for the mount-time deep-link. The `open-edit-prompt`
-     * message path (already-open manager) and the in-grid kebab keep this false
-     * so the dialog renders over the existing grid.
-     */
-    const [editOnly, setEditOnly] = useState<boolean>(Boolean(editPromptId));
-    // Tracks the dialog's prior open state so we can detect a genuine
-    // open→close transition (Save or Close) in edit-only mode without firing
-    // on the initial closed render.
-    const editDialogWasOpenRef = useRef<boolean>(false);
 
     const verifyOp = useAsyncOperation<VerifyAiSetupResponse>();
     const refreshOp = useAsyncOperation<void>();
@@ -123,7 +101,7 @@ export function AiOverviewScreen({ project, editPromptId }: AiOverviewScreenProp
 
     const runVerify = useCallback(async (): Promise<void> => {
         const result = await verifyOp.execute(async () => {
-            return await webviewClient.request<VerifyAiSetupResponse>(
+            return webviewClient.request<VerifyAiSetupResponse>(
                 'verify-ai-setup',
                 { projectPath: project.path },
             );
@@ -138,11 +116,7 @@ export function AiOverviewScreen({ project, editPromptId }: AiOverviewScreenProp
         refreshOp.reset();
         regenerateOp.reset();
         setUserPrompts(project.aiPrompts ?? []);
-        // Edit-only mode renders no grid, so there's nothing to populate —
-        // skip the verify-ai-setup round trip entirely.
-        if (!editOnly) {
-            void runVerify();
-        }
+        void runVerify();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [project.path]);
 
@@ -205,56 +179,6 @@ export function AiOverviewScreen({ project, editPromptId }: AiOverviewScreenProp
     const handleEditPrompt = useCallback((id: string) => {
         openEditForId(id);
     }, [openEditForId]);
-
-    // Deep-link (fresh open): when initial data carries an `editPromptId`, open
-    // that prompt's edit dialog on mount AND enter edit-only mode (dialog over a
-    // dark page, no chrome). Keyed on `editPromptId` so it fires once for the
-    // value initial data supplied.
-    useEffect(() => {
-        if (editPromptId) {
-            setEditOnly(true);
-            openEditForId(editPromptId);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [editPromptId]);
-
-    // Deep-link (already-open panel): the backend pushes `open-edit-prompt`
-    // when the surface was already open, so initial data won't be re-fetched.
-    // Mirrors the `surface-changed` listener above.
-    useEffect(() => {
-        const unsubscribe = webviewClient.onMessage('open-edit-prompt', (data) => {
-            const promptId = (data as { promptId?: string } | undefined)?.promptId;
-            if (promptId) {
-                openEditForId(promptId);
-            }
-        });
-        return unsubscribe;
-    }, [openEditForId]);
-
-    // Reuse signal: the backend pushes `set-manage-mode` to turn a lingering
-    // edit-only panel back into the full manage grid (e.g. the user re-opens
-    // the AI surface from the manager while an edit-only panel is still up).
-    // Drop out of edit-only mode and close any open dialog so the grid shows.
-    useEffect(() => {
-        const unsubscribe = webviewClient.onMessage('set-manage-mode', () => {
-            setEditOnly(false);
-            setEditDialogOpen(false);
-            setEditTarget(null);
-        });
-        return unsubscribe;
-    }, []);
-
-    // Close behavior for edit-only mode: when the edit dialog goes from open to
-    // closed (Save or Close), dispose the panel so the user returns to the chat.
-    // The ref guards against firing on the initial closed render before the
-    // mount effect opens the dialog.
-    useEffect(() => {
-        if (editOnly && editDialogWasOpenRef.current && !editDialogOpen) {
-            webviewClient.postMessage('close-ai-panel');
-            setEditOnly(false);
-        }
-        editDialogWasOpenRef.current = editDialogOpen;
-    }, [editOnly, editDialogOpen]);
 
     const handleCloseEditDialog = useCallback(() => {
         setEditDialogOpen(false);
@@ -346,37 +270,10 @@ export function AiOverviewScreen({ project, editPromptId }: AiOverviewScreenProp
         refreshOp.isExecuting ||
         regenerateOp.isExecuting;
 
-    // Edit-only mode: a fresh edit launch (came straight from the chat /
-    // QuickPick). Render ONLY the edit dialog over a dark, empty page — no
-    // header, grid, skills link, or footer. A modal can only dim its own
-    // webview's content, so the surrounding page must be intentionally bare.
-    if (editOnly) {
-        return (
-            <div
-                className="page-body-section"
-                style={{
-                    minHeight: '100vh',
-                    backgroundColor: 'var(--spectrum-global-color-gray-50)',
-                }}
-            >
-                {editDialogOpen && (
-                    <DialogContainer onDismiss={handleCloseEditDialog}>
-                        <PromptEditDialog
-                            mode={editTarget ? 'edit' : 'create'}
-                            initialPrompt={editTarget ?? undefined}
-                            onSave={handleSavePrompt}
-                            onClose={handleCloseEditDialog}
-                        />
-                    </DialogContainer>
-                )}
-            </div>
-        );
-    }
-
     return (
         <>
             <PageLayout
-                header={<PageHeader title="AI" subtitle={project.name} constrainWidth />}
+                header={<PageHeader title="Prompt Library" subtitle={project.name} constrainWidth />}
                 footer={
                     <PageFooter
                         leftContent={

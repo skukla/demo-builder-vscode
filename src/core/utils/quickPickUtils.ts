@@ -12,7 +12,7 @@
 
 import * as vscode from 'vscode';
 
-export interface WebviewQuickPickOptions<T extends vscode.QuickPickItem = vscode.QuickPickItem> {
+export interface WebviewQuickPickOptions {
     /** Placeholder text shown in the input box */
     placeholder?: string;
     /** Title shown at the top of the QuickPick */
@@ -25,15 +25,6 @@ export interface WebviewQuickPickOptions<T extends vscode.QuickPickItem = vscode
     matchOnDescription?: boolean;
     /** Whether to match on detail text when filtering */
     matchOnDetail?: boolean;
-    /**
-     * Invoked when a per-item button is triggered. The handler receives the
-     * `item`, the `button`, and the live `quickPick` so it can act on the item
-     * (e.g. confirm + delete) and refresh `quickPick.items` in place. A button
-     * press does NOT resolve the picker — only `onDidAccept` resolves.
-     */
-    onItemButton?: (
-        event: { item: T; button: vscode.QuickInputButton; quickPick: vscode.QuickPick<T> },
-    ) => void | Promise<void>;
 }
 
 /**
@@ -57,7 +48,7 @@ export interface WebviewQuickPickOptions<T extends vscode.QuickPickItem = vscode
  */
 export async function showWebviewQuickPick<T extends vscode.QuickPickItem>(
     items: T[],
-    options: WebviewQuickPickOptions<T> = {},
+    options: WebviewQuickPickOptions = {},
 ): Promise<T | undefined> {
     return new Promise<T | undefined>((resolve) => {
         const quickPick = vscode.window.createQuickPick<T>();
@@ -74,13 +65,6 @@ export async function showWebviewQuickPick<T extends vscode.QuickPickItem>(
             const selection = quickPick.selectedItems[0];
             quickPick.hide();
             resolve(selection);
-        });
-
-        // Per-item buttons route to the optional handler. A button press does
-        // not resolve the picker — only accept resolves. The handler may act on
-        // the item and refresh `quickPick.items` in place.
-        quickPick.onDidTriggerItemButton((e) => {
-            void options.onItemButton?.({ item: e.item, button: e.button, quickPick });
         });
 
         quickPick.onDidHide(() => {

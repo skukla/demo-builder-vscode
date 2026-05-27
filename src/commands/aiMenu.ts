@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { isClaudeChatOpen } from './openInClaude';
 import { BaseCommand } from '@/core/base';
 import { showWebviewQuickPick } from '@/core/utils/quickPickUtils';
-import { deleteAiPromptById, readMergedAiPrompts } from '@/features/dashboard/handlers/aiHandlers';
+import { readMergedAiPrompts } from '@/features/dashboard/handlers/aiHandlers';
 import type { AiPrompt } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -14,12 +14,11 @@ const PICKER_PLACEHOLDER = 'Select a prompt to insert, or manage prompts';
 
 /**
  * A single row in the AI QuickPick menu. `action` drives selection dispatch;
- * `promptId` / `promptBody` are present only on prompt rows so the insert +
- * item-button handlers can act on them.
+ * `promptBody` is present only on prompt rows so the insert handler can act on
+ * it.
  */
 interface AiMenuItem extends vscode.QuickPickItem {
-    action?: 'insert' | 'manage' | 'new';
-    promptId?: string;
+    action?: 'insert' | 'manage';
     promptBody?: string;
 }
 
@@ -28,12 +27,11 @@ interface AiMenuItem extends vscode.QuickPickItem {
  *
  * When no live Claude Code chat terminal is open, the icon opens the chat
  * directly (`demoBuilder.openAiExperience`) — there is no redundant "Open Chat"
- * menu row. When a chat IS open, it shows a prompt QuickPick listing the merged
- * prompt list (pinned first) with inline edit + delete buttons, plus Manage /
- * New actions. Selecting a prompt inserts it into Claude Code via
- * `demoBuilder.openInClaude`; Manage / New open the prompt manager
- * (`demoBuilder.openAi`); edit deep-links the manager to that prompt's edit
- * dialog; delete confirms then delegates to `deleteAiPromptById`.
+ * menu row. When a chat IS open, it shows an insert-only prompt QuickPick: the
+ * merged prompt list (pinned first) plus a "Manage prompts…" action. Selecting a
+ * prompt inserts it into Claude Code via `demoBuilder.openInClaude`; "Manage
+ * prompts…" opens the prompt library (`demoBuilder.openAi`) — the single home
+ * for creating, editing, deleting, and pinning prompts.
  */
 export class AiMenuCommand extends BaseCommand {
     public async execute(): Promise<void> {
@@ -52,7 +50,6 @@ export class AiMenuCommand extends BaseCommand {
             title: `AI · ${project?.name ?? 'No project'}`,
             placeholder: PICKER_PLACEHOLDER,
             matchOnDescription: true,
-            onItemButton: (event) => this.handleItemButton(event),
         });
 
         if (selected) {
@@ -61,29 +58,17 @@ export class AiMenuCommand extends BaseCommand {
     }
 
     /**
-     * Build the ordered menu from a prompt list: Prompts section → one row per
-     * prompt (pinned already first via the merge) → Manage / New. No "Open Chat"
-     * row — the chat-open state is handled in `execute`. The body preview is the
-     * row `description` (same line as the title) so the inline edit/delete
-     * buttons render vertically centered (two-line rows top-align them).
+     * Build the insert-only menu: a Prompts section → one row per prompt (pinned
+     * already first via the merge) → "Manage prompts…". The body preview is the
+     * row `description` (same line as the title). Creating, editing, deleting,
+     * and pinning all live in the prompt library, reached via "Manage prompts…".
      */
     private buildItems(prompts: AiPrompt[]): AiMenuItem[] {
-        const editButton: vscode.QuickInputButton = {
-            iconPath: new vscode.ThemeIcon('edit'),
-            tooltip: 'Edit',
-        };
-        const deleteButton: vscode.QuickInputButton = {
-            iconPath: new vscode.ThemeIcon('trash'),
-            tooltip: 'Delete',
-        };
-
         const promptItems: AiMenuItem[] = prompts.map((prompt: AiPrompt) => ({
             label: prompt.title,
             description: this.truncate(prompt.prompt),
             action: 'insert',
-            promptId: prompt.id,
             promptBody: prompt.prompt,
-            buttons: [editButton, deleteButton],
         }));
 
         return [
@@ -91,7 +76,6 @@ export class AiMenuCommand extends BaseCommand {
             ...promptItems,
             { label: '', kind: vscode.QuickPickItemKind.Separator },
             { label: '$(gear) Manage prompts…', action: 'manage' },
-            { label: '$(add) New prompt…', action: 'new' },
         ];
     }
 
@@ -104,49 +88,10 @@ export class AiMenuCommand extends BaseCommand {
                 });
                 break;
             case 'manage':
-            case 'new':
                 await vscode.commands.executeCommand('demoBuilder.openAi');
                 break;
             default:
                 break;
-        }
-    }
-
-    /**
-     * Edit → open the prompt manager focused on that prompt's edit dialog, then
-     * hide. Delete → confirm (modal), then delegate to `deleteAiPromptById` and
-     * refresh the menu items from the authoritative returned list (re-reading
-     * the captured `project` would show the just-deleted prompt again).
-     */
-    private async handleItemButton(
-        event: {
-            item: AiMenuItem;
-            button: vscode.QuickInputButton;
-            quickPick: vscode.QuickPick<AiMenuItem>;
-        },
-    ): Promise<void> {
-        const { item, button, quickPick } = event;
-        if (button.tooltip === 'Edit') {
-            await vscode.commands.executeCommand('demoBuilder.openAi', {
-                editPromptId: item.promptId,
-            });
-            quickPick.hide();
-            return;
-        }
-        if (button.tooltip === 'Delete' && item.promptId) {
-            const confirmed = await vscode.window.showWarningMessage(
-                `Delete "${item.label}"?`,
-                { modal: true },
-                'Delete',
-            );
-            if (confirmed !== 'Delete') {
-                return;
-            }
-            // Re-fetch the current project so repeated deletes operate on fresh
-            // state; refresh from the returned merged list (not the stale project).
-            const current = (await this.stateManager.getCurrentProject()) ?? undefined;
-            const remaining = await deleteAiPromptById(this.handlerContext(), current, item.promptId);
-            quickPick.items = this.buildItems(remaining);
         }
     }
 
@@ -158,9 +103,9 @@ export class AiMenuCommand extends BaseCommand {
     }
 
     /**
-     * Build the minimal `HandlerContext` shape the prompt helpers read — only
+     * Build the minimal `HandlerContext` shape the prompt helper reads — only
      * `context`, `stateManager`, and `logger`. The remaining HandlerContext
-     * fields are unused by `readMergedAiPrompts` / `deleteAiPromptById`.
+     * fields are unused by `readMergedAiPrompts`.
      */
     private handlerContext(): HandlerContext {
         return {

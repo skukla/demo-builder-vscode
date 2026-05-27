@@ -227,14 +227,14 @@ export class CommandManager {
             await openInClaude.execute(project);
         });
 
-        // AI — harness-agnostic standalone webview surface (prompt manager).
+        // AI — harness-agnostic prompt library webview (create/edit/delete/pin).
         const openAi = new ShowAiCommand(
             this.context,
             this.stateManager,
             this.logger,
         );
-        this.registerCommand('demoBuilder.openAi', async (...args: unknown[]) => {
-            await openAi.execute(args[0] as { editPromptId?: string } | undefined);
+        this.registerCommand('demoBuilder.openAi', async () => {
+            await openAi.execute();
         });
 
         // Open AI Experience (chat-first) — onboarding + open the Claude Code

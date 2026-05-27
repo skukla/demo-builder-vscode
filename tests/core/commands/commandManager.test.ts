@@ -202,23 +202,7 @@ describe('CommandManager', () => {
             );
         });
 
-        it('should forward the first arg to ShowAiCommand.execute (deep-link editPromptId)', async () => {
-            commandManager.registerCommands();
-
-            const openAiHandler = (vscode.commands.registerCommand as jest.Mock).mock.calls
-                .find(call => call[0] === 'demoBuilder.openAi')?.[1];
-            expect(openAiHandler).toBeDefined();
-
-            const ShowAiCmd = require('@/features/dashboard/commands/openAi').ShowAiCommand;
-            const aiInstance = ShowAiCmd.mock.instances[0];
-            aiInstance.execute.mockClear();
-
-            await openAiHandler({ editPromptId: 'prompt-abc' });
-
-            expect(aiInstance.execute).toHaveBeenCalledWith({ editPromptId: 'prompt-abc' });
-        });
-
-        it('forwards undefined to ShowAiCommand.execute when openAi is invoked with no arg', async () => {
+        it('invokes ShowAiCommand.execute (the prompt library) with no arg', async () => {
             commandManager.registerCommands();
 
             const openAiHandler = (vscode.commands.registerCommand as jest.Mock).mock.calls
@@ -231,7 +215,7 @@ describe('CommandManager', () => {
 
             await openAiHandler();
 
-            expect(aiInstance.execute).toHaveBeenCalledWith(undefined);
+            expect(aiInstance.execute).toHaveBeenCalledWith();
         });
 
     });

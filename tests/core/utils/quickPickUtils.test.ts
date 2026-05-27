@@ -20,7 +20,6 @@ describe('quickPickUtils', () => {
         selectedItems: vscode.QuickPickItem[];
         onDidAccept: jest.Mock;
         onDidHide: jest.Mock;
-        onDidTriggerItemButton: jest.Mock;
         show: jest.Mock;
         hide: jest.Mock;
         dispose: jest.Mock;
@@ -28,9 +27,6 @@ describe('quickPickUtils', () => {
 
     let onDidAcceptCallback: () => void;
     let onDidHideCallback: () => void;
-    let onDidTriggerItemButtonCallback: (
-        e: { item: vscode.QuickPickItem; button: vscode.QuickInputButton },
-    ) => void;
 
     const mockItems: vscode.QuickPickItem[] = [
         { label: 'Item 1', description: 'First item' },
@@ -56,9 +52,6 @@ describe('quickPickUtils', () => {
             }),
             onDidHide: jest.fn((callback) => {
                 onDidHideCallback = callback;
-            }),
-            onDidTriggerItemButton: jest.fn((callback) => {
-                onDidTriggerItemButtonCallback = callback;
             }),
             show: jest.fn(),
             hide: jest.fn(),
@@ -155,54 +148,6 @@ describe('quickPickUtils', () => {
             });
         });
 
-        describe('onItemButton', () => {
-            it('invokes onItemButton with { item, button, quickPick } when a button is triggered', async () => {
-                const onItemButton = jest.fn();
-                const button: vscode.QuickInputButton = { iconPath: {} as never, tooltip: 'Delete' };
-
-                const promise = showWebviewQuickPick(mockItems, { onItemButton });
-                // Fire an item-button event before hiding.
-                onDidTriggerItemButtonCallback({ item: mockItems[0], button });
-                onDidHideCallback();
-                await promise;
-
-                expect(onItemButton).toHaveBeenCalledTimes(1);
-                expect(onItemButton).toHaveBeenCalledWith({
-                    item: mockItems[0],
-                    button,
-                    quickPick: mockQuickPick,
-                });
-            });
-
-            it('registers an item-button listener even when onItemButton is not provided', async () => {
-                const promise = showWebviewQuickPick(mockItems);
-                onDidHideCallback();
-                await promise;
-
-                // The listener is always wired; triggering it with no handler is a no-op.
-                expect(mockQuickPick.onDidTriggerItemButton).toHaveBeenCalled();
-                const button: vscode.QuickInputButton = { iconPath: {} as never };
-                expect(() =>
-                    onDidTriggerItemButtonCallback({ item: mockItems[0], button }),
-                ).not.toThrow();
-            });
-
-            it('does not resolve the picker when only an item button is triggered', async () => {
-                const onItemButton = jest.fn();
-                const button: vscode.QuickInputButton = { iconPath: {} as never };
-                mockQuickPick.selectedItems = [mockItems[1]];
-
-                const promise = showWebviewQuickPick(mockItems, { onItemButton });
-                onDidTriggerItemButtonCallback({ item: mockItems[0], button });
-
-                // The button press must NOT hide/resolve — accept still drives resolution.
-                expect(mockQuickPick.hide).not.toHaveBeenCalled();
-
-                onDidAcceptCallback();
-                const result = await promise;
-                expect(result).toBe(mockItems[1]);
-            });
-        });
     });
 
     describe('showWebviewQuickPickMany', () => {

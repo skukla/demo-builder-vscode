@@ -64,7 +64,7 @@
       },
       {
         "command": "demoBuilder.openAi",
-        "title": "AI",
+        "title": "Manage AI Prompts",
         "category": "Demo Builder"
       },
       {

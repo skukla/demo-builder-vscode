@@ -99,7 +99,6 @@ export async function setLoadingState(
     getContent: () => Promise<string>,
     message = 'Loading...',
     _logger?: { info: (msg: string) => void; debug?: (msg: string) => void },
-    minDisplayMs: number = MIN_DISPLAY_TIME,
 ): Promise<void> {
     // Give VSCode a moment to fully initialize the panel
     // This helps prevent the "Initializing web view..." message
@@ -114,10 +113,9 @@ export async function setLoadingState(
     const elapsed = Date.now() - startTime;
 
     // Ensure spinner is visible for minimum time (prevents jarring instant
-    // transitions). Callers can pass `minDisplayMs: 0` for lightweight surfaces
-    // (e.g. a focused edit dialog) where an instant render is desirable.
-    if (elapsed < minDisplayMs) {
-        const remainingTime = minDisplayMs - elapsed;
+    // transitions).
+    if (elapsed < MIN_DISPLAY_TIME) {
+        const remainingTime = MIN_DISPLAY_TIME - elapsed;
         await new Promise(resolve => setTimeout(resolve, remainingTime));
     }
 
