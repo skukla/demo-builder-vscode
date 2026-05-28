@@ -85,8 +85,8 @@ features/my-feature/
 - `dist/mcp-server.js` (compiled from `src/mcp-server.ts`) - Standalone stdio MCP server exposing 7 project tools to AI agents
 
 **Responsibilities:**
-- Verifying project AI context files (used by the standalone AI surface via `AiOverviewScreen`)
-- Providing the skills + project-MCPs + session-MCPs inventory that the Cycle D AI Configuration tab will render
+- Verifying project AI context files — feeds the Project Dashboard's "AI Ready" health badge (via `useDashboardStatus`)
+- Providing the skills inventory rendered by the dashboard's "View Skills" capability surface (`AiSkillsModal`), plus the project-MCP / session-MCP inventory used by health diagnostics
 - Standalone MCP server process for AI agent tool access via Claude Code (CLI), discoverable through `~/.claude.json` (user-scope, consent-gated) and project `.mcp.json`
 
 **Path Alias**: `@/features/ai`
@@ -135,8 +135,8 @@ features/my-feature/
 **Key Services:**
 - `dashboardHandlers` - Handler map for project dashboard messages
 - `configureHandlers` - Handler map for Configure screen messages (cancel, components data, store discovery)
-- `aiHandlers` - Handler map for the standalone AI surface, 11 handlers: verify-ai-setup (returns inventory + globalMcpRegistration + extensionInstalled + sessionsBrowserAutoShown + surface), inspect-mcp, regenerate-ai-files, register-global-mcp, save-ai-prompt / delete-ai-prompt / list-ai-prompts (scope-routed by `pinned`: `pinned: true` prompts persist in globalState under `demoBuilder.ai.globalPrompts` and appear in every project; unpinned prompts persist in the current project's `.demo-builder.json` manifest; a pin toggle is a cross-scope move, and list returns the merged deduped list), openInClaude, copyAiPrompt (clipboard write for the kebab Copy prompt action), browseClaudeSessions (focus the Claude Code extension's sessions browser with a fallback command), markSessionsBrowserAutoShown (writes the one-time auto-open flag to globalState)
-- `AiSetupTab` - React tab component for the Configure screen that runs AI context file health checks and regeneration
+- `aiHandlers` - Handler map for the standalone AI surface, 9 handlers: verify-ai-setup (returns inventory + globalMcpRegistration), inspect-mcp, regenerate-ai-files, register-global-mcp, save-ai-prompt / delete-ai-prompt / list-ai-prompts (scope-routed by `pinned`: `pinned: true` prompts persist in globalState under `demoBuilder.ai.globalPrompts` and appear in every project; unpinned prompts persist in the current project's `.demo-builder.json` manifest; a pin toggle is a cross-scope move, and list returns the merged deduped list), openInClaude, copyAiPrompt (clipboard write for the kebab Copy prompt action)
+- `AiSkillsModal` / `AiSkillsList` - The dashboard's "View Skills" capability catalog (task-framed name + description) carrying the Regenerate AI files action; opened from a link beside the "AI Ready" health badge (NOT the badge itself)
 - Dashboard state management
 - Component browser integration
 - Mesh status display
@@ -148,7 +148,7 @@ features/my-feature/
 - Component file browser (with .env hiding)
 - Mesh deployment status
 - Project configuration editing (Configure screen)
-- AI Configuration tab: verify AI files, inspect skills + MCP servers + session MCPs, manage global MCP registration, regenerate AI context files
+- AI health + capability (separate concerns): the passive "AI Ready" badge reflects AI-setup health (from `verify-ai-setup`); a distinct "View Skills" link opens the capability catalog (skills) and carries Regenerate AI files. A conditional Regenerate link appears beside the badge when health needs attention. MCP/session-MCP plumbing stays in the "Demo Builder: Diagnostics" command.
 
 **Path Alias**: `@/features/dashboard`
 

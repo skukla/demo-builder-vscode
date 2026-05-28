@@ -1,7 +1,7 @@
 /**
  * ShowAiCommand Tests
  *
- * Tests for the new standalone AI surface webview command.
+ * Tests for the prompt library webview command.
  * Mirrors the ConfigureProjectWebviewCommand test pattern.
  */
 
@@ -122,9 +122,16 @@ describe('ShowAiCommand', () => {
                 .toBe('demoBuilder.openAi');
         });
 
-        it('getWebviewTitle returns "AI"', () => {
+        it('getWebviewTitle returns "Prompt Library"', () => {
             expect((command as unknown as { getWebviewTitle(): string }).getWebviewTitle())
-                .toBe('AI');
+                .toBe('Prompt Library');
+        });
+    });
+
+    describe('loading state', () => {
+        it('uses a "prompt library" loading message', () => {
+            expect((command as unknown as { getLoadingMessage(): string }).getLoadingMessage())
+                .toMatch(/prompt library/i);
         });
     });
 
@@ -162,7 +169,8 @@ describe('ShowAiCommand', () => {
     describe('initializeMessageHandlers', () => {
         it('registers a streaming handler for every aiHandlers message type', () => {
             const onStreaming = jest.fn();
-            const mockComm = { onStreaming } as unknown as Parameters<
+            const on = jest.fn();
+            const mockComm = { onStreaming, on } as unknown as Parameters<
                 (typeof command)['initializeMessageHandlers']
             >[0];
 
@@ -181,6 +189,25 @@ describe('ShowAiCommand', () => {
                 ]),
             );
             expect(calledTypes).toHaveLength(5);
+        });
+
+        it('registers a cancel handler (footer Close) that disposes the panel', async () => {
+            const onStreaming = jest.fn();
+            const on = jest.fn();
+            const mockComm = { onStreaming, on } as unknown as Parameters<
+                (typeof command)['initializeMessageHandlers']
+            >[0];
+            (command as unknown as { panel: vscode.WebviewPanel }).panel = mockPanel;
+
+            (command as unknown as {
+                initializeMessageHandlers(c: typeof mockComm): void;
+            }).initializeMessageHandlers(mockComm);
+
+            const cancelReg = on.mock.calls.find(call => call[0] === 'cancel');
+            expect(cancelReg).toBeDefined();
+
+            await (cancelReg![1] as () => unknown)();
+            expect(mockPanel.dispose).toHaveBeenCalled();
         });
     });
 
@@ -229,12 +256,12 @@ describe('ShowAiCommand', () => {
             expect(html).toContain('aiOverview-bundle.js');
         });
 
-        it('sets the document title to "AI"', async () => {
+        it('sets the document title to "Prompt Library"', async () => {
             (command as unknown as { panel: vscode.WebviewPanel }).panel = mockPanel;
             const html = await (command as unknown as { getWebviewContent(): Promise<string> })
                 .getWebviewContent();
 
-            expect(html).toContain('<title>AI</title>');
+            expect(html).toContain('<title>Prompt Library</title>');
         });
     });
 });

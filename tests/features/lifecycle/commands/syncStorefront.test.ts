@@ -258,9 +258,9 @@ describe('SyncStorefrontCommand', () => {
     });
 
     it('does not import vscode from the service module (service stays vscode-free)', () => {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
+
         const fs = require('fs') as typeof import('fs');
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
+
         const path = require('path') as typeof import('path');
         const source = fs.readFileSync(
             path.join(__dirname, '../../../../src/features/eds/services/storefrontSyncService.ts'),

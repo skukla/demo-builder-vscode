@@ -103,7 +103,7 @@ export async function setLoadingState(
     // Give VSCode a moment to fully initialize the panel
     // This helps prevent the "Initializing web view..." message
     await new Promise(resolve => setTimeout(resolve, INIT_DELAY));
-    
+
     // Set loading HTML
     panel.webview.html = getLoadingHTML(message);
 
@@ -112,7 +112,8 @@ export async function setLoadingState(
     const contentHTML = await getContent();
     const elapsed = Date.now() - startTime;
 
-    // Ensure spinner is visible for minimum time (prevents jarring instant transitions)
+    // Ensure spinner is visible for minimum time (prevents jarring instant
+    // transitions).
     if (elapsed < MIN_DISPLAY_TIME) {
         const remainingTime = MIN_DISPLAY_TIME - elapsed;
         await new Promise(resolve => setTimeout(resolve, remainingTime));

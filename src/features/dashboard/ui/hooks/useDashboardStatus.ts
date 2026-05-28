@@ -7,9 +7,10 @@
  * @module features/dashboard/ui/hooks/useDashboardStatus
  */
 
-import { useState, useEffect, useMemo, useRef, Dispatch, SetStateAction } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback, Dispatch, SetStateAction } from 'react';
 import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import type { SkillInventoryEntry } from '@/types/ai';
 
 /**
  * Mesh deployment status values
@@ -70,11 +71,13 @@ export interface AiReadyState {
     text: 'Verifying' | 'Ready' | 'Setup incomplete' | 'Broken';
 }
 
-/** Minimum shape we read from the verify-ai-setup handler response. */
+/** Shape we read from the verify-ai-setup handler response. */
 interface VerifyAiSetupResponse {
     success: boolean;
     checks?: Array<{ name: string; status: 'ok' | 'warning' | 'error' }>;
     inventory?: {
+        /** Task-framed capability list surfaced by the "View Skills" link. */
+        skills?: SkillInventoryEntry[];
         skillsError?: string;
         mcpsError?: string;
     };
@@ -122,7 +125,18 @@ export interface UseDashboardStatusReturn {
     meshStatus: MeshStatus | undefined;
     /** Derived AI Ready badge state */
     aiReady: AiReadyState;
+    /** Task-framed capability list (skills) for the "View Skills" surface */
+    aiSkills: SkillInventoryEntry[];
+    /** True when the skill inspector errored (list shows a warning row) */
+    aiSkillsError: boolean;
+    /** True while an AI verify/regenerate operation is in flight */
+    aiBusy: boolean;
+    /** Regenerate the project's AI files, then re-verify (refreshes badge + skills) */
+    regenerateAiFiles: () => Promise<void>;
 }
+
+/** Stable empty reference so `aiSkills` identity doesn't churn each render. */
+const EMPTY_SKILLS: SkillInventoryEntry[] = [];
 
 /** Mesh statuses that indicate a user-initiated operation is in progress (preserve during updates) */
 const isMeshDeploying = (status: MeshStatus | undefined): boolean =>
@@ -149,6 +163,7 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [verifyResult, setVerifyResult] = useState<VerifyAiSetupResponse | null>(null);
     const [verifyFailed, setVerifyFailed] = useState(false);
+    const [aiBusy, setAiBusy] = useState(false);
     // Track whether status was requested (prevent StrictMode double-request)
     const statusRequestedRef = useRef(false);
     const verifyRequestedRef = useRef(false);
@@ -203,29 +218,39 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
         };
     }, []);
 
+    // Run the AI setup verification. Reused on mount and after Regenerate to
+    // refresh both the badge and the skills list.
+    const runVerify = useCallback(async (): Promise<void> => {
+        try {
+            const result = await webviewClient.request<VerifyAiSetupResponse>('verify-ai-setup', {});
+            setVerifyResult(result);
+            setVerifyFailed(false);
+        } catch {
+            setVerifyFailed(true);
+        }
+    }, []);
+
+    // Regenerate the project's AI files (rewrites .claude/* + AGENTS.md, including
+    // skills), then re-verify so the badge and the skills list reflect the result.
+    const regenerateAiFiles = useCallback(async (): Promise<void> => {
+        setAiBusy(true);
+        try {
+            await webviewClient.request('regenerate-ai-files', {});
+            await runVerify();
+        } finally {
+            setAiBusy(false);
+        }
+    }, [runVerify]);
+
     // Fetch the AI setup verification once on mount. Guards against StrictMode
     // double-fetch using a ref. The badge stays in 'Verifying' (gray) until
     // this resolves.
     useEffect(() => {
         if (verifyRequestedRef.current) return;
         verifyRequestedRef.current = true;
-        let cancelled = false;
-        webviewClient
-            .request<VerifyAiSetupResponse>('verify-ai-setup', {})
-            .then(result => {
-                if (!cancelled) {
-                    setVerifyResult(result);
-                }
-            })
-            .catch(() => {
-                if (!cancelled) {
-                    setVerifyFailed(true);
-                }
-            });
-        return () => {
-            cancelled = true;
-        };
-    }, []);
+        setAiBusy(true);
+        void runVerify().finally(() => setAiBusy(false));
+    }, [runVerify]);
 
     // Derived values
     const status = projectStatus?.status;
@@ -345,6 +370,10 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
         return { label: 'AI Ready', color: 'green', text: 'Ready' };
     }, [verifyResult, verifyFailed]);
 
+    // Capability list (skills) + error flag for the "View Skills" surface.
+    const aiSkills = verifyResult?.inventory?.skills ?? EMPTY_SKILLS;
+    const aiSkillsError = Boolean(verifyResult?.inventory?.skillsError);
+
     return {
         projectStatus,
         isRunning,
@@ -356,5 +385,9 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
         status,
         meshStatus,
         aiReady,
+        aiSkills,
+        aiSkillsError,
+        aiBusy,
+        regenerateAiFiles,
     };
 }

@@ -232,7 +232,7 @@ describe('ActionGrid', () => {
         });
 
         it('should not render Sync Storefront when handleSyncStorefront is absent', () => {
-            const { handleSyncStorefront, ...edsNoSync } = edsProps;
+            const { handleSyncStorefront: _handleSyncStorefront, ...edsNoSync } = edsProps;
             render(<ActionGrid {...edsNoSync} />);
 
             expect(screen.queryByText('Sync Storefront')).not.toBeInTheDocument();

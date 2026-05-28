@@ -91,6 +91,11 @@ function SidebarApp(): React.ReactElement {
         sendMessage('openSettings');
     }, []);
 
+    // Handle open AI menu (chat-first QuickPick)
+    const handleOpenAiMenu = useCallback(() => {
+        sendMessage('openAiMenu');
+    }, []);
+
     // Handle start demo
     const handleStartDemo = useCallback(() => {
         sendMessage('startDemo');
@@ -150,6 +155,7 @@ function SidebarApp(): React.ReactElement {
                 onOpenTools={handleOpenTools}
                 onOpenHelp={handleOpenHelp}
                 onOpenSettings={handleOpenSettings}
+                onOpenAiMenu={handleOpenAiMenu}
                 onStartDemo={handleStartDemo}
                 onStopDemo={handleStopDemo}
                 onOpenDashboard={handleOpenDashboard}

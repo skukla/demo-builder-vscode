@@ -127,9 +127,9 @@ describe('helixApiClient', () => {
 
     describe('does not import vscode', () => {
         it('module file has no `import * as vscode` or `from "vscode"`', () => {
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
+
             const fs = require('fs') as typeof import('fs');
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
+
             const path = require('path') as typeof import('path');
             const source = fs.readFileSync(
                 path.join(__dirname, '../../../../src/features/eds/services/helixApiClient.ts'),

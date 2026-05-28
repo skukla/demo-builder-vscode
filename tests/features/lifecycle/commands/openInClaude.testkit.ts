@@ -1,31 +1,16 @@
 /**
  * Shared test support for OpenInClaudeCommand suites.
  *
- * Extracted verbatim from openInClaude.test.ts so the split
- * `<module>.<aspect>.test.ts` files can share mock factories, the
- * `setupVscodeMocks` helper, and the action-label constants.
+ * Extracted from the original openInClaude.test.ts so the split
+ * `<module>.<aspect>.test.ts` files share mock factories and the
+ * `setupVscodeMocks` helper.
  *
  * NOT a `.test.ts` file, so Jest does not run it as a suite.
  *
- * Coverage (across the consuming suites):
- *  - 2 surfaces (`extension`, `terminal`) × extension installed / not-installed
- *  - Missing-extension error dialog (Install / Switch to Terminal actions)
- *  - Unified dock-to-right offer toast (`maybeOfferDockToRight`) — fires from
- *    both URI and terminal launches; atomically writes BOTH
- *    `demoBuilder.ai.dockToRight = true` AND `claudeCode.preferredLocation =
- *    'sidebar'` when accepted; dismissal / Keep current layout leave both
- *    settings untouched; flag set BEFORE the toast (race-safe)
- *  - Extension-detected offer toast (`maybeOfferExtensionSurface`) — fires on
- *    first prompt click when `surface='terminal'` + extension installed +
- *    flag unset; user choice routes the launch this click; flag set BEFORE
- *    the toast (race-safe)
+ * Coverage (across the consuming suites — terminal-only):
  *  - Terminal find-or-spawn behavior + `claude --continue` on spawn
- *  - `launchTerminal` location selection: reads `demoBuilder.ai.dockToRight`
- *    to choose between default panel placement and
- *    `{ viewColumn: ViewColumn.Beside }`
- *  - Clipboard handoff for prompt + terminal surface
- *  - Workspace-mismatch warning (extension surface only, once-ever)
- *  - vscode.env.openExternal resolving to `false` surfaces a warning + logs
+ *  - Bracketed-paste injection on reuse
+ *  - Clipboard handoff for prompt + one-time fallback tip
  *  - Logging assertions per decision branch
  */
 
@@ -95,19 +80,18 @@ export function makeProject(overrides: Partial<Project> = {}): Partial<Project> 
 // ----------------------------------------------------------------------------
 
 /**
- * Sets up the vscode mock surface required for OpenInClaudeCommand.
- * Returns the per-test jest mocks so individual tests can assert behavior.
+ * Sets up the vscode mock surface required for OpenInClaudeCommand. With the
+ * extension surface retired, the command only opens a terminal — the helper
+ * therefore only configures terminal-related mocks (creation, find-or-spawn,
+ * clipboard, message toasts).
  */
 export function setupVscodeMocks(opts: {
-    surface: 'extension' | 'terminal';
     /** Engine setting. Defaults to `'claude-code'`. */
     engine?: 'claude-code';
-    extensionInstalled: boolean;
-    openExternalResult?: boolean;
     /**
      * Workspace folder path to expose via `vscode.workspace.workspaceFolders[0]`.
      * Defaults to `/projects/demo` so existing tests that assume workspace =
-     * project keep their URI-launch expectations.
+     * project keep their assertions intact.
      */
     workspaceFolderPath?: string | null;
     /**
@@ -115,22 +99,9 @@ export function setupVscodeMocks(opts: {
      * `[]` (no existing terminals; spawn a fresh one).
      */
     existingTerminals?: Array<{ name: string; exitStatus?: { code: number } | undefined }>;
-    /**
-     * Value of the `demoBuilder.ai.dockToRight` setting. Defaults to `false`.
-     */
-    dockToRight?: boolean;
-    /**
-     * Value of the `claudeCode.preferredLocation` setting (read-only here;
-     * tests assert writes via `claudeCodeUpdateMock`). Defaults to `'panel'`.
-     */
-    claudeCodePreferredLocation?: string;
-}): {
+} = {}): {
     getConfigMock: jest.Mock;
     configUpdateMock: jest.Mock;
-    claudeCodeGetMock: jest.Mock;
-    claudeCodeUpdateMock: jest.Mock;
-    getExtensionMock: jest.Mock;
-    openExternalMock: jest.Mock;
     createTerminalMock: jest.Mock;
     terminalShowMock: jest.Mock;
     terminalSendTextMock: jest.Mock;
@@ -140,50 +111,24 @@ export function setupVscodeMocks(opts: {
     clipboardWriteMock: jest.Mock;
     existingTerminalShowMocks: jest.Mock[];
 } {
-    // Default workspace = project.path so existing tests still URI-launch
+    // Default workspace = project.path so existing tests still pass.
     const wsPath = opts.workspaceFolderPath === undefined ? '/projects/demo' : opts.workspaceFolderPath;
     (vscode.workspace as unknown as { workspaceFolders: { uri: { fsPath: string } }[] | undefined }).workspaceFolders =
         wsPath === null ? undefined : [{ uri: { fsPath: wsPath } }];
 
-    // demoBuilder.ai configuration mock
+    // demoBuilder.ai configuration mock — only `engine` survives.
     const getConfigMock = jest.fn((key: string, defaultValue?: unknown) => {
         if (key === 'engine') return opts.engine ?? 'claude-code';
-        if (key === 'surface') return opts.surface;
-        if (key === 'dockToRight') return opts.dockToRight ?? false;
         return defaultValue;
     });
     const configUpdateMock = jest.fn().mockResolvedValue(undefined);
-
-    // claudeCode configuration mock (for `preferredLocation` sync)
-    const claudeCodeGetMock = jest.fn((key: string, defaultValue?: unknown) => {
-        if (key === 'preferredLocation') return opts.claudeCodePreferredLocation ?? 'panel';
-        return defaultValue;
-    });
-    const claudeCodeUpdateMock = jest.fn().mockResolvedValue(undefined);
 
     (vscode.workspace.getConfiguration as jest.Mock).mockImplementation((section: string) => {
         if (section === 'demoBuilder.ai') {
             return { get: getConfigMock, update: configUpdateMock };
         }
-        if (section === 'claudeCode') {
-            return { get: claudeCodeGetMock, update: claudeCodeUpdateMock };
-        }
         return { get: jest.fn() };
     });
-
-    const fakeExtension = opts.extensionInstalled
-        ? { id: 'anthropic.claude-code', isActive: false, activate: jest.fn() }
-        : undefined;
-    const getExtensionMock = jest.fn((id: string) =>
-        id === 'anthropic.claude-code' ? fakeExtension : undefined,
-    );
-    (vscode as unknown as { extensions: { getExtension: jest.Mock } }).extensions = {
-        getExtension: getExtensionMock,
-    };
-
-    const openExternalMock = vscode.env.openExternal as jest.Mock;
-    openExternalMock.mockReset();
-    openExternalMock.mockResolvedValue(opts.openExternalResult ?? true);
 
     const terminalShowMock = jest.fn();
     const terminalSendTextMock = jest.fn();
@@ -233,10 +178,6 @@ export function setupVscodeMocks(opts: {
     return {
         getConfigMock,
         configUpdateMock,
-        claudeCodeGetMock,
-        claudeCodeUpdateMock,
-        getExtensionMock,
-        openExternalMock,
         createTerminalMock,
         terminalShowMock,
         terminalSendTextMock,
@@ -247,21 +188,3 @@ export function setupVscodeMocks(opts: {
         existingTerminalShowMocks,
     };
 }
-
-// ----------------------------------------------------------------------------
-// Constants — kept in sync with src/commands/openInClaude.ts
-// ----------------------------------------------------------------------------
-
-/**
- * Same underlying globalState string as the legacy FIRST_TIP_KEY; symbol
- * was renamed to DOCK_OFFER_SHOWN_KEY but the string is preserved so
- * existing users don't see the new toast.
- */
-export const DOCK_OFFER_KEY = 'demoBuilder.ai.firstClaudeOpenTipShown';
-export const EXTENSION_OFFER_KEY = 'demoBuilder.ai.extensionAvailableOfferShown';
-
-export const DOCK_ACTION_LABEL = 'Dock to right side';
-export const USE_DEFAULT_LAYOUT_ACTION_LABEL = 'Use default';
-export const USE_EXTENSION_ACTION_LABEL = 'Use the Extension';
-export const STAY_IN_TERMINAL_ACTION_LABEL = 'Stay in Terminal';
-export const OPEN_SETTINGS_ACTION_LABEL = 'Open Settings';

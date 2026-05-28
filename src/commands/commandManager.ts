@@ -1,6 +1,7 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { AiMenuCommand } from './aiMenu';
 import { ConfigureCommand } from './configure';
 import { DiagnosticsCommand } from './diagnostics';
 import { OpenInClaudeCommand } from './openInClaude';
@@ -226,7 +227,7 @@ export class CommandManager {
             await openInClaude.execute(project);
         });
 
-        // AI — harness-agnostic standalone webview surface.
+        // AI — harness-agnostic prompt library webview (create/edit/delete/pin).
         const openAi = new ShowAiCommand(
             this.context,
             this.stateManager,
@@ -234,6 +235,22 @@ export class CommandManager {
         );
         this.registerCommand('demoBuilder.openAi', async () => {
             await openAi.execute();
+        });
+
+        // Open AI Experience (chat-first) — onboarding + open the Claude Code
+        // terminal/extension tab with no prompt. Delegates to openInClaude.execute().
+        this.registerCommand('demoBuilder.openAiExperience', async () => {
+            await openInClaude.execute();
+        });
+
+        // AI Menu — chat-first QuickPick (Open Chat + prompts + manage/new).
+        const aiMenu = new AiMenuCommand(
+            this.context,
+            this.stateManager,
+            this.logger,
+        );
+        this.registerCommand('demoBuilder.aiMenu', async () => {
+            await aiMenu.execute();
         });
 
         // Navigate — internal routing command for sidebar nav clicks.
@@ -248,8 +265,9 @@ export class CommandManager {
                     await configureProject.execute();
                     break;
                 case 'ai':
-                    // Standalone AI surface.
-                    await openAi.execute();
+                    // Chat-first: open the AI experience directly. The prompt
+                    // manager (openAi) stays reachable via the aiMenu Manage item.
+                    await vscode.commands.executeCommand('demoBuilder.openAiExperience');
                     break;
                 case 'updates':
                     await checkUpdates.execute();

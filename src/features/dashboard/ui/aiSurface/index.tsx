@@ -22,7 +22,9 @@ root.render(
     <WebviewApp>
         {(initData) => {
             const data = initData as AiOverviewInitData;
-            return data?.project ? <AiOverviewScreen project={data.project} /> : null;
+            return data?.project
+                ? <AiOverviewScreen project={data.project} />
+                : null;
         }}
     </WebviewApp>,
 );

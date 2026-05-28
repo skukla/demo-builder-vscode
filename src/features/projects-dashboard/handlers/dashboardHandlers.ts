@@ -19,6 +19,7 @@ import {
     exportProjectSettings,
     deleteProject,
 } from '../services';
+import { PENDING_CLAUDE_LAUNCH_KEY } from '@/commands/openInClaude';
 import { BaseWebviewCommand } from '@/core/base';
 import { COMPONENT_IDS } from '@/core/constants';
 import { executeCommandForProject } from '@/core/handlers';
@@ -690,10 +691,20 @@ export const handleOpenBrowser: MessageHandler<{ projectPath: string }> = async 
 };
 
 /**
- * Open a specific project in the standalone AI surface — E3 home-grid menu wiring.
+ * Open the configured AI chat surface for a specific project — home-grid kebab
+ * "Open AI" wiring. AI = chat (terminal tab or extension URI per
+ * `demoBuilder.ai.surface`), not the Prompt Library; the project's per-project
+ * skills / `.mcp.json` / `AGENTS.md` only load when the VS Code workspace is
+ * anchored to that project, so this handler:
  *
- * Loads the project for the given path and dispatches `demoBuilder.openAi`
- * with the project as the first argument.
+ *   1. Loads the project for the given path.
+ *   2. If the workspace already matches the project, dispatches
+ *      `demoBuilder.openAiExperience` directly.
+ *   3. Otherwise writes a pending-launch record (no prompt → bare chat) and
+ *      calls `vscode.openFolder`. The activation handler in extension.ts then
+ *      dispatches `demoBuilder.openInClaude` against the now-anchored
+ *      workspace, which opens the configured chat. Mirrors the
+ *      pending-prompt mechanism in `handleOpenInClaude` (just without a prompt).
  */
 export const handleOpenAiForProject: MessageHandler<{ projectPath: string }> = async (
     context: HandlerContext,
@@ -712,7 +723,37 @@ export const handleOpenAiForProject: MessageHandler<{ projectPath: string }> = a
         return { success: false, error: 'Project not found' };
     }
 
-    await vscode.commands.executeCommand('demoBuilder.openAi', project);
+    const workspaceFolderPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (workspaceFolderPath === project.path) {
+        await vscode.commands.executeCommand('demoBuilder.openAiExperience');
+        return { success: true };
+    }
+
+    const existing = context.context.globalState.get<{ prompt?: string }>(PENDING_CLAUDE_LAUNCH_KEY);
+    if (existing) {
+        context.logger.warn(
+            '[handleOpenAiForProject] overwriting existing pending Claude launch',
+        );
+    }
+    await context.context.globalState.update(PENDING_CLAUDE_LAUNCH_KEY, {
+        projectPath: project.path,
+        prompt: undefined,
+        createdAt: Date.now(),
+    });
+    try {
+        await vscode.commands.executeCommand(
+            'vscode.openFolder',
+            vscode.Uri.file(project.path),
+            false,
+        );
+    } catch (openError) {
+        await context.context.globalState.update(PENDING_CLAUDE_LAUNCH_KEY, undefined);
+        context.logger.error(
+            'Failed to open project folder for AI launch',
+            openError instanceof Error ? openError : undefined,
+        );
+        return { success: false, error: 'Failed to anchor workspace for AI launch' };
+    }
     return { success: true };
 };
 

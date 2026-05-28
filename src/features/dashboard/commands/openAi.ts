@@ -11,7 +11,7 @@ import { Project } from '@/types';
 import type { HandlerContext, SharedState } from '@/types/handlers';
 
 /**
- * Initial data sent to the AI overview webview.
+ * Initial data sent to the prompt library webview.
  */
 interface AiOverviewInitialData {
     theme: 'dark' | 'light';
@@ -19,13 +19,14 @@ interface AiOverviewInitialData {
 }
 
 /**
- * ShowAiCommand — opens the standalone AI surface.
+ * ShowAiCommand — opens the prompt library webview.
  *
  * Mirrors the ConfigureProjectWebviewCommand shape: a singleton webview panel
- * wired up to the new `aiHandlers` map. The AI surface is harness-agnostic —
- * the title is "AI", not "Claude Code". The URI launch underneath is still
- * Claude-specific, but that's an implementation detail handled by the
- * `openInClaude` route.
+ * wired up to the `aiHandlers` map. The library is the single home for creating,
+ * editing, deleting, and pinning prompts, reached on demand from the AI
+ * QuickPick's "Manage prompts…" action. It is harness-agnostic — the URI launch
+ * underneath is Claude-specific, but that's an implementation detail handled by
+ * the `openInClaude` route.
  */
 export class ShowAiCommand extends BaseWebviewCommand {
     /**
@@ -47,11 +48,11 @@ export class ShowAiCommand extends BaseWebviewCommand {
     }
 
     protected getWebviewTitle(): string {
-        return 'AI';
+        return 'Prompt Library';
     }
 
     protected getLoadingMessage(): string {
-        return 'Loading AI overview...';
+        return 'Loading prompt library...';
     }
 
     public async execute(): Promise<void> {
@@ -70,9 +71,9 @@ export class ShowAiCommand extends BaseWebviewCommand {
 
             this.subscribeToSurfaceChanges();
 
-            this.logger.debug(`[AI] Opened AI overview for project: ${project.name}`);
+            this.logger.debug(`[AI] Opened prompt library for project: ${project.name}`);
         } catch (error) {
-            await this.showError('Failed to open AI overview', error as Error);
+            await this.showError('Failed to open prompts', error as Error);
         }
     }
 
@@ -110,7 +111,7 @@ export class ShowAiCommand extends BaseWebviewCommand {
             scriptUri,
             nonce,
             cspSource: this.panel.webview.cspSource,
-            title: 'AI',
+            title: 'Prompt Library',
             baseUri,
         });
     }
@@ -139,6 +140,13 @@ export class ShowAiCommand extends BaseWebviewCommand {
                 return dispatchHandler(aiHandlers, context, messageType, data);
             });
         }
+
+        // The footer "Close" button posts `cancel`; dispose the panel so the
+        // Prompt Library tab closes (mirrors the Configure surface's cancel).
+        comm.on('cancel', async () => {
+            this.panel?.dispose();
+            return { success: true };
+        });
     }
 
     /**

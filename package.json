@@ -64,7 +64,7 @@
       },
       {
         "command": "demoBuilder.openAi",
-        "title": "AI",
+        "title": "Manage AI Prompts",
         "category": "Demo Builder"
       },
       {
@@ -288,28 +288,10 @@
               "claude-code"
             ],
             "enumDescriptions": [
-              "Anthropic's Claude Code (CLI + VS Code extension)."
+              "Anthropic's Claude Code (CLI)."
             ],
             "default": "claude-code",
             "description": "Which AI tool Demo Builder launches. Currently only Claude Code is supported; reserved for future engines (e.g. Codex)."
-          },
-          "demoBuilder.ai.surface": {
-            "type": "string",
-            "enum": [
-              "extension",
-              "terminal"
-            ],
-            "enumDescriptions": [
-              "Launch the engine's official VS Code extension. For Claude Code: chat panel via `vscode://anthropic.claude-code/open`, with prompts pre-filled in the input. Demo Builder offers to switch to this surface automatically when it detects the extension is installed.",
-              "Launch the engine's CLI in a VS Code integrated terminal rooted at the project. For Claude Code: `claude --continue` with prompt-on-clipboard handoff. No chat panel; full project context. This is the baseline surface — it works without any VS Code extension installed."
-            ],
-            "default": "terminal",
-            "description": "How Demo Builder launches the configured AI engine. Terminal is the baseline (no extension dependency); the extension surface is offered when Demo Builder detects the engine's VS Code extension is installed."
-          },
-          "demoBuilder.ai.dockToRight": {
-            "type": "boolean",
-            "default": false,
-            "description": "Dock the AI experience to the right side of VS Code. Applies to both surfaces: the extension chat panel docks to the right secondary sidebar, and terminals open as editor tabs beside your active code. Demo Builder keeps `claudeCode.preferredLocation` in sync so the Claude Code extension natively respects this preference."
           }
         }
       }

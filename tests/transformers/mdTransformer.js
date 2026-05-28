@@ -4,6 +4,8 @@
  * matching the esbuild text loader behavior used in production builds.
  */
 
+/* global module */
+
 module.exports = {
     process(sourceText) {
         return { code: `module.exports = ${JSON.stringify(sourceText)};` };

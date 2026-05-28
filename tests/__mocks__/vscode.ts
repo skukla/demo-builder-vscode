@@ -85,6 +85,7 @@ export const window = {
         dispose: jest.fn(),
     })),
     showQuickPick: jest.fn(),
+    createQuickPick: jest.fn(),
     terminals: [],
     activeColorTheme: {
         kind: 1, // ColorThemeKind.Dark
@@ -167,6 +168,11 @@ export const ViewColumn = {
 export const StatusBarAlignment = {
     Left: 1,
     Right: 2,
+};
+
+export const QuickPickItemKind = {
+    Separator: -1,
+    Default: 0,
 };
 
 export class EventEmitter {

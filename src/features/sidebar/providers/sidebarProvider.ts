@@ -240,6 +240,10 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 await this.handleOpenSettings();
                 break;
 
+            case 'openAiMenu':
+                await this.handleOpenAiMenu();
+                break;
+
             case 'startDemo':
                 await this.handleStartDemo();
                 break;
@@ -423,6 +427,22 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         } catch (error) {
             this.logger.error(
                 'Open settings failed',
+                error instanceof Error ? error : undefined,
+            );
+        }
+    }
+
+    /**
+     * Handle open AI menu request — opens the chat-first AI QuickPick.
+     */
+    private async handleOpenAiMenu(): Promise<void> {
+        this.logger.info('Sidebar: Open AI menu');
+
+        try {
+            await vscode.commands.executeCommand('demoBuilder.aiMenu');
+        } catch (error) {
+            this.logger.error(
+                'Open AI menu failed',
                 error instanceof Error ? error : undefined,
             );
         }

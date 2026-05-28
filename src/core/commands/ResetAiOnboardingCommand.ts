@@ -4,12 +4,14 @@ import { BaseCommand } from '@/core/base/baseCommand';
 
 /**
  * Dev-only convenience command for testing the first-run AI experience
- * (dock-to-right offer, extension-detected offer, sessions-browser auto-open,
- * etc.) repeatedly without nuking projects, Adobe auth, or other state.
+ * (clipboard-fallback tip, pending-launch replay) repeatedly without nuking
+ * projects, Adobe auth, or other state.
  *
- * Scope: clears the AI one-time toast flags AND the AI user-settings AND the
- * synced `claudeCode.preferredLocation`. Nothing else. Projects, Adobe auth,
- * DA.live config, and globalState outside AI are untouched.
+ * Scope: clears the active AI one-time flags AND the legacy flags / settings
+ * left over from the retired extension surface and dock-to-right offer, so
+ * users upgrading from a previous Demo Builder don't carry dead state.
+ * Projects, Adobe auth, DA.live config, and globalState outside AI are
+ * untouched.
  */
 export class ResetAiOnboardingCommand extends BaseCommand {
     public async execute(): Promise<void> {
@@ -23,10 +25,9 @@ export class ResetAiOnboardingCommand extends BaseCommand {
             }
 
             const confirm = await vscode.window.showWarningMessage(
-                'Reset the AI onboarding state? Clears the dock-offer / extension-offer / '
-                + 'sessions-browser-auto-open flags and resets `demoBuilder.ai.dockToRight`, '
-                + '`demoBuilder.ai.surface`, and `claudeCode.preferredLocation` to their defaults. '
-                + 'Projects, Adobe auth, and other settings are untouched.',
+                'Reset the AI onboarding state? Clears the clipboard-fallback tip flag and the '
+                + 'pending-launch record, plus legacy flags and settings from the retired extension '
+                + 'surface. Projects, Adobe auth, and other settings are untouched.',
                 { modal: true },
                 'Yes, Reset AI Onboarding',
                 'Cancel',

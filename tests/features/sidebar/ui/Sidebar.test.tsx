@@ -157,6 +157,22 @@ describe('Sidebar', () => {
             // Project context uses UtilityBar with icons
             expect(screen.getByRole('button', { name: /tools/i })).toBeInTheDocument();
         });
+
+        it('should plumb onOpenAiMenu to the UtilityBar AI button (project context)', () => {
+            const onOpenAiMenu = jest.fn();
+            renderWithProvider(
+                <Sidebar
+                    context={createProjectContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    onOpenAiMenu={onOpenAiMenu}
+                />
+            );
+
+            fireEvent.click(screen.getByRole('button', { name: /^ai$/i }));
+
+            expect(onOpenAiMenu).toHaveBeenCalled();
+        });
     });
 
     describe('Configure context', () => {

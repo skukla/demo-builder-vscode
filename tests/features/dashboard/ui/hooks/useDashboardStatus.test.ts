@@ -701,5 +701,50 @@ describe('useDashboardStatus', () => {
             // yellow (setup incomplete) so the badge does not get stuck on gray.
             expect(result.current.aiReady.color).toBe('yellow');
         });
+
+        it('exposes the skills inventory via aiSkills', async () => {
+            const skills = [
+                { name: 'Add a component', description: 'Adds a component', path: '/p/add.md', source: 'demo-builder' },
+            ];
+            mockRequest.mockResolvedValue(buildVerifyResponse({ inventory: { skills } }));
+            const { result } = renderHook(() => useDashboardStatus());
+            await flushVerify();
+            expect(result.current.aiSkills).toHaveLength(1);
+            expect(result.current.aiSkills[0].name).toBe('Add a component');
+            expect(result.current.aiSkillsError).toBe(false);
+        });
+
+        it('flags aiSkillsError when the skill inspector errored', async () => {
+            mockRequest.mockResolvedValue(buildVerifyResponse({ inventory: { skillsError: 'skill inspector failed' } }));
+            const { result } = renderHook(() => useDashboardStatus());
+            await flushVerify();
+            expect(result.current.aiSkillsError).toBe(true);
+        });
+
+        it('clears aiBusy after the initial verify resolves', async () => {
+            mockRequest.mockResolvedValue(buildVerifyResponse());
+            const { result } = renderHook(() => useDashboardStatus());
+            await flushVerify();
+            expect(result.current.aiBusy).toBe(false);
+        });
+
+        it('regenerateAiFiles dispatches regenerate-ai-files then re-verifies', async () => {
+            mockRequest.mockImplementation((type: string) =>
+                type === 'regenerate-ai-files'
+                    ? Promise.resolve({ success: true })
+                    : Promise.resolve(buildVerifyResponse()),
+            );
+            const { result } = renderHook(() => useDashboardStatus());
+            await flushVerify();
+            mockRequest.mockClear();
+
+            await act(async () => {
+                await result.current.regenerateAiFiles();
+            });
+
+            const types = mockRequest.mock.calls.map(c => c[0]);
+            expect(types).toContain('regenerate-ai-files');
+            expect(types).toContain('verify-ai-setup');
+        });
     });
 });
