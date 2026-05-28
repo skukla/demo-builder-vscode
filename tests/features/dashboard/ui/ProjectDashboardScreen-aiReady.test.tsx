@@ -5,8 +5,29 @@
  * Frontend + API Mesh on the project dashboard header.
  */
 
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { setupTestContext, renderDashboard } from './ProjectDashboardScreen.testUtils';
+
+/** A passing verify response carrying the given skills inventory. */
+function verifyWithSkills(skills: Array<{ name: string; description: string | null; path: string; source: string }>) {
+    return {
+        success: true,
+        status: 'ok',
+        checks: [{ name: 'skill-files', status: 'ok' }],
+        inventory: { skills, mcps: [], sessionMcps: [] },
+        globalMcpRegistration: 'registered',
+    };
+}
+
+/** Route verify-ai-setup to `response` and resolve regenerate-ai-files. */
+function mockAiRequests(response: unknown) {
+    const { webviewClient } = require('@/core/ui/utils/WebviewClient');
+    (webviewClient.request as jest.Mock).mockImplementation((type: string) => {
+        if (type === 'regenerate-ai-files') return Promise.resolve({ success: true });
+        return Promise.resolve(response);
+    });
+    return webviewClient;
+}
 
 describe('ProjectDashboardScreen - AI Ready Badge', () => {
     beforeEach(() => {
@@ -123,6 +144,104 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
             // ensuring the rendered node is not a button or link.
             expect(badge.tagName.toLowerCase()).not.toBe('button');
             expect(badge.tagName.toLowerCase()).not.toBe('a');
+        });
+    });
+
+    describe('View Skills — capability discovery (separate from the badge)', () => {
+        const SKILLS = [
+            { name: 'Add a component', description: 'Adds a component to your project', path: '/p/.claude/skills/add-component.md', source: 'demo-builder' },
+            { name: 'Sync changes', description: 'Picks the right sync operation', path: '/p/.claude/skills/sync-changes.md', source: 'demo-builder' },
+        ];
+
+        it('renders a clickable "View Skills (N)" link reflecting the skill count', async () => {
+            mockAiRequests(verifyWithSkills(SKILLS));
+            renderDashboard();
+            await waitFor(() => {
+                expect(screen.getByTestId('ai-view-skills-trigger').textContent).toMatch(/View Skills \(2\)/);
+            });
+        });
+
+        it('opens the skills modal listing the skills by name when clicked', async () => {
+            mockAiRequests(verifyWithSkills(SKILLS));
+            renderDashboard();
+            await waitFor(() => {
+                expect(screen.getByTestId('ai-view-skills-trigger').textContent).toMatch(/\(2\)/);
+            });
+
+            await act(async () => {
+                fireEvent.click(screen.getByTestId('ai-view-skills-trigger'));
+            });
+
+            expect(screen.getByTestId('ai-skills-modal')).toBeInTheDocument();
+            expect(screen.getByTestId('ai-skills-modal-count').textContent).toBe('2');
+            const rows = screen.getAllByTestId('ai-skills-modal-skill').map(r => r.textContent);
+            expect(rows).toContain('Add a component');
+            expect(rows).toContain('Sync changes');
+        });
+
+        it('the modal Regenerate action dispatches regenerate-ai-files then re-verifies', async () => {
+            const webviewClient = mockAiRequests(verifyWithSkills(SKILLS));
+            renderDashboard();
+            await waitFor(() => screen.getByTestId('ai-view-skills-trigger'));
+
+            await act(async () => {
+                fireEvent.click(screen.getByTestId('ai-view-skills-trigger'));
+            });
+            (webviewClient.request as jest.Mock).mockClear();
+            await act(async () => {
+                fireEvent.click(screen.getByTestId('ai-skills-modal-regenerate'));
+                await Promise.resolve();
+                await Promise.resolve();
+            });
+
+            const types = (webviewClient.request as jest.Mock).mock.calls.map((c: unknown[]) => c[0]);
+            expect(types).toContain('regenerate-ai-files');
+            expect(types).toContain('verify-ai-setup');
+        });
+    });
+
+    describe('Conditional Regenerate link (only when health needs attention)', () => {
+        it('shows a "Regenerate AI files" link next to the badge when a check fails (red)', async () => {
+            mockAiRequests({
+                success: true,
+                status: 'warning',
+                checks: [{ name: 'AGENTS.md', status: 'warning' }],
+                inventory: { skills: [], mcps: [], sessionMcps: [] },
+                globalMcpRegistration: 'registered',
+            });
+            renderDashboard();
+            await waitFor(() => {
+                expect(screen.getByTestId('ai-regenerate-trigger')).toBeInTheDocument();
+            });
+        });
+
+        it('does NOT show the Regenerate link when health is green', async () => {
+            mockAiRequests(verifyWithSkills([]));
+            renderDashboard();
+            await waitFor(() => {
+                expect(screen.getByTestId('status-card-AI Ready').getAttribute('data-color')).toBe('green');
+            });
+            expect(screen.queryByTestId('ai-regenerate-trigger')).not.toBeInTheDocument();
+        });
+
+        it('clicking the conditional Regenerate link dispatches regenerate-ai-files', async () => {
+            const webviewClient = mockAiRequests({
+                success: true,
+                status: 'warning',
+                checks: [{ name: 'AGENTS.md', status: 'warning' }],
+                inventory: { skills: [], mcps: [], sessionMcps: [] },
+                globalMcpRegistration: 'registered',
+            });
+            renderDashboard();
+            await waitFor(() => screen.getByTestId('ai-regenerate-trigger'));
+            (webviewClient.request as jest.Mock).mockClear();
+            await act(async () => {
+                fireEvent.click(screen.getByTestId('ai-regenerate-trigger'));
+                await Promise.resolve();
+                await Promise.resolve();
+            });
+            const types = (webviewClient.request as jest.Mock).mock.calls.map((c: unknown[]) => c[0]);
+            expect(types).toContain('regenerate-ai-files');
         });
     });
 });

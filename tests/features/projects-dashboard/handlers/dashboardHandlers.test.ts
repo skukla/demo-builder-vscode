@@ -446,46 +446,91 @@ describe('dashboardHandlers', () => {
         });
     });
 
-    describe('handleOpenAiForProject (E3)', () => {
-        it('should dispatch demoBuilder.openAi with the loaded project', async () => {
+    describe('handleOpenAiForProject', () => {
+        // The handler reads context.context.globalState + vscode.workspace.workspaceFolders;
+        // augment the mock context inline (createMockHandlerContext doesn't include them).
+        function makeContext(projects: Project[]): any {
+            const ctx = createMockHandlerContext(projects) as any;
+            ctx.context = {
+                globalState: {
+                    get: jest.fn(),
+                    update: jest.fn().mockResolvedValue(undefined),
+                },
+            };
+            return ctx;
+        }
+
+        function setWorkspaceFolder(fsPath: string | null): void {
+            const vscode = require('vscode');
+            vscode.workspace.workspaceFolders = fsPath === null
+                ? undefined
+                : [{ uri: { fsPath } }];
+        }
+
+        afterEach(() => setWorkspaceFolder(null));
+
+        it('dispatches demoBuilder.openAiExperience when the workspace already matches the project', async () => {
             const project = createMockProject({ name: 'AI Target' });
-            const context = createMockHandlerContext([project]);
+            setWorkspaceFolder(project.path);
+            const context = makeContext([project]);
             const vscode = require('vscode');
 
-            const result = await handleOpenAiForProject(context as any, {
-                projectPath: project.path,
-            });
+            const result = await handleOpenAiForProject(context, { projectPath: project.path });
 
             expect(result.success).toBe(true);
-            expect(context.stateManager.loadProjectFromPath).toHaveBeenCalledWith(
-                project.path,
-                undefined,
-                { persistAfterLoad: false },
-            );
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-                'demoBuilder.openAi',
-                project,
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openAiExperience');
+            // No workspace anchoring needed.
+            expect(context.context.globalState.update).not.toHaveBeenCalled();
+            expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
+                'vscode.openFolder',
+                expect.anything(),
+                expect.anything(),
             );
         });
 
-        it('should return error when projectPath is missing', async () => {
-            const context = createMockHandlerContext([]);
+        it('writes a pending-launch record and anchors the workspace via vscode.openFolder when workspace ≠ project', async () => {
+            const project = createMockProject({ name: 'AI Target' });
+            setWorkspaceFolder('/some/other/repo');
+            const context = makeContext([project]);
             const vscode = require('vscode');
 
-            const result = await handleOpenAiForProject(context as any, {} as any);
+            const result = await handleOpenAiForProject(context, { projectPath: project.path });
+
+            expect(result.success).toBe(true);
+            // Pending record carries no prompt — replay opens the bare chat.
+            expect(context.context.globalState.update).toHaveBeenCalledWith(
+                'demoBuilder.ai.pendingClaudeLaunch',
+                expect.objectContaining({
+                    projectPath: project.path,
+                    prompt: undefined,
+                    createdAt: expect.any(Number),
+                }),
+            );
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                'vscode.openFolder',
+                expect.objectContaining({ fsPath: project.path }),
+                false,
+            );
+            // The chat dispatch happens post-reload via replayPendingClaudeLaunch — not inline.
+            expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith('demoBuilder.openAiExperience');
+        });
+
+        it('returns error when projectPath is missing', async () => {
+            const context = makeContext([]);
+            const vscode = require('vscode');
+
+            const result = await handleOpenAiForProject(context, {} as any);
 
             expect(result.success).toBe(false);
             expect(result.error).toMatch(/path is required/i);
             expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
         });
 
-        it('should return error when project cannot be loaded', async () => {
-            const context = createMockHandlerContext([]);
+        it('returns error when project cannot be loaded', async () => {
+            const context = makeContext([]);
             const vscode = require('vscode');
 
-            const result = await handleOpenAiForProject(context as any, {
-                projectPath: '/nonexistent/path',
-            });
+            const result = await handleOpenAiForProject(context, { projectPath: '/nonexistent/path' });
 
             expect(result.success).toBe(false);
             expect(result.error).toMatch(/not found/i);

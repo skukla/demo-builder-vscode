@@ -12,9 +12,11 @@ import {
     Flex,
     Button,
     Link,
+    DialogContainer,
 } from '@adobe/react-spectrum';
 import React, { useState, useEffect, useRef } from 'react';
 import { ActionGrid } from './components/ActionGrid';
+import { AiSkillsModal } from './components/AiSkillsModal';
 import { isStartActionDisabled } from './dashboardPredicates';
 import { useDashboardActions } from './hooks/useDashboardActions';
 import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
@@ -82,6 +84,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
     // State for browser opening and logs hover suppression (passed to actions hook)
     const [isOpeningBrowser, setIsOpeningBrowser] = useState(false);
     const [isLogsHoverSuppressed, setIsLogsHoverSuppressed] = useState(false);
+    const [showSkills, setShowSkills] = useState(false);
 
     // Status management via extracted hook
     const {
@@ -95,6 +98,10 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
         status,
         meshStatus,
         aiReady,
+        aiSkills,
+        aiSkillsError,
+        aiBusy,
+        regenerateAiFiles,
     } = useDashboardStatus({ hasMesh, initialMeshStatus, initialEdsStorefrontStatus }, isEdsStable);
 
     // Action handlers via extracted hook
@@ -205,6 +212,37 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                                     size="S"
                                     className="dashboard-status-badge"
                                 />
+
+                                {/* AI links — capability discovery + a fix shortcut when health
+                                    needs attention. Placed in the status grid starting at column 2
+                                    so the link text is flush with the status labels above (not the
+                                    dot column). Distinct from the passive badges — a badge doesn't
+                                    read as clickable. */}
+                                <Flex
+                                    direction="row"
+                                    gap="size-200"
+                                    alignItems="center"
+                                    UNSAFE_style={{ gridColumn: '2 / -1' }}
+                                >
+                                    <Link
+                                        data-testid="ai-view-skills-trigger"
+                                        onPress={() => setShowSkills(true)}
+                                        isQuiet
+                                        UNSAFE_className="text-sm cursor-pointer"
+                                    >
+                                        {`View Skills (${aiSkills.length})`}
+                                    </Link>
+                                    {(aiReady.color === 'red' || aiReady.color === 'yellow') && (
+                                        <Link
+                                            data-testid="ai-regenerate-trigger"
+                                            onPress={() => { void regenerateAiFiles(); }}
+                                            isQuiet
+                                            UNSAFE_className="text-sm cursor-pointer"
+                                        >
+                                            Regenerate AI files
+                                        </Link>
+                                    )}
+                                </Flex>
                                 </div>
                                 {/* Sign in link - outside grid to avoid disrupting layout */}
                                 {meshStatus === 'needs-auth' && (
@@ -251,6 +289,20 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                     </div>
                 </div>
             </PageLayout>
+
+            {/* Capability catalog — reached from the "View Skills" link, NOT the
+                health badge. Carries Regenerate AI files (which rewrites skills). */}
+            {showSkills && (
+                <DialogContainer onDismiss={() => setShowSkills(false)}>
+                    <AiSkillsModal
+                        skills={aiSkills}
+                        hasError={aiSkillsError}
+                        onClose={() => setShowSkills(false)}
+                        onRegenerate={regenerateAiFiles}
+                        isBusy={aiBusy}
+                    />
+                </DialogContainer>
+            )}
         </div>
     );
 }

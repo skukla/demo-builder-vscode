@@ -1,8 +1,8 @@
 /**
  * AI Inventory Types
  *
- * Shared types for the AI inventory inspectors that back the Configure
- * screen's AI Configuration tab.
+ * Shared types for the AI inventory inspectors that back the Project
+ * Dashboard's "AI Ready" health badge and "View Skills" capability surface.
  *
  * The three inspectors live in `src/features/ai/`:
  *   - `skillInspector.ts`     → SkillInventoryEntry[]

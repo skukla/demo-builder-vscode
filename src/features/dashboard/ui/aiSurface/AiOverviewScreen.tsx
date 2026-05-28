@@ -1,41 +1,23 @@
 /**
- * AiOverviewScreen
+ * AiOverviewScreen — the Prompt Library
  *
- * Standalone AI surface screen. Composes the existing page chrome
- * (PageLayout + PageHeader + PageFooter) with a single, centered
- * content column that matches the projects-dashboard layout.
- *
- * Body:
- *   - PromptGrid of curated + user-saved prompts.
- *   - Quiet "View installed skills (N)" link beneath the grid opens
- *     InstalledSkillsModal, which carries the Regenerate AI files
- *     action in its footer.
- *
- * Inventory freshness: opening the skills modal triggers a background
- * MCP re-inspection + verify, so the modal renders fresh data every
- * time. No standalone Refresh control on the surface — opening the
- * modal IS the refresh gesture.
- *
- * Composition notes:
- *   - No new UI primitives. PageLayout + .page-container-padded for the
- *     centered 800px content column; Modal wrapper for the drill-down.
+ * A single, centered prompt-management surface: the user's saved AI prompts in
+ * a PromptGrid, with create/edit/duplicate/delete/pin and launch/copy. AI
+ * health and capability discovery (installed skills, Regenerate AI files,
+ * Browse sessions) live on the Project Dashboard, not here — this surface is
+ * purely about prompts and never calls verify-ai-setup.
  */
 
 import {
     Button,
     DialogContainer,
     Flex,
-    Link,
 } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
-import { InstalledSkillsModal } from './components/InstalledSkillsModal';
 import { PromptEditDialog } from './components/PromptEditDialog';
 import { PromptGrid } from './components/PromptGrid';
 import { PageFooter, PageHeader, PageLayout } from '@/core/ui/components/layout';
-import { useAsyncOperation } from '@/core/ui/hooks/useAsyncOperation';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import type { AiCheckResult } from '@/features/ai/aiSetupVerifier';
-import type { AiInventory } from '@/types/ai';
 import type { AiPrompt, Project } from '@/types/base';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -44,28 +26,9 @@ export interface AiOverviewScreenProps {
     project: Project;
 }
 
-type GlobalMcpRegistrationStateValue = 'registered' | 'declined' | 'unregistered';
-
-interface VerifyAiSetupResponse {
-    status: 'ok' | 'warning' | 'error';
-    checks: AiCheckResult[];
-    inventory: AiInventory;
-    globalMcpRegistration?: GlobalMcpRegistrationStateValue;
-    /** Whether the Claude Code extension is installed (gate for sessions UI). */
-    extensionInstalled?: boolean;
-    /**
-     * Whether the user has finished AI onboarding (made both surface +
-     * layout selections, or had no choice to make). Gates extension-only
-     * affordances so a fresh-state user doesn't see extension UI before
-     * they've engaged with the AI flow.
-     */
-    onboardingCompleted?: boolean;
-    /**
-     * The user's saved AI launch surface. Combined with `extensionInstalled`
-     * to gate extension-only affordances: terminal-surface users should not
-     * see extension UI even if they happen to have the extension installed.
-     */
-    surface?: 'terminal' | 'extension';
+interface SavePromptResponse {
+    success: boolean;
+    aiPrompts?: AiPrompt[];
 }
 
 /**
@@ -83,80 +46,18 @@ function generateAiPromptId(): string {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-interface SavePromptResponse {
-    success: boolean;
-    aiPrompts?: AiPrompt[];
-}
-
 export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.ReactElement {
-    const [verifyResult, setVerifyResult] = useState<VerifyAiSetupResponse | null>(null);
     const [userPrompts, setUserPrompts] = useState<AiPrompt[]>(project.aiPrompts ?? []);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<AiPrompt | null>(null);
-    const [skillsModalOpen, setSkillsModalOpen] = useState(false);
 
-    const verifyOp = useAsyncOperation<VerifyAiSetupResponse>();
-    const refreshOp = useAsyncOperation<void>();
-    const regenerateOp = useAsyncOperation<void>();
-
-    const runVerify = useCallback(async (): Promise<void> => {
-        const result = await verifyOp.execute(async () => {
-            return webviewClient.request<VerifyAiSetupResponse>(
-                'verify-ai-setup',
-                { projectPath: project.path },
-            );
-        });
-        if (result) {
-            setVerifyResult(result);
-        }
-    }, [project.path, verifyOp]);
-
+    // Reset the prompt list when the project changes.
     useEffect(() => {
-        verifyOp.reset();
-        refreshOp.reset();
-        regenerateOp.reset();
         setUserPrompts(project.aiPrompts ?? []);
-        void runVerify();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [project.path]);
-
-    // Backend pushes `surface-changed` whenever the user toggles the AI
-    // launch surface via VS Code settings. Re-fetch verify-ai-setup so
-    // extension-only affordances (Browse Claude sessions) appear or
-    // disappear without a manual reload.
-    useEffect(() => {
-        const unsubscribe = webviewClient.onMessage('surface-changed', () => {
-            void runVerify();
-        });
-        return unsubscribe;
-    }, [runVerify]);
-
-    const handleRegenerate = useCallback(async (): Promise<void> => {
-        await regenerateOp.execute(async () => {
-            await webviewClient.request('regenerate-ai-files', { projectPath: project.path });
-        });
-        await runVerify();
-    }, [project.path, regenerateOp, runVerify]);
+    }, [project.path, project.aiPrompts]);
 
     const handleClose = useCallback(() => {
         webviewClient.postMessage('cancel');
-    }, []);
-
-    const handleOpenSkillsModal = useCallback(() => {
-        setSkillsModalOpen(true);
-        // Background re-inspect + verify so the modal shows fresh data. The
-        // modal renders current state immediately; it updates silently when
-        // verify completes. Opening IS refreshing — no standalone Refresh action.
-        void (async () => {
-            await refreshOp.execute(async () => {
-                await webviewClient.request('inspect-mcp', {});
-            });
-            await runVerify();
-        })();
-    }, [refreshOp, runVerify]);
-
-    const handleCloseSkillsModal = useCallback(() => {
-        setSkillsModalOpen(false);
     }, []);
 
     // ─── User prompt CRUD ────────────────────────────────────────────────────
@@ -166,19 +67,12 @@ export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.Reac
         setEditDialogOpen(true);
     }, []);
 
-    // Resolve a prompt by id from the current user prompt list (matching the
-    // existing edit flow) and open its edit dialog. A no-op when the id isn't
-    // found (e.g. the prompt was deleted before the deep-link fired).
-    const openEditForId = useCallback((id: string) => {
+    const handleEditPrompt = useCallback((id: string) => {
         const target = userPrompts.find(p => p.id === id);
         if (!target) return;
         setEditTarget(target);
         setEditDialogOpen(true);
     }, [userPrompts]);
-
-    const handleEditPrompt = useCallback((id: string) => {
-        openEditForId(id);
-    }, [openEditForId]);
 
     const handleCloseEditDialog = useCallback(() => {
         setEditDialogOpen(false);
@@ -244,32 +138,6 @@ export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.Reac
         webviewClient.postMessage('copyAiPrompt', { prompt: promptBody });
     }, []);
 
-    const handleBrowseSessions = useCallback(() => {
-        webviewClient.postMessage('browseClaudeSessions');
-    }, []);
-
-    const inventory: AiInventory = verifyResult?.inventory ?? {
-        skills: [],
-        mcps: [],
-        sessionMcps: [],
-    };
-
-    const extensionInstalled = verifyResult?.extensionInstalled === true;
-    const onboardingCompleted = verifyResult?.onboardingCompleted === true;
-    const surfaceIsExtension = verifyResult?.surface === 'extension';
-    // Extension-specific affordances (like Browse Claude sessions) require
-    // the user to have finished onboarding AND kept the extension surface.
-    // A terminal-surface user who happens to have the extension installed
-    // explicitly opted out of the extension UX — don't surface extension
-    // links anyway.
-    const showExtensionAffordances =
-        extensionInstalled && onboardingCompleted && surfaceIsExtension;
-
-    const isBusy =
-        verifyOp.isExecuting ||
-        refreshOp.isExecuting ||
-        regenerateOp.isExecuting;
-
     return (
         <>
             <PageLayout
@@ -287,7 +155,6 @@ export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.Reac
             >
                 <div className="page-container-padded page-body-section">
                     <Flex direction="column" gap="size-400">
-                        {/* Primary content — user-saved prompt library */}
                         <PromptGrid
                             userPrompts={userPrompts}
                             onLaunchUser={handleLaunchUserPrompt}
@@ -298,43 +165,9 @@ export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.Reac
                             onNew={handleNewPrompt}
                             onCopy={handleCopyPrompt}
                         />
-
-                        {/* Quiet triggers row: installed-skills drill-down + (when the
-                            Claude Code extension is installed) the sessions browser. */}
-                        <Flex direction="row" gap="size-300" alignItems="center">
-                            <Link
-                                data-testid="ai-installed-skills-trigger"
-                                onPress={handleOpenSkillsModal}
-                                UNSAFE_className="cursor-pointer text-sm"
-                            >
-                                {`View installed skills (${inventory.skills.length})`}
-                            </Link>
-                            {showExtensionAffordances && (
-                                <Link
-                                    data-testid="ai-browse-sessions-trigger"
-                                    onPress={handleBrowseSessions}
-                                    UNSAFE_className="cursor-pointer text-sm"
-                                >
-                                    Browse Claude sessions
-                                </Link>
-                            )}
-                        </Flex>
                     </Flex>
                 </div>
             </PageLayout>
-
-            {/* Installed skills drill-down modal — carries the Regenerate action */}
-            {skillsModalOpen && (
-                <DialogContainer onDismiss={handleCloseSkillsModal}>
-                    <InstalledSkillsModal
-                        skills={inventory.skills}
-                        hasError={Boolean(inventory.skillsError)}
-                        onClose={handleCloseSkillsModal}
-                        onRegenerate={handleRegenerate}
-                        isBusy={isBusy}
-                    />
-                </DialogContainer>
-            )}
 
             {/* User prompt create/edit dialog */}
             {editDialogOpen && (

@@ -90,6 +90,26 @@ jest.mock('@adobe/react-spectrum', () => ({
     Link: ({ children, onPress, _isQuiet, ...props }: any) => (
         <a onClick={onPress} data-testid="sign-in-link" {...props}>{children}</a>
     ),
+    DialogContainer: ({ children }: any) => <div data-testid="dialog-container">{children}</div>,
+}));
+
+// Stub the skills modal — its real implementation renders the shared Modal
+// (Spectrum internals not covered by this file's minimal mock). The real
+// AiSkillsModal is exercised in its own test; here we only assert the dashboard
+// opens it and wires its props.
+jest.mock('@/features/dashboard/ui/components/AiSkillsModal', () => ({
+    AiSkillsModal: ({ skills, hasError, onClose, onRegenerate, isBusy }: any) => (
+        <div data-testid="ai-skills-modal" data-error={String(Boolean(hasError))} data-busy={String(Boolean(isBusy))}>
+            <span data-testid="ai-skills-modal-count">{skills.length}</span>
+            {skills.map((s: any) => (
+                <div key={s.path} data-testid="ai-skills-modal-skill">{s.name}</div>
+            ))}
+            <button data-testid="ai-skills-modal-regenerate" onClick={() => onRegenerate()}>
+                Regenerate AI files
+            </button>
+            <button data-testid="ai-skills-modal-close" onClick={onClose}>Close</button>
+        </div>
+    ),
 }));
 
 // Mock Spectrum icons

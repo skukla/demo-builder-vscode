@@ -123,11 +123,6 @@ export async function renderScreen(opts: {
     projectOverrides?: Partial<Project>;
     inventory?: AiInventory;
     status?: 'ok' | 'warning' | 'error';
-    extensionInstalled?: boolean;
-    /** Default true so existing tests (which assume the user has engaged) keep passing. */
-    onboardingCompleted?: boolean;
-    /** Default 'extension' so existing extension-flow tests keep passing. */
-    surface?: 'terminal' | 'extension';
     /**
      * Override the response for specific request types. Used in handful of
      * cases where the default verify-ai-setup response shape is wrong for
@@ -144,9 +139,6 @@ export async function renderScreen(opts: {
         checks: [],
         inventory: opts.inventory ?? makeFullInventory(),
         globalMcpRegistration: 'registered',
-        extensionInstalled: opts.extensionInstalled ?? false,
-        onboardingCompleted: opts.onboardingCompleted ?? true,
-        surface: opts.surface ?? 'extension',
     };
     webviewClient.request.mockImplementation((type: string) => {
         if (opts.requestOverrides && type in opts.requestOverrides) {
@@ -170,24 +162,4 @@ export async function renderScreen(opts: {
         await Promise.resolve();
     });
     return { ...result, project, webviewClient };
-}
-
-/**
- * Render with no pre-seeded request mock — for tests that script their own
- * `webviewClient.request` sequence (e.g. surface-changed re-verify) before
- * mounting.
- */
-export async function renderScreenRaw(project: Project): Promise<void> {
-    await act(async () => {
-        render(
-            <Provider theme={defaultTheme}>
-                <AiOverviewScreen project={project} />
-            </Provider>,
-        );
-        jest.runAllTimers();
-    });
-    await act(async () => {
-        await Promise.resolve();
-        await Promise.resolve();
-    });
 }

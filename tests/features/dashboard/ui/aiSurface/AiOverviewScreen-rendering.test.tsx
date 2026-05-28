@@ -60,12 +60,6 @@ describe('AiOverviewScreen — rendering', () => {
             expect(screen.queryByText(/learn more about ai integration/i)).not.toBeInTheDocument();
         });
 
-        it('does not render the inline InstalledSkillsList (it now lives in a modal)', async () => {
-            await renderScreen();
-            const body = screen.getByTestId('page-layout-body');
-            expect(within(body).queryByTestId('ai-installed-skills-list')).not.toBeInTheDocument();
-        });
-
         it('renders the PromptGrid in the body (no curated section after G1)', async () => {
             await renderScreen();
             const body = screen.getByTestId('page-layout-body');
@@ -75,34 +69,25 @@ describe('AiOverviewScreen — rendering', () => {
             expect(within(body).queryAllByTestId('ai-prompt-card').length).toBe(0);
         });
 
-        it('does NOT render a Refresh or Regenerate button in the body', async () => {
-            // Both actions moved off the surface: Refresh is implicit on modal
-            // open; Regenerate lives in the modal footer.
+        it('does NOT render AI-health controls in the body (those live on the dashboard)', async () => {
             await renderScreen();
             const body = screen.getByTestId('page-layout-body');
-            expect(within(body).queryByRole('button', { name: /^refresh$/i })).not.toBeInTheDocument();
             expect(within(body).queryByRole('button', { name: /regenerate ai files/i })).not.toBeInTheDocument();
-        });
-
-        it('renders the quiet "View installed skills (N)" link beneath the grid', async () => {
-            await renderScreen();
-            const trigger = screen.getByTestId('ai-installed-skills-trigger');
-            expect(trigger).toBeInTheDocument();
-            expect(trigger.textContent).toMatch(/view installed skills \(3\)/i);
+            expect(within(body).queryByTestId('ai-installed-skills-trigger')).not.toBeInTheDocument();
+            expect(within(body).queryByTestId('ai-view-skills-trigger')).not.toBeInTheDocument();
         });
     });
 
     describe('prompt library mount', () => {
-        it('renders the grid and runs verify-ai-setup on mount', async () => {
+        it('renders the grid and does NOT call verify-ai-setup (health lives on the dashboard)', async () => {
             const { webviewClient } = await renderScreen({
                 projectOverrides: makeProjectWithUserPrompts(),
             });
 
             expect(screen.getByTestId('page-header')).toBeInTheDocument();
-            expect(screen.getByTestId('ai-installed-skills-trigger')).toBeInTheDocument();
             const verifyCalls = (webviewClient.request as jest.Mock).mock.calls
                 .filter(c => c[0] === 'verify-ai-setup');
-            expect(verifyCalls.length).toBeGreaterThanOrEqual(1);
+            expect(verifyCalls.length).toBe(0);
         });
 
         it('does NOT open the edit dialog on mount', async () => {
