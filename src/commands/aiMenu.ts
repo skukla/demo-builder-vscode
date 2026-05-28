@@ -10,7 +10,7 @@ import type { HandlerContext } from '@/types/handlers';
 const PROMPT_PREVIEW_MAX_LENGTH = 70;
 
 /** Placeholder shown in the prompt QuickPick. */
-const PICKER_PLACEHOLDER = 'Open chat, insert a prompt, or manage prompts';
+const PICKER_PLACEHOLDER = 'Insert a prompt, or manage prompts';
 
 /**
  * A single row in the AI QuickPick menu. `action` drives selection dispatch;
@@ -18,7 +18,7 @@ const PICKER_PLACEHOLDER = 'Open chat, insert a prompt, or manage prompts';
  * it.
  */
 interface AiMenuItem extends vscode.QuickPickItem {
-    action?: 'open-chat' | 'insert' | 'manage';
+    action?: 'insert' | 'manage';
     promptBody?: string;
 }
 
@@ -30,12 +30,10 @@ interface AiMenuItem extends vscode.QuickPickItem {
  *     open). The terminal is observable, so we skip the picker on a cold start.
  *   - Chat alive → show the QuickPick for prompt insertion.
  *
- * The QuickPick carries an "Open chat" row (dispatches
- * `demoBuilder.openAiExperience`) so users can focus the existing chat
- * without picking a prompt, the merged prompt list (pinned first), and a
+ * The QuickPick shows the merged prompt list (pinned first) and a
  * "Manage prompts…" action. Selecting a prompt inserts it via
- * `demoBuilder.openInClaude`; "Manage prompts…" opens the prompt library
- * (`demoBuilder.openAi`).
+ * `demoBuilder.openInClaude` (which also focuses the live terminal);
+ * "Manage prompts…" opens the prompt library (`demoBuilder.openAi`).
  */
 export class AiMenuCommand extends BaseCommand {
     public async execute(): Promise<void> {
@@ -60,10 +58,12 @@ export class AiMenuCommand extends BaseCommand {
     }
 
     /**
-     * Build the menu: "Open chat" → Prompts section → prompt rows (pinned first
-     * via the merge) → "Manage prompts…". Open chat focuses the existing chat
-     * terminal (or spawns one if it died). Creating, editing, deleting, and
-     * pinning all live in the prompt library, reached via "Manage prompts…".
+     * Build the menu: prompt rows (pinned first via the merge) → "Manage
+     * prompts…". Creating, editing, deleting, and pinning all live in the
+     * prompt library, reached via "Manage prompts…". The picker only ever
+     * appears when a chat terminal is already alive, so a "focus the chat"
+     * row would be redundant — selecting any prompt focuses the live
+     * terminal anyway as part of `openInClaude`.
      */
     private buildItems(prompts: AiPrompt[]): AiMenuItem[] {
         const promptItems: AiMenuItem[] = prompts.map((prompt: AiPrompt) => ({
@@ -74,7 +74,6 @@ export class AiMenuCommand extends BaseCommand {
         }));
 
         return [
-            { label: '$(comment-discussion) Open chat', action: 'open-chat' },
             { label: 'Prompts', kind: vscode.QuickPickItemKind.Separator },
             ...promptItems,
             { label: '', kind: vscode.QuickPickItemKind.Separator },
@@ -85,9 +84,6 @@ export class AiMenuCommand extends BaseCommand {
     /** Route the selected item to the matching command. */
     private async dispatchAction(item: AiMenuItem): Promise<void> {
         switch (item.action) {
-            case 'open-chat':
-                await vscode.commands.executeCommand('demoBuilder.openAiExperience');
-                break;
             case 'insert':
                 await vscode.commands.executeCommand('demoBuilder.openInClaude', {
                     prompt: item.promptBody,

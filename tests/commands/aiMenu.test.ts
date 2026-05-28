@@ -41,7 +41,7 @@ import type { Logger } from '@/types/logger';
 import type { AiPrompt, Project } from '@/types/base';
 
 type AiMenuItem = vscode.QuickPickItem & {
-    action?: 'open-chat' | 'insert' | 'manage';
+    action?: 'insert' | 'manage';
     promptBody?: string;
 };
 
@@ -160,7 +160,7 @@ describe('AiMenuCommand', () => {
             expect(getCall().options.placeholder).toBeTruthy();
         });
 
-        it('includes an "Open chat" item so users can launch the chat without selecting a prompt', async () => {
+        it('omits the redundant "Open chat" row — the picker only appears when a chat is already alive, and selecting any prompt focuses that terminal anyway', async () => {
             const getCall = capturePicker();
             (readMergedAiPrompts as jest.Mock).mockReturnValue([
                 { id: 'p', title: 'Local Prompt', prompt: 'local body' },
@@ -170,9 +170,10 @@ describe('AiMenuCommand', () => {
             await cmd.execute();
 
             const items = getCall().items;
-            const openChat = items.find((i) => i.action === 'open-chat');
-            expect(openChat).toBeDefined();
-            expect(openChat?.label).toMatch(/open chat/i);
+            const openChat = items.find((i) =>
+                typeof i.label === 'string' && /open chat/i.test(i.label),
+            );
+            expect(openChat).toBeUndefined();
         });
 
         it('includes the merged prompts (pinned first) and Manage; no New, no per-item buttons', async () => {
@@ -225,15 +226,6 @@ describe('AiMenuCommand', () => {
                 'demoBuilder.openInClaude',
                 { prompt: 'local body' },
             );
-        });
-
-        it('open-chat executes demoBuilder.openAiExperience', async () => {
-            capturePicker((items) => items.find((i) => i.action === 'open-chat'));
-            const cmd = new AiMenuCommand(makeContext(), makeStateManager(PROJECT), makeLogger());
-
-            await cmd.execute();
-
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openAiExperience');
         });
 
         it('manage executes demoBuilder.openAi', async () => {
