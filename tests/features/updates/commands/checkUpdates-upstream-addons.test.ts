@@ -32,6 +32,11 @@ jest.mock('vscode', () => ({
         showErrorMessage: jest.fn().mockResolvedValue(undefined),
         showQuickPick: jest.fn(),
     },
+    workspace: {
+        getConfiguration: jest.fn(() => ({
+            get: jest.fn((_key: string, defaultValue: unknown) => defaultValue),
+        })),
+    },
     ProgressLocation: {
         Notification: 15,
     },
@@ -71,6 +76,7 @@ function makeProject(overrides: Partial<Project> = {}): Project {
                 type: 'frontend',
                 version: '1.0.0',
                 metadata: {
+                    githubRepo: 'testuser/my-storefront',
                     templateOwner: 'adobe',
                     templateRepo: 'aem-boilerplate-commerce',
                     edsRepoOwner: 'testuser',
@@ -260,6 +266,10 @@ describe('CheckUpdatesCommand — Add-on Updates', () => {
         mockStateManager.loadProjectFromPath.mockResolvedValue(project);
         mockStateManager.getCurrentProject.mockResolvedValue(project);
 
+        // User accepts the update prompt; install succeeds; save fails.
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Update');
+        const blockHelpers = require('@/features/eds/services/blockCollectionHelpers');
+        blockHelpers.installBlockCollections.mockResolvedValue({ success: true, blocksCount: 1, blockIds: ['hero'] });
         mockStateManager.saveProject.mockRejectedValue(new Error('Save failed'));
 
         const MockAddonChecker = AddonUpdateChecker as jest.MockedClass<typeof AddonUpdateChecker>;
@@ -291,6 +301,11 @@ describe('CheckUpdatesCommand — Add-on Updates', () => {
         mockStateManager.getAllProjects.mockResolvedValue([{ path: project.path }]);
         mockStateManager.loadProjectFromPath.mockResolvedValue(project);
         mockStateManager.getCurrentProject.mockResolvedValue(project);
+
+        // User accepts the update prompt; install succeeds.
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Update');
+        const blockHelpers = require('@/features/eds/services/blockCollectionHelpers');
+        blockHelpers.installBlockCollections.mockResolvedValue({ success: true, blocksCount: 1, blockIds: ['hero'] });
 
         const MockAddonChecker = AddonUpdateChecker as jest.MockedClass<typeof AddonUpdateChecker>;
         MockAddonChecker.prototype.checkBlockLibraries.mockResolvedValue([

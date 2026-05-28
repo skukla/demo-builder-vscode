@@ -49,7 +49,8 @@ const PAAS_ADMIN_PASSWORD = 'ADOBE_COMMERCE_ADMIN_PASSWORD';
 // Test fixtures (minimal — only fields used by tests in this file)
 // ---------------------------------------------------------------------------
 
-/** PaaS service group — connection fields only (store codes not needed here) */
+/** PaaS service group — connection fields + website code (needed for StoreConfigFieldRow's
+ *  isWebsiteCodeField branch, which renders the Re-detect button and StoreSelectionRow) */
 const paasServiceGroup: MockServiceGroup = {
     id: 'adobe-commerce',
     label: 'Adobe Commerce',
@@ -57,6 +58,7 @@ const paasServiceGroup: MockServiceGroup = {
         { key: PAAS_URL, label: 'Commerce URL', type: 'url', required: true, placeholder: 'https://...', componentIds: ['adobe-commerce'] },
         { key: PAAS_ADMIN_USERNAME, label: 'Admin Username', type: 'text', required: true, componentIds: ['adobe-commerce'] },
         { key: PAAS_ADMIN_PASSWORD, label: 'Admin Password', type: 'password', required: true, componentIds: ['adobe-commerce'] },
+        { key: 'ADOBE_COMMERCE_WEBSITE_CODE', label: 'Website Code', type: 'text', required: true, componentIds: ['adobe-commerce'] },
     ],
 };
 

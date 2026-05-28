@@ -187,6 +187,8 @@ export abstract class BaseCommand implements vscode.Disposable {
      *
      * @param name Terminal name
      * @param cwd Optional working directory
+     * @param location Optional editor-area location (e.g. `{ viewColumn: ViewColumn.Beside }`).
+     *   Omit to use the default panel placement.
      * @returns Created terminal instance
      *
      * @example
@@ -197,11 +199,19 @@ export abstract class BaseCommand implements vscode.Disposable {
      * // Terminal automatically disposed when command disposed
      * ```
      */
-    protected createTerminal(name: string, cwd?: string): vscode.Terminal {
-        const terminal = vscode.window.createTerminal({
+    protected createTerminal(
+        name: string,
+        cwd?: string,
+        location?: vscode.TerminalEditorLocationOptions,
+    ): vscode.Terminal {
+        const options: vscode.TerminalOptions = {
             name,
             cwd: cwd || undefined, // Only set cwd if explicitly provided
-        });
+        };
+        if (location !== undefined) {
+            options.location = location;
+        }
+        const terminal = vscode.window.createTerminal(options);
         this.disposables.add(terminal);
         return terminal;
     }

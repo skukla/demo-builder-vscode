@@ -96,7 +96,7 @@ async function runExtensionBuild() {
             // Externalise fs so fs/promises and fs don't get merged — Node provides both at runtime.
             'fs',
         ],
-        loader: { '.node': 'copy' },
+        loader: { '.node': 'copy', '.md': 'text', '.md.template': 'text' },
         plugins: [aliasPlugin],
         logLevel: 'info',
         metafile: true,
@@ -113,6 +113,35 @@ async function runExtensionBuild() {
 }
 
 // ---------------------------------------------------------------------------
+// MCP server build (standalone Node process — no vscode dependency)
+// ---------------------------------------------------------------------------
+async function runMcpServerBuild() {
+    const ctx = await esbuild.context({
+        entryPoints: ['src/mcp-server.ts'],
+        bundle: true,
+        format: 'cjs',
+        minify: production,
+        sourcemap: !production,
+        sourcesContent: false,
+        platform: 'node',
+        outfile: 'dist/mcp-server.js',
+        // Externalize Node built-ins only; bundle @modelcontextprotocol/sdk + zod
+        external: ['vscode', 'fs', 'path', 'os', 'child_process', 'crypto', 'util'],
+        plugins: [aliasPlugin],
+        logLevel: 'info',
+        metafile: true,
+    });
+    if (watch) {
+        await ctx.watch();
+        console.log('[esbuild] mcp-server: watching…');
+    } else {
+        const result = await ctx.rebuild();
+        logOutputSizes(result.metafile);
+        await ctx.dispose();
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Webview UI builds (one IIFE bundle per entry point)
 // ---------------------------------------------------------------------------
 const WEBVIEW_ENTRIES = {
@@ -121,6 +150,8 @@ const WEBVIEW_ENTRIES = {
     configure:    'src/features/dashboard/ui/configure/index.tsx',
     sidebar:      'src/features/sidebar/ui/index.tsx',
     projectsList: 'src/features/projects-dashboard/ui/index.tsx',
+    // Standalone AI surface (Batch E1) — webview behind `demoBuilder.openAi`.
+    aiOverview:   'src/features/dashboard/ui/aiSurface/index.tsx',
 };
 
 async function runWebviewBuild() {
@@ -180,6 +211,7 @@ async function main() {
     const tasks = [];
     if (buildExtension) {
         tasks.push(runExtensionBuild());
+        tasks.push(runMcpServerBuild());
     }
     if (buildWebviews) {
         tasks.push(runWebviewBuild());

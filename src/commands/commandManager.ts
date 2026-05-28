@@ -1,20 +1,25 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { AiMenuCommand } from './aiMenu';
 import { ConfigureCommand } from './configure';
 import { DiagnosticsCommand } from './diagnostics';
+import { OpenInClaudeCommand } from './openInClaude';
 import { BaseWebviewCommand } from '@/core/base';
+import { ResetAiOnboardingCommand } from '@/core/commands/ResetAiOnboardingCommand';
 import { ResetAllCommand } from '@/core/commands/ResetAllCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { StateManager } from '@/core/state';
 import { openUrl } from '@/core/utils/browserUtils';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
+import { ShowAiCommand } from '@/features/dashboard/commands/openAi';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { getBookmarkletSetupPageUrl } from '@/features/eds/ui/helpers/bookmarkletSetupPage';
 import { getBookmarkletUrl } from '@/features/eds/utils/daLiveTokenBookmarklet';
 import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProject';
 import { StartDemoCommand } from '@/features/lifecycle/commands/startDemo';
 import { StopDemoCommand } from '@/features/lifecycle/commands/stopDemo';
+import { SyncStorefrontCommand } from '@/features/lifecycle/commands/syncStorefront';
 import { ViewStatusCommand } from '@/features/lifecycle/commands/viewStatus';
 import { DeployMeshCommand } from '@/features/mesh/commands/deployMesh';
 import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
@@ -193,6 +198,15 @@ export class CommandManager {
         );
         this.registerCommand('demoBuilder.deployMesh', () => deployMesh.execute());
 
+        // Sync Storefront (EDS projects only — runs the same flow as the MCP
+        // sync_storefront tool, with VS Code-native conflict resolution UX)
+        const syncStorefront = new SyncStorefrontCommand(
+            this.context,
+            this.stateManager,
+            this.logger,
+        );
+        this.registerCommand('demoBuilder.syncStorefront', () => syncStorefront.execute());
+
         // Check Updates
         const checkUpdates = new CheckUpdatesCommand(
             this.context,
@@ -200,6 +214,68 @@ export class CommandManager {
             this.logger,
         );
         this.registerCommand('demoBuilder.checkForUpdates', () => checkUpdates.execute());
+
+        // Open in Claude Code (CLI) — URI launch when the Claude Code extension is
+        // installed; terminal launch otherwise. Pathway driven by `demoBuilder.ai.harness`.
+        const openInClaude = new OpenInClaudeCommand(
+            this.context,
+            this.stateManager,
+            this.logger,
+        );
+        this.registerCommand('demoBuilder.openInClaude', async (...args: unknown[]) => {
+            const project = args[0] as Project | undefined;
+            await openInClaude.execute(project);
+        });
+
+        // AI — harness-agnostic prompt library webview (create/edit/delete/pin).
+        const openAi = new ShowAiCommand(
+            this.context,
+            this.stateManager,
+            this.logger,
+        );
+        this.registerCommand('demoBuilder.openAi', async () => {
+            await openAi.execute();
+        });
+
+        // Open AI Experience (chat-first) — onboarding + open the Claude Code
+        // terminal/extension tab with no prompt. Delegates to openInClaude.execute().
+        this.registerCommand('demoBuilder.openAiExperience', async () => {
+            await openInClaude.execute();
+        });
+
+        // AI Menu — chat-first QuickPick (Open Chat + prompts + manage/new).
+        const aiMenu = new AiMenuCommand(
+            this.context,
+            this.stateManager,
+            this.logger,
+        );
+        this.registerCommand('demoBuilder.aiMenu', async () => {
+            await aiMenu.execute();
+        });
+
+        // Navigate — internal routing command for sidebar nav clicks.
+        // Intentionally omitted from package.json contributions (not user-facing).
+        this.registerCommand('demoBuilder.navigate', async (...args: unknown[]) => {
+            const payload = args[0] as { target?: string } | undefined;
+            switch (payload?.target) {
+                case 'overview':
+                    await projectDashboard.execute();
+                    break;
+                case 'configure':
+                    await configureProject.execute();
+                    break;
+                case 'ai':
+                    // Chat-first: open the AI experience directly. The prompt
+                    // manager (openAi) stays reachable via the aiMenu Manage item.
+                    await vscode.commands.executeCommand('demoBuilder.openAiExperience');
+                    break;
+                case 'updates':
+                    await checkUpdates.execute();
+                    break;
+                default:
+                    this.logger.warn(`[Navigate] Unknown target: ${payload?.target}`);
+            }
+        });
 
         // Reset All (Development only)
         if (this.context.extensionMode === vscode.ExtensionMode.Development) {
@@ -209,6 +285,19 @@ export class CommandManager {
                 this.logger,
             );
             this.registerCommand('demoBuilder.resetAll', () => resetAll.execute());
+
+            // Scoped: reset only AI onboarding state (flags + AI settings).
+            // Doesn't touch projects, Adobe auth, or other state — for iterating
+            // on the first-run AI launch experience.
+            const resetAiOnboarding = new ResetAiOnboardingCommand(
+                this.context,
+                this.stateManager,
+                this.logger,
+            );
+            this.registerCommand(
+                'demoBuilder.resetAiOnboarding',
+                () => resetAiOnboarding.execute(),
+            );
         }
 
         // Diagnostics
@@ -219,6 +308,7 @@ export class CommandManager {
         this.registerCommand('demoBuilder.setRecommendedZoom', async () => {
             const config = vscode.workspace.getConfiguration('window');
             await config.update('zoomLevel', 1, vscode.ConfigurationTarget.Global);
+            await this.applyConfiguredZoomLevel(config);
             // Use status bar message for auto-dismiss (3 seconds)
             vscode.window.setStatusBarMessage('$(check) Zoom set to 120% for optimal demo visibility', 3000);
         });
@@ -227,6 +317,7 @@ export class CommandManager {
         this.registerCommand('demoBuilder.resetZoom', async () => {
             const config = vscode.workspace.getConfiguration('window');
             await config.update('zoomLevel', 0, vscode.ConfigurationTarget.Global);
+            await this.applyConfiguredZoomLevel(config);
             // Use status bar message for auto-dismiss (3 seconds)
             vscode.window.setStatusBarMessage('$(check) Zoom reset to 100%', 3000);
         });
@@ -308,6 +399,23 @@ export class CommandManager {
         const disposable = vscode.commands.registerCommand(command, callback);
         this.commands.set(command, disposable);
         this.context.subscriptions.push(disposable);
+    }
+
+    /**
+     * Make the configured `window.zoomLevel` take effect on the current window.
+     *
+     * When `window.zoomPerWindow` is on (VS Code's default), Cmd+/Cmd- set a
+     * transient per-window zoom that outranks the `zoomLevel` setting, so writing
+     * the setting alone does nothing visible. `zoomReset` reverts the window to its
+     * configured `zoomLevel`, applying the value we just wrote. In all-windows mode
+     * there is no per-window override and `zoomReset` would force 100%, so it is
+     * skipped there.
+     */
+    private async applyConfiguredZoomLevel(config: vscode.WorkspaceConfiguration): Promise<void> {
+        const zoomPerWindow = config.get<boolean>('zoomPerWindow') ?? true;
+        if (zoomPerWindow) {
+            await vscode.commands.executeCommand('workbench.action.zoomReset');
+        }
     }
 
     public dispose(): void {

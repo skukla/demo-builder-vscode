@@ -27,6 +27,9 @@ import {
     handleOpenHelp,
     handleOpenSettings,
     handleSetViewModeOverride,
+    handleCopyProjectPath,
+    handleOpenAiForProject,
+    handleSetProjectPinned,
 } from './dashboardHandlers';
 import { defineHandlers } from '@/types/handlers';
 
@@ -77,4 +80,13 @@ export const projectsListHandlers = defineHandlers({
 
     // View mode override (session persistence)
     'setViewModeOverride': handleSetViewModeOverride,
+
+    // Project folder actions
+    'copy-project-path': handleCopyProjectPath,
+
+    // Open AI surface for a specific project (E3)
+    'openAi': handleOpenAiForProject,
+
+    // Pin / unpin a project — pinned projects sort first on the dashboard
+    'setProjectPinned': handleSetProjectPinned,
 });

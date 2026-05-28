@@ -23,7 +23,10 @@ import {
     generateEnvironmentFiles,
     finalizeProject,
     sendCompletionAndCleanup,
+    generateAIContextFiles,
+    openProjectAsWorkspace,
     ensureEdsContent,
+    ensureGlobalMcpRegistration,
     type ComponentDefinitionEntry,
     type MeshApiConfig,
 } from '../services';
@@ -428,6 +431,33 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
     await finalizeProject(finalizationContext);
     await sendCompletionAndCleanup(finalizationContext);
+
+    // Phase 6: Generate AI context files (non-blocking — failure does not abort project creation)
+    try {
+        await generateAIContextFiles(projectPath, project, context.context.extensionPath);
+    } catch (err) {
+        context.logger.warn('[Project Creation] Failed to generate AI context files', err instanceof Error ? err : undefined);
+    }
+
+    // Phase 6b: Consent-gated global MCP registration. First time: prompt the
+    // user. Subsequent project completions: no-op (state persists). The user's
+    // choice ('registered' | 'declined') survives across activations.
+    try {
+        const extensionDistPath = path.join(context.context.extensionPath, 'dist');
+        await ensureGlobalMcpRegistration(extensionDistPath, context.context);
+    } catch (err) {
+        context.logger.warn(
+            '[Project Creation] Global MCP registration failed',
+            err instanceof Error ? err : undefined,
+        );
+    }
+
+    // Phase 7: Anchor the project as the current window's VS Code workspace.
+    // From here forward "Open in Claude Code" launches the chat panel into the
+    // right cwd, so per-project skills, MCPs, and AGENTS.md load. The window
+    // reloads as a side effect, so this is the last meaningful step — anything
+    // after would be cut off by the reload.
+    await openProjectAsWorkspace(projectPath, context.logger);
 }
 
 // ============================================================================

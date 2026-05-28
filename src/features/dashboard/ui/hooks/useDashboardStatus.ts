@@ -7,9 +7,10 @@
  * @module features/dashboard/ui/hooks/useDashboardStatus
  */
 
-import { useState, useEffect, useMemo, useRef, Dispatch, SetStateAction } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback, Dispatch, SetStateAction } from 'react';
 import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import type { SkillInventoryEntry } from '@/types/ai';
 
 /**
  * Mesh deployment status values
@@ -58,6 +59,32 @@ export interface StatusDisplay {
 }
 
 /**
+ * AI Ready badge state — derived from `verify-ai-setup` response.
+ *
+ * Combines all 7 AI-setup signals (file checks + inventory inspectors +
+ * global MCP registration) into a single 4-color badge. See the
+ * "AI Ready badge state" section in the AI surface redesign plan.
+ */
+export interface AiReadyState {
+    label: 'AI Ready';
+    color: 'gray' | 'green' | 'yellow' | 'red';
+    text: 'Verifying' | 'Ready' | 'Setup incomplete' | 'Broken';
+}
+
+/** Shape we read from the verify-ai-setup handler response. */
+interface VerifyAiSetupResponse {
+    success: boolean;
+    checks?: Array<{ name: string; status: 'ok' | 'warning' | 'error' }>;
+    inventory?: {
+        /** Task-framed capability list surfaced by the "View Skills" link. */
+        skills?: SkillInventoryEntry[];
+        skillsError?: string;
+        mcpsError?: string;
+    };
+    globalMcpRegistration?: 'registered' | 'declined' | 'unregistered';
+}
+
+/**
  * EDS storefront status values
  */
 export type EdsStorefrontStatus = 'published' | 'stale' | 'update-declined' | 'not-published';
@@ -96,7 +123,20 @@ export interface UseDashboardStatusReturn {
     status: ProjectStatus['status'] | undefined;
     /** Current mesh status value */
     meshStatus: MeshStatus | undefined;
+    /** Derived AI Ready badge state */
+    aiReady: AiReadyState;
+    /** Task-framed capability list (skills) for the "View Skills" surface */
+    aiSkills: SkillInventoryEntry[];
+    /** True when the skill inspector errored (list shows a warning row) */
+    aiSkillsError: boolean;
+    /** True while an AI verify/regenerate operation is in flight */
+    aiBusy: boolean;
+    /** Regenerate the project's AI files, then re-verify (refreshes badge + skills) */
+    regenerateAiFiles: () => Promise<void>;
 }
+
+/** Stable empty reference so `aiSkills` identity doesn't churn each render. */
+const EMPTY_SKILLS: SkillInventoryEntry[] = [];
 
 /** Mesh statuses that indicate a user-initiated operation is in progress (preserve during updates) */
 const isMeshDeploying = (status: MeshStatus | undefined): boolean =>
@@ -121,8 +161,12 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
     const [projectStatus, setProjectStatus] = useState<ProjectStatus | null>(null);
     const [isRunning, setIsRunning] = useState(false);
     const [isTransitioning, setIsTransitioning] = useState(false);
+    const [verifyResult, setVerifyResult] = useState<VerifyAiSetupResponse | null>(null);
+    const [verifyFailed, setVerifyFailed] = useState(false);
+    const [aiBusy, setAiBusy] = useState(false);
     // Track whether status was requested (prevent StrictMode double-request)
     const statusRequestedRef = useRef(false);
+    const verifyRequestedRef = useRef(false);
 
     useEffect(() => {
         // Guard against StrictMode double-request (only send message once)
@@ -173,6 +217,40 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
             unsubscribeMesh();
         };
     }, []);
+
+    // Run the AI setup verification. Reused on mount and after Regenerate to
+    // refresh both the badge and the skills list.
+    const runVerify = useCallback(async (): Promise<void> => {
+        try {
+            const result = await webviewClient.request<VerifyAiSetupResponse>('verify-ai-setup', {});
+            setVerifyResult(result);
+            setVerifyFailed(false);
+        } catch {
+            setVerifyFailed(true);
+        }
+    }, []);
+
+    // Regenerate the project's AI files (rewrites .claude/* + AGENTS.md, including
+    // skills), then re-verify so the badge and the skills list reflect the result.
+    const regenerateAiFiles = useCallback(async (): Promise<void> => {
+        setAiBusy(true);
+        try {
+            await webviewClient.request('regenerate-ai-files', {});
+            await runVerify();
+        } finally {
+            setAiBusy(false);
+        }
+    }, [runVerify]);
+
+    // Fetch the AI setup verification once on mount. Guards against StrictMode
+    // double-fetch using a ref. The badge stays in 'Verifying' (gray) until
+    // this resolves.
+    useEffect(() => {
+        if (verifyRequestedRef.current) return;
+        verifyRequestedRef.current = true;
+        setAiBusy(true);
+        void runVerify().finally(() => setAiBusy(false));
+    }, [runVerify]);
 
     // Derived values
     const status = projectStatus?.status;
@@ -260,6 +338,42 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
         return { color: 'gray', text: 'Unknown' };
     }, [meshStatus, meshMessage, hasMesh, projectStatus, initialMeshStatus]);
 
+    // Derive AI Ready badge state from the verify response. The plan defines
+    // four colors:
+    //   gray:   verify hasn't returned yet (initial)
+    //   red:    any of 4 file checks failed
+    //   yellow: files OK BUT (not registered globally OR inventory inspector errored)
+    //   green:  all 7 signals pass
+    const aiReady = useMemo<AiReadyState>(() => {
+        if (!verifyResult) {
+            // Verify failed — surface as 'Setup incomplete' rather than leaving
+            // the badge stuck on gray indefinitely.
+            if (verifyFailed) {
+                return { label: 'AI Ready', color: 'yellow', text: 'Setup incomplete' };
+            }
+            return { label: 'AI Ready', color: 'gray', text: 'Verifying' };
+        }
+
+        const checks = verifyResult.checks ?? [];
+        const anyCheckFailed = checks.some(c => c.status !== 'ok');
+        if (anyCheckFailed) {
+            return { label: 'AI Ready', color: 'red', text: 'Broken' };
+        }
+
+        const inv = verifyResult.inventory ?? {};
+        const hasInventoryError = Boolean(inv.skillsError ?? inv.mcpsError);
+        const isRegistered = verifyResult.globalMcpRegistration === 'registered';
+        if (hasInventoryError || !isRegistered) {
+            return { label: 'AI Ready', color: 'yellow', text: 'Setup incomplete' };
+        }
+
+        return { label: 'AI Ready', color: 'green', text: 'Ready' };
+    }, [verifyResult, verifyFailed]);
+
+    // Capability list (skills) + error flag for the "View Skills" surface.
+    const aiSkills = verifyResult?.inventory?.skills ?? EMPTY_SKILLS;
+    const aiSkillsError = Boolean(verifyResult?.inventory?.skillsError);
+
     return {
         projectStatus,
         isRunning,
@@ -270,5 +384,10 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
         displayName,
         status,
         meshStatus,
+        aiReady,
+        aiSkills,
+        aiSkillsError,
+        aiBusy,
+        regenerateAiFiles,
     };
 }

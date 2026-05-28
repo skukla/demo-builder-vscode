@@ -9,6 +9,10 @@ import {
 import React from 'react';
 import { UniqueField } from '../hooks/useComponentConfig';
 import { FieldHelpButton } from '@/core/ui/components/forms';
+import {
+    renderTextWithCopyable,
+    type DescriptionContext,
+} from '@/core/ui/components/forms/descriptionRenderer';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 
 interface ConfigFieldRendererProps {
@@ -21,9 +25,11 @@ interface ConfigFieldRendererProps {
     onNormalizeUrl?: (field: UniqueField) => void;
     /** Base URI for resolving help screenshot paths */
     baseUri?: string;
+    /** Context for resolving {placeholder} tokens inside description URLs (e.g., {orgCode}) */
+    descriptionContext?: DescriptionContext;
 }
 
-export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate, onNormalizeUrl, baseUri }: ConfigFieldRendererProps) {
+export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate, onNormalizeUrl, baseUri, descriptionContext }: ConfigFieldRendererProps) {
     const selectableDefaultProps = useSelectableDefault();
     const showError = error && isTouched;
 
@@ -56,6 +62,12 @@ export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate, 
     // Determine if field has a default value (not empty and equals the default from config)
     const hasDefault = value && field.default && value === field.default;
 
+    // Render description with backtick-wrapped URLs as clickable links, applying
+    // {placeholder} substitution from descriptionContext (e.g. {orgCode}).
+    const renderedDescription = field.description
+        ? renderTextWithCopyable(field.description, descriptionContext)
+        : undefined;
+
     switch (field.type) {
         case 'text':
         case 'url':
@@ -67,7 +79,7 @@ export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate, 
                         onChange={(val) => onUpdate(field, val)}
                         onBlur={field.type === 'url' && onNormalizeUrl ? () => onNormalizeUrl(field) : undefined}
                         placeholder={field.placeholder}
-                        description={field.description}
+                        description={renderedDescription}
                         isRequired={isFieldRequired}
                         validationState={showError ? 'invalid' : undefined}
                         errorMessage={showError ? error : undefined}
@@ -87,7 +99,7 @@ export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate, 
                         value={value as string}
                         onChange={(val) => onUpdate(field, val)}
                         placeholder={field.placeholder}
-                        description={field.description}
+                        description={renderedDescription}
                         isRequired={isFieldRequired}
                         validationState={showError ? 'invalid' : undefined}
                         errorMessage={showError ? error : undefined}

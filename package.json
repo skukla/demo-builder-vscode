@@ -2,7 +2,7 @@
   "name": "adobe-demo-builder",
   "displayName": "Adobe Demo Builder",
   "description": "Create and manage Adobe Commerce demos with ease",
-  "version": "1.0.0-beta.110",
+  "version": "1.0.0-beta.111",
   "publisher": "skukla",
   "engines": {
     "vscode": "^1.84.0"
@@ -53,8 +53,28 @@
         "category": "Demo Builder"
       },
       {
+        "command": "demoBuilder.syncStorefront",
+        "title": "Sync Storefront",
+        "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.openInClaude",
+        "title": "Open in Claude Code",
+        "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.openAi",
+        "title": "Manage AI Prompts",
+        "category": "Demo Builder"
+      },
+      {
         "command": "demoBuilder.resetAll",
         "title": "Reset All (Dev Only)",
+        "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.resetAiOnboarding",
+        "title": "Reset AI Onboarding (Dev Only)",
         "category": "Demo Builder"
       },
       {
@@ -179,6 +199,21 @@
             },
             "default": [],
             "description": "Custom block libraries to include for new EDS projects. Each entry is a public GitHub repository URL containing a blocks/ directory."
+          },
+          "demoBuilder.blockLibraries.syncBehavior": {
+            "type": "string",
+            "enum": [
+              "ask",
+              "enabled",
+              "disabled"
+            ],
+            "enumDescriptions": [
+              "Prompt before applying upstream library updates or promoting local changes to a library",
+              "Apply library updates automatically when newer commits are detected; allow promotion actions without an extra confirmation",
+              "Never touch block library remotes — promotion actions are hidden and library updates are skipped (the storefront stays on the install-time block files)"
+            ],
+            "default": "ask",
+            "description": "How to handle two-way block library sync: applying upstream library updates to your storefront and promoting your local block changes back to the library repo."
           }
         }
       },
@@ -228,7 +263,10 @@
                   "description": "Discovery service App Builder action URL"
                 }
               },
-              "required": ["orgName", "serviceUrl"]
+              "required": [
+                "orgName",
+                "serviceUrl"
+              ]
             },
             "default": [
               {
@@ -238,6 +276,22 @@
               }
             ],
             "description": "ACCS Discovery Services for cross-org store structure auto-detection. Each entry maps a Commerce org to its App Builder discovery service."
+          }
+        }
+      },
+      {
+        "title": "AI",
+        "properties": {
+          "demoBuilder.ai.engine": {
+            "type": "string",
+            "enum": [
+              "claude-code"
+            ],
+            "enumDescriptions": [
+              "Anthropic's Claude Code (CLI)."
+            ],
+            "default": "claude-code",
+            "description": "Which AI tool Demo Builder launches. Currently only Claude Code is supported; reserved for future engines (e.g. Codex)."
           }
         }
       }
@@ -363,6 +417,7 @@
     "@adobe/aio-lib-console": "^5.4.2",
     "@adobe/aio-lib-ims": "^7.0.2",
     "@adobe/react-spectrum": "^3.46.0",
+    "@modelcontextprotocol/sdk": "1.29.0",
     "@octokit/core": "^6.1.6",
     "@octokit/plugin-retry": "^7.2.1",
     "@types/uuid": "^10.0.0",
@@ -377,6 +432,7 @@
     "uuid": "^13.0.0",
     "xterm": "^5.3.0",
     "xterm-addon-fit": "^0.8.0",
-    "yaml": "^2.3.4"
+    "yaml": "^2.3.4",
+    "zod": "^3.23.0"
   }
 }

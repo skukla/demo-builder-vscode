@@ -70,11 +70,19 @@ export class GitHubOAuthService {
         // Set timeout for OAuth flow
         const timeoutMs = TIMEOUTS.LONG || DEFAULT_OAUTH_TIMEOUT_MS;
         const timeoutPromise = new Promise<never>((_, reject) => {
-            setTimeout(() => {
+            const handle = setTimeout(() => {
                 this.oauthResolve = null;
                 this.oauthReject = null;
                 reject(new Error(ERROR_MESSAGES.OAUTH_TIMEOUT));
             }, timeoutMs);
+            // Don't hold the Node event loop open just for the OAuth timeout.
+            // If the host is shutting down before the flow completes, the
+            // timeout firing is moot; without unref() the unresolved timer
+            // keeps test workers alive past teardown and crashes with an
+            // unhandled rejection.
+            if (typeof (handle as NodeJS.Timeout).unref === 'function') {
+                (handle as NodeJS.Timeout).unref();
+            }
         });
 
         // Open browser with OAuth URL

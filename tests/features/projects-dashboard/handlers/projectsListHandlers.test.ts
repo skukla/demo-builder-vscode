@@ -97,13 +97,17 @@ describe('projectsListHandlers', () => {
             expect(hasHandler(projectsListHandlers, 'republishContent')).toBe(true);
         });
 
-        it('should have exactly 19 handlers', () => {
-            // Given: projectsListHandlers object
-            // When: Getting registered types
-            const types = getRegisteredTypes(projectsListHandlers);
+        it('should include copy path handler', () => {
+            expect(hasHandler(projectsListHandlers, 'copy-project-path')).toBe(true);
+        });
 
-            // Then: Exactly 19 handlers
-            expect(types).toHaveLength(19);
+        it('should include openAi handler (E3)', () => {
+            expect(hasHandler(projectsListHandlers, 'openAi')).toBe(true);
+        });
+
+        it('should have exactly 22 handlers', () => {
+            const types = getRegisteredTypes(projectsListHandlers);
+            expect(types).toHaveLength(22);
         });
 
         it('should have handlers as functions', () => {

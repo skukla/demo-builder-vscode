@@ -9,17 +9,22 @@
  * it depends on private notification/deployment methods. Same mixed pattern
  * as the Wizard (simple handlers in map, complex middleware inline).
  *
+ * AI-related handlers (`verify-ai-setup`, `inspect-mcp`,
+ * `regenerate-ai-files`, `register-global-mcp`, `openInClaude`) now live
+ * in `aiHandlers.ts` and are routed by the standalone AI surface.
+ *
  * @module features/dashboard/handlers/configureHandlers
  */
 
-import * as fs from 'fs/promises';
+import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { validateURL } from '@/core/validation';
+import { handleCreateWorkspaceCredential } from '@/features/authentication';
+import { handleSyncComponentConfigs } from '@/features/components/handlers/componentHandlers';
+import { handleDiscoverStoreStructure } from '@/features/eds';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 import { parseJSON } from '@/types/typeGuards';
-import { handleDiscoverStoreStructure } from '@/features/eds';
-import { handleCreateWorkspaceCredential } from '@/features/authentication';
 
 // ==========================================================
 // Handlers
@@ -42,7 +47,7 @@ export async function handleGetComponentsData(
     context: HandlerContext,
 ): Promise<HandlerResponse> {
     const componentsPath = path.join(context.context.extensionPath, 'src', 'features', 'components', 'config', 'components.json');
-    const componentsContent = await fs.readFile(componentsPath, 'utf-8');
+    const componentsContent = await fsPromises.readFile(componentsPath, 'utf-8');
     const componentsData = parseJSON<Record<string, unknown>>(componentsContent);
     if (!componentsData) {
         throw new Error('Failed to parse components.json');
@@ -90,5 +95,6 @@ export const configureHandlers = defineHandlers({
     'openExternal': handleOpenExternal,
     'open-eds-settings': handleOpenEdsSettings,
     'discover-store-structure': handleDiscoverStoreStructure,
+    'sync-component-configs': handleSyncComponentConfigs,
     'create-workspace-credential': handleCreateWorkspaceCredential,
 });

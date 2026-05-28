@@ -83,6 +83,11 @@ export interface Storefront {
     source: GitSource;
     /** DA.live content source for EDS storefronts (required for EDS stacks) */
     contentSource?: DaLiveContentSource;
+    /** Optional BYOM content overlay URL. When set, Config Service registers a
+     *  `content.overlay` alongside the DA.live content source so a backend
+     *  service can serve dynamic markup (e.g., per-SKU PDP HTML).
+     *  See https://www.aem.live/developer/byom. */
+    byomOverlayUrl?: string;
     /** GitHub owner of the template repository (for reset-to-template operations) */
     templateOwner?: string;
     /** GitHub repository name of the template (for reset-to-template operations) */

@@ -22,6 +22,7 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
     webviewClient: {
         postMessage: jest.fn(),
         onMessage: jest.fn(() => jest.fn()), // Return unsubscribe function
+        request: jest.fn(() => new Promise(() => {})), // Never resolve by default
     },
 }));
 
@@ -69,10 +70,45 @@ jest.mock('@adobe/react-spectrum', () => ({
     ActionButton: ({ children, onPress, _isQuiet, isDisabled, ...props }: any) => (
         <button onClick={onPress} disabled={isDisabled} {...props}>{children}</button>
     ),
+    MenuTrigger: ({ children }: any) => <div data-testid="menu-trigger">{children}</div>,
+    Menu: ({ children, onAction }: any) => (
+        <div role="menu">
+            {React.Children.map(children, (child: any) => {
+                if (!child) return null;
+                const key = child.key ?? child.props?.['data-key'];
+                return (
+                    <button key={key} role="menuitem" onClick={() => onAction?.(key)}>
+                        {child.props?.children}
+                    </button>
+                );
+            })}
+        </div>
+    ),
+    Item: ({ children }: any) => <>{children}</>,
     Divider: () => <hr />,
     ProgressCircle: () => <div data-testid="progress-circle" />,
     Link: ({ children, onPress, _isQuiet, ...props }: any) => (
         <a onClick={onPress} data-testid="sign-in-link" {...props}>{children}</a>
+    ),
+    DialogContainer: ({ children }: any) => <div data-testid="dialog-container">{children}</div>,
+}));
+
+// Stub the skills modal — its real implementation renders the shared Modal
+// (Spectrum internals not covered by this file's minimal mock). The real
+// AiSkillsModal is exercised in its own test; here we only assert the dashboard
+// opens it and wires its props.
+jest.mock('@/features/dashboard/ui/components/AiSkillsModal', () => ({
+    AiSkillsModal: ({ skills, hasError, onClose, onRegenerate, isBusy }: any) => (
+        <div data-testid="ai-skills-modal" data-error={String(Boolean(hasError))} data-busy={String(Boolean(isBusy))}>
+            <span data-testid="ai-skills-modal-count">{skills.length}</span>
+            {skills.map((s: any) => (
+                <div key={s.path} data-testid="ai-skills-modal-skill">{s.name}</div>
+            ))}
+            <button data-testid="ai-skills-modal-regenerate" onClick={() => onRegenerate()}>
+                Regenerate AI files
+            </button>
+            <button data-testid="ai-skills-modal-close" onClick={onClose}>Close</button>
+        </div>
     ),
 }));
 

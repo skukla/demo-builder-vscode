@@ -7,6 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.111] - 2026-05-28
+
+### Added
+
+- **Chat-first AI experience.** The Claude Code terminal opens as an editor tab next to Project Dashboard. A new wand icon in the sidebar `UtilityBar` is the single AI entry point: cold click launches the chat directly; with a chat alive, opens a QuickPick of the merged prompt list (pinned first) + "Manage prompts…". Selecting any prompt focuses the live terminal and injects via bracketed paste; "Manage prompts…" opens the Prompt Library. New commands: `demoBuilder.openAiExperience` and `demoBuilder.aiMenu`.
+- **Prompt Library webview.** The former AI surface (`AiOverviewScreen`) repurposed as a roomy on-demand prompt-management surface, reached via the wand QuickPick's "Manage prompts…" row or the `Demo Builder: Manage AI Prompts` palette entry. Full multi-line CRUD via `PromptEditDialog`. Pinned prompts persist globally (`demoBuilder.ai.globalPrompts`) and appear in every project; unpinned prompts persist in the current project's `.demo-builder.json`. Pinning is a cross-scope move; listing returns the merged deduped collection.
+- **Terminal prompt delivery.** On spawn, the prompt rides `claude --continue -- '<prompt>'` (race-free; auto-submits). On reuse, the prompt is injected into the live REPL via bracketed paste (CSI 200~/201~) — pre-fills the input for the user to send. Clipboard write remains the always-on fallback, with a once-ever tip toast explaining the contract.
+- **Workspace-anchored project launches.** When the home-grid kebab "Open AI" or a Prompt Library prompt is clicked for a project that's NOT the current workspace, Demo Builder writes a pending-launch record (`PENDING_CLAUDE_LAUNCH_KEY`) and calls `vscode.openFolder`; an activation handler replays the launch against the now-anchored workspace so per-project skills / `.mcp.json` / `AGENTS.md` load correctly.
+- **AI health/capability split on the Project Dashboard.** A passive "AI Ready" badge (driven by `verify-ai-setup`) communicates health only. A separate "View Skills (N)" link in the dashboard status grid opens the new `AiSkillsModal` — a lean name-only list of installed skills with a "Regenerate AI files" action. The dashboard "AI" tile now launches the chat surface, not the Prompt Library.
+- **AI inventory backend.** Three `vscode-free` inspector services in `src/features/ai/` populate an `inventory` payload on `AiVerificationResult`:
+  - `skillInspector` walks `.claude/skills/`, parses YAML frontmatter, classifies skills as `demo-builder`, `adobe`, or `unknown`.
+  - `mcpInspector` spawns each `.claude/mcp.json` server via `@modelcontextprotocol/sdk` (stdio client) and returns its tool list. 5-minute TTL cache (success-only). 15s per-server timeout. SDK env allowlist (`PATH`, `HOME`, `USER`, `SHELL`, `TERM`, `LANG`, `TMPDIR`) — extension host secrets do NOT leak to spawned children.
+  - `sessionMcpDetector` reads `~/.claude.json::claudeAiMcpEverConnected` cross-referenced with `~/.claude/mcp-needs-auth-cache.json` (best-effort; undocumented Claude Code internal state).
+  - `gatherInventory(projectPath)` orchestrates the three via `Promise.allSettled` so one inspector failing degrades to an empty list with a matching `*Error` field for the UI.
+  - `inspect-mcp` message handler forces a cache-clearing refresh (per-server or all).
+- **AI context file generation at project creation.** At finalization (Phase 6), three writers generate AI agent context files for each project:
+  - `AGENTS.md` (project root) — universal AI context (Claude/Copilot/Cursor/Gemini); 8 sections covering endpoints, storefront paths, block libraries, and example prompts.
+  - `CLAUDE.md` (root + `.claude/`) — one-line `see @AGENTS.md` pointer files.
+  - `.claude/mcp.json` and `.mcp.json` — Demo Builder MCP server entry.
+  - `.claude/settings.json` — PostToolUse git-sync hook for EDS storefronts.
+  - `.claude/skills/` — three Demo-Builder-specific lifecycle skills (`add-component.md`, `sync-changes.md`, `update-credentials.md`).
+  - All three writers run concurrently via `Promise.allSettled`; failures are collected and thrown as a single combined message.
+- **Standalone MCP server** (`dist/mcp-server.js`). Separate Node.js stdio process (no VS Code dependency) exposing 7 tools to AI agents: `list_projects`, `get_project`, `get_component_config`, `update_project_config`, `sync_storefront`, `list_blocks`, `get_block_source`. Discoverable via consent-gated `~/.claude.json` registration on extension activation, and via project-local `.mcp.json` written during project creation.
+- **Adobe AEM skills auto-installed when EDS Storefront is chosen.** `skillsWriter.ts` copies `aem-block-developer`, `aem-content-modeler`, `aem-dropin-developer`, `aem-project-manager`, `aem-researcher`, `aem-tester` from `node_modules/@adobe-commerce/commerce-extensibility-tools/dist/` into `.claude/skills/aem-*` when the component declares an `aiSkillBundle` in its definition.
+- **`AdobeMcpUpdateChecker`.** `Demo Builder: Check for Updates` now surfaces updates to `@adobe-commerce/commerce-extensibility-tools` alongside the existing fork / template / component / add-on sources. Applying the update runs `npm update` in the storefront and re-runs `generateAIContextFiles` so the skill bundle stays in sync.
+- **Kebab "Copy prompt" item** on every prompt card in the Prompt Library. Dispatches the `copyAiPrompt` handler, which writes the prompt body to the clipboard and shows a brief confirmation toast. Logs the prompt name only — never the body.
+- **Store discovery cascade auto-selection.** When website/storeGroup/storeView discovery returns a single deterministic option at any level, the wizard auto-selects it and advances to the next level. EDS handler refactor consolidates the discovery flow into a single `handleDiscoverStoreStructure` handler.
+- **ADR-004: Claude Code (CLI) as the AI Harness** (`docs/architecture/adr/004-claude-code-harness.md`). Documents the harness decision and three amendments: workspace anchoring (2026-05-24b), terminal prompt delivery via launch arg (2026-05-26), and extension-surface retirement (2026-05-27).
+
+### Removed
+
+- **Extension surface for Claude Code.** `demoBuilder.ai.surface` and `demoBuilder.ai.dockToRight` settings removed. The wand QuickPick requires inserting prompts into the LIVE chat; the Claude Code VS Code extension's URI handler opens a new chat on every launch, with no public API to inject into the running one — that contract can't work with a per-launch-new-chat surface. The terminal surface is now the only path. Also removed: the `vscode://anthropic.claude-code/open` URI launch, `claudeCode.preferredLocation` synchronization, every once-ever flag/dialog tied to the extension surface (extension-detected offer, mismatch warning, sessions-browser auto-open, first-launch dialog, dock-to-right offer), the `handleBrowseClaudeSessions` and `handleMarkSessionsBrowserAutoShown` handlers, and the `migrateHarnessSetting` migration code. `verify-ai-setup` no longer carries `extensionInstalled`, `onboardingCompleted`, `sessionsBrowserAutoShown`, or `surface` fields. `resetAiOnboardingState` clears the legacy flag/setting keys so users upgrading from any prior Demo Builder version don't carry dead state forward.
+- **Dormant VS Code chat participant.** `vscodeChatParticipant.ts` and its tests deleted.
+- **External MCP entries from generated configs.** Adobe-hosted MCPs (DA.live, Commerce, AEM Content) live at Claude Code's session level via its catalog; Demo Builder's per-project entries duplicated those (with worse, unauthenticated versions) and were not loading.
+- **`.cursor/mcp.json` and `.codex/mcp.json`** generation. Cursor and Codex read `.mcp.json` natively.
+- **Skill templates trimmed from 13 to 3.** Removed `add-block`, `add-custom-block`, `configure-eds`, `create-block`, `edit-block-library`, `modify-content`, `update-styles`, `use-aem-content-mcp`, `use-commerce-dev-mcp`, `use-da-live-mcp`. EDS storefront skills now come from Adobe's `@adobe-commerce/commerce-extensibility-tools` package.
+- **Unused `helixToken` plumbing.** Removed once the only consumer (aem-eds MCP entry) was removed.
+- **Settings hard-deleted**: `demoBuilder.ai.externalMcpServers`, `demoBuilder.ai.mcpConfigTargets`, `demoBuilder.ai.includeBoilerplateSkills` (no soft deprecation).
+
+### Changed
+
+- **`AGENTS.md` replaces `.claude/CLAUDE.md`** as the primary AI context file — universal across Claude / Copilot / Cursor / Gemini. Root `CLAUDE.md` and `.claude/CLAUDE.md` become one-line `see @AGENTS.md` pointer files.
+- **`BaseCommand.createTerminal(name, cwd?, location?)`** extended with an optional third `location` argument so callers can request editor-area terminals (used by the chat-first flow). Backward-compatible — existing call sites without `location` keep panel placement.
+
+### Refactored
+
+- **Shared sanitization module.** `sanitizeTemplateValue`, `sanitizeGithubSlug`, and `sanitizeUrl` extracted from `aiContextWriter.ts` and `skillsWriter.ts` into `src/features/project-creation/services/sanitization.ts`.
+- **Oversized AI test file splits.** `AiOverviewScreen.test.tsx`, `aiHandlers.test.ts`, and `mcpServer.test.ts` split along describe boundaries using a `*.testUtils` + per-aspect-sibling pattern. The 7 remaining non-AI oversized test files are tracked in `.rptc/backlog/2026-05-27-oversized-test-file-splits.md`.
+
+### Security
+
+- **`sanitizeUrl` protocol + bracket validation.** `aiContextWriter.ts` validates Commerce and MCP endpoint URLs against an `https://` allowlist before interpolating them into Markdown output. Non-https values (e.g. `javascript:`) are replaced with `[invalid URL]`. URLs that pass the `https://` check are additionally stripped of `]()` characters to prevent Markdown link injection.
+- **Full symlink-resistant path traversal protection in MCP server.** `assertInsideProject` canonicalizes both `projectPath` and the resolved path via `fs.realpath` before the prefix check. Prevents symlink-based escapes from the project directory; fixes legitimate access failures on macOS where `/tmp/proj` resolves to `/private/tmp/proj`.
+
+### Migration Notes
+
+- **Existing projects.** Open the project, then trigger `Regenerate AI files` (reached from the dashboard's `AiSkillsModal` via the "View Skills" link, or the palette) to migrate to the new shape (AGENTS.md + pointer files + slim MCP config + 3 lifecycle skills + Adobe AEM bundle if applicable). Demo Builder does not delete legacy AI files — remove `.cursor/mcp.json`, `.codex/mcp.json`, and any dropped skill files from `.claude/skills/` manually.
+
+### Known Limitations
+
+- **MCP config files contain machine-specific paths.** `.claude/mcp.json` and `.mcp.json` hold absolute paths to the Demo Builder MCP server binary. These files are automatically added to `.gitignore`. No credentials are written to these files — only machine paths.
+- **PostToolUse hook env var unverified.** The generated git-sync hook reads `$CLAUDE_TOOL_INPUT` for the modified file path. This variable name has not been confirmed end-to-end with Claude Code hooks. If wrong, the hook silently does nothing.
+
 ## [1.0.0-beta.110] - 2026-04-14
 
 ### Changed

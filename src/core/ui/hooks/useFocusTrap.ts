@@ -188,8 +188,17 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
       const target = e.target as Node;
       const focusableElements = focusableElementsCacheRef.current;
 
-      // If focus moved outside container, bring it back
+      // If focus moved outside container, bring it back — UNLESS the target is
+      // inside a known overlay (Spectrum Picker menus, Dialogs, Tooltips, etc.).
+      // These render in portals at document.body, physically outside the trap
+      // container, but are semantically part of the UI. Pulling focus back from
+      // them causes scroll-to-top when a Picker selection changes.
       if (!container.contains(target) && focusableElements.length > 0) {
+        if (target instanceof Element && target.closest(
+          '[role="listbox"],[role="menu"],[role="dialog"],[role="alertdialog"],[role="tooltip"]',
+        )) {
+          return; // Allow focus on overlay content
+        }
         e.preventDefault();
         e.stopPropagation();
         focusableElements[0].focus();

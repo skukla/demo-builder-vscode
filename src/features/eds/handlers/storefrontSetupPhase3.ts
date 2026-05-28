@@ -7,7 +7,7 @@
  * @module features/eds/handlers/storefrontSetupPhase3
  */
 
-import { buildSiteConfigParams, ConfigurationService, DEFAULT_FOLDER_MAPPING } from '../services/configurationService';
+import { buildSiteConfigParams, ConfigurationService } from '../services/configurationService';
 import { configureDaLivePermissions } from './edsHelpers';
 import { DaLiveAuthError } from '../services/types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -153,7 +153,12 @@ async function verifyCodeSync(
 }
 
 /**
- * Register site with Configuration Service and set folder mapping
+ * Register site with Configuration Service.
+ *
+ * Folder mapping (deprecated by Adobe — see aem.live/developer/byom) is intentionally
+ * NOT configured here. The CitiSignal storefront handles /products/{sku} routing
+ * via client-side JavaScript; folder mapping is the wrong mechanism for SEO-sensitive
+ * Commerce PDPs.
  */
 async function registerConfigurationService(
     context: HandlerContext,
@@ -171,34 +176,15 @@ async function registerConfigurationService(
     try {
         const siteParams = buildSiteConfigParams(
             repoInfo.repoOwner, repoInfo.repoName, edsConfig.daLiveOrg, edsConfig.daLiveSite,
+            edsConfig.byomOverlayUrl,
         );
-        const skipFolderMapping = await performSiteConfigRegistration(
-            configurationService, siteParams, edsConfig, context, logger,
-        );
-
-        if (!skipFolderMapping) {
-            const folderResult = await configurationService.setFolderMapping(
-                edsConfig.daLiveOrg, edsConfig.daLiveSite, DEFAULT_FOLDER_MAPPING,
-            );
-            if (folderResult.success) {
-                logger.info('[Storefront Setup] Folder mapping configured via Configuration Service');
-            } else if (folderResult.statusCode === 401) {
-                throw new DaLiveAuthError(`Folder mapping authentication failed: ${folderResult.error}`);
-            } else {
-                logger.error(`[Storefront Setup] Folder mapping failed: ${folderResult.error}`);
-                await context.sendMessage('storefront-setup-progress', {
-                    phase: 'site-config',
-                    message: '⚠️ Folder mapping failed — product detail pages may not work',
-                    progress: 49,
-                });
-            }
-        }
+        await performSiteConfigRegistration(configurationService, siteParams, edsConfig, context, logger);
     } catch (error) {
         if (error instanceof DaLiveAuthError) throw error;
-        logger.error(`[Storefront Setup] Configuration Service failed — Folder mapping not applied: ${(error as Error).message}`);
+        logger.error(`[Storefront Setup] Configuration Service failed: ${(error as Error).message}`);
         await context.sendMessage('storefront-setup-progress', {
             phase: 'site-config',
-            message: '⚠️ Configuration Service failed — product detail pages may not work',
+            message: '⚠️ Configuration Service setup incomplete — da.live preview may need manual configuration',
             progress: 49,
         });
     }
@@ -206,7 +192,7 @@ async function registerConfigurationService(
 
 /**
  * Attempt site registration, handling 409 (update), 401 (auth error),
- * and 403 on new repos (propagation retry). Returns whether to skip folder mapping.
+ * and 403 on new repos (propagation retry).
  */
 async function performSiteConfigRegistration(
     configurationService: ConfigurationService,
@@ -214,34 +200,33 @@ async function performSiteConfigRegistration(
     edsConfig: StorefrontSetupStartPayload['edsConfig'],
     context: HandlerContext,
     logger: Logger,
-): Promise<boolean> {
+): Promise<void> {
     const registerResult = await configurationService.registerSite(siteParams);
 
     if (registerResult.success) {
         logger.info('[Storefront Setup] Site registered with Configuration Service');
-        return false;
+        return;
     }
 
     const handled = await applyRegistrationResult(registerResult, configurationService, siteParams, logger);
-    if (handled !== null) return handled;
+    if (handled !== null) return;
 
     if (registerResult.statusCode === 403 && edsConfig.repoMode === 'new') {
-        return retryRegistrationAfterDelay(configurationService, siteParams, context, logger);
+        await retryRegistrationAfterDelay(configurationService, siteParams, context, logger);
+        return;
     }
 
-    // Other errors — fail gracefully, skip folder mapping
     logger.warn(`[Storefront Setup] Config Service registration warning: ${registerResult.error}`);
     await context.sendMessage('storefront-setup-progress', {
         phase: 'site-config',
         message: '⚠️ Configuration Service registration failed — da.live preview may not work',
         progress: 47,
     });
-    return true;
 }
 
 /**
  * Handle common registration result cases (409 and 401) shared by first-attempt
- * and retry paths. Returns false (proceed) on 409-then-update, throws on 401,
+ * and retry paths. Returns `void` (proceed) on 409-then-update, throws on 401,
  * and returns null for unhandled status codes (caller must handle).
  */
 async function applyRegistrationResult(
@@ -249,14 +234,14 @@ async function applyRegistrationResult(
     configurationService: ConfigurationService,
     siteParams: ReturnType<typeof buildSiteConfigParams>,
     logger: Logger,
-): Promise<false | null> {
+): Promise<void | null> {
     if (result.statusCode === 409) {
         logger.info('[Storefront Setup] Site config exists, updating...');
         const updateResult = await configurationService.updateSiteConfig(siteParams);
         if (!updateResult.success) {
             logger.warn(`[Storefront Setup] Site config update warning: ${updateResult.error}`);
         }
-        return false;
+        return;
     }
     if (result.statusCode === 401) {
         throw new DaLiveAuthError(`Configuration Service authentication failed: ${result.error}`);
@@ -265,35 +250,56 @@ async function applyRegistrationResult(
 }
 
 /**
- * Retry site registration once after a propagation delay (403 on new repo).
- * Returns whether to skip folder mapping.
+ * Retry site registration with increasing backoff after a 403 on a new repo.
+ *
+ * Per aem.live/docs/config-service-setup, the AEM Code Sync GitHub App installer
+ * is granted admin role, but role propagation across Adobe identity systems
+ * typically takes 30–90 seconds. A single short retry is insufficient.
+ *
+ * The 403 (not 401) confirms the token is accepted — only the admin role is missing.
  */
 async function retryRegistrationAfterDelay(
     configurationService: ConfigurationService,
     siteParams: ReturnType<typeof buildSiteConfigParams>,
     context: HandlerContext,
     logger: Logger,
-): Promise<boolean> {
-    logger.info('[Storefront Setup] Config Service 403 on new repo — retrying after propagation delay...');
-    await context.sendMessage('storefront-setup-progress', {
-        phase: 'site-config', message: 'Waiting for Configuration Service access...', progress: 46,
-    });
-    await new Promise(resolve => setTimeout(resolve, TIMEOUTS.CONFIG_SERVICE_RETRY_DELAY));
+): Promise<void> {
+    const RETRY_DELAYS_MS = [
+        TIMEOUTS.CONFIG_SERVICE_RETRY_DELAY,         // 30s
+        TIMEOUTS.CONFIG_SERVICE_RETRY_DELAY * 1.5,   // 45s
+        TIMEOUTS.CONFIG_SERVICE_RETRY_DELAY * 2,     // 60s
+    ];
 
-    const retryResult = await configurationService.registerSite(siteParams);
-    if (retryResult.success) {
-        logger.info('[Storefront Setup] Site registered with Configuration Service (retry succeeded)');
-        return false;
+    for (let attempt = 0; attempt < RETRY_DELAYS_MS.length; attempt++) {
+        const delayMs = RETRY_DELAYS_MS[attempt];
+        logger.info(`[Storefront Setup] Config Service 403 — retrying after ${delayMs / 1000}s (attempt ${attempt + 1}/${RETRY_DELAYS_MS.length}). Waiting for AEM Code Sync admin role propagation...`);
+        await context.sendMessage('storefront-setup-progress', {
+            phase: 'site-config',
+            message: `Waiting for Configuration Service access (${attempt + 1}/${RETRY_DELAYS_MS.length})...`,
+            progress: 46,
+        });
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+
+        const retryResult = await configurationService.registerSite(siteParams);
+        if (retryResult.success) {
+            logger.info('[Storefront Setup] Site registered with Configuration Service');
+            return;
+        }
+
+        const handled = await applyRegistrationResult(retryResult, configurationService, siteParams, logger);
+        if (handled !== null) return;
+
+        // Only keep retrying on continued 403 (admin role still propagating).
+        // Other errors will not improve with more waiting.
+        if (retryResult.statusCode !== 403) {
+            logger.warn(`[Storefront Setup] Config Service registration warning: ${retryResult.error}`);
+            break;
+        }
     }
 
-    const handled = await applyRegistrationResult(retryResult, configurationService, siteParams, logger);
-    if (handled !== null) return handled;
-
-    logger.warn(`[Storefront Setup] Config Service registration warning after retry: ${retryResult.error}`);
     await context.sendMessage('storefront-setup-progress', {
         phase: 'site-config',
         message: '⚠️ Configuration Service registration failed — da.live preview may not work',
         progress: 47,
     });
-    return true;
 }

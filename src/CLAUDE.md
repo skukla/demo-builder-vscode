@@ -11,6 +11,7 @@ src/
 ├── extension.ts           # Entry point - activates extension
 ├── commands/             # VS Code command implementations (→ CLAUDE.md)
 ├── features/            # Feature modules (→ features/CLAUDE.md)
+│   ├── ai/              # AI context verification & MCP server
 │   ├── authentication/  # Adobe authentication & SDK integration
 │   ├── components/      # Component management & registry
 │   ├── dashboard/       # Project dashboard & controls
@@ -141,6 +142,7 @@ export async function activate(context: ExtensionContext) {
 Commands orchestrate features and coordinate workflows. See `commands/CLAUDE.md` for details.
 
 ### Features (`features/`)
+- **ai**: AI context verification + standalone MCP server (7 project tools). Harness is Claude Code (CLI)
 - **authentication**: Adobe authentication with Console SDK, token caching, org/project/workspace selection
 - **components**: Component registry, definitions, and lifecycle management
 - **dashboard**: Project dashboard UI, mesh status, component browser

@@ -31,7 +31,7 @@ describe('ProjectDashboardScreen - Rendering and Status', () => {
 
         it('should render Demo status card', () => {
             renderDashboard();
-            expect(screen.getByText(/Ready/i)).toBeInTheDocument();
+            expect(screen.getByTestId('status-card-Frontend')).toBeInTheDocument();
         });
     });
 

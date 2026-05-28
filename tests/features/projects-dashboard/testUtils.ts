@@ -111,6 +111,7 @@ export interface MockHandlerContext {
         getCurrentProject: jest.Mock;
         loadProjectFromPath: jest.Mock;
         saveProject: jest.Mock;
+        saveProjectConfigOnly: jest.Mock;
     };
     logger: {
         info: jest.Mock;
@@ -146,6 +147,7 @@ export function createMockHandlerContext(
                 return Promise.resolve(project || null);
             }),
             saveProject: jest.fn().mockResolvedValue(undefined),
+            saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined),
         },
         logger: {
             info: jest.fn(),

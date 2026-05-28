@@ -113,6 +113,12 @@ export class ProjectConfigWriter {
             if (project.customBlockLibraries?.length) {
                 manifest.customBlockLibraries = project.customBlockLibraries;
             }
+            if (project.aiPrompts?.length) {
+                manifest.aiPrompts = project.aiPrompts;
+            }
+            if (project.pinned) {
+                manifest.pinned = true;
+            }
 
             // Atomic write: write to temp file first, then rename
             await fs.writeFile(tempPath, JSON.stringify(manifest, null, 2));

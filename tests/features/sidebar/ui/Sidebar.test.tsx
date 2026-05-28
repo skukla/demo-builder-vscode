@@ -157,6 +157,22 @@ describe('Sidebar', () => {
             // Project context uses UtilityBar with icons
             expect(screen.getByRole('button', { name: /tools/i })).toBeInTheDocument();
         });
+
+        it('should plumb onOpenAiMenu to the UtilityBar AI button (project context)', () => {
+            const onOpenAiMenu = jest.fn();
+            renderWithProvider(
+                <Sidebar
+                    context={createProjectContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    onOpenAiMenu={onOpenAiMenu}
+                />
+            );
+
+            fireEvent.click(screen.getByRole('button', { name: /^ai$/i }));
+
+            expect(onOpenAiMenu).toHaveBeenCalled();
+        });
     });
 
     describe('Configure context', () => {
@@ -197,6 +213,37 @@ describe('Sidebar', () => {
 
             const backButton = screen.getByRole('button', { name: /projects/i });
             expect(backButton).toBeInTheDocument();
+        });
+
+        it('should render AI nav item in configure context', () => {
+            renderWithProvider(
+                <Sidebar
+                    context={createConfigureContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                />
+            );
+
+            // Nav item is labelled "AI", not "AI Configuration"
+            expect(screen.getByText('AI')).toBeInTheDocument();
+            // The legacy label should no longer be present
+            expect(screen.queryByText('AI Configuration')).not.toBeInTheDocument();
+        });
+
+        it('should dispatch ai target when AI nav item clicked', () => {
+            const onNavigate = jest.fn();
+            renderWithProvider(
+                <Sidebar
+                    context={createConfigureContext()}
+                    onNavigate={onNavigate}
+                    onCreateProject={jest.fn()}
+                />
+            );
+
+            fireEvent.click(screen.getByText('AI'));
+
+            // Sidebar's onNavigate receives the target id 'ai' for the new entry point
+            expect(onNavigate).toHaveBeenCalledWith('ai');
         });
     });
 

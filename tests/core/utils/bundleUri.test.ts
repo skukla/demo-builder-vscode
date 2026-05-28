@@ -58,7 +58,7 @@ describe('createBundleUris', () => {
             expect(result.feature).toBeDefined();
         });
 
-        it('should call asWebviewUri for each bundle', () => {
+        it('should call asWebviewUri once for the feature bundle', () => {
             const options: BundleUriOptions = {
                 webview: mockWebview as unknown as vscode.Webview,
                 extensionPath,
@@ -67,11 +67,11 @@ describe('createBundleUris', () => {
 
             createBundleUris(options);
 
-            // Should call asWebviewUri 4 times (runtime, vendors, common, feature)
-            expect(mockWebview.asWebviewUri).toHaveBeenCalledTimes(4);
+            // esbuild produces a single self-contained bundle — one asWebviewUri call
+            expect(mockWebview.asWebviewUri).toHaveBeenCalledTimes(1);
         });
 
-        it('should construct correct paths for standard bundles', () => {
+        it('should construct correct path for the feature bundle', () => {
             const options: BundleUriOptions = {
                 webview: mockWebview as unknown as vscode.Webview,
                 extensionPath,
@@ -80,28 +80,7 @@ describe('createBundleUris', () => {
 
             createBundleUris(options);
 
-            // Verify runtime bundle path
-            expect(mockWebview.asWebviewUri).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    fsPath: path.join(webviewPath, 'runtime-bundle.js'),
-                })
-            );
-
-            // Verify vendors bundle path
-            expect(mockWebview.asWebviewUri).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    fsPath: path.join(webviewPath, 'vendors-bundle.js'),
-                })
-            );
-
-            // Verify common bundle path
-            expect(mockWebview.asWebviewUri).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    fsPath: path.join(webviewPath, 'common-bundle.js'),
-                })
-            );
-
-            // Verify feature bundle path
+            // esbuild produces one bundle — verify the single asWebviewUri call uses the feature bundle path
             expect(mockWebview.asWebviewUri).toHaveBeenCalledWith(
                 expect.objectContaining({
                     fsPath: path.join(webviewPath, 'dashboard-bundle.js'),

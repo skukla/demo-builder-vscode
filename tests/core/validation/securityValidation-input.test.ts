@@ -12,6 +12,14 @@
 
 import * as path from 'path';
 import * as os from 'os';
+
+// Mock realpathSync as identity by default — test paths don't exist on disk
+// but the 3-branch strategy needs realpathSync to resolve without throwing
+jest.mock('fs', () => ({
+    ...jest.requireActual('fs'),
+    realpathSync: jest.fn((p: string) => p),
+}));
+
 import {
     validateAdobeResourceId,
     validateProjectNameSecurity,
@@ -374,27 +382,27 @@ describe('securityValidation - Input Validation', () => {
             it('should reject paths with parent directory references', () => {
                 const maliciousPath = path.join(allowedBase, '..', '..', '..', 'etc', 'passwd');
                 expect(() => validateProjectPath(maliciousPath))
-                    .toThrow(/outside demo-builder projects directory/);
+                    .toThrow(/escapes allowed directory/);
             });
 
             it('should reject absolute paths outside allowed base', () => {
                 expect(() => validateProjectPath('/etc/passwd'))
-                    .toThrow(/outside demo-builder projects directory/);
+                    .toThrow(/escapes allowed directory/);
                 expect(() => validateProjectPath('/tmp/malicious'))
-                    .toThrow(/outside demo-builder projects directory/);
+                    .toThrow(/escapes allowed directory/);
             });
 
             it('should reject relative path traversal', () => {
                 const maliciousPath = path.join(allowedBase, 'project', '..', '..', '..', 'etc');
                 expect(() => validateProjectPath(maliciousPath))
-                    .toThrow(/outside demo-builder projects directory/);
+                    .toThrow(/escapes allowed directory/);
             });
 
             it('should handle normalized paths correctly', () => {
                 // Path that looks safe but normalizes to escape
                 const sneakyPath = path.join(allowedBase, 'project/../../../etc/passwd');
                 expect(() => validateProjectPath(sneakyPath))
-                    .toThrow(/outside demo-builder projects directory/);
+                    .toThrow(/escapes allowed directory/);
             });
         });
 
@@ -422,14 +430,14 @@ describe('securityValidation - Input Validation', () => {
                     const winPath = 'C:\\Users\\test\\.demo-builder\\projects\\myproject';
                     // This will fail since it's not in the homedir, but testing the logic
                     expect(() => validateProjectPath(winPath))
-                        .toThrow(/outside demo-builder projects directory/);
+                        .toThrow(/escapes allowed directory/);
                 });
             } else {
                 it('should handle Unix paths', () => {
                     const unixPath = '/home/user/.demo-builder/projects/myproject';
                     // This will fail since it's not in the homedir, but testing the logic
                     expect(() => validateProjectPath(unixPath))
-                        .toThrow(/outside demo-builder projects directory/);
+                        .toThrow(/escapes allowed directory/);
                 });
             }
         });

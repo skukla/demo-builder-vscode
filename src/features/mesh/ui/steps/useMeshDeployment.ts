@@ -214,6 +214,12 @@ export function useMeshDeployment({
                     dispatch({ type: 'TIMEOUT' });
                 }
             }, TIMEOUTS.MESH_DEPLOY_TOTAL);
+            // Don't hold the Node event loop open just for the mesh-deploy
+            // timeout. In test workers, leaving this timer reffed past
+            // teardown surfaces as "worker process failed to exit gracefully".
+            if (typeof (timeoutIdRef.current as NodeJS.Timeout).unref === 'function') {
+                (timeoutIdRef.current as NodeJS.Timeout).unref();
+            }
 
             // Set up elapsed time tracking (every second)
             elapsedIntervalRef.current = setInterval(() => {

@@ -9,6 +9,34 @@ import type { CustomBlockLibrary, InstalledBlockLibrary } from './blockLibraries
 import type { ServiceDefinition } from './components';
 
 /**
+ * AiPrompt - A user-saved AI prompt
+ *
+ * Storage is scope-routed by the `pinned` field. Pinned prompts persist in
+ * VS Code globalState under `demoBuilder.ai.globalPrompts` and appear in
+ * every project. Unpinned prompts persist in the current project's
+ * `.demo-builder.json` manifest under `Project.aiPrompts` and stay
+ * project-specific. Toggling pin moves the prompt across stores.
+ *
+ * Legacy data: prompts pinned before the global-pin feature shipped remain
+ * in their project's manifest until the user manually unpins then re-pins
+ * them — no automatic migration.
+ *
+ * Array order within either store is preserved; render-time pinned-first
+ * sort happens in the UI layer.
+ */
+export interface AiPrompt {
+    id: string;
+    title: string;
+    prompt: string;
+    /**
+     * When true: the prompt lives in globalState and appears in every
+     * project; render-time sort floats it above unpinned prompts.
+     * When falsy: project-scoped, visible only in the current project.
+     */
+    pinned?: boolean;
+}
+
+/**
  * Project - Core project definition
  */
 export interface Project {
@@ -86,6 +114,14 @@ export interface Project {
             version: string;
             lastUpdated: string; // ISO date string
         }>;
+    /** User-saved AI prompts */
+    aiPrompts?: AiPrompt[];
+    /**
+     * Pinned projects sort first on the projects dashboard (alphabetical
+     * within the pinned and unpinned groups). Set per-project via the
+     * Pin/Unpin kebab item.
+     */
+    pinned?: boolean;
     // Aliases for compatibility
     createdAt?: Date;
     updatedAt?: Date;

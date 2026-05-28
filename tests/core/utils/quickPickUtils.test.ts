@@ -147,6 +147,7 @@ describe('quickPickUtils', () => {
                 expect(mockQuickPick.ignoreFocusOut).toBe(false);
             });
         });
+
     });
 
     describe('showWebviewQuickPickMany', () => {

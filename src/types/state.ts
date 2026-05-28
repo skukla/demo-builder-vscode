@@ -70,6 +70,13 @@ export interface StateManager {
     saveProject(project: Project): Promise<void>;
 
     /**
+     * Persist a project's manifest to disk without touching `currentProject`
+     * or firing change events. For home-screen mutations (e.g. pin toggle
+     * from the projects dashboard) where the project is not "selected".
+     */
+    saveProjectConfigOnly(project: Project): Promise<void>;
+
+    /**
      * Clear current project
      */
     clearProject(): Promise<void>;

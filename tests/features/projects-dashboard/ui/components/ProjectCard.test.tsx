@@ -207,6 +207,56 @@ describe('ProjectCard', () => {
 
             expect(onSelect).toHaveBeenCalledWith(project);
         });
+
+        it('passes forceNewWindow=true when shift-clicked', () => {
+            const project = createMockProject({ name: 'Shift Click' });
+            const onSelect = jest.fn();
+            renderWithProvider(
+                <ProjectCard project={project} onSelect={onSelect} />
+            );
+
+            fireEvent.click(screen.getByRole('button'), { shiftKey: true });
+
+            expect(onSelect).toHaveBeenCalledWith(project, { forceNewWindow: true });
+        });
+
+        it('passes forceNewWindow=true when cmd-clicked (metaKey)', () => {
+            const project = createMockProject({ name: 'Cmd Click' });
+            const onSelect = jest.fn();
+            renderWithProvider(
+                <ProjectCard project={project} onSelect={onSelect} />
+            );
+
+            fireEvent.click(screen.getByRole('button'), { metaKey: true });
+
+            expect(onSelect).toHaveBeenCalledWith(project, { forceNewWindow: true });
+        });
+
+        it('does NOT pass forceNewWindow on plain click', () => {
+            const project = createMockProject({ name: 'Plain Click' });
+            const onSelect = jest.fn();
+            renderWithProvider(
+                <ProjectCard project={project} onSelect={onSelect} />
+            );
+
+            fireEvent.click(screen.getByRole('button'));
+
+            // Called with the project as the only positional arg (no opts)
+            expect(onSelect).toHaveBeenCalledWith(project);
+        });
+
+        it('passes forceNewWindow=true when Shift+Enter is pressed', () => {
+            const project = createMockProject({ name: 'Shift Enter' });
+            const onSelect = jest.fn();
+            renderWithProvider(
+                <ProjectCard project={project} onSelect={onSelect} />
+            );
+
+            const card = screen.getByRole('button');
+            fireEvent.keyDown(card, { key: 'Enter', shiftKey: true });
+
+            expect(onSelect).toHaveBeenCalledWith(project, { forceNewWindow: true });
+        });
     });
 
     describe('accessibility', () => {
@@ -231,6 +281,64 @@ describe('ProjectCard', () => {
 
             const card = screen.getByRole('button');
             expect(card).toHaveAttribute('tabIndex', '0');
+        });
+    });
+
+    describe('Open AI wiring', () => {
+        it('should expose Open AI menu item when actions.onOpenAi is provided', () => {
+            const project = createMockProject({ name: 'AI Wired Project' });
+            const onOpenAi = jest.fn();
+            renderWithProvider(
+                <ProjectCard
+                    project={project}
+                    onSelect={jest.fn()}
+                    actions={{ onOpenAi }}
+                />
+            );
+
+            // Open the kebab menu
+            const menuButton = screen.getByLabelText('More actions');
+            fireEvent.click(menuButton);
+
+            expect(screen.getByText('Open AI')).toBeInTheDocument();
+        });
+
+        it('should invoke onOpenAi with the row project when item is selected', () => {
+            const project = createMockProject({ name: 'AI Dispatch Project' });
+            const onOpenAi = jest.fn();
+            renderWithProvider(
+                <ProjectCard
+                    project={project}
+                    onSelect={jest.fn()}
+                    actions={{ onOpenAi }}
+                />
+            );
+
+            const menuButton = screen.getByLabelText('More actions');
+            fireEvent.click(menuButton);
+
+            const aiItem = screen.getByText('Open AI');
+            fireEvent.click(aiItem);
+
+            expect(onOpenAi).toHaveBeenCalledWith(project);
+            expect(onOpenAi).toHaveBeenCalledTimes(1);
+        });
+
+        it('should NOT render Open AI when actions.onOpenAi is omitted', () => {
+            const project = createMockProject({ name: 'No AI Wire Project' });
+            renderWithProvider(
+                <ProjectCard
+                    project={project}
+                    onSelect={jest.fn()}
+                    actions={{ onCopyPath: jest.fn() }}
+                />
+            );
+
+            const menuButton = screen.queryByLabelText('More actions');
+            if (menuButton) {
+                fireEvent.click(menuButton);
+            }
+            expect(screen.queryByText('Open AI')).not.toBeInTheDocument();
         });
     });
 });

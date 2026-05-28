@@ -28,6 +28,8 @@ export interface SidebarProps {
     onOpenHelp?: () => void;
     /** Callback for opening settings */
     onOpenSettings?: () => void;
+    /** Callback for opening the AI prompts QuickPick menu */
+    onOpenAiMenu?: () => void;
     /** Callback to start demo */
     onStartDemo?: () => void;
     /** Callback to stop demo */
@@ -53,6 +55,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onOpenTools,
     onOpenHelp,
     onOpenSettings,
+    onOpenAiMenu,
     onStartDemo: _onStartDemo,
     onStopDemo: _onStopDemo,
     onOpenDashboard: _onOpenDashboard,
@@ -68,6 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onOpenTools={onOpenTools}
                 onOpenHelp={onOpenHelp}
                 onOpenSettings={onOpenSettings}
+                onOpenAiMenu={onOpenAiMenu}
             />
         );
     }
@@ -184,5 +188,7 @@ function getProjectDetailNavItems(activeId: string): NavItem[] {
         { id: 'overview', label: 'Overview', active: activeId === 'overview' },
         { id: 'configure', label: 'Configure', active: activeId === 'configure' },
         { id: 'updates', label: 'Updates', active: activeId === 'updates' },
+        // rename "AI Configuration" → "AI"; target id 'ai' routes to demoBuilder.openAi
+        { id: 'ai', label: 'AI', active: activeId === 'ai' },
     ];
 }

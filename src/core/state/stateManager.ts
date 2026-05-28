@@ -222,6 +222,18 @@ export class StateManager {
         });
     }
 
+    /**
+     * Persist a project's manifest to disk without touching `currentProject`
+     * or firing change events. Use this from home-screen actions that mutate
+     * a project the user has not selected — pin toggle on the projects list,
+     * for example. Goes through the same atomic writer as `saveProject`.
+     */
+    public async saveProjectConfigOnly(project: Project): Promise<void> {
+        return StateManager.saveLock.run(async () => {
+            await this.projectConfigWriter.saveProjectConfig(project, this.state.currentProject?.path);
+        });
+    }
+
     // =========================================================================
     // Dirty Tracking
     // Background operations should call markDirty() instead of saveProject().

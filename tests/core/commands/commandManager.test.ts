@@ -30,7 +30,38 @@ jest.mock('@/features/projects-dashboard/commands/showProjectsList', () => {
 });
 jest.mock('@/features/project-creation/commands/createProject');
 jest.mock('@/features/dashboard/commands/showDashboard');
-jest.mock('@/features/dashboard/commands/configure');
+jest.mock('@/features/dashboard/commands/configure', () => {
+    const MockConfigureProjectWebviewCommand = jest.fn().mockImplementation(function(this: any) {
+        this.execute = jest.fn().mockResolvedValue(undefined);
+    });
+    (MockConfigureProjectWebviewCommand as any).disposeActivePanel = jest.fn();
+
+    return {
+        ConfigureProjectWebviewCommand: MockConfigureProjectWebviewCommand,
+    };
+});
+jest.mock('@/features/dashboard/commands/openAi', () => {
+    const MockShowAiCommand = jest.fn().mockImplementation(function(this: any) {
+        this.execute = jest.fn().mockResolvedValue(undefined);
+    });
+    (MockShowAiCommand as any).disposeActivePanel = jest.fn();
+
+    return {
+        ShowAiCommand: MockShowAiCommand,
+    };
+});
+jest.mock('@/commands/aiMenu', () => {
+    const MockAiMenuCommand = jest.fn().mockImplementation(function(this: any) {
+        this.execute = jest.fn().mockResolvedValue(undefined);
+    });
+    return { AiMenuCommand: MockAiMenuCommand };
+});
+jest.mock('@/commands/openInClaude', () => {
+    const MockOpenInClaudeCommand = jest.fn().mockImplementation(function(this: any) {
+        this.execute = jest.fn().mockResolvedValue(undefined);
+    });
+    return { OpenInClaudeCommand: MockOpenInClaudeCommand };
+});
 jest.mock('@/commands/configure');
 jest.mock('@/commands/diagnostics');
 jest.mock('@/core/commands/ResetAllCommand');
@@ -118,11 +149,11 @@ describe('CommandManager', () => {
             );
         });
 
-        it('should register all 19 commands (20 total, but resetAll only in dev mode)', () => {
+        it('should register all 25 commands (26 total, but resetAll only in dev mode)', () => {
             commandManager.registerCommands();
 
-            // Verify registerCommand was called 19 times (resetAll excluded - dev mode only)
-            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(19);
+            // Verify registerCommand was called 25 times (resetAll excluded - dev mode only)
+            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(25);
 
             // Verify all commands are registered (in order of registration)
             const expectedCommands = [
@@ -136,8 +167,14 @@ describe('CommandManager', () => {
                 'demoBuilder.viewStatus',
                 'demoBuilder.configure',
                 'demoBuilder.configureProject',
+                'demoBuilder.navigate',
                 'demoBuilder.deployMesh',
+                'demoBuilder.syncStorefront',
                 'demoBuilder.checkForUpdates',
+                'demoBuilder.openInClaude',
+                'demoBuilder.openAi',
+                'demoBuilder.openAiExperience',
+                'demoBuilder.aiMenu',
                 'demoBuilder.diagnostics',
                 'demoBuilder.setRecommendedZoom',
                 'demoBuilder.resetZoom',
@@ -156,6 +193,178 @@ describe('CommandManager', () => {
             });
         });
 
+        it('should register demoBuilder.openAi command', () => {
+            commandManager.registerCommands();
+
+            expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
+                'demoBuilder.openAi',
+                expect.any(Function),
+            );
+        });
+
+        it('invokes ShowAiCommand.execute (the prompt library) with no arg', async () => {
+            commandManager.registerCommands();
+
+            const openAiHandler = (vscode.commands.registerCommand as jest.Mock).mock.calls
+                .find(call => call[0] === 'demoBuilder.openAi')?.[1];
+            expect(openAiHandler).toBeDefined();
+
+            const ShowAiCmd = require('@/features/dashboard/commands/openAi').ShowAiCommand;
+            const aiInstance = ShowAiCmd.mock.instances[0];
+            aiInstance.execute.mockClear();
+
+            await openAiHandler();
+
+            expect(aiInstance.execute).toHaveBeenCalledWith();
+        });
+
+    });
+
+    describe('Zoom commands', () => {
+        let mockConfig: { update: jest.Mock; get: jest.Mock };
+
+        /**
+         * Stub `getConfiguration('window')` with both `update` (the zoom write)
+         * and `get` (the `zoomPerWindow` read the fix branches on).
+         */
+        const setupConfig = (zoomPerWindow: boolean | undefined): void => {
+            mockConfig = {
+                update: jest.fn().mockResolvedValue(undefined),
+                get: jest.fn().mockReturnValue(zoomPerWindow),
+            };
+            (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue(mockConfig);
+        };
+
+        const invokeZoomCommand = async (commandId: string): Promise<void> => {
+            commandManager.registerCommands();
+            const handler = (vscode.commands.registerCommand as jest.Mock).mock.calls
+                .find(call => call[0] === commandId)?.[1];
+            expect(handler).toBeDefined();
+            await handler();
+        };
+
+        describe('demoBuilder.setRecommendedZoom', () => {
+            it('sets window.zoomLevel to 1 (120%) globally', async () => {
+                setupConfig(true);
+
+                await invokeZoomCommand('demoBuilder.setRecommendedZoom');
+
+                expect(mockConfig.update).toHaveBeenCalledWith(
+                    'zoomLevel',
+                    1,
+                    vscode.ConfigurationTarget.Global,
+                );
+            });
+
+            it('clears the per-window zoom override via zoomReset when zoomPerWindow is on', async () => {
+                // A transient Cmd+/Cmd- override outranks the zoomLevel setting; the
+                // command must reset the window so the new level takes effect.
+                setupConfig(true);
+
+                await invokeZoomCommand('demoBuilder.setRecommendedZoom');
+
+                expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                    'workbench.action.zoomReset',
+                );
+            });
+
+            it('does NOT call zoomReset when zoomPerWindow is off (all-windows mode)', async () => {
+                // In all-windows mode there is no per-window override, and zoomReset
+                // would force 100%, clobbering the 120% we just set.
+                setupConfig(false);
+
+                await invokeZoomCommand('demoBuilder.setRecommendedZoom');
+
+                expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
+                    'workbench.action.zoomReset',
+                );
+            });
+
+            it('defaults to per-window behavior when zoomPerWindow is unset', async () => {
+                // window.zoomPerWindow defaults to true in VS Code.
+                setupConfig(undefined);
+
+                await invokeZoomCommand('demoBuilder.setRecommendedZoom');
+
+                expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                    'workbench.action.zoomReset',
+                );
+            });
+        });
+
+        describe('demoBuilder.resetZoom', () => {
+            it('sets window.zoomLevel to 0 (100%) globally', async () => {
+                setupConfig(true);
+
+                await invokeZoomCommand('demoBuilder.resetZoom');
+
+                expect(mockConfig.update).toHaveBeenCalledWith(
+                    'zoomLevel',
+                    0,
+                    vscode.ConfigurationTarget.Global,
+                );
+            });
+
+            it('clears the per-window zoom override via zoomReset when zoomPerWindow is on', async () => {
+                setupConfig(true);
+
+                await invokeZoomCommand('demoBuilder.resetZoom');
+
+                expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                    'workbench.action.zoomReset',
+                );
+            });
+
+            it('does NOT call zoomReset when zoomPerWindow is off (all-windows mode)', async () => {
+                setupConfig(false);
+
+                await invokeZoomCommand('demoBuilder.resetZoom');
+
+                expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
+                    'workbench.action.zoomReset',
+                );
+            });
+        });
+    });
+
+    describe('Navigate Routing', () => {
+        it('should route the ai target to demoBuilder.openAiExperience (chat-first)', async () => {
+            commandManager.registerCommands();
+
+            const navigateHandler = (vscode.commands.registerCommand as jest.Mock).mock.calls
+                .find(call => call[0] === 'demoBuilder.navigate')?.[1];
+            expect(navigateHandler).toBeDefined();
+
+            (vscode.commands.executeCommand as jest.Mock).mockClear();
+
+            await navigateHandler({ target: 'ai' });
+
+            // Chat-first: navigate('ai') now opens the AI experience directly.
+            // The prompt manager (openAi) stays reachable via the aiMenu Manage item.
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openAiExperience');
+        });
+
+        it('should warn on unknown target (legacy ai-setup is no longer routed)', async () => {
+            commandManager.registerCommands();
+
+            const navigateHandler = (vscode.commands.registerCommand as jest.Mock).mock.calls
+                .find(call => call[0] === 'demoBuilder.navigate')?.[1];
+            expect(navigateHandler).toBeDefined();
+
+            const ConfigureCmd = require('@/features/dashboard/commands/configure').ConfigureProjectWebviewCommand;
+            const ShowAiCmd = require('@/features/dashboard/commands/openAi').ShowAiCommand;
+
+            const configureInstance = ConfigureCmd.mock.instances[0];
+            const aiInstance = ShowAiCmd.mock.instances[0];
+            configureInstance.execute.mockClear();
+            aiInstance.execute.mockClear();
+
+            await navigateHandler({ target: 'ai-setup' });
+
+            // The legacy 'ai-setup' route was removed — neither command runs.
+            expect(configureInstance.execute).not.toHaveBeenCalled();
+            expect(aiInstance.execute).not.toHaveBeenCalled();
+        });
     });
 
     describe('Projects List Command Disposal', () => {

@@ -1,17 +1,21 @@
 /**
  * ActionGrid Component Tests
  *
- * Tests for the extracted dashboard action grid component.
- * Verifies button rendering and interactions.
+ * Tests for the zone-based dashboard action grid component.
+ * Verifies zone membership, gating, overflow menu contents, Delete isolation,
+ * and interactions.
  */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ActionGrid } from '@/features/dashboard/ui/components/ActionGrid';
 import '@testing-library/jest-dom';
 
-// Mock Adobe React Spectrum components
+// Mock Adobe React Spectrum components.
+// MenuTrigger/Menu/Item are mocked so overflow items render as clickable buttons:
+// each Item becomes a <button> that fires the Menu's onAction with the Item's key,
+// preserving the existing getByText(...).closest('button') click-assertion pattern.
 jest.mock('@adobe/react-spectrum', () => ({
     ActionButton: ({ children, onPress, isDisabled, ...props }: any) => (
         <button onClick={onPress} disabled={isDisabled} {...props}>
@@ -19,6 +23,25 @@ jest.mock('@adobe/react-spectrum', () => ({
         </button>
     ),
     Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
+    MenuTrigger: ({ children }: any) => <div data-testid="menu-trigger">{children}</div>,
+    Menu: ({ children, onAction }: any) => (
+        <div role="menu">
+            {React.Children.map(children, (child: any) => {
+                if (!child) return null;
+                const key = child.key ?? child.props?.['data-key'];
+                return (
+                    <button
+                        key={key}
+                        role="menuitem"
+                        onClick={() => onAction?.(key)}
+                    >
+                        {child.props?.children}
+                    </button>
+                );
+            })}
+        </div>
+    ),
+    Item: ({ children }: any) => <>{children}</>,
 }));
 
 // Mock Spectrum icons
@@ -46,32 +69,15 @@ jest.mock('@spectrum-icons/workflow/Settings', () => ({
     __esModule: true,
     default: () => <span data-testid="settings-icon" />,
 }));
-jest.mock('@spectrum-icons/workflow/FolderOpen', () => ({
-    __esModule: true,
-    default: () => <span data-testid="folder-icon" />,
-}));
-jest.mock('@spectrum-icons/workflow/Code', () => ({
-    __esModule: true,
-    default: () => <span data-testid="code-icon" />,
-}));
 jest.mock('@spectrum-icons/workflow/Delete', () => ({
     __esModule: true,
     default: () => <span data-testid="delete-icon" />,
-}));
-
-// Mock GridLayout
-jest.mock('@/core/ui/components/layout', () => ({
-    GridLayout: ({ children }: any) => <div data-testid="grid-layout">{children}</div>,
 }));
 
 // Mock EDS-specific icons
 jest.mock('@spectrum-icons/workflow/PublishCheck', () => ({
     __esModule: true,
     default: () => <span data-testid="publish-icon" />,
-}));
-jest.mock('@spectrum-icons/workflow/Revert', () => ({
-    __esModule: true,
-    default: () => <span data-testid="revert-icon" />,
 }));
 
 describe('ActionGrid', () => {
@@ -90,107 +96,315 @@ describe('ActionGrid', () => {
         handleConfigure: jest.fn(),
         handleViewComponents: jest.fn(),
         handleOpenDevConsole: jest.fn(),
+        handleOpenAi: jest.fn(),
         handleDeleteProject: jest.fn(),
+    };
+
+    const edsProps = {
+        ...defaultProps,
+        isEds: true,
+        handleOpenLiveSite: jest.fn(),
+        handleOpenDaLive: jest.fn(),
+        handleSyncStorefront: jest.fn(),
+    };
+
+    /** Resolve the zone container element for a given data-zone value. */
+    const getZone = (container: HTMLElement, zone: string): HTMLElement => {
+        const el = container.querySelector(`[data-zone="${zone}"]`);
+        return el as HTMLElement;
     };
 
     beforeEach(() => {
         jest.clearAllMocks();
     });
 
-    describe('Start/Stop Button Rendering', () => {
-        it('should render Start button when not running', () => {
-            render(<ActionGrid {...defaultProps} isRunning={false} />);
+    describe('Open in Claude Code removal', () => {
+        it('should not render an Open in Claude Code tile', () => {
+            render(<ActionGrid {...defaultProps} />);
 
-            expect(screen.getByText('Start')).toBeInTheDocument();
-            expect(screen.queryByText('Stop')).not.toBeInTheDocument();
+            expect(screen.queryByText('Open in Claude Code')).not.toBeInTheDocument();
         });
 
-        it('should render Stop button when running', () => {
-            render(<ActionGrid {...defaultProps} isRunning={true} />);
+        it('should not render an Open in Claude Code tile for EDS projects', () => {
+            render(<ActionGrid {...edsProps} />);
 
-            expect(screen.getByText('Stop')).toBeInTheDocument();
-            expect(screen.queryByText('Start')).not.toBeInTheDocument();
-        });
-
-        it('should disable Start button when isStartDisabled is true', () => {
-            render(<ActionGrid {...defaultProps} isRunning={false} isStartDisabled={true} />);
-
-            const startButton = screen.getByText('Start').closest('button');
-            expect(startButton).toBeDisabled();
-        });
-
-        it('should disable Stop button when isStopDisabled is true', () => {
-            render(<ActionGrid {...defaultProps} isRunning={true} isStopDisabled={true} />);
-
-            const stopButton = screen.getByText('Stop').closest('button');
-            expect(stopButton).toBeDisabled();
+            expect(screen.queryByText('Open in Claude Code')).not.toBeInTheDocument();
         });
     });
 
-    describe('Open Browser Button', () => {
-        it('should render Open in Browser button', () => {
-            render(<ActionGrid {...defaultProps} />);
+    describe('Primary Cluster', () => {
+        it('should label the primary cluster "Primary"', () => {
+            const { container } = render(<ActionGrid {...defaultProps} />);
 
-            expect(screen.getByText('Open in Browser')).toBeInTheDocument();
+            const primary = getZone(container, 'primary');
+            expect(within(primary).getByText('Primary')).toBeInTheDocument();
         });
 
-        it('should disable Open button when not running', () => {
+        it('should place Start in the primary cluster when not running (non-EDS)', () => {
+            const { container } = render(<ActionGrid {...defaultProps} isRunning={false} />);
+
+            const primary = getZone(container, 'primary');
+            expect(primary).toBeInTheDocument();
+            expect(within(primary).getByText('Start')).toBeInTheDocument();
+            expect(within(primary).queryByText('Stop')).not.toBeInTheDocument();
+        });
+
+        it('should place Stop in the primary cluster when running (non-EDS)', () => {
+            const { container } = render(<ActionGrid {...defaultProps} isRunning={true} />);
+
+            const primary = getZone(container, 'primary');
+            expect(within(primary).getByText('Stop')).toBeInTheDocument();
+            expect(within(primary).queryByText('Start')).not.toBeInTheDocument();
+        });
+
+        it('should place Open in Browser in the primary cluster', () => {
+            const { container } = render(<ActionGrid {...defaultProps} />);
+
+            const primary = getZone(container, 'primary');
+            expect(within(primary).getByText('Open in Browser')).toBeInTheDocument();
+        });
+
+        it('should place AI in the primary cluster', () => {
+            const { container } = render(<ActionGrid {...defaultProps} />);
+
+            const primary = getZone(container, 'primary');
+            expect(within(primary).getByText('AI')).toBeInTheDocument();
+        });
+
+        it('should mark primary tiles with the hero accent modifier class', () => {
+            render(<ActionGrid {...defaultProps} />);
+
+            const aiButton = screen.getByText('AI').closest('button');
+            // Mock renders UNSAFE_className as a lowercase attribute
+            expect(aiButton?.getAttribute('unsafe_classname')).toContain('dashboard-action-button--hero');
+        });
+
+        it('should not render Start/Stop in the primary cluster for EDS projects', () => {
+            const { container } = render(<ActionGrid {...edsProps} />);
+
+            const primary = getZone(container, 'primary');
+            expect(within(primary).queryByText('Start')).not.toBeInTheDocument();
+            expect(within(primary).queryByText('Stop')).not.toBeInTheDocument();
+        });
+    });
+
+    describe('Storefront Zone (EDS only)', () => {
+        it('should not render a storefront zone for non-EDS projects', () => {
+            const { container } = render(<ActionGrid {...defaultProps} />);
+
+            expect(getZone(container, 'storefront')).not.toBeInTheDocument();
+        });
+
+        it('should render a storefront zone for EDS projects', () => {
+            const { container } = render(<ActionGrid {...edsProps} />);
+
+            expect(getZone(container, 'storefront')).toBeInTheDocument();
+        });
+
+        it('should label the storefront zone "Storefront"', () => {
+            const { container } = render(<ActionGrid {...edsProps} />);
+
+            const storefront = getZone(container, 'storefront');
+            expect(within(storefront).getByText('Storefront')).toBeInTheDocument();
+        });
+
+        it('should not label the storefront zone "Author"', () => {
+            const { container } = render(<ActionGrid {...edsProps} />);
+
+            const storefront = getZone(container, 'storefront');
+            // The zone-label text must not be "Author" (Sync pushes code, not content)
+            const label = storefront.querySelector('.dashboard-zone-label');
+            expect(label?.textContent).not.toBe('Author');
+        });
+
+        it('should place Author in DA.live in the storefront zone', () => {
+            const { container } = render(<ActionGrid {...edsProps} />);
+
+            const storefront = getZone(container, 'storefront');
+            expect(within(storefront).getByText('Author in DA.live')).toBeInTheDocument();
+        });
+
+        it('should place Sync Storefront in the storefront zone when handler provided', () => {
+            const { container } = render(<ActionGrid {...edsProps} />);
+
+            const storefront = getZone(container, 'storefront');
+            expect(within(storefront).getByText('Sync Storefront')).toBeInTheDocument();
+        });
+
+        it('should not render Sync Storefront when handleSyncStorefront is absent', () => {
+            const { handleSyncStorefront: _handleSyncStorefront, ...edsNoSync } = edsProps;
+            render(<ActionGrid {...edsNoSync} />);
+
+            expect(screen.queryByText('Sync Storefront')).not.toBeInTheDocument();
+        });
+    });
+
+    describe('Build Zone', () => {
+        it('should label the build zone "Build"', () => {
+            const { container } = render(<ActionGrid {...defaultProps} />);
+
+            const build = getZone(container, 'build');
+            expect(within(build).getByText('Build')).toBeInTheDocument();
+        });
+
+        it('should place Configure in the build zone', () => {
+            const { container } = render(<ActionGrid {...defaultProps} />);
+
+            const build = getZone(container, 'build');
+            expect(within(build).getByText('Configure')).toBeInTheDocument();
+        });
+
+        it('should place Logs in the build zone', () => {
+            const { container } = render(<ActionGrid {...defaultProps} />);
+
+            const build = getZone(container, 'build');
+            expect(within(build).getByText('Logs')).toBeInTheDocument();
+        });
+
+        it('should place Deploy Mesh in the build zone when hasMesh', () => {
+            const { container } = render(<ActionGrid {...defaultProps} hasMesh={true} />);
+
+            const build = getZone(container, 'build');
+            expect(within(build).getByText('Deploy Mesh')).toBeInTheDocument();
+        });
+
+        it('should not render Deploy Mesh when hasMesh is false', () => {
+            render(<ActionGrid {...defaultProps} hasMesh={false} />);
+
+            expect(screen.queryByText('Deploy Mesh')).not.toBeInTheDocument();
+        });
+    });
+
+    describe('Overflow Menu', () => {
+        it('should render a More overflow trigger with an accessible label', () => {
+            render(<ActionGrid {...defaultProps} />);
+
+            expect(screen.getByLabelText('More actions')).toBeInTheDocument();
+        });
+
+        it('should expose Components inside the overflow menu', () => {
+            const { container } = render(<ActionGrid {...defaultProps} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(menu).toBeInTheDocument();
+            expect(within(menu).getByText('Components')).toBeInTheDocument();
+        });
+
+        it('should expose Dev Console inside the overflow menu', () => {
+            const { container } = render(<ActionGrid {...defaultProps} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).getByText('Dev Console')).toBeInTheDocument();
+        });
+
+        it('should not render Components as a top-level tile', () => {
+            const { container } = render(<ActionGrid {...defaultProps} />);
+
+            const build = getZone(container, 'build');
+            // Components lives only inside the overflow menu, not as a zone tile
+            const buildButtons = within(build).queryAllByText('Components');
+            // Any Components text present must be within the menu, not a tile button
+            buildButtons.forEach((node) => {
+                expect(node.closest('[role="menu"]')).toBeInTheDocument();
+            });
+        });
+
+        it('should call handleViewComponents when Components menu item clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(<ActionGrid {...defaultProps} />);
+
+            await user.click(screen.getByText('Components'));
+
+            expect(defaultProps.handleViewComponents).toHaveBeenCalled();
+        });
+
+        it('should call handleOpenDevConsole when Dev Console menu item clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(<ActionGrid {...defaultProps} />);
+
+            await user.click(screen.getByText('Dev Console'));
+
+            expect(defaultProps.handleOpenDevConsole).toHaveBeenCalled();
+        });
+    });
+
+    describe('Delete Footer (isolated)', () => {
+        it('should render Delete outside all action zones', () => {
+            const { container } = render(<ActionGrid {...defaultProps} />);
+
+            const deleteFooter = getZone(container, 'delete');
+            expect(deleteFooter).toBeInTheDocument();
+            expect(within(deleteFooter).getByText('Delete')).toBeInTheDocument();
+        });
+
+        it('should not place Delete inside the build zone', () => {
+            const { container } = render(<ActionGrid {...defaultProps} />);
+
+            const build = getZone(container, 'build');
+            expect(within(build).queryByText('Delete')).not.toBeInTheDocument();
+        });
+
+        it('should mark Delete with the destructive modifier class', () => {
+            render(<ActionGrid {...defaultProps} />);
+
+            const deleteButton = screen.getByText('Delete').closest('button');
+            expect(deleteButton?.getAttribute('unsafe_classname')).toContain('dashboard-action-button--destructive');
+        });
+
+        it('should call handleDeleteProject when Delete clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(<ActionGrid {...defaultProps} />);
+
+            await user.click(screen.getByText('Delete'));
+
+            expect(defaultProps.handleDeleteProject).toHaveBeenCalled();
+        });
+    });
+
+    describe('Open Browser Gating', () => {
+        it('should disable Open button when not running (non-EDS)', () => {
             render(<ActionGrid {...defaultProps} isRunning={false} />);
 
             const openButton = screen.getByText('Open in Browser').closest('button');
             expect(openButton).toBeDisabled();
         });
 
-        it('should enable Open button when running', () => {
+        it('should enable Open button when running (non-EDS)', () => {
             render(<ActionGrid {...defaultProps} isRunning={true} />);
 
             const openButton = screen.getByText('Open in Browser').closest('button');
             expect(openButton).not.toBeDisabled();
         });
 
-        it('should disable Open button when isOpeningBrowser is true', () => {
+        it('should disable Open button when isOpeningBrowser is true (non-EDS)', () => {
             render(<ActionGrid {...defaultProps} isRunning={true} isOpeningBrowser={true} />);
 
             const openButton = screen.getByText('Open in Browser').closest('button');
             expect(openButton).toBeDisabled();
         });
+
+        it('should disable EDS Open in Browser only while isOpeningBrowser', () => {
+            render(<ActionGrid {...edsProps} isOpeningBrowser={false} />);
+            expect(screen.getByText('Open in Browser').closest('button')).not.toBeDisabled();
+        });
+
+        it('should disable EDS Open in Browser when isOpeningBrowser is true', () => {
+            render(<ActionGrid {...edsProps} isOpeningBrowser={true} />);
+            expect(screen.getByText('Open in Browser').closest('button')).toBeDisabled();
+        });
     });
 
-    describe('Common Buttons', () => {
-        it('should render Logs button', () => {
-            render(<ActionGrid {...defaultProps} />);
+    describe('Start/Stop Gating', () => {
+        it('should disable Start when isStartDisabled is true', () => {
+            render(<ActionGrid {...defaultProps} isRunning={false} isStartDisabled={true} />);
 
-            expect(screen.getByText('Logs')).toBeInTheDocument();
+            expect(screen.getByText('Start').closest('button')).toBeDisabled();
         });
 
-        it('should render Deploy Mesh button', () => {
-            render(<ActionGrid {...defaultProps} />);
+        it('should disable Stop when isStopDisabled is true', () => {
+            render(<ActionGrid {...defaultProps} isRunning={true} isStopDisabled={true} />);
 
-            expect(screen.getByText('Deploy Mesh')).toBeInTheDocument();
-        });
-
-        it('should render Configure button', () => {
-            render(<ActionGrid {...defaultProps} />);
-
-            expect(screen.getByText('Configure')).toBeInTheDocument();
-        });
-
-        it('should render Components button', () => {
-            render(<ActionGrid {...defaultProps} />);
-
-            expect(screen.getByText('Components')).toBeInTheDocument();
-        });
-
-        it('should render Dev Console button', () => {
-            render(<ActionGrid {...defaultProps} />);
-
-            expect(screen.getByText('Dev Console')).toBeInTheDocument();
-        });
-
-        it('should render Delete button', () => {
-            render(<ActionGrid {...defaultProps} />);
-
-            expect(screen.getByText('Delete')).toBeInTheDocument();
+            expect(screen.getByText('Stop').closest('button')).toBeDisabled();
         });
     });
 
@@ -207,6 +421,22 @@ describe('ActionGrid', () => {
 
             const configureButton = screen.getByText('Configure').closest('button');
             expect(configureButton).toBeDisabled();
+        });
+    });
+
+    describe('Logs Hover Suppression', () => {
+        it('should apply hover-suppressed class when isLogsHoverSuppressed is true', () => {
+            render(<ActionGrid {...defaultProps} isLogsHoverSuppressed={true} />);
+
+            const logsButton = screen.getByText('Logs').closest('button');
+            expect(logsButton?.getAttribute('unsafe_classname')).toContain('hover-suppressed');
+        });
+
+        it('should not apply hover-suppressed class when isLogsHoverSuppressed is false', () => {
+            render(<ActionGrid {...defaultProps} isLogsHoverSuppressed={false} />);
+
+            const logsButton = screen.getByText('Logs').closest('button');
+            expect(logsButton?.getAttribute('unsafe_classname')).not.toContain('hover-suppressed');
         });
     });
 
@@ -229,7 +459,7 @@ describe('ActionGrid', () => {
             expect(defaultProps.handleStopDemo).toHaveBeenCalled();
         });
 
-        it('should call handleOpenBrowser when Open clicked', async () => {
+        it('should call handleOpenBrowser when Open clicked (non-EDS)', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...defaultProps} isRunning={true} />);
 
@@ -265,96 +495,22 @@ describe('ActionGrid', () => {
             expect(defaultProps.handleConfigure).toHaveBeenCalled();
         });
 
-        it('should call handleViewComponents when Components clicked', async () => {
+        it('should call handleOpenAi when AI tile clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...defaultProps} />);
 
-            await user.click(screen.getByText('Components'));
+            await user.click(screen.getByText('AI'));
 
-            expect(defaultProps.handleViewComponents).toHaveBeenCalled();
-        });
-
-        it('should call handleOpenDevConsole when Dev Console clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} />);
-
-            await user.click(screen.getByText('Dev Console'));
-
-            expect(defaultProps.handleOpenDevConsole).toHaveBeenCalled();
-        });
-
-        it('should call handleDeleteProject when Delete clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} />);
-
-            await user.click(screen.getByText('Delete'));
-
-            expect(defaultProps.handleDeleteProject).toHaveBeenCalled();
+            expect(defaultProps.handleOpenAi).toHaveBeenCalled();
         });
     });
 
-    describe('Logs Hover Suppression', () => {
-        it('should apply hover-suppressed class when isLogsHoverSuppressed is true', () => {
-            render(<ActionGrid {...defaultProps} isLogsHoverSuppressed={true} />);
-
-            const logsButton = screen.getByText('Logs').closest('button');
-            // Mock renders UNSAFE_className as lowercase attribute
-            expect(logsButton?.getAttribute('unsafe_classname')).toContain('hover-suppressed');
-        });
-
-        it('should not apply hover-suppressed class when isLogsHoverSuppressed is false', () => {
-            render(<ActionGrid {...defaultProps} isLogsHoverSuppressed={false} />);
-
-            const logsButton = screen.getByText('Logs').closest('button');
-            // Mock renders UNSAFE_className as lowercase attribute
-            expect(logsButton?.getAttribute('unsafe_classname')).not.toContain('hover-suppressed');
-        });
-    });
-
-    describe('Grid Structure', () => {
-        it('should render exactly 8 action buttons (Start/Stop are mutually exclusive)', () => {
-            render(<ActionGrid {...defaultProps} />);
-
-            const buttons = screen.getAllByRole('button');
-            // 8 buttons: Start OR Stop (exclusive) + Open + Logs + Deploy Mesh + Configure + Components + Dev Console + Delete
-            expect(buttons).toHaveLength(8);
-        });
-    });
-
-    describe('EDS-Specific Buttons', () => {
-        // Note: EDS Publish and Reset actions are available via the project card kebab menu,
-        // not on this dashboard detail view. See ActionGrid.tsx header comment.
-        const edsProps = {
-            ...defaultProps,
-            isEds: true,
-            handleOpenLiveSite: jest.fn(),
-            handleOpenDaLive: jest.fn(),
-        };
-
+    describe('EDS-Specific Interactions', () => {
         beforeEach(() => {
             jest.clearAllMocks();
         });
 
-        it('should render Open in Browser button for EDS projects', () => {
-            render(<ActionGrid {...edsProps} />);
-
-            expect(screen.getByText('Open in Browser')).toBeInTheDocument();
-        });
-
-        it('should render Author in DA.live button for EDS projects', () => {
-            render(<ActionGrid {...edsProps} />);
-
-            expect(screen.getByText('Author in DA.live')).toBeInTheDocument();
-        });
-
-        it('should not render Start/Stop buttons for EDS projects', () => {
-            render(<ActionGrid {...edsProps} />);
-
-            expect(screen.queryByText('Start')).not.toBeInTheDocument();
-            expect(screen.queryByText('Stop')).not.toBeInTheDocument();
-        });
-
-        it('should call handleOpenLiveSite when Open in Browser clicked', async () => {
+        it('should call handleOpenLiveSite when Open in Browser clicked (EDS)', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...edsProps} />);
 
@@ -370,6 +526,15 @@ describe('ActionGrid', () => {
             await user.click(screen.getByText('Author in DA.live'));
 
             expect(edsProps.handleOpenDaLive).toHaveBeenCalled();
+        });
+
+        it('should call handleSyncStorefront when Sync Storefront clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(<ActionGrid {...edsProps} />);
+
+            await user.click(screen.getByText('Sync Storefront'));
+
+            expect(edsProps.handleSyncStorefront).toHaveBeenCalled();
         });
     });
 });

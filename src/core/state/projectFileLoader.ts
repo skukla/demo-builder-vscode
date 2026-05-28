@@ -9,6 +9,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import type { Project, ComponentInstance } from '@/types';
+import type { AiPrompt } from '@/types/base';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
 import { getComponentInstancesByType, parseJSON } from '@/types/typeGuards';
@@ -31,6 +32,8 @@ export interface ProjectManifest {
     selectedAddons?: string[];
     selectedBlockLibraries?: string[];
     customBlockLibraries?: CustomBlockLibrary[];
+    aiPrompts?: AiPrompt[];
+    pinned?: boolean;
 }
 
 export class ProjectFileLoader {
@@ -91,6 +94,8 @@ export class ProjectFileLoader {
                 selectedAddons: manifest.selectedAddons,
                 selectedBlockLibraries: manifest.selectedBlockLibraries,
                 customBlockLibraries: manifest.customBlockLibraries,
+                aiPrompts: manifest.aiPrompts,
+                pinned: manifest.pinned,
             };
 
             // Detect if demo is actually running

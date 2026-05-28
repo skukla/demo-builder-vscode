@@ -8,12 +8,20 @@
  * Note: Manifest writing is handled by ProjectConfigWriter (single source of truth).
  */
 
+import * as path from 'path';
 import * as vscode from 'vscode';
+import stacksConfig from '../config/stacks.json';
 import { ProgressTracker } from '../handlers/shared';
+import { writeAgentsMd } from './aiContextWriter';
 import type { ComponentDefinitionEntry } from './componentInstallationOrchestrator';
+import { writeMcpConfigs } from './mcpConfigWriter';
+import { writeSkillFiles } from './skillsWriter';
 import { isMeshComponentId } from '@/core/constants';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { ProjectSetupContext, generateComponentConfigFiles } from '@/features/project-creation/helpers';
+import type { Project } from '@/types/base';
+import type { Logger } from '@/types/logger';
+import type { Stack } from '@/types/stacks';
 import { getComponentIds, getEntryCount } from '@/types/typeGuards';
 
 export interface FinalizationContext {
@@ -146,4 +154,65 @@ export async function sendCompletionAndCleanup(
     }
 
     logger.debug('[Project Creation] ===== PROJECT CREATION WORKFLOW COMPLETE =====');
+}
+
+/**
+ * Phase 7: Open the freshly-created project as the current window's VS Code
+ * workspace. Without this, the user finishes the wizard and finds themselves
+ * still in their old workspace — Claude Code launches inherit that workspace
+ * as cwd and miss the new project's `.claude/skills/`, `.mcp.json`, and
+ * `AGENTS.md`.
+ *
+ * Skips the openFolder call when the workspace already matches the project
+ * (rare but possible: wizard re-run in an existing project's workspace) to
+ * avoid an unnecessary window reload.
+ *
+ * Best-effort: errors are logged as warnings, never thrown — project creation
+ * has already succeeded by the time this runs.
+ */
+export async function openProjectAsWorkspace(
+    projectPath: string,
+    logger: Logger,
+): Promise<void> {
+    const currentWorkspace = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (currentWorkspace === projectPath) {
+        logger.debug('[Project Creation] Workspace already anchored to project; skipping openFolder');
+        return;
+    }
+    try {
+        await vscode.commands.executeCommand(
+            'vscode.openFolder',
+            vscode.Uri.file(projectPath),
+            false,
+        );
+    } catch (error) {
+        logger.warn(
+            '[Project Creation] Failed to open project as workspace',
+            error instanceof Error ? error : undefined,
+        );
+    }
+}
+
+/**
+ * Phase 6: Generate AI context files (AGENTS.md, .mcp.json, .claude/skills/)
+ *
+ * Delegates to the three writers. Non-blocking by design — callers should wrap in
+ * try/catch and log warnings on failure.
+ */
+export async function generateAIContextFiles(
+    projectPath: string,
+    project: Project,
+    extensionPath: string,
+): Promise<void> {
+    const results = await Promise.allSettled([
+        writeAgentsMd(projectPath, project, stacksConfig.stacks as Stack[]),
+        writeMcpConfigs(projectPath, project, path.join(extensionPath, 'dist')),
+        writeSkillFiles(projectPath, project),
+    ]);
+    const errors = results
+        .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+        .map(r => (r.reason instanceof Error ? r.reason.message : String(r.reason)));
+    if (errors.length > 0) {
+        throw new Error(`AI context file generation failed: ${errors.join('; ')}`);
+    }
 }

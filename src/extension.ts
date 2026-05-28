@@ -15,6 +15,8 @@ import { ComponentTreeProvider } from '@/features/components/providers/component
 import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLiveSites';
 import { manageGitHubReposCommand } from '@/features/eds/commands/manageGitHubRepos';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
+import { PENDING_CLAUDE_LAUNCH_KEY } from '@/commands/openInClaude';
+import { shouldAutoReopenProjectsList } from '@/features/dashboard/commands/showDashboard';
 import { SidebarProvider } from '@/features/sidebar';
 import type { Logger } from '@/types/logger';
 import { getProjectFrontendPort } from '@/types/typeGuards';
@@ -44,6 +46,50 @@ function shouldAutoOpenProjectsList(
     if (BaseWebviewCommand.isWebviewTransitionInProgress()) return false;
     return true;
 }
+
+/** Shape of the pending-prompt record written by `handleOpenInClaude` when a workspace anchor reload is required. */
+interface PendingClaudeLaunch {
+    projectPath: string;
+    prompt: string;
+    createdAt: number;
+}
+
+/** Pending records older than this are discarded silently on activation. */
+const PENDING_LAUNCH_TTL_MS = 60_000;
+
+/**
+ * Replay a pending Claude launch that was queued before a workspace anchor
+ * reload. Three inline checks gate the dispatch: record present, not stale,
+ * and workspace now matches the recorded `projectPath`. The record is cleared
+ * unconditionally — a stale or mismatched record is dropped silently.
+ */
+async function replayPendingClaudeLaunch(
+    context: vscode.ExtensionContext,
+    workspaceFolderPath: string | undefined,
+    log: Logger,
+): Promise<void> {
+    const pending = context.globalState.get<PendingClaudeLaunch>(PENDING_CLAUDE_LAUNCH_KEY);
+    await context.globalState.update(PENDING_CLAUDE_LAUNCH_KEY, undefined);
+    if (!pending) return;
+    const fresh = Date.now() - pending.createdAt < PENDING_LAUNCH_TTL_MS;
+    const workspaceMatches = workspaceFolderPath === pending.projectPath;
+    if (!fresh || !workspaceMatches) {
+        log.debug(
+            `[Extension] discarded pending Claude launch (fresh=${fresh}, workspaceMatches=${workspaceMatches})`,
+        );
+        return;
+    }
+    log.info('[Extension] replaying pending Claude launch with prompt pre-fill');
+    // Wrap in try/catch — a failed replay must not abort activation.
+    try {
+        await vscode.commands.executeCommand('demoBuilder.openInClaude', { prompt: pending.prompt });
+    } catch (error) {
+        log.warn(
+            `[Extension] pending Claude launch replay failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+    }
+}
+
 
 let logger: Logger;
 let stateManager: StateManager;
@@ -146,15 +192,19 @@ export async function activate(context: vscode.ExtensionContext) {
         context.subscriptions.push(projectChangeSubscription);
         context.subscriptions.push(treeViewVisibilitySubscription);
 
-        // Set up disposal callback to open Projects List when Dashboard closes
-        // Only fires for non-transition closures (e.g., user clicking X, not Back button)
+        // Set up disposal callback to auto-reopen the Projects List when the
+        // Dashboard closes — the safety net so a user inside a project workspace
+        // never ends up with no Demo Builder navigation surface.
+        //
+        // Guarded by `shouldAutoReopenProjectsList`, which short-circuits when:
+        //   - a webview transition is in progress (user is mid-navigation), or
+        //   - the workspace folder is not a Demo Builder project (the dashboard
+        //     was open in a non-project workspace; nothing to reopen toward).
         BaseWebviewCommand.setDisposalCallback(async (webviewId: string) => {
-            // Skip if we're in a transition (back button navigation handles this itself)
-            if (BaseWebviewCommand.isWebviewTransitionInProgress()) {
-                return;
-            }
-            // When Project Dashboard closes, open Projects List
-            if (webviewId === 'demoBuilder.projectDashboard') {
+            if (webviewId !== 'demoBuilder.projectDashboard') return;
+            const workspaceFolderPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            const transitionInProgress = BaseWebviewCommand.isWebviewTransitionInProgress();
+            if (shouldAutoReopenProjectsList(workspaceFolderPath, transitionInProgress)) {
                 await vscode.commands.executeCommand('demoBuilder.showProjectsList');
             }
         });
@@ -268,6 +318,29 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Note: Update checks are triggered when the sidebar is first activated
         // (see SidebarProvider.resolveWebviewView)
+
+        // Global MCP registration is consent-gated and triggered after first
+        // project creation completes (see executor.ts). The user is asked once;
+        // the choice persists in globalState. No activation-time auto-write.
+
+        // When this window is anchored to a Demo Builder project (e.g. just
+        // opened via tile-click), focus the Demo Builder Activity Bar so the
+        // sidebar becomes visible. The visibility subscription (line 133)
+        // then fires and auto-opens the projects list. Without this, a new
+        // project window inherits whichever Activity Bar view was previously
+        // focused (often Explorer) and the user has no Demo Builder UI until
+        // they click the Activity Bar icon themselves.
+        const activationWorkspace = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (shouldAutoReopenProjectsList(activationWorkspace, false)) {
+            await vscode.commands.executeCommand('workbench.view.extension.demoBuilder');
+        }
+
+        // Replay any pending prompt launch that was queued before a workspace
+        // anchor reload (see handleOpenInClaude in features/dashboard/handlers/
+        // aiHandlers.ts). The record carries `{ projectPath, prompt, createdAt }`
+        // and only fires if all three checks pass: present, not stale (<60s),
+        // and workspace folder now matches the recorded projectPath.
+        await replayPendingClaudeLaunch(context, activationWorkspace, logger);
 
         logger.info('[Extension] Ready');
 

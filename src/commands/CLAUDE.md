@@ -135,12 +135,69 @@ comm.on('continue-step', async (payload) => {
 });
 ```
 
+### navigate (Internal)
+
+**Purpose**: Routes sidebar navigation clicks to the appropriate webview command
+
+**Command ID**: `demoBuilder.navigate`
+
+**Accepted targets** (via `payload.target`):
+
+| Target | Routes to |
+|--------|-----------|
+| `overview` | `projectDashboard.execute()` |
+| `configure` | `configureProject.execute()` |
+| `ai` | `demoBuilder.openAiExperience` (chat-first: opens the Claude Code terminal tab) |
+| `updates` | `checkUpdates.execute()` |
+
+**Note**: This command is intentionally omitted from `package.json` contributions. It is an internal sidebar-routing command, not a user-facing command palette entry. The sidebar sends `demoBuilder.navigate` messages; the command dispatches to the appropriate webview.
+
+### AI experience (chat-first)
+
+Two internal commands back the chat-first AI surface (also omitted from `package.json` — invoked programmatically, not from the palette):
+
+- **`demoBuilder.openAiExperience`** — "Open Chat". Calls `OpenInClaudeCommand.execute()` with no prompt: opens/reveals the Claude Code terminal as a tab in the active editor group (`ViewColumn.Active`, next to Project Dashboard). `navigate('ai')` and the dashboard AI action route here.
+- **`demoBuilder.aiMenu`** (`src/commands/aiMenu.ts`) — the AI icon (the **wand icon** in the sidebar `UtilityBar`). State-aware via `isClaudeChatOpen()` (from `openInClaude.ts`): when no live "Claude Code" terminal exists, it launches the chat directly (`demoBuilder.openAiExperience`) — zero-friction first open. When a chat is alive, it shows the prompt QuickPick (built via the shared `showWebviewQuickPick`): the merged prompt list (pinned first) and a "Manage prompts…" row. Selecting a prompt dispatches `demoBuilder.openInClaude` with `{ prompt }` — which focuses the live terminal as part of the inject, so a separate "Open chat" row would be redundant. "Manage prompts…" dispatches `demoBuilder.openAi` (the prompt library). The picker carries no per-item buttons — creating, editing, deleting, and pinning all live in the library.
+
+The prompt-library webview (`ShowAiCommand` / `demoBuilder.openAi`, titled "Prompt Library", command-palette entry "Demo Builder: Manage AI Prompts") is the single home for prompt CRUD — reached on demand via the QuickPick's "Manage prompts…" or the palette. It is not the default AI surface; the chat is. The footer "Close" button posts `cancel`, which `ShowAiCommand` handles by disposing the panel.
+
+---
+
 ### createProject (Legacy)
 
 **Purpose**: Quick project creation without wizard
 - Simplified flow for experienced users
 - Command-line style interaction
 - Minimal UI involvement
+
+### openInClaude
+
+**Purpose**: Launch Claude Code (CLI) on the current project.
+
+**Command ID**: `demoBuilder.openInClaude`
+
+**Behavior**: Find-or-spawn the "Claude Code" terminal at `project.path`, placed as a tab in the active editor group (`{ viewColumn: ViewColumn.Active }`, next to Project Dashboard). Reuses an existing live terminal (matched by name + `exitStatus === undefined`) instead of duplicating.
+
+**Prompt delivery**:
+- **Spawn**: the prompt rides the launch command as `claude --continue -- '<prompt>'` (race-free — claude runs it on startup; `--` keeps a dash-leading prompt from being read as a flag).
+- **Reuse**: claude is already running, so the prompt is injected into the live REPL via bracketed paste (pre-fills the input for the user to send).
+- The prompt is always copied to the clipboard as a silent fallback. A once-ever tip toast explains the contract the first time a prompt is sent.
+
+With no prompt, spawn runs a bare `claude --continue`.
+
+**Setting**: `demoBuilder.ai.engine` — which AI tool. Currently `'claude-code'` only; reserved for future engines (e.g. Codex).
+
+**Why no extension surface**: An earlier version routed launches through the Claude Code VS Code extension's URI handler (`vscode://anthropic.claude-code/open`). That surface was retired because the extension's URI handler opens a new chat on every launch — there is no public API to inject a prompt into the live chat — so the wand's "pick a prompt, drop it into the conversation" model can't work there.
+
+**Prompt-click pending-launch mechanism**: When the user clicks a prompt from the projects home-grid AND workspace ≠ project, `projectsDashboardHandlers.handleOpenAiForProject` writes `{ projectPath, prompt?, createdAt }` to `globalState` under `PENDING_CLAUDE_LAUNCH_KEY = 'demoBuilder.ai.pendingClaudeLaunch'`, then calls `vscode.openFolder` to anchor the workspace. On the next activation, `extension.ts:replayPendingClaudeLaunch` reads the record, validates three gates (present, fresh <60s, workspace matches `projectPath`), clears the record, and dispatches `demoBuilder.openInClaude` with the prompt. End-user experience: one click → workspace switches → chat opens with the prompt pre-filled and full project context.
+
+**Dispatched from**:
+- The project-card kebab menu in `ProjectActionsMenu.tsx` (calls `webviewClient.postMessage('openAiForProject', { projectPath })`)
+- The Prompt Library prompt cards in `PromptCard.tsx` → `AiOverviewScreen.tsx` → `webviewClient.postMessage('openInClaude', { prompt })` → `aiHandlers.handleOpenInClaude`
+- The wand QuickPick prompt rows in `aiMenu.ts`
+- `extension.ts:replayPendingClaudeLaunch` on activation when a pending record exists
+
+**File**: `src/commands/openInClaude.ts`. See `docs/architecture/adr/004-claude-code-harness.md` for the harness decision rationale.
 
 ### diagnostics
 

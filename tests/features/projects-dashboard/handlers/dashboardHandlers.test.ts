@@ -8,6 +8,8 @@ import {
     handleGetProjects,
     handleSelectProject,
     handleCreateProject,
+    handleCopyProjectPath,
+    handleOpenAiForProject,
 } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import {
     createMockProject,
@@ -35,16 +37,28 @@ jest.mock('vscode', () => ({
             get: jest.fn().mockReturnValue('cards'),
         }),
     },
+    Uri: {
+        file: jest.fn((p: string) => ({ fsPath: p, path: p })),
+    },
+    env: {
+        clipboard: {
+            writeText: jest.fn(),
+        },
+    },
+    window: {
+        showInformationMessage: jest.fn(),
+    },
 }), { virtual: true });
 
 describe('dashboardHandlers', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        // Reset vscode config mock to default
+        // Reset vscode mocks to defaults
         const vscode = require('vscode');
         vscode.workspace.getConfiguration.mockReturnValue({
             get: jest.fn().mockReturnValue('cards'),
         });
+        vscode.commands.executeCommand.mockResolvedValue(undefined);
     });
 
     describe('handleGetProjects', () => {
@@ -375,6 +389,152 @@ describe('dashboardHandlers', () => {
             await handleCreateProject(context as any);
 
             expect(context.sendMessage).not.toHaveBeenCalled();
+        });
+    });
+
+
+    describe('handleCopyProjectPath', () => {
+        it('should copy the project path to clipboard', async () => {
+            const context = createMockHandlerContext([]);
+            const vscode = require('vscode');
+
+            const result = await handleCopyProjectPath(context as any, {
+                projectPath: `${require('os').homedir()}/.demo-builder/projects/test-project`,
+            });
+
+            expect(vscode.env.clipboard.writeText).toHaveBeenCalledWith(
+                `${require('os').homedir()}/.demo-builder/projects/test-project`,
+            );
+            expect(result).toEqual({ success: true });
+        });
+
+        it('should show an information message after copying', async () => {
+            const context = createMockHandlerContext([]);
+            const vscode = require('vscode');
+
+            await handleCopyProjectPath(context as any, {
+                projectPath: `${require('os').homedir()}/.demo-builder/projects/test-project`,
+            });
+
+            expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
+                expect.stringContaining('copied'),
+            );
+        });
+
+        it('should return error when projectPath is missing', async () => {
+            const context = createMockHandlerContext([]);
+
+            const result = await handleCopyProjectPath(context as any, undefined);
+
+            expect(result.success).toBe(false);
+            expect(result.error).toBeDefined();
+        });
+
+        it('should handle clipboard error', async () => {
+            const context = createMockHandlerContext([]);
+            const vscode = require('vscode');
+            vscode.env.clipboard.writeText.mockRejectedValue(
+                new Error('Clipboard failed'),
+            );
+
+            const result = await handleCopyProjectPath(context as any, {
+                projectPath: `${require('os').homedir()}/.demo-builder/projects/test-project`,
+            });
+
+            expect(result.success).toBe(false);
+            expect(context.logger.error).toHaveBeenCalled();
+        });
+    });
+
+    describe('handleOpenAiForProject', () => {
+        // The handler reads context.context.globalState + vscode.workspace.workspaceFolders;
+        // augment the mock context inline (createMockHandlerContext doesn't include them).
+        function makeContext(projects: Project[]): any {
+            const ctx = createMockHandlerContext(projects) as any;
+            ctx.context = {
+                globalState: {
+                    get: jest.fn(),
+                    update: jest.fn().mockResolvedValue(undefined),
+                },
+            };
+            return ctx;
+        }
+
+        function setWorkspaceFolder(fsPath: string | null): void {
+            const vscode = require('vscode');
+            vscode.workspace.workspaceFolders = fsPath === null
+                ? undefined
+                : [{ uri: { fsPath } }];
+        }
+
+        afterEach(() => setWorkspaceFolder(null));
+
+        it('dispatches demoBuilder.openAiExperience when the workspace already matches the project', async () => {
+            const project = createMockProject({ name: 'AI Target' });
+            setWorkspaceFolder(project.path);
+            const context = makeContext([project]);
+            const vscode = require('vscode');
+
+            const result = await handleOpenAiForProject(context, { projectPath: project.path });
+
+            expect(result.success).toBe(true);
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openAiExperience');
+            // No workspace anchoring needed.
+            expect(context.context.globalState.update).not.toHaveBeenCalled();
+            expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
+                'vscode.openFolder',
+                expect.anything(),
+                expect.anything(),
+            );
+        });
+
+        it('writes a pending-launch record and anchors the workspace via vscode.openFolder when workspace ≠ project', async () => {
+            const project = createMockProject({ name: 'AI Target' });
+            setWorkspaceFolder('/some/other/repo');
+            const context = makeContext([project]);
+            const vscode = require('vscode');
+
+            const result = await handleOpenAiForProject(context, { projectPath: project.path });
+
+            expect(result.success).toBe(true);
+            // Pending record carries no prompt — replay opens the bare chat.
+            expect(context.context.globalState.update).toHaveBeenCalledWith(
+                'demoBuilder.ai.pendingClaudeLaunch',
+                expect.objectContaining({
+                    projectPath: project.path,
+                    prompt: undefined,
+                    createdAt: expect.any(Number),
+                }),
+            );
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                'vscode.openFolder',
+                expect.objectContaining({ fsPath: project.path }),
+                false,
+            );
+            // The chat dispatch happens post-reload via replayPendingClaudeLaunch — not inline.
+            expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith('demoBuilder.openAiExperience');
+        });
+
+        it('returns error when projectPath is missing', async () => {
+            const context = makeContext([]);
+            const vscode = require('vscode');
+
+            const result = await handleOpenAiForProject(context, {} as any);
+
+            expect(result.success).toBe(false);
+            expect(result.error).toMatch(/path is required/i);
+            expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+        });
+
+        it('returns error when project cannot be loaded', async () => {
+            const context = makeContext([]);
+            const vscode = require('vscode');
+
+            const result = await handleOpenAiForProject(context, { projectPath: '/nonexistent/path' });
+
+            expect(result.success).toBe(false);
+            expect(result.error).toMatch(/not found/i);
+            expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
         });
     });
 });

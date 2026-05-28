@@ -28,7 +28,7 @@ import type { GitHubTokenService } from './githubTokenService';
 import type { HandlerContext } from '@/types/handlers';
 import type { EdsResetParams, EdsResetProgress, EdsResetResult } from './edsResetParams';
 import { DaLiveAuthError, GitHubAppNotInstalledError } from './types';
-import { DEFAULT_FOLDER_MAPPING, buildSiteConfigParams, ConfigurationService } from './configurationService';
+import { buildSiteConfigParams, ConfigurationService } from './configurationService';
 import { HelixService } from './helixService';
 import { DaLiveContentOperations } from './daLiveContentOperations';
 import { executeEdsPipeline } from './edsPipeline';
@@ -109,7 +109,7 @@ async function syncCodeAndPermissions(
  * a race where Helix's async bulk processing overwrites or clears the Config Service entry.
  */
 async function publishConfigAndRegisterSite(
-    { repoOwner, repoName, daLiveOrg, daLiveSite }: Pick<EdsResetParams, 'repoOwner' | 'repoName' | 'daLiveOrg' | 'daLiveSite'>,
+    { repoOwner, repoName, daLiveOrg, daLiveSite, byomOverlayUrl }: Pick<EdsResetParams, 'repoOwner' | 'repoName' | 'daLiveOrg' | 'daLiveSite' | 'byomOverlayUrl'>,
     githubTokenService: GitHubTokenService,
     tokenProvider: TokenProvider,
     logger: Logger,
@@ -129,24 +129,17 @@ async function publishConfigAndRegisterSite(
         report(6, 'config.json publish failed, continuing...');
     }
 
-    // Step 7: Update Configuration Service with current content source
+    // Step 7: Update Configuration Service with current content source.
+    // Folder mapping is intentionally NOT configured — deprecated by Adobe
+    // (see aem.live/developer/byom). CitiSignal handles /products/{sku} via client-side routing.
     report(7, 'Updating Configuration Service...');
     const configService = new ConfigurationService(tokenProvider, logger);
     try {
         const configResult = await configService.updateSiteConfig(
-            buildSiteConfigParams(repoOwner, repoName, daLiveOrg, daLiveSite),
+            buildSiteConfigParams(repoOwner, repoName, daLiveOrg, daLiveSite, byomOverlayUrl),
         );
         if (configResult.success) {
             logger.info('[EdsReset] Configuration Service updated');
-            report(7, 'Configuring folder mapping...');
-            const folderResult = await configService.setFolderMapping(
-                daLiveOrg, daLiveSite, DEFAULT_FOLDER_MAPPING,
-            );
-            if (folderResult.success) {
-                logger.info('[EdsReset] Folder mapping configured');
-            } else {
-                logger.warn(`[EdsReset] Folder mapping warning: ${folderResult.error}`);
-            }
             report(7, 'Configuration Service updated');
         } else {
             logger.warn(`[EdsReset] Configuration Service update warning: ${configResult.error}`);

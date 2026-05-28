@@ -3,6 +3,10 @@
  *
  * Tests for the Configure screen handler map.
  * Verifies handler registration and individual handler behavior.
+ *
+ * AI handlers (verify-ai-setup, inspect-mcp, regenerate-ai-files,
+ * register-global-mcp, openInClaude) moved to aiHandlers.ts; their tests live
+ * in aiHandlers.test.ts.
  */
 
 // Mock timeoutConfig before imports (transitive dependency)
@@ -81,6 +85,13 @@ function createMockContext(overrides?: Partial<HandlerContext>): HandlerContext 
             warn: jest.fn(),
             error: jest.fn(),
         },
+        stateManager: {
+            getCurrentProject: jest.fn().mockResolvedValue({
+                name: 'Test Project',
+                path: '/projects/test',
+                stack: 'paas',
+            }),
+        },
         sendMessage: jest.fn().mockResolvedValue(undefined),
         panel: {
             dispose: jest.fn(),
@@ -111,12 +122,21 @@ describe('configureHandlers', () => {
             expect(hasHandler(configureHandlers, 'openExternal')).toBe(true);
             expect(hasHandler(configureHandlers, 'open-eds-settings')).toBe(true);
             expect(hasHandler(configureHandlers, 'discover-store-structure')).toBe(true);
+            expect(hasHandler(configureHandlers, 'sync-component-configs')).toBe(true);
             expect(hasHandler(configureHandlers, 'create-workspace-credential')).toBe(true);
         });
 
-        it('should have exactly 6 handlers', () => {
+        it('should have exactly 7 handlers', () => {
             const types = getRegisteredTypes(configureHandlers);
-            expect(types).toHaveLength(6);
+            expect(types).toHaveLength(7);
+        });
+
+        it('should NOT include AI handlers (they live in aiHandlers.ts)', () => {
+            expect(hasHandler(configureHandlers, 'verify-ai-setup')).toBe(false);
+            expect(hasHandler(configureHandlers, 'inspect-mcp')).toBe(false);
+            expect(hasHandler(configureHandlers, 'regenerate-ai-files')).toBe(false);
+            expect(hasHandler(configureHandlers, 'register-global-mcp')).toBe(false);
+            expect(hasHandler(configureHandlers, 'openInClaude')).toBe(false);
         });
 
         it('should have all handlers as functions', () => {
