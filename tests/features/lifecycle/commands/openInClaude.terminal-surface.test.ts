@@ -12,12 +12,12 @@ describe('OpenInClaudeCommand', () => {
     });
 
     // ------------------------------------------------------------------------
-    // Surface=terminal
+    // Terminal-only launch (the extension surface was retired)
     // ------------------------------------------------------------------------
 
-    describe("surface='terminal'", () => {
-        it('forces terminal launch when extension is NOT installed', async () => {
-            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
+    describe('terminal launch', () => {
+        it('always opens a terminal — there is no extension fallback', async () => {
+            const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
@@ -26,12 +26,11 @@ describe('OpenInClaudeCommand', () => {
 
             await command.execute(makeProject() as Project);
 
-            expect(mocks.openExternalMock).not.toHaveBeenCalled();
             expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
         });
 
         it('uses `claude --continue` instead of plain `claude`', async () => {
-            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
+            const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
@@ -51,8 +50,6 @@ describe('OpenInClaudeCommand', () => {
     describe('terminal find-or-spawn', () => {
         it('reuses an existing live "Claude Code" terminal instead of spawning a new one', async () => {
             const mocks = setupVscodeMocks({
-                surface: 'terminal',
-                extensionInstalled: false,
                 existingTerminals: [{ name: 'Claude Code', exitStatus: undefined }],
             });
             const command = new OpenInClaudeCommand(
@@ -73,8 +70,6 @@ describe('OpenInClaudeCommand', () => {
 
         it('spawns a new terminal if the only matching terminal has exited', async () => {
             const mocks = setupVscodeMocks({
-                surface: 'terminal',
-                extensionInstalled: false,
                 existingTerminals: [{ name: 'Claude Code', exitStatus: { code: 0 } }],
             });
             const command = new OpenInClaudeCommand(
@@ -91,8 +86,6 @@ describe('OpenInClaudeCommand', () => {
 
         it('ignores terminals with non-matching names', async () => {
             const mocks = setupVscodeMocks({
-                surface: 'terminal',
-                extensionInstalled: false,
                 existingTerminals: [{ name: 'bash', exitStatus: undefined }, { name: 'zsh', exitStatus: undefined }],
             });
             const command = new OpenInClaudeCommand(
@@ -109,16 +102,12 @@ describe('OpenInClaudeCommand', () => {
 
     // ------------------------------------------------------------------------
     // launchTerminal location selection — chat-first: always an editor tab in
-    // the active group (ViewColumn.Active), decoupled from dockToRight.
+    // the active group (ViewColumn.Active).
     // ------------------------------------------------------------------------
 
     describe('launchTerminal location selection', () => {
-        it('opens the terminal as a tab in the active editor group (ViewColumn.Active) when dockToRight=false', async () => {
-            const mocks = setupVscodeMocks({
-                surface: 'terminal',
-                extensionInstalled: false,
-                dockToRight: false,
-            });
+        it('opens the terminal as a tab in the active editor group (ViewColumn.Active)', async () => {
+            const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
@@ -135,25 +124,6 @@ describe('OpenInClaudeCommand', () => {
                 location: { viewColumn: vscode.ViewColumn.Active },
             });
         });
-
-        it('still uses ViewColumn.Active even when dockToRight=true (no longer a side split)', async () => {
-            const mocks = setupVscodeMocks({
-                surface: 'terminal',
-                extensionInstalled: false,
-                dockToRight: true,
-            });
-            const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
-                makeStateManager(makeProject()) as never,
-                makeLogger() as never,
-            );
-
-            await command.execute(makeProject() as Project);
-
-            expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
-            const createArg = mocks.createTerminalMock.mock.calls[0][0];
-            expect(createArg.location).toEqual({ viewColumn: vscode.ViewColumn.Active });
-        });
     });
 
     // ------------------------------------------------------------------------
@@ -164,8 +134,6 @@ describe('OpenInClaudeCommand', () => {
     describe('isClaudeChatOpen()', () => {
         it('returns true when a live "Claude Code" terminal exists', () => {
             setupVscodeMocks({
-                surface: 'terminal',
-                extensionInstalled: false,
                 existingTerminals: [{ name: 'Claude Code', exitStatus: undefined }],
             });
 
@@ -174,8 +142,6 @@ describe('OpenInClaudeCommand', () => {
 
         it('returns false when the only "Claude Code" terminal has exited', () => {
             setupVscodeMocks({
-                surface: 'terminal',
-                extensionInstalled: false,
                 existingTerminals: [{ name: 'Claude Code', exitStatus: { code: 0 } }],
             });
 
@@ -184,8 +150,6 @@ describe('OpenInClaudeCommand', () => {
 
         it('returns false when no terminals are open', () => {
             setupVscodeMocks({
-                surface: 'terminal',
-                extensionInstalled: false,
                 existingTerminals: [],
             });
 
@@ -194,8 +158,6 @@ describe('OpenInClaudeCommand', () => {
 
         it('ignores live terminals with non-matching names', () => {
             setupVscodeMocks({
-                surface: 'terminal',
-                extensionInstalled: false,
                 existingTerminals: [{ name: 'bash', exitStatus: undefined }],
             });
 
@@ -209,7 +171,7 @@ describe('OpenInClaudeCommand', () => {
 
     describe('terminal behavior', () => {
         it("creates a terminal named 'Claude Code' with cwd = project.path", async () => {
-            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
+            const mocks = setupVscodeMocks();
             const project = makeProject({ path: '/projects/demo' });
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
@@ -225,7 +187,7 @@ describe('OpenInClaudeCommand', () => {
         });
 
         it('calls term.show() before sendText("claude --continue")', async () => {
-            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
+            const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
@@ -240,7 +202,7 @@ describe('OpenInClaudeCommand', () => {
         });
 
         it('surfaces an error when project.path is missing (no terminal created)', async () => {
-            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
+            const mocks = setupVscodeMocks();
             const project = makeProject({ path: '' });
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
@@ -255,7 +217,7 @@ describe('OpenInClaudeCommand', () => {
         });
 
         it('surfaces an error when no project is provided (no terminal created)', async () => {
-            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
+            const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(null) as never,

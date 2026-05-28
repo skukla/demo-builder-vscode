@@ -95,7 +95,6 @@ export {
     handleDeleteAiPrompt,
     handleListAiPrompts,
     handleCopyAiPrompt,
-    handleBrowseClaudeSessions,
     GLOBAL_AI_PROMPTS_KEY,
     mergePromptsForRead,
     deleteAiPromptById,

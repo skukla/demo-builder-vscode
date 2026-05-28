@@ -1,14 +1,13 @@
 /**
- * aiHandlers Tests — Copy, sessions & module helpers
+ * aiHandlers Tests — Copy & module helpers
  *
- * handleCopyAiPrompt, handleBrowseClaudeSessions, and the module-level prompt
- * helpers (GLOBAL_AI_PROMPTS_KEY, mergePromptsForRead, readMergedAiPrompts,
- * deleteAiPromptById). Shared setup lives in aiHandlers.testUtils.ts.
+ * handleCopyAiPrompt and the module-level prompt helpers (GLOBAL_AI_PROMPTS_KEY,
+ * mergePromptsForRead, readMergedAiPrompts, deleteAiPromptById). Shared setup
+ * lives in aiHandlers.testUtils.ts.
  */
 
 import {
     handleCopyAiPrompt,
-    handleBrowseClaudeSessions,
     GLOBAL_AI_PROMPTS_KEY,
     mergePromptsForRead,
     deleteAiPromptById,
@@ -17,7 +16,7 @@ import {
     makeScopedContext,
 } from './aiHandlers.testUtils';
 
-describe('aiHandlers — copy, sessions & module helpers', () => {
+describe('aiHandlers — copy & module helpers', () => {
     beforeEach(() => {
         jest.clearAllMocks();
     });
@@ -69,102 +68,6 @@ describe('aiHandlers — copy, sessions & module helpers', () => {
 
             expect(vscode.env.clipboard.writeText).toHaveBeenCalledWith('Quick prompt');
             expect(result).toEqual({ success: true });
-        });
-    });
-
-    describe('handleBrowseClaudeSessions', () => {
-        it('returns success when the primary container-focus command succeeds', async () => {
-            const vscode = jest.requireMock('vscode') as {
-                commands: { executeCommand: jest.Mock };
-                extensions: { getExtension: jest.Mock };
-            };
-            vscode.extensions.getExtension.mockReturnValue({ id: 'anthropic.claude-code' });
-            vscode.commands.executeCommand.mockResolvedValueOnce(undefined);
-
-            const context = createMockContext();
-            const result = await handleBrowseClaudeSessions(context);
-
-            expect(vscode.extensions.getExtension).toHaveBeenCalledWith('anthropic.claude-code');
-            expect(vscode.commands.executeCommand).toHaveBeenCalledTimes(1);
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-                'workbench.view.extension.claude-sessions-sidebar',
-            );
-            expect(context.logger.info).toHaveBeenCalledWith(
-                expect.stringContaining('[handleBrowseClaudeSessions] sessions browser focus command executed'),
-            );
-            expect(result).toEqual({ success: true });
-        });
-
-        it('falls back to claudeVSCodeSessionsList.focus when the primary command throws', async () => {
-            const vscode = jest.requireMock('vscode') as {
-                commands: { executeCommand: jest.Mock };
-                extensions: { getExtension: jest.Mock };
-            };
-            vscode.extensions.getExtension.mockReturnValue({ id: 'anthropic.claude-code' });
-            vscode.commands.executeCommand
-                .mockRejectedValueOnce(new Error('container missing'))
-                .mockResolvedValueOnce(undefined);
-
-            const context = createMockContext();
-            const result = await handleBrowseClaudeSessions(context);
-
-            expect(vscode.commands.executeCommand).toHaveBeenNthCalledWith(
-                1,
-                'workbench.view.extension.claude-sessions-sidebar',
-            );
-            expect(vscode.commands.executeCommand).toHaveBeenNthCalledWith(
-                2,
-                'claudeVSCodeSessionsList.focus',
-            );
-            expect(context.logger.warn).toHaveBeenCalledWith(
-                expect.stringContaining('[handleBrowseClaudeSessions] primary focus command failed'),
-            );
-            expect(result).toEqual({ success: true });
-        });
-
-        it('returns success: false and shows a toast when both focus commands throw', async () => {
-            const vscode = jest.requireMock('vscode') as {
-                commands: { executeCommand: jest.Mock };
-                extensions: { getExtension: jest.Mock };
-                window: { showInformationMessage: jest.Mock };
-            };
-            vscode.extensions.getExtension.mockReturnValue({ id: 'anthropic.claude-code' });
-            vscode.commands.executeCommand
-                .mockRejectedValueOnce(new Error('primary fail'))
-                .mockRejectedValueOnce(new Error('fallback fail'));
-
-            const context = createMockContext();
-            const result = await handleBrowseClaudeSessions(context);
-
-            expect(vscode.commands.executeCommand).toHaveBeenCalledTimes(2);
-            const warnMock = context.logger.warn as jest.Mock;
-            expect(warnMock).toHaveBeenCalledWith(
-                expect.stringContaining('[handleBrowseClaudeSessions] primary focus command failed'),
-            );
-            expect(warnMock).toHaveBeenCalledWith(
-                expect.stringContaining('[handleBrowseClaudeSessions] both focus commands failed'),
-            );
-            expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-                expect.stringContaining('sessions browser unavailable'),
-            );
-            expect(result).toMatchObject({ success: false });
-        });
-
-        it('returns success: false without invoking any commands when the extension is not installed', async () => {
-            const vscode = jest.requireMock('vscode') as {
-                commands: { executeCommand: jest.Mock };
-                extensions: { getExtension: jest.Mock };
-            };
-            vscode.extensions.getExtension.mockReturnValue(undefined);
-
-            const context = createMockContext();
-            const result = await handleBrowseClaudeSessions(context);
-
-            expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
-            expect(context.logger.warn).toHaveBeenCalledWith(
-                expect.stringContaining('[handleBrowseClaudeSessions] extension not installed'),
-            );
-            expect(result).toMatchObject({ success: false });
         });
     });
 

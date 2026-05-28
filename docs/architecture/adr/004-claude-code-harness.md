@@ -406,3 +406,59 @@ delayed spawn-inject machinery are removed.
 **Files.** `src/commands/openInClaude.ts` (`launchTerminal` spawn path,
 `quotePromptForShell`; removed `scheduleSpawnInject` / `getSpawnInjectDelayMs`),
 `package.json` (setting removed).
+
+---
+
+## Amendment (2026-05-27): Extension Surface Retired — Terminal-Only
+
+**Problem.** The wand QuickPick is a single, state-aware entry point: click it
+with no chat running, the chat opens; click it with a chat running, pick a
+prompt to drop into the conversation. That contract requires inserting a prompt
+into the **live** chat. The terminal surface satisfies it (find live "Claude
+Code" terminal → bracketed-paste into the REPL). The Claude Code VS Code
+extension does not: its `vscode://anthropic.claude-code/open?prompt=` URI
+handler opens a **new** chat every time. There is no public API to inject a
+prompt into the live extension chat.
+
+This left the extension surface incompatible with the wand's prompt-insertion
+model. A workaround had been added (always show the QuickPick on the extension
+surface, even when no chat was open, so prompts stayed reachable), but every
+prompt click still spawned a fresh chat — losing the conversation history the
+wand was supposed to extend.
+
+**Decision.** Drop the extension surface entirely. The terminal is the only
+surface. The wand inserts into a live REPL via bracketed paste on reuse, and
+delivers via launch arg on spawn (per the 2026-05-26 amendment above) — both
+preserve the chat's continuity.
+
+**Removed:**
+- `demoBuilder.ai.surface` setting (terminal/extension toggle).
+- `demoBuilder.ai.dockToRight` setting and the once-ever dock-to-right offer.
+- `Surface` type, `getSurface`, `launchViaUri`, the URI handler call site,
+  `claudeCode.preferredLocation` writes, and every extension-related dialog
+  (`maybeOfferExtensionSurface`, `maybeShowFirstLaunchDialog`,
+  `maybeShowMismatchWarning`, `maybeOpenSessionsBrowserOnce`,
+  `revealSessionsBrowser`), plus their one-time-shown globalState flags.
+- `handleBrowseClaudeSessions` and `handleMarkSessionsBrowserAutoShown`
+  handlers (sessions browser was extension-only).
+- The `verify-ai-setup` response no longer carries `extensionInstalled`,
+  `onboardingCompleted`, `sessionsBrowserAutoShown`, or `surface` —
+  affordances that depended on these were extension-only and are gone.
+- `extension.ts:migrateHarnessSetting` (no longer a target setting to migrate
+  into).
+
+**Kept:**
+- `resetAiOnboardingState` clears the legacy flag/setting keys so users
+  upgrading from a previous Demo Builder don't carry dead state forward.
+
+**Trade.** Users who preferred the extension's chat UI no longer get it from
+Demo Builder. They can still run the Claude Code extension independently of
+Demo Builder; Demo Builder simply stops launching it.
+
+**Files.** `src/commands/openInClaude.ts` (rewritten as terminal-only),
+`src/commands/aiMenu.ts` (reverted to state-aware via `isClaudeChatOpen()`,
+no surface check), `src/extension.ts` (dropped `migrateHarnessSetting` and
+`maybeShowFirstLaunchDialog` call sites), `src/features/dashboard/handlers/
+aiHandlers.ts` (dropped `handleBrowseClaudeSessions` + handler-map entry;
+simplified `handleVerifyAiSetup` response), `package.json` (`demoBuilder.ai.
+surface` removed).

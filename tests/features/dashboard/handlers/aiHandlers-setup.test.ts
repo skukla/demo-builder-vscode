@@ -17,7 +17,6 @@ import {
     handleDeleteAiPrompt,
     handleListAiPrompts,
     handleCopyAiPrompt,
-    handleBrowseClaudeSessions,
     hasHandler,
     getRegisteredTypes,
     clearMcpCache,
@@ -40,9 +39,9 @@ describe('aiHandlers — setup & verification', () => {
             expect(typeof aiHandlers).toBe('object');
         });
 
-        it('should have exactly 10 handlers', () => {
+        it('should have exactly 9 handlers', () => {
             const types = getRegisteredTypes(aiHandlers);
-            expect(types).toHaveLength(10);
+            expect(types).toHaveLength(9);
         });
 
         it('should include verify-ai-setup', () => {
@@ -81,10 +80,6 @@ describe('aiHandlers — setup & verification', () => {
             expect(hasHandler(aiHandlers, 'copyAiPrompt')).toBe(true);
         });
 
-        it('should include browseClaudeSessions', () => {
-            expect(hasHandler(aiHandlers, 'browseClaudeSessions')).toBe(true);
-        });
-
         it('should have all values as functions', () => {
             const types = getRegisteredTypes(aiHandlers);
             for (const type of types) {
@@ -102,7 +97,6 @@ describe('aiHandlers — setup & verification', () => {
             expect(aiHandlers['delete-ai-prompt']).toBe(handleDeleteAiPrompt);
             expect(aiHandlers['list-ai-prompts']).toBe(handleListAiPrompts);
             expect(aiHandlers['copyAiPrompt']).toBe(handleCopyAiPrompt);
-            expect(aiHandlers['browseClaudeSessions']).toBe(handleBrowseClaudeSessions);
         });
     });
 
@@ -167,91 +161,6 @@ describe('aiHandlers — setup & verification', () => {
 
             const context = createMockContext();
             await expect(handleVerifyAiSetup(context)).rejects.toThrow('fs error');
-        });
-
-        it('reports extensionInstalled=true when the Claude Code extension is present', async () => {
-            (verifyAiSetup as jest.Mock).mockResolvedValue({ status: 'ok', checks: [] });
-            const vscode = jest.requireMock('vscode') as {
-                extensions: { getExtension: jest.Mock };
-            };
-            vscode.extensions.getExtension.mockReturnValue({ id: 'anthropic.claude-code' });
-
-            const result = await handleVerifyAiSetup(createMockContext());
-
-            expect(vscode.extensions.getExtension).toHaveBeenCalledWith('anthropic.claude-code');
-            expect(result).toMatchObject({ success: true, extensionInstalled: true });
-        });
-
-        it('reports extensionInstalled=false when the Claude Code extension is not installed', async () => {
-            (verifyAiSetup as jest.Mock).mockResolvedValue({ status: 'ok', checks: [] });
-            const vscode = jest.requireMock('vscode') as {
-                extensions: { getExtension: jest.Mock };
-            };
-            vscode.extensions.getExtension.mockReturnValue(undefined);
-
-            const result = await handleVerifyAiSetup(createMockContext());
-
-            expect(result).toMatchObject({ success: true, extensionInstalled: false });
-        });
-
-        // onboardingCompleted reads the AI_ONBOARDING_COMPLETED_KEY flag,
-        // which openInClaude.execute() sets after both onboarding offers have
-        // settled. Gates the "Browse Claude sessions" link so a fresh-state
-        // user doesn't see extension UI before engaging with the AI flow.
-        describe('onboardingCompleted', () => {
-            beforeEach(() => {
-                (verifyAiSetup as jest.Mock).mockResolvedValue({ status: 'ok', checks: [] });
-            });
-
-            it('is true when the AI_ONBOARDING_COMPLETED_KEY flag is set', async () => {
-                const getMock = jest.fn((key: string, fallback?: unknown) => {
-                    if (key === 'demoBuilder.ai.onboardingCompleted') return true;
-                    return fallback;
-                });
-                const context = createMockContext({
-                    context: {
-                        extensionPath: '/mock/extension/path',
-                        secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn(), onDidChange: jest.fn() },
-                        globalState: { get: getMock, update: jest.fn(), keys: jest.fn().mockReturnValue([]) },
-                        subscriptions: [],
-                    } as unknown as HandlerContext['context'],
-                });
-                const result = await handleVerifyAiSetup(context);
-                expect(getMock).toHaveBeenCalledWith('demoBuilder.ai.onboardingCompleted', false);
-                expect(result).toMatchObject({ onboardingCompleted: true });
-            });
-
-            it('is false when the flag is unset (fresh state)', async () => {
-                const result = await handleVerifyAiSetup(createMockContext());
-                expect(result).toMatchObject({ onboardingCompleted: false });
-            });
-        });
-
-        // surface drives gating of extension-only affordances on the AI
-        // surface. A terminal-surface user should never see Browse Claude
-        // sessions even when the extension happens to be installed.
-        describe('surface', () => {
-            beforeEach(() => {
-                (verifyAiSetup as jest.Mock).mockResolvedValue({ status: 'ok', checks: [] });
-            });
-
-            it("defaults to 'terminal' when demoBuilder.ai.surface is unset", async () => {
-                const result = await handleVerifyAiSetup(createMockContext());
-                expect(result).toMatchObject({ surface: 'terminal' });
-            });
-
-            it("returns 'extension' when the user has saved that preference", async () => {
-                const vscode = jest.requireMock('vscode') as {
-                    workspace: { getConfiguration: jest.Mock };
-                };
-                vscode.workspace.getConfiguration.mockReturnValueOnce({
-                    get: jest.fn((key: string, fallback: unknown) =>
-                        key === 'surface' ? 'extension' : fallback,
-                    ),
-                });
-                const result = await handleVerifyAiSetup(createMockContext());
-                expect(result).toMatchObject({ surface: 'extension' });
-            });
         });
     });
 

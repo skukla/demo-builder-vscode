@@ -156,8 +156,8 @@ comm.on('continue-step', async (payload) => {
 
 Two internal commands back the chat-first AI surface (also omitted from `package.json` — invoked programmatically, not from the palette):
 
-- **`demoBuilder.openAiExperience`** — "Open Chat". Calls `OpenInClaudeCommand.execute()` with no prompt: settles the once-ever onboarding offers, then opens/reveals the Claude Code terminal as a tab in the active editor group (`ViewColumn.Active`, next to Project Dashboard). `navigate('ai')` and the dashboard AI action route here.
-- **`demoBuilder.aiMenu`** (`src/commands/aiMenu.ts`) — the **state-aware** AI icon (the **wand icon** in the sidebar `UtilityBar`). When no live Claude Code chat terminal is open (`isClaudeChatOpen()` from `openInClaude.ts`), it opens the chat directly (`demoBuilder.openAiExperience`) and shows no menu — there is no redundant "Open Chat" row. When a chat IS open, it shows an **insert-only** prompt QuickPick (built via the shared `showWebviewQuickPick`): the merged prompt list (pinned first) plus a "Manage prompts…" row, and a placeholder. Selecting a prompt dispatches `demoBuilder.openInClaude` with `{ prompt }`; "Manage prompts…" dispatches `demoBuilder.openAi` (the prompt library). The picker carries no per-item buttons — creating, editing, deleting, and pinning all live in the library.
+- **`demoBuilder.openAiExperience`** — "Open Chat". Calls `OpenInClaudeCommand.execute()` with no prompt: opens/reveals the Claude Code terminal as a tab in the active editor group (`ViewColumn.Active`, next to Project Dashboard). `navigate('ai')` and the dashboard AI action route here.
+- **`demoBuilder.aiMenu`** (`src/commands/aiMenu.ts`) — the AI icon (the **wand icon** in the sidebar `UtilityBar`). State-aware via `isClaudeChatOpen()` (from `openInClaude.ts`): when no live "Claude Code" terminal exists, it launches the chat directly (`demoBuilder.openAiExperience`) — zero-friction first open. When a chat is alive, it shows the prompt QuickPick (built via the shared `showWebviewQuickPick`): an **"Open chat"** row (dispatches `demoBuilder.openAiExperience` for the bare-launch case), the merged prompt list (pinned first), and a "Manage prompts…" row. Selecting a prompt dispatches `demoBuilder.openInClaude` with `{ prompt }`; "Manage prompts…" dispatches `demoBuilder.openAi` (the prompt library). The picker carries no per-item buttons — creating, editing, deleting, and pinning all live in the library.
 
 The prompt-library webview (`ShowAiCommand` / `demoBuilder.openAi`, titled "Prompt Library", command-palette entry "Demo Builder: Manage AI Prompts") is the single home for prompt CRUD — reached on demand via the QuickPick's "Manage prompts…" or the palette. It is not the default AI surface; the chat is. The footer "Close" button posts `cancel`, which `ShowAiCommand` handles by disposing the panel.
 
@@ -172,39 +172,32 @@ The prompt-library webview (`ShowAiCommand` / `demoBuilder.openAi`, titled "Prom
 
 ### openInClaude
 
-**Purpose**: Launch Claude Code on the current project.
+**Purpose**: Launch Claude Code (CLI) on the current project.
 
 **Command ID**: `demoBuilder.openInClaude`
 
-**Behavior** — driven by three settings:
+**Behavior**: Find-or-spawn the "Claude Code" terminal at `project.path`, placed as a tab in the active editor group (`{ viewColumn: ViewColumn.Active }`, next to Project Dashboard). Reuses an existing live terminal (matched by name + `exitStatus === undefined`) instead of duplicating.
 
-- **`demoBuilder.ai.engine`** — which AI tool. Currently `'claude-code'` only; reserved for future engines (e.g. Codex).
-- **`demoBuilder.ai.surface`** — how the engine is launched. **Terminal is the baseline** (no VS Code extension required); the extension surface is offered when Demo Builder detects the engine's VS Code extension is installed.
-- **`demoBuilder.ai.dockToRight`** — boolean (default `false`). Single position preference applied across both surfaces. When `true`, the extension chat panel docks to the right secondary sidebar and terminals open as editor tabs beside the active editor. Demo Builder atomically syncs `claudeCode.preferredLocation` to keep the extension's native setting aligned.
+**Prompt delivery**:
+- **Spawn**: the prompt rides the launch command as `claude --continue -- '<prompt>'` (race-free — claude runs it on startup; `--` keeps a dash-leading prompt from being read as a flag).
+- **Reuse**: claude is already running, so the prompt is injected into the live REPL via bracketed paste (pre-fills the input for the user to send).
+- The prompt is always copied to the clipboard as a silent fallback. A once-ever tip toast explains the contract the first time a prompt is sent.
 
-| `surface` | Behavior |
-|---------|----------|
-| `terminal` (default) | Find-or-spawn the "Claude Code" terminal at `project.path`. Reuses an existing live terminal (matched by name + `exitStatus === undefined`) instead of duplicating. When `dockToRight=true`, spawns the terminal as an editor tab beside the active editor; otherwise spawns in the bottom panel. **Prompt delivery:** on spawn, the prompt rides the launch command as `claude --continue -- <prompt>` (race-free — claude runs it on startup; `--` keeps a dash-leading prompt from being read as a flag); on reuse, claude is already running so the prompt is injected into the live REPL via bracketed paste (pre-filled for the user to send). The prompt is always copied to the clipboard as a fallback. With no prompt, spawn runs a bare `claude --continue`. |
-| `extension` | URI handler (`vscode://anthropic.claude-code/open`) when the `anthropic.claude-code` extension is installed. Missing-extension (with explicit user choice of `'extension'`) surfaces a recovery dialog: `INSTALL_ACTION_LABEL` ("Install Claude Code Extension" — opens the marketplace) or `SWITCH_TO_TERMINAL_ACTION_LABEL` ("Switch to Terminal Mode" — updates the setting + retries the launch). |
+With no prompt, spawn runs a bare `claude --continue`.
 
-**Unified dock-to-right offer toast** (`maybeOfferDockToRight`): Fires once after the first successful launch on either surface, gated by `DOCK_OFFER_SHOWN_KEY` (which reuses the legacy `FIRST_TIP_KEY` string value so existing users who already saw the old drag-to-sidebar tip don't re-see the new toast). Surface-aware body wording. "Dock to right side" atomically writes BOTH `demoBuilder.ai.dockToRight = true` AND `claudeCode.preferredLocation = 'sidebar'` (try/catch with rollback if the second write fails). "Keep current layout" or dismissal writes neither.
+**Setting**: `demoBuilder.ai.engine` — which AI tool. Currently `'claude-code'` only; reserved for future engines (e.g. Codex).
 
-**Capability-aware extension-detected offer toast** (`maybeOfferExtensionSurface`): Fires once when `surface='terminal'` AND the Claude Code extension is installed AND `EXTENSION_AVAILABLE_OFFER_SHOWN_KEY` is unset. Two buttons — "Use the Extension" writes `surface='extension'` and resolves the current click via the URI path; "Stay in Terminal" leaves the setting unchanged and proceeds via terminal.
+**Why no extension surface**: An earlier version routed launches through the Claude Code VS Code extension's URI handler (`vscode://anthropic.claude-code/open`). That surface was retired because the extension's URI handler opens a new chat on every launch — there is no public API to inject a prompt into the live chat — so the wand's "pick a prompt, drop it into the conversation" model can't work there.
 
-**First-launch setup dialog** (now narrower scope): On activation, if the user has *explicitly* chosen `surface='extension'` (not the default state — since the default is now `'terminal'`) AND the Claude Code extension is not installed AND `FIRST_LAUNCH_DIALOG_SHOWN_KEY` is unset, `maybeShowFirstLaunchDialog` (exported from `openInClaude.ts`, called from `extension.ts:activate`) surfaces an info dialog with the Install / Switch-to-Terminal actions. Fires once ever; no repeat prompts.
-
-**Workspace-mismatch warning** (`surface='extension'` only): When `workspaceFolders[0]?.uri.fsPath !== project.path`, surfaces a one-time-ever warning toast explaining the chat panel will miss per-project skills/MCPs/AGENTS.md. The prompt-click path bypasses this via the pending-prompt mechanism below.
-
-**Prompt-click pending-launch mechanism**: When the user clicks a prompt from the AI surface AND workspace ≠ project, `aiHandlers.handleOpenInClaude` writes `{ projectPath, prompt, createdAt }` to `globalState` under `PENDING_CLAUDE_LAUNCH_KEY = 'demoBuilder.ai.pendingClaudeLaunch'`, then calls `vscode.openFolder` to anchor the workspace. On the next activation, `extension.ts:replayPendingClaudeLaunch` reads the record, validates three gates (present, fresh <60s, workspace matches `projectPath`), clears the record, and dispatches `demoBuilder.openInClaude` with the prompt. End-user experience: one click → workspace switches → chat panel opens with prompt pre-filled and full project context.
-
-**Migration**: `extension.ts:migrateHarnessSetting` runs once at activation to migrate any persisted `demoBuilder.ai.harness` setting (3-mode: `auto` / `extension` / `terminal`) to the new `demoBuilder.ai.surface` setting per scope (workspace + global handled independently). `auto` maps to `extension`. An explicit `surface` value at any scope takes precedence — the migration won't overwrite a user's deliberate choice. A one-time info toast surfaces when at least one scope was migrated.
+**Prompt-click pending-launch mechanism**: When the user clicks a prompt from the projects home-grid AND workspace ≠ project, `projectsDashboardHandlers.handleOpenAiForProject` writes `{ projectPath, prompt?, createdAt }` to `globalState` under `PENDING_CLAUDE_LAUNCH_KEY = 'demoBuilder.ai.pendingClaudeLaunch'`, then calls `vscode.openFolder` to anchor the workspace. On the next activation, `extension.ts:replayPendingClaudeLaunch` reads the record, validates three gates (present, fresh <60s, workspace matches `projectPath`), clears the record, and dispatches `demoBuilder.openInClaude` with the prompt. End-user experience: one click → workspace switches → chat opens with the prompt pre-filled and full project context.
 
 **Dispatched from**:
-- The project-card kebab menu in `ProjectActionsMenu.tsx` (calls `webviewClient.postMessage('openInClaude', { projectPath })`)
-- The AI surface prompt cards in `PromptCard.tsx` → `AiOverviewScreen.tsx` → `webviewClient.postMessage('openInClaude', { prompt })` → `aiHandlers.handleOpenInClaude` (with the pending-prompt branch above)
+- The project-card kebab menu in `ProjectActionsMenu.tsx` (calls `webviewClient.postMessage('openAiForProject', { projectPath })`)
+- The Prompt Library prompt cards in `PromptCard.tsx` → `AiOverviewScreen.tsx` → `webviewClient.postMessage('openInClaude', { prompt })` → `aiHandlers.handleOpenInClaude`
+- The wand QuickPick prompt rows in `aiMenu.ts`
 - `extension.ts:replayPendingClaudeLaunch` on activation when a pending record exists
 
-**File**: `src/commands/openInClaude.ts`. See `docs/architecture/adr/004-claude-code-harness.md` for the harness decision rationale and the workspace-anchoring + binary-surface amendments.
+**File**: `src/commands/openInClaude.ts`. See `docs/architecture/adr/004-claude-code-harness.md` for the harness decision rationale.
 
 ### diagnostics
 

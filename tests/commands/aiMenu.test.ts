@@ -41,7 +41,7 @@ import type { Logger } from '@/types/logger';
 import type { AiPrompt, Project } from '@/types/base';
 
 type AiMenuItem = vscode.QuickPickItem & {
-    action?: 'insert' | 'manage';
+    action?: 'open-chat' | 'insert' | 'manage';
     promptBody?: string;
 };
 
@@ -160,7 +160,7 @@ describe('AiMenuCommand', () => {
             expect(getCall().options.placeholder).toBeTruthy();
         });
 
-        it('does NOT include an "Open Chat" item', async () => {
+        it('includes an "Open chat" item so users can launch the chat without selecting a prompt', async () => {
             const getCall = capturePicker();
             (readMergedAiPrompts as jest.Mock).mockReturnValue([
                 { id: 'p', title: 'Local Prompt', prompt: 'local body' },
@@ -169,8 +169,10 @@ describe('AiMenuCommand', () => {
 
             await cmd.execute();
 
-            const labels = getCall().items.map((i) => i.label);
-            expect(labels.some((l) => l.includes('Open Chat'))).toBe(false);
+            const items = getCall().items;
+            const openChat = items.find((i) => i.action === 'open-chat');
+            expect(openChat).toBeDefined();
+            expect(openChat?.label).toMatch(/open chat/i);
         });
 
         it('includes the merged prompts (pinned first) and Manage; no New, no per-item buttons', async () => {
@@ -223,6 +225,15 @@ describe('AiMenuCommand', () => {
                 'demoBuilder.openInClaude',
                 { prompt: 'local body' },
             );
+        });
+
+        it('open-chat executes demoBuilder.openAiExperience', async () => {
+            capturePicker((items) => items.find((i) => i.action === 'open-chat'));
+            const cmd = new AiMenuCommand(makeContext(), makeStateManager(PROJECT), makeLogger());
+
+            await cmd.execute();
+
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openAiExperience');
         });
 
         it('manage executes demoBuilder.openAi', async () => {

@@ -17,7 +17,7 @@ describe('OpenInClaudeCommand', () => {
 
     describe('terminal mode + prompt: clipboard handoff', () => {
         it('writes the prompt to the clipboard before launching the terminal', async () => {
-            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
+            const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
@@ -30,7 +30,7 @@ describe('OpenInClaudeCommand', () => {
         });
 
         it('shows the soft "prompt sent + clipboard fallback" tip on first terminal-mode prompt click', async () => {
-            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
+            const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
@@ -47,7 +47,7 @@ describe('OpenInClaudeCommand', () => {
         });
 
         it('does NOT write clipboard when no prompt is provided', async () => {
-            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
+            const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
@@ -67,7 +67,7 @@ describe('OpenInClaudeCommand', () => {
 
     describe('spawn case: prompt delivered as a launch argument', () => {
         it('launches `claude --continue` with the prompt as a single-quoted argument', async () => {
-            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
+            const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
@@ -80,7 +80,7 @@ describe('OpenInClaudeCommand', () => {
         });
 
         it('escapes single quotes in the prompt so the shell receives it intact', async () => {
-            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
+            const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
@@ -94,7 +94,7 @@ describe('OpenInClaudeCommand', () => {
         });
 
         it('keeps a multi-line prompt inside the single-quoted argument', async () => {
-            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
+            const mocks = setupVscodeMocks();
             const multiLine = 'line one\nline two';
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
@@ -108,7 +108,7 @@ describe('OpenInClaudeCommand', () => {
         });
 
         it('does NOT bracketed-paste inject on spawn (the prompt rides the launch arg)', async () => {
-            setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
+            setupVscodeMocks();
             const executeCommandMock = vscode.commands.executeCommand as jest.Mock;
             executeCommandMock.mockClear();
             executeCommandMock.mockResolvedValue(undefined);
@@ -127,7 +127,7 @@ describe('OpenInClaudeCommand', () => {
         });
 
         it('spawns with a plain `claude --continue` when no prompt is provided', async () => {
-            const mocks = setupVscodeMocks({ surface: 'terminal', extensionInstalled: false });
+            const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
@@ -153,8 +153,6 @@ describe('OpenInClaudeCommand', () => {
 
         it('injects the prompt via sendSequence immediately when a live terminal exists', async () => {
             const mocks = setupVscodeMocks({
-                surface: 'terminal',
-                extensionInstalled: false,
                 existingTerminals: [{ name: 'Claude Code', exitStatus: undefined }],
             });
             const executeCommandMock = vscode.commands.executeCommand as jest.Mock;
@@ -180,8 +178,6 @@ describe('OpenInClaudeCommand', () => {
 
         it('multi-line prompt: bracketed-paste markers wrap the whole block (including newlines)', async () => {
             setupVscodeMocks({
-                surface: 'terminal',
-                extensionInstalled: false,
                 existingTerminals: [{ name: 'Claude Code', exitStatus: undefined }],
             });
             const executeCommandMock = vscode.commands.executeCommand as jest.Mock;
@@ -209,8 +205,6 @@ describe('OpenInClaudeCommand', () => {
 
         it('clipboard-fallback tip fires once-ever (gated by globalState flag)', async () => {
             const mocks = setupVscodeMocks({
-                surface: 'terminal',
-                extensionInstalled: false,
                 existingTerminals: [{ name: 'Claude Code', exitStatus: undefined }],
             });
             const globalState = makeGlobalState();
@@ -244,8 +238,6 @@ describe('OpenInClaudeCommand', () => {
 
         it('does NOT inject anything when no prompt is provided', async () => {
             setupVscodeMocks({
-                surface: 'terminal',
-                extensionInstalled: false,
                 existingTerminals: [{ name: 'Claude Code', exitStatus: undefined }],
             });
             const executeCommandMock = vscode.commands.executeCommand as jest.Mock;

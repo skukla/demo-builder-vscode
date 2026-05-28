@@ -10,7 +10,7 @@ import type { HandlerContext } from '@/types/handlers';
 const PROMPT_PREVIEW_MAX_LENGTH = 70;
 
 /** Placeholder shown in the prompt QuickPick. */
-const PICKER_PLACEHOLDER = 'Select a prompt to insert, or manage prompts';
+const PICKER_PLACEHOLDER = 'Open chat, insert a prompt, or manage prompts';
 
 /**
  * A single row in the AI QuickPick menu. `action` drives selection dispatch;
@@ -18,28 +18,30 @@ const PICKER_PLACEHOLDER = 'Select a prompt to insert, or manage prompts';
  * it.
  */
 interface AiMenuItem extends vscode.QuickPickItem {
-    action?: 'insert' | 'manage';
+    action?: 'open-chat' | 'insert' | 'manage';
     promptBody?: string;
 }
 
 /**
- * AiMenuCommand — the chat-first, state-aware AI entry point.
+ * AiMenuCommand — the chat-first AI entry point (the wand icon).
  *
- * When no live Claude Code chat terminal is open, the icon opens the chat
- * directly (`demoBuilder.openAiExperience`) — there is no redundant "Open Chat"
- * menu row. When a chat IS open, it shows an insert-only prompt QuickPick: the
- * merged prompt list (pinned first) plus a "Manage prompts…" action. Selecting a
- * prompt inserts it into Claude Code via `demoBuilder.openInClaude`; "Manage
- * prompts…" opens the prompt library (`demoBuilder.openAi`) — the single home
- * for creating, editing, deleting, and pinning prompts.
+ * State-aware behavior:
+ *   - No live chat terminal → launch the chat directly (zero-friction first
+ *     open). The terminal is observable, so we skip the picker on a cold start.
+ *   - Chat alive → show the QuickPick for prompt insertion.
+ *
+ * The QuickPick carries an "Open chat" row (dispatches
+ * `demoBuilder.openAiExperience`) so users can focus the existing chat
+ * without picking a prompt, the merged prompt list (pinned first), and a
+ * "Manage prompts…" action. Selecting a prompt inserts it via
+ * `demoBuilder.openInClaude`; "Manage prompts…" opens the prompt library
+ * (`demoBuilder.openAi`).
  */
 export class AiMenuCommand extends BaseCommand {
     public async execute(): Promise<void> {
         const project = (await this.stateManager.getCurrentProject()) ?? undefined;
 
-        // State-aware: no chat open → open the chat and stop. Opening the chat
-        // (via openAiExperience) warms the terminal, so there's nothing to
-        // prewarm here.
+        // Zero-friction first-launch shortcut: no terminal yet → spawn one.
         if (!isClaudeChatOpen()) {
             await vscode.commands.executeCommand('demoBuilder.openAiExperience');
             return;
@@ -58,10 +60,10 @@ export class AiMenuCommand extends BaseCommand {
     }
 
     /**
-     * Build the insert-only menu: a Prompts section → one row per prompt (pinned
-     * already first via the merge) → "Manage prompts…". The body preview is the
-     * row `description` (same line as the title). Creating, editing, deleting,
-     * and pinning all live in the prompt library, reached via "Manage prompts…".
+     * Build the menu: "Open chat" → Prompts section → prompt rows (pinned first
+     * via the merge) → "Manage prompts…". Open chat focuses the existing chat
+     * terminal (or spawns one if it died). Creating, editing, deleting, and
+     * pinning all live in the prompt library, reached via "Manage prompts…".
      */
     private buildItems(prompts: AiPrompt[]): AiMenuItem[] {
         const promptItems: AiMenuItem[] = prompts.map((prompt: AiPrompt) => ({
@@ -72,6 +74,7 @@ export class AiMenuCommand extends BaseCommand {
         }));
 
         return [
+            { label: '$(comment-discussion) Open chat', action: 'open-chat' },
             { label: 'Prompts', kind: vscode.QuickPickItemKind.Separator },
             ...promptItems,
             { label: '', kind: vscode.QuickPickItemKind.Separator },
@@ -82,6 +85,9 @@ export class AiMenuCommand extends BaseCommand {
     /** Route the selected item to the matching command. */
     private async dispatchAction(item: AiMenuItem): Promise<void> {
         switch (item.action) {
+            case 'open-chat':
+                await vscode.commands.executeCommand('demoBuilder.openAiExperience');
+                break;
             case 'insert':
                 await vscode.commands.executeCommand('demoBuilder.openInClaude', {
                     prompt: item.promptBody,

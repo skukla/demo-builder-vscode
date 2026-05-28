@@ -14,10 +14,7 @@
 
 import * as path from 'path';
 import * as vscode from 'vscode';
-import {
-    AI_ONBOARDING_COMPLETED_KEY,
-    PENDING_CLAUDE_LAUNCH_KEY,
-} from '@/commands/openInClaude';
+import { PENDING_CLAUDE_LAUNCH_KEY } from '@/commands/openInClaude';
 import { BaseWebviewCommand } from '@/core/base';
 import { clearMcpCache, inspectAllServers, verifyAiSetup } from '@/features/ai';
 import {
@@ -59,31 +56,10 @@ export async function handleVerifyAiSetup(
     const globalMcpRegistration: GlobalMcpRegistrationState | 'unregistered' =
         persisted ?? 'unregistered';
 
-    // AI surface needs three capability / preference fields:
-    //   - extensionInstalled: whether the Claude Code extension is present
-    //   - onboardingCompleted: set in openInClaude.execute() once both the
-    //     extension-detected offer and dock-to-right offer have settled.
-    //   - surface: the user's saved launch preference. Extension-specific
-    //     affordances (Browse Claude sessions) require all three: the user
-    //     finished onboarding, kept the extension surface, and the extension
-    //     is actually installed. A user who explicitly chose terminal should
-    //     not see extension UI even if the extension happens to be installed.
-    const extensionInstalled = vscode.extensions.getExtension('anthropic.claude-code') !== undefined;
-    const onboardingCompleted = context.context.globalState.get<boolean>(
-        AI_ONBOARDING_COMPLETED_KEY,
-        false,
-    );
-    const surface = vscode.workspace
-        .getConfiguration('demoBuilder.ai')
-        .get<'terminal' | 'extension'>('surface', 'terminal');
-
     return {
         success: true,
         ...result,
         globalMcpRegistration,
-        extensionInstalled,
-        onboardingCompleted,
-        surface,
     };
 }
 
@@ -488,54 +464,6 @@ export async function handleCopyAiPrompt(
     return { success: true };
 }
 
-/**
- * Handle browseClaudeSessions — focus the Claude Code sessions browser view.
- *
- * Tries the container-focus command first (works when the user hasn't dragged
- * the view out of its default container). Falls back to the auto-generated
- * `<viewId>.focus` command if the container variant throws. If both fail, the
- * sessions browser is genuinely unavailable (e.g. the extension version pre-
- * dates the sessions browser feature, or it's behind a feature flag) — surface
- * a friendly toast so the user knows the click didn't get lost.
- *
- * Gates on `vscode.extensions.getExtension('anthropic.claude-code')` — the
- * webview-side gate should already hide the affordance, but a defensive
- * server-side check protects against stale UI state.
- */
-export async function handleBrowseClaudeSessions(
-    context: HandlerContext,
-): Promise<HandlerResponse> {
-    if (!vscode.extensions.getExtension('anthropic.claude-code')) {
-        context.logger.warn(
-            '[handleBrowseClaudeSessions] extension not installed; ignoring browse request',
-        );
-        return { success: false, error: 'Claude Code extension not installed' };
-    }
-    try {
-        await vscode.commands.executeCommand('workbench.view.extension.claude-sessions-sidebar');
-        context.logger.info('[handleBrowseClaudeSessions] sessions browser focus command executed');
-        return { success: true };
-    } catch (primaryError) {
-        const primaryMessage = primaryError instanceof Error ? primaryError.message : String(primaryError);
-        context.logger.warn(
-            `[handleBrowseClaudeSessions] primary focus command failed; trying fallback (${primaryMessage})`,
-        );
-        try {
-            await vscode.commands.executeCommand('claudeVSCodeSessionsList.focus');
-            context.logger.info('[handleBrowseClaudeSessions] sessions browser focus command executed');
-            return { success: true };
-        } catch {
-            context.logger.warn(
-                '[handleBrowseClaudeSessions] both focus commands failed; extension may have sessions browser disabled',
-            );
-            void vscode.window.showInformationMessage(
-                'Claude Code sessions browser unavailable in this version of the extension.',
-            );
-            return { success: false, error: 'sessions browser unavailable' };
-        }
-    }
-}
-
 // ==========================================================
 // Handler Map
 // ==========================================================
@@ -550,5 +478,4 @@ export const aiHandlers = defineHandlers({
     'delete-ai-prompt': handleDeleteAiPrompt,
     'list-ai-prompts': handleListAiPrompts,
     'copyAiPrompt': handleCopyAiPrompt,
-    'browseClaudeSessions': handleBrowseClaudeSessions,
 });
