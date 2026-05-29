@@ -296,14 +296,16 @@ features/my-feature/
 **Key Services:**
 - `SidebarProvider` - VS Code WebviewViewProvider implementation
 - `Sidebar` - Main sidebar component
-- `SidebarNav` - Navigation list component
-- `WizardProgress` - Wizard step progress display
+- `AiZone` - Labeled AI zone with Chat and Prompts single-purpose buttons (project + configure modes)
+- `UtilityBar` - Three-icon footer row (Tools, Help, Settings)
+- `SidebarNav` - Navigation list (used in configure mode only)
 
 **Responsibilities:**
-- Context-aware navigation (projects, project detail, wizard, configure)
-- Wizard step progress display
-- Back navigation
-- Project-specific navigation (Overview, Configure, Updates)
+- Context-aware navigation across five context types (`projects`, `projectsList`, `project`, `wizard`, `configure`)
+- Wizard step progress display via shared `TimelineNav`
+- Project-detail navigation (Overview, Configure, Updates) in the configure context
+- AI access (Chat + Prompts) in project and configure contexts via the `AiZone` component
+- Back navigation in configure mode only; other modes' back is in the main webview header
 
 **Path Alias**: `@/features/sidebar`
 

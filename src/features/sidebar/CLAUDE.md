@@ -2,13 +2,13 @@
 
 ## Overview
 
-The Sidebar feature provides contextual navigation for the Demo Builder extension using a WebviewViewProvider. It replaces the previous TreeView sidebar with a more flexible webview-based approach.
+The Sidebar feature provides contextual navigation for the Demo Builder extension using a WebviewViewProvider. Layout language matches the Project Dashboard: labeled zones, hero/quiet hierarchy, hidden-not-disabled gating.
 
 ## Purpose
 
 - Display contextual navigation based on current screen
 - Show wizard progress during project creation
-- Provide quick navigation between projects, screens, and settings
+- Provide AI access (Chat + Prompts) scoped to project context
 - Support back navigation and context switching
 
 ## Architecture
@@ -24,43 +24,73 @@ sidebar/
 ├── ui/
 │   ├── index.tsx               # Webview entry point
 │   ├── Sidebar.tsx             # Main sidebar component
+│   ├── views/
+│   │   └── UtilityBar.tsx      # 3-icon footer row (Tools, Help, Settings)
 │   └── components/
 │       ├── index.ts            # Component exports
-│       ├── SidebarNav.tsx      # Navigation list component
-│       └── WizardProgress.tsx  # Wizard step progress component
+│       ├── AiZone.tsx          # Labeled AI zone (Chat + Prompts buttons);
+│       │                       # appears in project + configure modes
+│       └── SidebarNav.tsx      # Navigation list (used in configure mode)
 └── CLAUDE.md                   # This file
 ```
 
 ## Context Types
 
-The sidebar renders different content based on context:
+The sidebar renders different content based on context. **Five context types** exist:
 
 ```typescript
 type SidebarContext =
-    | { type: 'projects' }                           // Projects Dashboard
-    | { type: 'project'; project: Project }          // Project Detail
-    | { type: 'wizard'; step: number; total: number } // Wizard
-    | { type: 'configure'; project: Project };       // Configure
+    | { type: 'projects' }                              // Projects Dashboard (no project loaded)
+    | { type: 'projectsList' }                          // Projects List home grid
+    | { type: 'project'; project: Project }             // Project Detail
+    | { type: 'wizard'; step: number; total: number; …} // Wizard
+    | { type: 'configure'; project: Project };          // Configure
 ```
 
-### Projects, ProjectsList, and Project Contexts
-- Renders the `UtilityBar` only (Tools / Help / Settings).
+### Projects and ProjectsList Contexts (no project loaded)
+- Renders the `UtilityBar` only — three icons: **Tools / Help / Settings**.
+- AI is project-scoped and **deliberately absent** here. The AI zone only
+  appears once a project is loaded.
+- The UtilityBar is a horizontal row of icon + label pairs, centered, filling
+  the sidebar height (`height="100%"`).
 - No back-to-Projects link in the sidebar.
-- Back navigation in project context lives in the **Project Dashboard
-  webview's header** ("All Projects" button), not in the sidebar.
-- Safety net: when the user closes the Project Dashboard tab inside a
-  project workspace, the projects list webview auto-reopens as a new tab so
-  the user keeps a Demo Builder navigation surface (see
+- Safety net: when the user closes the Project Dashboard tab inside a project
+  workspace, the projects list webview auto-reopens as a new tab so the user
+  keeps a Demo Builder navigation surface (see
   `src/features/dashboard/commands/showDashboard.ts::dispose`).
 
+### Project Context (project loaded, dashboard open)
+- Body (top to bottom):
+  - Project name header (`UNSAFE_className="font-semibold text-sm truncate"`).
+  - Divider (`size="S"`).
+  - `AiZone` with **Chat** and **Prompts** buttons (only when both
+    `onOpenAiChat` and `onShowPrompts` callbacks are provided).
+- Footer: `UtilityBar` in compact mode (3 icons: Tools, Help, Settings).
+- Back navigation lives in the Project Dashboard webview's header
+  ("All Projects" button), not in the sidebar.
+
 ### Wizard Context
-- Header: "NEW DEMO"
-- Shows wizard progress with step indicators
-- Back button: "← Cancel"
+- Top: shared `TimelineNav` (`@/core/ui/components/TimelineNav`) with
+  `headerText="Setup Progress"`, `compact={true}`, `showHeader={true}`.
+  Step indicators include completed / current / future plus a
+  `confirmedStepIndices` set for edit-mode navigation.
+- Bottom: `UtilityBar` in compact mode (3 icons: Tools, Help, Settings). No
+  AI access in wizard mode — that surface is project-scoped.
+- No "Cancel" back button is rendered in the sidebar; cancel/exit lives in
+  the wizard webview itself.
 
 ### Configure Context
-- Renders the `UtilityBar` only (same as project context).
-- Back navigation lives in the Configure webview's header.
+- Body (top to bottom):
+  - Back button: `ChevronLeft` icon + "Projects" label (when `onBack` is
+    provided).
+  - Project name header (`UNSAFE_className="font-semibold text-sm truncate"`).
+  - Divider (`size="S"`).
+  - `SidebarNav` with three items: **Overview, Configure, Updates**. The
+    `'ai'` item was removed — AI lives in its own zone below.
+  - Divider (`size="S"`).
+  - `AiZone` with **Chat** and **Prompts** buttons.
+- Footer: `UtilityBar` in compact mode.
+- The Configure webview's own header still hosts its primary back navigation.
 
 ## Components
 
@@ -72,6 +102,27 @@ Main container component that renders context-specific content.
 - `context: SidebarContext` - Current sidebar context
 - `onNavigate: (target: string) => void` - Navigation callback
 - `onBack?: () => void` - Back navigation callback
+- `onOpenAiChat?: () => void` - Backs the Chat button in `AiZone`
+- `onShowPrompts?: () => void` - Backs the Prompts button in `AiZone`
+- (utility callbacks: `onOpenTools`, `onOpenHelp`, `onOpenSettings`)
+
+### AiZone
+
+Labeled sidebar zone with two single-purpose AI actions.
+
+**Props:**
+- `onOpenAiChat: () => void` — invokes the Chat button. Routes to
+  `demoBuilder.openAiExperience` (opens or focuses the Claude terminal).
+- `onShowPrompts: () => void` — invokes the Prompts button. Routes to
+  `demoBuilder.showPromptsPicker` (shows the prompt QuickPick).
+
+**Rendering:**
+- Zone label "AI" (small caps via `sidebar-zone-label`).
+- Chat button (`MagicWand` icon + label).
+- Prompts button (`Chat` icon + label).
+
+The zone replaces the prior state-aware wand icon in `UtilityBar`. Each
+button is single-purpose — no state branching, no hidden second click.
 
 ### SidebarNav
 
@@ -81,20 +132,17 @@ Navigation list for sidebar items.
 - `items: NavItem[]` - Navigation items to display
 - `onNavigate: (id: string) => void` - Item click callback
 
-### WizardProgress
+### UtilityBar
 
-Displays wizard step progress with indicators.
+Three-icon horizontal utility row. AI is **not** here — it lives in `AiZone`.
 
 **Props:**
-- `steps: WizardStep[]` - Wizard steps
-- `currentStep: number` - Current step index (0-based)
-- `completedSteps: number[]` - Array of completed step indices
-- `onStepClick?: (stepIndex: number) => void` - Step click callback
+- `onOpenTools?: () => void` — Tools icon (Wrench)
+- `onOpenHelp?: () => void` — Help icon
+- `onOpenSettings?: () => void` — Settings icon
+- `compact?: boolean` — auto height instead of `100%` (for footer placement)
 
-**Progress Indicators:**
-- ✓ = Completed (checkmark, muted color)
-- ● = Current (filled dot, accent color)
-- ○ = Future (empty dot, muted color)
+Buttons render only when their callback prop is provided.
 
 ## Provider
 
@@ -149,6 +197,9 @@ const result = await handleSetContext(context, { context: { type: 'wizard', step
 | `contextUpdate` | Extension → UI | `{ context }` | - |
 | `navigate` | UI → Extension | `{ target }` | - |
 | `back` | UI → Extension | - | - |
+| `openAiChat` | UI → Extension | - | Routes to `demoBuilder.openAiExperience` |
+| `showPrompts` | UI → Extension | - | Routes to `demoBuilder.showPromptsPicker` |
+| `setContext` | UI → Extension | `{ context }` | - |
 
 ## Styling
 
@@ -156,6 +207,8 @@ Uses existing design system:
 - React Spectrum components (Flex, Text, ActionButton, Divider)
 - VS Code theme variables
 - Spectrum design tokens
+- `sidebar-zone-label` class for zone headers (matches dashboard's
+  `dashboard-zone-label` pattern)
 
 ## Testing
 
@@ -168,11 +221,16 @@ tests/features/sidebar/
 │   └── sidebarHandlers.test.ts           # Handler tests
 ├── providers/
 │   └── sidebarProvider.test.ts           # Provider tests
+├── integration/
+│   ├── extensionActivation.test.ts       # Activation wiring
+│   └── navigationCommands.test.ts        # Navigation routing
 └── ui/
     ├── Sidebar.test.tsx                  # Main component tests
-    └── components/
-        ├── SidebarNav.test.tsx           # Nav tests
-        └── WizardProgress.test.tsx       # Progress tests
+    ├── components/
+    │   └── SidebarNav.test.tsx           # Nav tests
+    └── views/
+        ├── UtilityBar.test.tsx           # Utility bar tests
+        └── views-removal.test.ts         # Legacy view-removal regression
 ```
 
 ## Dependencies
@@ -188,7 +246,12 @@ tests/features/sidebar/
 - **projects-dashboard** - Main content when sidebar shows projects context
 - **project-creation** - Wizard that updates sidebar context
 - **dashboard** - Project detail screen
-- **ai** - AI nav item routes to `demoBuilder.openAi`, which opens the standalone AI surface (`AiOverviewScreen`)
+- **commands/openInClaude.ts** - Backs `demoBuilder.openAiExperience`,
+  invoked by AiZone's Chat button
+- **commands/showPromptsPicker.ts** - Single-purpose prompt picker, invoked
+  by AiZone's Prompts button
+- **dashboard/handlers/aiHandlers.ts** - Provides `readMergedAiPrompts` for
+  the prompt picker
 
 ## Package.json Configuration
 
@@ -206,13 +269,14 @@ The sidebar must be registered in `package.json`:
 }
 ```
 
-## Webpack Configuration
+## Build Configuration
 
-The sidebar entry point must be added to `webpack.config.js`:
+The sidebar entry point is registered in `esbuild.config.js` (the project uses
+esbuild, not webpack):
 
 ```javascript
-entry: {
+const WEBVIEW_ENTRIES = {
     // ... existing entries
-    sidebar: './src/features/sidebar/ui/index.tsx'
-}
+    sidebar: 'src/features/sidebar/ui/index.tsx',
+};
 ```

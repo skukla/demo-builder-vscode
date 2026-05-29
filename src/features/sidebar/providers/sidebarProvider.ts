@@ -240,8 +240,12 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 await this.handleOpenSettings();
                 break;
 
-            case 'openAiMenu':
-                await this.handleOpenAiMenu();
+            case 'openAiChat':
+                await this.handleOpenAiChat();
+                break;
+
+            case 'showPrompts':
+                await this.handleShowPrompts();
                 break;
 
             case 'startDemo':
@@ -433,16 +437,34 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     }
 
     /**
-     * Handle open AI menu request — opens the chat-first AI QuickPick.
+     * Handle open AI chat request — opens/focuses the Claude terminal.
+     * Backs the Chat button in the sidebar's AiZone.
      */
-    private async handleOpenAiMenu(): Promise<void> {
-        this.logger.info('Sidebar: Open AI menu');
+    private async handleOpenAiChat(): Promise<void> {
+        this.logger.info('Sidebar: Open AI chat');
 
         try {
-            await vscode.commands.executeCommand('demoBuilder.aiMenu');
+            await vscode.commands.executeCommand('demoBuilder.openAiExperience');
         } catch (error) {
             this.logger.error(
-                'Open AI menu failed',
+                'Open AI chat failed',
+                error instanceof Error ? error : undefined,
+            );
+        }
+    }
+
+    /**
+     * Handle show prompts request — shows the prompt QuickPick.
+     * Backs the Prompts button in the sidebar's AiZone.
+     */
+    private async handleShowPrompts(): Promise<void> {
+        this.logger.info('Sidebar: Show prompts');
+
+        try {
+            await vscode.commands.executeCommand('demoBuilder.showPromptsPicker');
+        } catch (error) {
+            this.logger.error(
+                'Show prompts failed',
                 error instanceof Error ? error : undefined,
             );
         }

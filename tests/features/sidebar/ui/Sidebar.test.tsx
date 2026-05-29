@@ -13,263 +13,241 @@ import {
     createConfigureContext,
 } from '../testUtils';
 
-// Wrap component with Spectrum Provider
-const renderWithProvider = (ui: React.ReactElement) => {
-    return render(
+const renderWithProvider = (ui: React.ReactElement) =>
+    render(
         <Provider theme={defaultTheme} colorScheme="light">
             {ui}
-        </Provider>
+        </Provider>,
     );
-};
 
 describe('Sidebar', () => {
-    describe('Projects context (WelcomeView - utility strip)', () => {
-        it('should render nothing when no icon callbacks provided', () => {
+    describe('Projects context (no project loaded)', () => {
+        it('renders the utility bar', () => {
             const { container } = renderWithProvider(
                 <Sidebar
                     context={createProjectsContext()}
                     onNavigate={jest.fn()}
                     onCreateProject={jest.fn()}
-                />
-            );
-
-            // WelcomeView returns null when no icons
-            // The sidebar-welcome class should not be present
-            expect(container.querySelector('.sidebar-welcome')).not.toBeInTheDocument();
-        });
-
-        it('should render Tools icon button when onOpenTools provided', () => {
-            renderWithProvider(
-                <Sidebar
-                    context={createProjectsContext()}
-                    onNavigate={jest.fn()}
-                    onCreateProject={jest.fn()}
                     onOpenTools={jest.fn()}
-                />
+                />,
             );
 
+            expect(container.querySelector('.sidebar-utility-bar')).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /tools/i })).toBeInTheDocument();
         });
 
-        it('should render Get Help icon button when onOpenHelp provided', () => {
+        it('does NOT render an AI zone — AI is project-scoped', () => {
             renderWithProvider(
                 <Sidebar
                     context={createProjectsContext()}
                     onNavigate={jest.fn()}
                     onCreateProject={jest.fn()}
-                    onOpenHelp={jest.fn()}
-                />
+                    onOpenAiChat={jest.fn()}
+                    onShowPrompts={jest.fn()}
+                />,
             );
 
-            expect(screen.getByRole('button', { name: /get help/i })).toBeInTheDocument();
-        });
-
-        it('should render Settings icon button when onOpenSettings provided', () => {
-            renderWithProvider(
-                <Sidebar
-                    context={createProjectsContext()}
-                    onNavigate={jest.fn()}
-                    onCreateProject={jest.fn()}
-                    onOpenSettings={jest.fn()}
-                />
-            );
-
-            expect(screen.getByRole('button', { name: /settings/i })).toBeInTheDocument();
-        });
-
-        it('should call onOpenTools when Tools icon clicked', () => {
-            const onOpenTools = jest.fn();
-            renderWithProvider(
-                <Sidebar
-                    context={createProjectsContext()}
-                    onNavigate={jest.fn()}
-                    onCreateProject={jest.fn()}
-                    onOpenTools={onOpenTools}
-                />
-            );
-
-            fireEvent.click(screen.getByRole('button', { name: /tools/i }));
-
-            expect(onOpenTools).toHaveBeenCalled();
-        });
-
-        it('should call onOpenHelp when Get Help icon clicked', () => {
-            const onOpenHelp = jest.fn();
-            renderWithProvider(
-                <Sidebar
-                    context={createProjectsContext()}
-                    onNavigate={jest.fn()}
-                    onCreateProject={jest.fn()}
-                    onOpenHelp={onOpenHelp}
-                />
-            );
-
-            fireEvent.click(screen.getByRole('button', { name: /get help/i }));
-
-            expect(onOpenHelp).toHaveBeenCalled();
-        });
-
-        it('should call onOpenSettings when Settings icon clicked', () => {
-            const onOpenSettings = jest.fn();
-            renderWithProvider(
-                <Sidebar
-                    context={createProjectsContext()}
-                    onNavigate={jest.fn()}
-                    onCreateProject={jest.fn()}
-                    onOpenSettings={onOpenSettings}
-                />
-            );
-
-            fireEvent.click(screen.getByRole('button', { name: /settings/i }));
-
-            expect(onOpenSettings).toHaveBeenCalled();
+            expect(screen.queryByRole('button', { name: /^chat$/i })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /^prompts$/i })).not.toBeInTheDocument();
         });
     });
 
     describe('Project Detail context', () => {
-        // Note: Project context now renders UtilityBar (same as projects context)
-        // The detailed project controls are in the Project Dashboard main panel
-
-        it('should render utility bar for project context', () => {
-            const { container } = renderWithProvider(
+        it('renders the project name as a header', () => {
+            renderWithProvider(
                 <Sidebar
                     context={createProjectContext({ name: 'My Demo Project' })}
                     onNavigate={jest.fn()}
                     onCreateProject={jest.fn()}
-                />
+                />,
             );
 
-            // Project context now renders UtilityBar, not project details
-            // With no icon callbacks, it renders an empty utility bar
-            expect(container.querySelector('.sidebar-utility-bar')).toBeInTheDocument();
+            expect(screen.getByText('My Demo Project')).toBeInTheDocument();
         });
 
-        it('should render Tools icon when onOpenTools provided (project context)', () => {
+        it('renders the AiZone Chat and Prompts buttons when callbacks provided', () => {
             renderWithProvider(
+                <Sidebar
+                    context={createProjectContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    onOpenAiChat={jest.fn()}
+                    onShowPrompts={jest.fn()}
+                />,
+            );
+
+            expect(screen.getByRole('button', { name: /^chat$/i })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /^prompts$/i })).toBeInTheDocument();
+        });
+
+        it('dispatches onOpenAiChat when Chat is clicked', () => {
+            const onOpenAiChat = jest.fn();
+            renderWithProvider(
+                <Sidebar
+                    context={createProjectContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    onOpenAiChat={onOpenAiChat}
+                    onShowPrompts={jest.fn()}
+                />,
+            );
+
+            fireEvent.click(screen.getByRole('button', { name: /^chat$/i }));
+
+            expect(onOpenAiChat).toHaveBeenCalled();
+        });
+
+        it('dispatches onShowPrompts when Prompts is clicked', () => {
+            const onShowPrompts = jest.fn();
+            renderWithProvider(
+                <Sidebar
+                    context={createProjectContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    onOpenAiChat={jest.fn()}
+                    onShowPrompts={onShowPrompts}
+                />,
+            );
+
+            fireEvent.click(screen.getByRole('button', { name: /^prompts$/i }));
+
+            expect(onShowPrompts).toHaveBeenCalled();
+        });
+
+        it('renders the utility bar as a footer', () => {
+            const { container } = renderWithProvider(
                 <Sidebar
                     context={createProjectContext()}
                     onNavigate={jest.fn()}
                     onCreateProject={jest.fn()}
                     onOpenTools={jest.fn()}
-                />
+                />,
             );
 
-            // Project context uses UtilityBar with icons
-            expect(screen.getByRole('button', { name: /tools/i })).toBeInTheDocument();
+            expect(container.querySelector('.sidebar-utility-bar')).toBeInTheDocument();
         });
 
-        it('should plumb onOpenAiMenu to the UtilityBar AI button (project context)', () => {
-            const onOpenAiMenu = jest.fn();
+        it('does NOT render the configure nav list — that is configure-mode only', () => {
             renderWithProvider(
                 <Sidebar
                     context={createProjectContext()}
                     onNavigate={jest.fn()}
                     onCreateProject={jest.fn()}
-                    onOpenAiMenu={onOpenAiMenu}
-                />
+                />,
             );
 
-            fireEvent.click(screen.getByRole('button', { name: /^ai$/i }));
-
-            expect(onOpenAiMenu).toHaveBeenCalled();
+            // The configure nav items appear only in configure mode.
+            // 'Overview' / 'Configure' / 'Updates' should be absent here.
+            expect(screen.queryByText('Overview')).not.toBeInTheDocument();
         });
     });
 
     describe('Configure context', () => {
-        it('should render project name as header', () => {
+        it('renders project name as header', () => {
             renderWithProvider(
                 <Sidebar
                     context={createConfigureContext({ name: 'Config Project' })}
                     onNavigate={jest.fn()}
                     onCreateProject={jest.fn()}
-                />
+                />,
             );
 
             expect(screen.getByText('Config Project')).toBeInTheDocument();
         });
 
-        it('should render navigation with Configure active', () => {
+        it('renders Overview / Configure / Updates nav items', () => {
             renderWithProvider(
                 <Sidebar
                     context={createConfigureContext()}
                     onNavigate={jest.fn()}
                     onCreateProject={jest.fn()}
-                />
+                />,
             );
 
-            // Configure should be present
+            expect(screen.getByText('Overview')).toBeInTheDocument();
             expect(screen.getByText('Configure')).toBeInTheDocument();
+            expect(screen.getByText('Updates')).toBeInTheDocument();
         });
 
-        it('should show back button with "Projects" text', () => {
+        it('does NOT render an AI nav item — AI lives in its own zone now', () => {
+            renderWithProvider(
+                <Sidebar
+                    context={createConfigureContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                />,
+            );
+
+            // The legacy "AI" nav item is gone; "AI" only appears as a zone
+            // label when AiZone is rendered, not as a nav row. We assert no
+            // "AI" nav row by checking against the AiZone's presence:
+            // configure context without AiZone callbacks → no "AI" anywhere.
+            expect(screen.queryByText('AI')).not.toBeInTheDocument();
+        });
+
+        it('renders the AiZone when callbacks provided in configure mode', () => {
+            renderWithProvider(
+                <Sidebar
+                    context={createConfigureContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    onOpenAiChat={jest.fn()}
+                    onShowPrompts={jest.fn()}
+                />,
+            );
+
+            expect(screen.getByRole('button', { name: /^chat$/i })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /^prompts$/i })).toBeInTheDocument();
+        });
+
+        it('shows a back button to "Projects" when onBack provided', () => {
             renderWithProvider(
                 <Sidebar
                     context={createConfigureContext()}
                     onNavigate={jest.fn()}
                     onCreateProject={jest.fn()}
                     onBack={jest.fn()}
-                />
+                />,
             );
 
-            const backButton = screen.getByRole('button', { name: /projects/i });
-            expect(backButton).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /projects/i })).toBeInTheDocument();
         });
 
-        it('should render AI nav item in configure context', () => {
+        it('does not render back button when onBack is absent', () => {
             renderWithProvider(
                 <Sidebar
                     context={createConfigureContext()}
                     onNavigate={jest.fn()}
                     onCreateProject={jest.fn()}
-                />
+                />,
             );
 
-            // Nav item is labelled "AI", not "AI Configuration"
-            expect(screen.getByText('AI')).toBeInTheDocument();
-            // The legacy label should no longer be present
-            expect(screen.queryByText('AI Configuration')).not.toBeInTheDocument();
-        });
-
-        it('should dispatch ai target when AI nav item clicked', () => {
-            const onNavigate = jest.fn();
-            renderWithProvider(
-                <Sidebar
-                    context={createConfigureContext()}
-                    onNavigate={onNavigate}
-                    onCreateProject={jest.fn()}
-                />
-            );
-
-            fireEvent.click(screen.getByText('AI'));
-
-            // Sidebar's onNavigate receives the target id 'ai' for the new entry point
-            expect(onNavigate).toHaveBeenCalledWith('ai');
+            expect(screen.queryByRole('button', { name: /projects/i })).not.toBeInTheDocument();
         });
     });
 
     describe('Wizard context', () => {
-        it('should render "Setup Progress" header', () => {
+        it('renders "Setup Progress" header', () => {
             renderWithProvider(
                 <Sidebar
                     context={createWizardContext()}
                     onNavigate={jest.fn()}
                     onCreateProject={jest.fn()}
-                />
+                />,
             );
 
             expect(screen.getByText('Setup Progress')).toBeInTheDocument();
         });
 
-        it('should render wizard steps progress', () => {
+        it('renders wizard step labels', () => {
             renderWithProvider(
                 <Sidebar
                     context={createWizardContext(2)}
                     onNavigate={jest.fn()}
                     onCreateProject={jest.fn()}
-                />
+                />,
             );
 
-            // Should show wizard step labels
             expect(screen.getByText('Sign In')).toBeInTheDocument();
             expect(screen.getByText('Project')).toBeInTheDocument();
             expect(screen.getByText('Workspace')).toBeInTheDocument();
@@ -278,52 +256,30 @@ describe('Sidebar', () => {
             expect(screen.getByText('Review')).toBeInTheDocument();
         });
 
-        it('should show completed steps with timeline indicators', () => {
-            // Step 3 (1-indexed) means steps 0 and 1 are completed, step 2 is current
-            renderWithProvider(
-                <Sidebar
-                    context={createWizardContext(3)}
-                    onNavigate={jest.fn()}
-                    onCreateProject={jest.fn()}
-                />
-            );
-
-            // Completed steps have timeline-step-dot-completed class
-            // Current step is step 3 (index 2), so steps 0 and 1 are completed
-            const authStep = screen.getByTestId('timeline-step-auth');
-            const projectStep = screen.getByTestId('timeline-step-project');
-
-            expect(authStep).toBeInTheDocument();
-            expect(projectStep).toBeInTheDocument();
-        });
-
-        it('should show current step with proper indicator', () => {
+        it('marks the current step with aria-current', () => {
             renderWithProvider(
                 <Sidebar
                     context={createWizardContext(2)}
                     onNavigate={jest.fn()}
                     onCreateProject={jest.fn()}
-                />
+                />,
             );
 
-            // Current step has aria-current="step"
             const currentStep = screen.getByTestId('timeline-step-project');
             expect(currentStep).toHaveAttribute('aria-current', 'step');
         });
-    });
 
-    describe('no onBack provided', () => {
-        it('should not render back button when onBack is not provided', () => {
-            renderWithProvider(
+        it('renders the utility footer below the timeline', () => {
+            const { container } = renderWithProvider(
                 <Sidebar
-                    context={createProjectContext()}
+                    context={createWizardContext()}
                     onNavigate={jest.fn()}
                     onCreateProject={jest.fn()}
-                />
+                    onOpenTools={jest.fn()}
+                />,
             );
 
-            // No back button should appear without onBack handler
-            expect(screen.queryByRole('button', { name: /projects/i })).not.toBeInTheDocument();
+            expect(container.querySelector('.sidebar-utility-bar')).toBeInTheDocument();
         });
     });
 });

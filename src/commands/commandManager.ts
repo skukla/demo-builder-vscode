@@ -1,11 +1,11 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { AiMenuCommand } from './aiMenu';
 import { ConfigureCommand } from './configure';
 import { DiagnosticsCommand } from './diagnostics';
 import { OpenInClaudeCommand } from './openInClaude';
 import { OpenModernizationAgentCommand } from './openModernizationAgent';
+import { ShowPromptsPickerCommand } from './showPromptsPicker';
 import { BaseWebviewCommand } from '@/core/base';
 import { ResetAiOnboardingCommand } from '@/core/commands/ResetAiOnboardingCommand';
 import { ResetAllCommand } from '@/core/commands/ResetAllCommand';
@@ -244,14 +244,16 @@ export class CommandManager {
             await openInClaude.execute();
         });
 
-        // AI Menu — chat-first QuickPick (Open Chat + prompts + manage/new).
-        const aiMenu = new AiMenuCommand(
+        // Show Prompts Picker — single-purpose prompt QuickPick. Replaces the
+        // state-aware AiMenuCommand. Always shows the picker; selection inserts
+        // via openInClaude or routes to the prompt library.
+        const showPromptsPicker = new ShowPromptsPickerCommand(
             this.context,
             this.stateManager,
             this.logger,
         );
-        this.registerCommand('demoBuilder.aiMenu', async () => {
-            await aiMenu.execute();
+        this.registerCommand('demoBuilder.showPromptsPicker', async () => {
+            await showPromptsPicker.execute();
         });
 
         // Open AEM Modernization Agent — launches aemcoder.adobe.io in the
@@ -279,7 +281,8 @@ export class CommandManager {
                     break;
                 case 'ai':
                     // Chat-first: open the AI experience directly. The prompt
-                    // manager (openAi) stays reachable via the aiMenu Manage item.
+                    // manager (openAi) stays reachable via the Prompts picker's
+                    // "Manage prompts…" row.
                     await vscode.commands.executeCommand('demoBuilder.openAiExperience');
                     break;
                 case 'updates':

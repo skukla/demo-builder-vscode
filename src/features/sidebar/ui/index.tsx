@@ -91,9 +91,14 @@ function SidebarApp(): React.ReactElement {
         sendMessage('openSettings');
     }, []);
 
-    // Handle open AI menu (chat-first QuickPick)
-    const handleOpenAiMenu = useCallback(() => {
-        sendMessage('openAiMenu');
+    // Handle open AI chat (Chat button in AiZone)
+    const handleOpenAiChat = useCallback(() => {
+        sendMessage('openAiChat');
+    }, []);
+
+    // Handle show prompts picker (Prompts button in AiZone)
+    const handleShowPrompts = useCallback(() => {
+        sendMessage('showPrompts');
     }, []);
 
     // Handle start demo
@@ -155,7 +160,8 @@ function SidebarApp(): React.ReactElement {
                 onOpenTools={handleOpenTools}
                 onOpenHelp={handleOpenHelp}
                 onOpenSettings={handleOpenSettings}
-                onOpenAiMenu={handleOpenAiMenu}
+                onOpenAiChat={handleOpenAiChat}
+                onShowPrompts={handleShowPrompts}
                 onStartDemo={handleStartDemo}
                 onStopDemo={handleStopDemo}
                 onOpenDashboard={handleOpenDashboard}

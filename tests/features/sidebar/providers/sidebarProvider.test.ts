@@ -247,10 +247,16 @@ describe('SidebarProvider', () => {
             );
         });
 
-        it('should route openAiMenu message to the demoBuilder.aiMenu command', async () => {
-            await messageHandler({ type: 'openAiMenu' });
+        it('routes openAiChat to demoBuilder.openAiExperience', async () => {
+            await messageHandler({ type: 'openAiChat' });
 
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.aiMenu');
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openAiExperience');
+        });
+
+        it('routes showPrompts to demoBuilder.showPromptsPicker', async () => {
+            await messageHandler({ type: 'showPrompts' });
+
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.showPromptsPicker');
         });
     });
 

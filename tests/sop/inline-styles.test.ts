@@ -27,7 +27,6 @@ describe('SOP: Inline Styles', () => {
         'PageLayout.tsx': 'Dynamic backgroundColor from props',
         'SingleColumnLayout.tsx': 'Dynamic gap from props via translateSpectrumToken()',
         // Components with conditional styles
-        'WizardProgress.tsx': 'Dynamic cursor based on onClick prop',
         'StatusDot.tsx': 'Dynamic color/size based on props',
         'FadeTransition.tsx': 'Animation styles that must be inline for transitions',
         'LoadingOverlay.tsx': 'Position relative for overlay stacking context',

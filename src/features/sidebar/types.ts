@@ -42,7 +42,8 @@ export type SidebarMessageType =
     | 'getContext'
     | 'setContext'
     | 'back'
-    | 'openAiMenu';
+    | 'openAiChat'
+    | 'showPrompts';
 
 /**
  * Navigation target

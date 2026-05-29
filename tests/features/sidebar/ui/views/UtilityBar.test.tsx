@@ -15,42 +15,58 @@ const renderWithProvider = (ui: React.ReactElement) =>
     );
 
 describe('UtilityBar', () => {
-    describe('AI menu button', () => {
-        it('renders the AI button when onOpenAiMenu is provided', () => {
-            renderWithProvider(<UtilityBar onOpenAiMenu={jest.fn()} />);
+    it('renders Tools, Help, and Settings when all callbacks provided', () => {
+        renderWithProvider(
+            <UtilityBar
+                onOpenTools={jest.fn()}
+                onOpenHelp={jest.fn()}
+                onOpenSettings={jest.fn()}
+            />,
+        );
 
-            expect(screen.getByRole('button', { name: /^ai$/i })).toBeInTheDocument();
-        });
+        expect(screen.getByRole('button', { name: /tools/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /get help/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /settings/i })).toBeInTheDocument();
+    });
 
-        it('does not render the AI button when onOpenAiMenu is omitted', () => {
-            renderWithProvider(<UtilityBar onOpenTools={jest.fn()} />);
+    it('omits a button when its callback prop is absent', () => {
+        renderWithProvider(<UtilityBar onOpenTools={jest.fn()} />);
 
-            expect(screen.queryByRole('button', { name: /^ai$/i })).not.toBeInTheDocument();
-        });
+        expect(screen.getByRole('button', { name: /tools/i })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /get help/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /settings/i })).not.toBeInTheDocument();
+    });
 
-        it('calls onOpenAiMenu when the AI button is clicked', () => {
-            const onOpenAiMenu = jest.fn();
-            renderWithProvider(<UtilityBar onOpenAiMenu={onOpenAiMenu} />);
+    it('does NOT render an AI button — AI lives in the AiZone, not the utility row', () => {
+        renderWithProvider(
+            <UtilityBar
+                onOpenTools={jest.fn()}
+                onOpenHelp={jest.fn()}
+                onOpenSettings={jest.fn()}
+            />,
+        );
 
-            fireEvent.click(screen.getByRole('button', { name: /^ai$/i }));
+        expect(screen.queryByRole('button', { name: /^ai$/i })).not.toBeInTheDocument();
+    });
 
-            expect(onOpenAiMenu).toHaveBeenCalled();
-        });
+    it('invokes each callback when its button is clicked', () => {
+        const onOpenTools = jest.fn();
+        const onOpenHelp = jest.fn();
+        const onOpenSettings = jest.fn();
+        renderWithProvider(
+            <UtilityBar
+                onOpenTools={onOpenTools}
+                onOpenHelp={onOpenHelp}
+                onOpenSettings={onOpenSettings}
+            />,
+        );
 
-        it('renders the AI button alongside the existing utility buttons', () => {
-            renderWithProvider(
-                <UtilityBar
-                    onOpenTools={jest.fn()}
-                    onOpenHelp={jest.fn()}
-                    onOpenSettings={jest.fn()}
-                    onOpenAiMenu={jest.fn()}
-                />,
-            );
+        fireEvent.click(screen.getByRole('button', { name: /tools/i }));
+        fireEvent.click(screen.getByRole('button', { name: /get help/i }));
+        fireEvent.click(screen.getByRole('button', { name: /settings/i }));
 
-            expect(screen.getByRole('button', { name: /tools/i })).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: /get help/i })).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: /settings/i })).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: /^ai$/i })).toBeInTheDocument();
-        });
+        expect(onOpenTools).toHaveBeenCalled();
+        expect(onOpenHelp).toHaveBeenCalled();
+        expect(onOpenSettings).toHaveBeenCalled();
     });
 });
