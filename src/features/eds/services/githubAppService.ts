@@ -66,7 +66,7 @@ export class GitHubAppService {
         owner: string,
         repo: string,
         options?: { lenient?: boolean },
-    ): Promise<{ isInstalled: boolean; codeStatus?: number }> {
+    ): Promise<{ isInstalled: boolean; codeStatus?: number; transient?: boolean }> {
         const lenient = options?.lenient ?? false;
         this.logger.debug(`[GitHub App] Checking if app is installed on ${owner}/${repo} (lenient: ${lenient})`);
 
@@ -78,24 +78,33 @@ export class GitHubAppService {
 
         try {
             const result = await this.checkHelixStatus(owner, repo, token.token, lenient);
-            return { isInstalled: result.isInstalled, codeStatus: result.codeStatus };
+            return { isInstalled: result.isInstalled, codeStatus: result.codeStatus, transient: result.transient };
         } catch (error) {
+            // Network errors, fetch aborts, JSON parse failures, and the like are
+            // transient — the caller can decide whether to retry before treating
+            // this as a definitive "App not installed" signal.
             this.logger.debug(`[GitHub App] Failed to check app installation: ${(error as Error).message}`);
-            return { isInstalled: false };
+            return { isInstalled: false, transient: true };
         }
     }
 
     /**
      * Perform a single Helix admin status check.
-     * Returns httpNotFound=true when the HTTP response itself is 404
-     * (distinct from code.status 404 inside a 200 response).
+     *
+     * Classifies the result so the caller can distinguish a *definitive*
+     * "App not installed" answer (HTTP 200 + code.status 404, or HTTP 404)
+     * from a *transient* one (other HTTP errors, missing code.status field,
+     * thrown fetch errors). Definitive answers should drive the install
+     * dialog immediately; transient ones deserve a short retry — a flake on
+     * the very first check shouldn't fail storefront setup with a misleading
+     * "GitHub App installation required" prompt.
      */
     private async checkHelixStatus(
         owner: string,
         repo: string,
         token: string,
         lenient: boolean,
-    ): Promise<{ isInstalled: boolean; codeStatus?: number; httpNotFound?: boolean }> {
+    ): Promise<{ isInstalled: boolean; codeStatus?: number; httpNotFound?: boolean; transient?: boolean }> {
         const statusUrl = `${HELIX_ADMIN_BASE_URL}/status/${owner}/${repo}/main?editUrl=auto`;
 
         const response = await fetch(statusUrl, {
@@ -105,8 +114,15 @@ export class GitHubAppService {
         });
 
         if (!response.ok) {
-            this.logger.debug(`[GitHub App] Status endpoint returned HTTP ${response.status}`);
-            return { isInstalled: false, httpNotFound: response.status === 404 };
+            // HTTP 404 means Helix definitively doesn't know this repo — retrying
+            // won't change that. Other HTTP errors (401, 403, 429, 5xx, timeouts)
+            // are transient transport failures; flag for retry.
+            if (response.status === 404) {
+                this.logger.debug(`[GitHub App] Status endpoint returned HTTP 404 (Helix does not know this repo)`);
+                return { isInstalled: false, httpNotFound: true };
+            }
+            this.logger.debug(`[GitHub App] Status endpoint returned transient HTTP ${response.status}`);
+            return { isInstalled: false, transient: true };
         }
 
         const data = await response.json();
@@ -115,8 +131,10 @@ export class GitHubAppService {
         this.logger.debug(`[GitHub App] Code status for ${owner}/${repo}: ${codeStatus}`);
 
         if (codeStatus === undefined) {
+            // Response shape was unrecognized — don't conclude "not installed"
+            // from an answer Helix didn't give. Flag transient so the caller retries.
             this.logger.info(`[GitHub App] Unable to determine app status for ${owner}/${repo} (no code.status in response)`);
-            return { isInstalled: false };
+            return { isInstalled: false, transient: true };
         }
 
         let isInstalled: boolean;

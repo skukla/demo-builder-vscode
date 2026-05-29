@@ -26,7 +26,7 @@ import type { Logger } from '@/types/logger';
 import type { GitHubFileOperations } from './githubFileOperations';
 import type { GitHubTokenService } from './githubTokenService';
 import type { HandlerContext } from '@/types/handlers';
-import type { EdsResetParams, EdsResetProgress, EdsResetResult } from './edsResetParams';
+import { extractResetParams, type EdsResetParams, type EdsResetProgress, type EdsResetResult, type ExtractParamsResult } from './edsResetParams';
 import { DaLiveAuthError, GitHubAppNotInstalledError } from './types';
 import { buildSiteConfigParams, ConfigurationService } from './configurationService';
 import { HelixService } from './helixService';
@@ -42,8 +42,11 @@ import { resetRepoToTemplate } from './edsResetRepoHelper';
 // Re-exports for backward compatibility
 // ==========================================================
 
-export type { EdsResetParams, EdsResetProgress, EdsResetResult, ExtractParamsResult } from './edsResetParams';
-export { extractResetParams } from './edsResetParams';
+// Re-exports from the consolidated import above — kept here for the long-standing
+// downstream-consumer API. Splitting the import/re-export means the no-duplicate-imports
+// rule sees a single `from './edsResetParams'` statement.
+export { extractResetParams };
+export type { EdsResetParams, EdsResetProgress, EdsResetResult, ExtractParamsResult };
 
 // ==========================================================
 // Constants

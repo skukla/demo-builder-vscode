@@ -8,6 +8,14 @@
       "command": "node",
       "args": ["node_modules/@adobe-commerce/commerce-extensibility-tools/index.js"],
       "description": "Adobe App Builder MCP — aio-app-deploy, commerce-event-subscribe, search-commerce-docs, aio-app-dev, aio-app-use, aio-configure-global, aio-dev-invoke, aio-login, aio-where, onboard, upload-chat-history"
+    },
+    {
+      "id": "playwright",
+      "package": "@playwright/mcp",
+      "version": "^0.0.75",
+      "command": "node",
+      "args": ["node_modules/@playwright/mcp/cli.js"],
+      "description": "Playwright browser-automation MCP — drives the EDS site-scraping skills (scrape-reference-site, connect-authenticated-site, refine-visual-match). First use downloads a Chromium binary (~150 MB) cached in ~/Library/Caches/ms-playwright/, shared across all projects."
     }
   ]
 }

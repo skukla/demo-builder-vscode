@@ -178,11 +178,47 @@ describe('skillsWriter', () => {
             expect(writtenFiles().some(p => p.endsWith('update-credentials.md'))).toBe(true);
         });
 
-        it('writes exactly three skill files when the Adobe skill bundle is not present', async () => {
+        it('writes exactly nine skill files when the Adobe skill bundle is not present', async () => {
             mockMissingAdobeBundle();
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            expect(writtenFiles()).toHaveLength(3);
+            expect(writtenFiles()).toHaveLength(9);
+        });
+
+        it('writes scrape-reference-site.md for EDS projects', async () => {
+            await writeSkillFiles('/projects/test', makeEdsProject());
+
+            expect(writtenFiles().some(p => p.endsWith('scrape-reference-site.md'))).toBe(true);
+        });
+
+        it('writes connect-authenticated-site.md for EDS projects', async () => {
+            await writeSkillFiles('/projects/test', makeEdsProject());
+
+            expect(writtenFiles().some(p => p.endsWith('connect-authenticated-site.md'))).toBe(true);
+        });
+
+        it('writes commerce-block-mapper.md for EDS projects', async () => {
+            await writeSkillFiles('/projects/test', makeEdsProject());
+
+            expect(writtenFiles().some(p => p.endsWith('commerce-block-mapper.md'))).toBe(true);
+        });
+
+        it('writes demo-data-injector.md for EDS projects', async () => {
+            await writeSkillFiles('/projects/test', makeEdsProject());
+
+            expect(writtenFiles().some(p => p.endsWith('demo-data-injector.md'))).toBe(true);
+        });
+
+        it('writes header-nav-footer.md for EDS projects', async () => {
+            await writeSkillFiles('/projects/test', makeEdsProject());
+
+            expect(writtenFiles().some(p => p.endsWith('header-nav-footer.md'))).toBe(true);
+        });
+
+        it('writes refine-visual-match.md for EDS projects', async () => {
+            await writeSkillFiles('/projects/test', makeEdsProject());
+
+            expect(writtenFiles().some(p => p.endsWith('refine-visual-match.md'))).toBe(true);
         });
 
         it('each written skill file is non-empty and starts with YAML frontmatter or an H1', async () => {
@@ -191,7 +227,7 @@ describe('skillsWriter', () => {
             const writeFileMock = fsPromises.writeFile as jest.Mock;
             const calls = writeFileMock.mock.calls;
 
-            expect(calls.length).toBe(3);
+            expect(calls.length).toBe(9);
             for (const [, content] of calls) {
                 expect(typeof content).toBe('string');
                 expect((content as string).length).toBeGreaterThan(0);
@@ -371,8 +407,8 @@ describe('skillsWriter', () => {
 
             const files = writtenFiles();
             expect(files.some(p => p.includes('/.claude/skills/aem-'))).toBe(false);
-            // Demo-Builder skills still written
-            expect(files.filter(p => p.startsWith('/projects/test/.claude/skills/'))).toHaveLength(3);
+            // Demo-Builder skills still written: 3 lifecycle + 6 EDS-scraping = 9
+            expect(files.filter(p => p.startsWith('/projects/test/.claude/skills/'))).toHaveLength(9);
         });
 
         it('still writes the three Demo-Builder lifecycle skills when copying the Adobe bundle', async () => {

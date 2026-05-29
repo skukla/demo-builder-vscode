@@ -51,6 +51,8 @@ jest.mock('@/features/project-creation/services', () => ({
     generateAIContextFiles: jest.fn(),
     registerGlobalMcp: jest.fn().mockResolvedValue(undefined),
     GLOBAL_MCP_REG_STATE_KEY: 'demoBuilder.ai.globalMcpRegistration',
+    // Default: success — tests can override per-case via mockResolvedValueOnce.
+    installAiDefaultsInStorefront: jest.fn().mockResolvedValue({ success: true }),
 }));
 
 // Mock vscode
@@ -102,7 +104,7 @@ export {
 } from '@/features/dashboard/handlers/aiHandlers';
 export { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 export { clearMcpCache, inspectAllServers, verifyAiSetup } from '@/features/ai';
-export { generateAIContextFiles, registerGlobalMcp } from '@/features/project-creation/services';
+export { generateAIContextFiles, registerGlobalMcp, installAiDefaultsInStorefront } from '@/features/project-creation/services';
 export type { HandlerContext } from '@/types/handlers';
 
 import type { HandlerContext } from '@/types/handlers';
