@@ -5,6 +5,7 @@ import { ConfigureCommand } from './configure';
 import { DiagnosticsCommand } from './diagnostics';
 import { OpenInClaudeCommand } from './openInClaude';
 import { OpenModernizationAgentCommand } from './openModernizationAgent';
+import { RefreshBlockLibraryCommand } from './refreshBlockLibrary';
 import { ShowPromptsPickerCommand } from './showPromptsPicker';
 import { BaseWebviewCommand } from '@/core/base';
 import { ResetAiOnboardingCommand } from '@/core/commands/ResetAiOnboardingCommand';
@@ -207,6 +208,17 @@ export class CommandManager {
             this.logger,
         );
         this.registerCommand('demoBuilder.syncStorefront', () => syncStorefront.execute());
+
+        // Refresh Block Library (EDS projects only — dashboard kebab) —
+        // destructive rebuild of the DA.live authoring library from the project's
+        // current component-definition.json. No package.json contribution: the
+        // dashboard is the only entrypoint.
+        const refreshBlockLibrary = new RefreshBlockLibraryCommand(
+            this.context,
+            this.stateManager,
+            this.logger,
+        );
+        this.registerCommand('demoBuilder.refreshBlockLibrary', () => refreshBlockLibrary.execute());
 
         // Check Updates
         const checkUpdates = new CheckUpdatesCommand(

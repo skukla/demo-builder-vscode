@@ -82,15 +82,17 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'resetProject')).toBe(true);
         });
 
-        it('should have exactly 19 handlers', () => {
+        it('should have exactly 20 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers);
 
-            // Then: Exactly 19 handlers
-            // 2 init + 2 lifecycle + 10 navigation + 1 mesh + 1 syncStorefront + 1 auth + 1 project + 1 reset = 19
-            // (openInClaude removed with the dashboard tile — see dashboard-tile-layout redesign)
-            expect(types).toHaveLength(19);
+            // Then: Exactly 20 handlers
+            // 2 init + 2 lifecycle + 10 navigation + 1 mesh + 1 syncStorefront +
+            // 1 refreshBlockLibrary + 1 auth + 1 project + 1 reset = 20
+            // (openInClaude removed with the dashboard tile — see dashboard-tile-layout redesign;
+            //  refreshBlockLibrary added for the EDS kebab "Refresh Block Library" action)
+            expect(types).toHaveLength(20);
         });
 
         it('should have handlers as functions', () => {

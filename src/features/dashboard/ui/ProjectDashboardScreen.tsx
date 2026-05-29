@@ -113,6 +113,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
         handleViewLogs,
         handleDeployMesh,
         handleSyncStorefront,
+        handleRefreshBlockLibrary,
         handleOpenBrowser,
         handleOpenLiveSite,
         handleOpenDaLive,
@@ -282,6 +283,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                             handleViewLogs={handleViewLogs}
                             handleDeployMesh={handleDeployMesh}
                             handleSyncStorefront={handleSyncStorefront}
+                            handleRefreshBlockLibrary={isEdsStable ? handleRefreshBlockLibrary : undefined}
                             handleConfigure={handleConfigure}
                             handleViewComponents={handleViewComponents}
                             handleOpenDevConsole={handleOpenDevConsole}
