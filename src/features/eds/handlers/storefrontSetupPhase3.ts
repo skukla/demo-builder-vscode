@@ -82,11 +82,33 @@ export async function executePhaseCodeSync(
     return null;
 }
 
-const CODE_SYNC_MAX_ATTEMPTS = 25;
+// Warm-up wait after the App-installed check passes. 10 × 2s = 20s caps the
+// worst-case latency before downstream phases reference the bus. App-installed
+// repos typically settle in under 10s in practice; longer warm-ups added
+// latency without changing correctness now that the App check is the gate.
+const CODE_SYNC_MAX_ATTEMPTS = 10;
 const CODE_SYNC_POLL_INTERVAL_MS = 2000;
 
+// Delay before retrying isAppInstalled on a transient failure. Short enough
+// to feel snappy, long enough to ride out a momentary network blip.
+const APP_CHECK_RETRY_DELAY_MS = 2000;
+
 /**
- * Poll for code sync and handle GitHub App not installed scenario
+ * Verify the AEM Code Sync GitHub App is installed, then wait for the code
+ * bus to warm up.
+ *
+ * Ground-truth ordering is load-bearing. The code bus retains files seeded
+ * during initial template setup (e.g., `scripts/aem.js` pushed by DA.live or
+ * a template-clone bootstrap) even when the GitHub App is not installed on
+ * the user's repo. A poll that treats file fetchability as proof of sync
+ * therefore produces a false positive — it sees the seeded boilerplate, calls
+ * verification done, and lets the user finish setup. Their *next* push then
+ * 404s on the bus because no GitHub → Helix webhook fires without the App.
+ *
+ * Fix: check `isAppInstalled` first. If the App is missing, surface the
+ * install dialog and stop the phase — never poll. If the App is installed,
+ * the existing poll is preserved as a warm-up wait for sync to settle before
+ * downstream phases reference the bus.
  */
 async function verifyCodeSync(
     context: HandlerContext,
@@ -98,6 +120,34 @@ async function verifyCodeSync(
     const { githubAppService } = services;
 
     try {
+        // 1. Ground truth — is the AEM Code Sync GitHub App installed on this repo?
+        //    The check can fail transiently (network blip, Helix 5xx, parse error).
+        //    Since the dialog this gates is disruptive — it asks the user to leave
+        //    the IDE and complete a GitHub install flow — give a flaky first check
+        //    exactly one short retry before declaring the App missing.
+        let initialCheck = await githubAppService.isAppInstalled(repoInfo.repoOwner, repoInfo.repoName);
+
+        if (!initialCheck.isInstalled && initialCheck.transient) {
+            logger.info('[Storefront Setup] Code sync check failed transiently — retrying once');
+            await new Promise(resolve => setTimeout(resolve, APP_CHECK_RETRY_DELAY_MS));
+            initialCheck = await githubAppService.isAppInstalled(repoInfo.repoOwner, repoInfo.repoName);
+        }
+
+        if (!initialCheck.isInstalled) {
+            const installUrl = githubAppService.getInstallUrl(repoInfo.repoOwner, repoInfo.repoName);
+            logger.info(`[Storefront Setup] GitHub App not installed. Install URL: ${installUrl}`);
+
+            await context.sendMessage('storefront-setup-github-app-required', {
+                owner: repoInfo.repoOwner, repo: repoInfo.repoName, installUrl,
+                message: 'The AEM Code Sync GitHub App must be installed to continue.',
+            });
+
+            return { success: false, error: 'GitHub App installation required', ...repoInfo };
+        }
+
+        // 2. App is installed — wait briefly for the bus to start serving the
+        //    boilerplate before downstream phases reference it. Exhaustion is
+        //    not fatal here; the App check above already confirmed sync will work.
         const owner = encodeURIComponent(repoInfo.repoOwner);
         const repo = encodeURIComponent(repoInfo.repoName);
         const codeUrl = `https://admin.hlx.page/code/${owner}/${repo}/main/scripts/aem.js`;
@@ -121,28 +171,12 @@ async function verifyCodeSync(
             }
         }
 
-        if (!syncVerified) {
-            const { isInstalled, codeStatus } = await githubAppService.isAppInstalled(repoInfo.repoOwner, repoInfo.repoName);
-
-            if (!isInstalled) {
-                const installUrl = githubAppService.getInstallUrl(repoInfo.repoOwner, repoInfo.repoName);
-                logger.info(`[Storefront Setup] GitHub App not installed. Install URL: ${installUrl}`);
-
-                await context.sendMessage('storefront-setup-github-app-required', {
-                    owner: repoInfo.repoOwner, repo: repoInfo.repoName, installUrl,
-                    message: 'The AEM Code Sync GitHub App must be installed to continue.',
-                });
-
-                return { success: false, error: 'GitHub App installation required', ...repoInfo };
-            }
-
-            if (codeStatus === 400) {
-                logger.info('[Storefront Setup] Code sync in progress (initializing), continuing...');
-            } else {
-                logger.warn(`[Storefront Setup] Code sync status unclear (code.status: ${codeStatus}), continuing...`);
-            }
-        } else {
+        if (syncVerified) {
             logger.info('[Storefront Setup] Code sync verified');
+        } else if (initialCheck.codeStatus === 400) {
+            logger.info('[Storefront Setup] Code sync in progress (initializing), continuing...');
+        } else {
+            logger.warn(`[Storefront Setup] Code sync warm-up exhausted (code.status: ${initialCheck.codeStatus}), continuing...`);
         }
     } catch (error) {
         if (signal.aborted) throw error;

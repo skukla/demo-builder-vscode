@@ -159,8 +159,8 @@ describe('GitHub App Service', () => {
             expect(result).toEqual({ isInstalled: false, codeStatus: 404 });
         });
 
-        it('should return false when HTTP response is not ok', async () => {
-            // Given: Valid token but HTTP error
+        it('should return transient false when HTTP response is a non-404 transport error (e.g. 401, 5xx)', async () => {
+            // Given: Valid token but HTTP error (401/5xx/etc. are transient — caller can retry)
             mockTokenService.getToken.mockResolvedValue({ token: 'ghp_xxx', tokenType: 'bearer', scopes: ['repo'] });
             mockFetch.mockResolvedValue({
                 ok: false,
@@ -168,27 +168,42 @@ describe('GitHub App Service', () => {
             });
             const service = new GitHubAppService(mockTokenService);
 
-            // When: Checking if app is installed
+            // When
             const result = await service.isAppInstalled('test-owner', 'test-repo');
 
-            // Then: Should return isInstalled: false
-            expect(result).toEqual({ isInstalled: false });
+            // Then: isInstalled false + transient flag set, so the caller can decide to retry
+            // before declaring the App actually missing.
+            expect(result).toEqual({ isInstalled: false, transient: true });
         });
 
-        it('should return false when fetch throws error', async () => {
+        it('should NOT mark transient when HTTP response is 404 (Helix definitively does not know this repo)', async () => {
+            mockTokenService.getToken.mockResolvedValue({ token: 'ghp_xxx', tokenType: 'bearer', scopes: ['repo'] });
+            mockFetch.mockResolvedValue({
+                ok: false,
+                status: 404,
+            });
+            const service = new GitHubAppService(mockTokenService);
+
+            const result = await service.isAppInstalled('test-owner', 'test-repo');
+
+            // Retrying a real "Helix doesn't have this repo" won't change the answer —
+            // do not set transient, so the caller routes straight to the install dialog.
+            expect(result.isInstalled).toBe(false);
+            expect(result.transient).toBeUndefined();
+        });
+
+        it('should return transient false when fetch throws (network failure / abort)', async () => {
             // Given: Valid token but network error
             mockTokenService.getToken.mockResolvedValue({ token: 'ghp_xxx', tokenType: 'bearer', scopes: ['repo'] });
             mockFetch.mockRejectedValue(new Error('Network error'));
             const service = new GitHubAppService(mockTokenService);
 
-            // When: Checking if app is installed
             const result = await service.isAppInstalled('test-owner', 'test-repo');
 
-            // Then: Should return isInstalled: false
-            expect(result).toEqual({ isInstalled: false });
+            expect(result).toEqual({ isInstalled: false, transient: true });
         });
 
-        it('should return false when code.status is undefined', async () => {
+        it('should return transient false when code.status is undefined (response shape unrecognized)', async () => {
             // Given: Response without code.status field
             mockTokenService.getToken.mockResolvedValue({ token: 'ghp_xxx', tokenType: 'bearer', scopes: ['repo'] });
             mockFetch.mockResolvedValue({
@@ -200,11 +215,10 @@ describe('GitHub App Service', () => {
             });
             const service = new GitHubAppService(mockTokenService);
 
-            // When: Checking if app is installed
             const result = await service.isAppInstalled('test-owner', 'test-repo');
 
-            // Then: Should return isInstalled: false (no code status = not syncing)
-            expect(result).toEqual({ isInstalled: false });
+            // Unrecognized shape → don't trust it as "not installed" — flag transient.
+            expect(result).toEqual({ isInstalled: false, transient: true });
         });
     });
 
