@@ -93,21 +93,30 @@ jest.mock('@adobe/react-spectrum', () => ({
     DialogContainer: ({ children }: any) => <div data-testid="dialog-container">{children}</div>,
 }));
 
-// Stub the skills modal — its real implementation renders the shared Modal
-// (Spectrum internals not covered by this file's minimal mock). The real
-// AiSkillsModal is exercised in its own test; here we only assert the dashboard
-// opens it and wires its props.
-jest.mock('@/features/dashboard/ui/components/AiSkillsModal', () => ({
-    AiSkillsModal: ({ skills, hasError, onClose, onRegenerate, isBusy }: any) => (
-        <div data-testid="ai-skills-modal" data-error={String(Boolean(hasError))} data-busy={String(Boolean(isBusy))}>
-            <span data-testid="ai-skills-modal-count">{skills.length}</span>
+// Stub the capabilities modal — its real implementation renders the shared
+// Modal (Spectrum internals not covered by this file's minimal mock). The real
+// AiCapabilitiesModal is exercised in its own test; here we only assert the
+// dashboard opens it and wires its props.
+jest.mock('@/features/dashboard/ui/components/AiCapabilitiesModal', () => ({
+    AiCapabilitiesModal: ({ skills, mcps, hasSkillsError, hasMcpsError, onClose, onRegenerate, isBusy }: any) => (
+        <div
+            data-testid="ai-capabilities-modal"
+            data-skills-error={String(Boolean(hasSkillsError))}
+            data-mcps-error={String(Boolean(hasMcpsError))}
+            data-busy={String(Boolean(isBusy))}
+        >
+            <span data-testid="ai-capabilities-modal-skills-count">{skills.length}</span>
+            <span data-testid="ai-capabilities-modal-mcps-count">{mcps.length}</span>
             {skills.map((s: any) => (
-                <div key={s.path} data-testid="ai-skills-modal-skill">{s.name}</div>
+                <div key={s.path} data-testid="ai-capabilities-modal-skill">{s.name}</div>
             ))}
-            <button data-testid="ai-skills-modal-regenerate" onClick={() => onRegenerate()}>
+            {mcps.map((m: any) => (
+                <div key={m.id} data-testid="ai-capabilities-modal-mcp">{m.id}</div>
+            ))}
+            <button data-testid="ai-capabilities-modal-regenerate" onClick={() => onRegenerate()}>
                 Regenerate AI files
             </button>
-            <button data-testid="ai-skills-modal-close" onClick={onClose}>Close</button>
+            <button data-testid="ai-capabilities-modal-close" onClick={onClose}>Close</button>
         </div>
     ),
 }));

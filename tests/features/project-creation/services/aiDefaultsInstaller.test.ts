@@ -10,11 +10,22 @@
  */
 
 import * as fsPromises from 'fs/promises';
-import { applyAiDefaultsToStorefrontPackageJson } from '@/features/project-creation/services/aiDefaultsInstaller';
+import {
+    applyAiDefaultsToStorefrontPackageJson,
+    installAiDefaultsInStorefront,
+} from '@/features/project-creation/services/aiDefaultsInstaller';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 
 jest.mock('fs/promises', () => ({
     readFile: jest.fn(),
     writeFile: jest.fn().mockResolvedValue(undefined),
+}));
+
+const executeMock = jest.fn();
+jest.mock('@/core/di/serviceLocator', () => ({
+    ServiceLocator: {
+        getCommandExecutor: jest.fn(() => ({ execute: executeMock })),
+    },
 }));
 
 const STOREFRONT_PATH = '/projects/test/components/eds-storefront';
@@ -136,5 +147,73 @@ describe('applyAiDefaultsToStorefrontPackageJson', () => {
         (fsPromises.readFile as jest.Mock).mockResolvedValueOnce('{ not valid json');
 
         await expect(applyAiDefaultsToStorefrontPackageJson(STOREFRONT_PATH)).rejects.toThrow();
+    });
+});
+
+describe('installAiDefaultsInStorefront', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        executeMock.mockReset();
+        // Default: package.json read returns a minimal valid storefront so the
+        // applyAiDefaults step succeeds; tests can override per-case.
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(
+            JSON.stringify({ name: 'storefront', version: '1.0.0' }),
+        );
+    });
+
+    it('reapplies devDeps to package.json and then runs npm install in the storefront', async () => {
+        executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+
+        const result = await installAiDefaultsInStorefront(STOREFRONT_PATH);
+
+        expect(fsPromises.writeFile).toHaveBeenCalledWith(
+            PACKAGE_JSON_PATH,
+            expect.stringContaining('@adobe-commerce/commerce-extensibility-tools'),
+            'utf-8',
+        );
+        expect(ServiceLocator.getCommandExecutor).toHaveBeenCalledTimes(1);
+        expect(executeMock).toHaveBeenCalledWith(
+            'npm install',
+            expect.objectContaining({ cwd: STOREFRONT_PATH }),
+        );
+        expect(result).toEqual({ success: true });
+    });
+
+    it('reports failure with a clear error when npm install exits non-zero', async () => {
+        executeMock.mockResolvedValue({
+            code: 1,
+            stdout: '',
+            stderr: 'npm ERR! 404 Not Found - @some/package',
+        });
+
+        const result = await installAiDefaultsInStorefront(STOREFRONT_PATH);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toMatch(/npm install/);
+        expect(result.error).toMatch(/code 1/);
+        expect(result.error).toMatch(/404 Not Found/);
+    });
+
+    it('reports failure when the command executor throws', async () => {
+        executeMock.mockRejectedValue(new Error('ENOENT: npm not found'));
+
+        const result = await installAiDefaultsInStorefront(STOREFRONT_PATH);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toMatch(/npm not found/);
+    });
+
+    it('reports failure when the package.json mutation step throws', async () => {
+        (fsPromises.readFile as jest.Mock).mockReset();
+        (fsPromises.readFile as jest.Mock).mockRejectedValue(
+            Object.assign(new Error('ENOENT'), { code: 'ENOENT' }),
+        );
+
+        const result = await installAiDefaultsInStorefront(STOREFRONT_PATH);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toMatch(/package\.json/);
+        // npm install should NOT run if the prep step failed.
+        expect(executeMock).not.toHaveBeenCalled();
     });
 });

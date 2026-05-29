@@ -29,6 +29,12 @@ import * as path from 'path';
 import * as yaml from 'yaml';
 import componentsConfig from '@/features/components/config/components.json';
 import addComponentContent from '../templates/skills/add-component.md';
+import commerceBlockMapperContent from '../templates/skills/commerce-block-mapper.md';
+import connectAuthenticatedSiteContent from '../templates/skills/connect-authenticated-site.md';
+import demoDataInjectorContent from '../templates/skills/demo-data-injector.md';
+import headerNavFooterContent from '../templates/skills/header-nav-footer.md';
+import refineVisualMatchContent from '../templates/skills/refine-visual-match.md';
+import scrapeReferenceSiteContent from '../templates/skills/scrape-reference-site.md';
 import syncChangesContent from '../templates/skills/sync-changes.md';
 import updateCredentialsContent from '../templates/skills/update-credentials.md';
 import type { Project } from '@/types/base';
@@ -59,9 +65,19 @@ const components = componentsConfig as unknown as RawComponentRegistry;
 /**
  * Write skill files to `{projectPath}/.claude/skills/`.
  *
- * Always writes the three Demo-Builder lifecycle skills. Additionally copies
- * any Adobe skill bundles declared by components in `project.componentInstances`
- * (via the `aiSkillBundle` field on the component's definition).
+ * Always writes:
+ *   - Three Demo-Builder lifecycle skills (add-component, sync-changes,
+ *     update-credentials) — operating against the Demo Builder MCP server.
+ *   - Six EDS site-scraping skills (scrape-reference-site,
+ *     connect-authenticated-site, commerce-block-mapper, demo-data-injector,
+ *     header-nav-footer, refine-visual-match). They sit alongside the
+ *     lifecycle skills because they're invoked from any project state; the
+ *     `scrape-reference-site` orchestrator routes between Mod Agent and
+ *     Playwright MCP based on user choice.
+ *
+ * Additionally copies any Adobe skill bundles declared by components in
+ * `project.componentInstances` (via the `aiSkillBundle` field on the
+ * component's definition).
  */
 export async function writeSkillFiles(
     projectPath: string,
@@ -78,9 +94,17 @@ export async function writeSkillFiles(
     };
 
     await Promise.all([
+        // Demo Builder lifecycle skills
         writeSkill('add-component.md', addComponentContent),
         writeSkill('sync-changes.md', syncChangesContent),
         writeSkill('update-credentials.md', updateCredentialsContent),
+        // EDS site-scraping skills
+        writeSkill('scrape-reference-site.md', scrapeReferenceSiteContent),
+        writeSkill('connect-authenticated-site.md', connectAuthenticatedSiteContent),
+        writeSkill('commerce-block-mapper.md', commerceBlockMapperContent),
+        writeSkill('demo-data-injector.md', demoDataInjectorContent),
+        writeSkill('header-nav-footer.md', headerNavFooterContent),
+        writeSkill('refine-visual-match.md', refineVisualMatchContent),
     ]);
 
     // Copy Adobe skill bundles for components that declare aiSkillBundle.

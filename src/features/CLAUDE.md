@@ -246,7 +246,7 @@ features/my-feature/
 - Custom block library URL parsing and validation (`services/customBlockLibraryUtils.ts`)
 - `aiContextWriter.ts` - Generates `AGENTS.md` at the project root with project-specific AI agent context; writes `CLAUDE.md` (root) and `.claude/CLAUDE.md` as one-line `see @AGENTS.md` pointers
 - `mcpConfigWriter.ts` - Generates `.claude/mcp.json`, `.mcp.json`, and `.claude/settings.json` (Cursor and Codex read `.mcp.json` natively — no per-tool config files)
-- `skillsWriter.ts` - Writes three lifecycle skills to `.claude/skills/` (add-component, sync-changes, update-credentials); EDS storefront skills come from Adobe's `@adobe-commerce/commerce-extensibility-tools` package
+- `skillsWriter.ts` - Writes nine Demo-Builder skills to `.claude/skills/`: three lifecycle (add-component, sync-changes, update-credentials) plus six EDS site-scraping skills (scrape-reference-site, connect-authenticated-site, commerce-block-mapper, demo-data-injector, header-nav-footer, refine-visual-match); additionally copies Adobe AEM skills from `@adobe-commerce/commerce-extensibility-tools` when the EDS Storefront component is installed
 - `generateAIContextFiles` (in `projectFinalizationService.ts`) - Orchestrates all three AI writers as project finalization phase 6
 - Project template application
 - Environment file generation
