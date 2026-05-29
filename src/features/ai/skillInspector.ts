@@ -5,8 +5,9 @@
  * Classifies each skill by where it lives on disk:
  *
  *   - Any top-level filename in `DEMO_BUILDER_SKILL_FILES` → 'demo-builder'
- *     (matches the nine skills `skillsWriter` writes during project
- *     finalization: three lifecycle skills + six EDS site-scraping skills).
+ *     (matches the ten skills `skillsWriter` writes during project
+ *     finalization: three lifecycle skills + six EDS site-scraping skills +
+ *     one custom-block registration skill).
  *   - Any `.md` nested under a subdirectory of `skills/` → 'adobe'
  *     (`skillsWriter` only creates subdirectories for Adobe skill bundles
  *     copied from `@adobe-commerce/commerce-extensibility-tools`).
@@ -36,6 +37,8 @@ const DEMO_BUILDER_SKILL_FILES: ReadonlySet<string> = new Set([
     'demo-data-injector.md',
     'header-nav-footer.md',
     'refine-visual-match.md',
+    // Custom block authoring registration
+    'register-custom-block.md',
 ]);
 
 /**

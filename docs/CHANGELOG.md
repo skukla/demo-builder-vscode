@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`promote_block_to_library` MCP tool (8th project tool).** Registers a custom block in DA.live's authoring picker so a block created via AI is immediately drag-and-droppable in the DA.live editor. Four sub-steps: append entry to `component-definition.json` (commit + push); upsert the doc page at `.da/library/blocks/<id>.html` (overwrite-always — supports AI variant iteration); append a row to `.da/library/blocks.json` (read-merge-rewrite — idempotent on `name` collision); publish via Helix Admin (preview + publish). Inputs validated by Zod: `projectName`, `blockId` (regex `^[a-zA-Z0-9_-]+$`), `title`, `unsafeHTML` (≤100K chars), and optional `description` (≤1,000 chars) — persisted to `component-definition.json::components[].description` and rendered as a picker-tile tooltip by the EDS authoring runtime.
+- **`register-custom-block` skill** — 10th demo-builder skill. Instructs AI agents to call `promote_block_to_library` after writing block source files so the block appears in DA.live's picker. Linked from `commerce-block-mapper.md` and `header-nav-footer.md`.
+- **"Refresh Block Library" dashboard action.** EDS-only kebab item under the More menu (between Components and Dev Console). Triggers `executeEdsPipeline({ includeBlockLibrary: true, skipContent: true, skipPublish: false, blockCollectionIds: [] })` — the empty array is load-bearing: it routes the rebuild to read `component-definition.json` from the USER's repo (not the template), so MCP-promoted blocks survive the destructive rebuild.
+- **Public `appendBlockToLibrary`, `upsertBlockDocPage`, `ensureBlockDocPages` on `DaLiveContentOperations`.** `appendBlockToLibrary` does read-merge-rewrite of the library sheet (idempotent). `upsertBlockDocPage` (new) is overwrite-always — used by the MCP promote flow so AI variant edits land on the published page. `ensureBlockDocPages` (now public) stays non-destructive — used by the template rebuild path to preserve human-authored doc pages.
+- **`ErrorCode.INVALID_OPERATION`** — surfaced when a project-shape-gated action runs against an inapplicable project (e.g., the EDS-only Refresh Block Library kebab item invoked on a non-EDS project).
+
+### Changed
+
+- **Block library lifecycle documentation.** `src/features/eds/README.md` adds a "Block library lifecycle (post-setup)" subsection describing the three paths: initial destructive setup (`createBlockLibrary`), incremental promote via the MCP tool (`appendBlockToLibrary` + `upsertBlockDocPage`), and user-initiated destructive refresh via the dashboard kebab.
+- **`upsertBlockDocPage` return type collapsed to `'written' | 'failed'`.** The previous `'created' | 'overwritten' | 'failed'` shape forced an extra DA.live HEAD round-trip on every promote call just to label the result. The MCP handler treated both as success and never surfaced the distinction, so the probe was pure overhead. The doc page is still overwritten unconditionally — only the return label changed.
+
+### Security
+
+- **`unsafeHTML` sanitization at the MCP boundary.** `promote_block_to_library` now runs AI-supplied `unsafeHTML` through `sanitize-html` before writing it to either `component-definition.json` or `.da/library/blocks/<id>.html`. Strips `<script>`, event handlers (`on*`), `javascript:` URLs, framing tags (`<iframe>`, `<object>`, `<embed>`), and disallowed schemes. Allowlist permits the EDS authoring block vocabulary plus `class`/`id`/`data-*`/`aria-*`. Defense-in-depth: the trust boundary intentionally extends to the AI for this tool, but the sanitizer blunts prompt-injection / confused-deputy paths from poisoning the user's published doc page and committed component definition.
+
 ## [1.0.0-beta.111] - 2026-05-28
 
 ### Added

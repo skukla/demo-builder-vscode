@@ -20,8 +20,14 @@ import * as os from 'os';
 import * as path from 'path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import sanitizeHtml from 'sanitize-html';
 import { z } from 'zod';
 import { assertPathInside, assertPathInsideSync } from '@/core/validation';
+import {
+    DaLiveContentOperations,
+    type TokenProvider,
+} from '@/features/eds/services/daLiveContentOperations';
+import { previewAndPublishPage } from '@/features/eds/services/helixApiClient';
 import {
     PushRejectedError,
     syncAndPublish,
@@ -220,6 +226,221 @@ async function readStorefrontGithubRepo(projectPath: string): Promise<{ owner: s
     }
 }
 
+// ─── promote_block_to_library helpers ────────────────────────────────────────
+
+interface PromoteBlockContext {
+    storefrontPath: string;
+    daLiveOrg: string;
+    daLiveSite: string;
+    githubRepo?: { owner: string; site: string; branch?: string };
+}
+
+/**
+ * Read the manifest and extract the fields needed by promoteBlockToLibrary.
+ * Throws if no EDS storefront, daLiveOrg, or daLiveSite is configured.
+ */
+async function readPromoteBlockContext(projectPath: string): Promise<PromoteBlockContext> {
+    const raw = await fsPromises.readFile(path.join(projectPath, '.demo-builder.json'), 'utf-8');
+    const manifest = JSON.parse(raw);
+    const edsInstance = manifest?.componentInstances?.['eds-storefront'];
+    const storefrontPath = edsInstance?.path;
+    if (!storefrontPath) {
+        throw new Error('No EDS storefront configured for this project');
+    }
+    const metadata = edsInstance?.metadata ?? {};
+    const daLiveOrg = metadata.daLiveOrg;
+    const daLiveSite = metadata.daLiveSite;
+    if (typeof daLiveOrg !== 'string' || typeof daLiveSite !== 'string') {
+        throw new Error('No DA.live org/site configured for this storefront');
+    }
+    let githubRepo: PromoteBlockContext['githubRepo'];
+    const repo = metadata.githubRepo;
+    if (typeof repo === 'string' && repo.includes('/')) {
+        const [owner, site] = repo.split('/');
+        const branch = typeof metadata.edsBranch === 'string' ? metadata.edsBranch : undefined;
+        githubRepo = { owner, site, branch };
+    }
+    return { storefrontPath, daLiveOrg, daLiveSite, githubRepo };
+}
+
+/**
+ * Read component-definition.json, append the new entry to the first group's
+ * components if missing, write it back, and return whether a change was made.
+ *
+ * `description` (when provided) lands at `components[].description` — the EDS
+ * authoring runtime renders it as a tooltip on the block tile in the picker.
+ */
+async function applyComponentDefinitionEntry(
+    storefrontPath: string,
+    blockId: string,
+    title: string,
+    unsafeHTML: string,
+    description: string | undefined,
+): Promise<'added' | 'unchanged'> {
+    const compDefPath = path.join(storefrontPath, 'component-definition.json');
+    const raw = await fsPromises.readFile(compDefPath, 'utf-8');
+    const parsed = JSON.parse(raw) as {
+        groups?: Array<{ components?: ComponentDefinitionEntry[] }>;
+    };
+    const groups = parsed.groups ?? [];
+    const allComponents = groups.flatMap(g => g.components ?? []);
+    if (allComponents.some(c => c.id === blockId)) {
+        return 'unchanged';
+    }
+    const firstGroup = groups[0];
+    if (!firstGroup) {
+        throw new Error('component-definition.json has no groups to add the entry to');
+    }
+    const entry: ComponentDefinitionEntry = {
+        id: blockId,
+        title,
+        plugins: { da: { unsafeHTML } },
+    };
+    if (description) {
+        entry.description = description;
+    }
+    firstGroup.components = [
+        ...(firstGroup.components ?? []),
+        entry,
+    ];
+    await fsPromises.writeFile(compDefPath, JSON.stringify(parsed, null, 2), 'utf-8');
+    return 'added';
+}
+
+/** Shape of a single entry under `component-definition.json::groups[].components[]`.
+ *  All fields except `id` are optional in the schema; the promote flow always
+ *  populates `title` and `plugins.da.unsafeHTML`, and optionally `description`
+ *  (rendered as the picker-tile tooltip by the EDS authoring runtime). */
+interface ComponentDefinitionEntry {
+    id: string;
+    title?: string;
+    description?: string;
+    plugins?: { da?: { unsafeHTML?: string } };
+}
+
+/**
+ * Verify the block source directory exists under <storefrontPath>/blocks/.
+ * Throws "Block source not found: <blockId>" otherwise.
+ */
+async function verifyBlockSourceExists(storefrontPath: string, blockId: string): Promise<void> {
+    const blockDir = path.join(storefrontPath, 'blocks', blockId);
+    try {
+        await fsPromises.stat(blockDir);
+    } catch {
+        throw new Error(`Block source not found: ${blockId}`);
+    }
+}
+
+/**
+ * Build a static TokenProvider that returns the given token.
+ * The promote flow uses an env-derived DA.live token (not a fetched one).
+ */
+function staticTokenProvider(token: string): TokenProvider {
+    return { getAccessToken: async () => token };
+}
+
+/**
+ * Defense-in-depth sanitizer for AI-supplied `unsafeHTML` flowing into the
+ * `promote_block_to_library` tool. Strips XSS vectors (script tags, event
+ * handlers, `javascript:` URLs, framing tags) before the HTML lands in:
+ *   1. `component-definition.json` (committed + pushed to the user's repo)
+ *   2. `.da/library/blocks/<id>.html` (published to the user's CDN)
+ *
+ * The trust boundary intentionally extends to the AI for this tool, but a
+ * compromised AI session, prompt-injection from a malicious upstream page, or
+ * a confused-deputy scenario can otherwise produce stored XSS against the
+ * user's authoring UI and live site. The allowlist permits the EDS authoring
+ * block vocabulary (semantic tags + `<picture>`/`<source>` for responsive
+ * images + `class`/`id` for block styling) and rejects everything else.
+ *
+ * Schemes restricted to http / https / mailto / tel — explicitly blocks
+ * `javascript:`, `data:` (SVG XSS), `vbscript:`, and protocol-relative
+ * (`//evil.example/x`) URLs.
+ *
+ * Known limitations (defer until real EDS blocks need them):
+ *   - Inline `<svg>` is stripped. Use raster `<img>` or a CSS background for
+ *     icons in promoted blocks. Re-evaluate if a real block surfaces with
+ *     inline SVG decoration.
+ *   - `<style>` is stripped. Block styles belong in the block's `.css` source,
+ *     not the preview HTML.
+ *   - `data-*` is broadly allowed for EDS authoring runtime conventions
+ *     (`data-block-name`, `data-aue-resource`, etc.). No downstream renderer
+ *     in this stack treats `data-*` as a code expression — revisit if a
+ *     framework like KnockoutJS / AlpineJS / Vue is added to the storefront.
+ */
+function sanitizeBlockHtml(rawHtml: string): string {
+    return sanitizeHtml(rawHtml, {
+        allowedTags: [
+            // Semantic + flow content
+            'div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+            'ul', 'ol', 'li', 'dl', 'dt', 'dd',
+            'blockquote', 'pre', 'code', 'hr', 'br',
+            'strong', 'em', 'b', 'i', 'u', 's', 'small', 'sub', 'sup', 'mark',
+            'a', 'img', 'picture', 'source',
+            'figure', 'figcaption',
+            'table', 'thead', 'tbody', 'tr', 'td', 'th', 'caption',
+            'section', 'article', 'header', 'footer', 'nav', 'aside', 'main',
+        ],
+        allowedAttributes: {
+            // class + id allowed on all tags for EDS block styling
+            '*': ['class', 'id', 'data-*', 'aria-*', 'role', 'lang', 'title'],
+            a: ['href', 'target', 'rel'],
+            img: ['src', 'alt', 'width', 'height', 'loading', 'srcset', 'sizes'],
+            source: ['src', 'srcset', 'sizes', 'type', 'media'],
+            picture: [],
+            td: ['colspan', 'rowspan'],
+            th: ['colspan', 'rowspan', 'scope'],
+        },
+        allowedSchemes: ['http', 'https', 'mailto', 'tel'],
+        allowedSchemesByTag: {},
+        allowedSchemesAppliedToAttributes: ['href', 'src', 'cite', 'srcset'],
+        allowProtocolRelative: false,
+        disallowedTagsMode: 'discard',
+    });
+}
+
+/**
+ * Storefront commit/push/publish step. Failures are swallowed and reported via
+ * the returned status — a publish failure must NOT throw because the doc page +
+ * sheet + comp-def writes may have already succeeded.
+ */
+async function publishStorefrontAndDaLive(
+    ctx: PromoteBlockContext,
+    blockId: string,
+    githubToken: string | undefined,
+    daLiveToken: string,
+): Promise<'success' | 'partial' | 'failed'> {
+    try {
+        await syncAndPublish({
+            storefrontPath: ctx.storefrontPath,
+            commitMessage: `AI: promote block ${blockId} to library`,
+            githubRepo: ctx.githubRepo,
+            githubToken,
+            daLiveToken,
+        });
+    } catch {
+        return 'failed';
+    }
+    // Publish the DA.live doc page + sheet via Helix admin API (parallel to
+    // the storefront publish). Failures here are partial — the storefront push
+    // already succeeded.
+    if (!ctx.githubRepo || !githubToken) {
+        return 'success';
+    }
+    try {
+        await previewAndPublishPage(
+            ctx.githubRepo.owner,
+            ctx.githubRepo.site,
+            `/.da/library/blocks/${blockId}`,
+            ctx.githubRepo.branch ?? 'main',
+            { githubToken, daLiveToken },
+        );
+    } catch {
+        return 'partial';
+    }
+    return 'success';
+}
+
 // ─── Tool handlers (exported for unit tests) ─────────────────────────────────
 
 /** @internal — exported only for unit tests; not part of the public API */
@@ -394,6 +615,84 @@ export const toolHandlers = {
         );
         return JSON.stringify(sources, null, 2);
     },
+
+    /**
+     * Promote a local block to the DA.live authoring library.
+     *
+     * Adds the block to `component-definition.json`, writes the doc page in
+     * `.da/library/blocks/<blockId>`, appends a row to `.da/library/blocks.json`,
+     * commits/pushes the storefront, and previews/publishes the doc page.
+     *
+     * Partial-success: a publish failure does NOT throw — the returned status
+     * fields surface the real state of each step. Validation and "block source
+     * not found" failures DO throw (per the MCP error envelope contract).
+     */
+    async promoteBlockToLibrary(
+        projectsDir: string,
+        projectName: string,
+        blockId: string,
+        title: string,
+        unsafeHTML: string,
+        description?: string,
+    ): Promise<string> {
+        const projectPath = resolveProjectPath(projectsDir, projectName);
+        const ctx = await readPromoteBlockContext(projectPath);
+
+        // Validate the storefront path is absolute and lives inside the project.
+        if (!path.isAbsolute(ctx.storefrontPath)) {
+            throw new Error(`storefrontPath must be an absolute path: ${ctx.storefrontPath}`);
+        }
+        await assertInsideProject(projectPath, ctx.storefrontPath);
+
+        await verifyBlockSourceExists(ctx.storefrontPath, blockId);
+
+        // Defense-in-depth: sanitize AI-supplied HTML before it lands in two
+        // persistent stores (component-definition.json + published doc page).
+        // See sanitizeBlockHtml() for the allowlist rationale.
+        const safeHtml = sanitizeBlockHtml(unsafeHTML);
+
+        const componentDefinition = await applyComponentDefinitionEntry(
+            ctx.storefrontPath, blockId, title, safeHtml, description,
+        );
+
+        const daLiveToken = process.env.DA_LIVE_IMS_TOKEN || process.env.DEMO_BUILDER_DA_LIVE_TOKEN;
+        if (!daLiveToken) {
+            throw new Error('DA.live token unavailable — set DA_LIVE_IMS_TOKEN');
+        }
+        const githubToken = process.env.GITHUB_TOKEN || process.env.DEMO_BUILDER_GITHUB_TOKEN || undefined;
+
+        // Logger is unused for the MCP stdio flow — supply a no-op shim. The
+        // DA.live operations log to stderr in the real flow; the MCP wrapper
+        // intentionally suppresses noise.
+        const noopLogger = {
+            trace: () => undefined, debug: () => undefined, info: () => undefined,
+            warn: () => undefined, error: () => undefined,
+        };
+        const daLiveOps = new DaLiveContentOperations(staticTokenProvider(daLiveToken), noopLogger);
+
+        // Doc page: upsertBlockDocPage always writes so AI iteration on
+        // unsafeHTML refreshes the rendered preview. (ensureBlockDocPages is
+        // deliberately non-destructive for the template path — wrong contract
+        // for this flow.)
+        const docPage = await daLiveOps.upsertBlockDocPage(ctx.daLiveOrg, ctx.daLiveSite, {
+            id: blockId,
+            exampleHtml: safeHtml,
+        });
+
+        const sheetResult = await daLiveOps.appendBlockToLibrary(ctx.daLiveOrg, ctx.daLiveSite, {
+            blockId, title,
+        });
+
+        const publish = await publishStorefrontAndDaLive(ctx, blockId, githubToken, daLiveToken);
+
+        return JSON.stringify({
+            docPage,
+            sheet: sheetResult.status,
+            componentDefinition,
+            publish,
+            details: `Block "${title}" (${blockId}) promoted to ${ctx.daLiveOrg}/${ctx.daLiveSite}`,
+        });
+    },
 };
 
 // ─── MCP server wiring ────────────────────────────────────────────────────────
@@ -482,6 +781,33 @@ if (process.env.NODE_ENV !== 'test') {
         },
     }, async (args: any) => ({
         content: [{ type: 'text' as const, text: await toolHandlers.getBlockSource(PROJECTS_DIR, args.projectName, args.blockName as string) }],
+    }));
+
+    server.registerTool('promote_block_to_library', {
+        title: 'Promote Block to Library',
+        // Phrasing matches sync-changes.md:18 ("Block changes to push back to source library")
+        // so the capabilityStatements regression test (mcpServer-promoteBlock + capabilityStatements)
+        // stays green.
+        description: 'Block changes to push back to source library — adds a block to the DA.live authoring library by updating component-definition.json, writing the doc page, appending the sheet row, and committing/pushing/publishing the storefront',
+        inputSchema: {
+            projectName: projectNameSchema,
+            blockId: z.string().regex(/^[a-zA-Z0-9_-]+$/).describe('Block directory name inside storefront blocks/'),
+            title: z.string().min(1).max(200).describe('Human-readable block title shown in the DA.live library'),
+            unsafeHTML: z.string().max(100_000).describe('Example HTML for the block, embedded as plugins.da.unsafeHTML'),
+            description: z.string().max(1_000).optional().describe('Optional human-readable description'),
+        },
+    }, async (args: any) => ({
+        content: [{
+            type: 'text' as const,
+            text: await toolHandlers.promoteBlockToLibrary(
+                PROJECTS_DIR,
+                args.projectName,
+                args.blockId as string,
+                args.title as string,
+                args.unsafeHTML as string,
+                args.description as string | undefined,
+            ),
+        }],
     }));
     /* eslint-enable @typescript-eslint/no-explicit-any */
 

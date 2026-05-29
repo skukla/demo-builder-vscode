@@ -8,6 +8,13 @@
  * - CitiSignal content copy workflow
  *
  * Extracted from DaLiveService for better modularity and testability.
+ *
+ * IMPORTANT — vscode-free invariant: this module MUST NOT import `vscode`.
+ * The standalone MCP server (`src/mcp-server.ts`) constructs DaLiveContentOperations
+ * at process start. The MCP server runs in a separate Node process WITHOUT the
+ * vscode API; pulling `vscode` here (directly or transitively) would crash the
+ * server on startup. Mirrors the same constraint already enforced on
+ * `storefrontSyncService.ts` and `helixApiClient.ts`.
  */
 
 import * as fs from 'fs';
@@ -901,6 +908,127 @@ export class DaLiveContentOperations {
     }
 
     /**
+     * Append a single block to the `.da/library/blocks.json` sheet (non-destructive).
+     *
+     * Sibling to the destructive `createBlockLibrary` flow: this method preserves
+     * existing rows via a read-merge-rewrite cycle and is safe to call repeatedly
+     * (e.g., from the AI promotion path). It never calls `deleteSource`.
+     *
+     * Flow:
+     *   1. GET `.da/library/blocks.json` (404 → start with empty rows).
+     *   2. If a row with `name === title` already exists, return
+     *      `{ status: 'skipped-duplicate' }` without writing.
+     *   3. Otherwise append `{ name: title, path: content.da.live/<org>/<site>/.da/library/blocks/<blockId> }`
+     *      and rewrite via `createJsonSpreadsheet` with `overwrite: true`.
+     *   4. Re-invoke `updateSiteConfig` with the `"Blocks"` section so the library
+     *      registration is present. The section title MUST be exactly "Blocks" —
+     *      DA.live's library UI only renders block lists for that exact name.
+     *
+     * @param org - Destination organization
+     * @param site - Destination site name
+     * @param block - Block descriptor `{ blockId, title }`
+     * @returns Status of the sheet operation and whether the library section
+     *          was registered in site config.
+     * @throws Propagates non-404 HTTP errors from the initial GET without writing.
+     */
+    async appendBlockToLibrary(
+        org: string,
+        site: string,
+        block: { blockId: string; title: string },
+    ): Promise<{ status: 'created' | 'appended' | 'skipped-duplicate'; siteConfigRegistered: boolean }> {
+        const token = await this.getImsToken();
+        const sheetPath = '.da/library/blocks.json';
+        const sheetUrl = `${DA_LIVE_BASE_URL}/source/${org}/${site}/${sheetPath}`;
+
+        // Step 1: read existing rows. 404 → empty; other non-OK → throw.
+        const existingRows = await this.readBlockLibraryRows(sheetUrl, token);
+        const sheetExisted = existingRows !== null;
+        const rows = existingRows ?? [];
+
+        // Step 2: idempotency check.
+        if (rows.some(r => r.name === block.title)) {
+            // Still re-register the site config — caller may be repairing a config
+            // drift even when the row already exists.
+            const configRegistered = await this.registerBlocksLibrarySection(org, site);
+            return { status: 'skipped-duplicate', siteConfigRegistered: configRegistered };
+        }
+
+        // Step 3: append and rewrite. `createJsonSpreadsheet` writes with
+        // `overwrite: true`, so the read-merge-rewrite cycle preserves all
+        // pre-existing rows.
+        const newRow = {
+            name: block.title,
+            path: `https://content.da.live/${org}/${site}/.da/library/blocks/${block.blockId}`,
+        };
+        const mergedRows = [...rows, newRow];
+        const writeResult = await this.createJsonSpreadsheet(
+            org,
+            site,
+            '.da/library/blocks',
+            ['name', 'path'],
+            mergedRows,
+            { overwrite: true },
+        );
+        if (!writeResult.success) {
+            throw new Error(`Failed to write block library sheet: ${writeResult.error ?? 'unknown error'}`);
+        }
+
+        // Step 4: register the "Blocks" section (idempotent on DA.live's side).
+        const configRegistered = await this.registerBlocksLibrarySection(org, site);
+
+        return {
+            status: sheetExisted ? 'appended' : 'created',
+            siteConfigRegistered: configRegistered,
+        };
+    }
+
+    /**
+     * Read the current `.da/library/blocks.json` sheet rows.
+     *
+     * Returns `null` when the sheet is missing (HTTP 404). Throws for any other
+     * non-OK response so the caller does not silently overwrite a sheet it
+     * cannot read.
+     */
+    private async readBlockLibraryRows(
+        sheetUrl: string,
+        token: string,
+    ): Promise<Array<Record<string, string>> | null> {
+        const response = await this.fetchWithRetry(sheetUrl, {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.status === 404) return null;
+        if (!response.ok) {
+            throw this.createErrorFromResponse(response, 'read block library sheet');
+        }
+        const sheet = await response.json() as {
+            data?: { data?: Array<Record<string, string>> };
+        };
+        return sheet?.data?.data ?? [];
+    }
+
+    /**
+     * Register (or re-register) the "Blocks" library section in site config.
+     *
+     * Returns `true` on success, `false` on a non-fatal failure (logged but not
+     * thrown — the sheet write has already succeeded and the caller may still
+     * be useful with a stale config).
+     */
+    private async registerBlocksLibrarySection(org: string, site: string): Promise<boolean> {
+        const result = await this.updateSiteConfig(org, site, [
+            {
+                title: 'Blocks',
+                path: `https://content.da.live/${org}/${site}/.da/library/blocks.json`,
+            },
+        ]);
+        if (!result.success) {
+            this.logger.warn(`[DA.live] Failed to register Blocks library section: ${result.error}`);
+            return false;
+        }
+        return true;
+    }
+
+    /**
      * Create block library configuration in DA.live
      *
      * Creates a single "Blocks" spreadsheet at /.da/library/blocks.json and
@@ -1003,6 +1131,51 @@ export class DaLiveContentOperations {
     }
 
     /**
+     * Upsert a single block's documentation page — always writes, overwriting
+     * any existing page at `.da/library/blocks/<blockId>.html`.
+     *
+     * Use this from the `promote_block_to_library` MCP flow where the AI may
+     * iterate on the variant HTML and expects each call to refresh the rendered
+     * preview. Contrast with {@link ensureBlockDocPages} which preserves
+     * existing pages.
+     *
+     * Wraps `exampleHtml` in the DA.live-expected document structure
+     * (`<body><header/><main><div>{html}</div></main><footer/></body>` — the
+     * inner `<div>` matters: DA.live treats direct children of `<main>` as
+     * sections, not blocks).
+     *
+     * @param org - DA.live organization
+     * @param site - DA.live site
+     * @param block - Block descriptor with `id` and `exampleHtml`
+     * @returns `'written'` when DA.live accepted the write; `'failed'` when the
+     *          underlying source call returned an error or threw. Failures are
+     *          logged and surfaced via the return value, never thrown.
+     */
+    async upsertBlockDocPage(
+        org: string,
+        site: string,
+        block: { id: string; exampleHtml: string },
+    ): Promise<'written' | 'failed'> {
+        try {
+            const docHtml = `<body><header></header><main><div>${block.exampleHtml}</div></main><footer></footer></body>`;
+            const result = await this.createSource(
+                org, site,
+                `.da/library/blocks/${block.id}.html`,
+                docHtml,
+                { overwrite: true },
+            );
+            if (!result.success) {
+                this.logger.warn(`[DA.live] Failed to upsert doc page for ${block.id}: ${result.error}`);
+                return 'failed';
+            }
+            return 'written';
+        } catch (error) {
+            this.logger.warn(`[DA.live] Failed to upsert doc page for ${block.id}: ${(error as Error).message}`);
+            return 'failed';
+        }
+    }
+
+    /**
      * Create documentation pages for blocks that have exampleHtml but no existing page.
      *
      * Non-destructive: only creates pages for blocks missing from DA.live.
@@ -1014,7 +1187,7 @@ export class DaLiveContentOperations {
      * @param site - Site name
      * @param blocks - Array of block definitions (may include exampleHtml)
      */
-    private async ensureBlockDocPages(
+    async ensureBlockDocPages(
         org: string,
         site: string,
         blocks: Array<{ title: string; id: string; exampleHtml?: string }>,
