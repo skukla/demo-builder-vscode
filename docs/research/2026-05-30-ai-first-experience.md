@@ -1,6 +1,8 @@
-# AI-First Experience — Research & Plan
+# AI-First Experience — RPTC Research
 
-**Status:** Research + Plan (RPTC phase 1–2). Not yet in TDD.
+**Status:** RESEARCH COMPLETE (RPTC phase 1). All decisions resolved (§1a/§1b/§5);
+ready for promotion to a TDD-ready PLAN (`.rptc/plans/`) via the Master Feature
+Planner.
 **Owner:** TBD
 **Relates to:** PR #2 (in-extension MCP server), `.rptc/backlog/2026-05-30-global-mcp-entry-point.md`
 **Goal:** A first-class, start-to-finish AI-first experience driven from the
@@ -92,7 +94,23 @@ These resolve the §5 open questions; planning inherits them as fixed inputs.
   **full external verify gate** + **one post-create hook** (guaranteed
   workspace-anchor, model-independent). **Scoped creation subagent deferred** to
   backlog (add only if Tier-4 blast radius proves it necessary).
-- **Auth-in-the-loop UX:** _still open_ — see §5.
+- **Auth-in-the-loop UX:** **mirror the wizard** — *front-load all auth*, then
+  build uninterrupted. The wizard's step order (`adobe-auth` → `adobe-project` →
+  `adobe-workspace` → Connect Commerce → `eds-connect-services` [GitHub +
+  DA.live] → … → **Final Review** → **Publish Storefront** → **Create Project**)
+  shows auth is completed as gating steps *before* the long-running build, never
+  scattered through it. The scripted create skill mirrors this:
+  1. Gather requirements → prerequisites.
+  2. **Auth phase** — complete Adobe → GitHub → DA.live in that order; at each
+     boundary trigger `sign_in`, tell the user a browser is opening, then
+     **poll `get_auth_status` and hold** until done before the next (mirrors the
+     wizard's per-step `isLoggingIn` wait, not a mid-build interruption).
+  3. **Plan echo = the wizard's "Final Review"** — the confirm-the-plan moment
+     (already decided); by here all auth is done.
+  4. Build uninterrupted (`create_project` + storefront publish) → full verify →
+     anchor.
+  Consistent with scripted-create + confirm-the-plan + full-verify above, and
+  makes the AI flow structurally parallel to the wizard users already know.
 
 ---
 
@@ -195,11 +213,10 @@ verification scope (full external verify), cold-start launch context
 determinism spend (verify gate + one post-create hook; subagent deferred), and
 the governing tiered determinism policy.
 
-**Still open (carry into Plan):**
+**Auth-in-the-loop UX** — resolved: mirror the wizard (front-load auth, then
+build uninterrupted). See §1b.
 
-1. **Auth-in-the-loop UX.** How browser sign-ins (`needsAuth` → `sign_in`)
-   surface mid-conversation so they feel first-class, not like errors — and how
-   the scripted skill pauses/resumes around them.
+**All §5 decisions resolved.** No open questions block planning.
 
 ---
 
