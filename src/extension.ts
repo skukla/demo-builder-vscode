@@ -26,6 +26,7 @@ import { registerViewTools } from '@/features/ai/server/viewTools';
 import { AuthenticationService } from '@/features/authentication';
 import { ComponentTreeProvider } from '@/features/components/providers/componentTreeProvider';
 import { shouldAutoReopenProjectsList } from '@/features/dashboard/commands/showDashboard';
+import { seedDefaultAiPrompts } from '@/features/dashboard/services/defaultPromptsSeeder';
 import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLiveSites';
 import { manageGitHubReposCommand } from '@/features/eds/commands/manageGitHubRepos';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
@@ -148,6 +149,14 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Register StateManager with ServiceLocator (for commands without handler context)
         ServiceLocator.setStateManager(stateManager);
+
+        // Seed built-in AI prompts into the global store once (starter recipes that
+        // surface in every project's prompt library). Idempotent and non-fatal.
+        try {
+            await seedDefaultAiPrompts(context.globalState);
+        } catch (err) {
+            logger.error('Failed to seed default AI prompts', err);
+        }
 
         // Initialize context variables for view switching
         const hasProject = await stateManager.hasProject();
