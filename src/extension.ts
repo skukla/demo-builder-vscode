@@ -12,6 +12,7 @@ import { StateManager } from '@/core/state';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
+import { registerAuthTools } from '@/features/ai/server/authTools';
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer';
@@ -417,6 +418,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
             (mcpServer) => {
                 registerDescriptorTools(mcpServer, [...READ_DESCRIPTORS, ...ACTION_DESCRIPTORS], ctxFactory);
                 registerDiscoveryTools(mcpServer);
+                registerAuthTools(mcpServer, ctxFactory);
             },
         );
         await server.start();
