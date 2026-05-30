@@ -56,8 +56,6 @@ export interface UseDashboardActionsReturn {
     handleConfigure: () => void;
     /** Open Adobe Developer Console */
     handleOpenDevConsole: () => void;
-    /** Open the AI surface for the project */
-    handleOpenAi: () => void;
     /** Delete the project */
     handleDeleteProject: () => void;
     /** Navigate back to projects list */
@@ -149,10 +147,6 @@ export function useDashboardActions({
         webviewClient.postMessage('openDevConsole');
     }, []);
 
-    const handleOpenAi = useCallback(() => {
-        webviewClient.postMessage('openAi');
-    }, []);
-
     const handleDeleteProject = useCallback(() => {
         webviewClient.postMessage('deleteProject');
     }, []);
@@ -181,7 +175,6 @@ export function useDashboardActions({
         handleOpenDaLive,
         handleConfigure,
         handleOpenDevConsole,
-        handleOpenAi,
         handleDeleteProject,
         handleNavigateBack,
         handleViewComponents,

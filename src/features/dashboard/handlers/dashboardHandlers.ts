@@ -317,20 +317,6 @@ export const handleRefreshBlockLibrary: MessageHandler = async (context) => {
 };
 
 /**
- * Handle 'openAi' message — launch the configured AI chat surface for the current
- * project (terminal tab or extension URI, depending on `demoBuilder.ai.surface`).
- *
- * The project dashboard's AI tile is a chat-launcher, not a prompt-manager —
- * delegates to `demoBuilder.openAiExperience` (the chat). The Prompt Library
- * webview (`demoBuilder.openAi`) is reached from the wand QuickPick's
- * "Manage prompts…" or the "Demo Builder: Manage AI Prompts" palette entry.
- */
-export const handleOpenAi: MessageHandler = async (_context) => {
-    await vscode.commands.executeCommand('demoBuilder.openAiExperience');
-    return { success: true };
-};
-
-/**
  * Handle 'openDevConsole' message - Open Adobe Developer Console
  */
 export const handleOpenDevConsole: MessageHandler = async (context) => {
@@ -566,7 +552,6 @@ export const dashboardHandlers = defineHandlers({
     'viewDebugLogs': handleViewDebugLogs,
     'configure': handleConfigure,
     'openDevConsole': handleOpenDevConsole,
-    'openAi': handleOpenAi,
     'navigateBack': handleNavigateBack,
     'viewComponents': handleViewComponents,
 
