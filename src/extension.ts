@@ -22,6 +22,7 @@ import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer'
 import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
 import { registerOpenProjectTool } from '@/features/ai/server/openProjectTool';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
+import { registerStorefrontTools } from '@/features/ai/server/storefrontTools';
 import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
 import { registerViewTools } from '@/features/ai/server/viewTools';
 import { AuthenticationService } from '@/features/authentication';
@@ -437,6 +438,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerCreateProjectTool(mcpServer, ctxFactory);
                 registerOpenProjectTool(mcpServer, ctxFactory);
                 registerCloudResourceTools(mcpServer, ctxFactory);
+                registerStorefrontTools(mcpServer, ctxFactory);
                 registerViewTools(mcpServer, (commandId) => Promise.resolve(vscode.commands.executeCommand(commandId)));
             },
         );
