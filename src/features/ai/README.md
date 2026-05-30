@@ -97,6 +97,40 @@ Responses are shaped to keep token usage low: tool output is emitted as compact 
 
 ---
 
+## Token Efficiency
+
+The MCP server is convenient but every tool call spends the agent's context-window tokens. There are two independent levers — one we own in this repo, one that lives in the harness (the Claude Code CLI).
+
+### Lever 1 — Response shaping (server-side, always in effect)
+
+This is the portable win: it helps regardless of which CLI version a user runs. The dominant cost is tool **response payloads**, not the tool definitions, so the server keeps responses lean:
+
+- **Compact JSON.** `get_project` and `get_block_source` emit `JSON.stringify(x)` (no indentation). Pretty-print whitespace is pure token waste for machine-consumed output.
+- **Summaries over full dumps.** `get_project` returns a curated summary by default — `aiPrompts` collapses to a count, `installedBlockLibraries` keeps name/source but replaces `blockIds` with a count, and `componentInstances` keeps `path` while dropping metadata blobs. Pass `full=true` for the untouched manifest.
+- **Progressive block source.** `get_block_source` without `fileName` returns only a `{ files: [{ name, bytes }] }` manifest; with `fileName` it returns one file. This bounds a response to a single file (capped at `MAX_FILE_BYTES`, 30 KB) instead of dumping up to `MAX_BLOCK_FILES × MAX_FILE_BYTES` at once. The agent uses the manifest's `bytes` to skip files that would truncate.
+- **Pagination.** `list_projects` and `list_blocks` accept `offset`/`limit`.
+
+When adding or changing a tool, keep this in mind: prefer a list-then-fetch shape over bulk dumps, return compact JSON, and cap any file/blob a tool can return.
+
+### Lever 2 — Deferred tool loading (harness-side, version-dependent)
+
+Recent Claude Code versions support **tool-search / deferred tool loading**: a server's tool *definitions* are not all injected into the model's context up front — the harness surfaces tool names and pulls a tool's full schema only when it's about to be used. This makes the static cost of the tool list pay-per-use instead of per-turn.
+
+There is nothing to enable in `mcp-server.ts` for this — it is governed by the user's CLI version. To take advantage of it:
+
+- **Encourage a current Claude Code CLI.** Older CLIs eager-load every registered server's full tool list into context on every turn; deferred loading only kicks in on recent versions.
+- **Keep tools search-friendly.** Concise, distinct tool names and one-line descriptions (which we already use) let the harness match the right tool on demand. Don't bury intent in long prose — search ranks on names and short descriptions.
+
+### How the two levers combine with project-scoping
+
+Global registration (`~/.claude.json`) is a manual opt-in, not the default (see *Global MCP registration* below). The default is per-project `.mcp.json`. The net effect:
+
+- **Project scope** keeps the server out of unrelated Claude sessions entirely (the 7 tools load only in a demo-project directory).
+- **Deferred loading** trims the in-session static cost where the server *is* active.
+- **Response shaping** trims the dynamic per-call cost — and is the only lever that helps on CLIs without deferred loading.
+
+---
+
 ## Integration Points
 
 - **Standalone AI surface** (`src/features/dashboard/ui/aiSurface/AiOverviewScreen.tsx`): renders a status strip, capability bullets, an installed-skills drill-down, and a sidebar of curated prompt cards plus an Open-in-Claude-Code CTA. Actions: Refresh (calls `inspect-mcp`), Regenerate AI Files (`regenerate-ai-files` then re-verify), Register Global MCP (`register-global-mcp` — only when the global registration state is not `'registered'`).
