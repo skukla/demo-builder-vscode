@@ -1,9 +1,9 @@
 /**
  * UtilityBar Component
  *
- * Three-icon utility row for the sidebar: Tools, Help, Settings. These are
- * infrequent global actions; the row is intentionally minimal. AI access lives
- * in the `AiZone` component (project / configure modes), not here.
+ * A labeled "Utilities" zone — small-caps zone label above three tiles
+ * (Tools, Help, Settings), stacked vertically. Mirrors the project
+ * dashboard's labeled zones.
  */
 
 import { Flex, Text, ActionButton } from '@adobe/react-spectrum';
@@ -19,57 +19,58 @@ export interface UtilityBarProps {
     onOpenHelp?: () => void;
     /** Callback when user clicks Settings */
     onOpenSettings?: () => void;
-    /** If true, use auto height instead of filling container (for footer placement) */
+    /** Reserved for footer-placement variants; currently no-op. */
     compact?: boolean;
 }
 
 /**
- * UtilityBar — three-icon utility row.
- *
- * Buttons render only when their callback prop is provided; the AI button
- * removal here is intentional: AI is project-scoped and now lives in the
- * `AiZone` zone within project / configure mode bodies.
+ * UtilityBar — labeled zone with Tools, Help, Settings tiles stacked
+ * vertically. Tiles render only when their callback prop is provided.
  */
 export const UtilityBar: React.FC<UtilityBarProps> = ({
     onOpenTools,
     onOpenHelp,
     onOpenSettings,
-    compact = false,
+    compact: _compact = false,
 }) => {
     return (
-        <Flex
-            direction="row"
-            gap="size-300"
-            alignItems="center"
-            justifyContent="center"
-            height={compact ? undefined : '100%'}
-            UNSAFE_className="sidebar-utility-bar"
-        >
+        <Flex direction="column" gap="size-100" alignItems="center">
+            <Text UNSAFE_className="dashboard-zone-label">Utilities</Text>
+
             {onOpenTools && (
-                <Flex direction="column" alignItems="center" gap="size-75">
-                    <ActionButton isQuiet onPress={onOpenTools} aria-label="Tools">
-                        <Wrench size="L" />
-                    </ActionButton>
-                    <Text UNSAFE_className="text-sm opacity-70">Tools</Text>
-                </Flex>
+                <ActionButton
+                    isQuiet
+                    onPress={onOpenTools}
+                    aria-label="Tools"
+                    UNSAFE_className="sidebar-action-tile"
+                >
+                    <Wrench />
+                    <Text UNSAFE_className="icon-label">Tools</Text>
+                </ActionButton>
             )}
 
             {onOpenHelp && (
-                <Flex direction="column" alignItems="center" gap="size-75">
-                    <ActionButton isQuiet onPress={onOpenHelp} aria-label="Get Help">
-                        <Help size="L" />
-                    </ActionButton>
-                    <Text UNSAFE_className="text-sm opacity-70">Help</Text>
-                </Flex>
+                <ActionButton
+                    isQuiet
+                    onPress={onOpenHelp}
+                    aria-label="Get Help"
+                    UNSAFE_className="sidebar-action-tile"
+                >
+                    <Help />
+                    <Text UNSAFE_className="icon-label">Help</Text>
+                </ActionButton>
             )}
 
             {onOpenSettings && (
-                <Flex direction="column" alignItems="center" gap="size-75">
-                    <ActionButton isQuiet onPress={onOpenSettings} aria-label="Settings">
-                        <Settings size="L" />
-                    </ActionButton>
-                    <Text UNSAFE_className="text-sm opacity-70">Settings</Text>
-                </Flex>
+                <ActionButton
+                    isQuiet
+                    onPress={onOpenSettings}
+                    aria-label="Settings"
+                    UNSAFE_className="sidebar-action-tile"
+                >
+                    <Settings />
+                    <Text UNSAFE_className="icon-label">Settings</Text>
+                </ActionButton>
             )}
         </Flex>
     );

@@ -631,6 +631,62 @@ button[class*="spectrum-Button"][disabled],
     border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
 }
 
+/* Sidebar action tile — small square tile with icon above label, single
+   hover/focus target (the entire tile is one button). Visually echoes the
+   dashboard's `.dashboard-action-button` but smaller for the narrow
+   sidebar geometry. */
+.sidebar-action-tile {
+    background: var(--spectrum-global-color-gray-50) !important;
+    border-radius: 6px !important;
+    padding: 8px !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    transition: all 0.2s ease !important;
+
+    width: 64px !important;
+    height: 64px !important;
+    box-sizing: border-box !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 4px !important;
+    cursor: pointer !important;
+}
+
+.sidebar-action-tile svg {
+    width: 18px !important;
+    height: 18px !important;
+}
+
+.sidebar-action-tile .icon-label {
+    font-size: 11px !important;
+    line-height: 1.1 !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    overflow-wrap: anywhere !important;
+}
+
+.sidebar-action-tile:hover,
+.sidebar-action-tile:focus {
+    background: var(--spectrum-global-color-gray-75) !important;
+    border-color: var(--spectrum-global-color-gray-400) !important;
+    outline: none !important;
+}
+
+.sidebar-action-tile:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
+    outline-offset: 2px !important;
+}
+
+/* Prevent internal Spectrum elements from showing their own hover states */
+.sidebar-action-tile:hover *,
+.sidebar-action-tile:focus * {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
 /* Wizard timeline column — left rail housing TimelineNav (formerly in the
    sidebar). Width matches VS Code's default primary sidebar so the timeline
    has the same visual footprint as before. */

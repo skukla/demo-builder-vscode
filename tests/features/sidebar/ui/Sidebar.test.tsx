@@ -21,7 +21,7 @@ const renderWithProvider = (ui: React.ReactElement) =>
 describe('Sidebar', () => {
     describe('Projects context (no project loaded)', () => {
         it('renders the utility bar', () => {
-            const { container } = renderWithProvider(
+            renderWithProvider(
                 <Sidebar
                     context={createProjectsContext()}
                     onNavigate={jest.fn()}
@@ -30,7 +30,6 @@ describe('Sidebar', () => {
                 />,
             );
 
-            expect(container.querySelector('.sidebar-utility-bar')).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /tools/i })).toBeInTheDocument();
         });
 
@@ -113,7 +112,7 @@ describe('Sidebar', () => {
         });
 
         it('renders the utility bar as a footer', () => {
-            const { container } = renderWithProvider(
+            renderWithProvider(
                 <Sidebar
                     context={createProjectContext()}
                     onNavigate={jest.fn()}
@@ -122,7 +121,7 @@ describe('Sidebar', () => {
                 />,
             );
 
-            expect(container.querySelector('.sidebar-utility-bar')).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /tools/i })).toBeInTheDocument();
         });
 
         it('does NOT render the configure nav list — that is configure-mode only', () => {

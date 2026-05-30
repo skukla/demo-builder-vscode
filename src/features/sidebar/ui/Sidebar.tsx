@@ -74,10 +74,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <Flex
             direction="column"
             height="100%"
-            justifyContent="center"
+            justifyContent="start"
             alignItems="center"
-            gap="size-400"
+            gap="size-300"
             UNSAFE_className="sidebar-view"
+            UNSAFE_style={{ paddingTop: '80px' }}
         >
             {showAiZone && (
                 <AiZone
