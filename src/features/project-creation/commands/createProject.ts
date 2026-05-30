@@ -100,8 +100,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     private stepLogger: StepLogger | null = null;
     private stepLoggerInitPromise: Promise<StepLogger> | null = null;
     private templatesPath: string;
-    private wizardNavigateCommand: vscode.Disposable | null = null;  // Command for sidebar navigation
-    private wizardSteps: WizardStep[] | null = null;  // Loaded wizard steps for sidebar
     private importedSettings: SettingsFile | null = null;  // Settings imported from file or copied from project
     private editProject: EditProjectConfig | null = null;  // Configuration for editing existing project
 
@@ -265,8 +263,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 const stepsConfig = parseJSON<{ steps: WizardStep[] }>(stepsContent);
                 if (stepsConfig) {
                     wizardSteps = stepsConfig.steps;
-                    // Store for sidebar updates
-                    this.wizardSteps = wizardSteps;
                     // Extract step IDs for logging (show first 3 + count of remaining)
                     const stepCount = wizardSteps?.length ?? 0;
                     const stepPreview = wizardSteps?.slice(0, 3).map((s) => s.id).join(', ') ?? '';
@@ -358,22 +354,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     }
 
     protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
-        // Handle wizard step changes (update sidebar progress)
-        // Receives filtered steps from webview based on stack selection
-        comm.on('wizardStepChanged', (data: unknown) => {
-            const payload = data as {
-                step: number;
-                completedSteps?: number[];
-                confirmedSteps?: number[];
-                steps?: Array<{ id: string; label: string }>;
-                isEditMode?: boolean;
-            };
-            if (payload?.step) {
-                this.updateSidebarWizardContext(payload.step, payload.completedSteps, payload.confirmedSteps, payload.steps, payload.isEditMode);
-            }
-            return { success: true };
-        });
-
         // Handle one-time tip to save block library defaults
         // Fires once when user first confirms block library selection in the architecture modal.
         // Tracked via globalState. Uses shared showOneTimeTip utility.
@@ -524,19 +504,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 await this.initializeCommunication();
             }
 
-            // Register command for sidebar navigation (if not already registered)
-            if (!this.wizardNavigateCommand) {
-                this.wizardNavigateCommand = vscode.commands.registerCommand(
-                    'demoBuilder.internal.wizardNavigate',
-                    (stepIndex: number) => this.navigateToStep(stepIndex),
-                );
-            }
-
             // Update context variables for view switching
             await vscode.commands.executeCommand('setContext', 'demoBuilder.wizardActive', true);
-
-            // Notify sidebar that wizard is active (start at step 1)
-            this.updateSidebarWizardContext(1);
 
             // End webview transition (wizard successfully opened)
             BaseWebviewCommand.endWebviewTransition();
@@ -549,21 +518,12 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         }
     }
 
-    // Override dispose to clean up polling intervals and sidebar context
+    // Override dispose to clean up polling intervals and wizard context
     public dispose(): void {
         // Update context variable for view switching (fire-and-forget since dispose is synchronous)
         vscode.commands.executeCommand('setContext', 'demoBuilder.wizardActive', false);
 
-        // Clear wizard context from sidebar
-        this.clearSidebarWizardContext();
-
-        // Dispose navigation command
-        if (this.wizardNavigateCommand) {
-            this.wizardNavigateCommand.dispose();
-            this.wizardNavigateCommand = null;
-        }
-
-        // Navigate to projects list with sidebar closed (fire-and-forget)
+        // Navigate to projects list (fire-and-forget)
         // Skip during webview transitions (e.g., wizard being re-created for a different mode)
         if (!BaseWebviewCommand.isWebviewTransitionInProgress()) {
             vscode.commands.executeCommand('demoBuilder.showProjectsList');
@@ -571,76 +531,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
         // Call parent dispose
         super.dispose();
-    }
-
-    /**
-     * Update sidebar to show wizard progress
-     *
-     * @param step - Current step index (1-based)
-     * @param completedSteps - Array of completed step indices
-     * @param confirmedSteps - Array of confirmed step indices (in edit mode, user clicked Continue)
-     * @param filteredSteps - Optional filtered steps from webview (based on stack selection)
-     * @param isEditMode - Whether we're in edit mode (reviewing existing project)
-     */
-    private updateSidebarWizardContext(
-        step: number,
-        completedSteps?: number[],
-        confirmedSteps?: number[],
-        filteredSteps?: Array<{ id: string; label: string }>,
-        isEditMode?: boolean,
-    ): void {
-        if (ServiceLocator.isSidebarInitialized()) {
-            const sidebarProvider = ServiceLocator.getSidebarProvider();
-
-            // Use filtered steps from webview if provided (includes stack-based filtering),
-            // otherwise fall back to enabled steps from config (initial load before webview sends steps)
-            let sidebarSteps: Array<{ id: string; label: string }>;
-            if (filteredSteps && filteredSteps.length > 0) {
-                sidebarSteps = filteredSteps;
-            } else {
-                // Fallback: filter to enabled steps only (doesn't include stack-based filtering)
-                const enabledSteps = this.wizardSteps?.filter(s => s.enabled !== false) || [];
-                sidebarSteps = enabledSteps.map(s => ({
-                    id: s.id,
-                    label: s.name,  // Convert 'name' to 'label' for sidebar
-                }));
-            }
-
-            sidebarProvider.updateContext({
-                type: 'wizard',
-                step,
-                total: sidebarSteps.length,
-                completedSteps,
-                confirmedSteps,
-                steps: sidebarSteps,
-                isEditMode,
-            });
-        }
-    }
-
-    /**
-     * Navigate wizard to a specific step (called from sidebar)
-     */
-    public navigateToStep(stepIndex: number): void {
-        if (this.communicationManager) {
-            this.communicationManager.sendMessage('navigateToStep', { stepIndex }).catch(err => {
-                this.logger.warn('Failed to navigate wizard to step', err);
-            });
-        }
-    }
-
-    /**
-     * Clear wizard context from sidebar (called when wizard closes)
-     * Note: Fire-and-forget since dispose() is synchronous
-     */
-    private clearSidebarWizardContext(): void {
-        if (ServiceLocator.isSidebarInitialized()) {
-            const sidebarProvider = ServiceLocator.getSidebarProvider();
-            // Don't await - dispose is synchronous, but message will still be sent
-            sidebarProvider.clearWizardContext().catch(err => {
-                this.logger.warn('Failed to clear sidebar wizard context', err);
-            });
-        }
     }
 
     // Helper method to send feedback messages

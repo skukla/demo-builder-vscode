@@ -154,12 +154,14 @@ comm.on('continue-step', async (payload) => {
 
 ### AI experience (chat-first)
 
-Two internal commands back the chat-first AI surface (also omitted from `package.json` — invoked programmatically, not from the palette):
+Two single-purpose internal commands back the AI surface (omitted from `package.json` — invoked programmatically from sidebar / dashboard / navigation):
 
-- **`demoBuilder.openAiExperience`** — "Open Chat". Calls `OpenInClaudeCommand.execute()` with no prompt: opens/reveals the Claude Code terminal as a tab in the active editor group (`ViewColumn.Active`, next to Project Dashboard). `navigate('ai')` and the dashboard AI action route here.
-- **`demoBuilder.aiMenu`** (`src/commands/aiMenu.ts`) — the AI icon (the **wand icon** in the sidebar `UtilityBar`). State-aware via `isClaudeChatOpen()` (from `openInClaude.ts`): when no live "Claude Code" terminal exists, it launches the chat directly (`demoBuilder.openAiExperience`) — zero-friction first open. When a chat is alive, it shows the prompt QuickPick (built via the shared `showWebviewQuickPick`): the merged prompt list (pinned first) and a "Manage prompts…" row. Selecting a prompt dispatches `demoBuilder.openInClaude` with `{ prompt }` — which focuses the live terminal as part of the inject, so a separate "Open chat" row would be redundant. "Manage prompts…" dispatches `demoBuilder.openAi` (the prompt library). The picker carries no per-item buttons — creating, editing, deleting, and pinning all live in the library.
+- **`demoBuilder.openAiExperience`** — "Open Chat". Calls `OpenInClaudeCommand.execute()` with no prompt: opens/reveals the Claude Code terminal as a tab in the active editor group (`ViewColumn.Active`, next to Project Dashboard). Routed from: the sidebar `AiZone` Chat button, `navigate('ai')`, and the dashboard AI action.
+- **`demoBuilder.showPromptsPicker`** (`src/commands/showPromptsPicker.ts`) — "Show Prompts". Always shows the prompt QuickPick (no state-aware branching). Built via the shared `showWebviewQuickPick`: the merged prompt list (pinned first) and a "Manage prompts…" row. Selecting a prompt dispatches `demoBuilder.openInClaude` with `{ prompt }` — which opens or focuses the Claude terminal and bracketed-paste-injects the prompt. "Manage prompts…" dispatches `demoBuilder.openAi` (the prompt library). Routed from the sidebar `AiZone` Prompts button.
 
-The prompt-library webview (`ShowAiCommand` / `demoBuilder.openAi`, titled "Prompt Library", command-palette entry "Demo Builder: Manage AI Prompts") is the single home for prompt CRUD — reached on demand via the QuickPick's "Manage prompts…" or the palette. It is not the default AI surface; the chat is. The footer "Close" button posts `cancel`, which `ShowAiCommand` handles by disposing the panel.
+The prompt-library webview (`ShowAiCommand` / `demoBuilder.openAi`, titled "Prompt Library", command-palette entry "Demo Builder: Manage AI Prompts") is the single home for prompt CRUD — reached on demand via the picker's "Manage prompts…" or the palette. It is not the default AI surface; the chat is. The footer "Close" button posts `cancel`, which `ShowAiCommand` handles by disposing the panel.
+
+The previous `demoBuilder.aiMenu` command (state-aware wand-icon dispatcher) was retired in favor of the two single-purpose commands above. The two-button `AiZone` in the sidebar makes the prompt library discoverable from the first click rather than requiring a hidden second click on a state-aware wand.
 
 ---
 
@@ -194,7 +196,7 @@ With no prompt, spawn runs a bare `claude --continue`.
 **Dispatched from**:
 - The project-card kebab menu in `ProjectActionsMenu.tsx` (calls `webviewClient.postMessage('openAiForProject', { projectPath })`)
 - The Prompt Library prompt cards in `PromptCard.tsx` → `AiOverviewScreen.tsx` → `webviewClient.postMessage('openInClaude', { prompt })` → `aiHandlers.handleOpenInClaude`
-- The wand QuickPick prompt rows in `aiMenu.ts`
+- The sidebar `AiZone` Prompts button → `showPromptsPicker.ts` → `openInClaude` with the selected prompt
 - `extension.ts:replayPendingClaudeLaunch` on activation when a pending record exists
 
 **File**: `src/commands/openInClaude.ts`. See `docs/architecture/adr/004-claude-code-harness.md` for the harness decision rationale.

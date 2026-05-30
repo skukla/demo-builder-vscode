@@ -39,7 +39,7 @@ Site chrome appears on every page. The Mod Agent processes pages individually, s
    - `footer` — global footer block
    - `commerce-mini-cart` — drop-in cart icon
 
-   Don't recreate them from scratch. Extend their CSS and markup to match the scraped reference.
+   Don't recreate them from scratch. Extend their CSS and markup to match the scraped reference. If the reference forces you to introduce a brand-new chrome block (rare — most cases extend existing ones), call the `register-custom-block` skill (or directly invoke `promote_block_to_library`) after writing the source files so the block appears in DA.live's authoring picker.
 
 3. **Map scraped design tokens to the chrome blocks.**
    - Header background, height, sticky behavior

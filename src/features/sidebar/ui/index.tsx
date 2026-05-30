@@ -91,9 +91,14 @@ function SidebarApp(): React.ReactElement {
         sendMessage('openSettings');
     }, []);
 
-    // Handle open AI menu (chat-first QuickPick)
-    const handleOpenAiMenu = useCallback(() => {
-        sendMessage('openAiMenu');
+    // Handle open AI chat (Chat button in AiZone)
+    const handleOpenAiChat = useCallback(() => {
+        sendMessage('openAiChat');
+    }, []);
+
+    // Handle show prompts picker (Prompts button in AiZone)
+    const handleShowPrompts = useCallback(() => {
+        sendMessage('showPrompts');
     }, []);
 
     // Handle start demo
@@ -119,11 +124,6 @@ function SidebarApp(): React.ReactElement {
     // Handle check updates
     const handleCheckUpdates = useCallback(() => {
         sendMessage('checkUpdates');
-    }, []);
-
-    // Handle wizard step click (for back navigation)
-    const handleWizardStepClick = useCallback((stepIndex: number) => {
-        sendMessage('wizardStepClick', { stepIndex });
     }, []);
 
     // Apply VSCode dark theme class to body (unified theme system ignores user preferences)
@@ -155,13 +155,13 @@ function SidebarApp(): React.ReactElement {
                 onOpenTools={handleOpenTools}
                 onOpenHelp={handleOpenHelp}
                 onOpenSettings={handleOpenSettings}
-                onOpenAiMenu={handleOpenAiMenu}
+                onOpenAiChat={handleOpenAiChat}
+                onShowPrompts={handleShowPrompts}
                 onStartDemo={handleStartDemo}
                 onStopDemo={handleStopDemo}
                 onOpenDashboard={handleOpenDashboard}
                 onOpenConfigure={handleOpenConfigure}
                 onCheckUpdates={handleCheckUpdates}
-                onWizardStepClick={handleWizardStepClick}
             />
         </Provider>
     );

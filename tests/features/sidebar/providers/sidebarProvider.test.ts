@@ -247,10 +247,16 @@ describe('SidebarProvider', () => {
             );
         });
 
-        it('should route openAiMenu message to the demoBuilder.aiMenu command', async () => {
-            await messageHandler({ type: 'openAiMenu' });
+        it('routes openAiChat to demoBuilder.openAiExperience', async () => {
+            await messageHandler({ type: 'openAiChat' });
 
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.aiMenu');
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openAiExperience');
+        });
+
+        it('routes showPrompts to demoBuilder.showPromptsPicker', async () => {
+            await messageHandler({ type: 'showPrompts' });
+
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.showPromptsPicker');
         });
     });
 
@@ -354,7 +360,7 @@ describe('SidebarProvider', () => {
         });
 
         it('should send context update to webview', async () => {
-            const context = { type: 'wizard' as const, step: 2, total: 6 };
+            const context = { type: 'projectsList' as const };
 
             await provider.updateContext(context);
 
@@ -362,27 +368,6 @@ describe('SidebarProvider', () => {
                 type: 'contextUpdate',
                 data: { context },
             });
-        });
-
-        it('should store wizard context locally', async () => {
-            const wizardContext = { type: 'wizard' as const, step: 2, total: 6 };
-            await provider.updateContext(wizardContext);
-
-            // Clear the mock to reset call history
-            mockWebviewView.webview.postMessage.mockClear();
-
-            // Now get context should return wizard
-            const messageHandler = mockWebviewView.webview.onDidReceiveMessage.mock.calls[0][0];
-            await messageHandler({ type: 'getContext' });
-
-            expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    type: 'contextResponse',
-                    data: expect.objectContaining({
-                        context: { type: 'wizard', step: 2, total: 6 },
-                    }),
-                })
-            );
         });
     });
 });

@@ -105,7 +105,7 @@ describe('InExtensionMcpServer', () => {
         server = undefined;
     });
 
-    it('serves the seven project tools over the socket', async () => {
+    it('serves the eight project tools over the socket', async () => {
         server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger());
         await server.start();
 
@@ -118,6 +118,7 @@ describe('InExtensionMcpServer', () => {
                 'get_project',
                 'list_blocks',
                 'list_projects',
+                'promote_block_to_library',
                 'sync_storefront',
                 'update_project_config',
             ].sort(),

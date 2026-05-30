@@ -26,6 +26,8 @@ export enum ErrorCode {
     CANCELLED = 'CANCELLED',
     /** Rate limiting or throttling */
     RATE_LIMITED = 'RATE_LIMITED',
+    /** Operation not applicable in the current context (e.g. EDS-only action on a headless project) */
+    INVALID_OPERATION = 'INVALID_OPERATION',
 
     // ===== Authentication Errors =====
     /** User not authenticated - login required */
@@ -156,6 +158,7 @@ export function getErrorTitle(code: ErrorCode): string {
         [ErrorCode.NETWORK]: 'Connection problem',
         [ErrorCode.CANCELLED]: 'Operation cancelled',
         [ErrorCode.RATE_LIMITED]: 'Too many requests',
+        [ErrorCode.INVALID_OPERATION]: 'Operation not applicable',
 
         // Auth
         [ErrorCode.AUTH_REQUIRED]: 'Sign in required',

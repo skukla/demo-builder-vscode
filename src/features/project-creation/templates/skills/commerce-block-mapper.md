@@ -54,7 +54,7 @@ For each drop-in, these levers exist:
 
 3. **Map tokens to drop-in CSS custom properties.** Each drop-in publishes a CSS variable surface. Update the project's storefront CSS to set these variables to the scraped values. Reuse the existing `aem-block-developer` skill for the actual CSS writing.
 
-4. **Wrap with EDS container blocks for context.** If the reference shows surrounding content (related products, brand messaging, trust badges, distributor tables, sample-request CTAs), those go in EDS blocks AROUND the drop-in, not inside it. Use existing block patterns: `te-distributor`, `te-samples`, `te-stock-cart` from the TE project are good references for commerce-adjacent custom blocks.
+4. **Wrap with EDS container blocks for context.** If the reference shows surrounding content (related products, brand messaging, trust badges, distributor tables, sample-request CTAs), those go in EDS blocks AROUND the drop-in, not inside it. Use existing block patterns: `te-distributor`, `te-samples`, `te-stock-cart` from the TE project are good references for commerce-adjacent custom blocks. After you finish writing the block source files, call the `register-custom-block` skill (or directly invoke `promote_block_to_library`) so the block appears in DA.live's authoring picker.
 
 5. **Use slots for inline custom content.** If the reference includes content that visually lives inside the drop-in's footprint (e.g., a custom "save for later" affordance under the price), check whether the drop-in exposes a slot for it. If yes, pass the custom content via the slot API. If no, place it in a wrapping block instead.
 

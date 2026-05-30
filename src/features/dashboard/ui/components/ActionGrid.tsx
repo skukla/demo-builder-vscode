@@ -6,7 +6,7 @@
  *  - Hero zone (accent): Start/Stop (non-EDS, mutually exclusive), Open in Browser, AI.
  *  - Storefront zone (EDS only): Author in DA.live, Sync Storefront.
  *  - Build zone: Deploy Mesh (when hasMesh), Configure, Logs, and a "More" overflow
- *    menu holding Components and Dev Console.
+ *    menu holding Components, Refresh Block Library (EDS only), and Dev Console.
  *  - Delete footer: isolated below the zones, destructive styling.
  *
  * Gating is behavioral, not displayed: the Storefront zone renders only for EDS
@@ -39,7 +39,7 @@ import ViewList from '@spectrum-icons/workflow/ViewList';
 import React from 'react';
 
 /** Overflow menu item keys. */
-type OverflowKey = 'components' | 'devConsole';
+type OverflowKey = 'components' | 'refreshBlockLibrary' | 'devConsole';
 
 /**
  * Props for the ActionGrid component
@@ -77,6 +77,8 @@ export interface ActionGridProps {
     handleDeployMesh: () => void;
     /** Handler for Sync Storefront button (EDS projects only) */
     handleSyncStorefront?: () => void;
+    /** Handler for Refresh Block Library overflow item (EDS projects only) */
+    handleRefreshBlockLibrary?: () => void;
     /** Handler for Configure button */
     handleConfigure: () => void;
     /** Handler for Components button (overflow menu) */
@@ -113,6 +115,7 @@ export function ActionGrid({
     handleViewLogs,
     handleDeployMesh,
     handleSyncStorefront,
+    handleRefreshBlockLibrary,
     handleConfigure,
     handleViewComponents,
     handleOpenDevConsole,
@@ -120,10 +123,16 @@ export function ActionGrid({
     handleDeleteProject,
 }: ActionGridProps): React.ReactElement {
     const handleOverflowAction = (key: React.Key): void => {
-        if (key === ('components' satisfies OverflowKey)) {
-            handleViewComponents();
-        } else if (key === ('devConsole' satisfies OverflowKey)) {
-            handleOpenDevConsole();
+        switch (key) {
+            case 'components' satisfies OverflowKey:
+                handleViewComponents();
+                return;
+            case 'refreshBlockLibrary' satisfies OverflowKey:
+                handleRefreshBlockLibrary?.();
+                return;
+            case 'devConsole' satisfies OverflowKey:
+                handleOpenDevConsole();
+                return;
         }
     };
 
@@ -278,6 +287,9 @@ export function ActionGrid({
                         </ActionButton>
                         <Menu onAction={handleOverflowAction}>
                             <Item key="components">Components</Item>
+                            {isEds && handleRefreshBlockLibrary ? (
+                                <Item key="refreshBlockLibrary">Refresh Block Library</Item>
+                            ) : null}
                             <Item key="devConsole">Dev Console</Item>
                         </Menu>
                     </MenuTrigger>
