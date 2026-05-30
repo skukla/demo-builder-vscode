@@ -1,21 +1,13 @@
 /**
  * Sidebar Component
  *
- * Main sidebar container that renders contextual content based on state.
- * Aesthetic stays minimal — icons with tiny labels — matching the existing
- * UtilityBar pattern across all modes.
+ * Single layout across all contexts: AiZone (Chat + Prompts) above UtilityBar
+ * (Tools + Help + Settings), vertically centered as one group. AI is globally
+ * available — MCP is wired at the extension level, not per project — so the
+ * AiZone renders in every sidebar context.
  *
- * Modes:
- *   - `projects` / `projectsList` — UtilityBar only (3 icons). AI is
- *     project-scoped, so it doesn't appear here.
- *   - `project` — AiZone (Chat + Prompts) paired above the UtilityBar footer,
- *     vertically centered as a group.
- *
- * Notes on absent modes:
- *   - Wizard: the wizard's progress timeline lives inside the wizard webview's
- *     own left column (`WizardContainer`), not the sidebar.
- *   - Configure: the Configure webview is a self-contained tab with its own
- *     Cancel footer. The sidebar stays in `project` mode the whole time.
+ * Surfaces that previously rendered inside the sidebar (wizard's TimelineNav,
+ * a now-deleted configure-mode nav) have moved into their own webviews.
  */
 
 import { Flex } from '@adobe/react-spectrum';
@@ -25,7 +17,10 @@ import { AiZone } from './components/AiZone';
 import { UtilityBar } from './views';
 
 export interface SidebarProps {
-    /** Current sidebar context */
+    /**
+     * Current sidebar context — retained for the message protocol but unused
+     * by the rendered layout (all contexts render identically).
+     */
     context: SidebarContext;
     /** Callback for navigation actions */
     onNavigate: (target: string) => void;
@@ -56,10 +51,10 @@ export interface SidebarProps {
 }
 
 /**
- * Sidebar - Main sidebar container
+ * Sidebar — single centered group: AiZone above UtilityBar.
  */
 export const Sidebar: React.FC<SidebarProps> = ({
-    context,
+    context: _context,
     onNavigate: _onNavigate,
     onBack: _onBack,
     onCreateProject: _onCreateProject,
@@ -74,20 +69,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onOpenConfigure: _onOpenConfigure,
     onCheckUpdates: _onCheckUpdates,
 }) => {
-    // Projects-list / no-project: UtilityBar only. AI is project-scoped, so
-    // it intentionally doesn't appear in this mode.
-    if (context.type === 'projects' || context.type === 'projectsList') {
-        return (
-            <UtilityBar
-                onOpenTools={onOpenTools}
-                onOpenHelp={onOpenHelp}
-                onOpenSettings={onOpenSettings}
-            />
-        );
-    }
-
-    // Project mode: AiZone + UtilityBar as a single group, vertically centered
-    // in the sidebar. No lines, no project header — keeps the surface minimal.
     const showAiZone = onOpenAiChat && onShowPrompts;
     return (
         <Flex
@@ -96,7 +77,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             justifyContent="center"
             alignItems="center"
             gap="size-400"
-            UNSAFE_className="sidebar-project-view"
+            UNSAFE_className="sidebar-view"
         >
             {showAiZone && (
                 <AiZone

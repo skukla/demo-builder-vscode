@@ -34,7 +34,7 @@ describe('Sidebar', () => {
             expect(screen.getByRole('button', { name: /tools/i })).toBeInTheDocument();
         });
 
-        it('does NOT render an AI zone — AI is project-scoped', () => {
+        it('renders the AiZone (AI is globally available, not project-scoped)', () => {
             renderWithProvider(
                 <Sidebar
                     context={createProjectsContext()}
@@ -45,8 +45,8 @@ describe('Sidebar', () => {
                 />,
             );
 
-            expect(screen.queryByRole('button', { name: /^chat$/i })).not.toBeInTheDocument();
-            expect(screen.queryByRole('button', { name: /^prompts$/i })).not.toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /^chat$/i })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /^prompts$/i })).toBeInTheDocument();
         });
     });
 

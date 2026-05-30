@@ -32,9 +32,11 @@ sidebar/
 └── CLAUDE.md                   # This file
 ```
 
-## Context Types
+## Layout
 
-The sidebar renders different content based on context. **Three context types** exist:
+The sidebar renders the **same layout in every context**: an `AiZone`
+(Chat + Prompts) above a `UtilityBar` (Tools + Help + Settings), vertically
+centered as a single group.
 
 ```typescript
 type SidebarContext =
@@ -43,33 +45,31 @@ type SidebarContext =
     | { type: 'project'; project: Project };            // Project Detail
 ```
 
-**Wizard and Configure modes are intentionally absent:**
-- The wizard's progress timeline lives inside the wizard webview's own left
-  column (`WizardContainer`'s `.wizard-timeline-column`), not in the sidebar.
-- Configure is a self-contained webview tab with its own Cancel footer; the
-  sidebar stays in `project` mode while Configure is open.
+`SidebarContext` is retained for the message protocol — handlers and the
+provider still send/receive a context — but it does not affect the
+rendered layout. All three contexts render identically because:
+- **AI is globally available** (MCP is wired at the extension level, not
+  per project) — the `AiZone` always renders.
+- The other previously-context-specific surfaces have moved out of the
+  sidebar entirely:
+  - The wizard's progress timeline lives inside the wizard webview's own
+    left column (`WizardContainer`'s `.wizard-timeline-column`).
+  - Configure is a self-contained webview tab with its own Cancel footer.
 
-### Projects and ProjectsList Contexts (no project loaded)
-- Renders the `UtilityBar` only — three icons: **Tools / Help / Settings**.
-- AI is project-scoped and **deliberately absent** here. The AI zone only
-  appears once a project is loaded.
-- The UtilityBar is a horizontal row of icon + label pairs, centered, filling
-  the sidebar height (`height="100%"`).
-- No back-to-Projects link in the sidebar.
-- Safety net: when the user closes the Project Dashboard tab inside a project
-  workspace, the projects list webview auto-reopens as a new tab so the user
-  keeps a Demo Builder navigation surface (see
-  `src/features/dashboard/commands/showDashboard.ts::dispose`).
+### Rendered layout (all contexts)
+- `AiZone` with **Chat** and **Prompts** buttons (renders when both
+  `onOpenAiChat` and `onShowPrompts` callbacks are provided — they are
+  always provided in practice).
+- `UtilityBar` in compact mode — three icons: **Tools / Help / Settings**.
+- Both groups centered as a single vertical block (`justifyContent="center"`,
+  `gap="size-400"`).
+- No dividers, no project name, no nav list. The dashboard, configure
+  webview, and wizard webview own those surfaces.
 
-### Project Context (project loaded, dashboard open)
-- Body (top to bottom):
-  - Project name header (`UNSAFE_className="font-semibold text-sm truncate"`).
-  - Divider (`size="S"`).
-  - `AiZone` with **Chat** and **Prompts** buttons (only when both
-    `onOpenAiChat` and `onShowPrompts` callbacks are provided).
-- Footer: `UtilityBar` in compact mode (3 icons: Tools, Help, Settings).
-- Back navigation lives in the Project Dashboard webview's header
-  ("All Projects" button), not in the sidebar.
+Safety net: when the user closes the Project Dashboard tab inside a project
+workspace, the projects list webview auto-reopens as a new tab so the user
+keeps a Demo Builder navigation surface (see
+`src/features/dashboard/commands/showDashboard.ts::dispose`).
 
 ## Components
 
