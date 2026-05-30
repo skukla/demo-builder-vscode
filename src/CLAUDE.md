@@ -142,7 +142,7 @@ export async function activate(context: ExtensionContext) {
 Commands orchestrate features and coordinate workflows. See `commands/CLAUDE.md` for details.
 
 ### Features (`features/`)
-- **ai**: AI context verification + standalone MCP server (7 project tools). Harness is Claude Code (CLI)
+- **ai**: AI context verification + in-extension MCP server (full agent tool surface). Harness is Claude Code (CLI) — see `docs/systems/mcp-server.md`
 - **authentication**: Adobe authentication with Console SDK, token caching, org/project/workspace selection
 - **components**: Component registry, definitions, and lifecycle management
 - **dashboard**: Project dashboard UI, mesh status, component browser

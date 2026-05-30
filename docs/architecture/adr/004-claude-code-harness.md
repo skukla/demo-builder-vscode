@@ -462,3 +462,39 @@ no surface check), `src/extension.ts` (dropped `migrateHarnessSetting` and
 aiHandlers.ts` (dropped `handleBrowseClaudeSessions` + handler-map entry;
 simplified `handleVerifyAiSetup` response), `package.json` (`demoBuilder.ai.
 surface` removed).
+
+---
+
+## Amendment (in-extension MCP server replaces the standalone process)
+
+### What changed
+
+The original ADR described the MCP server as **"a standalone stdio process
+(`dist/mcp-server.js`)… with no `vscode` import"** exposing **seven project
+tools**. That standalone process is **retired.** The server now runs
+**in-extension** (`src/features/ai/server/inExtensionMcpServer.ts`) on a
+per-workspace Unix domain socket, reached by clients through the
+`dist/mcp-proxy.js` stdio↔socket forwarder.
+
+### Why
+
+The very property the original ADR celebrated — no `vscode` import — was also
+the standalone server's ceiling: with no extension host it could only read and
+sync files, never create projects, authenticate, deploy meshes, or apply
+updates. Running the server *inside* the extension lets every tool reuse the
+extension's own services and handlers, so an agent can drive the full lifecycle
+and the tools do the same work as the UI (single source of truth).
+
+### What this supersedes / preserves
+
+- **Superseded:** "standalone stdio process / `dist/mcp-server.js`" and the
+  "seven tools" count. The surface is now the full agent toolset.
+- **Preserved:** `src/mcp-server.ts` remains as a `vscode`-free module whose
+  `registerProjectTools` still provides the original seven file-based tools as a
+  subset; and the "discoverable via project `.mcp.json`, usable by any MCP
+  client (Cursor/Codex)" goal still holds — clients now spawn the proxy.
+
+### Reference
+
+Full architecture, tool catalog, and conventions:
+[`docs/systems/mcp-server.md`](../../systems/mcp-server.md).

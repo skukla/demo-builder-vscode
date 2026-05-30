@@ -18,7 +18,7 @@ The `features/` directory contains self-contained feature modules organized by b
 
 ```
 features/
-├── ai/                  # AI context verification + standalone MCP server
+├── ai/                  # AI context verification + in-extension MCP server
 ├── authentication/       # Adobe authentication & SDK
 │   ├── index.ts         # Public API exports
 │   ├── services/        # Authentication services
@@ -82,7 +82,7 @@ features/my-feature/
 - `inspectSkills(projectPath)` - Walks `.claude/skills/`, parses YAML frontmatter, classifies as `demo-builder` / `adobe` / `unknown`
 - `inspectAllServers(projectPath)` + `clearMcpCache(serverId?)` - Spawns each `.claude/mcp.json` server via `@modelcontextprotocol/sdk` stdio client, returns tool list per server; 15s per-server timeout, 5-min TTL cache (success-only), SDK env allowlist (no host secret leakage)
 - `detectSessionMcps()` - Reads `~/.claude.json::claudeAiMcpEverConnected` + `~/.claude/mcp-needs-auth-cache.json` for Adobe MCPs the user connected via Claude Code's catalog (best-effort; undocumented Claude Code internal state)
-- `dist/mcp-server.js` (compiled from `src/mcp-server.ts`) - Standalone stdio MCP server exposing 7 project tools to AI agents
+- `InExtensionMcpServer` (`server/inExtensionMcpServer.ts`) - In-extension MCP server on a per-workspace Unix socket; reuses extension services so tools do the same work as the UI. Clients reach it through the `dist/mcp-proxy.js` stdio↔socket forwarder. Exposes the full agent tool surface (project reads, auth, lifecycle, cloud, storefront, updates). The `vscode`-free `src/mcp-server.ts` still provides the shared file-based `registerProjectTools`; its standalone process is retired. **Full reference: `docs/systems/mcp-server.md`**
 
 **Responsibilities:**
 - Verifying project AI context files — feeds the Project Dashboard's "AI Ready" health badge (via `useDashboardStatus`)

@@ -5,7 +5,8 @@
  * - AGENTS.md: exists and non-empty (the real AI context file; `CLAUDE.md`
  *   and `.claude/CLAUDE.md` are one-line pointers to it)
  * - .claude/mcp.json: exists, valid JSON, has mcpServers key
- * - mcp-binary: dist/mcp-server.js present at extension dist path
+ * - mcp-binary: dist/mcp-proxy.js present at extension dist path (the stdio↔socket
+ *   forwarder clients spawn; the standalone dist/mcp-server.js is retired)
  * - skill-files: at least one .md in .claude/skills/
  *
  * An `inventory` payload is populated in parallel with the checks: skills,
