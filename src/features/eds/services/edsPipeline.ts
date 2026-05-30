@@ -370,6 +370,13 @@ export async function executeEdsPipeline(
                 }
             }
 
+            // Load-bearing: truthy `blockCollectionIds` (including the empty
+            // array `[]`) routes the comp-def read to the USER's repo so any
+            // MCP-promoted blocks survive a destructive rebuild. `undefined`
+            // falls back to the template repo (initial setup / template-only
+            // refresh). Do NOT change this to `blockCollectionIds?.length`
+            // — RefreshBlockLibraryCommand passes `[]` deliberately as the
+            // "rebuild from user repo" signal. See src/commands/refreshBlockLibrary.ts.
             const compDefOwner = blockCollectionIds ? repoOwner : templateOwner;
             const compDefRepo = blockCollectionIds ? repoName : templateRepo;
 

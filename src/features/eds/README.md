@@ -119,6 +119,14 @@ Orchestrates complete EDS project setup through phases:
 | `auth-recovery` | (paused) | DA.live token expired; prompts re-authentication (up to 2 attempts) |
 | `complete` | 100% | Setup complete |
 
+#### Block library lifecycle (post-setup)
+
+Three paths keep the DA.live authoring library in sync with the user's blocks:
+
+1. **Initial setup** (above) — destructive `createBlockLibrary` rebuilds from `component-definition.json`.
+2. **AI-driven incremental promote** — the `promote_block_to_library` MCP tool sanitizes the AI-supplied HTML via `sanitize-html` at the MCP boundary (allowlist for the EDS authoring vocabulary; strips scripts, framing tags, and `javascript:`/`data:` URLs), then calls `appendBlockToLibrary` (read–merge–rewrite, idempotent on `name` collision) and `upsertBlockDocPage` (overwrite-always). Used by Claude Code via the `register-custom-block` skill after the AI authors a new block.
+3. **User-initiated full refresh** — the dashboard's More-menu "Refresh Block Library" action runs `executeEdsPipeline` with `{ includeBlockLibrary: true, skipContent: true, blockCollectionIds: [] }`. The empty (truthy) `blockCollectionIds` is load-bearing — it tells the pipeline to read `component-definition.json` from the user's repo, not the template, so MCP-promoted blocks survive the rebuild.
+
 #### Mid-Pipeline Token Recovery
 
 If the DA.live token expires during content pipeline execution (phases 4-5), the pipeline catches `DaLiveAuthError` and pauses to prompt re-authentication via `ensureDaLiveAuth()`. Up to 2 re-auth attempts are allowed before failing. The UI receives an `auth-recovery` phase progress message during re-authentication.

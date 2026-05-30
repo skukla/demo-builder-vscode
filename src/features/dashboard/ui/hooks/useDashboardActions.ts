@@ -44,6 +44,8 @@ export interface UseDashboardActionsReturn {
     handleDeployMesh: () => void;
     /** Sync storefront — git push + Helix preview/publish (EDS projects only) */
     handleSyncStorefront: () => void;
+    /** Refresh DA.live block library from component-definition.json (EDS projects only) */
+    handleRefreshBlockLibrary: () => void;
     /** Open demo in browser (non-EDS projects) */
     handleOpenBrowser: () => void;
     /** Open live site in browser (EDS projects) */
@@ -111,6 +113,10 @@ export function useDashboardActions({
         webviewClient.postMessage('syncStorefront');
     }, []);
 
+    const handleRefreshBlockLibrary = useCallback(() => {
+        webviewClient.postMessage('refreshBlockLibrary');
+    }, []);
+
     const handleOpenBrowser = useCallback(() => {
         if (isOpeningBrowser) return; // Prevent double-click
         setIsOpeningBrowser(true);
@@ -169,6 +175,7 @@ export function useDashboardActions({
         handleViewLogs,
         handleDeployMesh,
         handleSyncStorefront,
+        handleRefreshBlockLibrary,
         handleOpenBrowser,
         handleOpenLiveSite,
         handleOpenDaLive,

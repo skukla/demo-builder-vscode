@@ -16,16 +16,17 @@
  * Where a skill originated.
  *
  * - `'demo-builder'` — top-level `.claude/skills/<filename>.md` where the
- *   filename matches one of the nine skills `skillsWriter` writes: three
- *   lifecycle (`add-component.md`, `sync-changes.md`, `update-credentials.md`)
- *   plus six EDS site-scraping skills (`scrape-reference-site.md`,
+ *   filename matches one of the ten skills `skillsWriter` writes: three
+ *   lifecycle (`add-component.md`, `sync-changes.md`, `update-credentials.md`),
+ *   six EDS site-scraping skills (`scrape-reference-site.md`,
  *   `connect-authenticated-site.md`, `commerce-block-mapper.md`,
- *   `demo-data-injector.md`, `header-nav-footer.md`, `refine-visual-match.md`).
+ *   `demo-data-injector.md`, `header-nav-footer.md`, `refine-visual-match.md`),
+ *   and one block-library registration skill (`register-custom-block.md`).
  * - `'adobe'` — any `.md` nested under a subdirectory of `.claude/skills/`.
  *   `skillsWriter` only creates subdirectories for Adobe skill bundles
  *   (`@adobe-commerce/commerce-extensibility-tools`) using a
  *   `<prefix>-<name>/` layout, so any nested skill is treated as Adobe.
- * - `'unknown'` — a top-level `.md` that is not one of the nine
+ * - `'unknown'` — a top-level `.md` that is not one of the ten
  *   Demo Builder skills (e.g., a user-authored skill).
  */
 export type SkillSource = 'demo-builder' | 'adobe' | 'unknown';

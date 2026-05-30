@@ -82,7 +82,7 @@ features/my-feature/
 - `inspectSkills(projectPath)` - Walks `.claude/skills/`, parses YAML frontmatter, classifies as `demo-builder` / `adobe` / `unknown`
 - `inspectAllServers(projectPath)` + `clearMcpCache(serverId?)` - Spawns each `.claude/mcp.json` server via `@modelcontextprotocol/sdk` stdio client, returns tool list per server; 15s per-server timeout, 5-min TTL cache (success-only), SDK env allowlist (no host secret leakage)
 - `detectSessionMcps()` - Reads `~/.claude.json::claudeAiMcpEverConnected` + `~/.claude/mcp-needs-auth-cache.json` for Adobe MCPs the user connected via Claude Code's catalog (best-effort; undocumented Claude Code internal state)
-- `dist/mcp-server.js` (compiled from `src/mcp-server.ts`) - Standalone stdio MCP server exposing 7 project tools to AI agents
+- `dist/mcp-server.js` (compiled from `src/mcp-server.ts`) - Standalone stdio MCP server exposing 8 project tools to AI agents (the 8th is `promote_block_to_library` — registers a custom block in DA.live's authoring picker)
 
 **Responsibilities:**
 - Verifying project AI context files — feeds the Project Dashboard's "AI Ready" health badge (via `useDashboardStatus`)
@@ -246,7 +246,7 @@ features/my-feature/
 - Custom block library URL parsing and validation (`services/customBlockLibraryUtils.ts`)
 - `aiContextWriter.ts` - Generates `AGENTS.md` at the project root with project-specific AI agent context; writes `CLAUDE.md` (root) and `.claude/CLAUDE.md` as one-line `see @AGENTS.md` pointers
 - `mcpConfigWriter.ts` - Generates `.claude/mcp.json`, `.mcp.json`, and `.claude/settings.json` (Cursor and Codex read `.mcp.json` natively — no per-tool config files)
-- `skillsWriter.ts` - Writes nine Demo-Builder skills to `.claude/skills/`: three lifecycle (add-component, sync-changes, update-credentials) plus six EDS site-scraping skills (scrape-reference-site, connect-authenticated-site, commerce-block-mapper, demo-data-injector, header-nav-footer, refine-visual-match); additionally copies Adobe AEM skills from `@adobe-commerce/commerce-extensibility-tools` when the EDS Storefront component is installed
+- `skillsWriter.ts` - Writes ten Demo-Builder skills to `.claude/skills/`: three lifecycle (add-component, sync-changes, update-credentials) plus six EDS site-scraping skills (scrape-reference-site, connect-authenticated-site, commerce-block-mapper, demo-data-injector, header-nav-footer, refine-visual-match) plus one block-library registration skill (register-custom-block); additionally copies Adobe AEM skills from `@adobe-commerce/commerce-extensibility-tools` when the EDS Storefront component is installed
 - `generateAIContextFiles` (in `projectFinalizationService.ts`) - Orchestrates all three AI writers as project finalization phase 6
 - Project template application
 - Environment file generation

@@ -34,6 +34,7 @@ import connectAuthenticatedSiteContent from '../templates/skills/connect-authent
 import demoDataInjectorContent from '../templates/skills/demo-data-injector.md';
 import headerNavFooterContent from '../templates/skills/header-nav-footer.md';
 import refineVisualMatchContent from '../templates/skills/refine-visual-match.md';
+import registerCustomBlockContent from '../templates/skills/register-custom-block.md';
 import scrapeReferenceSiteContent from '../templates/skills/scrape-reference-site.md';
 import syncChangesContent from '../templates/skills/sync-changes.md';
 import updateCredentialsContent from '../templates/skills/update-credentials.md';
@@ -74,6 +75,9 @@ const components = componentsConfig as unknown as RawComponentRegistry;
  *     lifecycle skills because they're invoked from any project state; the
  *     `scrape-reference-site` orchestrator routes between Mod Agent and
  *     Playwright MCP based on user choice.
+ *   - One custom-block authoring registration skill (register-custom-block) —
+ *     calls the `promote_block_to_library` MCP tool to make a new block show
+ *     up in DA.live's authoring picker.
  *
  * Additionally copies any Adobe skill bundles declared by components in
  * `project.componentInstances` (via the `aiSkillBundle` field on the
@@ -105,6 +109,8 @@ export async function writeSkillFiles(
         writeSkill('demo-data-injector.md', demoDataInjectorContent),
         writeSkill('header-nav-footer.md', headerNavFooterContent),
         writeSkill('refine-visual-match.md', refineVisualMatchContent),
+        // Custom block authoring registration
+        writeSkill('register-custom-block.md', registerCustomBlockContent),
     ]);
 
     // Copy Adobe skill bundles for components that declare aiSkillBundle.
