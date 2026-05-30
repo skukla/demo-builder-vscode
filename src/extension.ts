@@ -14,6 +14,7 @@ import { WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
 import { registerAdobeTools } from '@/features/ai/server/adobeTools';
 import { registerAuthTools } from '@/features/ai/server/authTools';
+import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
 import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
@@ -435,6 +436,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerAdobeTools(mcpServer, ctxFactory);
                 registerCreateProjectTool(mcpServer, ctxFactory);
                 registerOpenProjectTool(mcpServer, ctxFactory);
+                registerCloudResourceTools(mcpServer, ctxFactory);
                 registerViewTools(mcpServer, (commandId) => Promise.resolve(vscode.commands.executeCommand(commandId)));
             },
         );

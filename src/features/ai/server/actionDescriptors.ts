@@ -10,6 +10,7 @@ import { z } from 'zod';
 import type { ToolDescriptor } from './toolDescriptors';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
+import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 
 export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     {
@@ -53,5 +54,13 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         type: 'delete-ai-prompt',
         confirm: true,
         inputSchema: { promptId: z.string().describe('Id of the prompt to delete') },
+    },
+    {
+        tool: 'delete_mesh',
+        description: 'Delete the API Mesh for an Adobe I/O workspace',
+        map: meshHandlers,
+        type: 'delete-api-mesh',
+        confirm: true,
+        inputSchema: { workspaceId: z.string().describe('Adobe I/O workspace id whose mesh to delete') },
     },
 ];

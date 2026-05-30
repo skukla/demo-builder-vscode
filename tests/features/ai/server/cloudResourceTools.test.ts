@@ -1,0 +1,161 @@
+/**
+ * cloud-resource tools — GitHub repo list/delete adapters. The EDS service layer
+ * is mocked (no real GitHub calls); covers auth handoff, pagination/projection,
+ * and the extra-strict (confirm + confirmName echo) gate on the irreversible
+ * delete.
+ */
+
+jest.mock('@/features/eds/handlers/edsHelpers', () => ({
+    getGitHubServices: jest.fn(),
+}));
+
+import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
+import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
+import type { HandlerContext } from '@/types/handlers';
+
+const getGitHubServicesMock = getGitHubServices as jest.Mock;
+
+function fakeServer() {
+
+    const tools = new Map<string, (args: any) => Promise<{ content: Array<{ text: string }> }>>();
+    return {
+
+        registerTool(name: string, _def: unknown, handler: (args: any) => Promise<{ content: Array<{ text: string }> }>) {
+            tools.set(name, handler);
+        },
+
+        async call(name: string, args?: unknown): Promise<any> {
+            return JSON.parse((await tools.get(name)!(args)).content[0].text);
+        },
+    };
+}
+
+const ctxFactory = () => ({}) as unknown as HandlerContext;
+
+/** Build a GitHub services double; override pieces per test. */
+function gh(overrides: {
+    valid?: boolean;
+    validateThrows?: boolean;
+    repos?: Array<{ fullName: string; isPrivate: boolean; updatedAt: string }>;
+    deleteRepository?: jest.Mock;
+} = {}) {
+    const validateToken = overrides.validateThrows
+        ? jest.fn(async () => { throw new Error('network'); })
+        : jest.fn(async () => ({ valid: overrides.valid ?? true }));
+    return {
+        tokenService: { validateToken },
+        repoOperations: {
+            listUserRepositories: jest.fn(async () => overrides.repos ?? []),
+            deleteRepository: overrides.deleteRepository ?? jest.fn(async () => undefined),
+        },
+    };
+}
+
+describe('cloud-resource tools (GitHub)', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    describe('list_github_repos', () => {
+        it('hands off to GitHub auth when not signed in', async () => {
+            getGitHubServicesMock.mockReturnValue(gh({ valid: false }));
+            const s = fakeServer();
+            registerCloudResourceTools(s, ctxFactory);
+            expect(await s.call('list_github_repos', {})).toMatchObject({ needsAuth: 'github' });
+        });
+
+        it('treats a token-validation throw as unauthenticated', async () => {
+            getGitHubServicesMock.mockReturnValue(gh({ validateThrows: true }));
+            const s = fakeServer();
+            registerCloudResourceTools(s, ctxFactory);
+            expect(await s.call('list_github_repos', {})).toMatchObject({ needsAuth: 'github' });
+        });
+
+        it('returns a paginated, summary-projected page (no raw API fields)', async () => {
+            const repos = Array.from({ length: 5 }, (_, i) => ({
+                fullName: `me/repo-${i}`,
+                isPrivate: i % 2 === 0,
+                updatedAt: `2026-01-0${i + 1}`,
+                htmlUrl: 'should-not-appear',
+            }));
+            getGitHubServicesMock.mockReturnValue(gh({ repos }));
+            const s = fakeServer();
+            registerCloudResourceTools(s, ctxFactory);
+
+            const res = await s.call('list_github_repos', { offset: 1, limit: 2 });
+            expect(res).toEqual({
+                total: 5,
+                offset: 1,
+                limit: 2,
+                repos: [
+                    { fullName: 'me/repo-1', isPrivate: false, updatedAt: '2026-01-02' },
+                    { fullName: 'me/repo-2', isPrivate: true, updatedAt: '2026-01-03' },
+                ],
+            });
+        });
+    });
+
+    describe('delete_github_repo', () => {
+        it('requires owner and repo', async () => {
+            getGitHubServicesMock.mockReturnValue(gh());
+            const s = fakeServer();
+            registerCloudResourceTools(s, ctxFactory);
+            expect(await s.call('delete_github_repo', { owner: '', repo: '' })).toMatchObject({
+                error: expect.stringMatching(/owner and repo are required/),
+            });
+        });
+
+        it('refuses without confirm:true (irreversible) and never calls the service', async () => {
+            const deleteRepository = jest.fn(async () => undefined);
+            getGitHubServicesMock.mockReturnValue(gh({ deleteRepository }));
+            const s = fakeServer();
+            registerCloudResourceTools(s, ctxFactory);
+
+            const res = await s.call('delete_github_repo', { owner: 'me', repo: 'r' });
+            expect(res).toMatchObject({ irreversible: true });
+            expect(res.error).toMatch(/confirmName:"me\/r"/);
+            expect(deleteRepository).not.toHaveBeenCalled();
+        });
+
+        it('refuses when confirmName does not echo owner/repo exactly', async () => {
+            const deleteRepository = jest.fn(async () => undefined);
+            getGitHubServicesMock.mockReturnValue(gh({ deleteRepository }));
+            const s = fakeServer();
+            registerCloudResourceTools(s, ctxFactory);
+
+            const res = await s.call('delete_github_repo', { owner: 'me', repo: 'r', confirm: true, confirmName: 'me/WRONG' });
+            expect(res).toMatchObject({ irreversible: true });
+            expect(deleteRepository).not.toHaveBeenCalled();
+        });
+
+        it('hands off to GitHub auth when the strict gate passes but not signed in', async () => {
+            const deleteRepository = jest.fn(async () => undefined);
+            getGitHubServicesMock.mockReturnValue(gh({ valid: false, deleteRepository }));
+            const s = fakeServer();
+            registerCloudResourceTools(s, ctxFactory);
+
+            const res = await s.call('delete_github_repo', { owner: 'me', repo: 'r', confirm: true, confirmName: 'me/r' });
+            expect(res).toMatchObject({ needsAuth: 'github' });
+            expect(deleteRepository).not.toHaveBeenCalled();
+        });
+
+        it('deletes when confirm:true and confirmName echoes exactly', async () => {
+            const deleteRepository = jest.fn(async () => undefined);
+            getGitHubServicesMock.mockReturnValue(gh({ deleteRepository }));
+            const s = fakeServer();
+            registerCloudResourceTools(s, ctxFactory);
+
+            const res = await s.call('delete_github_repo', { owner: 'me', repo: 'r', confirm: true, confirmName: 'me/r' });
+            expect(res).toEqual({ deleted: true, repo: 'me/r' });
+            expect(deleteRepository).toHaveBeenCalledWith('me', 'r');
+        });
+
+        it('returns deleted:false with the error when the service throws', async () => {
+            const deleteRepository = jest.fn(async () => { throw new Error('insufficient scope'); });
+            getGitHubServicesMock.mockReturnValue(gh({ deleteRepository }));
+            const s = fakeServer();
+            registerCloudResourceTools(s, ctxFactory);
+
+            const res = await s.call('delete_github_repo', { owner: 'me', repo: 'r', confirm: true, confirmName: 'me/r' });
+            expect(res).toMatchObject({ deleted: false, repo: 'me/r', error: 'insufficient scope' });
+        });
+    });
+});
