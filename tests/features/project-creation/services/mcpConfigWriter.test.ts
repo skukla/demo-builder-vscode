@@ -13,11 +13,9 @@
  */
 
 import * as fsPromises from 'fs/promises';
-import * as os from 'os';
 import * as path from 'path';
 import {
     generateClaudeSettings,
-    registerGlobalMcp,
     writeMcpConfigs,
 } from '@/features/project-creation/services/mcpConfigWriter';
 import type { Project, ComponentInstance } from '@/types/base';
@@ -440,76 +438,5 @@ describe('writeMcpConfigs', () => {
         await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
         expect(fsPromises.appendFile as jest.Mock).not.toHaveBeenCalled();
-    });
-});
-
-// ─── Global MCP registration ────────────────────────────────────────────────
-
-const GLOBAL_CLAUDE_CONFIG_PATH = path.join(os.homedir(), '.claude.json');
-
-describe('registerGlobalMcp', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-    });
-
-    it('writes the demo-builder entry to ~/.claude.json (not ~/.claude/.mcp.json)', async () => {
-        await registerGlobalMcp(EXTENSION_DIST);
-
-        const writeFileMock = fsPromises.writeFile as jest.Mock;
-        const call = writeFileMock.mock.calls.find(
-            ([p]: [string]) => String(p) === GLOBAL_CLAUDE_CONFIG_PATH,
-        );
-        expect(call).toBeDefined();
-        const written = call ? (call[1] as string) : '';
-        const parsed = JSON.parse(written);
-        expect(parsed.mcpServers['demo-builder']).toBeDefined();
-        expect(path.isAbsolute(parsed.mcpServers['demo-builder'].command)).toBe(true);
-        expect(parsed.mcpServers['demo-builder'].args).toEqual([`${EXTENSION_DIST}/mcp-proxy.js`]);
-    });
-
-    it('never writes the legacy ~/.claude/.mcp.json path', async () => {
-        await registerGlobalMcp(EXTENSION_DIST);
-
-        const writeFileMock = fsPromises.writeFile as jest.Mock;
-        const wrote = writeFileMock.mock.calls.some(([p]: [string]) =>
-            String(p) === path.join(os.homedir(), '.claude', '.mcp.json'),
-        );
-        expect(wrote).toBe(false);
-    });
-
-    it('preserves every existing field in ~/.claude.json when upserting', async () => {
-        const existing = {
-            theme: 'dark',
-            mcpServers: {
-                'other-server': { command: 'npx', args: ['other-mcp'] },
-            },
-            customSettings: { foo: 'bar' },
-        };
-        (fsPromises.readFile as jest.Mock).mockResolvedValueOnce(JSON.stringify(existing));
-
-        await registerGlobalMcp(EXTENSION_DIST);
-
-        const writeFileMock = fsPromises.writeFile as jest.Mock;
-        const call = writeFileMock.mock.calls.find(([p]: [string]) => String(p) === GLOBAL_CLAUDE_CONFIG_PATH);
-        const parsed = JSON.parse(call?.[1] as string);
-
-        expect(parsed.theme).toBe('dark');
-        expect(parsed.customSettings).toEqual({ foo: 'bar' });
-        expect(parsed.mcpServers['other-server']).toEqual({ command: 'npx', args: ['other-mcp'] });
-        expect(parsed.mcpServers['demo-builder']).toBeDefined();
-    });
-
-    it('creates ~/.claude.json when missing', async () => {
-        await expect(registerGlobalMcp(EXTENSION_DIST)).resolves.not.toThrow();
-
-        const writeFileMock = fsPromises.writeFile as jest.Mock;
-        expect(writeFileMock).toHaveBeenCalled();
-    });
-
-    it('throws when ~/.claude.json is malformed (does not overwrite valid-but-unreadable user state)', async () => {
-        (fsPromises.readFile as jest.Mock).mockResolvedValueOnce('{ not valid json');
-
-        await expect(registerGlobalMcp(EXTENSION_DIST)).rejects.toThrow(/malformed|JSON/i);
-        expect(fsPromises.writeFile).not.toHaveBeenCalled();
     });
 });

@@ -1,9 +1,8 @@
 /**
  * aiHandlers Tests — Setup & verification
  *
- * Handler registration, handleVerifyAiSetup, handleInspectMcp,
- * handleRegenerateAiFiles, and handleRegisterGlobalMcp. Shared setup lives in
- * aiHandlers.testUtils.ts.
+ * Handler registration, handleVerifyAiSetup, handleInspectMcp, and
+ * handleRegenerateAiFiles. Shared setup lives in aiHandlers.testUtils.ts.
  */
 
 import {
@@ -11,7 +10,6 @@ import {
     handleVerifyAiSetup,
     handleInspectMcp,
     handleRegenerateAiFiles,
-    handleRegisterGlobalMcp,
     handleOpenInClaude,
     handleSaveAiPrompt,
     handleDeleteAiPrompt,
@@ -23,7 +21,6 @@ import {
     inspectAllServers,
     verifyAiSetup,
     generateAIContextFiles,
-    registerGlobalMcp,
     createMockContext,
 } from './aiHandlers.testUtils';
 import type { HandlerContext } from './aiHandlers.testUtils';
@@ -39,9 +36,9 @@ describe('aiHandlers — setup & verification', () => {
             expect(typeof aiHandlers).toBe('object');
         });
 
-        it('should have exactly 9 handlers', () => {
+        it('should have exactly 8 handlers', () => {
             const types = getRegisteredTypes(aiHandlers);
-            expect(types).toHaveLength(9);
+            expect(types).toHaveLength(8);
         });
 
         it('should include verify-ai-setup', () => {
@@ -54,10 +51,6 @@ describe('aiHandlers — setup & verification', () => {
 
         it('should include regenerate-ai-files', () => {
             expect(hasHandler(aiHandlers, 'regenerate-ai-files')).toBe(true);
-        });
-
-        it('should include register-global-mcp', () => {
-            expect(hasHandler(aiHandlers, 'register-global-mcp')).toBe(true);
         });
 
         it('should include openInClaude', () => {
@@ -91,7 +84,6 @@ describe('aiHandlers — setup & verification', () => {
             expect(aiHandlers['verify-ai-setup']).toBe(handleVerifyAiSetup);
             expect(aiHandlers['inspect-mcp']).toBe(handleInspectMcp);
             expect(aiHandlers['regenerate-ai-files']).toBe(handleRegenerateAiFiles);
-            expect(aiHandlers['register-global-mcp']).toBe(handleRegisterGlobalMcp);
             expect(aiHandlers['openInClaude']).toBe(handleOpenInClaude);
             expect(aiHandlers['save-ai-prompt']).toBe(handleSaveAiPrompt);
             expect(aiHandlers['delete-ai-prompt']).toBe(handleDeleteAiPrompt);
@@ -115,32 +107,6 @@ describe('aiHandlers — setup & verification', () => {
             expect(result).toMatchObject({
                 success: true,
                 ...mockResult,
-                globalMcpRegistration: 'unregistered',
-            });
-        });
-
-        it('exposes persisted globalMcpRegistration state from globalState', async () => {
-            const mockResult = { status: 'ok', checks: [] };
-            (verifyAiSetup as jest.Mock).mockResolvedValue(mockResult);
-
-            const context = createMockContext({
-                context: {
-                    extensionPath: '/mock/extension/path',
-                    secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn(), onDidChange: jest.fn() },
-                    globalState: {
-                        get: jest.fn().mockReturnValue('registered'),
-                        update: jest.fn(),
-                        keys: jest.fn().mockReturnValue([]),
-                    },
-                    subscriptions: [],
-                } as unknown as HandlerContext['context'],
-            });
-            const result = await handleVerifyAiSetup(context);
-
-            expect(result).toMatchObject({
-                success: true,
-                ...mockResult,
-                globalMcpRegistration: 'registered',
             });
         });
 
@@ -277,35 +243,6 @@ describe('aiHandlers — setup & verification', () => {
 
             expect(generateAIContextFiles).not.toHaveBeenCalled();
             expect(result).toMatchObject({ success: false });
-        });
-    });
-
-    describe('handleRegisterGlobalMcp', () => {
-        it('calls registerGlobalMcp with the extension dist path and sets globalState to "registered"', async () => {
-            const update = jest.fn().mockResolvedValue(undefined);
-            const context = createMockContext({
-                context: {
-                    extensionPath: '/mock/extension/path',
-                    secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn(), onDidChange: jest.fn() },
-                    globalState: {
-                        get: jest.fn(),
-                        update,
-                        keys: jest.fn().mockReturnValue([]),
-                    },
-                    subscriptions: [],
-                } as unknown as HandlerContext['context'],
-            });
-
-            const result = await handleRegisterGlobalMcp(context);
-
-            expect(registerGlobalMcp).toHaveBeenCalledWith(
-                expect.stringContaining('mock/extension/path'),
-            );
-            expect(update).toHaveBeenCalledWith(
-                'demoBuilder.ai.globalMcpRegistration',
-                'registered',
-            );
-            expect(result).toEqual({ success: true });
         });
     });
 

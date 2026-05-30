@@ -37,9 +37,8 @@ interface NeedsAuthEntry {
  * `needsAuth` derived from the needs-auth cache.
  *
  * Returns `[]` when `~/.claude.json` is missing or lacks the array. Throws
- * when `~/.claude.json` exists but is malformed (matches the read-parse-guard
- * pattern from `mcpConfigWriter::registerGlobalMcp` — refuse to silently
- * misread a valid-but-unreadable user config).
+ * when `~/.claude.json` exists but is malformed — refuse to silently
+ * misread a valid-but-unreadable user config.
  *
  * The needs-auth cache fails soft: missing or malformed treats all entries
  * as `needsAuth: false`. This is intentional — the cache is undocumented

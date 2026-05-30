@@ -3,7 +3,7 @@
  *
  * Shared jest.mock setup, module re-exports, and context fixtures for the
  * aiHandlers suite, which is split into per-area files:
- *   - aiHandlers-setup.test.ts    (registration, verify, inspect, regenerate, register MCP)
+ *   - aiHandlers-setup.test.ts    (registration, verify, inspect, regenerate)
  *   - aiHandlers-launch.test.ts   (handleOpenInClaude, handleSaveAiPrompt)
  *   - aiHandlers-prompts.test.ts  (delete/list/pin-aware/scope flow)
  *   - aiHandlers-misc.test.ts     (copy, sessions, module-level prompt helpers)
@@ -46,11 +46,9 @@ jest.mock('@/features/ai', () => ({
     clearMcpCache: jest.fn(),
 }));
 
-// Mock AI context file generator + global MCP registration helpers
+// Mock AI context file generator
 jest.mock('@/features/project-creation/services', () => ({
     generateAIContextFiles: jest.fn(),
-    registerGlobalMcp: jest.fn().mockResolvedValue(undefined),
-    GLOBAL_MCP_REG_STATE_KEY: 'demoBuilder.ai.globalMcpRegistration',
 }));
 
 // Mock vscode
@@ -89,7 +87,6 @@ export {
     handleVerifyAiSetup,
     handleInspectMcp,
     handleRegenerateAiFiles,
-    handleRegisterGlobalMcp,
     handleOpenInClaude,
     handleSaveAiPrompt,
     handleDeleteAiPrompt,
@@ -102,7 +99,7 @@ export {
 } from '@/features/dashboard/handlers/aiHandlers';
 export { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 export { clearMcpCache, inspectAllServers, verifyAiSetup } from '@/features/ai';
-export { generateAIContextFiles, registerGlobalMcp } from '@/features/project-creation/services';
+export { generateAIContextFiles } from '@/features/project-creation/services';
 export type { HandlerContext } from '@/types/handlers';
 
 import type { HandlerContext } from '@/types/handlers';

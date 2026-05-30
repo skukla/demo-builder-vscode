@@ -523,7 +523,6 @@ describe('useDashboardStatus', () => {
                 skillsError?: string;
                 mcpsError?: string;
             };
-            globalMcpRegistration?: 'registered' | 'declined' | 'unregistered';
         } = {}) => ({
             success: true,
             status: 'ok',
@@ -544,7 +543,6 @@ describe('useDashboardStatus', () => {
                     ? { mcpsError: overrides.inventory.mcpsError }
                     : {}),
             },
-            globalMcpRegistration: overrides.globalMcpRegistration ?? 'registered',
         });
 
         const flushVerify = async () => {
@@ -581,26 +579,7 @@ describe('useDashboardStatus', () => {
             });
         });
 
-        it('stays green Ready when global MCP is unregistered (project .mcp.json is sufficient)', async () => {
-            mockRequest.mockResolvedValue(buildVerifyResponse({ globalMcpRegistration: 'unregistered' }));
-            const { result } = renderHook(() => useDashboardStatus());
-            await flushVerify();
-            expect(result.current.aiReady).toEqual({
-                label: 'AI Ready',
-                color: 'green',
-                text: 'Ready',
-            });
-        });
-
-        it('stays green Ready when global MCP is declined (registration does not gate the badge)', async () => {
-            mockRequest.mockResolvedValue(buildVerifyResponse({ globalMcpRegistration: 'declined' }));
-            const { result } = renderHook(() => useDashboardStatus());
-            await flushVerify();
-            expect(result.current.aiReady.color).toBe('green');
-            expect(result.current.aiReady.text).toBe('Ready');
-        });
-
-        it('returns yellow Setup incomplete when inventory mcpsError is set (files OK, registered)', async () => {
+        it('returns yellow Setup incomplete when inventory mcpsError is set (files OK)', async () => {
             mockRequest.mockResolvedValue(
                 buildVerifyResponse({
                     inventory: { mcpsError: 'mcp inspector failed' },

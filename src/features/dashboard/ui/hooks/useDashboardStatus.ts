@@ -81,7 +81,6 @@ interface VerifyAiSetupResponse {
         skillsError?: string;
         mcpsError?: string;
     };
-    globalMcpRegistration?: 'registered' | 'declined' | 'unregistered';
 }
 
 /**

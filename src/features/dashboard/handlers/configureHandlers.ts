@@ -10,8 +10,8 @@
  * as the Wizard (simple handlers in map, complex middleware inline).
  *
  * AI-related handlers (`verify-ai-setup`, `inspect-mcp`,
- * `regenerate-ai-files`, `register-global-mcp`, `openInClaude`) now live
- * in `aiHandlers.ts` and are routed by the standalone AI surface.
+ * `regenerate-ai-files`, `openInClaude`) now live in `aiHandlers.ts` and are
+ * routed by the standalone AI surface.
  *
  * @module features/dashboard/handlers/configureHandlers
  */

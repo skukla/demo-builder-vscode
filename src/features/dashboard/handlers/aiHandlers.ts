@@ -17,12 +17,7 @@ import * as vscode from 'vscode';
 import { PENDING_CLAUDE_LAUNCH_KEY } from '@/commands/openInClaude';
 import { BaseWebviewCommand } from '@/core/base';
 import { clearMcpCache, inspectAllServers, verifyAiSetup } from '@/features/ai';
-import {
-    GLOBAL_MCP_REG_STATE_KEY,
-    type GlobalMcpRegistrationState,
-    generateAIContextFiles,
-    registerGlobalMcp,
-} from '@/features/project-creation/services';
+import { generateAIContextFiles } from '@/features/project-creation/services';
 import type { AiPrompt, Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
@@ -36,11 +31,6 @@ import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/typ
  *
  * Reads projectPath from stateManager (not the webview payload) to prevent
  * a compromised webview from supplying an arbitrary filesystem path.
- *
- * Extends the response with `globalMcpRegistration` so the AI surface can
- * show the Register button when demo-builder is not yet in `~/.claude.json`.
- * The value is the persisted globalState, narrowed to `'unregistered'` when
- * the user has not been prompted yet.
  */
 export async function handleVerifyAiSetup(
     context: HandlerContext,
@@ -52,33 +42,11 @@ export async function handleVerifyAiSetup(
     // extensionDistPath is always server-side (prevent webview-supplied path traversal)
     const extensionDistPath = path.join(context.context.extensionPath, 'dist');
     const result = await verifyAiSetup(project.path, extensionDistPath);
-    const persisted = context.context.globalState.get<GlobalMcpRegistrationState>(GLOBAL_MCP_REG_STATE_KEY);
-    const globalMcpRegistration: GlobalMcpRegistrationState | 'unregistered' =
-        persisted ?? 'unregistered';
 
     return {
         success: true,
         ...result,
-        globalMcpRegistration,
     };
-}
-
-/**
- * Handle register-global-mcp — upsert the demo-builder MCP entry into
- * `~/.claude.json` and mark globalState as `'registered'`.
- *
- * Global registration is a manual opt-in: it happens only when the user clicks
- * the Register button on the AI surface (it is never triggered automatically at
- * project-creation time). The per-project `.mcp.json` already covers in-project
- * discovery; this adds cross-directory discovery for users who want it.
- */
-export async function handleRegisterGlobalMcp(
-    context: HandlerContext,
-): Promise<HandlerResponse> {
-    const extensionDistPath = path.join(context.context.extensionPath, 'dist');
-    await registerGlobalMcp(extensionDistPath);
-    await context.context.globalState.update(GLOBAL_MCP_REG_STATE_KEY, 'registered');
-    return { success: true };
 }
 
 /**
@@ -473,7 +441,6 @@ export const aiHandlers = defineHandlers({
     'verify-ai-setup': handleVerifyAiSetup,
     'inspect-mcp': handleInspectMcp,
     'regenerate-ai-files': handleRegenerateAiFiles,
-    'register-global-mcp': handleRegisterGlobalMcp,
     'openInClaude': handleOpenInClaude,
     'save-ai-prompt': handleSaveAiPrompt,
     'delete-ai-prompt': handleDeleteAiPrompt,

@@ -138,7 +138,6 @@ export async function renderScreen(opts: {
         status: opts.status ?? 'ok',
         checks: [],
         inventory: opts.inventory ?? makeFullInventory(),
-        globalMcpRegistration: 'registered',
     };
     webviewClient.request.mockImplementation((type: string) => {
         if (opts.requestOverrides && type in opts.requestOverrides) {

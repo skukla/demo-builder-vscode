@@ -97,7 +97,6 @@ describe('AiOverviewScreen — user prompts', () => {
                     status: 'ok',
                     checks: [],
                     inventory: makeFullInventory(),
-                    globalMcpRegistration: 'registered',
                 });
             });
 
@@ -141,7 +140,6 @@ describe('AiOverviewScreen — user prompts', () => {
                     status: 'ok',
                     checks: [],
                     inventory: makeFullInventory(),
-                    globalMcpRegistration: 'registered',
                 });
             });
 
@@ -184,7 +182,6 @@ describe('AiOverviewScreen — user prompts', () => {
                     status: 'ok',
                     checks: [],
                     inventory: makeFullInventory(),
-                    globalMcpRegistration: 'registered',
                 });
             });
 
@@ -220,7 +217,6 @@ describe('AiOverviewScreen — user prompts', () => {
                     status: 'ok',
                     checks: [],
                     inventory: makeFullInventory(),
-                    globalMcpRegistration: 'registered',
                 });
             });
 
@@ -251,7 +247,6 @@ describe('AiOverviewScreen — user prompts', () => {
                     status: 'ok',
                     checks: [],
                     inventory: makeFullInventory(),
-                    globalMcpRegistration: 'registered',
                 });
             });
 
@@ -288,7 +283,6 @@ describe('AiOverviewScreen — user prompts', () => {
                     status: 'ok',
                     checks: [],
                     inventory: makeFullInventory(),
-                    globalMcpRegistration: 'registered',
                 });
             });
 

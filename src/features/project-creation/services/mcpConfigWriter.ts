@@ -20,7 +20,6 @@
 
 import * as childProcess from 'child_process';
 import * as fsPromises from 'fs/promises';
-import * as os from 'os';
 import * as path from 'path';
 import { promisify } from 'util';
 import aiDefaultsConfig from '../config/ai-defaults.json';
@@ -32,24 +31,6 @@ import type { Project } from '@/types/base';
 const execFile = promisify(childProcess.execFile);
 
 const aiDefaults: AiDefaults = aiDefaultsConfig as AiDefaults;
-
-/**
- * globalState key tracking whether the user has opted into registering
- * demo-builder in the canonical Claude Code user config (~/.claude.json).
- *
- * States:
- *   - undefined:    not registered globally (the default — per-project .mcp.json
- *                   is written at creation and is sufficient for AI agents)
- *   - 'registered': user clicked Register in the dashboard AI tab; the
- *                   demo-builder entry is in ~/.claude.json
- *
- * The legacy 'declined' value is retained in the type for backward
- * compatibility with any previously-persisted state, but is no longer written
- * now that global registration is a manual opt-in rather than an auto-prompt.
- */
-export const GLOBAL_MCP_REG_STATE_KEY = 'demoBuilder.ai.globalMcpRegistration';
-
-export type GlobalMcpRegistrationState = 'registered' | 'declined';
 
 // ─── MCP entry shape ──────────────────────────────────────────────────────────
 
@@ -112,56 +93,6 @@ export async function writeMcpConfigs(
     await ensureMcpFilesGitignored(projectPath);
 }
 
-
-/**
- * Upsert the demo-builder MCP server entry into Claude Code's canonical
- * user-scope config file: `~/.claude.json` top-level `mcpServers` field
- * (verified against Claude Code v2.1.x on 2026-05-20).
- *
- * Preserves every other field in the file. Idempotent. This is an explicit,
- * user-initiated opt-in (the dashboard AI tab's Register button) — it is never
- * called automatically, so the user always consents by clicking Register.
- *
- * Throws if `~/.claude.json` exists but is malformed, so we never overwrite a
- * valid-but-unreadable user-curated config.
- */
-export async function registerGlobalMcp(extensionDistPath: string): Promise<void> {
-    const configPath = path.join(os.homedir(), '.claude.json');
-
-    let config: Record<string, unknown> = {};
-    try {
-        const raw = await fsPromises.readFile(configPath, 'utf-8');
-        try {
-            config = JSON.parse(raw) as Record<string, unknown>;
-        } catch (err) {
-            throw new Error(
-                `~/.claude.json is malformed — refusing to overwrite valid-but-unreadable ` +
-                `user config: ${err instanceof Error ? err.message : String(err)}`,
-            );
-        }
-    } catch (err) {
-        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
-            throw err;
-        }
-        // Missing file — start with an empty object
-    }
-
-    if (!config.mcpServers || typeof config.mcpServers !== 'object') {
-        config.mcpServers = {};
-    }
-
-    const nodePath = await resolveNodePath();
-    // Global (user-scope) entry carries NO socket env: the proxy derives the
-    // per-workspace socket path from its cwd (the project dir Claude is launched
-    // in), so one global entry connects to whichever VS Code window has that
-    // project open.
-    (config.mcpServers as Record<string, unknown>)['demo-builder'] = {
-        command: nodePath,
-        args: [path.join(extensionDistPath, 'mcp-proxy.js')],
-    };
-
-    await fsPromises.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
-}
 
 /**
  * Generate .claude/settings.json with PostToolUse git sync hook.
