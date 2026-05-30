@@ -9,7 +9,6 @@ import { Sidebar } from '@/features/sidebar/ui/Sidebar';
 import {
     createProjectsContext,
     createProjectContext,
-    createConfigureContext,
 } from '../testUtils';
 
 const renderWithProvider = (ui: React.ReactElement) =>
@@ -135,97 +134,12 @@ describe('Sidebar', () => {
                 />,
             );
 
-            // The configure nav items appear only in configure mode.
-            // 'Overview' / 'Configure' / 'Updates' should be absent here.
+            // SidebarNav is gone; nav items never render anywhere.
             expect(screen.queryByText('Overview')).not.toBeInTheDocument();
         });
     });
 
-    describe('Configure context', () => {
-        it('renders project name as header', () => {
-            renderWithProvider(
-                <Sidebar
-                    context={createConfigureContext({ name: 'Config Project' })}
-                    onNavigate={jest.fn()}
-                    onCreateProject={jest.fn()}
-                />,
-            );
-
-            expect(screen.getByText('Config Project')).toBeInTheDocument();
-        });
-
-        it('renders Overview / Configure / Updates nav items', () => {
-            renderWithProvider(
-                <Sidebar
-                    context={createConfigureContext()}
-                    onNavigate={jest.fn()}
-                    onCreateProject={jest.fn()}
-                />,
-            );
-
-            expect(screen.getByText('Overview')).toBeInTheDocument();
-            expect(screen.getByText('Configure')).toBeInTheDocument();
-            expect(screen.getByText('Updates')).toBeInTheDocument();
-        });
-
-        it('does NOT render an AI nav item — AI lives in its own zone now', () => {
-            renderWithProvider(
-                <Sidebar
-                    context={createConfigureContext()}
-                    onNavigate={jest.fn()}
-                    onCreateProject={jest.fn()}
-                />,
-            );
-
-            // The legacy "AI" nav item is gone; "AI" only appears as a zone
-            // label when AiZone is rendered, not as a nav row. We assert no
-            // "AI" nav row by checking against the AiZone's presence:
-            // configure context without AiZone callbacks → no "AI" anywhere.
-            expect(screen.queryByText('AI')).not.toBeInTheDocument();
-        });
-
-        it('renders the AiZone when callbacks provided in configure mode', () => {
-            renderWithProvider(
-                <Sidebar
-                    context={createConfigureContext()}
-                    onNavigate={jest.fn()}
-                    onCreateProject={jest.fn()}
-                    onOpenAiChat={jest.fn()}
-                    onShowPrompts={jest.fn()}
-                />,
-            );
-
-            expect(screen.getByRole('button', { name: /^chat$/i })).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: /^prompts$/i })).toBeInTheDocument();
-        });
-
-        it('shows a back button to "Projects" when onBack provided', () => {
-            renderWithProvider(
-                <Sidebar
-                    context={createConfigureContext()}
-                    onNavigate={jest.fn()}
-                    onCreateProject={jest.fn()}
-                    onBack={jest.fn()}
-                />,
-            );
-
-            expect(screen.getByRole('button', { name: /projects/i })).toBeInTheDocument();
-        });
-
-        it('does not render back button when onBack is absent', () => {
-            renderWithProvider(
-                <Sidebar
-                    context={createConfigureContext()}
-                    onNavigate={jest.fn()}
-                    onCreateProject={jest.fn()}
-                />,
-            );
-
-            expect(screen.queryByRole('button', { name: /projects/i })).not.toBeInTheDocument();
-        });
-    });
-
-    // Wizard mode is intentionally absent — the wizard timeline lives inside
-    // the wizard webview's own left column, not the sidebar. While the wizard
-    // is active the sidebar shows the projects-list-equivalent layout.
+    // Configure and Wizard modes are intentionally absent — see Sidebar.tsx
+    // for the rationale. Configure is a self-contained webview; the Wizard
+    // timeline lives inside its own webview column.
 });

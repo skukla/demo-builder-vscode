@@ -10,21 +10,18 @@
  *     project-scoped, so it doesn't appear here.
  *   - `project` — AiZone (Chat + Prompts) paired above the UtilityBar footer,
  *     vertically centered as a group.
- *   - `configure` — back + project name + nav, then AiZone paired above the
- *     UtilityBar footer at the bottom.
  *
- * Note: there is no wizard mode. The wizard's progress timeline lives inside
- * the wizard webview's own left column (`WizardContainer`), not the sidebar.
- * While the wizard is active the sidebar shows whatever non-wizard context
- * applies (usually `projects`).
+ * Notes on absent modes:
+ *   - Wizard: the wizard's progress timeline lives inside the wizard webview's
+ *     own left column (`WizardContainer`), not the sidebar.
+ *   - Configure: the Configure webview is a self-contained tab with its own
+ *     Cancel footer. The sidebar stays in `project` mode the whole time.
  */
 
-import { Flex, Text, ActionButton } from '@adobe/react-spectrum';
-import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft';
+import { Flex } from '@adobe/react-spectrum';
 import React from 'react';
-import type { SidebarContext, NavItem } from '../types';
+import type { SidebarContext } from '../types';
 import { AiZone } from './components/AiZone';
-import { SidebarNav } from './components/SidebarNav';
 import { UtilityBar } from './views';
 
 export interface SidebarProps {
@@ -63,8 +60,8 @@ export interface SidebarProps {
  */
 export const Sidebar: React.FC<SidebarProps> = ({
     context,
-    onNavigate,
-    onBack,
+    onNavigate: _onNavigate,
+    onBack: _onBack,
     onCreateProject: _onCreateProject,
     onOpenTools,
     onOpenHelp,
@@ -89,84 +86,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
         );
     }
 
-    const showAiZone = onOpenAiChat && onShowPrompts;
-
     // Project mode: AiZone + UtilityBar as a single group, vertically centered
     // in the sidebar. No lines, no project header — keeps the surface minimal.
-    if (context.type === 'project') {
-        return (
-            <Flex
-                direction="column"
-                height="100%"
-                justifyContent="center"
-                alignItems="center"
-                gap="size-400"
-                UNSAFE_className="sidebar-project-view"
-            >
-                {showAiZone && (
-                    <AiZone
-                        onOpenAiChat={onOpenAiChat}
-                        onShowPrompts={onShowPrompts}
-                    />
-                )}
-                <UtilityBar
-                    onOpenTools={onOpenTools}
-                    onOpenHelp={onOpenHelp}
-                    onOpenSettings={onOpenSettings}
-                    compact
-                />
-            </Flex>
-        );
-    }
-
-    // Configure: back + project name + nav at top, AiZone + UtilityBar at
-    // the bottom as a group. No dividers.
+    const showAiZone = onOpenAiChat && onShowPrompts;
     return (
         <Flex
             direction="column"
             height="100%"
-            UNSAFE_className="sidebar-configure-view"
+            justifyContent="center"
+            alignItems="center"
+            gap="size-400"
+            UNSAFE_className="sidebar-project-view"
         >
-            <Flex direction="column" gap="size-200" UNSAFE_className="p-2" flex={1}>
-                {onBack && (
-                    <ActionButton isQuiet onPress={onBack}>
-                        <ChevronLeft />
-                        <Text>Projects</Text>
-                    </ActionButton>
-                )}
-
-                <Text UNSAFE_className="font-semibold text-sm truncate">
-                    {context.project.name}
-                </Text>
-
-                <SidebarNav
-                    items={getProjectDetailNavItems('configure')}
-                    onNavigate={onNavigate}
+            {showAiZone && (
+                <AiZone
+                    onOpenAiChat={onOpenAiChat}
+                    onShowPrompts={onShowPrompts}
                 />
-            </Flex>
-
-            <Flex direction="column" alignItems="center" gap="size-400">
-                {showAiZone && (
-                    <AiZone
-                        onOpenAiChat={onOpenAiChat}
-                        onShowPrompts={onShowPrompts}
-                    />
-                )}
-                <UtilityBar
-                    onOpenTools={onOpenTools}
-                    onOpenHelp={onOpenHelp}
-                    onOpenSettings={onOpenSettings}
-                    compact
-                />
-            </Flex>
+            )}
+            <UtilityBar
+                onOpenTools={onOpenTools}
+                onOpenHelp={onOpenHelp}
+                onOpenSettings={onOpenSettings}
+                compact
+            />
         </Flex>
     );
 };
-
-function getProjectDetailNavItems(activeId: string): NavItem[] {
-    return [
-        { id: 'overview', label: 'Overview', active: activeId === 'overview' },
-        { id: 'configure', label: 'Configure', active: activeId === 'configure' },
-        { id: 'updates', label: 'Updates', active: activeId === 'updates' },
-    ];
-}

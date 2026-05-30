@@ -5,7 +5,7 @@
  */
 
 // Types
-export type { SidebarContext, NavItem, WizardStep } from './types';
+export type { SidebarContext } from './types';
 
 // Provider
 export { SidebarProvider } from './providers/sidebarProvider';

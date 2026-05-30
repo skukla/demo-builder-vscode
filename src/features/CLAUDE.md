@@ -296,15 +296,13 @@ features/my-feature/
 **Key Services:**
 - `SidebarProvider` - VS Code WebviewViewProvider implementation
 - `Sidebar` - Main sidebar component
-- `AiZone` - Labeled AI zone with Chat and Prompts single-purpose buttons (project + configure modes)
-- `UtilityBar` - Three-icon footer row (Tools, Help, Settings)
-- `SidebarNav` - Navigation list (used in configure mode only)
+- `AiZone` - AI icon pair (Chat + Prompts) shown in project mode
+- `UtilityBar` - Three-icon utility row (Tools, Help, Settings)
 
 **Responsibilities:**
-- Context-aware navigation across four context types (`projects`, `projectsList`, `project`, `configure`)
-- Project-detail navigation (Overview, Configure, Updates) in the configure context
-- AI access (Chat + Prompts) in project and configure contexts via the `AiZone` component
-- Back navigation in configure mode only; other modes' back is in the main webview header
+- Context-aware navigation across three context types (`projects`, `projectsList`, `project`)
+- AI access (Chat + Prompts) in project context via the `AiZone` component
+- Wizard and Configure screens are NOT sidebar contexts — they own their own surfaces (TimelineNav in the wizard webview, Cancel footer in the Configure webview)
 
 **Path Alias**: `@/features/sidebar`
 

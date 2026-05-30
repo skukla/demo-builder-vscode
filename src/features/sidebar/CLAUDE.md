@@ -15,7 +15,7 @@ The Sidebar feature provides contextual navigation for the Demo Builder extensio
 ```
 sidebar/
 ├── index.ts                    # Public exports
-├── types.ts                    # Sidebar types (SidebarContext, NavItem)
+├── types.ts                    # Sidebar types (SidebarContext, SidebarMessageType)
 ├── providers/
 │   └── sidebarProvider.ts      # WebviewViewProvider implementation
 ├── handlers/
@@ -27,29 +27,27 @@ sidebar/
 │   │   └── UtilityBar.tsx      # 3-icon footer row (Tools, Help, Settings)
 │   └── components/
 │       ├── index.ts            # Component exports
-│       ├── AiZone.tsx          # Labeled AI zone (Chat + Prompts buttons);
-│       │                       # appears in project + configure modes
-│       └── SidebarNav.tsx      # Navigation list (used in configure mode)
+│       └── AiZone.tsx          # AI icon pair (Chat + Prompts); appears in
+│                               # project mode
 └── CLAUDE.md                   # This file
 ```
 
 ## Context Types
 
-The sidebar renders different content based on context. **Four context types** exist:
+The sidebar renders different content based on context. **Three context types** exist:
 
 ```typescript
 type SidebarContext =
     | { type: 'projects' }                              // Projects Dashboard (no project loaded)
     | { type: 'projectsList' }                          // Projects List home grid
-    | { type: 'project'; project: Project }             // Project Detail
-    | { type: 'configure'; project: Project };          // Configure
+    | { type: 'project'; project: Project };            // Project Detail
 ```
 
-**Wizard mode is intentionally absent.** The wizard's progress timeline
-lives inside the wizard webview's own left column (`WizardContainer`'s
-`.wizard-timeline-column`), not in the sidebar. While the wizard is active
-the sidebar falls through to a non-wizard context (typically `projects` if
-no project is loaded).
+**Wizard and Configure modes are intentionally absent:**
+- The wizard's progress timeline lives inside the wizard webview's own left
+  column (`WizardContainer`'s `.wizard-timeline-column`), not in the sidebar.
+- Configure is a self-contained webview tab with its own Cancel footer; the
+  sidebar stays in `project` mode while Configure is open.
 
 ### Projects and ProjectsList Contexts (no project loaded)
 - Renders the `UtilityBar` only — three icons: **Tools / Help / Settings**.
@@ -72,19 +70,6 @@ no project is loaded).
 - Footer: `UtilityBar` in compact mode (3 icons: Tools, Help, Settings).
 - Back navigation lives in the Project Dashboard webview's header
   ("All Projects" button), not in the sidebar.
-
-### Configure Context
-- Body (top to bottom):
-  - Back button: `ChevronLeft` icon + "Projects" label (when `onBack` is
-    provided).
-  - Project name header (`UNSAFE_className="font-semibold text-sm truncate"`).
-  - Divider (`size="S"`).
-  - `SidebarNav` with three items: **Overview, Configure, Updates**. The
-    `'ai'` item was removed — AI lives in its own zone below.
-  - Divider (`size="S"`).
-  - `AiZone` with **Chat** and **Prompts** buttons.
-- Footer: `UtilityBar` in compact mode.
-- The Configure webview's own header still hosts its primary back navigation.
 
 ## Components
 
@@ -117,14 +102,6 @@ Labeled sidebar zone with two single-purpose AI actions.
 
 The zone replaces the prior state-aware wand icon in `UtilityBar`. Each
 button is single-purpose — no state branching, no hidden second click.
-
-### SidebarNav
-
-Navigation list for sidebar items.
-
-**Props:**
-- `items: NavItem[]` - Navigation items to display
-- `onNavigate: (id: string) => void` - Item click callback
 
 ### UtilityBar
 
@@ -220,8 +197,6 @@ tests/features/sidebar/
 │   └── navigationCommands.test.ts        # Navigation routing
 └── ui/
     ├── Sidebar.test.tsx                  # Main component tests
-    ├── components/
-    │   └── SidebarNav.test.tsx           # Nav tests
     └── views/
         ├── UtilityBar.test.tsx           # Utility bar tests
         └── views-removal.test.ts         # Legacy view-removal regression
