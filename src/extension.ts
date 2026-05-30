@@ -11,8 +11,11 @@ import { CommandExecutor } from '@/core/shell';
 import { StateManager } from '@/core/state';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
+import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer';
 import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
+import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
+import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
 import { AuthenticationService } from '@/features/authentication';
 import { ComponentTreeProvider } from '@/features/components/providers/componentTreeProvider';
 import { shouldAutoReopenProjectsList } from '@/features/dashboard/commands/showDashboard';
@@ -255,10 +258,10 @@ export async function activate(context: vscode.ExtensionContext) {
         // Start the in-extension MCP server (serves Claude Code via the
         // stdio→UDS proxy). Bound to the open workspace folder; restarted when
         // the folder changes. Failure here must never abort activation.
-        await startInExtensionMcpServer();
+        await startInExtensionMcpServer(context);
         context.subscriptions.push(
             vscode.workspace.onDidChangeWorkspaceFolders(() => {
-                void startInExtensionMcpServer();
+                void startInExtensionMcpServer(context);
             }),
         );
 
@@ -391,7 +394,7 @@ export function deactivate() {
  * socket; the proxy resolves the same path from its cwd / env. Never throws —
  * MCP availability must not affect the rest of the extension.
  */
-async function startInExtensionMcpServer(): Promise<void> {
+async function startInExtensionMcpServer(context: vscode.ExtensionContext): Promise<void> {
     try {
         inExtensionMcpServer?.dispose();
         inExtensionMcpServer = undefined;
@@ -402,7 +405,15 @@ async function startInExtensionMcpServer(): Promise<void> {
         }
         const projectsDir =
             process.env.DEMO_BUILDER_PROJECTS_DIR ?? path.join(os.homedir(), '.demo-builder', 'projects');
-        const server = new InExtensionMcpServer(resolveMcpSocketPath(workspacePath), projectsDir, logger);
+        // Handler-backed read/status tools dispatch through the existing handler
+        // maps with a fresh headless context per call.
+        const ctxFactory = () => createHeadlessHandlerContext(context, stateManager, logger);
+        const server = new InExtensionMcpServer(
+            resolveMcpSocketPath(workspacePath),
+            projectsDir,
+            logger,
+            (mcpServer) => registerDescriptorTools(mcpServer, READ_DESCRIPTORS, ctxFactory),
+        );
         await server.start();
         inExtensionMcpServer = server;
     } catch (err) {

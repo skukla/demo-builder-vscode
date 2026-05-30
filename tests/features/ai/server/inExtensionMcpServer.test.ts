@@ -12,6 +12,8 @@ import * as net from 'net';
 import * as os from 'os';
 import * as path from 'path';
 import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer';
+import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
+import type { HandlerContext, HandlerMap } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 
 function makeLogger(): Logger {
@@ -56,7 +58,7 @@ class SocketRpc {
     }
 }
 
-async function listToolsOverSocket(socketPath: string): Promise<string[]> {
+async function connectAndInit(socketPath: string): Promise<{ socket: net.Socket; rpc: SocketRpc }> {
     const socket = net.connect(socketPath);
     await new Promise<void>((resolve, reject) => {
         socket.once('connect', resolve);
@@ -69,10 +71,22 @@ async function listToolsOverSocket(socketPath: string): Promise<string[]> {
         clientInfo: { name: 'test', version: '0.0.0' },
     });
     rpc.notify('notifications/initialized');
+    return { socket, rpc };
+}
+
+async function listToolsOverSocket(socketPath: string): Promise<string[]> {
+    const { socket, rpc } = await connectAndInit(socketPath);
     const res = await rpc.request(2, 'tools/list', {});
     socket.end();
      
     return (res.result?.tools ?? []).map((t: any) => t.name);
+}
+
+async function callToolOverSocket(socketPath: string, name: string, args: unknown): Promise<string> {
+    const { socket, rpc } = await connectAndInit(socketPath);
+    const res = await rpc.request(2, 'tools/call', { name, arguments: args });
+    socket.end();
+    return res.result?.content?.[0]?.text ?? '';
 }
 
 describe('InExtensionMcpServer', () => {
@@ -108,6 +122,25 @@ describe('InExtensionMcpServer', () => {
                 'update_project_config',
             ].sort(),
         );
+    });
+
+    it('registers and dispatches injected descriptor tools (registerExtraTools)', async () => {
+        const extraMap: HandlerMap = { ping: async () => ({ success: true, data: { pong: true } }) };
+        const registerExtra = (mcpServer: unknown) =>
+            registerDescriptorTools(
+                mcpServer,
+                [{ tool: 'ping_tool', description: 'test', map: extraMap, type: 'ping' }],
+                () => ({}) as HandlerContext,
+            );
+        server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), registerExtra);
+        await server.start();
+
+        const names = await listToolsOverSocket(socketPath);
+        expect(names).toContain('ping_tool');
+        expect(names).toContain('list_projects'); // the 7 project tools still present
+
+        const result = await callToolOverSocket(socketPath, 'ping_tool', {});
+        expect(result).toBe('{"pong":true}');
     });
 
     it('creates the socket with 0600 permissions (owner-only)', async () => {

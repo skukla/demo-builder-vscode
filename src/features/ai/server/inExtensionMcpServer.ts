@@ -68,11 +68,17 @@ export class InExtensionMcpServer {
      * @param socketPath  Absolute UDS path to listen on (per workspace).
      * @param projectsDir Projects root the tools operate on (`~/.demo-builder/projects`).
      * @param logger      Extension logger.
+     * @param registerExtraTools Optional hook to register additional tools (e.g.
+     *   handler-backed descriptor tools) on the per-connection server. Receives
+     *   the logging-wrapped server so those tools are logged too. Injected by the
+     *   extension so this module stays free of vscode/handler-map imports.
      */
     constructor(
         private readonly socketPath: string,
         private readonly projectsDir: string,
         private readonly logger: Logger,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        private readonly registerExtraTools?: (server: any) => void,
     ) {}
 
     async start(): Promise<void> {
@@ -87,8 +93,11 @@ export class InExtensionMcpServer {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const server: any = new McpServer({ name: SERVER_NAME, version: SERVER_VERSION });
             // Wrap so every tool logs to the extension channels; registerProjectTools
-            // stays vscode-free and logging-agnostic.
-            registerProjectTools(withToolLogging(server, this.logger), this.projectsDir);
+            // stays vscode-free and logging-agnostic. Extra (handler-backed) tools
+            // are registered through the same wrapper.
+            const logged = withToolLogging(server, this.logger);
+            registerProjectTools(logged, this.projectsDir);
+            this.registerExtraTools?.(logged);
 
             const transport = new StdioServerTransport(socket, socket);
             server.connect(transport).catch((err: unknown) => {
