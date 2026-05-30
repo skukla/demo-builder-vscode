@@ -16,8 +16,12 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { PENDING_CLAUDE_LAUNCH_KEY } from '@/commands/openInClaude';
 import { BaseWebviewCommand } from '@/core/base';
+import { COMPONENT_IDS } from '@/core/constants';
 import { clearMcpCache, inspectAllServers, verifyAiSetup } from '@/features/ai';
-import { generateAIContextFiles } from '@/features/project-creation/services';
+import {
+    generateAIContextFiles,
+    installAiDefaultsInStorefront,
+} from '@/features/project-creation/services';
 import type { AiPrompt, Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
@@ -165,6 +169,23 @@ export async function handleOpenInClaude(
 
 /**
  * Handle regenerate-ai-files — re-generate AI context files for the project.
+ *
+ * For EDS projects this also runs the storefront install pipeline before
+ * rewriting context files. That step (a) ensures the storefront's package.json
+ * declares every ai-defaults MCP package as a devDep and (b) runs `npm install`
+ * so they actually exist on disk under the storefront's node_modules. Without
+ * it, projects created before a given MCP was added to ai-defaults.json end up
+ * with a `.mcp.json` that references files that aren't there — the case that
+ * surfaced as "playwright · MCP error -32000: Connection closed" in the
+ * dashboard's AI Capabilities modal.
+ *
+ * Order is load-bearing: install runs first so the path `mcpConfigWriter`
+ * later resolves to (under the storefront) is guaranteed to exist by the time
+ * any verify re-spawns. Headless projects skip the install step entirely —
+ * they have no storefront and the MCP entries that need it aren't wired.
+ *
+ * Clears the MCP inspector cache on success so the next verify re-spawns and
+ * the modal flips from a stale failure to fresh inventory.
  */
 export async function handleRegenerateAiFiles(
     context: HandlerContext,
@@ -173,8 +194,26 @@ export async function handleRegenerateAiFiles(
     if (!project) {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
+
+    const storefrontPath = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.path;
+    if (storefrontPath) {
+        const installResult = await installAiDefaultsInStorefront(storefrontPath);
+        if (!installResult.success) {
+            return {
+                success: false,
+                error: `Failed to install storefront AI dependencies: ${installResult.error ?? 'unknown error'}`,
+            };
+        }
+    }
+
     // Use server-side project.path — do not accept a webview-supplied path override.
     await generateAIContextFiles(project.path, project, context.context.extensionPath);
+
+    // The .mcp.json may now point at newly-installed binaries (or the same
+    // binaries via storefront-anchored absolute paths). Drop the inspector
+    // cache so the next verify re-spawns from a clean slate.
+    clearMcpCache();
+
     return { success: true };
 }
 

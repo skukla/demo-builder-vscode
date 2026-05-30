@@ -700,6 +700,40 @@ describe('useDashboardStatus', () => {
             expect(result.current.aiSkillsError).toBe(true);
         });
 
+        it('exposes the MCP inventory via aiMcps', async () => {
+            const mcps = [
+                {
+                    id: 'playwright',
+                    status: 'ok' as const,
+                    tools: [
+                        { name: 'browser_navigate', description: 'Navigate to a URL' },
+                        { name: 'browser_snapshot', description: 'Capture accessibility tree' },
+                    ],
+                },
+            ];
+            mockRequest.mockResolvedValue(buildVerifyResponse({ inventory: { mcps } }));
+            const { result } = renderHook(() => useDashboardStatus());
+            await flushVerify();
+            expect(result.current.aiMcps).toHaveLength(1);
+            expect(result.current.aiMcps[0].id).toBe('playwright');
+            expect(result.current.aiMcps[0].tools).toHaveLength(2);
+            expect(result.current.aiMcpsError).toBe(false);
+        });
+
+        it('flags aiMcpsError when the MCP inspector errored', async () => {
+            mockRequest.mockResolvedValue(buildVerifyResponse({ inventory: { mcpsError: 'mcp inspector failed' } }));
+            const { result } = renderHook(() => useDashboardStatus());
+            await flushVerify();
+            expect(result.current.aiMcpsError).toBe(true);
+        });
+
+        it('returns a stable empty MCPs reference before verify resolves', () => {
+            // Default mock: request never resolves
+            const { result } = renderHook(() => useDashboardStatus());
+            expect(result.current.aiMcps).toEqual([]);
+            expect(result.current.aiMcpsError).toBe(false);
+        });
+
         it('clears aiBusy after the initial verify resolves', async () => {
             mockRequest.mockResolvedValue(buildVerifyResponse());
             const { result } = renderHook(() => useDashboardStatus());

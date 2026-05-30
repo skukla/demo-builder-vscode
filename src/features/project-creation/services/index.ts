@@ -30,3 +30,8 @@ export {
 } from './projectFinalizationService';
 
 export { ensureEdsContent } from './edsContentSetup';
+
+export {
+    installAiDefaultsInStorefront,
+    type InstallAiDefaultsResult,
+} from './aiDefaultsInstaller';

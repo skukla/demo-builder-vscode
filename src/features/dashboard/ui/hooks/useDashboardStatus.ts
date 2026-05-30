@@ -10,7 +10,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback, Dispatch, SetStateAction } from 'react';
 import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import type { SkillInventoryEntry } from '@/types/ai';
+import type { McpInventoryEntry, SkillInventoryEntry } from '@/types/ai';
 
 /**
  * Mesh deployment status values
@@ -76,9 +76,11 @@ interface VerifyAiSetupResponse {
     success: boolean;
     checks?: Array<{ name: string; status: 'ok' | 'warning' | 'error' }>;
     inventory?: {
-        /** Task-framed capability list surfaced by the "View Skills" link. */
+        /** Task-framed capability list surfaced by the "View AI Capabilities" link. */
         skills?: SkillInventoryEntry[];
         skillsError?: string;
+        /** MCP servers wired into the project's .mcp.json, with per-server status + tool count. */
+        mcps?: McpInventoryEntry[];
         mcpsError?: string;
     };
 }
@@ -124,18 +126,23 @@ export interface UseDashboardStatusReturn {
     meshStatus: MeshStatus | undefined;
     /** Derived AI Ready badge state */
     aiReady: AiReadyState;
-    /** Task-framed capability list (skills) for the "View Skills" surface */
+    /** Task-framed capability list (skills) for the "View AI Capabilities" surface */
     aiSkills: SkillInventoryEntry[];
     /** True when the skill inspector errored (list shows a warning row) */
     aiSkillsError: boolean;
+    /** Project MCP servers inventory for the "View AI Capabilities" surface */
+    aiMcps: McpInventoryEntry[];
+    /** True when the MCP inspector errored (list shows a warning row) */
+    aiMcpsError: boolean;
     /** True while an AI verify/regenerate operation is in flight */
     aiBusy: boolean;
-    /** Regenerate the project's AI files, then re-verify (refreshes badge + skills) */
+    /** Regenerate the project's AI files, then re-verify (refreshes badge + skills + MCPs) */
     regenerateAiFiles: () => Promise<void>;
 }
 
-/** Stable empty reference so `aiSkills` identity doesn't churn each render. */
+/** Stable empty references so identity doesn't churn each render. */
 const EMPTY_SKILLS: SkillInventoryEntry[] = [];
+const EMPTY_MCPS: McpInventoryEntry[] = [];
 
 /** Mesh statuses that indicate a user-initiated operation is in progress (preserve during updates) */
 const isMeshDeploying = (status: MeshStatus | undefined): boolean =>
@@ -372,9 +379,11 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
         return { label: 'AI Ready', color: 'green', text: 'Ready' };
     }, [verifyResult, verifyFailed]);
 
-    // Capability list (skills) + error flag for the "View Skills" surface.
+    // Capability lists for the "View AI Capabilities" surface.
     const aiSkills = verifyResult?.inventory?.skills ?? EMPTY_SKILLS;
     const aiSkillsError = Boolean(verifyResult?.inventory?.skillsError);
+    const aiMcps = verifyResult?.inventory?.mcps ?? EMPTY_MCPS;
+    const aiMcpsError = Boolean(verifyResult?.inventory?.mcpsError);
 
     return {
         projectStatus,
@@ -389,6 +398,8 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
         aiReady,
         aiSkills,
         aiSkillsError,
+        aiMcps,
+        aiMcpsError,
         aiBusy,
         regenerateAiFiles,
     };

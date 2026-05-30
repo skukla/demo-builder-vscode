@@ -21,9 +21,27 @@ import {
     inspectAllServers,
     verifyAiSetup,
     generateAIContextFiles,
+    installAiDefaultsInStorefront,
     createMockContext,
 } from './aiHandlers.testUtils';
 import type { HandlerContext } from './aiHandlers.testUtils';
+import { COMPONENT_IDS } from '@/core/constants';
+
+const STOREFRONT_PATH = '/projects/test/components/eds-storefront';
+const PROJECT_WITH_STOREFRONT = {
+    name: 'Test Project',
+    path: '/projects/test',
+    stack: 'paas',
+    componentInstances: {
+        [COMPONENT_IDS.EDS_STOREFRONT]: { path: STOREFRONT_PATH },
+    },
+};
+const PROJECT_HEADLESS = {
+    name: 'Test Project',
+    path: '/projects/test',
+    stack: 'paas',
+    componentInstances: {},
+};
 
 describe('aiHandlers — setup & verification', () => {
     beforeEach(() => {
@@ -214,11 +232,10 @@ describe('aiHandlers — setup & verification', () => {
     describe('handleRegenerateAiFiles', () => {
         it('calls generateAIContextFiles using server-side project.path (ignores payload)', async () => {
             (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
-            const mockProject = { name: 'Test Project', path: '/projects/test', stack: 'paas' };
 
             const context = createMockContext({
                 stateManager: {
-                    getCurrentProject: jest.fn().mockResolvedValue(mockProject),
+                    getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
                 } as unknown as HandlerContext['stateManager'],
             });
 
@@ -226,7 +243,7 @@ describe('aiHandlers — setup & verification', () => {
 
             expect(generateAIContextFiles).toHaveBeenCalledWith(
                 '/projects/test',
-                mockProject,
+                PROJECT_HEADLESS,
                 '/mock/extension/path',
             );
             expect(result).toEqual({ success: true });
@@ -243,6 +260,78 @@ describe('aiHandlers — setup & verification', () => {
 
             expect(generateAIContextFiles).not.toHaveBeenCalled();
             expect(result).toMatchObject({ success: false });
+        });
+
+        it('reinstalls storefront AI-defaults dependencies before regenerating context files when EDS Storefront is present', async () => {
+            (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
+            (installAiDefaultsInStorefront as jest.Mock).mockResolvedValue({ success: true });
+
+            const context = createMockContext({
+                stateManager: {
+                    getCurrentProject: jest.fn().mockResolvedValue(PROJECT_WITH_STOREFRONT),
+                } as unknown as HandlerContext['stateManager'],
+            });
+
+            const result = await handleRegenerateAiFiles(context);
+
+            expect(installAiDefaultsInStorefront).toHaveBeenCalledWith(STOREFRONT_PATH);
+            // Order matters: the install must complete before context files are written
+            // (so .mcp.json's storefront-anchored paths resolve to real files).
+            const installCallOrder = (installAiDefaultsInStorefront as jest.Mock).mock.invocationCallOrder[0];
+            const generateCallOrder = (generateAIContextFiles as jest.Mock).mock.invocationCallOrder[0];
+            expect(installCallOrder).toBeLessThan(generateCallOrder);
+            expect(result).toEqual({ success: true });
+        });
+
+        it('does NOT run the storefront install for headless projects (no EDS Storefront)', async () => {
+            (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
+
+            const context = createMockContext({
+                stateManager: {
+                    getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
+                } as unknown as HandlerContext['stateManager'],
+            });
+
+            await handleRegenerateAiFiles(context);
+
+            expect(installAiDefaultsInStorefront).not.toHaveBeenCalled();
+            expect(generateAIContextFiles).toHaveBeenCalled();
+        });
+
+        it('returns the installer error and skips generateAIContextFiles when the storefront install fails', async () => {
+            (installAiDefaultsInStorefront as jest.Mock).mockResolvedValue({
+                success: false,
+                error: 'npm install exited with code 1: 404 Not Found',
+            });
+
+            const context = createMockContext({
+                stateManager: {
+                    getCurrentProject: jest.fn().mockResolvedValue(PROJECT_WITH_STOREFRONT),
+                } as unknown as HandlerContext['stateManager'],
+            });
+
+            const result = await handleRegenerateAiFiles(context);
+
+            expect(generateAIContextFiles).not.toHaveBeenCalled();
+            expect(result.success).toBe(false);
+            expect((result as { error?: string }).error).toMatch(/404 Not Found/);
+        });
+
+        it('clears the MCP inspector cache after a successful regenerate so the next verify re-spawns', async () => {
+            // mockResolvedValue persists across jest.clearAllMocks(); the previous
+            // failure-path test left it as { success: false }, so re-arm explicitly.
+            (installAiDefaultsInStorefront as jest.Mock).mockResolvedValue({ success: true });
+            (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
+
+            const context = createMockContext({
+                stateManager: {
+                    getCurrentProject: jest.fn().mockResolvedValue(PROJECT_WITH_STOREFRONT),
+                } as unknown as HandlerContext['stateManager'],
+            });
+
+            await handleRegenerateAiFiles(context);
+
+            expect(clearMcpCache).toHaveBeenCalledWith();
         });
     });
 

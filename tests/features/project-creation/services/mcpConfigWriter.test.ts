@@ -126,9 +126,12 @@ describe('MCP config content', () => {
         await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
         const config = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, unknown> };
-        // ai-defaults.json ships with the Adobe App Builder MCP as `commerce-extensibility`.
+        // ai-defaults.json ships with the Adobe App Builder MCP as `commerce-extensibility`
+        // and Playwright MCP as `playwright` (for the EDS site-scraping skills).
         // If/when more defaults are added, this test should reflect them.
-        expect(Object.keys(config.mcpServers).sort()).toEqual(['commerce-extensibility', 'demo-builder']);
+        expect(Object.keys(config.mcpServers).sort()).toEqual(
+            ['commerce-extensibility', 'demo-builder', 'playwright'],
+        );
     });
 
     it('anchors the Adobe App Builder MCP args to the storefront path so Claude Code (cwd=project.path) can spawn it', async () => {

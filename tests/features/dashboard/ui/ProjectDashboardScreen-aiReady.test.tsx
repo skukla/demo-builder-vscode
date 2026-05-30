@@ -122,49 +122,67 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
         });
     });
 
-    describe('View Skills — capability discovery (separate from the badge)', () => {
+    describe('View AI Capabilities — capability discovery (separate from the badge)', () => {
         const SKILLS = [
             { name: 'Add a component', description: 'Adds a component to your project', path: '/p/.claude/skills/add-component.md', source: 'demo-builder' },
             { name: 'Sync changes', description: 'Picks the right sync operation', path: '/p/.claude/skills/sync-changes.md', source: 'demo-builder' },
         ];
+        const MCPS = [
+            { id: 'demo-builder', status: 'ok' as const, tools: [{ name: 'list_projects', description: 'd' }] },
+        ];
 
-        it('renders a clickable "View Skills (N)" link reflecting the skill count', async () => {
-            mockAiRequests(verifyWithSkills(SKILLS));
+        function verifyWithSkillsAndMcps(skills: typeof SKILLS, mcps: typeof MCPS) {
+            return {
+                success: true,
+                status: 'ok',
+                checks: [
+                    { name: 'AGENTS.md', status: 'ok' as const },
+                    { name: '.claude/mcp.json', status: 'ok' as const },
+                    { name: 'mcp-binary', status: 'ok' as const },
+                    { name: 'skill-files', status: 'ok' as const },
+                ],
+                inventory: { skills, mcps, sessionMcps: [] },
+            };
+        }
+
+        it('renders a clickable "View AI Capabilities" link', async () => {
+            mockAiRequests(verifyWithSkillsAndMcps(SKILLS, MCPS));
             renderDashboard();
             await waitFor(() => {
-                expect(screen.getByTestId('ai-view-skills-trigger').textContent).toMatch(/View Skills \(2\)/);
+                expect(screen.getByTestId('ai-view-capabilities-trigger').textContent)
+                    .toMatch(/View AI Capabilities/);
             });
         });
 
-        it('opens the skills modal listing the skills by name when clicked', async () => {
-            mockAiRequests(verifyWithSkills(SKILLS));
+        it('opens the capabilities modal showing both skills and MCPs when clicked', async () => {
+            mockAiRequests(verifyWithSkillsAndMcps(SKILLS, MCPS));
             renderDashboard();
-            await waitFor(() => {
-                expect(screen.getByTestId('ai-view-skills-trigger').textContent).toMatch(/\(2\)/);
-            });
+            await waitFor(() => screen.getByTestId('ai-view-capabilities-trigger'));
 
             await act(async () => {
-                fireEvent.click(screen.getByTestId('ai-view-skills-trigger'));
+                fireEvent.click(screen.getByTestId('ai-view-capabilities-trigger'));
             });
 
-            expect(screen.getByTestId('ai-skills-modal')).toBeInTheDocument();
-            expect(screen.getByTestId('ai-skills-modal-count').textContent).toBe('2');
-            const rows = screen.getAllByTestId('ai-skills-modal-skill').map(r => r.textContent);
-            expect(rows).toContain('Add a component');
-            expect(rows).toContain('Sync changes');
+            expect(screen.getByTestId('ai-capabilities-modal')).toBeInTheDocument();
+            expect(screen.getByTestId('ai-capabilities-modal-skills-count').textContent).toBe('2');
+            expect(screen.getByTestId('ai-capabilities-modal-mcps-count').textContent).toBe('1');
+            const skillRows = screen.getAllByTestId('ai-capabilities-modal-skill').map(r => r.textContent);
+            expect(skillRows).toContain('Add a component');
+            const mcpRows = screen.getAllByTestId('ai-capabilities-modal-mcp').map(r => r.textContent);
+            expect(mcpRows).toContain('demo-builder');
         });
 
         it('the modal Regenerate action dispatches regenerate-ai-files then re-verifies', async () => {
-            const webviewClient = mockAiRequests(verifyWithSkills(SKILLS));
+            const webviewClient = mockAiRequests(verifyWithSkillsAndMcps(SKILLS, MCPS));
             renderDashboard();
-            await waitFor(() => screen.getByTestId('ai-view-skills-trigger'));
+            await waitFor(() => screen.getByTestId('ai-view-capabilities-trigger'));
 
             await act(async () => {
-                fireEvent.click(screen.getByTestId('ai-view-skills-trigger'));
+                fireEvent.click(screen.getByTestId('ai-view-capabilities-trigger'));
             });
             (webviewClient.request as jest.Mock).mockClear();
             await act(async () => {
-                fireEvent.click(screen.getByTestId('ai-skills-modal-regenerate'));
+                fireEvent.click(screen.getByTestId('ai-capabilities-modal-regenerate'));
                 await Promise.resolve();
                 await Promise.resolve();
             });

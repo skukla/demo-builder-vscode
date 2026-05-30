@@ -16,7 +16,7 @@ import {
 } from '@adobe/react-spectrum';
 import React, { useState, useEffect, useRef } from 'react';
 import { ActionGrid } from './components/ActionGrid';
-import { AiSkillsModal } from './components/AiSkillsModal';
+import { AiCapabilitiesModal } from './components/AiCapabilitiesModal';
 import { isStartActionDisabled } from './dashboardPredicates';
 import { useDashboardActions } from './hooks/useDashboardActions';
 import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
@@ -84,7 +84,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
     // State for browser opening and logs hover suppression (passed to actions hook)
     const [isOpeningBrowser, setIsOpeningBrowser] = useState(false);
     const [isLogsHoverSuppressed, setIsLogsHoverSuppressed] = useState(false);
-    const [showSkills, setShowSkills] = useState(false);
+    const [showCapabilities, setShowCapabilities] = useState(false);
 
     // Status management via extracted hook
     const {
@@ -100,6 +100,8 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
         aiReady,
         aiSkills,
         aiSkillsError,
+        aiMcps,
+        aiMcpsError,
         aiBusy,
         regenerateAiFiles,
     } = useDashboardStatus({ hasMesh, initialMeshStatus, initialEdsStorefrontStatus }, isEdsStable);
@@ -225,12 +227,12 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                                     UNSAFE_style={{ gridColumn: '2 / -1' }}
                                 >
                                     <Link
-                                        data-testid="ai-view-skills-trigger"
-                                        onPress={() => setShowSkills(true)}
+                                        data-testid="ai-view-capabilities-trigger"
+                                        onPress={() => setShowCapabilities(true)}
                                         isQuiet
                                         UNSAFE_className="text-sm cursor-pointer"
                                     >
-                                        {`View Skills (${aiSkills.length})`}
+                                        View AI Capabilities
                                     </Link>
                                     {(aiReady.color === 'red' || aiReady.color === 'yellow') && (
                                         <Link
@@ -290,14 +292,17 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                 </div>
             </PageLayout>
 
-            {/* Capability catalog — reached from the "View Skills" link, NOT the
-                health badge. Carries Regenerate AI files (which rewrites skills). */}
-            {showSkills && (
-                <DialogContainer onDismiss={() => setShowSkills(false)}>
-                    <AiSkillsModal
+            {/* Capability catalog — reached from the "View AI Capabilities" link,
+                NOT the health badge. Two sections (skills + MCP servers) plus a
+                Regenerate AI files action (which rewrites both). */}
+            {showCapabilities && (
+                <DialogContainer onDismiss={() => setShowCapabilities(false)}>
+                    <AiCapabilitiesModal
                         skills={aiSkills}
-                        hasError={aiSkillsError}
-                        onClose={() => setShowSkills(false)}
+                        mcps={aiMcps}
+                        hasSkillsError={aiSkillsError}
+                        hasMcpsError={aiMcpsError}
+                        onClose={() => setShowCapabilities(false)}
                         onRegenerate={regenerateAiFiles}
                         isBusy={aiBusy}
                     />

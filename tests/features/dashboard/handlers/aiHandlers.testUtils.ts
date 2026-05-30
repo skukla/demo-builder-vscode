@@ -49,6 +49,8 @@ jest.mock('@/features/ai', () => ({
 // Mock AI context file generator
 jest.mock('@/features/project-creation/services', () => ({
     generateAIContextFiles: jest.fn(),
+    // Default: success — tests can override per-case via mockResolvedValueOnce.
+    installAiDefaultsInStorefront: jest.fn().mockResolvedValue({ success: true }),
 }));
 
 // Mock vscode
@@ -99,7 +101,7 @@ export {
 } from '@/features/dashboard/handlers/aiHandlers';
 export { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 export { clearMcpCache, inspectAllServers, verifyAiSetup } from '@/features/ai';
-export { generateAIContextFiles } from '@/features/project-creation/services';
+export { generateAIContextFiles, installAiDefaultsInStorefront } from '@/features/project-creation/services';
 export type { HandlerContext } from '@/types/handlers';
 
 import type { HandlerContext } from '@/types/handlers';

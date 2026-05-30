@@ -5,6 +5,7 @@ import { AiMenuCommand } from './aiMenu';
 import { ConfigureCommand } from './configure';
 import { DiagnosticsCommand } from './diagnostics';
 import { OpenInClaudeCommand } from './openInClaude';
+import { OpenModernizationAgentCommand } from './openModernizationAgent';
 import { BaseWebviewCommand } from '@/core/base';
 import { ResetAiOnboardingCommand } from '@/core/commands/ResetAiOnboardingCommand';
 import { ResetAllCommand } from '@/core/commands/ResetAllCommand';
@@ -251,6 +252,18 @@ export class CommandManager {
         );
         this.registerCommand('demoBuilder.aiMenu', async () => {
             await aiMenu.execute();
+        });
+
+        // Open AEM Modernization Agent — launches aemcoder.adobe.io in the
+        // browser. Entry point for the Mod Agent workflow described in the
+        // scrape-reference-site skill.
+        const openModernizationAgent = new OpenModernizationAgentCommand(
+            this.context,
+            this.stateManager,
+            this.logger,
+        );
+        this.registerCommand('demoBuilder.openModernizationAgent', async () => {
+            await openModernizationAgent.execute();
         });
 
         // Navigate — internal routing command for sidebar nav clicks.
