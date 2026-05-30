@@ -9,11 +9,38 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getGitHubServices: jest.fn(),
 }));
 
+const mockInspectToken = jest.fn();
+const mockGetAccessToken = jest.fn();
+const mockListOrgSites = jest.fn();
+const mockDeleteAllSiteContent = jest.fn();
+
+jest.mock('@/core/di', () => ({
+    ServiceLocator: {
+        getAuthenticationService: jest.fn(() => ({
+            getTokenManager: () => ({ inspectToken: mockInspectToken, getAccessToken: mockGetAccessToken }),
+        })),
+    },
+}));
+jest.mock('@/features/eds/services/daLiveOrgOperations', () => ({
+    DaLiveOrgOperations: jest.fn(() => ({ listOrgSites: mockListOrgSites })),
+}));
+jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+    DaLiveContentOperations: jest.fn(() => ({ deleteAllSiteContent: mockDeleteAllSiteContent })),
+}));
+
 import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import type { HandlerContext } from '@/types/handlers';
 
 const getGitHubServicesMock = getGitHubServices as jest.Mock;
+
+beforeEach(() => {
+    jest.clearAllMocks();
+    mockInspectToken.mockResolvedValue({ valid: true, expiresIn: 60 });
+    mockGetAccessToken.mockResolvedValue('ims-token');
+    mockListOrgSites.mockResolvedValue([]);
+    mockDeleteAllSiteContent.mockResolvedValue({ success: true, deletedCount: 0 });
+});
 
 function fakeServer() {
 
@@ -52,8 +79,6 @@ function gh(overrides: {
 }
 
 describe('cloud-resource tools (GitHub)', () => {
-    beforeEach(() => jest.clearAllMocks());
-
     describe('list_github_repos', () => {
         it('hands off to GitHub auth when not signed in', async () => {
             getGitHubServicesMock.mockReturnValue(gh({ valid: false }));
@@ -156,6 +181,90 @@ describe('cloud-resource tools (GitHub)', () => {
 
             const res = await s.call('delete_github_repo', { owner: 'me', repo: 'r', confirm: true, confirmName: 'me/r' });
             expect(res).toMatchObject({ deleted: false, repo: 'me/r', error: 'insufficient scope' });
+        });
+    });
+});
+
+describe('cloud-resource tools (DA.live)', () => {
+    describe('list_dalive_sites', () => {
+        it('requires org', async () => {
+            const s = fakeServer();
+            registerCloudResourceTools(s, ctxFactory);
+            expect(await s.call('list_dalive_sites', { org: '' })).toMatchObject({
+                error: expect.stringMatching(/org is required/),
+            });
+        });
+
+        it('hands off to Adobe auth when the IMS token is invalid', async () => {
+            mockInspectToken.mockResolvedValueOnce({ valid: false, expiresIn: 0 });
+            const s = fakeServer();
+            registerCloudResourceTools(s, ctxFactory);
+            expect(await s.call('list_dalive_sites', { org: 'acme' })).toMatchObject({ needsAuth: 'adobe' });
+            expect(mockListOrgSites).not.toHaveBeenCalled();
+        });
+
+        it('returns a paginated, summary-projected page (drops path/ext)', async () => {
+            mockListOrgSites.mockResolvedValueOnce([
+                { name: 'a', path: '/a', lastModified: 1 },
+                { name: 'b', path: '/b', ext: 'json', lastModified: 2 },
+                { name: 'c', path: '/c', lastModified: 3 },
+            ]);
+            const s = fakeServer();
+            registerCloudResourceTools(s, ctxFactory);
+
+            const res = await s.call('list_dalive_sites', { org: 'acme', offset: 1, limit: 1 });
+            expect(res).toEqual({
+                org: 'acme',
+                total: 3,
+                offset: 1,
+                limit: 1,
+                sites: [{ name: 'b', lastModified: 2 }],
+            });
+        });
+    });
+
+    describe('cleanup_dalive_sites', () => {
+        it('requires org and site', async () => {
+            const s = fakeServer();
+            registerCloudResourceTools(s, ctxFactory);
+            expect(await s.call('cleanup_dalive_sites', { org: 'acme', site: '' })).toMatchObject({
+                error: expect.stringMatching(/org and site are required/),
+            });
+        });
+
+        it('refuses without confirm + confirmName echo (irreversible) and never calls the service', async () => {
+            const s = fakeServer();
+            registerCloudResourceTools(s, ctxFactory);
+            const res = await s.call('cleanup_dalive_sites', { org: 'acme', site: 'shop' });
+            expect(res).toMatchObject({ irreversible: true });
+            expect(res.error).toMatch(/confirmName:"acme\/shop"/);
+            expect(mockDeleteAllSiteContent).not.toHaveBeenCalled();
+        });
+
+        it('refuses when confirmName does not echo org/site exactly', async () => {
+            const s = fakeServer();
+            registerCloudResourceTools(s, ctxFactory);
+            const res = await s.call('cleanup_dalive_sites', { org: 'acme', site: 'shop', confirm: true, confirmName: 'acme/WRONG' });
+            expect(res).toMatchObject({ irreversible: true });
+            expect(mockDeleteAllSiteContent).not.toHaveBeenCalled();
+        });
+
+        it('hands off to Adobe auth when the strict gate passes but token invalid', async () => {
+            mockInspectToken.mockResolvedValueOnce({ valid: false, expiresIn: 0 });
+            const s = fakeServer();
+            registerCloudResourceTools(s, ctxFactory);
+            const res = await s.call('cleanup_dalive_sites', { org: 'acme', site: 'shop', confirm: true, confirmName: 'acme/shop' });
+            expect(res).toMatchObject({ needsAuth: 'adobe' });
+            expect(mockDeleteAllSiteContent).not.toHaveBeenCalled();
+        });
+
+        it('deletes site content when confirm + confirmName echo exactly', async () => {
+            mockDeleteAllSiteContent.mockResolvedValueOnce({ success: true, deletedCount: 7 });
+            const s = fakeServer();
+            registerCloudResourceTools(s, ctxFactory);
+            const res = await s.call('cleanup_dalive_sites', { org: 'acme', site: 'shop', confirm: true, confirmName: 'acme/shop' });
+            expect(res).toEqual({ deleted: true, site: 'acme/shop', deletedCount: 7 });
+            expect(mockDeleteAllSiteContent).toHaveBeenCalledWith('acme', 'shop');
         });
     });
 });
