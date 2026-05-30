@@ -1,25 +1,27 @@
 /**
- * Demo Builder MCP Server (Multi-Project Mode)
+ * Demo Builder MCP — shared project-tool registration.
  *
- * Standalone Node.js process (not VS Code extension host) that exposes
- * Demo Builder project tools to AI agents via the MCP protocol.
+ * Defines the seven project-scoped MCP tools (list_projects, get_project,
+ * get_component_config, update_project_config, sync_storefront, list_blocks,
+ * get_block_source) and the security helpers they use, then exposes them via
+ * `registerProjectTools(server, projectsDir)`.
  *
- * IMPORTANT: This file MUST NOT import 'vscode' — it runs as a separate
- * process and the vscode API is unavailable.
+ * This module is NOT a server process. The in-extension MCP server
+ * (`@/features/ai/server/inExtensionMcpServer`) imports `registerProjectTools`
+ * and registers these tools alongside the handler-backed tools — see
+ * `docs/systems/mcp-server.md` for the full architecture. The former standalone
+ * `dist/mcp-server.js` stdio process was retired once the in-extension server
+ * (reachable via the `dist/mcp-proxy.js` stdio→socket bridge) became the only
+ * path; clients now always reach the extension host, so tools can reuse its
+ * handlers and services directly.
  *
- * One global server serves ALL projects. Claude Code discovers projects
- * via `list_projects` tool; each tool takes `projectName` as first parameter.
- *
- * Started by the MCP client (Claude Code, Cursor, Codex CLI) with:
- *   node dist/mcp-server.js
- *   (DEMO_BUILDER_PROJECTS_DIR env var optional — defaults to ~/.demo-builder/projects)
+ * IMPORTANT: This file MUST NOT import 'vscode'. It is bundled into the
+ * vscode-free `dist/mcp-proxy.js` path indirectly and consumed by the
+ * extension host, but its tool handlers operate purely on the filesystem.
  */
 
 import * as fsPromises from 'fs/promises';
-import * as os from 'os';
 import * as path from 'path';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { assertPathInside, assertPathInsideSync } from '@/core/validation';
 import {
@@ -587,26 +589,3 @@ export function registerProjectTools(server: any, projectsDir: string): void {
     }));
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
-
-// ─── Standalone stdio bootstrap ───────────────────────────────────────────────
-
-// Only start the standalone server when run as its own process (not in tests,
-// and not when these handlers are imported into the extension host). The
-// in-extension server (`@/features/ai/server/inExtensionMcpServer`) reuses
-// `registerProjectTools` instead of this bootstrap.
-if (process.env.NODE_ENV !== 'test' && require.main === module) {
-    const PROJECTS_DIR = process.env.DEMO_BUILDER_PROJECTS_DIR
-        ?? path.join(os.homedir(), '.demo-builder', 'projects');
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const server: any = new McpServer({ name: 'demo-builder', version: '1.0.0' });
-    registerProjectTools(server, PROJECTS_DIR);
-
-    (async () => {
-        const transport = new StdioServerTransport();
-        await server.connect(transport);
-    })().catch(err => {
-        process.stderr.write(`Fatal: ${(err as Error).message}\n`);
-        process.exit(1);
-    });
-}

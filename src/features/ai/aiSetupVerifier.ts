@@ -133,7 +133,10 @@ async function checkMcpConfig(projectPath: string): Promise<AiCheckResult> {
 }
 
 async function checkMcpBinary(extensionDistPath: string): Promise<AiCheckResult> {
-    const binaryPath = path.join(extensionDistPath, 'mcp-server.js');
+    // The MCP client (Claude Code) spawns the stdio→socket proxy, which bridges
+    // to the in-extension server. The retired standalone `mcp-server.js` is no
+    // longer built, so the proxy is the binary that must be present.
+    const binaryPath = path.join(extensionDistPath, 'mcp-proxy.js');
     try {
         await fsPromises.access(binaryPath);
         return { name: 'mcp-binary', status: 'ok' };
@@ -141,7 +144,7 @@ async function checkMcpBinary(extensionDistPath: string): Promise<AiCheckResult>
         return {
             name: 'mcp-binary',
             status: 'warning',
-            message: 'MCP server binary not found — run npm run build to compile it',
+            message: 'MCP proxy binary not found — run npm run build to compile it',
         };
     }
 }
