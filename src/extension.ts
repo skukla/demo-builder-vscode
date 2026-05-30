@@ -16,6 +16,7 @@ import { registerAdobeTools } from '@/features/ai/server/adobeTools';
 import { registerAuthTools } from '@/features/ai/server/authTools';
 import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
 import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
+import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
@@ -441,6 +442,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerCloudResourceTools(mcpServer, ctxFactory);
                 registerStorefrontTools(mcpServer, ctxFactory);
                 registerEdsResetTool(mcpServer, ctxFactory);
+                registerDeleteProjectTool(mcpServer, ctxFactory);
                 registerViewTools(mcpServer, (commandId) => Promise.resolve(vscode.commands.executeCommand(commandId)));
             },
         );
