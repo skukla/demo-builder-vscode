@@ -152,6 +152,24 @@ describe('toolHandlers.listProjects', () => {
 
         expect(JSON.parse(result)).toEqual([]);
     });
+
+    it('applies offset and limit when paginating', async () => {
+        (fsProm.readdir as jest.Mock).mockResolvedValue([
+            { name: 'project-a', isDirectory: () => true },
+            { name: 'project-b', isDirectory: () => true },
+            { name: 'project-c', isDirectory: () => true },
+        ]);
+        (fsProm.stat as jest.Mock).mockResolvedValue({ size: 0 });
+        (fsProm.readFile as jest.Mock).mockImplementation((p: string) =>
+            Promise.resolve(JSON.stringify({ name: path.basename(path.dirname(String(p))), status: 'ready' })),
+        );
+
+        const result = await toolHandlers.listProjects(PROJECTS_DIR, 1, 1);
+        const parsed = JSON.parse(result);
+
+        expect(parsed).toHaveLength(1);
+        expect(parsed[0].name).toBe('project-b');
+    });
 });
 
 // ─── toolHandlers.getProject ──────────────────────────────────────────────────
@@ -190,6 +208,69 @@ describe('toolHandlers.getProject', () => {
         const result = await toolHandlers.getProject(PROJECTS_DIR, PROJECT_NAME);
 
         expect(result).toContain('Error reading project state');
+    });
+
+    it('returns compact JSON (no pretty-print indentation)', async () => {
+        (fsProm.readFile as jest.Mock).mockResolvedValue(
+            JSON.stringify({ name: 'test-project', status: 'ready' }),
+        );
+
+        const result = await toolHandlers.getProject(PROJECTS_DIR, PROJECT_NAME);
+
+        expect(result).not.toContain('\n');
+    });
+
+    describe('summary mode (default)', () => {
+        const manifestWithLargeFields = JSON.stringify({
+            name: 'test-project',
+            status: 'ready',
+            aiPrompts: [{ title: 'a' }, { title: 'b' }, { title: 'c' }],
+            installedBlockLibraries: [
+                { name: 'Lib A', source: { owner: 'o', repo: 'r' }, blockIds: ['x', 'y', 'z'] },
+            ],
+            componentInstances: {
+                'eds-storefront': { path: '/p/storefront', metadata: { huge: 'blob', more: 'data' } },
+            },
+        });
+
+        it('collapses aiPrompts to a count placeholder', async () => {
+            (fsProm.readFile as jest.Mock).mockResolvedValue(manifestWithLargeFields);
+
+            const parsed = JSON.parse(await toolHandlers.getProject(PROJECTS_DIR, PROJECT_NAME));
+
+            expect(parsed.aiPrompts).toContain('3 prompt');
+        });
+
+        it('replaces installedBlockLibraries blockIds with a blockCount', async () => {
+            (fsProm.readFile as jest.Mock).mockResolvedValue(manifestWithLargeFields);
+
+            const parsed = JSON.parse(await toolHandlers.getProject(PROJECTS_DIR, PROJECT_NAME));
+
+            expect(parsed.installedBlockLibraries[0]).toEqual({
+                name: 'Lib A',
+                source: { owner: 'o', repo: 'r' },
+                blockCount: 3,
+            });
+            expect(parsed.installedBlockLibraries[0].blockIds).toBeUndefined();
+        });
+
+        it('drops component metadata, keeping only the path', async () => {
+            (fsProm.readFile as jest.Mock).mockResolvedValue(manifestWithLargeFields);
+
+            const parsed = JSON.parse(await toolHandlers.getProject(PROJECTS_DIR, PROJECT_NAME));
+
+            expect(parsed.componentInstances['eds-storefront']).toEqual({ path: '/p/storefront' });
+        });
+
+        it('returns the untouched manifest when full=true', async () => {
+            (fsProm.readFile as jest.Mock).mockResolvedValue(manifestWithLargeFields);
+
+            const parsed = JSON.parse(await toolHandlers.getProject(PROJECTS_DIR, PROJECT_NAME, true));
+
+            expect(parsed.aiPrompts).toHaveLength(3);
+            expect(parsed.installedBlockLibraries[0].blockIds).toEqual(['x', 'y', 'z']);
+            expect(parsed.componentInstances['eds-storefront'].metadata).toEqual({ huge: 'blob', more: 'data' });
+        });
     });
 });
 

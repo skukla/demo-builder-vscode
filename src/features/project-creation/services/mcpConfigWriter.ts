@@ -23,7 +23,6 @@ import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { promisify } from 'util';
-import * as vscode from 'vscode';
 import aiDefaultsConfig from '../config/ai-defaults.json';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { AiDefaults } from '@/types/aiDefaults';
@@ -34,13 +33,18 @@ const execFile = promisify(childProcess.execFile);
 const aiDefaults: AiDefaults = aiDefaultsConfig as AiDefaults;
 
 /**
- * globalState key tracking user consent for registering demo-builder in the
- * canonical Claude Code user config (~/.claude.json).
+ * globalState key tracking whether the user has opted into registering
+ * demo-builder in the canonical Claude Code user config (~/.claude.json).
  *
- * Three states:
- *   - undefined: user has not been asked yet
- *   - 'registered': user accepted, demo-builder entry is in ~/.claude.json
- *   - 'declined': user opted out of the prompt; do not ask again
+ * States:
+ *   - undefined:    not registered globally (the default — per-project .mcp.json
+ *                   is written at creation and is sufficient for AI agents)
+ *   - 'registered': user clicked Register in the dashboard AI tab; the
+ *                   demo-builder entry is in ~/.claude.json
+ *
+ * The legacy 'declined' value is retained in the type for backward
+ * compatibility with any previously-persisted state, but is no longer written
+ * now that global registration is a manual opt-in rather than an auto-prompt.
  */
 export const GLOBAL_MCP_REG_STATE_KEY = 'demoBuilder.ai.globalMcpRegistration';
 
@@ -112,8 +116,9 @@ export async function writeMcpConfigs(
  * user-scope config file: `~/.claude.json` top-level `mcpServers` field
  * (verified against Claude Code v2.1.x on 2026-05-20).
  *
- * Preserves every other field in the file. Idempotent. Does NOT prompt the
- * user — callers must obtain consent first (see `ensureGlobalMcpRegistration`).
+ * Preserves every other field in the file. Idempotent. This is an explicit,
+ * user-initiated opt-in (the dashboard AI tab's Register button) — it is never
+ * called automatically, so the user always consents by clicking Register.
  *
  * Throws if `~/.claude.json` exists but is malformed, so we never overwrite a
  * valid-but-unreadable user-curated config.
@@ -150,46 +155,6 @@ export async function registerGlobalMcp(extensionDistPath: string): Promise<void
     };
 
     await fsPromises.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
-}
-
-/**
- * Consent-gated global MCP registration.
- *
- * Called after a project creation completes. Prompts the user the first time;
- * remembers the choice via `globalState`. Subsequent calls no-op once the
- * state is set, so this is safe to call after every project completion.
- *
- * The AI Configuration tab exposes a `[Register]` button that calls
- * `registerGlobalMcp` directly, bypassing the consent prompt for users who
- * opted out earlier.
- */
-export async function ensureGlobalMcpRegistration(
-    extensionDistPath: string,
-    context: vscode.ExtensionContext,
-): Promise<void> {
-    const state = context.globalState.get<GlobalMcpRegistrationState>(GLOBAL_MCP_REG_STATE_KEY);
-    if (state === 'registered' || state === 'declined') return;
-
-    // Modal so the prompt persists until the user responds. Non-modal info
-    // notifications auto-dismiss after a few seconds, and users were missing
-    // the prompt entirely when it appeared during a long project creation.
-    const choice = await vscode.window.showInformationMessage(
-        'Demo Builder can register its MCP server with Claude Code so AI agents can ' +
-        'discover your projects from any directory. This adds a `demo-builder` entry ' +
-        'to your Claude Code user config (~/.claude.json). Register now?',
-        { modal: true },
-        'Register',
-        'Not Now',
-        "Don't Ask Again",
-    );
-
-    if (choice === 'Register') {
-        await registerGlobalMcp(extensionDistPath);
-        await context.globalState.update(GLOBAL_MCP_REG_STATE_KEY, 'registered');
-    } else if (choice === "Don't Ask Again") {
-        await context.globalState.update(GLOBAL_MCP_REG_STATE_KEY, 'declined');
-    }
-    // 'Not Now' or dialog dismissal: leave state undefined, re-prompt next time.
 }
 
 /**

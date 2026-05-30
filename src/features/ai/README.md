@@ -85,13 +85,15 @@ The **MCP server** is compiled from `src/mcp-server.ts` (not from inside this fe
 
 | Tool | Description |
 |------|-------------|
-| `list_projects` | Lists all Demo Builder projects |
-| `get_project` | Reads `.demo-builder.json` |
+| `list_projects` | Lists all Demo Builder projects (supports `offset`/`limit`) |
+| `get_project` | Reads `.demo-builder.json` — token-lean summary by default; `full=true` for the complete manifest |
 | `get_component_config` | Reads `.demo-builder.json` or a `.env` file |
 | `update_project_config` | Writes `.demo-builder.json` or a `.env` file |
 | `sync_storefront` | Git add / commit / push in the storefront directory |
-| `list_blocks` | Lists block directory names |
-| `get_block_source` | Reads all source files for a named block |
+| `list_blocks` | Lists block directory names (supports `offset`/`limit`) |
+| `get_block_source` | Lists a block's files (names + sizes) by default; pass `fileName` to read one file's source |
+
+Responses are shaped to keep token usage low: tool output is emitted as compact JSON (no pretty-print indentation), `get_project` collapses large arrays/metadata unless `full=true`, and `get_block_source` is progressive (manifest first, one file per fetch, with a per-file byte cap) rather than dumping every file at once.
 
 ---
 
@@ -99,12 +101,12 @@ The **MCP server** is compiled from `src/mcp-server.ts` (not from inside this fe
 
 - **Standalone AI surface** (`src/features/dashboard/ui/aiSurface/AiOverviewScreen.tsx`): renders a status strip, capability bullets, an installed-skills drill-down, and a sidebar of curated prompt cards plus an Open-in-Claude-Code CTA. Actions: Refresh (calls `inspect-mcp`), Regenerate AI Files (`regenerate-ai-files` then re-verify), Register Global MCP (`register-global-mcp` — only when the global registration state is not `'registered'`).
 - **`inspect-mcp` handler** (`aiHandlers.ts`): clears the `mcpInspector` cache (per-server or all) and returns fresh `inspectAllServers` output. Used by the AI surface for on-demand refresh.
-- **`register-global-mcp` handler** (`aiHandlers.ts`): calls `registerGlobalMcp(extensionDistPath)` and updates `globalState[GLOBAL_MCP_REG_STATE_KEY] = 'registered'`. Used by the AI surface's Register button (explicit user intent — bypasses the activation-time consent prompt).
+- **`register-global-mcp` handler** (`aiHandlers.ts`): calls `registerGlobalMcp(extensionDistPath)` and updates `globalState[GLOBAL_MCP_REG_STATE_KEY] = 'registered'`. Used by the AI surface's Register button — the sole entry point for global registration, which is a manual opt-in (there is no automatic prompt).
 - **`verify-ai-setup` handler** (`aiHandlers.ts`): returns `AiVerificationResult` extended with `globalMcpRegistration` (read from globalState) so the AI dashboard can gate the Register-global-MCP affordance from a single round-trip.
 - **`Open in Claude Code` command** (`src/commands/openInClaude.ts`): launches the Claude Code CLI in a VS Code integrated terminal placed as a tab in the active editor group (next to Project Dashboard). Spawn: `claude --continue -- '<prompt>'` (race-free — claude receives the prompt as a launch argument and auto-submits). Reuse: when a live "Claude Code" terminal exists, the existing session is focused and the prompt is injected via bracketed paste (CSI 200~ / 201~), which pre-fills the input for the user to send. The clipboard is always written too as a silent fallback (with a once-ever tip toast). The earlier "extension" surface — URI-launching the Claude Code VS Code extension — was retired: the extension's URI handler opens a new chat on every launch (no public API to inject a prompt into the live chat), so the wand's "pick a prompt, drop it into the conversation" model can't work there. Dispatched from the dashboard tile, the project-card kebab menu, the wand QuickPick prompt rows (with workspace anchor + pending-prompt mechanism), and the activation handler that replays pending launches.
 - **`copyAiPrompt` handler** (`aiHandlers.ts`): writes a prompt body to the clipboard via `vscode.env.clipboard.writeText` and shows a confirmation toast. Used by the kebab "Copy prompt" action on each prompt card. Logs the prompt name only — never the body.
 - **Project creation** (`projectFinalizationService.ts`): `generateAIContextFiles()` runs all three writers after project setup completes. Also runs as the post-step of `Demo Builder: Check for Updates` when an Adobe MCP package update is applied.
-- **Extension activation** (`extension.ts`): consent-gated `ensureGlobalMcpRegistration` upserts the Demo Builder MCP entry into `~/.claude.json` so Claude Code (CLI) can discover it from any project.
+- **Global MCP registration** (`mcpConfigWriter.ts::registerGlobalMcp`): a manual, user-initiated opt-in (the AI surface's Register button) that upserts the Demo Builder MCP entry into `~/.claude.json` for cross-directory discovery. It is **not** run automatically at project-creation or activation time — the per-project `.mcp.json` written during project creation already exposes the tools in-project and only loads them where relevant.
 
 ---
 

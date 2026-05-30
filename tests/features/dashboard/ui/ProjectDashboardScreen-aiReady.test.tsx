@@ -90,7 +90,7 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
             });
         });
 
-        it('shows yellow color when files OK but not registered globally', async () => {
+        it('stays green when files OK and not registered globally (project .mcp.json suffices)', async () => {
             const { webviewClient } = require('@/core/ui/utils/WebviewClient');
             (webviewClient.request as jest.Mock).mockResolvedValue({
                 success: true,
@@ -107,8 +107,8 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
             renderDashboard();
             await waitFor(() => {
                 const badge = screen.getByTestId('status-card-AI Ready');
-                expect(badge.getAttribute('data-color')).toBe('yellow');
-                expect(badge.textContent).toMatch(/Setup incomplete/i);
+                expect(badge.getAttribute('data-color')).toBe('green');
+                expect(badge.textContent).toMatch(/Ready/i);
             });
         });
 

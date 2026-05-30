@@ -338,12 +338,16 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
         return { color: 'gray', text: 'Unknown' };
     }, [meshStatus, meshMessage, hasMesh, projectStatus, initialMeshStatus]);
 
-    // Derive AI Ready badge state from the verify response. The plan defines
-    // four colors:
+    // Derive AI Ready badge state from the verify response. Colors:
     //   gray:   verify hasn't returned yet (initial)
-    //   red:    any of 4 file checks failed
-    //   yellow: files OK BUT (not registered globally OR inventory inspector errored)
-    //   green:  all 7 signals pass
+    //   red:    any of the project AI file checks failed
+    //   yellow: files OK but an inventory inspector errored
+    //   green:  files OK and inventory healthy
+    //
+    // Global MCP registration (~/.claude.json) is an optional convenience for
+    // cross-directory discovery, not a readiness requirement — the per-project
+    // .mcp.json is written at creation and is sufficient. So it does NOT gate
+    // this badge; the AI Configuration tab surfaces a Register button separately.
     const aiReady = useMemo<AiReadyState>(() => {
         if (!verifyResult) {
             // Verify failed — surface as 'Setup incomplete' rather than leaving
@@ -362,8 +366,7 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
 
         const inv = verifyResult.inventory ?? {};
         const hasInventoryError = Boolean(inv.skillsError ?? inv.mcpsError);
-        const isRegistered = verifyResult.globalMcpRegistration === 'registered';
-        if (hasInventoryError || !isRegistered) {
+        if (hasInventoryError) {
             return { label: 'AI Ready', color: 'yellow', text: 'Setup incomplete' };
         }
 

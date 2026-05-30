@@ -581,23 +581,23 @@ describe('useDashboardStatus', () => {
             });
         });
 
-        it('returns yellow Setup incomplete when global MCP is unregistered', async () => {
+        it('stays green Ready when global MCP is unregistered (project .mcp.json is sufficient)', async () => {
             mockRequest.mockResolvedValue(buildVerifyResponse({ globalMcpRegistration: 'unregistered' }));
             const { result } = renderHook(() => useDashboardStatus());
             await flushVerify();
             expect(result.current.aiReady).toEqual({
                 label: 'AI Ready',
-                color: 'yellow',
-                text: 'Setup incomplete',
+                color: 'green',
+                text: 'Ready',
             });
         });
 
-        it('returns yellow Setup incomplete when global MCP is declined', async () => {
+        it('stays green Ready when global MCP is declined (registration does not gate the badge)', async () => {
             mockRequest.mockResolvedValue(buildVerifyResponse({ globalMcpRegistration: 'declined' }));
             const { result } = renderHook(() => useDashboardStatus());
             await flushVerify();
-            expect(result.current.aiReady.color).toBe('yellow');
-            expect(result.current.aiReady.text).toBe('Setup incomplete');
+            expect(result.current.aiReady.color).toBe('green');
+            expect(result.current.aiReady.text).toBe('Ready');
         });
 
         it('returns yellow Setup incomplete when inventory mcpsError is set (files OK, registered)', async () => {

@@ -26,7 +26,6 @@ import {
     generateAIContextFiles,
     openProjectAsWorkspace,
     ensureEdsContent,
-    ensureGlobalMcpRegistration,
     type ComponentDefinitionEntry,
     type MeshApiConfig,
 } from '../services';
@@ -439,18 +438,13 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         context.logger.warn('[Project Creation] Failed to generate AI context files', err instanceof Error ? err : undefined);
     }
 
-    // Phase 6b: Consent-gated global MCP registration. First time: prompt the
-    // user. Subsequent project completions: no-op (state persists). The user's
-    // choice ('registered' | 'declined') survives across activations.
-    try {
-        const extensionDistPath = path.join(context.context.extensionPath, 'dist');
-        await ensureGlobalMcpRegistration(extensionDistPath, context.context);
-    } catch (err) {
-        context.logger.warn(
-            '[Project Creation] Global MCP registration failed',
-            err instanceof Error ? err : undefined,
-        );
-    }
+    // Global MCP registration (~/.claude.json) is intentionally NOT performed
+    // here. The per-project .mcp.json written in Phase 6 already lets AI agents
+    // discover this project's tools when launched from its directory, and it
+    // only loads those tools where they're relevant — registering globally would
+    // load them into every Claude session everywhere. Cross-directory discovery
+    // remains available as an explicit opt-in via the dashboard's AI tab
+    // (Register button → registerGlobalMcp).
 
     // Phase 7: Anchor the project as the current window's VS Code workspace.
     // From here forward "Open in Claude Code" launches the chat panel into the

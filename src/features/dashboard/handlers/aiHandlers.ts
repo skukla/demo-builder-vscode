@@ -67,9 +67,10 @@ export async function handleVerifyAiSetup(
  * Handle register-global-mcp — upsert the demo-builder MCP entry into
  * `~/.claude.json` and mark globalState as `'registered'`.
  *
- * Bypasses the consent prompt that `ensureGlobalMcpRegistration` runs at
- * project-creation time — this handler is invoked from the AI surface's
- * explicit Register button, so the user has already opted in.
+ * Global registration is a manual opt-in: it happens only when the user clicks
+ * the Register button on the AI surface (it is never triggered automatically at
+ * project-creation time). The per-project `.mcp.json` already covers in-project
+ * discovery; this adds cross-directory discovery for users who want it.
  */
 export async function handleRegisterGlobalMcp(
     context: HandlerContext,

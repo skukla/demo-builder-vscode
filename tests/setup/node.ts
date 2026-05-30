@@ -9,7 +9,7 @@
  * - Reset ServiceLocator singletons
  */
 
-import { ServiceLocator } from '@/core/di/ServiceLocator';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 
 afterEach(() => {
     // Reset ServiceLocator to prevent singleton pollution between tests

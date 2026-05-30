@@ -15,9 +15,7 @@
 import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-import * as vscode from 'vscode';
 import {
-    ensureGlobalMcpRegistration,
     generateClaudeSettings,
     registerGlobalMcp,
     writeMcpConfigs,
@@ -30,12 +28,6 @@ jest.mock('fs/promises', () => ({
     readFile: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
     appendFile: jest.fn().mockResolvedValue(undefined),
 }));
-
-jest.mock('vscode', () => ({
-    window: {
-        showInformationMessage: jest.fn(),
-    },
-}), { virtual: true });
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -450,22 +442,6 @@ describe('writeMcpConfigs', () => {
 // ─── Global MCP registration ────────────────────────────────────────────────
 
 const GLOBAL_CLAUDE_CONFIG_PATH = path.join(os.homedir(), '.claude.json');
-const GLOBAL_MCP_REG_STATE_KEY = 'demoBuilder.ai.globalMcpRegistration';
-
-function makeMockExtensionContext(initialState?: 'registered' | 'declined'): {
-    globalState: { get: jest.Mock; update: jest.Mock };
-} {
-    const store: Record<string, unknown> = {};
-    if (initialState !== undefined) store[GLOBAL_MCP_REG_STATE_KEY] = initialState;
-    return {
-        globalState: {
-            get: jest.fn((key: string) => store[key]),
-            update: jest.fn(async (key: string, value: unknown) => {
-                store[key] = value;
-            }),
-        },
-    };
-}
 
 describe('registerGlobalMcp', () => {
     beforeEach(() => {
@@ -530,79 +506,6 @@ describe('registerGlobalMcp', () => {
         (fsPromises.readFile as jest.Mock).mockResolvedValueOnce('{ not valid json');
 
         await expect(registerGlobalMcp(EXTENSION_DIST)).rejects.toThrow(/malformed|JSON/i);
-        expect(fsPromises.writeFile).not.toHaveBeenCalled();
-    });
-});
-
-describe('ensureGlobalMcpRegistration', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-    });
-
-    it('prompts the user with a modal dialog and three buttons when state is undefined', async () => {
-        const ctx = makeMockExtensionContext(undefined);
-        const showInfo = vscode.window.showInformationMessage as jest.Mock;
-        showInfo.mockResolvedValueOnce(undefined); // user dismisses
-
-        await ensureGlobalMcpRegistration(EXTENSION_DIST, ctx as unknown as never);
-
-        expect(showInfo).toHaveBeenCalledTimes(1);
-        const [, options, ...buttons] = showInfo.mock.calls[0];
-        expect(options).toEqual({ modal: true });
-        expect(buttons).toEqual(['Register', 'Not Now', "Don't Ask Again"]);
-    });
-
-    it('registers and persists "registered" state when user clicks Register', async () => {
-        const ctx = makeMockExtensionContext(undefined);
-        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValueOnce('Register');
-
-        await ensureGlobalMcpRegistration(EXTENSION_DIST, ctx as unknown as never);
-
-        // Wrote to ~/.claude.json
-        const writeFileMock = fsPromises.writeFile as jest.Mock;
-        expect(writeFileMock.mock.calls.some(([p]: [string]) => String(p) === GLOBAL_CLAUDE_CONFIG_PATH)).toBe(true);
-        expect(ctx.globalState.update).toHaveBeenCalledWith(GLOBAL_MCP_REG_STATE_KEY, 'registered');
-    });
-
-    it('persists "declined" state when user clicks Don\'t Ask Again, without writing config', async () => {
-        const ctx = makeMockExtensionContext(undefined);
-        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValueOnce("Don't Ask Again");
-
-        await ensureGlobalMcpRegistration(EXTENSION_DIST, ctx as unknown as never);
-
-        const writeFileMock = fsPromises.writeFile as jest.Mock;
-        expect(writeFileMock.mock.calls.some(([p]: [string]) => String(p) === GLOBAL_CLAUDE_CONFIG_PATH)).toBe(false);
-        expect(ctx.globalState.update).toHaveBeenCalledWith(GLOBAL_MCP_REG_STATE_KEY, 'declined');
-    });
-
-    it('leaves state undefined and does not register when user clicks Not Now', async () => {
-        const ctx = makeMockExtensionContext(undefined);
-        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValueOnce('Not Now');
-
-        await ensureGlobalMcpRegistration(EXTENSION_DIST, ctx as unknown as never);
-
-        const writeFileMock = fsPromises.writeFile as jest.Mock;
-        expect(writeFileMock.mock.calls.some(([p]: [string]) => String(p) === GLOBAL_CLAUDE_CONFIG_PATH)).toBe(false);
-        expect(ctx.globalState.update).not.toHaveBeenCalled();
-    });
-
-    it('does nothing and does not prompt when state is "registered"', async () => {
-        const ctx = makeMockExtensionContext('registered');
-        const showInfo = vscode.window.showInformationMessage as jest.Mock;
-
-        await ensureGlobalMcpRegistration(EXTENSION_DIST, ctx as unknown as never);
-
-        expect(showInfo).not.toHaveBeenCalled();
-        expect(fsPromises.writeFile).not.toHaveBeenCalled();
-    });
-
-    it('does nothing and does not prompt when state is "declined"', async () => {
-        const ctx = makeMockExtensionContext('declined');
-        const showInfo = vscode.window.showInformationMessage as jest.Mock;
-
-        await ensureGlobalMcpRegistration(EXTENSION_DIST, ctx as unknown as never);
-
-        expect(showInfo).not.toHaveBeenCalled();
         expect(fsPromises.writeFile).not.toHaveBeenCalled();
     });
 });
