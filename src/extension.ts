@@ -11,6 +11,8 @@ import { CommandExecutor } from '@/core/shell';
 import { StateManager } from '@/core/state';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
+import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
+import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer';
 import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
@@ -412,7 +414,10 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
             resolveMcpSocketPath(workspacePath),
             projectsDir,
             logger,
-            (mcpServer) => registerDescriptorTools(mcpServer, READ_DESCRIPTORS, ctxFactory),
+            (mcpServer) => {
+                registerDescriptorTools(mcpServer, [...READ_DESCRIPTORS, ...ACTION_DESCRIPTORS], ctxFactory);
+                registerDiscoveryTools(mcpServer);
+            },
         );
         await server.start();
         inExtensionMcpServer = server;
