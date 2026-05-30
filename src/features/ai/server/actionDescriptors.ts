@@ -6,6 +6,7 @@
  * Destructive rows set `confirm`. Wired in from `extension.ts`.
  */
 
+import { z } from 'zod';
 import type { ToolDescriptor } from './toolDescriptors';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
@@ -28,5 +29,29 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         description: 'Stop the current project\'s running demo server',
         map: dashboardHandlers,
         type: 'stopDemo',
+    },
+    {
+        tool: 'save_ai_prompt',
+        description: 'Create or update a saved AI prompt',
+        map: aiHandlers,
+        type: 'save-ai-prompt',
+        inputSchema: {
+            prompt: z
+                .object({
+                    id: z.string().describe('Prompt id (reuse to update; new id to create)'),
+                    title: z.string(),
+                    prompt: z.string(),
+                    pinned: z.boolean().optional().describe('true = global (every project); false = project-local'),
+                })
+                .describe('The prompt to save'),
+        },
+    },
+    {
+        tool: 'delete_ai_prompt',
+        description: 'Delete a saved AI prompt by id',
+        map: aiHandlers,
+        type: 'delete-ai-prompt',
+        confirm: true,
+        inputSchema: { promptId: z.string().describe('Id of the prompt to delete') },
     },
 ];
