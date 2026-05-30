@@ -95,7 +95,7 @@ describe('MCP config content', () => {
         jest.clearAllMocks();
     });
 
-    it('always includes the demo-builder server pointing to dist/mcp-server.js', async () => {
+    it('always includes the demo-builder server pointing to dist/mcp-proxy.js', async () => {
         const project = makeEdsProject();
         await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
@@ -106,17 +106,21 @@ describe('MCP config content', () => {
         expect(path.isAbsolute(command)).toBe(true);
         expect(path.basename(command)).toMatch(/^node(\.exe)?$/);
         expect((config.mcpServers['demo-builder'].args as string[]).join(' ')).toContain(
-            `${EXTENSION_DIST}/mcp-server.js`,
+            `${EXTENSION_DIST}/mcp-proxy.js`,
         );
     });
 
-    it('does not include DEMO_BUILDER_PROJECT_PATH env var (multi-project mode)', async () => {
+    it('passes the per-project UDS socket path via env, and no legacy single-project env', async () => {
         const project = makeEdsProject();
         await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
         const config = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, Record<string, unknown>> };
+        const env = config.mcpServers['demo-builder'].env as Record<string, string> | undefined;
 
-        expect(config.mcpServers['demo-builder'].env).toBeUndefined();
+        // The proxy receives the explicit socket path for this project…
+        expect(env?.['DEMO_BUILDER_MCP_SOCKET']).toMatch(/\.sock$/);
+        // …but never the legacy single-project path env.
+        expect(env?.['DEMO_BUILDER_PROJECT_PATH']).toBeUndefined();
     });
 
     it('emits demo-builder plus every server declared in ai-defaults.json', async () => {
@@ -460,7 +464,7 @@ describe('registerGlobalMcp', () => {
         const parsed = JSON.parse(written);
         expect(parsed.mcpServers['demo-builder']).toBeDefined();
         expect(path.isAbsolute(parsed.mcpServers['demo-builder'].command)).toBe(true);
-        expect(parsed.mcpServers['demo-builder'].args).toEqual([`${EXTENSION_DIST}/mcp-server.js`]);
+        expect(parsed.mcpServers['demo-builder'].args).toEqual([`${EXTENSION_DIST}/mcp-proxy.js`]);
     });
 
     it('never writes the legacy ~/.claude/.mcp.json path', async () => {

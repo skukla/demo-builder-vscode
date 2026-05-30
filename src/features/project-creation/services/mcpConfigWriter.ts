@@ -25,6 +25,7 @@ import * as path from 'path';
 import { promisify } from 'util';
 import aiDefaultsConfig from '../config/ai-defaults.json';
 import { COMPONENT_IDS } from '@/core/constants';
+import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
 import type { AiDefaults } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';
 
@@ -55,6 +56,7 @@ export type GlobalMcpRegistrationState = 'registered' | 'declined';
 interface McpServerEntry {
     command: string;
     args: string[];
+    env?: Record<string, string>;
 }
 
 interface McpConfig {
@@ -149,9 +151,13 @@ export async function registerGlobalMcp(extensionDistPath: string): Promise<void
     }
 
     const nodePath = await resolveNodePath();
+    // Global (user-scope) entry carries NO socket env: the proxy derives the
+    // per-workspace socket path from its cwd (the project dir Claude is launched
+    // in), so one global entry connects to whichever VS Code window has that
+    // project open.
     (config.mcpServers as Record<string, unknown>)['demo-builder'] = {
         command: nodePath,
-        args: [path.join(extensionDistPath, 'mcp-server.js')],
+        args: [path.join(extensionDistPath, 'mcp-proxy.js')],
     };
 
     await fsPromises.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
@@ -229,10 +235,15 @@ async function buildMcpConfig(
     project: Project,
 ): Promise<McpConfig> {
     const nodePath = await resolveNodePath();
+    // Per-project entry: the stdio→UDS proxy with the explicit socket path for
+    // this project. The in-extension server (when this project is the open
+    // workspace) listens on the same path. Stable across restarts — no
+    // per-activation rewrite needed.
     const mcpServers: Record<string, McpServerEntry> = {
         'demo-builder': {
             command: nodePath,
-            args: [path.join(extensionDistPath, 'mcp-server.js')],
+            args: [path.join(extensionDistPath, 'mcp-proxy.js')],
+            env: { DEMO_BUILDER_MCP_SOCKET: resolveMcpSocketPath(project.path) },
         },
     };
 

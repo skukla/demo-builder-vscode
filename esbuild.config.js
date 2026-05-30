@@ -142,6 +142,34 @@ async function runMcpServerBuild() {
 }
 
 // ---------------------------------------------------------------------------
+// MCP proxy build (stdio→UDS forwarder spawned by Claude Code — no vscode)
+// ---------------------------------------------------------------------------
+async function runMcpProxyBuild() {
+    const ctx = await esbuild.context({
+        entryPoints: ['src/mcp-proxy.ts'],
+        bundle: true,
+        format: 'cjs',
+        minify: production,
+        sourcemap: !production,
+        sourcesContent: false,
+        platform: 'node',
+        outfile: 'dist/mcp-proxy.js',
+        external: ['vscode', 'fs', 'path', 'os', 'child_process', 'crypto', 'util', 'net'],
+        plugins: [aliasPlugin],
+        logLevel: 'info',
+        metafile: true,
+    });
+    if (watch) {
+        await ctx.watch();
+        console.log('[esbuild] mcp-proxy: watching…');
+    } else {
+        const result = await ctx.rebuild();
+        logOutputSizes(result.metafile);
+        await ctx.dispose();
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Webview UI builds (one IIFE bundle per entry point)
 // ---------------------------------------------------------------------------
 const WEBVIEW_ENTRIES = {
@@ -212,6 +240,7 @@ async function main() {
     if (buildExtension) {
         tasks.push(runExtensionBuild());
         tasks.push(runMcpServerBuild());
+        tasks.push(runMcpProxyBuild());
     }
     if (buildWebviews) {
         tasks.push(runWebviewBuild());

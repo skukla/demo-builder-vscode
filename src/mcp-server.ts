@@ -491,33 +491,34 @@ export const toolHandlers = {
     },
 };
 
-// ─── MCP server wiring ────────────────────────────────────────────────────────
+// ─── Tool registration (shared) ──────────────────────────────────────────────
 
-// Only start the server when running as a standalone process (not in tests).
-if (process.env.NODE_ENV !== 'test') {
-    const PROJECTS_DIR = process.env.DEMO_BUILDER_PROJECTS_DIR
-        ?? path.join(os.homedir(), '.demo-builder', 'projects');
-
-    // Typed as `any` to avoid TS2589 (deep type instantiation with inline Zod schema inference).
-    // This is a confirmed SDK regression (issue #1180, v1.23.0+). The MCP SDK validates all
-    // inputs at runtime via the Zod schemas below — the cast is safe.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const server: any = new McpServer({ name: 'demo-builder', version: '1.0.0' });
-
+/**
+ * Register the seven project tools on an MCP server instance. Shared by the
+ * standalone stdio bootstrap (below) and the in-extension server
+ * (`@/features/ai/server/inExtensionMcpServer`) so both expose an identical
+ * surface from one source of truth.
+ *
+ * `server` is typed `any` to avoid TS2589 (deep type instantiation with inline
+ * Zod schema inference) — a confirmed SDK regression (issue #1180, v1.23.0+).
+ * The MCP SDK validates all inputs at runtime via the Zod schemas, so the cast
+ * is safe.
+ *
+ * @param server      An `McpServer` instance (typed `any`; see above).
+ * @param projectsDir Absolute path to the projects root (`~/.demo-builder/projects`).
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export function registerProjectTools(server: any, projectsDir: string): void {
     const projectNameSchema = z.string().describe('Project name (directory name under ~/.demo-builder/projects/)');
     const offsetSchema = z.number().int().min(0).optional().describe('Number of items to skip (pagination)');
     const limitSchema = z.number().int().min(0).optional().describe('Maximum number of items to return (pagination)');
 
-    // Tool handlers return result strings directly. The SDK's built-in error handling
-    // catches thrown errors and converts them to { isError: true } responses automatically
-    // (via createToolError in the CallToolRequestSchema handler).
-    /* eslint-disable @typescript-eslint/no-explicit-any */
     server.registerTool('list_projects', {
         title: 'List Projects',
         description: 'List all Demo Builder projects',
         inputSchema: { offset: offsetSchema, limit: limitSchema },
     }, async (args: any) => ({
-        content: [{ type: 'text' as const, text: await toolHandlers.listProjects(PROJECTS_DIR, args.offset, args.limit) }],
+        content: [{ type: 'text' as const, text: await toolHandlers.listProjects(projectsDir, args.offset, args.limit) }],
     }));
 
     server.registerTool('get_project', {
@@ -528,7 +529,7 @@ if (process.env.NODE_ENV !== 'test') {
             full: z.boolean().optional().describe('Return the complete manifest instead of the summary'),
         },
     }, async (args: any) => ({
-        content: [{ type: 'text' as const, text: await toolHandlers.getProject(PROJECTS_DIR, args.projectName, args.full === true) }],
+        content: [{ type: 'text' as const, text: await toolHandlers.getProject(projectsDir, args.projectName, args.full === true) }],
     }));
 
     server.registerTool('get_component_config', {
@@ -539,7 +540,7 @@ if (process.env.NODE_ENV !== 'test') {
             configRelPath: z.string().describe('Relative path to config file within project'),
         },
     }, async (args: any) => ({
-        content: [{ type: 'text' as const, text: await toolHandlers.getComponentConfig(PROJECTS_DIR, args.projectName, args.configRelPath as string) }],
+        content: [{ type: 'text' as const, text: await toolHandlers.getComponentConfig(projectsDir, args.projectName, args.configRelPath as string) }],
     }));
 
     server.registerTool('update_project_config', {
@@ -551,7 +552,7 @@ if (process.env.NODE_ENV !== 'test') {
             content: z.string().max(1_000_000).describe('New file content'),
         },
     }, async (args: any) => ({
-        content: [{ type: 'text' as const, text: await toolHandlers.updateProjectConfig(PROJECTS_DIR, args.projectName, args.configRelPath as string, args.content as string) }],
+        content: [{ type: 'text' as const, text: await toolHandlers.updateProjectConfig(projectsDir, args.projectName, args.configRelPath as string, args.content as string) }],
     }));
 
     server.registerTool('sync_storefront', {
@@ -562,7 +563,7 @@ if (process.env.NODE_ENV !== 'test') {
             commitMessage: z.string().max(500).describe('Git commit message'),
         },
     }, async (args: any) => ({
-        content: [{ type: 'text' as const, text: await toolHandlers.syncStorefront(PROJECTS_DIR, args.projectName, args.commitMessage as string) }],
+        content: [{ type: 'text' as const, text: await toolHandlers.syncStorefront(projectsDir, args.projectName, args.commitMessage as string) }],
     }));
 
     server.registerTool('list_blocks', {
@@ -570,7 +571,7 @@ if (process.env.NODE_ENV !== 'test') {
         description: 'List all block directories in the storefront blocks/ directory',
         inputSchema: { projectName: projectNameSchema, offset: offsetSchema, limit: limitSchema },
     }, async (args: any) => ({
-        content: [{ type: 'text' as const, text: await toolHandlers.listBlocks(PROJECTS_DIR, args.projectName, args.offset, args.limit) }],
+        content: [{ type: 'text' as const, text: await toolHandlers.listBlocks(projectsDir, args.projectName, args.offset, args.limit) }],
     }));
 
     server.registerTool('get_block_source', {
@@ -582,9 +583,24 @@ if (process.env.NODE_ENV !== 'test') {
             fileName: z.string().regex(/^[a-zA-Z0-9._-]+$/).optional().describe('A file within the block to read; omit to list the block\'s files'),
         },
     }, async (args: any) => ({
-        content: [{ type: 'text' as const, text: await toolHandlers.getBlockSource(PROJECTS_DIR, args.projectName, args.blockName as string, args.fileName as string | undefined) }],
+        content: [{ type: 'text' as const, text: await toolHandlers.getBlockSource(projectsDir, args.projectName, args.blockName as string, args.fileName as string | undefined) }],
     }));
-    /* eslint-enable @typescript-eslint/no-explicit-any */
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+// ─── Standalone stdio bootstrap ───────────────────────────────────────────────
+
+// Only start the standalone server when run as its own process (not in tests,
+// and not when these handlers are imported into the extension host). The
+// in-extension server (`@/features/ai/server/inExtensionMcpServer`) reuses
+// `registerProjectTools` instead of this bootstrap.
+if (process.env.NODE_ENV !== 'test' && require.main === module) {
+    const PROJECTS_DIR = process.env.DEMO_BUILDER_PROJECTS_DIR
+        ?? path.join(os.homedir(), '.demo-builder', 'projects');
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const server: any = new McpServer({ name: 'demo-builder', version: '1.0.0' });
+    registerProjectTools(server, PROJECTS_DIR);
 
     (async () => {
         const transport = new StdioServerTransport();
