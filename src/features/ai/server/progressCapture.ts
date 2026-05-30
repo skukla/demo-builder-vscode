@@ -28,6 +28,17 @@ export interface PhaseEntry {
     progress?: number;
 }
 
+/** Pull a human-readable error message out of an event payload (`error` then `message`). */
+function errorMessage(d: Record<string, unknown>): string | undefined {
+    if (typeof d.error === 'string') {
+        return d.error;
+    }
+    if (typeof d.message === 'string') {
+        return d.message;
+    }
+    return undefined;
+}
+
 /**
  * Wrap `base` so its `sendMessage` appends each event to `sink` (in addition to
  * any logging the base already does). Everything else passes through unchanged,
@@ -66,7 +77,7 @@ export function toPhaseTimeline(events: CapturedEvent[]): PhaseEntry[] {
             timeline.push({
                 phase: String(d.phase ?? 'error'),
                 status: 'error',
-                message: typeof d.error === 'string' ? d.error : typeof d.message === 'string' ? d.message : undefined,
+                message: errorMessage(d),
             });
         }
     }
