@@ -35,6 +35,67 @@ self-correction.
 
 ---
 
+## 1a. Determinism policy (PM-approved) — the governing rule for ALL AI interactions
+
+Determinism here means **the same request reliably produces the same _correct
+outcome_, proven by inspection** — not that the conversation is identical each
+time. Variation in phrasing/clarifying questions is fine; variation in the
+_result_ is not. Rather than decide this per-flow (which drifts into
+inconsistency), every AI-reachable tool/flow is classified into a tier by
+**risk × verifiability**, and its treatment follows from the tier:
+
+| Tier | Examples (current tools) | Reversible? | Treatment |
+|---|---|---|---|
+| **1 — Reads** | `list_*`, `get_*`, `verify_ai_setup`, `check_mesh`, `get_auth_status` | n/a | Trust the model fully — free choice/sequence, no gate. Determinism = the tool returns the same data. |
+| **2 — Light/reversible writes** | `start_demo`, `stop_demo`, prompt CRUD, `regenerate_ai_files`, `sign_in`/`select_*` | Yes | Model drives; per-tool validation; confirm only where there's a side effect. |
+| **3 — Heavy / multi-step** | `create_project`, `reset_eds_project`, deploy mesh, `apply_updates`, `republish`, `sync_content` | Costly | **Scripted skill + confirm-the-plan + full external verify gate.** Where we spend determinism. |
+| **4 — Destructive / irreversible** | `delete_project`, `delete_github_repo`, `cleanup_dalive_site`, `delete_mesh` | No | Tier-3 rigor **plus** extra-strict gating (e.g. `confirmName` echo) + explicit human "are you sure". |
+
+Most existing tools already match their tier (confirm-gates, `needsAuth`
+handoffs, `confirmName` on `delete_project`). This policy **names the rule the
+migration already half-followed**, makes it explicit, and surfaces the gaps to
+fill — chiefly a **reusable external-verify capability** that Tier-3/4 flows call.
+
+**Cross-cutting work this implies (feeds the plan):**
+1. A shared **verify capability** Tier-3/4 flows invoke (today only
+   `verify_ai_setup` approximates it).
+2. The **confirm-the-plan** convention standardized across Tier-3/4.
+3. An **audit** placing every existing tool in its correct tier.
+
+**Subagent isolation** is an _optional_ Tier-4 belt-and-suspenders, deferred to
+backlog and added only where blast radius proves to justify it — not a per-flow
+decision.
+
+---
+
+## 1b. Settled design decisions (PM-approved)
+
+These resolve the §5 open questions; planning inherits them as fixed inputs.
+
+- **Constraint model for `create`:** **Scripted** (max determinism) — a skill
+  playbook the model can't deviate from: gather → echo a concrete plan for one
+  confirmation → call tools in fixed order → verify → anchor. (Tier-3 treatment
+  by the policy above; ongoing _management_ flows stay Tier-2/looser.)
+- **Verification scope:** **Full external verify** — inspect every real artifact
+  (manifest + `.env` valid, GitHub repo exists, mesh deployed & responding,
+  DA.live/Helix content published, AI files generated). "Done" = this passes.
+- **Cold-start launch context:** Global socket, **cwd = the extension's projects
+  directory** (`~/.demo-builder/projects`). Rationale: Claude Code discovers
+  `.mcp.json`/`AGENTS.md`/skills from cwd, so we seed a small "create context"
+  there (create-eds-project skill + `.mcp.json` → global socket); the launch
+  lands somewhere that already knows about Demo Builder, then `open_project`
+  anchors the real project after create. (Beats a bare home dir or throwaway
+  scratch workspace.)
+- **Multi-window tiebreak:** **Prompt the user to pick** which Demo Builder
+  window answers when more than one is live. (Unambiguous over convenient.)
+- **Determinism spend on the create flow:** skill playbook + tool validation +
+  **full external verify gate** + **one post-create hook** (guaranteed
+  workspace-anchor, model-independent). **Scoped creation subagent deferred** to
+  backlog (add only if Tier-4 blast radius proves it necessary).
+- **Auth-in-the-loop UX:** _still open_ — see §5.
+
+---
+
 ## 2. Where we are (the migration already built the engine)
 
 The in-extension MCP work (PR #2) delivered most of the *middle* of the journey.
@@ -126,21 +187,19 @@ determinism-critical phase; lean hard on the four mechanisms:
 
 ---
 
-## 5. Key decisions to resolve in Plan
+## 5. Decisions
 
-1. **Cold-start launch context.** What cwd/workspace does "Create with AI" launch
-   into when no project exists? (Global socket + a scratch cwd, vs. a transient
-   workspace.)
-2. **How constrained is the conversation?** Free-form chat backed by a skill, vs.
-   a tightly scripted skill/subagent the model can't deviate from. (Determinism
-   vs. flexibility — likely scripted for create, freer for management.)
-3. **Verification scope.** What exactly must `verify_project` check to call a
-   project "correct"? This defines "done."
-4. **Multi-window behavior** for the global socket (most-recently-active? prompt?).
-5. **Auth-in-the-loop UX.** How browser sign-ins surface mid-conversation so they
-   feel first-class, not like errors.
-6. **How far to push subagents/hooks** vs. keeping it skill+tool only (complexity
-   budget).
+**Resolved (PM-approved — see §1a/§1b):** constraint model (scripted create),
+verification scope (full external verify), cold-start launch context
+(projects-dir cwd + global socket), multi-window (prompt to pick),
+determinism spend (verify gate + one post-create hook; subagent deferred), and
+the governing tiered determinism policy.
+
+**Still open (carry into Plan):**
+
+1. **Auth-in-the-loop UX.** How browser sign-ins (`needsAuth` → `sign_in`)
+   surface mid-conversation so they feel first-class, not like errors — and how
+   the scripted skill pauses/resumes around them.
 
 ---
 
