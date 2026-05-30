@@ -6,22 +6,30 @@
 
 jest.mock('@/features/eds/services/storefrontRepublishService', () => ({
     republishStorefrontConfig: jest.fn(),
+    republishStorefrontContent: jest.fn(),
 }));
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getGitHubServices: jest.fn(),
+    getDaLiveAuthService: jest.fn(),
 }));
 jest.mock('@/types/typeGuards', () => ({
     isEdsProject: jest.fn(),
 }));
 
 import { registerStorefrontTools } from '@/features/ai/server/storefrontTools';
-import { republishStorefrontConfig } from '@/features/eds/services/storefrontRepublishService';
-import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
+import { COMPONENT_IDS } from '@/core/constants';
+import {
+    republishStorefrontConfig,
+    republishStorefrontContent,
+} from '@/features/eds/services/storefrontRepublishService';
+import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { isEdsProject } from '@/types/typeGuards';
 import type { HandlerContext } from '@/types/handlers';
 
 const republishMock = republishStorefrontConfig as jest.Mock;
+const republishContentMock = republishStorefrontContent as jest.Mock;
 const getGitHubServicesMock = getGitHubServices as jest.Mock;
+const getDaLiveAuthServiceMock = getDaLiveAuthService as jest.Mock;
 const isEdsProjectMock = isEdsProject as unknown as jest.Mock;
 
 function fakeServer() {
@@ -105,5 +113,75 @@ describe('republish', () => {
         registerStorefrontTools(s, ctxFactory);
         const res = await s.call('republish');
         expect(res).toMatchObject({ success: false, error: 'CDN verify failed' });
+    });
+});
+
+describe('sync_content', () => {
+    const PROJECT = {
+        name: 'eds-proj',
+        path: '/p/eds-proj',
+        componentInstances: {
+            [COMPONENT_IDS.EDS_STOREFRONT]: {
+                metadata: { githubRepo: 'me/shop', daLiveOrg: 'acme', daLiveSite: 'shop' },
+            },
+        },
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        getCurrentProject.mockResolvedValue(PROJECT);
+        isEdsProjectMock.mockReturnValue(true);
+        getGitHubServicesMock.mockReturnValue({ tokenService: { validateToken: jest.fn(async () => ({ valid: true })) } });
+        getDaLiveAuthServiceMock.mockReturnValue({ isAuthenticated: jest.fn(async () => true) });
+        republishContentMock.mockResolvedValue({ success: true, cdnVerified: true });
+    });
+
+    it('errors for a non-EDS project', async () => {
+        isEdsProjectMock.mockReturnValueOnce(false);
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        expect(await s.call('sync_content')).toMatchObject({ error: expect.stringMatching(/only to EDS/) });
+        expect(republishContentMock).not.toHaveBeenCalled();
+    });
+
+    it('errors when GitHub repo metadata is missing', async () => {
+        getCurrentProject.mockResolvedValueOnce({ name: 'p', path: '/p', componentInstances: {} });
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        expect(await s.call('sync_content')).toMatchObject({ error: expect.stringMatching(/missing GitHub repo/) });
+        expect(republishContentMock).not.toHaveBeenCalled();
+    });
+
+    it('hands off to GitHub auth when not signed in', async () => {
+        getGitHubServicesMock.mockReturnValueOnce({ tokenService: { validateToken: jest.fn(async () => ({ valid: false })) } });
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        expect(await s.call('sync_content')).toMatchObject({ needsAuth: 'github' });
+        expect(republishContentMock).not.toHaveBeenCalled();
+    });
+
+    it('hands off to DA.live auth when GitHub is ok but DA.live is not', async () => {
+        getDaLiveAuthServiceMock.mockReturnValueOnce({ isAuthenticated: jest.fn(async () => false) });
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        expect(await s.call('sync_content')).toMatchObject({ needsAuth: 'dalive' });
+        expect(republishContentMock).not.toHaveBeenCalled();
+    });
+
+    it('publishes content with the resolved targets on success', async () => {
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        const res = await s.call('sync_content');
+        expect(res).toEqual({ success: true, cdnVerified: true });
+        expect(republishContentMock).toHaveBeenCalledWith(
+            expect.objectContaining({ repoOwner: 'me', repoName: 'shop', daLiveOrg: 'acme', daLiveSite: 'shop' }),
+        );
+    });
+
+    it('passes through a failure result with its error', async () => {
+        republishContentMock.mockResolvedValueOnce({ success: false, error: 'publish failed' });
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        expect(await s.call('sync_content')).toMatchObject({ success: false, error: 'publish failed' });
     });
 });
