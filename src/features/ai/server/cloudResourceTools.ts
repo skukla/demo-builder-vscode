@@ -189,7 +189,7 @@ export function registerCloudResourceTools(
     );
 
     server.registerTool(
-        'cleanup_dalive_sites',
+        'cleanup_dalive_site',
         {
             description:
                 'Delete all content for a DA.live site (irreversible). Requires confirm:true and confirmName="org/site".',
@@ -213,7 +213,7 @@ export function registerCloudResourceTools(
             const fullName = `${org}/${site}`;
             if (args?.confirm !== true || args?.confirmName !== fullName) {
                 return asText({
-                    error: `cleanup_dalive_sites permanently deletes all content for ${fullName}. To proceed, call again with confirm:true and confirmName:"${fullName}".`,
+                    error: `cleanup_dalive_site permanently deletes all content for ${fullName}. To proceed, call again with confirm:true and confirmName:"${fullName}".`,
                     irreversible: true,
                 });
             }

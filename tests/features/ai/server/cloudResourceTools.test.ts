@@ -223,11 +223,11 @@ describe('cloud-resource tools (DA.live)', () => {
         });
     });
 
-    describe('cleanup_dalive_sites', () => {
+    describe('cleanup_dalive_site', () => {
         it('requires org and site', async () => {
             const s = fakeServer();
             registerCloudResourceTools(s, ctxFactory);
-            expect(await s.call('cleanup_dalive_sites', { org: 'acme', site: '' })).toMatchObject({
+            expect(await s.call('cleanup_dalive_site', { org: 'acme', site: '' })).toMatchObject({
                 error: expect.stringMatching(/org and site are required/),
             });
         });
@@ -235,7 +235,7 @@ describe('cloud-resource tools (DA.live)', () => {
         it('refuses without confirm + confirmName echo (irreversible) and never calls the service', async () => {
             const s = fakeServer();
             registerCloudResourceTools(s, ctxFactory);
-            const res = await s.call('cleanup_dalive_sites', { org: 'acme', site: 'shop' });
+            const res = await s.call('cleanup_dalive_site', { org: 'acme', site: 'shop' });
             expect(res).toMatchObject({ irreversible: true });
             expect(res.error).toMatch(/confirmName:"acme\/shop"/);
             expect(mockDeleteAllSiteContent).not.toHaveBeenCalled();
@@ -244,7 +244,7 @@ describe('cloud-resource tools (DA.live)', () => {
         it('refuses when confirmName does not echo org/site exactly', async () => {
             const s = fakeServer();
             registerCloudResourceTools(s, ctxFactory);
-            const res = await s.call('cleanup_dalive_sites', { org: 'acme', site: 'shop', confirm: true, confirmName: 'acme/WRONG' });
+            const res = await s.call('cleanup_dalive_site', { org: 'acme', site: 'shop', confirm: true, confirmName: 'acme/WRONG' });
             expect(res).toMatchObject({ irreversible: true });
             expect(mockDeleteAllSiteContent).not.toHaveBeenCalled();
         });
@@ -253,7 +253,7 @@ describe('cloud-resource tools (DA.live)', () => {
             mockInspectToken.mockResolvedValueOnce({ valid: false, expiresIn: 0 });
             const s = fakeServer();
             registerCloudResourceTools(s, ctxFactory);
-            const res = await s.call('cleanup_dalive_sites', { org: 'acme', site: 'shop', confirm: true, confirmName: 'acme/shop' });
+            const res = await s.call('cleanup_dalive_site', { org: 'acme', site: 'shop', confirm: true, confirmName: 'acme/shop' });
             expect(res).toMatchObject({ needsAuth: 'adobe' });
             expect(mockDeleteAllSiteContent).not.toHaveBeenCalled();
         });
@@ -262,7 +262,7 @@ describe('cloud-resource tools (DA.live)', () => {
             mockDeleteAllSiteContent.mockResolvedValueOnce({ success: true, deletedCount: 7 });
             const s = fakeServer();
             registerCloudResourceTools(s, ctxFactory);
-            const res = await s.call('cleanup_dalive_sites', { org: 'acme', site: 'shop', confirm: true, confirmName: 'acme/shop' });
+            const res = await s.call('cleanup_dalive_site', { org: 'acme', site: 'shop', confirm: true, confirmName: 'acme/shop' });
             expect(res).toEqual({ deleted: true, site: 'acme/shop', deletedCount: 7 });
             expect(mockDeleteAllSiteContent).toHaveBeenCalledWith('acme', 'shop');
         });
