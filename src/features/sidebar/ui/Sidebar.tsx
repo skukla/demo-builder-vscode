@@ -2,18 +2,19 @@
  * Sidebar Component
  *
  * Main sidebar container that renders contextual content based on state.
- * Layout language matches the Project Dashboard: labeled zones, hero/quiet
- * hierarchy, hidden-not-disabled gating.
+ * Aesthetic stays minimal — icons with tiny labels — matching the existing
+ * UtilityBar pattern across all modes.
  *
  * Modes:
- *   - `projects` / `projectsList` — UtilityBar only (3 icons). AI access is
- *     scoped to project context, so it doesn't appear here.
- *   - `project` / `configure` — structured body (project header + nav in
- *     configure + AiZone) above a compact UtilityBar footer.
- *   - `wizard` — shared `TimelineNav` above a compact UtilityBar footer.
+ *   - `projects` / `projectsList` — UtilityBar only (3 icons). AI is
+ *     project-scoped, so it doesn't appear here.
+ *   - `project` — AiZone (Chat + Prompts) paired above the UtilityBar footer.
+ *   - `configure` — back + project name + nav, then AiZone paired above the
+ *     UtilityBar footer.
+ *   - `wizard` — shared `TimelineNav` above a UtilityBar footer.
  */
 
-import { Flex, Text, ActionButton, Divider } from '@adobe/react-spectrum';
+import { Flex, Text, ActionButton } from '@adobe/react-spectrum';
 import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft';
 import React from 'react';
 import type { SidebarContext, NavItem } from '../types';
@@ -114,72 +115,86 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     />
                 </div>
 
-                <div className="border-t sidebar-utility-footer">
-                    <UtilityBar
-                        onOpenTools={onOpenTools}
-                        onOpenHelp={onOpenHelp}
-                        onOpenSettings={onOpenSettings}
-                        compact
-                    />
-                </div>
-            </Flex>
-        );
-    }
-
-    // Project + configure: structured body (header, optional nav, AiZone)
-    // above a compact UtilityBar footer.
-    const isConfigure = context.type === 'configure';
-    const showAiZone = onOpenAiChat && onShowPrompts;
-
-    return (
-        <Flex
-            direction="column"
-            height="100%"
-            UNSAFE_className="sidebar-project-view"
-        >
-            <div className="sidebar-project-body" style={{ flex: 1, overflow: 'auto' }}>
-                <Flex direction="column" gap="size-200" UNSAFE_className="p-2">
-                    {isConfigure && onBack && (
-                        <ActionButton isQuiet onPress={onBack}>
-                            <ChevronLeft />
-                            <Text>Projects</Text>
-                        </ActionButton>
-                    )}
-
-                    <Text UNSAFE_className="font-semibold text-sm truncate">
-                        {context.project.name}
-                    </Text>
-
-                    {isConfigure && (
-                        <>
-                            <Divider size="S" />
-                            <SidebarNav
-                                items={getProjectDetailNavItems('configure')}
-                                onNavigate={onNavigate}
-                            />
-                        </>
-                    )}
-
-                    {showAiZone && (
-                        <>
-                            <Divider size="S" />
-                            <AiZone
-                                onOpenAiChat={onOpenAiChat}
-                                onShowPrompts={onShowPrompts}
-                            />
-                        </>
-                    )}
-                </Flex>
-            </div>
-
-            <div className="border-t sidebar-utility-footer">
                 <UtilityBar
                     onOpenTools={onOpenTools}
                     onOpenHelp={onOpenHelp}
                     onOpenSettings={onOpenSettings}
                     compact
                 />
-            </div>
+            </Flex>
+        );
+    }
+
+    // Project mode: AiZone + UtilityBar as a single group, vertically centered
+    // in the sidebar. No lines, no project header — keeps the surface minimal.
+    const showAiZone = onOpenAiChat && onShowPrompts;
+
+    if (context.type === 'project') {
+        return (
+            <Flex
+                direction="column"
+                height="100%"
+                justifyContent="center"
+                alignItems="center"
+                gap="size-400"
+                UNSAFE_className="sidebar-project-view"
+            >
+                {showAiZone && (
+                    <AiZone
+                        onOpenAiChat={onOpenAiChat}
+                        onShowPrompts={onShowPrompts}
+                    />
+                )}
+                <UtilityBar
+                    onOpenTools={onOpenTools}
+                    onOpenHelp={onOpenHelp}
+                    onOpenSettings={onOpenSettings}
+                    compact
+                />
+            </Flex>
+        );
+    }
+
+    // Configure: back + project name + nav at top, AiZone + UtilityBar at
+    // the bottom as a group. No dividers.
+    return (
+        <Flex
+            direction="column"
+            height="100%"
+            UNSAFE_className="sidebar-configure-view"
+        >
+            <Flex direction="column" gap="size-200" UNSAFE_className="p-2" flex={1}>
+                {onBack && (
+                    <ActionButton isQuiet onPress={onBack}>
+                        <ChevronLeft />
+                        <Text>Projects</Text>
+                    </ActionButton>
+                )}
+
+                <Text UNSAFE_className="font-semibold text-sm truncate">
+                    {context.project.name}
+                </Text>
+
+                <SidebarNav
+                    items={getProjectDetailNavItems('configure')}
+                    onNavigate={onNavigate}
+                />
+            </Flex>
+
+            <Flex direction="column" alignItems="center" gap="size-400">
+                {showAiZone && (
+                    <AiZone
+                        onOpenAiChat={onOpenAiChat}
+                        onShowPrompts={onShowPrompts}
+                    />
+                )}
+                <UtilityBar
+                    onOpenTools={onOpenTools}
+                    onOpenHelp={onOpenHelp}
+                    onOpenSettings={onOpenSettings}
+                    compact
+                />
+            </Flex>
         </Flex>
     );
 };

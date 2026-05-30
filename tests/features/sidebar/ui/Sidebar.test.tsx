@@ -53,7 +53,7 @@ describe('Sidebar', () => {
     });
 
     describe('Project Detail context', () => {
-        it('renders the project name as a header', () => {
+        it('does NOT render the project name — that lives on the dashboard', () => {
             renderWithProvider(
                 <Sidebar
                     context={createProjectContext({ name: 'My Demo Project' })}
@@ -62,7 +62,7 @@ describe('Sidebar', () => {
                 />,
             );
 
-            expect(screen.getByText('My Demo Project')).toBeInTheDocument();
+            expect(screen.queryByText('My Demo Project')).not.toBeInTheDocument();
         });
 
         it('renders the AiZone Chat and Prompts buttons when callbacks provided', () => {
