@@ -40,7 +40,6 @@ jest.mock('@/features/dashboard/handlers/aiHandlers', () => ({
         'verify-ai-setup': jest.fn(),
         'inspect-mcp': jest.fn(),
         'regenerate-ai-files': jest.fn(),
-        'register-global-mcp': jest.fn(),
         'openInClaude': jest.fn(),
     },
 }));
@@ -184,11 +183,10 @@ describe('ShowAiCommand', () => {
                     'verify-ai-setup',
                     'inspect-mcp',
                     'regenerate-ai-files',
-                    'register-global-mcp',
                     'openInClaude',
                 ]),
             );
-            expect(calledTypes).toHaveLength(5);
+            expect(calledTypes).toHaveLength(4);
         });
 
         it('registers a cancel handler (footer Close) that disposes the panel', async () => {

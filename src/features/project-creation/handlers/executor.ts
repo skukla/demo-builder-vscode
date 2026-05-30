@@ -26,7 +26,6 @@ import {
     generateAIContextFiles,
     openProjectAsWorkspace,
     ensureEdsContent,
-    ensureGlobalMcpRegistration,
     type ComponentDefinitionEntry,
     type MeshApiConfig,
 } from '../services';
@@ -202,7 +201,11 @@ interface ProjectCreationConfig {
 /**
  * Actual project creation logic (extracted for testability)
  */
-export async function executeProjectCreation(context: HandlerContext, config: Record<string, unknown>): Promise<void> {
+export async function executeProjectCreation(
+    context: HandlerContext,
+    config: Record<string, unknown>,
+    options?: { skipWorkspaceAnchor?: boolean },
+): Promise<void> {
     const typedConfig = config as unknown as ProjectCreationConfig;
 
     // Debug: trace incoming config values for selectedPackage/selectedStack
@@ -439,25 +442,25 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         context.logger.warn('[Project Creation] Failed to generate AI context files', err instanceof Error ? err : undefined);
     }
 
-    // Phase 6b: Consent-gated global MCP registration. First time: prompt the
-    // user. Subsequent project completions: no-op (state persists). The user's
-    // choice ('registered' | 'declined') survives across activations.
-    try {
-        const extensionDistPath = path.join(context.context.extensionPath, 'dist');
-        await ensureGlobalMcpRegistration(extensionDistPath, context.context);
-    } catch (err) {
-        context.logger.warn(
-            '[Project Creation] Global MCP registration failed',
-            err instanceof Error ? err : undefined,
-        );
-    }
+    // The per-project .mcp.json written in Phase 6 lets AI agents discover this
+    // project's tools when launched from its directory, and it only loads those
+    // tools where they're relevant. No global (~/.claude.json) registration is
+    // performed — the in-extension MCP server hosts the tools per-project.
 
     // Phase 7: Anchor the project as the current window's VS Code workspace.
     // From here forward "Open in Claude Code" launches the chat panel into the
     // right cwd, so per-project skills, MCPs, and AGENTS.md load. The window
     // reloads as a side effect, so this is the last meaningful step — anything
     // after would be cut off by the reload.
-    await openProjectAsWorkspace(projectPath, context.logger);
+    //
+    // Headless callers (the MCP `create_project` tool) skip this: the reload
+    // would kill the live extension host and the agent's MCP connection. The
+    // project tools are project-name-addressed, so the agent keeps working
+    // without the anchor; the separate `open_project` tool performs the
+    // anchor+resume when the user wants the project open in the IDE.
+    if (!options?.skipWorkspaceAnchor) {
+        await openProjectAsWorkspace(projectPath, context.logger);
+    }
 }
 
 // ============================================================================

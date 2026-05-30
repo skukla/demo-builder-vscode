@@ -27,8 +27,6 @@ import { sessionUIState } from '@/core/state/sessionUIState';
 import { openInIncognito, TIMEOUTS } from '@/core/utils';
 import { validateProjectPath, validateProjectNameSecurity, validateURL } from '@/core/validation';
 import { hasMeshDeploymentRecord, determineMeshStatus } from '@/features/dashboard/handlers/meshStatusHelpers';
-import { republishStorefrontConfig } from '@/features/eds';
-import { configureDaLivePermissions } from '@/features/eds/handlers/edsHelpers';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import type { Project } from '@/types/base';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -931,77 +929,29 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
                 }
 
                 const daLiveAuthService = getDaLiveAuthService(context.context);
-
-                // Initialize services
-                const { HelixService } = await import('@/features/eds/services/helixService');
                 const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
-
                 const { tokenService: githubTokenService } = getGitHubServices(context);
 
-                // Create TokenProvider adapter for DA.live operations
-                // Required to list and publish content from DA.live
-                const { createDaLiveServiceTokenProvider } = await import('@/features/eds/services/daLiveContentOperations');
-                const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
-
-                // Create HelixService with GitHub token for Admin API and DA.live token for content operations
-                const helixService = new HelixService(context.logger, githubTokenService, daLiveTokenProvider);
-
-                // Step 1: Apply EDS org config (AEM Assets, Universal Editor)
-                progress.report({ message: 'Step 1/5: Applying EDS configuration...' });
-                const { DaLiveContentOperations } = await import('@/features/eds/services/daLiveContentOperations');
-                const { applyDaLiveOrgConfigSettings } = await import('@/features/eds/handlers/edsHelpers');
-                const daLiveContentOps = new DaLiveContentOperations(daLiveTokenProvider, context.logger);
-                await applyDaLiveOrgConfigSettings(daLiveContentOps, effectiveDaLiveOrg, effectiveDaLiveSite, context.logger);
-
-                // Step 2: Regenerate and sync config.json (picks up env var changes)
-                progress.report({ message: 'Step 2/5: Regenerating storefront configuration...' });
-                const configResult = await republishStorefrontConfig({
+                // Run the shared content-republish pipeline (single source of truth —
+                // the MCP sync_content tool calls the same service).
+                progress.report({ message: 'Republishing content...' });
+                const { republishStorefrontContent } = await import('@/features/eds/services/storefrontRepublishService');
+                const contentResult = await republishStorefrontContent({
                     project,
+                    repoOwner,
+                    repoName,
+                    daLiveOrg: effectiveDaLiveOrg,
+                    daLiveSite: effectiveDaLiveSite,
                     secrets: context.context.secrets,
                     logger: context.logger,
-                    onProgress: (message) => progress.report({ message: `Step 2/5: ${message}` }),
+                    daLiveAuthService,
+                    githubTokenService,
+                    onProgress: (message) => progress.report({ message }),
                 });
-                if (!configResult.success) {
-                    context.logger.warn(`[ProjectsList] Config regeneration warning: ${configResult.error}`);
-                    // Continue with republish even if config regeneration has issues
-                } else {
-                    context.logger.debug('[ProjectsList] Config.json regenerated and synced');
+                if (!contentResult.success) {
+                    return { success: false, error: contentResult.error };
                 }
-
-                // Step 3: Sync all code files to CDN
-                progress.report({ message: 'Step 3/5: Syncing code to CDN...' });
-                await helixService.previewCode(repoOwner, repoName, '/*');
-                context.logger.debug('[ProjectsList] Code synced to CDN');
-
-                // Configure permissions via DA.live Config API (part of Step 3)
-                progress.report({ message: 'Step 3/5: Configuring site permissions...' });
-                const userEmail = await daLiveAuthService.getUserEmail();
-                if (userEmail) {
-                    await configureDaLivePermissions(daLiveTokenProvider, effectiveDaLiveOrg, effectiveDaLiveSite, userEmail, context.logger);
-                } else {
-                    context.logger.warn('[ProjectsList] No user email available for permissions');
-                }
-
-                // Step 4: Publish all content (with cache purge for republish scenarios)
-                progress.report({ message: 'Step 4/5: Purging stale cache...' });
-                await helixService.purgeCacheAll(repoOwner, repoName, 'main');
-
-                progress.report({ message: 'Step 4/5: Publishing content to CDN...' });
-                await helixService.publishAllSiteContent(
-                    repoFullName,
-                    'main',
-                    effectiveDaLiveOrg,
-                    effectiveDaLiveSite,
-                    (info) => {
-                        progress.report({ message: `Step 4/5: ${info.message}` });
-                    },
-                );
-
-                // Step 5: Verify CDN accessibility
-                progress.report({ message: 'Step 5/5: Verifying CDN...' });
-                const { verifyConfigOnCdn } = await import('@/features/eds/services/configSyncService');
-                const cdnVerified = await verifyConfigOnCdn(repoOwner, repoName, context.logger);
-                if (!cdnVerified) {
+                if (!contentResult.cdnVerified) {
                     context.logger.warn('[ProjectsList] CDN verification timed out - content may still be propagating');
                 }
 

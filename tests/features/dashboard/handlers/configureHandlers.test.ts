@@ -5,7 +5,7 @@
  * Verifies handler registration and individual handler behavior.
  *
  * AI handlers (verify-ai-setup, inspect-mcp, regenerate-ai-files,
- * register-global-mcp, openInClaude) moved to aiHandlers.ts; their tests live
+ * openInClaude) moved to aiHandlers.ts; their tests live
  * in aiHandlers.test.ts.
  */
 
@@ -135,7 +135,6 @@ describe('configureHandlers', () => {
             expect(hasHandler(configureHandlers, 'verify-ai-setup')).toBe(false);
             expect(hasHandler(configureHandlers, 'inspect-mcp')).toBe(false);
             expect(hasHandler(configureHandlers, 'regenerate-ai-files')).toBe(false);
-            expect(hasHandler(configureHandlers, 'register-global-mcp')).toBe(false);
             expect(hasHandler(configureHandlers, 'openInClaude')).toBe(false);
         });
 

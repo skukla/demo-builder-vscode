@@ -258,6 +258,20 @@ describe('toolHandlers.listBlocks', () => {
             toolHandlers.listBlocks(PROJECTS_DIR, PROJECT_NAME),
         ).rejects.toThrow(/No EDS storefront configured/i);
     });
+
+    it('applies offset and limit when paginating', async () => {
+        mockManifestWithStorefront();
+        (fsProm.readdir as jest.Mock).mockResolvedValue([
+            { name: 'a', isDirectory: () => true, isFile: () => false },
+            { name: 'b', isDirectory: () => true, isFile: () => false },
+            { name: 'c', isDirectory: () => true, isFile: () => false },
+            { name: 'd', isDirectory: () => true, isFile: () => false },
+        ]);
+
+        const result = await toolHandlers.listBlocks(PROJECTS_DIR, PROJECT_NAME, 1, 2);
+
+        expect(JSON.parse(result)).toEqual([{ name: 'b' }, { name: 'c' }]);
+    });
 });
 
 // ─── toolHandlers.getBlockSource ─────────────────────────────────────────────
@@ -267,15 +281,59 @@ describe('toolHandlers.getBlockSource', () => {
         jest.clearAllMocks();
     });
 
-    it('reads all files in blocks/<blockName>/ and returns JSON array of {name, content}', async () => {
-        mockManifestWithStorefront();
-        (fsProm.stat as jest.Mock).mockResolvedValue({ size: 1_000 });
-        (fsProm.readdir as jest.Mock).mockResolvedValue([
-            { name: 'hero.js', isFile: () => true, isDirectory: () => false },
-            { name: 'hero.css', isFile: () => true, isDirectory: () => false },
-        ]);
-        (fsProm.readFile as jest.Mock)
-            .mockImplementation((p: string) => {
+    describe('without fileName (manifest mode)', () => {
+        it('returns a { files: [{ name, bytes }] } manifest — names and sizes, no contents', async () => {
+            mockManifestWithStorefront();
+            (fsProm.stat as jest.Mock).mockResolvedValue({ size: 1_000 });
+            (fsProm.readdir as jest.Mock).mockResolvedValue([
+                { name: 'hero.js', isFile: () => true, isDirectory: () => false },
+                { name: 'hero.css', isFile: () => true, isDirectory: () => false },
+            ]);
+
+            const result = await toolHandlers.getBlockSource(PROJECTS_DIR, PROJECT_NAME, 'hero');
+            const parsed = JSON.parse(result) as { files: Array<{ name: string; bytes: number }> };
+
+            expect(parsed.files).toEqual([
+                { name: 'hero.js', bytes: 1_000 },
+                { name: 'hero.css', bytes: 1_000 },
+            ]);
+            // No file contents read in manifest mode (only the manifest read + stats).
+            expect(fsProm.readFile as jest.Mock).toHaveBeenCalledTimes(1);
+        });
+
+        it('returns an empty files manifest when the block directory has no files', async () => {
+            mockManifestWithStorefront();
+            (fsProm.readdir as jest.Mock).mockResolvedValue([]);
+
+            const result = await toolHandlers.getBlockSource(PROJECTS_DIR, PROJECT_NAME, 'empty-block');
+            const parsed = JSON.parse(result) as { files: unknown[] };
+
+            expect(parsed.files).toHaveLength(0);
+        });
+
+        it('caps the manifest at MAX_BLOCK_FILES entries', async () => {
+            mockManifestWithStorefront();
+            (fsProm.stat as jest.Mock).mockResolvedValue({ size: 10 });
+            const many = Array.from({ length: 60 }, (_, i) => ({
+                name: `f${i}.js`, isFile: () => true, isDirectory: () => false,
+            }));
+            (fsProm.readdir as jest.Mock).mockResolvedValue(many);
+
+            const result = await toolHandlers.getBlockSource(PROJECTS_DIR, PROJECT_NAME, 'hero');
+            const parsed = JSON.parse(result) as { files: unknown[] };
+
+            expect(parsed.files).toHaveLength(50);
+        });
+    });
+
+    describe('with fileName (single-file mode)', () => {
+        it('returns { name, content } for a file within the size limit', async () => {
+            mockManifestWithStorefront();
+            (fsProm.readdir as jest.Mock).mockResolvedValue([
+                { name: 'hero.js', isFile: () => true, isDirectory: () => false },
+            ]);
+            (fsProm.stat as jest.Mock).mockResolvedValueOnce({ size: 1_000 });
+            (fsProm.readFile as jest.Mock).mockImplementation((p: string) => {
                 if (String(p).endsWith('.demo-builder.json')) {
                     return Promise.resolve(JSON.stringify({
                         name: 'my-project',
@@ -283,17 +341,39 @@ describe('toolHandlers.getBlockSource', () => {
                         componentInstances: { 'eds-storefront': { path: STOREFRONT_PATH } },
                     }));
                 }
-                if (String(p).endsWith('hero.js')) return Promise.resolve('// hero js');
-                if (String(p).endsWith('hero.css')) return Promise.resolve('.hero { color: red; }');
-                return Promise.reject(new Error(`Unexpected readFile: ${p}`));
+                return Promise.resolve('// hero source');
             });
 
-        const result = await toolHandlers.getBlockSource(PROJECTS_DIR, PROJECT_NAME, 'hero');
-        const parsed = JSON.parse(result) as Array<{ name: string; content: string }>;
+            const result = await toolHandlers.getBlockSource(PROJECTS_DIR, PROJECT_NAME, 'hero', 'hero.js');
+            const parsed = JSON.parse(result) as { name: string; content: string };
 
-        expect(parsed).toHaveLength(2);
-        expect(parsed[0].name).toBe('hero.js');
-        expect(parsed[0].content).toBe('// hero js');
+            expect(parsed).toEqual({ name: 'hero.js', content: '// hero source' });
+        });
+
+        it('returns a truncation placeholder for a file exceeding MAX_FILE_BYTES', async () => {
+            mockManifestWithStorefront();
+            (fsProm.readdir as jest.Mock).mockResolvedValue([
+                { name: 'large.min.js', isFile: () => true, isDirectory: () => false },
+            ]);
+            (fsProm.stat as jest.Mock).mockResolvedValueOnce({ size: 200_000 });
+
+            const result = await toolHandlers.getBlockSource(PROJECTS_DIR, PROJECT_NAME, 'hero', 'large.min.js');
+            const parsed = JSON.parse(result) as { name: string; content: string };
+
+            expect(parsed.name).toBe('large.min.js');
+            expect(parsed.content).toContain('[truncated:');
+        });
+
+        it('throws when the requested fileName is not a file in the block', async () => {
+            mockManifestWithStorefront();
+            (fsProm.readdir as jest.Mock).mockResolvedValue([
+                { name: 'hero.js', isFile: () => true, isDirectory: () => false },
+            ]);
+
+            await expect(
+                toolHandlers.getBlockSource(PROJECTS_DIR, PROJECT_NAME, 'hero', 'missing.js'),
+            ).rejects.toThrow(/not found in block/i);
+        });
     });
 
     it('throws when blockName contains ../', async () => {
@@ -313,53 +393,6 @@ describe('toolHandlers.getBlockSource', () => {
         await expect(
             toolHandlers.getBlockSource(PROJECTS_DIR, PROJECT_NAME, 'nonexistent'),
         ).rejects.toThrow(/ENOENT/);
-    });
-
-    it('returns empty array when block directory exists but has no files', async () => {
-        mockManifestWithStorefront();
-        (fsProm.readdir as jest.Mock).mockResolvedValue([]);
-
-        const result = await toolHandlers.getBlockSource(PROJECTS_DIR, PROJECT_NAME, 'empty-block');
-        const parsed = JSON.parse(result) as unknown[];
-
-        expect(parsed).toHaveLength(0);
-    });
-
-    it('reads file content when file is within the size limit', async () => {
-        mockManifestWithStorefront();
-        (fsProm.readdir as jest.Mock).mockResolvedValue([
-            { name: 'hero.js', isFile: () => true, isDirectory: () => false },
-        ]);
-        (fsProm.stat as jest.Mock).mockResolvedValueOnce({ size: 1_000 });
-        (fsProm.readFile as jest.Mock).mockImplementation((p: string) => {
-            if (String(p).endsWith('.demo-builder.json')) {
-                return Promise.resolve(JSON.stringify({
-                    name: 'my-project',
-                    status: 'ready',
-                    componentInstances: { 'eds-storefront': { path: STOREFRONT_PATH } },
-                }));
-            }
-            return Promise.resolve('// hero source');
-        });
-
-        const result = await toolHandlers.getBlockSource(PROJECTS_DIR, PROJECT_NAME, 'hero');
-        const parsed = JSON.parse(result) as Array<{ name: string; content: string }>;
-
-        expect(parsed[0].content).toBe('// hero source');
-    });
-
-    it('returns a truncation placeholder for files exceeding MAX_FILE_BYTES', async () => {
-        mockManifestWithStorefront();
-        (fsProm.readdir as jest.Mock).mockResolvedValue([
-            { name: 'large.min.js', isFile: () => true, isDirectory: () => false },
-        ]);
-        (fsProm.stat as jest.Mock).mockResolvedValueOnce({ size: 200_000 });
-
-        const result = await toolHandlers.getBlockSource(PROJECTS_DIR, PROJECT_NAME, 'hero');
-        const parsed = JSON.parse(result) as Array<{ name: string; content: string }>;
-
-        expect(parsed[0].name).toBe('large.min.js');
-        expect(parsed[0].content).toContain('[truncated:');
     });
 
     it('throws when project has no EDS storefront configured (getBlockSource)', async () => {
@@ -392,23 +425,14 @@ describe('toolHandlers.getBlockSource', () => {
             .mockImplementationOnce((p: string) =>
                 Promise.resolve(p.replace('block-alias', 'hero')),
             );
+        (fsProm.stat as jest.Mock).mockResolvedValue({ size: 42 });
         (fsProm.readdir as jest.Mock).mockResolvedValue([
             { name: 'hero.js', isFile: () => true, isDirectory: () => false },
         ]);
-        (fsProm.readFile as jest.Mock).mockImplementation((p: string) => {
-            if (String(p).endsWith('.demo-builder.json')) {
-                return Promise.resolve(JSON.stringify({
-                    name: 'my-project',
-                    status: 'ready',
-                    componentInstances: { 'eds-storefront': { path: STOREFRONT_PATH } },
-                }));
-            }
-            return Promise.resolve('// hero js');
-        });
 
         const result = await toolHandlers.getBlockSource(PROJECTS_DIR, PROJECT_NAME, 'block-alias');
-        const parsed = JSON.parse(result) as Array<{ name: string; content: string }>;
+        const parsed = JSON.parse(result) as { files: Array<{ name: string; bytes: number }> };
 
-        expect(parsed[0].name).toBe('hero.js');
+        expect(parsed.files[0].name).toBe('hero.js');
     });
 });

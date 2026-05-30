@@ -32,13 +32,6 @@ export {
 export { ensureEdsContent } from './edsContentSetup';
 
 export {
-    ensureGlobalMcpRegistration,
-    registerGlobalMcp,
-    GLOBAL_MCP_REG_STATE_KEY,
-    type GlobalMcpRegistrationState,
-} from './mcpConfigWriter';
-
-export {
     installAiDefaultsInStorefront,
     type InstallAiDefaultsResult,
 } from './aiDefaultsInstaller';

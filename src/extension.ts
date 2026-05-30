@@ -3,6 +3,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { CommandManager } from '@/commands/commandManager';
+import { PENDING_CLAUDE_LAUNCH_KEY } from '@/commands/openInClaude';
 import { BaseWebviewCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
 import { initializeLogger, getLogger } from '@/core/logging';
@@ -10,13 +11,30 @@ import { CommandExecutor } from '@/core/shell';
 import { StateManager } from '@/core/state';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
+import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
+import { registerAdobeTools } from '@/features/ai/server/adobeTools';
+import { registerAuthTools } from '@/features/ai/server/authTools';
+import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
+import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool';
+import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
+import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';
+import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
+import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
+import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
+import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer';
+import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
+import { registerOpenProjectTool } from '@/features/ai/server/openProjectTool';
+import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
+import { registerStorefrontTools } from '@/features/ai/server/storefrontTools';
+import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
+import { registerViewTools } from '@/features/ai/server/viewTools';
 import { AuthenticationService } from '@/features/authentication';
 import { ComponentTreeProvider } from '@/features/components/providers/componentTreeProvider';
+import { shouldAutoReopenProjectsList } from '@/features/dashboard/commands/showDashboard';
+import { seedDefaultAiPrompts } from '@/features/dashboard/services/defaultPromptsSeeder';
 import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLiveSites';
 import { manageGitHubReposCommand } from '@/features/eds/commands/manageGitHubRepos';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
-import { PENDING_CLAUDE_LAUNCH_KEY } from '@/commands/openInClaude';
-import { shouldAutoReopenProjectsList } from '@/features/dashboard/commands/showDashboard';
 import { SidebarProvider } from '@/features/sidebar';
 import type { Logger } from '@/types/logger';
 import { getProjectFrontendPort } from '@/types/typeGuards';
@@ -99,6 +117,7 @@ let authenticationService: AuthenticationService;
 let componentTreeProvider: ComponentTreeProvider;
 let componentTreeView: vscode.TreeView<unknown>;
 let daLiveAuthService: DaLiveAuthService;
+let inExtensionMcpServer: InExtensionMcpServer | undefined;
 
 export async function activate(context: vscode.ExtensionContext) {
     // Initialize the debug logger first
@@ -135,6 +154,14 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Register StateManager with ServiceLocator (for commands without handler context)
         ServiceLocator.setStateManager(stateManager);
+
+        // Seed built-in AI prompts into the global store once (starter recipes that
+        // surface in every project's prompt library). Idempotent and non-fatal.
+        try {
+            await seedDefaultAiPrompts(context.globalState);
+        } catch (err) {
+            logger.error('Failed to seed default AI prompts', err);
+        }
 
         // Initialize context variables for view switching
         const hasProject = await stateManager.hasProject();
@@ -249,6 +276,16 @@ export async function activate(context: vscode.ExtensionContext) {
         const commandManager = new CommandManager(context, stateManager, logger);
         commandManager.registerCommands();
 
+        // Start the in-extension MCP server (serves Claude Code via the
+        // stdio→UDS proxy). Bound to the open workspace folder; restarted when
+        // the folder changes. Failure here must never abort activation.
+        await startInExtensionMcpServer(context);
+        context.subscriptions.push(
+            vscode.workspace.onDidChangeWorkspaceFolders(() => {
+                void startInExtensionMcpServer(context);
+            }),
+        );
+
         // Register file watchers early (before loading projects)
         // This ensures the initializeFileHashes command exists when we need it
         registerFileWatchers(context);
@@ -359,6 +396,7 @@ export function deactivate() {
     autoUpdater?.dispose();
     componentTreeView?.dispose();
     componentTreeProvider?.dispose();
+    inExtensionMcpServer?.dispose();
     stateManager?.dispose();
     externalCommandManager?.dispose();
     daLiveAuthService?.dispose();
@@ -368,6 +406,53 @@ export function deactivate() {
     ServiceLocator.reset();
 
     logger.info('Adobe Demo Builder extension deactivated.');
+}
+
+/**
+ * Start (or restart) the in-extension MCP server for the currently-open
+ * workspace folder. No-ops when no project workspace is open. The socket path
+ * is derived from the workspace folder so each window/project gets its own
+ * socket; the proxy resolves the same path from its cwd / env. Never throws —
+ * MCP availability must not affect the rest of the extension.
+ */
+async function startInExtensionMcpServer(context: vscode.ExtensionContext): Promise<void> {
+    try {
+        inExtensionMcpServer?.dispose();
+        inExtensionMcpServer = undefined;
+
+        const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (!workspacePath) {
+            return;
+        }
+        const projectsDir =
+            process.env.DEMO_BUILDER_PROJECTS_DIR ?? path.join(os.homedir(), '.demo-builder', 'projects');
+        // Handler-backed read/status tools dispatch through the existing handler
+        // maps with a fresh headless context per call.
+        const ctxFactory = () => createHeadlessHandlerContext(context, stateManager, logger);
+        const server = new InExtensionMcpServer(
+            resolveMcpSocketPath(workspacePath),
+            projectsDir,
+            logger,
+            (mcpServer) => {
+                registerDescriptorTools(mcpServer, [...READ_DESCRIPTORS, ...ACTION_DESCRIPTORS], ctxFactory);
+                registerDiscoveryTools(mcpServer);
+                registerAuthTools(mcpServer, ctxFactory);
+                registerAdobeTools(mcpServer, ctxFactory);
+                registerCreateProjectTool(mcpServer, ctxFactory);
+                registerOpenProjectTool(mcpServer, ctxFactory);
+                registerCloudResourceTools(mcpServer, ctxFactory);
+                registerStorefrontTools(mcpServer, ctxFactory);
+                registerEdsResetTool(mcpServer, ctxFactory);
+                registerDeleteProjectTool(mcpServer, ctxFactory);
+                registerApplyUpdatesTool(mcpServer, ctxFactory);
+                registerViewTools(mcpServer, (commandId) => Promise.resolve(vscode.commands.executeCommand(commandId)));
+            },
+        );
+        await server.start();
+        inExtensionMcpServer = server;
+    } catch (err) {
+        logger.error('Failed to start in-extension MCP server', err instanceof Error ? err : undefined);
+    }
 }
 
 function registerFileWatchers(context: vscode.ExtensionContext) {

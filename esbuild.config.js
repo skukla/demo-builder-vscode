@@ -113,27 +113,26 @@ async function runExtensionBuild() {
 }
 
 // ---------------------------------------------------------------------------
-// MCP server build (standalone Node process — no vscode dependency)
+// MCP proxy build (stdio→UDS forwarder spawned by Claude Code — no vscode)
 // ---------------------------------------------------------------------------
-async function runMcpServerBuild() {
+async function runMcpProxyBuild() {
     const ctx = await esbuild.context({
-        entryPoints: ['src/mcp-server.ts'],
+        entryPoints: ['src/mcp-proxy.ts'],
         bundle: true,
         format: 'cjs',
         minify: production,
         sourcemap: !production,
         sourcesContent: false,
         platform: 'node',
-        outfile: 'dist/mcp-server.js',
-        // Externalize Node built-ins only; bundle @modelcontextprotocol/sdk + zod
-        external: ['vscode', 'fs', 'path', 'os', 'child_process', 'crypto', 'util'],
+        outfile: 'dist/mcp-proxy.js',
+        external: ['vscode', 'fs', 'path', 'os', 'child_process', 'crypto', 'util', 'net'],
         plugins: [aliasPlugin],
         logLevel: 'info',
         metafile: true,
     });
     if (watch) {
         await ctx.watch();
-        console.log('[esbuild] mcp-server: watching…');
+        console.log('[esbuild] mcp-proxy: watching…');
     } else {
         const result = await ctx.rebuild();
         logOutputSizes(result.metafile);
@@ -211,7 +210,7 @@ async function main() {
     const tasks = [];
     if (buildExtension) {
         tasks.push(runExtensionBuild());
-        tasks.push(runMcpServerBuild());
+        tasks.push(runMcpProxyBuild());
     }
     if (buildWebviews) {
         tasks.push(runWebviewBuild());

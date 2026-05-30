@@ -15,7 +15,6 @@ function verifyWithSkills(skills: Array<{ name: string; description: string | nu
         status: 'ok',
         checks: [{ name: 'skill-files', status: 'ok' }],
         inventory: { skills, mcps: [], sessionMcps: [] },
-        globalMcpRegistration: 'registered',
     };
 }
 
@@ -68,7 +67,7 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
     });
 
     describe('Badge Color (resolved state)', () => {
-        it('shows green color when verify-ai-setup returns all OK + registered', async () => {
+        it('shows green color when verify-ai-setup returns all OK', async () => {
             const { webviewClient } = require('@/core/ui/utils/WebviewClient');
             (webviewClient.request as jest.Mock).mockResolvedValue({
                 success: true,
@@ -80,35 +79,12 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
                     { name: 'skill-files', status: 'ok' },
                 ],
                 inventory: { skills: [], mcps: [], sessionMcps: [] },
-                globalMcpRegistration: 'registered',
             });
             renderDashboard();
             await waitFor(() => {
                 const badge = screen.getByTestId('status-card-AI Ready');
                 expect(badge.getAttribute('data-color')).toBe('green');
                 expect(badge.textContent).toMatch(/Ready/i);
-            });
-        });
-
-        it('shows yellow color when files OK but not registered globally', async () => {
-            const { webviewClient } = require('@/core/ui/utils/WebviewClient');
-            (webviewClient.request as jest.Mock).mockResolvedValue({
-                success: true,
-                status: 'ok',
-                checks: [
-                    { name: 'AGENTS.md', status: 'ok' },
-                    { name: '.claude/mcp.json', status: 'ok' },
-                    { name: 'mcp-binary', status: 'ok' },
-                    { name: 'skill-files', status: 'ok' },
-                ],
-                inventory: { skills: [], mcps: [], sessionMcps: [] },
-                globalMcpRegistration: 'unregistered',
-            });
-            renderDashboard();
-            await waitFor(() => {
-                const badge = screen.getByTestId('status-card-AI Ready');
-                expect(badge.getAttribute('data-color')).toBe('yellow');
-                expect(badge.textContent).toMatch(/Setup incomplete/i);
             });
         });
 
@@ -124,7 +100,6 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
                     { name: 'skill-files', status: 'ok' },
                 ],
                 inventory: { skills: [], mcps: [], sessionMcps: [] },
-                globalMcpRegistration: 'registered',
             });
             renderDashboard();
             await waitFor(() => {
@@ -167,7 +142,6 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
                     { name: 'skill-files', status: 'ok' as const },
                 ],
                 inventory: { skills, mcps, sessionMcps: [] },
-                globalMcpRegistration: 'registered' as const,
             };
         }
 
@@ -226,7 +200,6 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
                 status: 'warning',
                 checks: [{ name: 'AGENTS.md', status: 'warning' }],
                 inventory: { skills: [], mcps: [], sessionMcps: [] },
-                globalMcpRegistration: 'registered',
             });
             renderDashboard();
             await waitFor(() => {
@@ -249,7 +222,6 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
                 status: 'warning',
                 checks: [{ name: 'AGENTS.md', status: 'warning' }],
                 inventory: { skills: [], mcps: [], sessionMcps: [] },
-                globalMcpRegistration: 'registered',
             });
             renderDashboard();
             await waitFor(() => screen.getByTestId('ai-regenerate-trigger'));

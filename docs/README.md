@@ -20,6 +20,7 @@ Documentation about system design and high-level architecture.
 #### ⚙️ Systems
 Detailed documentation about specific subsystems.
 
+- **[MCP Server](./systems/mcp-server.md)** - How the in-extension Model Context Protocol server exposes the extension's capabilities as tools for AI agents (Claude Code). Start here if you're new to MCP.
 - **[Prerequisites System](./systems/prerequisites-system.md)** - Comprehensive guide to the configuration-driven prerequisites and progress tracking system
 - **[Error Logging](./systems/error-logging.md)** - Error handling, logging strategy, and notification system
 - **[Custom Block Libraries](./systems/custom-block-libraries.md)** - Creating standalone block libraries for use with the Demo Builder

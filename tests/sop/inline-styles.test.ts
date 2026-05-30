@@ -36,6 +36,7 @@ describe('SOP: Inline Styles', () => {
         'TimelineNav.tsx': 'Spectrum UNSAFE_style for background colors',
         'VerifiedField.tsx': 'Spectrum UNSAFE_style for semantic colors',
         'DaLiveOrgConfigSection.tsx': 'Spectrum UNSAFE_style for icon vertical alignment',
+        'Sidebar.tsx': 'Spectrum UNSAFE_style for top padding offset',
 
         // Grid layouts (CSS Grid properties for complex layouts)
         'ReviewStep.tsx': 'CSS Grid layout for two-column review summary',

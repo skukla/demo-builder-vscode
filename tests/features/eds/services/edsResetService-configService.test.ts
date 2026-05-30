@@ -78,7 +78,7 @@ jest.mock('@/features/project-creation/config/demo-packages.json', () => ({
             },
         },
     }],
-}), { virtual: true });
+}));
 
 jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),

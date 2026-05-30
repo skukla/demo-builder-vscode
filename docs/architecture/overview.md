@@ -42,9 +42,10 @@ The Adobe Demo Builder is a VS Code extension that streamlines the creation and 
 ├─────────────────────────────────────────────────────────────┤
 │  AI Context Layer (harness: Claude Code CLI)               │
 │  ├── aiContextWriter — Generates AGENTS.md + CLAUDE.md ptr │
-│  ├── skillsWriter — Writes 10 Demo-Builder skills          │
+│  ├── skillsWriter — Writes 11 Demo-Builder skills          │
 │  ├── mcpConfigWriter — Generates .mcp.json + tool settings │
-│  └── MCP Server (dist/mcp-server.js) — 8 project tools    │
+│  └── MCP Server (in-extension, via mcp-proxy.js) — agent  │
+│      tool surface; file-based subset shown below:          │
 │      list_projects · get_project · get_component_config ·  │
 │      update_project_config · sync_storefront · list_blocks │
 │      · get_block_source · promote_block_to_library          │
@@ -246,7 +247,7 @@ getCurrentOrganization() // SDK-powered, 1-minute cache
 - **`mcpConfigWriter`** (`src/features/project-creation/services/mcpConfigWriter.ts`): Generates `.mcp.json` (project root), `.claude/mcp.json`, and `.claude/settings.json` with the Demo Builder MCP server entry and a PostToolUse hook for auto-sync. Cursor and Codex read `.mcp.json` natively — no per-tool config files.
 - **`aiSetupVerifier`** (`src/features/ai/aiSetupVerifier.ts`): Runs four file-presence checks in parallel with `gatherInventory()`; returns `AiVerificationResult` with `{ status, checks, inventory }`.
 - **`skillInspector`, `mcpInspector`, `sessionMcpDetector`** (`src/features/ai/`, Cycle C): Three `vscode-free` services that populate the `inventory` payload. `mcpInspector` uses `@modelcontextprotocol/sdk` (stdio client) with a 5-min TTL cache and the SDK's safe env allowlist (no host-secret leakage). `sessionMcpDetector` reads `~/.claude.json::claudeAiMcpEverConnected` cross-referenced with `~/.claude/mcp-needs-auth-cache.json` (best-effort; undocumented Claude Code internal state).
-- **MCP Server** (`src/mcp-server.ts` → `dist/mcp-server.js`): Standalone stdio process (no VS Code dependency) exposing 8 project tools: `list_projects`, `get_project`, `get_component_config`, `update_project_config`, `sync_storefront`, `list_blocks`, `get_block_source`, `promote_block_to_library`.
+- **MCP Server** (`src/features/ai/server/inExtensionMcpServer.ts`): In-extension server on a per-workspace Unix socket, reached through the `dist/mcp-proxy.js` stdio↔socket forwarder. Because it runs in the extension host it reuses the extension's services, so tools do the same work as the UI. Exposes the full agent tool surface (auth, project lifecycle, cloud resources, storefront, updates); the `vscode`-free `src/mcp-server.ts` provides the shared file-based subset (`list_projects`, `get_project`, `get_component_config`, `update_project_config`, `sync_storefront`, `list_blocks`, `get_block_source`, `promote_block_to_library`) via `registerProjectTools`. **Full reference: [`../systems/mcp-server.md`](../systems/mcp-server.md).** (The old standalone `dist/mcp-server.js` process is retired.)
 
 **Integration Point**: `projectFinalizationService.generateAIContextFiles()` orchestrates all three writers as Phase 6 of project creation. The Configure → AI Configuration tab calls `verifyAiSetup()` to check the setup, `inspect-mcp` to introspect MCP tools, `register-global-mcp` to enroll in `~/.claude.json`, and offers regeneration.
 
@@ -370,7 +371,8 @@ Prefer adding to `src/features/<feature>/services/` or `src/core/utils/` rather 
 demo-builder-vscode/
 ├── src/
 │   ├── extension.ts              # VS Code extension entry point
-│   ├── mcp-server.ts             # Standalone MCP server entry point (separate process, no vscode)
+│   ├── mcp-server.ts             # Shared file-based tool registration (registerProjectTools), no vscode
+│   ├── mcp-proxy.ts              # stdio↔Unix-socket forwarder Claude Code spawns (→ dist/mcp-proxy.js)
 │   ├── commands/                 # Command implementations
 │   │   ├── createProjectWebview.ts   # Main wizard
 │   │   ├── startDemo.ts             # Start demo
@@ -472,7 +474,7 @@ try {
 
 ### Shipped in Phase 1 (AI layer, Cycles A–D)
 - AI context file generation at project creation (AGENTS.md, 3 lifecycle skills, MCP config)
-- Standalone Demo Builder MCP server (8 project tools for AI agents)
+- In-extension Demo Builder MCP server exposing the full agent tool surface (see [`../systems/mcp-server.md`](../systems/mcp-server.md))
 - AI Configuration tab in Configure screen — verifies AI files, inspects skills and MCP servers and session MCPs, manages global MCP registration, and regenerates AI context files (Cycle D)
 - Claude Code (CLI) as the primary AI harness — see [ADR-004](adr/004-claude-code-harness.md)
 - `@adobe-commerce/commerce-extensibility-tools` skill bundle installed per EDS project; updates surfaced by `AdobeMcpUpdateChecker` (Cycle B + D)

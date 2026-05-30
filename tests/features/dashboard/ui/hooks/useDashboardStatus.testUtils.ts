@@ -99,7 +99,6 @@ export const buildVerifyResponse = (overrides: {
         skillsError?: string;
         mcpsError?: string;
     };
-    globalMcpRegistration?: 'registered' | 'declined' | 'unregistered';
 } = {}) => ({
     success: true,
     status: 'ok',
@@ -120,7 +119,6 @@ export const buildVerifyResponse = (overrides: {
             ? { mcpsError: overrides.inventory.mcpsError }
             : {}),
     },
-    globalMcpRegistration: overrides.globalMcpRegistration ?? 'registered',
 });
 
 /**

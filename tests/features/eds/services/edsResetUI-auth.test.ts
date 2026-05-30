@@ -87,7 +87,7 @@ jest.mock('@/features/project-creation/config/demo-packages.json', () => ({
             },
         },
     }],
-}), { virtual: true });
+}));
 
 jest.mock('@/types/typeGuards', () => ({
     getMeshComponentInstance: jest.fn((project: any) => {

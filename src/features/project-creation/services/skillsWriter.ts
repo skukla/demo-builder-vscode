@@ -3,11 +3,12 @@
  *
  * Writes skill files to `{projectPath}/.claude/skills/`. Two sources:
  *
- * 1. **Demo Builder lifecycle skills** (always written): three procedural guides
+ * 1. **Demo Builder lifecycle skills** (always written): procedural guides
  *    that tell AI agents how to operate against the Demo Builder MCP server.
  *    - `add-component.md` — add or enable a component via update_project_config
  *    - `sync-changes.md` — push code changes via sync_storefront
  *    - `update-credentials.md` — edit .env credentials via update_project_config
+ *    - `create-eds-project.md` — provision a new project headlessly via create_project
  *
  * 2. **Adobe skill bundles** (component-driven): each `RawComponentDefinition`
  *    may declare `aiSkillBundle: { path, prefix }`. The bundle is copied from
@@ -27,10 +28,10 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as yaml from 'yaml';
-import componentsConfig from '@/features/components/config/components.json';
 import addComponentContent from '../templates/skills/add-component.md';
 import commerceBlockMapperContent from '../templates/skills/commerce-block-mapper.md';
 import connectAuthenticatedSiteContent from '../templates/skills/connect-authenticated-site.md';
+import createEdsProjectContent from '../templates/skills/create-eds-project.md';
 import demoDataInjectorContent from '../templates/skills/demo-data-injector.md';
 import headerNavFooterContent from '../templates/skills/header-nav-footer.md';
 import refineVisualMatchContent from '../templates/skills/refine-visual-match.md';
@@ -38,6 +39,7 @@ import registerCustomBlockContent from '../templates/skills/register-custom-bloc
 import scrapeReferenceSiteContent from '../templates/skills/scrape-reference-site.md';
 import syncChangesContent from '../templates/skills/sync-changes.md';
 import updateCredentialsContent from '../templates/skills/update-credentials.md';
+import componentsConfig from '@/features/components/config/components.json';
 import type { Project } from '@/types/base';
 import type { RawComponentDefinition, RawComponentRegistry } from '@/types/components';
 
@@ -67,8 +69,9 @@ const components = componentsConfig as unknown as RawComponentRegistry;
  * Write skill files to `{projectPath}/.claude/skills/`.
  *
  * Always writes:
- *   - Three Demo-Builder lifecycle skills (add-component, sync-changes,
- *     update-credentials) — operating against the Demo Builder MCP server.
+ *   - Four Demo-Builder lifecycle skills (add-component, sync-changes,
+ *     update-credentials, create-eds-project) — operating against the Demo
+ *     Builder MCP server.
  *   - Six EDS site-scraping skills (scrape-reference-site,
  *     connect-authenticated-site, commerce-block-mapper, demo-data-injector,
  *     header-nav-footer, refine-visual-match). They sit alongside the
@@ -102,6 +105,7 @@ export async function writeSkillFiles(
         writeSkill('add-component.md', addComponentContent),
         writeSkill('sync-changes.md', syncChangesContent),
         writeSkill('update-credentials.md', updateCredentialsContent),
+        writeSkill('create-eds-project.md', createEdsProjectContent),
         // EDS site-scraping skills
         writeSkill('scrape-reference-site.md', scrapeReferenceSiteContent),
         writeSkill('connect-authenticated-site.md', connectAuthenticatedSiteContent),

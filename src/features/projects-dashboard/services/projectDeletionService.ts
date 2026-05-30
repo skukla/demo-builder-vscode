@@ -120,32 +120,8 @@ export async function deleteProject(
 
             progress.report({ message: `Deleting "${project.name}"...` });
 
-            // Stop demo if running
-            if (project.status === 'running') {
-                await context.stateManager.saveProject(project);
-                await vscode.commands.executeCommand('demoBuilder.stopDemo');
-            }
-
-            // Delete project files with retry logic
-            const projectPath = project.path;
-            if (projectPath) {
-                context.logger.debug(`[Delete Project] Deleting directory: ${projectPath}`);
-                await new Promise(resolve => setTimeout(resolve, TIMEOUTS.FILE_HANDLE_RELEASE));
-                await deleteDirectoryWithRetry(projectPath, context);
-            }
-
-            // Remove from recent projects list
-            if (projectPath) {
-                await context.stateManager.removeFromRecentProjects(projectPath);
-            }
-
-            // Clear current project if it was the deleted one
-            const currentProject = await context.stateManager.getCurrentProject();
-            if (currentProject?.path === projectPath) {
-                await context.stateManager.clearProject();
-            }
-
-            context.logger.info(`Deleted project: ${project.name}`);
+            // Local deletion (stop demo, remove files, drop from recent, clear current).
+            await deleteProjectFiles(context, project);
 
             // Show success message
             progress.report({ message: `"${project.name}" deleted` });
@@ -180,6 +156,44 @@ export async function deleteProject(
         success: true,
         data: { success: true, projectName: project.name, cleanupResults },
     };
+}
+
+/**
+ * Delete a project's LOCAL footprint — no modals, no external-resource cleanup.
+ *
+ * Stops the demo if running, removes the project directory (with retry), drops it
+ * from the recent list, and clears the current-project pointer if it matched. The
+ * headless core shared by the UI `deleteProject` (which wraps it with confirmation
+ * + progress + optional EDS cloud cleanup) and the MCP `delete_project` tool
+ * (which gates it with confirm + a name echo). Cloud resources are handled
+ * separately (delete_github_repo / cleanup_dalive_site).
+ */
+export async function deleteProjectFiles(
+    context: HandlerContext,
+    project: Project,
+): Promise<void> {
+    // Stop demo if running
+    if (project.status === 'running') {
+        await context.stateManager.saveProject(project);
+        await vscode.commands.executeCommand('demoBuilder.stopDemo');
+    }
+
+    // Delete project files with retry logic, then drop from the recent list
+    const projectPath = project.path;
+    if (projectPath) {
+        context.logger.debug(`[Delete Project] Deleting directory: ${projectPath}`);
+        await new Promise(resolve => setTimeout(resolve, TIMEOUTS.FILE_HANDLE_RELEASE));
+        await deleteDirectoryWithRetry(projectPath, context);
+        await context.stateManager.removeFromRecentProjects(projectPath);
+    }
+
+    // Clear current project if it was the deleted one
+    const currentProject = await context.stateManager.getCurrentProject();
+    if (currentProject?.path === projectPath) {
+        await context.stateManager.clearProject();
+    }
+
+    context.logger.info(`Deleted project: ${project.name}`);
 }
 
 /**

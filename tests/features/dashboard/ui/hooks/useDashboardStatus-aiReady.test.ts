@@ -64,26 +64,7 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
         });
     });
 
-    it('returns yellow Setup incomplete when global MCP is unregistered', async () => {
-        mocks.mockRequest.mockResolvedValue(buildVerifyResponse({ globalMcpRegistration: 'unregistered' }));
-        const { result } = renderHook(() => useDashboardStatus());
-        await flushVerify();
-        expect(result.current.aiReady).toEqual({
-            label: 'AI Ready',
-            color: 'yellow',
-            text: 'Setup incomplete',
-        });
-    });
-
-    it('returns yellow Setup incomplete when global MCP is declined', async () => {
-        mocks.mockRequest.mockResolvedValue(buildVerifyResponse({ globalMcpRegistration: 'declined' }));
-        const { result } = renderHook(() => useDashboardStatus());
-        await flushVerify();
-        expect(result.current.aiReady.color).toBe('yellow');
-        expect(result.current.aiReady.text).toBe('Setup incomplete');
-    });
-
-    it('returns yellow Setup incomplete when inventory mcpsError is set (files OK, registered)', async () => {
+    it('returns yellow Setup incomplete when inventory mcpsError is set (files OK)', async () => {
         mocks.mockRequest.mockResolvedValue(
             buildVerifyResponse({
                 inventory: { mcpsError: 'mcp inspector failed' },
