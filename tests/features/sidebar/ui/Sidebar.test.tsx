@@ -9,7 +9,6 @@ import { Sidebar } from '@/features/sidebar/ui/Sidebar';
 import {
     createProjectsContext,
     createProjectContext,
-    createWizardContext,
     createConfigureContext,
 } from '../testUtils';
 
@@ -226,60 +225,7 @@ describe('Sidebar', () => {
         });
     });
 
-    describe('Wizard context', () => {
-        it('renders "Setup Progress" header', () => {
-            renderWithProvider(
-                <Sidebar
-                    context={createWizardContext()}
-                    onNavigate={jest.fn()}
-                    onCreateProject={jest.fn()}
-                />,
-            );
-
-            expect(screen.getByText('Setup Progress')).toBeInTheDocument();
-        });
-
-        it('renders wizard step labels', () => {
-            renderWithProvider(
-                <Sidebar
-                    context={createWizardContext(2)}
-                    onNavigate={jest.fn()}
-                    onCreateProject={jest.fn()}
-                />,
-            );
-
-            expect(screen.getByText('Sign In')).toBeInTheDocument();
-            expect(screen.getByText('Project')).toBeInTheDocument();
-            expect(screen.getByText('Workspace')).toBeInTheDocument();
-            expect(screen.getByText('Components')).toBeInTheDocument();
-            expect(screen.getByText('API Mesh')).toBeInTheDocument();
-            expect(screen.getByText('Review')).toBeInTheDocument();
-        });
-
-        it('marks the current step with aria-current', () => {
-            renderWithProvider(
-                <Sidebar
-                    context={createWizardContext(2)}
-                    onNavigate={jest.fn()}
-                    onCreateProject={jest.fn()}
-                />,
-            );
-
-            const currentStep = screen.getByTestId('timeline-step-project');
-            expect(currentStep).toHaveAttribute('aria-current', 'step');
-        });
-
-        it('renders the utility footer below the timeline', () => {
-            const { container } = renderWithProvider(
-                <Sidebar
-                    context={createWizardContext()}
-                    onNavigate={jest.fn()}
-                    onCreateProject={jest.fn()}
-                    onOpenTools={jest.fn()}
-                />,
-            );
-
-            expect(container.querySelector('.sidebar-utility-bar')).toBeInTheDocument();
-        });
-    });
+    // Wizard mode is intentionally absent — the wizard timeline lives inside
+    // the wizard webview's own left column, not the sidebar. While the wizard
+    // is active the sidebar shows the projects-list-equivalent layout.
 });

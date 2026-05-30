@@ -82,8 +82,8 @@ export class CommandManager {
             // args[0] may contain { importedSettings, sourceDescription } when launched from Import
             const options = args[0] as Parameters<typeof this.createProjectWebview.execute>[0] | undefined;
             await this.createProjectWebview.execute(options);
-            // Show sidebar for wizard progress (after webview is loaded)
-            await vscode.commands.executeCommand('workbench.view.extension.demoBuilder');
+            // Wizard progress now renders inside the wizard webview's left
+            // column; no sidebar reveal needed.
         });
 
         // Project Dashboard (Post-creation guide)

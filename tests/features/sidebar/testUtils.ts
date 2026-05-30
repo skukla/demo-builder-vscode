@@ -3,7 +3,7 @@
  */
 
 import type { Project } from '@/types/base';
-import type { SidebarContext, NavItem, WizardStep } from '@/features/sidebar/types';
+import type { SidebarContext, NavItem } from '@/features/sidebar/types';
 
 /**
  * Creates a mock project for testing
@@ -39,24 +39,6 @@ export function createProjectContext(project?: Partial<Project>): SidebarContext
 }
 
 /**
- * Creates a Wizard context
- * @param step - Current step (1-indexed for display)
- * @param total - Total number of steps
- * @param completedSteps - Array of completed step indices (0-indexed)
- */
-export function createWizardContext(step = 1, total = 6, completedSteps?: number[]): SidebarContext {
-    // If completedSteps not provided, compute from step (all steps before current are completed)
-    const completed = completedSteps ?? Array.from({ length: step - 1 }, (_, i) => i);
-    return {
-        type: 'wizard',
-        step,
-        total,
-        completedSteps: completed,
-        steps: DEFAULT_WIZARD_STEPS,
-    };
-}
-
-/**
  * Creates a Configure context
  */
 export function createConfigureContext(project?: Partial<Project>): SidebarContext {
@@ -65,18 +47,6 @@ export function createConfigureContext(project?: Partial<Project>): SidebarConte
         project: createMockProject(project),
     };
 }
-
-/**
- * Default wizard steps
- */
-export const DEFAULT_WIZARD_STEPS: WizardStep[] = [
-    { id: 'auth', label: 'Sign In' },
-    { id: 'project', label: 'Project' },
-    { id: 'workspace', label: 'Workspace' },
-    { id: 'components', label: 'Components' },
-    { id: 'mesh', label: 'API Mesh' },
-    { id: 'review', label: 'Review' },
-];
 
 /**
  * Creates navigation items for projects context

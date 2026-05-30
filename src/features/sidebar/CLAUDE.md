@@ -7,7 +7,6 @@ The Sidebar feature provides contextual navigation for the Demo Builder extensio
 ## Purpose
 
 - Display contextual navigation based on current screen
-- Show wizard progress during project creation
 - Provide AI access (Chat + Prompts) scoped to project context
 - Support back navigation and context switching
 
@@ -16,7 +15,7 @@ The Sidebar feature provides contextual navigation for the Demo Builder extensio
 ```
 sidebar/
 ├── index.ts                    # Public exports
-├── types.ts                    # Sidebar types (SidebarContext, NavItem, WizardStep)
+├── types.ts                    # Sidebar types (SidebarContext, NavItem)
 ├── providers/
 │   └── sidebarProvider.ts      # WebviewViewProvider implementation
 ├── handlers/
@@ -36,16 +35,21 @@ sidebar/
 
 ## Context Types
 
-The sidebar renders different content based on context. **Five context types** exist:
+The sidebar renders different content based on context. **Four context types** exist:
 
 ```typescript
 type SidebarContext =
     | { type: 'projects' }                              // Projects Dashboard (no project loaded)
     | { type: 'projectsList' }                          // Projects List home grid
     | { type: 'project'; project: Project }             // Project Detail
-    | { type: 'wizard'; step: number; total: number; …} // Wizard
     | { type: 'configure'; project: Project };          // Configure
 ```
+
+**Wizard mode is intentionally absent.** The wizard's progress timeline
+lives inside the wizard webview's own left column (`WizardContainer`'s
+`.wizard-timeline-column`), not in the sidebar. While the wizard is active
+the sidebar falls through to a non-wizard context (typically `projects` if
+no project is loaded).
 
 ### Projects and ProjectsList Contexts (no project loaded)
 - Renders the `UtilityBar` only — three icons: **Tools / Help / Settings**.
@@ -68,16 +72,6 @@ type SidebarContext =
 - Footer: `UtilityBar` in compact mode (3 icons: Tools, Help, Settings).
 - Back navigation lives in the Project Dashboard webview's header
   ("All Projects" button), not in the sidebar.
-
-### Wizard Context
-- Top: shared `TimelineNav` (`@/core/ui/components/TimelineNav`) with
-  `headerText="Setup Progress"`, `compact={true}`, `showHeader={true}`.
-  Step indicators include completed / current / future plus a
-  `confirmedStepIndices` set for edit-mode navigation.
-- Bottom: `UtilityBar` in compact mode (3 icons: Tools, Help, Settings). No
-  AI access in wizard mode — that surface is project-scoped.
-- No "Cancel" back button is rendered in the sidebar; cancel/exit lives in
-  the wizard webview itself.
 
 ### Configure Context
 - Body (top to bottom):
@@ -181,10 +175,10 @@ const result = await handleGetContext(context);
 
 ### handleSetContext
 
-Sets sidebar context (mainly for wizard state).
+Sets sidebar context (used by commands to push a new context to the webview).
 
 ```typescript
-const result = await handleSetContext(context, { context: { type: 'wizard', step: 2, total: 6 } });
+const result = await handleSetContext(context, { context: { type: 'projectsList' } });
 // { success: true }
 ```
 
@@ -244,7 +238,7 @@ tests/features/sidebar/
 ## Related Features
 
 - **projects-dashboard** - Main content when sidebar shows projects context
-- **project-creation** - Wizard that updates sidebar context
+- **project-creation** - Wizard webview that hosts its own progress timeline (no sidebar coupling)
 - **dashboard** - Project detail screen
 - **commands/openInClaude.ts** - Backs `demoBuilder.openAiExperience`,
   invoked by AiZone's Chat button

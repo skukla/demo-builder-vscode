@@ -8,10 +8,15 @@
  * Modes:
  *   - `projects` / `projectsList` — UtilityBar only (3 icons). AI is
  *     project-scoped, so it doesn't appear here.
- *   - `project` — AiZone (Chat + Prompts) paired above the UtilityBar footer.
+ *   - `project` — AiZone (Chat + Prompts) paired above the UtilityBar footer,
+ *     vertically centered as a group.
  *   - `configure` — back + project name + nav, then AiZone paired above the
- *     UtilityBar footer.
- *   - `wizard` — shared `TimelineNav` above a UtilityBar footer.
+ *     UtilityBar footer at the bottom.
+ *
+ * Note: there is no wizard mode. The wizard's progress timeline lives inside
+ * the wizard webview's own left column (`WizardContainer`), not the sidebar.
+ * While the wizard is active the sidebar shows whatever non-wizard context
+ * applies (usually `projects`).
  */
 
 import { Flex, Text, ActionButton } from '@adobe/react-spectrum';
@@ -21,7 +26,6 @@ import type { SidebarContext, NavItem } from '../types';
 import { AiZone } from './components/AiZone';
 import { SidebarNav } from './components/SidebarNav';
 import { UtilityBar } from './views';
-import { TimelineNav, TimelineStep } from '@/core/ui/components/TimelineNav';
 
 export interface SidebarProps {
     /** Current sidebar context */
@@ -52,8 +56,6 @@ export interface SidebarProps {
     onOpenConfigure?: () => void;
     /** Callback to check for updates */
     onCheckUpdates?: () => void;
-    /** Callback when wizard step is clicked (for back navigation) */
-    onWizardStepClick?: (stepIndex: number) => void;
 }
 
 /**
@@ -74,7 +76,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onOpenDashboard: _onOpenDashboard,
     onOpenConfigure: _onOpenConfigure,
     onCheckUpdates: _onCheckUpdates,
-    onWizardStepClick,
 }) => {
     // Projects-list / no-project: UtilityBar only. AI is project-scoped, so
     // it intentionally doesn't appear in this mode.
@@ -88,47 +89,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         );
     }
 
-    // Wizard: TimelineNav + compact UtilityBar footer.
-    if (context.type === 'wizard') {
-        const timelineSteps: TimelineStep[] = context.steps?.map(s => ({
-            id: s.id,
-            name: s.label,
-        })) || [];
-
-        return (
-            <Flex
-                direction="column"
-                height="100%"
-                UNSAFE_className="sidebar-wizard-view"
-            >
-                <div style={{ flex: 1, overflow: 'auto' }}>
-                    <TimelineNav
-                        steps={timelineSteps}
-                        currentStepIndex={context.step - 1}
-                        completedStepIndices={context.completedSteps || []}
-                        confirmedStepIndices={context.confirmedSteps || []}
-                        onStepClick={onWizardStepClick}
-                        compact={true}
-                        showHeader={true}
-                        headerText="Setup Progress"
-                        isEditMode={context.isEditMode}
-                    />
-                </div>
-
-                <UtilityBar
-                    onOpenTools={onOpenTools}
-                    onOpenHelp={onOpenHelp}
-                    onOpenSettings={onOpenSettings}
-                    compact
-                />
-            </Flex>
-        );
-    }
+    const showAiZone = onOpenAiChat && onShowPrompts;
 
     // Project mode: AiZone + UtilityBar as a single group, vertically centered
     // in the sidebar. No lines, no project header — keeps the surface minimal.
-    const showAiZone = onOpenAiChat && onShowPrompts;
-
     if (context.type === 'project') {
         return (
             <Flex

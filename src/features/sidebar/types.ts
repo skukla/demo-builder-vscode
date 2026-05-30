@@ -7,13 +7,17 @@
 import type { Project } from '@/types/base';
 
 /**
- * Sidebar context - determines what the sidebar displays
+ * Sidebar context - determines what the sidebar displays.
+ *
+ * Wizard mode is intentionally absent: the wizard's progress timeline lives
+ * inside the wizard webview's own left column (`WizardContainer`), not in
+ * the sidebar. While the wizard is active the sidebar falls through to one
+ * of the four contexts below (typically `projects` if no project is loaded).
  */
 export type SidebarContext =
     | { type: 'projects' }                                                          // Projects Dashboard (no project loaded)
     | { type: 'projectsList' }                                                      // Projects List (utility icons only)
     | { type: 'project'; project: Project }                                         // Project Detail
-    | { type: 'wizard'; step: number; total: number; completedSteps?: number[]; confirmedSteps?: number[]; steps?: WizardStep[]; isEditMode?: boolean }    // Wizard
     | { type: 'configure'; project: Project };                                      // Configure
 
 /**
@@ -52,5 +56,4 @@ export type NavigationTarget =
     | 'projects'
     | 'project-detail'
     | 'configure'
-    | 'updates'
-    | 'wizard';
+    | 'updates';

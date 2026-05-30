@@ -126,11 +126,6 @@ function SidebarApp(): React.ReactElement {
         sendMessage('checkUpdates');
     }, []);
 
-    // Handle wizard step click (for back navigation)
-    const handleWizardStepClick = useCallback((stepIndex: number) => {
-        sendMessage('wizardStepClick', { stepIndex });
-    }, []);
-
     // Apply VSCode dark theme class to body (unified theme system ignores user preferences)
     useEffect(() => {
         document.body.classList.add('vscode-dark');
@@ -167,7 +162,6 @@ function SidebarApp(): React.ReactElement {
                 onOpenDashboard={handleOpenDashboard}
                 onOpenConfigure={handleOpenConfigure}
                 onCheckUpdates={handleCheckUpdates}
-                onWizardStepClick={handleWizardStepClick}
             />
         </Provider>
     );

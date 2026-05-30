@@ -631,13 +631,23 @@ button[class*="spectrum-Button"][disabled],
     border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
 }
 
+/* Wizard timeline column — left rail housing TimelineNav (formerly in the
+   sidebar). Width matches VS Code's default primary sidebar so the timeline
+   has the same visual footprint as before. */
+.wizard-timeline-column {
+    flex: 0 0 280px !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+    border-right: 1px solid var(--spectrum-global-color-gray-200) !important;
+}
+
 /* Wizard main content area */
 .wizard-main-content {
     display: flex !important;
     flex-direction: column !important;
     flex: 1 !important;
     height: 100% !important;
-    width: 100% !important;
+    min-width: 0 !important;
 }
 
 /* Step main content area */

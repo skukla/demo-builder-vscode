@@ -301,8 +301,7 @@ features/my-feature/
 - `SidebarNav` - Navigation list (used in configure mode only)
 
 **Responsibilities:**
-- Context-aware navigation across five context types (`projects`, `projectsList`, `project`, `wizard`, `configure`)
-- Wizard step progress display via shared `TimelineNav`
+- Context-aware navigation across four context types (`projects`, `projectsList`, `project`, `configure`)
 - Project-detail navigation (Overview, Configure, Updates) in the configure context
 - AI access (Chat + Prompts) in project and configure contexts via the `AiZone` component
 - Back navigation in configure mode only; other modes' back is in the main webview header
