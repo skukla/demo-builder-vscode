@@ -1,20 +1,26 @@
 /**
  * Sidebar Component
  *
- * Main sidebar container that renders contextual content based on state.
- * Shows different views depending on whether user has a project, is in wizard, etc.
+ * Single layout across all contexts: AiZone (Chat + Prompts) above UtilityBar
+ * (Tools + Help + Settings), vertically centered as one group. AI is globally
+ * available — MCP is wired at the extension level, not per project — so the
+ * AiZone renders in every sidebar context.
+ *
+ * Surfaces that previously rendered inside the sidebar (wizard's TimelineNav,
+ * a now-deleted configure-mode nav) have moved into their own webviews.
  */
 
-import { Flex, Text, ActionButton, Divider } from '@adobe/react-spectrum';
-import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft';
+import { Flex } from '@adobe/react-spectrum';
 import React from 'react';
-import type { SidebarContext, NavItem } from '../types';
-import { SidebarNav } from './components/SidebarNav';
+import type { SidebarContext } from '../types';
+import { AiZone } from './components/AiZone';
 import { UtilityBar } from './views';
-import { TimelineNav, TimelineStep } from '@/core/ui/components/TimelineNav';
 
 export interface SidebarProps {
-    /** Current sidebar context */
+    /**
+     * Current sidebar context — retained for the message protocol but unused
+     * by the rendered layout (all contexts render identically).
+     */
     context: SidebarContext;
     /** Callback for navigation actions */
     onNavigate: (target: string) => void;
@@ -28,8 +34,10 @@ export interface SidebarProps {
     onOpenHelp?: () => void;
     /** Callback for opening settings */
     onOpenSettings?: () => void;
-    /** Callback for opening the AI prompts QuickPick menu */
-    onOpenAiMenu?: () => void;
+    /** Callback to open Claude chat — Chat button in AiZone. */
+    onOpenAiChat?: () => void;
+    /** Callback to show the prompt picker — Prompts button in AiZone. */
+    onShowPrompts?: () => void;
     /** Callback to start demo */
     onStartDemo?: () => void;
     /** Callback to stop demo */
@@ -40,155 +48,50 @@ export interface SidebarProps {
     onOpenConfigure?: () => void;
     /** Callback to check for updates */
     onCheckUpdates?: () => void;
-    /** Callback when wizard step is clicked (for back navigation) */
-    onWizardStepClick?: (stepIndex: number) => void;
 }
 
 /**
- * Sidebar - Main sidebar container
+ * Sidebar — single centered group: AiZone above UtilityBar.
  */
 export const Sidebar: React.FC<SidebarProps> = ({
-    context,
-    onNavigate,
-    onBack,
+    context: _context,
+    onNavigate: _onNavigate,
+    onBack: _onBack,
     onCreateProject: _onCreateProject,
     onOpenTools,
     onOpenHelp,
     onOpenSettings,
-    onOpenAiMenu,
+    onOpenAiChat,
+    onShowPrompts,
     onStartDemo: _onStartDemo,
     onStopDemo: _onStopDemo,
     onOpenDashboard: _onOpenDashboard,
     onOpenConfigure: _onOpenConfigure,
     onCheckUpdates: _onCheckUpdates,
-    onWizardStepClick,
 }) => {
-    // For projects, projectsList, or project context, show UtilityBar
-    // (The detailed project controls are in the Project Dashboard main panel)
-    if (context.type === 'projects' || context.type === 'projectsList' || context.type === 'project') {
-        return (
+    const showAiZone = onOpenAiChat && onShowPrompts;
+    return (
+        <Flex
+            direction="column"
+            height="100%"
+            justifyContent="start"
+            alignItems="center"
+            gap="size-300"
+            UNSAFE_className="sidebar-view"
+            UNSAFE_style={{ paddingTop: '80px' }}
+        >
+            {showAiZone && (
+                <AiZone
+                    onOpenAiChat={onOpenAiChat}
+                    onShowPrompts={onShowPrompts}
+                />
+            )}
             <UtilityBar
                 onOpenTools={onOpenTools}
                 onOpenHelp={onOpenHelp}
                 onOpenSettings={onOpenSettings}
-                onOpenAiMenu={onOpenAiMenu}
+                compact
             />
-        );
-    }
-
-    // For wizard context, show wizard progress using shared TimelineNav
-    if (context.type === 'wizard') {
-        // Convert steps to TimelineStep format (id, name)
-        const timelineSteps: TimelineStep[] = context.steps?.map(s => ({
-            id: s.id,
-            name: s.label,
-        })) || [];
-
-        return (
-            <Flex
-                direction="column"
-                height="100%"
-                UNSAFE_className="sidebar-wizard-view"
-            >
-                {/* Wizard progress using shared TimelineNav */}
-                <div style={{ flex: 1, overflow: 'auto' }}>
-                    <TimelineNav
-                        steps={timelineSteps}
-                        currentStepIndex={context.step - 1}
-                        completedStepIndices={context.completedSteps || []}
-                        confirmedStepIndices={context.confirmedSteps || []}
-                        onStepClick={onWizardStepClick}
-                        compact={true}
-                        showHeader={true}
-                        headerText="Setup Progress"
-                        isEditMode={context.isEditMode}
-                    />
-                </div>
-
-                {/* Footer: utility icons matching PageFooter height */}
-                <div className="border-t sidebar-utility-footer">
-                    <UtilityBar
-                        onOpenTools={onOpenTools}
-                        onOpenHelp={onOpenHelp}
-                        onOpenSettings={onOpenSettings}
-                        compact
-                    />
-                </div>
-            </Flex>
-        );
-    }
-
-    // For configure context, show navigation-based UI
-    return (
-        <Flex
-            direction="column"
-            gap="size-200"
-            UNSAFE_className="p-2"
-            height="100%"
-        >
-            {/* Back button */}
-            {onBack && (
-                <ActionButton isQuiet onPress={onBack}>
-                    <ChevronLeft />
-                    <Text>Projects</Text>
-                </ActionButton>
-            )}
-
-            {/* Context-specific header */}
-            {renderHeader(context)}
-
-            <Divider size="S" />
-
-            {/* Context-specific navigation */}
-            {renderContent(context, onNavigate)}
         </Flex>
     );
 };
-
-function renderHeader(context: SidebarContext): React.ReactNode {
-    switch (context.type) {
-        case 'project':
-        case 'configure':
-            return (
-                <Text UNSAFE_className="font-semibold text-sm truncate">
-                    {context.project.name}
-                </Text>
-            );
-        default:
-            return null;
-    }
-}
-
-function renderContent(
-    context: SidebarContext,
-    onNavigate: (target: string) => void,
-): React.ReactNode {
-    switch (context.type) {
-        case 'project':
-            return (
-                <SidebarNav
-                    items={getProjectDetailNavItems('overview')}
-                    onNavigate={onNavigate}
-                />
-            );
-        case 'configure':
-            return (
-                <SidebarNav
-                    items={getProjectDetailNavItems('configure')}
-                    onNavigate={onNavigate}
-                />
-            );
-        default:
-            return null;
-    }
-}
-
-function getProjectDetailNavItems(activeId: string): NavItem[] {
-    return [
-        { id: 'overview', label: 'Overview', active: activeId === 'overview' },
-        { id: 'configure', label: 'Configure', active: activeId === 'configure' },
-        { id: 'updates', label: 'Updates', active: activeId === 'updates' },
-        // rename "AI Configuration" → "AI"; target id 'ai' routes to demoBuilder.openAi
-        { id: 'ai', label: 'AI', active: activeId === 'ai' },
-    ];
-}

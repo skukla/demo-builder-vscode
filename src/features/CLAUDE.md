@@ -296,14 +296,13 @@ features/my-feature/
 **Key Services:**
 - `SidebarProvider` - VS Code WebviewViewProvider implementation
 - `Sidebar` - Main sidebar component
-- `SidebarNav` - Navigation list component
-- `WizardProgress` - Wizard step progress display
+- `AiZone` - AI icon pair (Chat + Prompts), globally available
+- `UtilityBar` - Three-icon utility row (Tools, Help, Settings)
 
 **Responsibilities:**
-- Context-aware navigation (projects, project detail, wizard, configure)
-- Wizard step progress display
-- Back navigation
-- Project-specific navigation (Overview, Configure, Updates)
+- Single rendered layout across all three context types (`projects`, `projectsList`, `project`): centered AiZone + UtilityBar group
+- AI access (Chat + Prompts) globally — MCP is wired at the extension level, not per project
+- Wizard and Configure screens are NOT sidebar contexts — they own their own surfaces (TimelineNav in the wizard webview, Cancel footer in the Configure webview)
 
 **Path Alias**: `@/features/sidebar`
 

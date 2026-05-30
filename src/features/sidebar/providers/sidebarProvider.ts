@@ -18,7 +18,6 @@ import type { Logger } from '@/types/logger';
  * Provides contextual navigation:
  * - Projects: Shows projects list navigation
  * - Project Detail: Shows project-specific navigation (Overview, Configure, Updates)
- * - Wizard: Shows wizard step progress
  */
 export class SidebarProvider implements vscode.WebviewViewProvider {
     /** The view ID registered in package.json */
@@ -27,9 +26,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     private view?: vscode.WebviewView;
     private extensionUri: vscode.Uri;
 
-    // Local context state (for wizard tracking)
-    // Stores the full wizard context including steps array
-    private wizardContext?: { step: number; total: number; completedSteps?: number[]; steps?: { id: string; label: string }[]; isEditMode?: boolean };
 
     // Track when we're showing the Projects List (vs Project Dashboard)
     private showingProjectsList = false;
@@ -78,17 +74,17 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             this.view = undefined;
         });
 
-        // When sidebar is revealed (user clicks extension icon), auto-open the main dashboard
-        // Only if not in wizard mode and no webview panels are currently open
+        // When sidebar is revealed (user clicks extension icon), auto-open
+        // the main dashboard — unless a webview panel is already open.
         webviewView.onDidChangeVisibility(() => {
-            if (webviewView.visible && !this.wizardContext && !this.hasOpenWebview()) {
+            if (webviewView.visible && !this.hasOpenWebview()) {
                 this.openMainDashboard();
             }
         });
 
-        // Also open on initial resolve (first time sidebar is shown)
-        // Skip if a webview panel is already open
-        if (!this.wizardContext && !this.hasOpenWebview()) {
+        // Also open on initial resolve (first time sidebar is shown).
+        // Skip if a webview panel is already open.
+        if (!this.hasOpenWebview()) {
             this.openMainDashboard();
         }
 
@@ -162,37 +158,13 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     }
 
     /**
-     * Update the sidebar context
-     * Call this from wizard or other commands to update the sidebar
+     * Update the sidebar context.
+     * Used by commands that need to push a new context to the sidebar webview
+     * (e.g., projects list vs project detail). Wizard mode no longer uses this
+     * — the wizard timeline lives inside the wizard webview itself.
      */
     public async updateContext(context: SidebarContext): Promise<void> {
-        // Store wizard context locally (including steps array for getContext requests)
-        if (context.type === 'wizard') {
-            this.wizardContext = {
-                step: context.step,
-                total: context.total,
-                completedSteps: context.completedSteps,
-                steps: context.steps,
-            };
-        } else {
-            this.wizardContext = undefined;
-        }
-
         await this.sendMessage('contextUpdate', { context });
-    }
-
-    /**
-     * Clear wizard context (call when wizard closes)
-     * Sends updated context to webview to refresh the sidebar view
-     */
-    public async clearWizardContext(): Promise<void> {
-        this.logger.info('Clearing wizard context from sidebar');
-        this.wizardContext = undefined;
-
-        // Get the new context (will be 'projects' or 'project' based on state)
-        const newContext = await this.getCurrentContext();
-        this.logger.info(`New sidebar context: ${newContext.type}`);
-        await this.sendMessage('contextUpdate', { context: newContext });
     }
 
     /**
@@ -240,8 +212,12 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 await this.handleOpenSettings();
                 break;
 
-            case 'openAiMenu':
-                await this.handleOpenAiMenu();
+            case 'openAiChat':
+                await this.handleOpenAiChat();
+                break;
+
+            case 'showPrompts':
+                await this.handleShowPrompts();
                 break;
 
             case 'startDemo':
@@ -264,10 +240,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 await this.handleCheckUpdates();
                 break;
 
-            case 'wizardStepClick':
-                await this.handleWizardStepClick(message.payload as { stepIndex: number } | undefined);
-                break;
-
             default:
                 this.logger.warn(`Unknown sidebar message: ${message.type}`);
         }
@@ -285,18 +257,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
      * Get current sidebar context based on state
      */
     private async getCurrentContext(): Promise<SidebarContext> {
-        // Check for wizard state (stored locally)
-        if (this.wizardContext) {
-            return {
-                type: 'wizard',
-                step: this.wizardContext.step,
-                total: this.wizardContext.total,
-                completedSteps: this.wizardContext.completedSteps,
-                steps: this.wizardContext.steps,
-                isEditMode: this.wizardContext.isEditMode,
-            };
-        }
-
         // Check for current project
         const currentProject = await this.stateManager.getCurrentProject();
 
@@ -342,21 +302,14 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
     /**
      * Handle back navigation
-     * Context-aware: closes wizard when in wizard context, otherwise navigates back
      */
     private async handleBack(): Promise<void> {
         this.logger.info('Sidebar back navigation');
 
         try {
-            // If in wizard context, close the active editor (wizard panel)
-            if (this.wizardContext) {
-                // Close the active editor which will trigger the wizard's dispose()
-                // The dispose() method will call clearWizardContext() to update sidebar
-                await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
-            } else {
-                // For other contexts, navigate back (future implementation)
-                this.logger.debug('Back navigation: no wizard context, no-op for now');
-            }
+            // No-op for now — back navigation in surfaces that need it lives
+            // in the webview's own header, not the sidebar.
+            this.logger.debug('Back navigation: no-op');
         } catch (error) {
             this.logger.error(
                 'Back navigation failed',
@@ -433,16 +386,34 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     }
 
     /**
-     * Handle open AI menu request — opens the chat-first AI QuickPick.
+     * Handle open AI chat request — opens/focuses the Claude terminal.
+     * Backs the Chat button in the sidebar's AiZone.
      */
-    private async handleOpenAiMenu(): Promise<void> {
-        this.logger.info('Sidebar: Open AI menu');
+    private async handleOpenAiChat(): Promise<void> {
+        this.logger.info('Sidebar: Open AI chat');
 
         try {
-            await vscode.commands.executeCommand('demoBuilder.aiMenu');
+            await vscode.commands.executeCommand('demoBuilder.openAiExperience');
         } catch (error) {
             this.logger.error(
-                'Open AI menu failed',
+                'Open AI chat failed',
+                error instanceof Error ? error : undefined,
+            );
+        }
+    }
+
+    /**
+     * Handle show prompts request — shows the prompt QuickPick.
+     * Backs the Prompts button in the sidebar's AiZone.
+     */
+    private async handleShowPrompts(): Promise<void> {
+        this.logger.info('Sidebar: Show prompts');
+
+        try {
+            await vscode.commands.executeCommand('demoBuilder.showPromptsPicker');
+        } catch (error) {
+            this.logger.error(
+                'Show prompts failed',
                 error instanceof Error ? error : undefined,
             );
         }
@@ -523,27 +494,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         } catch (error) {
             this.logger.error(
                 'Check updates failed',
-                error instanceof Error ? error : undefined,
-            );
-        }
-    }
-
-    /**
-     * Handle wizard step click (for back navigation)
-     */
-    private async handleWizardStepClick(payload?: { stepIndex: number }): Promise<void> {
-        if (payload?.stepIndex === undefined) {
-            this.logger.warn('Wizard step click: stepIndex not provided');
-            return;
-        }
-
-        this.logger.info(`Sidebar: Navigate wizard to step ${payload.stepIndex}`);
-
-        try {
-            await vscode.commands.executeCommand('demoBuilder.internal.wizardNavigate', payload.stepIndex);
-        } catch (error) {
-            this.logger.error(
-                'Wizard navigation failed',
                 error instanceof Error ? error : undefined,
             );
         }

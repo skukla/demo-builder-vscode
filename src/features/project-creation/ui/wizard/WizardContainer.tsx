@@ -16,6 +16,7 @@ import {
     useWizardEffects,
 } from './hooks';
 import {
+    getCompletedStepIndices,
     getNextButtonText,
     getNavigationDirection,
     shouldShowWizardFooter,
@@ -28,6 +29,7 @@ import {
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
 import { LoadingOverlay } from '@/core/ui/components/feedback';
 import { PageHeader, PageFooter } from '@/core/ui/components/layout';
+import { TimelineNav, TimelineStep } from '@/core/ui/components/TimelineNav';
 import { useFocusTrap } from '@/core/ui/hooks';
 import { cn } from '@/core/ui/utils/classNames';
 import { vscode } from '@/core/ui/utils/vscode-api';
@@ -359,6 +361,24 @@ export function WizardContainer({
     const currentStepName = WIZARD_STEPS[currentStepIndex]?.name;
     const currentStepDescription = WIZARD_STEPS[currentStepIndex]?.description;
 
+    // Timeline state — derived from local wizard state, no sidebar messaging.
+    const timelineSteps: TimelineStep[] = WIZARD_STEPS.map(s => ({ id: s.id, name: s.name }));
+    const completedStepIndices = getCompletedStepIndices(completedSteps, WIZARD_STEPS);
+    const confirmedStepIndices = getCompletedStepIndices(confirmedSteps, WIZARD_STEPS);
+    const isEditMode = state.wizardMode ? state.wizardMode !== 'create' : state.editMode;
+
+    const handleTimelineStepClick = (targetIndex: number) => {
+        const targetStep = WIZARD_STEPS[targetIndex];
+        if (!targetStep || targetIndex === currentStepIndex) return;
+        // Same navigation pattern as useMessageListeners' navigateToStep callback.
+        setAnimationDirection(getNavigationDirection(targetIndex, currentStepIndex));
+        setIsTransitioning(true);
+        setTimeout(() => {
+            setState(prev => ({ ...prev, currentStep: targetStep.id }));
+            setIsTransitioning(false);
+        }, TIMEOUTS.STEP_TRANSITION);
+    };
+
     return (
         <View
             backgroundColor="gray-50"
@@ -367,7 +387,24 @@ export function WizardContainer({
             UNSAFE_className={cn('flex', 'overflow-hidden')}
         >
             <div ref={wizardContainerRef} className="flex h-full w-full">
-                {/* Content Area - Timeline moved to sidebar */}
+                {/* Timeline column — TimelineNav with identical props to the
+                    sidebar rendering it replaced. State is local to the wizard,
+                    no postMessage round-trip. */}
+                <div className="wizard-timeline-column">
+                    <TimelineNav
+                        steps={timelineSteps}
+                        currentStepIndex={currentStepIndex}
+                        completedStepIndices={completedStepIndices}
+                        confirmedStepIndices={confirmedStepIndices}
+                        onStepClick={handleTimelineStepClick}
+                        compact={true}
+                        showHeader={true}
+                        headerText="Setup Progress"
+                        isEditMode={isEditMode}
+                    />
+                </div>
+
+                {/* Content Area */}
                 <div className="wizard-main-content">
                     {/* Header */}
                     <PageHeader

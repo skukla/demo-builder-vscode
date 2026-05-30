@@ -50,11 +50,11 @@ jest.mock('@/features/dashboard/commands/openAi', () => {
         ShowAiCommand: MockShowAiCommand,
     };
 });
-jest.mock('@/commands/aiMenu', () => {
-    const MockAiMenuCommand = jest.fn().mockImplementation(function(this: any) {
+jest.mock('@/commands/showPromptsPicker', () => {
+    const MockShowPromptsPickerCommand = jest.fn().mockImplementation(function(this: any) {
         this.execute = jest.fn().mockResolvedValue(undefined);
     });
-    return { AiMenuCommand: MockAiMenuCommand };
+    return { ShowPromptsPickerCommand: MockShowPromptsPickerCommand };
 });
 jest.mock('@/commands/openInClaude', () => {
     const MockOpenInClaudeCommand = jest.fn().mockImplementation(function(this: any) {
@@ -174,7 +174,7 @@ describe('CommandManager', () => {
                 'demoBuilder.openInClaude',
                 'demoBuilder.openAi',
                 'demoBuilder.openAiExperience',
-                'demoBuilder.aiMenu',
+                'demoBuilder.showPromptsPicker',
                 'demoBuilder.openModernizationAgent',
                 'demoBuilder.diagnostics',
                 'demoBuilder.setRecommendedZoom',
@@ -340,8 +340,9 @@ describe('CommandManager', () => {
 
             await navigateHandler({ target: 'ai' });
 
-            // Chat-first: navigate('ai') now opens the AI experience directly.
-            // The prompt manager (openAi) stays reachable via the aiMenu Manage item.
+            // Chat-first: navigate('ai') opens the AI experience directly.
+            // The prompt manager (openAi) stays reachable via the prompt picker's
+            // "Manage prompts…" row.
             expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openAiExperience');
         });
 

@@ -27,12 +27,9 @@ describe('SOP: Inline Styles', () => {
         'PageLayout.tsx': 'Dynamic backgroundColor from props',
         'SingleColumnLayout.tsx': 'Dynamic gap from props via translateSpectrumToken()',
         // Components with conditional styles
-        'WizardProgress.tsx': 'Dynamic cursor based on onClick prop',
         'StatusDot.tsx': 'Dynamic color/size based on props',
         'FadeTransition.tsx': 'Animation styles that must be inline for transitions',
         'LoadingOverlay.tsx': 'Position relative for overlay stacking context',
-        'SidebarNav.tsx': 'Dynamic styles for navigation items',
-        'Sidebar.tsx': 'Flex container for scrollable wizard progress',
 
         // Spectrum UNSAFE_style (required for Spectrum overrides)
         'SearchHeader.tsx': 'Spectrum UNSAFE_style for theme integration',

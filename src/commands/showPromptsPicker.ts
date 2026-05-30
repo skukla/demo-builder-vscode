@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { isClaudeChatOpen } from './openInClaude';
 import { BaseCommand } from '@/core/base';
 import { showWebviewQuickPick } from '@/core/utils/quickPickUtils';
 import { readMergedAiPrompts } from '@/features/dashboard/handlers/aiHandlers';
@@ -13,41 +12,34 @@ const PROMPT_PREVIEW_MAX_LENGTH = 70;
 const PICKER_PLACEHOLDER = 'Insert a prompt, or manage prompts';
 
 /**
- * A single row in the AI QuickPick menu. `action` drives selection dispatch;
+ * A single row in the prompt picker. `action` drives selection dispatch;
  * `promptBody` is present only on prompt rows so the insert handler can act on
  * it.
  */
-interface AiMenuItem extends vscode.QuickPickItem {
+interface PromptPickerItem extends vscode.QuickPickItem {
     action?: 'insert' | 'manage';
     promptBody?: string;
 }
 
 /**
- * AiMenuCommand — the chat-first AI entry point (the wand icon).
+ * ShowPromptsPickerCommand — single-purpose prompt picker.
  *
- * State-aware behavior:
- *   - No live chat terminal → launch the chat directly (zero-friction first
- *     open). The terminal is observable, so we skip the picker on a cold start.
- *   - Chat alive → show the QuickPick for prompt insertion.
+ * Always shows the prompt QuickPick — no state-aware branching. Selecting a
+ * prompt dispatches `demoBuilder.openInClaude` with `{ prompt }`, which opens
+ * or focuses the Claude terminal and bracketed-paste-injects the prompt.
+ * "Manage prompts…" dispatches `demoBuilder.openAi` (the prompt library).
  *
- * The QuickPick shows the merged prompt list (pinned first) and a
- * "Manage prompts…" action. Selecting a prompt inserts it via
- * `demoBuilder.openInClaude` (which also focuses the live terminal);
- * "Manage prompts…" opens the prompt library (`demoBuilder.openAi`).
+ * Replaces the chat-vs-picker state branch in the retired `AiMenuCommand`. The
+ * sidebar's "Prompts" button is the primary caller; the command palette entry
+ * "Demo Builder: Show Prompts" surfaces it for keyboard users.
  */
-export class AiMenuCommand extends BaseCommand {
+export class ShowPromptsPickerCommand extends BaseCommand {
     public async execute(): Promise<void> {
         const project = (await this.stateManager.getCurrentProject()) ?? undefined;
 
-        // Zero-friction first-launch shortcut: no terminal yet → spawn one.
-        if (!isClaudeChatOpen()) {
-            await vscode.commands.executeCommand('demoBuilder.openAiExperience');
-            return;
-        }
-
         const prompts = readMergedAiPrompts(this.handlerContext(), project);
-        const selected = await showWebviewQuickPick<AiMenuItem>(this.buildItems(prompts), {
-            title: `AI · ${project?.name ?? 'No project'}`,
+        const selected = await showWebviewQuickPick<PromptPickerItem>(this.buildItems(prompts), {
+            title: `Prompts · ${project?.name ?? 'No project'}`,
             placeholder: PICKER_PLACEHOLDER,
             matchOnDescription: true,
         });
@@ -60,13 +52,10 @@ export class AiMenuCommand extends BaseCommand {
     /**
      * Build the menu: prompt rows (pinned first via the merge) → "Manage
      * prompts…". Creating, editing, deleting, and pinning all live in the
-     * prompt library, reached via "Manage prompts…". The picker only ever
-     * appears when a chat terminal is already alive, so a "focus the chat"
-     * row would be redundant — selecting any prompt focuses the live
-     * terminal anyway as part of `openInClaude`.
+     * prompt library, reached via "Manage prompts…".
      */
-    private buildItems(prompts: AiPrompt[]): AiMenuItem[] {
-        const promptItems: AiMenuItem[] = prompts.map((prompt: AiPrompt) => ({
+    private buildItems(prompts: AiPrompt[]): PromptPickerItem[] {
+        const promptItems: PromptPickerItem[] = prompts.map((prompt: AiPrompt) => ({
             label: prompt.title,
             description: this.truncate(prompt.prompt),
             action: 'insert',
@@ -82,7 +71,7 @@ export class AiMenuCommand extends BaseCommand {
     }
 
     /** Route the selected item to the matching command. */
-    private async dispatchAction(item: AiMenuItem): Promise<void> {
+    private async dispatchAction(item: PromptPickerItem): Promise<void> {
         switch (item.action) {
             case 'insert':
                 await vscode.commands.executeCommand('demoBuilder.openInClaude', {
