@@ -4,9 +4,9 @@
  * Walks `<project>/.claude/skills/` and returns a `SkillInventoryEntry[]`.
  * Classifies each skill by where it lives on disk:
  *
- *   - Top-level `add-component.md` / `sync-changes.md` / `update-credentials.md`
- *     → 'demo-builder' (matches the three lifecycle skills `skillsWriter`
- *     writes during project finalization).
+ *   - Top-level `add-component.md` / `sync-changes.md` / `update-credentials.md` /
+ *     `create-eds-project.md` → 'demo-builder' (matches the lifecycle skills
+ *     `skillsWriter` writes during project finalization).
  *   - Any `.md` nested under a subdirectory of `skills/` → 'adobe'
  *     (`skillsWriter` only creates subdirectories for Adobe skill bundles
  *     copied from `@adobe-commerce/commerce-extensibility-tools`).
@@ -28,6 +28,7 @@ const DEMO_BUILDER_SKILL_FILES: ReadonlySet<string> = new Set([
     'add-component.md',
     'sync-changes.md',
     'update-credentials.md',
+    'create-eds-project.md',
 ]);
 
 /**

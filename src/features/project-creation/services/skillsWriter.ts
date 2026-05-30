@@ -3,11 +3,12 @@
  *
  * Writes skill files to `{projectPath}/.claude/skills/`. Two sources:
  *
- * 1. **Demo Builder lifecycle skills** (always written): three procedural guides
+ * 1. **Demo Builder lifecycle skills** (always written): procedural guides
  *    that tell AI agents how to operate against the Demo Builder MCP server.
  *    - `add-component.md` — add or enable a component via update_project_config
  *    - `sync-changes.md` — push code changes via sync_storefront
  *    - `update-credentials.md` — edit .env credentials via update_project_config
+ *    - `create-eds-project.md` — provision a new project headlessly via create_project
  *
  * 2. **Adobe skill bundles** (component-driven): each `RawComponentDefinition`
  *    may declare `aiSkillBundle: { path, prefix }`. The bundle is copied from
@@ -29,6 +30,7 @@ import * as path from 'path';
 import * as yaml from 'yaml';
 import componentsConfig from '@/features/components/config/components.json';
 import addComponentContent from '../templates/skills/add-component.md';
+import createEdsProjectContent from '../templates/skills/create-eds-project.md';
 import syncChangesContent from '../templates/skills/sync-changes.md';
 import updateCredentialsContent from '../templates/skills/update-credentials.md';
 import type { Project } from '@/types/base';
@@ -81,6 +83,7 @@ export async function writeSkillFiles(
         writeSkill('add-component.md', addComponentContent),
         writeSkill('sync-changes.md', syncChangesContent),
         writeSkill('update-credentials.md', updateCredentialsContent),
+        writeSkill('create-eds-project.md', createEdsProjectContent),
     ]);
 
     // Copy Adobe skill bundles for components that declare aiSkillBundle.
