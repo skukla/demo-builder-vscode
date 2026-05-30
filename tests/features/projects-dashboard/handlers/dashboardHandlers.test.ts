@@ -23,6 +23,17 @@ jest.mock('@/features/dashboard/handlers/meshStatusHelpers', () => ({
     determineMeshStatus: jest.fn().mockResolvedValue('deployed'),
 }));
 
+// Make filesystem path-safety checks deterministic and independent of the host.
+// validateProjectPath() canonicalizes via fs.realpathSync; on a machine without
+// a real ~/.demo-builder/projects directory the validator would reject otherwise
+// valid in-tree paths. Identity realpathSync keeps the security prefix check
+// intact (traversal paths still resolve outside the base) while letting valid
+// project paths through regardless of what exists on disk.
+jest.mock('fs', () => ({
+    ...jest.requireActual('fs'),
+    realpathSync: jest.fn((p: string) => p),
+}));
+
 jest.mock('@/features/mesh/services/stalenessDetector', () => ({
     detectMeshChanges: jest.fn().mockResolvedValue({ hasChanges: false }),
 }));

@@ -30,7 +30,7 @@ jest.mock('@/features/project-creation/config/demo-packages.json', () => ({
             },
         },
     }],
-}), { virtual: true });
+}));
 
 import { extractResetParams } from '@/features/eds/services/edsResetParams';
 

@@ -17,6 +17,16 @@ jest.mock('vscode', () => ({
     },
 }), { virtual: true });
 
+// Make filesystem path-safety checks deterministic and independent of the host.
+// validateProjectPath() canonicalizes via fs.realpathSync; identity realpathSync
+// lets valid in-tree project paths validate without requiring a real
+// ~/.demo-builder/projects directory on disk (the security prefix check is
+// unaffected — traversal paths still resolve outside the allowed base).
+jest.mock('fs', () => ({
+    ...jest.requireActual('fs'),
+    realpathSync: jest.fn((p: string) => p),
+}));
+
 import * as vscode from 'vscode';
 import {
     handleSelectProject,
