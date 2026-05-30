@@ -201,7 +201,11 @@ interface ProjectCreationConfig {
 /**
  * Actual project creation logic (extracted for testability)
  */
-export async function executeProjectCreation(context: HandlerContext, config: Record<string, unknown>): Promise<void> {
+export async function executeProjectCreation(
+    context: HandlerContext,
+    config: Record<string, unknown>,
+    options?: { skipWorkspaceAnchor?: boolean },
+): Promise<void> {
     const typedConfig = config as unknown as ProjectCreationConfig;
 
     // Debug: trace incoming config values for selectedPackage/selectedStack
@@ -448,7 +452,15 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     // right cwd, so per-project skills, MCPs, and AGENTS.md load. The window
     // reloads as a side effect, so this is the last meaningful step — anything
     // after would be cut off by the reload.
-    await openProjectAsWorkspace(projectPath, context.logger);
+    //
+    // Headless callers (the MCP `create_project` tool) skip this: the reload
+    // would kill the live extension host and the agent's MCP connection. The
+    // project tools are project-name-addressed, so the agent keeps working
+    // without the anchor; the separate `open_project` tool performs the
+    // anchor+resume when the user wants the project open in the IDE.
+    if (!options?.skipWorkspaceAnchor) {
+        await openProjectAsWorkspace(projectPath, context.logger);
+    }
 }
 
 // ============================================================================
