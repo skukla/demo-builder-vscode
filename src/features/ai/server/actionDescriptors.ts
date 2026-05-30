@@ -8,6 +8,7 @@
 
 import type { ToolDescriptor } from './toolDescriptors';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
+import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 
 export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     {
@@ -15,5 +16,17 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         description: 'Regenerate the project\'s AI context files (AGENTS.md, .mcp.json, skills)',
         map: aiHandlers,
         type: 'regenerate-ai-files',
+    },
+    {
+        tool: 'start_demo',
+        description: 'Start the current project\'s demo server',
+        map: dashboardHandlers,
+        type: 'startDemo',
+    },
+    {
+        tool: 'stop_demo',
+        description: 'Stop the current project\'s running demo server',
+        map: dashboardHandlers,
+        type: 'stopDemo',
     },
 ];
