@@ -123,14 +123,6 @@ export function hasComponentEnvVars(componentDef: ComponentData | undefined): bo
 }
 
 /**
- * Check if a component has environment variables configured
- * @deprecated Use hasComponentEnvVars instead, which handles undefined input
- */
-export function componentHasEnvVars(componentDef: ComponentData): boolean {
-    return hasComponentEnvVars(componentDef);
-}
-
-/**
  * Capitalize the first letter of a string
  */
 export function capitalizeFirst(str: string): string {
@@ -162,7 +154,7 @@ export function discoverComponentsFromInstances(
 
     for (const [id, instance] of Object.entries(componentInstances)) {
         const componentDef = allComponentDefs.find((c: ComponentData) => c.id === id);
-        if (componentDef && componentHasEnvVars(componentDef)) {
+        if (componentDef && hasComponentEnvVars(componentDef)) {
             discovered.push({
                 id: componentDef.id,
                 data: componentDef,
