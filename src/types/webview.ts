@@ -13,14 +13,11 @@ export type WizardStep =
     | 'adobe-auth'  // Adobe authentication step
     | 'adobe-project'  // Adobe project selection step
     | 'adobe-workspace'  // Adobe workspace selection step
-    | 'adobe-org'  // Legacy: Adobe org selection
     | 'eds-connect-services'  // EDS: Combined GitHub + DA.live authentication (conditional: requiresGitHub OR requiresDaLive stack)
     | 'eds-repository-config'  // EDS: Repository and DA.live configuration (conditional: requiresGitHub stack)
     | 'eds-data-source'  // EDS: ACCS data source configuration (conditional: requiresDaLive stack)
     | 'storefront-setup'  // EDS: Storefront setup (GitHub repo, DA.live content, Helix config)
     | 'settings'  // Component-specific settings collection
-    | 'data-source-config'  // Legacy: Data source configuration
-    | 'connect-services'  // Legacy: Connect services step
     | 'review'
     | 'create-project';
 
