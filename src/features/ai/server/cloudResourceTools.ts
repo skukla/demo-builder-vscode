@@ -62,7 +62,7 @@ async function buildDaLiveOps(
             return null;
         }
         const tokenProvider = {
-            getAccessToken: async () => (await tokenManager.getAccessToken()) ?? null,
+            getAccessToken: async () => (await tokenManager.inspectToken()).token ?? null,
         };
         return {
             org: new DaLiveOrgOperations(tokenProvider, ctx.logger),

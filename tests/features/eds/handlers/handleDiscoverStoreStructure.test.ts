@@ -87,7 +87,7 @@ function createMockContext(overrides?: Partial<HandlerContext>): HandlerContext 
         } as unknown as HandlerContext['stateManager'],
         authManager: {
             getTokenManager: jest.fn().mockReturnValue({
-                getAccessToken: jest.fn().mockResolvedValue('mock-ims-token'),
+                inspectToken: jest.fn().mockResolvedValue({ valid: true, expiresIn: 3600, token: 'mock-ims-token' }),
             }),
         },
         ...overrides,
@@ -249,7 +249,7 @@ describe('handleDiscoverStoreStructure', () => {
         const context = createMockContext({
             authManager: {
                 getTokenManager: jest.fn().mockReturnValue({
-                    getAccessToken: jest.fn().mockResolvedValue(null),
+                    inspectToken: jest.fn().mockResolvedValue({ valid: false, expiresIn: 0 }),
                 }),
             } as unknown as HandlerContext['authManager'],
         });
