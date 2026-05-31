@@ -15,184 +15,23 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
-
-// ---------------------------------------------------------------------------
-// Types for mock return values
-// ---------------------------------------------------------------------------
-
-interface MockServiceGroup {
-    id: string;
-    label: string;
-    fields: MockField[];
-}
-
-interface MockField {
-    key: string;
-    label: string;
-    type: string;
-    required?: boolean;
-    placeholder?: string;
-    description?: string;
-    componentIds: string[];
-    options?: Array<{ value: string; label: string }>;
-    default?: string | boolean;
-    validation?: { pattern?: string; message?: string };
-}
-
-// ---------------------------------------------------------------------------
-// Env var key constants (matching real values from envVarKeys.ts)
-// ---------------------------------------------------------------------------
-
-const ACCS_ENDPOINT_KEY = 'ACCS_GRAPHQL_ENDPOINT';
-const PAAS_URL = 'ADOBE_COMMERCE_URL';
-const PAAS_ADMIN_USERNAME = 'ADOBE_COMMERCE_ADMIN_USERNAME';
-const PAAS_ADMIN_PASSWORD = 'ADOBE_COMMERCE_ADMIN_PASSWORD';
-const PAAS_WEBSITE_CODE = 'ADOBE_COMMERCE_WEBSITE_CODE';
-const PAAS_STORE_CODE = 'ADOBE_COMMERCE_STORE_CODE';
-const PAAS_STORE_VIEW_CODE = 'ADOBE_COMMERCE_STORE_VIEW_CODE';
-const ACCS_WEBSITE_CODE = 'ACCS_WEBSITE_CODE';
-const ACCS_STORE_CODE = 'ACCS_STORE_CODE';
-const ACCS_STORE_VIEW_CODE = 'ACCS_STORE_VIEW_CODE';
-const ACCS_CUSTOMER_GROUP = 'ACCS_CUSTOMER_GROUP';
-
-// ---------------------------------------------------------------------------
-// Test fixtures
-// ---------------------------------------------------------------------------
-
-/** ACCS connection field — always visible */
-const accsEndpointField: MockField = {
-    key: ACCS_ENDPOINT_KEY,
-    label: 'GraphQL Endpoint',
-    type: 'url',
-    required: true,
-    placeholder: 'https://...',
-    componentIds: ['accs'],
-};
-
-/** PaaS connection fields — always visible */
-const paasUrlField: MockField = {
-    key: PAAS_URL,
-    label: 'Commerce URL',
-    type: 'url',
-    required: true,
-    placeholder: 'https://...',
-    componentIds: ['adobe-commerce'],
-};
-
-const paasUsernameField: MockField = {
-    key: PAAS_ADMIN_USERNAME,
-    label: 'Admin Username',
-    type: 'text',
-    required: true,
-    componentIds: ['adobe-commerce'],
-};
-
-const paasPasswordField: MockField = {
-    key: PAAS_ADMIN_PASSWORD,
-    label: 'Admin Password',
-    type: 'password',
-    required: true,
-    componentIds: ['adobe-commerce'],
-};
-
-/** Store code fields — hidden until discovery completes */
-const paasWebsiteCodeField: MockField = {
-    key: PAAS_WEBSITE_CODE,
-    label: 'Website Code',
-    type: 'select',
-    required: true,
-    componentIds: ['adobe-commerce'],
-};
-
-const paasStoreCodeField: MockField = {
-    key: PAAS_STORE_CODE,
-    label: 'Store Code',
-    type: 'select',
-    required: true,
-    componentIds: ['adobe-commerce'],
-};
-
-const paasStoreViewCodeField: MockField = {
-    key: PAAS_STORE_VIEW_CODE,
-    label: 'Store View Code',
-    type: 'select',
-    required: true,
-    componentIds: ['adobe-commerce'],
-};
-
-const accsWebsiteCodeField: MockField = {
-    key: ACCS_WEBSITE_CODE,
-    label: 'Website Code',
-    type: 'select',
-    required: true,
-    componentIds: ['accs'],
-};
-
-const accsStoreCodeField: MockField = {
-    key: ACCS_STORE_CODE,
-    label: 'Store Code',
-    type: 'select',
-    required: true,
-    componentIds: ['accs'],
-};
-
-const accsStoreViewCodeField: MockField = {
-    key: ACCS_STORE_VIEW_CODE,
-    label: 'Store View Code',
-    type: 'select',
-    required: true,
-    componentIds: ['accs'],
-};
-
-const accsCustomerGroupField: MockField = {
-    key: ACCS_CUSTOMER_GROUP,
-    label: 'Customer Group',
-    type: 'text',
-    required: false,
-    componentIds: ['accs'],
-};
-
-/** PaaS service group with connection + store fields */
-const paasServiceGroup: MockServiceGroup = {
-    id: 'adobe-commerce',
-    label: 'Adobe Commerce',
-    fields: [
-        paasUrlField,
-        paasUsernameField,
-        paasPasswordField,
-        paasWebsiteCodeField,
-        paasStoreCodeField,
-        paasStoreViewCodeField,
-    ],
-};
-
-/** ACCS service group with connection + store + other fields */
-const accsServiceGroup: MockServiceGroup = {
-    id: 'accs',
-    label: 'Adobe Commerce Cloud',
-    fields: [
-        accsEndpointField,
-        accsWebsiteCodeField,
-        accsStoreCodeField,
-        accsStoreViewCodeField,
-        accsCustomerGroupField,
-    ],
-};
-
-/** Non-store service group (e.g., Catalog Service) */
-const catalogServiceGroup: MockServiceGroup = {
-    id: 'catalog',
-    label: 'Catalog Service',
-    fields: [
-        {
-            key: 'ADOBE_CATALOG_API_KEY',
-            label: 'API Key',
-            type: 'text',
-            required: true,
-            componentIds: ['catalog-service'],
-        },
-    ],
-};
+import {
+    type MockServiceGroup,
+    ACCS_ENDPOINT_KEY,
+    PAAS_URL,
+    PAAS_ADMIN_USERNAME,
+    PAAS_ADMIN_PASSWORD,
+    PAAS_WEBSITE_CODE,
+    PAAS_STORE_CODE,
+    PAAS_STORE_VIEW_CODE,
+    ACCS_WEBSITE_CODE,
+    ACCS_STORE_CODE,
+    ACCS_STORE_VIEW_CODE,
+    ACCS_CUSTOMER_GROUP,
+    paasServiceGroup,
+    accsServiceGroup,
+    catalogServiceGroup,
+} from './ConnectStoreStepContent.testUtils';
 
 // ---------------------------------------------------------------------------
 // Mock setup

@@ -1557,29 +1557,19 @@ export class DaLiveContentOperations {
     }
 
     /**
-     * Copy content from source site to destination site
+     * Enumerate source content paths and apply the standard filters.
+     *
+     * Prefers the DA.live list API (complete), falling back to the CDN content
+     * index. The list API returns 404 (mapped to empty array) for orgs the user
+     * doesn't belong to, so also falls back when it succeeds but returns 0 paths.
+     * Then removes product-overlay documents and the library-index spreadsheet.
+     *
      * @param source - Source content configuration (org, site, indexUrl)
-     * @param destOrg - Destination organization
-     * @param destSite - Destination site
-     * @param progressCallback - Optional progress callback
-     * @param contentPatchIds - Optional content patch IDs to apply
-     * @param contentPatchSource - Optional external source for content patches
-     * @returns Copy result
+     * @returns The filtered content paths plus whether the list API was used
      */
-    async copyContentFromSource(
+    private async enumerateAndFilterContentPaths(
         source: DaLiveContentSource,
-        destOrg: string,
-        destSite: string,
-        progressCallback?: DaLiveProgressCallback,
-        contentPatchIds?: string[],
-        contentPatchSource?: ContentPatchSource,
-    ): Promise<DaLiveCopyResult> {
-        // Report initialization progress
-        progressCallback?.({ processed: 0, total: 0, percentage: 0, message: 'Enumerating source content...' });
-
-        // Enumerate content paths: prefer DA.live list API (complete), fall back to CDN index.
-        // The list API returns 404 (mapped to empty array) for orgs the user doesn't belong to,
-        // so also fall back when it succeeds but returns 0 paths.
+    ): Promise<{ contentPaths: string[]; usedDaLiveList: boolean }> {
         let contentPaths: string[];
         let usedDaLiveList = false;
 
@@ -1616,6 +1606,34 @@ export class DaLiveContentOperations {
         if (contentPaths.length < preLibraryCount) {
             this.logger.info(`[DA.live] Excluded library index (will be generated with correct paths)`);
         }
+
+        return { contentPaths, usedDaLiveList };
+    }
+
+    /**
+     * Copy content from source site to destination site
+     * @param source - Source content configuration (org, site, indexUrl)
+     * @param destOrg - Destination organization
+     * @param destSite - Destination site
+     * @param progressCallback - Optional progress callback
+     * @param contentPatchIds - Optional content patch IDs to apply
+     * @param contentPatchSource - Optional external source for content patches
+     * @returns Copy result
+     */
+    async copyContentFromSource(
+        source: DaLiveContentSource,
+        destOrg: string,
+        destSite: string,
+        progressCallback?: DaLiveProgressCallback,
+        contentPatchIds?: string[],
+        contentPatchSource?: ContentPatchSource,
+    ): Promise<DaLiveCopyResult> {
+        // Report initialization progress
+        progressCallback?.({ processed: 0, total: 0, percentage: 0, message: 'Enumerating source content...' });
+
+        // Enumerate and filter source content paths (list API w/ CDN-index fallback,
+        // product-overlay filter, library-index exclusion).
+        const { contentPaths, usedDaLiveList } = await this.enumerateAndFilterContentPaths(source);
 
         progressCallback?.({ processed: 0, total: 0, percentage: 0, message: 'Checking configurations...' });
 

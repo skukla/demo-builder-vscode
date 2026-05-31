@@ -13,75 +13,13 @@ import {
 import type { Logger } from '@/types/logger';
 import type { GitHubFileOperations } from '@/features/eds/services/githubFileOperations';
 import type { AddonSource } from '@/types/demoPackages';
-
-// --- Shared test helpers ---
-
-/** Create a component-definition.json with specified blocks */
-function createComponentDef(
-    blocks: Array<{ title: string; id: string; unsafeHTML?: string }>,
-): string {
-    return JSON.stringify({
-        groups: [{
-            id: 'blocks',
-            title: 'Blocks',
-            components: blocks.map(b => ({
-                title: b.title,
-                id: b.id,
-                plugins: b.unsafeHTML ? { da: { unsafeHTML: b.unsafeHTML } } : undefined,
-            })),
-        }],
-    });
-}
-
-/** Create a destination component-definition.json with existing blocks */
-function createDestComponentDef(
-    blocks: Array<{ title: string; id: string }> = [
-        { title: 'Hero', id: 'hero' },
-        { title: 'Cards', id: 'cards' },
-    ],
-): string {
-    return JSON.stringify({
-        groups: [{
-            id: 'blocks',
-            title: 'Blocks',
-            components: blocks.map(b => ({ title: b.title, id: b.id })),
-        }],
-    });
-}
-
-/** Create a source component-filters.json */
-function createComponentFilters(
-    sectionBlocks: string[],
-    subFilters: Array<{ id: string; components: string[] }> = [],
-): string {
-    return JSON.stringify([
-        { id: 'main', components: ['section'] },
-        { id: 'section', components: sectionBlocks },
-        ...subFilters,
-    ]);
-}
-
-/** Create a destination component-filters.json with common defaults */
-function createDestComponentFilters(
-    sectionBlocks: string[] = ['hero', 'cards', 'enrichment', 'fragment', 'text', 'image'],
-): string {
-    return JSON.stringify([
-        { id: 'main', components: ['section'] },
-        { id: 'section', components: sectionBlocks },
-    ]);
-}
-
-/** Create mock file entries for blocks/ directories */
-function createBlockFileEntries(
-    blockIds: string[],
-): Array<{ path: string; mode: string; type: 'blob'; sha: string }> {
-    return blockIds.map(id => ({
-        path: `blocks/${id}/${id}.js`,
-        mode: '100644',
-        type: 'blob' as const,
-        sha: `sha-${id}`,
-    }));
-}
+import {
+    createComponentDef,
+    createDestComponentDef,
+    createComponentFilters,
+    createDestComponentFilters,
+    createBlockFileEntries,
+} from './blockCollectionHelpers.testUtils';
 
 describe('installBlockCollections', () => {
     const SOURCE_A: AddonSource = { owner: 'adobe', repo: 'isle5', branch: 'main' };
