@@ -100,6 +100,4 @@ export {
 export * from './stacks';
 
 // Demo package types (unified packages + storefronts)
-// Note: Replaces legacy brands + templates architecture
-// See: .rptc/plans/demo-packages-simplification/
 export * from './demoPackages';
