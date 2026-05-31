@@ -317,9 +317,6 @@ describe('MeshVerifier', () => {
 
             await syncMeshStatus(project, verificationResult);
 
-            // Note: syncMeshStatus does NOT write endpoint - that's managed by deployMesh.ts
-            // The single source of truth for endpoint writes is the deployment command
-            expect(project.componentInstances?.['commerce-mesh'].endpoint).toBeUndefined();
             expect(project.componentInstances?.['commerce-mesh'].status).toBe('deployed');
         });
 
@@ -332,7 +329,6 @@ describe('MeshVerifier', () => {
                         subType: 'mesh',
                         path: '/test/mesh',
                         status: 'deployed',
-                        endpoint: 'https://old.com/graphql', // Pre-existing endpoint
                         metadata: {
                             meshId: 'mesh123',
                         },
@@ -356,9 +352,6 @@ describe('MeshVerifier', () => {
 
             expect(project.meshState).toBeUndefined();
             expect(project.componentInstances?.['commerce-mesh'].status).toBe('ready');
-            // Note: syncMeshStatus does NOT clear endpoint - that's managed by deployMesh.ts
-            // The single source of truth for endpoint writes is the deployment command
-            expect(project.componentInstances?.['commerce-mesh'].endpoint).toBe('https://old.com/graphql');
         });
 
         it('should do nothing when no mesh component', async () => {
@@ -387,7 +380,6 @@ describe('MeshVerifier', () => {
                         subType: 'mesh',
                         path: '/test/mesh',
                         status: 'deployed',
-                        endpoint: 'https://old.com/graphql',
                     },
                 },
             });
@@ -399,72 +391,8 @@ describe('MeshVerifier', () => {
 
             await syncMeshStatus(project, verificationResult);
 
-            // Should not modify project
-            expect(project.componentInstances?.['commerce-mesh'].endpoint).toBe('https://old.com/graphql');
-        });
-
-        it('should not update endpoint even if different - endpoint writes are managed by deployMesh.ts', async () => {
-            const project = createMockProject({
-                componentInstances: {
-                    'commerce-mesh': {
-                        id: 'commerce-mesh',
-                        name: 'API Mesh',
-                        subType: 'mesh',
-                        path: '/test/mesh',
-                        status: 'deployed',
-                        endpoint: 'https://old.com/graphql',
-                    },
-                },
-                meshState: {
-                    envVars: {},
-                    sourceHash: 'abc123',
-                    lastDeployed: '2024-01-01',
-                },
-            });
-
-            const verificationResult = {
-                success: true,
-                data: {
-                    exists: true,
-                    meshId: 'mesh123',
-                    endpoint: 'https://new.com/graphql',
-                },
-            };
-
-            await syncMeshStatus(project, verificationResult);
-
-            // Note: syncMeshStatus does NOT update endpoint - that's managed by deployMesh.ts
-            // The single source of truth for endpoint writes is the deployment command
-            expect(project.componentInstances?.['commerce-mesh'].endpoint).toBe('https://old.com/graphql');
-        });
-
-        it('should preserve existing endpoint - endpoint writes are managed by deployMesh.ts', async () => {
-            const project = createMockProject({
-                componentInstances: {
-                    'commerce-mesh': {
-                        id: 'commerce-mesh',
-                        name: 'API Mesh',
-                        subType: 'mesh',
-                        path: '/test/mesh',
-                        status: 'deployed',
-                        endpoint: 'https://example.com/graphql',
-                    },
-                },
-            });
-
-            const verificationResult = {
-                success: true,
-                data: {
-                    exists: true,
-                    meshId: 'mesh123',
-                    endpoint: 'https://example.com/graphql',
-                },
-            };
-
-            await syncMeshStatus(project, verificationResult);
-
-            // Note: syncMeshStatus does NOT touch endpoint - that's managed by deployMesh.ts
-            expect(project.componentInstances?.['commerce-mesh'].endpoint).toBe('https://example.com/graphql');
+            // Should not modify project status
+            expect(project.componentInstances?.['commerce-mesh'].status).toBe('deployed');
         });
     });
 });

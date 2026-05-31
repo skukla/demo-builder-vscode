@@ -126,7 +126,7 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         }
     }
 
-    const meshEndpoint = project.meshState?.endpoint || meshComponent?.endpoint;
+    const meshEndpoint = project.meshState?.endpoint;
     const statusData = buildStatusPayload(
         project,
         frontendConfigChanged,

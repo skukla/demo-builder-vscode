@@ -91,7 +91,7 @@ export function hasAdobeProjectContext(project: Project | null | undefined): pro
  * These must all be present in the mesh's .env file for deployment to work.
  *
  * Note: MESH_ENDPOINT is NOT in this list because it's an OUTPUT of deployment,
- * not an input. The mesh endpoint is stored in componentInstances['commerce-mesh'].endpoint
+ * not an input. The mesh endpoint is stored in meshState.endpoint
  * and is checked separately.
  */
 const REQUIRED_PAAS_MESH_ENV_VARS = [
@@ -226,7 +226,7 @@ export async function sendDemoStatusUpdate(context: HandlerContext): Promise<voi
         } else if (hasMeshDeploymentRecord(project)) {
             // Read persisted status instead of re-detecting changes
             // Only 'stale' needs translation — dashboard UI uses 'config-changed'
-            const endpoint = project.meshState?.endpoint || meshComponent.endpoint;
+            const endpoint = project.meshState?.endpoint;
             const summary = project.meshStatusSummary;
             const status = summary === 'stale' ? 'config-changed'
                 : (summary === 'unknown' || !summary) ? 'deployed'

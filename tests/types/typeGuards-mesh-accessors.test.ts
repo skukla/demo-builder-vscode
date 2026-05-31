@@ -234,24 +234,6 @@ describe('typeGuards - Mesh Component Accessors', () => {
             expect(getMeshEndpointUrl(project)).toBe(meshEndpoint);
         });
 
-        it('should fallback to component instance endpoint when meshState missing', () => {
-            const project = createProjectWithMesh('eds-commerce-mesh', {
-                endpoint: meshEndpoint,
-            });
-            expect(getMeshEndpointUrl(project)).toBe(meshEndpoint);
-        });
-
-        it('should prefer meshState.endpoint over component endpoint', () => {
-            const meshStateEndpoint = 'https://edge-graph.adobe.io/api/99999/graphql';
-            const project = {
-                ...createProjectWithMesh('eds-commerce-mesh', {
-                    endpoint: meshEndpoint,
-                }),
-                meshState: { endpoint: meshStateEndpoint },
-            } as unknown as Project;
-            expect(getMeshEndpointUrl(project)).toBe(meshStateEndpoint);
-        });
-
         it('should return undefined when no endpoint available', () => {
             const project = createProjectWithMesh('eds-commerce-mesh');
             expect(getMeshEndpointUrl(project)).toBeUndefined();

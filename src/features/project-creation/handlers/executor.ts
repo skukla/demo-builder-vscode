@@ -567,7 +567,7 @@ async function executeMeshPhase(
         },
     };
 
-    logMeshDecisionContext(context, typedConfig, meshComponent, meshId, meshDefinition, isEditMode, existingProject);
+    logMeshDecisionContext(context, typedConfig, project, meshComponent, meshId, meshDefinition, isEditMode, existingProject);
 
     // Check for same-workspace import FIRST
     const isSameWorkspaceImport = typedConfig.importedWorkspaceId &&
@@ -583,7 +583,7 @@ async function executeMeshPhase(
             workspace: typedConfig.adobe?.workspace,
         };
         await linkExistingMesh(meshContext, importedApiMesh);
-    } else if (shouldConfigureExistingMesh(typedConfig.apiMesh, meshComponent?.endpoint)) {
+    } else if (shouldConfigureExistingMesh(typedConfig.apiMesh, project.meshState?.endpoint)) {
         await linkExistingMesh(meshContext, typedConfig.apiMesh as MeshApiConfig);
     } else if (isEditMode && existingProject?.meshState?.endpoint) {
         context.logger.info('[Mesh Setup] Edit mode - reusing existing mesh from project');
@@ -605,6 +605,7 @@ async function executeMeshPhase(
 function logMeshDecisionContext(
     context: HandlerContext,
     typedConfig: ProjectCreationConfig,
+    project: import('@/types').Project,
     meshComponent: import('@/types').ComponentInstance | undefined,
     meshId: string | undefined,
     meshDefinition: import('@/types').TransformedComponentDefinition | undefined,
@@ -618,7 +619,7 @@ function logMeshDecisionContext(
     context.logger.debug(`  - meshComponent?.path: ${meshComponent?.path}`);
     context.logger.debug(`  - meshId: ${meshId}`);
     context.logger.debug(`  - meshDefinition: ${meshDefinition ? 'found' : 'NOT FOUND'}`);
-    context.logger.debug(`  - shouldConfigureExistingMesh result: ${shouldConfigureExistingMesh(typedConfig.apiMesh, meshComponent?.endpoint)}`);
+    context.logger.debug(`  - shouldConfigureExistingMesh result: ${shouldConfigureExistingMesh(typedConfig.apiMesh, project.meshState?.endpoint)}`);
 }
 
 /**

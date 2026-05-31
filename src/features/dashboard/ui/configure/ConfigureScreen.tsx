@@ -27,7 +27,7 @@ import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreCo
 import { useAutoStoreDetect } from '@/features/components/ui/hooks/useAutoStoreDetect';
 import { useStoreDiscovery } from '@/features/components/ui/hooks/useStoreDiscovery';
 import type { Project } from '@/types/base';
-import { getMeshComponentInstance, hasEntries } from '@/types/typeGuards';
+import { hasEntries } from '@/types/typeGuards';
 import { ComponentEnvVar, ComponentConfigs } from '@/types/webview';
 
 // Create validators with consistent error messages
@@ -364,17 +364,8 @@ export function ConfigureScreen({
 
     const getFieldValue = useCallback((field: UniqueField): string | boolean | undefined => {
         // Special handling for MESH_ENDPOINT - read from meshState (authoritative)
-        // with fallback to componentInstance for backward compatibility
-        if (field.key === 'MESH_ENDPOINT') {
-            // Primary: meshState.endpoint (authoritative location)
-            if (project.meshState?.endpoint) {
-                return project.meshState.endpoint;
-            }
-            // Fallback: componentInstances (legacy, for old projects)
-            const meshComponent = getMeshComponentInstance(project);
-            if (meshComponent?.endpoint) {
-                return meshComponent.endpoint;
-            }
+        if (field.key === 'MESH_ENDPOINT' && project.meshState?.endpoint) {
+            return project.meshState.endpoint;
         }
 
         // If user explicitly touched this field, only look in the field's componentIds

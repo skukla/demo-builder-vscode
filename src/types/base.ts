@@ -145,10 +145,6 @@ export interface ComponentInstance {
     status: ComponentStatus;
     port?: number;           // For components that run locally
     pid?: number;            // Process ID if running
-    // DEPRECATED: Use project.meshState.endpoint instead
-    // Kept for backward compatibility with old project files only
-    /** @deprecated Use project.meshState.endpoint instead */
-    endpoint?: string;
     lastUpdated?: Date;
     metadata?: Record<string, unknown>; // Additional component-specific data
 }

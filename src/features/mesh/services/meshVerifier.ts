@@ -149,7 +149,7 @@ async function tryRecoverMeshIdImpl(meshComponent: ComponentInstance, logger: Lo
         };
 
         // Note: Endpoint is NOT written here - that's handled by deployMesh.ts
-        // meshComponent.endpoint is the single source of truth, written only during actual deployment
+        // meshState.endpoint is the single source of truth, written only during actual deployment
 
         return meshInfo.meshId;
     }
