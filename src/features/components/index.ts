@@ -9,7 +9,6 @@
  * - DependencyResolver: Resolve component dependencies
  * - ComponentManager: Component installation and lifecycle
  * - ComponentTreeProvider: VS Code tree view for component browser
- * - ComponentHandler: Legacy service for component operations
  * - Handler functions for wizard message handling
  * - Transforms for service group display
  */
@@ -33,9 +32,6 @@ export type {
 
 // Providers
 export { ComponentTreeProvider } from './providers/componentTreeProvider';
-
-// Handlers
-export { ComponentHandler } from './handlers/componentHandler';
 
 // Handler functions for HandlerRegistry use
 export {
