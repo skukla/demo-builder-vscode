@@ -260,8 +260,8 @@ export async function handleOpenAdobeConsole(
     }
 }
 
-// Re-export for backward compatibility (toggleLogsPanel imported at top for use in this file)
-export { toggleLogsPanel, resetLogsViewState } from '../services/lifecycleService';
+// Re-export toggleLogsPanel (also imported at top for use in this file)
+export { toggleLogsPanel } from '../services/lifecycleService';
 
 /**
  * show-logs - Toggle the VS Code output panel with Demo Builder logs

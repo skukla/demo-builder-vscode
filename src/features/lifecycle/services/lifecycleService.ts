@@ -30,13 +30,3 @@ export async function toggleLogsPanel(): Promise<boolean> {
     }
     return sessionUIState.isLogsViewShown;
 }
-
-/**
- * Reset logs view state - for testing only
- *
- * @internal
- * @deprecated Use sessionUIState.reset() instead
- */
-export function resetLogsViewState(): void {
-    sessionUIState.isLogsViewShown = false;
-}
