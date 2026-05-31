@@ -313,6 +313,31 @@ A past migration revealed that tests using outdated mock structures can pass whi
 2. **Structure validation**: Mock validation tests ensure mocks match current JSON
 3. **Documentation**: Clear comments explaining mock derivation source
 
+### Mocking Dependencies: seam over leaf-module mocks
+
+**Standard:** test pure logic directly; for *config/data* reads, mock at a
+**loader/service seam** and feed structure-validated data; use **provider-DI**
+(real defaults) only for *non-determinism*; and **never `jest.mock` a leaf JSON
+config module**.
+
+| Situation | Approach |
+|-----------|----------|
+| Pure logic; inputs are arguments | Call it directly — no mock, no DI |
+| Reads config via a loader/service (e.g. `ConfigurationLoader`) | Mock the loader; feed `testUtils` mock data — the `ComponentRegistryManager` pattern |
+| Reads non-determinism (time / random / spawn) | Provider-interface DI with real defaults — the `ProgressUnifier` pattern |
+| Reads a bundled JSON via **direct static import**, no seam | Add a seam (loader preferred; an optional injected-data param is an acceptable lightweight seam). **Do not** `jest.mock` the JSON module |
+| Heavy/external module (vscode, spectrum, octokit) | Shared `tests/__mocks__` manual mock |
+
+**Why not `jest.mock('….json')`:** `resetModules` is off, so a module-mock of a
+leaf JSON file does not reliably override an instance another suite already
+loaded for real in the same worker (e.g. a runtime `require()` of the same
+config). The result is order-dependent, intermittent failures. Mocking a
+**seam** (a loader/service the JSON flows through) or **injecting the data**
+sidesteps this entirely. DI is for these boundary cases only — blanket DI and
+parameter-threading are an anti-pattern (see root `CLAUDE.md`).
+
+See `.rptc/research/2026-05-31-test-dependency-strategy.md` for the full analysis.
+
 ## Test Coverage
 
 **Coverage Target:** 80% overall, 100% for critical paths
