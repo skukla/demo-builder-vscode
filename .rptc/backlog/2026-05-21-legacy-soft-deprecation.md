@@ -180,6 +180,68 @@ docs: trim historical-architecture mentions from src/ comments (L5)
 
 `feature/legacy-cleanup`, branched off whichever branch is current when this cycle begins (defer the merge target to commit time — Cycles D and E may have landed by then).
 
+## Cycle 4 execution log (2026-05-31, branch `claude/soft-deprecation-cycle-4-54ZNO`, base `c0a43c2`)
+
+Each item below is one commit, verified with `tsc --noEmit` (0 errors), `eslint`
+on touched files (0 errors), and the affected jest suites.
+
+**Done:**
+- **L4a** — deleted `BaseCommand.getProjectDirectory` (`@deprecated`); inlined its
+  sole caller `getTerminalCwd` to `(await this.stateManager.getCurrentProject())?.path`.
+- **L4b** — deleted the `getWebviewHTMLWithBundles` alias in
+  `core/utils/getWebviewHTMLWithBundles.ts`; barrel now re-exports canonical
+  `getWebviewHTML`. (File NOT renamed — out of scope; the 5 command callers
+  already import `getWebviewHTML` directly.)
+- **L2.1** — dropped `WizardStep` `'adobe-setup'`, `'adobe-context'` (no
+  WizardStep-typed callers).
+- **L2.2** — dropped `WizardStep` `'eds-github'`, `'eds-dalive'`; removed the two
+  dead `WizardContainer` switch branches + orphaned imports. NOTE: the step
+  components `GitHubSetupStep`/`DaLiveSetupStep` are now orphaned (only their own
+  tests reference them) — left for a future dead-code pass (not soft-deprecation
+  symbols). The `'eds-github'`/`'eds-dalive'` STACK ids are a separate namespace,
+  untouched.
+- **L2.3** — dropped `WizardStep` `'org-selection'`, `'project-selection'`,
+  `'component-config'`, `'commerce-config'`; removed dead `'component-config'`
+  entry from the `useWizardEffects` self-managed-focus Set.
+- **StepLogger canonicalization** (user-directed; the backlog's Category-A "active
+  migration" classification of `stepLogger.ts` was WRONG — these were dead
+  translations). Migrated 24 `logTemplate('adobe-setup', …)` call sites across the
+  3 Adobe auth services to `'adobe-auth'`; removed the dead `adobe-setup` /
+  `adobe-context` / `org-selection` / `project-selection` / `commerce-config` map
+  entries and the dead `adobe-auth→adobe-setup` normalize branch in `getStepName`.
+  Display name unchanged ("Adobe Setup"). Updated the affected test assertions.
+- **L3.2** — dropped `RawComponentRegistry.components` (`@deprecated` v2.0 field).
+  Shipped `components.json` is v3.0 (sectioned), so the only reader
+  (`...(raw.components || {})` in `ComponentRegistryManager`) was a dead no-op.
+- **Infra/quality (separate commits):** fixed a case-sensitive import in
+  `tests/setup/node.ts` (`@/core/di/ServiceLocator`→`serviceLocator`) that broke
+  ALL node tests on Linux/CI; fixed a pre-existing `import/order` warning in
+  `WizardContainer.tsx`.
+
+**Stopped-and-asked / deferred (over the ~20-line / broad-data-shape threshold):**
+- **L3.3 `ComponentInstance.endpoint` → `meshState.endpoint`** — backlog's "2
+  files" snapshot is stale. Real blast radius: ~6 source readers
+  (`meshStatusHelpers`, `dashboardStatusService`, `typeGuards`, `ConfigureScreen`,
+  `useConfigureFields`, `executor`), a writer in `meshVerifier`, and 15+ test
+  files asserting `componentInstances['commerce-mesh'].endpoint`. Also a genuine
+  source-of-truth conflict: `base.ts` calls `meshState.endpoint` AUTHORITATIVE
+  while `meshVerifier.ts:152` calls `meshComponent.endpoint` "the single source of
+  truth". Needs an architectural decision + likely a data migration → its own
+  session.
+- **L4c `getAccessToken`** — ~29 source references / 48 files incl. tests. Per the
+  task's own note, "likely its own session." Deferred.
+
+**Pre-existing issues found on the branch baseline (NOT introduced this cycle;
+confirmed identical at `c0a43c2`):**
+- 15 failing tests in 3 suites: `projects-dashboard/handlers/dashboardHandlers`,
+  `projects-dashboard/handlers/selectProject-navigation` (handler/test out of
+  sync re: `demoBuilder.showProjectDashboard`), and `eds/services/edsResetParams`
+  (cross-suite pollution — passes in isolation).
+- 4 repo-wide eslint errors (`no-duplicate-imports` in `edsResetService`,
+  `ProjectCard.tsx`, `ProjectRow.tsx`; unused `execFile` in `mcp-server.ts`) + 96
+  pre-existing warnings (mostly `max-lines` in test files). The task's "expect
+  0/0 + ~8421 green" assumed a clean baseline this branch did not have.
+
 ## Verification
 
 After every batch:
