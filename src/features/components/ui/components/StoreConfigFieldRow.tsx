@@ -12,8 +12,6 @@
  */
 import { Button, Flex, ProgressCircle, Text } from '@adobe/react-spectrum';
 import React from 'react';
-import { ConfigFieldRenderer } from './ConfigFieldRenderer';
-import { StoreSelectionRow } from './StoreSelectionRow';
 import {
     CONNECTION_FIELDS,
     isStoreCodeField,
@@ -21,6 +19,8 @@ import {
 } from '../../config/storeFieldHelpers';
 import type { ServiceGroup, UniqueField } from '../hooks/useComponentConfig';
 import type { StoreListItem } from '../hooks/useStoreDiscovery';
+import { ConfigFieldRenderer } from './ConfigFieldRenderer';
+import { StoreSelectionRow } from './StoreSelectionRow';
 import type { DescriptionContext } from '@/core/ui/components/forms/descriptionRenderer';
 import type { ComponentConfigs } from '@/types/webview';
 

@@ -12,15 +12,15 @@
 
 import { Flex } from '@adobe/react-spectrum';
 import React from 'react';
-import { StoreStructureSelector } from './StoreStructureSelector';
-import { lookupComponentConfigValue } from '../../services/envVarHelpers';
 import {
     PAAS_WEBSITE_CODE, PAAS_STORE_CODE, PAAS_STORE_VIEW_CODE,
     ACCS_WEBSITE_CODE, ACCS_STORE_CODE, ACCS_STORE_VIEW_CODE,
 } from '../../config/envVarKeys';
 import { STORE_GROUP_IDS } from '../../config/storeFieldHelpers';
+import { lookupComponentConfigValue } from '../../services/envVarHelpers';
 import type { UniqueField, ServiceGroup } from '../hooks/useComponentConfig';
 import type { StoreListItem } from '../hooks/useStoreDiscovery';
+import { StoreStructureSelector } from './StoreStructureSelector';
 
 // ==========================================================
 // Types

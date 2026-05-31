@@ -9,22 +9,22 @@
  * @module features/eds/services/edsResetRepoHelper
  */
 
-import type { GitHubTreeInput } from './types';
-import type { Logger } from '@/types/logger';
-import type { GitHubFileOperations } from './githubFileOperations';
-import type { HandlerContext } from '@/types/handlers';
-import type { AddonSource } from '@/types/demoPackages';
-import type { Project } from '@/types/base';
+import { installBlockCollections } from './blockCollectionHelpers';
+import { generateConfigJson, extractConfigParams } from './configGenerator';
 import { assertValidGitHubSlug, type EdsResetParams } from './edsResetParams';
 import { generateFstabContent } from './fstabGenerator';
-import { generateConfigJson, extractConfigParams } from './configGenerator';
-import { installBlockCollections } from './blockCollectionHelpers';
+import type { GitHubFileOperations } from './githubFileOperations';
 import { generateInspectorTreeEntries, installInspectorTagging } from './inspectorHelpers';
+import type { GitHubTreeInput } from './types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     getBlockLibrarySource, getBlockLibraryContentSource,
     getBlockLibraryName, isBlockLibraryAvailableForPackage,
 } from '@/features/project-creation/services/blockLibraryLoader';
+import type { Project } from '@/types/base';
+import type { AddonSource } from '@/types/demoPackages';
+import type { HandlerContext } from '@/types/handlers';
+import type { Logger } from '@/types/logger';
 
 // ==========================================================
 // Helpers

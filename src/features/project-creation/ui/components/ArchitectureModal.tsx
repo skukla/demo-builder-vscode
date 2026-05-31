@@ -12,19 +12,19 @@ import {
     getAvailableBlockLibraries,
     getNativeBlockLibraries,
 } from '../../services/blockLibraryLoader';
+import { getResolvedMeshRequirement } from '../../services/demoPackageLoader';
 import {
     getAvailableFeaturePacks,
     getNativeFeaturePacks,
 } from '../../services/featurePackLoader';
-import { filterAddonsByPackage } from './brandGalleryHelpers';
 import { ArchitectureStepContent } from './ArchitectureStepContent';
 import { BlockLibrariesStepContent } from './BlockLibrariesStepContent';
+import { filterAddonsByPackage } from './brandGalleryHelpers';
+import { isMeshComponentId } from '@/core/constants';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { useArrowKeyNavigation } from '@/core/ui/hooks/useArrowKeyNavigation';
 import { cn } from '@/core/ui/utils/classNames';
 import { vscode } from '@/core/ui/utils/vscode-api';
-import { isMeshComponentId } from '@/core/constants';
-import { getResolvedMeshRequirement } from '../../services/demoPackageLoader';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import { DemoPackage } from '@/types/demoPackages';
 import type { Stack, StacksConfig } from '@/types/stacks';
