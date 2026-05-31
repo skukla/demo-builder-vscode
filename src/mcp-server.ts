@@ -15,11 +15,9 @@
  *   (DEMO_BUILDER_PROJECTS_DIR env var optional — defaults to ~/.demo-builder/projects)
  */
 
-import * as childProcess from 'child_process';
 import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-import { promisify } from 'util';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
@@ -28,8 +26,6 @@ import {
     PushRejectedError,
     syncAndPublish,
 } from '@/features/eds/services/storefrontSyncService';
-
-const execFile = promisify(childProcess.execFile);
 
 // Maximum number of files returned by getBlockSource — prevents unbounded memory use
 // when a block directory contains many large assets.
