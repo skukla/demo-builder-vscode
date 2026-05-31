@@ -70,7 +70,7 @@ interface UseAsyncDataReturn<T> {
  * return (
  *   <>
  *     {loading && !hasLoadedOnce && <LoadingDisplay />}
- *     {error && <ErrorDisplay message={error} />}
+ *     {error && <StatusDisplay variant="error" message={error} />}
  *     {projects && <ProjectList items={projects} />}
  *   </>
  * );
