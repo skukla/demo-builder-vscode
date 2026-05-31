@@ -6,7 +6,6 @@
 
 export { getWebviewHTML } from './getWebviewHTMLWithBundles';
 export type { WebviewHTMLOptions } from './getWebviewHTMLWithBundles';
-export type { BundleUris } from './bundleUri';
 
 export { extractEnvVars, extractEnvVarsSync } from './envVarExtraction';
 
