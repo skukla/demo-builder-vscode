@@ -269,6 +269,31 @@ describe('Spinner', () => {
 
 ## Mock Derivation Guidelines
 
+### Prefer injection seams over leaf-module mocks
+
+When code under test reads a config "leaf" (a bundled JSON like
+`demo-packages.json`/`stacks.json`, or a thin loader over one), prefer an
+**injection seam** to `jest.mock(...)` of that module:
+
+- Give the function an **optional parameter that defaults to the bundled
+  data** (e.g. `getPackageById(id, packages = bundled)`,
+  `extractResetParams(project, packages = demoPackagesConfig.packages)`).
+  Production callers are unaffected (they use the default); tests pass a
+  small fixture.
+- Tests of **logic** inject a fixture and assert against it — they stay
+  green when the shipped config changes.
+- Tests of the **shipped config itself** (inventory/structure) call the
+  function with the default and assert on the real data, in a clearly
+  separated block.
+
+Reference seams: `src/features/project-creation/services/demoPackageLoader.ts`
+and `src/features/eds/services/edsResetParams.ts`. Example test split:
+`tests/features/project-creation/ui/helpers/demoPackageLoader.test.ts`
+(injected-fixture logic vs. shipped-config integrity).
+
+Reach for `jest.mock` only when there is no reasonable seam (e.g. mocking a
+network/service collaborator, not a static config leaf).
+
 ### Pattern: Derive Mocks from Actual JSON
 
 Test mocks for JSON configuration files MUST be derived from actual file structure to prevent mock drift:
