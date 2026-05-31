@@ -218,6 +218,62 @@ on touched files (0 errors), and the affected jest suites.
   ALL node tests on Linux/CI; fixed a pre-existing `import/order` warning in
   `WizardContainer.tsx`.
 
+**Done (continuation pass — full cleanly-removable sweep):**
+- **L1 stragglers** — dropped zero-caller `WizardStep` `'adobe-org'`,
+  `'data-source-config'`, `'connect-services'` (the latter migrated 2 test
+  fixtures' `currentStep` to canonical `'eds-connect-services'`).
+- **resetViewModeOverride** (dashboardHandlers) — zero-caller `@deprecated` deleted.
+- **componentHasEnvVars** (configureHelpers) — migrated sole caller to
+  `hasComponentEnvVars`, deleted wrapper.
+- **HandlerRegistryMap** (types/handlers) — no consumers (decl + 2 barrel
+  re-exports only); removed all three.
+- **DebugLogger.toggle()** — `@deprecated` one-liner, only a test asserted it
+  existed; removed method + test.
+- **createBundleUris / BundleUris** (bundleUri) — no src callers; deleted alias +
+  type + barrel re-export, retargeted the test to canonical `getBundleUri`.
+- **resetLogsViewState** (lifecycle) — no prod callers; deleted, removed 2 barrel
+  re-exports + its unit tests, switched showLogs handler-test setup to
+  `sessionUIState.reset()`.
+- **ErrorDisplay** (core/ui) — no real renders (barrel + a JSDoc example only);
+  deleted component + barrel exports + its test; updated the useAsyncData example.
+- **webviewHTMLBuilder.ts** — empty exports-removed stub, zero importers; deleted
+  the file + its deprecation-verification meta-test.
+- **existingRepoVerified** (webview WizardState) — write-only, never read/
+  serialized; removed field + 3 set sites. Kept `existingRepo` and reclassified
+  it **Category A** (active migration fallback `selectedRepo || existingRepo` for
+  pre-`selectedRepo` serialized projects — reworded the comment).
+- **Test robustness:** `edsResetParams.test.ts` loads `extractResetParams` via
+  `jest.isolateModules` so its `demo-packages.json` mock always applies regardless
+  of worker file ordering (root-caused the original flaky "pre-existing" failure).
+
+After this pass: full suite **8297 green**, `eslint` **0 errors** (only pre-existing
+refactor-only warnings: max-lines/complexity/max-depth/1 non-null-assertion).
+
+**Remaining — NOT clean soft-deprecation removals (need decisions / are Category A):**
+- **L3.1 `editMode`/`editProjectPath`/`editOriginalName` → `wizardMode`** — an
+  IN-PROGRESS migration, not a finished one: code reads BOTH
+  (`wizardMode ? wizardMode !== 'create' : editMode`). `wizardMode` is an enum that
+  can't hold the path/name DATA in `editProjectPath`/`editOriginalName`, so there's
+  no defined home for them. Crosses the UI↔backend message boundary
+  (`executor.ts`, `handlers.ts`, `createHandler.ts`) and drives the edit-project
+  flow. Needs a data-model design decision — deferred.
+- **mesh `stalenessDetector` / `meshVerifier` "backward-compatible function
+  exports"** — 5 importers; removing means migrating callers to the class/DI form
+  (lazy-default-logger → injected logger), a behavioral refactor, not a stub
+  removal. Deferred.
+- **`ComponentHandler`** (`componentHandler.ts`) — unused class but woven into
+  `HandlerContext` typing (`testUtils` casts `{} as ComponentHandler`) with 3 stale
+  `jest.mock`s; untangling touches the handler-context contract. Ambiguous (dead vs
+  intended-API) — deferred.
+- **Category A (KEEP, mislabeled "backward compatibility"):** the individual
+  handler re-export barrels (mesh/prereq/projects-dashboard handlers `index.ts`)
+  are an ACTIVE, `barrel-exports.test.ts`-tested API for the project-creation
+  handler registry — not removable. `existingRepo` (above). typeGuards endpoint
+  fallback, helixService one-time migration, prerequisitesCacheManager old-cache
+  fallback (already Category A in the snapshot).
+- **L5 Category-C comments** — trivial historical-architecture comment trims;
+  not yet done.
+
 **Stopped-and-asked / deferred (over the ~20-line / broad-data-shape threshold):**
 - **L3.3 `ComponentInstance.endpoint` → `meshState.endpoint`** — backlog's "2
   files" snapshot is stale. Real blast radius: ~6 source readers
