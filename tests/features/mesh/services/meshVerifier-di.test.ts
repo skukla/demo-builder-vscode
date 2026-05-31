@@ -199,7 +199,7 @@ describe('MeshVerifierService - DI Pattern', () => {
             expect(result.data?.exists).toBe(false);
         });
 
-        it('should sync mesh status correctly (status only, not endpoint)', async () => {
+        it('should sync mesh status correctly', async () => {
             const project = createMockProject({
                 componentInstances: {
                     'commerce-mesh': {
@@ -228,10 +228,7 @@ describe('MeshVerifierService - DI Pattern', () => {
 
             await service.syncMeshStatus(project, verificationResult);
 
-            // Note: syncMeshStatus does NOT write endpoint - that's managed by deployMesh.ts
-            // The single source of truth for endpoint writes is the deployment command
-            expect(project.componentInstances?.['commerce-mesh'].endpoint).toBeUndefined();
-            // But status should be updated
+            // status should be updated
             expect(project.componentInstances?.['commerce-mesh'].status).toBe('deployed');
         });
     });

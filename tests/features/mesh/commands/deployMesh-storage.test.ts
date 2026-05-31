@@ -3,9 +3,9 @@
  *
  * Tests verifying mesh endpoint storage behavior:
  * - Mesh endpoint stored ONLY in meshState.endpoint (single source of truth)
- * - Mesh endpoint NOT persisted to componentConfigs or componentInstances.endpoint
+ * - Mesh endpoint NOT persisted to componentConfigs
  *
- * The mesh endpoint is now stored in project.meshState.endpoint as the
+ * The mesh endpoint is stored in project.meshState.endpoint as the
  * authoritative location. See docs/architecture/state-ownership.md for details.
  *
  * Target Coverage: 85%+
@@ -219,8 +219,6 @@ describe('DeployMeshCommand - Storage Behavior', () => {
             expect(capturedProject!.meshState!.endpoint).toBe(
                 'https://test-mesh.adobe.io/graphql'
             );
-            // And: componentInstances should NOT have endpoint (deprecated)
-            expect(capturedProject!.componentInstances!['commerce-mesh'].endpoint).toBeUndefined();
         });
 
         it('should update mesh component status to deployed', async () => {

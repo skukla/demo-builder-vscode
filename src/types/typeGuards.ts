@@ -452,8 +452,7 @@ export function hasMeshComponent(project: Project | undefined | null): boolean {
 /**
  * Get the mesh endpoint from a project
  *
- * Returns the mesh endpoint URL from meshState (authoritative) or
- * falls back to the component instance endpoint (legacy).
+ * Returns the mesh endpoint URL from meshState, the authoritative source.
  *
  * @param project - The project to check (can be undefined/null)
  * @returns The mesh endpoint URL, or undefined if not available
@@ -461,11 +460,5 @@ export function hasMeshComponent(project: Project | undefined | null): boolean {
 export function getMeshEndpointUrl(
     project: Project | undefined | null,
 ): string | undefined {
-    if (!project) return undefined;
-    // meshState.endpoint is the authoritative source
-    if (project.meshState?.endpoint) {
-        return project.meshState.endpoint;
-    }
-    // Fallback to component instance endpoint (legacy projects)
-    return getMeshComponentInstance(project)?.endpoint;
+    return project?.meshState?.endpoint;
 }
