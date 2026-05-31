@@ -135,7 +135,7 @@ export class AdobeEntitySelector {
             // SECURITY: Validate orgId to prevent command injection
             validateOrgId(orgId);
 
-            this.stepLogger.logTemplate('adobe-setup', 'operations.selecting', { item: 'organization' });
+            this.stepLogger.logTemplate('adobe-auth', 'operations.selecting', { item: 'organization' });
 
             const result = await this.commandManager.execute(
                 `aio console org select ${orgId}`,
@@ -165,7 +165,7 @@ export class AdobeEntitySelector {
                 }
 
                 // Log with org name (or ID as fallback)
-                this.stepLogger.logTemplate('adobe-setup', 'statuses.organization-selected', { name: orgName });
+                this.stepLogger.logTemplate('adobe-auth', 'statuses.organization-selected', { name: orgName });
 
                 // Clear downstream caches
                 this.cacheManager.setCachedProject(undefined);
@@ -237,7 +237,7 @@ export class AdobeEntitySelector {
             // SECURITY: Validate projectId to prevent command injection
             validateProjectId(projectId);
 
-            this.stepLogger.logTemplate('adobe-setup', 'operations.selecting', { item: 'project' });
+            this.stepLogger.logTemplate('adobe-auth', 'operations.selecting', { item: 'project' });
 
             const result = await this.commandManager.execute(
                 `aio console project select ${projectId}`,
@@ -264,7 +264,7 @@ export class AdobeEntitySelector {
                 }
 
                 // Log with project name (or ID as fallback)
-                this.stepLogger.logTemplate('adobe-setup', 'statuses.project-selected', { name: projectName });
+                this.stepLogger.logTemplate('adobe-auth', 'statuses.project-selected', { name: projectName });
 
                 // Clear downstream workspace cache and update console.where with known state
                 this.cacheManager.setCachedWorkspace(undefined);
@@ -297,7 +297,7 @@ export class AdobeEntitySelector {
                 }
 
                 // Log with project name (or ID as fallback)
-                this.stepLogger.logTemplate('adobe-setup', 'statuses.project-selected', { name: projectName });
+                this.stepLogger.logTemplate('adobe-auth', 'statuses.project-selected', { name: projectName });
 
                 // Clear downstream workspace cache and update console.where with known state
                 this.cacheManager.setCachedWorkspace(undefined);
@@ -346,7 +346,7 @@ export class AdobeEntitySelector {
             // SECURITY: Validate workspaceId to prevent command injection
             validateWorkspaceId(workspaceId);
 
-            this.stepLogger.logTemplate('adobe-setup', 'operations.selecting', { item: 'workspace' });
+            this.stepLogger.logTemplate('adobe-auth', 'operations.selecting', { item: 'workspace' });
 
             const result = await this.commandManager.execute(
                 `aio console workspace select ${workspaceId}`,
@@ -373,7 +373,7 @@ export class AdobeEntitySelector {
                 }
 
                 // Log with workspace name (or ID as fallback)
-                this.stepLogger.logTemplate('adobe-setup', 'statuses.workspace-selected', { name: workspaceName });
+                this.stepLogger.logTemplate('adobe-auth', 'statuses.workspace-selected', { name: workspaceName });
 
                 // Update console.where cache with known state
                 const currentWhere = this.cacheManager.getCachedConsoleWhere();
