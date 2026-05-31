@@ -17,9 +17,7 @@ export type WizardStep =
     | 'org-selection'  // Kept for compatibility, will be disabled in config
     | 'project-selection'  // Kept for compatibility, will be disabled in config
     | 'eds-connect-services'  // EDS: Combined GitHub + DA.live authentication (conditional: requiresGitHub OR requiresDaLive stack)
-    | 'eds-github'  // EDS: GitHub authentication (conditional: requiresGitHub stack) - legacy, use eds-connect-services
     | 'eds-repository-config'  // EDS: Repository and DA.live configuration (conditional: requiresGitHub stack)
-    | 'eds-dalive'  // EDS: DA.live authentication (conditional: requiresDaLive stack) - legacy, use eds-connect-services
     | 'eds-data-source'  // EDS: ACCS data source configuration (conditional: requiresDaLive stack)
     | 'storefront-setup'  // EDS: Storefront setup (GitHub repo, DA.live content, Helix config)
     | 'settings'  // Component-specific settings collection
