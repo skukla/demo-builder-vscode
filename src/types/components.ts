@@ -174,8 +174,6 @@ export interface RawComponentDefinition {
  */
 export interface RawComponentRegistry {
     version: string;
-    /** @deprecated v2.0 structure - use separate sections below */
-    components?: Record<string, RawComponentDefinition>;
     selectionGroups?: {
         frontends?: string[];
         backends?: string[];
