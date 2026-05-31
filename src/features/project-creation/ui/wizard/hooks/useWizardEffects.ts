@@ -84,10 +84,10 @@ export function useWizardEffects({
                 confirmedSteps: getCompletedStepIndices(confirmedSteps, WIZARD_STEPS),
                 steps: sidebarSteps,
                 // Show confirmed step indicators for any review mode (edit/import/copy)
-                isEditMode: state.wizardMode ? state.wizardMode !== 'create' : state.editMode,
+                isEditMode: (state.wizardMode ?? 'create') !== 'create',
             });
         }
-    }, [state.currentStep, state.editMode, state.wizardMode, completedSteps, confirmedSteps, WIZARD_STEPS]);
+    }, [state.currentStep, state.wizardMode, completedSteps, confirmedSteps, WIZARD_STEPS]);
 
     // Hydrate project title from API if needed (handles old projects without projectTitle stored)
     useEffect(() => {

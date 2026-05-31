@@ -157,8 +157,7 @@ interface ProjectCreationConfig {
     customBlockLibraries?: CustomBlockLibrary[];
     // Frontend source from template (templates are source of truth for repos)
     frontendSource?: FrontendSource;
-    // Edit mode: re-use existing project directory
-    editMode?: boolean;
+    // Edit mode: re-use existing project directory (editProjectPath presence signals edit mode)
     editProjectPath?: string;
     // EDS-specific configuration (for Edge Delivery Services stacks)
     edsConfig?: {
@@ -229,8 +228,8 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     // Safety check: Ensure port is available
     await handlePortConflicts(context, typedConfig, progressTracker);
 
-    // Determine project path based on edit mode
-    const isEditMode = typedConfig.editMode && typedConfig.editProjectPath;
+    // Determine project path based on edit mode (editProjectPath presence signals edit)
+    const isEditMode = Boolean(typedConfig.editProjectPath);
     const projectPath = isEditMode && typedConfig.editProjectPath
         ? typedConfig.editProjectPath
         : path.join(os.homedir(), '.demo-builder', 'projects', typedConfig.projectName);

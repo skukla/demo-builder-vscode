@@ -78,8 +78,7 @@ export interface WizardState {
     // Wizard mode - determines flow behavior and UI labels
     wizardMode?: WizardMode;
 
-    // Edit mode properties (legacy, use wizardMode instead)
-    editMode?: boolean;  // True when editing existing project
+    // Edit-target data (populated when wizardMode === 'edit')
     editProjectPath?: string;  // Path to existing project being edited
     editOriginalName?: string;  // Original project name (for duplicate validation)
 }
