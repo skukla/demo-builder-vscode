@@ -359,7 +359,7 @@ export function WizardContainer({
     const timelineSteps: TimelineStep[] = WIZARD_STEPS.map(s => ({ id: s.id, name: s.name }));
     const completedStepIndices = getCompletedStepIndices(completedSteps, WIZARD_STEPS);
     const confirmedStepIndices = getCompletedStepIndices(confirmedSteps, WIZARD_STEPS);
-    const isEditMode = state.wizardMode ? state.wizardMode !== 'create' : state.editMode;
+    const isEditMode = (state.wizardMode ?? 'create') !== 'create';
 
     const handleTimelineStepClick = (targetIndex: number) => {
         const targetStep = WIZARD_STEPS[targetIndex];

@@ -695,7 +695,6 @@ export function buildProjectConfig(
         selectedBlockLibraries: wizardState.selectedBlockLibraries || [],
         customBlockLibraries: wizardState.customBlockLibraries || [],
         frontendSource,
-        editMode: wizardState.editMode,
         editProjectPath: wizardState.editProjectPath,
         edsConfig: buildProjectEdsConfig(wizardState),
     };

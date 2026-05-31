@@ -211,7 +211,6 @@ function buildEditModeState(
         currentStep: firstStep,
         projectName: editProject.projectName,
         wizardMode: 'edit',
-        editMode: true,
         editProjectPath: editProject.projectPath,
         editOriginalName: editProject.projectName,
         componentConfigs: editSettings.configs || {},

@@ -57,7 +57,6 @@ export interface ProjectConfig {
     importedWorkspaceId?: string;
     importedMeshEndpoint?: string;
     frontendSource?: unknown;
-    editMode?: boolean;
     editProjectPath?: string;
     edsConfig?: unknown;
     // Legacy fields (kept for backwards compatibility)
