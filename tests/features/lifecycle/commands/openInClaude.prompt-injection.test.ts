@@ -1,4 +1,11 @@
 /** Terminal prompt delivery: spawn launch-arg, reuse bracketed-paste, clipboard handoff — split from openInClaude.test.ts. */
+
+// Must declare the session-store mock before importing OpenInClaudeCommand
+// or the testkit — Jest only hoists `jest.mock` within a single file.
+jest.mock('@/commands/claudeSessionStore', () => ({
+    hasConversation: jest.fn(() => false),
+}));
+
 import * as vscode from 'vscode';
 import { OpenInClaudeCommand } from '@/commands/openInClaude';
 import type { Project } from '@/types/base';
@@ -61,13 +68,15 @@ describe('OpenInClaudeCommand', () => {
     });
 
     // ------------------------------------------------------------------------
-    // Spawn case: prompt delivered as a `claude --continue` launch argument.
-    // Race-free — no waiting for the REPL to be ready, no bracketed-paste.
+    // Spawn case: prompt delivered as a launch argument. Race-free — no
+    // waiting for the REPL to be ready, no bracketed-paste. Includes
+    // `--continue` only when a prior session exists for the cwd, so a
+    // fresh project does not error with "No conversation found to continue".
     // ------------------------------------------------------------------------
 
     describe('spawn case: prompt delivered as a launch argument', () => {
-        it('launches `claude --continue` with the prompt as a single-quoted argument', async () => {
-            const mocks = setupVscodeMocks();
+        it('launches with `--continue` and the prompt when a prior conversation exists', async () => {
+            const mocks = setupVscodeMocks({ hasClaudeConversation: true });
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
@@ -79,8 +88,21 @@ describe('OpenInClaudeCommand', () => {
             expect(mocks.terminalSendTextMock).toHaveBeenCalledWith("claude --continue -- 'do the thing'");
         });
 
+        it('omits `--continue` on cold start and submits the prompt to a fresh session', async () => {
+            const mocks = setupVscodeMocks({ hasClaudeConversation: false });
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute({ project: makeProject() as Project, prompt: 'do the thing' });
+
+            expect(mocks.terminalSendTextMock).toHaveBeenCalledWith("claude -- 'do the thing'");
+        });
+
         it('escapes single quotes in the prompt so the shell receives it intact', async () => {
-            const mocks = setupVscodeMocks();
+            const mocks = setupVscodeMocks({ hasClaudeConversation: true });
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
@@ -94,7 +116,7 @@ describe('OpenInClaudeCommand', () => {
         });
 
         it('keeps a multi-line prompt inside the single-quoted argument', async () => {
-            const mocks = setupVscodeMocks();
+            const mocks = setupVscodeMocks({ hasClaudeConversation: true });
             const multiLine = 'line one\nline two';
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
@@ -126,8 +148,21 @@ describe('OpenInClaudeCommand', () => {
             expect(sendSequenceCall).toBeUndefined();
         });
 
-        it('spawns with a plain `claude --continue` when no prompt is provided', async () => {
-            const mocks = setupVscodeMocks();
+        it('spawns with bare `claude` on cold start when no prompt is provided', async () => {
+            const mocks = setupVscodeMocks({ hasClaudeConversation: false });
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute(makeProject() as Project);
+
+            expect(mocks.terminalSendTextMock).toHaveBeenCalledWith('claude');
+        });
+
+        it('spawns with `claude --continue` when a prior conversation exists and no prompt', async () => {
+            const mocks = setupVscodeMocks({ hasClaudeConversation: true });
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,

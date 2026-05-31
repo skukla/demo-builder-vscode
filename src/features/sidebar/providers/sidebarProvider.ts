@@ -9,8 +9,18 @@ import * as crypto from 'crypto';
 import * as vscode from 'vscode';
 import type { SidebarContext } from '../types';
 import { BaseWebviewCommand } from '@/core/base';
+import { LAST_UPDATE_CHECK } from '@/core/constants';
 import type { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
+
+/**
+ * Minimum gap between automatic update checks fired from sidebar activation.
+ * Workspace reloads happen frequently (every project switch); without a
+ * persistent throttle the auto-check runs on every reload. One hour balances
+ * "fresh-enough updates within a session" against "no spam on every reload."
+ * The palette command bypasses this throttle.
+ */
+const UPDATE_CHECK_THROTTLE_MS = 60 * 60 * 1000;
 
 /**
  * SidebarProvider - WebviewViewProvider for the Demo Builder sidebar
@@ -104,25 +114,58 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     }
 
     /**
-     * Trigger update check if auto-update is enabled
-     * Called once when sidebar is first activated
+     * Trigger update check if auto-update is enabled.
+     *
+     * Throttled across workspace reloads: when switching projects, VS Code
+     * reactivates the extension and re-resolves the sidebar, which would
+     * re-fire the check on every project switch. A persistent
+     * `LAST_UPDATE_CHECK` timestamp in globalState skips the check while
+     * the last run is within `UPDATE_CHECK_THROTTLE_MS` (inclusive of the
+     * boundary — `<=`). The palette command (`demoBuilder.checkForUpdates`)
+     * bypasses this — only the automatic sidebar-activation path is throttled.
+     *
+     * The timestamp is written eagerly before the network call to prevent
+     * concurrent activations from double-checking. If the network call
+     * fails, the timestamp is rolled back so the next sidebar activation
+     * can retry instead of burning the full throttle window on a transient
+     * error.
      */
     private triggerUpdateCheck(): void {
         const autoUpdateEnabled = vscode.workspace
             .getConfiguration('demoBuilder')
             .get<boolean>('autoUpdate', true);
 
-        if (autoUpdateEnabled) {
-            // Run in background, don't block sidebar activation
-            vscode.commands.executeCommand('demoBuilder.checkForUpdates').then(
-                () => {
-                    // Success - no action needed
-                },
-                (err: Error) => {
-                    this.logger.debug('[Updates] Background check failed:', err);
-                },
-            );
+        if (!autoUpdateEnabled) {
+            return;
         }
+
+        const now = Date.now();
+        const last = this._context.globalState.get<number>(LAST_UPDATE_CHECK) ?? 0;
+        if (last > 0 && now - last <= UPDATE_CHECK_THROTTLE_MS) {
+            this.logger.debug(
+                `[Updates] Skipping auto-check; last ran ${Math.round((now - last) / 1000)}s ago`,
+            );
+            return;
+        }
+
+        // Set the timestamp eagerly so concurrent activations cannot
+        // double-check before the network call returns. The catch arm
+        // rolls back to the previous value so transient failures don't
+        // burn the throttle window.
+        const previous = last > 0 ? last : undefined;
+        void this._context.globalState.update(LAST_UPDATE_CHECK, now);
+
+        // Run in background, don't block sidebar activation
+        vscode.commands.executeCommand('demoBuilder.checkForUpdates').then(
+            () => {
+                // Success - no action needed
+            },
+            (err: Error) => {
+                this.logger.debug('[Updates] Background check failed:', err);
+                // Restore the prior timestamp so the next activation retries.
+                void this._context.globalState.update(LAST_UPDATE_CHECK, previous);
+            },
+        );
     }
 
     /**

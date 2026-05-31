@@ -1,4 +1,11 @@
 /** Terminal surface: forced launch, find-or-spawn, location selection, terminal behavior — split from openInClaude.test.ts. */
+
+// Must declare the session-store mock before importing OpenInClaudeCommand
+// or the testkit — Jest only hoists `jest.mock` within a single file.
+jest.mock('@/commands/claudeSessionStore', () => ({
+    hasConversation: jest.fn(() => false),
+}));
+
 import * as vscode from 'vscode';
 import { OpenInClaudeCommand, isClaudeChatOpen } from '@/commands/openInClaude';
 import type { Project } from '@/types/base';
@@ -29,8 +36,21 @@ describe('OpenInClaudeCommand', () => {
             expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
         });
 
-        it('uses `claude --continue` instead of plain `claude`', async () => {
-            const mocks = setupVscodeMocks();
+        it('uses plain `claude` on cold start (no prior conversation)', async () => {
+            const mocks = setupVscodeMocks({ hasClaudeConversation: false });
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(makeProject()) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute(makeProject() as Project);
+
+            expect(mocks.terminalSendTextMock).toHaveBeenCalledWith('claude');
+        });
+
+        it('uses `claude --continue` when a prior conversation exists for the cwd', async () => {
+            const mocks = setupVscodeMocks({ hasClaudeConversation: true });
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
@@ -40,6 +60,20 @@ describe('OpenInClaudeCommand', () => {
             await command.execute(makeProject() as Project);
 
             expect(mocks.terminalSendTextMock).toHaveBeenCalledWith('claude --continue');
+        });
+
+        it('probes the session store using the project path', async () => {
+            const mocks = setupVscodeMocks({ hasClaudeConversation: false });
+            const project = makeProject({ path: '/Users/kukla/projects/demo' });
+            const command = new OpenInClaudeCommand(
+                makeContext(makeGlobalState()),
+                makeStateManager(project) as never,
+                makeLogger() as never,
+            );
+
+            await command.execute(project as Project);
+
+            expect(mocks.hasClaudeConversationMock).toHaveBeenCalledWith('/Users/kukla/projects/demo');
         });
     });
 
@@ -71,6 +105,8 @@ describe('OpenInClaudeCommand', () => {
         it('spawns a new terminal if the only matching terminal has exited', async () => {
             const mocks = setupVscodeMocks({
                 existingTerminals: [{ name: 'Claude Code', exitStatus: { code: 0 } }],
+                // A prior session likely exists when a terminal has just exited.
+                hasClaudeConversation: true,
             });
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
@@ -186,7 +222,7 @@ describe('OpenInClaudeCommand', () => {
             expect(createArg).toMatchObject({ name: 'Claude Code', cwd: '/projects/demo' });
         });
 
-        it('calls term.show() before sendText("claude --continue")', async () => {
+        it('calls term.show() before sendText(launch command)', async () => {
             const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),

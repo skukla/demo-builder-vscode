@@ -1,4 +1,11 @@
 /** Logging assertions, error surfaces, and project resolution — split from openInClaude.test.ts. */
+
+// Must declare the session-store mock before importing OpenInClaudeCommand
+// or the testkit — Jest only hoists `jest.mock` within a single file.
+jest.mock('@/commands/claudeSessionStore', () => ({
+    hasConversation: jest.fn(() => false),
+}));
+
 import { OpenInClaudeCommand } from '@/commands/openInClaude';
 import type { Project } from '@/types/base';
 import {

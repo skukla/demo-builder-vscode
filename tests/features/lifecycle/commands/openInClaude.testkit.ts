@@ -8,7 +8,7 @@
  * NOT a `.test.ts` file, so Jest does not run it as a suite.
  *
  * Coverage (across the consuming suites — terminal-only):
- *  - Terminal find-or-spawn behavior + `claude --continue` on spawn
+ *  - Terminal find-or-spawn behavior + cold-start vs warm-start launch
  *  - Bracketed-paste injection on reuse
  *  - Clipboard handoff for prompt + one-time fallback tip
  *  - Logging assertions per decision branch
@@ -16,7 +16,14 @@
 
 import * as vscode from 'vscode';
 
+import { hasConversation as hasClaudeConversation } from '@/commands/claudeSessionStore';
 import type { Project } from '@/types/base';
+
+// NOTE: each consuming test file MUST declare its own
+//   `jest.mock('@/commands/claudeSessionStore', () => ({ hasConversation: jest.fn(() => false) }))`
+// at the top. Jest only hoists `jest.mock` calls within a single file —
+// placing the mock here would not apply to imports that already resolved
+// when the testkit module loaded.
 
 // ----------------------------------------------------------------------------
 // Mock helpers
@@ -99,6 +106,13 @@ export function setupVscodeMocks(opts: {
      * `[]` (no existing terminals; spawn a fresh one).
      */
     existingTerminals?: Array<{ name: string; exitStatus?: { code: number } | undefined }>;
+    /**
+     * Whether a prior Claude conversation exists for the project's cwd.
+     * Defaults to `false` (cold start — launch with bare `claude`).
+     * Set to `true` to exercise the warm-start path (launch with
+     * `claude --continue`).
+     */
+    hasClaudeConversation?: boolean;
 } = {}): {
     getConfigMock: jest.Mock;
     configUpdateMock: jest.Mock;
@@ -110,6 +124,7 @@ export function setupVscodeMocks(opts: {
     showWarningMessageMock: jest.Mock;
     clipboardWriteMock: jest.Mock;
     existingTerminalShowMocks: jest.Mock[];
+    hasClaudeConversationMock: jest.Mock;
 } {
     // Default workspace = project.path so existing tests still pass.
     const wsPath = opts.workspaceFolderPath === undefined ? '/projects/demo' : opts.workspaceFolderPath;
@@ -175,6 +190,12 @@ export function setupVscodeMocks(opts: {
     showWarningMessageMock.mockReset();
     showWarningMessageMock.mockResolvedValue(undefined);
 
+    // Configure the Claude session-store probe for this run. Default is
+    // `false` (cold start); tests opt into the warm path explicitly.
+    const hasClaudeConversationMock = hasClaudeConversation as jest.Mock;
+    hasClaudeConversationMock.mockReset();
+    hasClaudeConversationMock.mockReturnValue(opts.hasClaudeConversation ?? false);
+
     return {
         getConfigMock,
         configUpdateMock,
@@ -186,5 +207,6 @@ export function setupVscodeMocks(opts: {
         showWarningMessageMock,
         clipboardWriteMock,
         existingTerminalShowMocks,
+        hasClaudeConversationMock,
     };
 }

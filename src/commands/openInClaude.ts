@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { hasConversation as hasClaudeConversation } from './claudeSessionStore';
 import { BaseCommand } from '@/core/base';
 import type { Project } from '@/types/base';
 
@@ -145,14 +146,21 @@ export class OpenInClaudeCommand extends BaseCommand {
         terminal.show();
         // Deliver the prompt as a launch argument so claude runs it on startup —
         // no waiting for the REPL, no dropped paste. `--` marks end-of-options so
-        // a prompt that starts with a dash is taken as text, not a flag. Falls
-        // back to a bare resume when there's no prompt.
+        // a prompt that starts with a dash is taken as text, not a flag.
+        //
+        // Only pass `--continue` when a prior conversation exists for this cwd.
+        // `claude --continue` on cold start prints "No conversation found to
+        // continue" and exits, leaving the user with a dead terminal. The
+        // session-store probe (`claudeSessionStore.hasConversation`) checks
+        // `~/.claude/projects/<encoded-cwd>/` for any `.jsonl` transcript.
+        const useContinue = hasClaudeConversation(project.path);
+        const continueFlag = useContinue ? ' --continue' : '';
         const launchCommand = prompt
-            ? `claude --continue -- ${this.quotePromptForShell(prompt)}`
-            : 'claude --continue';
+            ? `claude${continueFlag} -- ${this.quotePromptForShell(prompt)}`
+            : `claude${continueFlag}`;
         terminal.sendText(launchCommand);
         this.logger.info(
-            `[Open in Claude] terminal spawned (project=${project.name}, location=editor-active, prompt=${prompt ? 'yes' : 'no'})`,
+            `[Open in Claude] terminal spawned (project=${project.name}, location=editor-active, prompt=${prompt ? 'yes' : 'no'}, resume=${useContinue ? 'yes' : 'no'})`,
         );
 
         if (prompt) {
