@@ -62,7 +62,6 @@ export {
     SharedState,
     HandlerContext,
     HandlerResponse,
-    HandlerRegistryMap,
 } from './handlers';
 
 // Type guards - Import directly from './typeGuards' when needed to avoid circular dependency
