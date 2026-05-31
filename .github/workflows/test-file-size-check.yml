@@ -1,17 +1,17 @@
 name: Test File Size Check
 
 on:
+  # No path filter: this check is a required status under branch protection,
+  # so it must report on EVERY pull request. A path filter would skip the run
+  # on non-test PRs (docs, config), leaving the required check permanently
+  # "pending" and blocking the merge. The validator is cheap and a no-op when
+  # no test files changed, so running it unconditionally is safe.
   pull_request:
-    paths:
-      - 'tests/**/*.test.ts'
-      - 'tests/**/*.test.tsx'
   push:
     branches:
       - main
       - master
-    paths:
-      - 'tests/**/*.test.ts'
-      - 'tests/**/*.test.tsx'
+      - develop
   workflow_dispatch: # Allow manual trigger
 
 jobs:
