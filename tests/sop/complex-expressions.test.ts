@@ -20,9 +20,11 @@ describe('SOP: Complex Expression Extraction', () => {
     /**
      * Pattern to detect nested ternary operators in code.
      * Matches: a ? b : c ? d : e (ternary inside ternary)
-     * Excludes: comments, string literals with '?'
+     * Excludes: comments, string literals with '?', and two INDEPENDENT
+     * ternaries on one line (e.g. separate `${...}` template interpolations) —
+     * the middle segment forbids interpolation/statement boundaries ({ } ;).
      */
-    const NESTED_TERNARY_PATTERN = /[^'"`/]\s*\?\s*[^:]+:\s*[^?]+\?\s*[^:]+:/;
+    const NESTED_TERNARY_PATTERN = /[^'"`/]\s*\?\s*[^:]+:\s*[^?{};]+\?\s*[^:]+:/;
 
     /**
      * Pattern to detect long boolean && chains (4+ conditions in JSX)
