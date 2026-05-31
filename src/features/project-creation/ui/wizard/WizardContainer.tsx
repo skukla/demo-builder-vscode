@@ -40,10 +40,8 @@ import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjec
 import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
 import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
 import { ConnectServicesStep } from '@/features/eds/ui/steps/ConnectServicesStep';
-import { DaLiveSetupStep } from '@/features/eds/ui/steps/DaLiveSetupStep';
 import { DataSourceConfigStep } from '@/features/eds/ui/steps/DataSourceConfigStep';
 import { GitHubRepoSelectionStep } from '@/features/eds/ui/steps/GitHubRepoSelectionStep';
-import { GitHubSetupStep } from '@/features/eds/ui/steps/GitHubSetupStep';
 import { StorefrontSetupStep } from '@/features/eds/ui/steps/StorefrontSetupStep';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
 import { ConnectStoreStepContent } from '@/features/project-creation/ui/components/ConnectStoreStepContent';
@@ -314,12 +312,8 @@ export function WizardContainer({
                 return <AdobeWorkspaceStep {...props} completedSteps={completedSteps} />;
             case 'eds-connect-services':
                 return <ConnectServicesStep {...props} />;
-            case 'eds-github':
-                return <GitHubSetupStep {...props} />;
             case 'eds-repository-config':
                 return <GitHubRepoSelectionStep {...props} />;
-            case 'eds-dalive':
-                return <DaLiveSetupStep {...props} />;
             case 'eds-data-source':
                 return <DataSourceConfigStep {...props} />;
             case 'storefront-setup':
