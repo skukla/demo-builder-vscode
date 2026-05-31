@@ -98,7 +98,7 @@ export interface TokenProvider {
  * This matches the shape of AuthenticationService.getTokenManager().
  */
 interface TokenManager {
-    getAccessToken(): Promise<string | undefined>;
+    inspectToken(): Promise<{ valid: boolean; expiresIn: number; token?: string }>;
 }
 
 interface AuthManagerLike {
@@ -125,7 +125,7 @@ export function createDaLiveTokenProvider(authManager?: AuthManagerLike | null):
 
     return {
         getAccessToken: async () => {
-            const token = await authManager.getTokenManager().getAccessToken();
+            const token = (await authManager.getTokenManager().inspectToken()).token;
             return token ?? null;
         },
     };

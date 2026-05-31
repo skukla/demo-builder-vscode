@@ -10,14 +10,13 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 }));
 
 const mockInspectToken = jest.fn();
-const mockGetAccessToken = jest.fn();
 const mockListOrgSites = jest.fn();
 const mockDeleteAllSiteContent = jest.fn();
 
 jest.mock('@/core/di', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({
-            getTokenManager: () => ({ inspectToken: mockInspectToken, getAccessToken: mockGetAccessToken }),
+            getTokenManager: () => ({ inspectToken: mockInspectToken }),
         })),
     },
 }));
@@ -36,8 +35,7 @@ const getGitHubServicesMock = getGitHubServices as jest.Mock;
 
 beforeEach(() => {
     jest.clearAllMocks();
-    mockInspectToken.mockResolvedValue({ valid: true, expiresIn: 60 });
-    mockGetAccessToken.mockResolvedValue('ims-token');
+    mockInspectToken.mockResolvedValue({ valid: true, expiresIn: 60, token: 'ims-token' });
     mockListOrgSites.mockResolvedValue([]);
     mockDeleteAllSiteContent.mockResolvedValue({ success: true, deletedCount: 0 });
 });

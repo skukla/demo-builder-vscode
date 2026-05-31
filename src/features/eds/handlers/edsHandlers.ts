@@ -318,7 +318,7 @@ async function buildAccsDiscoveryParams(
         return { success: false, error: 'Adobe authentication required' };
     }
 
-    const imsToken = await context.authManager.getTokenManager().getAccessToken();
+    const imsToken = (await context.authManager.getTokenManager().inspectToken()).token;
     if (!imsToken) {
         await context.sendMessage('store-discovery-result', {
             success: false,

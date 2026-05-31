@@ -317,36 +317,6 @@ ${JSON.stringify({ token, expiry })}`;
         });
     });
 
-    describe('getAccessToken', () => {
-        it('should return token when valid', async () => {
-            const now = Date.now();
-            const expiry = now + (60 * 60 * 1000);
-            const token = 'x'.repeat(150);
-
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: JSON.stringify({ token, expiry }),
-                stderr: '',
-            } as CommandResult);
-
-            const result = await tokenManager.getAccessToken();
-
-            expect(result).toBe(token);
-        });
-
-        it('should return undefined when token is invalid', async () => {
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 1,
-                stdout: '',
-                stderr: '',
-            } as CommandResult);
-
-            const result = await tokenManager.getAccessToken();
-
-            expect(result).toBeUndefined();
-        });
-    });
-
     describe('edge cases', () => {
         it('should handle token at exactly 100 characters', async () => {
             const now = Date.now();

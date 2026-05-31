@@ -66,7 +66,7 @@ export async function cleanupDaLiveSitesCommand(): Promise<void> {
 
         const tokenProvider = {
             getAccessToken: async () => {
-                const token = await tokenManager.getAccessToken();
+                const token = (await tokenManager.inspectToken()).token;
                 return token ?? null;
             },
         };

@@ -44,7 +44,7 @@ export async function cleanupDaLiveSites(
         const daLiveOps = new DaLiveOrgOperations(
             { 
                 getAccessToken: async () => {
-                    const token = await tokenManager.getAccessToken();
+                    const token = (await tokenManager.inspectToken()).token;
                     return token ?? null; // Convert undefined to null for TokenProvider interface
                 },
             },
