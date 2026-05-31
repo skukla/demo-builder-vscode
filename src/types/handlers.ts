@@ -219,12 +219,6 @@ export interface HandlerResponse {
 }
 
 /**
- * HandlerRegistry - Maps message types to handler functions
- * @deprecated Use HandlerMap (object literal) instead
- */
-export type HandlerRegistryMap = Map<string, MessageHandler>;
-
-/**
  * AnyMessageHandler - Permissive type for handler functions
  *
  * Allows handlers with specific payload types to be used in handler maps.
