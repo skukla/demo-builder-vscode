@@ -48,7 +48,7 @@ export function useWizardEffects({
     // Auto-focus first element in step content when step changes
     useEffect(() => {
         // Don't auto-focus on steps that manage their own focus or use natural tab order
-        const selfManagedFocusSteps = new Set(['component-selection', 'component-config', 'prerequisites']);
+        const selfManagedFocusSteps = new Set(['component-selection', 'prerequisites']);
 
         if (selfManagedFocusSteps.has(state.currentStep)) {
             return;
