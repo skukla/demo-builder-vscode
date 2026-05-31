@@ -90,7 +90,7 @@ async function validateProjectConfig(
     // Orphaned/invalid directories will still be cleaned up by executor
     // In edit mode, allow the original project name (same project being edited)
     const existingProjects = await context.stateManager.getAllProjects();
-    const isEditMode = Boolean(config.editMode && config.editProjectPath);
+    const isEditMode = Boolean(config.editProjectPath);
     const duplicateProject = existingProjects.find(p => {
         if (p.name !== config.projectName) return false;
         // In edit mode, allow if it's the same project being edited
@@ -315,8 +315,8 @@ export async function handleCreateProject(
         context.logger.error(`[Project Creation] Failed after ${elapsedStr}`, error as Error);
 
         // Cleanup partial project directory and orphaned mesh on failure
-        const editMode = (config as { editMode?: boolean }).editMode === true;
-        await cleanupOnFailure(context, projectPath, editMode);
+        const isEditMode = Boolean((config as { editProjectPath?: string }).editProjectPath);
+        await cleanupOnFailure(context, projectPath, isEditMode);
 
         // Report error to UI
         await reportCreationError(context, error, elapsedStr);

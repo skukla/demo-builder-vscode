@@ -10,25 +10,14 @@ export type WizardStep =
     | 'welcome'
     | 'component-selection'
     | 'prerequisites'
-    | 'adobe-setup'  // Kept for backward compatibility
     | 'adobe-auth'  // Adobe authentication step
     | 'adobe-project'  // Adobe project selection step
     | 'adobe-workspace'  // Adobe workspace selection step
-    | 'adobe-context'  // Kept for compatibility
-    | 'adobe-org'  // Legacy: Adobe org selection
-    | 'org-selection'  // Kept for compatibility, will be disabled in config
-    | 'project-selection'  // Kept for compatibility, will be disabled in config
     | 'eds-connect-services'  // EDS: Combined GitHub + DA.live authentication (conditional: requiresGitHub OR requiresDaLive stack)
-    | 'eds-github'  // EDS: GitHub authentication (conditional: requiresGitHub stack) - legacy, use eds-connect-services
     | 'eds-repository-config'  // EDS: Repository and DA.live configuration (conditional: requiresGitHub stack)
-    | 'eds-dalive'  // EDS: DA.live authentication (conditional: requiresDaLive stack) - legacy, use eds-connect-services
     | 'eds-data-source'  // EDS: ACCS data source configuration (conditional: requiresDaLive stack)
     | 'storefront-setup'  // EDS: Storefront setup (GitHub repo, DA.live content, Helix config)
     | 'settings'  // Component-specific settings collection
-    | 'component-config'  // Legacy: Component configuration
-    | 'commerce-config'  // Kept for compatibility
-    | 'data-source-config'  // Legacy: Data source configuration
-    | 'connect-services'  // Legacy: Connect services step
     | 'review'
     | 'create-project';
 
@@ -89,8 +78,7 @@ export interface WizardState {
     // Wizard mode - determines flow behavior and UI labels
     wizardMode?: WizardMode;
 
-    // Edit mode properties (legacy, use wizardMode instead)
-    editMode?: boolean;  // True when editing existing project
+    // Edit-target data (populated when wizardMode === 'edit')
     editProjectPath?: string;  // Path to existing project being edited
     editOriginalName?: string;  // Original project name (for duplicate validation)
 }
@@ -377,8 +365,6 @@ export interface EDSConfig {
     selectedRepo?: GitHubRepoItem;
     /** Existing repository full name (owner/repo format) - deprecated, use selectedRepo */
     existingRepo?: string;
-    /** Whether existing repo access has been verified - deprecated, use selectedRepo */
-    existingRepoVerified?: boolean;
     /** Whether to reset existing repo to template (repurpose flow) */
     resetToTemplate?: boolean;
     /** DA.live organization name */

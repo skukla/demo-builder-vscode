@@ -164,18 +164,18 @@ export class AuthenticationService {
             try {
                 this.debugLogger.debug('[Auth] Checking authentication status');
                 const stepLogger = await this.ensureStepLogger();
-                stepLogger.logTemplate('adobe-setup', 'operations.checking', { item: 'authentication status' });
+                stepLogger.logTemplate('adobe-auth', 'operations.checking', { item: 'authentication status' });
 
                 const isValid = await this.tokenManager.isTokenValid();
 
                 if (isValid) {
                     await this.organizationValidator.validateAndClearInvalidOrgContext();
-                    stepLogger.logTemplate('adobe-setup', 'statuses.authentication-complete', {});
+                    stepLogger.logTemplate('adobe-auth', 'statuses.authentication-complete', {});
                     this.cacheManager.setCachedAuthStatus(true);
                     return true;
                 } else {
                     this.logger.info('[Auth] Not authenticated with Adobe. Please click "Log in to Adobe" to authenticate.');
-                    stepLogger.logTemplate('adobe-setup', 'statuses.not-authenticated', {});
+                    stepLogger.logTemplate('adobe-auth', 'statuses.not-authenticated', {});
                     this.cacheManager.setCachedAuthStatus(false);
                     return false;
                 }
@@ -191,7 +191,7 @@ export class AuthenticationService {
                 this.debugLogger.debug(formatted.technical);
 
                 const stepLogger = await this.ensureStepLogger();
-                stepLogger.logTemplate('adobe-setup', 'error', { item: 'Authentication check', error: formatted.title });
+                stepLogger.logTemplate('adobe-auth', 'error', { item: 'Authentication check', error: formatted.title });
 
                 this.cacheManager.setCachedAuthStatus(false, CACHE_TTL.SHORT);
                 return false;
@@ -206,7 +206,7 @@ export class AuthenticationService {
         return withTiming('login', async () => {
             try {
                 const stepLogger = await this.ensureStepLogger();
-                stepLogger.logTemplate('adobe-setup', 'operations.opening-browser', {});
+                stepLogger.logTemplate('adobe-auth', 'operations.opening-browser', {});
 
                 // If forced login, clear caches BEFORE login
                 if (force) {
@@ -218,8 +218,8 @@ export class AuthenticationService {
                 const loginCommand = force ? 'aio auth login -f' : 'aio auth login';
 
                 this.debugLogger.debug('[Auth] Executing login command, browser should open');
-                stepLogger.logTemplate('adobe-setup', 'statuses.browser-opened', {});
-                stepLogger.logTemplate('adobe-setup', 'operations.waiting-authentication', {});
+                stepLogger.logTemplate('adobe-auth', 'statuses.browser-opened', {});
+                stepLogger.logTemplate('adobe-auth', 'operations.waiting-authentication', {});
 
                 const result = await this.commandManager.execute(
                     loginCommand,
@@ -232,7 +232,7 @@ export class AuthenticationService {
                     });
                     this.logger.error(`[Auth] ${formatted.message}`);
                     this.debugLogger.debug(formatted.technical);
-                    stepLogger.logTemplate('adobe-setup', 'error', {
+                    stepLogger.logTemplate('adobe-auth', 'error', {
                         item: 'Authentication',
                         error: formatted.title,
                     });
@@ -245,7 +245,7 @@ export class AuthenticationService {
 
                     if (isValidTokenResponse(token)) {
                         this.debugLogger.debug('[Auth] Adobe CLI login successful (exit code 0)');
-                        stepLogger.logTemplate('adobe-setup', 'statuses.authentication-complete', {});
+                        stepLogger.logTemplate('adobe-auth', 'statuses.authentication-complete', {});
 
                         this.sdkClient.clear();
                         this.debugLogger.debug('[Auth] Cleared SDK client to force re-init with new token');
@@ -265,7 +265,7 @@ export class AuthenticationService {
 
                     if (!force) {
                         this.debugLogger.debug('[Auth] Retrying with force flag to ensure fresh authentication');
-                        stepLogger.logTemplate('adobe-setup', 'operations.retrying', { item: 'authentication with fresh login' });
+                        stepLogger.logTemplate('adobe-auth', 'operations.retrying', { item: 'authentication with fresh login' });
                         return await this.login(true);
                     }
                 } else {
@@ -297,7 +297,7 @@ export class AuthenticationService {
             this.sdkClient.clear();
 
             const stepLogger = await this.ensureStepLogger();
-            stepLogger.logTemplate('adobe-setup', 'success', { item: 'Logout' });
+            stepLogger.logTemplate('adobe-auth', 'success', { item: 'Logout' });
         } catch (error) {
             this.debugLogger.error('[Auth] Logout failed', error as Error);
             throw error;

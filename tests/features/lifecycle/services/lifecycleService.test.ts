@@ -6,7 +6,7 @@
  */
 
 import * as vscode from 'vscode';
-import { toggleLogsPanel, resetLogsViewState } from '@/features/lifecycle/services/lifecycleService';
+import { toggleLogsPanel } from '@/features/lifecycle/services/lifecycleService';
 
 // Mock VS Code
 jest.mock('vscode', () => ({
@@ -76,32 +76,6 @@ describe('lifecycleService', () => {
             expect(afterFirst).toBe(true);
             expect(afterSecond).toBe(false);
             expect(afterThird).toBe(true);
-        });
-    });
-
-    describe('resetLogsViewState', () => {
-        it('should reset logs view state to false', () => {
-            // Given: Logs panel is open
-            const { sessionUIState } = require('@/core/state/sessionUIState');
-            sessionUIState.isLogsViewShown = true;
-
-            // When: Resetting state
-            resetLogsViewState();
-
-            // Then: State should be false
-            expect(sessionUIState.isLogsViewShown).toBe(false);
-        });
-
-        it('should have no effect when already false', () => {
-            // Given: Logs panel is already closed
-            const { sessionUIState } = require('@/core/state/sessionUIState');
-            sessionUIState.isLogsViewShown = false;
-
-            // When: Resetting state
-            resetLogsViewState();
-
-            // Then: State should still be false
-            expect(sessionUIState.isLogsViewShown).toBe(false);
         });
     });
 });

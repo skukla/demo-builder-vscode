@@ -168,8 +168,8 @@ describe('AdobeEntityService - Organizations - Listing', () => {
 
             await service.getOrganizations();
 
-            expect(mockStepLogger.logTemplate).toHaveBeenCalledWith('adobe-setup', 'loading-organizations', {});
-            expect(mockStepLogger.logTemplate).toHaveBeenCalledWith('adobe-setup', 'found', expect.any(Object));
+            expect(mockStepLogger.logTemplate).toHaveBeenCalledWith('adobe-auth', 'loading-organizations', {});
+            expect(mockStepLogger.logTemplate).toHaveBeenCalledWith('adobe-auth', 'found', expect.any(Object));
         });
     });
 });

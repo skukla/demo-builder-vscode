@@ -63,13 +63,8 @@ export class StepLogger {
             'welcome': 'Project Setup',
             'component-selection': 'Components',
             'prerequisites': 'Prerequisites',
-            'adobe-setup': 'Adobe Setup',
-            'adobe-auth': 'Adobe Setup',  // Map legacy steps to current names
-            'adobe-context': 'Adobe Setup',
-            'org-selection': 'Adobe Setup',
-            'project-selection': 'Adobe Setup',
+            'adobe-auth': 'Adobe Setup',
             'settings': 'Connect Commerce',
-            'commerce-config': 'Configuration',  // Legacy
             'review': 'Review',
             'creating': 'Creating',
         };
@@ -142,17 +137,14 @@ export class StepLogger {
      * Get the display name for a step ID
      */
     public getStepName(stepId: string): string {
-        // Normalize step ID (adobe-auth -> adobe-setup)
-        const normalizedId = stepId === 'adobe-auth' ? 'adobe-setup' : stepId;
-        
         // Get the step name or create a fallback
-        const stepName = this.stepNames.get(normalizedId);
+        const stepName = this.stepNames.get(stepId);
         if (stepName) {
             return stepName;
         }
-        
+
         // Create a readable fallback from the ID
-        const fallback = normalizedId
+        const fallback = stepId
             .replace(/-/g, ' ')
             .split(' ')
             .map(word => word.charAt(0).toUpperCase() + word.slice(1))

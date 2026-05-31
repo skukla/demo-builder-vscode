@@ -62,7 +62,6 @@ export {
     SharedState,
     HandlerContext,
     HandlerResponse,
-    HandlerRegistryMap,
 } from './handlers';
 
 // Type guards - Import directly from './typeGuards' when needed to avoid circular dependency
@@ -101,6 +100,4 @@ export {
 export * from './stacks';
 
 // Demo package types (unified packages + storefronts)
-// Note: Replaces legacy brands + templates architecture
-// See: .rptc/plans/demo-packages-simplification/
 export * from './demoPackages';

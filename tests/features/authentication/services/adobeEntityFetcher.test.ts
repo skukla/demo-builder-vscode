@@ -248,7 +248,7 @@ describe('AdobeEntityFetcher', () => {
             await fetcher.getProjects({ silent: true });
 
             expect(mockStepLogger.logTemplate).not.toHaveBeenCalledWith(
-                'adobe-setup',
+                'adobe-auth',
                 'operations.loading-projects',
                 expect.anything(),
             );

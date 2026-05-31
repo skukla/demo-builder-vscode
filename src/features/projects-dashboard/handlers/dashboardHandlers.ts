@@ -303,15 +303,6 @@ export const handleSetViewModeOverride: MessageHandler<{ viewMode: 'cards' | 'ro
     return { success: true };
 };
 
-/**
- * Reset view mode session state - for testing
- * @internal
- * @deprecated Use sessionUIState.reset() instead
- */
-export function resetViewModeOverride(): void {
-    sessionUIState.viewModeOverride = undefined;
-}
-
 // ============================================================================
 // Settings Import/Export Handlers (delegated to settingsTransferService)
 // ============================================================================

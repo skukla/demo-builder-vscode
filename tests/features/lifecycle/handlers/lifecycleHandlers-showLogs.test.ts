@@ -6,7 +6,8 @@
  * - First click opens, second click closes
  */
 
-import { handleShowLogs, resetLogsViewState } from '@/features/lifecycle/handlers/lifecycleHandlers';
+import { handleShowLogs } from '@/features/lifecycle/handlers/lifecycleHandlers';
+import { sessionUIState } from '@/core/state/sessionUIState';
 import { createMockContext } from './lifecycleHandlers.testUtils';
 
 // Mock vscode inline to avoid hoisting issues
@@ -27,7 +28,7 @@ describe('lifecycleHandlers - Show Logs', () => {
         jest.clearAllMocks();
         mockContext = createMockContext();
         // Reset the toggle state for each test
-        resetLogsViewState();
+        sessionUIState.reset();
     });
 
     describe('handleShowLogs', () => {

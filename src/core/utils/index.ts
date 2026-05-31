@@ -4,12 +4,9 @@
  * Infrastructure utilities for webviews, progress tracking, and configuration.
  */
 
-// Note: generateWebviewHTML has been deprecated and removed
-// All webview commands should use getWebviewHTMLWithBundles instead
-
-export { getWebviewHTMLWithBundles } from './getWebviewHTMLWithBundles';
+// All webview commands use getWebviewHTML
+export { getWebviewHTML } from './getWebviewHTMLWithBundles';
 export type { WebviewHTMLOptions } from './getWebviewHTMLWithBundles';
-export type { BundleUris } from './bundleUri';
 
 export { extractEnvVars, extractEnvVarsSync } from './envVarExtraction';
 

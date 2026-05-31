@@ -35,20 +35,3 @@ export function getBundleUri(options: BundleUriOptions): vscode.Uri {
     );
     return webview.asWebviewUri(vscode.Uri.file(bundlePath));
 }
-
-// ---------------------------------------------------------------------------
-// Legacy alias — kept for incremental migration of callers.
-// ---------------------------------------------------------------------------
-/** @deprecated Use {@link getBundleUri} instead */
-export function createBundleUris(options: BundleUriOptions): {
-    runtime: vscode.Uri;
-    vendors: vscode.Uri;
-    common: vscode.Uri;
-    feature: vscode.Uri;
-} {
-    const uri = getBundleUri(options);
-    return { runtime: uri, vendors: uri, common: uri, feature: uri };
-}
-
-/** @deprecated Use {@link BundleUriOptions} instead */
-export type { BundleUriOptions as BundleUris };
