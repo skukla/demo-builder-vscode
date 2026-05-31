@@ -336,7 +336,7 @@ config). The result is order-dependent, intermittent failures. Mocking a
 sidesteps this entirely. DI is for these boundary cases only — blanket DI and
 parameter-threading are an anti-pattern (see root `CLAUDE.md`).
 
-See `.rptc/research/2026-05-31-test-dependency-strategy.md` for the full analysis.
+See `docs/testing/test-dependency-strategy.md` for the full analysis.
 
 ## Test Coverage
 
