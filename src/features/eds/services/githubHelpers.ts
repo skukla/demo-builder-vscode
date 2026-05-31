@@ -10,6 +10,7 @@
  * Extracted from GitHubService for better modularity.
  */
 
+import * as crypto from 'crypto';
 import { Octokit } from '@octokit/core';
 import { retry } from '@octokit/plugin-retry';
 import type { GitHubUser, GitHubApiError } from './types';
@@ -46,9 +47,7 @@ export function createAuthenticatedOctokit(token: string): InstanceType<typeof O
  * Returns a 32-character hex string
  */
 export function generateOAuthState(): string {
-    const array = new Uint8Array(16);
-    crypto.getRandomValues(array);
-    return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+    return crypto.randomBytes(16).toString('hex');
 }
 
 /**

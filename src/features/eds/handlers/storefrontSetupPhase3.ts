@@ -8,13 +8,13 @@
  */
 
 import { buildSiteConfigParams, ConfigurationService } from '../services/configurationService';
-import { configureDaLivePermissions } from './edsHelpers';
 import { DaLiveAuthError } from '../services/types';
+import { configureDaLivePermissions } from './edsHelpers';
+import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
+import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
-import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
-import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
 
 /**
  * Execute Phase 3: Code sync verification and CDN publishing

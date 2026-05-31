@@ -38,7 +38,6 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjectStep';
 import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
-import { ConnectStoreStepContent } from '@/features/project-creation/ui/components/ConnectStoreStepContent';
 import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
 import { ConnectServicesStep } from '@/features/eds/ui/steps/ConnectServicesStep';
 import { DaLiveSetupStep } from '@/features/eds/ui/steps/DaLiveSetupStep';
@@ -47,6 +46,7 @@ import { GitHubRepoSelectionStep } from '@/features/eds/ui/steps/GitHubRepoSelec
 import { GitHubSetupStep } from '@/features/eds/ui/steps/GitHubSetupStep';
 import { StorefrontSetupStep } from '@/features/eds/ui/steps/StorefrontSetupStep';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
+import { ConnectStoreStepContent } from '@/features/project-creation/ui/components/ConnectStoreStepContent';
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
 import { ReviewStep } from '@/features/project-creation/ui/steps/ReviewStep';
 import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';

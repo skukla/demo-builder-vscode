@@ -9,6 +9,7 @@
  * Extracted from GitHubService as part of god file split.
  */
 
+import * as crypto from 'crypto';
 import * as vscode from 'vscode';
 import { GITHUB_SCOPES, type OAuthCallbackParams } from './types';
 import { getLogger } from '@/core/logging';
@@ -115,8 +116,6 @@ export class GitHubOAuthService {
      * @returns 32-character hex string
      */
     generateState(): string {
-        const array = new Uint8Array(16);
-        crypto.getRandomValues(array);
-        return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+        return crypto.randomBytes(16).toString('hex');
     }
 }

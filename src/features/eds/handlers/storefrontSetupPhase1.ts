@@ -7,9 +7,9 @@
  * @module features/eds/handlers/storefrontSetupPhase1
  */
 
-import type { HandlerContext } from '@/types/handlers';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
+import type { HandlerContext } from '@/types/handlers';
 
 /**
  * Execute Phase 1: GitHub repository setup (create, use existing, or pre-created)

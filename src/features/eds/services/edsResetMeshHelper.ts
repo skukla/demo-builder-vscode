@@ -8,14 +8,14 @@
  * @module features/eds/services/edsResetMeshHelper
  */
 
-import type { Project } from '@/types/base';
-import type { HandlerContext } from '@/types/handlers';
 import type { EdsResetResult } from './edsResetParams';
-import { getMeshComponentInstance } from '@/types/typeGuards';
-import { ServiceLocator } from '@/core/di';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
+import { ServiceLocator } from '@/core/di';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
 import { updateMeshState } from '@/features/mesh/services/stalenessDetector';
+import type { Project } from '@/types/base';
+import type { HandlerContext } from '@/types/handlers';
+import { getMeshComponentInstance } from '@/types/typeGuards';
 
 // ==========================================================
 // Helpers

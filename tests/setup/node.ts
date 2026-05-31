@@ -9,7 +9,18 @@
  * - Reset ServiceLocator singletons
  */
 
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+
+// Ensure the demo-builder projects base directory exists. The real path-safety
+// validator (validateProjectPath → assertPathInsideSync → fs.realpathSync)
+// resolves the parent directory on disk, so canonical mock project paths
+// (~/.demo-builder/projects/<name>) only validate when this base dir exists.
+// Without it, handler tests pass on developer machines (where the dir exists)
+// but throw on clean machines/CI. Idempotent; out-of-base paths still reject.
+fs.mkdirSync(path.join(os.homedir(), '.demo-builder', 'projects'), { recursive: true });
 
 afterEach(() => {
     // Reset ServiceLocator to prevent singleton pollution between tests

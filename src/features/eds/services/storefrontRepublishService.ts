@@ -10,6 +10,7 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import type * as vscode from 'vscode';
+import { applyDaLiveOrgConfigSettings, configureDaLivePermissions } from '../handlers/edsHelpers';
 import { generateConfigJson, extractConfigParams } from './configGenerator';
 import { syncConfigToRemote, verifyConfigOnCdn } from './configSyncService';
 import type { DaLiveAuthService } from './daLiveAuthService';
@@ -18,7 +19,6 @@ import type { GitHubTokenService } from './githubTokenService';
 import { HelixService } from './helixService';
 import { updateStorefrontState } from './storefrontStalenessDetector';
 import type { PhaseProgressCallback } from './types';
-import { applyDaLiveOrgConfigSettings, configureDaLivePermissions } from '../handlers/edsHelpers';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';

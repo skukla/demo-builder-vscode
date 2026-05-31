@@ -116,7 +116,11 @@ export function assertValidGitHubSlug(value: string, field: string): void {
  * @param project - Project to extract parameters from
  * @returns Extraction result with params or error
  */
-export function extractResetParams(project: Project): ExtractParamsResult {
+export function extractResetParams(
+    project: Project,
+    // Injectable for tests; defaults to the bundled demo-packages config.
+    packages: typeof demoPackagesConfig.packages = demoPackagesConfig.packages,
+): ExtractParamsResult {
     // Get EDS metadata from component instance (project-specific data)
     const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
     const repoFullName = edsInstance?.metadata?.githubRepo as string | undefined;
@@ -124,7 +128,7 @@ export function extractResetParams(project: Project): ExtractParamsResult {
     const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
 
     // Derive template config from brand+stack (source of truth)
-    const pkg = demoPackagesConfig.packages.find((p: { id: string }) => p.id === project.selectedPackage);
+    const pkg = packages.find((p: { id: string }) => p.id === project.selectedPackage);
     const storefronts = pkg?.storefronts as Record<string, {
         templateOwner?: string;
         templateRepo?: string;

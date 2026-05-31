@@ -12,8 +12,8 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { useVSCodeMessage } from '@/core/ui/hooks/useVSCodeMessage';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { STORE_GROUP_IDS } from '@/features/components/config/storeFieldHelpers';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
 // ==========================================================

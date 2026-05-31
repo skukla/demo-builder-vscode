@@ -10,8 +10,8 @@
 import { Text, Checkbox, Divider } from '@adobe/react-spectrum';
 import React from 'react';
 import { cn } from '@/core/ui/utils/classNames';
-import type { OptionalAddon } from '@/types/stacks';
 import type { FeaturePack } from '@/types/featurePacks';
+import type { OptionalAddon } from '@/types/stacks';
 
 interface StackSelectionProps {
     filteredStacks: { id: string; name: string; description: string }[];

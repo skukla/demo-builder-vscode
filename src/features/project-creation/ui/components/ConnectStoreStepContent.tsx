@@ -14,22 +14,21 @@ import {
     Form,
 } from '@adobe/react-spectrum';
 import React, { useMemo } from 'react';
-import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreConfigFieldRow';
-import { ServiceGroupList } from '@/features/components/ui/components/ServiceGroupList';
-import { useComponentConfig } from '@/features/components/ui/hooks/useComponentConfig';
-import { useStoreDiscovery } from '@/features/components/ui/hooks/useStoreDiscovery';
-import { useAutoStoreDetect } from '@/features/components/ui/hooks/useAutoStoreDetect';
-import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
-import type { ComponentConfigs } from '@/types/webview';
-import type { CommerceStoreStructure } from '@/types/commerceStore';
-
 import {
     ACCS_STORE_VIEW_CODE,
     PAAS_STORE_VIEW_CODE,
 } from '@/features/components/config/envVarKeys';
+import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
+import { ServiceGroupList } from '@/features/components/ui/components/ServiceGroupList';
+import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreConfigFieldRow';
+import { useAutoStoreDetect } from '@/features/components/ui/hooks/useAutoStoreDetect';
+import { useComponentConfig } from '@/features/components/ui/hooks/useComponentConfig';
+import { useStoreDiscovery } from '@/features/components/ui/hooks/useStoreDiscovery';
+import type { CommerceStoreStructure } from '@/types/commerceStore';
+import type { ComponentConfigs } from '@/types/webview';
 
 /** Groups that contain connection + store fields (shown immediately with progressive disclosure) */
 const CONNECTION_GROUPS = new Set(['accs', 'adobe-commerce']);

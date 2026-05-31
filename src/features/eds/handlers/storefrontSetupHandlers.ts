@@ -13,7 +13,6 @@
  */
 
 import * as vscode from 'vscode';
-import { hasMeshInDependencies } from '@/core/constants';
 import { CleanupService } from '../services/cleanupService';
 import { ConfigurationService } from '../services/configurationService';
 import { createDaLiveTokenProvider, createDaLiveServiceTokenProvider } from '../services/daLiveContentOperations';
@@ -25,6 +24,7 @@ import type { EdsMetadata, EdsCleanupOptions } from '../services/types';
 import { ensureDaLiveAuth, getDaLiveAuthService } from './edsHelpers';
 import { executeStorefrontSetupPhases } from './storefrontSetupPhases';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
+import { hasMeshInDependencies } from '@/core/constants';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 

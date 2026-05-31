@@ -17,8 +17,8 @@ import { Flex, Heading, Text, View } from '@adobe/react-spectrum';
 import React from 'react';
 import { AiMcpsList } from './AiMcpsList';
 import { AiSkillsList } from './AiSkillsList';
-import { Modal } from '@/core/ui/components/ui/Modal';
 import { Spinner } from '@/core/ui/components/ui';
+import { Modal } from '@/core/ui/components/ui/Modal';
 import type { McpInventoryEntry, SkillInventoryEntry } from '@/types/ai';
 
 export interface AiCapabilitiesModalProps {

@@ -13,7 +13,8 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
+import type { FetchStoresParams } from './useStoreDiscovery';
+import { validateURL } from '@/core/validation/URLValidator';
 import {
     PAAS_URL,
     PAAS_ADMIN_USERNAME,
@@ -21,8 +22,7 @@ import {
     ACCS_GRAPHQL_ENDPOINT as ACCS_ENDPOINT_KEY,
 } from '@/features/components/config/envVarKeys';
 import { STORE_GROUP_IDS } from '@/features/components/config/storeFieldHelpers';
-import { validateURL } from '@/core/validation/URLValidator';
-import type { FetchStoresParams } from './useStoreDiscovery';
+import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
 import type { ComponentConfigs } from '@/types/webview';
 
 /** Derive the component service group ID from an autoDetectKey prefix. */
