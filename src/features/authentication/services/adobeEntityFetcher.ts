@@ -209,7 +209,7 @@ export class AdobeEntityFetcher {
             const cachedOrgs = this.cacheManager.getCachedOrgList();
             if (cachedOrgs) return cachedOrgs;
 
-            this.stepLogger.logTemplate('adobe-setup', 'loading-organizations', {});
+            this.stepLogger.logTemplate('adobe-auth', 'loading-organizations', {});
             await this.ensureSDKReady();
 
             const client = this.sdkClient.getClient() as { getOrganizations: () => Promise<SDKResponse<RawAdobeOrg[]>> };
@@ -230,7 +230,7 @@ export class AdobeEntityFetcher {
             }
 
             this.cacheManager.setCachedOrgList(mappedOrgs);
-            this.stepLogger.logTemplate('adobe-setup', 'found', {
+            this.stepLogger.logTemplate('adobe-auth', 'found', {
                 count: mappedOrgs.length,
                 item: mappedOrgs.length === 1 ? 'organization' : 'organizations',
             });
@@ -274,7 +274,7 @@ export class AdobeEntityFetcher {
 
         try {
             if (!silent) {
-                this.stepLogger.logTemplate('adobe-setup', 'operations.loading-projects', {});
+                this.stepLogger.logTemplate('adobe-auth', 'operations.loading-projects', {});
             }
 
             await this.ensureSDKReady();
@@ -289,7 +289,7 @@ export class AdobeEntityFetcher {
             }
 
             if (!silent) {
-                this.stepLogger.logTemplate('adobe-setup', 'statuses.projects-loaded', {
+                this.stepLogger.logTemplate('adobe-auth', 'statuses.projects-loaded', {
                     count: mappedProjects.length,
                     plural: mappedProjects.length === 1 ? '' : 's',
                 });
@@ -309,7 +309,7 @@ export class AdobeEntityFetcher {
         const startTime = Date.now();
 
         try {
-            this.stepLogger.logTemplate('adobe-setup', 'operations.retrieving-workspaces', {});
+            this.stepLogger.logTemplate('adobe-auth', 'operations.retrieving-workspaces', {});
             await this.ensureSDKReady();
 
             const cachedOrg = this.cacheManager.getCachedOrganization();
@@ -336,7 +336,7 @@ export class AdobeEntityFetcher {
                 );
             }
 
-            this.stepLogger.logTemplate('adobe-setup', 'statuses.workspaces-loaded', {
+            this.stepLogger.logTemplate('adobe-auth', 'statuses.workspaces-loaded', {
                 count: mappedWorkspaces.length,
                 plural: mappedWorkspaces.length === 1 ? '' : 's',
             });

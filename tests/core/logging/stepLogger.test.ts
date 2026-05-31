@@ -174,12 +174,8 @@ describe('StepLogger', () => {
             expect(stepLogger.getStepName('prerequisites')).toBe('Prerequisites');
         });
 
-        it('should normalize adobe-auth to adobe-setup', () => {
+        it('should return configured step name for adobe-auth', () => {
             expect(stepLogger.getStepName('adobe-auth')).toBe('Adobe Setup');
-        });
-
-        it('should return configured step name for adobe-setup', () => {
-            expect(stepLogger.getStepName('adobe-setup')).toBe('Adobe Setup');
         });
 
         it('should create readable fallback for unknown step IDs', () => {
