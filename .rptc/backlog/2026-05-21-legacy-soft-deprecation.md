@@ -256,43 +256,56 @@ Delivered across two stacked PRs, both merged:
 Verification at re-derive time (Node 18): tsc 0 errors, eslint 0, full jest
 suite green (≈8490 tests).
 
-### Deferred (caller migration exceeds the batch boundary — Constraint #7)
+### Previously-deferred items — NOW DONE (2026-05-31)
 
-| Item | Location | Why deferred |
+Both items deferred at the #9 status snapshot have since been migrated and
+merged to `develop`:
+
+| Item | Location | Resolution |
 |---|---|---|
-| **L3.3** `ComponentInstance.endpoint` → `meshState.endpoint` | `src/types/base.ts:150` | Still read by old-project-file fallback paths in mesh/dashboard status helpers; safe migration needs an old-manifest read-shim audit. Category-A-adjacent (back-compat read of on-disk data), not a pure stub. |
-| **L4c** `TokenManager.getAccessToken()` → `inspectToken()` | `src/features/authentication/services/tokenManager.ts:186` | ~5 live callers across `ai/server/cloudResourceTools.ts`, EDS cleanup commands/handlers, `daLiveContentOperations.ts`, `edsHandlers.ts`. Migration is mechanical but spans features; out of one-batch scope. |
+| **L3.3** `ComponentInstance.endpoint` → `meshState.endpoint` | `src/types/base.ts` | **Done — PR #11.** Audited: the field was never written by current code (deployment writes only `meshState.endpoint`); all 7 reads were back-compat fallbacks. Per cycle decision, dropped legacy support outright (no migration shim) — pre-`meshState` files show a blank endpoint until next redeploy; "deployed" status keys off `meshState.envVars`, so status is unaffected. Field + fallbacks deleted, tests re-pointed to `meshState`. |
+| **L4c** `TokenManager.getAccessToken()` → `inspectToken()` | `src/features/authentication/services/tokenManager.ts` | **Done — PR #10.** Migrated all 5 callers to `(await tokenManager.inspectToken()).token`, updated the local `AuthManagerLike` interface + 3 tests, deleted the method. |
 
-### Remaining clean follow-ups (future cycle, low risk)
+Verification (Node 18) for both: tsc 0, eslint 0 errors, full jest suite green.
 
+### Remaining clean follow-ups
+
+In progress this cycle (each researched → implemented → PR'd separately):
+
+- **Pre-existing lint warnings** (15: 0 errors) — complexity/max-depth/non-null
+  in the EDS service layer + oversized test files. Quality only, no behavior
+  change. *(follow-up 1)*
 - **Mesh back-compat exports refactor** — `features/mesh/handlers/index.ts`
   individual re-exports + `stalenessDetector.ts` back-compat exports/static
-  method. Mechanical; no behavior change.
+  method. Mechanical; no behavior change. *(follow-up 2)*
 - **`ComponentHandler` untangle** — `componentHandler.ts:8` is `@deprecated`
   but still wired into live message handling; needs a routing untangle before
-  deletion (Category-A-tangled, not a stub).
+  deletion. *(follow-up 3)*
+
+Not yet scheduled:
+
 - **`demoPackageLoader` test seam** — finish the seam-injection started in
   `edsResetParams.ts` so package-config tests inject data at the boundary
   rather than mocking the leaf module (per `tests/README.md` standard).
-- **Pre-existing lint warnings** — unrelated to this cycle; sweep
-  opportunistically.
 
 ### Category-A kept (verified NOT soft deprecation — do not remove)
 
-- `src/features/components/handlers/componentHandler.ts` — tangled live handler
-  (see follow-up above).
 - `src/features/project-creation/helpers/envFileGenerator.ts:52` — points at
   `ProjectSetupContext`; the generator is still an active code path.
 - `src/features/project-creation/ui/steps/ProjectCreationStep.tsx:459`
   `checkMeshAccess` — internal-only alias delegating to `runPreFlightChecks`;
-  zero external callers, harmless, slated with the mesh follow-up.
+  zero external callers, harmless.
 - All 2026-05-21 Category-A entries above (stateManager/stepLogger/typeGuards
   migration paths, spectrumTokens polymorphism, Helix/fstab external-system
   comments) remain legitimate.
 
+`componentHandler.ts` was previously listed here as "Category-A-tangled"; it is
+now an active follow-up (#3 above) to untangle-then-delete, not a permanent keep.
+
 ### Net surface
 
-`@deprecated` in `src/` went from the 2026-05-21 inventory down to **5**
-remaining, all accounted for above: 2 deferred (base.ts endpoint, tokenManager
-getAccessToken), 1 internal alias (ProjectCreationStep checkMeshAccess), 2
-Category-A-tangled (componentHandler, envFileGenerator).
+With L3.3 and L4c merged, `@deprecated` in `src/` is down to **3**: the
+internal `ProjectCreationStep.checkMeshAccess` alias, `envFileGenerator`
+(active path, Category-A), and `componentHandler` (scheduled for untangle in
+follow-up #3). Every removable Category-B soft-deprecation from the 2026-05-21
+audit has now been deleted or migrated-then-deleted.
