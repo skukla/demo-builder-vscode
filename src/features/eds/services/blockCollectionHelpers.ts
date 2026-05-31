@@ -47,6 +47,72 @@ interface LibraryBlockData {
     files: Array<{ path: string; sha: string }>;
 }
 
+/** Result of discovering + cross-library-deduplicating one library's blocks */
+interface LibraryDiscoveryResult {
+    /** Total blocks discovered in this library's source (before dedup) */
+    discoveredCount: number;
+    /** Blocks unique to this library (not seen in a prior library / destination) */
+    uniqueBlockIds: string[];
+    /** Files belonging only to the unique blocks */
+    files: Array<{ path: string; sha: string }>;
+    /** Source repo commit SHA (for version tracking) */
+    sourceCommitSha: string;
+}
+
+/**
+ * Discover the blocks in a single library's source repo and deduplicate them
+ * against blocks already seen (first-seen-wins). Mutates `seenBlocks` and
+ * `allBlockIds` to record newly-claimed block IDs.
+ */
+async function discoverAndDeduplicateLibraryBlocks(
+    githubFileOps: GitHubFileOperations,
+    lib: BlockLibraryEntry,
+    seenBlocks: Set<string>,
+    allBlockIds: string[],
+): Promise<LibraryDiscoveryResult> {
+    const sourceFiles = await githubFileOps.listRepoFiles(
+        lib.source.owner, lib.source.repo, lib.source.branch,
+    );
+
+    // Capture source repo commit SHA for version tracking
+    const { commitSha: sourceCommitSha } = await githubFileOps.getBranchInfo(
+        lib.source.owner, lib.source.repo, lib.source.branch,
+    );
+
+    // Discover block IDs under blocks/
+    const discoveredBlocks = new Set<string>();
+    for (const entry of sourceFiles) {
+        const parts = entry.path.split('/');
+        if (parts.length >= 3 && parts[0] === 'blocks') {
+            discoveredBlocks.add(parts[1]);
+        }
+    }
+
+    // Determine which blocks are new (not seen in a prior library)
+    const uniqueBlockIds: string[] = [];
+    for (const blockId of [...discoveredBlocks].sort()) {
+        if (!seenBlocks.has(blockId)) {
+            seenBlocks.add(blockId);
+            uniqueBlockIds.push(blockId);
+            allBlockIds.push(blockId);
+        }
+    }
+
+    // Collect files only for unique blocks
+    const uniqueBlockIdSet = new Set(uniqueBlockIds);
+    const blockFiles = sourceFiles.filter(entry => {
+        const parts = entry.path.split('/');
+        return parts.length >= 3 && parts[0] === 'blocks' && uniqueBlockIdSet.has(parts[1]);
+    });
+
+    return {
+        discoveredCount: discoveredBlocks.size,
+        uniqueBlockIds,
+        files: blockFiles.map(f => ({ path: f.path, sha: f.sha })),
+        sourceCommitSha,
+    };
+}
+
 /**
  * Install blocks from multiple libraries into the user's repo in a single atomic commit.
  *
@@ -100,60 +166,29 @@ export async function installBlockCollections(
 
         // 1. Discover blocks from each library, dedup across libraries
         for (const lib of libraries) {
-            const sourceFiles = await githubFileOps.listRepoFiles(
-                lib.source.owner, lib.source.repo, lib.source.branch,
+            const discovered = await discoverAndDeduplicateLibraryBlocks(
+                githubFileOps, lib, seenBlocks, allBlockIds,
             );
 
-            // Capture source repo commit SHA for version tracking
-            const { commitSha: sourceCommitSha } = await githubFileOps.getBranchInfo(
-                lib.source.owner, lib.source.repo, lib.source.branch,
-            );
+            totalDiscovered += discovered.discoveredCount;
 
-            // Discover block IDs under blocks/
-            const discoveredBlocks = new Set<string>();
-            for (const entry of sourceFiles) {
-                const parts = entry.path.split('/');
-                if (parts.length >= 3 && parts[0] === 'blocks') {
-                    discoveredBlocks.add(parts[1]);
-                }
-            }
-
-            totalDiscovered += discoveredBlocks.size;
-
-            // Determine which blocks are new (not seen in a prior library)
-            const uniqueBlockIds: string[] = [];
-            for (const blockId of [...discoveredBlocks].sort()) {
-                if (!seenBlocks.has(blockId)) {
-                    seenBlocks.add(blockId);
-                    uniqueBlockIds.push(blockId);
-                    allBlockIds.push(blockId);
-                }
-            }
-
-            // Collect files only for unique blocks
-            const uniqueBlockIdSet = new Set(uniqueBlockIds);
-            const blockFiles = sourceFiles.filter(entry => {
-                const parts = entry.path.split('/');
-                return parts.length >= 3 && parts[0] === 'blocks' && uniqueBlockIdSet.has(parts[1]);
-            });
-
-            if (uniqueBlockIds.length > 0) {
+            if (discovered.uniqueBlockIds.length > 0) {
                 libraryBlockFiles.push({
                     source: lib.source,
-                    blockIds: uniqueBlockIds,
-                    files: blockFiles.map(f => ({ path: f.path, sha: f.sha })),
+                    blockIds: discovered.uniqueBlockIds,
+                    files: discovered.files,
                 });
 
                 // Track version info for this library
                 libraryVersions.push({
                     source: lib.source,
                     name: lib.name,
-                    commitSha: sourceCommitSha,
-                    blockIds: uniqueBlockIds,
+                    commitSha: discovered.sourceCommitSha,
+                    blockIds: discovered.uniqueBlockIds,
                 });
             }
 
-            const skippedCount = discoveredBlocks.size - uniqueBlockIds.length;
+            const skippedCount = discovered.discoveredCount - discovered.uniqueBlockIds.length;
             if (skippedCount > 0) {
                 logger.info(`[Block Collection] ${lib.name}: skipped ${skippedCount} duplicate blocks`);
             }
@@ -306,10 +341,12 @@ async function buildMergedComponentDefinitionMultiSource(
                 if (!matches) continue;
 
                 collectedIds.add(entry.id);
-                if (!entriesByGroup.has(group.id)) {
-                    entriesByGroup.set(group.id, { title: group.title, entries: [] });
+                let groupData = entriesByGroup.get(group.id);
+                if (!groupData) {
+                    groupData = { title: group.title, entries: [] };
+                    entriesByGroup.set(group.id, groupData);
                 }
-                entriesByGroup.get(group.id)!.entries.push(entry);
+                groupData.entries.push(entry);
             }
         }
     }
@@ -324,6 +361,39 @@ async function buildMergedComponentDefinitionMultiSource(
     if (!destDef.groups) return null;
 
     // Pass 1: merge component-definition entries for newly-installed (unique) blocks.
+    const addedCount = mergeNewComponentDefinitionEntries(destDef, entriesByGroup);
+
+    // Pass 2: enrich unsafeHTML for blocks already present in the destination but
+    // without unsafeHTML. Covers deduplicated blocks whose component-definition entries
+    // came from the template rather than the library — their block files were correctly
+    // preserved, but their metadata may lack unsafeHTML that the library source has.
+    // Additive only: never overwrites existing unsafeHTML, never touches block files.
+    const enrichedCount = enrichMissingUnsafeHtml(destDef, sourceDefinitions);
+
+    if (addedCount === 0 && enrichedCount === 0) return null;
+    return JSON.stringify(destDef, null, 2);
+}
+
+/** Group entries collected from source repos, keyed by group id. */
+type CollectedEntriesByGroup = Map<string, {
+    title: string;
+    entries: Array<{ id: string; [key: string]: unknown }>;
+}>;
+
+/** Parsed source component-definition shape needed for unsafeHTML enrichment. */
+type SourceDefinition = {
+    groups: Array<{ components?: Array<{ id: string; plugins?: { da?: { unsafeHTML?: string } } }> }>;
+};
+
+/**
+ * Pass 1: append component-definition entries for newly-installed (unique) blocks
+ * into the matching destination group, creating groups as needed. Returns the
+ * number of entries added.
+ */
+function mergeNewComponentDefinitionEntries(
+    destDef: { groups: Array<{ id: string; title?: string; components?: Array<{ id: string }> }> },
+    entriesByGroup: CollectedEntriesByGroup,
+): number {
     let addedCount = 0;
     for (const [groupId, groupData] of entriesByGroup) {
         let destGroup = destDef.groups.find((g: { id: string }) => g.id === groupId);
@@ -340,12 +410,18 @@ async function buildMergedComponentDefinitionMultiSource(
             addedCount += newEntries.length;
         }
     }
+    return addedCount;
+}
 
-    // Pass 2: enrich unsafeHTML for blocks already present in the destination but
-    // without unsafeHTML. Covers deduplicated blocks whose component-definition entries
-    // came from the template rather than the library — their block files were correctly
-    // preserved, but their metadata may lack unsafeHTML that the library source has.
-    // Additive only: never overwrites existing unsafeHTML, never touches block files.
+/**
+ * Pass 2: enrich unsafeHTML for blocks already present in the destination but
+ * missing it, using the source definitions. Additive only — never overwrites
+ * existing unsafeHTML. Returns the number of entries enriched.
+ */
+function enrichMissingUnsafeHtml(
+    destDef: { groups: Array<{ components?: Array<{ id: string; plugins?: { da?: { unsafeHTML?: string } } }> }> },
+    sourceDefinitions: SourceDefinition[],
+): number {
     let enrichedCount = 0;
     for (const sourceDef of sourceDefinitions) {
         for (const group of sourceDef.groups) {
@@ -367,9 +443,7 @@ async function buildMergedComponentDefinitionMultiSource(
             }
         }
     }
-
-    if (addedCount === 0 && enrichedCount === 0) return null;
-    return JSON.stringify(destDef, null, 2);
+    return enrichedCount;
 }
 
 /**

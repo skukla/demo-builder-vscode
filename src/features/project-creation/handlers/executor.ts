@@ -237,20 +237,12 @@ export async function executeProjectCreation(
         ? typedConfig.editProjectPath
         : path.join(os.homedir(), '.demo-builder', 'projects', typedConfig.projectName);
 
-    // Load existing project state if in edit mode (to preserve creation date)
+    // Load existing project state if in edit mode (to preserve creation date);
+    // otherwise clean up any orphaned/invalid directory (new project only).
     let existingProject: import('@/types').Project | undefined;
     if (isEditMode) {
-        context.logger.info(`[Project Edit] Editing existing project at: ${projectPath}`);
-        try {
-            existingProject = await context.stateManager.loadProjectFromPath(projectPath) ?? undefined;
-            if (existingProject) {
-                context.logger.debug('[Project Edit] Loaded existing project state for creation date preservation');
-            }
-        } catch (error) {
-            context.logger.warn(`[Project Edit] Could not load existing project state: ${(error as Error).message}`);
-        }
+        existingProject = await loadExistingProjectForEdit(projectPath, context);
     } else {
-        // Clean up orphaned/invalid directories (new project only)
         await cleanupOrphanedDirectory(projectPath, context, progressTracker, fsPromises);
     }
 
@@ -331,20 +323,9 @@ export async function executeProjectCreation(
     // Only swap to production after ALL components install successfully.
     // This preserves the original components if installation fails.
 
-    let tempComponentsDir: string | undefined;
-
-    if (isEditMode) {
-        tempComponentsDir = path.join(projectPath, 'components.tmp');
-
-        // Clean up any stale temp directory from previous failed attempts
-        const tempDirExists = await fsPromises.access(tempComponentsDir).then(() => true).catch(() => false);
-        if (tempDirExists) {
-            context.logger.info('[Project Edit] Cleaning up stale temporary components directory');
-            await fsPromises.rm(tempComponentsDir, { recursive: true, force: true });
-        }
-
-        context.logger.info('[Project Edit] Will install components to temporary directory for atomic swap');
-    }
+    const tempComponentsDir = isEditMode
+        ? await prepareEditModeTempDir(projectPath, context)
+        : undefined;
 
     // ========================================================================
     // PHASE 1-2: COMPONENT INSTALLATION
@@ -465,6 +446,53 @@ export async function executeProjectCreation(
 // ============================================================================
 // Private Helper Functions
 // ============================================================================
+
+/**
+ * Load existing project state for edit mode, used to preserve the original
+ * creation date. Failures are non-fatal (logged, returns undefined).
+ */
+async function loadExistingProjectForEdit(
+    projectPath: string,
+    context: HandlerContext,
+): Promise<import('@/types').Project | undefined> {
+    context.logger.info(`[Project Edit] Editing existing project at: ${projectPath}`);
+    try {
+        const existingProject = await context.stateManager.loadProjectFromPath(projectPath) ?? undefined;
+        if (existingProject) {
+            context.logger.debug('[Project Edit] Loaded existing project state for creation date preservation');
+        }
+        return existingProject;
+    } catch (error) {
+        context.logger.warn(`[Project Edit] Could not load existing project state: ${(error as Error).message}`);
+        return undefined;
+    }
+}
+
+/**
+ * Prepare the temporary components directory used for the edit-mode atomic swap.
+ *
+ * Components are installed here first; only after all install successfully are
+ * they swapped into production, preserving the originals on failure. Any stale
+ * temp directory from a previous failed attempt is removed first.
+ *
+ * @returns The temp components directory path.
+ */
+async function prepareEditModeTempDir(
+    projectPath: string,
+    context: HandlerContext,
+): Promise<string> {
+    const tempComponentsDir = path.join(projectPath, 'components.tmp');
+
+    // Clean up any stale temp directory from previous failed attempts
+    const tempDirExists = await fsPromises.access(tempComponentsDir).then(() => true).catch(() => false);
+    if (tempDirExists) {
+        context.logger.info('[Project Edit] Cleaning up stale temporary components directory');
+        await fsPromises.rm(tempComponentsDir, { recursive: true, force: true });
+    }
+
+    context.logger.info('[Project Edit] Will install components to temporary directory for atomic swap');
+    return tempComponentsDir;
+}
 
 /**
  * Populate EDS-specific metadata on the component instance after cloning.
