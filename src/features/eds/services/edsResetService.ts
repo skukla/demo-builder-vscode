@@ -21,22 +21,22 @@
  * @module features/eds/services/edsResetService
  */
 
+import { getGitHubServices, configureDaLivePermissions, getDaLiveAuthService, ensureDaLiveAuth } from '../handlers/edsHelpers';
+import { verifyCdnResources } from './configSyncService';
+import { buildSiteConfigParams, ConfigurationService } from './configurationService';
+import { DaLiveContentOperations } from './daLiveContentOperations';
 import type { TokenProvider } from './daLiveOrgOperations';
-import type { Logger } from '@/types/logger';
+import { executeEdsPipeline } from './edsPipeline';
+import { redeployApiMesh } from './edsResetMeshHelper';
+import type { EdsResetParams, EdsResetProgress, EdsResetResult } from './edsResetParams';
+import { resetRepoToTemplate } from './edsResetRepoHelper';
 import type { GitHubFileOperations } from './githubFileOperations';
 import type { GitHubTokenService } from './githubTokenService';
-import type { HandlerContext } from '@/types/handlers';
-import type { EdsResetParams, EdsResetProgress, EdsResetResult } from './edsResetParams';
-import { DaLiveAuthError, GitHubAppNotInstalledError } from './types';
-import { buildSiteConfigParams, ConfigurationService } from './configurationService';
 import { HelixService } from './helixService';
-import { DaLiveContentOperations } from './daLiveContentOperations';
-import { executeEdsPipeline } from './edsPipeline';
-import { verifyCdnResources } from './configSyncService';
 import { updateStorefrontState } from './storefrontStalenessDetector';
-import { getGitHubServices, configureDaLivePermissions, getDaLiveAuthService, ensureDaLiveAuth } from '../handlers/edsHelpers';
-import { redeployApiMesh } from './edsResetMeshHelper';
-import { resetRepoToTemplate } from './edsResetRepoHelper';
+import { DaLiveAuthError, GitHubAppNotInstalledError } from './types';
+import type { HandlerContext } from '@/types/handlers';
+import type { Logger } from '@/types/logger';
 
 // ==========================================================
 // Re-exports for backward compatibility

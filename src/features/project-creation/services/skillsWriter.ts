@@ -27,10 +27,10 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as yaml from 'yaml';
-import componentsConfig from '@/features/components/config/components.json';
 import addComponentContent from '../templates/skills/add-component.md';
 import syncChangesContent from '../templates/skills/sync-changes.md';
 import updateCredentialsContent from '../templates/skills/update-credentials.md';
+import componentsConfig from '@/features/components/config/components.json';
 import type { Project } from '@/types/base';
 import type { RawComponentDefinition, RawComponentRegistry } from '@/types/components';
 

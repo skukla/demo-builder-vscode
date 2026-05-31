@@ -19,9 +19,9 @@ import { toComponentDataArray, toDependencyData } from '../services/componentTra
 import { ComponentRegistryManager, DependencyResolver } from '@/features/components/services/ComponentRegistryManager';
 import { ComponentSelection, type ComponentConfigs as ComponentConfigsData } from '@/types/components';
 import { toAppError } from '@/types/errors';
-import type { ComponentConfigs } from '@/types/webview';
 import { HandlerContext, MessageHandler } from '@/types/handlers';
 import { getEntryCount } from '@/types/typeGuards';
+import type { ComponentConfigs } from '@/types/webview';
 
 /**
  * Create a ComponentRegistryManager for the current extension context

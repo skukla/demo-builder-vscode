@@ -25,8 +25,8 @@
 
 import type { GitHubFileOperations } from './githubFileOperations';
 import type { GitHubTreeInput } from './types';
-import type { Logger } from '@/types/logger';
 import inspectorOverrides from '@/features/project-creation/config/inspector-rules.json';
+import type { Logger } from '@/types/logger';
 
 // ---------------------------------------------------------------------------
 // Types

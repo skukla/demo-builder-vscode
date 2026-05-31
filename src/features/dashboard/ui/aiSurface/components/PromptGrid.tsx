@@ -12,10 +12,10 @@
 
 import { Text, View } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo, useState } from 'react';
+import { PromptCard, PROMPT_CARD_HEIGHT } from './PromptCard';
 import { GridLayout } from '@/core/ui/components/layout/GridLayout';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import type { AiPrompt } from '@/types/base';
-import { PromptCard, PROMPT_CARD_HEIGHT } from './PromptCard';
 
 export interface PromptGridProps {
     /** User-saved prompts in their persisted order. */

@@ -17,13 +17,13 @@ import { generateFstabContent } from '../services/fstabGenerator';
 import { GitHubFileOperations } from '../services/githubFileOperations';
 import { generateInspectorTreeEntries, installInspectorTagging } from '../services/inspectorHelpers';
 import { type GitHubTreeInput } from '../services/types';
-import { checkGitHubAppForExistingRepo } from './storefrontSetupPhaseHelpers';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
+import { checkGitHubAppForExistingRepo } from './storefrontSetupPhaseHelpers';
+import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
 import { getBlockLibraryName, getBlockLibrarySource, isBlockLibraryAvailableForPackage } from '@/features/project-creation/services/blockLibraryLoader';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
-import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
 
 // Validates GitHub owner/repo names. Must start and end with alphanumeric;
 // no leading/trailing dots or hyphens. Invalid identifiers are rejected by GitHub API.

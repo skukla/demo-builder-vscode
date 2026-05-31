@@ -15,22 +15,22 @@
 
 import { ConfigurationService } from '../services/configurationService';
 import { createDaLiveServiceTokenProvider, DaLiveContentOperations } from '../services/daLiveContentOperations';
+import { executeEdsPipeline } from '../services/edsPipeline';
 import { GitHubAppService } from '../services/githubAppService';
 import { GitHubFileOperations } from '../services/githubFileOperations';
 import { GitHubRepoOperations } from '../services/githubRepoOperations';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { HelixService } from '../services/helixService';
-import { executeEdsPipeline } from '../services/edsPipeline';
 import { DaLiveAuthError } from '../services/types';
 import { ensureDaLiveAuth, getDaLiveAuthService } from './edsHelpers';
+import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { executePhaseGitHubRepo } from './storefrontSetupPhase1';
 import { executePhaseHelixConfig, type BlockLibraryOptions } from './storefrontSetupPhase2';
 import { executePhaseCodeSync } from './storefrontSetupPhase3';
-import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
+import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
 import { getBlockLibraryContentSource } from '@/features/project-creation/services/blockLibraryLoader';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
-import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
 
 // Public type re-exports
 export type { StorefrontSetupResult } from './storefrontSetupTypes';

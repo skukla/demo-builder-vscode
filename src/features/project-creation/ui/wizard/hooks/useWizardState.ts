@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { filterStepsForStack, WizardStepWithCondition } from '../stepFiltering';
-import { hasMeshInDependencies } from '@/core/constants';
 import {
     getEnabledWizardSteps,
     initializeComponentsFromImport,
@@ -11,6 +10,7 @@ import {
     EditProjectConfig,
     WizardStepConfigWithRequirements,
 } from '../wizardHelpers';
+import { hasMeshInDependencies } from '@/core/constants';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import type { ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
 import type { Stack } from '@/types/stacks';

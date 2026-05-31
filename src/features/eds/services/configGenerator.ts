@@ -20,8 +20,8 @@
  */
 
 import configTemplate from '../config/config-template.json';
-import componentsConfig from '@/features/components/config/components.json';
 import { isMeshComponentId } from '@/core/constants';
+import componentsConfig from '@/features/components/config/components.json';
 import {
     PAAS_GRAPHQL_ENDPOINT, PAAS_ENVIRONMENT_ID, PAAS_STORE_VIEW_CODE,
     PAAS_STORE_CODE, PAAS_WEBSITE_CODE, PAAS_CUSTOMER_GROUP,
