@@ -72,8 +72,9 @@ function getRelevantMeshEnvVars(meshComponentId: string): string[] {
 }
 
 /**
- * Lazy-loaded default logger for backward-compatible function exports.
- * Avoids module-level instantiation issues during testing.
+ * Lazy-loaded default logger for the module-level function exports, which
+ * delegate to the logger-injected *Impl variants. Lazy to avoid module-level
+ * instantiation issues during testing.
  */
 let _defaultLogger: Logger | null = null;
 function getDefaultLogger(): Logger {
@@ -94,14 +95,6 @@ export class StalenessDetectorService {
 
     constructor(logger: Logger) {
         this.logger = logger;
-    }
-
-    /**
-     * Get current mesh-related environment variables from component config
-     * (Static method for backward compatibility)
-     */
-    static getMeshEnvVars(componentConfig: Record<string, unknown>): Record<string, string> {
-        return getMeshEnvVarsImpl(componentConfig);
     }
 
     /**
@@ -185,7 +178,7 @@ function getMeshEnvVarsImpl(componentConfig: Record<string, unknown>): Record<st
 }
 
 /**
- * Backward-compatible export: Get current mesh-related environment variables
+ * Module-level function export:Get current mesh-related environment variables
  */
 export function getMeshEnvVars(componentConfig: Record<string, unknown>): Record<string, string> {
     return getMeshEnvVarsImpl(componentConfig);
@@ -323,7 +316,7 @@ async function fetchDeployedMeshConfigImpl(logger: Logger): Promise<Record<strin
 }
 
 /**
- * Backward-compatible export: Fetch deployed mesh configuration from Adobe I/O
+ * Module-level function export:Fetch deployed mesh configuration from Adobe I/O
  */
 export async function fetchDeployedMeshConfig(): Promise<Record<string, string> | null> {
     return fetchDeployedMeshConfigImpl(getDefaultLogger());
@@ -390,7 +383,7 @@ async function calculateMeshSourceHashImpl(meshComponentPath: string, logger: Lo
 }
 
 /**
- * Backward-compatible export: Calculate hash of mesh source files
+ * Module-level function export:Calculate hash of mesh source files
  */
 export async function calculateMeshSourceHash(meshComponentPath: string): Promise<string | null> {
     return calculateMeshSourceHashImpl(meshComponentPath, getDefaultLogger());
@@ -414,7 +407,7 @@ function getCurrentMeshStateImpl(project: Project): MeshState | null {
 }
 
 /**
- * Backward-compatible export: Get current mesh state from project
+ * Module-level function export:Get current mesh state from project
  */
 export function getCurrentMeshState(project: Project): MeshState | null {
     return getCurrentMeshStateImpl(project);
@@ -553,7 +546,7 @@ async function detectMeshChangesImpl(
 }
 
 /**
- * Backward-compatible export: Detect if mesh has changes requiring redeployment
+ * Module-level function export:Detect if mesh has changes requiring redeployment
  */
 export async function detectMeshChanges(
     project: Project,
@@ -634,7 +627,7 @@ function detectFrontendChangesImpl(project: Project): boolean {
 }
 
 /**
- * Backward-compatible export: Detect if frontend env vars have changed since demo started
+ * Module-level function export:Detect if frontend env vars have changed since demo started
  */
 export function detectFrontendChanges(project: Project): boolean {
     return detectFrontendChangesImpl(project);

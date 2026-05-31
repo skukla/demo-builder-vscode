@@ -11,7 +11,7 @@ import * as authentication from '@/features/authentication';
 import * as components from '@/features/components/handlers/componentHandlers';
 import * as eds from '@/features/eds/handlers';
 import * as lifecycle from '@/features/lifecycle/handlers';
-import * as mesh from '@/features/mesh/handlers';
+import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 import * as prerequisites from '@/features/prerequisites/handlers';
 import { defineHandlers } from '@/types/handlers';
 
@@ -67,9 +67,9 @@ export const projectCreationHandlers = defineHandlers({
     'create-workspace-credential': authentication.handleCreateWorkspaceCredential,
 
     // Mesh handlers
-    'check-api-mesh': mesh.handleCheckApiMesh,
-    'create-api-mesh': mesh.handleCreateApiMesh,
-    'delete-api-mesh': mesh.handleDeleteApiMesh,
+    'check-api-mesh': meshHandlers['check-api-mesh'],
+    'create-api-mesh': meshHandlers['create-api-mesh'],
+    'delete-api-mesh': meshHandlers['delete-api-mesh'],
 
     // EDS handlers - GitHub
     'check-github-auth': eds.handleCheckGitHubAuth,

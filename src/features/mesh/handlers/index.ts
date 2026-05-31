@@ -1,13 +1,9 @@
 /**
  * Mesh Handlers - Public API
  *
- * Exports the handler map and individual handlers.
+ * Exports the canonical handler map. Individual handlers are consumed through
+ * this map (meshHandlers['check-api-mesh'], etc.) or imported directly from
+ * their source modules in tests.
  */
 
-// Export handler map (preferred - Step 3: Handler Registry Simplification)
 export { meshHandlers } from './meshHandlers';
-
-// Export individual handlers (backward compatibility)
-export * from './checkHandler';
-export * from './createHandler';
-export * from './deleteHandler';
