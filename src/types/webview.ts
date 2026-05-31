@@ -10,11 +10,9 @@ export type WizardStep =
     | 'welcome'
     | 'component-selection'
     | 'prerequisites'
-    | 'adobe-setup'  // Kept for backward compatibility
     | 'adobe-auth'  // Adobe authentication step
     | 'adobe-project'  // Adobe project selection step
     | 'adobe-workspace'  // Adobe workspace selection step
-    | 'adobe-context'  // Kept for compatibility
     | 'adobe-org'  // Legacy: Adobe org selection
     | 'org-selection'  // Kept for compatibility, will be disabled in config
     | 'project-selection'  // Kept for compatibility, will be disabled in config
