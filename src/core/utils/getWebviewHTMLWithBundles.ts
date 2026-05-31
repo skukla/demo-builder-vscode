@@ -75,12 +75,3 @@ export function getWebviewHTML(options: WebviewHTMLOptions): string {
 </body>
 </html>`;
 }
-
-// ---------------------------------------------------------------------------
-// Legacy alias — kept so callers can be migrated incrementally.
-// New code should import getWebviewHTML directly.
-// ---------------------------------------------------------------------------
-/** @deprecated Use {@link getWebviewHTML} instead */
-export const getWebviewHTMLWithBundles = getWebviewHTML as unknown as (
-    opts: WebviewHTMLOptions & { bundleUris?: unknown },
-) => string;
