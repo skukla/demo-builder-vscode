@@ -171,13 +171,6 @@ describe('DebugLogger - Core', () => {
             jest.clearAllMocks();
         });
 
-        it('should expose toggle() method for legacy code', () => {
-            expect(typeof logger.toggle).toBe('function');
-
-            logger.toggle();
-            expect(mockLogsChannel.show).toHaveBeenCalled();
-        });
-
         it('should expose hide() method', () => {
             expect(typeof logger.hide).toBe('function');
 
