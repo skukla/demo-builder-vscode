@@ -31,7 +31,6 @@ jest.mock('@/core/di', () => ({
     },
 }));
 
-jest.mock('@/features/components/handlers/componentHandler');
 jest.mock('@/features/prerequisites/services/PrerequisitesManager');
 
 // Mock WebviewPanelManager to prevent singleton panel reuse between tests

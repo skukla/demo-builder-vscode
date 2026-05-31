@@ -35,11 +35,6 @@ export const mockVSCode = {
  * This prevents test pollution from shared references.
  */
 export function createMockContext() {
-    // Mock component handler
-    const mockComponentHandler = {
-        handleMessage: jest.fn().mockResolvedValue(undefined)
-    };
-
     // Mock webview panel
     const mockPanel = {
         dispose: jest.fn()
@@ -57,7 +52,6 @@ export function createMockContext() {
 
     // Create mock context
     const context = {
-        componentHandler: mockComponentHandler,
         panel: mockPanel,
         stateManager: mockStateManager,
         communicationManager: mockCommunicationManager,
