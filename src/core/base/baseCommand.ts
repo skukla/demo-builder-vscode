@@ -227,28 +227,6 @@ export abstract class BaseCommand implements vscode.Disposable {
     }
 
     /**
-     * Get the current project directory path
-     *
-     * Smart directory detection that returns the project path directly
-     * without relying on workspace folders.
-     *
-     * NOTE: In refactor branch, getCurrentProject() is async. Callers should
-     * await getCurrentProject() directly and access .path property.
-     * This helper is kept for compatibility but marked deprecated.
-     *
-     * @returns Project directory path
-     * @throws Error if no project is loaded
-     * @deprecated Use `await this.stateManager.getCurrentProject()` directly
-     */
-    protected async getProjectDirectory(): Promise<string> {
-        const project = await this.stateManager.getCurrentProject();
-        if (!project?.path) {
-            throw new Error('No project loaded');
-        }
-        return project.path;
-    }
-
-    /**
      * Get terminal working directory for commands
      *
      * Returns the parent directory of the project for operations like
@@ -258,7 +236,10 @@ export abstract class BaseCommand implements vscode.Disposable {
      */
     protected async getTerminalCwd(): Promise<string> {
         try {
-            const projectDir = await this.getProjectDirectory();
+            const projectDir = (await this.stateManager.getCurrentProject())?.path;
+            if (!projectDir) {
+                throw new Error('No project loaded');
+            }
             // Return parent directory for operations outside project
             return path.dirname(projectDir);
         } catch {
