@@ -366,8 +366,6 @@ export interface EDSConfig {
     selectedRepo?: GitHubRepoItem;
     /** Existing repository full name (owner/repo format) - deprecated, use selectedRepo */
     existingRepo?: string;
-    /** Whether existing repo access has been verified - deprecated, use selectedRepo */
-    existingRepoVerified?: boolean;
     /** Whether to reset existing repo to template (repurpose flow) */
     resetToTemplate?: boolean;
     /** DA.live organization name */
