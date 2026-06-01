@@ -63,6 +63,7 @@ function withToolLogging(server: any, logger: Logger): any {
 
 export class InExtensionMcpServer {
     private netServer?: net.Server;
+    private connCounter = 0;
 
     /**
      * @param socketPath  Absolute UDS path to listen on (per workspace).
@@ -88,7 +89,9 @@ export class InExtensionMcpServer {
         await fsPromises.rm(this.socketPath, { force: true });
 
         const netServer = net.createServer((socket) => {
-            this.logger.debug('[MCP] client connected');
+            const connId = ++this.connCounter;
+            const startedAt = Date.now();
+            this.logger.debug(`[MCP] client connected (conn=${connId})`);
             // Typed `any` to avoid TS2589 (see registerProjectTools docstring).
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const server: any = new McpServer({ name: SERVER_NAME, version: SERVER_VERSION });
@@ -100,14 +103,26 @@ export class InExtensionMcpServer {
             this.registerExtraTools?.(logged);
 
             const transport = new StdioServerTransport(socket, socket);
-            server.connect(transport).catch((err: unknown) => {
-                this.logger.error(
-                    `[MCP] connection failed: ${err instanceof Error ? err.message : String(err)}`,
-                );
-                socket.destroy();
-            });
+            server.connect(transport)
+                .then(() => {
+                    this.logger.debug(`[MCP] connect resolved (conn=${connId})`);
+                })
+                .catch((err: unknown) => {
+                    this.logger.error(
+                        `[MCP] connection failed (conn=${connId}): ${err instanceof Error ? err.message : String(err)}`,
+                    );
+                    socket.destroy();
+                });
 
-            socket.on('error', (err) => this.logger.debug(`[MCP] socket error: ${err.message}`));
+            socket.on('error', (err) =>
+                this.logger.debug(`[MCP] socket error (conn=${connId}): ${err.message}`),
+            );
+            socket.on('close', (hadError) => {
+                const ms = Date.now() - startedAt;
+                this.logger.debug(
+                    `[MCP] client disconnected (conn=${connId}, hadError=${hadError}, ${ms}ms)`,
+                );
+            });
         });
 
         await new Promise<void>((resolve, reject) => {

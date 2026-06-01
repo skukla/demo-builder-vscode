@@ -152,6 +152,62 @@ describe('InExtensionMcpServer', () => {
         expect(mode).toBe(0o600);
     });
 
+    it('logs the full connect/disconnect lifecycle with a unique conn id', async () => {
+        const logger = makeLogger();
+        server = new InExtensionMcpServer(socketPath, projectsDir, logger);
+        await server.start();
+
+        const { socket } = await connectAndInit(socketPath);
+        // Give server.connect(transport) and the SDK handshake a moment to settle.
+        await new Promise((r) => setTimeout(r, 50));
+
+        const debug = logger.debug as jest.Mock;
+        const connectedCall = debug.mock.calls.find(([msg]) =>
+            /\[MCP\] client connected \(conn=\d+\)/.test(String(msg)),
+        );
+        expect(connectedCall).toBeDefined();
+        const resolvedCall = debug.mock.calls.find(([msg]) =>
+            /\[MCP\] connect resolved \(conn=\d+\)/.test(String(msg)),
+        );
+        expect(resolvedCall).toBeDefined();
+
+        await new Promise<void>((resolve) => {
+            socket.once('close', () => resolve());
+            socket.end();
+        });
+        // The 'close' handler fires synchronously with the event but the log
+        // call is one tick later when the assertion runs — let the microtask flush.
+        await new Promise((r) => setImmediate(r));
+
+        const disconnectedCall = debug.mock.calls.find(([msg]) =>
+            /\[MCP\] client disconnected \(conn=\d+, hadError=(true|false), \d+ms\)/.test(String(msg)),
+        );
+        expect(disconnectedCall).toBeDefined();
+    });
+
+    it('assigns sequential conn ids across multiple connections', async () => {
+        const logger = makeLogger();
+        server = new InExtensionMcpServer(socketPath, projectsDir, logger);
+        await server.start();
+
+        const c1 = await connectAndInit(socketPath);
+        await new Promise((r) => setTimeout(r, 30));
+        const c2 = await connectAndInit(socketPath);
+        await new Promise((r) => setTimeout(r, 30));
+
+        const debug = logger.debug as jest.Mock;
+        const ids = debug.mock.calls
+            .map(([msg]) => /\[MCP\] client connected \(conn=(\d+)\)/.exec(String(msg)))
+            .filter((m): m is RegExpExecArray => m !== null)
+            .map((m) => Number(m[1]));
+        expect(ids).toHaveLength(2);
+        expect(ids[1]).toBe(ids[0] + 1);
+
+        c1.socket.end();
+        c2.socket.end();
+        await new Promise((r) => setTimeout(r, 30));
+    });
+
     it('dispose() closes the server — connections refused afterward', async () => {
         server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger());
         await server.start();
