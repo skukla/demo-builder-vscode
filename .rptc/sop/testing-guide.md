@@ -280,6 +280,57 @@ npm run test:unit  # Only Node.js tests (2-3 min)
 
 ---
 
+## Dependency Mocking: Injection Seams over Leaf-Module Mocks
+
+When code under test reads a **config "leaf"** — a bundled JSON file
+(`demo-packages.json`, `stacks.json`, `block-libraries.json`, …) or a thin
+loader over one — prefer an **injection seam** to `jest.mock()` of that module.
+
+### ❌ ANTI-PATTERN: `jest.mock()` a config JSON leaf
+
+```ts
+// ❌ BAD: mocks the JSON module; brittle, hidden coupling, leaks across suites
+jest.mock('@/features/project-creation/config/demo-packages.json', () => ({
+    packages: [/* fixture */],
+}));
+```
+
+### ✅ STANDARD: inject the data through an optional, defaulted parameter
+
+```ts
+// Production: add an optional param defaulting to the bundled data.
+// Callers are unaffected (they use the default); tests pass a fixture.
+export async function getPackageById(
+    packageId: string,
+    packages: DemoPackage[] = bundledPackages,
+): Promise<DemoPackage | undefined> { /* … */ }
+
+// Test (logic): inject a fixture, assert against it — stable across config edits.
+expect(await getPackageById('alpha', makeTestPackages())).toBeDefined();
+```
+
+**Split the two concerns:**
+- **Logic** tests inject a fixture and assert against it (stay green when the
+  shipped config changes).
+- **Shipped-config integrity** tests call with the default and assert on the
+  real data, in a clearly separated block.
+
+**Reference seams:**
+`src/features/project-creation/services/demoPackageLoader.ts` and
+`src/features/eds/services/edsResetParams.ts`. Reference test split:
+`tests/features/project-creation/ui/helpers/demoPackageLoader.test.ts`.
+
+**When `jest.mock` IS appropriate:** mocking a true collaborator that does I/O
+or network (e.g. a service client, `fs`, an HTTP layer) — not a static config
+leaf.
+
+**Enforcement:** `tests/sop/no-config-leaf-mocks.test.ts` fails CI when a test
+`jest.mock`s a `config/*.json` leaf. Pre-existing violations are grandfathered
+in an in-file allowlist that should only ever shrink — migrate them to the
+seam rather than adding new entries.
+
+---
+
 ## Troubleshooting
 
 ### Watch Mode Not Detecting Changes
