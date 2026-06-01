@@ -43,15 +43,11 @@ const SELF = path.relative(repoRoot, __filename).replace(/\\/g, '/');
 /**
  * Pre-existing config-leaf mocks, grandfathered. SHRINK ONLY — migrate to the
  * injection seam (see edsResetParams.ts `packages` param) and delete the entry.
+ *
+ * Currently EMPTY: every config-leaf mock has been migrated to the seam. New
+ * entries are not allowed — fix the test instead.
  */
-const ALLOWLIST: readonly string[] = [
-    'tests/features/eds/services/edsResetService-auth.test.ts',
-    'tests/features/eds/services/edsResetService-configService.test.ts',
-    'tests/features/eds/services/edsResetService-customBlockLibraries.test.ts',
-    'tests/features/eds/services/edsResetService-daLiveReauth.test.ts',
-    'tests/features/eds/services/edsResetService-meshAuth.test.ts',
-    'tests/features/eds/services/edsResetUI-auth.test.ts',
-];
+const ALLOWLIST: readonly string[] = [];
 
 function collectTestFiles(dir: string): string[] {
     const files: string[] = [];

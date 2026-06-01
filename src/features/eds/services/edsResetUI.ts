@@ -43,6 +43,11 @@ export interface ResetWithUIOptions {
     redeployMesh?: boolean;
     /** Show "Show Logs" button in error messages (default: false) */
     showLogsOnError?: boolean;
+    /**
+     * Demo packages config for parameter extraction. Injectable for tests;
+     * defaults to the bundled demo-packages.json inside extractResetParams.
+     */
+    packages?: Parameters<typeof extractResetParams>[1];
 }
 
 // ==========================================================
@@ -238,6 +243,7 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
         project, context,
         logPrefix = '[EdsReset]',
         includeBlockLibrary = false, verifyCdn = false, redeployMesh, showLogsOnError = false,
+        packages,
     } = options;
 
     const vscode = await import('vscode');
@@ -245,7 +251,7 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
     const { createDaLiveServiceTokenProvider } = await import('./daLiveContentOperations');
     const { getMeshComponentInstance } = await import('@/types/typeGuards');
 
-    const paramsResult = extractResetParams(project);
+    const paramsResult = extractResetParams(project, packages);
     if (!paramsResult.success) {
         context.logger.error(`${logPrefix} resetEds: ${paramsResult.error}`);
         return { success: false, error: paramsResult.error };

@@ -29,19 +29,6 @@ jest.mock('@/core/constants', () => ({
     COMPONENT_IDS: { EDS_STOREFRONT: 'eds-storefront' },
 }));
 
-jest.mock('@/features/project-creation/config/demo-packages.json', () => ({
-    packages: [{
-        id: 'citisignal',
-        storefronts: {
-            'eds-paas': {
-                templateOwner: 'template-owner',
-                templateRepo: 'template-repo',
-                contentSource: { org: 'content-org', site: 'content-site' },
-            },
-        },
-    }],
-}));
-
 jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
     getBlockLibraryName: jest.fn(),
