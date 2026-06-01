@@ -25,8 +25,6 @@ export interface HelixTokens {
 export interface HelixApiOptions {
     /** AbortSignal timeout in milliseconds (default: 180000). */
     timeoutMs?: number;
-    /** HTTP method (default: POST). `unpublishPage` passes DELETE. */
-    method?: 'POST' | 'DELETE';
 }
 
 export class HelixApiError extends Error {
@@ -55,7 +53,7 @@ async function callHelix(
     options: HelixApiOptions = {},
 ): Promise<void> {
     const response = await fetch(url, {
-        method: options.method ?? 'POST',
+        method: 'POST',
         headers: buildHeaders(tokens),
         signal: AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS),
     });
