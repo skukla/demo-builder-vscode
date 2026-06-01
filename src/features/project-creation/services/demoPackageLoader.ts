@@ -37,16 +37,20 @@ export interface StorefrontWithContext {
 /**
  * Load all demo packages from demo-packages.json
  *
+ * @param config - Injectable packages config; defaults to the bundled
+ *   demo-packages.json. Tests pass a fixture here instead of mocking the JSON
+ *   leaf module (see the seam-injection standard in tests/README.md).
  * @returns Promise resolving to array of demo packages
  *
  * @example
  * const packages = await loadDemoPackages();
  * console.log(`Found ${packages.length} packages`);
  */
-export async function loadDemoPackages(): Promise<DemoPackage[]> {
+export async function loadDemoPackages(
+    config: DemoPackagesConfig = demoPackagesConfig as unknown as DemoPackagesConfig,
+): Promise<DemoPackage[]> {
     // Import is synchronous, but we return Promise for consistency
     // and to support future async loading scenarios (e.g., remote config)
-    const config = demoPackagesConfig as unknown as DemoPackagesConfig;
     return config.packages;
 }
 
@@ -54,6 +58,7 @@ export async function loadDemoPackages(): Promise<DemoPackage[]> {
  * Get a demo package by its ID
  *
  * @param packageId - The unique identifier of the package (e.g., "citisignal", "buildright")
+ * @param packages - Injectable package list; defaults to the bundled config.
  * @returns Promise resolving to the package, or undefined if not found
  *
  * @example
@@ -62,12 +67,15 @@ export async function loadDemoPackages(): Promise<DemoPackage[]> {
  *   console.log(`Found package: ${pkg.name}`);
  * }
  */
-export async function getPackageById(packageId: string): Promise<DemoPackage | undefined> {
+export async function getPackageById(
+    packageId: string,
+    packages?: DemoPackage[],
+): Promise<DemoPackage | undefined> {
     if (!packageId) {
         return undefined;
     }
-    const packages = await loadDemoPackages();
-    return packages.find(pkg => pkg.id === packageId);
+    const all = packages ?? await loadDemoPackages();
+    return all.find(pkg => pkg.id === packageId);
 }
 
 /**
@@ -90,8 +98,9 @@ export async function getPackageById(packageId: string): Promise<DemoPackage | u
 export async function getStorefrontForStack(
     packageId: string,
     stackId: string,
+    packages?: DemoPackage[],
 ): Promise<Storefront | undefined> {
-    const pkg = await getPackageById(packageId);
+    const pkg = await getPackageById(packageId, packages);
     if (!pkg) {
         return undefined;
     }
@@ -112,8 +121,11 @@ export async function getStorefrontForStack(
  * const stacks = await getAvailableStacksForPackage('citisignal');
  * // Returns: ['headless-paas', 'eds-paas', 'eds-accs']
  */
-export async function getAvailableStacksForPackage(packageId: string): Promise<string[]> {
-    const pkg = await getPackageById(packageId);
+export async function getAvailableStacksForPackage(
+    packageId: string,
+    packages?: DemoPackage[],
+): Promise<string[]> {
+    const pkg = await getPackageById(packageId, packages);
     if (!pkg) {
         return [];
     }
@@ -135,11 +147,13 @@ export async function getAvailableStacksForPackage(packageId: string): Promise<s
  *   console.log(`${packageId} - ${stackId}: ${storefront.name}`);
  * });
  */
-export async function getAllStorefronts(): Promise<StorefrontWithContext[]> {
-    const packages = await loadDemoPackages();
+export async function getAllStorefronts(
+    packages?: DemoPackage[],
+): Promise<StorefrontWithContext[]> {
+    const all = packages ?? await loadDemoPackages();
     const result: StorefrontWithContext[] = [];
 
-    for (const pkg of packages) {
+    for (const pkg of all) {
         for (const [stackId, storefront] of Object.entries(pkg.storefronts)) {
             result.push({
                 packageId: pkg.id,
