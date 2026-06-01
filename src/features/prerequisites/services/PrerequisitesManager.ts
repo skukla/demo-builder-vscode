@@ -434,10 +434,3 @@ export class PrerequisitesManager {
         return resolveDependencies(prerequisites);
     }
 }
-
-export function createPrerequisitesManager(
-    extensionPath: string,
-    logger: Logger,
-): PrerequisitesManager {
-    return new PrerequisitesManager(extensionPath, logger);
-}

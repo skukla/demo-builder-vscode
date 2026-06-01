@@ -25,18 +25,3 @@ export function hasValidTitle(item: TitleableItem | null | undefined): boolean {
     if (!item) return false;
     return Boolean(item.title && item.title !== item.name);
 }
-
-/**
- * Determine if selected item should be hydrated with data from API.
- * Returns true when: selected item lacks valid title, but API item has one.
- *
- * @param selectedItem - Currently selected item (may have incomplete data)
- * @param apiItem - Matching item from API (has complete data)
- * @returns true if selectedItem should be updated with apiItem's title
- */
-export function needsTitleHydration(
-    selectedItem: TitleableItem | null | undefined,
-    apiItem: TitleableItem | null | undefined,
-): boolean {
-    return !hasValidTitle(selectedItem) && hasValidTitle(apiItem);
-}

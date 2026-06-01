@@ -189,19 +189,3 @@ export function getProjectNameError(
     return undefined;
 }
 
-/**
- * Check if a project name is valid.
- *
- * @param name - The project name to validate
- * @param existingNames - Array of existing project names to check for duplicates
- * @param allowedName - Optional name that's allowed even if in existingNames
- * @returns true if the name is valid
- */
-export function isValidProjectName(
-    name: string,
-    existingNames: string[] = [],
-    allowedName?: string,
-): boolean {
-    return getProjectNameError(name, existingNames, allowedName) === undefined;
-}
-

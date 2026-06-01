@@ -70,14 +70,3 @@ export interface MeshChanges {
     unknownDeployedState?: boolean;  // True if meshState.envVars was empty and couldn't fetch deployed config
     shouldSaveProject?: boolean;  // True if meshState.envVars was populated from deployed config (caller should call markDirty)
 }
-
-/**
- * Status messages for mesh deployment states
- */
-export const MESH_STATUS_MESSAGES = {
-    CHECKING: 'Verifying deployment status...',
-    UNKNOWN: 'Unable to verify deployment status',
-    NOT_DEPLOYED: 'No mesh deployed',
-    DEPLOYED: 'Mesh deployed successfully',
-    CONFIG_CHANGED: 'Configuration changes detected',
-} as const;

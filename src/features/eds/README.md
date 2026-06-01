@@ -19,7 +19,6 @@ src/features/eds/
 │   ├── daLiveContentOperations.ts  # DA.live content copy with progress
 │   ├── daLiveOrgOperations.ts      # DA.live org access verification
 │   ├── daLiveConfigService.ts      # DA.live config/permissions spreadsheets
-│   ├── daLiveOrgConfigService.ts   # DA.live org-level configuration
 │   ├── daLiveConstants.ts          # DA.live shared constants
 │   ├── daLiveMimeTypes.ts          # MIME type mapping for DA.live uploads
 │   ├── daLiveSpreadsheetUtils.ts   # Spreadsheet parsing utilities
@@ -57,7 +56,6 @@ src/features/eds/
 │   └── daLiveTokenBookmarklet.ts  # DA.live token bookmarklet generator
 ├── ui/
 │   ├── components/
-│   │   ├── DaLiveOrgConfigSection.tsx   # DA.live org configuration
 │   │   ├── DaLiveServiceCard.tsx        # DA.live service card
 │   │   ├── GitHubAppInstallDialog.tsx   # GitHub App install dialog
 │   │   ├── GitHubServiceCard.tsx        # GitHub service card
@@ -86,7 +84,6 @@ src/features/eds/
 │   ├── edsDaLiveHandlers.ts        # DA.live content handlers
 │   ├── edsDaLiveAuthHandlers.ts    # DA.live auth handlers
 │   ├── edsDaLiveOrgHandlers.ts     # DA.live org handlers
-│   ├── edsDaLiveOrgConfigHandlers.ts # DA.live org config handlers
 │   ├── storefrontSetupHandlers.ts  # Storefront setup orchestration + cleanup
 │   ├── storefrontSetupTypes.ts     # Shared types: StorefrontSetupResult, SetupServices, RepoInfo
 │   ├── storefrontSetupPhase1.ts    # Phase 1: GitHub repo creation/selection
