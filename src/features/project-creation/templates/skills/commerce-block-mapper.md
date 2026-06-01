@@ -72,3 +72,13 @@ For each drop-in, these levers exist:
 - Won't generate brand-new commerce React components — Adobe owns those.
 - Won't bypass Adobe Commerce auth or backend services — connection still goes through the configured Commerce instance.
 - Won't fix demos against the wrong commerce backend (PaaS vs SaaS vs ACCS) — confirm the project's stack first via `get_project`.
+
+## Handoff
+
+When the mapping is done, report in plain language:
+
+- **Status:** which sections are now wired to which drop-ins.
+- **The fidelity gap, stated once:** the honest first-pass / after-iteration percentages and that the remaining gap is the drop-in's fixed structure — don't bury it, and don't repeat it three times.
+- **What to verify / next step:** the 2-3 things the user should eyeball, not a full QA matrix.
+
+Lead with what's working. Keep CSS-variable names and drop-in internals out of the user message unless they ask.

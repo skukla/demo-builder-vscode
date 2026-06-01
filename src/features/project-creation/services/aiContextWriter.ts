@@ -52,6 +52,7 @@ export function generateAgentsMd(project: Project, stacksConfig: Stack[]): strin
     sections.push(buildBlockLibraries(project));
     sections.push(buildAdobeIo(project));
     sections.push(buildTryAskingClaude(project));
+    sections.push(buildReportingStyle());
     sections.push(buildNotesForAgents(project));
 
     return sections.filter(Boolean).join('\n\n');
@@ -294,6 +295,18 @@ function buildTryAskingClaude(project: Project): string {
     lines.push('- "Check if there are any pending updates for this project"');
 
     return lines.join('\n');
+}
+
+function buildReportingStyle(): string {
+    return [
+        '## Reporting Back to the User',
+        'When you finish a task, write the final message for a demo builder, not an engineer. Keep it short and scannable:',
+        '- **Lead with status in one line**, and separate what is *done* from what is *unverified or still up to them*. Never stack a confident "done!" against a long hedge — state both plainly (e.g. "X is live; Y isn\'t tested yet").',
+        '- **Use plain language, not internals.** Skip function names, file paths, JSON/tool field names, and pixel breakpoints unless asked. Say what changed and what they can now do.',
+        '- **Give the one next action or thing to verify** — not a QA checklist. Offer the full checklist only if they want it.',
+        '- **Surface the single most important caveat.** Keep process trivia (commit/lint gates, re-auth retries) out of the headline — mention it in a line or save it to memory.',
+        '- **Never paste raw tool-result JSON.** Translate sub-step results into a one-line outcome.',
+    ].join('\n');
 }
 
 function buildNotesForAgents(project: Project): string {

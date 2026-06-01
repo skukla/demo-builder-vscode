@@ -87,3 +87,7 @@ After the chrome is in place, `refine-visual-match` will compare rendered output
 - Mobile menu animation doesn't match
 
 Each of these is a small CSS adjustment in the chrome blocks. Keep iterations focused — don't restructure the chrome on every iteration; just tune.
+
+## Handoff
+
+Report in plain language: which chrome blocks you mapped or extended, that they render on **every** page (not just home), and the handful of things to check (desktop + mobile menu, mini-cart count, nav hierarchy). If you're handing visual deltas to `refine-visual-match`, say so in one line rather than listing pixel diffs.
