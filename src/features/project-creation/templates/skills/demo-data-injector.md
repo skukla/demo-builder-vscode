@@ -84,3 +84,11 @@ After data injection, render the demo locally and spot-check:
 - All images load (no broken references to the original site's CDN).
 - Drop-in commerce sections still fetch correctly from the demo backend.
 - Personalization renders as the demo's default state, not the reference's logged-in state.
+
+## Handoff
+
+Report in plain language, **summarized by category** — don't enumerate every replaced string:
+
+- **What you swapped** (e.g. "product names, SKUs, and testimonials → demo placeholders").
+- **What you intentionally left live** (the drop-in's catalog fetch) and why.
+- **The one risk to confirm** (e.g. a section still pulling the demo backend's catalog the user should check), plus a short spot-check list.

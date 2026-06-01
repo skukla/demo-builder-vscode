@@ -168,6 +168,22 @@ describe('aiContextWriter', () => {
             });
         });
 
+        describe('reporting style (handoff convention)', () => {
+            it('includes the Reporting Back to the User section for EDS projects', () => {
+                const result = generateAgentsMd(makeEdsProject(), STACKS);
+
+                expect(result).toContain('## Reporting Back to the User');
+                expect(result).toContain('Lead with status in one line');
+                expect(result).toContain('Never paste raw tool-result JSON');
+            });
+
+            it('includes the reporting convention for headless projects too', () => {
+                const result = generateAgentsMd(makeHeadlessProject(), STACKS);
+
+                expect(result).toContain('## Reporting Back to the User');
+            });
+        });
+
         describe('mesh endpoint', () => {
             it('includes the mesh endpoint URL when present', () => {
                 const project = makeHeadlessProject({

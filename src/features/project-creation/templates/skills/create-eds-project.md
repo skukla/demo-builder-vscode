@@ -83,3 +83,7 @@ Only if the user wants the project opened in the IDE:
   your window.
 - Never pass `confirm: true` on the user's behalf for `create_project`, `sign_in`,
   `open_view`, or `open_project` without an explicit yes.
+
+## Handoff
+
+When the run finishes, lead with **one line**: project created and its name (plus the repo URL if there is one). Then the single next action — keep working in this same prompt, or open it (offer, never auto-open). Don't replay the whole phase timeline at the end; your progress narration already covered it. If anything still needs the user (a sign-in, a manual step), state that one thing plainly.

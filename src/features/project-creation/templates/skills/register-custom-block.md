@@ -43,3 +43,13 @@ Any sub-step can succeed or fail independently; check the result to confirm each
 - The **`component-definition.json`** entry is only added the first time; later calls leave the existing entry alone.
 
 This means you can re-run the tool as many times as you need while tuning the preview HTML — the only thing that visibly changes on repeat calls is the doc-page content.
+
+## Handoff
+
+After `promote_block_to_library` returns, report to the user in plain language — don't relay the raw sub-step JSON:
+
+- **Status (one line):** the block is registered in the DA.live library and published — or name the sub-step that failed. Be explicit that "registered" is **not** the same as "placed on a page" or "verified with live data."
+- **How to use it:** how an author adds it in DA.live and exactly what they type (the block's authoring rows), with **one consistent example** — don't switch SKU/value examples mid-message.
+- **The one gap + next step:** if you didn't place it on a page or run it against real data, say that's what's left and offer the single next action (e.g. a quick live-data check).
+
+Keep the internal field names (`docPage`, `sheet`, `componentDefinition`) and code symbols out of the user-facing message — "registered and published" is what they need to hear.
