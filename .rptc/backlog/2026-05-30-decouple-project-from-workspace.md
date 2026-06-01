@@ -3,6 +3,14 @@
 **Filed:** 2026-05-30
 **Origin:** Fix-session for "extension resets when switching projects from the list"
 
+> **Related tactical quick-win:** [`../research/2026-05-31-post-reload-dashboard-landing.md`](../research/2026-05-31-post-reload-dashboard-landing.md).
+> That research covers a much smaller, lower-risk slice that works *within* the current reload
+> behavior: after the `openFolder` reload, land on the picked project's **Dashboard** instead of
+> the projects-list start screen (route on `activate()` when the workspace folder is a project).
+> It does **not** require the project↔workspace decoupling below, and delivers most of the
+> perceived "I picked a project and it showed me the project" improvement. This decouple item
+> supersedes it if/when it ships (no reload at all).
+
 ## Symptom
 
 From a project's Dashboard, clicking "All Projects" → selecting a different project
