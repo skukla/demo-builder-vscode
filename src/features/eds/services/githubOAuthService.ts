@@ -70,33 +70,40 @@ export class GitHubOAuthService {
 
         // Set timeout for OAuth flow
         const timeoutMs = TIMEOUTS.LONG || DEFAULT_OAUTH_TIMEOUT_MS;
+        let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
         const timeoutPromise = new Promise<never>((_, reject) => {
-            const handle = setTimeout(() => {
+            timeoutHandle = setTimeout(() => {
                 this.oauthResolve = null;
                 this.oauthReject = null;
                 reject(new Error(ERROR_MESSAGES.OAUTH_TIMEOUT));
             }, timeoutMs);
             // Don't hold the Node event loop open just for the OAuth timeout.
-            // If the host is shutting down before the flow completes, the
-            // timeout firing is moot; without unref() the unresolved timer
-            // keeps test workers alive past teardown and crashes with an
-            // unhandled rejection.
-            if (typeof (handle as NodeJS.Timeout).unref === 'function') {
-                (handle as NodeJS.Timeout).unref();
+            if (typeof (timeoutHandle as NodeJS.Timeout).unref === 'function') {
+                (timeoutHandle as NodeJS.Timeout).unref();
             }
         });
 
-        // Open browser with OAuth URL
-        const opened = await vscode.env.openExternal(vscode.Uri.parse(authUrl.toString()));
+        try {
+            // Open browser with OAuth URL
+            const opened = await vscode.env.openExternal(vscode.Uri.parse(authUrl.toString()));
 
-        if (!opened) {
-            this.oauthResolve = null;
-            this.oauthReject = null;
-            throw new Error(ERROR_MESSAGES.OAUTH_CANCELLED);
+            if (!opened) {
+                this.oauthResolve = null;
+                this.oauthReject = null;
+                throw new Error(ERROR_MESSAGES.OAUTH_CANCELLED);
+            }
+
+            // Wait for callback or timeout
+            return await Promise.race([callbackPromise, timeoutPromise]);
+        } finally {
+            // Always clear the timeout timer once the flow settles. A leaked
+            // timer that fires after the callback already won rejects an
+            // orphaned promise, surfacing as an unhandled rejection that
+            // crashes/poisons other tests sharing the worker process.
+            if (timeoutHandle) {
+                clearTimeout(timeoutHandle);
+            }
         }
-
-        // Wait for callback or timeout
-        return Promise.race([callbackPromise, timeoutPromise]);
     }
 
     /**
