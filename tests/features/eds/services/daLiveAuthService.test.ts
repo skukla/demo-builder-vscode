@@ -26,6 +26,14 @@ jest.mock('@/core/logging', () => ({
     })),
 }));
 
+// Keep these unit tests off the real ~/.aem/da-token.json (the service now
+// reads it as a fallback and mirrors stored tokens to it). The bridge itself
+// is covered by daAuthHelperToken.test and daLiveAuthService-daAuthHelperFallback.test.
+jest.mock('@/features/eds/services/daAuthHelperToken', () => ({
+    readDaAuthHelperToken: jest.fn(() => null),
+    writeDaAuthHelperToken: jest.fn(() => false),
+}));
+
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 import type { ExtensionContext } from 'vscode';
 
