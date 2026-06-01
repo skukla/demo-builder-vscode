@@ -25,6 +25,8 @@ export interface HelixTokens {
 export interface HelixApiOptions {
     /** AbortSignal timeout in milliseconds (default: 180000). */
     timeoutMs?: number;
+    /** HTTP method (default: POST). `unpublishPage` passes DELETE. */
+    method?: 'POST' | 'DELETE';
 }
 
 export class HelixApiError extends Error {
@@ -53,7 +55,7 @@ async function callHelix(
     options: HelixApiOptions = {},
 ): Promise<void> {
     const response = await fetch(url, {
-        method: 'POST',
+        method: options.method ?? 'POST',
         headers: buildHeaders(tokens),
         signal: AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS),
     });
@@ -116,4 +118,65 @@ export async function previewAndPublishPage(
 ): Promise<void> {
     await previewPage(org, site, path, branch, tokens, options);
     await publishPage(org, site, path, branch, tokens, options);
+}
+
+/**
+ * Issue a DELETE against one Helix partition (live or preview).
+ *
+ * Mirrors `helixService.deleteResource` semantics but vscode-free:
+ *   - 204 / 404 → success (404 = already absent)
+ *   - 401 / 403 → non-fatal failure (returns false; caller decides)
+ *   - 429 / 5xx / other non-OK → throw `HelixApiError`
+ */
+async function deleteHelixPartition(
+    partition: 'live' | 'preview',
+    org: string,
+    site: string,
+    path: string,
+    branch: string,
+    tokens: HelixTokens,
+    options: HelixApiOptions = {},
+): Promise<boolean> {
+    const url = `${HELIX_ADMIN_URL}/${partition}/${org}/${site}/${branch}${normalizeWebPath(path)}`;
+    const response = await fetch(url, {
+        method: 'DELETE',
+        headers: buildHeaders(tokens),
+        signal: AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS),
+    });
+
+    if (response.status === 204 || response.status === 404 || response.ok) {
+        return true;
+    }
+    if (response.status === 401 || response.status === 403) {
+        // Auth failure is non-fatal — the caller (unregister flow) reports it
+        // as a partial result rather than aborting the whole operation.
+        return false;
+    }
+    throw new HelixApiError(
+        `Unpublish (${partition}) failed: ${response.status} ${response.statusText}`,
+        response.status,
+    );
+}
+
+/**
+ * Unpublish a single page from the live partition, then delete its preview.
+ *
+ * Vscode-free counterpart to `helixService.unpublishPage`/`unpublishPages`.
+ * Returns `false` if either partition DELETE hit an auth failure (401/403) —
+ * non-fatal so the caller can report a partial unpublish. Throws on 5xx/429.
+ *
+ * @returns `true` when both live + preview deletes succeeded (or were already
+ *          absent); `false` when an auth failure blocked one of them.
+ */
+export async function unpublishPage(
+    org: string,
+    site: string,
+    path: string = '/',
+    branch: string = DEFAULT_BRANCH,
+    tokens: HelixTokens,
+    options?: HelixApiOptions,
+): Promise<boolean> {
+    const liveOk = await deleteHelixPartition('live', org, site, path, branch, tokens, options);
+    const previewOk = await deleteHelixPartition('preview', org, site, path, branch, tokens, options);
+    return liveOk && previewOk;
 }

@@ -16,6 +16,7 @@ Use this skill to decide which sync operation to run after making changes.
 | `mesh.json` or API Mesh config | `deploy_mesh` — redeploys via `aio` CLI |
 | Component `.env` credential | `update_project_config`, then restart demo |
 | Block changes to push back to source library | `promote_block_to_library` |
+| Remove a block from the library | `remove_block_from_library` |
 
 ## EDS projects
 

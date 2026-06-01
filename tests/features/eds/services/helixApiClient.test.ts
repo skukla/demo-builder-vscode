@@ -13,6 +13,7 @@ import {
     previewAndPublishPage,
     previewPage,
     publishPage,
+    unpublishPage,
     type HelixTokens,
 } from '@/features/eds/services/helixApiClient';
 
@@ -122,6 +123,48 @@ describe('helixApiClient', () => {
 
             const previewUrl = mockFetch.mock.calls[0][0] as string;
             expect(previewUrl).toBe('https://admin.hlx.page/preview/o/s/main/');
+        });
+    });
+
+    describe('unpublishPage', () => {
+        it('DELETEs the live partition then the preview partition', async () => {
+            await unpublishPage('myorg', 'mysite', '/.da/library/blocks/hero-cta', 'main', TOKENS);
+
+            expect(mockFetch).toHaveBeenCalledTimes(2);
+            const liveCall = mockFetch.mock.calls[0];
+            const previewCall = mockFetch.mock.calls[1];
+            expect(liveCall[0]).toBe(
+                'https://admin.hlx.page/live/myorg/mysite/main/.da/library/blocks/hero-cta',
+            );
+            expect((liveCall[1] as RequestInit).method).toBe('DELETE');
+            expect(previewCall[0]).toBe(
+                'https://admin.hlx.page/preview/myorg/mysite/main/.da/library/blocks/hero-cta',
+            );
+            expect((previewCall[1] as RequestInit).method).toBe('DELETE');
+        });
+
+        it('treats 404 (already absent) as success on both partitions', async () => {
+            mockFetch.mockResolvedValue({ ok: false, status: 404, statusText: 'Not Found' });
+
+            await expect(unpublishPage('o', 's', '/p', 'main', TOKENS)).resolves.toBe(true);
+        });
+
+        it('returns false (non-fatal) on a 403 auth failure', async () => {
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 403, statusText: 'Forbidden' });
+
+            await expect(unpublishPage('o', 's', '/p', 'main', TOKENS)).resolves.toBe(false);
+        });
+
+        it('throws HelixApiError on a 5xx response', async () => {
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 503, statusText: 'Unavailable' });
+
+            await expect(unpublishPage('o', 's', '/p', 'main', TOKENS)).rejects.toBeInstanceOf(HelixApiError);
+        });
+
+        it('defaults path to "/" and branch to "main"', async () => {
+            await unpublishPage('o', 's', undefined as never, undefined as never, TOKENS);
+
+            expect(mockFetch.mock.calls[0][0]).toBe('https://admin.hlx.page/live/o/s/main/');
         });
     });
 

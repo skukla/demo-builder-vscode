@@ -29,7 +29,7 @@ import {
     DaLiveContentOperations,
     type TokenProvider,
 } from '@/features/eds/services/daLiveContentOperations';
-import { previewAndPublishPage } from '@/features/eds/services/helixApiClient';
+import { previewAndPublishPage, unpublishPage } from '@/features/eds/services/helixApiClient';
 import {
     PushRejectedError,
     syncAndPublish,
@@ -368,6 +368,39 @@ async function applyComponentDefinitionEntry(
     return 'added';
 }
 
+/**
+ * Inverse of {@link applyComponentDefinitionEntry}: read
+ * `component-definition.json`, drop any `components[]` entry with
+ * `id === blockId` across all `groups[]`, and write back only if something
+ * changed. Returns `'removed'` when an entry was dropped, `'absent'` otherwise.
+ */
+async function removeComponentDefinitionEntry(
+    storefrontPath: string,
+    blockId: string,
+): Promise<'removed' | 'absent'> {
+    const compDefPath = path.join(storefrontPath, 'component-definition.json');
+    const raw = await fsPromises.readFile(compDefPath, 'utf-8');
+    const parsed = JSON.parse(raw) as {
+        groups?: Array<{ components?: ComponentDefinitionEntry[] }>;
+    };
+    const groups = parsed.groups ?? [];
+    let changed = false;
+    for (const group of groups) {
+        const components = group.components;
+        if (!components) continue;
+        const filtered = components.filter(c => c.id !== blockId);
+        if (filtered.length !== components.length) {
+            group.components = filtered;
+            changed = true;
+        }
+    }
+    if (!changed) {
+        return 'absent';
+    }
+    await fsPromises.writeFile(compDefPath, JSON.stringify(parsed, null, 2), 'utf-8');
+    return 'removed';
+}
+
 /** Shape of a single entry under `component-definition.json::groups[].components[]`.
  *  All fields except `id` are optional in the schema; the promote flow always
  *  populates `title` and `plugins.da.unsafeHTML`, and optionally `description`
@@ -501,6 +534,52 @@ async function publishStorefrontAndDaLive(
         return 'partial';
     }
     return 'success';
+}
+
+/**
+ * Reverse of {@link publishStorefrontAndDaLive}: commit/push the storefront
+ * removal, then unpublish the block's library doc page from Helix. Failures are
+ * swallowed and reported via the returned status — never thrown, because the
+ * comp-def + doc-page + sheet teardown may have already succeeded.
+ *
+ *   - `'success'` — storefront push + unpublish both succeeded (or nothing to
+ *     unpublish because no GitHub repo/token is configured).
+ *   - `'partial'` — storefront push succeeded but the unpublish hit an auth
+ *     failure (401/403) or errored.
+ *   - `'failed'`  — the storefront commit/push itself failed.
+ */
+async function unpublishStorefrontAndDaLive(
+    ctx: PromoteBlockContext,
+    blockId: string,
+    githubToken: string | undefined,
+    daLiveToken: string,
+): Promise<'success' | 'partial' | 'failed'> {
+    try {
+        await syncAndPublish({
+            storefrontPath: ctx.storefrontPath,
+            commitMessage: `AI: remove block ${blockId} from library`,
+            githubRepo: ctx.githubRepo,
+            githubToken,
+            daLiveToken,
+        });
+    } catch {
+        return 'failed';
+    }
+    if (!ctx.githubRepo || !githubToken) {
+        return 'success';
+    }
+    try {
+        const ok = await unpublishPage(
+            ctx.githubRepo.owner,
+            ctx.githubRepo.site,
+            `/.da/library/blocks/${blockId}`,
+            ctx.githubRepo.branch ?? 'main',
+            { githubToken, daLiveToken },
+        );
+        return ok ? 'success' : 'partial';
+    } catch {
+        return 'partial';
+    }
 }
 
 // ─── Credentials ─────────────────────────────────────────────────────────────
@@ -827,12 +906,71 @@ export const toolHandlers = {
             details: `Block "${title}" (${blockId}) promoted to ${ctx.daLiveOrg}/${ctx.daLiveSite}`,
         });
     },
+
+    /**
+     * Remove a block from the DA.live authoring library — inverse of
+     * {@link promoteBlockToLibrary}.
+     *
+     * Reverses the library registration: removes the entry from
+     * `component-definition.json`, deletes the DA.live doc page, drops the
+     * sheet row, commits/pushes the storefront removal, and unpublishes the
+     * doc page. Does NOT delete the block's source files in `blocks/<blockId>/`
+     * — that is the agent's job (see the remove-custom-block skill).
+     *
+     * Partial-success: the storefront push / unpublish failures do NOT throw —
+     * the returned status fields surface the real state of each step. Validation
+     * and missing-DA.live-token failures DO throw (per the MCP error envelope).
+     */
+    async removeBlockFromLibrary(
+        projectsDir: string,
+        projectName: string,
+        blockId: string,
+        tokens?: McpToolCredentials,
+    ): Promise<string> {
+        const projectPath = resolveProjectPath(projectsDir, projectName);
+        const ctx = await readPromoteBlockContext(projectPath);
+
+        if (!path.isAbsolute(ctx.storefrontPath)) {
+            throw new Error(`storefrontPath must be an absolute path: ${ctx.storefrontPath}`);
+        }
+        await assertInsideProject(projectPath, ctx.storefrontPath);
+
+        const daLiveToken = tokens?.daLiveToken;
+        if (!daLiveToken) {
+            throw new Error(
+                'DA.live token unavailable — sign in to DA.live first '
+                + '(check get_auth_status, then the sign_in tool with provider:"dalive").',
+            );
+        }
+        const githubToken = tokens?.githubToken ?? undefined;
+
+        const componentDefinition = await removeComponentDefinitionEntry(ctx.storefrontPath, blockId);
+
+        const noopLogger = {
+            trace: () => undefined, debug: () => undefined, info: () => undefined,
+            warn: () => undefined, error: () => undefined,
+        };
+        const daLiveOps = new DaLiveContentOperations(staticTokenProvider(daLiveToken), noopLogger);
+        const { docPage, sheet } = await daLiveOps.removeBlockFromLibrary(
+            ctx.daLiveOrg, ctx.daLiveSite, { blockId },
+        );
+
+        const unpublish = await unpublishStorefrontAndDaLive(ctx, blockId, githubToken, daLiveToken);
+
+        return JSON.stringify({
+            componentDefinition,
+            docPage,
+            sheet,
+            unpublish,
+            details: `Block "${blockId}" removed from ${ctx.daLiveOrg}/${ctx.daLiveSite} library`,
+        });
+    },
 };
 
 // ─── Tool registration (shared) ──────────────────────────────────────────────
 
 /**
- * Register the seven project tools on an MCP server instance. Consumed by the
+ * Register the nine project tools on an MCP server instance. Consumed by the
  * in-extension server (`@/features/ai/server/inExtensionMcpServer`) — the only
  * live path now that the standalone `dist/mcp-server.js` stdio process is
  * retired (see this file's header).
@@ -972,5 +1110,38 @@ export function registerProjectTools(
             ),
         }],
     }));
+
+    server.registerTool('remove_block_from_library', {
+        title: 'Remove Block from Library',
+        description: 'Remove (delete) a block from the DA.live authoring library — the inverse of promote_block_to_library. Removes the component-definition.json entry, deletes the doc page, drops the sheet row, commits/pushes the removal, and unpublishes the doc page. Does NOT delete the block source files in blocks/. Destructive: requires confirm:true.',
+        inputSchema: {
+            projectName: projectNameSchema,
+            blockId: z.string().regex(/^[a-zA-Z0-9_-]+$/).describe('Block directory name inside storefront blocks/'),
+            confirm: z.boolean().optional().describe('Must be true — this unpublishes the live doc page and pushes a removal commit'),
+        },
+    }, async (args: any) => {
+        if (args?.confirm !== true) {
+            return {
+                content: [{
+                    type: 'text' as const,
+                    text: JSON.stringify({
+                        error: 'remove_block_from_library unpublishes the live doc page and pushes a removal commit. Call again with confirm:true.',
+                        destructive: true,
+                    }),
+                }],
+            };
+        }
+        return {
+            content: [{
+                type: 'text' as const,
+                text: await toolHandlers.removeBlockFromLibrary(
+                    projectsDir,
+                    args.projectName,
+                    args.blockId as string,
+                    await resolveCredentials(),
+                ),
+            }],
+        };
+    });
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */

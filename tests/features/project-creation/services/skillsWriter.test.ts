@@ -191,11 +191,11 @@ describe('skillsWriter', () => {
             expect(writtenFiles().some(p => p.endsWith('create-eds-project.md'))).toBe(true);
         });
 
-        it('writes exactly eleven skill files when the Adobe skill bundle is not present', async () => {
+        it('writes exactly twelve skill files when the Adobe skill bundle is not present', async () => {
             mockMissingAdobeBundle();
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            expect(writtenFiles()).toHaveLength(11);
+            expect(writtenFiles()).toHaveLength(12);
         });
 
         it('writes scrape-reference-site.md for EDS projects', async () => {
@@ -240,13 +240,19 @@ describe('skillsWriter', () => {
             expect(writtenFiles().some(p => p.endsWith('register-custom-block.md'))).toBe(true);
         });
 
+        it('writes remove-custom-block.md for EDS projects', async () => {
+            await writeSkillFiles('/projects/test', makeEdsProject());
+
+            expect(writtenFiles().some(p => p.endsWith('remove-custom-block.md'))).toBe(true);
+        });
+
         it('each written skill file is non-empty and starts with YAML frontmatter or an H1', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
             const writeFileMock = fsPromises.writeFile as jest.Mock;
             const calls = writeFileMock.mock.calls;
 
-            expect(calls.length).toBe(11);
+            expect(calls.length).toBe(12);
             for (const [, content] of calls) {
                 expect(typeof content).toBe('string');
                 expect((content as string).length).toBeGreaterThan(0);
@@ -426,8 +432,8 @@ describe('skillsWriter', () => {
 
             const files = writtenFiles();
             expect(files.some(p => p.includes('/.claude/skills/aem-'))).toBe(false);
-            // Demo-Builder skills still written: 3 lifecycle + create-eds-project + 6 EDS-scraping + 1 register-custom-block = 11
-            expect(files.filter(p => p.startsWith('/projects/test/.claude/skills/'))).toHaveLength(11);
+            // Demo-Builder skills still written: 3 lifecycle + create-eds-project + 6 EDS-scraping + register-custom-block + remove-custom-block = 12
+            expect(files.filter(p => p.startsWith('/projects/test/.claude/skills/'))).toHaveLength(12);
         });
 
         it('still writes the three Demo-Builder lifecycle skills when copying the Adobe bundle', async () => {
