@@ -11,9 +11,11 @@
  * real network I/O.
  */
 
+import { DaLiveContentOperations } from '@/features/eds/services/daLiveContentOperations';
 import {
     fsProm,
     toolHandlers,
+    registerProjectTools,
     PROJECTS_DIR,
     PROJECT_NAME,
     STOREFRONT_PATH,
@@ -141,12 +143,19 @@ function mockHappyPathFilesystem(opts: {
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
+// Tokens are injected by the caller (the in-extension server resolves them from
+// the live sign-in session); these direct-handler tests supply them via this
+// wrapper. The credential-source describe below exercises the wiring seam.
+const TOKENS = { daLiveToken: 'da-live-token', githubToken: 'github-token' };
+const promote = (
+    projectsDir: string, projectName: string, blockId: string,
+    title: string, unsafeHTML: string, description?: string,
+): Promise<string> =>
+    toolHandlers.promoteBlockToLibrary(projectsDir, projectName, blockId, title, unsafeHTML, description, TOKENS);
+
 describe('toolHandlers.promoteBlockToLibrary', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        // Reset DA.live tokens in env so the handler picks them up.
-        process.env.DA_LIVE_IMS_TOKEN = 'da-live-token';
-        process.env.GITHUB_TOKEN = 'github-token';
 
         mockAppendBlockToLibrary.mockResolvedValue({ status: 'created', siteConfigRegistered: true });
         mockUpsertBlockDocPage.mockResolvedValue('written');
@@ -159,14 +168,9 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
         mockPreviewAndPublishPage.mockResolvedValue(undefined);
     });
 
-    afterEach(() => {
-        delete process.env.DA_LIVE_IMS_TOKEN;
-        delete process.env.GITHUB_TOKEN;
-    });
-
     it('throws when projectName does not resolve (invalid name)', async () => {
         await expect(
-            toolHandlers.promoteBlockToLibrary(
+            promote(
                 PROJECTS_DIR,
                 '../escape',
                 BLOCK_ID,
@@ -180,7 +184,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
         mockHappyPathFilesystem({ includeStorefront: false });
 
         await expect(
-            toolHandlers.promoteBlockToLibrary(
+            promote(
                 PROJECTS_DIR,
                 PROJECT_NAME,
                 BLOCK_ID,
@@ -194,7 +198,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
         mockHappyPathFilesystem({ blockDirExists: false });
 
         await expect(
-            toolHandlers.promoteBlockToLibrary(
+            promote(
                 PROJECTS_DIR,
                 PROJECT_NAME,
                 BLOCK_ID,
@@ -207,7 +211,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
     it('happy path — block exists, comp-def lacks entry → appends to comp-def, writes doc page, appends sheet row, publishes', async () => {
         mockHappyPathFilesystem({ componentDef: [] });
 
-        const raw = await toolHandlers.promoteBlockToLibrary(
+        const raw = await promote(
             PROJECTS_DIR,
             PROJECT_NAME,
             BLOCK_ID,
@@ -270,7 +274,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
             ],
         });
 
-        const raw = await toolHandlers.promoteBlockToLibrary(
+        const raw = await promote(
             PROJECTS_DIR,
             PROJECT_NAME,
             BLOCK_ID,
@@ -298,7 +302,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
             siteConfigRegistered: true,
         });
 
-        const raw = await toolHandlers.promoteBlockToLibrary(
+        const raw = await promote(
             PROJECTS_DIR,
             PROJECT_NAME,
             BLOCK_ID,
@@ -317,7 +321,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
         mockHappyPathFilesystem({ componentDef: [] });
         mockSyncAndPublish.mockRejectedValue(new Error('Helix admin 503'));
 
-        const raw = await toolHandlers.promoteBlockToLibrary(
+        const raw = await promote(
             PROJECTS_DIR,
             PROJECT_NAME,
             BLOCK_ID,
@@ -339,7 +343,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
 
         const malicious = '<div class="x">hi</div><script>alert("xss")</script>';
 
-        await toolHandlers.promoteBlockToLibrary(
+        await promote(
             PROJECTS_DIR,
             PROJECT_NAME,
             BLOCK_ID,
@@ -368,7 +372,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
         const malicious = '<a href="javascript:alert(1)" onclick="alert(2)">click</a>'
             + '<img src="x" onerror="fetch(\'/steal\')">';
 
-        await toolHandlers.promoteBlockToLibrary(
+        await promote(
             PROJECTS_DIR,
             PROJECT_NAME,
             BLOCK_ID,
@@ -390,7 +394,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
             + '<object data="javascript:alert(1)"></object>'
             + '<embed src="x.swf">';
 
-        await toolHandlers.promoteBlockToLibrary(
+        await promote(
             PROJECTS_DIR,
             PROJECT_NAME,
             BLOCK_ID,
@@ -411,7 +415,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
             + '<a href="vbscript:msgbox(1)">click</a>'
             + '<a href="//evil.example/x.js">click</a>';
 
-        await toolHandlers.promoteBlockToLibrary(
+        await promote(
             PROJECTS_DIR,
             PROJECT_NAME,
             BLOCK_ID,
@@ -431,7 +435,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
 
         const malicious = '<div>hi</div><style>body { background: url(javascript:alert(1)); }</style>';
 
-        await toolHandlers.promoteBlockToLibrary(
+        await promote(
             PROJECTS_DIR,
             PROJECT_NAME,
             BLOCK_ID,
@@ -449,7 +453,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
 
         // Title contains markup-like content; this must reach appendBlockToLibrary verbatim.
         const ornateTitle = 'Promo <Banner>';
-        await toolHandlers.promoteBlockToLibrary(
+        await promote(
             PROJECTS_DIR,
             PROJECT_NAME,
             BLOCK_ID,
@@ -469,7 +473,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
 
         const desc = 'A promo banner for sitewide sales.';
 
-        await toolHandlers.promoteBlockToLibrary(
+        await promote(
             PROJECTS_DIR,
             PROJECT_NAME,
             BLOCK_ID,
@@ -489,7 +493,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
     it('omits description from entry when not supplied', async () => {
         mockHappyPathFilesystem({ componentDef: [] });
 
-        await toolHandlers.promoteBlockToLibrary(
+        await promote(
             PROJECTS_DIR,
             PROJECT_NAME,
             BLOCK_ID,
@@ -516,7 +520,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
             + '<a href="/sale">View sale</a>'
             + '</div>';
 
-        await toolHandlers.promoteBlockToLibrary(
+        await promote(
             PROJECTS_DIR,
             PROJECT_NAME,
             BLOCK_ID,
@@ -547,6 +551,74 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
         // capabilityStatements test depends on (`promote_block_to_library`
         // backticked token).
         expect(src).toMatch(/Block changes to push back to source library/);
+    });
+});
+
+// ─── Credential source ───────────────────────────────────────────────────────
+// Regression coverage for the token seam: promote no longer reads
+// DA_LIVE_IMS_TOKEN from env (nothing populates it now the standalone process
+// is retired) — tokens are injected, resolved from the live sign-in session.
+
+describe('promote_block_to_library — credential source', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockAppendBlockToLibrary.mockResolvedValue({ status: 'created', siteConfigRegistered: true });
+        mockUpsertBlockDocPage.mockResolvedValue('written');
+        mockSyncAndPublish.mockResolvedValue({ committed: true, pushed: true, helixPublished: true, summary: 'ok' });
+        mockPreviewAndPublishPage.mockResolvedValue(undefined);
+    });
+
+    it('uses the injected DA.live + GitHub tokens', async () => {
+        mockHappyPathFilesystem({ componentDef: [] });
+
+        await toolHandlers.promoteBlockToLibrary(
+            PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, BLOCK_HTML, undefined,
+            { daLiveToken: 'injected-da', githubToken: 'injected-gh' },
+        );
+
+        // DA.live ops constructed with a provider yielding the injected token.
+        const tokenProvider = (DaLiveContentOperations as unknown as jest.Mock).mock.calls[0][0];
+        await expect(tokenProvider.getAccessToken()).resolves.toBe('injected-da');
+        // Both tokens flow through to the storefront commit/publish step.
+        expect(mockSyncAndPublish).toHaveBeenCalledWith(
+            expect.objectContaining({ githubToken: 'injected-gh', daLiveToken: 'injected-da' }),
+        );
+    });
+
+    it('throws when no DA.live token is supplied (user not signed in)', async () => {
+        mockHappyPathFilesystem({ componentDef: [] });
+
+        await expect(
+            toolHandlers.promoteBlockToLibrary(
+                PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, BLOCK_HTML, undefined,
+                { daLiveToken: null, githubToken: null },
+            ),
+        ).rejects.toThrow(/DA\.live token unavailable/i);
+    });
+
+    it('registerProjectTools threads the credential provider into the promote tool', async () => {
+        mockHappyPathFilesystem({ componentDef: [] });
+        const credentials = {
+            getDaLiveToken: jest.fn().mockResolvedValue('live-da'),
+            getGitHubToken: jest.fn().mockResolvedValue('live-gh'),
+        };
+        const handlers = new Map<string, (args: unknown) => Promise<unknown>>();
+        const server = {
+            registerTool: (name: string, _s: unknown, h: (a: unknown) => Promise<unknown>) => handlers.set(name, h),
+        };
+
+        registerProjectTools(server, PROJECTS_DIR, credentials);
+        await handlers.get('promote_block_to_library')!({
+            projectName: PROJECT_NAME, blockId: BLOCK_ID, title: BLOCK_TITLE, unsafeHTML: BLOCK_HTML,
+        });
+
+        expect(credentials.getDaLiveToken).toHaveBeenCalled();
+        expect(credentials.getGitHubToken).toHaveBeenCalled();
+        const tokenProvider = (DaLiveContentOperations as unknown as jest.Mock).mock.calls[0][0];
+        await expect(tokenProvider.getAccessToken()).resolves.toBe('live-da');
+        expect(mockSyncAndPublish).toHaveBeenCalledWith(
+            expect.objectContaining({ githubToken: 'live-gh', daLiveToken: 'live-da' }),
+        );
     });
 });
 

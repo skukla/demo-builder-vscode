@@ -20,7 +20,7 @@ import * as net from 'net';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { mcpSocketDir } from './mcpSocketPath';
-import { registerProjectTools } from '@/mcp-server';
+import { registerProjectTools, type McpCredentialProvider } from '@/mcp-server';
 import type { Logger } from '@/types/logger';
 
 const SERVER_NAME = 'demo-builder';
@@ -73,6 +73,9 @@ export class InExtensionMcpServer {
      *   handler-backed descriptor tools) on the per-connection server. Receives
      *   the logging-wrapped server so those tools are logged too. Injected by the
      *   extension so this module stays free of vscode/handler-map imports.
+     * @param credentials Optional DA.live / GitHub token resolver injected by the
+     *   extension so the credential-needing project tools (`sync_storefront`,
+     *   `promote_block_to_library`) use the live sign-in session.
      */
     constructor(
         private readonly socketPath: string,
@@ -80,6 +83,7 @@ export class InExtensionMcpServer {
         private readonly logger: Logger,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         private readonly registerExtraTools?: (server: any) => void,
+        private readonly credentials?: McpCredentialProvider,
     ) {}
 
     async start(): Promise<void> {
@@ -99,7 +103,7 @@ export class InExtensionMcpServer {
             // stays vscode-free and logging-agnostic. Extra (handler-backed) tools
             // are registered through the same wrapper.
             const logged = withToolLogging(server, this.logger);
-            registerProjectTools(logged, this.projectsDir);
+            registerProjectTools(logged, this.projectsDir, this.credentials);
             this.registerExtraTools?.(logged);
 
             const transport = new StdioServerTransport(socket, socket);

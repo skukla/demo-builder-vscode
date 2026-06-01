@@ -394,7 +394,8 @@ async function verifyBlockSourceExists(storefrontPath: string, blockId: string):
 
 /**
  * Build a static TokenProvider that returns the given token.
- * The promote flow uses an env-derived DA.live token (not a fetched one).
+ * The promote flow resolves the DA.live token once (from the injected
+ * credentials) and wraps it here — it does not fetch/refresh mid-call.
  */
 function staticTokenProvider(token: string): TokenProvider {
     return { getAccessToken: async () => token };
@@ -502,6 +503,32 @@ async function publishStorefrontAndDaLive(
     return 'success';
 }
 
+// ─── Credentials ─────────────────────────────────────────────────────────────
+
+/**
+ * Credentials a tool invocation may use, resolved from the live extension
+ * session. Both nullable — absent when the user isn't signed in.
+ *
+ * The in-extension server resolves these from `DaLiveAuthService` /
+ * `GitHubTokenService` and threads them in (see `registerProjectTools`). They
+ * replaced the former `DA_LIVE_IMS_TOKEN` / `GITHUB_TOKEN` env vars, which were
+ * only ever populated by the now-retired standalone process.
+ */
+export interface McpToolCredentials {
+    daLiveToken?: string | null;
+    githubToken?: string | null;
+}
+
+/**
+ * Per-call credential resolver injected by the (vscode-aware) in-extension
+ * server. Kept as a plain async-string interface so this module stays
+ * vscode-free. Resolved fresh on each tool call so token expiry is respected.
+ */
+export interface McpCredentialProvider {
+    getDaLiveToken(): Promise<string | null>;
+    getGitHubToken(): Promise<string | null>;
+}
+
 // ─── Tool handlers (exported for unit tests) ─────────────────────────────────
 
 /** @internal — exported only for unit tests; not part of the public API */
@@ -578,7 +605,12 @@ export const toolHandlers = {
         return `Updated ${configRelPath}`;
     },
 
-    async syncStorefront(projectsDir: string, projectName: string, commitMessage: string): Promise<string> {
+    async syncStorefront(
+        projectsDir: string,
+        projectName: string,
+        commitMessage: string,
+        tokens?: McpToolCredentials,
+    ): Promise<string> {
         const projectPath = resolveProjectPath(projectsDir, projectName);
         const storefrontPath = await resolveStorefrontPath(projectPath);
         if (!path.isAbsolute(storefrontPath)) {
@@ -591,12 +623,11 @@ export const toolHandlers = {
             throw new Error(`storefrontPath is not a git repository root: ${storefrontPath}`);
         }
 
-        // Tokens come from environment when running standalone (Claude Code launches
-        // the MCP server). The extension can write them into the spawn env via the
-        // launch wiring. Absence is fine: git falls back to ambient auth and the
-        // Helix step is skipped.
-        const githubToken = process.env.GITHUB_TOKEN || process.env.DEMO_BUILDER_GITHUB_TOKEN || undefined;
-        const daLiveToken = process.env.DA_LIVE_IMS_TOKEN || process.env.DEMO_BUILDER_DA_LIVE_TOKEN || undefined;
+        // Credentials come from the live extension session (DaLiveAuthService /
+        // GitHubTokenService), injected by registerProjectTools. Absence is fine:
+        // git falls back to ambient auth and the Helix publish step is skipped.
+        const githubToken = tokens?.githubToken ?? undefined;
+        const daLiveToken = tokens?.daLiveToken ?? undefined;
 
         const githubRepo = await readStorefrontGithubRepo(projectPath);
 
@@ -731,6 +762,7 @@ export const toolHandlers = {
         title: string,
         unsafeHTML: string,
         description?: string,
+        tokens?: McpToolCredentials,
     ): Promise<string> {
         const projectPath = resolveProjectPath(projectsDir, projectName);
         const ctx = await readPromoteBlockContext(projectPath);
@@ -752,11 +784,16 @@ export const toolHandlers = {
             ctx.storefrontPath, blockId, title, safeHtml, description,
         );
 
-        const daLiveToken = process.env.DA_LIVE_IMS_TOKEN || process.env.DEMO_BUILDER_DA_LIVE_TOKEN;
+        // Credentials come from the live extension session (DaLiveAuthService /
+        // GitHubTokenService), injected by registerProjectTools.
+        const daLiveToken = tokens?.daLiveToken;
         if (!daLiveToken) {
-            throw new Error('DA.live token unavailable — set DA_LIVE_IMS_TOKEN');
+            throw new Error(
+                'DA.live token unavailable — sign in to DA.live first '
+                + '(check get_auth_status, then the sign_in tool with provider:"dalive").',
+            );
         }
-        const githubToken = process.env.GITHUB_TOKEN || process.env.DEMO_BUILDER_GITHUB_TOKEN || undefined;
+        const githubToken = tokens?.githubToken ?? undefined;
 
         // Logger is unused for the MCP stdio flow — supply a no-op shim. The
         // DA.live operations log to stderr in the real flow; the MCP wrapper
@@ -795,10 +832,10 @@ export const toolHandlers = {
 // ─── Tool registration (shared) ──────────────────────────────────────────────
 
 /**
- * Register the seven project tools on an MCP server instance. Shared by the
- * standalone stdio bootstrap (below) and the in-extension server
- * (`@/features/ai/server/inExtensionMcpServer`) so both expose an identical
- * surface from one source of truth.
+ * Register the seven project tools on an MCP server instance. Consumed by the
+ * in-extension server (`@/features/ai/server/inExtensionMcpServer`) — the only
+ * live path now that the standalone `dist/mcp-server.js` stdio process is
+ * retired (see this file's header).
  *
  * `server` is typed `any` to avoid TS2589 (deep type instantiation with inline
  * Zod schema inference) — a confirmed SDK regression (issue #1180, v1.23.0+).
@@ -807,9 +844,30 @@ export const toolHandlers = {
  *
  * @param server      An `McpServer` instance (typed `any`; see above).
  * @param projectsDir Absolute path to the projects root (`~/.demo-builder/projects`).
+ * @param credentials Optional resolver for DA.live / GitHub tokens, injected by
+ *   the in-extension server so the credential-needing tools (`sync_storefront`,
+ *   `promote_block_to_library`) use the live sign-in session rather than env
+ *   vars. Omitted in vscode-free/file-only contexts (tools fall back to env).
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export function registerProjectTools(server: any, projectsDir: string): void {
+export function registerProjectTools(
+    server: any,
+    projectsDir: string,
+    credentials?: McpCredentialProvider,
+): void {
+    // Resolve credentials fresh per call (token expiry); undefined when no
+    // provider, so the handlers fall back to their env-var path.
+    const resolveCredentials = async (): Promise<McpToolCredentials | undefined> => {
+        if (!credentials) {
+            return undefined;
+        }
+        const [daLiveToken, githubToken] = await Promise.all([
+            credentials.getDaLiveToken(),
+            credentials.getGitHubToken(),
+        ]);
+        return { daLiveToken, githubToken };
+    };
+
     const projectNameSchema = z.string().describe('Project name (directory name under ~/.demo-builder/projects/)');
     const offsetSchema = z.number().int().min(0).optional().describe('Number of items to skip (pagination)');
     const limitSchema = z.number().int().min(0).optional().describe('Maximum number of items to return (pagination)');
@@ -864,7 +922,7 @@ export function registerProjectTools(server: any, projectsDir: string): void {
             commitMessage: z.string().max(500).describe('Git commit message'),
         },
     }, async (args: any) => ({
-        content: [{ type: 'text' as const, text: await toolHandlers.syncStorefront(projectsDir, args.projectName, args.commitMessage as string) }],
+        content: [{ type: 'text' as const, text: await toolHandlers.syncStorefront(projectsDir, args.projectName, args.commitMessage as string, await resolveCredentials()) }],
     }));
 
     server.registerTool('list_blocks', {
@@ -910,6 +968,7 @@ export function registerProjectTools(server: any, projectsDir: string): void {
                 args.title as string,
                 args.unsafeHTML as string,
                 args.description as string | undefined,
+                await resolveCredentials(),
             ),
         }],
     }));

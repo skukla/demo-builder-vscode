@@ -34,8 +34,10 @@ import { shouldAutoReopenProjectsList, landOnProjectDashboardForWorkspace } from
 import { seedDefaultAiPrompts } from '@/features/dashboard/services/defaultPromptsSeeder';
 import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLiveSites';
 import { manageGitHubReposCommand } from '@/features/eds/commands/manageGitHubRepos';
+import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 import { SidebarProvider } from '@/features/sidebar';
+import type { McpCredentialProvider } from '@/mcp-server';
 import type { Logger } from '@/types/logger';
 import { getProjectFrontendPort } from '@/types/typeGuards';
 import { AutoUpdater } from '@/utils/autoUpdater';
@@ -434,6 +436,14 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
         // Handler-backed read/status tools dispatch through the existing handler
         // maps with a fresh headless context per call.
         const ctxFactory = () => createHeadlessHandlerContext(context, stateManager, logger);
+        // Resolve DA.live / GitHub tokens from the live sign-in session so the
+        // credential-needing tools (sync_storefront, promote_block_to_library)
+        // see the same auth get_auth_status / sign_in operate on. Resolved fresh
+        // per call (token expiry); failures degrade to null (treated as no token).
+        const credentials: McpCredentialProvider = {
+            getDaLiveToken: () => getDaLiveAuthService(context).getAccessToken(),
+            getGitHubToken: async () => (await getGitHubServices(ctxFactory()).tokenService.getToken())?.token ?? null,
+        };
         const server = new InExtensionMcpServer(
             resolveMcpSocketPath(workspacePath),
             projectsDir,
@@ -452,6 +462,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerApplyUpdatesTool(mcpServer, ctxFactory);
                 registerViewTools(mcpServer, (commandId) => Promise.resolve(vscode.commands.executeCommand(commandId)));
             },
+            credentials,
         );
         await server.start();
         inExtensionMcpServer = server;

@@ -44,9 +44,9 @@ jest.mock('child_process', () => ({
     execFile: jest.fn(),
 }));
 
-import { toolHandlers, validateEnvContent, resolveProjectPath } from '@/mcp-server';
+import { toolHandlers, validateEnvContent, resolveProjectPath, registerProjectTools } from '@/mcp-server';
 
-export { fsProm, fsSync, childProcess, path, toolHandlers, validateEnvContent, resolveProjectPath };
+export { fsProm, fsSync, childProcess, path, toolHandlers, validateEnvContent, resolveProjectPath, registerProjectTools };
 
 export const PROJECTS_DIR = '/projects';
 export const PROJECT_NAME = 'my-project';
