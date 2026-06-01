@@ -983,6 +983,125 @@ export class DaLiveContentOperations {
     }
 
     /**
+     * Remove a single block from the DA.live authoring library (inverse of
+     * {@link appendBlockToLibrary}). Idempotent — never throws on
+     * already-absent state.
+     *
+     * Reverses exactly two library artifacts:
+     *   1. **Doc page** — `deleteSource` on `.da/library/blocks/<blockId>.html`
+     *      (the same path {@link upsertBlockDocPage} writes). Returns
+     *      `'deleted'` when a page was present and removed, `'absent'` when it
+     *      was already gone, or `'failed'` when the delete reported an error.
+     *   2. **Sheet row** — reads `.da/library/blocks.json`, filters OUT the row
+     *      whose `path` ends with `/.da/library/blocks/<blockId>` (matched by
+     *      blockId via the path, NOT by title — the caller only has blockId). If
+     *      a row was removed, rewrites the sheet via `createJsonSpreadsheet`
+     *      with `overwrite: true` (remaining rows, possibly empty) → `'removed'`.
+     *      If no matching row, or the sheet is missing (404), the sheet is left
+     *      untouched → `'absent'`.
+     *
+     * Does NOT delete the block's source files in `blocks/<blockId>/` — that is
+     * the agent's responsibility (driven by the remove-custom-block skill). It
+     * also does not touch `component-definition.json` (the MCP handler does).
+     *
+     * @param org   - DA.live organization
+     * @param site  - DA.live site
+     * @param block - Block descriptor `{ blockId }`
+     * @returns Per-artifact status `{ docPage, sheet }`.
+     */
+    async removeBlockFromLibrary(
+        org: string,
+        site: string,
+        block: { blockId: string },
+    ): Promise<{ docPage: 'deleted' | 'absent' | 'failed'; sheet: 'removed' | 'absent' }> {
+        const docPage = await this.deleteBlockDocPage(org, site, block.blockId);
+        const sheet = await this.removeBlockLibraryRow(org, site, block.blockId);
+        return { docPage, sheet };
+    }
+
+    /**
+     * Delete the doc page for a block. Probes existence first so the result can
+     * distinguish `'deleted'` (a page was there) from `'absent'` (already gone);
+     * `'failed'` only when `deleteSource` itself reports an error. The end state
+     * is identical for deleted/absent — the distinction is purely informational.
+     */
+    private async deleteBlockDocPage(
+        org: string,
+        site: string,
+        blockId: string,
+    ): Promise<'deleted' | 'absent' | 'failed'> {
+        const docPath = `.da/library/blocks/${blockId}.html`;
+        const existed = await this.sourceExists(org, site, docPath);
+        const result = await this.deleteSource(org, site, docPath);
+        if (!result.success) {
+            return 'failed';
+        }
+        return existed ? 'deleted' : 'absent';
+    }
+
+    /**
+     * Best-effort existence probe for a DA.live source path. Returns `false`
+     * on 404 or any error (used only to pick a status label, never to gate the
+     * delete itself).
+     */
+    private async sourceExists(org: string, site: string, path: string): Promise<boolean> {
+        try {
+            const token = await this.getImsToken();
+            const normalized = normalizePath(path);
+            const url = `${DA_LIVE_BASE_URL}/source/${org}/${site}/${normalized}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: { Authorization: `Bearer ${token}` },
+                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+            });
+            return response.ok;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Remove the block's row from `.da/library/blocks.json` and rewrite the
+     * sheet with the remaining rows. Matches the row by blockId via its `path`
+     * (the caller has no title). 404 sheet or no matching row → `'absent'`.
+     */
+    private async removeBlockLibraryRow(
+        org: string,
+        site: string,
+        blockId: string,
+    ): Promise<'removed' | 'absent'> {
+        const token = await this.getImsToken();
+        const sheetPath = '.da/library/blocks.json';
+        const sheetUrl = `${DA_LIVE_BASE_URL}/source/${org}/${site}/${sheetPath}`;
+
+        const existingRows = await this.readBlockLibraryRows(sheetUrl, token);
+        if (existingRows === null) {
+            return 'absent'; // sheet not present (404)
+        }
+
+        const suffix = `/.da/library/blocks/${blockId}`;
+        const remaining = existingRows.filter(
+            r => !(typeof r.path === 'string' && r.path.endsWith(suffix)),
+        );
+        if (remaining.length === existingRows.length) {
+            return 'absent'; // no matching row — nothing to rewrite
+        }
+
+        const writeResult = await this.createJsonSpreadsheet(
+            org,
+            site,
+            '.da/library/blocks',
+            ['name', 'path'],
+            remaining,
+            { overwrite: true },
+        );
+        if (!writeResult.success) {
+            throw new Error(`Failed to rewrite block library sheet: ${writeResult.error ?? 'unknown error'}`);
+        }
+        return 'removed';
+    }
+
+    /**
      * Read the current `.da/library/blocks.json` sheet rows.
      *
      * Returns `null` when the sheet is missing (HTTP 404). Throws for any other
