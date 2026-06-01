@@ -10,7 +10,7 @@
  */
 
 import * as vscode from 'vscode';
-import { readDaAuthHelperToken } from './daAuthHelperToken';
+import { readDaAuthHelperToken, writeDaAuthHelperToken } from './daAuthHelperToken';
 import { getLogger } from '@/core/logging';
 
 // ==========================================================
@@ -278,6 +278,24 @@ export class DaLiveAuthService {
         await this.context.globalState.update(STATE_KEYS.setupComplete, true);
 
         this.logger.info('[DA.live Auth] Token stored successfully');
+
+        this.mirrorToDaAuthHelper(token);
+    }
+
+    /**
+     * Mirror the just-stored token into the da-auth-helper cache so a sign-in
+     * done through the extension is recognized by the agent's `da-auth` skill
+     * too (the reverse of the read fallback). Best-effort, merge-preserving, and
+     * freshness-guarded — see writeDaAuthHelperToken.
+     */
+    private mirrorToDaAuthHelper(token: string): void {
+        const expiresAt = this.context.globalState.get<number>(STATE_KEYS.tokenExpiration);
+        if (!expiresAt) {
+            return;
+        }
+        if (writeDaAuthHelperToken({ accessToken: token, expiresAt })) {
+            this.logger.debug('[DA.live Auth] Mirrored token to da-auth-helper cache (~/.aem/da-token.json)');
+        }
     }
 
     /**

@@ -65,6 +65,48 @@ export function readDaAuthHelperToken(filePath: string = daAuthHelperTokenPath()
     return { accessToken, expiresAt, ...(email ? { email } : {}) };
 }
 
+/**
+ * Mirror a DA.live token into the da-auth-helper cache so a sign-in done through
+ * the extension (webview / MCP `sign_in`) is recognized by the `da-auth` skill.
+ *
+ * Safe by construction (per da-auth-helper's `src/auth.js`, the cache holds only
+ * `access_token` + `expires_at` and no refresh token):
+ *  - MERGE-PRESERVE: keeps any unknown fields already in the file (future-proof),
+ *    overwriting only `access_token` / `expires_at`.
+ *  - FRESHNESS GUARD: never downgrades a cached token that is fresher than ours.
+ *  - BEST-EFFORT: never throws; returns whether a write happened.
+ *
+ * @param token    The token + ms-epoch expiry to mirror.
+ * @param filePath Cache path (defaults to `~/.aem/da-token.json`); injectable for tests.
+ */
+export function writeDaAuthHelperToken(
+    token: { accessToken: string; expiresAt: number },
+    filePath: string = daAuthHelperTokenPath(),
+): boolean {
+    try {
+        // Don't downgrade a cached token that is at least as fresh as ours.
+        const existing = readDaAuthHelperToken(filePath);
+        if (existing && existing.expiresAt >= token.expiresAt) {
+            return false;
+        }
+
+        // Merge-preserve: keep any other fields da-auth-helper may have written.
+        let raw: Record<string, unknown> = {};
+        try {
+            raw = JSON.parse(fs.readFileSync(filePath, 'utf8')) as Record<string, unknown>;
+        } catch {
+            raw = {};
+        }
+        const merged = { ...raw, access_token: token.accessToken, expires_at: token.expiresAt };
+
+        fs.mkdirSync(path.dirname(filePath), { recursive: true });
+        fs.writeFileSync(filePath, `${JSON.stringify(merged, null, 2)}\n`, { mode: 0o600 });
+        return true;
+    } catch {
+        return false; // best-effort; the extension's own token store is authoritative
+    }
+}
+
 function pickString(obj: Record<string, unknown>, keys: string[]): string | undefined {
     for (const key of keys) {
         const value = obj[key];

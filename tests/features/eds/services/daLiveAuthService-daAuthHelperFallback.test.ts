@@ -18,13 +18,15 @@ jest.mock('@/core/logging', () => ({
 
 jest.mock('@/features/eds/services/daAuthHelperToken', () => ({
     readDaAuthHelperToken: jest.fn(() => null),
+    writeDaAuthHelperToken: jest.fn(() => true),
 }));
 
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
-import { readDaAuthHelperToken } from '@/features/eds/services/daAuthHelperToken';
+import { readDaAuthHelperToken, writeDaAuthHelperToken } from '@/features/eds/services/daAuthHelperToken';
 import type { ExtensionContext } from 'vscode';
 
 const readMock = readDaAuthHelperToken as jest.Mock;
+const writeMock = writeDaAuthHelperToken as jest.Mock;
 
 function makeService(initial: Record<string, unknown> = {}) {
     const store = new Map<string, unknown>(Object.entries(initial));
@@ -81,5 +83,14 @@ describe('DaLiveAuthService — da-auth-helper fallback', () => {
 
         expect(await service.getAccessToken()).toBe('eyJ.from-state');
         expect(readMock).not.toHaveBeenCalled();
+    });
+
+    it('mirrors a stored token back to the da-auth-helper cache (reverse bridge)', async () => {
+        const { service } = makeService();
+        const expiresAt = Date.now() + 3600_000;
+
+        await service.storeToken('eyJ.from-extension', { expiresAt, email: 'x@y.com' });
+
+        expect(writeMock).toHaveBeenCalledWith({ accessToken: 'eyJ.from-extension', expiresAt });
     });
 });
