@@ -397,23 +397,29 @@ export class DiagnosticsCommand {
                 // tools installed outside the GUI launchd PATH.
                 execResult = await commandManager.execute(command, { shell: true, enhancePath: true });
             }
-            const { stdout, stderr } = execResult;
+            const { stdout, stderr, code } = execResult;
             const duration = Date.now() - startTime;
+            const trimmedStdout = stdout.trim();
 
             const result: CommandResultWithContext = {
-                stdout: stdout.trim(),
+                stdout: trimmedStdout,
                 stderr: stderr.trim(),
-                code: 0,
+                code: code ?? 0,
                 duration,
                 cwd: process.cwd(),
             };
 
             this.logger.logCommand(command, result);
 
+            // The command ran without throwing, but a non-zero exit means the
+            // tool isn't actually usable — e.g. a shell "command not found" (127)
+            // resolves rather than throws. Treat only a clean exit as installed so
+            // a failed probe reports "❌ Not installed" instead of "✅ <blank>".
             return {
-                installed: true,
-                output: stdout.trim(),
+                installed: code === 0,
+                output: trimmedStdout,
                 error: stderr.trim(),
+                code: code ?? undefined,
                 duration,
             };
         } catch (error: unknown) {
