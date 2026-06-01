@@ -41,10 +41,10 @@ describe('claudeSessionStore.hasConversation', () => {
 
     /**
      * Helper: write a fake session file for the given cwd, mirroring
-     * Claude Code's `/`-to-`-` encoding under `~/.claude/projects/`.
+     * Claude Code's `/`-and-`.`-to-`-` encoding under `~/.claude/projects/`.
      */
     const seedSession = (cwd: string, sessionFile = 'session.jsonl'): void => {
-        const encoded = cwd.replace(/\//g, '-');
+        const encoded = cwd.replace(/[/.]/g, '-');
         const dir = path.join(tempHome, '.claude', 'projects', encoded);
         fs.mkdirSync(dir, { recursive: true });
         fs.writeFileSync(path.join(dir, sessionFile), '{"role":"user","content":"hi"}\n');
@@ -88,6 +88,24 @@ describe('claudeSessionStore.hasConversation', () => {
 
         // /projects/demo-extra encodes differently — must not be confused with /projects/demo.
         expect(hasConversation('/projects/demo-extra')).toBe(false);
+    });
+
+    it('also encodes dots in the cwd to dashes (Claude Code encoding)', () => {
+        // Verified empirically against `~/.claude/projects/`:
+        // `/Users/kukla/.demo-builder/projects/x` is stored at
+        // `-Users-kukla--demo-builder-projects-x` — note the double-hyphen
+        // where the leading dot lives. Hard-coded here (not via the helper)
+        // so this test catches a regression even if the helper drifts.
+        const encodedDir = path.join(
+            tempHome,
+            '.claude',
+            'projects',
+            '-Users-kukla--demo-builder-projects-x',
+        );
+        fs.mkdirSync(encodedDir, { recursive: true });
+        fs.writeFileSync(path.join(encodedDir, 'session.jsonl'), '{}\n');
+
+        expect(hasConversation('/Users/kukla/.demo-builder/projects/x')).toBe(true);
     });
 
     it('returns false when the filesystem read throws (treats unknown as cold start)', () => {
