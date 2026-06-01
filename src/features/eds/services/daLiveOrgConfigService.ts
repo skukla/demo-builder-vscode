@@ -55,15 +55,6 @@ export interface DaLiveOrgConfig {
     updatedAt?: string;
 }
 
-/**
- * Result of applying org config to a site
- */
-export interface ApplyOrgConfigResult {
-    success: boolean;
-    applied: string[];  // Keys that were applied
-    error?: string;
-}
-
 // ==========================================================
 // DA.live Organization Config Service
 // ==========================================================

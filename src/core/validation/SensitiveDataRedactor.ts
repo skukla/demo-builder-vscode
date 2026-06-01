@@ -88,9 +88,3 @@ export function sanitizeError(error: Error): Error {
 
     return sanitizedError;
 }
-
-/**
- * Access to sensitive patterns for testing
- * @internal
- */
-export const _SENSITIVE_PATTERNS_FOR_TESTING = SENSITIVE_PATTERNS;

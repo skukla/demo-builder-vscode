@@ -88,8 +88,3 @@ export function webviewLogger(context: string) {
         },
     };
 }
-
-/**
- * Type for the logger instance returned by webviewLogger
- */
-export type WebviewLogger = ReturnType<typeof webviewLogger>;
