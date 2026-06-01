@@ -9,17 +9,19 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
         tokenService: { validateToken: jest.fn(async () => ({ valid: true })) },
     })),
     getDaLiveAuthService: jest.fn(() => ({ isAuthenticated: jest.fn(async () => false) })),
+    // Native DA.live sign-in flow (browser → token input → org). The agent
+    // routes here instead of the webview-only 'open-dalive-login' handler.
+    showDaLiveAuthQuickPick: jest.fn(async () => ({ success: true })),
 }));
 
 jest.mock('@/features/eds/handlers/edsHandlers', () => ({
     edsHandlers: {
         'github-oauth': jest.fn(async () => ({ success: true })),
-        'open-dalive-login': jest.fn(async () => ({ success: true })),
     },
 }));
 
 import { registerAuthTools } from '@/features/ai/server/authTools';
-import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
+import { getGitHubServices, showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
 import type { HandlerContext } from '@/types/handlers';
 
 function fakeServer() {
@@ -104,5 +106,27 @@ describe('registerAuthTools', () => {
 
         const res = await server.call('sign_in', { provider: 'github', confirm: true });
         expect(res).toEqual({ provider: 'github', success: true });
+    });
+
+    it('sign_in dalive with confirm runs the native quick-pick (not the webview handler)', async () => {
+        const server = fakeServer();
+        registerAuthTools(server, makeCtxFactory(false));
+
+        const res = await server.call('sign_in', { provider: 'dalive', confirm: true });
+
+        // Routes to the native showInputBox flow, which works without a webview —
+        // the headless agent context drops sendMessage, so 'open-dalive-login' can't.
+        expect(showDaLiveAuthQuickPick).toHaveBeenCalledTimes(1);
+        expect(res).toEqual({ provider: 'dalive', success: true, cancelled: false, note: expect.any(String) });
+    });
+
+    it('sign_in dalive reports cancellation when the user dismisses the flow', async () => {
+        (showDaLiveAuthQuickPick as jest.Mock).mockResolvedValueOnce({ success: false, cancelled: true });
+        const server = fakeServer();
+        registerAuthTools(server, makeCtxFactory(false));
+
+        const res = await server.call('sign_in', { provider: 'dalive', confirm: true });
+        expect(res.success).toBe(false);
+        expect(res.cancelled).toBe(true);
     });
 });
