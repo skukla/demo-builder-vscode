@@ -14,7 +14,7 @@
 import { z } from 'zod';
 import { dispatchHandler } from '@/core/handlers';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
-import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
+import { getDaLiveAuthService, getGitHubServices, showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
 import type { HandlerContext } from '@/types/handlers';
 
 interface ProviderStatus {
@@ -99,9 +99,14 @@ export function registerAuthTools(server: any, ctxFactory: () => HandlerContext)
                 const res = await dispatchHandler(edsHandlers, ctx, 'github-oauth', {});
                 return { content: [{ type: 'text' as const, text: JSON.stringify({ provider, success: res.success }) }] };
             }
-            // dalive — opens the DA.live login/bookmarklet page; the token paste
-            // still happens in VS Code (DA.live has no headless token grant).
-            const res = await dispatchHandler(edsHandlers, ctx, 'open-dalive-login', {});
+            // dalive — DA.live has no headless token grant, so sign-in completes
+            // through native VS Code prompts (open browser → paste token → org).
+            // Use showDaLiveAuthQuickPick directly: it collects the token via
+            // vscode.window.showInputBox (no webview). The 'open-dalive-login'
+            // handler can't be used from here — it posts the paste UI to a webview,
+            // and the agent's headless context drops sendMessage, so the input box
+            // never appears.
+            const res = await showDaLiveAuthQuickPick(ctx);
             return {
                 content: [
                     {
@@ -109,7 +114,10 @@ export function registerAuthTools(server: any, ctxFactory: () => HandlerContext)
                         text: JSON.stringify({
                             provider,
                             success: res.success,
-                            note: 'Finish the DA.live token paste in VS Code, then retry.',
+                            cancelled: res.cancelled ?? false,
+                            note: res.success
+                                ? 'DA.live sign-in complete.'
+                                : 'DA.live sign-in was cancelled or failed; re-run sign_in to retry.',
                         }),
                     },
                 ],
