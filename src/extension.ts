@@ -30,7 +30,7 @@ import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
 import { registerViewTools } from '@/features/ai/server/viewTools';
 import { AuthenticationService } from '@/features/authentication';
 import { ComponentTreeProvider } from '@/features/components/providers/componentTreeProvider';
-import { shouldAutoReopenProjectsList } from '@/features/dashboard/commands/showDashboard';
+import { shouldAutoReopenProjectsList, landOnProjectDashboardForWorkspace } from '@/features/dashboard/commands/showDashboard';
 import { seedDefaultAiPrompts } from '@/features/dashboard/services/defaultPromptsSeeder';
 import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLiveSites';
 import { manageGitHubReposCommand } from '@/features/eds/commands/manageGitHubRepos';
@@ -361,14 +361,19 @@ export async function activate(context: vscode.ExtensionContext) {
         // the choice persists in globalState. No activation-time auto-write.
 
         // When this window is anchored to a Demo Builder project (e.g. just
-        // opened via tile-click), focus the Demo Builder Activity Bar so the
-        // sidebar becomes visible. The visibility subscription (line 133)
-        // then fires and auto-opens the projects list. Without this, a new
-        // project window inherits whichever Activity Bar view was previously
-        // focused (often Explorer) and the user has no Demo Builder UI until
-        // they click the Activity Bar icon themselves.
+        // opened via tile-click, File -> Open Recent, or `code <dir>`), land on
+        // that project's Dashboard rather than the projects-list start screen.
+        // landOnProjectDashboardForWorkspace opens the Dashboard panel first and
+        // then focuses the Activity Bar (in that order), so the tree-view
+        // visibility handler's projects-list auto-open guards itself out
+        // (shouldAutoOpenProjectsList bails when a panel already exists).
         const activationWorkspace = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        if (shouldAutoReopenProjectsList(activationWorkspace, false)) {
+        const landedOnDashboard = await landOnProjectDashboardForWorkspace(activationWorkspace, stateManager, logger);
+        if (!landedOnDashboard && shouldAutoReopenProjectsList(activationWorkspace, false)) {
+            // Defensive fallback (e.g. the project failed to load): focus the
+            // Demo Builder Activity Bar so the sidebar becomes visible and the
+            // visibility subscription auto-opens the projects list — preserving
+            // the prior behavior rather than leaving the user with no UI.
             await vscode.commands.executeCommand('workbench.view.extension.demoBuilder');
         }
 
