@@ -389,7 +389,13 @@ export class DiagnosticsCommand {
                     useNodeVersion: 'auto',
                 });
             } else {
-                execResult = await commandManager.execute(command);
+                // Other tools (git, fnm): run through a shell so the multi-word
+                // "<tool> --version" string is parsed and executed. With execa's
+                // default shell:false the whole string is treated as a single
+                // binary name → the command never runs and stdout comes back
+                // empty (the "✅ git: <blank>" symptom). enhancePath surfaces
+                // tools installed outside the GUI launchd PATH.
+                execResult = await commandManager.execute(command, { shell: true, enhancePath: true });
             }
             const { stdout, stderr } = execResult;
             const duration = Date.now() - startTime;
