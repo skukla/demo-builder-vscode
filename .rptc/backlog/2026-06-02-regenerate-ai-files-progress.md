@@ -3,6 +3,7 @@
 **Filed:** 2026-06-02
 **Origin:** Feature request — make AI-file regeneration communicate *what's happening*, reusing the wizard's step/loading pattern.
 **Status:** Planned (not started). RPTC research complete; this is the implementation plan.
+**Sequencing:** Queued **after the home-AI Chat phase** — that phase may add a "refresh the home context" step to regeneration, so build the progress UI once over the final step set rather than revise it.
 
 ## Problem
 
@@ -46,25 +47,25 @@ Reuse the wizard contract. **Map the regen flow to discrete steps and emit progr
 (Steps 2–4 are the `generateAIContextFiles` writers; step 1 is skipped for headless projects — adjust `totalSteps` accordingly.)
 
 ### Backend
-- **`generateAIContextFiles(projectPath, project, extensionPath, onProgress?)`** — add an optional `onProgress?: ProgressTracker` param. **Serialize the three writers** (currently `Promise.allSettled`) so each can report its own step. Cost is negligible (tiny file writes; the `npm install` dominates) and it keeps `allSettled`-style error aggregation (collect results, then surface failures). Emit before each writer.
+- **`generateAIContextFiles(projectPath, project, extensionPath, onProgress?)`** — add an optional `onProgress?: ProgressTracker` param. **Serialize the three writers** (currently `Promise.allSettled`) so each can report its own step. Cost is negligible (tiny file writes; the `npm install` dominates) and it keeps `allSettled`-style error aggregation (collect results, then surface failures). Emit before each writer. **Shared seam:** this `onProgress` is not regen-only — project creation calls the same `generateAIContextFiles` (its "phase 6"), today as one coarse step; the wizard can opt into the same per-writer steps for free. One seam, two callers.
 - **`handleRegenerateAiFiles`** — emit via `context.sendMessage(...)` before step 1 (install) and step 5 (finalize), and pass an `onProgress` into `generateAIContextFiles` that emits steps 2–4. Compute `totalSteps` (4 headless / 5 EDS) and the per-step `progress` %.
 
 ### Contract / message type
-Reuse the **same shape** (`{ currentOperation, progress, message }`) and the **same `LoadingDisplay` renderer**. Use a **dedicated message type `ai-regeneration-progress`** (not the wizard's `creationProgress`) so the two surfaces never cross-talk — same pattern, distinct channel.
+Reuse the wizard's contract **wholesale**: the existing **`creationProgress`** message type, the `{ currentOperation, progress, message }` shape, the `ProgressTracker` type, and the `LoadingDisplay` renderer. Reusing `creationProgress` (rather than a new type) is safe — the wizard and the dashboard are **separate webviews**, so the wizard's listener isn't mounted in the dashboard modal; there's no cross-talk. Net new code is then just the `onProgress` seam + the modal listener; zero new message types or UI components.
 
 ### UI
-- `AiCapabilitiesModal` (and/or the standalone AI surface that hosts the action): listen for `ai-regeneration-progress`, hold a small `regenProgress` state, and **replace the static spinner with `LoadingDisplay`** (`message` = step name, `subMessage` = detail). The Spectrum dialog already centers/constrains it — the wizard's pattern ports cleanly to the modal (no new component needed).
+- `AiCapabilitiesModal` (and/or the standalone AI surface that hosts the action): listen for `creationProgress`, hold a small `regenProgress` state, and **replace the static spinner with `LoadingDisplay`** (`message` = step name, `subMessage` = detail). The Spectrum dialog already centers/constrains it — the wizard's pattern ports cleanly to the modal (no new component needed).
 - On completion/error, restore the modal (or show the existing error path).
 
 ### Tests
-- `aiHandlers-setup.test.ts` — assert `handleRegenerateAiFiles` calls `context.sendMessage('ai-regeneration-progress', …)` with the expected ordered payloads (install → finalize), and that EDS vs headless changes `totalSteps`/skips step 1.
+- `aiHandlers-setup.test.ts` — assert `handleRegenerateAiFiles` calls `context.sendMessage('creationProgress', …)` with the expected ordered payloads (install → finalize), and that EDS vs headless changes `totalSteps`/skips step 1.
 - `projectFinalizationService` test — `generateAIContextFiles` invokes `onProgress` once per writer, in order, and still aggregates writer failures (serialized but `allSettled`-equivalent error handling).
 - Webview — listener updates state; `LoadingDisplay` renders the step name + detail. (Extend the existing `LoadingDisplay` test / add a small listener test.)
 
 ## Key decisions
 
 1. **Serialize the three writers** to get per-step progress (recommended) vs. keep them parallel and report a single coarse "Writing AI files" step. → Serialize; the writes are trivially fast and granular steps are the whole point.
-2. **Dedicated `ai-regeneration-progress` message type** (recommended) vs. reuse `creationProgress`. → Dedicated, same shape — avoids any chance of the dashboard and a (hypothetically mounted) wizard listener interfering.
+2. **Reuse the existing `creationProgress` message type** (recommended) vs. a dedicated `ai-regeneration-progress`. → Reuse — the surfaces are separate webviews (no cross-talk), so reusing the wizard's type maximizes reuse and adds zero new strings. (A distinct name buys only marginal semantic clarity.)
 3. **Reuse `LoadingDisplay` in the modal** (recommended) vs. a new compact component. → Reuse; consistent visual language, zero new UI surface.
 
 ## Open questions / related
