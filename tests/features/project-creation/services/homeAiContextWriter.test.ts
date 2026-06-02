@@ -5,7 +5,8 @@
  * (`~/.demo-builder/projects`) for the single home Chat:
  * - MCP config points at the ROOT socket (`resolveMcpSocketPath(<root>)`), not a
  *   per-project socket.
- * - `.claude/settings.json` is empty (no per-storefront git-sync hook).
+ * - `.claude/settings.json` carries a project-aware PostToolUse git-sync hook
+ *   (auto-commits/pushes edits in repos under the root that have an origin remote).
  * - ALL Demo Builder skills are written — the one home Chat edits any project's
  *   files, so it carries the full skill surface.
  * - `AGENTS.md` frames the directory as the Demo Builder home (every project is a
@@ -103,8 +104,30 @@ describe('ensureHomeAiContext — settings.json', () => {
         jest.clearAllMocks();
     });
 
-    it('writes an empty settings.json (no storefront git-sync hook at the root)', async () => {
+    it('writes a project-aware PostToolUse git-sync hook scoped under the projects root', async () => {
         await ensureHomeAiContext(PROJECTS_ROOT, EXTENSION_DIST, TEST_NODE_PATH);
+
+        const settings = JSON.parse(captureWrite('.claude/settings.json')) as {
+            hooks?: { PostToolUse?: Array<{ matcher: string; hooks: Array<{ type: string; command: string }> }> };
+        };
+        const hook = settings.hooks?.PostToolUse?.[0];
+        expect(hook?.matcher).toBe('Write|Edit');
+
+        const command = hook?.hooks?.[0]?.command ?? '';
+        // Tool-input extraction uses a single node -e invocation on the resolved
+        // node binary — no jq/python3/grep cascade.
+        expect(command).toContain(`TOOL_FILE=$("${TEST_NODE_PATH}" -e '`);
+        expect(command).toContain('process.env.CLAUDE_TOOL_INPUT');
+        expect(command).not.toContain('jq');
+        expect(command).not.toContain('python3');
+        // Root-scope guard (subpath only) + origin-remote guard.
+        expect(command).toContain(`case "$TOP" in "${PROJECTS_ROOT}"/*)`);
+        expect(command).toContain('remote get-url origin');
+        expect(command).toContain('rev-parse --show-toplevel');
+    });
+
+    it('writes an empty settings.json when the projects root is unsafe (shell metachars)', async () => {
+        await ensureHomeAiContext('/home/user/a;b/projects', EXTENSION_DIST, TEST_NODE_PATH);
 
         const settings = JSON.parse(captureWrite('.claude/settings.json')) as Record<string, unknown>;
         expect(settings).toEqual({});
