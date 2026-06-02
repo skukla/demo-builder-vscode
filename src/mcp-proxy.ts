@@ -30,6 +30,7 @@
 
 import * as net from 'net';
 import { LineBuffer, classifyHandshake, isInitResponse } from '@/features/ai/server/mcpProxyFraming';
+import { isRetryableConnectError } from '@/features/ai/server/mcpProxyRetry';
 import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
 
 const socketPath = process.env.DEMO_BUILDER_MCP_SOCKET || resolveMcpSocketPath(process.cwd());
@@ -102,7 +103,18 @@ function connect(attempt: number, isReconnect: boolean): void {
     const s = net.connect(socketPath);
     socket = s;
 
+    // Per-socket flag: was 'connect' ever emitted on THIS socket? Without it,
+    // a transient connect failure causes both the error handler AND the close
+    // handler to schedule reconnects (Node sockets emit 'close' after 'error').
+    // The two parallel timers each open a new socket, the failures double on
+    // every cycle, and the process eventually hits EMFILE — the very symptom
+    // we kept seeing on the client as "MCP error -32000: Connection closed".
+    // Tracking this per-cycle lets the close handler stay focused on its real
+    // job (reload-recovery for sockets that were actually connected).
+    let connectedThisCycle = false;
+
     s.once('connect', () => {
+        connectedThisCycle = true;
         connected = true;
         // Re-establish the session on the freshly-restarted server, then hide
         // the reconnection from the client by swallowing the init response.
@@ -119,12 +131,12 @@ function connect(attempt: number, isReconnect: boolean): void {
     s.on('data', onSocketData);
 
     s.on('error', (err: NodeJS.ErrnoException) => {
-        const notUpYet = err.code === 'ENOENT' || err.code === 'ECONNREFUSED';
-        if (notUpYet && attempt < RETRY_DELAYS_MS.length) {
+        const retryable = isRetryableConnectError(err.code);
+        if (retryable && attempt < RETRY_DELAYS_MS.length) {
             setTimeout(() => connect(attempt + 1, isReconnect), RETRY_DELAYS_MS[attempt]);
             return;
         }
-        if (notUpYet) {
+        if (retryable) {
             process.stderr.write(
                 'Demo Builder MCP server is not running. Open this project in VS Code ' +
                 '(the Demo Builder extension hosts the MCP server), then retry.\n',
@@ -138,10 +150,14 @@ function connect(attempt: number, isReconnect: boolean): void {
     s.once('close', () => {
         connected = false;
         socket = undefined;
-        // The extension is likely reloading — reconnect (replaying the
-        // handshake once back up). The retry window inside connect() bounds how
-        // long we wait before giving up, so a truly-closed VS Code still exits.
-        setTimeout(() => connect(0, true), RECONNECT_PAUSE_MS);
+        // Only schedule a reconnect when this socket actually established at
+        // some point — i.e. the extension restarted and dropped us. If 'connect'
+        // never fired, the error handler above already owns the retry policy;
+        // letting close also schedule one creates the parallel-timer cascade
+        // described at the top of this function.
+        if (connectedThisCycle) {
+            setTimeout(() => connect(0, true), RECONNECT_PAUSE_MS);
+        }
     });
 }
 
