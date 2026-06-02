@@ -103,6 +103,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
         aiMcps,
         aiMcpsError,
         aiBusy,
+        aiRegenProgress,
         regenerateAiFiles,
     } = useDashboardStatus({ hasMesh, initialMeshStatus, initialEdsStorefrontStatus }, isEdsStable);
 
@@ -305,6 +306,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                         onClose={() => setShowCapabilities(false)}
                         onRegenerate={regenerateAiFiles}
                         isBusy={aiBusy}
+                        progress={aiRegenProgress ?? undefined}
                     />
                 </DialogContainer>
             )}

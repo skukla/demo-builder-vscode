@@ -52,6 +52,7 @@ function renderModal(props: Partial<React.ComponentProps<typeof AiCapabilitiesMo
                 hasSkillsError={props.hasSkillsError}
                 hasMcpsError={props.hasMcpsError}
                 isBusy={props.isBusy}
+                progress={props.progress}
             />
         </Provider>,
     );
@@ -167,5 +168,44 @@ describe('AiCapabilitiesModal', () => {
         // Body content present
         expect(screen.getByTestId('ai-mcps-list')).toBeInTheDocument();
         expect(screen.getByTestId('ai-skills-summary')).toBeInTheDocument();
+    });
+
+    // ─── Live progress reporting ──────────────────────────────────────────────
+    // When the regenerate flow emits a `creationProgress` message, the hook
+    // forwards the live step into the modal so users see what's happening
+    // ("Installing storefront dependencies" → "Writing skills" → "Finalizing")
+    // instead of a single static "Reinstalling…" string for the whole minute.
+
+    it('surfaces the live step name in the loading state when progress is supplied', () => {
+        renderModal({
+            skills: SKILLS,
+            mcps: MCPS,
+            isBusy: true,
+            progress: { currentOperation: 'Writing skills', message: '' },
+        });
+        const loading = screen.getByTestId('ai-capabilities-loading');
+        expect(loading).toHaveTextContent(/Writing skills/);
+    });
+
+    it('surfaces the live sub-message when progress carries one', () => {
+        renderModal({
+            skills: SKILLS,
+            mcps: MCPS,
+            isBusy: true,
+            progress: {
+                currentOperation: 'Installing storefront dependencies',
+                message: 'This can take up to a minute',
+            },
+        });
+        const loading = screen.getByTestId('ai-capabilities-loading');
+        expect(loading).toHaveTextContent(/Installing storefront dependencies/);
+        expect(loading).toHaveTextContent(/This can take up to a minute/);
+    });
+
+    it('falls back to the original static text when busy but no progress has arrived yet', () => {
+        renderModal({ skills: SKILLS, mcps: MCPS, isBusy: true });
+        const loading = screen.getByTestId('ai-capabilities-loading');
+        // Initial busy state (before first creationProgress) still reads cleanly.
+        expect(loading).toHaveTextContent(/up to a minute|reinstalling|regenerating/i);
     });
 });

@@ -17,9 +17,22 @@ import { Flex, Heading, Text, View } from '@adobe/react-spectrum';
 import React from 'react';
 import { AiMcpsList } from './AiMcpsList';
 import { AiSkillsList } from './AiSkillsList';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { Spinner } from '@/core/ui/components/ui';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import type { McpInventoryEntry, SkillInventoryEntry } from '@/types/ai';
+
+/**
+ * Live regenerate-step shape, mirrored from the wizard's `creationProgress`
+ * payload. `currentOperation` is the step name (bold), `message` is the
+ * sub-text (gray), `progress` is the optional 0–100 percentage that drives
+ * the determinate `ProgressCircle` inside `LoadingDisplay`.
+ */
+export interface AiRegenerateProgress {
+    currentOperation: string;
+    message?: string;
+    progress?: number;
+}
 
 export interface AiCapabilitiesModalProps {
     skills: SkillInventoryEntry[];
@@ -33,6 +46,13 @@ export interface AiCapabilitiesModalProps {
     onRegenerate: () => void | Promise<void>;
     /** True while a verify/regenerate operation is in flight — disables the action. */
     isBusy?: boolean;
+    /**
+     * Live regenerate progress (step name + optional detail). Forwarded from
+     * the dashboard hook, which subscribes to the wizard's `creationProgress`
+     * channel. When present, the busy state renders `LoadingDisplay` with the
+     * live step instead of the static "Reinstalling…" fallback.
+     */
+    progress?: AiRegenerateProgress;
 }
 
 export function AiCapabilitiesModal({
@@ -43,6 +63,7 @@ export function AiCapabilitiesModal({
     onClose,
     onRegenerate,
     isBusy = false,
+    progress,
 }: AiCapabilitiesModalProps): React.ReactElement {
     return (
         <Modal
@@ -79,15 +100,32 @@ export function AiCapabilitiesModal({
                         gap="size-200"
                         height="size-3600"
                     >
-                        <Spinner size="L" aria-label="Regenerating AI files" />
-                        <Flex direction="column" alignItems="center" gap="size-50">
-                            <Text UNSAFE_className="text-sm text-gray-700">
-                                Reinstalling storefront dependencies and rewriting AI files.
-                            </Text>
-                            <Text UNSAFE_className="text-sm text-gray-600">
-                                This can take up to a minute.
-                            </Text>
-                        </Flex>
+                        {progress ? (
+                            // Live progress arrived — render LoadingDisplay so the user
+                            // sees each step (install → AGENTS.md → MCP → skills → finalize)
+                            // and the determinate progress ring when a percentage is set.
+                            <LoadingDisplay
+                                size="L"
+                                message={progress.currentOperation}
+                                subMessage={progress.message}
+                                progress={progress.progress}
+                            />
+                        ) : (
+                            // Initial busy frame — no creationProgress has landed yet.
+                            // Keep the original static copy so the modal doesn't flash
+                            // with blank labels before the first step fires.
+                            <>
+                                <Spinner size="L" aria-label="Regenerating AI files" />
+                                <Flex direction="column" alignItems="center" gap="size-50">
+                                    <Text UNSAFE_className="text-sm text-gray-700">
+                                        Reinstalling storefront dependencies and rewriting AI files.
+                                    </Text>
+                                    <Text UNSAFE_className="text-sm text-gray-600">
+                                        This can take up to a minute.
+                                    </Text>
+                                </Flex>
+                            </>
+                        )}
                     </Flex>
                 ) : (
                     <Flex direction="column" gap="size-300">

@@ -160,20 +160,38 @@ export async function sendCompletionAndCleanup(
  *
  * Delegates to the three writers. Non-blocking by design — callers should wrap in
  * try/catch and log warnings on failure.
+ *
+ * Pass `onProgress` to emit a step before each writer runs (dashboard "Regenerate
+ * AI files" surfaces this in the AI Capabilities modal). The writers serialize when
+ * an `onProgress` is supplied so each step's UI matches the work in flight; the
+ * combined cost is negligible (small file writes, no network). Writer errors are
+ * still collected across all three before being rethrown — same semantics as the
+ * previous `Promise.allSettled` path. Calling without `onProgress` keeps the
+ * original behavior for existing callers.
  */
 export async function generateAIContextFiles(
     projectPath: string,
     project: Project,
     extensionPath: string,
+    onProgress?: ProgressTracker,
 ): Promise<void> {
-    const results = await Promise.allSettled([
-        writeAgentsMd(projectPath, project, stacksConfig.stacks as Stack[]),
-        writeMcpConfigs(projectPath, project, path.join(extensionPath, 'dist')),
-        writeSkillFiles(projectPath, project),
-    ]);
-    const errors = results
-        .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
-        .map(r => (r.reason instanceof Error ? r.reason.message : String(r.reason)));
+    const distPath = path.join(extensionPath, 'dist');
+    const steps: Array<{ label: string; run: () => Promise<void> }> = [
+        { label: 'Writing AGENTS.md', run: () => writeAgentsMd(projectPath, project, stacksConfig.stacks as Stack[]) },
+        { label: 'Writing MCP configuration', run: () => writeMcpConfigs(projectPath, project, distPath) },
+        { label: 'Writing skills', run: () => writeSkillFiles(projectPath, project) },
+    ];
+
+    const errors: string[] = [];
+    for (const step of steps) {
+        onProgress?.(step.label, 0);
+        try {
+            await step.run();
+        } catch (err) {
+            errors.push(err instanceof Error ? err.message : String(err));
+        }
+    }
+
     if (errors.length > 0) {
         throw new Error(`AI context file generation failed: ${errors.join('; ')}`);
     }
