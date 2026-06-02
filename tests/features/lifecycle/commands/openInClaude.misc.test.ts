@@ -109,7 +109,9 @@ describe('OpenInClaudeCommand', () => {
 
     describe('project resolution', () => {
         it('falls back to StateManager.getCurrentProject() when invoked without a project argument', async () => {
-            const mocks = setupVscodeMocks();
+            // Workspace = the resolved project's path so execute() takes the
+            // in-place spawn path (no anchor-on-demand reload).
+            const mocks = setupVscodeMocks({ workspaceFolderPath: '/p/state' });
             const project = makeProject({ name: 'from-state', path: '/p/state' });
             const stateManager = makeStateManager(project);
             const command = new OpenInClaudeCommand(

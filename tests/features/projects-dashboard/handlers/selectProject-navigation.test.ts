@@ -37,7 +37,6 @@ import {
 } from '../testUtils';
 
 const mockExecuteCommand = vscode.commands.executeCommand as jest.Mock;
-const mockUriFile = vscode.Uri.file as jest.Mock;
 
 /** Set the mocked workspaceFolders for a single test. */
 function setMockWorkspaceFolder(path: string | null): void {
@@ -52,8 +51,8 @@ describe('handleSelectProject - Navigation', () => {
     });
 
     describe('showProjectDashboard command execution', () => {
-        it('navigates to dashboard when workspace already matches project', async () => {
-            // Given: A valid project AND the workspace folder is already the project
+        it('navigates to dashboard in-place on a plain selection (no browse reload)', async () => {
+            // Given: A valid project and the workspace folder is already the project
             const project = createMockProject({ name: 'Navigation Test Project' });
             const context = createMockHandlerContext([project]);
             setMockWorkspaceFolder(project.path);
@@ -73,7 +72,7 @@ describe('handleSelectProject - Navigation', () => {
         });
 
         it('should execute showProjectDashboard after saveProject completes', async () => {
-            // Given: A valid project AND workspace already matches (so no openFolder reload)
+            // Given: A valid project (plain selection → in-place, no openFolder reload)
             const project = createMockProject({ name: 'Order Test Project' });
             const context = createMockHandlerContext([project]);
             setMockWorkspaceFolder(project.path);
@@ -149,29 +148,28 @@ describe('handleSelectProject - Navigation', () => {
     });
 
     describe('workspace anchoring', () => {
-        it('opens the project folder as workspace (current window) when workspace does not match', async () => {
+        it('does NOT reload on a plain selection when no workspace is open — renders in-place', async () => {
             // Given: A valid project AND no workspace folder open
             const project = createMockProject({ name: 'Anchor Test' });
             const context = createMockHandlerContext([project]);
             setMockWorkspaceFolder(null);
 
-            // When: selectProject is called
+            // When: selectProject is called (plain, no forceNewWindow)
             await handleSelectProject(context as any, {
                 projectPath: project.path,
             });
 
-            // Then: openFolder is called with the project path in same window (forceNewWindow=false)
-            expect(mockUriFile).toHaveBeenCalledWith(project.path);
-            expect(mockExecuteCommand).toHaveBeenCalledWith(
+            // Then: NO openFolder reload — browsing never anchors the workspace.
+            expect(mockExecuteCommand).not.toHaveBeenCalledWith(
                 'vscode.openFolder',
-                expect.objectContaining({ fsPath: project.path }),
-                false,
+                expect.anything(),
+                expect.anything(),
             );
-            // AND showProjectDashboard is NOT called (window reload + reactivation handles it)
-            expect(mockExecuteCommand).not.toHaveBeenCalledWith('demoBuilder.showProjectDashboard');
+            // The dashboard is surfaced in-place instead.
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.showProjectDashboard');
         });
 
-        it('opens the project folder as workspace (current window) when workspace is a different folder', async () => {
+        it('does NOT reload on a plain selection when the workspace is a different folder — renders in-place', async () => {
             const project = createMockProject({ name: 'Anchor Test 2' });
             const context = createMockHandlerContext([project]);
             setMockWorkspaceFolder('/some/other/folder');
@@ -180,11 +178,13 @@ describe('handleSelectProject - Navigation', () => {
                 projectPath: project.path,
             });
 
-            expect(mockExecuteCommand).toHaveBeenCalledWith(
+            // Plain selection never anchors, even when the open workspace differs.
+            expect(mockExecuteCommand).not.toHaveBeenCalledWith(
                 'vscode.openFolder',
-                expect.objectContaining({ fsPath: project.path }),
-                false,
+                expect.anything(),
+                expect.anything(),
             );
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.showProjectDashboard');
         });
 
         it('opens the project folder in a NEW window when forceNewWindow is true', async () => {

@@ -30,7 +30,7 @@ import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
 import { registerViewTools } from '@/features/ai/server/viewTools';
 import { AuthenticationService } from '@/features/authentication';
 import { ComponentTreeProvider } from '@/features/components/providers/componentTreeProvider';
-import { shouldAutoReopenProjectsList, landOnProjectDashboardForWorkspace } from '@/features/dashboard/commands/showDashboard';
+import { shouldAutoReopenProjectsList } from '@/features/dashboard/commands/showDashboard';
 import { seedDefaultAiPrompts } from '@/features/dashboard/services/defaultPromptsSeeder';
 import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLiveSites';
 import { manageGitHubReposCommand } from '@/features/eds/commands/manageGitHubRepos';
@@ -87,26 +87,30 @@ async function replayPendingClaudeLaunch(
     context: vscode.ExtensionContext,
     workspaceFolderPath: string | undefined,
     log: Logger,
-): Promise<void> {
+): Promise<boolean> {
     const pending = context.globalState.get<PendingClaudeLaunch>(PENDING_CLAUDE_LAUNCH_KEY);
     await context.globalState.update(PENDING_CLAUDE_LAUNCH_KEY, undefined);
-    if (!pending) return;
+    if (!pending) return false;
     const fresh = Date.now() - pending.createdAt < PENDING_LAUNCH_TTL_MS;
     const workspaceMatches = workspaceFolderPath === pending.projectPath;
     if (!fresh || !workspaceMatches) {
         log.debug(
             `[Extension] discarded pending Claude launch (fresh=${fresh}, workspaceMatches=${workspaceMatches})`,
         );
-        return;
+        return false;
     }
     log.info('[Extension] replaying pending Claude launch with prompt pre-fill');
-    // Wrap in try/catch — a failed replay must not abort activation.
+    // Wrap in try/catch — a failed replay must not abort activation. A throw means
+    // the chat did NOT open, so report false and let the caller fall back to the
+    // projects list rather than leaving the user on a blank window.
     try {
         await vscode.commands.executeCommand('demoBuilder.openInClaude', { prompt: pending.prompt });
+        return true;
     } catch (error) {
         log.warn(
             `[Extension] pending Claude launch replay failed: ${error instanceof Error ? error.message : String(error)}`,
         );
+        return false;
     }
 }
 
@@ -362,29 +366,27 @@ export async function activate(context: vscode.ExtensionContext) {
         // project creation completes (see executor.ts). The user is asked once;
         // the choice persists in globalState. No activation-time auto-write.
 
-        // When this window is anchored to a Demo Builder project (e.g. just
-        // opened via tile-click, File -> Open Recent, or `code <dir>`), land on
-        // that project's Dashboard rather than the projects-list start screen.
-        // landOnProjectDashboardForWorkspace opens the Dashboard panel first and
-        // then focuses the Activity Bar (in that order), so the tree-view
-        // visibility handler's projects-list auto-open guards itself out
-        // (shouldAutoOpenProjectsList bails when a panel already exists).
+        // A pending Claude launch means THIS activation is finishing an
+        // anchor-on-demand Chat/terminal launch (post-reload), NOT a cold browse
+        // start — replay it (which opens the chat) and do NOT also force the
+        // projects list, which would steal the view. The record only fires if
+        // present, fresh (<60s), and the workspace now matches the recorded
+        // projectPath (see OpenInClaudeCommand.execute()'s anchor-on-demand path).
         const activationWorkspace = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        const landedOnDashboard = await landOnProjectDashboardForWorkspace(activationWorkspace, stateManager, logger);
-        if (!landedOnDashboard && shouldAutoReopenProjectsList(activationWorkspace, false)) {
-            // Defensive fallback (e.g. the project failed to load): focus the
-            // Demo Builder Activity Bar so the sidebar becomes visible and the
-            // visibility subscription auto-opens the projects list — preserving
-            // the prior behavior rather than leaving the user with no UI.
+        const replayedChatLaunch = await replayPendingClaudeLaunch(context, activationWorkspace, logger);
+
+        // Cold start (no pending launch) always lands on the projects list as the
+        // home screen — even when this window is still anchored to a Demo Builder
+        // project folder (decoupling Phase 1). Browsing/selecting a project no
+        // longer reloads the window; the workspace only anchors on-demand when the
+        // user launches a workspace-requiring action. For a project-anchored
+        // workspace, focus the Demo Builder Activity Bar so the tree-view
+        // visibility subscription auto-opens the projects list (guarded by
+        // shouldAutoOpenProjectsList). Non-project workspaces already auto-open the
+        // list via the same visibility handler.
+        if (!replayedChatLaunch && shouldAutoReopenProjectsList(activationWorkspace, false)) {
             await vscode.commands.executeCommand('workbench.view.extension.demoBuilder');
         }
-
-        // Replay any pending prompt launch that was queued before a workspace
-        // anchor reload (see handleOpenInClaude in features/dashboard/handlers/
-        // aiHandlers.ts). The record carries `{ projectPath, prompt, createdAt }`
-        // and only fires if all three checks pass: present, not stale (<60s),
-        // and workspace folder now matches the recorded projectPath.
-        await replayPendingClaudeLaunch(context, activationWorkspace, logger);
 
         logger.info('[Extension] Ready');
 
