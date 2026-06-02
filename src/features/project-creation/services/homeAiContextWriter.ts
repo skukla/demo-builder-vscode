@@ -1,21 +1,22 @@
 /**
  * Home AI Context Writer
  *
- * Writes a HOME AI context at the Demo Builder projects root
- * (`~/.demo-builder/projects`). A Chat launched there reaches the in-extension
- * MCP server on the ROOT socket (`resolveMcpSocketPath(projectsRoot)`), so the
- * agent can do global / by-name work: list projects, create projects, check or
- * change sign-in, and operate on any existing project by name.
+ * Writes the AI context for the SINGLE home Chat at the Demo Builder projects
+ * root (`~/.demo-builder/projects`). There is exactly ONE Chat, always rooted
+ * here. Because every project lives in a subdirectory of this root, that one
+ * Chat can natively read and edit any project's files on disk, and it reaches
+ * the in-extension MCP server on the ROOT socket
+ * (`resolveMcpSocketPath(projectsRoot)`) for by-name project operations.
  *
- * This is the home analogue of the three per-project writers
- * (`mcpConfigWriter`, `aiContextWriter`, `skillsWriter`). It deliberately writes
- * a slimmer surface than a project:
+ * The home Chat does deep, file-level work on any project, so it carries the
+ * FULL skill surface — all `DEMO_BUILDER_SKILLS` from `skillsWriter` — not just
+ * a single global skill. There is no separate per-project Chat anymore.
+ *
+ * It still differs from a per-project context in two ways:
  * - MCP config points at the ROOT socket (not a per-project socket).
- * - `.claude/settings.json` is empty — the root is not a storefront, so there is
- *   no PostToolUse git-sync hook.
- * - Only the GLOBAL `create-eds-project` skill is copied; project-scoped skills
- *   (site-scraping, custom-block authoring, etc.) belong inside a project.
- * - `AGENTS.md` is a dedicated HOME variant, not the per-project document.
+ * - `.claude/settings.json` is empty — the root is not a single storefront, so
+ *   there is no per-storefront PostToolUse git-sync hook (syncing is driven by
+ *   the `sync-changes` skill via `sync_storefront`).
  *
  * Contract: IDEMPOTENT (safe to call on every activation — generated files are
  * overwritten, unrelated files are left untouched) and it NEVER throws
@@ -25,8 +26,8 @@
 
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
-import createEdsProjectContent from '../templates/skills/create-eds-project.md';
 import { buildDemoBuilderMcpEntry, type McpServerEntry } from './mcpConfigWriter';
+import { DEMO_BUILDER_SKILLS } from './skillsWriter';
 import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
 
 interface McpConfig {
@@ -51,7 +52,8 @@ const CLAUDE_MD_POINTER = 'see @AGENTS.md\n';
  * - `<root>/.claude/settings.json` — empty `{}` (no storefront git-sync hook).
  * - `<root>/AGENTS.md` plus `<root>/CLAUDE.md` and `<root>/.claude/CLAUDE.md`
  *   `see @AGENTS.md` pointers.
- * - `<root>/.claude/skills/create-eds-project.md` — the only global skill.
+ * - `<root>/.claude/skills/*.md` — ALL Demo Builder skills (the one home Chat
+ *   does deep work on any project, so it needs every skill).
  *
  * Best-effort: never throws. On any failure it logs to stderr and returns.
  *
@@ -77,14 +79,18 @@ export async function ensureHomeAiContext(
         await Promise.all([
             fsPromises.writeFile(path.join(projectsRoot, '.mcp.json'), mcpJson, 'utf-8'),
             fsPromises.writeFile(path.join(claudeDir, 'mcp.json'), mcpJson, 'utf-8'),
-            // No storefront at the root → no PostToolUse git-sync hook. Match the
-            // no-storefront case of mcpConfigWriter.generateClaudeSettings ({}).
+            // Empty settings.json: the auto-commit-on-save hook is intentionally
+            // deferred — syncing is driven by the `sync-changes` skill (explicit
+            // `sync_storefront`); a project-aware home hook is a planned follow-up.
             fsPromises.writeFile(path.join(claudeDir, 'settings.json'), JSON.stringify({}, null, 2), 'utf-8'),
             fsPromises.writeFile(path.join(projectsRoot, 'AGENTS.md'), buildHomeAgentsMd(), 'utf-8'),
             fsPromises.writeFile(path.join(projectsRoot, 'CLAUDE.md'), CLAUDE_MD_POINTER, 'utf-8'),
             fsPromises.writeFile(path.join(claudeDir, 'CLAUDE.md'), CLAUDE_MD_POINTER, 'utf-8'),
-            // Global skill only — project-scoped skills belong inside a project.
-            fsPromises.writeFile(path.join(skillsDir, 'create-eds-project.md'), createEdsProjectContent, 'utf-8'),
+            // ALL skills — the single home Chat edits any project's files, so it
+            // needs the full skill surface, not just one global skill.
+            ...DEMO_BUILDER_SKILLS.map(({ filename, content }) =>
+                fsPromises.writeFile(path.join(skillsDir, filename), content, 'utf-8'),
+            ),
         ]);
     } catch (err) {
         // Best-effort: the home AI context is a convenience, never a hard
@@ -113,14 +119,15 @@ async function buildHomeMcpConfig(
 
 /**
  * The home `AGENTS.md`. A short, static document — no user-supplied values, so
- * no sanitization is needed. Frames this directory as the Demo Builder home and
- * reuses the `## Reporting Back to the User` convention from `aiContextWriter`.
+ * no sanitization is needed. Frames this directory as the Demo Builder home for
+ * the single home Chat and reuses the `## Reporting Back to the User`
+ * convention from `aiContextWriter`.
  */
 function buildHomeAgentsMd(): string {
     return [
         buildHomeHeader(),
         buildHomeWhatYouCanDo(),
-        buildHomeWhatBelongsInAProject(),
+        buildHomeWorkingOnProjects(),
         buildHomeReportingStyle(),
     ].join('\n\n');
 }
@@ -129,10 +136,11 @@ function buildHomeHeader(): string {
     return [
         '# Demo Builder Home',
         '',
-        'This is the Demo Builder **home / projects root** — the directory that holds every',
-        'Demo Builder project. A Chat launched here is connected to the Demo Builder MCP',
-        'server for **global, cross-project work**: you can see all projects at once and act',
-        'on **any existing project by name** (the project tools take a `projectName` argument).',
+        'This is the Demo Builder **home**, rooted at the projects directory that holds every',
+        'Demo Builder project. **Every project is a subdirectory here.** This is the single',
+        'Chat for all Demo Builder work — there is no separate per-project Chat. You are',
+        'connected to the Demo Builder MCP server and can both edit project files directly and',
+        'operate on any project by name.',
     ].join('\n');
 }
 
@@ -145,18 +153,25 @@ function buildHomeWhatYouCanDo(): string {
         '- **Check or change sign-in:** call `get_auth_status` to see the current Adobe',
         '  sign-in, and `sign_in` to authenticate.',
         '- **Operate on a project by name:** the project tools accept a `projectName` argument,',
-        '  so you can run them against any existing project from here without opening it.',
+        '  so you can run them against any existing project (`get_project`, `sync_storefront`,',
+        '  `promote_block_to_library`, `deploy_mesh`, etc.).',
     ].join('\n');
 }
 
-function buildHomeWhatBelongsInAProject(): string {
+function buildHomeWorkingOnProjects(): string {
     return [
-        '## What Belongs Inside a Project',
-        'Deep, file-level work inside a single project — editing block files, scraping a',
-        'reference site, wiring up content — is done from **that project\'s own Chat**, not',
-        'here. Open the project (or ask to open it by name) and start a Chat there; that Chat',
-        'has the project\'s full context, its block files on disk, and the project-scoped',
-        'skills. From the home, stay at the global / by-name level.',
+        '## Working on Projects',
+        'You can **read and edit any project\'s files directly** — every project is a',
+        'subdirectory of this root, so you do NOT open a project separately to work on it.',
+        'You can also operate on projects **by name** via the tools (`list_projects`,',
+        '`create_project`, `get_project`, `sync_storefront`, `promote_block_to_library`,',
+        '`deploy_mesh`, etc.).',
+        '',
+        '**When the user refers to a project without naming one, ask which project they mean.**',
+        '(A later update will default this to the project the user is currently viewing.)',
+        '',
+        'After editing a project\'s storefront files, run `sync_storefront` (see the',
+        '`sync-changes` skill) to commit and push the changes.',
     ].join('\n');
 }
 

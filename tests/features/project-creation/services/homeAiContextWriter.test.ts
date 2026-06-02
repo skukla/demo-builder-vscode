@@ -1,15 +1,15 @@
 /**
  * Home AI Context Writer Tests
  *
- * Tests for the HOME AI context written at the Demo Builder projects root
- * (`~/.demo-builder/projects`). The home variant is slimmer than a per-project
- * context:
+ * Tests for the AI context written at the Demo Builder projects root
+ * (`~/.demo-builder/projects`) for the single home Chat:
  * - MCP config points at the ROOT socket (`resolveMcpSocketPath(<root>)`), not a
  *   per-project socket.
- * - `.claude/settings.json` is empty (no storefront git-sync hook).
- * - Only the global `create-eds-project` skill is written — project-scoped skills
- *   (site-scraping, custom-block authoring) are NOT.
- * - `AGENTS.md` frames the directory as the Demo Builder home and reuses the
+ * - `.claude/settings.json` is empty (no per-storefront git-sync hook).
+ * - ALL Demo Builder skills are written — the one home Chat edits any project's
+ *   files, so it carries the full skill surface.
+ * - `AGENTS.md` frames the directory as the Demo Builder home (every project is a
+ *   subdirectory; edit any project directly or by name), and reuses the
  *   `## Reporting Back to the User` convention.
  *
  * The writer is best-effort: it must never throw on write failure.
@@ -119,7 +119,7 @@ describe('ensureHomeAiContext — AGENTS.md and CLAUDE.md pointers', () => {
         jest.clearAllMocks();
     });
 
-    it('writes a home AGENTS.md framing the projects root with global / by-name guidance', async () => {
+    it('writes a home AGENTS.md framing the projects root for the single home Chat', async () => {
         await ensureHomeAiContext(PROJECTS_ROOT, EXTENSION_DIST, TEST_NODE_PATH);
 
         const agents = captureWrite('AGENTS.md');
@@ -131,6 +131,12 @@ describe('ensureHomeAiContext — AGENTS.md and CLAUDE.md pointers', () => {
         // by-name guidance
         expect(agents.toLowerCase()).toContain('by name');
         expect(agents).toContain('projectName');
+        // New single-home-Chat framing: edit any project directly (subdirectories
+        // of this root) and sync via sync_storefront / the sync-changes skill.
+        expect(agents.toLowerCase()).toContain('subdirector');
+        expect(agents).toContain('sync_storefront');
+        // The old two-tier model is gone: no separate per-project Chat.
+        expect(agents).not.toContain("project's own Chat");
         // Reporting convention is reused verbatim from aiContextWriter
         expect(agents).toContain('## Reporting Back to the User');
     });
@@ -152,32 +158,22 @@ describe('ensureHomeAiContext — skills', () => {
         jest.clearAllMocks();
     });
 
-    it('writes only the global create-eds-project skill', async () => {
+    it('writes ALL Demo Builder skills (the single home Chat edits any project)', async () => {
         await ensureHomeAiContext(PROJECTS_ROOT, EXTENSION_DIST, TEST_NODE_PATH);
 
-        expect(wasWritten(path.join('.claude', 'skills', 'create-eds-project.md'))).toBe(true);
-        const content = captureWrite(path.join('skills', 'create-eds-project.md'));
-        expect(content.length).toBeGreaterThan(0);
-    });
-
-    it('does NOT write project-scoped skills', async () => {
-        await ensureHomeAiContext(PROJECTS_ROOT, EXTENSION_DIST, TEST_NODE_PATH);
-
-        const projectScopedSkills = [
-            'register-custom-block.md',
-            'remove-custom-block.md',
+        // Spot-check a representative subset across each skill category — the
+        // home Chat carries the full skill surface, not just one global skill.
+        const expectedSkills = [
+            'create-eds-project.md',
             'scrape-reference-site.md',
-            'connect-authenticated-site.md',
-            'commerce-block-mapper.md',
-            'demo-data-injector.md',
-            'header-nav-footer.md',
-            'refine-visual-match.md',
-            'add-component.md',
+            'register-custom-block.md',
             'sync-changes.md',
-            'update-credentials.md',
+            'commerce-block-mapper.md',
         ];
-        for (const skill of projectScopedSkills) {
-            expect(wasWritten(path.join('skills', skill))).toBe(false);
+        for (const skill of expectedSkills) {
+            expect(wasWritten(path.join('.claude', 'skills', skill))).toBe(true);
+            const content = captureWrite(path.join('skills', skill));
+            expect(content.length).toBeGreaterThan(0);
         }
     });
 
