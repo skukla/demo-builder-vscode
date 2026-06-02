@@ -53,10 +53,10 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
     });
 
     describe('Badge Color (initial state)', () => {
-        it('shows gray color while verify is pending', () => {
+        it('shows blue color while verify is pending', () => {
             renderDashboard();
             const badge = screen.getByTestId('status-card-AI');
-            expect(badge.getAttribute('data-color')).toBe('gray');
+            expect(badge.getAttribute('data-color')).toBe('blue');
         });
 
         it('shows "Verifying" status text while verify is pending', () => {

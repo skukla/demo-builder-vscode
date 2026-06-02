@@ -67,7 +67,7 @@ export interface StatusDisplay {
  */
 export interface AiReadyState {
     label: 'AI';
-    color: 'gray' | 'green' | 'yellow' | 'red';
+    color: 'blue' | 'gray' | 'green' | 'yellow' | 'red';
     text: 'Verifying' | 'Ready' | 'Setup incomplete' | 'Broken';
 }
 
@@ -249,7 +249,7 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
     }, [runVerify]);
 
     // Fetch the AI setup verification once on mount. Guards against StrictMode
-    // double-fetch using a ref. The badge stays in 'Verifying' (gray) until
+    // double-fetch using a ref. The badge stays in 'Verifying' (blue) until
     // this resolves.
     useEffect(() => {
         if (verifyRequestedRef.current) return;
@@ -345,7 +345,9 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
     }, [meshStatus, meshMessage, hasMesh, projectStatus, initialMeshStatus]);
 
     // Derive AI Ready badge state from the verify response. Colors:
-    //   gray:   verify hasn't returned yet (initial)
+    //   blue:   verify hasn't returned yet (initial) — matches the dashboard's
+    //           convention that blue is "in-flight / transient" across badges
+    //           (Mesh "Loading status...", Frontend "Starting...", etc.)
     //   red:    any of the project AI file checks failed
     //   yellow: files OK but an inventory inspector errored
     //   green:  files OK and inventory healthy
@@ -361,7 +363,7 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
             if (verifyFailed) {
                 return { label: 'AI', color: 'yellow', text: 'Setup incomplete' };
             }
-            return { label: 'AI', color: 'gray', text: 'Verifying' };
+            return { label: 'AI', color: 'blue', text: 'Verifying' };
         }
 
         const checks = verifyResult.checks ?? [];

@@ -2,7 +2,7 @@
  * useDashboardStatus Hook Tests — AI Ready Badge State
  *
  * Covers the verify-ai-setup integration that drives the AI Ready badge:
- * gray Verifying → green Ready → yellow Setup incomplete → red Broken,
+ * blue Verifying → green Ready → yellow Setup incomplete → red Broken,
  * plus skills/MCPs inventory exposure and the regenerate-ai-files flow.
  *
  * Core hook behavior is in `useDashboardStatus.test.ts`; display string
@@ -38,12 +38,12 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
         mocks = setupMocks();
     });
 
-    it('returns gray Verifying state before verify-ai-setup resolves', () => {
+    it('returns blue Verifying state before verify-ai-setup resolves', () => {
         // Default mock: request never resolves
         const { result } = renderHook(() => useDashboardStatus());
         expect(result.current.aiReady).toEqual({
             label: 'AI',
-            color: 'gray',
+            color: 'blue',
             text: 'Verifying',
         });
     });
