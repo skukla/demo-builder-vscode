@@ -34,7 +34,7 @@ const aiDefaults: AiDefaults = aiDefaultsConfig as AiDefaults;
 
 // ─── MCP entry shape ──────────────────────────────────────────────────────────
 
-interface McpServerEntry {
+export interface McpServerEntry {
     command: string;
     args: string[];
     env?: Record<string, string>;
@@ -135,7 +135,7 @@ export function generateClaudeSettings(project: Project): ClaudeSettings {
  * Falls back to `process.execPath` if resolution fails (better than nothing —
  * user can fix the path manually in ~/.claude/.mcp.json).
  */
-async function resolveNodePath(): Promise<string> {
+export async function resolveNodePath(): Promise<string> {
     try {
         // `which node` finds the node binary (resolves fnm/nvm shims)
         const { stdout: whichOut } = await execFile('which', ['node']);
@@ -161,21 +161,40 @@ async function resolveNodePath(): Promise<string> {
     return process.execPath;
 }
 
+/**
+ * Build the `demo-builder` MCP entry: the stdio→UDS proxy pointed at an explicit
+ * socket path. The in-extension server (when the matching folder is the open
+ * workspace) listens on that same path. Stable across restarts — no
+ * per-activation rewrite needed.
+ *
+ * Shared by the per-project writer (socket keyed to `project.path`) and the home
+ * writer (socket keyed to the projects root). `nodePath` may be supplied by the
+ * caller to avoid resolving it twice; otherwise it is resolved here.
+ */
+export async function buildDemoBuilderMcpEntry(
+    extensionDistPath: string,
+    socketPath: string,
+    nodePath?: string,
+): Promise<McpServerEntry> {
+    const resolvedNode = nodePath ?? (await resolveNodePath());
+    return {
+        command: resolvedNode,
+        args: [path.join(extensionDistPath, 'mcp-proxy.js')],
+        env: { DEMO_BUILDER_MCP_SOCKET: socketPath },
+    };
+}
+
 async function buildMcpConfig(
     extensionDistPath: string,
     project: Project,
 ): Promise<McpConfig> {
     const nodePath = await resolveNodePath();
-    // Per-project entry: the stdio→UDS proxy with the explicit socket path for
-    // this project. The in-extension server (when this project is the open
-    // workspace) listens on the same path. Stable across restarts — no
-    // per-activation rewrite needed.
     const mcpServers: Record<string, McpServerEntry> = {
-        'demo-builder': {
-            command: nodePath,
-            args: [path.join(extensionDistPath, 'mcp-proxy.js')],
-            env: { DEMO_BUILDER_MCP_SOCKET: resolveMcpSocketPath(project.path) },
-        },
+        'demo-builder': await buildDemoBuilderMcpEntry(
+            extensionDistPath,
+            resolveMcpSocketPath(project.path),
+            nodePath,
+        ),
     };
 
     // ai-defaults.json packages live under the storefront's node_modules

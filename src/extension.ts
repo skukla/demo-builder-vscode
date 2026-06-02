@@ -36,6 +36,7 @@ import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLive
 import { manageGitHubReposCommand } from '@/features/eds/commands/manageGitHubRepos';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
+import { ensureHomeAiContext } from '@/features/project-creation/services/homeAiContextWriter';
 import { SidebarProvider } from '@/features/sidebar';
 import type { McpCredentialProvider } from '@/mcp-server';
 import type { Logger } from '@/types/logger';
@@ -291,6 +292,14 @@ export async function activate(context: vscode.ExtensionContext) {
                 void startInExtensionMcpServer(context);
             }),
         );
+
+        // Write the home AI context at the projects root so a Chat launched
+        // there reaches the in-extension MCP server on the ROOT socket and can do
+        // global / by-name work. Best-effort and additive — never blocks or
+        // breaks activation, and changes no navigation/workspace behavior.
+        const projectsDir =
+            process.env.DEMO_BUILDER_PROJECTS_DIR ?? path.join(os.homedir(), '.demo-builder', 'projects');
+        void ensureHomeAiContext(projectsDir, path.join(context.extensionPath, 'dist'));
 
         // Register file watchers early (before loading projects)
         // This ensures the initializeFileHashes command exists when we need it

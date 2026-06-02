@@ -64,6 +64,31 @@ const COMPONENT_CATEGORIES = [
 
 const components = componentsConfig as unknown as RawComponentRegistry;
 
+/**
+ * The twelve Demo-Builder skills written into every project's
+ * `.claude/skills/` directory (filename → static content imported at build
+ * time). Exported so other writers — notably the single home Chat
+ * (`homeAiContextWriter`) — can write the exact same set without duplicating
+ * the import list. Order is not significant.
+ */
+export const DEMO_BUILDER_SKILLS: ReadonlyArray<{ filename: string; content: string }> = [
+    // Demo Builder lifecycle skills
+    { filename: 'add-component.md', content: addComponentContent },
+    { filename: 'sync-changes.md', content: syncChangesContent },
+    { filename: 'update-credentials.md', content: updateCredentialsContent },
+    { filename: 'create-eds-project.md', content: createEdsProjectContent },
+    // EDS site-scraping skills
+    { filename: 'scrape-reference-site.md', content: scrapeReferenceSiteContent },
+    { filename: 'connect-authenticated-site.md', content: connectAuthenticatedSiteContent },
+    { filename: 'commerce-block-mapper.md', content: commerceBlockMapperContent },
+    { filename: 'demo-data-injector.md', content: demoDataInjectorContent },
+    { filename: 'header-nav-footer.md', content: headerNavFooterContent },
+    { filename: 'refine-visual-match.md', content: refineVisualMatchContent },
+    // Custom block authoring registration
+    { filename: 'register-custom-block.md', content: registerCustomBlockContent },
+    { filename: 'remove-custom-block.md', content: removeCustomBlockContent },
+];
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -102,23 +127,9 @@ export async function writeSkillFiles(
         await fsPromises.writeFile(path.join(skillsDir, filename), content, 'utf-8');
     };
 
-    await Promise.all([
-        // Demo Builder lifecycle skills
-        writeSkill('add-component.md', addComponentContent),
-        writeSkill('sync-changes.md', syncChangesContent),
-        writeSkill('update-credentials.md', updateCredentialsContent),
-        writeSkill('create-eds-project.md', createEdsProjectContent),
-        // EDS site-scraping skills
-        writeSkill('scrape-reference-site.md', scrapeReferenceSiteContent),
-        writeSkill('connect-authenticated-site.md', connectAuthenticatedSiteContent),
-        writeSkill('commerce-block-mapper.md', commerceBlockMapperContent),
-        writeSkill('demo-data-injector.md', demoDataInjectorContent),
-        writeSkill('header-nav-footer.md', headerNavFooterContent),
-        writeSkill('refine-visual-match.md', refineVisualMatchContent),
-        // Custom block authoring registration
-        writeSkill('register-custom-block.md', registerCustomBlockContent),
-        writeSkill('remove-custom-block.md', removeCustomBlockContent),
-    ]);
+    await Promise.all(
+        DEMO_BUILDER_SKILLS.map(({ filename, content }) => writeSkill(filename, content)),
+    );
 
     // Copy Adobe skill bundles for components that declare aiSkillBundle.
     const componentInstances = project.componentInstances ?? {};
