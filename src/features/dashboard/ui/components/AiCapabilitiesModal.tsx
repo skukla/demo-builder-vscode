@@ -46,7 +46,7 @@ export function AiCapabilitiesModal({
 }: AiCapabilitiesModalProps): React.ReactElement {
     return (
         <Modal
-            title="Capabilities"
+            title="AI Capabilities"
             size="M"
             onClose={onClose}
             actionButtons={[
