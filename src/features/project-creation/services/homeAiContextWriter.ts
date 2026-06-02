@@ -29,7 +29,7 @@
 
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
-import { buildDemoBuilderMcpEntry, generateHomeClaudeSettings, type McpServerEntry } from './mcpConfigWriter';
+import { buildDemoBuilderMcpEntry, generateHomeClaudeSettings, resolveNodePath, type McpServerEntry } from './mcpConfigWriter';
 import { DEMO_BUILDER_SKILLS } from './skillsWriter';
 import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
 
@@ -77,7 +77,12 @@ export async function ensureHomeAiContext(
         const skillsDir = path.join(claudeDir, 'skills');
         await fsPromises.mkdir(skillsDir, { recursive: true });
 
-        const mcpConfig = await buildHomeMcpConfig(projectsRoot, extensionDistPath, nodePath);
+        // Resolve the Node binary once and thread it to BOTH the MCP proxy entry
+        // and the git-sync hook extractor (which now parses tool input via
+        // `node -e`), so they always agree on the same binary.
+        const resolvedNode = nodePath ?? (await resolveNodePath());
+
+        const mcpConfig = await buildHomeMcpConfig(projectsRoot, extensionDistPath, resolvedNode);
         const mcpJson = JSON.stringify(mcpConfig, null, 2);
 
         await Promise.all([
@@ -86,7 +91,7 @@ export async function ensureHomeAiContext(
             // Project-aware home git-sync hook: auto-commits/pushes storefront
             // edits made by the home Chat, scoped to repos UNDER the projects
             // root that have an `origin` remote (see generateHomeClaudeSettings).
-            fsPromises.writeFile(path.join(claudeDir, 'settings.json'), JSON.stringify(generateHomeClaudeSettings(projectsRoot), null, 2), 'utf-8'),
+            fsPromises.writeFile(path.join(claudeDir, 'settings.json'), JSON.stringify(generateHomeClaudeSettings(projectsRoot, resolvedNode), null, 2), 'utf-8'),
             fsPromises.writeFile(path.join(projectsRoot, 'AGENTS.md'), buildHomeAgentsMd(), 'utf-8'),
             fsPromises.writeFile(path.join(projectsRoot, 'CLAUDE.md'), CLAUDE_MD_POINTER, 'utf-8'),
             fsPromises.writeFile(path.join(claudeDir, 'CLAUDE.md'), CLAUDE_MD_POINTER, 'utf-8'),

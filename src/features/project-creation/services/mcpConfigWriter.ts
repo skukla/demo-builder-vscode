@@ -82,12 +82,16 @@ export async function writeMcpConfigs(
         await fsPromises.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
     };
 
-    const mcpConfig = await buildMcpConfig(extensionDistPath, project);
+    // Resolve the Node binary once and thread it to BOTH the MCP proxy entry
+    // and the git-sync hook extractor (which now parses tool input via `node -e`).
+    const nodePath = await resolveNodePath();
+
+    const mcpConfig = await buildMcpConfig(extensionDistPath, project, nodePath);
 
     await writeJson(path.join(projectPath, '.claude', 'mcp.json'), mcpConfig);
     await writeJson(path.join(projectPath, '.mcp.json'), mcpConfig);
 
-    const claudeSettings = generateClaudeSettings(project);
+    const claudeSettings = generateClaudeSettings(project, nodePath);
     await writeJson(path.join(projectPath, '.claude', 'settings.json'), claudeSettings);
 
     await ensureMcpFilesGitignored(projectPath);
@@ -97,15 +101,19 @@ export async function writeMcpConfigs(
 /**
  * Generate .claude/settings.json with PostToolUse git sync hook.
  * Hook is only added when the project has an EDS storefront with a local path
- * and that path contains no shell metacharacters.
+ * and that path (and `nodePath`, interpolated into the hook) contains no shell
+ * metacharacters.
+ *
+ * `nodePath` is the already-resolved Node binary (see `resolveNodePath`) used
+ * by the hook's `node -e` tool-input extractor.
  */
-export function generateClaudeSettings(project: Project): ClaudeSettings {
+export function generateClaudeSettings(project: Project, nodePath: string): ClaudeSettings {
     const storefrontPath = resolveStorefrontPath(project);
     if (!storefrontPath) {
         return {};
     }
 
-    const command = buildGitSyncCommand(storefrontPath);
+    const command = buildGitSyncCommand(storefrontPath, nodePath);
     if (!command) {
         // Path contained shell metacharacters — skip hook for safety
         return {};
@@ -129,11 +137,15 @@ export function generateClaudeSettings(project: Project): ClaudeSettings {
  * that auto-commits/pushes storefront edits made anywhere under the projects
  * root — the home analogue of the per-project hook.
  *
- * Returns `{}` (no hook) when `projectsRoot` contains shell metacharacters —
- * an attacker-controlled root must not become part of an executed shell command.
+ * Returns `{}` (no hook) when `projectsRoot` (or `nodePath`, interpolated into
+ * the hook) contains shell metacharacters — an attacker-controlled value must
+ * not become part of an executed shell command.
+ *
+ * `nodePath` is the already-resolved Node binary (see `resolveNodePath`) used
+ * by the hook's `node -e` tool-input extractor.
  */
-export function generateHomeClaudeSettings(projectsRoot: string): ClaudeSettings {
-    const command = buildHomeGitSyncCommand(projectsRoot);
+export function generateHomeClaudeSettings(projectsRoot: string, nodePath: string): ClaudeSettings {
+    const command = buildHomeGitSyncCommand(projectsRoot, nodePath);
     if (!command) {
         // Root contained shell metacharacters — skip hook for safety
         return {};
@@ -215,8 +227,8 @@ export async function buildDemoBuilderMcpEntry(
 async function buildMcpConfig(
     extensionDistPath: string,
     project: Project,
+    nodePath: string,
 ): Promise<McpConfig> {
-    const nodePath = await resolveNodePath();
     const mcpServers: Record<string, McpServerEntry> = {
         'demo-builder': await buildDemoBuilderMcpEntry(
             extensionDistPath,
@@ -265,41 +277,42 @@ const SHELL_METACHAR_RE = /["`$;|&<>\n\r\\'*?[\](){}]/;
  * Build the shell snippet that extracts the edited file path from the
  * PostToolUse payload into `$TOOL_FILE`.
  *
- * JSON-parsing strategy is a tolerant fallback chain so the hook works in
- * environments missing one of the tools:
- *   1. `jq` — primary, robust JSON parser (widely available)
- *   2. `python3` — secondary, present on every modern macOS/Linux install
- *   3. `grep`/`sed` — last-resort regex
+ * Parses `$CLAUDE_TOOL_INPUT` with a single `node -e` invocation using the
+ * already-resolved Node binary (the same one the MCP proxy depends on) — no
+ * `jq`/`python3`/`grep`+`sed` cascade. The Node one-liner:
+ *   - reads `process.env.CLAUDE_TOOL_INPUT` directly (defaulting to `"{}"`), so
+ *     the shell never expands the env var,
+ *   - `JSON.parse`s it inside try/catch (parse failure ⇒ prints nothing),
+ *   - recursively finds the FIRST string-valued `file_path` at any nesting depth
+ *     (parity with the old `.. | .file_path` recursion; Claude passes it at
+ *     `tool_input.file_path`),
+ *   - writes that path (or empty string) to stdout with NO trailing newline.
  *
- * Each subsequent tool only runs if the previous one produced empty output
- * (or failed) — guarded by `[ -z "$TOOL_FILE" ]`. The query is
- * `.. | objects | .file_path? // empty` for jq, equivalent recursive logic
- * for python3, and a `grep -o` pattern for the last-resort path — all three
- * extract `file_path` at any nesting depth. Shared by the per-project and the
- * home git-sync hooks; the snippet contains no interpolated paths, so it is
- * always safe.
+ * The JS contains NO single-quote characters, so the whole `-e '…'` is wrapped
+ * in single quotes with no escaping. `nodePath` is interpolated double-quoted.
+ * Shared by the per-project and the home git-sync hooks. Callers guard
+ * `nodePath` with `SHELL_METACHAR_RE` before interpolating it here.
  */
-function buildToolFileExtraction(): string {
-    const jqExtract = `jq -r '.. | objects | .file_path? // empty' 2>/dev/null`;
-    const pythonExtract =
-        `python3 -c 'import json,sys\n` +
-        `def find(o):\n` +
-        `    if isinstance(o,dict):\n` +
-        `        if "file_path" in o: print(o["file_path"]); return True\n` +
-        `        return any(find(v) for v in o.values())\n` +
-        `    if isinstance(o,list):\n` +
-        `        return any(find(v) for v in o)\n` +
-        `    return False\n` +
-        `find(json.load(sys.stdin))' 2>/dev/null`;
-    const grepSedExtract =
-        `grep -o '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | ` +
-        `sed 's/"file_path"[[:space:]]*:[[:space:]]*"//;s/"$//'`;
+function buildToolFileExtraction(nodePath: string): string {
+    // No single quotes anywhere in this script — it is wrapped in single quotes
+    // for the shell. Double quotes only. Reads the env var directly (no shell
+    // expansion of $CLAUDE_TOOL_INPUT), recurses for the first string file_path,
+    // and writes it with no trailing newline.
+    const script =
+        `try{` +
+        `var o=JSON.parse(process.env.CLAUDE_TOOL_INPUT||"{}");` +
+        `var f=function(v){` +
+        `if(v&&typeof v==="object"){` +
+        `if(typeof v.file_path==="string")return v.file_path;` +
+        `for(var k in v){var r=f(v[k]);if(typeof r==="string")return r}` +
+        `}` +
+        `return null` +
+        `};` +
+        `var p=f(o);` +
+        `if(typeof p==="string")process.stdout.write(p)` +
+        `}catch(e){}`;
 
-    return (
-        `TOOL_FILE=$(echo "$CLAUDE_TOOL_INPUT" | ${jqExtract}); ` +
-        `[ -z "$TOOL_FILE" ] && TOOL_FILE=$(echo "$CLAUDE_TOOL_INPUT" | ${pythonExtract}); ` +
-        `[ -z "$TOOL_FILE" ] && TOOL_FILE=$(echo "$CLAUDE_TOOL_INPUT" | ${grepSedExtract}); `
-    );
+    return `TOOL_FILE=$("${nodePath}" -e '${script}'); `;
 }
 
 /**
@@ -311,9 +324,12 @@ function buildToolFileExtraction(): string {
  *
  * Extracts the edited file into `$TOOL_FILE` (see `buildToolFileExtraction`),
  * then commits + pushes only when that file is under the storefront path.
+ *
+ * `nodePath` is interpolated into the extractor command, so it is subject to
+ * the same `SHELL_METACHAR_RE` guard as `storefrontPath`.
  */
-function buildGitSyncCommand(storefrontPath: string): string {
-    if (SHELL_METACHAR_RE.test(storefrontPath)) {
+function buildGitSyncCommand(storefrontPath: string, nodePath: string): string {
+    if (SHELL_METACHAR_RE.test(storefrontPath) || SHELL_METACHAR_RE.test(nodePath)) {
         // Unsafe path — skip hook rather than risk shell injection
         return '';
     }
@@ -324,7 +340,7 @@ function buildGitSyncCommand(storefrontPath: string): string {
     const quoted = `"${storefrontPath}"`;
 
     return (
-        buildToolFileExtraction() +
+        buildToolFileExtraction(nodePath) +
         `if [[ "$TOOL_FILE" == ${quoted}* ]]; then ` +
         `git -C ${quoted} add -A && ` +
         `git -C ${quoted} commit -m "AI: sync files" && ` +
@@ -342,9 +358,10 @@ function buildGitSyncCommand(storefrontPath: string): string {
  * home Chat can edit ANY project under the root, so this command resolves the
  * enclosing git repo at runtime and applies layered safety guards:
  *
- *   1. Returns `''` (no hook) if `projectsRoot` contains shell metacharacters —
- *      an attacker-controlled root must never become part of a shell command.
- *      Same guard as `buildGitSyncCommand`.
+ *   1. Returns `''` (no hook) if `projectsRoot` (or `nodePath`, interpolated into
+ *      the extractor) contains shell metacharacters — an attacker-controlled
+ *      value must never become part of a shell command. Same guard as
+ *      `buildGitSyncCommand`.
  *   2. Extracts the edited file into `$TOOL_FILE`; `[ -z … ] && exit 0` bails
  *      when nothing was edited or the payload couldn't be parsed.
  *   3. Resolves the enclosing repo via `git rev-parse --show-toplevel` from the
@@ -361,8 +378,8 @@ function buildGitSyncCommand(storefrontPath: string): string {
  * The root is double-quoted everywhere it is interpolated. The metachar guard
  * already rejects quotes, so quoting is purely to preserve spaces in the path.
  */
-export function buildHomeGitSyncCommand(projectsRoot: string): string {
-    if (SHELL_METACHAR_RE.test(projectsRoot)) {
+export function buildHomeGitSyncCommand(projectsRoot: string, nodePath: string): string {
+    if (SHELL_METACHAR_RE.test(projectsRoot) || SHELL_METACHAR_RE.test(nodePath)) {
         // Unsafe root — skip hook rather than risk shell injection
         return '';
     }
@@ -373,7 +390,7 @@ export function buildHomeGitSyncCommand(projectsRoot: string): string {
     const quotedRoot = `"${projectsRoot}"`;
 
     return (
-        buildToolFileExtraction() +
+        buildToolFileExtraction(nodePath) +
         `[ -z "$TOOL_FILE" ] && exit 0; ` +
         `TOP=$(git -C "$(dirname "$TOOL_FILE")" rev-parse --show-toplevel 2>/dev/null) || exit 0; ` +
         `case "$TOP" in ${quotedRoot}/*) ;; *) exit 0 ;; esac; ` +

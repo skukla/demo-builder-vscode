@@ -114,6 +114,12 @@ describe('ensureHomeAiContext — settings.json', () => {
         expect(hook?.matcher).toBe('Write|Edit');
 
         const command = hook?.hooks?.[0]?.command ?? '';
+        // Tool-input extraction uses a single node -e invocation on the resolved
+        // node binary — no jq/python3/grep cascade.
+        expect(command).toContain(`TOOL_FILE=$("${TEST_NODE_PATH}" -e '`);
+        expect(command).toContain('process.env.CLAUDE_TOOL_INPUT');
+        expect(command).not.toContain('jq');
+        expect(command).not.toContain('python3');
         // Root-scope guard (subpath only) + origin-remote guard.
         expect(command).toContain(`case "$TOP" in "${PROJECTS_ROOT}"/*)`);
         expect(command).toContain('remote get-url origin');

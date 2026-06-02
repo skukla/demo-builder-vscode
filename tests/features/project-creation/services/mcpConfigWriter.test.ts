@@ -75,6 +75,10 @@ function makeHeadlessProject(overrides: Partial<Project> = {}): Project {
 
 const EXTENSION_DIST = '/path/to/extension/dist';
 
+// Already-resolved Node binary threaded into the git-sync hook's `node -e`
+// tool-input extractor (see resolveNodePath / buildToolFileExtraction).
+const NODE_PATH = '/usr/local/bin/node';
+
 /**
  * Capture the McpConfig written to a specific file path from the writeFile mock.
  * Returns parsed JSON or throws if the file was not written.
@@ -190,7 +194,7 @@ describe('MCP config content', () => {
 describe('generateClaudeSettings', () => {
     it('returns a hooks structure with PostToolUse for EDS projects', () => {
         const project = makeEdsProject();
-        const settings = generateClaudeSettings(project);
+        const settings = generateClaudeSettings(project, NODE_PATH);
 
         expect(settings.hooks).toBeDefined();
         expect(settings.hooks?.['PostToolUse']).toBeDefined();
@@ -199,7 +203,7 @@ describe('generateClaudeSettings', () => {
 
     it('PostToolUse hook matches Write and Edit tools', () => {
         const project = makeEdsProject();
-        const settings = generateClaudeSettings(project);
+        const settings = generateClaudeSettings(project, NODE_PATH);
         const hook = settings.hooks?.['PostToolUse']?.[0];
 
         expect(hook?.matcher).toMatch(/Write|Edit/);
@@ -207,7 +211,7 @@ describe('generateClaudeSettings', () => {
 
     it('PostToolUse hook command references the storefront local path', () => {
         const project = makeEdsProject();
-        const settings = generateClaudeSettings(project);
+        const settings = generateClaudeSettings(project, NODE_PATH);
         const hook = settings.hooks?.['PostToolUse']?.[0];
         const command = hook?.hooks?.[0]?.command ?? '';
 
@@ -216,7 +220,7 @@ describe('generateClaudeSettings', () => {
 
     it('PostToolUse hook command includes git commit and push', () => {
         const project = makeEdsProject();
-        const settings = generateClaudeSettings(project);
+        const settings = generateClaudeSettings(project, NODE_PATH);
         const hook = settings.hooks?.['PostToolUse']?.[0];
         const command = hook?.hooks?.[0]?.command ?? '';
 
@@ -227,7 +231,7 @@ describe('generateClaudeSettings', () => {
 
     it('returns no PostToolUse hook for headless projects (no storefront path)', () => {
         const project = makeHeadlessProject();
-        const settings = generateClaudeSettings(project);
+        const settings = generateClaudeSettings(project, NODE_PATH);
 
         expect(settings.hooks?.['PostToolUse']).toBeUndefined();
     });
@@ -239,7 +243,7 @@ describe('generateClaudeSettings', () => {
                 'eds-storefront': { ...makeEdsInstance(), path: dangerousPath },
             },
         });
-        const settings = generateClaudeSettings(project);
+        const settings = generateClaudeSettings(project, NODE_PATH);
 
         expect(settings.hooks?.['PostToolUse']).toBeUndefined();
     });
@@ -251,14 +255,14 @@ describe('generateClaudeSettings', () => {
                 'eds-storefront': { ...makeEdsInstance(), path: dangerousPath },
             },
         });
-        const settings = generateClaudeSettings(project);
+        const settings = generateClaudeSettings(project, NODE_PATH);
 
         expect(settings.hooks?.['PostToolUse']).toBeUndefined();
     });
 
     it('PostToolUse hook uses a static commit message (no dynamic filename expansion)', () => {
         const project = makeEdsProject();
-        const settings = generateClaudeSettings(project);
+        const settings = generateClaudeSettings(project, NODE_PATH);
         const command = settings.hooks?.['PostToolUse']?.[0]?.hooks?.[0]?.command ?? '';
 
         // The commit -m value must be a static string — no $() in the -m argument
@@ -267,23 +271,27 @@ describe('generateClaudeSettings', () => {
     });
 
     describe('PostToolUse hook hardening', () => {
-        it('uses jq as the primary JSON parser', () => {
+        it('extracts the tool input with a single node -e invocation (no jq/python3/grep cascade)', () => {
             const project = makeEdsProject();
-            const command = generateClaudeSettings(project).hooks?.['PostToolUse']?.[0]?.hooks?.[0]?.command ?? '';
-            expect(command).toContain('jq');
+            const command = generateClaudeSettings(project, NODE_PATH).hooks?.['PostToolUse']?.[0]?.hooks?.[0]?.command ?? '';
+
+            // Parses via the resolved node binary, reading the env var directly.
+            expect(command).toContain(`TOOL_FILE=$("${NODE_PATH}" -e '`);
+            expect(command).toContain('process.env.CLAUDE_TOOL_INPUT');
+            expect(command).toContain('JSON.parse');
+            // Recursive first-string file_path finder (parity with old `.. | .file_path`).
+            expect(command).toContain('file_path');
+            // The old 3-tier shell cascade is gone.
+            expect(command).not.toContain('jq');
+            expect(command).not.toContain('python3');
+            expect(command).not.toContain('grep');
+            expect(command).not.toContain('sed');
         });
 
-        it('falls back to python3 when jq is not available', () => {
+        it('returns no PostToolUse hook when nodePath contains shell metacharacters', () => {
             const project = makeEdsProject();
-            const command = generateClaudeSettings(project).hooks?.['PostToolUse']?.[0]?.hooks?.[0]?.command ?? '';
-            expect(command).toContain('python3');
-        });
-
-        it('falls back to grep/sed when jq and python3 are not available', () => {
-            const project = makeEdsProject();
-            const command = generateClaudeSettings(project).hooks?.['PostToolUse']?.[0]?.hooks?.[0]?.command ?? '';
-            expect(command).toContain('grep');
-            expect(command).toContain('sed');
+            const settings = generateClaudeSettings(project, '/usr/local/bin/node;rm -rf /');
+            expect(settings.hooks?.['PostToolUse']).toBeUndefined();
         });
 
         it('produces a hook for storefront paths containing spaces', () => {
@@ -294,7 +302,7 @@ describe('generateClaudeSettings', () => {
                 },
             });
 
-            const settings = generateClaudeSettings(project);
+            const settings = generateClaudeSettings(project, NODE_PATH);
             expect(settings.hooks?.['PostToolUse']).toBeDefined();
             const command = settings.hooks?.['PostToolUse']?.[0]?.hooks?.[0]?.command ?? '';
             expect(command).toContain(pathWithSpaces);
@@ -308,7 +316,7 @@ describe('generateClaudeSettings', () => {
                 },
             });
 
-            const command = generateClaudeSettings(project).hooks?.['PostToolUse']?.[0]?.hooks?.[0]?.command ?? '';
+            const command = generateClaudeSettings(project, NODE_PATH).hooks?.['PostToolUse']?.[0]?.hooks?.[0]?.command ?? '';
             expect(command).toContain(`"${pathWithSpaces}"`);
         });
 
@@ -318,7 +326,7 @@ describe('generateClaudeSettings', () => {
                     'eds-storefront': { ...makeEdsInstance(), path: '/projects/test;rm -rf /' },
                 },
             });
-            const settings = generateClaudeSettings(project);
+            const settings = generateClaudeSettings(project, NODE_PATH);
             expect(settings.hooks?.['PostToolUse']).toBeUndefined();
         });
     });
@@ -329,45 +337,53 @@ describe('generateClaudeSettings', () => {
 describe('buildHomeGitSyncCommand', () => {
     const HOME_ROOT = '/Users/demo/.demo-builder/projects';
 
-    it('extracts the edited file via the jq/python3/grep+sed fallback chain', () => {
-        const command = buildHomeGitSyncCommand(HOME_ROOT);
-        expect(command).toContain('jq');
-        expect(command).toContain('python3');
-        expect(command).toContain('grep');
-        expect(command).toContain('sed');
+    it('extracts the edited file with a single node -e invocation (no jq/python3/grep cascade)', () => {
+        const command = buildHomeGitSyncCommand(HOME_ROOT, NODE_PATH);
+        expect(command).toContain(`TOOL_FILE=$("${NODE_PATH}" -e '`);
+        expect(command).toContain('process.env.CLAUDE_TOOL_INPUT');
+        expect(command).toContain('JSON.parse');
+        expect(command).toContain('file_path');
         expect(command).toContain('TOOL_FILE=');
+        expect(command).not.toContain('jq');
+        expect(command).not.toContain('python3');
+        expect(command).not.toContain('grep');
+        expect(command).not.toContain('sed');
     });
 
     it('bails when no file was edited / payload could not be parsed', () => {
-        const command = buildHomeGitSyncCommand(HOME_ROOT);
+        const command = buildHomeGitSyncCommand(HOME_ROOT, NODE_PATH);
         expect(command).toContain('[ -z "$TOOL_FILE" ] && exit 0');
     });
 
     it('resolves the enclosing git repo via rev-parse --show-toplevel', () => {
-        const command = buildHomeGitSyncCommand(HOME_ROOT);
+        const command = buildHomeGitSyncCommand(HOME_ROOT, NODE_PATH);
         expect(command).toContain('rev-parse --show-toplevel');
         expect(command).toContain('TOP=$(git -C "$(dirname "$TOOL_FILE")" rev-parse --show-toplevel 2>/dev/null) || exit 0');
     });
 
     it('applies the root-scope case guard with the quoted projects root (subpath only)', () => {
-        const command = buildHomeGitSyncCommand(HOME_ROOT);
+        const command = buildHomeGitSyncCommand(HOME_ROOT, NODE_PATH);
         expect(command).toContain(`case "$TOP" in "${HOME_ROOT}"/*) ;; *) exit 0 ;; esac`);
     });
 
     it('applies the origin-remote guard so only storefront repos are committed', () => {
-        const command = buildHomeGitSyncCommand(HOME_ROOT);
+        const command = buildHomeGitSyncCommand(HOME_ROOT, NODE_PATH);
         expect(command).toContain('git -C "$TOP" remote get-url origin >/dev/null 2>&1 || exit 0');
     });
 
     it('commits and pushes the resolved repo top with a static message', () => {
-        const command = buildHomeGitSyncCommand(HOME_ROOT);
+        const command = buildHomeGitSyncCommand(HOME_ROOT, NODE_PATH);
         expect(command).toContain('git -C "$TOP" add -A');
         expect(command).toContain('git -C "$TOP" commit -m "AI: sync files"');
         expect(command).toContain('git -C "$TOP" push');
     });
 
     it('returns an empty string when the projects root contains shell metacharacters', () => {
-        expect(buildHomeGitSyncCommand('/tmp/a;b')).toBe('');
+        expect(buildHomeGitSyncCommand('/tmp/a;b', NODE_PATH)).toBe('');
+    });
+
+    it('returns an empty string when nodePath contains shell metacharacters', () => {
+        expect(buildHomeGitSyncCommand(HOME_ROOT, '/usr/local/bin/node;rm -rf /')).toBe('');
     });
 });
 
@@ -375,18 +391,24 @@ describe('generateHomeClaudeSettings', () => {
     const HOME_ROOT = '/Users/demo/.demo-builder/projects';
 
     it('wraps the home git-sync command as a Write|Edit PostToolUse hook', () => {
-        const settings = generateHomeClaudeSettings(HOME_ROOT);
+        const settings = generateHomeClaudeSettings(HOME_ROOT, NODE_PATH);
         const hook = settings.hooks?.['PostToolUse']?.[0];
 
         expect(hook?.matcher).toBe('Write|Edit');
         const command = hook?.hooks?.[0]?.command ?? '';
-        expect(command).toBe(buildHomeGitSyncCommand(HOME_ROOT));
+        expect(command).toBe(buildHomeGitSyncCommand(HOME_ROOT, NODE_PATH));
         expect(command).toContain(`case "$TOP" in "${HOME_ROOT}"/*)`);
         expect(command).toContain('remote get-url origin');
     });
 
     it('returns {} (no hook) when the projects root is unsafe', () => {
-        const settings = generateHomeClaudeSettings('/tmp/a;b');
+        const settings = generateHomeClaudeSettings('/tmp/a;b', NODE_PATH);
+        expect(settings).toEqual({});
+        expect(settings.hooks).toBeUndefined();
+    });
+
+    it('returns {} (no hook) when nodePath is unsafe', () => {
+        const settings = generateHomeClaudeSettings(HOME_ROOT, '/usr/local/bin/node;rm -rf /');
         expect(settings).toEqual({});
         expect(settings.hooks).toBeUndefined();
     });
