@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { hasConversation as hasClaudeConversation } from './claudeSessionStore';
-import { BaseCommand } from '@/core/base';
+import { BaseCommand, BaseWebviewCommand } from '@/core/base';
 import type { Project } from '@/types/base';
 
 /**
@@ -80,6 +80,27 @@ export class OpenInClaudeCommand extends BaseCommand {
         const target = project ?? (await this.stateManager.getCurrentProject() ?? undefined);
 
         this.logger.info(`[Open in Claude] project=${target?.name ?? '<none>'} prompt=${prompt ? 'yes' : 'no'}`);
+
+        // Anchor-on-demand: launching the chat/terminal is a workspace-requiring
+        // action — per-project skills, `.mcp.json`, and `AGENTS.md` only load when
+        // the VS Code workspace folder is anchored to the target project.
+        // Browsing/selecting a project no longer reloads the window (see
+        // handleSelectProject), so the anchor is centralized HERE and deferred to
+        // this moment. When the target project differs from the open workspace
+        // folder, write a pending-launch record and reload the window via
+        // `vscode.openFolder`. After the reload, activation's
+        // `replayPendingClaudeLaunch` re-invokes this command with workspace =
+        // project, which then falls through to the spawn path below.
+        const workspaceFolderPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (target?.path && target.path !== workspaceFolderPath) {
+            const anchored = await this.anchorWorkspaceForLaunch(target.path, prompt);
+            if (anchored) {
+                return;
+            }
+            // Anchor failed (openFolder threw) — fall through and attempt an
+            // in-place launch rather than leaving the user with nothing.
+        }
+
         try {
             await this.launchTerminal(target, prompt);
         } catch (error) {
@@ -89,6 +110,63 @@ export class OpenInClaudeCommand extends BaseCommand {
             await vscode.window.showErrorMessage(
                 `Failed to open Claude Code: ${error instanceof Error ? error.message : 'Unknown error'}`,
             );
+        }
+    }
+
+    /**
+     * Anchor the VS Code workspace to `projectPath` so a subsequent Claude launch
+     * sees the right cwd. Writes a `PENDING_CLAUDE_LAUNCH_KEY` record (carrying
+     * the optional prompt) then reloads the window via `vscode.openFolder`. On
+     * the next activation, `extension.ts:replayPendingClaudeLaunch` validates the
+     * record (present, fresh, workspace matches) and re-dispatches
+     * `demoBuilder.openInClaude { prompt }` — this time with workspace = project,
+     * so this command falls through to the actual launch.
+     *
+     * A no-prompt launch (sidebar Chat / "Open AI") writes `prompt: ''` so the
+     * record is still well-formed; the replay re-invokes with an empty prompt,
+     * which `launchTerminal` treats as "no prompt" (bare `claude --continue`).
+     *
+     * Marks a webview transition so a disposing dashboard's dispose() does not
+     * race-reopen the projects list mid-reload (same pattern previously used by
+     * the handler wrappers).
+     *
+     * @returns true when the anchor reload was initiated (caller must return);
+     *   false when `openFolder` failed (caller falls back to an in-place launch).
+     */
+    private async anchorWorkspaceForLaunch(projectPath: string, prompt?: string): Promise<boolean> {
+        const existing = this.context.globalState.get<{ prompt?: string }>(PENDING_CLAUDE_LAUNCH_KEY);
+        if (existing) {
+            this.logger.warn(
+                '[Open in Claude] overwriting existing pending Claude launch (prior prompt dropped)',
+            );
+        }
+        await this.context.globalState.update(PENDING_CLAUDE_LAUNCH_KEY, {
+            projectPath,
+            prompt: prompt ?? '',
+            createdAt: Date.now(),
+        });
+        await BaseWebviewCommand.startWebviewTransition();
+        try {
+            await vscode.commands.executeCommand(
+                'vscode.openFolder',
+                vscode.Uri.file(projectPath),
+                false,
+            );
+            // Window is reloading; this extension instance is going away. Do NOT
+            // end the transition here (the post-reload activation owns that).
+            return true;
+        } catch (openError) {
+            // openFolder rarely fails, but if it does: clear the pending record
+            // (otherwise the next activation would replay against a mismatched
+            // workspace and discard silently), release the transition lock, and
+            // tell the caller to fall back to an in-place launch.
+            await this.context.globalState.update(PENDING_CLAUDE_LAUNCH_KEY, undefined);
+            BaseWebviewCommand.endWebviewTransition();
+            this.logger.error(
+                '[Open in Claude] failed to anchor workspace for launch',
+                openError instanceof Error ? openError : undefined,
+            );
+            return false;
         }
     }
 

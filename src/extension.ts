@@ -30,7 +30,7 @@ import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
 import { registerViewTools } from '@/features/ai/server/viewTools';
 import { AuthenticationService } from '@/features/authentication';
 import { ComponentTreeProvider } from '@/features/components/providers/componentTreeProvider';
-import { shouldAutoReopenProjectsList, landOnProjectDashboardForWorkspace } from '@/features/dashboard/commands/showDashboard';
+import { shouldAutoReopenProjectsList } from '@/features/dashboard/commands/showDashboard';
 import { seedDefaultAiPrompts } from '@/features/dashboard/services/defaultPromptsSeeder';
 import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLiveSites';
 import { manageGitHubReposCommand } from '@/features/eds/commands/manageGitHubRepos';
@@ -362,28 +362,29 @@ export async function activate(context: vscode.ExtensionContext) {
         // project creation completes (see executor.ts). The user is asked once;
         // the choice persists in globalState. No activation-time auto-write.
 
-        // When this window is anchored to a Demo Builder project (e.g. just
-        // opened via tile-click, File -> Open Recent, or `code <dir>`), land on
-        // that project's Dashboard rather than the projects-list start screen.
-        // landOnProjectDashboardForWorkspace opens the Dashboard panel first and
-        // then focuses the Activity Bar (in that order), so the tree-view
-        // visibility handler's projects-list auto-open guards itself out
-        // (shouldAutoOpenProjectsList bails when a panel already exists).
+        // Cold start always lands on the projects list as the home screen — even
+        // when this window is still anchored to a Demo Builder project folder
+        // (decoupling Phase 1). Browsing/selecting a project no longer reloads
+        // the window; the workspace only anchors on-demand when the user launches
+        // a workspace-requiring action (AI Chat / terminal). So a project-anchored
+        // window is just a leftover anchor, not a signal to land on its dashboard.
+        //
+        // For a project-anchored workspace, focus the Demo Builder Activity Bar so
+        // the sidebar becomes visible and the tree-view visibility subscription
+        // auto-opens the projects list (guarded by shouldAutoOpenProjectsList, so
+        // it won't double-open when a panel already exists). Non-project workspaces
+        // already auto-open the list via the same visibility handler.
         const activationWorkspace = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        const landedOnDashboard = await landOnProjectDashboardForWorkspace(activationWorkspace, stateManager, logger);
-        if (!landedOnDashboard && shouldAutoReopenProjectsList(activationWorkspace, false)) {
-            // Defensive fallback (e.g. the project failed to load): focus the
-            // Demo Builder Activity Bar so the sidebar becomes visible and the
-            // visibility subscription auto-opens the projects list — preserving
-            // the prior behavior rather than leaving the user with no UI.
+        if (shouldAutoReopenProjectsList(activationWorkspace, false)) {
             await vscode.commands.executeCommand('workbench.view.extension.demoBuilder');
         }
 
         // Replay any pending prompt launch that was queued before a workspace
-        // anchor reload (see handleOpenInClaude in features/dashboard/handlers/
-        // aiHandlers.ts). The record carries `{ projectPath, prompt, createdAt }`
-        // and only fires if all three checks pass: present, not stale (<60s),
-        // and workspace folder now matches the recorded projectPath.
+        // anchor reload (see OpenInClaudeCommand.execute() anchor-on-demand path).
+        // The record carries `{ projectPath, prompt, createdAt }` and only fires
+        // if all three checks pass: present, not stale (<60s), and workspace
+        // folder now matches the recorded projectPath. This is what re-opens the
+        // chat after an anchor reload — over the projects list is fine.
         await replayPendingClaudeLaunch(context, activationWorkspace, logger);
 
         logger.info('[Extension] Ready');

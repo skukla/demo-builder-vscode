@@ -480,7 +480,7 @@ describe('dashboardHandlers', () => {
 
         afterEach(() => setWorkspaceFolder(null));
 
-        it('dispatches demoBuilder.openAiExperience when the workspace already matches the project', async () => {
+        it('sets the current-project pointer and dispatches demoBuilder.openInClaude with the project (command anchors on-demand)', async () => {
             const project = createMockProject({ name: 'AI Target' });
             setWorkspaceFolder(project.path);
             const context = makeContext([project]);
@@ -489,8 +489,15 @@ describe('dashboardHandlers', () => {
             const result = await handleOpenAiForProject(context, { projectPath: project.path });
 
             expect(result.success).toBe(true);
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openAiExperience');
-            // No workspace anchoring needed.
+            // Pointer set so the (possibly post-reload) dashboard/state reads resolve here.
+            expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
+            // Forwards to the command, passing the loaded project — the command
+            // owns the anchor-on-demand decision.
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                'demoBuilder.openInClaude',
+                { project },
+            );
+            // The handler itself does NOT anchor (no pending record, no openFolder).
             expect(context.context.globalState.update).not.toHaveBeenCalled();
             expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
                 'vscode.openFolder',
@@ -499,7 +506,7 @@ describe('dashboardHandlers', () => {
             );
         });
 
-        it('writes a pending-launch record and anchors the workspace via vscode.openFolder when workspace ≠ project', async () => {
+        it('does NOT anchor itself even when workspace ≠ project — the command handles that', async () => {
             const project = createMockProject({ name: 'AI Target' });
             setWorkspaceFolder('/some/other/repo');
             const context = makeContext([project]);
@@ -508,22 +515,19 @@ describe('dashboardHandlers', () => {
             const result = await handleOpenAiForProject(context, { projectPath: project.path });
 
             expect(result.success).toBe(true);
-            // Pending record carries no prompt — replay opens the bare chat.
-            expect(context.context.globalState.update).toHaveBeenCalledWith(
-                'demoBuilder.ai.pendingClaudeLaunch',
-                expect.objectContaining({
-                    projectPath: project.path,
-                    prompt: undefined,
-                    createdAt: expect.any(Number),
-                }),
-            );
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+            expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
+            // No pending record / openFolder written by the handler.
+            expect(context.context.globalState.update).not.toHaveBeenCalled();
+            expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
                 'vscode.openFolder',
-                expect.objectContaining({ fsPath: project.path }),
-                false,
+                expect.anything(),
+                expect.anything(),
             );
-            // The chat dispatch happens post-reload via replayPendingClaudeLaunch — not inline.
-            expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith('demoBuilder.openAiExperience');
+            // Just forwards to the command with the loaded project.
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                'demoBuilder.openInClaude',
+                { project },
+            );
         });
 
         it('returns error when projectPath is missing', async () => {

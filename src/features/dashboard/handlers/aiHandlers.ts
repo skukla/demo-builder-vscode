@@ -14,8 +14,6 @@
 
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { PENDING_CLAUDE_LAUNCH_KEY } from '@/commands/openInClaude';
-import { BaseWebviewCommand } from '@/core/base';
 import { COMPONENT_IDS } from '@/core/constants';
 import { clearMcpCache, inspectAllServers, verifyAiSetup } from '@/features/ai';
 import {
@@ -85,80 +83,20 @@ export async function handleInspectMcp(
 /**
  * Handle openInClaude — dispatch Claude Code with optional prompt pre-fill.
  *
- * Two paths:
- *
- *   1. **Direct dispatch** — when no prompt is provided, OR when the workspace
- *      already matches the current project (chat panel will load correctly).
- *      Hands off to `demoBuilder.openInClaude` immediately, same as the
- *      dashboard tile.
- *
- *   2. **Pending-prompt + workspace anchor** — when the user clicked a prompt
- *      AND the current workspace is not the project. URI launches into the
- *      wrong cwd would lose per-project skills / MCPs / AGENTS.md. To resolve:
- *      write the prompt to `globalState` under `PENDING_CLAUDE_LAUNCH_KEY`,
- *      then call `vscode.openFolder` (same call `handleSelectProject` uses)
- *      to reload the window into the project workspace. The activation
- *      handler in `extension.ts` reads the pending record on next startup
- *      and fires `demoBuilder.openInClaude` with the prompt — this time with
- *      workspace = project so the chat panel loads with full context.
- *
- * The clipboard handoff (terminal surface) survives the reload because the OS
- * clipboard is global, so terminal-mode users get the same end result.
+ * Thin pass-through to the `demoBuilder.openInClaude` command. Anchor-on-demand
+ * now lives in `OpenInClaudeCommand.execute()`: when the target project differs
+ * from the open workspace folder, the command writes a
+ * `PENDING_CLAUDE_LAUNCH_KEY` record and reloads the window via
+ * `vscode.openFolder`; `extension.ts:replayPendingClaudeLaunch` then re-invokes
+ * the launch post-reload with workspace = project so the chat loads with full
+ * per-project context (skills / `.mcp.json` / `AGENTS.md`). This handler no
+ * longer anchors itself — it simply forwards the (optional) prompt.
  */
 export async function handleOpenInClaude(
-    context: HandlerContext,
+    _context: HandlerContext,
     payload?: { prompt?: string },
 ): Promise<HandlerResponse> {
     const prompt = payload?.prompt;
-
-    // Pending-prompt mechanism applies ONLY when (a) a prompt was supplied and
-    // (b) we have a project to anchor to and (c) the workspace doesn't already
-    // match. Direct dispatch in every other case.
-    if (prompt) {
-        const project = await context.stateManager.getCurrentProject();
-        const workspaceFolderPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        if (project?.path && workspaceFolderPath !== project.path) {
-            // Warn if a previous pending record exists — concurrent rapid clicks
-            // race-clobber the older prompt. Not a fatal error (the newer click
-            // is presumably the intent) but worth surfacing in logs.
-            const existing = context.context.globalState.get<{ prompt: string }>(PENDING_CLAUDE_LAUNCH_KEY);
-            if (existing) {
-                context.logger.warn(
-                    `[handleOpenInClaude] overwriting existing pending Claude launch (prior prompt dropped)`,
-                );
-            }
-            await context.context.globalState.update(PENDING_CLAUDE_LAUNCH_KEY, {
-                projectPath: project.path,
-                prompt,
-                createdAt: Date.now(),
-            });
-            // Mark a webview transition so disposing dashboards don't auto-reopen
-            // the projects list mid-reload (same pattern as handleSelectProject).
-            await BaseWebviewCommand.startWebviewTransition();
-            try {
-                await vscode.commands.executeCommand(
-                    'vscode.openFolder',
-                    vscode.Uri.file(project.path),
-                    false,
-                );
-            } catch (openError) {
-                // openFolder rarely fails, but if it does: clear the pending
-                // record (otherwise next activation would replay against a
-                // mismatched workspace and discard silently), release the
-                // transition lock, and surface the failure. Mirrors
-                // handleSelectProject's defensive pattern.
-                await context.context.globalState.update(PENDING_CLAUDE_LAUNCH_KEY, undefined);
-                BaseWebviewCommand.endWebviewTransition();
-                context.logger.error(
-                    'Failed to open project folder for prompt launch',
-                    openError instanceof Error ? openError : undefined,
-                );
-                return { success: false, error: 'Failed to anchor workspace for prompt launch' };
-            }
-            return { success: true };
-        }
-    }
-
     if (prompt) {
         await vscode.commands.executeCommand('demoBuilder.openInClaude', { prompt });
     } else {

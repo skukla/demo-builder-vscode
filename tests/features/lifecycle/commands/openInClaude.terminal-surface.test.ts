@@ -63,7 +63,11 @@ describe('OpenInClaudeCommand', () => {
         });
 
         it('probes the session store using the project path', async () => {
-            const mocks = setupVscodeMocks({ hasClaudeConversation: false });
+            // Workspace = project path so execute() spawns in-place (no anchor).
+            const mocks = setupVscodeMocks({
+                hasClaudeConversation: false,
+                workspaceFolderPath: '/Users/kukla/projects/demo',
+            });
             const project = makeProject({ path: '/Users/kukla/projects/demo' });
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),

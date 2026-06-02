@@ -19,7 +19,6 @@ import {
     exportProjectSettings,
     deleteProject,
 } from '../services';
-import { PENDING_CLAUDE_LAUNCH_KEY } from '@/commands/openInClaude';
 import { BaseWebviewCommand } from '@/core/base';
 import { COMPONENT_IDS } from '@/core/constants';
 import { executeCommandForProject } from '@/core/handlers';
@@ -114,19 +113,20 @@ export const handleGetProjects: MessageHandler = async (
 /**
  * Select a project by path.
  *
- * Loads the project, sets it as the current project, and anchors the VS Code
- * workspace to the project root so that Claude Code (and any other workspace-
- * scoped tooling) reads `.claude/skills/`, `.mcp.json`, and `AGENTS.md` from
- * the right cwd.
+ * Loads the project and sets it as the current project (the persisted
+ * `currentProjectPath` pointer that `StateManager.getCurrentProject()` reads).
+ * Browsing/selecting a project NO LONGER anchors the VS Code workspace — the
+ * dashboard, component tree, and auth cache all work off that pointer, so a
+ * plain selection just surfaces the dashboard webview in-place with no reload.
+ *
+ * The workspace anchor (a `vscode.openFolder` reload) is deferred until the
+ * user launches a workspace-requiring action (AI Chat / terminal); that anchor
+ * lives in `OpenInClaudeCommand.execute()`, on-demand.
  *
  * Behavior:
- *   - workspace already matches project + `forceNewWindow` falsy → just navigate
- *     to the project dashboard webview (no reload).
- *   - workspace differs (or no workspace) + `forceNewWindow` falsy → reopen the
- *     current window with the project as workspace. The extension reactivates;
- *     globalState carries `currentProject` across, so the dashboard surfaces
- *     automatically. We skip the explicit `showProjectDashboard` call because
- *     the reload makes it racy and unnecessary.
+ *   - plain selection (`forceNewWindow` falsy), regardless of whether the
+ *     current workspace already matches → surface the project dashboard webview
+ *     in-place. No reload, ever.
  *   - `forceNewWindow: true` (shift/cmd-click) → open the project in a NEW
  *     VS Code window; the current window is left alone (still on the projects
  *     list).
@@ -171,41 +171,32 @@ export const handleSelectProject: MessageHandler<{ projectPath: string; forceNew
         context.logger.info(`Selected project: ${project.name}`);
 
         const forceNewWindow = payload.forceNewWindow === true;
-        const currentWorkspace = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        const workspaceMatches = currentWorkspace === project.path;
 
-        if (forceNewWindow || !workspaceMatches) {
-            // Open the project folder as a workspace. `forceNewWindow=false`
-            // replaces the current window's workspace (VS Code shows its native
-            // unsaved-changes prompt if needed). `forceNewWindow=true` spawns
-            // a new window and leaves the current one alone.
-            //
-            // When replacing the current window, mark a webview transition so
-            // the outgoing dashboard's dispose() skips its projects-list
-            // auto-reopen — otherwise we'd briefly flash that panel before the
-            // reload completes. New-window opens don't reload us, so no flag.
-            if (!forceNewWindow) {
-                await BaseWebviewCommand.startWebviewTransition();
-            }
+        if (forceNewWindow) {
+            // Shift/cmd-click: open the project in a NEW VS Code window and
+            // leave the current one alone (still on the projects list). This is
+            // the only path that still anchors a workspace on selection.
             try {
                 await vscode.commands.executeCommand(
                     'vscode.openFolder',
                     vscode.Uri.file(project.path),
-                    forceNewWindow,
+                    true,
                 );
             } catch (openError) {
                 context.logger.error(
-                    'Failed to open project folder as workspace',
+                    'Failed to open project folder in new window',
                     openError instanceof Error ? openError : undefined,
                 );
-                if (!forceNewWindow) {
-                    BaseWebviewCommand.endWebviewTransition();
-                }
             }
-            // No endWebviewTransition() on the success path — the window is
-            // reloading; this extension instance is going away.
         } else {
-            // Already in the right workspace — just surface the dashboard webview.
+            // Plain selection: surface the dashboard webview in-place. We never
+            // reload the window on browse — the persisted current-project
+            // pointer (set by saveProject above) is what the dashboard reads,
+            // so a reload is unnecessary. The workspace only anchors later, on
+            // demand, when the user launches a workspace-requiring action.
+            //
+            // Mark a webview transition so the outgoing Projects List's
+            // dispose() doesn't fight the dashboard handoff.
             await BaseWebviewCommand.startWebviewTransition();
             try {
                 await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
@@ -681,19 +672,22 @@ export const handleOpenBrowser: MessageHandler<{ projectPath: string }> = async 
 
 /**
  * Open the configured AI chat surface for a specific project — home-grid kebab
- * "Open AI" wiring. AI = chat (terminal tab or extension URI per
- * `demoBuilder.ai.surface`), not the Prompt Library; the project's per-project
- * skills / `.mcp.json` / `AGENTS.md` only load when the VS Code workspace is
- * anchored to that project, so this handler:
+ * "Open AI" wiring. AI = chat (the Claude Code terminal tab), not the Prompt
+ * Library. The project's per-project skills / `.mcp.json` / `AGENTS.md` only
+ * load when the VS Code workspace is anchored to that project, but this handler
+ * no longer anchors itself — anchor-on-demand lives in
+ * `OpenInClaudeCommand.execute()`.
  *
- *   1. Loads the project for the given path.
- *   2. If the workspace already matches the project, dispatches
- *      `demoBuilder.openAiExperience` directly.
- *   3. Otherwise writes a pending-launch record (no prompt → bare chat) and
- *      calls `vscode.openFolder`. The activation handler in extension.ts then
- *      dispatches `demoBuilder.openInClaude` against the now-anchored
- *      workspace, which opens the configured chat. Mirrors the
- *      pending-prompt mechanism in `handleOpenInClaude` (just without a prompt).
+ * Flow:
+ *   1. Load the project for the given path and set it as the current-project
+ *      pointer (`saveProject`) so the post-reload dashboard / state reads
+ *      resolve to it.
+ *   2. Dispatch `demoBuilder.openInClaude` with the loaded project. The command
+ *      anchors the workspace (pending record + `vscode.openFolder`) when the
+ *      project differs from the open workspace folder, then
+ *      `extension.ts:replayPendingClaudeLaunch` re-invokes the launch after the
+ *      reload. When the workspace already matches, the command spawns the
+ *      terminal directly with no reload.
  */
 export const handleOpenAiForProject: MessageHandler<{ projectPath: string }> = async (
     context: HandlerContext,
@@ -712,37 +706,11 @@ export const handleOpenAiForProject: MessageHandler<{ projectPath: string }> = a
         return { success: false, error: 'Project not found' };
     }
 
-    const workspaceFolderPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-    if (workspaceFolderPath === project.path) {
-        await vscode.commands.executeCommand('demoBuilder.openAiExperience');
-        return { success: true };
-    }
-
-    const existing = context.context.globalState.get<{ prompt?: string }>(PENDING_CLAUDE_LAUNCH_KEY);
-    if (existing) {
-        context.logger.warn(
-            '[handleOpenAiForProject] overwriting existing pending Claude launch',
-        );
-    }
-    await context.context.globalState.update(PENDING_CLAUDE_LAUNCH_KEY, {
-        projectPath: project.path,
-        prompt: undefined,
-        createdAt: Date.now(),
-    });
-    try {
-        await vscode.commands.executeCommand(
-            'vscode.openFolder',
-            vscode.Uri.file(project.path),
-            false,
-        );
-    } catch (openError) {
-        await context.context.globalState.update(PENDING_CLAUDE_LAUNCH_KEY, undefined);
-        context.logger.error(
-            'Failed to open project folder for AI launch',
-            openError instanceof Error ? openError : undefined,
-        );
-        return { success: false, error: 'Failed to anchor workspace for AI launch' };
-    }
+    // Set the current-project pointer so the (possibly post-reload) dashboard
+    // and state reads resolve to this project. The command owns the workspace
+    // anchor decision from here.
+    await context.stateManager.saveProject(project);
+    await vscode.commands.executeCommand('demoBuilder.openInClaude', { project });
     return { success: true };
 };
 

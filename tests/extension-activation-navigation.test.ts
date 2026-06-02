@@ -327,6 +327,38 @@ describe('Extension Activation - Navigation', () => {
         });
     });
 
+    describe('Given the window is anchored to a Demo Builder project on cold start', () => {
+        const os = jest.requireActual('os') as typeof import('os');
+        const path = jest.requireActual('path') as typeof import('path');
+        const PROJECT_PATH = path.join(os.homedir(), '.demo-builder', 'projects', 'my-demo');
+
+        beforeEach(() => {
+            (vscode.workspace as unknown as { workspaceFolders: unknown }).workspaceFolders = [
+                { uri: { fsPath: PROJECT_PATH } },
+            ];
+        });
+
+        afterEach(() => {
+            (vscode.workspace as unknown as { workspaceFolders: unknown }).workspaceFolders = [];
+        });
+
+        it('does NOT land on the project dashboard (always the projects list is home)', async () => {
+            mockHasProject.mockResolvedValue(true);
+            mockGetCurrentProject.mockResolvedValue({ name: 'My Demo', path: PROJECT_PATH });
+
+            const context = createMockExtensionContext();
+            await activate(context);
+
+            // Cold start never opens the project dashboard, even when the window
+            // is still anchored to a project folder (decoupling Phase 1 reverses
+            // the prior landOnProjectDashboardForWorkspace behavior). The projects
+            // list is always home.
+            expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
+                'demoBuilder.showProjectDashboard',
+            );
+        });
+    });
+
     describe('Error handling during activation', () => {
         it('should complete activation even if registerCommand fails for some commands', async () => {
             // Given: Some command registration will fail

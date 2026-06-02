@@ -21,6 +21,12 @@ describe('aiHandlers — launch & save', () => {
     });
 
     describe('handleOpenInClaude', () => {
+        // Anchor-on-demand now lives in OpenInClaudeCommand.execute() (see
+        // tests/features/lifecycle/commands/openInClaude.anchor.test.ts). This
+        // handler is a thin pass-through: it forwards the (optional) prompt to
+        // `demoBuilder.openInClaude` and never anchors / writes a pending record
+        // itself, regardless of the current workspace.
+
         /** Set the mocked workspaceFolders for a single test. */
         function setWorkspaceFolder(path: string | null): void {
             const vscode = jest.requireMock('vscode') as {
@@ -32,10 +38,10 @@ describe('aiHandlers — launch & save', () => {
         }
 
         beforeEach(() => {
-            setWorkspaceFolder('/projects/test'); // default: workspace = project (happy path)
+            setWorkspaceFolder('/projects/test');
         });
 
-        it('forwards a prompt payload to demoBuilder.openInClaude when workspace = project', async () => {
+        it('forwards a prompt payload to demoBuilder.openInClaude', async () => {
             const vscode = jest.requireMock('vscode') as {
                 commands: { executeCommand: jest.Mock };
             };
@@ -80,12 +86,11 @@ describe('aiHandlers — launch & save', () => {
             expect(call.length).toBe(1);
         });
 
-        // ----- Workspace anchoring via pending-prompt mechanism -----
+        // ----- No anchoring in the handler (moved to the command) -----
 
-        it('when workspace ≠ project AND prompt is provided: writes pending record + invokes openFolder (does NOT dispatch openInClaude inline)', async () => {
+        it('does NOT anchor (no pending record, no openFolder) even when workspace ≠ project — the command handles that', async () => {
             const vscode = jest.requireMock('vscode') as {
                 commands: { executeCommand: jest.Mock };
-                Uri: { file: jest.Mock };
             };
             setWorkspaceFolder('/some/other/repo');
             const globalStateUpdateMock = jest.fn().mockResolvedValue(undefined);
@@ -101,107 +106,15 @@ describe('aiHandlers — launch & save', () => {
             const result = await handleOpenInClaude(context, { prompt: 'Add a hero block' });
 
             expect(result).toEqual({ success: true });
-            // Pending record was written
-            expect(globalStateUpdateMock).toHaveBeenCalledWith(
-                'demoBuilder.ai.pendingClaudeLaunch',
-                expect.objectContaining({
-                    projectPath: '/projects/test',
-                    prompt: 'Add a hero block',
-                    createdAt: expect.any(Number),
-                }),
-            );
-            // openFolder was invoked (current window, false = same window)
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-                'vscode.openFolder',
-                expect.objectContaining({ fsPath: '/projects/test' }),
-                false,
-            );
-            // demoBuilder.openInClaude was NOT dispatched inline — that happens post-reload via activation handler
-            expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
-                'demoBuilder.openInClaude',
-                expect.anything(),
-            );
-        });
-
-        it('when workspace ≠ project but NO prompt provided: dispatches openInClaude immediately (no pending-prompt mechanism)', async () => {
-            const vscode = jest.requireMock('vscode') as {
-                commands: { executeCommand: jest.Mock };
-            };
-            setWorkspaceFolder('/some/other/repo');
-            const globalStateUpdateMock = jest.fn().mockResolvedValue(undefined);
-            const context = createMockContext({
-                context: {
-                    extensionPath: '/mock/extension/path',
-                    secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn(), onDidChange: jest.fn() },
-                    globalState: { get: jest.fn(), update: globalStateUpdateMock, keys: jest.fn().mockReturnValue([]) },
-                    subscriptions: [],
-                } as unknown as HandlerContext['context'],
-            });
-
-            const result = await handleOpenInClaude(context);
-
-            expect(result).toEqual({ success: true });
-            // No pending record
+            // No pending record written by the handler
             expect(globalStateUpdateMock).not.toHaveBeenCalled();
-            // No openFolder
+            // No openFolder by the handler
             expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
                 'vscode.openFolder',
                 expect.anything(),
                 expect.anything(),
             );
-            // Just direct dispatch
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openInClaude');
-        });
-
-        it('when there is no current project: skips pending-prompt and dispatches normally (command handles missing project)', async () => {
-            const vscode = jest.requireMock('vscode') as {
-                commands: { executeCommand: jest.Mock };
-            };
-            setWorkspaceFolder('/some/other/repo');
-            const globalStateUpdateMock = jest.fn().mockResolvedValue(undefined);
-            const context = createMockContext({
-                stateManager: {
-                    getCurrentProject: jest.fn().mockResolvedValue(null),
-                } as unknown as HandlerContext['stateManager'],
-                context: {
-                    extensionPath: '/mock/extension/path',
-                    secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn(), onDidChange: jest.fn() },
-                    globalState: { get: jest.fn(), update: globalStateUpdateMock, keys: jest.fn().mockReturnValue([]) },
-                    subscriptions: [],
-                } as unknown as HandlerContext['context'],
-            });
-
-            const result = await handleOpenInClaude(context, { prompt: 'Add a hero block' });
-
-            expect(result).toEqual({ success: true });
-            // No pending record (no project = no anchor target)
-            expect(globalStateUpdateMock).not.toHaveBeenCalled();
-            // Still dispatches; the command will surface a "no project" error itself
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-                'demoBuilder.openInClaude',
-                { prompt: 'Add a hero block' },
-            );
-        });
-
-        it('when workspace = project (no anchoring needed): dispatches openInClaude with prompt directly', async () => {
-            const vscode = jest.requireMock('vscode') as {
-                commands: { executeCommand: jest.Mock };
-            };
-            setWorkspaceFolder('/projects/test');
-            const globalStateUpdateMock = jest.fn().mockResolvedValue(undefined);
-            const context = createMockContext({
-                context: {
-                    extensionPath: '/mock/extension/path',
-                    secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn(), onDidChange: jest.fn() },
-                    globalState: { get: jest.fn(), update: globalStateUpdateMock, keys: jest.fn().mockReturnValue([]) },
-                    subscriptions: [],
-                } as unknown as HandlerContext['context'],
-            });
-
-            const result = await handleOpenInClaude(context, { prompt: 'Add a hero block' });
-
-            expect(result).toEqual({ success: true });
-            expect(globalStateUpdateMock).not.toHaveBeenCalled();
+            // Just forwards the prompt — the command anchors on-demand
             expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
                 'demoBuilder.openInClaude',
                 { prompt: 'Add a hero block' },

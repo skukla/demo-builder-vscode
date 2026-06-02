@@ -57,56 +57,6 @@ export function shouldAutoReopenProjectsList(
 }
 
 /**
- * On activation, when the open workspace folder is a Demo Builder project, land
- * on that project's Dashboard instead of the projects-list start screen.
- *
- * The window reload triggered by selecting a project (`vscode.openFolder`)
- * restarts the extension host, so there is no in-process "reload" event — this
- * activation-time routing decision is the post-reload signal. It also covers
- * opening a project folder any other way (File -> Open Recent, `code <dir>`).
- *
- * `workspaceFolders[0]` is the ground truth for WHICH project; the cached
- * current project is reconciled from it when stale (e.g. `state.json` still
- * points at a previously-selected project).
- *
- * Ordering matters: the Dashboard panel is opened BEFORE the Activity Bar is
- * focused so the tree-view visibility handler's projects-list auto-open sees a
- * non-zero panel count (`shouldAutoOpenProjectsList`) and stays out of the way.
- *
- * @returns true when it handled the landing (it has already focused the Activity
- *   Bar). Returns false when the folder is not a project, or the project could
- *   not be loaded — in which case the caller keeps the existing behavior.
- */
-export async function landOnProjectDashboardForWorkspace(
-    activationWorkspace: string | undefined,
-    stateManager: import('@/core/state').StateManager,
-    logger: import('@/types/logger').Logger,
-): Promise<boolean> {
-    if (!activationWorkspace) return false;
-    if (!shouldAutoReopenProjectsList(activationWorkspace, false)) return false;
-
-    // workspaceFolders[0] is ground truth — reconcile state if it's stale.
-    const current = await stateManager.getCurrentProject();
-    if (current?.path !== activationWorkspace) {
-        const project = await stateManager.loadProjectFromPath(activationWorkspace);
-        if (!project) {
-            // Couldn't load → don't show a blank Dashboard; let the caller fall
-            // back to the existing projects-list behavior.
-            logger.warn(`[Extension] project-folder landing: failed to load project at ${activationWorkspace}`);
-            return false;
-        }
-        await stateManager.saveProject(project);
-    }
-
-    // ORDER MATTERS: open the Dashboard FIRST (panel count -> 1) so the
-    // subsequent Activity-Bar focus does not trigger the projects-list
-    // auto-open (shouldAutoOpenProjectsList bails when panel count !== 0).
-    await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
-    await vscode.commands.executeCommand('workbench.view.extension.demoBuilder');
-    return true;
-}
-
-/**
  * Command to show the "Project Dashboard" after project creation
  * This provides a control panel for demo management and quick actions
  *
