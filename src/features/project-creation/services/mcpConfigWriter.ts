@@ -123,6 +123,34 @@ export function generateClaudeSettings(project: Project): ClaudeSettings {
     };
 }
 
+/**
+ * Generate .claude/settings.json for the SINGLE home Chat (rooted at the Demo
+ * Builder projects root). Installs a project-aware PostToolUse git-sync hook
+ * that auto-commits/pushes storefront edits made anywhere under the projects
+ * root — the home analogue of the per-project hook.
+ *
+ * Returns `{}` (no hook) when `projectsRoot` contains shell metacharacters —
+ * an attacker-controlled root must not become part of an executed shell command.
+ */
+export function generateHomeClaudeSettings(projectsRoot: string): ClaudeSettings {
+    const command = buildHomeGitSyncCommand(projectsRoot);
+    if (!command) {
+        // Root contained shell metacharacters — skip hook for safety
+        return {};
+    }
+
+    return {
+        hooks: {
+            PostToolUse: [
+                {
+                    matcher: 'Write|Edit',
+                    hooks: [{ type: 'command', command }],
+                },
+            ],
+        },
+    };
+}
+
 // ─── Private helpers ──────────────────────────────────────────────────────────
 
 /**
@@ -234,11 +262,8 @@ function resolveStorefrontPath(project: Project): string | undefined {
 const SHELL_METACHAR_RE = /["`$;|&<>\n\r\\'*?[\](){}]/;
 
 /**
- * Build the PostToolUse git sync shell command for the storefront path.
- *
- * Returns an empty string (no hook installed) if `storefrontPath` contains
- * shell metacharacters — an attacker-controlled path must not become part of
- * an executed shell command.
+ * Build the shell snippet that extracts the edited file path from the
+ * PostToolUse payload into `$TOOL_FILE`.
  *
  * JSON-parsing strategy is a tolerant fallback chain so the hook works in
  * environments missing one of the tools:
@@ -246,22 +271,15 @@ const SHELL_METACHAR_RE = /["`$;|&<>\n\r\\'*?[\](){}]/;
  *   2. `python3` — secondary, present on every modern macOS/Linux install
  *   3. `grep`/`sed` — last-resort regex
  *
- * The chain uses `||` so each tool only runs if the previous one produced
- * empty output (or failed). The query is `.. | objects | .file_path? // empty`
- * for jq, equivalent recursive logic for python3, and a `grep -o` pattern for
- * the last-resort path — all three extract `file_path` at any nesting depth.
+ * Each subsequent tool only runs if the previous one produced empty output
+ * (or failed) — guarded by `[ -z "$TOOL_FILE" ]`. The query is
+ * `.. | objects | .file_path? // empty` for jq, equivalent recursive logic
+ * for python3, and a `grep -o` pattern for the last-resort path — all three
+ * extract `file_path` at any nesting depth. Shared by the per-project and the
+ * home git-sync hooks; the snippet contains no interpolated paths, so it is
+ * always safe.
  */
-function buildGitSyncCommand(storefrontPath: string): string {
-    if (SHELL_METACHAR_RE.test(storefrontPath)) {
-        // Unsafe path — skip hook rather than risk shell injection
-        return '';
-    }
-
-    // SHELL_METACHAR_RE already rejects any quote characters, so no further
-    // escaping of storefrontPath is needed before interpolating into double-quoted
-    // shell arguments. The double quotes preserve any spaces.
-    const quoted = `"${storefrontPath}"`;
-
+function buildToolFileExtraction(): string {
     const jqExtract = `jq -r '.. | objects | .file_path? // empty' 2>/dev/null`;
     const pythonExtract =
         `python3 -c 'import json,sys\n` +
@@ -280,11 +298,89 @@ function buildGitSyncCommand(storefrontPath: string): string {
     return (
         `TOOL_FILE=$(echo "$CLAUDE_TOOL_INPUT" | ${jqExtract}); ` +
         `[ -z "$TOOL_FILE" ] && TOOL_FILE=$(echo "$CLAUDE_TOOL_INPUT" | ${pythonExtract}); ` +
-        `[ -z "$TOOL_FILE" ] && TOOL_FILE=$(echo "$CLAUDE_TOOL_INPUT" | ${grepSedExtract}); ` +
+        `[ -z "$TOOL_FILE" ] && TOOL_FILE=$(echo "$CLAUDE_TOOL_INPUT" | ${grepSedExtract}); `
+    );
+}
+
+/**
+ * Build the PostToolUse git sync shell command for the storefront path.
+ *
+ * Returns an empty string (no hook installed) if `storefrontPath` contains
+ * shell metacharacters — an attacker-controlled path must not become part of
+ * an executed shell command.
+ *
+ * Extracts the edited file into `$TOOL_FILE` (see `buildToolFileExtraction`),
+ * then commits + pushes only when that file is under the storefront path.
+ */
+function buildGitSyncCommand(storefrontPath: string): string {
+    if (SHELL_METACHAR_RE.test(storefrontPath)) {
+        // Unsafe path — skip hook rather than risk shell injection
+        return '';
+    }
+
+    // SHELL_METACHAR_RE already rejects any quote characters, so no further
+    // escaping of storefrontPath is needed before interpolating into double-quoted
+    // shell arguments. The double quotes preserve any spaces.
+    const quoted = `"${storefrontPath}"`;
+
+    return (
+        buildToolFileExtraction() +
         `if [[ "$TOOL_FILE" == ${quoted}* ]]; then ` +
         `git -C ${quoted} add -A && ` +
         `git -C ${quoted} commit -m "AI: sync files" && ` +
         `git -C ${quoted} push; fi`
+    );
+}
+
+/**
+ * Build the project-aware PostToolUse git-sync command for the SINGLE home Chat
+ * (rooted at the Demo Builder projects root). Auto-commits/pushes a storefront
+ * edit made anywhere under `<root>/<project>/...` — the home analogue of the
+ * per-project `buildGitSyncCommand`.
+ *
+ * Unlike the per-project hook (which targets one fixed storefront path), the
+ * home Chat can edit ANY project under the root, so this command resolves the
+ * enclosing git repo at runtime and applies layered safety guards:
+ *
+ *   1. Returns `''` (no hook) if `projectsRoot` contains shell metacharacters —
+ *      an attacker-controlled root must never become part of a shell command.
+ *      Same guard as `buildGitSyncCommand`.
+ *   2. Extracts the edited file into `$TOOL_FILE`; `[ -z … ] && exit 0` bails
+ *      when nothing was edited or the payload couldn't be parsed.
+ *   3. Resolves the enclosing repo via `git rev-parse --show-toplevel` from the
+ *      edited file's directory; `|| exit 0` bails when the file isn't in a repo.
+ *   4. ROOT-SCOPE guard: `case "$TOP" in "<root>"/*) … *) exit 0` — only proceed
+ *      when the repo top is strictly UNDER the projects root. `"<root>"/*`
+ *      requires a subpath, so the root itself (and files written directly under
+ *      it, e.g. `.claude/`) never trigger a commit.
+ *   5. REMOTE guard: `git remote get-url origin || exit 0` — only repos that
+ *      have an `origin` remote (i.e. the storefront repos Helix watches). Never
+ *      commit+push a random non-remote repo a user happens to have under root.
+ *   6. Commit + push the resolved repo top.
+ *
+ * The root is double-quoted everywhere it is interpolated. The metachar guard
+ * already rejects quotes, so quoting is purely to preserve spaces in the path.
+ */
+export function buildHomeGitSyncCommand(projectsRoot: string): string {
+    if (SHELL_METACHAR_RE.test(projectsRoot)) {
+        // Unsafe root — skip hook rather than risk shell injection
+        return '';
+    }
+
+    // SHELL_METACHAR_RE already rejects any quote characters, so no further
+    // escaping is needed before interpolating into double-quoted shell
+    // arguments. The double quotes preserve any spaces in the root path.
+    const quotedRoot = `"${projectsRoot}"`;
+
+    return (
+        buildToolFileExtraction() +
+        `[ -z "$TOOL_FILE" ] && exit 0; ` +
+        `TOP=$(git -C "$(dirname "$TOOL_FILE")" rev-parse --show-toplevel 2>/dev/null) || exit 0; ` +
+        `case "$TOP" in ${quotedRoot}/*) ;; *) exit 0 ;; esac; ` +
+        `git -C "$TOP" remote get-url origin >/dev/null 2>&1 || exit 0; ` +
+        `git -C "$TOP" add -A && ` +
+        `git -C "$TOP" commit -m "AI: sync files" && ` +
+        `git -C "$TOP" push`
     );
 }
 

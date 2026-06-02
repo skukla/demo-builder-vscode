@@ -14,9 +14,12 @@
  *
  * It still differs from a per-project context in two ways:
  * - MCP config points at the ROOT socket (not a per-project socket).
- * - `.claude/settings.json` is empty — the root is not a single storefront, so
- *   there is no per-storefront PostToolUse git-sync hook (syncing is driven by
- *   the `sync-changes` skill via `sync_storefront`).
+ * - `.claude/settings.json` carries a PROJECT-AWARE PostToolUse git-sync hook:
+ *   the root is not a single storefront, so the hook resolves the edited file's
+ *   enclosing git repo at runtime and auto-commits/pushes only when that repo
+ *   is UNDER the projects root and has an `origin` remote (the home analogue of
+ *   the per-storefront hook). `sync_storefront` remains available for explicit
+ *   pushes.
  *
  * Contract: IDEMPOTENT (safe to call on every activation — generated files are
  * overwritten, unrelated files are left untouched) and it NEVER throws
@@ -26,7 +29,7 @@
 
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
-import { buildDemoBuilderMcpEntry, type McpServerEntry } from './mcpConfigWriter';
+import { buildDemoBuilderMcpEntry, generateHomeClaudeSettings, type McpServerEntry } from './mcpConfigWriter';
 import { DEMO_BUILDER_SKILLS } from './skillsWriter';
 import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
 
@@ -49,7 +52,8 @@ const CLAUDE_MD_POINTER = 'see @AGENTS.md\n';
  * Writes (overwriting each call):
  * - `<root>/.mcp.json` and `<root>/.claude/mcp.json` — the demo-builder proxy
  *   entry on the ROOT socket.
- * - `<root>/.claude/settings.json` — empty `{}` (no storefront git-sync hook).
+ * - `<root>/.claude/settings.json` — project-aware git-sync hook (auto-commits/
+ *   pushes storefront edits, scoped to repos under the root with an origin remote).
  * - `<root>/AGENTS.md` plus `<root>/CLAUDE.md` and `<root>/.claude/CLAUDE.md`
  *   `see @AGENTS.md` pointers.
  * - `<root>/.claude/skills/*.md` — ALL Demo Builder skills (the one home Chat
@@ -79,10 +83,10 @@ export async function ensureHomeAiContext(
         await Promise.all([
             fsPromises.writeFile(path.join(projectsRoot, '.mcp.json'), mcpJson, 'utf-8'),
             fsPromises.writeFile(path.join(claudeDir, 'mcp.json'), mcpJson, 'utf-8'),
-            // Empty settings.json: the auto-commit-on-save hook is intentionally
-            // deferred — syncing is driven by the `sync-changes` skill (explicit
-            // `sync_storefront`); a project-aware home hook is a planned follow-up.
-            fsPromises.writeFile(path.join(claudeDir, 'settings.json'), JSON.stringify({}, null, 2), 'utf-8'),
+            // Project-aware home git-sync hook: auto-commits/pushes storefront
+            // edits made by the home Chat, scoped to repos UNDER the projects
+            // root that have an `origin` remote (see generateHomeClaudeSettings).
+            fsPromises.writeFile(path.join(claudeDir, 'settings.json'), JSON.stringify(generateHomeClaudeSettings(projectsRoot), null, 2), 'utf-8'),
             fsPromises.writeFile(path.join(projectsRoot, 'AGENTS.md'), buildHomeAgentsMd(), 'utf-8'),
             fsPromises.writeFile(path.join(projectsRoot, 'CLAUDE.md'), CLAUDE_MD_POINTER, 'utf-8'),
             fsPromises.writeFile(path.join(claudeDir, 'CLAUDE.md'), CLAUDE_MD_POINTER, 'utf-8'),
@@ -170,8 +174,8 @@ function buildHomeWorkingOnProjects(): string {
         '**When the user refers to a project without naming one, ask which project they mean.**',
         '(A later update will default this to the project the user is currently viewing.)',
         '',
-        'After editing a project\'s storefront files, run `sync_storefront` (see the',
-        '`sync-changes` skill) to commit and push the changes.',
+        'Storefront edits are **auto-committed and pushed** by a hook as you make them.',
+        '`sync_storefront` (see the `sync-changes` skill) remains available for an explicit push.',
     ].join('\n');
 }
 

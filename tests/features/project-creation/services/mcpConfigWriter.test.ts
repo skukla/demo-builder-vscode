@@ -15,7 +15,9 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import {
+    buildHomeGitSyncCommand,
     generateClaudeSettings,
+    generateHomeClaudeSettings,
     writeMcpConfigs,
 } from '@/features/project-creation/services/mcpConfigWriter';
 import type { Project, ComponentInstance } from '@/types/base';
@@ -319,6 +321,74 @@ describe('generateClaudeSettings', () => {
             const settings = generateClaudeSettings(project);
             expect(settings.hooks?.['PostToolUse']).toBeUndefined();
         });
+    });
+});
+
+// ─── buildHomeGitSyncCommand / generateHomeClaudeSettings ────────────────────
+
+describe('buildHomeGitSyncCommand', () => {
+    const HOME_ROOT = '/Users/demo/.demo-builder/projects';
+
+    it('extracts the edited file via the jq/python3/grep+sed fallback chain', () => {
+        const command = buildHomeGitSyncCommand(HOME_ROOT);
+        expect(command).toContain('jq');
+        expect(command).toContain('python3');
+        expect(command).toContain('grep');
+        expect(command).toContain('sed');
+        expect(command).toContain('TOOL_FILE=');
+    });
+
+    it('bails when no file was edited / payload could not be parsed', () => {
+        const command = buildHomeGitSyncCommand(HOME_ROOT);
+        expect(command).toContain('[ -z "$TOOL_FILE" ] && exit 0');
+    });
+
+    it('resolves the enclosing git repo via rev-parse --show-toplevel', () => {
+        const command = buildHomeGitSyncCommand(HOME_ROOT);
+        expect(command).toContain('rev-parse --show-toplevel');
+        expect(command).toContain('TOP=$(git -C "$(dirname "$TOOL_FILE")" rev-parse --show-toplevel 2>/dev/null) || exit 0');
+    });
+
+    it('applies the root-scope case guard with the quoted projects root (subpath only)', () => {
+        const command = buildHomeGitSyncCommand(HOME_ROOT);
+        expect(command).toContain(`case "$TOP" in "${HOME_ROOT}"/*) ;; *) exit 0 ;; esac`);
+    });
+
+    it('applies the origin-remote guard so only storefront repos are committed', () => {
+        const command = buildHomeGitSyncCommand(HOME_ROOT);
+        expect(command).toContain('git -C "$TOP" remote get-url origin >/dev/null 2>&1 || exit 0');
+    });
+
+    it('commits and pushes the resolved repo top with a static message', () => {
+        const command = buildHomeGitSyncCommand(HOME_ROOT);
+        expect(command).toContain('git -C "$TOP" add -A');
+        expect(command).toContain('git -C "$TOP" commit -m "AI: sync files"');
+        expect(command).toContain('git -C "$TOP" push');
+    });
+
+    it('returns an empty string when the projects root contains shell metacharacters', () => {
+        expect(buildHomeGitSyncCommand('/tmp/a;b')).toBe('');
+    });
+});
+
+describe('generateHomeClaudeSettings', () => {
+    const HOME_ROOT = '/Users/demo/.demo-builder/projects';
+
+    it('wraps the home git-sync command as a Write|Edit PostToolUse hook', () => {
+        const settings = generateHomeClaudeSettings(HOME_ROOT);
+        const hook = settings.hooks?.['PostToolUse']?.[0];
+
+        expect(hook?.matcher).toBe('Write|Edit');
+        const command = hook?.hooks?.[0]?.command ?? '';
+        expect(command).toBe(buildHomeGitSyncCommand(HOME_ROOT));
+        expect(command).toContain(`case "$TOP" in "${HOME_ROOT}"/*)`);
+        expect(command).toContain('remote get-url origin');
+    });
+
+    it('returns {} (no hook) when the projects root is unsafe', () => {
+        const settings = generateHomeClaudeSettings('/tmp/a;b');
+        expect(settings).toEqual({});
+        expect(settings.hooks).toBeUndefined();
     });
 });
 
