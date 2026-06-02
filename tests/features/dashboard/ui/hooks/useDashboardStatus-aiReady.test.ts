@@ -42,7 +42,7 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
         // Default mock: request never resolves
         const { result } = renderHook(() => useDashboardStatus());
         expect(result.current.aiReady).toEqual({
-            label: 'AI Ready',
+            label: 'AI',
             color: 'gray',
             text: 'Verifying',
         });
@@ -58,7 +58,7 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
         const { result } = renderHook(() => useDashboardStatus());
         await flushVerify();
         expect(result.current.aiReady).toEqual({
-            label: 'AI Ready',
+            label: 'AI',
             color: 'green',
             text: 'Ready',
         });
@@ -102,7 +102,7 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
         const { result } = renderHook(() => useDashboardStatus());
         await flushVerify();
         expect(result.current.aiReady).toEqual({
-            label: 'AI Ready',
+            label: 'AI',
             color: 'red',
             text: 'Broken',
         });
