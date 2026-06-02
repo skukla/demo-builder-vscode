@@ -154,6 +154,10 @@ describe('ensureHomeAiContext — AGENTS.md and CLAUDE.md pointers', () => {
         // by-name guidance
         expect(agents.toLowerCase()).toContain('by name');
         expect(agents).toContain('projectName');
+        // Announce-the-project-first contract: call get_current_project and state
+        // the active project before acting on any project task (ask if null).
+        expect(agents).toContain('get_current_project');
+        expect(agents.toLowerCase()).toContain('before starting any project task');
         // New single-home-Chat framing: edit any project directly (subdirectories
         // of this root) and sync via sync_storefront / the sync-changes skill.
         expect(agents.toLowerCase()).toContain('subdirector');
