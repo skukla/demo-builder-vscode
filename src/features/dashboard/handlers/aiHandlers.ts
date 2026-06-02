@@ -129,8 +129,29 @@ export async function handleRegenerateAiFiles(
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
+    // Reuse the wizard's `creationProgress` channel so the AI Capabilities modal
+    // can render per-step LoadingDisplay instead of a static spinner. Steps:
+    //   1. Installing storefront dependencies  (EDS only — the long pole)
+    //   2. Writing AGENTS.md                   ┐
+    //   3. Writing MCP configuration           │ emitted from generateAIContextFiles
+    //   4. Writing skills                      ┘ via the onProgress tracker below
+    //   5. Finalizing                          (clearMcpCache)
     const storefrontPath = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.path;
+    const totalSteps = storefrontPath ? 5 : 4;
+    let stepNumber = 0;
+    const emit = (currentOperation: string, message?: string): void => {
+        stepNumber++;
+        const progress = Math.round((stepNumber / totalSteps) * 100);
+        void context.sendMessage('creationProgress', {
+            currentOperation,
+            progress,
+            message: message ?? '',
+            logs: [],
+        });
+    };
+
     if (storefrontPath) {
+        emit('Installing storefront dependencies', 'This can take up to a minute');
         const installResult = await installAiDefaultsInStorefront(storefrontPath);
         if (!installResult.success) {
             return {
@@ -141,8 +162,16 @@ export async function handleRegenerateAiFiles(
     }
 
     // Use server-side project.path — do not accept a webview-supplied path override.
-    await generateAIContextFiles(project.path, project, context.context.extensionPath);
+    // Pass an onProgress tracker so the three writer steps surface in the same
+    // creationProgress channel.
+    await generateAIContextFiles(
+        project.path,
+        project,
+        context.context.extensionPath,
+        (currentOperation: string, _progress: number, message?: string) => emit(currentOperation, message),
+    );
 
+    emit('Finalizing', 'Refreshing AI capability inventory');
     // The .mcp.json may now point at newly-installed binaries (or the same
     // binaries via storefront-anchored absolute paths). Drop the inspector
     // cache so the next verify re-spawns from a clean slate.

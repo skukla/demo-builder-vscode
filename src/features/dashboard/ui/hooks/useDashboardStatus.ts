@@ -10,6 +10,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback, Dispatch, SetStateAction } from 'react';
 import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import type { AiRegenerateProgress } from '@/features/dashboard/ui/components/AiCapabilitiesModal';
 import type { McpInventoryEntry, SkillInventoryEntry } from '@/types/ai';
 
 /**
@@ -136,6 +137,12 @@ export interface UseDashboardStatusReturn {
     aiMcpsError: boolean;
     /** True while an AI verify/regenerate operation is in flight */
     aiBusy: boolean;
+    /**
+     * Live regenerate progress (step name + detail) when a regenerate is in flight,
+     * else null. Sourced from the wizard's `creationProgress` channel — see
+     * `handleRegenerateAiFiles`. Forwarded into the AI Capabilities modal.
+     */
+    aiRegenProgress: AiRegenerateProgress | null;
     /** Regenerate the project's AI files, then re-verify (refreshes badge + skills + MCPs) */
     regenerateAiFiles: () => Promise<void>;
 }
@@ -170,6 +177,7 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
     const [verifyResult, setVerifyResult] = useState<VerifyAiSetupResponse | null>(null);
     const [verifyFailed, setVerifyFailed] = useState(false);
     const [aiBusy, setAiBusy] = useState(false);
+    const [aiRegenProgress, setAiRegenProgress] = useState<AiRegenerateProgress | null>(null);
     // Track whether status was requested (prevent StrictMode double-request)
     const statusRequestedRef = useRef(false);
     const verifyRequestedRef = useRef(false);
@@ -218,9 +226,25 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
             }
         });
 
+        // Subscribe to the wizard's `creationProgress` channel — the regenerate
+        // handler reuses it so each step (install → AGENTS.md → MCP → skills →
+        // finalize) is reported in the same payload shape. The AI Capabilities
+        // modal renders this live via LoadingDisplay; no cross-talk with the
+        // wizard because the wizard is a separate webview.
+        const unsubscribeProgress = webviewClient.onMessage('creationProgress', (data: unknown) => {
+            const payload = data as { currentOperation?: string; progress?: number; message?: string };
+            if (!payload?.currentOperation) return;
+            setAiRegenProgress({
+                currentOperation: payload.currentOperation,
+                message: payload.message,
+                progress: payload.progress,
+            });
+        });
+
         return () => {
             unsubscribeStatus();
             unsubscribeMesh();
+            unsubscribeProgress();
         };
     }, []);
 
@@ -238,13 +262,18 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
 
     // Regenerate the project's AI files (rewrites .claude/* + AGENTS.md, including
     // skills), then re-verify so the badge and the skills list reflect the result.
+    // Clears any stale `aiRegenProgress` at start so the modal opens on the static
+    // copy before the first creationProgress lands, and again at end so a stopped
+    // regen doesn't leave a frozen step name showing on next open.
     const regenerateAiFiles = useCallback(async (): Promise<void> => {
+        setAiRegenProgress(null);
         setAiBusy(true);
         try {
             await webviewClient.request('regenerate-ai-files', {});
             await runVerify();
         } finally {
             setAiBusy(false);
+            setAiRegenProgress(null);
         }
     }, [runVerify]);
 
@@ -403,6 +432,7 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
         aiMcps,
         aiMcpsError,
         aiBusy,
+        aiRegenProgress,
         regenerateAiFiles,
     };
 }

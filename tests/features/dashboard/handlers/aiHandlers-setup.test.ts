@@ -241,10 +241,14 @@ describe('aiHandlers — setup & verification', () => {
 
             const result = await handleRegenerateAiFiles(context);
 
+            // Fourth arg is the onProgress tracker the handler passes so
+            // generateAIContextFiles' per-writer steps emit through the same
+            // creationProgress channel as the install/finalize steps.
             expect(generateAIContextFiles).toHaveBeenCalledWith(
                 '/projects/test',
                 PROJECT_HEADLESS,
                 '/mock/extension/path',
+                expect.any(Function),
             );
             expect(result).toEqual({ success: true });
         });
@@ -332,6 +336,90 @@ describe('aiHandlers — setup & verification', () => {
             await handleRegenerateAiFiles(context);
 
             expect(clearMcpCache).toHaveBeenCalledWith();
+        });
+
+        // Progress reporting: regen reuses the wizard's `creationProgress` channel so
+        // the AI Capabilities modal can render per-step LoadingDisplay instead of a
+        // static spinner. The handler emits the install step (EDS only) and the
+        // finalize step directly; the three writer steps are emitted from inside
+        // generateAIContextFiles via an `onProgress` tracker the handler supplies.
+        describe('progress reporting', () => {
+            it('emits an install-deps creationProgress message before installing the storefront (EDS)', async () => {
+                (installAiDefaultsInStorefront as jest.Mock).mockResolvedValue({ success: true });
+                (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
+
+                const context = createMockContext({
+                    stateManager: {
+                        getCurrentProject: jest.fn().mockResolvedValue(PROJECT_WITH_STOREFRONT),
+                    } as unknown as HandlerContext['stateManager'],
+                });
+
+                await handleRegenerateAiFiles(context);
+
+                const installCalls = (context.sendMessage as jest.Mock).mock.calls.filter(
+                    ([type]) => type === 'creationProgress',
+                );
+                expect(installCalls.length).toBeGreaterThan(0);
+                expect(installCalls[0][1]).toMatchObject({
+                    currentOperation: 'Installing storefront dependencies',
+                });
+            });
+
+            it('emits a finalize creationProgress message after the writers run', async () => {
+                (installAiDefaultsInStorefront as jest.Mock).mockResolvedValue({ success: true });
+                (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
+
+                const context = createMockContext({
+                    stateManager: {
+                        getCurrentProject: jest.fn().mockResolvedValue(PROJECT_WITH_STOREFRONT),
+                    } as unknown as HandlerContext['stateManager'],
+                });
+
+                await handleRegenerateAiFiles(context);
+
+                const operations = (context.sendMessage as jest.Mock).mock.calls
+                    .filter(([type]) => type === 'creationProgress')
+                    .map(([, data]) => data.currentOperation);
+                expect(operations[operations.length - 1]).toBe('Finalizing');
+            });
+
+            it('skips the install-deps step for headless projects (no EDS Storefront)', async () => {
+                (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
+
+                const context = createMockContext({
+                    stateManager: {
+                        getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
+                    } as unknown as HandlerContext['stateManager'],
+                });
+
+                await handleRegenerateAiFiles(context);
+
+                const operations = (context.sendMessage as jest.Mock).mock.calls
+                    .filter(([type]) => type === 'creationProgress')
+                    .map(([, data]) => data.currentOperation);
+                expect(operations).not.toContain('Installing storefront dependencies');
+                expect(operations).toContain('Finalizing');
+            });
+
+            it('passes an onProgress tracker to generateAIContextFiles so the writer steps emit too', async () => {
+                (installAiDefaultsInStorefront as jest.Mock).mockResolvedValue({ success: true });
+                (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
+
+                const context = createMockContext({
+                    stateManager: {
+                        getCurrentProject: jest.fn().mockResolvedValue(PROJECT_WITH_STOREFRONT),
+                    } as unknown as HandlerContext['stateManager'],
+                });
+
+                await handleRegenerateAiFiles(context);
+
+                expect(generateAIContextFiles).toHaveBeenCalledWith(
+                    '/projects/test',
+                    PROJECT_WITH_STOREFRONT,
+                    '/mock/extension/path',
+                    expect.any(Function),
+                );
+            });
         });
     });
 
