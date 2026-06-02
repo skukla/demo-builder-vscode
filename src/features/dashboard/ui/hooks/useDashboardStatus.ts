@@ -66,7 +66,7 @@ export interface StatusDisplay {
  * "AI Ready badge state" section in the AI surface redesign plan.
  */
 export interface AiReadyState {
-    label: 'AI Ready';
+    label: 'AI';
     color: 'gray' | 'green' | 'yellow' | 'red';
     text: 'Verifying' | 'Ready' | 'Setup incomplete' | 'Broken';
 }
@@ -359,24 +359,24 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
             // Verify failed — surface as 'Setup incomplete' rather than leaving
             // the badge stuck on gray indefinitely.
             if (verifyFailed) {
-                return { label: 'AI Ready', color: 'yellow', text: 'Setup incomplete' };
+                return { label: 'AI', color: 'yellow', text: 'Setup incomplete' };
             }
-            return { label: 'AI Ready', color: 'gray', text: 'Verifying' };
+            return { label: 'AI', color: 'gray', text: 'Verifying' };
         }
 
         const checks = verifyResult.checks ?? [];
         const anyCheckFailed = checks.some(c => c.status !== 'ok');
         if (anyCheckFailed) {
-            return { label: 'AI Ready', color: 'red', text: 'Broken' };
+            return { label: 'AI', color: 'red', text: 'Broken' };
         }
 
         const inv = verifyResult.inventory ?? {};
         const hasInventoryError = Boolean(inv.skillsError ?? inv.mcpsError);
         if (hasInventoryError) {
-            return { label: 'AI Ready', color: 'yellow', text: 'Setup incomplete' };
+            return { label: 'AI', color: 'yellow', text: 'Setup incomplete' };
         }
 
-        return { label: 'AI Ready', color: 'green', text: 'Ready' };
+        return { label: 'AI', color: 'green', text: 'Ready' };
     }, [verifyResult, verifyFailed]);
 
     // Capability lists for the "View AI Capabilities" surface.

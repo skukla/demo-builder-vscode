@@ -42,26 +42,26 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
             // API Mesh
             expect(screen.getByTestId('status-card-API Mesh')).toBeInTheDocument();
             // AI Ready (new in F1)
-            expect(screen.getByTestId('status-card-AI Ready')).toBeInTheDocument();
+            expect(screen.getByTestId('status-card-AI')).toBeInTheDocument();
         });
 
         it('renders the AI Ready badge even when project has no mesh', () => {
             renderDashboard();
             // AI Ready should still show
-            expect(screen.getByTestId('status-card-AI Ready')).toBeInTheDocument();
+            expect(screen.getByTestId('status-card-AI')).toBeInTheDocument();
         });
     });
 
     describe('Badge Color (initial state)', () => {
         it('shows gray color while verify is pending', () => {
             renderDashboard();
-            const badge = screen.getByTestId('status-card-AI Ready');
+            const badge = screen.getByTestId('status-card-AI');
             expect(badge.getAttribute('data-color')).toBe('gray');
         });
 
         it('shows "Verifying" status text while verify is pending', () => {
             renderDashboard();
-            const badge = screen.getByTestId('status-card-AI Ready');
+            const badge = screen.getByTestId('status-card-AI');
             expect(badge.textContent).toMatch(/Verifying/i);
         });
     });
@@ -82,7 +82,7 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
             });
             renderDashboard();
             await waitFor(() => {
-                const badge = screen.getByTestId('status-card-AI Ready');
+                const badge = screen.getByTestId('status-card-AI');
                 expect(badge.getAttribute('data-color')).toBe('green');
                 expect(badge.textContent).toMatch(/Ready/i);
             });
@@ -103,7 +103,7 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
             });
             renderDashboard();
             await waitFor(() => {
-                const badge = screen.getByTestId('status-card-AI Ready');
+                const badge = screen.getByTestId('status-card-AI');
                 expect(badge.getAttribute('data-color')).toBe('red');
                 expect(badge.textContent).toMatch(/Broken/i);
             });
@@ -113,7 +113,7 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
     describe('Badge is display-only', () => {
         it('does not have an onClick handler (display-only badge)', () => {
             renderDashboard();
-            const badge = screen.getByTestId('status-card-AI Ready');
+            const badge = screen.getByTestId('status-card-AI');
             // The mocked StatusCard component does not forward any onClick prop
             // (it isn't part of the StatusCardProps interface). Confirm by
             // ensuring the rendered node is not a button or link.
@@ -211,7 +211,7 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
             mockAiRequests(verifyWithSkills([]));
             renderDashboard();
             await waitFor(() => {
-                expect(screen.getByTestId('status-card-AI Ready').getAttribute('data-color')).toBe('green');
+                expect(screen.getByTestId('status-card-AI').getAttribute('data-color')).toBe('green');
             });
             expect(screen.queryByTestId('ai-regenerate-trigger')).not.toBeInTheDocument();
         });
