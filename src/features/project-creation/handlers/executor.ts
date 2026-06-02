@@ -24,7 +24,6 @@ import {
     finalizeProject,
     sendCompletionAndCleanup,
     generateAIContextFiles,
-    openProjectAsWorkspace,
     ensureEdsContent,
     type ComponentDefinitionEntry,
     type MeshApiConfig,
@@ -203,7 +202,6 @@ interface ProjectCreationConfig {
 export async function executeProjectCreation(
     context: HandlerContext,
     config: Record<string, unknown>,
-    options?: { skipWorkspaceAnchor?: boolean },
 ): Promise<void> {
     const typedConfig = config as unknown as ProjectCreationConfig;
 
@@ -427,20 +425,13 @@ export async function executeProjectCreation(
     // tools where they're relevant. No global (~/.claude.json) registration is
     // performed — the in-extension MCP server hosts the tools per-project.
 
-    // Phase 7: Anchor the project as the current window's VS Code workspace.
-    // From here forward "Open in Claude Code" launches the chat panel into the
-    // right cwd, so per-project skills, MCPs, and AGENTS.md load. The window
-    // reloads as a side effect, so this is the last meaningful step — anything
-    // after would be cut off by the reload.
-    //
-    // Headless callers (the MCP `create_project` tool) skip this: the reload
-    // would kill the live extension host and the agent's MCP connection. The
-    // project tools are project-name-addressed, so the agent keeps working
-    // without the anchor; the separate `open_project` tool performs the
-    // anchor+resume when the user wants the project open in the IDE.
-    if (!options?.skipWorkspaceAnchor) {
-        await openProjectAsWorkspace(projectPath, context.logger);
-    }
+    // No workspace anchoring: in the always-root home model the VS Code window
+    // stays homed at the projects root. `finalizeProject` → `saveProject`
+    // already set this new project as the current-project pointer, which the
+    // dashboards render in-place and the home Chat resolves via the
+    // `get_current_project` MCP tool. Anchoring the window to the project subdir
+    // would reload the window (killing any live MCP session) and break the
+    // single-home-Chat model, so it is intentionally omitted.
 }
 
 // ============================================================================

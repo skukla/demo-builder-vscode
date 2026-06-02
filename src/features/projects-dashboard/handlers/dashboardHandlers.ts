@@ -119,9 +119,8 @@ export const handleGetProjects: MessageHandler = async (
  * dashboard, component tree, and auth cache all work off that pointer, so a
  * plain selection just surfaces the dashboard webview in-place with no reload.
  *
- * The workspace anchor (a `vscode.openFolder` reload) is deferred until the
- * user launches a workspace-requiring action (AI Chat / terminal); that anchor
- * lives in `OpenInClaudeCommand.execute()`, on-demand.
+ * Nothing anchors the workspace to a project subdir in the always-root home
+ * model — dashboards render in-place off the current-project pointer.
  *
  * Behavior:
  *   - plain selection (`forceNewWindow` falsy), regardless of whether the
@@ -129,7 +128,9 @@ export const handleGetProjects: MessageHandler = async (
  *     in-place. No reload, ever.
  *   - `forceNewWindow: true` (shift/cmd-click) → open the project in a NEW
  *     VS Code window; the current window is left alone (still on the projects
- *     list).
+ *     list). Note: that new window opens at the project subdir, so its
+ *     activation `shouldReHomeToRoot` check re-homes it back to the projects
+ *     root (home-on-launch) — the always-root invariant still holds.
  */
 export const handleSelectProject: MessageHandler<{ projectPath: string; forceNewWindow?: boolean }> = async (
     context: HandlerContext,
@@ -673,21 +674,18 @@ export const handleOpenBrowser: MessageHandler<{ projectPath: string }> = async 
 /**
  * Open the configured AI chat surface for a specific project — home-grid kebab
  * "Open AI" wiring. AI = chat (the Claude Code terminal tab), not the Prompt
- * Library. The project's per-project skills / `.mcp.json` / `AGENTS.md` only
- * load when the VS Code workspace is anchored to that project, but this handler
- * no longer anchors itself — anchor-on-demand lives in
- * `OpenInClaudeCommand.execute()`.
+ * Library.
+ *
+ * Always-root home model: the home Chat launches at the projects root, not the
+ * project subdir, so nothing anchors the workspace here. We only set the
+ * current-project pointer; the home Chat resolves "the active project" from that
+ * pointer via the `get_current_project` MCP tool.
  *
  * Flow:
  *   1. Load the project for the given path and set it as the current-project
- *      pointer (`saveProject`) so the post-reload dashboard / state reads
- *      resolve to it.
- *   2. Dispatch `demoBuilder.openInClaude` with the loaded project. The command
- *      anchors the workspace (pending record + `vscode.openFolder`) when the
- *      project differs from the open workspace folder, then
- *      `extension.ts:replayPendingClaudeLaunch` re-invokes the launch after the
- *      reload. When the workspace already matches, the command spawns the
- *      terminal directly with no reload.
+ *      pointer (`saveProject`).
+ *   2. Dispatch `demoBuilder.openInClaude` with NO project arg — the command
+ *      always launches the home Chat at the projects root.
  */
 export const handleOpenAiForProject: MessageHandler<{ projectPath: string }> = async (
     context: HandlerContext,
@@ -706,11 +704,11 @@ export const handleOpenAiForProject: MessageHandler<{ projectPath: string }> = a
         return { success: false, error: 'Project not found' };
     }
 
-    // Set the current-project pointer so the (possibly post-reload) dashboard
-    // and state reads resolve to this project. The command owns the workspace
-    // anchor decision from here.
+    // Set the current-project pointer so the dashboard / state reads and the
+    // home Chat's `get_current_project` tool resolve to this project. No
+    // workspace anchor — the home Chat launches at the projects root.
     await context.stateManager.saveProject(project);
-    await vscode.commands.executeCommand('demoBuilder.openInClaude', { project });
+    await vscode.commands.executeCommand('demoBuilder.openInClaude');
     return { success: true };
 };
 

@@ -3,10 +3,11 @@
  * headless and EDS stacks.
  *
  * Reuses the wizard's own `buildProjectConfig` to assemble the exact creation
- * config (no divergence) and runs `executeProjectCreation` with
- * `skipWorkspaceAnchor` so the window does NOT reload (which would kill the live
- * MCP session). Returns the new project's name/path; the agent keeps working via
- * name-addressed tools, and offers `open_project`/`open_view` to surface it.
+ * config (no divergence) and runs `executeProjectCreation`. Creation never
+ * anchors the window to the project (the always-root home model keeps the
+ * window at the projects root, so the live MCP session is never killed).
+ * Returns the new project's name/path; the agent keeps working via
+ * name-addressed tools, and can offer `open_view` to surface it.
  *
  * EDS stacks additionally run the existing storefront-setup orchestration
  * (`storefront-setup-start` → creates the GitHub repo from template, DA.live
@@ -143,7 +144,7 @@ async function createHeadless(
 
     const config = buildProjectConfig(wizardState, null, packages) as unknown as Record<string, unknown>;
     try {
-        await executeProjectCreation(ctx, config, { skipWorkspaceAnchor: true });
+        await executeProjectCreation(ctx, config);
     } catch (err) {
         return asText({ created: false, error: err instanceof Error ? err.message : String(err) });
     }
@@ -151,7 +152,7 @@ async function createHeadless(
         created: true,
         name: args.projectName,
         path: path.join(projectsDir(), args.projectName),
-        hint: 'Operate on it by name with the project tools (list_blocks, update_project_config, sync_storefront, …). Offer open_project to open it in VS Code.',
+        hint: 'Operate on it by name with the project tools (list_blocks, update_project_config, sync_storefront, …).',
     });
 }
 
@@ -235,7 +236,7 @@ async function createEds(
 
     const config = buildProjectConfig(wizardState, null, packages) as unknown as Record<string, unknown>;
     try {
-        await executeProjectCreation(capturing, config, { skipWorkspaceAnchor: true });
+        await executeProjectCreation(capturing, config);
     } catch (err) {
         return asText({
             created: false,
@@ -253,7 +254,7 @@ async function createEds(
         path: path.join(projectsDir(), args.projectName),
         repoUrl,
         phases: toPhaseTimeline(events),
-        hint: 'Operate on it by name (list_blocks, sync_storefront, …). Offer open_project to open it in VS Code for native editing.',
+        hint: 'Operate on it by name (list_blocks, sync_storefront, …).',
     });
 }
 

@@ -3,7 +3,6 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { CommandManager } from '@/commands/commandManager';
-import { PENDING_CLAUDE_LAUNCH_KEY } from '@/commands/openInClaude';
 import { BaseWebviewCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
 import { initializeLogger, getLogger } from '@/core/logging';
@@ -22,8 +21,8 @@ import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer';
+import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
 import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
-import { registerOpenProjectTool } from '@/features/ai/server/openProjectTool';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
 import { registerStorefrontTools } from '@/features/ai/server/storefrontTools';
 import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
@@ -68,51 +67,18 @@ function shouldAutoOpenProjectsList(
     return true;
 }
 
-/** Shape of the pending-prompt record written by `handleOpenInClaude` when a workspace anchor reload is required. */
-interface PendingClaudeLaunch {
-    projectPath: string;
-    prompt: string;
-    createdAt: number;
-}
-
-/** Pending records older than this are discarded silently on activation. */
-const PENDING_LAUNCH_TTL_MS = 60_000;
-
 /**
- * Replay a pending Claude launch that was queued before a workspace anchor
- * reload. Three inline checks gate the dispatch: record present, not stale,
- * and workspace now matches the recorded `projectPath`. The record is cleared
- * unconditionally — a stale or mismatched record is dropped silently.
+ * Whether this window should re-home to the projects root on activation.
+ *
+ * In the always-root home-Chat model the VS Code window must stay homed at the
+ * projects root (so the home `.mcp.json` there reaches the root MCP socket). If
+ * a window opened anchored to a project SUBDIR (e.g. a leftover anchor from an
+ * older build), re-home it. Returns true only when `ws` is a strict descendant
+ * of `projectsRoot` — never for the root itself, an undefined workspace, or an
+ * unrelated path.
  */
-async function replayPendingClaudeLaunch(
-    context: vscode.ExtensionContext,
-    workspaceFolderPath: string | undefined,
-    log: Logger,
-): Promise<boolean> {
-    const pending = context.globalState.get<PendingClaudeLaunch>(PENDING_CLAUDE_LAUNCH_KEY);
-    await context.globalState.update(PENDING_CLAUDE_LAUNCH_KEY, undefined);
-    if (!pending) return false;
-    const fresh = Date.now() - pending.createdAt < PENDING_LAUNCH_TTL_MS;
-    const workspaceMatches = workspaceFolderPath === pending.projectPath;
-    if (!fresh || !workspaceMatches) {
-        log.debug(
-            `[Extension] discarded pending Claude launch (fresh=${fresh}, workspaceMatches=${workspaceMatches})`,
-        );
-        return false;
-    }
-    log.info('[Extension] replaying pending Claude launch with prompt pre-fill');
-    // Wrap in try/catch — a failed replay must not abort activation. A throw means
-    // the chat did NOT open, so report false and let the caller fall back to the
-    // projects list rather than leaving the user on a blank window.
-    try {
-        await vscode.commands.executeCommand('demoBuilder.openInClaude', { prompt: pending.prompt });
-        return true;
-    } catch (error) {
-        log.warn(
-            `[Extension] pending Claude launch replay failed: ${error instanceof Error ? error.message : String(error)}`,
-        );
-        return false;
-    }
+export function shouldReHomeToRoot(ws: string | undefined, projectsRoot: string): boolean {
+    return !!ws && ws !== projectsRoot && ws.startsWith(projectsRoot + path.sep);
 }
 
 
@@ -375,25 +341,26 @@ export async function activate(context: vscode.ExtensionContext) {
         // project creation completes (see executor.ts). The user is asked once;
         // the choice persists in globalState. No activation-time auto-write.
 
-        // A pending Claude launch means THIS activation is finishing an
-        // anchor-on-demand Chat/terminal launch (post-reload), NOT a cold browse
-        // start — replay it (which opens the chat) and do NOT also force the
-        // projects list, which would steal the view. The record only fires if
-        // present, fresh (<60s), and the workspace now matches the recorded
-        // projectPath (see OpenInClaudeCommand.execute()'s anchor-on-demand path).
-        const activationWorkspace = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        const replayedChatLaunch = await replayPendingClaudeLaunch(context, activationWorkspace, logger);
+        // Always-root home model: the VS Code window must stay homed at the
+        // projects root so the home `.mcp.json` there reaches the root MCP socket
+        // and one home Chat can address any project by name. If this window opened
+        // anchored to a project SUBDIR (e.g. a leftover anchor from an older
+        // build), re-home it to the projects root and bail — the post-reopen
+        // activation runs the cold-start path below.
+        const projectsRoot =
+            process.env.DEMO_BUILDER_PROJECTS_DIR ?? path.join(os.homedir(), '.demo-builder', 'projects');
+        const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (shouldReHomeToRoot(ws, projectsRoot)) {
+            await fs.mkdir(projectsRoot, { recursive: true }).catch(() => {});
+            await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(projectsRoot), false);
+            return;
+        }
 
-        // Cold start (no pending launch) always lands on the projects list as the
-        // home screen — even when this window is still anchored to a Demo Builder
-        // project folder (decoupling Phase 1). Browsing/selecting a project no
-        // longer reloads the window; the workspace only anchors on-demand when the
-        // user launches a workspace-requiring action. For a project-anchored
-        // workspace, focus the Demo Builder Activity Bar so the tree-view
-        // visibility subscription auto-opens the projects list (guarded by
-        // shouldAutoOpenProjectsList). Non-project workspaces already auto-open the
-        // list via the same visibility handler.
-        if (!replayedChatLaunch && shouldAutoReopenProjectsList(activationWorkspace, false)) {
+        // Cold start always lands on the projects list as the home screen. For a
+        // root-anchored (or non-project) workspace, focus the Demo Builder
+        // Activity Bar so the tree-view visibility subscription auto-opens the
+        // projects list (guarded by shouldAutoOpenProjectsList).
+        if (shouldAutoReopenProjectsList(ws, false)) {
             await vscode.commands.executeCommand('workbench.view.extension.demoBuilder');
         }
 
@@ -465,7 +432,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerAuthTools(mcpServer, ctxFactory);
                 registerAdobeTools(mcpServer, ctxFactory);
                 registerCreateProjectTool(mcpServer, ctxFactory);
-                registerOpenProjectTool(mcpServer, ctxFactory);
+                registerCurrentProjectTool(mcpServer, ctxFactory);
                 registerCloudResourceTools(mcpServer, ctxFactory);
                 registerStorefrontTools(mcpServer, ctxFactory);
                 registerEdsResetTool(mcpServer, ctxFactory);
