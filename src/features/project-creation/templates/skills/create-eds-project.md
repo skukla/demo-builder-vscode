@@ -63,26 +63,25 @@ is idempotent: fix the cause that `stage`/`error` points to (e.g. re-auth an exp
 DA.live token, or wait out a GitHub rate limit), then **re-run the identical
 `create_project` call** — completed steps are skipped, not duplicated.
 
-## 6. After success — offer, never auto-open
+## 6. After success — keep working in place
 
 Success returns `{ created: true, name, repoUrl? }`. The project tools are
-project-name-addressed, so you can keep working on the new project in the same prompt
-(`update_project_config`, `sync_storefront`, …) with no window reload.
+project-name-addressed, so you keep working on the new project in the same prompt
+(`update_project_config`, `sync_storefront`, …) with no window reload. The new project is
+now the current project — `get_current_project` resolves to it.
 
-Only if the user wants the project opened in the IDE:
-
-- `open_view view="projects" confirm=true` — show the project list, or
-- `open_project name="<name>" continuationPrompt="<next step>" confirm=true` — anchor the
-  project as the workspace and resume. This **reloads the window and ends the current
-  Claude session**, so always confirm first.
+If the user wants to see the project list in the IDE, offer `open_view view="projects"
+confirm=true` (confirm first). There is no separate "open project as workspace" step —
+the VS Code window stays homed at the projects root.
 
 ## Notes
 
-- This MCP server is only reachable with a Demo Builder project open in VS Code.
-- `create_project` skips the workspace anchor by design — creating a project never reloads
-  your window.
-- Never pass `confirm: true` on the user's behalf for `create_project`, `sign_in`,
-  `open_view`, or `open_project` without an explicit yes.
+- This MCP server is reachable whenever Demo Builder is open; it serves the home Chat at
+  the projects root.
+- `create_project` never anchors the workspace — creating a project doesn't reload your
+  window.
+- Never pass `confirm: true` on the user's behalf for `create_project`, `sign_in`, or
+  `open_view` without an explicit yes.
 
 ## Handoff
 
