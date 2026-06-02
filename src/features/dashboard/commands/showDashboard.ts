@@ -26,8 +26,10 @@ const DEMO_BUILDER_PROJECTS_BASE = path.join(os.homedir(), '.demo-builder', 'pro
  * list as a safety net.
  *
  * Returns true only when:
- *   1. The current workspace folder is anchored to a Demo Builder project
- *      (i.e. a subdirectory of `~/.demo-builder/projects/`), AND
+ *   1. The current workspace folder is within the Demo Builder projects tree
+ *      — the projects root itself (`~/.demo-builder/projects/`, the home in the
+ *      always-root model) OR a project subdirectory (a leftover anchor from an
+ *      older build) — AND
  *   2. No webview transition is in progress.
  *
  * Condition 2 keeps us out of the way when the user is intentionally
@@ -38,8 +40,11 @@ const DEMO_BUILDER_PROJECTS_BASE = path.join(os.homedir(), '.demo-builder', 'pro
  * passing `transitionInProgress=true`.
  *
  * The path check uses `path.relative` rather than a string prefix so that
- * path-traversal attempts (`.../projects/../../etc/passwd`) and the base
- * directory itself both correctly return false.
+ * path-traversal attempts (`.../projects/../../etc/passwd`) and unrelated
+ * folders correctly return false. The base directory ITSELF returns true: in
+ * the always-root model the window is homed at the projects root, so closing
+ * an in-place dashboard there should surface the projects list, not strand the
+ * user on a bare root workspace.
  */
 export function shouldAutoReopenProjectsList(
     workspaceFolderPath: string | undefined,
@@ -48,11 +53,13 @@ export function shouldAutoReopenProjectsList(
     if (transitionInProgress) return false;
     if (!workspaceFolderPath) return false;
     const rel = path.relative(DEMO_BUILDER_PROJECTS_BASE, workspaceFolderPath);
-    // rel is empty when paths are equal (base itself — no project subdir).
-    // rel starts with '..' when path is outside the base (including traversal).
-    if (rel === '' || rel.startsWith('..') || path.isAbsolute(rel)) {
+    // rel starts with '..' (or is absolute) when the path is outside the base
+    // — including traversal attempts. Those are not Demo Builder contexts.
+    if (rel.startsWith('..') || path.isAbsolute(rel)) {
         return false;
     }
+    // rel === '' is the projects root itself (the always-root home); a non-empty
+    // rel is a project subdir. Both should reopen the list.
     return true;
 }
 

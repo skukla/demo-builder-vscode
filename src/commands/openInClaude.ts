@@ -1,6 +1,8 @@
+import * as os from 'os';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { hasConversation as hasClaudeConversation } from './claudeSessionStore';
-import { BaseCommand, BaseWebviewCommand } from '@/core/base';
+import { BaseCommand } from '@/core/base';
 import type { Project } from '@/types/base';
 
 /**
@@ -18,14 +20,6 @@ export type Engine = 'claude-code';
  * without repeated noise.
  */
 const CLIPBOARD_FALLBACK_TIP_SHOWN_KEY = 'demoBuilder.ai.clipboardFallbackTipShown';
-
-/**
- * globalState key for the pending Claude launch record written when the
- * prompt-click / home-grid handlers need to anchor the workspace before
- * launching. Consumed on activation by `extension.ts`. Shape:
- *   `{ projectPath: string; prompt?: string; createdAt: number }`
- */
-export const PENDING_CLAUDE_LAUNCH_KEY = 'demoBuilder.ai.pendingClaudeLaunch';
 
 /** Terminal name displayed in the integrated terminals dropdown. */
 const TERMINAL_NAME = 'Claude Code';
@@ -59,9 +53,24 @@ export function isClaudeChatOpen(): boolean {
 export type OpenInClaudeArg = Project | { project?: Project; prompt?: string };
 
 /**
- * OpenInClaudeCommand — opens Claude Code (`claude --continue`) for the current
- * project in a VS Code integrated terminal placed as a tab in the active editor
- * group (next to Project Dashboard).
+ * Resolve the projects root the home Chat always launches at:
+ * `DEMO_BUILDER_PROJECTS_DIR` if set, else `~/.demo-builder/projects`.
+ */
+export function resolveProjectsRoot(): string {
+    return process.env.DEMO_BUILDER_PROJECTS_DIR ?? path.join(os.homedir(), '.demo-builder', 'projects');
+}
+
+/**
+ * OpenInClaudeCommand — opens Claude Code (`claude --continue`) in a VS Code
+ * integrated terminal placed as a tab in the active editor group (next to
+ * Project Dashboard).
+ *
+ * Always launches at the projects root (`resolveProjectsRoot()`), never at a
+ * project subdir. This is the single "home" Chat: the VS Code window stays
+ * homed at the projects root, the home `.mcp.json` there points at the root
+ * socket, and the agent addresses any project by name through the in-extension
+ * MCP tools (e.g. `get_current_project`). Nothing anchors the workspace to a
+ * project; no window reload happens here.
  *
  * The chat is a persistent terminal session: subsequent invocations reuse the
  * live terminal and inject the prompt via bracketed paste, keeping the
@@ -76,33 +85,16 @@ export type OpenInClaudeArg = Project | { project?: Project; prompt?: string };
  */
 export class OpenInClaudeCommand extends BaseCommand {
     public async execute(arg?: OpenInClaudeArg): Promise<void> {
-        const { project, prompt } = normalizeArg(arg);
-        const target = project ?? (await this.stateManager.getCurrentProject() ?? undefined);
+        // Only the prompt matters now — any project arg is ignored. The home Chat
+        // always launches at the projects root so one session addresses any
+        // project by name via the in-extension MCP tools.
+        const { prompt } = normalizeArg(arg);
+        const cwd = resolveProjectsRoot();
 
-        this.logger.info(`[Open in Claude] project=${target?.name ?? '<none>'} prompt=${prompt ? 'yes' : 'no'}`);
-
-        // Anchor-on-demand: launching the chat/terminal is a workspace-requiring
-        // action — per-project skills, `.mcp.json`, and `AGENTS.md` only load when
-        // the VS Code workspace folder is anchored to the target project.
-        // Browsing/selecting a project no longer reloads the window (see
-        // handleSelectProject), so the anchor is centralized HERE and deferred to
-        // this moment. When the target project differs from the open workspace
-        // folder, write a pending-launch record and reload the window via
-        // `vscode.openFolder`. After the reload, activation's
-        // `replayPendingClaudeLaunch` re-invokes this command with workspace =
-        // project, which then falls through to the spawn path below.
-        const workspaceFolderPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        if (target?.path && target.path !== workspaceFolderPath) {
-            const anchored = await this.anchorWorkspaceForLaunch(target.path, prompt);
-            if (anchored) {
-                return;
-            }
-            // Anchor failed (openFolder threw) — fall through and attempt an
-            // in-place launch rather than leaving the user with nothing.
-        }
+        this.logger.info(`[Open in Claude] cwd=${cwd} prompt=${prompt ? 'yes' : 'no'}`);
 
         try {
-            await this.launchTerminal(target, prompt);
+            await this.launchTerminal(cwd, prompt);
         } catch (error) {
             this.logger.error(
                 `[Open in Claude] failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -114,64 +106,7 @@ export class OpenInClaudeCommand extends BaseCommand {
     }
 
     /**
-     * Anchor the VS Code workspace to `projectPath` so a subsequent Claude launch
-     * sees the right cwd. Writes a `PENDING_CLAUDE_LAUNCH_KEY` record (carrying
-     * the optional prompt) then reloads the window via `vscode.openFolder`. On
-     * the next activation, `extension.ts:replayPendingClaudeLaunch` validates the
-     * record (present, fresh, workspace matches) and re-dispatches
-     * `demoBuilder.openInClaude { prompt }` — this time with workspace = project,
-     * so this command falls through to the actual launch.
-     *
-     * A no-prompt launch (sidebar Chat / "Open AI") writes `prompt: ''` so the
-     * record is still well-formed; the replay re-invokes with an empty prompt,
-     * which `launchTerminal` treats as "no prompt" (bare `claude --continue`).
-     *
-     * Marks a webview transition so a disposing dashboard's dispose() does not
-     * race-reopen the projects list mid-reload (same pattern previously used by
-     * the handler wrappers).
-     *
-     * @returns true when the anchor reload was initiated (caller must return);
-     *   false when `openFolder` failed (caller falls back to an in-place launch).
-     */
-    private async anchorWorkspaceForLaunch(projectPath: string, prompt?: string): Promise<boolean> {
-        const existing = this.context.globalState.get<{ prompt?: string }>(PENDING_CLAUDE_LAUNCH_KEY);
-        if (existing) {
-            this.logger.warn(
-                '[Open in Claude] overwriting existing pending Claude launch (prior prompt dropped)',
-            );
-        }
-        await this.context.globalState.update(PENDING_CLAUDE_LAUNCH_KEY, {
-            projectPath,
-            prompt: prompt ?? '',
-            createdAt: Date.now(),
-        });
-        await BaseWebviewCommand.startWebviewTransition();
-        try {
-            await vscode.commands.executeCommand(
-                'vscode.openFolder',
-                vscode.Uri.file(projectPath),
-                false,
-            );
-            // Window is reloading; this extension instance is going away. Do NOT
-            // end the transition here (the post-reload activation owns that).
-            return true;
-        } catch (openError) {
-            // openFolder rarely fails, but if it does: clear the pending record
-            // (otherwise the next activation would replay against a mismatched
-            // workspace and discard silently), release the transition lock, and
-            // tell the caller to fall back to an in-place launch.
-            await this.context.globalState.update(PENDING_CLAUDE_LAUNCH_KEY, undefined);
-            BaseWebviewCommand.endWebviewTransition();
-            this.logger.error(
-                '[Open in Claude] failed to anchor workspace for launch',
-                openError instanceof Error ? openError : undefined,
-            );
-            return false;
-        }
-    }
-
-    /**
-     * Launch `claude --continue` in an integrated terminal at `project.path`,
+     * Launch `claude --continue` in an integrated terminal at `cwd`,
      * reusing an existing "Claude Code" terminal if one is still alive.
      *
      * When `prompt` is provided, delivery depends on spawn vs reuse:
@@ -188,11 +123,11 @@ export class OpenInClaudeCommand extends BaseCommand {
      * editor group (`{ viewColumn: ViewColumn.Active }`) — next to Project
      * Dashboard — not a split.
      */
-    private async launchTerminal(project: Project | undefined, prompt?: string): Promise<void> {
-        if (!project || !project.path) {
-            this.logger.error('[Open in Claude] cannot launch terminal: project path missing');
+    private async launchTerminal(cwd: string, prompt?: string): Promise<void> {
+        if (!cwd) {
+            this.logger.error('[Open in Claude] cannot launch terminal: cwd missing');
             await vscode.window.showErrorMessage(
-                'Cannot open Claude Code: no project directory is available.',
+                'Cannot open Claude Code: no directory is available.',
             );
             return;
         }
@@ -207,7 +142,7 @@ export class OpenInClaudeCommand extends BaseCommand {
         const existing = findLiveClaudeTerminal();
         if (existing) {
             existing.show();
-            this.logger.info(`[Open in Claude] terminal reused (project=${project.name})`);
+            this.logger.info('[Open in Claude] terminal reused');
             if (prompt) {
                 // Reuse case: claude is already at its REPL — inject immediately.
                 this.injectPromptViaBracketedPaste(prompt);
@@ -218,7 +153,7 @@ export class OpenInClaudeCommand extends BaseCommand {
 
         // Chat-first: open the terminal as a tab in the active editor group
         // (next to Project Dashboard), not a side split.
-        const terminal = this.createTerminal(TERMINAL_NAME, project.path, {
+        const terminal = this.createTerminal(TERMINAL_NAME, cwd, {
             viewColumn: vscode.ViewColumn.Active,
         });
         terminal.show();
@@ -231,14 +166,14 @@ export class OpenInClaudeCommand extends BaseCommand {
         // continue" and exits, leaving the user with a dead terminal. The
         // session-store probe (`claudeSessionStore.hasConversation`) checks
         // `~/.claude/projects/<encoded-cwd>/` for any `.jsonl` transcript.
-        const useContinue = hasClaudeConversation(project.path);
+        const useContinue = hasClaudeConversation(cwd);
         const continueFlag = useContinue ? ' --continue' : '';
         const launchCommand = prompt
             ? `claude${continueFlag} -- ${this.quotePromptForShell(prompt)}`
             : `claude${continueFlag}`;
         terminal.sendText(launchCommand);
         this.logger.info(
-            `[Open in Claude] terminal spawned (project=${project.name}, location=editor-active, prompt=${prompt ? 'yes' : 'no'}, resume=${useContinue ? 'yes' : 'no'})`,
+            `[Open in Claude] terminal spawned (location=editor-active, prompt=${prompt ? 'yes' : 'no'}, resume=${useContinue ? 'yes' : 'no'})`,
         );
 
         if (prompt) {
@@ -300,7 +235,10 @@ export class OpenInClaudeCommand extends BaseCommand {
 export async function resetAiOnboardingState(context: vscode.ExtensionContext): Promise<void> {
     // Active one-time flags
     await context.globalState.update(CLIPBOARD_FALLBACK_TIP_SHOWN_KEY, undefined);
-    await context.globalState.update(PENDING_CLAUDE_LAUNCH_KEY, undefined);
+    // Legacy pending-launch record, retired in the always-root home-Chat model.
+    // Still cleared so users upgrading from the anchor-on-demand build don't
+    // carry a dead record forward.
+    await context.globalState.update('demoBuilder.ai.pendingClaudeLaunch', undefined);
 
     // Legacy flags from the retired extension surface + dock-to-right offer.
     // Cleared so users who installed older Demo Builder versions don't carry

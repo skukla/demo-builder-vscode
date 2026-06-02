@@ -21,8 +21,11 @@ describe('shouldAutoReopenProjectsList', () => {
         expect(shouldAutoReopenProjectsList('/Users/test/some-other-repo')).toBe(false);
     });
 
-    it('returns false when workspace folder is the Demo Builder projects base (no project subdir)', () => {
-        expect(shouldAutoReopenProjectsList(PROJECTS_BASE)).toBe(false);
+    it('returns true when workspace folder IS the Demo Builder projects root (always-root home)', () => {
+        // In the always-root model the window is homed at the projects root, so
+        // closing an in-place dashboard there must reopen the projects list
+        // rather than strand the user on a bare root workspace.
+        expect(shouldAutoReopenProjectsList(PROJECTS_BASE)).toBe(true);
     });
 
     it('returns true when workspace folder is inside the Demo Builder projects directory', () => {

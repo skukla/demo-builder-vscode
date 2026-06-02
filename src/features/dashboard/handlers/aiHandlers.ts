@@ -83,14 +83,10 @@ export async function handleInspectMcp(
 /**
  * Handle openInClaude — dispatch Claude Code with optional prompt pre-fill.
  *
- * Thin pass-through to the `demoBuilder.openInClaude` command. Anchor-on-demand
- * now lives in `OpenInClaudeCommand.execute()`: when the target project differs
- * from the open workspace folder, the command writes a
- * `PENDING_CLAUDE_LAUNCH_KEY` record and reloads the window via
- * `vscode.openFolder`; `extension.ts:replayPendingClaudeLaunch` then re-invokes
- * the launch post-reload with workspace = project so the chat loads with full
- * per-project context (skills / `.mcp.json` / `AGENTS.md`). This handler no
- * longer anchors itself — it simply forwards the (optional) prompt.
+ * Thin pass-through to the `demoBuilder.openInClaude` command. In the
+ * always-root home model that command launches the single home Chat at the
+ * projects root (never a project subdir) — nothing anchors the workspace. This
+ * handler simply forwards the (optional) prompt.
  */
 export async function handleOpenInClaude(
     _context: HandlerContext,

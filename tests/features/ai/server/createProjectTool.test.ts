@@ -100,11 +100,13 @@ describe('create_project', () => {
             expect(executeProjectCreation).not.toHaveBeenCalled();
         });
 
-        it('creates a non-mesh project and skips the workspace anchor', async () => {
+        it('creates a non-mesh project without anchoring the workspace', async () => {
             const s = fakeServer();
             registerCreateProjectTool(s, ctxFactory);
             const res = await s.call(HEADLESS);
-            expect(executeProjectCreation).toHaveBeenCalledWith(expect.anything(), { projectName: 'assembled' }, { skipWorkspaceAnchor: true });
+            // Always-root model: creation never anchors the window, so no options
+            // arg is passed.
+            expect(executeProjectCreation).toHaveBeenCalledWith(expect.anything(), { projectName: 'assembled' });
             expect(res).toMatchObject({ created: true, name: 'my-proj' });
         });
 
@@ -151,7 +153,7 @@ describe('create_project', () => {
             const res = await s.call(EDS);
 
             expect(storefrontSetup).toHaveBeenCalled();
-            expect(executeProjectCreation).toHaveBeenCalledWith(expect.anything(), { projectName: 'assembled' }, { skipWorkspaceAnchor: true });
+            expect(executeProjectCreation).toHaveBeenCalledWith(expect.anything(), { projectName: 'assembled' });
             expect(res).toMatchObject({ created: true, name: 'eds-proj', repoUrl: 'https://github.com/o/r' });
             // captured per-phase progress timeline
             expect(res.phases).toEqual(

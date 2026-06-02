@@ -12,7 +12,26 @@ import {
     setupVscodeMocks, makeLogger, makeStateManager, makeGlobalState, makeContext, makeProject,
 } from './openInClaude.testkit';
 
+// The home Chat always launches at the projects root. Pin the root so the
+// cwd-in-log assertion is deterministic.
+const PROJECTS_ROOT = '/projects';
+
 describe('OpenInClaudeCommand', () => {
+    let prevProjectsDir: string | undefined;
+
+    beforeAll(() => {
+        prevProjectsDir = process.env.DEMO_BUILDER_PROJECTS_DIR;
+        process.env.DEMO_BUILDER_PROJECTS_DIR = PROJECTS_ROOT;
+    });
+
+    afterAll(() => {
+        if (prevProjectsDir === undefined) {
+            delete process.env.DEMO_BUILDER_PROJECTS_DIR;
+        } else {
+            process.env.DEMO_BUILDER_PROJECTS_DIR = prevProjectsDir;
+        }
+    });
+
     beforeEach(() => {
         jest.clearAllMocks();
     });
@@ -22,7 +41,7 @@ describe('OpenInClaudeCommand', () => {
     // ------------------------------------------------------------------------
 
     describe('logging', () => {
-        it('logs project.name in the launch path', async () => {
+        it('logs the projects-root cwd in the launch path', async () => {
             setupVscodeMocks();
             const logger = makeLogger();
             const project = makeProject({ name: 'my-demo-project' });
@@ -38,7 +57,7 @@ describe('OpenInClaudeCommand', () => {
                 ...logger.info.mock.calls,
                 ...logger.debug.mock.calls,
             ].flat().join(' ');
-            expect(allLogs).toContain('my-demo-project');
+            expect(allLogs).toContain(PROJECTS_ROOT);
         });
 
         it('logs terminal spawned + location=editor-active (chat-first tab)', async () => {
@@ -104,13 +123,13 @@ describe('OpenInClaudeCommand', () => {
     });
 
     // ------------------------------------------------------------------------
-    // Project resolution
+    // Always-root launch
     // ------------------------------------------------------------------------
 
-    describe('project resolution', () => {
-        it('falls back to StateManager.getCurrentProject() when invoked without a project argument', async () => {
-            // Workspace = the resolved project's path so execute() takes the
-            // in-place spawn path (no anchor-on-demand reload).
+    describe('always-root launch', () => {
+        it('launches at the projects root regardless of the current-project pointer', async () => {
+            // The home Chat does not resolve a project; it always opens at the
+            // projects root so one session addresses any project by name via MCP.
             const mocks = setupVscodeMocks({ workspaceFolderPath: '/p/state' });
             const project = makeProject({ name: 'from-state', path: '/p/state' });
             const stateManager = makeStateManager(project);
@@ -122,10 +141,11 @@ describe('OpenInClaudeCommand', () => {
 
             await command.execute();
 
-            expect(stateManager.getCurrentProject).toHaveBeenCalled();
+            // The current-project pointer is irrelevant to the launch cwd.
+            expect(stateManager.getCurrentProject).not.toHaveBeenCalled();
             expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
             const createArg = mocks.createTerminalMock.mock.calls[0][0];
-            expect(createArg.cwd).toBe('/p/state');
+            expect(createArg.cwd).toBe(PROJECTS_ROOT);
         });
     });
 });

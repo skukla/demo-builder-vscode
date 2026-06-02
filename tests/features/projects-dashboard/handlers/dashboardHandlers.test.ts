@@ -480,7 +480,7 @@ describe('dashboardHandlers', () => {
 
         afterEach(() => setWorkspaceFolder(null));
 
-        it('sets the current-project pointer and dispatches demoBuilder.openInClaude with the project (command anchors on-demand)', async () => {
+        it('sets the current-project pointer and dispatches demoBuilder.openInClaude with NO project arg (always-root home Chat)', async () => {
             const project = createMockProject({ name: 'AI Target' });
             setWorkspaceFolder(project.path);
             const context = makeContext([project]);
@@ -489,15 +489,13 @@ describe('dashboardHandlers', () => {
             const result = await handleOpenAiForProject(context, { projectPath: project.path });
 
             expect(result.success).toBe(true);
-            // Pointer set so the (possibly post-reload) dashboard/state reads resolve here.
+            // Pointer set so the dashboard/state reads and the home Chat's
+            // get_current_project tool resolve here.
             expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
-            // Forwards to the command, passing the loaded project — the command
-            // owns the anchor-on-demand decision.
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-                'demoBuilder.openInClaude',
-                { project },
-            );
-            // The handler itself does NOT anchor (no pending record, no openFolder).
+            // Forwards to the command with NO project — the home Chat always
+            // launches at the projects root.
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openInClaude');
+            // The handler never anchors (no pending record, no openFolder).
             expect(context.context.globalState.update).not.toHaveBeenCalled();
             expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
                 'vscode.openFolder',
@@ -506,7 +504,7 @@ describe('dashboardHandlers', () => {
             );
         });
 
-        it('does NOT anchor itself even when workspace ≠ project — the command handles that', async () => {
+        it('never anchors the workspace even when workspace ≠ project', async () => {
             const project = createMockProject({ name: 'AI Target' });
             setWorkspaceFolder('/some/other/repo');
             const context = makeContext([project]);
@@ -523,11 +521,8 @@ describe('dashboardHandlers', () => {
                 expect.anything(),
                 expect.anything(),
             );
-            // Just forwards to the command with the loaded project.
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-                'demoBuilder.openInClaude',
-                { project },
-            );
+            // Just forwards to the command with no project arg.
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openInClaude');
         });
 
         it('returns error when projectPath is missing', async () => {
