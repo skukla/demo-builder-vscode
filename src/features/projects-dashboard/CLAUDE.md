@@ -122,7 +122,7 @@ Object literal handler map for the Projects List view, used with `dispatchHandle
 
 **Registered Handlers:**
 - `getProjects` - Load all projects
-- `selectProject` - Select a project. Anchors VS Code's workspace folder to the project (current window unless `forceNewWindow=true`), so subsequent Claude Code launches see per-project skills, `.mcp.json`, and `AGENTS.md` at the right cwd. When workspace already matches, surfaces the project dashboard webview without a reload.
+- `selectProject` - Select a project. Sets the persisted current-project pointer and surfaces the project dashboard webview in-place — **no workspace anchoring, no reload** (always-root home model). `forceNewWindow=true` opens a new window, which home-on-launch (`shouldReHomeToRoot`) re-homes back to the projects root.
 - `createProject` - Trigger project creation wizard
 
 **Usage:**
@@ -209,20 +209,22 @@ tests/features/projects-dashboard/
 - `@/core/state/stateManager` - Project data
 - `@/types/base` - Project interface
 
-## Workspace Anchoring (Project Tile = VS Code Workspace)
+## No Workspace Anchoring (Always-Root Home Model)
 
-Clicking a project tile opens the project folder as the current VS Code window's workspace (via `vscode.openFolder`). This is the contract that makes the Claude Code chat panel work — without the workspace anchor, the URI handler launches Claude Code with the wrong cwd and per-project skills / `.mcp.json` / `AGENTS.md` don't load.
+Nothing anchors the VS Code workspace to a project subdir. The window stays homed at the **projects root** (`~/.demo-builder/projects`, overridable by `DEMO_BUILDER_PROJECTS_DIR`); every project is a subdir. Dashboards render in-place as webviews keyed off the persisted current-project pointer, and the AI Chat always launches at the projects-root cwd so one home Chat addresses any project by name via the in-extension MCP tools (`get_current_project`, `get_project`, …).
+
+Why root: the in-extension MCP server's socket is keyed on the open workspace folder (`resolveMcpSocketPath(workspacePath)`), and the home `.mcp.json` at the projects root points at the **root** socket — so the window must be at the root for the home Chat to have working MCP tools.
 
 | Gesture | Effect |
 |---|---|
-| Plain click on a tile | Opens project in **current** window (replaces workspace; VS Code shows its native unsaved-changes prompt if needed) |
-| Shift- or Cmd-click on a tile | Opens project in a **new** window; current window unchanged |
-| Click when workspace already = project | No-op on workspace; just surfaces the dashboard webview |
-| Wizard finish | Same as plain click: anchors the freshly-created project as the workspace |
+| Plain click on a tile | Sets the current-project pointer; surfaces the dashboard webview in-place. **No reload, ever.** |
+| Shift- or Cmd-click on a tile | Opens the project in a **new** window; that window's activation `shouldReHomeToRoot` check re-homes it to the projects root (home-on-launch). Current window unchanged. |
+| Wizard finish | Sets the freshly-created project as the current pointer (via `finalizeProject` → `saveProject`); no anchor, no reload. |
+| Window opened at a project subdir (e.g. leftover anchor) | Activation re-homes it to the projects root via `shouldReHomeToRoot` + `vscode.openFolder`. |
 
-**Getting back to the projects list.** The Project Dashboard's header has an "All Projects" button — the happy path. As a safety net, closing the dashboard webview inside a project workspace auto-opens the projects list as a new tab (`shouldAutoReopenProjectsList` + `dispose()` override in `src/features/dashboard/commands/showDashboard.ts`). The user never ends up stranded with no Demo Builder navigation surface.
+**Getting back to the projects list.** The Project Dashboard's header has an "All Projects" button — the happy path. As a safety net, closing the dashboard webview auto-opens the projects list as a new tab (`shouldAutoReopenProjectsList` + `dispose()` override in `src/features/dashboard/commands/showDashboard.ts`). The user never ends up stranded with no Demo Builder navigation surface.
 
-See [ADR-004](../../../docs/architecture/adr/004-claude-code-harness.md#amendment-2026-05-24-workspace-anchoring) for the full design rationale.
+See [ADR-004](../../../docs/architecture/adr/004-claude-code-harness.md#amendment-2026-05-24-workspace-anchoring) for the harness decision rationale.
 
 ## Related Features
 

@@ -191,7 +191,7 @@ jest.mock('vscode', () => ({
 }));
 
 // Import activate after all mocks are set up
-import { activate } from '../src/extension';
+import { activate, shouldReHomeToRoot } from '../src/extension';
 
 /**
  * Create mock ExtensionContext for activation tests
@@ -374,5 +374,31 @@ describe('Extension Activation - Navigation', () => {
             // Then: Should complete successfully (activation is resilient to partial failures)
             await expect(activate(context)).resolves.not.toThrow();
         });
+    });
+});
+
+describe('shouldReHomeToRoot', () => {
+    const ROOT = '/home/user/.demo-builder/projects';
+
+    it('returns false when no workspace folder is open', () => {
+        expect(shouldReHomeToRoot(undefined, ROOT)).toBe(false);
+    });
+
+    it('returns false when the workspace IS the projects root', () => {
+        expect(shouldReHomeToRoot(ROOT, ROOT)).toBe(false);
+    });
+
+    it('returns true when the workspace is a project subdir of the root', () => {
+        expect(shouldReHomeToRoot(`${ROOT}/my-demo`, ROOT)).toBe(true);
+    });
+
+    it('returns false for an unrelated path outside the root', () => {
+        expect(shouldReHomeToRoot('/somewhere/else', ROOT)).toBe(false);
+    });
+
+    it('returns false for a sibling path that only shares the root prefix string', () => {
+        // `${ROOT}-other` starts with `${ROOT}` as a string but is NOT a child
+        // of the root directory — the path.sep guard rejects it.
+        expect(shouldReHomeToRoot(`${ROOT}-other`, ROOT)).toBe(false);
     });
 });

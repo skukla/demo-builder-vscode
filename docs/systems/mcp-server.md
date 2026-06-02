@@ -266,7 +266,7 @@ Thin tools declared as data and dispatched to existing handler maps:
 | Tool | File | Notes |
 |---|---|---|
 | `create_project` | `createProjectTool.ts` | Full wizard pipeline, headless. |
-| `open_project` | `openProjectTool.ts` | Anchor a project as the workspace. |
+| `get_current_project` | `currentProjectTool.ts` | Resolve the active project (persisted current-project pointer); returns `{ name, path }` or `null`. |
 | `delete_project` | `deleteProjectTool.ts` | **Irreversible** — needs `confirm:true` + `confirmName` echo. Local only. |
 | `reset_eds_project` | `edsResetTool.ts` | Reset storefront to template; captured progress timeline. |
 | `apply_updates` | `applyUpdatesTool.ts` | Check (no confirm) / apply (`confirm:true`) across all update categories. |

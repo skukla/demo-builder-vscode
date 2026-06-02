@@ -16,12 +16,12 @@ import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool'
 import { registerAuthTools } from '@/features/ai/server/authTools';
 import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
 import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
+import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
 import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer';
-import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
 import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
 import { registerStorefrontTools } from '@/features/ai/server/storefrontTools';

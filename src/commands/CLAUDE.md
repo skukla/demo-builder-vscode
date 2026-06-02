@@ -174,30 +174,31 @@ The previous `demoBuilder.aiMenu` command (state-aware wand-icon dispatcher) was
 
 ### openInClaude
 
-**Purpose**: Launch Claude Code (CLI) on the current project.
+**Purpose**: Launch the single "home" Claude Code (CLI) Chat.
 
 **Command ID**: `demoBuilder.openInClaude`
 
-**Behavior**: Find-or-spawn the "Claude Code" terminal at `project.path`, placed as a tab in the active editor group (`{ viewColumn: ViewColumn.Active }`, next to Project Dashboard). Reuses an existing live terminal (matched by name + `exitStatus === undefined`) instead of duplicating.
+**Behavior**: Find-or-spawn the "Claude Code" terminal at the **projects root** (`resolveProjectsRoot()` — `DEMO_BUILDER_PROJECTS_DIR` or `~/.demo-builder/projects`), placed as a tab in the active editor group (`{ viewColumn: ViewColumn.Active }`, next to Project Dashboard). Reuses an existing live terminal (matched by name + `exitStatus === undefined`) instead of duplicating.
+
+Always-root home model: the Chat launches at the projects root, never a project subdir, and **nothing anchors the VS Code workspace**. The window stays homed at the root, so the home `.mcp.json` there reaches the root MCP socket and one home Chat addresses any project by name via the in-extension MCP tools. Any `project` arg passed to `execute` is ignored (only the `prompt` is used); callers that still pass a project are harmless. To resolve "the active project," the agent calls the `get_current_project` MCP tool (the persisted current-project pointer), which the home `AGENTS.md` instructs it to do before asking the user.
 
 **Prompt delivery**:
-- **Spawn**: the prompt rides the launch command as `claude --continue -- '<prompt>'` (race-free — claude runs it on startup; `--` keeps a dash-leading prompt from being read as a flag).
+- **Spawn**: the prompt rides the launch command as `claude --continue -- '<prompt>'` (race-free — claude runs it on startup; `--` keeps a dash-leading prompt from being read as a flag). `--continue` is only added when a prior conversation exists for the root cwd.
 - **Reuse**: claude is already running, so the prompt is injected into the live REPL via bracketed paste (pre-fills the input for the user to send).
 - The prompt is always copied to the clipboard as a silent fallback. A once-ever tip toast explains the contract the first time a prompt is sent.
 
-With no prompt, spawn runs a bare `claude --continue`.
+With no prompt, spawn runs a bare `claude` (or `claude --continue` if a prior root conversation exists).
 
 **Setting**: `demoBuilder.ai.engine` — which AI tool. Currently `'claude-code'` only; reserved for future engines (e.g. Codex).
 
 **Why no extension surface**: An earlier version routed launches through the Claude Code VS Code extension's URI handler (`vscode://anthropic.claude-code/open`). That surface was retired because the extension's URI handler opens a new chat on every launch — there is no public API to inject a prompt into the live chat — so the wand's "pick a prompt, drop it into the conversation" model can't work there.
 
-**Prompt-click pending-launch mechanism**: When the user clicks a prompt from the projects home-grid AND workspace ≠ project, `projectsDashboardHandlers.handleOpenAiForProject` writes `{ projectPath, prompt?, createdAt }` to `globalState` under `PENDING_CLAUDE_LAUNCH_KEY = 'demoBuilder.ai.pendingClaudeLaunch'`, then calls `vscode.openFolder` to anchor the workspace. On the next activation, `extension.ts:replayPendingClaudeLaunch` reads the record, validates three gates (present, fresh <60s, workspace matches `projectPath`), clears the record, and dispatches `demoBuilder.openInClaude` with the prompt. End-user experience: one click → workspace switches → chat opens with the prompt pre-filled and full project context.
+**No more anchoring / pending-launch**: The prior anchor-on-demand model (pending `globalState` record + `vscode.openFolder` reload + `replayPendingClaudeLaunch` on activation) was retired with the always-root model. Home-grid prompt clicks just set the current-project pointer and launch the home Chat at the root; no window reload. If a window ever opens anchored to a project subdir, activation's `shouldReHomeToRoot` re-homes it to the projects root.
 
 **Dispatched from**:
-- The project-card kebab menu in `ProjectActionsMenu.tsx` (calls `webviewClient.postMessage('openAiForProject', { projectPath })`)
+- The project-card kebab menu in `ProjectActionsMenu.tsx` (calls `webviewClient.postMessage('openAiForProject', { projectPath })` → `handleOpenAiForProject` sets the pointer, then dispatches `openInClaude` with no arg)
 - The Prompt Library prompt cards in `PromptCard.tsx` → `AiOverviewScreen.tsx` → `webviewClient.postMessage('openInClaude', { prompt })` → `aiHandlers.handleOpenInClaude`
 - The sidebar `AiZone` Prompts button → `showPromptsPicker.ts` → `openInClaude` with the selected prompt
-- `extension.ts:replayPendingClaudeLaunch` on activation when a pending record exists
 
 **File**: `src/commands/openInClaude.ts`. See `docs/architecture/adr/004-claude-code-harness.md` for the harness decision rationale.
 
