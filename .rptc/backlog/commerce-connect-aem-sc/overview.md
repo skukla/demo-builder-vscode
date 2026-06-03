@@ -31,20 +31,20 @@ The two SCs are in **different Adobe accounts**, so they can't literally share o
 - **V1:** the master + synced copies; the Commerce SC adds the commerce parts; content via AEM Sites; each copy wired to the commerce backend.
 - **Later:** **either** SC can add the commerce parts (V1 = only the Commerce SC); two-way contribution (the Content SC contributing custom parts back); a convenience that reads a partner's commerce-backend details from a URL instead of entering them by hand.
 
-## Why this isn't from scratch
+## Why this isn't from scratch (verified against the code, 2026-06-03)
 
-The extension already has the three ingredients; V1 mostly **assembles them across two SCs**:
+Most of the pieces already exist — V1 mostly **assembles them across two SCs**. See the [roadmap](./roadmap.md) for the per-step EXISTS/PARTIAL/NET-NEW grounding and file references.
 
-- a **sync engine** — it already keeps a project's parts up to date from a master source (the auto-update system);
-- **installers** — it already adds parts (block libraries / feature packs) into a storefront;
-- **Connect-Commerce** — it already wires a storefront to a commerce backend.
+- a **sync engine** that already pulls a copy from a configurable master, one-directional, with conflict handling — **and already preserves each copy's `config.json`/`fstab.yaml` across syncs** (so the backend wiring and content source survive a master update);
+- **installers** that already add parts (block libraries / feature packs) into a storefront repo;
+- **Connect-Commerce** that already writes the backend connection (`config.json`).
 
-## What's genuinely new / risky
+## What's genuinely new (and where the real work is)
 
-- A **master + synced copies** setup that spans **two SCs' repos in different accounts** — who can write to the master, how the copies get created.
-- Keeping the **backend wiring local** to each copy, so a sync doesn't overwrite it.
-- **Merge/conflict** handling when a sync brings commerce parts into a copy that already has local content.
-- **Re-verify live:** reading the commerce backend across accounts (research couldn't fetch Adobe's docs programmatically, so the cross-account specifics need a live check before code lands).
+- **The cross-team orchestration:** one **master** that **two separately-owned copies in two different accounts** both sync from — and letting the Commerce SC act on the master the Content SC's copy follows. Today everything is single-project, one active GitHub account, 1:1 sync. **This is the heart of the build.**
+- **Re-verify live:** reading the commerce backend across accounts, and AEM-Sites-as-content-source (research couldn't fetch Adobe's docs programmatically, so these need a live check before code lands).
+
+**Two things that turned out *not* to be problems:** a "shared mesh/backend" (it's just the same URL in each copy's `config.json` — already written by Connect-Commerce) and a "shared DA.live site" (content comes from the Content SC's AEM Sites, per copy).
 
 ## Out of scope
 
