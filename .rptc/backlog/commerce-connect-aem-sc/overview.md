@@ -16,7 +16,8 @@ Grew out of "hook the extension to an existing AEM Sites deployment and demo the
 
 | Doc | What it is |
 |---|---|
-| [ownership-vs-connection](./ownership-vs-connection.md) | **The organizing model** — owned vs connected (per product); connection as the primitive (manual \| discovery); the per-`(product, ownership)` dashboard principle; the v1 decisions. Read after this. |
+| [ownership-vs-connection](./ownership-vs-connection.md) | **The organizing model** — owned vs connected (per product); two owner archetypes on a neutral spine; connection as the primitive (manual \| discovery); the per-`(product, ownership)` dashboard principle; the v1 decisions. Read after this. |
+| [user-journeys](./user-journeys.md) | **End-to-end journeys per owner archetype** — Commerce SC (v1) and Content SC (later) step-by-step, with build status (✅ v1 / 🟡 designed slot / 🔵 later), the federated relationship, and a slice→journey map. |
 | [commerce-connection-kit](./commerce-connection-kit.md) | **Lead mechanism** — the commerce connection contract, cross-org verdict, discovery-not-export, what exists today, considered-&-rejected. |
 | [federated-two-instance-demos](./federated-two-instance-demos.md) | **Operator/delivery model** — each SC runs their own single-org instance; the higher-cohesion shared-upstream (synced-fork) layer for shared custom code. |
 | [aem-sc-first-run](./aem-sc-first-run.md) | **Front door / cold-start** — the commerce-vs-content journeys; front door + AEM-framed flow; the selection model that **reuses the existing configuration model** (`selectedStack` / `componentSelections{frontend,backend,integrations[],appBuilder[]}` / the registry — *no* new field). |
