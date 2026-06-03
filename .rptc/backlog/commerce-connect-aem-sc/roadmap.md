@@ -42,8 +42,9 @@
 - **Goal:** make the commerce owner's storefront consume **AEM-authored content/assets** — the first *functional* outbound connection. Define the **AEM connection contract** (author/publish URL + IMS org), capture it via **manual entry** (AEM is external / not-extension-built → **not discoverable**), **apply** (P2) into the storefront config, and render a **functional** connected-AEM card (status/edit) via H2.
 - **Direction note:** this is **commerce-owner → AEM content** (the hub *consuming* AEM). It is *distinct* from the later content-SC milestone, which is **AEM-as-owned**. Same product, opposite ownership — the AEM contract must cover both directions.
 - **Reuse:** P2 apply; the manual-entry mechanism (generalized from Connect-Commerce); the connected-product card from H2.
-- **Unknowns (this is why AEM carries risk):** research established the **commerce backend is org-agnostic to consume, but AEM content / code-bus is org-bound** — consuming AEM content across orgs may require a same-org AEM or hit auth limits; **re-verify live before building.** Also: how much of the storefront-side rendering (an EDS block fetching AEM content) is extension work vs block-library/storefront work.
-- **Effort:** M (capture+apply is contained; the cross-org + storefront-render unknowns are the risk). Plan JIT after P1/P2/H1.
+- **Unknowns / scoping (why AEM carries risk):** research established the **commerce backend is org-agnostic to consume, but AEM content / code-bus is org-bound.** **Resolution: scope A1 to a single IMS org** (commerce + AEM co-resident) — this removes the cross-org auth blocker *and* is the realistic precondition for the shared-storefront end-state anyway. External / cross-org AEM is a later question, **re-verify live before attempting.** Same-org is also what makes **both** experiences (this hub *and* the content-owned wizard) extension-buildable.
+- **Shared-storefront constraint (must-consider):** A1's storefront-side renderer (the block that fetches/displays AEM content) must be authored as a **block-library artifact** (existing block-libraries system) — **not** bespoke extension code — so it can later flow through the deferred **shared-upstream / synced-fork** cohesion model (see *Deferred*). Design A1 to *compose with* that milestone, not preempt or block it. NB: the connection (runtime coordinates) and the shared storefront (build-time code lineage) are **orthogonal axes** — the AEM-content block is where they meet.
+- **Effort:** M (capture+apply is contained; the same-org scoping resolves the auth risk; storefront-render-as-block is the design care-point). Plan JIT after P1/P2/H1.
 
 ### H3 — Journey selector (front door)
 - **Goal:** a **visible front door** where the user picks a journey — **commerce live**, **content "coming soon"** (a designed entry, not functional). Makes the neutral, multi-journey identity visible to Team in v1.
@@ -64,8 +65,10 @@
 
 ## Deferred — higher cohesion: shared upstream + synced forks + custom-code
 - The 3-repo model — a shared **upstream** both SCs' repos sync from, so custom **blocks** (block library) + **drop-ins** (feature pack) land in one storefront. *(NB: "upstream" ≠ ADR-003 "canonical repo" — see federated doc terminology note.)*
+- **Orthogonal to the connection primitive — they stack, don't conflict.** This is a **build-time code-lineage** layer; it shares storefront *code*, it does **not** eliminate the **runtime connections** to the backing commerce/AEM *services* (those stay coordinate-joined). So connection-as-primitive survives the cohesion upgrade.
+- **Composes with A1:** A1's AEM-content block (authored as a block-library artifact, per A1's constraint) is exactly the kind of custom block this upstream distributes to both forks. A1 done right is the first step toward this, not a throwaway.
 - **Reuse:** `templateSyncService`/`componentUpdater`, block-libraries, `featurePackInstaller`.
-- **Unknowns:** the two-way contribution flow; multi-fork sync coordination.
+- **Unknowns:** the two-way contribution flow; multi-fork sync coordination; same-org assumption (the shared lineage presumes co-resident instances, matching A1's same-org scoping).
 - **Effort:** L. Deferred. Plan JIT.
 
 ## Optional parallel track (not in the main sequence)

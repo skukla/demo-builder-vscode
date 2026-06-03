@@ -72,5 +72,6 @@ Journey 2 step 3 becomes **federated** when its connected commerce *is* Journey 
 
 ## Open journey questions
 
-- **A1 cross-org:** AEM content is org-bound — does the commerce owner's AEM need to be same-org, or can it be external? Re-verify live before building A1.
+- **A1 scoped to same IMS org** (commerce + AEM co-resident) — resolves the org-bound auth risk *and* matches the shared-storefront precondition. Open part: can it ever be *external* / cross-org? Re-verify live before attempting.
+- **A1's AEM-content renderer must be a block-library artifact** (not bespoke extension code) so it flows through the deferred shared-upstream/synced-fork model. Open: how much of that block is extension vs storefront work.
 - **Manual vs discovery default in Journey 2:** lead with manual (general) and offer discovery when a published peer is detected?
