@@ -10,9 +10,9 @@
 
 ## The idea in one line
 
-The extension **provisions/owns the commerce backend** (ACCS/PaaS + API Mesh + Catalog Service) and emits a **"commerce connection kit"** — the endpoints + keys + store headers it *already generates*. **Any** EDS storefront — document-authored *or* AEM-Sites-authored, in *any* Adobe org — becomes a commerce storefront by dropping that config in. The AEM SC stands up an off-the-shelf AEM-authorable commerce storefront in **their own** org and applies the kit.
+The Commerce SC provisions/owns the commerce backend (ACCS/PaaS + API Mesh + Catalog Service) and **publishes their DA.live storefront** (today's flow — assumed always present). That storefront serves its `config.json` **publicly** — endpoints + **public read keys** (`x-api-key`, `Magento-Environment-Id`) + store headers — because the storefront is a client-side app that calls those endpoints from the browser. So the connection values are *already published*. The AEM SC stands up an off-the-shelf AEM-authorable commerce storefront (`aem-boilerplate-xcom`) in **their own** org and **discovers** those values from the Commerce SC's published storefront URL.
 
-The shared thing is the **commerce backend (a URL + keys)**, not a code repo and not content. That's what makes it cross-org-native.
+The shared thing is the **commerce backend**, reached via values the storefront already publishes — not a code repo, not content, and **not a hand-off**. Discovery, not export. That's what makes it cross-org-native *and* low-friction.
 
 ## How we got here (why not "dual authoring")
 
@@ -27,7 +27,7 @@ A commerce EDS storefront reads `config.json` (dev) / the Configuration Service 
 - **Endpoints:** `commerce-core-endpoint` (core GraphQL — cart/checkout), `commerce-endpoint` (Catalog Service / Live Search read path, or the API Mesh URL).
 - **Headers:** `x-api-key`, `Magento-Environment-Id` (the Commerce **SaaS data-space** id), `Magento-Store-Code`, `Magento-Store-View-Code`, `Magento-Website-Code`, `Magento-Customer-Group`, `Store`.
 
-**The extension already generates exactly this.** `src/features/eds/services/configGenerator.ts` emits all of the above (ACCS vs PaaS aware), and `src/features/eds/config/config-template.json` is the `public.default` block. Today it writes this *into the storefront repo it creates*; a connection kit is **the same config, exported**. So the kit is ~90% existing code.
+**The extension already generates exactly this.** `src/features/eds/services/configGenerator.ts` emits all of the above (ACCS vs PaaS aware), and `src/features/eds/config/config-template.json` is the `public.default` block. The Commerce SC's storefront publishes it; the AEM side **discovers the same shape back** from that published config. So both producing and reading these values is existing code.
 - Seams: `configGenerator.ts`, `config-template.json`, `configurationService.ts` (config-service PUT, overlay-capable), `src/features/mesh/services/meshEndpoint.ts` (the mesh URL).
 - Sources: [Storefront configuration](https://experienceleague.adobe.com/developer/commerce/storefront/setup/configuration/commerce-configuration/), [Catalog Service GraphQL](https://developer.adobe.com/commerce/services/graphql/catalog-service/).
 
@@ -43,16 +43,20 @@ A commerce EDS storefront reads `config.json` (dev) / the Configuration Service 
 
 ## Candidate v1 shape (what the extension might do)
 
-1. **Emit a commerce connection kit** — export the connection config the extension already computes (endpoints + `x-api-key` + environment-id + store headers) as a shareable artifact (the `public.default` JSON snippet) + apply instructions. Surface in **Configure** and/or a dashboard action; record nothing new on the project beyond what exists.
-2. **Optionally help the AEM SC scaffold** `aem-boilerplate-xcom` in their org (template-copy — reuses the extension's existing repo-from-template machinery) and apply the kit to its config service.
+**Commerce side: nothing new** — the Commerce SC builds/publishes their DA.live storefront as today; its public config *is* the connection source.
+
+**AEM side:**
+1. **Discover** — the AEM SC enters the Commerce demo's published storefront URL; the extension fetches its `config.json` / Configuration Service `public.json` and extracts the commerce subset (endpoints + `x-api-key` + environment-id + store headers). Extends the extension's existing store-discovery machinery.
+2. **Scaffold** `aem-boilerplate-xcom` in the AEM SC's org (template-copy — reuses the existing repo-from-template machinery) and write the discovered values into its config service.
 3. **Guide** the AEM-side steps with no self-serve API (Code Sync, Cloud Manager site, IMS roles, UE enablement).
 
-No content seeding, no code-bus sharing, no fork-sync of the Commerce SC's repo. Effort looks **S–M**.
+No export/import file, no content seeding, no code-bus sharing, no fork. Effort looks **S–M** (lighter than the export model — the Commerce side is a no-op).
 
 ## Considered & rejected (preserve the rationale)
 - **Two sites / repoless / fork of the Commerce repo** — rejected: cross-org code-bus can't be shared; and we don't need shared code, only a shared backend. (Fork-into-own-org remains the sanctioned move *if* someone wants the same storefront *code*, but that's the AEM SC's choice, not something the extension must orchestrate.)
 - **Content seeding into AEM** (`@adobe/aem-import-helper`) — not needed here: storefronts are authored independently and share commerce *data*, not editorial content. (Kept on file; medium-effort if ever wanted.)
 - **Switchable single content source** (flip DA↔AEM) — fallback only; not "both live."
+- **Export/import a connection-kit *file*** — rejected: the connection values are **published** (the storefront serves its config publicly; the keys are public read keys), so the AEM SC **discovers** them from the Commerce SC's storefront URL. A file hand-off would add a manual step *and* a staleness problem for data that's already public and live. (The "kit" survives as the *concept* — the set of values — but delivery is discovery.)
 
 ## Open questions / minor notes (none are gates)
 1. **Cross-org consumption — resolved.** ACCS-first → SaaS read path is cross-org-clean (no IMS token). Mesh consumption is org-agnostic (URL + api-key; mesh handles upstream auth internally). Not a gate. Trivially testable only if a deliberately locked-down mesh is ever in play.
