@@ -1,5 +1,7 @@
 # Federated two-instance demos — each SC manages their piece via their own Demo Builder
 
+> **Now V1-central (2026-06-03).** This two-SC / synced-copy delivery model was filed as "deferred" — it's actually the **heart of V1** (the synced common storefront). See [overview](./overview.md) and [roadmap](./roadmap.md).
+
 **Filed:** 2026-06-02
 **Status:** **Leading direction** (per discovery — pending `/rptc:plan`). This is the **operator/delivery model** for the [commerce connection kit](./commerce-connection-kit.md) (which is the *integration mechanism*).
 

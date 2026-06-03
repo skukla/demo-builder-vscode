@@ -1,5 +1,7 @@
 # AEM SC first-run & the front door
 
+> **V1-relevant (2026-06-03).** The content-SC-owned storefront with **AEM Sites as the content-authoring tool** is the V1 model. Some front-door / journey-selector framing here is from the superseded "commerce-hub" plan — see [overview](./overview.md) and [roadmap](./roadmap.md).
+
 **Filed:** 2026-06-02
 **Status:** Design (the AEM-SC first-run / front door). Feeds the [commerce-connect roadmap](./roadmap.md) and pairs with [federated-two-instance-demos](./federated-two-instance-demos.md) + [commerce-connection-kit](./commerce-connection-kit.md).
 **Why this exists:** the extension is commerce-centric end-to-end. An AEM SC's *first action* — "pick a commerce demo package" — is an immediate mismatch. A good AEM connect flow doesn't fix a commerce-first front door. This doc designs the coherent AEM-SC first-run, the **commerce-SC-vs-content-SC journeys**, and the **selection model** — which has to be shaped now to grow into a true configuration/composition approach.

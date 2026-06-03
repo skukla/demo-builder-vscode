@@ -1,84 +1,29 @@
-# Build roadmap — Commerce-connect: connection/ownership model + commerce-hub v1
+# Build sequence — the synced common storefront
 
-**Filed:** 2026-06-02 (re-anchored 2026-06-03)
-**Status:** Roadmap (build sequence). Detailed TDD plans are produced **just-in-time** per slice.
-**Design:** [ownership-vs-connection](./ownership-vs-connection.md) (the organizing model) · [commerce-connection-kit](./commerce-connection-kit.md) (mechanism) · [federated-two-instance-demos](./federated-two-instance-demos.md) (operator model) · [aem-sc-first-run](./aem-sc-first-run.md) (front door / first-run).
+> **2026-06-03 re-aim.** V1 = the synced common storefront (two SCs: a content-owned frontend + a commerce backend). The earlier `P1/P2 · H1/H2/H3 · A1` slicing was built on the superseded "commerce-hub connects out to AEM" frame and is **replaced** by the sequence below. See [overview](./overview.md).
 
-## The model in one line
+## What V1 builds, in order
 
-**Connection is the primitive; ownership is a per-product flag.** A connection's coordinates are populated by **manual entry** (general) or **discovery** (convenience, when the source publishes a readable contract) — see [ownership-vs-connection](./ownership-vs-connection.md). One machinery serves both scenarios. **v1 anchors on the commerce-hub** (an *owned* commerce demo that connects *out* to other Adobe apps the partner SCs manage manually); the **AEM-SC federated** case (owned AEM storefront ← discovered commerce) is a later milestone on the same primitive.
+Each step says what to build and which **existing** piece it reuses. Detailed TDD plans are written just-in-time, one step at a time.
 
-**v1 decisions (2026-06-03):** anchor = **commerce-hub first** (the first *implemented* case, **not** privileged). Contracts: **build the AEM spoke live (A1), design AEP + App Builder** (designed slots). V1 also ships a **visible journey selector (H3)** — commerce live, content "coming soon." So **v1 = framework (H1) + per-`(product,ownership)` dashboard (H2) + journey selector (H3) + one live outbound spoke (A1: commerce→AEM) + the shared primitive (P1/P2)**, all on a product-neutral spine.
+1. **Master + synced copy (the backbone).** Stand up a common **master** storefront and a **copy** that auto-syncs from it. *Reuses the auto-update / sync engine (`templateSyncService` / `componentUpdater`).* Everything else hangs on this.
 
-**Neutrality is a hard constraint.** Build the spine product-symmetric (extend the [ADR-003](../../../docs/architecture/adr/003-multisite-architecture-seam.md) seam; the core asks "what does this archetype own?", never "is this commerce?"). The **content-SC owner wizard** and the **federated peer-to-peer** case become **first-class** later (Team-facing) and must drop in additively. But keep neutrality structural/naming, not a built-ahead framework — implement only commerce in v1 (YAGNI). See [ownership-vs-connection](./ownership-vs-connection.md), "two owner archetypes."
+2. **Add the commerce parts to the master.** The Commerce SC installs the commerce parts (product pages, cart, checkout) into the master **from the commerce boilerplate**, so they flow into the copies. *Reuses the block-library / feature-pack installers.*
 
-## Shared connection primitive (built once; every scenario reuses it)
+3. **Wire each copy to the commerce backend.** Write the backend connection into each copy as **local** config — deliberately kept *out* of sync so it isn't overwritten. *Reuses Connect-Commerce / `configurationService`.*
 
-### P1 — Discover a connection from a published source  ← TDD-ready
-- **Goal:** a pure service — URL in → typed `CommerceConnection` out (one *population mode*; commerce-storefront-specific).
-- **Reuse:** native `fetch()` + `AbortSignal.timeout()`; field names from `configGenerator.ts` / `config-template.json`.
-- **Note:** *not* on the commerce-hub critical path (the hub uses manual entry and already owns commerce) — but reusable and ready; build it as the discovery mode and the AEM-SC milestone consumes it.
-- **Unknowns:** config-service `public.json` vs root `config.json` precedence.
-- **Effort:** S. **Plan:** [discovery](./slice1-discovery.md) (ready for TDD).
+4. **Content via AEM Sites.** Confirm the content the Content SC authors in **AEM Sites** renders in the storefront. *Mostly existing storefront + AEM capability — verify, don't rebuild.*
 
-### P2 — Apply a connection to a target config
-- **Goal:** write a connection's coordinates into a storefront config (`config.json` / Configuration Service) from a **manual or discovered** source.
-- **Reuse:** `configGenerator` (emits this shape) + `configurationService` (the PUT); the header↔env-var mapping is already implemented.
-- **Effort:** S–M.
+5. **Cross-team access.** The practical hand-off so the Commerce SC can contribute to a master that the Content SC's copy syncs from (different accounts / repos).
 
-## v1 anchor — the commerce-hub experience
+## Later (not V1)
 
-### H1 — Connection/ownership model over the existing manifest
-- **Goal:** represent a connection as a typed object sourced from `componentConfigs`; **derive ownership** (provisioned → owned; coordinates-only → connected). First instance = commerce's *own* (owned) connection, from today's Connect-Commerce values. **No new top-level field.**
-- **Reuse:** `Project.componentSelections.{integrations[], appBuilder[]}`, `componentConfigs` ([`src/types/base.ts:55-63`](../../../src/types/base.ts)) — all existing.
-- **Effort:** M.
+- **Either SC** can add the commerce parts — V1 is **Commerce SC only**, via the commerce boilerplate. (Allowing the Content SC to add them too is purely a "when do we build it" call, not a different design.)
+- **Two-way contribution** — the Content SC contributes custom parts back to the master.
+- **Discovery** — read a partner's commerce-backend details from a URL instead of entering them. A convenience; not needed in V1 because the Commerce SC owns the backend.
 
-### H2 — Per-`(product, ownership)` dashboard surface
-- **Goal:** centralize the scattered binary `isEds` into one derived per-product capability; render **owned-product actions** + a **Connections** area of **connected-product status/edit cards**. The **AEM** card is **functional** (A1); **AEP / App Builder** appear as **designed slots** (not yet functional).
-- **Touches:** the ~8-10 dashboard files that branch on `isEds` today — centralize, don't duplicate (see [ownership-vs-connection](./ownership-vs-connection.md), "the dashboard principle").
-- **Effort:** M–L.
+## Open questions to resolve as we go
 
-### A1 — The AEM spoke (the one live outbound connection)
-- **Goal:** make the commerce owner's storefront consume **AEM-authored content/assets** — the first *functional* outbound connection. Define the **AEM connection contract** (author/publish URL + IMS org), capture it via **manual entry** (AEM is external / not-extension-built → **not discoverable**), **apply** (P2) into the storefront config, and render a **functional** connected-AEM card (status/edit) via H2.
-- **Direction note:** this is **commerce-owner → AEM content** (the hub *consuming* AEM). It is *distinct* from the later content-SC milestone, which is **AEM-as-owned**. Same product, opposite ownership — the AEM contract must cover both directions.
-- **Reuse:** P2 apply; the manual-entry mechanism (generalized from Connect-Commerce); the connected-product card from H2.
-- **Unknowns / scoping (why AEM carries risk):** research established the **commerce backend is org-agnostic to consume, but AEM content / code-bus is org-bound.** **Resolution: scope A1 to a single IMS org** (commerce + AEM co-resident) — this removes the cross-org auth blocker *and* is the realistic precondition for the shared-storefront end-state anyway. External / cross-org AEM is a later question, **re-verify live before attempting.** Same-org is also what makes **both** experiences (this hub *and* the content-owned wizard) extension-buildable.
-- **Shared-storefront constraint (must-consider):** A1's storefront-side renderer (the block that fetches/displays AEM content) must be authored as a **block-library artifact** (existing block-libraries system) — **not** bespoke extension code — so it can later flow through the deferred **shared-upstream / synced-fork** cohesion model (see *Deferred*). Design A1 to *compose with* that milestone, not preempt or block it. NB: the connection (runtime coordinates) and the shared storefront (build-time code lineage) are **orthogonal axes** — the AEM-content block is where they meet.
-- **Effort:** M (capture+apply is contained; the same-org scoping resolves the auth risk; storefront-render-as-block is the design care-point). Plan JIT after P1/P2/H1.
-
-### H3 — Journey selector (front door)
-- **Goal:** a **visible front door** where the user picks a journey — **commerce live**, **content "coming soon"** (a designed entry, not functional). Makes the neutral, multi-journey identity visible to Team in v1.
-- **Constraint:** a **thin UI surface** routing to the existing commerce wizard — **not** a solution-family framework. The content entry is a placeholder; the content-SC wizard is the later milestone. (Journey = owner archetype.)
-- **Reuse:** existing project-creation entry point.
-- **Effort:** S–M.
-
-### Design (no build): AEP + App Builder contracts
-- Sketch the connection contract for **AEP** (datastream/sandbox/org) and **App Builder** (runtime URL + creds): coordinates → storefront landing spot → integration behavior. Surface as **designed slots** (non-functional cards). Validates the model against the remaining products. *(AEM is built — see A1.)*
-
-## First-class later — the content-SC owner archetype (+ federated)
-- **A second owner wizard** (peer to today's commerce wizard): a content SC **owns** an AEM/content demo (e.g. `aem-boilerplate-xcom`). This *lights up the content entry* H3 ships as "coming soon" — built on the *existing* `selectedStack`/`componentSelections`/registry model, **not** a solution-family refactor.
-- **Distinct from v1's A1:** A1 is commerce-owner *consuming* AEM content; here AEM is **owned** and *consumes commerce*. The AEM contract from A1 informs this, but the ownership (and the no-API wiring) is new.
-- **Federated** is then one connection value: the content owner connects to commerce that's **discoverable** (peer extension-built, via P1) *or* manual — the AEM-framed flow in [aem-sc-first-run](./aem-sc-first-run.md): paste URL → discover (P1) → scaffold `xcom` → apply (P2) → guided no-API AEM wiring → author in UE.
-- **Reuse:** P1 + P2 + the per-`(product, ownership)` dashboard (H2) + repo-from-template; a new AEM-storefront **frontend** + a **config-only consumed-commerce backend** (clone the ACCS pattern — **not** `external-system`); writes existing `Project` fields (no new field).
-- **Unknowns:** auth to the content SC's GitHub org; `xcom` stability/version pinning; the no-API wiring steps; AEM-as-new-`Stack` vs new front-door entry; how symmetric the front door must be at this point vs later.
-- **Effort:** L. Plan JIT.
-
-## Deferred — higher cohesion: shared upstream + synced forks + custom-code
-- The 3-repo model — a shared **upstream** both SCs' repos sync from, so custom **blocks** (block library) + **drop-ins** (feature pack) land in one storefront. *(NB: "upstream" ≠ ADR-003 "canonical repo" — see federated doc terminology note.)*
-- **Orthogonal to the connection primitive — they stack, don't conflict.** This is a **build-time code-lineage** layer; it shares storefront *code*, it does **not** eliminate the **runtime connections** to the backing commerce/AEM *services* (those stay coordinate-joined). So connection-as-primitive survives the cohesion upgrade.
-- **Composes with A1:** A1's AEM-content block (authored as a block-library artifact, per A1's constraint) is exactly the kind of custom block this upstream distributes to both forks. A1 done right is the first step toward this, not a throwaway.
-- **Reuse:** `templateSyncService`/`componentUpdater`, block-libraries, `featurePackInstaller`.
-- **Unknowns:** the two-way contribution flow; multi-fork sync coordination; same-org assumption (the shared lineage presumes co-resident instances, matching A1's same-org scoping).
-- **Effort:** L. Deferred. Plan JIT.
-
-## Optional parallel track (not in the main sequence)
-
-- **Harden the shared canvas** (UE-on-DA): promote the existing `demoBuilder.daLive.aemAuthorUrl`/`IMSOrgId` settings (`applyDaLiveOrgConfigSettings`) into a first-class surface. Separate and smaller; delivers the *shared canvas*, **not** the AEM SC's own instance. See the connection-kit doc's "two meanings of connect."
-
-## Future (out of scope here)
-
-- **Product selection** (AEM as a *standalone* product) — the solution-family refactor; a deliberate later bet (connection-kit "Product-flow context").
-
-## Sequencing principle
-
-Detailed TDD plans are written **just-in-time**. The shared primitive (**P1–P2**) is concrete now; the **commerce-hub anchor (H1–H2–H3)** is plannable after P1–P2; the live **AEM spoke (A1)** is plannable after H1/H2 but carries the cross-org unknown (re-verify live first); the **content-SC milestone** and **higher cohesion** carry real unknowns (the no-API AEM steps, the sync model) and stay roadmap-level until reached, to avoid plan rot.
+- Where the **master** lives and who can write to it (cross-team GitHub access).
+- **Merge/conflict** handling when synced commerce parts meet a copy's local content.
+- Re-verify the **cross-account commerce-backend read** in a live environment before code lands.

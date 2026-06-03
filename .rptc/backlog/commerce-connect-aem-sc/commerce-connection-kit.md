@@ -1,5 +1,7 @@
 # Commerce Connection Kit — connect any EDS storefront (incl. AEM-Sites-authored) to a Demo Builder commerce backend
 
+> **Now one step inside V1 (2026-06-03).** Wiring a storefront copy to the commerce backend is **step 3** of the synced common storefront, not the headline. The cross-account read caveat below still applies. See [overview](./overview.md) and [roadmap](./roadmap.md).
+
 **Filed:** 2026-06-02
 **Status:** **Leading direction** (per discovery — pending `/rptc:plan`). No remaining technical gates.
 **Operator model:** [Federated two-instance demos](./federated-two-instance-demos.md) — each SC runs their own extension copy and manages their piece; this kit is the contract between them.

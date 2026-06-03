@@ -1,5 +1,7 @@
 # Ownership vs connection — the organizing model
 
+> **Superseded framing (2026-06-03).** V1 is the **synced common storefront** (two SCs: a content-owned frontend + a commerce backend). The "connection-as-primitive / commerce-hub" model below is **not** the V1 target — kept for the research trail. See [overview](./overview.md) and [roadmap](./roadmap.md).
+
 **Filed:** 2026-06-03
 **Status:** Design (the organizing primitive for the whole feature). Read after [overview](./overview.md); it generalizes [commerce-connection-kit](./commerce-connection-kit.md) and reframes the dashboard work in [aem-sc-first-run](./aem-sc-first-run.md).
 **Why this exists:** the federated model quietly assumed *discovery is mandatory*, which forced "every SC must use the extension." That's a lock-in. Making **connection** (not discovery) the primitive removes it and lets one model serve both the federated case **and** a commerce owner who connects outward to Adobe apps that *no one* builds with the extension.

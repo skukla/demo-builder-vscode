@@ -1,5 +1,7 @@
 # User journeys — per owner archetype
 
+> **Reflects earlier framing (2026-06-03).** These journeys were written for the superseded "commerce-hub" model. V1 is the **synced common storefront** — see [overview](./overview.md) and [roadmap](./roadmap.md) for the corrected flow.
+
 **Filed:** 2026-06-03
 **Status:** Design (end-to-end journeys for the SCs the extension serves). Read after [ownership-vs-connection](./ownership-vs-connection.md) (the model) and alongside [roadmap](./roadmap.md) (what's built when). Journey 2's flow detail lives in [aem-sc-first-run](./aem-sc-first-run.md).
 

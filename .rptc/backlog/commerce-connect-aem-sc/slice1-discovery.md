@@ -1,5 +1,7 @@
 # Slice 1 — Discover the commerce connection from a published storefront URL
 
+> **No longer the first slice (2026-06-03).** Under the re-aimed V1 (synced common storefront), the Commerce SC **owns** the backend, so discovery-by-URL is a **later convenience**, not step 1. The first step is now the **master + synced copy** backbone — see [roadmap](./roadmap.md).
+
 **Filed:** 2026-06-02
 **Status:** Ready for TDD.
 **Roadmap:** [commerce-connect roadmap](./roadmap.md). **Design:** [commerce-connection-kit](./commerce-connection-kit.md).
