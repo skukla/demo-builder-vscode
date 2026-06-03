@@ -6,31 +6,33 @@ A single backlog feature with several design docs and a build plan. This file is
 
 ## The feature in one line
 
-Let an **AEM SC** run their *own* copy of the extension, paste the **Commerce SC's published storefront URL**, **discover** the (already-public) commerce connection from it, **scaffold** an AEM-authorable `aem-boilerplate-xcom` storefront in *their* org, **apply** the connection, and author it in Universal Editor against their own AEM Sites — sharing the commerce **backend** (a URL + public read keys), not code or content.
+Let the extension build **multi-product Adobe demos** where each product is either **owned** (the extension provisions it) or **connected** (it references it via coordinates). **Connection is the primitive** — populated by **manual entry** (general) or **discovery** (convenience) — so no partner SC is forced to use the extension. **v1 anchors on the commerce-hub** (an owned commerce demo connecting *out* to Adobe apps partners manage manually); the **AEM-SC federated** case (owned AEM `aem-boilerplate-xcom` storefront ← *discovered* commerce backend, authored in Universal Editor) is a later milestone on the same primitive. See [ownership-vs-connection](./ownership-vs-connection.md).
 
 ## Provenance
 
-Grew out of "hook the extension to an existing AEM Sites deployment and demo the same content from DA.live *and* AEM Sites." Research killed simultaneous dual-authoring (one EDS site = one content source) and cross-org code sharing (code-bus is bound to one org), but established that the commerce **backend is org-agnostic to consume** (SaaS read path / API Mesh need only a URL + public keys, no IMS token). That reshaped the goal into the **federated, discovery-first** model captured here. Full RPTC research/decision trail lives in git history on `claude/commerce-connection-kit-research`.
+Grew out of "hook the extension to an existing AEM Sites deployment and demo the same content from DA.live *and* AEM Sites." Research killed simultaneous dual-authoring (one EDS site = one content source) and cross-org code sharing (code-bus is bound to one org), but established that the commerce **backend is org-agnostic to consume** (SaaS read path / API Mesh need only a URL + public keys, no IMS token) → a **federated, discovery-first** model. That then generalized again (2026-06-03): discovery was forcing "every SC must use the extension," so **connection became the primitive** (manual entry first-class, discovery as an accelerator) and **ownership a per-product flag** — which also covers a commerce owner connecting outward to partner-managed Adobe apps. v1 was re-anchored to that commerce-hub case. Full RPTC research/decision trail lives in git history on `claude/commerce-connection-kit-research`.
 
 ## Documents
 
 | Doc | What it is |
 |---|---|
-| [commerce-connection-kit](./commerce-connection-kit.md) | **Lead design** — the integration mechanism (the connection contract, cross-org verdict, discovery-not-export, what exists today, considered-&-rejected). Status: *leading direction*. |
+| [ownership-vs-connection](./ownership-vs-connection.md) | **The organizing model** — owned vs connected (per product); connection as the primitive (manual \| discovery); the per-`(product, ownership)` dashboard principle; the v1 decisions. Read after this. |
+| [commerce-connection-kit](./commerce-connection-kit.md) | **Lead mechanism** — the commerce connection contract, cross-org verdict, discovery-not-export, what exists today, considered-&-rejected. |
 | [federated-two-instance-demos](./federated-two-instance-demos.md) | **Operator/delivery model** — each SC runs their own single-org instance; the higher-cohesion shared-upstream (synced-fork) layer for shared custom code. |
-| [aem-sc-first-run](./aem-sc-first-run.md) | **Front door / cold-start** — why a commerce-centric first action mismatches a content SC; the commerce-vs-content journeys; the front door + separate AEM-framed flow; the **selection model that reuses the extension's existing configuration model** (`selectedStack` / `componentSelections{frontend,backend,integrations[],appBuilder[]}` / the component registry — *no* new `kind`/`composition` field) so the front door and the eventual full configuration selector share one model; shared-surface adaptation. |
-| [roadmap](./roadmap.md) | **Build sequence** — 5 slices (Discover → Apply → Scaffold → front-door/UI → shared-code sync), with detailed TDD plans produced just-in-time. |
-| [slice1-discovery](./slice1-discovery.md) | **First executable plan** — TDD-ready Slice 1: a pure `discoverCommerceConnection(url)` service. |
+| [aem-sc-first-run](./aem-sc-first-run.md) | **Front door / cold-start** — the commerce-vs-content journeys; front door + AEM-framed flow; the selection model that **reuses the existing configuration model** (`selectedStack` / `componentSelections{frontend,backend,integrations[],appBuilder[]}` / the registry — *no* new field). |
+| [roadmap](./roadmap.md) | **Build sequence** — shared primitive (P1 discover · P2 apply) → commerce-hub v1 (H1 model · H2 dashboard) → AEM-SC milestone → deferred cohesion. JIT plans. |
+| [slice1-discovery](./slice1-discovery.md) | **First executable plan** — TDD-ready: a pure `discoverCommerceConnection(url)` service (the discovery population mode / P1). |
 
 ## Goal / scope
 
-- **In:** the discovery → apply → scaffold plumbing, an AEM-SC front door + AEM-framed connect flow, and the shared-surface adaptation (new stack/registry entries + dashboard branching on existing `Project` fields) — reusing the extension's existing configuration model, not a new one.
-- **v1:** two repos sharing **data** (discovery). **Later (deferred):** three repos (shared upstream + synced forks) sharing **code**.
+- **In (v1, commerce-hub):** the connection/ownership framework (connection primitive: manual entry + discovery + apply), commerce's owned representation, and the per-`(product, ownership)` dashboard surface — all reusing the existing configuration model, no new field.
+- **Design, not build (v1):** the AEM / AEP / App Builder spoke connection contracts (validate the model against 4 products); surface as designed slots.
+- **Later milestone:** AEM-SC federated (owned AEM storefront ← discovered commerce) on the same primitive. **Deferred:** higher cohesion (shared upstream + synced forks) for shared code.
 - **Out:** the deep "solution-family" product-selection refactor; content seeding into AEM; the optional SEO prerenderer.
 
 ## Execution plan
 
-The [roadmap](./roadmap.md) holds the slice sequence; [slice1-discovery](./slice1-discovery.md) is ready for TDD. Slices 1–2 are concrete; 3–5 carry real unknowns (cross-org behavior, the no-API AEM wiring, the sync model) and stay roadmap-level until reached. Deferred decision to lock at Slice 4 planning: minimal two-option router vs. a fuller solution selector (recommendation: minimal, designed to grow).
+The [roadmap](./roadmap.md) holds the sequence: **P1 discover · P2 apply** (the shared primitive, P1 TDD-ready) → **H1 connection/ownership model · H2 per-`(product,ownership)` dashboard** (the commerce-hub v1) → AEM-SC milestone → deferred cohesion. Detailed TDD plans are written just-in-time. **Open interpretation to confirm:** "build commerce" in v1 = the framework + commerce's owned representation + designed spoke slots, *not* a functional commerce→spoke wiring yet.
 
 ## Constraints
 

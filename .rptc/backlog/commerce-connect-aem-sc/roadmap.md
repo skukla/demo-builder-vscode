@@ -1,47 +1,55 @@
-# Build roadmap — Commerce-connect for federated AEM Sites demos
+# Build roadmap — Commerce-connect: connection/ownership model + commerce-hub v1
 
-**Filed:** 2026-06-02
+**Filed:** 2026-06-02 (re-anchored 2026-06-03)
 **Status:** Roadmap (build sequence). Detailed TDD plans are produced **just-in-time** per slice.
-**Design:** [commerce-connection-kit](./commerce-connection-kit.md) (mechanism) · [federated-two-instance-demos](./federated-two-instance-demos.md) (operator model) · [aem-sc-first-run](./aem-sc-first-run.md) (front door / first-run).
+**Design:** [ownership-vs-connection](./ownership-vs-connection.md) (the organizing model) · [commerce-connection-kit](./commerce-connection-kit.md) (mechanism) · [federated-two-instance-demos](./federated-two-instance-demos.md) (operator model) · [aem-sc-first-run](./aem-sc-first-run.md) (front door / first-run).
 
 ## The model in one line
 
-The AEM SC's *own* extension instance: enter the Commerce demo's **published storefront URL** → **discover** the commerce connection (it's public) → **scaffold `xcom`** in their org → **apply** → **guide** the no-API AEM wiring → author in their AEM Sites. **v1 = 2 repos sharing data;** the later higher-cohesion layer = 3 repos (shared upstream + synced forks) for shared custom code.
+**Connection is the primitive; ownership is a per-product flag.** A connection's coordinates are populated by **manual entry** (general) or **discovery** (convenience, when the source publishes a readable contract) — see [ownership-vs-connection](./ownership-vs-connection.md). One machinery serves both scenarios. **v1 anchors on the commerce-hub** (an *owned* commerce demo that connects *out* to other Adobe apps the partner SCs manage manually); the **AEM-SC federated** case (owned AEM storefront ← discovered commerce) is a later milestone on the same primitive.
 
-## Slices
+**v1 decisions (2026-06-03):** anchor = **commerce-hub first**; contracts = **design all (AEM/AEP/App Builder), build commerce**. Because commerce is *owned* in the hub, "build commerce" delivers the **framework + commerce's owned representation + the per-`(product, ownership)` dashboard surface + designed spoke slots** — *not* a functional commerce→spoke wiring yet (the first spoke follows). *(Working interpretation — confirm before the detailed v1 plan.)*
 
-### Slice 1 — Discover the commerce connection from a published storefront URL ← **first**
-- **Goal:** a pure service — URL in → typed `CommerceConnection` out.
-- **Scope:** fetch `{url}/config.json`, parse, extract the commerce subset (endpoints + headers).
-- **Reuse:** native `fetch()` + `AbortSignal.timeout()` (from `commerceStoreDiscovery.ts`); field names from `configGenerator.ts` / `config-template.json`.
+## Shared connection primitive (built once; every scenario reuses it)
+
+### P1 — Discover a connection from a published source  ← TDD-ready
+- **Goal:** a pure service — URL in → typed `CommerceConnection` out (one *population mode*; commerce-storefront-specific).
+- **Reuse:** native `fetch()` + `AbortSignal.timeout()`; field names from `configGenerator.ts` / `config-template.json`.
+- **Note:** *not* on the commerce-hub critical path (the hub uses manual entry and already owns commerce) — but reusable and ready; build it as the discovery mode and the AEM-SC milestone consumes it.
 - **Unknowns:** config-service `public.json` vs root `config.json` precedence.
-- **Effort:** S. **Plan:** [Slice 1 — discovery](./slice1-discovery.md) (ready for TDD).
+- **Effort:** S. **Plan:** [discovery](./slice1-discovery.md) (ready for TDD).
 
-### Slice 2 — Apply a discovered connection to a target storefront's config
-- **Goal:** write a `CommerceConnection` into a storefront's config (`config.json` / Configuration Service).
-- **Reuse:** `configGenerator` (produces this exact shape) + `configurationService` (the PUT).
-- **Milestone:** after 1–2 you have a *demonstrable* result — URL in → working config out.
-- **Effort:** S–M. Plannable in detail now (do after Slice 1 lands).
+### P2 — Apply a connection to a target config
+- **Goal:** write a connection's coordinates into a storefront config (`config.json` / Configuration Service) from a **manual or discovered** source.
+- **Reuse:** `configGenerator` (emits this shape) + `configurationService` (the PUT); the header↔env-var mapping is already implemented.
+- **Effort:** S–M.
 
-### Slice 3 — Scaffold `xcom` into the AEM SC's org
-- **Goal:** template-copy `adobe-rnd/aem-boilerplate-xcom` into the AEM SC's GitHub org.
-- **Reuse:** the repo-from-template machinery (project creation).
-- **Unknowns:** auth to the AEM SC's GitHub org; `xcom` template stability/version pinning.
-- **Prereq created here:** when this writes the AEM project record, populate the **existing `Project` fields** — no new field — `selectedStack` = the AEM entry, `componentSelections.frontend` = the AEM storefront component, the consumed commerce backend (a backend/`external-system` component), and the discovered connection in `componentConfigs`. The front door + dashboard (Slice 4) branch on these existing signals — see [aem-sc-first-run](./aem-sc-first-run.md), "The selection model."
-- **Effort:** M. Plan JIT.
+## v1 anchor — the commerce-hub experience
 
-### Slice 4 — AEM-SC front door + connect-flow UI + shared-surface adaptation
-- **Goal:** the coherent **AEM-SC first-run** (full design: [aem-sc-first-run](./aem-sc-first-run.md)): a top-level **front door** (cards selecting an existing-model entry — "Commerce demo" | "AEM Sites storefront"), the **AEM-framed connect flow** (paste URL → discover → confirm → scaffold → guided AEM wiring → author in UE), and **shared-surface adaptation** — the dashboard/sidebar branch on **existing fields** (`componentSelections.frontend` / `selectedStack` / backend-ownership), so an AEM project shows **Author in AEM** + a **commerce-connection** status and *hides* DA.live authoring / Sync Storefront / Deploy Mesh (the AEM SC owns none of those).
-- **Guided part:** the no-API AEM steps (Code Sync, Cloud Manager site, IMS roles, UE enablement) as a checklist with verify affordances.
-- **Why bigger than "a surface":** this is where commerce-centricity stops being additive — the front door *is* the seed of the configuration selector (built on the *existing* `selectedStack`/`componentSelections`/registry model), and the dashboard must branch on existing fields instead of assuming commerce/EDS. (The deep solution-family refactor is still NOT required — the AEM flow is its own path, not the commerce wizard.)
-- **Unknowns:** front-door placement (empty state vs "+ New" vs first-run welcome); adapt-dashboard vs AEM variant; wizard vs single-screen; UI vs agent; AEM-as-new-`Stack` vs new front-door entry.
-- **Effort:** M–L. Plan JIT — and likely split into "front door + AEM stack/registry entries" and "AEM connect-flow UI + dashboard adaptation" sub-slices.
+### H1 — Connection/ownership model over the existing manifest
+- **Goal:** represent a connection as a typed object sourced from `componentConfigs`; **derive ownership** (provisioned → owned; coordinates-only → connected). First instance = commerce's *own* (owned) connection, from today's Connect-Commerce values. **No new top-level field.**
+- **Reuse:** `Project.componentSelections.{integrations[], appBuilder[]}`, `componentConfigs` ([`src/types/base.ts:55-63`](../../../src/types/base.ts)) — all existing.
+- **Effort:** M.
 
-### Slice 5 (deferred) — Higher cohesion: shared upstream + synced forks + custom-code contribution
-- **Goal:** the 3-repo model — a shared **upstream** both SCs' repos sync from, so both SCs' custom **blocks** (block library) + **drop-ins** (feature pack) land in one storefront. *(NB: "upstream" ≠ ADR-003 "canonical repo" — see federated doc terminology note.)*
-- **Reuse:** `templateSyncService`/`componentUpdater` (sync), block-libraries, `featurePackInstaller`.
+### H2 — Per-`(product, ownership)` dashboard surface
+- **Goal:** centralize the scattered binary `isEds` into one derived per-product capability; render **owned-product actions** + a **Connections** area of **connected-product status/edit cards**. AEM/AEP/App Builder appear as **designed slots** (not yet functional).
+- **Touches:** the ~8-10 dashboard files that branch on `isEds` today — centralize, don't duplicate (see [ownership-vs-connection](./ownership-vs-connection.md), "the dashboard principle").
+- **Effort:** M–L.
+
+### Design-all (no build): the three spoke contracts
+- Sketch the connection contract for **AEM** (author URL + IMS org), **AEP** (datastream/sandbox/org), **App Builder** (runtime URL + creds): coordinates → storefront landing spot → integration behavior. Validates the model against 4 products. **Build none of the spokes in v1.**
+
+## Later milestone — AEM-SC federated (owned AEM storefront ← connected commerce)
+- The front-door + AEM-framed flow ([aem-sc-first-run](./aem-sc-first-run.md)): paste URL → **discover** (P1) → **scaffold `xcom`** in their org → **apply** (P2) → guided no-API AEM wiring → author in UE.
+- **Reuse:** P1 + P2 + the per-`(product, ownership)` dashboard (H2) + repo-from-template; a new AEM-storefront **frontend** + a **config-only consumed-commerce backend** (clone the ACCS pattern — **not** `external-system`); writes the existing `Project` fields (no new field).
+- **Unknowns:** auth to the AEM SC's GitHub org; `xcom` stability/version pinning; the no-API wiring steps; AEM-as-new-`Stack` vs new front-door entry.
+- **Effort:** M–L. Plan JIT.
+
+## Deferred — higher cohesion: shared upstream + synced forks + custom-code
+- The 3-repo model — a shared **upstream** both SCs' repos sync from, so custom **blocks** (block library) + **drop-ins** (feature pack) land in one storefront. *(NB: "upstream" ≠ ADR-003 "canonical repo" — see federated doc terminology note.)*
+- **Reuse:** `templateSyncService`/`componentUpdater`, block-libraries, `featurePackInstaller`.
 - **Unknowns:** the two-way contribution flow; multi-fork sync coordination.
-- **Effort:** L. Deferred — v1 doesn't need it. Plan JIT when reached.
+- **Effort:** L. Deferred. Plan JIT.
 
 ## Optional parallel track (not in the main sequence)
 
@@ -53,4 +61,4 @@ The AEM SC's *own* extension instance: enter the Commerce demo's **published sto
 
 ## Sequencing principle
 
-Detailed TDD plans are written **just-in-time**. Slices 1–2 are concrete now; **3–5 carry real unknowns** (cross-org behavior, the no-API AEM steps, the sync model) and depend on learnings from 1–2 — so they stay roadmap-level until reached, to avoid plan rot.
+Detailed TDD plans are written **just-in-time**. The shared primitive (**P1–P2**) is concrete now; the **commerce-hub anchor (H1–H2)** is plannable after P1–P2; the **AEM-SC milestone** and **higher cohesion** carry real unknowns (the no-API AEM steps, the sync model, the spoke contracts) and stay roadmap-level until reached, to avoid plan rot.
