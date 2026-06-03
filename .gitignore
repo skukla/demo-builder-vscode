@@ -52,9 +52,9 @@ yarn-error.log*
 .claude/
 
 # RPTC workflow temporary files
+# .rptc/plans/ and .rptc/research/ are tracked (durable in this ephemeral
+# container — gitignored files are lost on restart). Only prompt.md (transient) is ignored.
 .rptc/prompt.md
-# .rptc/plans/ is tracked (durable in this ephemeral environment); only scratch stays ignored
-.rptc/research/
 
 # Analysis artifacts
 report/
