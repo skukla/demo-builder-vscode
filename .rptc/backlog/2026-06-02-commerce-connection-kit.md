@@ -55,7 +55,7 @@ No content seeding, no code-bus sharing, no fork-sync of the Commerce SC's repo.
 
 ## Open questions / validation spikes (before committing)
 1. **Cross-org API Mesh** — empirical test: stand up `xcom` in org B, point `commerce-endpoint` at a mesh provisioned in org A (public api-key), confirm it renders. Also confirm via the **Adobe customer Slack** (Helix/EDS team, ~1hr SLA).
-2. **PDP SEO / prerenderer** — `adobe-rnd/aem-commerce-prerender` is an **App Builder app** (in an Adobe org/project) for crawler-visible PDPs; a real second moving part with its own cross-org wrinkle. May be optional for a live demo.
+2. **PDP SEO / prerenderer — OPTIONAL, *not* a build requirement.** `adobe-rnd/aem-commerce-prerender` is an App Builder app that server-renders product pages for **crawlers/LLMs (SEO)**. PDPs render **client-side** via the drop-ins, so a live demo works without it. It is **not** AEM-Sites-specific (same concern for DA- and AEM-authored commerce storefronts), and **the extension does not touch prerendering today** — its current commerce demos work without it. Track only if a build ever needs crawlable/indexable PDPs; it is not a gate for this direction.
 3. **CORS / domain allow-listing** on the core GraphQL endpoint for the storefront's domain.
 4. **Config-service precedence trap** — a stray `config.json` on `main` silently overrides the prod Configuration Service.
 5. **`xcom` maturity** — semi-official; expect to read source/release notes.
