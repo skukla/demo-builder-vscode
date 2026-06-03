@@ -18,13 +18,13 @@ Grew out of "hook the extension to an existing AEM Sites deployment and demo the
 |---|---|
 | [commerce-connection-kit](./commerce-connection-kit.md) | **Lead design** — the integration mechanism (the connection contract, cross-org verdict, discovery-not-export, what exists today, considered-&-rejected). Status: *leading direction*. |
 | [federated-two-instance-demos](./federated-two-instance-demos.md) | **Operator/delivery model** — each SC runs their own single-org instance; the higher-cohesion shared-upstream (synced-fork) layer for shared custom code. |
-| [aem-sc-first-run](./aem-sc-first-run.md) | **Front door / cold-start** — why a commerce-centric first action mismatches an AEM SC; the router + separate AEM-framed flow + shared-surface (`kind`) adaptation. |
+| [aem-sc-first-run](./aem-sc-first-run.md) | **Front door / cold-start** — why a commerce-centric first action mismatches a content SC; the commerce-vs-content journeys; the front door + separate AEM-framed flow; the **selection model that reuses the extension's existing configuration model** (`selectedStack` / `componentSelections{frontend,backend,integrations[],appBuilder[]}` / the component registry — *no* new `kind`/`composition` field) so the front door and the eventual full configuration selector share one model; shared-surface adaptation. |
 | [roadmap](./roadmap.md) | **Build sequence** — 5 slices (Discover → Apply → Scaffold → front-door/UI → shared-code sync), with detailed TDD plans produced just-in-time. |
 | [slice1-discovery](./slice1-discovery.md) | **First executable plan** — TDD-ready Slice 1: a pure `discoverCommerceConnection(url)` service. |
 
 ## Goal / scope
 
-- **In:** the discovery → apply → scaffold plumbing, an AEM-SC front door + AEM-framed connect flow, and the manifest `kind` + dashboard branching that an AEM-storefront project needs.
+- **In:** the discovery → apply → scaffold plumbing, an AEM-SC front door + AEM-framed connect flow, and the shared-surface adaptation (new stack/registry entries + dashboard branching on existing `Project` fields) — reusing the extension's existing configuration model, not a new one.
 - **v1:** two repos sharing **data** (discovery). **Later (deferred):** three repos (shared upstream + synced forks) sharing **code**.
 - **Out:** the deep "solution-family" product-selection refactor; content seeding into AEM; the optional SEO prerenderer.
 
@@ -36,7 +36,7 @@ The [roadmap](./roadmap.md) holds the slice sequence; [slice1-discovery](./slice
 
 - Research caveat: Adobe doc pages block programmatic fetch; load-bearing specifics (esp. cross-org API Mesh) should be re-verified in a live environment before code lands.
 - Reuses existing single-org architecture — **no multi-IMS refactor**; integration is via the connection, not centralized orchestration.
-- Additive except for two commerce-assuming surfaces: the manifest `kind` field and the dashboard's `kind`-branching.
+- Reuses the **existing project configuration model** (`Project` manifest: `selectedStack` / `componentSelections` / `componentConfigs` / the component registry) — **no new `kind`/`composition` field.** Additive except for the dashboard's branching (today it assumes commerce/EDS) and any shared project-creation pipeline the AEM case touches.
 
 ## Kickoff prompt
 
