@@ -35,8 +35,10 @@ Each SC runs **their own copy** of the Demo Builder extension, authenticated to 
 
 The discovery model above shares commerce **data**; each storefront's **code** stays independent. To make *both* SCs' custom code appear in one coherent storefront, raise the cohesion level — share the **code** too, via a **shared upstream storefront codebase + per-org synced forks.**
 
-- **One upstream "storefront codebase"** = the canonical storefront (the `xcom` base + blocks + drop-ins) — the single source of truth for code.
-- **Each SC's extension project = a synced fork** in their own org (their own EDS site's code-bus — the cross-org rule *requires* the fork; keeping the forks in sync makes them effectively one storefront, deployed once per org).
+- **One *shared upstream* storefront** (the `xcom` base + the demo's blocks + drop-ins) = the single source of truth for code. *(This is the upstream — **not** "canonical" in ADR-003's sense; see the terminology note below.)*
+- **Each SC's storefront repo = a synced fork** of that upstream, in their own org (the cross-org rule *requires* the fork; sync keeps the forks aligned, so they're effectively one storefront deployed once per org). Within each org, that fork is the org's **canonical repo** (ADR-003 sense) — the anchor it could run repoless multisite from.
+
+> **Terminology — "canonical" vs this "upstream" (don't conflate).** [ADR-003: Multisite Architecture Seam](../../docs/architecture/adr/003-multisite-architecture-seam.md) reserves **canonical repo** for Adobe **Repoless multisite**: one repo → many aem.live sites (per env/locale) **within one org** (`org/site` must match `owner/repo`). That's *same-org* multi-site. This federated model is *cross-org*: **each SC's repo is its own canonical** (ADR-003 sense) for their org; they cannot share one canonical across orgs, so the AEM SC's repo is a **fork** of the shared **upstream**. Net: two canonicals (one per SC/org), one upstream — never one canonical spanning orgs.
 
 ### Two cohesion levels (choose per demo)
 

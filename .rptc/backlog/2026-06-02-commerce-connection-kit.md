@@ -52,6 +52,28 @@ A commerce EDS storefront reads `config.json` (dev) / the Configuration Service 
 
 No export/import file, no content seeding, no code-bus sharing, no fork. Effort looks **S–M** (lighter than the export model — the Commerce side is a no-op).
 
+## What exists today, the two meanings of "connect", and how to start
+
+**What exists today.** The `demoBuilder.daLive.aemAuthorUrl` / `IMSOrgId` settings (`applyDaLiveOrgConfigSettings`, `edsHelpers.ts:537-580`) wire a **UE punch-out** on the Commerce SC's *DA* content. A real "specify an AEM instance" seam — but it delivers the **shared canvas**, not a separate AEM Sites storefront.
+
+**Two meanings of "connect to AEM" — keep them distinct:**
+
+| | Shared canvas (UE-on-DA — *exists today*) | Separate AEM storefront (*this direction*) |
+|---|---|---|
+| Driven by | Commerce SC (specifies the AEM IMS org) | AEM SC (their own instance) |
+| Mechanism | UE punch-out on the Commerce SC's DA content | `xcom` storefront + **discover** commerce |
+| Storefronts | one (the Commerce SC's) | one, authored by the AEM SC |
+| Content store | DA (one) | AEM JCR (the AEM SC's own) |
+
+**The canonical *use case* for this direction** (note: the *use case*, not a "canonical repo"): one storefront whose experience is authored by the **AEM SC in Universal Editor in *their own* AEM Sites instance**, rendering the **Commerce SC's** catalog. The Commerce SC merely **publishes** their storefront; the AEM SC **discovers** the commerce connection from its URL — no hand-off. *(This storefront is the AEM SC's, in their org — distinct from the "shared upstream / canonical repo" concept in the [federated doc](./2026-06-02-federated-two-instance-demos.md) and [ADR-003](../../docs/architecture/adr/003-multisite-architecture-seam.md).)*
+
+**Discovery, and the extension *can* create the EDS site.** Run from the AEM SC's *own* extension instance: enter the Commerce demo URL → **discover** the connection → **scaffold `xcom`** in their org → apply → **guide** the no-API steps (Code Sync, Cloud Manager, IMS). The cross-org limit is narrow — it only governs *who runs it* (the AEM SC's instance, not the Commerce SC's). Nothing is handed off but the URL.
+
+**How to start (on-ramp):**
+1. **Harden the shared canvas** — promote the `aemAuthorUrl`/`IMSOrgId` settings into a first-class surface. Smallest step; it's what exists.
+2. **AEM-side discovery flow** — URL → discover → scaffold `xcom` → guided wiring → author. Additive, commerce-anchored; **not** product selection.
+3. **Product selection** (later, deliberate) — AEM as a *standalone* product → the solution-family refactor. A separate bet; see *Product-flow context* below.
+
 ## Considered & rejected (preserve the rationale)
 - **Two sites / repoless / fork of the Commerce repo** — rejected: cross-org code-bus can't be shared; and we don't need shared code, only a shared backend. (Fork-into-own-org remains the sanctioned move *if* someone wants the same storefront *code*, but that's the AEM SC's choice, not something the extension must orchestrate.)
 - **Content seeding into AEM** (`@adobe/aem-import-helper`) — not needed here: storefronts are authored independently and share commerce *data*, not editorial content. (Kept on file; medium-effort if ever wanted.)
