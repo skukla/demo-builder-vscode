@@ -53,7 +53,7 @@ yarn-error.log*
 
 # RPTC workflow temporary files
 .rptc/prompt.md
-.rptc/plans/
+# .rptc/plans/ is tracked (durable in this ephemeral environment); only scratch stays ignored
 .rptc/research/
 
 # Analysis artifacts
