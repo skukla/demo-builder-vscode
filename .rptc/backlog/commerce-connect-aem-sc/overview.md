@@ -6,7 +6,7 @@ A single backlog feature with several design docs and a build plan. This file is
 
 ## The feature in one line
 
-Let the extension build **multi-product Adobe demos** where each product is either **owned** (the extension provisions it) or **connected** (it references it via coordinates). **Connection is the primitive** — populated by **manual entry** (general) or **discovery** (convenience) — so no partner SC is forced to use the extension. **v1 anchors on the commerce-hub** (an owned commerce demo connecting *out* to Adobe apps partners manage manually); the **AEM-SC federated** case (owned AEM `aem-boilerplate-xcom` storefront ← *discovered* commerce backend, authored in Universal Editor) is a later milestone on the same primitive. See [ownership-vs-connection](./ownership-vs-connection.md).
+Let the extension build **multi-product Adobe demos** through **owner archetypes** (creation wizards): the **commerce-SC wizard** today, a **content-SC wizard** later — each *owns* its demo and *connects out* to other systems that are usually **not built with the extension** (so **manual entry is the spine**; discovery/federated is the special case). **v1 anchors on the commerce-hub** (an owned commerce demo connecting out to partner-managed Adobe apps) — the first case *implemented* on a **product-neutral spine**, not a privileged one. The **content-SC owner wizard** and the **federated peer-to-peer** case (Team-facing) become **first-class** later and must drop in additively. See [ownership-vs-connection](./ownership-vs-connection.md).
 
 ## Provenance
 
@@ -27,7 +27,8 @@ Grew out of "hook the extension to an existing AEM Sites deployment and demo the
 
 - **In (v1, commerce-hub):** the connection/ownership framework (connection primitive: manual entry + discovery + apply), commerce's owned representation, and the per-`(product, ownership)` dashboard surface — all reusing the existing configuration model, no new field.
 - **Design, not build (v1):** the AEM / AEP / App Builder spoke connection contracts (validate the model against 4 products); surface as designed slots.
-- **Later milestone:** AEM-SC federated (owned AEM storefront ← discovered commerce) on the same primitive. **Deferred:** higher cohesion (shared upstream + synced forks) for shared code.
+- **First-class later:** the **content-SC owner wizard** (a second creation journey) and the **federated** peer-to-peer case (discoverable commerce) — must drop in additively on the neutral spine. **Deferred:** higher cohesion (shared upstream + synced forks) for shared code.
+- **Hard constraint:** the spine stays **product-neutral** (commerce is one product, not *the* product) — but neutrality is structural/naming, not a built-ahead framework (implement only commerce in v1; YAGNI).
 - **Out:** the deep "solution-family" product-selection refactor; content seeding into AEM; the optional SEO prerenderer.
 
 ## Execution plan

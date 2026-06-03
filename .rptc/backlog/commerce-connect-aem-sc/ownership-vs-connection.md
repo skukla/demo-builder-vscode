@@ -4,6 +4,18 @@
 **Status:** Design (the organizing primitive for the whole feature). Read after [overview](./overview.md); it generalizes [commerce-connection-kit](./commerce-connection-kit.md) and reframes the dashboard work in [aem-sc-first-run](./aem-sc-first-run.md).
 **Why this exists:** the federated model quietly assumed *discovery is mandatory*, which forced "every SC must use the extension." That's a lock-in. Making **connection** (not discovery) the primitive removes it and lets one model serve both the federated case **and** a commerce owner who connects outward to Adobe apps that *no one* builds with the extension.
 
+## Two owner archetypes — on one neutral spine
+
+The extension makes an SC the **owner** of a demo via a **creation wizard**. There are two such archetypes:
+- **Commerce-SC wizard** (today) → owns a commerce demo.
+- **Content-SC wizard** (new — an opportunity to build) → owns an AEM/content demo.
+
+**The owner archetype determines what's *owned*; everything else in the project is *connected*.** So per-product ownership (next section) is mostly *derived from the archetype*, not separately configured — a commerce-owner connects out to content/AEP/App Builder; a content-owner connects out to commerce.
+
+**The connected peer is usually NOT extension-built** — it's the customer's existing external Adobe system, with no readable contract. So **manual entry is the spine; discovery is the lucky special case** (the peer happens to be extension-built / publishes a contract — the *federated* case).
+
+> **Neutrality is a hard constraint.** The federated peer-to-peer case becomes **first-class** eventually, and the whole thing is intended to be offered to **Team** — so the spine must **not lean toward commerce *or* content.** The core never asks "is this commerce?", only "what does this archetype own?"; commerce-hub is merely the first case we *implement*, never a privileged one. Build the seams product-neutral (extend the [ADR-003](../../../docs/architecture/adr/003-multisite-architecture-seam.md) seam; treat commerce as *one* product). **But** neutrality here is *structural/naming* — cheap, reversible — pressure-tested by the *design-all* contracts (sketching the content-owner + federated + AEP/App-Builder shapes is what proves the seam isn't commerce-shaped). It is **not** license to build a plugin framework ahead of its second real user: implement only commerce in v1; keep abstractions thin until the content/federated implementations actually arrive (YAGNI).
+
 ## Two axes, both per-product (neither is a project-level "type")
 
 - **Ownership** — *owned*: the extension provisions/manages it (clone, deploy, sync, start). *connected*: the extension only references it via coordinates and never manages it.
@@ -13,15 +25,17 @@
 
 **Manual connection already exists today:** the `settings` / Connect Commerce step + Configure UI is manual entry of a commerce connection into `componentConfigs`. Discovery (Slice 1) is a *second* way to populate the same thing — we generalize an existing mode, we don't invent one.
 
-## Both scenarios = one machinery, different ownership distribution
+## Scenarios = one machinery, different ownership distribution
 
-| Scenario | Owned | Connected (how) |
+| Owner (wizard) | Owns | Connects out to (usually external → **manual**) |
 |---|---|---|
-| **Commerce-hub** (v1 anchor) | commerce backend + EDS/DA.live storefront | AEM / AEP / App Builder — **manual** (partners work in their own tools) |
-| **AEM-SC federated** (later) | AEM storefront (xcom) | commerce backend — **discovered** (or manual) |
-| **Commerce today** | storefront (+ mesh) | commerce backend — *already* connected (config-only, no `source`, never cloned) |
+| **Commerce SC** (today; first *implemented*) | commerce backend + EDS/DA.live storefront | AEM / AEP / App Builder |
+| **Content SC** (new wizard; first-class later) | AEM/content storefront (e.g. `aem-boilerplate-xcom`) | commerce backend, AEP, App Builder |
+| *either, **federated*** | their owned product | a **peer extension-built** demo → **discoverable** (the special case) |
 
-The third row matters: **even today the commerce backend is "connected," not owned** ([`adobe-commerce-paas`/`accs` have no `source`](../../../src/features/components/config/components.json); the executor's install list is frontend + dependencies + appBuilder only). "Connected product" is the existing config-only-backend reality, generalized.
+Two things this table encodes: the connected side is normally an **external, non-extension-built** system (hence manual), and **federated** (the discoverable peer) is one column value, not a separate world.
+
+And it's already partly true today: **the commerce backend is "connected," not owned** ([`adobe-commerce-paas`/`accs` have no `source`](../../../src/features/components/config/components.json); the executor's install list is frontend + dependencies + appBuilder only). "Connected product" is the existing config-only-backend reality, generalized.
 
 ## Maps onto the existing model — still no new top-level field
 
@@ -43,13 +57,15 @@ So the dashboard is **composed per `(product, ownership)`**, not a project-level
 
 ## v1 decisions (locked 2026-06-03)
 
-- **Anchor: commerce-hub first.** v1 introduces the connection/ownership framework in the **commerce owner's** experience, additive to today's commerce flow. The AEM-SC federated case is a later milestone on the same primitive.
+- **Anchor: commerce-hub is the first *implemented* case — not a privileged one.** v1 introduces the framework in the **commerce owner's** experience, additive to today's flow, **on a product-neutral spine**. The **content-SC owner wizard** and the **federated peer-to-peer** case are first-class *future* milestones the spine must host **additively** (no rewrite) — so v1 must not bake in commerce-only assumptions even though only commerce is built.
 - **Contracts: design all, build commerce.** Sketch the connection-contract shape for AEM / AEP / App Builder now (coordinates → where they land → what the integration does) to validate the model against 4 products; **build only the commerce contract.** Outbound spokes surface as designed "connect …" slots until each is built.
 - **Build = framework, not a functional spoke yet** *(working interpretation — confirm before the detailed v1 plan).* Because commerce is *owned* in the hub scenario, "build commerce" = the framework + commerce's owned representation + its (source) connection contract + the per-`(product, ownership)` dashboard surface — **not** a working commerce→other-app wiring. The first functional spoke follows when a spoke contract is built.
 
 ## Open questions
 
 - **The three spoke contracts** (AEM / AEP / App Builder): exact coordinates, storefront landing spot, and integration behavior. Research each before building it.
+- **Owner-archetype representation:** is the archetype derivable from `selectedStack` (the stack already implies the owned product), or does it need an explicit neutral marker? Resolve while keeping the spine product-symmetric.
+- **Front-door symmetry:** the journey selector must structurally host commerce / content / federated as peers even while only commerce is lit — without tipping into a built-ahead solution-family framework.
 - **Ownership marker:** how far can ownership stay *derived* before a small explicit per-component marker is needed (e.g., a connected commerce backend vs an owned one)?
 - **Dashboard refactor depth:** centralize the scattered `isEds` into one per-product capability now (recommended) vs add a second binary and untangle later.
 - **Connection health:** what "reachable/configured" means per product for the connected-status card (a HEAD/probe vs presence-of-coordinates).

@@ -8,7 +8,9 @@
 
 **Connection is the primitive; ownership is a per-product flag.** A connection's coordinates are populated by **manual entry** (general) or **discovery** (convenience, when the source publishes a readable contract) — see [ownership-vs-connection](./ownership-vs-connection.md). One machinery serves both scenarios. **v1 anchors on the commerce-hub** (an *owned* commerce demo that connects *out* to other Adobe apps the partner SCs manage manually); the **AEM-SC federated** case (owned AEM storefront ← discovered commerce) is a later milestone on the same primitive.
 
-**v1 decisions (2026-06-03):** anchor = **commerce-hub first**; contracts = **design all (AEM/AEP/App Builder), build commerce**. Because commerce is *owned* in the hub, "build commerce" delivers the **framework + commerce's owned representation + the per-`(product, ownership)` dashboard surface + designed spoke slots** — *not* a functional commerce→spoke wiring yet (the first spoke follows). *(Working interpretation — confirm before the detailed v1 plan.)*
+**v1 decisions (2026-06-03):** anchor = **commerce-hub first** (the first *implemented* case, **not** privileged); contracts = **design all (AEM/AEP/App Builder), build commerce**. Because commerce is *owned* in the hub, "build commerce" delivers the **framework + commerce's owned representation + the per-`(product, ownership)` dashboard surface + designed spoke slots** — *not* a functional commerce→spoke wiring yet (the first spoke follows). *(Working interpretation — confirm before the detailed v1 plan.)*
+
+**Neutrality is a hard constraint.** Build the spine product-symmetric (extend the [ADR-003](../../../docs/architecture/adr/003-multisite-architecture-seam.md) seam; the core asks "what does this archetype own?", never "is this commerce?"). The **content-SC owner wizard** and the **federated peer-to-peer** case become **first-class** later (Team-facing) and must drop in additively. But keep neutrality structural/naming, not a built-ahead framework — implement only commerce in v1 (YAGNI). See [ownership-vs-connection](./ownership-vs-connection.md), "two owner archetypes."
 
 ## Shared connection primitive (built once; every scenario reuses it)
 
@@ -39,11 +41,12 @@
 ### Design-all (no build): the three spoke contracts
 - Sketch the connection contract for **AEM** (author URL + IMS org), **AEP** (datastream/sandbox/org), **App Builder** (runtime URL + creds): coordinates → storefront landing spot → integration behavior. Validates the model against 4 products. **Build none of the spokes in v1.**
 
-## Later milestone — AEM-SC federated (owned AEM storefront ← connected commerce)
-- The front-door + AEM-framed flow ([aem-sc-first-run](./aem-sc-first-run.md)): paste URL → **discover** (P1) → **scaffold `xcom`** in their org → **apply** (P2) → guided no-API AEM wiring → author in UE.
-- **Reuse:** P1 + P2 + the per-`(product, ownership)` dashboard (H2) + repo-from-template; a new AEM-storefront **frontend** + a **config-only consumed-commerce backend** (clone the ACCS pattern — **not** `external-system`); writes the existing `Project` fields (no new field).
-- **Unknowns:** auth to the AEM SC's GitHub org; `xcom` stability/version pinning; the no-API wiring steps; AEM-as-new-`Stack` vs new front-door entry.
-- **Effort:** M–L. Plan JIT.
+## First-class later — the content-SC owner archetype (+ federated)
+- **A second owner wizard** (peer to today's commerce wizard): a content SC **owns** an AEM/content demo (e.g. `aem-boilerplate-xcom`). This is the front door becoming symmetric — "which journey?" — built on the *existing* `selectedStack`/`componentSelections`/registry model, **not** a solution-family refactor.
+- **Federated** is then one connection value: the content owner connects to commerce that's **discoverable** (peer extension-built, via P1) *or* manual — the AEM-framed flow in [aem-sc-first-run](./aem-sc-first-run.md): paste URL → discover (P1) → scaffold `xcom` → apply (P2) → guided no-API AEM wiring → author in UE.
+- **Reuse:** P1 + P2 + the per-`(product, ownership)` dashboard (H2) + repo-from-template; a new AEM-storefront **frontend** + a **config-only consumed-commerce backend** (clone the ACCS pattern — **not** `external-system`); writes existing `Project` fields (no new field).
+- **Unknowns:** auth to the content SC's GitHub org; `xcom` stability/version pinning; the no-API wiring steps; AEM-as-new-`Stack` vs new front-door entry; how symmetric the front door must be at this point vs later.
+- **Effort:** L. Plan JIT.
 
 ## Deferred — higher cohesion: shared upstream + synced forks + custom-code
 - The 3-repo model — a shared **upstream** both SCs' repos sync from, so custom **blocks** (block library) + **drop-ins** (feature pack) land in one storefront. *(NB: "upstream" ≠ ADR-003 "canonical repo" — see federated doc terminology note.)*

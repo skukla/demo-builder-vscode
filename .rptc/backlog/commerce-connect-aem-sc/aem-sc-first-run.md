@@ -98,7 +98,7 @@ An earlier draft of this doc proposed a manifest **`kind`** field (`commerce-dem
 
 **Guardrail (YAGNI):** the minimal cut still ships **single-select front door → one new stack/frontend (+ consumed backend) → derived branching on existing fields**. We do **not** build a composition engine, an integration resolver, or a multi-select/compose UI now — those arrive when the full selector does, *on the same model*.
 
-> **Update (2026-06-03):** the dashboard "variant" fork below is resolved by the **per-`(product, ownership)`** model in [ownership-vs-connection](./ownership-vs-connection.md) — the dashboard composes owned-product actions + connected-product status cards rather than switching on a project-level `isEds`/`isAem` enum. And the AEM-SC flow described here is now a **later milestone** (v1 anchors on the commerce-hub); it reuses the shared connection primitive (P1 discover + P2 apply).
+> **Update (2026-06-03):** the dashboard "variant" fork below is resolved by the **per-`(product, ownership)`** model in [ownership-vs-connection](./ownership-vs-connection.md) — the dashboard composes owned-product actions + connected-product status cards rather than switching on a project-level `isEds`/`isAem` enum. And this AEM flow is now understood as a **content-SC *owner* archetype** (a second creation wizard, peer to commerce — **first-class later**, Team-facing), with **federated** (discoverable commerce) as one connection value on it. v1 anchors on the commerce-hub; this milestone reuses the shared connection primitive (P1 discover + P2 apply) and must drop onto the **product-neutral spine** additively.
 
 ## Shared-surface adaptation (the part that *isn't* purely additive)
 
