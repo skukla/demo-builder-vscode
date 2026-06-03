@@ -1,7 +1,7 @@
 # Commerce Connection Kit — connect any EDS storefront (incl. AEM-Sites-authored) to a Demo Builder commerce backend
 
 **Filed:** 2026-06-02
-**Status:** **Possible direction** (research / candidate — NOT a committed plan). Pending a product-strategy call + two validation spikes.
+**Status:** **Possible direction** (research / candidate — NOT a committed plan). No remaining technical gates; pending a product-strategy call.
 **Sits within:** the "commerce-first" product strategy (vs. the larger "solution-family-first" repositioning — see *Product-flow context* below).
 **Supersedes:** the earlier "DA.live + AEM Sites dual authoring (two sites / repoless / fork)" framing, now demoted to *Considered & rejected*.
 
@@ -34,7 +34,7 @@ A commerce EDS storefront reads `config.json` (dev) / the Configuration Service 
 
 - **SaaS read path (Catalog Service / Live Search / Recs): cross-org-safe.** Global multi-tenant endpoints called from the browser with **just `x-api-key` + `Magento-Environment-Id` + store headers — no IMS token**. Keys are scoped to the **Commerce data space**, not the storefront's hosting org. So org B's storefront renders org A's catalog with the shared public key. The org boundary is *administrative* (who mints the key), not runtime. (MEDIUM-HIGH, partly inferred — [Commerce Services Connector](https://experienceleague.adobe.com/en/docs/commerce/user-guides/integration-services/saas), [Catalog Service](https://developer.adobe.com/commerce/services/graphql/catalog-service/))
   → an **ACCS** demo connects cross-org cleanly.
-- **API Mesh: validate.** Mechanically callable with a public api-key, but the mesh lives in org A's Adobe I/O project; secured/auth'd meshes or upstreams needing org-A creds can break cross-org. Clean pattern: provision mesh in org A, expose with public key, org B points at the URL. (MEDIUM) → **PaaS** demos (mesh-heavy) are the case to prove out.
+- **API Mesh: org-agnostic to consume (resolved).** Demos are **ACCS-first**, so the SaaS read path above is the norm anyway. And even for a mesh: consuming a *deployed* mesh is org-agnostic — it's a GraphQL URL + `x-api-key`; the mesh resolves its **upstream** sources internally with *their* creds, transparent to the caller. A storefront in org B calling org A's mesh needs only the URL + key; the mesh's IMS org doesn't enter the runtime path. (Confirmed by SC domain input + the public-api-key mesh model.) Only a deliberately locked-down mesh would differ — not how the extension deploys them.
 
 ## Off-the-shelf AEM-authorable commerce storefront
 
@@ -53,8 +53,8 @@ No content seeding, no code-bus sharing, no fork-sync of the Commerce SC's repo.
 - **Content seeding into AEM** (`@adobe/aem-import-helper`) — not needed here: storefronts are authored independently and share commerce *data*, not editorial content. (Kept on file; medium-effort if ever wanted.)
 - **Switchable single content source** (flip DA↔AEM) — fallback only; not "both live."
 
-## Open questions / validation spikes (before committing)
-1. **Cross-org API Mesh** — empirical test: stand up `xcom` in org B, point `commerce-endpoint` at a mesh provisioned in org A (public api-key), confirm it renders. Also confirm via the **Adobe customer Slack** (Helix/EDS team, ~1hr SLA).
+## Open questions / minor notes (none are gates)
+1. **Cross-org consumption — resolved.** ACCS-first → SaaS read path is cross-org-clean (no IMS token). Mesh consumption is org-agnostic (URL + api-key; mesh handles upstream auth internally). Not a gate. Trivially testable only if a deliberately locked-down mesh is ever in play.
 2. **PDP SEO / prerenderer — OPTIONAL, *not* a build requirement.** `adobe-rnd/aem-commerce-prerender` is an App Builder app that server-renders product pages for **crawlers/LLMs (SEO)**. PDPs render **client-side** via the drop-ins, so a live demo works without it. It is **not** AEM-Sites-specific (same concern for DA- and AEM-authored commerce storefronts), and **the extension does not touch prerendering today** — its current commerce demos work without it. Track only if a build ever needs crawlable/indexable PDPs; it is not a gate for this direction.
 3. **CORS / domain allow-listing** on the core GraphQL endpoint for the storefront's domain.
 4. **Config-service precedence trap** — a stray `config.json` on `main` silently overrides the prod Configuration Service.
