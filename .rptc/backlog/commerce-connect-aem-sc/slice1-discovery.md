@@ -2,7 +2,7 @@
 
 **Filed:** 2026-06-02
 **Status:** Ready for TDD.
-**Roadmap:** [commerce-connect roadmap](./2026-06-02-commerce-connect-roadmap.md). **Design:** [commerce-connection-kit](../backlog/2026-06-02-commerce-connection-kit.md).
+**Roadmap:** [commerce-connect roadmap](./roadmap.md). **Design:** [commerce-connection-kit](./commerce-connection-kit.md).
 
 ## Goal
 

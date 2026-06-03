@@ -1,7 +1,7 @@
 # AEM SC first-run & the front door
 
 **Filed:** 2026-06-02
-**Status:** Design (the AEM-SC first-run / front door). Feeds the [commerce-connect roadmap](../plans/2026-06-02-commerce-connect-roadmap.md) and pairs with [federated-two-instance-demos](./2026-06-02-federated-two-instance-demos.md) + [commerce-connection-kit](./2026-06-02-commerce-connection-kit.md).
+**Status:** Design (the AEM-SC first-run / front door). Feeds the [commerce-connect roadmap](./roadmap.md) and pairs with [federated-two-instance-demos](./federated-two-instance-demos.md) + [commerce-connection-kit](./commerce-connection-kit.md).
 **Why this exists:** the extension is commerce-centric end-to-end. An AEM SC's *first action* — "pick a commerce demo package" — is an immediate mismatch. A good AEM connect flow doesn't fix a commerce-first front door. This doc designs the coherent AEM-SC first-run.
 
 ## Where commerce bites at cold-start (today)

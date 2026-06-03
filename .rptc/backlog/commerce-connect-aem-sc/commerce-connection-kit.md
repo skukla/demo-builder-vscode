@@ -2,7 +2,7 @@
 
 **Filed:** 2026-06-02
 **Status:** **Leading direction** (per discovery — pending `/rptc:plan`). No remaining technical gates.
-**Operator model:** [Federated two-instance demos](./2026-06-02-federated-two-instance-demos.md) — each SC runs their own extension copy and manages their piece; this kit is the contract between them.
+**Operator model:** [Federated two-instance demos](./federated-two-instance-demos.md) — each SC runs their own extension copy and manages their piece; this kit is the contract between them.
 **Sits within:** the "commerce-first" product strategy (vs. the larger "solution-family-first" repositioning — see *Product-flow context* below).
 **Supersedes:** the earlier "DA.live + AEM Sites dual authoring (two sites / repoless / fork)" framing, now demoted to *Considered & rejected*.
 
@@ -65,7 +65,7 @@ No export/import file, no content seeding, no code-bus sharing, no fork. Effort 
 | Storefronts | one (the Commerce SC's) | one, authored by the AEM SC |
 | Content store | DA (one) | AEM JCR (the AEM SC's own) |
 
-**The canonical *use case* for this direction** (note: the *use case*, not a "canonical repo"): one storefront whose experience is authored by the **AEM SC in Universal Editor in *their own* AEM Sites instance**, rendering the **Commerce SC's** catalog. The Commerce SC merely **publishes** their storefront; the AEM SC **discovers** the commerce connection from its URL — no hand-off. *(This storefront is the AEM SC's, in their org — distinct from the "shared upstream / canonical repo" concept in the [federated doc](./2026-06-02-federated-two-instance-demos.md) and [ADR-003](../../docs/architecture/adr/003-multisite-architecture-seam.md).)*
+**The canonical *use case* for this direction** (note: the *use case*, not a "canonical repo"): one storefront whose experience is authored by the **AEM SC in Universal Editor in *their own* AEM Sites instance**, rendering the **Commerce SC's** catalog. The Commerce SC merely **publishes** their storefront; the AEM SC **discovers** the commerce connection from its URL — no hand-off. *(This storefront is the AEM SC's, in their org — distinct from the "shared upstream / canonical repo" concept in the [federated doc](./federated-two-instance-demos.md) and [ADR-003](../../../docs/architecture/adr/003-multisite-architecture-seam.md).)*
 
 **Discovery, and the extension *can* create the EDS site.** Run from the AEM SC's *own* extension instance: enter the Commerce demo URL → **discover** the connection → **scaffold `xcom`** in their org → apply → **guide** the no-API steps (Code Sync, Cloud Manager, IMS). The cross-org limit is narrow — it only governs *who runs it* (the AEM SC's instance, not the Commerce SC's). Nothing is handed off but the URL.
 

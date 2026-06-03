@@ -1,7 +1,7 @@
 # Federated two-instance demos — each SC manages their piece via their own Demo Builder
 
 **Filed:** 2026-06-02
-**Status:** **Leading direction** (per discovery — pending `/rptc:plan`). This is the **operator/delivery model** for the [commerce connection kit](./2026-06-02-commerce-connection-kit.md) (which is the *integration mechanism*).
+**Status:** **Leading direction** (per discovery — pending `/rptc:plan`). This is the **operator/delivery model** for the [commerce connection kit](./commerce-connection-kit.md) (which is the *integration mechanism*).
 
 ## The model
 
@@ -38,7 +38,7 @@ The discovery model above shares commerce **data**; each storefront's **code** s
 - **One *shared upstream* storefront** (the `xcom` base + the demo's blocks + drop-ins) = the single source of truth for code. *(This is the upstream — **not** "canonical" in ADR-003's sense; see the terminology note below.)*
 - **Each SC's storefront repo = a synced fork** of that upstream, in their own org (the cross-org rule *requires* the fork; sync keeps the forks aligned, so they're effectively one storefront deployed once per org). Within each org, that fork is the org's **canonical repo** (ADR-003 sense) — the anchor it could run repoless multisite from.
 
-> **Terminology — "canonical" vs this "upstream" (don't conflate).** [ADR-003: Multisite Architecture Seam](../../docs/architecture/adr/003-multisite-architecture-seam.md) reserves **canonical repo** for Adobe **Repoless multisite**: one repo → many aem.live sites (per env/locale) **within one org** (`org/site` must match `owner/repo`). That's *same-org* multi-site. This federated model is *cross-org*: **each SC's repo is its own canonical** (ADR-003 sense) for their org; they cannot share one canonical across orgs, so the AEM SC's repo is a **fork** of the shared **upstream**. Net: two canonicals (one per SC/org), one upstream — never one canonical spanning orgs.
+> **Terminology — "canonical" vs this "upstream" (don't conflate).** [ADR-003: Multisite Architecture Seam](../../../docs/architecture/adr/003-multisite-architecture-seam.md) reserves **canonical repo** for Adobe **Repoless multisite**: one repo → many aem.live sites (per env/locale) **within one org** (`org/site` must match `owner/repo`). That's *same-org* multi-site. This federated model is *cross-org*: **each SC's repo is its own canonical** (ADR-003 sense) for their org; they cannot share one canonical across orgs, so the AEM SC's repo is a **fork** of the shared **upstream**. Net: two canonicals (one per SC/org), one upstream — never one canonical spanning orgs.
 
 ### Two cohesion levels (choose per demo)
 
