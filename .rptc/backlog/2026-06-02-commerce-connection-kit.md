@@ -1,7 +1,8 @@
 # Commerce Connection Kit — connect any EDS storefront (incl. AEM-Sites-authored) to a Demo Builder commerce backend
 
 **Filed:** 2026-06-02
-**Status:** **Possible direction** (research / candidate — NOT a committed plan). No remaining technical gates; pending a product-strategy call.
+**Status:** **Leading direction** (per discovery — pending `/rptc:plan`). No remaining technical gates.
+**Operator model:** [Federated two-instance demos](./2026-06-02-federated-two-instance-demos.md) — each SC runs their own extension copy and manages their piece; this kit is the contract between them.
 **Sits within:** the "commerce-first" product strategy (vs. the larger "solution-family-first" repositioning — see *Product-flow context* below).
 **Supersedes:** the earlier "DA.live + AEM Sites dual authoring (two sites / repoless / fork)" framing, now demoted to *Considered & rejected*.
 
