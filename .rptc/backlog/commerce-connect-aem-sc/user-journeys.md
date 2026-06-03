@@ -15,11 +15,13 @@ The SCs who *use* the extension are the **owners**: the **commerce SC** and the 
 
 **Owns:** a commerce backend + an EDS/DA.live storefront. This is today's user; v1 is additive, the new part is the tail.
 
+0. **Journey selector (H3)** ✅ — a visible front door: **commerce** is the live journey, **content** appears as a "coming soon" entry. Commerce SC picks commerce and proceeds.
 1. **Create** ✅ *(unchanged, exists today)* — prerequisites → Adobe setup (auth/org/project) → welcome (demo package + architecture) → **Connect Commerce** → mesh → components → review → create.
 2. **Dashboard, recomposed (H2)** ✅ — renders **per `(product, ownership)`** instead of the binary `isEds`. Owned commerce shows its actions (Deploy Mesh / Sync / Configure / Author in DA.live); a new **Connections** area appears.
-3. **Connections area** 🟡 — lists outbound Adobe apps (AEM / AEP / App Builder) as **connected-product cards**. In v1 these are **designed slots, not functional wiring** ("design all, build commerce"). A live outbound connection arrives when the first **spoke contract** is built.
+3. **Connect to AEM (A1)** ✅ — **manual entry** of an AEM connection (author/publish URL + IMS org; AEM is external → not discoverable) → **apply** (P2) → the storefront consumes AEM-authored content/assets, and a **functional** connected-AEM card shows on the dashboard. *This is the one live outbound spoke.*
+4. **AEP / App Builder** 🟡 — appear as **designed slots** (non-functional cards) until built later.
 
-**The honest v1 line:** functionally close to today **plus** the connections surface and the ownership model underneath. The outbound payoff (commerce → AEP, etc.) is deferred to the first spoke. *(This is the "build commerce = framework, not a live spoke yet" interpretation still pending confirmation — see [roadmap](./roadmap.md) v1 decisions.)*
+**The honest v1 line:** today's flow **plus** a live commerce→AEM content connection, the connections surface, and the ownership model underneath. AEP/App Builder payoff comes later. **Known A1 risk:** AEM content is org-bound (unlike the org-agnostic commerce backend) — cross-org consumption must be re-verified live before building.
 
 **Shared primitive on this path:** minimal. A commerce owner never **discovers** their own commerce (P1) and rarely **applies** it to themselves (P2). P1/P2 are built first because they're TDD-ready and reusable — they pay off in Journey 2.
 
@@ -54,15 +56,21 @@ Journey 2 step 3 becomes **federated** when its connected commerce *is* Journey 
 | Slice ([roadmap](./roadmap.md)) | Commerce SC (v1) | Content SC (later) |
 |---|---|---|
 | **P1 discover** | not on their path | the federated populate-by-URL step |
-| **P2 apply** | rarely (self) | writes commerce into their storefront |
+| **P2 apply** | writes the AEM connection (A1) | writes commerce into their storefront |
 | **H1 model** | commerce represented as owned | archetype → owned/connected derivation |
-| **H2 dashboard** | owned-commerce actions + connection slots 🟡 | owned-AEM actions + connected-commerce card |
-| **design-all contracts** | AEM/AEP/App Builder as designed slots 🟡 | validates the content/federated shape |
+| **H2 dashboard** | owned-commerce actions + AEM card (live) + AEP/App-Builder slots 🟡 | owned-AEM actions + connected-commerce card |
+| **H3 journey selector** | commerce live, content "coming soon" ✅ | lights up the content entry 🔵 |
+| **A1 AEM spoke** | live commerce→AEM content ✅ | informs the (owned) AEM contract |
+| **design AEP + App Builder** | designed slots 🟡 | validates the remaining shapes |
 | **content-SC wizard** | — | the whole creation journey 🔵 |
 | **deferred cohesion** | shared custom code across both | shared custom code across both |
 
+## Resolved (2026-06-03)
+
+- **Commerce-SC v1 thinness → resolved:** v1 builds **one live spoke, AEM** (commerce→AEM content). AEP/App Builder stay designed slots.
+- **Front-door timing → resolved:** the **journey selector ships in v1** (commerce live, content "coming soon"), not deferred.
+
 ## Open journey questions
 
-- **Commerce-SC v1 thinness:** most "connect outward" value is designed slots until a spoke is built. If v1 should give the commerce SC one *live* outbound connection, that's the "build one spoke" variation (relaxes "build commerce only").
-- **Front-door timing:** does the journey selector appear in v1 (structurally, commerce-only lit) or only when the content wizard lands? (Tie to neutrality — structural now, implemented later.)
+- **A1 cross-org:** AEM content is org-bound — does the commerce owner's AEM need to be same-org, or can it be external? Re-verify live before building A1.
 - **Manual vs discovery default in Journey 2:** lead with manual (general) and offer discovery when a published peer is detected?

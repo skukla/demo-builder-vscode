@@ -26,15 +26,15 @@ Grew out of "hook the extension to an existing AEM Sites deployment and demo the
 
 ## Goal / scope
 
-- **In (v1, commerce-hub):** the connection/ownership framework (connection primitive: manual entry + discovery + apply), commerce's owned representation, and the per-`(product, ownership)` dashboard surface — all reusing the existing configuration model, no new field.
-- **Design, not build (v1):** the AEM / AEP / App Builder spoke connection contracts (validate the model against 4 products); surface as designed slots.
+- **In (v1, commerce-hub):** the connection/ownership framework (connection primitive: manual entry + discovery + apply), commerce's owned representation, the per-`(product, ownership)` dashboard surface, a **visible journey selector** (commerce live, content "coming soon"), and **one live outbound spoke — AEM** (commerce→AEM content) — all reusing the existing configuration model, no new field.
+- **Design, not build (v1):** the **AEP + App Builder** spoke connection contracts (AEM is built); surface as designed slots.
 - **First-class later:** the **content-SC owner wizard** (a second creation journey) and the **federated** peer-to-peer case (discoverable commerce) — must drop in additively on the neutral spine. **Deferred:** higher cohesion (shared upstream + synced forks) for shared code.
 - **Hard constraint:** the spine stays **product-neutral** (commerce is one product, not *the* product) — but neutrality is structural/naming, not a built-ahead framework (implement only commerce in v1; YAGNI).
 - **Out:** the deep "solution-family" product-selection refactor; content seeding into AEM; the optional SEO prerenderer.
 
 ## Execution plan
 
-The [roadmap](./roadmap.md) holds the sequence: **P1 discover · P2 apply** (the shared primitive, P1 TDD-ready) → **H1 connection/ownership model · H2 per-`(product,ownership)` dashboard** (the commerce-hub v1) → AEM-SC milestone → deferred cohesion. Detailed TDD plans are written just-in-time. **Open interpretation to confirm:** "build commerce" in v1 = the framework + commerce's owned representation + designed spoke slots, *not* a functional commerce→spoke wiring yet.
+The [roadmap](./roadmap.md) holds the sequence: **P1 discover · P2 apply** (shared primitive, P1 TDD-ready) → **H1 model · H2 dashboard · H3 journey selector** + **A1 the live AEM spoke** (the commerce-hub v1) → content-SC milestone → deferred cohesion. Detailed TDD plans are written just-in-time. **A1 carries the one live unknown:** AEM content is org-bound (unlike the org-agnostic commerce backend) — re-verify cross-org consumption live before building.
 
 ## Constraints
 

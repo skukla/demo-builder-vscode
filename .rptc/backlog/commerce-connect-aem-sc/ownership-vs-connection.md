@@ -29,7 +29,7 @@ The extension makes an SC the **owner** of a demo via a **creation wizard**. The
 
 | Owner (wizard) | Owns | Connects out to (usually external → **manual**) |
 |---|---|---|
-| **Commerce SC** (today; first *implemented*) | commerce backend + EDS/DA.live storefront | AEM / AEP / App Builder |
+| **Commerce SC** (today; first *implemented*) | commerce backend + EDS/DA.live storefront | **AEM (live, v1)** / AEP / App Builder |
 | **Content SC** (new wizard; first-class later) | AEM/content storefront (e.g. `aem-boilerplate-xcom`) | commerce backend, AEP, App Builder |
 | *either, **federated*** | their owned product | a **peer extension-built** demo → **discoverable** (the special case) |
 
@@ -51,15 +51,15 @@ Today the dashboard branches on a **binary `isEds`** (`isEdsStackId` = `eds-` pr
 Replace the binary with: **for each product in the composition, render owned-actions or a connected-status card.**
 - Owned commerce → Deploy Mesh / Sync / Configure / Author in DA.live.
 - Connected commerce → a "commerce connection" status card (reachable? configured? edit) — no management actions.
-- Owned AEM → Author in AEM. Connected AEP / App Builder → status + edit-connection cards.
+- Connected AEM → a **functional** content-connection card (v1 / A1). Owned AEM → Author in AEM (later). Connected AEP / App Builder → designed slots (v1).
 
 So the dashboard is **composed per `(product, ownership)`**, not a project-level enum — this *is* the configuration dashboard, and it answers the variant fork better than an enum would. The work: centralize the scattered `isEds` reads into one derived per-product capability.
 
 ## v1 decisions (locked 2026-06-03)
 
-- **Anchor: commerce-hub is the first *implemented* case — not a privileged one.** v1 introduces the framework in the **commerce owner's** experience, additive to today's flow, **on a product-neutral spine**. The **content-SC owner wizard** and the **federated peer-to-peer** case are first-class *future* milestones the spine must host **additively** (no rewrite) — so v1 must not bake in commerce-only assumptions even though only commerce is built.
-- **Contracts: design all, build commerce.** Sketch the connection-contract shape for AEM / AEP / App Builder now (coordinates → where they land → what the integration does) to validate the model against 4 products; **build only the commerce contract.** Outbound spokes surface as designed "connect …" slots until each is built.
-- **Build = framework, not a functional spoke yet** *(working interpretation — confirm before the detailed v1 plan).* Because commerce is *owned* in the hub scenario, "build commerce" = the framework + commerce's owned representation + its (source) connection contract + the per-`(product, ownership)` dashboard surface — **not** a working commerce→other-app wiring. The first functional spoke follows when a spoke contract is built.
+- **Anchor: commerce-hub is the first *implemented* case — not a privileged one.** v1 introduces the framework in the **commerce owner's** experience, additive to today's flow, **on a product-neutral spine**. The **content-SC owner wizard** and the **federated peer-to-peer** case are first-class *future* milestones the spine must host **additively** (no rewrite) — so v1 must not bake in commerce-only assumptions even though only commerce + the AEM spoke are built.
+- **Contracts: build AEM live, design AEP + App Builder.** The **AEM** spoke is implemented (manual entry → apply → a **functional** connected-AEM card); **AEP / App Builder** stay designed "connect …" slots until built. Plus a **visible journey selector** in v1 (commerce live, content "coming soon").
+- **Build includes one live spoke (AEM) — resolved 2026-06-03.** Earlier framing was "framework, no live spoke"; we relaxed "build commerce only" to ship **one functional outbound connection: commerce-owner → AEM content.** **Known risk:** AEM content / code-bus is **org-bound** (unlike the org-agnostic commerce backend) — re-verify cross-org consumption *live* before building (the chief A1 unknown).
 
 ## Open questions
 
