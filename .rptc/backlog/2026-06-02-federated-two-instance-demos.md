@@ -31,6 +31,47 @@ Each SC runs **their own copy** of the Demo Builder extension, authenticated to 
 - **AEM side:** "Discover from URL" (fetch the Commerce storefront's published config, extract the commerce subset — extends existing store discovery) · "Apply" (write to the AEM storefront's config service) · "Scaffold `xcom`" (template-copy — reuses repo-from-template) · **guide** the manual AEM steps (Code Sync, Cloud Manager site, IMS roles, UE enablement).
 - **Optional:** a shared demo descriptor (brand / name / linkage).
 
+## Higher cohesion: a shared storefront codebase (synced forks)
+
+The discovery model above shares commerce **data**; each storefront's **code** stays independent. To make *both* SCs' custom code appear in one coherent storefront, raise the cohesion level — share the **code** too, via a **shared upstream storefront codebase + per-org synced forks.**
+
+- **One upstream "storefront codebase"** = the canonical storefront (the `xcom` base + blocks + drop-ins) — the single source of truth for code.
+- **Each SC's extension project = a synced fork** in their own org (their own EDS site's code-bus — the cross-org rule *requires* the fork; keeping the forks in sync makes them effectively one storefront, deployed once per org).
+
+### Two cohesion levels (choose per demo)
+
+| | Discovery-only (v1 above) | Synced shared codebase |
+|---|---|---|
+| Shared | commerce **data** | commerce **data + code** (blocks + drop-ins) |
+| Storefronts | two, independently built | effectively **one**, synced per-org |
+| Cost | S–M | + a contribution/sync flow |
+
+### How the two SCs' custom code combines (the blocks/drop-ins asymmetry)
+
+The asymmetry is about who can **build**, not who can **consume** — consuming a synced artifact needs no special tooling:
+- **Commerce SC** builds custom **drop-ins** (dropin SDK + commerce/demo-builder skills — their exclusive capability) → contributes them as a **package / feature pack**.
+- **AEM SC** builds custom **blocks** (AEM modernization agent) → contributes them as a **block library**.
+- Both land in the shared upstream → **sync down to both forks** → each storefront ends up with *both* the custom blocks and the custom drop-ins, on the shared commerce data.
+
+### The extension already has most of the spine
+
+- **Template-based creation** (`templateOwner`/`templateRepo`) — the upstream-template concept.
+- **The update/sync system** — `templateSyncService`, `componentUpdater`, `updateManager`, `configSyncService` — pulls upstream changes into a project (one-way today).
+- **Block libraries** (`block-libraries.json`) — share custom blocks from a source, "usable in any EDS storefront."
+- **Feature packs** (`featurePackInstaller`, `feature-packs.json`) — installable code bundles (the natural vehicle for custom drop-ins).
+
+### The gap (what's genuinely new)
+
+- Sync is **one-way today** (upstream → project). The shared demo needs **contribution flowing *up*** (each SC's custom code → shared upstream) **+ sync flowing down to two forks**, kept aligned as each SC contributes.
+- A **shared upstream** both projects sync from — a repo, or the artifact channels (block libraries for blocks, packages/feature packs for drop-ins).
+- Contribution-to-upstream (git PR / publish a block library / publish a drop-in package) isn't automated today.
+
+### Constraints specific to this level
+
+- **Forks ≠ one repo** (cross-org rule) → they drift without active sync; the update system is what keeps them identical.
+- **Drop-ins need a commerce storefront** to land in — `xcom` qualifies; a plain AEM EDS site wouldn't.
+- **Block portability:** an AEM-authored (xwalk-instrumented) block renders anywhere but needs its xwalk config present to be *authorable* in the other storefront.
+
 ## Operator topology: federated vs centralized
 
 - **Federated (this):** two operators, one org each. Matches the two-SC reality; least refactor.
@@ -57,3 +98,4 @@ Each SC runs **their own copy** of the Demo Builder extension, authenticated to 
 - The **AEM-side scaffold + guide** flow (`xcom` template-copy + the manual AEM steps the extension can only guide).
 - Optional **shared demo descriptor**.
 - Where the "connect to a commerce demo" surface lives (Configure, dashboard, or both).
+- **(Higher cohesion, later)** the shared-codebase contribution flow — how custom blocks (block library) and custom drop-ins (package / feature pack) publish to a shared upstream and sync down to both forks, extending the existing update + block-library + feature-pack systems.
