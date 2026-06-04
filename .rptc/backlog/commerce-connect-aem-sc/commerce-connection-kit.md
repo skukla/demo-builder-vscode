@@ -54,6 +54,23 @@ A commerce EDS storefront reads `config.json` (dev) / the Configuration Service 
 
 No export/import file, no content seeding, no code-bus sharing, no fork. Effort looks **S–M** (lighter than the export model — the Commerce side is a no-op).
 
+## Variant: adding commerce to an SC's *existing* storefront (the graft)
+
+The shape above assumes the content SC **scaffolds a fresh `xcom`** storefront. A distinct, common case (the one that prompted this): the content SC **already has** a built EDS / AEM-Sites storefront and wants to **add commerce to it** — keep her setup, don't rebuild. That's a **graft**, not a scaffold.
+
+**The blocker for our audience:** grafting commerce in is normally developer work (merging commerce startup into her storefront's code), and **content SCs aren't developers.** There's no self-serve manual path for them — so this variant is viable only as a **tool** (or a one-off dev favor). *This is the strongest argument for building the kit: the manual alternative doesn't exist for non-technical SCs.*
+
+**What makes it tool-automatable — the key enabling assumption:** of everything the graft adds, only **one** file is a *non-additive merge* — **`scripts.js`** (where commerce is initialized at startup). Everything else (commerce blocks, `@dropins/*` deps, `config.json`, folder mapping) is **additive** — new files alongside hers, low-risk — which is exactly what `featurePackInstaller` already does (the way B2B is added today).
+
+So: **if `scripts.js` is the stock/untouched boilerplate file** (normal for a non-technical content author — she authors content, not JS), **the commerce init becomes a known transform on a known file → automatable, no developer.** The tool:
+- **detects** whether `scripts.js` (and `head.html`) match a known stock boilerplate version,
+- **if yes** → applies the commerce changes automatically (additive install + the known `scripts.js` patch),
+- **if no** (customized) → stops with "needs a developer" instead of silently breaking.
+
+That turns "add commerce to an existing site" from developer-only into a dependable, non-technical action. Residual variables: "stock" is relative to a boilerplate **version** (support known versions); and the cleanest outcome — **confirm in the [spike](./verify-aem-sites-spike.md)** — is whether commerce can **self-initialize without touching `scripts.js` at all** (purely additive), which would remove the assumption entirely.
+
+**Net:** the kit's only hard part is the `scripts.js` init merge; the stock-`scripts.js` precondition neutralizes it, and everything else is reuse. *(Scenario A — deprioritized vs. the locked B target — but this is the finding that would make it buildable for non-technical SCs if it recurs.)*
+
 ## What exists today, the two meanings of "connect", and how to start
 
 **What exists today.** The `demoBuilder.daLive.aemAuthorUrl` / `IMSOrgId` settings (`applyDaLiveOrgConfigSettings`, `edsHelpers.ts:537-580`) wire a **UE punch-out** on the Commerce SC's *DA* content. A real "specify an AEM instance" seam — but it delivers the **shared canvas**, not a separate AEM Sites storefront.
