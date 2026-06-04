@@ -204,6 +204,28 @@ predicate) and defaults to today's behavior when `flow` is absent.
 
 ---
 
+## Content-SC (Joiner) UX flow — a NEW flow, built from reused parts
+
+**Reuse-first applies to the building blocks, not the journey.** The content SC gets a
+**genuinely new end-to-end flow** — a new entry, two new screens, and a trimmed wizard
+sequence that differs from the commerce flow. It must be **designed and tested as a flow**;
+the Reuse-First Inventory below says *what it's built from*, not *that it's the same
+experience*. Design rationale: [engagement-modes-and-ownership](../../backlog/commerce-connect-aem-sc/engagement-modes-and-ownership.md) → "Per-SC wizard flows."
+
+Screen-by-screen (Slice 1 / DA.live), with the building step and key states:
+
+1. **Home → "Join a shared storefront"** — *new entry; reuses the dashboard CTA cluster* — **Step 2**.
+2. **Paste-link screen** — *new screen; reuses `FormField` (url) + `useCanProceed`* — states: empty / invalid / valid — **Step 2**.
+3. **Resolve on Continue** — *Backend-Call-on-Continue; reuses `GitHubFileOperations`* — states: loading overlay / error + retry — **Step 2**.
+4. **Confirmation preview** — *new screen; reuses `ReviewStep` LabelValue / `Modal`* — "Joining **CitiSignal** by `<owner>` → backend `<endpoint>`; you'll author in your **own** DA.live (AEM in Slice 2)" → confirm / back — **Step 2**.
+5. **Trimmed wizard** — *reuses `WizardContainer` shell + seeded state; gallery suppressed; prerequisites/mesh/adobe skipped* — name fork → connect **own** DA.live → **inherited backend** (confirm, no discovery) → create — **Steps 3 (filtering), 5 (coords), 4 (executor)**.
+6. **Creation / progress** — *reuses `ProjectCreationStep` + executor content branch* — **Step 4**.
+7. **Done → dashboard** — *content-flow project rendered via the archetype predicate* — **Step 7**.
+
+This is a **distinct user journey that did not exist before** — it just happens to be assembled almost entirely from existing components, services, and patterns. The flow's *novelty* lives in the **sequence + the two new screens (paste-link, preview) + the gallery suppression**; the *parts* are reused.
+
+---
+
 ## Reuse-First Inventory (audited 2026-06-04)
 
 A codebase reuse sweep confirmed Slice 1 is **primarily integration of existing pieces**. Prefer these; net-new only where flagged.
