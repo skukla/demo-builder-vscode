@@ -84,6 +84,21 @@ Up-front entry: **Solo / Start shared → gallery; Join shared → handoff.**
 
 **Verified:** the GitHub mechanism (collaborator-read generate from a private `is_template` master into the joiner's own account) is feasible per GitHub's documented API. **Not yet verified (spike-gated):** the joiner authoring in **their own AEM** (fstab → their AEM — the spine) and **cross-org transacting writes**. **Slice 1 proves the repo + inherit + content-source + sync plumbing on DA.live — i.e., the joiner flow minus AEM.**
 
+### Master visibility & joiner collaboration setup — DECISION (2026-06-04): public master
+
+**Assume the master is public.** GitHub lets anyone read / generate from a public template, so the **joiner needs no collaborator invite, no acceptance, no identity exchange** — only the master's repo identity. (Storefront is boilerplate + brand design; `config.json` holds only public-by-nature values: endpoint + public keys already served to browsers.) The joiner needs **no Adobe-side collaboration** either (own AEM; backend read by URL; CORS edge-handled). A **private master + invite/accept handshake** (`PUT /repos/.../collaborators/{username}` → joiner `PATCH /user/repository_invitations/{id}`) remains a documented **fallback** for repo-visibility-policy orgs, but is not the default.
+
+### Joining — how it's communicated in the UI
+
+With a public master, **"joining" is a single paste of a link**; the extension resolves the rest by reading the public master.
+
+- **Starter side:** after creating a "start shared" storefront, the project dashboard surfaces a **"Share storefront"** action → a copyable **join link** (the public master repo URL, optionally wrapped as a `demo-builder` join code) to send out-of-band (Slack/email). No in-app account linking.
+- **Joiner side:** the projects home screen carries a **distinct "Join a shared storefront"** entry (separate from "Create" — the flow starts from a link, not the brand gallery). It opens **one field: "Paste the storefront link"** → the extension reads the master's `config.json` (endpoint, store codes) + a small **self-describing marker** written into the master (package id, flow) → shows a **confirmation preview** ("You're joining **CitiSignal**, shared by `<owner>` → backend `<endpoint>`; you'll author in your **own** AEM/DA.live") → into the gallery-less joiner wizard.
+- **Token:** the public master repo URL is the single join token; everything else is read from the public repo. **Build implication:** write a small self-describing marker (package id, flow) into the master at creation.
+- **Trust gate:** the confirmation preview (before any repo is created) is where the joiner verifies brand + backend.
+
+Maps to the up-front entry: **Solo / Start shared → gallery; Join shared → paste link.** Refines **Slice 1 Step 2**: the content-SC entry is a **"Join" entry that takes a link, resolves it, then opens the gallery-less wizard** (buildable on DA.live; content-source-agnostic).
+
 ## Collaboration surfaces (Mode C)
 
 Because each party works in their **own IMS org** and authors in their **own AEM**, the cross‑org surface is tightly bounded — three surfaces, only one of them cross‑org:
