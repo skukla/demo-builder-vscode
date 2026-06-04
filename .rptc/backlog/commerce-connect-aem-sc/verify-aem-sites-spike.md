@@ -27,9 +27,9 @@ It's the **spine** of the locked target ([storefront-topology](./storefront-topo
 3. **Point content at AEM:** edit `fstab.yaml` — replace the default content-source URL with your **AEM author instance** URL.
 4. **Author a page in Universal Editor** on the AEM author instance; publish.
 5. **Wire commerce:** copy the boilerplate `config.json` to the repo root; set the endpoints/headers to **your** Commerce backend (`commerce-core-endpoint` + `commerce-endpoint`).
-6. **Verify transact:** open the published site → product list (Live Search/Catalog) → PDP → add to cart → reach checkout. *(PDPs render client-side by default — this works without the prerenderer.)*
+6. **Make PDPs resolve, then transact:** PDP URLs need *a* routing mechanism — for the spike, configure the (deprecated but still functional) **folder mapping**, which renders client-side and **transacts** with no App Builder. Then: product list (Live Search/Catalog) → PDP → add to cart → reach checkout.
 7. **CORS:** allow-list the storefront domain on the backend.
-8. **(Fidelity, optional) Prerenderer:** set up the **AEM Commerce Prerenderer** (an App Builder app) only if you want SEO-grade / crawlable PDPs — it's about initial HTML, *not* whether the page transacts. Also confirm what resolves PDP URLs by default now that folder mapping is deprecated.
+8. **(Build-time, not spike) Prerenderer:** the **AEM Commerce Prerenderer** (an App Builder app) is the *forward* PDP-routing choice — real per-product HTML via content-overlay, with fallback to the AEM-authored content source. It's the durable replacement for folder mapping (deprecated), needed for SEO/crawlable PDPs — **not** to transact. Confirm in the spike which routing the current xcom ships with by default.
 
 ## Record at each step (this feeds straight back into the plan)
 
@@ -44,7 +44,7 @@ It's the **spine** of the locked target ([storefront-topology](./storefront-topo
 - **xcom is purpose-built for this** — "all the changes on top of `aem-boilerplate-commerce` to author content and commerce blocks in-context with Universal Editor."
 - **AEM-as-content-source is standard** — install the Code Sync app + set `fstab.yaml` to the AEM author instance; content persists in AEM JCR, code in GitHub, EDS fetches each.
 - **Backend connection is `config.json`** (endpoints + headers) — copy the demo, point at your backend; cart/checkout/product dropins ship in the boilerplate.
-- **Prerenderer is SEO/fidelity, not transaction:** PDPs render client-side by default (a shopper can transact). The **AEM Commerce Prerenderer** (an App Builder app) pre-generates real per-product HTML so crawlers/LLMs/social previews see real content — it replaces the deprecated folder-mapping approach for *initial HTML*, not for whether the page works. Treat it as a later fidelity add-on; confirm default PDP-URL routing in the spike.
+- **PDP routing needs a mechanism (not free), but not the prerenderer to transact:** product URLs resolve via **either** (deprecated-but-functional) **folder mapping** (client-side data; quick; soft-404s/thin HTML) **or** the **AEM Commerce Prerenderer** (App Builder app; real per-product HTML via content-overlay, falling back to the AEM-authored source). A shopper can transact under folder mapping. Because folder mapping is deprecated, the prerenderer is the **durable build-time** PDP-routing choice — per fork, in its org — but it's never a transaction/spike blocker. *(Confidence: from doc/GitHub summaries — the aem.live writeup 403'd to fetch; the live spike confirms the exact default.)*
 - Sources: [Set Up AEM Sites as a Content Source](https://www.aem.live/developer/ue-tutorial) · [adobe-rnd/aem-boilerplate-xcom](https://github.com/adobe-rnd/aem-boilerplate-xcom) · [Storefront boilerplate configuration](https://experienceleague.adobe.com/developer/commerce/storefront/boilerplate/configuration/)
 
 ## Outcome → next move
