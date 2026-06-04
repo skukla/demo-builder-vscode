@@ -65,7 +65,7 @@ Because each party works in their **own IMS org** and authors in their **own AEM
 |---|---|---|---|
 | **Code (GitHub)** | No (GitHub is org‑agnostic) | Content party forks the shared source + syncs | **Automatable** — invite / fork / sync |
 | **AEM (author)** | **No** | Each authors in their **own** AEM, own org | **Zero cross‑org work** — self‑contained per party |
-| **Backend (transact)** | **Topology-dependent** | **ACCS-first + per-org mesh (recommended): CORS is set in each party's *own* mesh; the mesh reads ACCS server-side by URL + public key — no PaaS backend, no cross-org step.** Direct-backend allow-list is **PaaS-only** (no such knob on ACCS); on ACCS the only options are a per-org mesh or ACCS auto-allowing storefront origins (unverified — see spike). | Mesh path = self-contained per org (auto). Mesh is **verify-then-decide**, not mandated. |
+| **Backend (transact)** | **Topology-dependent** | **ACCS-first + per-org mesh (recommended): CORS is set in each party's *own* mesh; the mesh reads ACCS server-side by URL + public key — no PaaS backend, no cross-org step.** Direct-backend allow-list is **PaaS-only** (no such knob on ACCS). On ACCS, **documentation indicates the edge handles CORS** (read path is browser-direct by design; CORS config is PaaS-only) → **mesh not required for CORS**; confirm the transactional endpoint live (spike). | Mesh is **optional**, not mandated. |
 
 Key simplifiers from "own IMS org each":
 

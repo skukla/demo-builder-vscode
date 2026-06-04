@@ -30,14 +30,24 @@ A browser blocks a page on domain A from reading responses from domain B unless 
 - The earlier "commerce-SC allow-lists the content domain + bidirectional handshake" is **only the direct-backend (no-mesh) path.** With the recommended **ACCS-first + per-org mesh**, CORS is **self-contained in each party's own org** and the cross-org handshake **dissolves**. Mode C is *less* brittle than recorded — *provided* it is fronted by per-org meshes.
 - **Same-origin** (Adobe's global best practice) needs one shared domain → it is the **Mode A / single-org** option only, never cross-org.
 
-## Open / unverified
+## The deciding question — documentation indicates YES (ACCS handles CORS at the edge)
 
-- **Does ACCS return CORS headers for arbitrary storefront origins out of the box? — the deciding question (UNVERIFIED).** One live check: send the ACCS core-commerce (cart/checkout) GraphQL endpoint a request with an `Origin` header and inspect the response for `Access-Control-Allow-Origin`. **Yes ⇒ no mesh needed for CORS even cross-org** (mesh stays genuinely optional). **No ⇒ a per-org mesh is the only path** (same-origin isn't available cross-org). Belongs in the spike (needs a live ACCS endpoint).
-- **Cross-org transacting (WRITES), not just CORS — MEDIUM.** CORS is the browser-origin gate; whether cart/checkout *writes* against the commerce-SC's backend from another org work **end-to-end** is the spike's deferred item. CORS is necessary, possibly not sufficient — **verify live.**
+**Does ACCS return CORS headers for arbitrary storefront origins out of the box?** Adobe's docs answer this *indirectly but consistently* (no single explicit ACAO sentence for `/graphql`, so triangulated):
+
+- **Read path — CORS-open by design (HIGH).** Catalog Service / Live Search are called **directly from the storefront browser** at `catalog-service.adobe.io/graphql` (client-side PLP, per the connection + Live Search docs). A SaaS endpoint browser-called from arbitrary domains must return `Access-Control-Allow-Origin` for any origin.
+- **CORS config is PaaS-only (HIGH).** Both CORS pages are badged `PaaS only`; Adobe never instructs a SaaS user to configure CORS → the SaaS edge handles it.
+- **ACCS is fully Adobe-operated SaaS on the EDS + API-Mesh edge (HIGH on architecture)**, and the core endpoint **needs no api-key by default** — built for direct storefront consumption.
+- **Residual — core/transactional (cart/checkout) endpoint ACAO not explicitly stated (MEDIUM-HIGH).** Strongly implied by the above; confirm with one live `Origin`-header request (kept in the spike).
+
+**Net: a mesh is NOT required for CORS on ACCS.**
+
+## Still to verify live
+
+- **The transactional endpoint's ACAO (one request)** + **cross-org transacting (cart/checkout WRITES) end-to-end** — CORS is necessary, possibly not sufficient. Both in the spike.
 
 ## Recommendation
 
-**Do NOT mandate the mesh — verify-then-decide.** The direct-CORS-config path is PaaS-only, so on ACCS there is no manual backend allow-list handshake either way; the only open question is whether ACCS auto-allows storefront origins (above). Until that's checked live: keep the mesh **optional** (the config generator already supports a direct backend URL), document the per-org mesh as the **fallback mechanism if ACCS does not auto-allow**, and treat **same-origin** as Mode-A (single-org) only. The mesh's footprint is justified *only* if the live check comes back "no."
+**Do NOT mandate the mesh.** Documentation indicates ACCS handles cross-origin at the edge and the read path is browser-direct by design, so on ACCS the mesh is **likely not needed for CORS at all** — and there is no PaaS-style manual allow-list handshake on SaaS either way. Keep the mesh **optional** (the config generator already supports a direct backend URL); reserve it for cases where the transactional endpoint turns out *not* to auto-allow. Same-origin is Mode-A (single-org) only.
 
 ## Sources
 
