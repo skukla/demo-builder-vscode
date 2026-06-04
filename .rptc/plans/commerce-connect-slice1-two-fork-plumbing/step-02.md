@@ -1,6 +1,9 @@
 # Step 2: Content-SC "Join" Entry (link-resolving) — reuses `WizardContainer`
 
-**Status: 🟡 In progress.** ✅ Core service `resolveJoinLink` complete (2026-06-04) — 7/7 tests, lint, typecheck, SOP suite + grep green. **Remaining (next increment):** the UI screens (paste-link + confirmation preview), the Join entry/command, gallery-less seeded wizard launch, and the starter-side marker write.
+**Status: 🟡 In progress.**
+- ✅ Core service `resolveJoinLink` (2026-06-04) — 7/7 tests, all gates green.
+- ✅ `JoinStorefrontScreen` UI (paste-link → resolve-on-Continue → confirmation preview → Join), prop-driven, reuses `FormField` + Spectrum; 5/5 component tests, lint, typecheck, SOP suite + grep green.
+- **Remaining (next increments):** the Join webview entry/command (wires `onResolve` → `GitHubFileOperations` + `resolveJoinLink`, `onConfirm` → gallery-less seeded wizard launch) and the starter-side marker write.
 
 **Purpose:** Add the joiner's entry point. With a **public master** (decision recorded in
 [engagement-modes-and-ownership](../../backlog/commerce-connect-aem-sc/engagement-modes-and-ownership.md)),
