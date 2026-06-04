@@ -43,4 +43,4 @@ The combined demo (AEM content + commerce) **lives in the Content SC's org** —
 - Where the **upstream** is hosted and who can write to it (cross-team GitHub access) — step 3/5.
 - The **multi-fork state model**: today `currentProject` is singular — how to represent "one upstream, two forks."
 - **Two GitHub accounts** in one workflow (one active token per session today).
-- Re-verify live: **AEM-Sites content source**, **cross-org mesh call**, `aem-boilerplate-xcom` maturity, the **code-sync app**, CORS.
+- Re-verify live: **AEM-Sites content source**, `aem-boilerplate-xcom` maturity, the **code-sync app**, CORS, and the **cross-org mesh call *only if* we pick mesh option A** (the **mesh is optional / backend-dependent**, and per-org meshes avoid the cross-org call — see [storefront-topology](./storefront-topology.md)).

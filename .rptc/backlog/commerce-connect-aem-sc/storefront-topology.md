@@ -56,6 +56,19 @@ A neutral **upstream** holds the shared storefront *code* (**not a live site**).
 - **Full symmetry:** the Commerce SC's own demo is **also a fork** of the upstream — so their custom commerce blocks live in the upstream and reach both demos.
 - **Per-scenario** upstream for now; a reusable customization layer across many scenarios is a later question.
 
+## The mesh — optional, and not necessarily cross-org
+
+**API Mesh** is a hosted gateway that presents several commerce services (core Commerce GraphQL + Catalog Service + Live Search) to the storefront as **one GraphQL endpoint**, holding the private keys server-side. It is a **convenience/integration layer, not a hard requirement** — the config generator **uses a mesh endpoint if one is deployed, else falls back to the backend URL directly** *([`configGenerator.ts`](../../../src/features/eds/services/configGenerator.ts)).* Rule of thumb: **PaaS** usually wants a mesh (multiple services to stitch); **ACCS / SaaS** often doesn't.
+
+**"Cross-org mesh" is a design choice, not a necessity.** It only arises if both forks share the *Commerce SC's* one mesh:
+
+| Option | Mesh setup | Cross-org call? |
+|---|---|---|
+| **A — one shared mesh** | Commerce SC's mesh; both forks call it | **Yes** — Content SC's storefront → Commerce SC's mesh (the item on the verify list) |
+| **B — a mesh per org** (default) | Each SC deploys their own mesh pointing at the shared backend | **No** — each storefront calls its own org's mesh; only the *mesh→backend* hop crosses orgs, and that's the org-agnostic backend read we already trust |
+
+**Default to B** — it removes the cross-org mesh question entirely (leaning only on org-agnostic backend consumption) at the cost of each SC deploying a mesh in their own org (which the extension already does). Option A is simpler operationally (one mesh) but puts the cross-org call on the critical path. Or skip the mesh on SaaS backends.
+
 ## Reuse vs net-new
 
 | | Reuses today | Net-new |
@@ -67,4 +80,4 @@ A neutral **upstream** holds the shared storefront *code* (**not a live site**).
 
 ## Needs live verification
 
-Cross-org mesh call; `aem-boilerplate-xcom` maturity; the AEM code-sync app; CORS on the commerce endpoint. (Adobe docs block programmatic fetch — verify in a live environment before code lands.)
+`aem-boilerplate-xcom` maturity; the AEM code-sync app; CORS on the commerce endpoint; **the cross-org mesh call — but only if we pick mesh option A** (option B / per-org mesh avoids it). (Adobe docs block programmatic fetch — verify in a live environment before code lands.)
