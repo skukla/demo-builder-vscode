@@ -67,10 +67,10 @@ Mirroring (one shared package; mirror-by-fork-of-master — see [compositional-d
 | Repo creation | Generate from package boilerplate → **this repo is the master** | **Generate from the master** (mechanism below) |
 | Content seed | Package `contentSource` → their DA.live/AEM | Package id (from handoff) → brand starter content into **their own** AEM/DA.live |
 
-The joiner inherits via the generated copy: store codes (package `configDefaults` / master `config.json`), backend endpoint (master `config.json`), blocks (copied code); CORS handled at the ACCS edge.
+The joiner inherits via the generated copy: backend endpoint + store codes (from the master's committed **`storefront-share.json`** descriptor — see below; an owned schema, *not* parsed from Adobe's `config.json`), blocks (copied code); CORS handled at the ACCS edge.
 
 - **Starter** (≈ today's flow, tagged "start shared"): brand gallery → Connect-Commerce (their backend) → their content → generate repo (**= the master**, flagged `is_template`) → share master + emit handoff.
-- **Joiner** (net-new): "Join a shared storefront" → accept handoff (verify collaborator access) → *[skip prerequisites / mesh / adobe-IO]* → name the new repo → backend **inherited** (endpoint from master, store codes from package id; confirm, no discovery) → connect **own** AEM/DA.live → **generate from the master** (fstab → own content source; config inherited) → optionally seed brand starter content → create.
+- **Joiner** (net-new): "Join a shared storefront" → accept handoff (verify collaborator access) → *[skip prerequisites / mesh / adobe-IO]* → name the new repo → backend **inherited** (endpoint + store codes from the master's `storefront-share.json`; confirm, no discovery) → connect **own** AEM/DA.live → **generate from the master** (fstab → own content source; config inherited) → optionally seed brand starter content → create.
 
 Up-front entry: **Solo / Start shared → gallery; Join shared → handoff.**
 
@@ -93,8 +93,9 @@ Up-front entry: **Solo / Start shared → gallery; Join shared → handoff.**
 With a public master, **"joining" is a single paste of a link**; the extension resolves the rest by reading the public master.
 
 - **Starter side:** after creating a "start shared" storefront, the project dashboard surfaces a **"Share storefront"** action → a copyable **join link** (the public master repo URL, optionally wrapped as a `demo-builder` join code) to send out-of-band (Slack/email). No in-app account linking.
-- **Joiner side:** the projects home screen carries a **distinct "Join a shared storefront"** entry (separate from "Create" — the flow starts from a link, not the brand gallery). It opens **one field: "Paste the storefront link"** → the extension reads the master's `config.json` (endpoint, store codes) + a small **self-describing marker** written into the master (package id, flow) → shows a **confirmation preview** ("You're joining **CitiSignal**, shared by `<owner>` → backend `<endpoint>`; you'll author in your **own** AEM/DA.live") → into the gallery-less joiner wizard.
-- **Token:** the public master repo URL is the single join token; everything else is read from the public repo. **Build implication:** write a small self-describing marker (package id, flow) into the master at creation.
+- **Joiner side:** the projects home screen carries a **distinct "Join a shared storefront"** entry (separate from "Create" — the flow starts from a link, not the brand gallery). It opens **one field: "Paste the storefront link"** → the extension reads a single repo-committed **`storefront-share.json`** descriptor from the master (package id + inherited commerce coords: endpoint, store codes) → shows a **confirmation preview** ("You're joining **CitiSignal**, shared by `<owner>` → backend `<endpoint>`; you'll author in your **own** AEM/DA.live") → into the gallery-less joiner wizard. The descriptor is an **owned schema**; resolve does **not** parse Adobe's `config.json` (decouples us from Adobe's file format).
+- **`storefront-share.json` vs `.demo-builder.json`:** these are distinct. `storefront-share.json` is the **repo-committed, publicly-readable** share descriptor (the thing a joiner reads remotely). `.demo-builder.json` is the **local per-project manifest** on the operator's filesystem (per-project state, never committed to the shared repo). The naming keeps them from being confused.
+- **Token:** the public master repo URL is the single join token; everything else is read from `storefront-share.json` in the public repo. **Build implication:** write the `storefront-share.json` descriptor (package id + commerce coords) into the master at creation.
 - **Trust gate:** the confirmation preview (before any repo is created) is where the joiner verifies brand + backend.
 
 Maps to the up-front entry: **Solo / Start shared → gallery; Join shared → paste link.** Refines **Slice 1 Step 2**: the content-SC entry is a **"Join" entry that takes a link, resolves it, then opens the gallery-less wizard** (buildable on DA.live; content-source-agnostic).
@@ -105,7 +106,7 @@ The joiner interacts with GitHub at several points — all in **their own accoun
 
 | Touchpoint | When | Auth |
 |---|---|---|
-| **Resolve** (read the master's marker) | paste-link / preview | **none** — unauthenticated `raw.githubusercontent.com` read |
+| **Resolve** (read the master's `storefront-share.json` descriptor) | paste-link / preview | **none** — unauthenticated `raw.githubusercontent.com` read |
 | **GitHub sign-in (OAuth)** | at fork creation (existing `eds-connect-services` step) | sign-in |
 | **Repo generation** (`createFromTemplate` from the master → joiner's account) | fork creation | their token |
 | **GitHub App install** (AEM Code Sync on their repo) | storefront-setup | their token |
