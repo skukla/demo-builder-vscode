@@ -57,7 +57,8 @@ Most of the pieces already exist — V1 mostly **assembles them across two SCs**
 |---|---|
 | [storefront-topology](./storefront-topology.md) | **The authoritative architecture** — the Adobe canonical-site rule, what can/can't be shared across orgs, the two shapes, and the upstream decision (neutral, seeded, full symmetry). |
 | [roadmap](./roadmap.md) | **The build sequence** — verify-first, then the increments to the locked target, each tagged EXISTS/PARTIAL/NET-NEW with file refs. |
-| [verify-aem-sites-spike](./verify-aem-sites-spike.md) | **The gating spike** (the clear next step) — an executable runbook to confirm, in a live env, that an `xcom` storefront can be AEM-Sites-authored *and* transact. |
+| [verify-aem-sites-spike](./verify-aem-sites-spike.md) | **The gating spike** — an executable runbook (setup → test) to confirm, in a live env, that an `xcom` storefront can be AEM-Sites-authored *and* transact. |
+| [synthesis-and-build-order](./synthesis-and-build-order.md) | **Design → code** — how the target attaches to the existing extension (current→target diff, file-referenced), and the build order. Slice 1 (two-fork plumbing, DA.live) is buildable *now* while the spike is pending. |
 | [federated-two-instance-demos](./federated-two-instance-demos.md) | The **two-SC / synced-copy delivery model** — now V1-central (it was filed as "deferred"). |
 | [aem-sc-first-run](./aem-sc-first-run.md) | The **content-SC-owned storefront** flow + **AEM Sites** as the content-authoring tool — the V1 model. |
 | [commerce-connection-kit](./commerce-connection-kit.md) | The **commerce-backend connection** detail (now one step *inside* the synced storefront) + the cross-account read caveat. |
