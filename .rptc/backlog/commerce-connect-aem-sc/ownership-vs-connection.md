@@ -1,16 +1,6 @@
 # Ownership vs connection — the organizing model
 
-> **Read this as the broader product *direction*, not this feature's V1 (updated 2026-06-04).** The **organizing model** below — an *owning system* plus *added connected systems* (commerce, AEM, AEP, App Builder), composed per-product — is the **strategic direction**: the shift from today's **prebuilt packages** to a **compositional** Adobe demo builder. The locked **synced-storefront** feature ([storefront-topology](./storefront-topology.md)) is its **first concrete instance**. Only the specific *"v1 decisions"* lower in this doc (commerce-hub pulls AEM content; the journey selector; the AEM "spoke") are **superseded** by that target.
-
-## From prebuilt packages to a compositional demo builder (the direction)
-
-**Today:** commerce demos are **prebuilt packages** — the SC picks a demo package + stack and receives a predetermined component set (`demo-packages.json` / `stacks.json`).
-
-**The direction:** the SC composes a demo from **an owning system + the additional systems they choose to connect to it.** The wizard creates the owning system (commerce today; content/AEM next); the SC then **adds connected systems** the demo needs — including **App Builder instances** (API Mesh, the Commerce Prerenderer), and later AEP and others — instead of receiving a fixed bundle.
-
-**First concrete need — the App Builder add-flow:** a step in either wizard that lets the SC **specify App Builder instances to add to a demo** (e.g. a mesh; the Commerce Prerenderer for SEO-grade PDPs). The data hook already exists — `componentSelections.appBuilder[]` ([`src/types/base.ts`](../../../src/types/base.ts)) — so the work is a **wizard surface + provisioning over an existing slot**, not a new model. This is where "compositional" first stops being abstract.
-
-**How it relates to the locked V1:** the synced-storefront feature is the **first instance** of this — an owning system (each SC's storefront) + a connected backend + optional per-fork App Builder apps. It proves the compositional model in one slice without building the general composer up front (YAGNI).
+> **This doc is the detailed per-product *model* (updated 2026-06-04).** The **direction** it serves — prebuilt packages → a compositional demo builder (owning system + added connected systems) — now has its own north-star home: **[compositional-demo-builder](../compositional-demo-builder.md)** (incl. the slice ladder and the App Builder add-flow). Read that for the *why/where-it's-going*; read **below** for the detailed owned-vs-connected model. The specific *"v1 decisions"* lower in this doc (commerce-hub pulls AEM content; the journey selector; the AEM "spoke") are **superseded** by [storefront-topology](./storefront-topology.md).
 
 **Filed:** 2026-06-03
 **Status:** Design (the organizing primitive for the whole feature). Read after [overview](./overview.md); it generalizes [commerce-connection-kit](./commerce-connection-kit.md) and reframes the dashboard work in [aem-sc-first-run](./aem-sc-first-run.md).

@@ -2,7 +2,7 @@
 
 **Filed:** 2026-06-02 · **Re-aimed:** 2026-06-03 · **Status:** backlog (designed, paused — ready to promote when activated).
 
-This file is the front door — read it first.
+This file is the front door — read it first. *Part of the [compositional Adobe demo builder](../compositional-demo-builder.md) direction — this is its **first feature**.*
 
 > **2026-06-03 re-aim.** Earlier drafts framed V1 as a single commerce demo that "connects out" to other Adobe apps (including pulling in AEM content). **That was the wrong target.** V1 is the **synced common storefront** described below. The other docs in this folder still carry some of the older framing — this overview is the current source of truth; each doc is flagged in the table.
 
