@@ -7,6 +7,7 @@ import {
     buildGitHubHeaders,
     fetchWithTimeout,
 } from './githubApiClient';
+import { isRepoCollaborator } from './collaboratorGate';
 import { selectLatestForChannel } from './releaseTrack';
 import type { ReleaseInfo, UpdateCheckResult, GitHubRelease, GitHubReleaseAsset, UpdateChannel } from './types';
 import { validateGitHubDownloadURL } from '@/core/validation';
@@ -52,8 +53,8 @@ export class UpdateManager {
      */
     async checkExtensionUpdate(): Promise<UpdateCheckResult> {
         const currentVersion = this.context.extension.packageJSON.version;
-        const channel = this.getUpdateChannel();
-    
+        const channel = await this.resolveEffectiveChannel(this.getUpdateChannel());
+
         const latestRelease = await this.fetchLatestRelease(this.EXTENSION_REPO, channel);
     
         if (!latestRelease) {
@@ -267,6 +268,23 @@ export class UpdateManager {
     private getUpdateChannel(): UpdateChannel {
         return vscode.workspace.getConfiguration('demoBuilder')
             .get<UpdateChannel>('updateChannel', 'stable');
+    }
+
+    /**
+     * Resolve the channel actually used for fetching. early-access is honored
+     * only for verified repo collaborators; otherwise it falls back to beta.
+     * Never throws (the gate itself fails closed).
+     */
+    private async resolveEffectiveChannel(configured: UpdateChannel): Promise<UpdateChannel> {
+        if (configured !== 'early-access') return configured;
+        try {
+            const allowed = await isRepoCollaborator(this.context.secrets, this.logger);
+            return allowed ? 'early-access' : 'beta';
+        } catch {
+            // Defensive: the gate fails closed internally, but never let an
+            // unexpected error block the update check — fall back to beta.
+            return 'beta';
+        }
     }
 
     private isNewerVersion(latest: string, current: string): boolean {

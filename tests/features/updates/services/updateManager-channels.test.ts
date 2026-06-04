@@ -198,52 +198,8 @@ describe('UpdateManager - Update Channels', () => {
             expect(result.latest).toBe('1.2.0-beta.1');
         });
 
-        it('early-access selects the alpha build (ungated path at this step)', async () => {
-            (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue(
-                createMockWorkspaceConfig('early-access')
-            );
-            (global.fetch as jest.Mock).mockResolvedValueOnce({
-                ok: true,
-                json: async () => createMockReleasesArray(),
-            });
-            mockSecurityValidationPass();
-
-            const result = await new UpdateManager(mockContext, mockLogger).checkExtensionUpdate();
-
-            expect(result.latest).toBe('2.0.0-alpha.1');
-            expect(global.fetch).toHaveBeenCalledWith(
-                expect.stringContaining('/releases?per_page=20'),
-                expect.any(Object)
-            );
-        });
-
-        it('early-access with only final releases reports no update', async () => {
-            (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue(
-                createMockWorkspaceConfig('early-access')
-            );
-            (global.fetch as jest.Mock).mockResolvedValueOnce({
-                ok: true,
-                json: async () => [
-                    {
-                        tag_name: 'v1.1.0',
-                        body: 'Stable',
-                        published_at: '2024-01-01T00:00:00Z',
-                        prerelease: false,
-                        draft: false,
-                        assets: [
-                            {
-                                name: 'extension.vsix',
-                                browser_download_url: 'https://github.com/test/repo/releases/download/v1.1.0/extension.vsix',
-                            },
-                        ],
-                    },
-                ],
-            });
-            mockSecurityValidationPass();
-
-            const result = await new UpdateManager(mockContext, mockLogger).checkExtensionUpdate();
-
-            expect(result.hasUpdate).toBe(false);
-        });
+        // early-access gated behavior (collaborator → alpha, otherwise beta) and the
+        // "only finals → no update" case are covered in updateManager-earlyAccess.test.ts
+        // and releaseTrack.test.ts respectively.
     });
 });
