@@ -8,10 +8,21 @@ import {
     buildMasterMarker,
     serializeMasterMarker,
     writeMasterMarker,
+    publishMasterMarkerForProject,
     type MasterFileWriter,
     resolveJoinLink,
     MASTER_MARKER_PATH,
 } from '@/features/project-creation/services/resolveJoinLink';
+import type { Project } from '@/types/base';
+
+const makeProject = (over: Partial<Project>): Project => ({
+    name: 'demo',
+    created: new Date(),
+    lastModified: new Date(),
+    path: '/x',
+    status: 'created' as Project['status'],
+    ...over,
+});
 
 describe('buildMasterMarker', () => {
     it('builds a marker with packageId + commerce coords', () => {
@@ -90,5 +101,61 @@ describe('writeMasterMarker', () => {
         if (!result.ok) return;
         expect(result.descriptor.packageId).toBe('citisignal');
         expect(result.descriptor.commerce?.endpoint).toBe('https://x/graphql');
+    });
+});
+
+describe('publishMasterMarkerForProject', () => {
+    it('builds + writes a marker from the project package + componentConfigs coords', async () => {
+        const writes: Array<{ path: string; content: string }> = [];
+        const writeFile: MasterFileWriter = async (_o, _r, path, content) => { writes.push({ path, content }); };
+
+        const ok = await publishMasterMarkerForProject(
+            {
+                owner: 'me',
+                repo: 'citisignal',
+                project: makeProject({
+                    selectedPackage: 'citisignal',
+                    componentConfigs: {
+                        'adobe-commerce-accs': {
+                            ACCS_GRAPHQL_ENDPOINT: 'https://x/graphql',
+                            ACCS_WEBSITE_CODE: 'citisignal',
+                            ACCS_STORE_CODE: 'citisignal_store',
+                            ACCS_STORE_VIEW_CODE: 'citisignal_us',
+                        },
+                    },
+                }),
+            },
+            writeFile,
+        );
+
+        expect(ok).toBe(true);
+        expect(writes).toHaveLength(1);
+        expect(writes[0].path).toBe(MASTER_MARKER_PATH);
+        const parsed = JSON.parse(writes[0].content);
+        expect(parsed.packageId).toBe('citisignal');
+        expect(parsed.commerce).toEqual({
+            endpoint: 'https://x/graphql',
+            websiteCode: 'citisignal',
+            storeCode: 'citisignal_store',
+            storeViewCode: 'citisignal_us',
+        });
+    });
+
+    it('does not confuse STORE_CODE with STORE_VIEW_CODE', async () => {
+        let written = '';
+        await publishMasterMarkerForProject(
+            { owner: 'o', repo: 'r', project: makeProject({ selectedPackage: 'b', componentConfigs: { x: { PAAS_STORE_CODE: 'main', PAAS_STORE_VIEW_CODE: 'default' } } }) },
+            async (_o, _r, _p, content) => { written = content; },
+        );
+        const c = JSON.parse(written).commerce;
+        expect(c.storeCode).toBe('main');
+        expect(c.storeViewCode).toBe('default');
+    });
+
+    it('returns false (no write) when the project has no package', async () => {
+        const writeFile = jest.fn();
+        const ok = await publishMasterMarkerForProject({ owner: 'me', repo: 'r', project: makeProject({}) }, writeFile);
+        expect(ok).toBe(false);
+        expect(writeFile).not.toHaveBeenCalled();
     });
 });

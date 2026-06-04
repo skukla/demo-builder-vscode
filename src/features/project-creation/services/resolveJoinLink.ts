@@ -10,6 +10,7 @@
  */
 
 import { parseGitHubUrl } from '@/core/utils';
+import type { Project } from '@/types/base';
 import { isRecord } from '@/types/typeGuards';
 
 /** Repo path of the master's self-describing marker. */
@@ -69,6 +70,39 @@ export async function writeMasterMarker(
 ): Promise<void> {
     const content = serializeMasterMarker(buildMasterMarker(target.packageId, target.commerce));
     await writeFile(target.owner, target.repo, MASTER_MARKER_PATH, content, 'chore: add Demo Builder storefront marker');
+}
+
+/** Extract commerce coordinates from a project's componentConfigs (backend-agnostic). */
+function extractCommerceCoords(configs: Project['componentConfigs']): MasterCommerceCoords | undefined {
+    if (!configs) return undefined;
+    const out: MasterCommerceCoords = {};
+    for (const cfg of Object.values(configs)) {
+        for (const [key, value] of Object.entries(cfg)) {
+            if (typeof value !== 'string' || value.length === 0) continue;
+            if (key.endsWith('GRAPHQL_ENDPOINT')) out.endpoint ??= value;
+            else if (key.endsWith('STORE_VIEW_CODE')) out.storeViewCode ??= value;
+            else if (key.endsWith('STORE_CODE')) out.storeCode ??= value;
+            else if (key.endsWith('WEBSITE_CODE')) out.websiteCode ??= value;
+        }
+    }
+    return Object.keys(out).length > 0 ? out : undefined;
+}
+
+/**
+ * Publish the marker into a created (master) storefront so a content fork can join
+ * it. Builds packageId + commerce coords from the project; no-ops (returns false)
+ * when the project has no package identity. The writer is injected (the starter
+ * wires GitHubFileOperations.createOrUpdateFile).
+ */
+export async function publishMasterMarkerForProject(
+    target: { owner: string; repo: string; project: Project },
+    writeFile: MasterFileWriter,
+): Promise<boolean> {
+    const packageId = target.project.selectedPackage;
+    if (!packageId) return false;
+    const commerce = extractCommerceCoords(target.project.componentConfigs);
+    await writeMasterMarker({ owner: target.owner, repo: target.repo, packageId, commerce }, writeFile);
+    return true;
 }
 
 /** Reads a file from a public master repo; resolves null when absent (404). */
