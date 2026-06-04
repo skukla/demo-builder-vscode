@@ -39,6 +39,16 @@ framework, a plugin architecture, AEM Sites as a content source (Slice 2),
 mirrored-package config (Slice 3+), two-way contribution, or a full migration of
 every `isEds` call site. Each step extends an existing slot additively.
 
+**Forward-compat (see [engagement-modes-and-ownership](../../backlog/commerce-connect-aem-sc/engagement-modes-and-ownership.md)):**
+the design session surfaced an access-driven model with three engagement modes
+(A solo / B co-located single-org collaboration / C federated cross-org). Slice 1
+builds Mode C's two-fork substrate. Two constraints on this slice so it doesn't
+foreclose the others: (1) **do not hard-wire `flow:'commerce'` ⇒ DA.live** —
+content source is a separate dimension; (2) keep "who hosts the shared repo"
+**process-driven**, not a code-fixed role. An **open determinant** (does the
+content party author in the Commerce org's AEM (B) or their own (C)?) may reorder
+build priority; Slice 1 stays valid as substrate regardless.
+
 **Estimated Complexity:** Medium-Complex
 **Estimated Timeline:** 4–6 days
 
