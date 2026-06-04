@@ -61,7 +61,7 @@ Most of the pieces already exist — V1 mostly **assembles them across two SCs**
 | [federated-two-instance-demos](./federated-two-instance-demos.md) | The **two-SC / synced-copy delivery model** — now V1-central (it was filed as "deferred"). |
 | [aem-sc-first-run](./aem-sc-first-run.md) | The **content-SC-owned storefront** flow + **AEM Sites** as the content-authoring tool — the V1 model. |
 | [commerce-connection-kit](./commerce-connection-kit.md) | The **commerce-backend connection** detail (now one step *inside* the synced storefront) + the cross-account read caveat. |
-| [ownership-vs-connection](./ownership-vs-connection.md) | Earlier organizing model ("connection-as-primitive / commerce-hub"). **Superseded framing** — kept for the research trail. |
+| [ownership-vs-connection](./ownership-vs-connection.md) | **The broader product direction** — owning system + added connected systems (incl. App Builder), i.e. the shift from prebuilt packages to a compositional demo builder; the synced storefront is its first instance. *(Its old "v1 decisions" are superseded by storefront-topology.)* |
 | [user-journeys](./user-journeys.md) | Step-by-step journeys — **reflects the earlier framing**; see the roadmap for the corrected V1. |
 | [slice1-discovery](./slice1-discovery.md) | A discovery service — **now a later convenience, not the first slice** (the Commerce SC owns the backend in V1). |
 
