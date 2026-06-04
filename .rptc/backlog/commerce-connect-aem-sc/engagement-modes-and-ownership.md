@@ -57,6 +57,33 @@ The content party authors in **their own AEM, in their own IMS org** — each co
 - **Mode B (co‑located) is possible but dispreferred** — content SCs want to own/author their own instances, not author in the commerce party's org. Keep only as a fallback.
 - **Mode A (solo) is provided as an explicit niche option** in the extension (one user, one org; content source = AEM Sites or DA.live, entitlement‑gated). Cheap — it's the solo flow + the content‑source choice.
 
+## Per-SC wizard flows (Mode C)
+
+Mirroring (one shared package; mirror-by-fork-of-master — see [compositional-demo-builder](../compositional-demo-builder.md)) makes the two wizards diverge at **three touchpoints**; the joiner inherits the rest.
+
+| Touchpoint | Starter (Commerce SC / Mode-A solo) | Joiner (Content SC) |
+|---|---|---|
+| Brand identity | Brand gallery → pick package (seeds the master) | **No gallery** — accept join handoff `{master repo, endpoint, package id}`; brand inherited |
+| Repo creation | Generate from package boilerplate → **this repo is the master** | **Generate from the master** (mechanism below) |
+| Content seed | Package `contentSource` → their DA.live/AEM | Package id (from handoff) → brand starter content into **their own** AEM/DA.live |
+
+The joiner inherits via the generated copy: store codes (package `configDefaults` / master `config.json`), backend endpoint (master `config.json`), blocks (copied code); CORS handled at the ACCS edge.
+
+- **Starter** (≈ today's flow, tagged "start shared"): brand gallery → Connect-Commerce (their backend) → their content → generate repo (**= the master**, flagged `is_template`) → share master + emit handoff.
+- **Joiner** (net-new): "Join a shared storefront" → accept handoff (verify collaborator access) → *[skip prerequisites / mesh / adobe-IO]* → name the new repo → backend **inherited** (endpoint from master, store codes from package id; confirm, no discovery) → connect **own** AEM/DA.live → **generate from the master** (fstab → own content source; config inherited) → optionally seed brand starter content → create.
+
+Up-front entry: **Solo / Start shared → gallery; Join shared → handoff.**
+
+### Mechanism: "fork the master" = template-generate + existing sync (verified against GitHub docs, 2026-06-04)
+
+"Fork the master" is implemented with **existing** code paths — **not** a GitHub-native fork:
+
+- **Repo creation:** the **joiner's own extension** (authenticated as the joiner, with **collaborator read access** to the master) calls `createFromTemplate` (`POST /repos/{owner}/{repo}/generate`) with the **master** as `template_owner/template_repo` → a new repo **in the joiner's account**. GitHub docs confirm *anyone with read access to a template can generate from it*, and generate is *"for the authenticated user"* — exactly the per-user-extension model. The master must be flagged **`is_template: true`** (a toggle the starter's "share" step sets; a repo can be a template **and** a live repo at once).
+- **Ongoing sync:** the existing `templateSyncService` (adds the source as a git remote and fetches — it does **not** rely on a GitHub fork connection) syncs the joiner's repo from the master via `templateOwner/templateRepo = master`; reset-to-upstream default (D2).
+- **Why generate, not fork:** the sync engine already does its own remote + fetch, so the fork connection buys nothing; and a private personal-account fork leaks visibility to external collaborators. Generate (single-commit, disconnected) + metadata-driven sync is cleaner and reuses today's code. *(Resolves the earlier "fork vs template-generate" open mechanic → template-generate.)*
+
+**Verified:** the GitHub mechanism (collaborator-read generate from a private `is_template` master into the joiner's own account) is feasible per GitHub's documented API. **Not yet verified (spike-gated):** the joiner authoring in **their own AEM** (fstab → their AEM — the spine) and **cross-org transacting writes**. **Slice 1 proves the repo + inherit + content-source + sync plumbing on DA.live — i.e., the joiner flow minus AEM.**
+
 ## Collaboration surfaces (Mode C)
 
 Because each party works in their **own IMS org** and authors in their **own AEM**, the cross‑org surface is tightly bounded — three surfaces, only one of them cross‑org:
