@@ -1,5 +1,7 @@
 # Step 4: Content Flow Through the Existing Pipeline (config-first)
 
+**Status: 🟡 Config gate done (2026-06-04).** ✅ `supportedFlows` added to `stacks.json` (EDS=`['commerce','content']`, headless=`['commerce']`), the `Stack` type, `stacks.schema.json`, and the alignment test's field list — 116 template/alignment tests green, lint/typecheck/SOP clean. **Remaining:** the executor content-flow integration test (verify the existing pipeline handles content given seeded config: no mesh deployed, inherited coords in config.json, Phase 5/5b run) — heavier node integration test.
+
 **Purpose:** Make the **content flow run end-to-end through the EXISTING creation
 pipeline**, driven by **configuration + seeded data** rather than an imperative
 executor branch. Three config facts do almost all the work:

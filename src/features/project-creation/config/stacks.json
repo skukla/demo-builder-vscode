@@ -18,7 +18,8 @@
       "dependencies": [],
       "optionalDependencies": ["headless-commerce-mesh"],
       "optionalAddons": [],
-      "features": ["Server-side rendering", "API Mesh integration", "Full customization"]
+      "features": ["Server-side rendering", "API Mesh integration", "Full customization"],
+      "supportedFlows": ["commerce"]
     },
     {
       "id": "headless-accs",
@@ -30,7 +31,8 @@
       "dependencies": [],
       "optionalDependencies": ["headless-commerce-mesh"],
       "optionalAddons": [],
-      "features": ["Server-side rendering", "API Mesh integration", "Managed backend"]
+      "features": ["Server-side rendering", "API Mesh integration", "Managed backend"],
+      "supportedFlows": ["commerce"]
     },
     {
       "id": "eds-paas",
@@ -45,6 +47,7 @@
         { "id": "adobe-commerce-aco" }
       ],
       "features": ["Ultra-fast delivery", "DA.live content", "Self-managed backend"],
+      "supportedFlows": ["commerce", "content"],
       "requiresGitHub": true,
       "requiresDaLive": true
     },
@@ -61,6 +64,7 @@
         { "id": "adobe-commerce-aco" }
       ],
       "features": ["Ultra-fast delivery", "DA.live content", "Managed backend"],
+      "supportedFlows": ["commerce", "content"],
       "requiresGitHub": true,
       "requiresDaLive": true
     }
