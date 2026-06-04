@@ -1,5 +1,7 @@
 # Step 2: Content-SC "Join" Entry (link-resolving) — reuses `WizardContainer`
 
+**Status: 🟡 In progress.** ✅ Core service `resolveJoinLink` complete (2026-06-04) — 7/7 tests, lint, typecheck, SOP suite + grep green. **Remaining (next increment):** the UI screens (paste-link + confirmation preview), the Join entry/command, gallery-less seeded wizard launch, and the starter-side marker write.
+
 **Purpose:** Add the joiner's entry point. With a **public master** (decision recorded in
 [engagement-modes-and-ownership](../../backlog/commerce-connect-aem-sc/engagement-modes-and-ownership.md)),
 joining is a single **paste of a link**: a new "Join a shared storefront" entry resolves the link
