@@ -7,6 +7,8 @@
 import {
     buildMasterMarker,
     serializeMasterMarker,
+    writeMasterMarker,
+    type MasterFileWriter,
     resolveJoinLink,
     MASTER_MARKER_PATH,
 } from '@/features/project-creation/services/resolveJoinLink';
@@ -50,5 +52,43 @@ describe('marker round-trip (write → read)', () => {
         expect(result.descriptor.upstream).toEqual({ owner: 'commerce-sc', repo: 'citisignal-master' });
         expect(result.descriptor.packageId).toBe('citisignal');
         expect(result.descriptor.commerce).toEqual({ endpoint: 'https://x/graphql', storeViewCode: 'citisignal_us' });
+    });
+});
+
+describe('writeMasterMarker', () => {
+    it('writes the serialized marker to MASTER_MARKER_PATH with a commit message', async () => {
+        const writes: Array<{ owner: string; repo: string; path: string; content: string; message: string }> = [];
+        const writeFile: MasterFileWriter = async (owner, repo, path, content, message) => {
+            writes.push({ owner, repo, path, content, message });
+        };
+
+        await writeMasterMarker(
+            { owner: 'commerce-sc', repo: 'citisignal-master', packageId: 'citisignal', commerce: { endpoint: 'https://x/graphql' } },
+            writeFile,
+        );
+
+        expect(writes).toHaveLength(1);
+        expect(writes[0].owner).toBe('commerce-sc');
+        expect(writes[0].repo).toBe('citisignal-master');
+        expect(writes[0].path).toBe(MASTER_MARKER_PATH);
+        expect(writes[0].message.length).toBeGreaterThan(0);
+        const parsed = JSON.parse(writes[0].content);
+        expect(parsed.packageId).toBe('citisignal');
+        expect(parsed.commerce.endpoint).toBe('https://x/graphql');
+    });
+
+    it('round-trips: a written marker resolves back to the same descriptor', async () => {
+        let written = '';
+        await writeMasterMarker(
+            { owner: 'o', repo: 'r', packageId: 'citisignal', commerce: { endpoint: 'https://x/graphql' } },
+            async (_o, _r, _p, content) => { written = content; },
+        );
+        const result = await resolveJoinLink('https://github.com/o/r', async (_o, _r, path) =>
+            path === MASTER_MARKER_PATH ? written : null,
+        );
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.descriptor.packageId).toBe('citisignal');
+        expect(result.descriptor.commerce?.endpoint).toBe('https://x/graphql');
     });
 });

@@ -50,6 +50,27 @@ export function serializeMasterMarker(marker: MasterMarker): string {
     return JSON.stringify(marker, null, 2);
 }
 
+/** Writes a repo file (create/update); the starter wires GitHubFileOperations.createOrUpdateFile. */
+export type MasterFileWriter = (
+    owner: string,
+    repo: string,
+    path: string,
+    content: string,
+    message: string,
+) => Promise<void>;
+
+/**
+ * Publish the self-describing marker into a master repo so content forks can resolve
+ * it. The writer is injected so this stays unit-testable.
+ */
+export async function writeMasterMarker(
+    target: { owner: string; repo: string; packageId: string; commerce?: MasterCommerceCoords },
+    writeFile: MasterFileWriter,
+): Promise<void> {
+    const content = serializeMasterMarker(buildMasterMarker(target.packageId, target.commerce));
+    await writeFile(target.owner, target.repo, MASTER_MARKER_PATH, content, 'chore: add Demo Builder storefront marker');
+}
+
 /** Reads a file from a public master repo; resolves null when absent (404). */
 export type MasterFileReader = (owner: string, repo: string, path: string) => Promise<string | null>;
 
