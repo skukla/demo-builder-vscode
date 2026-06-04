@@ -1,5 +1,7 @@
 # Step 1: Project Model — `flow` discriminator, `upstream`, and flow predicates
 
+**Status: ✅ Complete (2026-06-04) — 10/10 tests, lint, and `tsc --noEmit` typecheck all green.**
+
 **Purpose:** Add the additive data model that the whole slice hangs off:
 a `flow` discriminator (`'commerce' | 'content'`) and an `upstream{owner,repo}`
 reference on `Project`, plus typed predicates so every downstream branch reads a

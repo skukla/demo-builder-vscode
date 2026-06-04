@@ -147,6 +147,10 @@ interface ProjectCreationConfig {
     // Package/Stack selections
     selectedPackage?: string;
     selectedStack?: string;
+    // Storefront archetype flow (absent ⇒ 'commerce' / legacy) + the upstream this
+    // fork was created from and syncs against (content flow / two-fork plumbing).
+    flow?: 'commerce' | 'content';
+    upstream?: { owner: string; repo: string };
     // Selected optional addons (e.g., ['adobe-commerce-aco'])
     selectedAddons?: string[];
     // Selected block library IDs (e.g., ['isle5', 'demo-team-blocks'])
@@ -276,6 +280,8 @@ export async function executeProjectCreation(
         componentConfigs: (typedConfig.componentConfigs || {}) as Record<string, Record<string, string | number | boolean | undefined>>,
         selectedPackage: typedConfig.selectedPackage,
         selectedStack: typedConfig.selectedStack,
+        flow: typedConfig.flow,
+        upstream: typedConfig.upstream,
         selectedAddons: typedConfig.selectedAddons,
         selectedBlockLibraries: typedConfig.selectedBlockLibraries,
         customBlockLibraries: typedConfig.customBlockLibraries,

@@ -271,6 +271,39 @@ export function canProceedFromAuth(
 }
 
 // =============================================================================
+// Storefront Flow Predicates
+// =============================================================================
+// SOP §4: Centralized flow detection. The `flow` discriminator distinguishes the
+// commerce-SC storefront from the content-SC fork. Absent ⇒ 'commerce' so legacy
+// projects are unchanged. Structurally typed so both the saved `Project` and the
+// in-flight `ProjectCreationConfig` satisfy it.
+
+/** A record that may carry a storefront flow discriminator. */
+type FlowBearing = { flow?: 'commerce' | 'content' };
+
+/**
+ * Resolve a record's storefront flow, defaulting legacy records (no `flow`) to
+ * 'commerce' so existing behavior is preserved.
+ */
+export function getProjectFlow(record: FlowBearing): 'commerce' | 'content' {
+    return record.flow ?? 'commerce';
+}
+
+/**
+ * True only for the content-SC flow (a fork that inherits a shared master).
+ */
+export function isContentFlow(record: FlowBearing): boolean {
+    return getProjectFlow(record) === 'content';
+}
+
+/**
+ * True for the commerce flow — including legacy records with no `flow` set.
+ */
+export function isCommerceFlow(record: FlowBearing): boolean {
+    return getProjectFlow(record) === 'commerce';
+}
+
+// =============================================================================
 // EDS (Edge Delivery Services) Project Functions
 // =============================================================================
 // SOP §4: Centralized EDS detection for use across features
