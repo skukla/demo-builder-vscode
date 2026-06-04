@@ -36,6 +36,20 @@ export interface JoinDescriptor {
     commerce?: MasterCommerceCoords;
 }
 
+/**
+ * Build the marker the starter writes into a shareable master repo so a content
+ * fork can resolve it (the write-side pair of resolveJoinLink). Omits `commerce`
+ * when no coords are provided.
+ */
+export function buildMasterMarker(packageId: string, commerce?: MasterCommerceCoords): MasterMarker {
+    return commerce ? { packageId, commerce } : { packageId };
+}
+
+/** Serialize a marker to the JSON written at MASTER_MARKER_PATH. */
+export function serializeMasterMarker(marker: MasterMarker): string {
+    return JSON.stringify(marker, null, 2);
+}
+
 /** Reads a file from a public master repo; resolves null when absent (404). */
 export type MasterFileReader = (owner: string, repo: string, path: string) => Promise<string | null>;
 
