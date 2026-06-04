@@ -72,6 +72,10 @@ Grew out of "hook the extension to an existing AEM Sites deployment and demo the
 
 ## Kickoff prompt
 
-> **If you're ready to build:** read [storefront-topology](./storefront-topology.md) (architecture) + [synthesis-and-build-order](./synthesis-and-build-order.md) (design→code), then **`/rptc:plan` Slice 1 — the two-fork plumbing with DA.live content** (buildable now; no AEM environment needed). Write the plan, approve it, then `/rptc:tdd` on a fresh feature branch. Slice 2 (AEM Sites as a content source) follows once the spike passes.
+> **Branch (read first):** all of these design docs live **only** on `claude/commerce-connection-kit-research` — they are **not** merged to `main`. Start the next session on that branch, and create the implementation branch **from it** so the docs travel along:
+> `git switch claude/commerce-connection-kit-research && git switch -c <impl-branch>`
+> Do **not** branch from `main` (the docs won't be there). All work to date is committed and pushed to `claude/commerce-connection-kit-research`.
+>
+> **If you're ready to build:** read [storefront-topology](./storefront-topology.md) (architecture) + [synthesis-and-build-order](./synthesis-and-build-order.md) (design→code), then **`/rptc:plan` Slice 1 — the two-fork plumbing with DA.live content** (buildable now; no AEM environment needed). Write the plan, approve it, then `/rptc:tdd` on the implementation branch above. Slice 2 (AEM Sites as a content source) follows once the spike passes.
 >
 > **Parallel track (when the AEM environment is secured):** run the [verify-aem-sites-spike](./verify-aem-sites-spike.md) — it gates Slice 2 but does **not** block Slice 1.
