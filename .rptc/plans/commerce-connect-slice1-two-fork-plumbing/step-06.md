@@ -19,6 +19,14 @@ and (b) choose the default strategy by flow.
 
 ---
 
+## Reuse map
+
+- **`TemplateSyncService`** (`src/features/updates/services/templateSyncService.ts`) — used **as-is** (no internal change); already preserves `config.json`/`fstab.yaml` and supports reset/merge.
+- **`populateEdsMetadata`** write path — set `templateOwner/templateRepo = master` (and write the self-describing marker).
+- **Net-new:** a one-line `defaultSyncStrategyForProject` predicate (`reset` for content).
+
+---
+
 ## Tests to Write First
 
 ### Unit: `tests/.../content-sync-wiring.test.ts`

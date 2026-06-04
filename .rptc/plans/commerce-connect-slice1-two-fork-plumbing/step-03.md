@@ -15,6 +15,14 @@ predicate composed with** the existing stack-property checks, not a replacement.
 
 ---
 
+## Reuse map
+
+- **`stepFiltering.filterStepsForStack`** + `StepCondition`/`FilterOptions` — extend with **one** `flow` predicate composed with the existing stack checks; reuse the existing filtering call site in `WizardContainer`.
+- **Wizard step registry** (`wizard-steps.json`) — tag prerequisites/mesh/adobe steps additively (`flow:'commerce'`).
+- **Net-new:** the single `flow` equality branch.
+
+---
+
 ## Tests to Write First
 
 ### Unit: `tests/.../stepFiltering-flow.test.ts`

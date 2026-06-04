@@ -13,6 +13,14 @@ predicate rather than re-deriving flow. Absent `flow` ⇒ treated as `'commerce'
 
 ---
 
+## Reuse map
+
+- **`src/types/typeGuards.ts`** — add `getProjectFlow`/`isContentFlow`/`isCommerceFlow` *alongside* existing guards (same file/style as `isEdsStackId`); do **not** create a new module.
+- **`src/types/base.ts` `Project`** + **`ProjectCreationConfig`** (`executor.ts`) — extend additively with optional fields; no shape rewrite.
+- **Net-new:** only the two optional fields + three predicates.
+
+---
+
 ## Tests to Write First
 
 ### Unit: `tests/types/flowPredicates.test.ts`

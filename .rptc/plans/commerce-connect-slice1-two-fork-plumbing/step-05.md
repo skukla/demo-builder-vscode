@@ -32,6 +32,17 @@ verification track as the spike (see Risk 3 / overview — "unverified live").
 
 ---
 
+## Reuse map
+
+- **`configGenerator.generateConfigJson`** — unchanged; already falls back to a direct backend URL when no mesh (the content case).
+- **`GitHubFileOperations`** read — public read of the master `config.json` + marker (no auth).
+- **`demo-packages.json` `configDefaults`** — store codes (shared across both SCs; no handoff).
+- **`ConnectStoreStepContent`** — reuse the step; **suppress** the authenticated discovery affordance for the content flow.
+- **`settingsSerializer`** mapping pattern — map master `config.json` → component-config defaults.
+- **Net-new:** the `upstreamConfigSeed` / `resolveJoinLink` mapper only.
+
+---
+
 ## Tests to Write First
 
 ### Unit: `tests/.../upstreamConfigSeed.test.ts`

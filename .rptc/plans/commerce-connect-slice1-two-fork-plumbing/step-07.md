@@ -18,6 +18,14 @@ rendering correctly on the dashboard without a 20-file refactor.
 
 ---
 
+## Reuse map
+
+- **`src/types/typeGuards.ts`** — add `getProjectArchetype` composing `getProjectFlow` + existing `isEds`/stack guards; leave the other ~19 `isEds` sites untouched.
+- **projects-dashboard components** (`ProjectCard` / `ProjectRow` / `ProjectActionsMenu`) — route only the content-flow entry sites through the archetype predicate; reuse their existing rendering.
+- **Net-new:** the archetype predicate + the minimal call-site migration.
+
+---
+
 ## Tests to Write First
 
 ### Unit: `tests/.../projectArchetype.test.ts`

@@ -16,6 +16,15 @@ EDS path is byte-for-byte unchanged when `flow` is absent or `'commerce'`.
 
 ---
 
+## Reuse map
+
+- **storefront-setup phase orchestration** (`storefrontSetupPhases.ts`) + **`GitHubRepoOperations.createFromTemplate`** — the joiner's repo is generated **from the master** via the EXISTING phases (template source = master); **no new pipeline phase**.
+- **`executor.ts`** pipeline — branch additively: skip `executeMeshPhase`; **reuse** Phase 4 (`configGenerator`), Phase 5 (config sync), Phase 5b (`ensureEdsContent`), and `populateEdsMetadata`.
+- **`resolveFrontendSource`** — reuse its source-shape for sourcing from `upstream`.
+- **Net-new:** the content-flow skip-guards (gated on `isContentFlow`).
+
+---
+
 ## Tests to Write First
 
 ### Characterization (write BEFORE branching — Risk 1 guard)

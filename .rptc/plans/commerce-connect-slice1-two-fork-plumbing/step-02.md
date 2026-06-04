@@ -29,7 +29,9 @@ by reading the **public** master (`config.json` + a small self-describing marker
 | Wizard shell + seeding | `WizardContainer` + the import/edit **pre-populate** pattern (`settingsSerializer` / `loadProjectIntoWizardState`) to inject initial state | gallery-suppress for the join flow |
 | Starter "Share" link + marker | clipboard/share pattern (e.g. `copyAiPrompt`); EDS metadata write path (`populateEdsMetadata`) to also write the marker | the marker write |
 
-*(This map is reconciled with the full reuse audit — see the consolidated reuse appendix in `overview.md`.)*
+*(Reconciled with the full reuse audit — see the consolidated Reuse-First Inventory in `overview.md`.)*
+
+> **Scope guard:** the join **token is the plain public master repo URL**. Do **NOT** add link encoding, expiry, checksums, or a versioning scheme (the audit suggested these; rejected — a public URL has nothing to expire, and the master is read live). Resolution = fetch `config.json` + marker and map.
 
 ---
 

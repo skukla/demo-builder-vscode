@@ -134,9 +134,13 @@ predicate) and defaults to today's behavior when `flow` is absent.
 - **Timeouts:** use `TIMEOUTS.*` from `@/core/utils/timeoutConfig` — no magic
   numbers (SOP `code-patterns.md`).
 - **Imports:** path aliases across boundaries, relative within feature (SOP).
+- **REUSE-FIRST (mandate):** Slice 1 is **integration of existing pieces**, not new
+  primitives. Before writing any component/service/handler, consult the **Reuse-First
+  Inventory** (below) and prefer the listed asset; introduce net-new only where the
+  inventory marks it "net-new." Each step carries its own **Reuse map**.
 - **Dependencies:** REUSE `TemplateSyncService`, `discoverStoreStructure`,
-  `configGenerator`, `ensureEdsContent`, `WizardContainer`, `filterStepsForStack`.
-  **No new npm packages.**
+  `configGenerator`, `ensureEdsContent`, `WizardContainer`, `filterStepsForStack`,
+  and the full Reuse-First Inventory below. **No new npm packages.**
 - **Additive only:** absent `flow` ⇒ identical to today's commerce/EDS behavior.
 
 ---
@@ -197,6 +201,59 @@ predicate) and defaults to today's behavior when `flow` is absent.
 ### Net-new explicitly deferred (NOT this slice)
 - AEM Sites content-source service/variant (Slice 2)
 - Mirrored-package config, App Builder add-flow, two-way contribution (Slice 3+)
+
+---
+
+## Reuse-First Inventory (audited 2026-06-04)
+
+A codebase reuse sweep confirmed Slice 1 is **primarily integration of existing pieces**. Prefer these; net-new only where flagged.
+
+### UI components
+- `CopyableText` (`src/core/ui/components/ui/CopyableText.tsx`) — clipboard write + ✓ feedback → the **Share** link (Step 2).
+- `Modal` (`src/core/ui/components/ui/Modal.tsx`) — `{title, actionButtons, onClose}` → confirmation/preview dialog (Step 2).
+- `FormField` (`src/core/ui/components/forms/FormField.tsx`) — `type:'url'`, error/showError → the **paste-link** field (Step 2).
+- `ReviewStep` LabelValue / ConfigurationSummary (`src/features/project-creation/ui/steps/ReviewStep.tsx`) — the **preview** presentation (Step 2).
+- `StatusDot` (`src/core/ui/components/ui/StatusDot.tsx`) — link-validity indicator (Step 2).
+- `SingleColumnLayout` (`src/core/ui/components/layout/`), `useCanProceed` (`src/core/ui/hooks/useCanProceed.ts`), `useFocusTrap` — layout, Continue-gating, a11y (Step 2).
+- projects-dashboard: `ProjectsDashboard` (Create/Import CTA cluster), `DashboardEmptyState`, `ProjectActionsMenu` (`ProjectActions` interface) — add **"Join"** + **"Share"** entries alongside (Steps 2, 7).
+
+### Wizard shell + seeding
+- `WizardContainer` (`.../ui/wizard/WizardContainer.tsx`) — already accepts `importedSettings`/`editProject` initial state; **reuse this prop-seeding path** to inject the resolved join state (Step 2).
+- `useWizardState` — merges defaults with init props (Step 2).
+- `settingsSerializer.extractSettingsFromProject` (`src/features/projects-dashboard/services/settingsSerializer.ts`) — the **pre-populate** pattern; adapt to map the master `config.json` → wizard state (Steps 2, 5).
+- `stepFiltering.filterStepsForStack` + `StepCondition`/`FilterOptions` (`.../wizard/stepFiltering.ts`) — extend with the `flow` predicate (Step 3).
+
+### Webview / command infrastructure
+- `BaseWebviewCommand` (`src/core/base/baseWebviewCommand.ts`) — extend for the Join command (Step 2).
+- `WebviewCommunicationManager` (`src/core/communication/webviewCommunicationManager.ts`) — handshake + request/response (Step 2).
+- `dispatchHandler` + object-literal handler maps (`defineHandlers`/`getRegisteredTypes`, `src/core/handlers/`) — the join handlers (Step 2).
+- `HandlerContext` (`src/types/handlers.ts`) + `createErrorResponse` (`src/core/handlers/errorHandling.ts`) — handler shape + errors (Step 2).
+
+### GitHub + backend services (confirmed present)
+- `GitHubFileOperations` read-file (`src/features/eds/services/githubFileOperations.ts`) — **public reads need no auth**; 404→null → read master `config.json` + marker (Steps 2, 5).
+- `GitHubRepoOperations.createFromTemplate` (`src/features/eds/services/githubRepoOperations.ts`) — generate the joiner's repo **from the master** (`is_template`) (Steps 2, 4).
+- `TemplateSyncService` (`src/features/updates/services/templateSyncService.ts`) — sync from the master; preserves `config.json`/`fstab.yaml`; reset/merge (Step 6).
+- `configGenerator.generateConfigJson` (`src/features/eds/services/configGenerator.ts`) — config.json; falls back to direct backend URL with no mesh (Steps 4, 5).
+- `ensureEdsContent` (`src/features/project-creation/services`) — DA.live content / Phase 5b (Step 4).
+- `populateEdsMetadata` (`src/features/project-creation/handlers/executor.ts`) — EDS metadata write path; extend to also write the **self-describing marker** (Steps 2, 6).
+- storefront-setup phase orchestration (`src/features/eds/handlers/storefrontSetupPhases.ts`) — reuse for the joiner (createFromTemplate-from-master → fstab → blocks → content → publish) (Step 4).
+
+### Patterns (`docs/patterns/`)
+- **Backend Call on Continue** (`selection-pattern.md`) — paste-link is UI-only; resolve/join on Continue with a loading overlay (Step 2).
+- **Two-column layout**, **loading overlay**, **error-at-commitment-point**, **state-clearing** — preview/validation UX (Step 2).
+
+### Cross-cutting utilities
+- `TIMEOUTS` (`src/core/utils/timeoutConfig.ts`) + `FRONTEND_TIMEOUTS` (`src/core/ui/utils/frontendTimeouts.ts`) — no magic numbers (all steps).
+- `StepLogger`/`getLogger` (`src/core/logging`) — step logging (all steps).
+- `ServiceLocator` (`src/core/di`), `DisposableStore` (`src/core/utils/`) — DI + disposal (Step 2).
+- `typeGuards` (`src/types/typeGuards.ts`) — flow + archetype predicates (Steps 1, 7).
+
+### Net-new (kept deliberately minimal)
+- `flow` discriminator + `upstream` + predicates (Step 1).
+- `resolveJoinLink` (fetch master `config.json` + marker → `JoinDescriptor`) + the small **self-describing marker** schema (Step 2).
+- **Token = the public master repo URL — NO link encoding, expiry, checksum, or versioning** (a plain public URL has nothing to expire; the audit's heavier link-payload suggestion is explicitly rejected).
+- **No new EDS pipeline phase** — the joiner reuses the storefront-setup phases with the master as the template source.
+- Flow-aware filter branch (Step 3); executor content branch — skip mesh, source from master (Step 4); content-coords seed (Step 5); content sync default (Step 6); `(product,ownership)` predicate + minimal migration (Step 7).
 
 ---
 
