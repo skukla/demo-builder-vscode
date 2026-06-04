@@ -35,6 +35,28 @@ export function channelAcceptsTrack(channel: UpdateChannel, track: ReleaseTrack)
 }
 
 /**
+ * True when the installed version is an -alpha.* whose base (major.minor.patch)
+ * is met or exceeded by a final release — i.e. the feature has graduated and the
+ * user would otherwise be stranded on the last alpha. Never throws.
+ */
+export function shouldOfferGraduation(
+    installedVersion: string,
+    latestFinalVersion: string | null,
+): boolean {
+    if (!latestFinalVersion) return false;
+    const parsed = semver.parse(cleanTag(installedVersion));
+    if (!parsed) return false;
+    const isAlpha = parsed.prerelease.length > 0 && String(parsed.prerelease[0]) === 'alpha';
+    if (!isAlpha) return false;
+    const base = `${parsed.major}.${parsed.minor}.${parsed.patch}`;
+    try {
+        return semver.gte(cleanTag(latestFinalVersion), base);
+    } catch {
+        return false;
+    }
+}
+
+/**
  * Pick the highest-semver, non-draft release that the channel accepts.
  * Returns null when nothing matches (graceful: caller treats as "no update").
  */

@@ -72,6 +72,15 @@ export class UpdateManager {
     }
 
     /**
+     * Latest final (stable) version string, or null. Used by the graduation
+     * off-ramp to detect when an installed -alpha.* has been superseded.
+     */
+    async getLatestFinalVersion(): Promise<string | null> {
+        const release = await this.fetchLatestRelease(this.EXTENSION_REPO, 'stable');
+        return release ? release.version : null;
+    }
+
+    /**
      * Check for component updates across ALL projects
      * Groups results by component with list of outdated projects for each
      *

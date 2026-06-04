@@ -13,6 +13,7 @@ import {
     classifyTrack,
     channelAcceptsTrack,
     selectLatestForChannel,
+    shouldOfferGraduation,
 } from '@/features/updates/services/releaseTrack';
 import type { GitHubRelease } from '@/features/updates/services/types';
 
@@ -118,6 +119,34 @@ describe('releaseTrack', () => {
 
         it('returns null for an empty array', () => {
             expect(selectLatestForChannel([], 'beta')).toBeNull();
+        });
+    });
+
+    describe('shouldOfferGraduation', () => {
+        it('is true when a final release equals the installed alpha base', () => {
+            expect(shouldOfferGraduation('2.0.0-alpha.5', '2.0.0')).toBe(true);
+        });
+
+        it('is true when a final release exceeds the installed alpha base', () => {
+            expect(shouldOfferGraduation('2.0.0-alpha.5', '2.0.1')).toBe(true);
+        });
+
+        it('is false when the latest final is below the alpha base', () => {
+            expect(shouldOfferGraduation('2.0.0-alpha.5', '1.9.0')).toBe(false);
+        });
+
+        it('is false when the installed version is a final (not an alpha)', () => {
+            expect(shouldOfferGraduation('2.0.0', '2.0.0')).toBe(false);
+        });
+
+        it('is false when the installed version is a beta (not an alpha)', () => {
+            expect(shouldOfferGraduation('2.0.0-beta.1', '2.0.0')).toBe(false);
+        });
+
+        it('is false (no throw) for garbage input or a null final', () => {
+            expect(() => shouldOfferGraduation('not-a-version', '2.0.0')).not.toThrow();
+            expect(shouldOfferGraduation('not-a-version', '2.0.0')).toBe(false);
+            expect(shouldOfferGraduation('2.0.0-alpha.1', null)).toBe(false);
         });
     });
 });
