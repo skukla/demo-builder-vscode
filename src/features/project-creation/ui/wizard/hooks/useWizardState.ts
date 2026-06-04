@@ -326,6 +326,7 @@ export function useWizardState({
                 id: step.id,
                 name: step.name,
                 description: step.description,
+                flow: originalStep?.flow,
                 condition: originalStep?.condition,
             };
         });
@@ -345,6 +346,7 @@ export function useWizardState({
             isEditMode: !!editProject,
             hasAdobeIO: meshIncluded,
             hasAdobeAuth: meshIncluded || isAccsBackend,
+            flow: state.flow,
         });
 
         return filteredSteps.map(step => ({
@@ -352,7 +354,7 @@ export function useWizardState({
             name: step.name,
             description: step.description,
         }));
-    }, [wizardSteps, stacks, state.selectedStack, state.selectedOptionalDependencies, editProject]);
+    }, [wizardSteps, stacks, state.selectedStack, state.selectedOptionalDependencies, editProject, state.flow]);
 
     // Step completion tracking
     // Neither import mode nor edit mode pre-marks steps as completed

@@ -26,6 +26,10 @@ export interface WizardState {
     projectName: string;
     selectedPackage?: string;  // Selected package ID (e.g., 'citisignal', 'buildright')
     selectedStack?: string;  // Selected stack ID (e.g., 'headless-paas', 'eds-paas')
+    /** Storefront archetype flow ('commerce' | 'content'); absent ⇒ commerce. */
+    flow?: 'commerce' | 'content';
+    /** Upstream/master a content fork was created from (two-fork plumbing). */
+    upstream?: { owner: string; repo: string };
     selectedAddons?: string[];  // Selected addon IDs (e.g., ['adobe-commerce-aco'])
     selectedBlockLibraries?: string[];  // Selected block library IDs (e.g., ['isle5', 'demo-team-blocks'])
     selectedFeaturePacks?: string[];  // Selected feature pack IDs (e.g., ['b2b-commerce'])

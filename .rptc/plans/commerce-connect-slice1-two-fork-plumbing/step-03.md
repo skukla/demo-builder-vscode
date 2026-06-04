@@ -1,5 +1,9 @@
 # Step 3: Flow-Aware Step Filtering
 
+**Status: ✅ Complete (2026-06-04) — flow tests 7/7; wizard area 149 node + 108 React tests pass (no regression); lint + `tsc --noEmit` green.**
+
+**Design refinement (vs plan):** `flow` is modeled as a **top-level step field** (on `WizardStepWithCondition` / the step registry), **not** inside `StepCondition`. Reason: the no-stack branch hides any step that "has a condition," so a flow-only condition would wrongly hide `prerequisites` in a future Custom/no-stack *commerce* flow. A top-level `flow` + a pre-filter composes safely and is regression-guarded by a test. Content flow hides: `prerequisites`, `adobe-auth`, `adobe-project`, `adobe-workspace` (no standalone mesh step exists; mesh is gated via the Adobe-IO steps).
+
 **Purpose:** Make `filterStepsForStack` flow-aware so the **content flow hides
 the steps it doesn't need** — prerequisites and API Mesh — while keeping a
 content-oriented "connect" step (Step 5) and the storefront/DA.live steps. The
