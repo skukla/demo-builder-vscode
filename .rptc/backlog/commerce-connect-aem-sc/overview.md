@@ -13,38 +13,38 @@ A way for **two solutions consultants** to build **one demo storefront together*
 - a **Commerce SC** — owns the commerce backend (products, cart, checkout), and
 - a **Content SC** — owns the content, authored in **AEM Sites**.
 
-### How it works
+### How it works (the target — "shape 2")
 
-- For each demo pairing, there is **one master storefront** — the shared source of the storefront's parts.
-- Each SC has their **own copy** of the storefront (their own repo, in their own account) that **auto-syncs from the master**.
-- The **Commerce SC adds the commerce parts** (the product pages, cart, checkout — "commerce blocks") to the master **from the commerce boilerplate** → they flow into both copies.
-- The **Content SC authors the content in AEM Sites** → it shows up in the storefront.
-- Each copy is wired to the **Commerce SC's commerce backend** for live products and pricing.
-- **Result:** both SCs see the same, always-current storefront that blends their content and commerce.
+- For each demo pairing there is **one neutral upstream** — a shared repo holding the storefront **code** (commerce parts + custom blocks). **It is not a live site, just code** — seeded from the commerce boilerplate, maintained by the Commerce SC.
+- Each SC has their **own fork** of the upstream (their own repo, in their own account) that **auto-syncs** from it. Both forks point at the **Commerce SC's commerce backend** (by URL).
+- **Content is per-fork, never shared:** the **Content SC's fork** uses their **AEM Sites** content — that fork **is the combined demo** (their content + the shared commerce). The Commerce SC's fork is their own commerce demo (DA.live content). What the two share is **code + backend**, not content.
 
-### Why separate copies (not one shared site)
+### Why it's forks, not one shared site
 
-The two SCs are in **different Adobe accounts**, so they can't literally share one running site. A **master + auto-synced copies** is the only workable shape — and that account split is exactly *why* the answer is a shared (synced) storefront rather than a one-off connection between two finished demos.
+Adobe EDS has a **canonical-site rule: one repo = one org's site** — a single live storefront can't span two accounts. The sanctioned move is **fork into your own org**. So the neutral shared thing you'd want *does* exist — as the **code upstream** — but each *live* site is its own org-bound fork. Full detail in **[storefront-topology](./storefront-topology.md)**.
 
-### V1 vs later
+**Simpler first increment ("shape 1"):** skip the upstream — the Commerce SC drops the commerce parts straight into the Content SC's repo (GitHub collaboration) + hands over the backend URL. One combined demo, static. Shape 2 adds the upstream so it stays in sync. Same path, one step apart.
 
-- **V1:** the master + synced copies; the Commerce SC adds the commerce parts; content via AEM Sites; each copy wired to the commerce backend.
-- **Later:** **either** SC can add the commerce parts (V1 = only the Commerce SC); two-way contribution (the Content SC contributing custom parts back); a convenience that reads a partner's commerce-backend details from a URL instead of entering them by hand.
+### Target vs later
+
+- **Target (shape 2):** the neutral upstream + per-org forks (full symmetry); the Commerce SC maintains the commerce code in the upstream; content via AEM Sites in the Content SC's fork; each fork wired to the commerce backend. **First increment (shape 1):** combine commerce into the Content SC's repo directly, no upstream yet.
+- **Later:** **either** SC can add the commerce parts (first = only the Commerce SC); two-way contribution (the Content SC pushing custom parts back to the upstream); a reusable upstream across scenarios; a convenience that reads a partner's backend details from a URL.
 
 ## Why this isn't from scratch (verified against the code, 2026-06-03)
 
 Most of the pieces already exist — V1 mostly **assembles them across two SCs**. See the [roadmap](./roadmap.md) for the per-step EXISTS/PARTIAL/NET-NEW grounding and file references.
 
-- a **sync engine** that already pulls a copy from a configurable master, one-directional, with conflict handling — **and already preserves each copy's `config.json`/`fstab.yaml` across syncs** (so the backend wiring and content source survive a master update);
+- a **sync engine** that already pulls a fork from a configurable upstream, one-directional, with conflict handling — **and already preserves each fork's `config.json`/`fstab.yaml` across syncs** (so the backend wiring and content source survive an upstream update);
 - **installers** that already add parts (block libraries / feature packs) into a storefront repo;
 - **Connect-Commerce** that already writes the backend connection (`config.json`).
 
 ## What's genuinely new (and where the real work is)
 
-- **The cross-team orchestration:** one **master** that **two separately-owned copies in two different accounts** both sync from — and letting the Commerce SC act on the master the Content SC's copy follows. Today everything is single-project, one active GitHub account, 1:1 sync. **This is the heart of the build.**
-- **Re-verify live:** reading the commerce backend across accounts, and AEM-Sites-as-content-source (research couldn't fetch Adobe's docs programmatically, so these need a live check before code lands).
+- **AEM Sites as a content source** — the extension is **DA.live-only** today; this is the biggest net-new piece.
+- **The upstream + multi-fork orchestration:** one neutral upstream that **two separately-owned forks in two different accounts** both sync from. Today everything is single-project, one active GitHub account, 1:1 sync. **This is the heart of the build.**
+- **Re-verify live:** reading the commerce backend across accounts, the AEM code-sync app, `aem-boilerplate-xcom` maturity, CORS (Adobe docs block programmatic fetch — verify live before code lands).
 
-**Two things that turned out *not* to be problems:** a "shared mesh/backend" (it's just the same URL in each copy's `config.json` — already written by Connect-Commerce) and a "shared DA.live site" (content comes from the Content SC's AEM Sites, per copy).
+**Two things that turned out *not* to be problems:** a "shared mesh/backend" (just the same URL in each fork's `config.json` — already written by Connect-Commerce) and a "shared content site" (not possible *and* not needed — each fork has its own content source).
 
 ## Out of scope
 
@@ -56,7 +56,8 @@ Most of the pieces already exist — V1 mostly **assembles them across two SCs**
 
 | Doc | What it is |
 |---|---|
-| [roadmap](./roadmap.md) | **The build sequence** (re-aimed) — what V1 builds, in order, and which existing piece each step reuses. |
+| [storefront-topology](./storefront-topology.md) | **The authoritative architecture** — the Adobe canonical-site rule, what can/can't be shared across orgs, the two shapes, and the upstream decision (neutral, seeded, full symmetry). |
+| [roadmap](./roadmap.md) | **The build sequence** — the increments toward shape 2, each tagged EXISTS/PARTIAL/NET-NEW with file refs. |
 | [federated-two-instance-demos](./federated-two-instance-demos.md) | The **two-SC / synced-copy delivery model** — now V1-central (it was filed as "deferred"). |
 | [aem-sc-first-run](./aem-sc-first-run.md) | The **content-SC-owned storefront** flow + **AEM Sites** as the content-authoring tool — the V1 model. |
 | [commerce-connection-kit](./commerce-connection-kit.md) | The **commerce-backend connection** detail (now one step *inside* the synced storefront) + the cross-account read caveat. |
@@ -70,4 +71,4 @@ Grew out of "hook the extension to an existing AEM Sites deployment and demo the
 
 ## Kickoff prompt
 
-> Promote `commerce-connect-aem-sc` from the backlog. Start with step 1 of the [roadmap](./roadmap.md) — the **master + synced copy** backbone — on a feature branch, RPTC TDD loop. Re-read the roadmap before each subsequent step; write detailed plans just-in-time.
+> Promote `commerce-connect-aem-sc` from the backlog. Read [storefront-topology](./storefront-topology.md) first (architecture), then start with step 1 of the [roadmap](./roadmap.md) — **shape 1: combine commerce into a Content-SC storefront** — on a feature branch, RPTC TDD loop. Re-read the roadmap before each subsequent step; write detailed plans just-in-time.
