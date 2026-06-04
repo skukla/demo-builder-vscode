@@ -1,5 +1,7 @@
 # Step 6: Upstream Sync Wiring + `reset-to-upstream` Default for Content Forks
 
+**Status: ✅ Complete (2026-06-04).** `defaultSyncStrategyForProject` (content→`reset`, commerce/legacy→`merge`, preserving the existing default) + wired into both sync call sites (`updateApplyService`, `updateExecutor`). `TemplateSyncService` unchanged. Verified: 4/4 predicate + 224 updates/SOP regression; lint/typecheck green. *(Content metadata `templateOwner=master` is set via the join resolve / Step 2.)*
+
 **Purpose:** Make a content fork **sync from the upstream** using the **existing**
 `TemplateSyncService`, and implement **PM decision D2**: content forks default to
 the **`reset`** strategy (`reset-to-upstream`). This is additive — the service

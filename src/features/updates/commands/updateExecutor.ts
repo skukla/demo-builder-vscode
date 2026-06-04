@@ -26,6 +26,7 @@ import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
 import { generateAIContextFiles } from '@/features/project-creation/services';
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
+import { defaultSyncStrategyForProject } from '@/features/updates/services/syncStrategy';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
@@ -166,7 +167,7 @@ export async function performTemplateUpdates(
 
                 try {
                     const result = await templateSyncService.syncWithTemplate(project, {
-                        strategy: 'merge',
+                        strategy: defaultSyncStrategyForProject(project),
                     });
 
                     if (result.success) {
