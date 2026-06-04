@@ -35,7 +35,12 @@ A commerce EDS storefront reads `config.json` (dev) / the Configuration Service 
 
 ## Cross-org verdict
 
-- **SaaS read path (Catalog Service / Live Search / Recs): cross-org-safe.** Global multi-tenant endpoints called from the browser with **just `x-api-key` + `Magento-Environment-Id` + store headers — no IMS token**. Keys are scoped to the **Commerce data space**, not the storefront's hosting org. So org B's storefront renders org A's catalog with the shared public key. The org boundary is *administrative* (who mints the key), not runtime. (MEDIUM-HIGH, partly inferred — [Commerce Services Connector](https://experienceleague.adobe.com/en/docs/commerce/user-guides/integration-services/saas), [Catalog Service](https://developer.adobe.com/commerce/services/graphql/catalog-service/))
+- **SaaS read path (Catalog Service / Live Search / Recs): cross-org-safe.** The Merchandising API documents itself as requiring **no authentication**:
+  > "Authentication is not required for the Merchandising API." — [Get started with the Merchandising API](https://developer.adobe.com/commerce/services/optimizer/merchandising-services/using-the-api) (SaaS-only badged)
+
+  The required header set is all public identifiers: `AC-View-ID` (catalog view UUID), `AC-Source-Locale`, optionally `AC-Price-Book-ID` and `AC-Policy-{name}`. No `x-api-key`, no IMS token, no `Authorization` header. The base URL `https://{region}.api.commerce.adobe.com/{tenantId}/graphql` carries the tenant binding; everything else is publishable.
+
+  That's why the ACCS mesh-best-practices example ships `"X-Api-Key": "not_used"` verbatim — the endpoint ignores it. So org B's storefront renders org A's catalog with the values org A already publishes in its `config.json`; nothing is minted, nothing is exchanged. (Confirmed 2026-06-04 via ExL.)
   → an **ACCS** demo connects cross-org cleanly.
 - **API Mesh: org-agnostic to consume (resolved).** Demos are **ACCS-first**, so the SaaS read path above is the norm anyway. And even for a mesh: consuming a *deployed* mesh is org-agnostic — it's a GraphQL URL + `x-api-key`; the mesh resolves its **upstream** sources internally with *their* creds, transparent to the caller. A storefront in org B calling org A's mesh needs only the URL + key; the mesh's IMS org doesn't enter the runtime path. (Confirmed by SC domain input + the public-api-key mesh model.) Only a deliberately locked-down mesh would differ — not how the extension deploys them.
 

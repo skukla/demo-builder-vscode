@@ -60,6 +60,41 @@ Adobe EDS has a **canonical-site rule: one repo serves exactly one org's site** 
 
 **API Mesh** stitches commerce services into one endpoint and holds keys server-side. It's a **convenience, not a requirement** — the config generator falls back to a direct backend URL when no mesh is deployed *([`configGenerator.ts`](../../../src/features/eds/services/configGenerator.ts))*. PaaS usually wants one; SaaS often doesn't. And cross-org is a choice: **default to a mesh per org** (each fork calls its own org's mesh → no cross-org call), rather than both forks sharing the Commerce SC's one mesh.
 
+## Alternative topology: Configuration-Service "repoless" model
+
+> Discovered 2026-06-04 in [`config-service-setup`](https://www.aem.live/docs/config-service-setup). Documented here so future passes know it exists; **the two-fork model above remains primary for Slice 1** because the extension's sync engine already supports it and the Slice-1 step list is grounded in that shape.
+
+The Configuration Service decouples a "site" from its GitHub repo. A site becomes `(org, site)` and points at a separately-named code repo plus a separately-named content source. Verbatim:
+
+> "it is now possible to have multiple sites that use different content, but use the same code repository. This feature is also known as **'repoless'**."
+
+For two SCs sharing one upstream codebase, that opens a topology the two-fork model rules out:
+
+```
+Commerce SC's aem.live site (org A) ──┐
+                                       ├──► same GitHub code repo (the upstream)
+Content SC's   aem.live site (org B) ──┘
+                                       └► each site points at its own content source
+                                          (Content SC's → their AEM Sites)
+```
+
+**Two sites, one code repo, two content sources. No fork. No sync engine.** The "shared design lives in the upstream" property is achieved *by construction* because both sites point at the same repo.
+
+### The constraint that complicates it
+
+> "For projects that want to use multiple sites with the same code repository (repoless), there must be **one canonical site for which the `org/site` matches the GitHub `owner/repo`**. This is required for proper code-config association and CDN push invalidation."
+
+One SC becomes the canonical anchor. Commerce SC fits naturally (they maintain the upstream). The asymmetry is not yet stress-tested in the docs — what breaks if the canonical site goes away isn't stated.
+
+### Two further setup facts
+
+- Each `aem.live` org **must also exist as a `github.com` org** with at least one repo synced via the AEM Code Sync App. Cross-account: each SC needs both an `aem.live` and a matching `github.com` org.
+- The Configuration Service can set arbitrary CORS headers on a site via `POST /config/{org}/sites/{site}/headers.json` — relevant to the cross-org CORS question (see [cross-org-cors-and-mesh research](../../research/2026-06-04-cross-org-cors-and-mesh.md), addendum).
+
+### Why this is parked, not picked
+
+The Slice-1 build sequence and the existing sync engine assume the two-fork model. Adopting "repoless" would mean rewriting Slice 1's reuse map. The trade comes due if the two-fork sync turns out to be more friction than expected, or if Slice 2+ needs the asymmetric anchor model anyway. Either way, the option exists.
+
 ## Reuse vs net-new
 
 | Reuses today | Net-new |

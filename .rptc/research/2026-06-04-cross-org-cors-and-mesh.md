@@ -49,6 +49,37 @@ A browser blocks a page on domain A from reading responses from domain B unless 
 
 **Do NOT mandate the mesh.** Documentation indicates ACCS handles cross-origin at the edge and the read path is browser-direct by design, so on ACCS the mesh is **likely not needed for CORS at all** — and there is no PaaS-style manual allow-list handshake on SaaS either way. Keep the mesh **optional** (the config generator already supports a direct backend URL); reserve it for cases where the transactional endpoint turns out *not* to auto-allow. Same-origin is Mode-A (single-org) only.
 
+## Addendum (2026-06-04): the AEM Configuration Service is a fourth way
+
+The original three-way enumeration ((1) same-origin, (2) API Mesh, (3) direct PaaS allow-list) covered the **Commerce backend** side. There is a fourth path that lives on the **EDS storefront** side, surfaced during the post-research ExL dig into the Configuration Service ([`config-service-setup`](https://www.aem.live/docs/config-service-setup)):
+
+- **Configuration-Service site headers** — `POST /config/{org}/sites/{site}/headers.json` accepts arbitrary HTTP response headers per path pattern, including `access-control-allow-origin`. Example from the doc:
+  ```bash
+  curl -X POST https://admin.hlx.page/config/{org}/sites/{site}/headers.json \
+    -H 'content-type: application/json' \
+    -H 'x-auth-token: {your-auth-token}' \
+    --data '{ "/**": [{ "key": "access-control-allow-origin", "value": "*" }] }'
+  ```
+
+This sets CORS on the **storefront's** responses at the AEM-managed CDN — orthogonal to the Commerce backend's CORS posture. It does **not** help the storefront's calls *out* to the Commerce backend (the original CORS question), so it does **not** change the recommendation above. But:
+
+- It is **the easiest way to set CORS for any backend that consumes the EDS storefront's API** (e.g. an embedded widget calling back into the storefront). The two-SC plan doesn't need this today, but it is a likely concern for "shoppable AEM content" or App Builder integrations that surface storefront data.
+- It is **the SaaS / repoless equivalent** of dropping `nginx.conf` headers on a PaaS Commerce. Same intent (set ACAO at the edge), no server/codebase access required, no mesh required.
+
+**Net:** the recommendation is unchanged for the cross-org commerce path. The four-way enumeration is the complete EDS-storefront-plus-Commerce CORS picture.
+
+## Addendum (2026-06-04): cross-account read path strengthened
+
+The deciding question above asked whether ACCS handles CORS at the edge. While verifying that, the dig also surfaced a stronger result for the **read** half of the cross-account story than the original research recorded.
+
+Adobe's Merchandising API docs state directly:
+
+> "Authentication is not required for the Merchandising API." — [Get started with the Merchandising API](https://developer.adobe.com/commerce/services/optimizer/merchandising-services/using-the-api) (SaaS-only badged)
+
+The required headers are `AC-View-ID` + `AC-Source-Locale`; optional `AC-Price-Book-ID` and `AC-Policy-{name}`. All are public identifiers (visible in any client-side session). The tenant binding lives in the URL path: `https://{region}.api.commerce.adobe.com/{tenantId}/graphql`. No `x-api-key`, no `Authorization`, no IMS token.
+
+That explains the literal `"X-Api-Key": "not_used"` in the [ACCS API Mesh example](https://developer.adobe.com/graphql-mesh-gateway/mesh/best-practices/commerce-cloud-service/) — the endpoint ignores it. So in the two-SC plan, the Content SC's storefront calls the Merchandising API for org A's catalog with values org A already publishes (`tenantId`, view ID, locale). **Nothing crosses a trust boundary because there is no trust boundary to cross.** The cross-account-read story is on firmer ground than the original "read path needs only a URL + public keys" phrasing.
+
 ## Sources
 
 - [CORS Setup](https://experienceleague.adobe.com/developer/commerce/storefront/setup/configuration/cors-setup/)
@@ -58,3 +89,9 @@ A browser blocks a page on domain A from reading responses from domain B unless 
 - [API Mesh — best practices for Adobe Commerce as a Cloud Service](https://developer.adobe.com/graphql-mesh-gateway/mesh/best-practices/commerce-cloud-service/)
 - [Storefront architecture](https://experienceleague.adobe.com/developer/commerce/storefront/get-started/architecture/)
 - [Fastly dynamic cache control (API Mesh)](https://developer.adobe.com/graphql-mesh-gateway/gateway/fastly/)
+
+### Added 2026-06-04 (post-research ExL dig)
+
+- [Setting up the Configuration Service](https://www.aem.live/docs/config-service-setup) — `/headers.json` for CORS at the EDS-storefront edge; "repoless" multi-site-one-repo model.
+- [Get started with the Merchandising API](https://developer.adobe.com/commerce/services/optimizer/merchandising-services/using-the-api) — "Authentication is not required" verbatim; required header set is `AC-View-ID` + `AC-Source-Locale`.
+- [Set up your storefront (ACO)](https://experienceleague.adobe.com/en/docs/commerce/optimizer/storefront) — SaaS-only setup flow: paste `tenantId` + endpoint into `config.json`; no CORS step in the path.
