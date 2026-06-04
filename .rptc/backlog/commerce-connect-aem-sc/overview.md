@@ -72,4 +72,6 @@ Grew out of "hook the extension to an existing AEM Sites deployment and demo the
 
 ## Kickoff prompt
 
-> Promote `commerce-connect-aem-sc` from the backlog. Read [storefront-topology](./storefront-topology.md) first (architecture), then start with step 1 of the [roadmap](./roadmap.md) — **shape 1: combine commerce into a Content-SC storefront** — on a feature branch, RPTC TDD loop. Re-read the roadmap before each subsequent step; write detailed plans just-in-time.
+> **If you're ready to build:** read [storefront-topology](./storefront-topology.md) (architecture) + [synthesis-and-build-order](./synthesis-and-build-order.md) (design→code), then **`/rptc:plan` Slice 1 — the two-fork plumbing with DA.live content** (buildable now; no AEM environment needed). Write the plan, approve it, then `/rptc:tdd` on a fresh feature branch. Slice 2 (AEM Sites as a content source) follows once the spike passes.
+>
+> **Parallel track (when the AEM environment is secured):** run the [verify-aem-sites-spike](./verify-aem-sites-spike.md) — it gates Slice 2 but does **not** block Slice 1.
