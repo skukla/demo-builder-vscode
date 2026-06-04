@@ -26,8 +26,8 @@ import { AddonUpdateChecker } from '@/features/updates/services/addonUpdateCheck
 import { AdobeMcpUpdateChecker } from '@/features/updates/services/adobeMcpUpdateChecker';
 import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
-import { TemplateUpdateChecker, TemplateUpdateResult } from '@/features/updates/services/templateUpdateChecker';
 import { shouldOfferGraduation } from '@/features/updates/services/releaseTrack';
+import { TemplateUpdateChecker, TemplateUpdateResult } from '@/features/updates/services/templateUpdateChecker';
 import { UpdateManager, MultiProjectUpdateResult } from '@/features/updates/services/updateManager';
 import { Project } from '@/types';
 

@@ -1,13 +1,13 @@
 import * as fs from 'fs/promises';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
+import { isRepoCollaborator } from './collaboratorGate';
 import { ComponentRepositoryResolver, type ComponentRepositoryInfo } from './componentRepositoryResolver';
 import {
     GITHUB_API_BASE,
     buildGitHubHeaders,
     fetchWithTimeout,
 } from './githubApiClient';
-import { isRepoCollaborator } from './collaboratorGate';
 import { selectLatestForChannel } from './releaseTrack';
 import type { ReleaseInfo, UpdateCheckResult, GitHubRelease, GitHubReleaseAsset, UpdateChannel } from './types';
 import { validateGitHubDownloadURL } from '@/core/validation';
