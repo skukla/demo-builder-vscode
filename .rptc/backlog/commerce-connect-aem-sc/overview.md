@@ -13,22 +13,21 @@ A way for **two solutions consultants** to build **one demo storefront together*
 - a **Commerce SC** — owns the commerce backend (products, cart, checkout), and
 - a **Content SC** — owns the content, authored in **AEM Sites**.
 
-### How it works (the target — "shape 2")
+### How it works (the locked target)
 
-- For each demo pairing there is **one neutral upstream** — a shared repo holding the storefront **code** (commerce parts + custom blocks). **It is not a live site, just code** — seeded from the commerce boilerplate, maintained by the Commerce SC.
-- Each SC has their **own fork** of the upstream (their own repo, in their own account) that **auto-syncs** from it. Both forks point at the **Commerce SC's commerce backend** (by URL).
-- **Content is per-fork, never shared:** the **Content SC's fork** uses their **AEM Sites** content — that fork **is the combined demo** (their content + the shared commerce). The Commerce SC's fork is their own commerce demo (DA.live content). What the two share is **code + backend**, not content.
+- A neutral **upstream** holds the shared storefront **code** (commerce dropins + shared design), based on a commerce boilerplate that supports **AEM Sites authoring** (`aem-boilerplate-xcom`). It's code, not a live site; maintained by the Commerce SC.
+- **Both SCs fork the upstream** into their own org and sync from it → the two sites are **identical in look/system**.
+- **Each SC authors their own content** into their fork — and **the Content SC authors in their *own* AEM Sites** (the non-negotiable point). Identical code, different content.
+- **Both forks carry full commerce and both transact** against the **Commerce SC's backend** (by URL).
 
-### Why it's forks, not one shared site
+### Why two sites, not one
 
-Adobe EDS has a **canonical-site rule: one repo = one org's site** — a single live storefront can't span two accounts. The sanctioned move is **fork into your own org**. So the neutral shared thing you'd want *does* exist — as the **code upstream** — but each *live* site is its own org-bound fork. Full detail in **[storefront-topology](./storefront-topology.md)**.
-
-**Simpler first increment ("shape 1"):** skip the upstream — the Commerce SC drops the commerce parts straight into the Content SC's repo (GitHub collaboration) + hands over the backend URL. One combined demo, static. Shape 2 adds the upstream so it stays in sync. Same path, one step apart.
+Adobe EDS's **canonical-site rule** (one repo = one org's site; one content source per site) means a single live storefront can't span two accounts — so the result is **two forks** sharing the codebase. The Content SC's AEM-Sites authoring is the org-bound piece that forces the split, and we **accept** that rather than work around it. Full detail + decision trail in **[storefront-topology](./storefront-topology.md)**.
 
 ### Target vs later
 
-- **Target (shape 2):** the neutral upstream + per-org forks (full symmetry); the Commerce SC maintains the commerce code in the upstream; content via AEM Sites in the Content SC's fork; each fork wired to the commerce backend. **First increment (shape 1):** combine commerce into the Content SC's repo directly, no upstream yet.
-- **Later:** **either** SC can add the commerce parts (first = only the Commerce SC); two-way contribution (the Content SC pushing custom parts back to the upstream); a reusable upstream across scenarios; a convenience that reads a partner's backend details from a URL.
+- **Target:** Scenario B · Option X · **two identical transacting forks**; both SCs on the extension (content-SC wizard); each authors their own content; **Content SC in their own AEM Sites**; both wired to the Commerce SC's backend.
+- **Later:** two-way contribution (the Content SC evolving the *shared design*, not just content); an invite/handoff between the SCs; shared cart/session across the two sites.
 
 ## Why this isn't from scratch (verified against the code, 2026-06-03)
 
