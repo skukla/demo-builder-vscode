@@ -50,6 +50,7 @@ Adobe EDS has a **canonical-site rule: one repo serves exactly one org's site** 
 ## The upstream
 
 - **Neutral repo, seeded from a commerce boilerplate that supports AEM Sites authoring** (the `aem-boilerplate-xcom` family — commerce dropins + Universal-Editor/xwalk authoring). This is the linchpin: the shared code must let a fork be authored via AEM Sites.
+- **Identity comes from a mirrored package.** When both SCs pick the same demo identity (e.g. "CitiSignal") from their respective wizards, that package defines the upstream's brand/design — so the two forks **align by construction**, no manual coordination. See the [compositional demo builder](../compositional-demo-builder.md) direction (packages *within* composition, mirrored across owning systems).
 - **Hosted** in a neutral/shared GitHub org (GitHub isn't Adobe-org-bound); **maintained by the Commerce SC**.
 - **Full symmetry:** both SCs' demos are forks of it.
 - **Shared design lives in the upstream; content is per-fork.** To keep the two sites identical, design/code changes go to the **upstream** (centrally). The Content SC evolving the *shared design* (vs their content) is **two-way contribution — later**.

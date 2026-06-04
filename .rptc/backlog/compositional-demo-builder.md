@@ -2,11 +2,15 @@
 
 **Filed:** 2026-06-04 · **Status:** direction / north-star — *not a single feature*; the umbrella that several features ladder into.
 
-## The shift
+## The shift — packages *within* composition (not instead of)
 
-**Today:** the extension builds **prebuilt commerce packages** — the SC picks a demo package + stack and gets a predetermined component set (`demo-packages.json` / `stacks.json`). Great for commerce; fixed.
+**Retain prebuilt packages.** Commerce already has them (`demo-packages.json` / `stacks.json`): curated, brand-themed starting bundles (Isle5, CitiSignal, …). They stay — **a package *is* a curated composition** (a preset of owning system + components + brand/content), not the thing we move away from.
 
-**The direction:** a broader **Adobe demo builder** where the SC composes a demo from **an owning system + the additional systems they choose to connect to it** — instead of receiving a fixed bundle.
+**Two additions make packages compositional:**
+1. **Extensible** — beyond the package's preset, the SC can **add connected systems** (App Builder instances, AEP, …) to the demo.
+2. **Mirrored across owning systems** — the same demo identity (e.g. "CitiSignal") is pickable from **both** the commerce wizard and the content wizard, producing **aligned** demos. When a Commerce SC and a Content SC each pick the mirrored package, their storefronts **share brand/design by construction** — exactly what the synced-storefront flow ("two identical-looking sites") needs, with **no manual coordination.** The package defines the **shared look**; each SC authors their **own content** within it; the compositional layer lets either **add systems** on top.
+
+So the chosen mirrored package effectively **defines the shared upstream's identity** for the synced-storefront feature.
 
 ## The model (one line)
 
@@ -29,6 +33,12 @@ It maps onto the **existing** project model — `componentSelections.{integratio
 - **Neutral spine** — the core asks "what does this archetype *own*?", never "is this commerce?" Commerce is the first owning system *implemented*, not a privileged one.
 - **YAGNI on the general composer** — do **not** build a generic plugin/composition framework ahead of its second real user. Each slice extends existing slots; abstractions stay thin until a second implementation actually arrives.
 - **One owning system per demo** for now; multi-owner composition is a later question.
+
+## Open design questions
+
+- **Mirroring mechanism:** **paired packages** (a commerce + a content package per identity, kept in sync by curation) vs **one package definition both wizards consume** (each takes its slice — mirror *by construction*, no drift). Lean: the single shared definition; likely an extension of `demo-packages.json`.
+- **Curation cost:** each demo identity now needs a **content side** (AEM-authorable themed content + matching design) alongside the commerce side. Who authors/maintains the mirror.
+- **Package ↔ upstream:** does selecting a mirrored package *seed* the shared upstream (the synced-storefront code/design), or just configure two aligned forks? (Ties package selection to [storefront-topology](./commerce-connect-aem-sc/storefront-topology.md).)
 
 ## Why this is its own entry
 
