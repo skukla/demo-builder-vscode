@@ -49,10 +49,28 @@ The first screen asks **what you're doing**, never **who you are**:
 
 Roles (commerce/content) are never asked; they **emerge** from "do you have a backend?" and "where will you author?" The extension's job is capabilities + preflight (entitlement/access checks) + invite/fork/sync.
 
-## Open determinant (gates build order)
+## Determinant — RESOLVED (2026-06-04): Mode C is the target
 
-**Does the content party author in an AEM that lives in the *Commerce* party's org (Mode B — single org, granted access) or in *their own* org (Mode C — cross‑org, two forks)?**
+The content party authors in **their own AEM, in their own IMS org** — each content SC literally has their own org; that's how they work today.
 
-- **If Mode B is acceptable** for the common case → dramatically less brittle; the first composed‑mode build should target **single‑org collaboration** (one project + AEM content source + access‑grant management), *not* the two‑fork plumbing.
-- **If Mode C is required** (content party insists on their own tenant) → the **two‑fork plumbing (Slice 1)** is the correct substrate.
-- **Slice 1 (DA.live two‑fork plumbing) is unaffected as a substrate/learning exercise** either way — but the determinant decides whether it is the *primary* path or the *premium edge case*.
+- **Mode C (federated cross‑org composition) is the primary two‑party target.** Slice 1's two‑fork plumbing is the correct substrate.
+- **Mode B (co‑located) is possible but dispreferred** — content SCs want to own/author their own instances, not author in the commerce party's org. Keep only as a fallback.
+- **Mode A (solo) is provided as an explicit niche option** in the extension (one user, one org; content source = AEM Sites or DA.live, entitlement‑gated). Cheap — it's the solo flow + the content‑source choice.
+
+## Collaboration surfaces (Mode C)
+
+Because each party works in their **own IMS org** and authors in their **own AEM**, the cross‑org surface is tightly bounded — three surfaces, only one of them cross‑org:
+
+| Surface | Cross‑org? | What's needed | Automate vs process |
+|---|---|---|---|
+| **Code (GitHub)** | No (GitHub is org‑agnostic) | Content party forks the shared source + syncs | **Automatable** — invite / fork / sync |
+| **AEM (author)** | **No** | Each authors in their **own** AEM, own org | **Zero cross‑org work** — self‑contained per party |
+| **Backend (transact)** | **Yes — the only one** | Content storefront reads the backend **by URL + public keys** (inherited from shared code); commerce party **CORS‑allow‑lists the content domain** | URL/keys inherited (auto); **CORS = commerce‑side manual/Cloud‑Manager step, sequenced after the content site exists** |
+
+Key simplifiers from "own IMS org each":
+
+- **No cross‑org AEM** — nobody authors in anyone else's instance (the Mode‑B access‑grant apparatus is not needed).
+- **No cross‑org IMS auth for the content party** — storefront reads the backend by URL + public keys; store codes come from the shared package/config, not live discovery. The content party never signs into the commerce org.
+- The **only** genuine cross‑org dependency is **backend CORS allow‑listing** of the content domain — **bidirectional + sequenced**: code + endpoint flow Commerce→Content; then the content party's **published domain flows Content→Commerce** for the allow‑list. A first‑class **association/invite artifact** can carry the domain back automatically; minimally it's a guided manual exchange.
+
+**Slice 1 touchpoint:** the DA.live content fork also transacts, so its domain needs backend CORS too. Trivial in Slice 1's typically same‑org test, but the seam (publish domain → allow‑list) should be acknowledged so the Slice 2 cross‑org case slots into the same plumbing.
