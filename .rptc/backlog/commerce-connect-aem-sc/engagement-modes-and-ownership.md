@@ -65,12 +65,13 @@ Because each party works in their **own IMS org** and authors in their **own AEM
 |---|---|---|---|
 | **Code (GitHub)** | No (GitHub is org‑agnostic) | Content party forks the shared source + syncs | **Automatable** — invite / fork / sync |
 | **AEM (author)** | **No** | Each authors in their **own** AEM, own org | **Zero cross‑org work** — self‑contained per party |
-| **Backend (transact)** | **Yes — the only one** | Content storefront reads the backend **by URL + public keys** (inherited from shared code); commerce party **CORS‑allow‑lists the content domain** | URL/keys inherited (auto); **CORS = commerce‑side manual/Cloud‑Manager step, sequenced after the content site exists** |
+| **Backend (transact)** | **Topology-dependent** | **ACCS-first + per-org mesh (recommended): CORS is set in each party's *own* mesh; the mesh reads ACCS server-side by URL + public key — no PaaS backend, no cross-org step.** Direct-backend fallback: commerce party allow-lists the content domain. | Mesh path = self-contained per org (auto). Direct path = commerce-side allow-list + domain handshake. |
 
 Key simplifiers from "own IMS org each":
 
 - **No cross‑org AEM** — nobody authors in anyone else's instance (the Mode‑B access‑grant apparatus is not needed).
 - **No cross‑org IMS auth for the content party** — storefront reads the backend by URL + public keys; store codes come from the shared package/config, not live discovery. The content party never signs into the commerce org.
-- The **only** genuine cross‑org dependency is **backend CORS allow‑listing** of the content domain — **bidirectional + sequenced**: code + endpoint flow Commerce→Content; then the content party's **published domain flows Content→Commerce** for the allow‑list. A first‑class **association/invite artifact** can carry the domain back automatically; minimally it's a guided manual exchange.
+- Cross‑org CORS is **topology‑dependent** (verified 2026‑06‑04 — see [research](../../research/2026-06-04-cross-org-cors-and-mesh.md)): with the recommended **ACCS‑first + per‑org mesh**, CORS is configured in **each party's own mesh** (their App Builder) and the mesh reads ACCS server‑side by URL + public key — **no PaaS backend, and the cross‑org handshake dissolves**. Only the no‑mesh **direct‑backend** fallback needs the commerce party to allow‑list the content domain (a bidirectional, sequenced handshake; a first‑class association/invite artifact can carry the domain back). **Same‑origin** (Adobe's global best practice) needs one shared domain → Mode A only.
+- **Still to verify live:** cross‑org *transacting* (cart/checkout **writes**), not just CORS — the spike's deferred item. CORS is necessary, possibly not sufficient.
 
 **Slice 1 touchpoint:** the DA.live content fork also transacts, so its domain needs backend CORS too. Trivial in Slice 1's typically same‑org test, but the seam (publish domain → allow‑list) should be acknowledged so the Slice 2 cross‑org case slots into the same plumbing.
