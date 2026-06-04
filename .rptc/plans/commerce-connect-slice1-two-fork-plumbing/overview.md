@@ -127,6 +127,18 @@ fresh code-walk on `develop`:**
 every executor/filtering/predicate change is gated on `flow === 'content'` (or a
 predicate) and defaults to today's behavior when `flow` is absent.
 
+**Per-step verification gate (run during each step's REFACTOR, before commit):**
+1. step tests (RED→GREEN) + targeted regression suite for the touched area
+2. `eslint` on changed files
+3. `tsc --noEmit` (full typecheck)
+4. **`tests/sop/`** (the repo's automated SOP suite: magic timeouts, complex
+   expressions, inline styles, component/handler extraction)
+5. **targeted `code-patterns.md` grep** of the changed files for the judgment-based
+   rules the suite can't enforce (deep optional chaining §4, helper extraction §2,
+   nested ternaries §3)
+
+A step is not "done" until all five are green.
+
 ---
 
 ## Implementation Constraints
