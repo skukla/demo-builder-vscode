@@ -99,6 +99,20 @@ With a public master, **"joining" is a single paste of a link**; the extension r
 
 Maps to the up-front entry: **Solo / Start shared → gallery; Join shared → paste link.** Refines **Slice 1 Step 2**: the content-SC entry is a **"Join" entry that takes a link, resolves it, then opens the gallery-less wizard** (buildable on DA.live; content-source-agnostic).
 
+#### Joiner's GitHub touchpoints (decision A: anonymous preview, sign-in at commit)
+
+The joiner interacts with GitHub at several points — all in **their own account** plus a **public read** of the master (no cross-account grant, since the master is public):
+
+| Touchpoint | When | Auth |
+|---|---|---|
+| **Resolve** (read the master's marker) | paste-link / preview | **none** — unauthenticated `raw.githubusercontent.com` read |
+| **GitHub sign-in (OAuth)** | at fork creation (existing `eds-connect-services` step) | sign-in |
+| **Repo generation** (`createFromTemplate` from the master → joiner's account) | fork creation | their token |
+| **GitHub App install** (AEM Code Sync on their repo) | storefront-setup | their token |
+| **Sync** from the master (ongoing) | dashboard / updates | their token (public read) |
+
+**Sequencing (A):** previewing a storefront requires **no sign-in**; GitHub sign-in is deferred to fork creation. Most touchpoints reuse the existing EDS flow — only the *resolve* (unauthenticated public read at the home screen) is new.
+
 ## Collaboration surfaces (Mode C)
 
 Because each party works in their **own IMS org** and authors in their **own AEM**, the cross‑org surface is tightly bounded — three surfaces, only one of them cross‑org:

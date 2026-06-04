@@ -5,8 +5,21 @@
  * reader.
  */
 
-import { handleResolveJoinLink } from '@/features/project-creation/handlers/joinHandlers';
+import {
+    handleResolveJoinLink,
+    createPublicMasterReader,
+    type FetchLike,
+} from '@/features/project-creation/handlers/joinHandlers';
 import { buildMasterMarker, serializeMasterMarker } from '@/features/project-creation/services/resolveJoinLink';
+
+const fakeFetch = (status: number, body = ''): { fetch: FetchLike; url: () => string } => {
+    let captured = '';
+    const fetch: FetchLike = async (u: string) => {
+        captured = u;
+        return { ok: status >= 200 && status < 300, status, text: async () => body };
+    };
+    return { fetch, url: () => captured };
+};
 
 const marker = serializeMasterMarker(buildMasterMarker('citisignal', { endpoint: 'https://x/graphql' }));
 const link = 'https://github.com/commerce-sc/citisignal-master';
@@ -39,5 +52,25 @@ describe('handleResolveJoinLink', () => {
         const readFile = jest.fn().mockResolvedValue(null);
         const result = await handleResolveJoinLink({ link }, { readFile });
         expect(result.ok).toBe(false);
+    });
+});
+
+describe('createPublicMasterReader (unauthenticated public read)', () => {
+    it('reads file text from the public raw URL on 200', async () => {
+        const f = fakeFetch(200, marker);
+        const read = createPublicMasterReader(f.fetch);
+        const content = await read('commerce-sc', 'citisignal-master', '.demo-builder/master.json');
+        expect(content).toBe(marker);
+        expect(f.url()).toBe('https://raw.githubusercontent.com/commerce-sc/citisignal-master/HEAD/.demo-builder/master.json');
+    });
+
+    it('returns null on 404 (file absent / not a shareable storefront)', async () => {
+        const read = createPublicMasterReader(fakeFetch(404).fetch);
+        expect(await read('o', 'r', 'p')).toBeNull();
+    });
+
+    it('throws on other HTTP errors', async () => {
+        const read = createPublicMasterReader(fakeFetch(500).fetch);
+        await expect(read('o', 'r', 'p')).rejects.toThrow();
     });
 });

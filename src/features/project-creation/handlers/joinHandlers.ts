@@ -2,15 +2,13 @@
  * Join-flow message handlers.
  *
  * `handleResolveJoinLink` bridges the Join UI's `onResolve` to the resolveJoinLink
- * service. The GitHub file reader is injected so the handler is unit-testable; the
- * command supplies the real reader via `createGitHubMasterReader`.
+ * service via an injected reader (unit-testable). `createPublicMasterReader` supplies
+ * an UNAUTHENTICATED public read of the master, so pasting a link and previewing a
+ * storefront needs no GitHub sign-in — the master is public, and GitHub sign-in
+ * happens later, at fork creation (decision A).
  */
 
-import * as vscode from 'vscode';
 import { resolveJoinLink, type MasterFileReader, type ResolveJoinResult } from '../services/resolveJoinLink';
-import { GitHubFileOperations } from '@/features/eds/services/githubFileOperations';
-import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
-import type { Logger } from '@/types/logger';
 
 export interface ResolveJoinDeps {
     /** Reads a file from a public master repo; resolves null when absent. */
@@ -31,17 +29,29 @@ export async function handleResolveJoinLink(
     return resolveJoinLink(link, deps.readFile);
 }
 
+/** Minimal fetch contract — keeps the reader testable and avoids a global-fetch typing dep. */
+export interface MasterFetchResponse {
+    ok: boolean;
+    status: number;
+    text(): Promise<string>;
+}
+export type FetchLike = (url: string) => Promise<MasterFetchResponse>;
+
+const RAW_HOST = 'https://raw.githubusercontent.com';
+
 /**
- * Build a MasterFileReader backed by GitHubFileOperations.
- *
- * Note: `getFileContent` authenticates with the user's GitHub token. The joiner
- * authenticates with GitHub to fork the master anyway, so the resolve runs with
- * their token (not a true anonymous read). Returns null on 404.
+ * Build a MasterFileReader that reads the (public) master via an UNAUTHENTICATED
+ * raw read — no GitHub sign-in needed to preview a join. 404 ⇒ null (not shareable).
  */
-export function createGitHubMasterReader(secrets: vscode.SecretStorage, logger: Logger): MasterFileReader {
-    const ops = new GitHubFileOperations(new GitHubTokenService(secrets, logger), logger);
+export function createPublicMasterReader(fetchImpl: FetchLike): MasterFileReader {
     return async (owner, repo, path) => {
-        const file = await ops.getFileContent(owner, repo, path);
-        return file?.content ?? null;
+        const res = await fetchImpl(`${RAW_HOST}/${owner}/${repo}/HEAD/${path}`);
+        if (res.status === 404) {
+            return null;
+        }
+        if (!res.ok) {
+            throw new Error(`Could not read the storefront (HTTP ${res.status}).`);
+        }
+        return res.text();
     };
 }

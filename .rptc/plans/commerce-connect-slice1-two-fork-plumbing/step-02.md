@@ -4,7 +4,7 @@
 - ✅ Core service `resolveJoinLink` (2026-06-04) — 7/7 tests, all gates green.
 - ✅ `JoinStorefrontScreen` UI (paste-link → resolve-on-Continue → confirmation preview → Join), prop-driven, reuses `FormField` + Spectrum; 5/5 component tests, lint, typecheck, SOP suite + grep green.
 - ✅ Marker write-side contract `buildMasterMarker`/`serializeMasterMarker` (co-located with the reader) + **round-trip** test (write→read); 4/4 + 7/7 regression, all gates green.
-- ✅ Resolve handler `handleResolveJoinLink` (injected reader, TDD'd 4/4) + `createGitHubMasterReader` adapter. **Finding:** `GitHubFileOperations.getFileContent` calls `ensureAuthenticated`, so the resolve runs with the **joiner's GitHub token** (they auth to fork the master anyway) — not a true anonymous read. Acceptable; the Join entry ensures GitHub auth before/at resolve.
+- ✅ Resolve handler `handleResolveJoinLink` (injected reader, TDD'd) + `createPublicMasterReader` (**unauthenticated** raw public read). **Decision A:** pasting a link + previewing needs **no GitHub sign-in** (the master is public, read via `raw.githubusercontent.com`); GitHub sign-in happens later, at **fork creation**. (`GitHubFileOperations` was avoided here because it forces `ensureAuthenticated`.) Handler + reader 7/7.
 - **Remaining (final Step 2 increment — integration glue):** the Join webview command/entry registration (`BaseWebviewCommand` + `package.json` contribute + webview/webpack entry + home-screen "Join" entry), `onConfirm` → gallery-less seeded wizard launch, and the marker write during project finalization. Lower unit-test density (typecheck + existing webview-command patterns).
 
 **Purpose:** Add the joiner's entry point. With a **public master** (decision recorded in
