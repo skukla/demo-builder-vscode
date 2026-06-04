@@ -4,8 +4,8 @@
 
 - [x] Planned
 - [x] In Progress (TDD Phase) — all 7 steps GREEN
-- [ ] Efficiency Review
-- [ ] Security Review
+- [x] Efficiency Review — clean, no must-fix
+- [x] Security Review — safe to ship; encodeURIComponent hardening applied
 - [ ] Complete
 
 **Created:** 2026-06-04
