@@ -4,7 +4,8 @@
 - ✅ Core service `resolveJoinLink` (2026-06-04) — 7/7 tests, all gates green.
 - ✅ `JoinStorefrontScreen` UI (paste-link → resolve-on-Continue → confirmation preview → Join), prop-driven, reuses `FormField` + Spectrum; 5/5 component tests, lint, typecheck, SOP suite + grep green.
 - ✅ Marker write-side contract `buildMasterMarker`/`serializeMasterMarker` (co-located with the reader) + **round-trip** test (write→read); 4/4 + 7/7 regression, all gates green.
-- **Remaining (next increment):** the Join webview entry/command — wires `onResolve` → `GitHubFileOperations` + `resolveJoinLink`, `onConfirm` → gallery-less seeded wizard launch; registers the home-screen entry; and writes the marker into created storefronts during finalization.
+- ✅ Resolve handler `handleResolveJoinLink` (injected reader, TDD'd 4/4) + `createGitHubMasterReader` adapter. **Finding:** `GitHubFileOperations.getFileContent` calls `ensureAuthenticated`, so the resolve runs with the **joiner's GitHub token** (they auth to fork the master anyway) — not a true anonymous read. Acceptable; the Join entry ensures GitHub auth before/at resolve.
+- **Remaining (final Step 2 increment — integration glue):** the Join webview command/entry registration (`BaseWebviewCommand` + `package.json` contribute + webview/webpack entry + home-screen "Join" entry), `onConfirm` → gallery-less seeded wizard launch, and the marker write during project finalization. Lower unit-test density (typecheck + existing webview-command patterns).
 
 **Purpose:** Add the joiner's entry point. With a **public master** (decision recorded in
 [engagement-modes-and-ownership](../../backlog/commerce-connect-aem-sc/engagement-modes-and-ownership.md)),
