@@ -34,11 +34,11 @@ It maps onto the **existing** project model — `componentSelections.{integratio
 - **YAGNI on the general composer** — do **not** build a generic plugin/composition framework ahead of its second real user. Each slice extends existing slots; abstractions stay thin until a second implementation actually arrives.
 - **One owning system per demo** for now; multi-owner composition is a later question.
 
-## Open design questions
+## Design questions — mirroring RESOLVED (2026-06-04)
 
-- **Mirroring mechanism:** **paired packages** (a commerce + a content package per identity, kept in sync by curation) vs **one package definition both wizards consume** (each takes its slice — mirror *by construction*, no drift). Lean: the single shared definition; likely an extension of `demo-packages.json`.
-- **Curation cost:** each demo identity now needs a **content side** (AEM-authorable themed content + matching design) alongside the commerce side. Who authors/maintains the mirror.
-- **Package ↔ upstream:** does selecting a mirrored package *seed* the shared upstream (the synced-storefront code/design), or just configure two aligned forks? (Ties package selection to [storefront-topology](./commerce-connect-aem-sc/storefront-topology.md).)
+- **Mirroring mechanism — RESOLVED: one shared package definition (not paired); the mirror itself is the fork of the master.** Extend `demo-packages.json`; **no** separate commerce/content packages. The **starter** picks the package from the gallery → it **seeds their master** (the SC-owned engagement upstream). The **joiner** does **not** re-pick from a gallery — they **fork the master** and align by construction; the package **id travels in the join handoff** so their tooling pulls the right brand starter-content for their *own* authoring. Independent same-package selection survives only as a fallback (still the one shared definition; paired packages rejected — YAGNI + drift). This **refines** the earlier "both pick the mirrored package" framing: forking the master is strictly tighter (inherits the wired backend + any master state, no drift). See [engagement-modes-and-ownership](./commerce-connect-aem-sc/engagement-modes-and-ownership.md).
+- **Package ↔ upstream — RESOLVED: the package *seeds* the master/upstream** (it does not merely configure two parallel forks). The second fork aligns to the **master**, not to an independent package instantiation.
+- **Curation cost — acknowledged; non-code dependency (still open):** each demo identity needs **AEM-authorable themed starter content + matching design** produced and maintained alongside the commerce side. This is a **content-production** task ("who builds CitiSignal for AEM"), not an engineering decision — flagged so it isn't mistaken for build work. Gates the **AEM (Slice 2)** path, not Slice 1.
 
 ## Why this is its own entry
 
