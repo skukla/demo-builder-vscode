@@ -57,7 +57,9 @@ async function fetchLogin(token: string): Promise<string | null> {
 }
 
 async function fetchIsCollaborator(token: string, login: string): Promise<boolean> {
-    const url = `${GITHUB_API_BASE}/repos/${EA_OWNER}/${EA_REPO}/collaborators/${login}`;
+    // Encode the login (from GET /user) defensively, even though GitHub logins
+    // are constrained — never trust a remote value interpolated into a URL path.
+    const url = `${GITHUB_API_BASE}/repos/${EA_OWNER}/${EA_REPO}/collaborators/${encodeURIComponent(login)}`;
     const res = await fetchWithTimeout(url, { headers: authHeaders(token) });
     // 204 => collaborator; 404 => not; anything else => treat as not (graceful)
     return res.status === 204;
