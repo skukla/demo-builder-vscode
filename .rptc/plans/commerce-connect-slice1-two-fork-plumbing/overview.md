@@ -139,6 +139,12 @@ predicate) and defaults to today's behavior when `flow` is absent.
   primitives. Before writing any component/service/handler, consult the **Reuse-First
   Inventory** (below) and prefer the listed asset; introduce net-new only where the
   inventory marks it "net-new." Each step carries its own **Reuse map**.
+- **CONFIGURATION-DRIVEN (mandate):** prefer expressing behavior as **data** in the
+  existing config (`stacks.json` + `stacks.schema.json`, `demo-packages.json`,
+  `wizard-steps.json`, `components.json`) over imperative branches. The content flow's
+  "no mesh / which steps / which components / availability" should fall out of config,
+  not `if (isContentFlow)` logic. Schema-bound config (`stacks.json`) requires a matching
+  `stacks.schema.json` update.
 - **Dependencies:** REUSE `TemplateSyncService`, `discoverStoreStructure`,
   `configGenerator`, `ensureEdsContent`, `WizardContainer`, `filterStepsForStack`,
   and the full Reuse-First Inventory below. **No new npm packages.**
@@ -276,7 +282,9 @@ A codebase reuse sweep confirmed Slice 1 is **primarily integration of existing 
 - `resolveJoinLink` (fetch master `config.json` + marker → `JoinDescriptor`) + the small **self-describing marker** schema (Step 2).
 - **Token = the public master repo URL — NO link encoding, expiry, checksum, or versioning** (a plain public URL has nothing to expire; the audit's heavier link-payload suggestion is explicitly rejected).
 - **No new EDS pipeline phase** — the joiner reuses the storefront-setup phases with the master as the template source.
-- Flow-aware filter branch (Step 3); executor content branch — skip mesh, source from master (Step 4); content-coords seed (Step 5); content sync default (Step 6); `(product,ownership)` predicate + minimal migration (Step 7).
+- **Config-first, not imperative** — the content flow rides the existing pipeline via **data**: mesh is already `optionalDependencies` in `stacks.json` (content omits it → existing mesh no-op), the backend is URL-in-`config.json` (nothing to provision), and fork-from-master is `templateOwner` data. So Step 4 is mostly **verification + minimal guards**, not a skip-guarded branch.
+- New config field **`supportedFlows`** on `stacks.json` (+ **`stacks.schema.json`** update) gates content-flow availability as data (EDS = both; non-EDS = commerce-only) — Step 4.
+- Flow-aware filter branch (Step 3); content-coords seed (Step 5); content sync default (Step 6); `(product,ownership)` predicate + minimal migration (Step 7).
 
 ---
 

@@ -1,96 +1,100 @@
-# Step 4: Executor Content-Flow Branch (fork-from-upstream, skip mesh/backend-deploy)
+# Step 4: Content Flow Through the Existing Pipeline (config-first)
 
-**Purpose:** Branch the existing `executeProjectCreation` pipeline so the
-**content flow forks from the upstream** and **skips the mesh phase (Phase 3) and
-backend deployment**, while **reusing** component install, config generation
-(Phase 4), config sync (Phase 5), and DA.live content (Phase 5b). The commerce/
-EDS path is byte-for-byte unchanged when `flow` is absent or `'commerce'`.
+**Purpose:** Make the **content flow run end-to-end through the EXISTING creation
+pipeline**, driven by **configuration + seeded data** rather than an imperative
+executor branch. Three config facts do almost all the work:
+
+- **No mesh — by config.** Mesh is an `optionalDependencies` entry in `stacks.json`
+  (not a default); the content path simply doesn't include it, and `executeMeshPhase`
+  **already no-ops when no mesh component is present** (`else if (meshComponent?.path && meshDefinition)`).
+  So there is *nothing to skip*.
+- **Backend by URL — not provisioned.** There is no separate "backend deploy" phase;
+  the backend is just coordinates in `config.json` (seeded in Step 5) consumed by
+  `configGenerator`. So there is *nothing to skip* there either.
+- **Fork-from-master is data.** The repo is generated from the master by the existing
+  storefront-setup `createFromTemplate`, sourced from `edsConfig.templateOwner/templateRepo = master`
+  (set by the join resolve in Step 2). **No new pipeline phase.**
+
+So Step 4 is mostly **verifying the existing pipeline handles content given the seeded
+config**, plus the **minimal guard(s)** for any spot where the pipeline makes a
+commerce-only assumption that a test actually reveals. **No strategy split; no broad
+`if (isContentFlow)` skip-guards** (YAGNI / neutral-spine guardrail).
+
+> Supersedes the earlier "branch the executor / skip mesh+backend" framing — that work
+> is now config-driven, not imperative. The earlier "`resolveFrontendSource` returns the
+> upstream" idea was also wrong: the local clone is from the user's generated `repoUrl`
+> (same for both flows); the *master* is the **template source** via `templateOwner`,
+> upstream of the executor.
 
 **Prerequisites:**
-- [ ] `executor.ts` pipeline fully understood — phases at lines:
-  pre-flight/init (≈225–288), component install (≈329–352), Phase 3 mesh
-  (`executeMeshPhase` ≈374), Phase 4 env/config (≈398), Phase 5 config sync
-  (`syncEdsConfigToRemote` ≈407), Phase 5b content (`setupEdsContent` ≈411)
-- [ ] `resolveFrontendSource` (≈974) — how the frontend source is chosen
-- [ ] Steps 1–3 complete
+- [ ] Steps 1 (flow/upstream), 2 (join resolve seeds `edsConfig.templateOwner=master` + coords), 3 (filtering)
+- [ ] `executor.ts` understood — esp. `executeMeshPhase` no-ops without a mesh component
+- [ ] mesh is `optionalDependencies` in `stacks.json` (verified)
 
 ---
 
-## Reuse map
+## Reuse map (config-first)
+- **`stacks.json` dependency set** — content path carries no mesh dependency → existing mesh no-op. No imperative skip.
+- **`executeMeshPhase`** — unchanged; no-ops when no mesh present.
+- **`configGenerator.generateConfigJson`** (Phase 4) — unchanged; consumes seeded coords; direct backend URL when no mesh.
+- **storefront-setup `createFromTemplate`** — generates the fork from `templateOwner/templateRepo = master` (data from Step 2).
+- **`ensureEdsContent`** (Phase 5b) + config sync (Phase 5) — unchanged.
+- **Net-new:** only minimal guard(s) surfaced by the content integration test (expect little/none); executor already sets `flow`/`upstream` (Step 1).
 
-- **storefront-setup phase orchestration** (`storefrontSetupPhases.ts`) + **`GitHubRepoOperations.createFromTemplate`** — the joiner's repo is generated **from the master** via the EXISTING phases (template source = master); **no new pipeline phase**.
-- **`executor.ts`** pipeline — branch additively: skip `executeMeshPhase`; **reuse** Phase 4 (`configGenerator`), Phase 5 (config sync), Phase 5b (`ensureEdsContent`), and `populateEdsMetadata`.
-- **`resolveFrontendSource`** — reuse its source-shape for sourcing from `upstream`.
-- **Net-new:** the content-flow skip-guards (gated on `isContentFlow`).
+## Config gating — `supportedFlows` (config + schema)
+- Add `supportedFlows?: ('commerce' | 'content')[]` to `stacks.json` **and update `stacks.schema.json`** so *which stacks the content flow may use* is expressed as **data**, not a hardcoded predicate. EDS stacks support both; non-EDS (headless) support `'commerce'` only. This is the config-driven availability gate (ties to the mirroring decision).
 
 ---
 
 ## Tests to Write First
 
-### Characterization (write BEFORE branching — Risk 1 guard)
-### Integration: `tests/.../executor-commerce-regression.test.ts`
-- [ ] **Commerce/EDS path still runs Phase 3 mesh** when a mesh component is
-  present (capture current behavior so the branch can't regress it).
+### Characterization (Risk-1 guard): `tests/.../executor-commerce-regression.test.ts`
+- [ ] Commerce/EDS path still runs Phase 3 mesh **when a mesh component IS present** (capture current behavior so nothing regresses).
 
 ### Integration: `tests/.../executor-content-flow.test.ts`
-- [ ] **Content flow uses the upstream as the frontend source**
-  (`resolveFrontendSource` returns `{owner,repo}` from `config.upstream`).
-- [ ] **Content flow skips Phase 3** — `executeMeshPhase` is not invoked / no
-  mesh deploy attempted (no Adobe auth/mesh CLI calls).
-- [ ] **Content flow skips backend deploy** but still **runs Phase 5 config
-  sync** and **Phase 5b DA.live content**.
-- [ ] **Content project is saved with `flow:'content'` + `upstream`** populated.
+- [ ] Content flow (no mesh dependency) runs the pipeline with **no mesh deployment attempted** (existing no-op; no Adobe/mesh CLI calls).
+- [ ] `config.json` is generated with the **inherited coords** (seeded `componentConfigs`) via the existing `configGenerator`.
+- [ ] Phase 5 config sync + Phase 5b content run for content.
+- [ ] Saved content project carries `flow:'content'` + `upstream`.
+
+### Config: `tests/.../stacks-supportedFlows.test.ts`
+- [ ] EDS stacks declare `supportedFlows` including `'content'`; non-EDS stacks do not.
 
 ---
 
 ## Files to Create/Modify
-- [ ] `src/features/project-creation/handlers/executor.ts` — content branch
-- [ ] `tests/.../executor-content-flow.test.ts` — new
-- [ ] `tests/.../executor-commerce-regression.test.ts` — new
+- [ ] `src/features/project-creation/config/stacks.json` + `stacks.schema.json` — add `supportedFlows`
+- [ ] `src/features/project-creation/handlers/executor.ts` — ONLY minimal guard(s) **if** a content test reveals a commerce-only assumption (expect little/none)
+- [ ] test files above
 
 ---
 
 ## Implementation Details
 
 ### RED
-Characterization test for commerce first (must pass against current code), then
-the content-flow tests (fail — no branch yet).
+Characterization (commerce mesh) passes against current code. The content integration
+test fails wherever a commerce-only assumption breaks — **or passes outright**, in which
+case Step 4 is verification + the `supportedFlows` config only.
 
 ### GREEN
-Introduce a single guarded segment using the Step-1 predicate:
-```typescript
-const isContent = isContentFlow(typedConfig); // flow === 'content'
-```
-- **Frontend source:** extend `resolveFrontendSource` so that when `isContent`
-  and `typedConfig.upstream` is set, the source is the upstream repo
-  (`{ type:'git', url: https://github.com/{owner}/{repo}.git, branch:'main' }`).
-  This mirrors the existing EDS `repoUrl` branch — reuse the same shape.
-- **Phase 3 (mesh):** wrap the `executeMeshPhase(...)` call so it is skipped when
-  `isContent` (content forks point at the Commerce SC's backend by URL; no mesh).
-- **Backend deploy:** content flow does not run any backend provisioning; it
-  only writes coordinates (Step 5). Ensure no mesh/backend CLI path is reachable
-  for content.
-- **Phases 4 / 5 / 5b:** leave intact — content forks still generate `config.json`
-  (Step 5 seeds the coords), sync it to GitHub (Phase 5), and populate DA.live
-  content (Phase 5b via `ensureEdsContent`).
-
-Keep the branch **narrow and early-exit-shaped** where possible (skip-guards),
-so commerce logic is never altered — only bypassed for content.
+- Run the content flow through the pipeline with seeded config (no mesh dep; coords in
+  `componentConfigs`; `templateOwner=master`). Add a **narrow, predicate-named guard**
+  *only* where a test shows a commerce-only assumption (e.g., a step assuming a backend/
+  mesh component exists). Prefer `shouldRunMeshPhase(...)`-style helpers over inline `if`s,
+  and only if actually needed.
+- Add `supportedFlows` to `stacks.json` + `stacks.schema.json`.
 
 ### REFACTOR
-- If the mesh-skip + backend-skip guards clutter the main function, extract a
-  small `shouldRunMeshPhase(typedConfig)` predicate (returns `false` for content)
-  rather than inlining conditionals.
-- Do **not** restructure the pipeline into a strategy pattern (YAGNI / guardrail
-  — one discriminator, not a framework).
+- No strategy pattern. Keep any guard minimal. Document that "no mesh / no backend-deploy"
+  is **config-driven, not imperative**.
 
 ---
 
 ## Acceptance Criteria
-- [ ] Commerce/EDS characterization test green before and after the change.
-- [ ] Content flow: upstream source used, mesh skipped, backend deploy skipped,
-  Phase 5 + 5b still run.
-- [ ] Saved content project has `flow` + `upstream`.
-- [ ] Full build + existing executor tests green.
+- [ ] Commerce characterization test green before + after.
+- [ ] Content flow runs end-to-end via the existing pipeline: no mesh deployed, `config.json`
+  carries inherited coords, Phase 5/5b run, project saved with `flow`/`upstream`.
+- [ ] `supportedFlows` in `stacks.json` + `stacks.schema.json`; non-EDS stacks are commerce-only.
+- [ ] **Minimal-to-no imperative executor branching;** full build + existing executor tests green.
 
-**Estimated time:** 6–8 hours
+**Estimated time:** 5–7 hours
