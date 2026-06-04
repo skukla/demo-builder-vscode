@@ -85,7 +85,7 @@ fresh code-walk on `develop`:**
 
 | # | Question (from synthesis "Open product questions") | Decision | Rationale |
 |---|---|---|---|
-| D1 | How does a content fork obtain the Commerce SC's backend coordinates? | **Both** — seed from the **upstream repo's `config.json`** (read), confirm/override website/store/store-view via the **existing `discoverStoreStructure` flow**. Reuses `commerceStoreDiscovery.ts` + `ConnectStoreStepContent`. | No manual coordination (upstream-seeded) + reuses proven machinery. PaaS discovery is URL+admin-creds (org-agnostic). **Caveat:** ACCS cross-account discovery needs the caller's IMS token + a discovery service provisioned for the Commerce org. |
+| D1 | How does a content fork obtain the Commerce SC's backend coordinates? | **Both, sharpened** — **primary:** *inherit/seed* from the **upstream repo's `config.json`** (these coords are **public storefront config**, not secrets); **secondary:** *manual override / re-seed* (paste the URL the Commerce SC provides, adjust store-view). The **authenticated `discoverStoreStructure`** flow stays the **Commerce SC's same-account tool**; the content fork does **not** depend on it cross-account. **Live cross-account read is deferred** to live verification. | Coords are client-visible config, so they travel safely with the fork and are preserved by sync — no credential sharing, no cross-org auth. Avoids the PaaS-admin-creds and ACCS-discovery-service obstacles for the content fork. See Step 5. |
 | D2 | Sync conflict strategy for a content fork? | Default **`reset-to-upstream`**; keep `merge`-with-reset-fallback available; "promote to upstream" is the durable path (later slice). | Reliable *by construction*: content lives in DA.live/AEM (not the repo) and wiring files are preserved, so reset never destroys the SC's real work. Arbitrary two-way auto-merge of AI-divergent code is not reliably solvable — the model routes durable code changes through the upstream instead. |
 | D3 | How much `isEds` predicate centralization in Slice 1? | **Minimal additive** — introduce the predicate helper, migrate only the content-flow entry sites (creation + dashboard render), leave the other ~18 `isEds` sites. | Guardrails ("extend additively", "neutral but thin", YAGNI). Avoids mixing a 20-site refactor with new behavior and locking the predicate shape before Slice 2 informs it. |
 
@@ -147,9 +147,15 @@ predicate) and defaults to today's behavior when `flow` is absent.
 
 ### Risk 3 — Cross-account backend coordinates (PaaS vs ACCS)
 - **Likelihood:** Medium · **Impact:** Medium · **Priority:** High
-- **Mitigation:** Slice 1 primary path is upstream-`config.json` seeding (works
-  offline of the Commerce org); discovery/override is the seam. Record the ACCS
-  discovery-service prerequisite; do not block Slice 1 on it.
+- **Mitigation:** Slice 1's content path is **inherit-from-upstream-`config.json`
+  + manual override** — a plain file read of *public* config that works offline
+  of the Commerce org, so it needs no admin creds (PaaS) and no IMS token +
+  discovery service (ACCS). The authenticated `discoverStoreStructure` flow
+  remains the Commerce SC's same-account tool only.
+- **Deferred:** *live* cross-account read of the backend (enumerate store
+  structure over the network from a different org) is "high confidence but
+  unverified live" (Adobe docs block programmatic fetch). It is **deferred to
+  the same verification track as the spike** and is **not** attempted in Slice 1.
 
 ### Risk 4 — Sync reliability with AI-customized forks
 - **Likelihood:** High (long-term) · **Impact:** Medium · **Priority:** Medium
@@ -195,6 +201,16 @@ predicate) and defaults to today's behavior when `flow` is absent.
 - [ ] **A3:** `TemplateSyncService` syncing from the upstream (vs the original
   template) needs only the `templateOwner/templateRepo` metadata to point at the
   upstream. *Impact if wrong:* add an explicit `upstreamRepo` metadata field.
+
+- [ ] **A4 (upstream wiring — open product question, sits *above* D1):** the
+  inherit/seed path (D1, Step 5) only yields real coordinates if the **upstream's
+  `config.json` is actually wired** with the Commerce SC's backend — but a stock
+  boilerplate ships placeholders. *How the upstream comes to hold real coords*
+  (e.g. the Commerce SC's "maintain the upstream" step wires it; or a published
+  coordinates handoff) is **unresolved** and tracked as an open question (see the
+  open-questions walk). *Impact if wrong / unwired:* Slice 1 still works via the
+  **manual override** path; only the zero-friction "confirm" experience depends
+  on A4 being satisfied. Slice 1 is **not** blocked on it.
 
 ---
 
