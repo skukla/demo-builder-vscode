@@ -7,7 +7,8 @@ import {
     buildGitHubHeaders,
     fetchWithTimeout,
 } from './githubApiClient';
-import type { ReleaseInfo, UpdateCheckResult, GitHubRelease, GitHubReleaseAsset } from './types';
+import { selectLatestForChannel } from './releaseTrack';
+import type { ReleaseInfo, UpdateCheckResult, GitHubRelease, GitHubReleaseAsset, UpdateChannel } from './types';
 import { validateGitHubDownloadURL } from '@/core/validation';
 import { Project } from '@/types';
 import type { Logger } from '@/types/logger';
@@ -77,7 +78,10 @@ export class UpdateManager {
      * @returns Array of components with updates, each containing list of affected projects
      */
     async checkAllProjectsForUpdates(projects: Project[]): Promise<MultiProjectUpdateResult[]> {
-        const channel = this.getUpdateChannel();
+        // Components ship no -alpha.* builds; early-access collapses to beta for
+        // component checks so EA users don't silently skip component updates.
+        const configuredChannel = this.getUpdateChannel();
+        const channel: UpdateChannel = configuredChannel === 'early-access' ? 'beta' : configuredChannel;
 
         // Collect all unique component IDs across all projects
         const componentProjectMap = new Map<string, Array<{ project: Project; currentVersion: string }>>();
@@ -158,7 +162,7 @@ export class UpdateManager {
      * Stable: Latest non-prerelease
      * Beta: Latest release (including prereleases)
      */
-    private async fetchLatestRelease(repo: string, channel: 'stable' | 'beta'): Promise<ReleaseInfo | null> {
+    private async fetchLatestRelease(repo: string, channel: UpdateChannel): Promise<ReleaseInfo | null> {
         try {
             // For stable: use /releases/latest (non-prereleases only)
             // For beta: use /releases?per_page=20 (includes prereleases, need to sort)
@@ -186,19 +190,14 @@ export class UpdateManager {
 
             const data: GitHubRelease | GitHubRelease[] = await response.json();
 
-            // Beta channel returns array, stable returns object
+            // Stable returns a single object; beta/early-access return an array.
+            // For arrays, pick the highest release the channel ACCEPTS by track
+            // (beta excludes -alpha.*, early-access takes -alpha.* only).
             let release: GitHubRelease;
             if (Array.isArray(data)) {
-                // For beta: find the latest version by semver, not by GitHub's order
-                const nonDraftReleases = data.filter((r: GitHubRelease) => !r.draft);
-                if (nonDraftReleases.length === 0) return null;
-
-                // Sort by version using semver
-                release = nonDraftReleases.sort((a: GitHubRelease, b: GitHubRelease) => {
-                    const versionA = this.parseVersionFromTag(a.tag_name);
-                    const versionB = this.parseVersionFromTag(b.tag_name);
-                    return semver.gt(versionA, versionB) ? -1 : 1;
-                })[0];
+                const selected = selectLatestForChannel(data, channel);
+                if (!selected) return null;
+                release = selected;
             } else {
                 release = data;
             }
@@ -265,9 +264,9 @@ export class UpdateManager {
         return { id: componentId, repository, name };
     }
 
-    private getUpdateChannel(): 'stable' | 'beta' {
+    private getUpdateChannel(): UpdateChannel {
         return vscode.workspace.getConfiguration('demoBuilder')
-            .get<'stable' | 'beta'>('updateChannel', 'stable');
+            .get<UpdateChannel>('updateChannel', 'stable');
     }
 
     private isNewerVersion(latest: string, current: string): boolean {

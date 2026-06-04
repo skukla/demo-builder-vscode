@@ -96,6 +96,42 @@ export function createMockRelease(options: {
 }
 
 /**
+ * Builds a release object (array form) with a .vsix asset for the given tag.
+ */
+function mockArrayRelease(tag: string, prerelease: boolean): any {
+    return {
+        tag_name: tag,
+        body: `Release notes for ${tag}`,
+        published_at: '2024-01-01T00:00:00Z',
+        prerelease,
+        draft: false,
+        assets: [
+            {
+                name: 'extension.vsix',
+                browser_download_url: `https://github.com/test/repo/releases/download/${tag}/extension.vsix`,
+            },
+        ],
+    };
+}
+
+/**
+ * Creates a mixed releases array (final + beta + alpha) for channel-filtering tests.
+ * Defaults: final 1.1.0, beta 1.2.0-beta.1, alpha 2.0.0-alpha.1.
+ */
+export function createMockReleasesArray(options?: {
+    final?: string;
+    beta?: string;
+    alpha?: string;
+}): any[] {
+    const { final = '1.1.0', beta = '1.2.0-beta.1', alpha = '2.0.0-alpha.1' } = options ?? {};
+    return [
+        mockArrayRelease(`v${alpha}`, true),
+        mockArrayRelease(`v${beta}`, true),
+        mockArrayRelease(`v${final}`, false),
+    ];
+}
+
+/**
  * Creates a mock project with components
  */
 export function createMockProject(components: { id: string; version: string; repoUrl?: string; path?: string; name?: string }[]): any {
