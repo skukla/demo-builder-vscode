@@ -1,6 +1,7 @@
 # Step 2: Content-SC "Join" Entry (link-resolving) — reuses `WizardContainer`
 
 **Status: 🟡 In progress.**
+> **Marker file: `storefront-share.json`** (repo-committed, read remotely by the joiner) — deliberately **NOT** under the `.demo-builder` namespace, which is the *local* per-project manifest (`.demo-builder.json`). The descriptor carries packageId + inherited commerce coords (owned schema; avoids coupling to Adobe's `config.json` format).
 - ✅ Core service `resolveJoinLink` (2026-06-04) — 7/7 tests, all gates green.
 - ✅ `JoinStorefrontScreen` UI (paste-link → resolve-on-Continue → confirmation preview → Join), prop-driven, reuses `FormField` + Spectrum; 5/5 component tests, lint, typecheck, SOP suite + grep green.
 - ✅ Marker write-side contract `buildMasterMarker`/`serializeMasterMarker` (co-located with the reader) + **round-trip** test (write→read); 4/4 + 7/7 regression, all gates green.

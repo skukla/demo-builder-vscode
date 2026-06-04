@@ -13,8 +13,15 @@ import { parseGitHubUrl } from '@/core/utils';
 import type { Project } from '@/types/base';
 import { isRecord } from '@/types/typeGuards';
 
-/** Repo path of the master's self-describing marker. */
-export const MASTER_MARKER_PATH = '.demo-builder/master.json';
+/**
+ * Repo path of the master storefront's **shareable descriptor** — committed to the
+ * master repo and read remotely by a joiner (packageId + inherited commerce coords).
+ *
+ * NOTE: this is repo-public join metadata, deliberately **distinct from the local
+ * `.demo-builder.json` project manifest** (which is per-project state on the user's
+ * filesystem, never committed here).
+ */
+export const MASTER_MARKER_PATH = 'storefront-share.json';
 
 /** Commerce coordinates a content fork inherits from the master. */
 export interface MasterCommerceCoords {

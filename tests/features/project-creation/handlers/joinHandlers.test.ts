@@ -59,9 +59,9 @@ describe('createPublicMasterReader (unauthenticated public read)', () => {
     it('reads file text from the public raw URL on 200', async () => {
         const f = fakeFetch(200, marker);
         const read = createPublicMasterReader(f.fetch);
-        const content = await read('commerce-sc', 'citisignal-master', '.demo-builder/master.json');
+        const content = await read('commerce-sc', 'citisignal-master', 'storefront-share.json');
         expect(content).toBe(marker);
-        expect(f.url()).toBe('https://raw.githubusercontent.com/commerce-sc/citisignal-master/HEAD/.demo-builder/master.json');
+        expect(f.url()).toBe('https://raw.githubusercontent.com/commerce-sc/citisignal-master/HEAD/storefront-share.json');
     });
 
     it('returns null on 404 (file absent / not a shareable storefront)', async () => {
