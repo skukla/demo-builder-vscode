@@ -74,7 +74,7 @@ Adobe EDS has a **canonical-site rule: one repo serves exactly one org's site** 
 ## Needs live verification (critical-path first)
 
 1. **AEM Sites as a content source, transacting** — can an `xcom`-style upstream be authored via AEM Sites in the Content SC's own org *and* transact against the backend? *(The spine — verify before committing to the build. Runbook: [verify-aem-sites-spike](./verify-aem-sites-spike.md). Desk research confirms it's a standard capability; the spike is end-to-end confirmation.)*
-   - sub-wrinkle: PDPs come from the **AEM Commerce Prerenderer** now (folder mapping deprecated) — confirm it on the transact path.
+   - note: PDPs render **client-side by default** (transacting doesn't need the prerenderer). The **AEM Commerce Prerenderer** (App Builder app) is a **SEO/fidelity** add-on — real per-product HTML for crawlers/LLMs/social — replacing deprecated folder mapping; not on the transact path. Confirm default PDP-URL routing.
 2. The **AEM code-sync app** (connecting the fork to the Content SC's AEM).
 3. `aem-boilerplate-xcom` maturity.
 4. **CORS** allow-listing both storefront domains on the backend.

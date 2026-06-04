@@ -6,7 +6,7 @@
 
 ## Verify first (gates everything)
 
-**Can an `aem-boilerplate-xcom`-style storefront be authored via AEM Sites in its own org *and* transact against a commerce backend?** Stand this up by hand in one environment. If it holds, the rest is "two of these sharing an upstream." If it doesn't, the target needs rethinking. **Runbook: [verify-aem-sites-spike](./verify-aem-sites-spike.md)** (executable steps + pass/fail; desk research already confirms it's a *standard* capability, so the spike is end-to-end confirmation — esp. transacting — not discovery). *(Surfaces: the code-sync app, the Commerce Prerenderer for PDPs, cross-org backend read, CORS.)*
+**Can an `aem-boilerplate-xcom`-style storefront be authored via AEM Sites in its own org *and* transact against a commerce backend?** Stand this up by hand in one environment. If it holds, the rest is "two of these sharing an upstream." If it doesn't, the target needs rethinking. **Runbook: [verify-aem-sites-spike](./verify-aem-sites-spike.md)** (executable steps + pass/fail; desk research already confirms it's a *standard* capability, so the spike is end-to-end confirmation — esp. transacting — not discovery). *(Surfaces: the code-sync app, cross-org backend read, CORS, and default PDP-URL routing. The Commerce Prerenderer is a later SEO/fidelity add-on — PDPs transact client-side without it.)*
 
 ## What to build, in order (each tagged EXISTS / PARTIAL / NET-NEW)
 
