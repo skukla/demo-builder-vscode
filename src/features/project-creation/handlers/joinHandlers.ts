@@ -9,6 +9,7 @@
  */
 
 import { resolveJoinLink, type MasterFileReader, type ResolveJoinResult } from '../services/resolveJoinLink';
+import { defineHandlers, type HandlerContext } from '@/types/handlers';
 
 export interface ResolveJoinDeps {
     /** Reads a file from a public master repo; resolves null when absent. */
@@ -55,3 +56,24 @@ export function createPublicMasterReader(fetchImpl: FetchLike): MasterFileReader
         return res.text();
     };
 }
+
+/**
+ * Join-flow handler map (object literal, dispatched via dispatchHandler).
+ *
+ * `resolve-join` reads the public master with the unauthenticated reader and returns
+ * the resolve result (Pattern B envelope). `join-confirm` receives the confirmed
+ * descriptor — the seeded gallery-less wizard launch is wired in a follow-up.
+ */
+export const joinHandlers = defineHandlers({
+    'resolve-join': async (_context: HandlerContext, data?: unknown) => {
+        const result = await handleResolveJoinLink(
+            data as { link?: string } | undefined,
+            { readFile: createPublicMasterReader((url: string) => fetch(url)) },
+        );
+        return { success: true, data: result };
+    },
+    'join-confirm': async (context: HandlerContext, data?: unknown) => {
+        context.logger.debug(`[Join] confirm received: ${JSON.stringify(data)}`);
+        return { success: true };
+    },
+});

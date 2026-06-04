@@ -25,6 +25,7 @@ import { SyncStorefrontCommand } from '@/features/lifecycle/commands/syncStorefr
 import { ViewStatusCommand } from '@/features/lifecycle/commands/viewStatus';
 import { DeployMeshCommand } from '@/features/mesh/commands/deployMesh';
 import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
+import { JoinStorefrontCommand } from '@/features/project-creation/commands/joinStorefront';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
 import { Project } from '@/types';
@@ -61,6 +62,17 @@ export class CommandManager {
             ProjectDashboardWebviewCommand.disposeActivePanel();
             ConfigureProjectWebviewCommand.disposeActivePanel();
             await projectsList.execute();
+        });
+
+        // Join a Shared Storefront (content-SC join-by-link entry)
+        const joinStorefront = new JoinStorefrontCommand(
+            this.context,
+            this.stateManager,
+            this.logger,
+        );
+        this.registerCommand('demoBuilder.joinStorefront', async () => {
+            ShowProjectsListCommand.disposeActivePanel();
+            await joinStorefront.execute();
         });
 
         // Create Project (Webview version)
