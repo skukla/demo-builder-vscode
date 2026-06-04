@@ -57,7 +57,8 @@ Record at each step (this feeds straight into the build plan):
 - Which steps required **Adobe-org-side** actions → these are what the Content-SC's *own* extension must do in *their* org (confirms Scenario B's division of labor).
 - Anything **manual/undocumented** → net-new extension work.
 - How **PDP-URL routing** behaves out of the box (folder mapping vs. prerenderer default).
-- *(Deferred to a second pass)* the **cross-org backend read AND transacting (cart/checkout *writes*), not just CORS** (your own backend, storefront in another org). CORS is verified as the browser-origin gate ([research](../../research/2026-06-04-cross-org-cors-and-mesh.md)) and is self-contained per org with **ACCS-first + per-org mesh** — but confirm end-to-end transacting live, since CORS is necessary, possibly not sufficient.
+- *(Deferred to a second pass)* the **cross-org backend read AND transacting (cart/checkout *writes*), not just CORS** (your own backend, storefront in another org). CORS is verified as the browser-origin gate ([research](../../research/2026-06-04-cross-org-cors-and-mesh.md)); confirm end-to-end transacting live, since CORS is necessary, possibly not sufficient.
+  - **Deciding sub-check (one request):** hit the **ACCS** core-commerce (cart/checkout) GraphQL with an `Origin` header and inspect the response for `Access-Control-Allow-Origin`. **Yes ⇒ no mesh needed for CORS even cross-org.** **No ⇒ a per-org mesh is required** (direct CORS config is PaaS-only — there is no ACCS knob). This decides whether the mesh is mandatory for Mode C.
 
 **Outcome:**
 - **Pass** → start the build at roadmap step 1 (shared upstream / AEM Sites content source), confident the spine holds.

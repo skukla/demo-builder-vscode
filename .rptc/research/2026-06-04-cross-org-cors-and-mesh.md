@@ -23,6 +23,8 @@ A browser blocks a page on domain A from reading responses from domain B unless 
 
 4. **ACCS-first + per-org mesh = no backend config at all (HIGH on mechanism).** ACCS is SaaS — there is **no PaaS backend to configure**. Adobe's recommended ACCS consumption pattern is **via API Mesh**. With each party fronting the backend with **their own mesh in their own org**, CORS is configured **inside that mesh** (their App Builder), and the mesh reads ACCS server-side with the **public key**. Nobody edits a backend, and the cross-org allow-list handshake disappears.
 
+5. **The direct CORS-config page is explicitly "PaaS only" (HIGH — confirmed from the doc source).** [`cors-setup.mdx`](https://github.com/commerce-docs/microsite-commerce-storefront/blob/release/src/content/docs/setup/configuration/cors-setup.mdx) carries a **`PaaS only`** badge; its three mechanisms — web-server (nginx/apache) headers, the `graycore/magento2-cors` third-party module, or a custom Magento module — all require server/codebase access. **No SaaS/ACCS instructions exist.** ⇒ the "commerce party manually allow-lists the content domain" handshake is a **PaaS artifact that does not exist on ACCS** — on SaaS there is no knob to turn. So on ACCS the only ways to satisfy a cross-domain storefront are: **(a) your own per-org mesh**, or **(b) ACCS already returning CORS headers for storefront origins at its edge** (plausible — EDS storefronts are built to be consumed cross-domain — but **unverified**).
+
 ## Impact on the engagement model
 
 - The earlier "commerce-SC allow-lists the content domain + bidirectional handshake" is **only the direct-backend (no-mesh) path.** With the recommended **ACCS-first + per-org mesh**, CORS is **self-contained in each party's own org** and the cross-org handshake **dissolves**. Mode C is *less* brittle than recorded — *provided* it is fronted by per-org meshes.
@@ -30,12 +32,12 @@ A browser blocks a page on domain A from reading responses from domain B unless 
 
 ## Open / unverified
 
-- **Cross-org transacting (WRITES), not just CORS — MEDIUM.** CORS is the browser-origin gate; whether cart/checkout *writes* against the commerce-SC's backend from another org work **end-to-end** is the spike's deferred "cross-org backend read/transact" item. CORS is necessary, possibly not sufficient — **verify live.**
-- **Exact ACCS CORS config location** when a mesh is *not* used (we don't plan to) — not nailed down (doc fetch blocked).
+- **Does ACCS return CORS headers for arbitrary storefront origins out of the box? — the deciding question (UNVERIFIED).** One live check: send the ACCS core-commerce (cart/checkout) GraphQL endpoint a request with an `Origin` header and inspect the response for `Access-Control-Allow-Origin`. **Yes ⇒ no mesh needed for CORS even cross-org** (mesh stays genuinely optional). **No ⇒ a per-org mesh is the only path** (same-origin isn't available cross-org). Belongs in the spike (needs a live ACCS endpoint).
+- **Cross-org transacting (WRITES), not just CORS — MEDIUM.** CORS is the browser-origin gate; whether cart/checkout *writes* against the commerce-SC's backend from another org work **end-to-end** is the spike's deferred item. CORS is necessary, possibly not sufficient — **verify live.**
 
 ## Recommendation
 
-**ACCS-first + per-org API Mesh** as the documented default for the two-party (Mode C) storefront: no PaaS backend, CORS lives in each party's own mesh, and cross-org coordination reduces to the mesh's server-side read (URL + public key). Direct-backend allow-list is a fallback only; same-origin is for single-org (Mode A).
+**Do NOT mandate the mesh — verify-then-decide.** The direct-CORS-config path is PaaS-only, so on ACCS there is no manual backend allow-list handshake either way; the only open question is whether ACCS auto-allows storefront origins (above). Until that's checked live: keep the mesh **optional** (the config generator already supports a direct backend URL), document the per-org mesh as the **fallback mechanism if ACCS does not auto-allow**, and treat **same-origin** as Mode-A (single-org) only. The mesh's footprint is justified *only* if the live check comes back "no."
 
 ## Sources
 
