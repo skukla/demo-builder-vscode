@@ -1,5 +1,7 @@
 # Step 7: Dashboard Predicate — Minimal-Additive `(product, ownership)` Migration
 
+**Status: 🟡 Predicate complete (2026-06-04).** ✅ `getProjectArchetype` in `typeGuards` (composes `getProjectFlow` + `isEdsStackId`) — 5/5 tests, lint/typecheck/SOP green. **Deferred (needs F5):** routing the content-flow dashboard render sites through the predicate (live UI confirmation).
+
 **Purpose:** Introduce the per-`(product, ownership)` predicate the design calls
 for, and route **only the content-flow entry sites** through it — **PM decision
 D3 (minimal additive)**. The other ~18 `isEds` call sites are left untouched;

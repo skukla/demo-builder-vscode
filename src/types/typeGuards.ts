@@ -303,6 +303,29 @@ export function isCommerceFlow(record: FlowBearing): boolean {
     return getProjectFlow(record) === 'commerce';
 }
 
+/** A project's archetype as a per-(product, ownership) descriptor. */
+export interface ProjectArchetype {
+    product: 'eds-storefront' | 'headless-storefront' | 'other';
+    ownership: 'commerce' | 'content';
+}
+
+/**
+ * Resolve a project's archetype — ownership from the flow predicate, product from
+ * the existing EDS/stack signal. Lets the dashboard recognize a content-SC fork
+ * additively, without rewriting every `isEds` call site.
+ */
+export function getProjectArchetype(project: Project | undefined | null): ProjectArchetype {
+    const ownership = getProjectFlow(project ?? {});
+    const stack = project?.selectedStack;
+    let product: ProjectArchetype['product'] = 'other';
+    if (isEdsStackId(stack)) {
+        product = 'eds-storefront';
+    } else if (stack?.startsWith('headless')) {
+        product = 'headless-storefront';
+    }
+    return { product, ownership };
+}
+
 // =============================================================================
 // EDS (Edge Delivery Services) Project Functions
 // =============================================================================
