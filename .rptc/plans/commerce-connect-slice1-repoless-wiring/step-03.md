@@ -2,6 +2,8 @@
 
 **Status: ✅ Complete (2026-06-04) — flow tests 7/7; wizard area 149 node + 108 React tests pass (no regression); lint + `tsc --noEmit` green.**
 
+> **2026-06-05 repivot reframe:** Survives unchanged under repoless. Step filtering operates on `flow` discriminator, not on topology — the content flow hides `prerequisites`, `adobe-auth`, `adobe-project`, `adobe-workspace` regardless of whether the back-end mechanic is fork-and-sync (old) or Configuration Service satellite creation (new). The step set the content flow runs is identical. No code change required.
+
 **Design refinement (vs plan):** `flow` is modeled as a **top-level step field** (on `WizardStepWithCondition` / the step registry), **not** inside `StepCondition`. Reason: the no-stack branch hides any step that "has a condition," so a flow-only condition would wrongly hide `prerequisites` in a future Custom/no-stack *commerce* flow. A top-level `flow` + a pre-filter composes safely and is regression-guarded by a test. Content flow hides: `prerequisites`, `adobe-auth`, `adobe-project`, `adobe-workspace` (no standalone mesh step exists; mesh is gated via the Adobe-IO steps).
 
 **Purpose:** Make `filterStepsForStack` flow-aware so the **content flow hides

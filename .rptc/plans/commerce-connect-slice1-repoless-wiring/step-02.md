@@ -1,6 +1,10 @@
 # Step 2: Content-SC "Join" Entry (link-resolving) — reuses `WizardContainer`
 
 **Status: 🟡 In progress.**
+
+> **2026-06-05 repivot reframe:** The Join UX, link-resolver, marker contract, and preview screens all survive unchanged under repoless — these are the user-facing front half of the flow. **What changed is the terminal action.** Previously, "Continue" on the preview screen led to a wizard that ended in `GitHubRepoOperations.createFromTemplate` (forking the upstream into the Content SC's GitHub org) + per-fork config/sync wiring. **Under repoless, the wizard's terminal step calls `ConfigurationService.PUT /config/{contentSC-org}/sites/{site}.json` with `code.owner = <commerceSC-org>`** — a single Admin API call replacing the fork + sync wiring. The marker still travels public-read via raw GitHub URLs (no GitHub auth needed for the join), the wizard still seeds from the resolved `JoinDescriptor`, and the gallery suppression still applies. Only the back-end mechanic in Step 4's executor branch changes. See the overview's D4 decision.
+>
+> **Files shipped under this step that remain useful:** `resolveJoinLink`, `JoinStorefrontScreen`, `buildMasterMarker`/`serializeMasterMarker`, `publishMasterMarkerForProject`, `handleResolveJoinLink`, `createPublicMasterReader`, `writeMasterMarker`, `JoinStorefrontCommand`, `joinHandlers` map, `ui/join/index.tsx` — all carry forward. Only the planned `onConfirm → terminal-action` wiring in the wizard-launch follow-up retargets to Configuration Service instead of fork-from-template.
 > **Marker file: `storefront-share.json`** (repo-committed, read remotely by the joiner) — deliberately **NOT** under the `.demo-builder` namespace, which is the *local* per-project manifest (`.demo-builder.json`). The descriptor carries packageId + inherited commerce coords (owned schema; avoids coupling to Adobe's `config.json` format).
 - ✅ Core service `resolveJoinLink` (2026-06-04) — 7/7 tests, all gates green.
 - ✅ `JoinStorefrontScreen` UI (paste-link → resolve-on-Continue → confirmation preview → Join), prop-driven, reuses `FormField` + Spectrum; 5/5 component tests, lint, typecheck, SOP suite + grep green.

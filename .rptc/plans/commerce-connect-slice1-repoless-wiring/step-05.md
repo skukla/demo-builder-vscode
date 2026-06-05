@@ -1,6 +1,8 @@
 # Step 5: Content-Fork Backend Coordinates (inherit from upstream + manual override)
 
-**Purpose:** Give a content fork the Commerce SC's backend coordinates
+> **2026-06-05 repivot reframe:** Decision D1 (inherit/seed primary + manual override secondary) is **unchanged** — coords are public, inheritable, no cross-org auth needed. **Strengthened** by the Adobe Merchandising API docs ("Authentication is not required" verbatim) — the cross-account read story is firmer than the original "URL + public keys" phrasing. **What changes under repoless:** there is no satellite-side `config.json` file to write to; the coords live in either (a) the upstream repo's `config.json` (Slice 1 — the Content SC's site reads it via the shared codebase by construction), or (b) authored as content nodes in AEM per the CitiSignal `configs`/`configs-stage`/`configs-dev` pattern (Slice 2+, multi-env story). Slice 1's mechanic is the simpler form: the Content SC's site shares code with the Commerce SC's upstream, so when the upstream's `config.json` is wired, both sites resolve the same coords automatically. The "manual override" path now means authoring a per-site config override via the Configuration Service or in the Content SC's own DA.live content — not editing a forked repo's `config.json`. The decision shape and the test categories survive; the destination changes.
+
+**Purpose:** Give a content-flow site the Commerce SC's backend coordinates
 (endpoint + website/store/store-view, and for PaaS the public Catalog Service
 key + environment id) so it transacts — implementing **PM decision D1
 ("Both"), sharpened**:

@@ -1,8 +1,16 @@
 # Step 6: Upstream Sync Wiring + `reset-to-upstream` Default for Content Forks
 
-**Status: ✅ Complete (2026-06-04).** `defaultSyncStrategyForProject` (content→`reset`, commerce/legacy→`merge`, preserving the existing default) + wired into both sync call sites (`updateApplyService`, `updateExecutor`). `TemplateSyncService` unchanged. Verified: 4/4 predicate + 224 updates/SOP regression; lint/typecheck green. *(Content metadata `templateOwner=master` is set via the join resolve / Step 2.)*
+**Status: ✅ Complete (2026-06-04). Dormant for content flow under repoless (2026-06-05); remains correct for commerce flow.**
 
-**Purpose:** Make a content fork **sync from the upstream** using the **existing**
+> **2026-06-05 repivot reframe (consequential):** This step's shipped code targets the **two-fork-sync** architecture that the 2026-06-05 repivot retired. Under the locked repoless architecture, **content satellites do not fork or sync code** — they read the upstream natively via `code.owner` in their Configuration Service site config. There is no satellite-side fork to sync, and `defaultSyncStrategyForProject` is never called for content-flow projects.
+>
+> **What this means concretely:**
+> - The `defaultSyncStrategyForProject` predicate remains in the codebase and remains correct as-shipped. For commerce-flow projects (including legacy), the default strategy is unchanged — `merge`-with-reset-fallback, exactly today's behavior. The content branch (`reset`) is dead code for content-flow projects only because the repoless architecture takes them out of the sync path entirely; no content-flow project will ever reach the `flow === 'content' → 'reset'` line.
+> - **No code changes proposed.** Deleting the content branch from `defaultSyncStrategyForProject` would be premature — the function might be the right home if a future commerce fork-and-sync use case needs differentiation. The cost of carrying the unreachable line is zero; the cost of removing it (potential rework if the predicate's shape proves useful later) is non-zero.
+> - **Joins now write the `upstream` field directly** in the project model (Step 1), not via sync metadata. The `populateEdsMetadata`-via-marker path documented below was the two-fork-sync mechanism for capturing the upstream reference; under repoless, the `upstream` field on `Project` (set during executor's content branch in Step 4 from the resolved `JoinDescriptor`) serves the same purpose without needing sync metadata.
+> - **The escape hatch** — fork-and-own-your-code for a Content SC who needs code customization — exits the repoless arrangement by forking the upstream into the SC's own GitHub org and switching their site's `code.owner`. If that path becomes common enough to wizard-support, this step's `reset-to-upstream` default *could* become relevant for the escape-hatch sync (manually-driven, opt-in). Not designed-for today.
+
+**Purpose (under the original two-fork-sync architecture, shipped 2026-06-04):** Make a content fork **sync from the upstream** using the **existing**
 `TemplateSyncService`, and implement **PM decision D2**: content forks default to
 the **`reset`** strategy (`reset-to-upstream`). This is additive — the service
 already supports `merge`/`reset`, falls back to reset on conflict, and preserves

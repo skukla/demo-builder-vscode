@@ -2,6 +2,8 @@
 
 **Status: ✅ Complete (2026-06-04) — 10/10 tests, lint, and `tsc --noEmit` typecheck all green.**
 
+> **2026-06-05 repivot reframe:** Survives unchanged. The `flow` discriminator and `upstream{owner,repo}` reference are topology-neutral — both the original two-fork-sync architecture and the locked repoless architecture need them. Under repoless, `upstream` identifies the Commerce SC's repo that the Content SC's site reads as its `code.owner`; under the old model it identified the repo the Content SC's fork would sync from. Same data, different downstream interpretation. No code change required.
+
 **Purpose:** Add the additive data model that the whole slice hangs off:
 a `flow` discriminator (`'commerce' | 'content'`) and an `upstream{owner,repo}`
 reference on `Project`, plus typed predicates so every downstream branch reads a

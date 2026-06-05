@@ -2,6 +2,8 @@
 
 **Status: 🟡 Predicate complete (2026-06-04).** ✅ `getProjectArchetype` in `typeGuards` (composes `getProjectFlow` + `isEdsStackId`) — 5/5 tests, lint/typecheck/SOP green. **Deferred (needs F5):** routing the content-flow dashboard render sites through the predicate (live UI confirmation).
 
+> **2026-06-05 repivot reframe:** Survives unchanged under repoless. The predicate composes `getProjectFlow` (topology-neutral, see Step 1) with `isEdsStackId` (stack-shape, not topology). A content-flow EDS project renders the same dashboard whether it was created via fork-and-sync (old) or Configuration Service satellite (new) — same archetype, same UI surfaces. No code change required. The deferred F5 routing work proceeds as planned.
+
 **Purpose:** Introduce the per-`(product, ownership)` predicate the design calls
 for, and route **only the content-flow entry sites** through it — **PM decision
 D3 (minimal additive)**. The other ~18 `isEds` call sites are left untouched;
