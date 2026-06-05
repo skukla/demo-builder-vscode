@@ -6,7 +6,7 @@
 - [x] In Progress (TDD Phase) — all 7 steps GREEN
 - [x] Efficiency Review — clean, no must-fix
 - [x] Security Review — safe to ship; encodeURIComponent hardening applied
-- [ ] Complete
+- [x] Complete — PR #41 (claude/extension-version-access-4PUbc → develop)
 
 **Created:** 2026-06-04
 **Last Updated:** 2026-06-04
@@ -43,7 +43,7 @@
 
 ## Research References
 
-**Research Document:** `.rptc/research/2026-06-04-early-access-version-gating.md`
+**Research Document:** `./research.md` (moved from `.rptc/research/2026-06-04-early-access-version-gating.md`)
 
 **Key Findings:**
 - Extension updates come from one hardcoded repo `EXTENSION_REPO = 'skukla/demo-builder-vscode'` (`updateManager.ts:41`).
