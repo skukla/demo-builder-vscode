@@ -1,10 +1,12 @@
 # Two-SC synced storefront demos (commerce + content)
 
-**Filed:** 2026-06-02 · **Re-aimed:** 2026-06-03 · **Status:** backlog (designed, paused — ready to promote when activated).
+**Filed:** 2026-06-02 · **Re-aimed:** 2026-06-03 · **Repivoted:** 2026-06-05 (repoless as the architecture) · **Status:** backlog (architecture locked, validation evidence captured, ready to plan Slice 1 wiring).
 
 This file is the front door — read it first. *Part of the [compositional Adobe demo builder](../compositional-demo-builder.md) direction — this is its **first feature**.*
 
-> **2026-06-03 re-aim.** Earlier drafts framed V1 as a single commerce demo that "connects out" to other Adobe apps (including pulling in AEM content). **That was the wrong target.** V1 is the **synced common storefront** described below. The other docs in this folder still carry some of the older framing — this overview is the current source of truth; each doc is flagged in the table.
+> **2026-06-05 repivot.** Earlier drafts locked the two-fork-sync model. Post-research investigation surfaced Adobe's **repoless** capability as a first-class alternative; a live cross-org test confirmed it works at runtime. The architecture flipped: one shared code repo, per-site content sources via Configuration Service, no forks. The [storefront-topology](./storefront-topology.md) doc carries the new locked plan with validation evidence. Other docs in this folder still carry some of the older framing — this overview is the current source of truth; the doc table below flags which need cascading updates.
+
+> **2026-06-03 re-aim** (prior). Earlier drafts framed V1 as a single commerce demo that "connects out" to other Adobe apps (including pulling in AEM content). That was the wrong target. V1 is the **synced common storefront** described below.
 
 ## What we're building (V1)
 
@@ -15,67 +17,77 @@ A way for **two solutions consultants** to build **one demo storefront together*
 
 ### How it works (the locked target)
 
-- A neutral **upstream** holds the shared storefront **code** (commerce dropins + shared design), based on a commerce boilerplate that supports **AEM Sites authoring** (`aem-boilerplate-xcom`). It's code, not a live site; maintained by the Commerce SC.
-- **Both SCs fork the upstream** into their own org and sync from it → the two sites are **identical in look/system**.
-- **Each SC authors their own content** into their fork — and **the Content SC authors in their *own* AEM Sites** (the non-negotiable point). Identical code, different content.
-- **Both forks carry full commerce and both transact** against the **Commerce SC's backend** (by URL).
+- A **shared GitHub code repo (the upstream)** holds the storefront code (commerce drop-ins + design), based on `aem-boilerplate-xcom`. Owned by the Commerce SC; AEM Code Sync installed on it once.
+- **The Commerce SC's `aem.live` site** is the canonical anchor (`org/site` matches the GitHub `owner/repo`). It authors content in the Commerce SC's AEM (or DA.live), commerce config in their AEM as content nodes.
+- **The Content SC's `aem.live` site** is a repoless satellite that reads code from the Commerce SC's repo via `code.owner` in the Configuration Service. It authors content in **their own AEM Sites**, in their own Adobe org — the non-negotiable point of the feature. Their commerce config is authored in their own AEM and can mirror the Commerce SC's published values (the read path is no-auth).
+- **Both sites carry full commerce and both transact** against the **Commerce SC's backend** (by URL).
+- **No forks. No sync engine.** When the Commerce SC pushes a code change, both sites pick it up within one Code Sync cycle.
 
-### Why two sites, not one
+### Why this works across Adobe accounts
 
-Adobe EDS's **canonical-site rule** (one repo = one org's site; one content source per site) means a single live storefront can't span two accounts — so the result is **two forks** sharing the codebase. The Content SC's AEM-Sites authoring is the org-bound piece that forces the split, and we **accept** that rather than work around it. Full detail + decision trail in **[storefront-topology](./storefront-topology.md)**.
+The original analysis assumed that EDS's canonical-site rule (one repo = one site; one content source per site) forced two forks across two accounts. **Repoless changes the answer**: a single repo can back multiple sites, each in its own `aem.live` org, each with its own content source. The cross-org part is just the satellite's site config — `PUT /config/{contentSC-org}/sites/{site}.json` with `code.owner = <commerceSC-org>`. Validated live 2026-06-05; full evidence in [storefront-topology](./storefront-topology.md).
 
 ### Target vs later
 
-- **Target:** Scenario B · Option X · **two identical transacting forks**; both SCs on the extension (content-SC wizard); each authors their own content; **Content SC in their own AEM Sites**; both wired to the Commerce SC's backend.
-- **Later:** two-way contribution (the Content SC evolving the *shared design*, not just content); an invite/handoff between the SCs; shared cart/session across the two sites.
+- **Target:** repoless with per-org content sources; both SCs use the extension (Content-SC wizard); each authors their own content in their own AEM; commerce config authored as content (multi-env aware); both transact against the Commerce SC's backend.
+- **Later:** Content SC contributing back to the shared codebase (PRs to the upstream); an invite/handoff between the SCs; shared cart/session across the two sites.
 
-## Why this isn't from scratch (verified against the code, 2026-06-03)
+## Why this isn't from scratch (verified against the code, updated 2026-06-05)
 
-Most of the pieces already exist — V1 mostly **assembles them across two SCs**. See the [roadmap](./roadmap.md) for the per-step EXISTS/PARTIAL/NET-NEW grounding and file references.
+The architecture pivot to repoless **shrinks** the build:
 
-- a **sync engine** that already pulls a fork from a configurable upstream, one-directional, with conflict handling — **and already preserves each fork's `config.json`/`fstab.yaml` across syncs** (so the backend wiring and content source survive an upstream update);
-- **installers** that already add parts (block libraries / feature packs) into a storefront repo;
-- **Connect-Commerce** that already writes the backend connection (`config.json`).
+- **`ConfigurationService.ts` already talks to the Configuration Service API** (`/config/{org}/sites/{site}.json` PUT/POST flows). The Content-SC wizard's site-creation step is a thin call into this existing seam.
+- **`aem-boilerplate-xcom` is a public, supported template** — `gh repo create --template adobe-rnd/aem-boilerplate-xcom` is the entire repo-creation step. No custom upstream maintenance.
+- **Existing fork-from-template / site-creation machinery** repoints to "create a repoless satellite via Configuration Service" instead of "fork into Content SC's org." The mechanic differs; the wizard shape is similar.
+- **Connect-Commerce** still writes the commerce wiring. The destination changes from `config.json` in the repo to AEM content nodes (`configs`, `configs-dev`, `configs-stage`) per the CitiSignal pattern — but the *values* are the same shape it already produces.
 
 ## What's genuinely new (and where the real work is)
 
-- **AEM Sites as a content source** — the extension is **DA.live-only** today; this is the biggest net-new piece.
-- **The upstream + multi-fork orchestration:** one neutral upstream that **two separately-owned forks in two different accounts** both sync from. Today everything is single-project, one active GitHub account, 1:1 sync. **This is the heart of the build.**
-- **Re-verify live:** reading the commerce backend across accounts, the AEM code-sync app, `aem-boilerplate-xcom` maturity, CORS (Adobe docs block programmatic fetch — verify live before code lands).
+- **AEM Sites as a content source** — the extension is **DA.live-only** today. This is still the spine, *but* its architectural risk is now closed: [`roberttoddhoven/citisignal-one`](https://github.com/roberttoddhoven/citisignal-one) is a working public example of `xcom` + AEM Sites authoring + transacting. The remaining work is the wizard wiring, not the architectural pattern.
+- **Repoless satellite creation** (the Content-SC wizard's new shape) — `PUT /config/{org}/sites/{site}.json` with `code.owner` cross-referencing the Commerce SC's repo. Cross-org validated live; the wizard wraps a single API call.
+- **Config-as-content writer** — replaces the current "write `config.json` to the repo root" with "author `configs`/`configs-dev`/`configs-stage` nodes in AEM via the Configuration Service or directly to the content source." Per-environment from day one.
 
-**Two things that turned out *not* to be problems:** a "shared mesh/backend" (just the same URL in each fork's `config.json` — already written by Connect-Commerce) and a "shared content site" (not possible *and* not needed — each fork has its own content source).
+## What turned out *not* to be problems
+
+- **A "shared mesh/backend"** — same URL in each site's config, public values, no handshake needed.
+- **A "shared content site"** — not possible *and* not needed; each site has its own content source.
+- **The two-fork orchestration** — repoless removes it entirely.
+- **CORS allow-listing across orgs** — the Merchandising API requires no authentication and ACCS handles CORS at the edge for SaaS storefronts. No PaaS-style manual handshake needed.
+- **Cross-account commerce backend read** — Adobe's docs state "Authentication is not required for the Merchandising API" verbatim; the required headers (`AC-View-ID`, `AC-Source-Locale`, optionally `AC-Price-Book-ID` / `AC-Policy-*`) are all public identifiers, and the tenant binding lives in the URL.
 
 ## Out of scope
 
 - The deep "solution-family" product-selection refactor.
 - Seeding content into AEM (the Content SC authors it).
-- The optional SEO prerenderer.
+- The optional SEO prerenderer (folder mapping is no longer the concern under repoless / Configuration Service paths).
 
 ## Documents
 
-| Doc | What it is |
-|---|---|
-| [storefront-topology](./storefront-topology.md) | **The authoritative architecture** — the Adobe canonical-site rule, what can/can't be shared across orgs, the two shapes, and the upstream decision (neutral, seeded, full symmetry). |
-| [roadmap](./roadmap.md) | **The build sequence** — verify-first, then the increments to the locked target, each tagged EXISTS/PARTIAL/NET-NEW with file refs. |
-| [verify-aem-sites-spike](./verify-aem-sites-spike.md) | **The gating spike** — an executable runbook (setup → test) to confirm, in a live env, that an `xcom` storefront can be AEM-Sites-authored *and* transact. |
-| [synthesis-and-build-order](./synthesis-and-build-order.md) | **Design → code** — how the target attaches to the existing extension (current→target diff, file-referenced), and the build order. Slice 1 (two-fork plumbing, DA.live) is buildable *now* while the spike is pending. |
-| [federated-two-instance-demos](./federated-two-instance-demos.md) | The **two-SC / synced-copy delivery model** — now V1-central (it was filed as "deferred"). |
-| [aem-sc-first-run](./aem-sc-first-run.md) | The **content-SC-owned storefront** flow + **AEM Sites** as the content-authoring tool — the V1 model. |
-| [commerce-connection-kit](./commerce-connection-kit.md) | The **commerce-backend connection** detail (now one step *inside* the synced storefront) + the cross-account read caveat. |
-| [ownership-vs-connection](./ownership-vs-connection.md) | **The broader product direction** — owning system + added connected systems (incl. App Builder), i.e. the shift from prebuilt packages to a compositional demo builder; the synced storefront is its first instance. *(Its old "v1 decisions" are superseded by storefront-topology.)* |
-| [user-journeys](./user-journeys.md) | Step-by-step journeys — **reflects the earlier framing**; see the roadmap for the corrected V1. |
-| [slice1-discovery](./slice1-discovery.md) | A discovery service — **now a later convenience, not the first slice** (the Commerce SC owns the backend in V1). |
+| Doc | What it is | State |
+|---|---|---|
+| [storefront-topology](./storefront-topology.md) | **The authoritative architecture.** Repoless with per-org content sources, validation evidence inline, two-fork model in rejected alternatives. | **Current** (2026-06-05) |
+| [commerce-connection-kit](./commerce-connection-kit.md) | The commerce-backend connection detail, with the cross-account read claim strengthened by the Merchandising API "no auth required" finding. | Updated 2026-06-04; consistent with repoless |
+| [roadmap](./roadmap.md) | The build sequence. **Pending repivot** — the sync-engine line items should drop; config-as-content writer should be added. | **Pending** |
+| [synthesis-and-build-order](./synthesis-and-build-order.md) | Design → code mapping. **Pending repivot** — Slice 1 reuse map shrinks. | **Pending** |
+| [verify-aem-sites-spike](./verify-aem-sites-spike.md) | Original gating spike. **Closed** — answered by [CitiSignal One](https://github.com/roberttoddhoven/citisignal-one) existence. | **Closed** (kept for runbook reference if a fresh end-to-end is needed) |
+| [federated-two-instance-demos](./federated-two-instance-demos.md) | The two-SC / synced-copy delivery model. Still V1-central; the synced-copy mechanic is now Configuration Service, not fork-and-sync. | Carries pre-repivot framing in places |
+| [aem-sc-first-run](./aem-sc-first-run.md) | The content-SC-owned storefront flow. Still V1 model; the wizard shape simplifies under repoless. | Carries pre-repivot framing |
+| [ownership-vs-connection](./ownership-vs-connection.md) | The broader product direction (compositional demo builder). Repoless aligns directly with this direction. | Still valid; old "v1 decisions" superseded by storefront-topology |
+| [user-journeys](./user-journeys.md) | Step-by-step journeys. Reflects earlier framing. | Update later |
+| [slice1-discovery](./slice1-discovery.md) | A discovery service — still a later convenience, not the first slice. | Unchanged |
+
+A new file is being added: [`architecture-validation`](../../research/2026-06-05-architecture-validation.md) — captures the live cross-org repoless verification and the CitiSignal One worked-example findings as primary-source evidence.
 
 ## Provenance
 
-Grew out of "hook the extension to an existing AEM Sites deployment and demo the same content from DA.live *and* AEM Sites." Research killed simultaneous dual-authoring (one storefront = one content source) and cross-account code sharing as a single repo (so: a master + synced copies instead). It established that the commerce **backend can be read from another account** (read path needs only a URL + public keys), which is what lets the Content SC's copy show the Commerce SC's products across accounts. The full RPTC research/decision trail lives in git history on `claude/commerce-connection-kit-research`.
+Grew out of "hook the extension to an existing AEM Sites deployment and demo the same content from DA.live *and* AEM Sites." Research killed simultaneous dual-authoring (one storefront = one content source) and reframed the goal as "two sites, identical look, own content each." For weeks the locked plan was **two-fork-sync**: each SC forks the upstream and the extension's sync engine keeps them aligned. The 2026-06-05 repivot replaced that with **repoless**: one repo, multiple sites pointing at it via the Configuration Service. Cross-org validated live 2026-06-05; AEM Sites + xcom architecture confirmed via CitiSignal One as the worked example. The full RPTC research/decision trail lives in git history on `claude/commerce-connect-slice-1-plan-bgVlb`.
 
 ## Kickoff prompt
 
-> **Branch (read first):** all of these design docs live **only** on `claude/commerce-connection-kit-research` — they are **not** merged to `main`. Start the next session on that branch, and create the implementation branch **from it** so the docs travel along:
-> `git switch claude/commerce-connection-kit-research && git switch -c <impl-branch>`
-> Do **not** branch from `main` (the docs won't be there). All work to date is committed and pushed to `claude/commerce-connection-kit-research`.
+> **Branch (read first):** all of these design docs live on `claude/commerce-connect-slice-1-plan-bgVlb` — they are **not** merged to `main` / `develop`. Start the next session on that branch, and create the implementation branch **from it** so the docs travel along:
+> `git switch claude/commerce-connect-slice-1-plan-bgVlb && git switch -c <impl-branch>`
+> Do **not** branch from `develop` (the docs won't be there).
 >
-> **If you're ready to build:** read [storefront-topology](./storefront-topology.md) (architecture) + [synthesis-and-build-order](./synthesis-and-build-order.md) (design→code), then **`/rptc:plan` Slice 1 — the two-fork plumbing with DA.live content** (buildable now; no AEM environment needed). Write the plan, approve it, then `/rptc:tdd` on the implementation branch above. Slice 2 (AEM Sites as a content source) follows once the spike passes.
+> **If you're ready to build:** read [storefront-topology](./storefront-topology.md) (locked architecture + validation evidence), then **`/rptc:plan` Slice 1 — the repoless wiring with per-org content sources**. The roadmap and synthesis-and-build-order docs still carry pre-repivot framing in places; treat storefront-topology as the source of truth where they diverge until they're updated.
 >
-> **Parallel track (when the AEM environment is secured):** run the [verify-aem-sites-spike](./verify-aem-sites-spike.md) — it gates Slice 2 but does **not** block Slice 1.
+> **No live AEM environment needed** for Slice 1 — the wizard wiring (repoless satellite via Configuration Service, config-as-content writer) is buildable against the Admin API directly. AEM Sites authoring as a content source is a separate Slice that picks up after Slice 1.

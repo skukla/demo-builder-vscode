@@ -1,6 +1,28 @@
 # Spike: verify AEM Sites authoring + transacting (setup → test)
 
-**Filed:** 2026-06-04 · The verification the [roadmap](./roadmap.md) puts **before any build**. Needs a **live environment**. This runbook covers it **end to end — securing the environment through the test result.**
+**Filed:** 2026-06-04 · **Closed:** 2026-06-05 — answered by existence proof. Kept as a reference runbook in case a fresh end-to-end is ever needed against new infrastructure.
+
+## Closed by existence proof (2026-06-05)
+
+The spike's question — "Can an `aem-boilerplate-xcom` storefront be authored via AEM Sites and transact?" — is **answered YES** by the existence of [`roberttoddhoven/citisignal-one`](https://github.com/roberttoddhoven/citisignal-one):
+
+- Public repo, Apache 2.0
+- `xcom`-shaped: `component-definition.json` / `component-models.json` / `component-filters.json` / `helix-query.yaml` / `blocks` / commerce drop-ins
+- Authored via AEM Sites — content tree at `/content/rth-citisignal-one/...` in a working AEM Author instance
+- Multi-environment configs as content (`configs`, `configs-stage`, `configs-dev`) via `paths.json` mapping — see the [storefront-topology Configuration-as-content section](./storefront-topology.md#configuration-as-content-the-citisignal-pattern)
+- Running in production demo use
+
+The architectural pattern is in production. The spike's end-to-end probe is **not a build gate** — we have a worked example.
+
+## One residual probe (optional, not a gate)
+
+**Cross-account cart/checkout transacting** — the read path is closed by [Adobe's Merchandising API docs](https://developer.adobe.com/commerce/services/optimizer/merchandising-services/using-the-api) ("Authentication is not required"). The write path (cart/checkout against ACCS from a storefront in a different Adobe org) wasn't tested live. A single `Origin`-header request against the ACCS core-commerce endpoint would close the question definitively. Worth running at convenience; **not gating** because documentation triangulation indicates ACCS handles cross-origin at the edge.
+
+---
+
+> The runbook below predates the existence proof. It is preserved verbatim in case a fresh end-to-end test is ever wanted against new infrastructure. **Do not block Slice 1 on running it.**
+
+---
 
 ## The question (just one)
 

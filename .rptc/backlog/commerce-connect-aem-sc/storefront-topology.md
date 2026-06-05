@@ -1,125 +1,154 @@
 # Storefront topology — the locked plan of record
 
-**Filed:** 2026-06-04 · The **authoritative architecture** for this feature. Read after [overview](./overview.md).
+**Filed:** 2026-06-04 · **Repivoted:** 2026-06-05 (repoless as the architecture). The **authoritative architecture** for this feature. Read after [overview](./overview.md).
 
-## The decision (locked 2026-06-04)
+## The decision (locked 2026-06-05)
 
-**Scenario B · Option X · two identical transacting forks.**
+**Repoless: one shared codebase, per-site content sources.**
 
-- **Both SCs use the extension** (Scenario B). The Content SC gets a dedicated **content-SC wizard**.
-- The two storefronts are **forks of one shared upstream** → **identical look/system** (Option X: shared whole codebase, kept in sync).
-- **Each SC authors their own content** into their own fork. **The Content SC authors in their *own* AEM Sites, in their own org — this is the non-negotiable point of the whole feature.**
-- **Both forks carry the full commerce dropins and both transact** against the **Commerce SC's backend**.
-- We **accept the two-org reality** (AEM Sites is org-bound; that's the point) rather than engineer around it.
+- **One shared code repo (the upstream)** owned by the Commerce SC. Both SCs' `aem.live` sites point at this repo as their code source. No forks. No sync engine.
+- **Each SC's `aem.live` site is its own (org, site) pair** with its own content source. The Content SC's site points at **their own AEM Sites**, in their own Adobe org — the non-negotiable point of the feature.
+- **The Commerce SC's site is the canonical anchor** (Adobe's repoless rule requires one canonical site whose `org/site` matches the GitHub `owner/repo`). The Content SC's site is a satellite that reads the same code via the Configuration Service API.
+- **Commerce config travels as authored content**, not baked code — config nodes are authored in AEM (`/content/<site>/configs`, `configs-stage`, `configs-dev`), and `paths.json` maps them to the runtime endpoints. Each site authors its own commerce wiring; the Commerce SC's backend URL/keys are public, so the Content SC's site can read them directly.
+- **Both sites carry the full commerce drop-ins and both transact** against the **Commerce SC's backend**.
 
-The **spine and the gating unknown is the same thing: AEM Sites as a content source** (the extension is DA.live-only today).
+The result: two sites with identical look and behavior, each with its own content and its own per-environment commerce config, sharing one codebase by construction.
 
-## The rule everything bends around
+## Why this is locked: the validation evidence (2026-06-05)
 
-Adobe EDS has a **canonical-site rule: one repo serves exactly one org's site** — no single live repo spans two Adobe orgs; the sanctioned move is **fork into your own org**. And **one site has exactly one content source**. *(grounded in [`configurationService.ts`](../../../src/features/eds/services/configurationService.ts); established in [commerce-connection-kit](./commerce-connection-kit.md).)* This is *why* the target is **two forks**, not one shared live site — and why the Content SC's AEM-org binding forces the split.
+Two live verifications close the architectural questions.
+
+### Cross-org repoless works at runtime
+
+The `verify-repoless-cross-org` spike pushed a marker to a code repo owned by GitHub org A and confirmed it appeared on an `aem.live` satellite site owned by org B within 45 seconds. The Admin API accepted the cross-org configuration (`PUT /config/{orgB}/sites/{site}.json` with `code.owner = orgA` → HTTP 201) and the runtime propagated the code change cleanly. The full test artifacts:
+
+- Phase 3 (API acceptance): `201 Created` on cross-org satellite registration
+- Phase 4 (runtime propagation): marker pushed to `skukla/repoless-spike/head.html` appeared in `https://main--satellite--kukla-demos.aem.page/head.html` within one sync cycle
+- Live evidence captured in [`architecture-validation`](../../research/2026-06-05-architecture-validation.md)
+
+### AEM Sites + xcom architecture works in production today
+
+The public repo [`roberttoddhoven/citisignal-one`](https://github.com/roberttoddhoven/citisignal-one) is a working `xcom`-shaped commerce storefront authored via AEM Sites. Its `paths.json` shows the runtime mapping pattern this plan adopts:
+
+```json
+"mappings": [
+  "/content/rth-citisignal-one/:/",
+  "/content/rth-citisignal-one/configuration:/.helix/config.json",
+  "/content/rth-citisignal-one/configs:/configs.json",
+  "/content/rth-citisignal-one/configs-stage:/configs-stage.json",
+  "/content/rth-citisignal-one/configs-dev:/configs-dev.json",
+  ...
+]
+```
+
+Configuration is authored as content nodes, multi-environment configs travel as content, drop-ins render correctly. The architecture the plan is locking in **already runs in production** — there's no novel engineering risk for the AEM Sites side.
+
+## The rule that no longer bends the topology
+
+Adobe EDS still has its canonical-site rule: **one repo serves exactly one canonical site, and one site has exactly one content source**. What changed in the analysis is that **repoless lets multiple sites share that one repo as their code source** — they each remain "exactly one site, exactly one content source," they just happen to point at the same code. The cross-org constraint we previously thought forced two forks is satisfied by repoless without forking.
+
+The rule that still constrains: **one canonical site per code repo**. The Commerce SC is that canonical anchor. The Content SC's site is a satellite. The asymmetry is real (see Accepted trade-offs).
 
 ## What can and can't be shared across the two orgs
 
 | Layer | Shareable? | How |
 |---|---|---|
-| **Content** (AEM-authored pages) | **No** | One site = one content source, org-bound. Each fork authors its own. |
-| **Code / design / commerce** | **Yes** | The shared **upstream** that each org **forks** and syncs. |
-| **Commerce backend** | **Yes** | Consumed by URL + public keys; org-agnostic. |
+| **Code / design / commerce drop-ins** | **Yes** | One GitHub repo, both sites point at it as their code source |
+| **Content** (AEM-authored pages) | **No** | Each site has exactly one content source; the Content SC's points at their AEM |
+| **Commerce config** (endpoints, keys, store headers) | **Yes — published** | Authored as content in the Commerce SC's site; the Content SC's site reads the same upstream values or authors its own |
+| **Commerce backend** | **Yes** | Consumed by URL + public identifiers; the Merchandising API documents itself as requiring no authentication |
 
 ## How it works
 
 ```
-        Neutral UPSTREAM  (commerce boilerplate that supports AEM authoring — "xcom")
-        shared design + blocks + full commerce dropins · Commerce SC maintains
-               │ fork + sync                │ fork + sync
-     ┌─────────▼──────────┐      ┌──────────▼───────────┐
-     │ Commerce SC FORK   │      │ Content SC FORK       │
-     │ (org A)            │      │ (org B)               │
-     │ authors own content│      │ authors content in    │
-     │                    │      │ THEIR OWN AEM Sites    │
-     │ full commerce ─┐   │      │ full commerce ─┐      │
-     └────────────────┼───┘      └────────────────┼──────┘
-                      └──► Commerce SC's backend (by URL) ◄──┘
-        Identical look (shared code) · own content each · BOTH transact
+                  Shared GitHub code repo (the upstream)
+                  owned by Commerce SC · Code Sync installed
+                                   │
+                                   │ (code propagates to all sites)
+                                   │
+              ┌────────────────────┴───────────────────┐
+              │                                        │
+              ▼                                        ▼
+   ┌──────────────────────┐                ┌──────────────────────┐
+   │ Commerce SC's site    │                │ Content SC's site     │
+   │ (canonical anchor;    │                │ (repoless satellite;  │
+   │  org/site = owner/repo)│                │  code.owner = Commerce│
+   │                       │                │  SC's GitHub org)     │
+   │ content: Commerce SC's │                │ content: Content SC's │
+   │ AEM (or DA.live)      │                │ AEM Sites (own org)   │
+   │ commerce config:      │                │ commerce config:      │
+   │   own (configs node)  │                │   own (configs node)  │
+   │ full commerce ────┐   │                │ full commerce ────┐   │
+   └──────────────────┼───┘                └──────────────────┼───┘
+                      │                                        │
+                      └──► Commerce SC's backend (by URL) ◄────┘
+                           Adobe Commerce as a Cloud Service
+                           (Merchandising API requires no auth)
+
+Identical code · own content each · own per-env config · BOTH transact
 ```
 
-- Both forks are children of the **same upstream**, so they look and behave identically — *except* the content each authors.
-- **Both transact** — and this is *least* risky here, because both forks *are* the commerce boilerplate, so the cart/checkout dropins belong by construction (no graft).
-- Each fork keeps its **own content source + backend config**; the sync engine already **preserves** those across syncs.
+- Both sites are children of the **same code repo**, so they look and behave identically — *except* the content each authors and any per-site config overrides.
+- **Both transact** — the drop-ins belong by construction (no graft).
+- Each site keeps its **own content source and its own authored config** (per-env). The Commerce SC's backend URL/keys are public; each site stores its own copy of those values in its own AEM content tree.
 
 ## The upstream
 
-- **Neutral repo, seeded from a commerce boilerplate that supports AEM Sites authoring** (the `aem-boilerplate-xcom` family — commerce dropins + Universal-Editor/xwalk authoring). This is the linchpin: the shared code must let a fork be authored via AEM Sites.
-- **Identity comes from a mirrored package.** When both SCs pick the same demo identity (e.g. "CitiSignal") from their respective wizards, that package defines the upstream's brand/design — so the two forks **align by construction**, no manual coordination. See the [compositional demo builder](../compositional-demo-builder.md) direction (packages *within* composition, mirrored across owning systems).
-- **Hosted** in a neutral/shared GitHub org (GitHub isn't Adobe-org-bound); **maintained by the Commerce SC**.
-- **Full symmetry:** both SCs' demos are forks of it.
-- **Shared design lives in the upstream; content is per-fork.** To keep the two sites identical, design/code changes go to the **upstream** (centrally). The Content SC evolving the *shared design* (vs their content) is **two-way contribution — later**.
-- Each fork sets its **own content source**: the Content SC's is **their AEM Sites**; the Commerce SC's is whatever the xcom base supports (their AEM or DA.live — a detail to confirm).
+- **Public GitHub repo, seeded from `aem-boilerplate-xcom`** (the commerce boilerplate that supports AEM Sites authoring — Universal Editor / xwalk authoring + full commerce drop-ins). The CitiSignal One repo is the live worked example of this shape.
+- **Owned by the Commerce SC's GitHub org** (which matches their `aem.live` org name — the canonical-site rule).
+- **AEM Code Sync App installed on it** by the Commerce SC. The Content SC's site references it via `code.owner = "<commerce-sc-org>"` in its Configuration Service site config — no Code Sync install needed on the Content SC's side.
+- **Identity comes from a mirrored package.** When both SCs pick the same demo identity (e.g. "CitiSignal") from their respective wizards, the package defines the upstream's brand/design. Both sites already align by construction because they share the codebase; the package is what tells them *which* codebase to point at. See the [compositional demo builder](../compositional-demo-builder.md) direction (packages *within* composition).
+
+## Configuration as content (the CitiSignal pattern)
+
+Commerce wiring values — `commerce-core-endpoint`, `commerce-endpoint`, `x-api-key`, `Magento-Environment-Id`, store headers — are **authored as content nodes in AEM**, not committed to GitHub. The `paths.json` file in the repo maps content-tree paths to runtime JSON endpoints:
+
+```
+/content/<site>/configs        →   /configs.json        (production wiring)
+/content/<site>/configs-stage  →   /configs-stage.json  (stage wiring)
+/content/<site>/configs-dev    →   /configs-dev.json    (dev wiring)
+/content/<site>/configuration  →   /.helix/config.json  (default fallback)
+```
+
+This is why having three AEM environments (dev/stage/prod) maps cleanly onto repoless: **one site per environment**, each pointing at its own AEM content source with its own commerce config nodes — same code across all three. Promotion is content authoring, not code merging.
+
+The Content SC's site authors its own `configs*` nodes. The values they author can mirror the Commerce SC's (the read path needs only public values, so the Commerce SC can publish them in their own storefront's config and the Content SC can copy or programmatically discover them — see [commerce-connection-kit](./commerce-connection-kit.md)).
 
 ## The mesh — optional, not necessarily cross-org
 
-**API Mesh** stitches commerce services into one endpoint and holds keys server-side. It's a **convenience, not a requirement** — the config generator falls back to a direct backend URL when no mesh is deployed *([`configGenerator.ts`](../../../src/features/eds/services/configGenerator.ts))*. PaaS usually wants one; SaaS often doesn't. And cross-org is a choice: **default to a mesh per org** (each fork calls its own org's mesh → no cross-org call), rather than both forks sharing the Commerce SC's one mesh.
-
-## Alternative topology: Configuration-Service "repoless" model
-
-> Discovered 2026-06-04 in [`config-service-setup`](https://www.aem.live/docs/config-service-setup). Documented here so future passes know it exists; **the two-fork model above remains primary for Slice 1** because the extension's sync engine already supports it and the Slice-1 step list is grounded in that shape.
-
-The Configuration Service decouples a "site" from its GitHub repo. A site becomes `(org, site)` and points at a separately-named code repo plus a separately-named content source. Verbatim:
-
-> "it is now possible to have multiple sites that use different content, but use the same code repository. This feature is also known as **'repoless'**."
-
-For two SCs sharing one upstream codebase, that opens a topology the two-fork model rules out:
-
-```
-Commerce SC's aem.live site (org A) ──┐
-                                       ├──► same GitHub code repo (the upstream)
-Content SC's   aem.live site (org B) ──┘
-                                       └► each site points at its own content source
-                                          (Content SC's → their AEM Sites)
-```
-
-**Two sites, one code repo, two content sources. No fork. No sync engine.** The "shared design lives in the upstream" property is achieved *by construction* because both sites point at the same repo.
-
-### The constraint that complicates it
-
-> "For projects that want to use multiple sites with the same code repository (repoless), there must be **one canonical site for which the `org/site` matches the GitHub `owner/repo`**. This is required for proper code-config association and CDN push invalidation."
-
-One SC becomes the canonical anchor. Commerce SC fits naturally (they maintain the upstream). The asymmetry is not yet stress-tested in the docs — what breaks if the canonical site goes away isn't stated.
-
-### Two further setup facts
-
-- Each `aem.live` org **must also exist as a `github.com` org** with at least one repo synced via the AEM Code Sync App. Cross-account: each SC needs both an `aem.live` and a matching `github.com` org.
-- The Configuration Service can set arbitrary CORS headers on a site via `POST /config/{org}/sites/{site}/headers.json` — relevant to the cross-org CORS question (see [cross-org-cors-and-mesh research](../../research/2026-06-04-cross-org-cors-and-mesh.md), addendum).
-
-### Why this is parked, not picked
-
-The Slice-1 build sequence and the existing sync engine assume the two-fork model. Adopting "repoless" would mean rewriting Slice 1's reuse map. The trade comes due if the two-fork sync turns out to be more friction than expected, or if Slice 2+ needs the asymmetric anchor model anyway. Either way, the option exists.
+**API Mesh** stitches commerce services into one endpoint and holds keys server-side. It is a **convenience, not a requirement** — the config generator falls back to a direct backend URL when no mesh is deployed *([`configGenerator.ts`](../../../src/features/eds/services/configGenerator.ts))*. PaaS usually wants one; ACCS often does not (the Merchandising API requires no authentication and CORS is handled at the edge). When a mesh is in play, default to **a mesh per org** (each site calls its own org's mesh) rather than sharing the Commerce SC's mesh across both. Details: [cross-org-cors-and-mesh research](../../research/2026-06-04-cross-org-cors-and-mesh.md).
 
 ## Reuse vs net-new
 
 | Reuses today | Net-new |
 |---|---|
-| Fork-from-template + the **sync engine** (keeps forks identical, preserves per-fork content source + backend); the **commerce dropins**; **Connect-Commerce** | **AEM Sites as a content source** (the spine — DA.live-only today) · the **content-SC wizard** · the **two-fork / cross-account orchestration** |
+| `aem-boilerplate-xcom` template + commerce drop-ins · `ConfigurationService.ts` (already talks to the Config Service API) · Connect-Commerce flow · existing site-creation machinery | **Content-SC wizard** (creates a repoless satellite via `PUT /config/{org}/sites/{site}.json` rather than forking) · **AEM Sites as a content source** flow (the spine — the extension is DA.live-only today) · **Config-as-content writer** (writes `configs.json` etc. to the AEM content tree rather than committing `config.json` to the repo) |
+
+The shrink vs the two-fork model: **no sync engine work, no fork-from-template orchestration, no per-fork config preservation logic**. The Configuration Service API replaces all of it with a single PUT.
 
 ## Accepted trade-offs
 
-- **Two-org complexity is accepted** (the cost of AEM Sites authoring being the point).
-- **Two sites, not one** (canonical rule) — unified by shared *code*, differentiated by content.
+- **Asymmetric ownership.** The Commerce SC owns the codebase. The Content SC is a satellite — they cannot modify code without forking out of the repoless arrangement (which is still available as an escape hatch — see below). For demo use the asymmetry is the right shape: code is platform discipline, content is per-tenant freedom.
+- **Shared blast radius for code.** A bug pushed to the upstream affects both sites simultaneously. Acceptable for demo infrastructure; recoverable in minutes via revert. Not acceptable for production sites, which is not the use case.
+- **One canonical-site dependency.** If the Commerce SC's canonical site is destroyed (deletion, lost access), the Content SC's satellite loses its code source. The mitigation is the standard one — multiple admins on the canonical, and the satellite owner can always exit to a fork if needed.
 - **Separate cart/session per site** (different domains) unless shared auth is deliberately wired — "same engine + catalog, two sites," not "one cart across both."
 
-## Needs live verification (critical-path first)
+## Escape hatch: fork-and-own-your-code
 
-1. **AEM Sites as a content source, transacting** — can an `xcom`-style upstream be authored via AEM Sites in the Content SC's own org *and* transact against the backend? *(The spine — verify before committing to the build. Runbook: [verify-aem-sites-spike](./verify-aem-sites-spike.md). Desk research confirms it's a standard capability; the spike is end-to-end confirmation.)*
-   - note: PDP URLs need *a* routing mechanism — **folder mapping** (deprecated but functional; client-side; transacts) **or** the **AEM Commerce Prerenderer** (App Builder app; real per-product HTML via content-overlay → falls back to the AEM-authored source). Transacting needs *a* mechanism but **not** the prerenderer; because folder mapping is deprecated, the prerenderer is the **durable build-time** PDP-routing choice per fork — never a transaction blocker. Bonus: overlay+fallback lets prerendered product pages and AEM-authored content **coexist in one storefront**.
-2. The **AEM code-sync app** (connecting the fork to the Content SC's AEM).
-3. `aem-boilerplate-xcom` maturity.
-4. **CORS** allow-listing both storefront domains on the backend.
-5. Cross-account **commerce backend read** (high confidence, but unverified live).
+If a Content SC genuinely needs to customize code in ways the shared codebase does not support, they fork the upstream into their own GitHub org, install Code Sync on the fork, and switch their site's `code.owner` from the Commerce SC's org to their own. The two-fork-sync model becomes an opt-in tier for that case. The wizard does not need to support this on day one — manual repointing is a config change, not a build.
 
-(Adobe docs block programmatic fetch — verify in a live environment before code lands.)
+## Needs live verification (remaining open items)
+
+The high-priority verifications are closed (cross-org repoless: ✅, AEM Sites + xcom: ✅ via CitiSignal One). Remaining:
+
+1. **Cross-account cart/checkout transacting end-to-end.** The read path is closed by [Adobe's Merchandising API docs](https://developer.adobe.com/commerce/services/optimizer/merchandising-services/using-the-api) ("Authentication is not required"). The write path (cart, checkout) was not tested live during the spike. Documentation triangulation says it should work via ACCS edge CORS; a single `Origin`-header probe against the core ACCS endpoint would close the question definitively. Not a build gate — worth running at convenience.
+
+(Earlier list items — AEM code-sync app, `aem-boilerplate-xcom` maturity, CORS handshakes — are now closed by the CitiSignal One existence proof and the [Adobe Merchandising API docs](https://developer.adobe.com/commerce/services/optimizer/merchandising-services/using-the-api). Folder mapping is no longer relevant since repoless sites use the Configuration Service path mappings.)
 
 ## Decision trail (how we got here)
 
-- **Scenario A dropped** — Commerce SC grafting commerce into a non-extension Content SC's existing storefront carried the worst integration risk *and* couldn't be push-button (the extension can't reach the Content SC's Adobe org). A "shoppable content" variant was considered and set aside in favor of full B.
-- **Option Y dropped** — "commerce as an installable kit" gives two *different*-looking sites; "identical look" requires sharing the whole codebase (X).
+- **Original V1 framing rejected** — "single commerce demo that connects out to other Adobe apps" was the wrong target; the two-SC synced storefront is the real shape.
+- **Scenario A dropped** — Commerce SC grafting commerce into a non-extension Content SC's existing storefront carried the worst integration risk *and* couldn't be push-button (the extension can't reach the Content SC's Adobe org).
+- **Option Y dropped** — "commerce as an installable kit" gives two *different*-looking sites; "identical look" requires sharing the whole codebase.
+- **Two-fork-sync model rejected (2026-06-05)** — was the locked plan as of 2026-06-04 based on a narrow reading of the canonical-site rule. The post-research dig into the Configuration Service revealed repoless as Adobe's first-class capability for "multiple sites, one codebase." The cross-org repoless live test confirmed it works at runtime. The fork-and-sync model's autonomy is insurance against problems demos don't usually have; repoless aligns better with the compositional direction and removes most of the orchestration cost. Fork-and-sync survives as the explicit escape hatch for the rare Content SC who needs code customization.
 - **Rows 1 & 2 dropped** (shared DA.live single site / guest-authoring) — both sacrifice the Content SC authoring in their *own* AEM Sites, which is the point.

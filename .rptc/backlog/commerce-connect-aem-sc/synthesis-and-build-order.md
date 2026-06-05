@@ -1,47 +1,56 @@
 # Synthesis & build order — from design to code
 
-**Filed:** 2026-06-04 · How the locked target ([storefront-topology](./storefront-topology.md)) attaches to the **existing** extension, and the order to build it. Source: a code walk of the current creation experience, reconciled with our locked decisions. Consume this with `/rptc:plan` for the first slice.
+**Filed:** 2026-06-04 · **Repivoted:** 2026-06-05 (repoless replaces two-fork-sync). How the locked target ([storefront-topology](./storefront-topology.md)) attaches to the **existing** extension, and the order to build it. Source: a code walk of the current creation experience, reconciled with the locked architecture. Consume this with `/rptc:plan` for Slice 1.
 
 ## Headline
 
-- **Most of the target is REUSE / EXTEND, not net-new.** The wizard, executor, installers, sync, Connect-Commerce, dashboard, and packages all *extend* — the architecture doesn't fight a second archetype.
-- **One big NET-NEW:** **AEM Sites as a content source** (the extension is DA.live-only). It's the spine *and* the gated unknown (the spike).
-- **The two-fork plumbing can be built *now*, without the AEM env**, by using DA.live content first — then AEM Sites slots into the *same* plumbing. This is how we make progress while the spike is blocked.
+- **Most of the target is REUSE / EXTEND, not net-new.** The wizard, executor, installers, Connect-Commerce, dashboard, and packages all *extend* — the architecture doesn't fight a second archetype.
+- **Two NET-NEW pieces:**
+  1. **Repoless satellite creation** via Configuration Service Admin API — a small wizard step that wraps a single `PUT /config/{org}/sites/{site}.json` with `code.owner` cross-referencing the Commerce SC's repo. Cross-org repoless verified live 2026-06-05 (HTTP 201 + 45-second propagation).
+  2. **AEM Sites as a content source** — replaces the current DA.live-only assumption. Architecturally closed via the [`roberttoddhoven/citisignal-one`](https://github.com/roberttoddhoven/citisignal-one) worked example; the remaining work is wiring.
+- **Two NET-NEW deletions:**
+  - The two-fork **sync engine for code** — no longer needed; satellites read the upstream natively
+  - The per-fork `config.json` writer — replaced by the **config-as-content writer** that authors AEM nodes per CitiSignal's `paths.json` pattern (production / stage / dev configs as content)
 
 ## Current → target diff (per flow)
 
 | Flow | Current (file) | Delta | Attach point |
 |---|---|---|---|
 | **Wizard** | one flow, pluggable steps, stack-filtered (`WizardContainer.tsx`, `stepFiltering.ts`) | **EXTEND** | a 2nd entry `createContentScProjectWebview.ts` reusing the container; a `flow` discriminator; step filtering by flow |
-| **Executor** | single-fork, mesh+backend assumed (`handlers/executor.ts`) | **EXTEND** | add `flow`; skip mesh + backend for content; new "fork from upstream" + "content source" branches |
-| **Project model** | single project, single `adobe`, no upstream (`types/base.ts`, `stateManager.ts`) | **EXTEND** | add `flow`, `upstream{owner,repo}`, `contentSourceType` |
-| **Content source** | **DA.live only** (`fstabGenerator.ts`, `configurationService.ts`, `edsPipeline.ts`, `DataSourceConfigStep.tsx`) | **NET-NEW** | pluggable content-source service + an AEM-Sites variant + UI step |
-| **Installers + sync** | arbitrary source repos; sync from `templateOwner/templateRepo`, preserves `config.json`/`fstab.yaml` (`blockCollectionHelpers.ts`, `templateSyncService.ts`) | **REUSE + EXTEND** | add `upstreamRepo` to metadata; sync from upstream |
-| **Connect-Commerce** | backend discovery + config write (`ConnectStoreStepContent.tsx`, `configGenerator.ts`) | **REUSE** | skip for content; content fork inherits the backend URL |
+| **Executor** | single-fork, mesh+backend assumed (`handlers/executor.ts`) | **EXTEND** | add `flow`; for the Content-SC flow, skip fork (call Configuration Service PUT instead) + skip the repo-based config-write |
+| **Project model** | single project, single `adobe`, no upstream (`types/base.ts`, `stateManager.ts`) | **EXTEND** | add `flow`, `upstream{owner,repo}`, `contentSourceType`. **No `secondaryAdobe`** — each side's wizard runs in its own SC's extension and creates its own single-org project. |
+| **Content source** | **DA.live only** (`fstabGenerator.ts`, `configurationService.ts`, `edsPipeline.ts`, `DataSourceConfigStep.tsx`) | **NET-NEW** | pluggable content-source service + an AEM-Sites variant + UI step (replaces fstab.yaml with Configuration Service `ContentConfig`) |
+| **Code source registration** | fork-from-template, single-org (`createRepoFromTemplate`, `templateSyncService.ts`) | **NET-NEW (smaller than before)** | for the Content-SC flow, **replace** fork-from-template with `ConfigurationService.PUT site config { code: { owner: <commerceSC>, repo: <upstream> } }`. Existing fork-from-template machinery survives for the canonical site (Commerce SC) and for the manual escape hatch. |
+| **Installers + sync** | block libraries / feature-packs into a repo (`blockCollectionHelpers.ts`, `templateSyncService.ts`) | **REUSE (code-sync drops out for satellites)** | Block-library install still applies to the canonical Commerce-SC repo; both sites pick up the change automatically because they share code. Content-side sync survives where appropriate. |
+| **Connect-Commerce** | backend discovery + config write (`ConnectStoreStepContent.tsx`, `configGenerator.ts`) | **REUSE values + redirect destination** | Connect-Commerce still produces the same commerce wiring values. The writer changes from "write to `config.json`" to "write to AEM content nodes (configs/configs-stage/configs-dev) via the Configuration Service." Content SC's wizard either mirrors the Commerce SC's published values or authors its own. |
 | **Dashboard** | `isEds` boolean across ~10 files (`ActionGrid.tsx`, `useDashboard*`, `typeGuards.ts`) | **EXTEND** | centralize into per-`(product,ownership)` predicates |
 | **Packages/stacks** | brand packages + tech stacks (`demo-packages.json`, `stacks.json`) | **EXTEND** | add `flow`/`supportedFlows`; mirrored packages later |
 
-## Three reconciliations (the code walk lacked our locked context)
+## Four reconciliations (the code walk lacked the post-repivot context)
 
-1. **"`Project.adobe` is a single org" is *not* a blocker.** Each fork is its **own project in its own org**, managed by **that SC's own extension** (Scenario B). Nothing needs one project to hold two orgs — single-org-per-project is correct. (No `secondaryAdobe` needed.)
-2. **"Content SC doesn't transact" is resolved by the locked design.** Both forks come from the **`xcom` upstream** (commerce dropins included) and point at the **Commerce SC's backend by URL** → both transact. Not a gap.
-3. **First-slice sequencing — adjust for the blocked spike.** The walk suggested "DA.live content SC first"; our target makes **AEM Sites the spine**. Reconcile: **build the two-fork plumbing now with DA.live** (same plumbing the AEM version uses), and **add AEM Sites as a content source once the spike passes.** Not wasted — the plumbing is content-source-agnostic.
+1. **"`Project.adobe` is a single org" is *not* a blocker.** Each side's wizard runs in its own SC's extension and produces a single-org project. Cross-org plumbing lives in the Configuration Service call (`code.owner = <commerceSC-org>`), not in the project model.
+
+2. **"Content SC doesn't transact" is resolved by the architecture.** Both sites read the same `xcom` code (commerce drop-ins included) and read the Commerce SC's backend via published values → both transact. Not a gap.
+
+3. **The "fork sync conflict strategy" question dissolves.** Under repoless there is no satellite-side fork to keep in sync. The Commerce SC's upstream is the single source of truth; both sites read it directly. Code drift is impossible by construction.
+
+4. **First-slice sequencing.** With architectural unknowns closed, Slice 1 is the repoless wiring plus config-as-content writer; AEM Sites as a content source becomes Slice 2 (no longer waiting on a gating spike).
 
 ## Build order
 
-- **Slice 0 — the spike (gates AEM Sites).** Manual, when the AEM env is secured. See [verify-aem-sites-spike](./verify-aem-sites-spike.md). *Does not block Slice 1.*
-- **Slice 1 — two-fork plumbing, DA.live content (buildable now).** `Project.flow` + `upstream`; `createContentScProjectWebview` reusing the container; step filtering (skip prerequisites/mesh/Connect-Commerce for content); executor: fork-from-upstream + skip mesh/backend; sync from `upstreamRepo`; dashboard `isEds` → per-`(product,ownership)` predicates. **Proves the architecture end-to-end without AEM.**
-- **Slice 2 — AEM Sites as a content source (the spine; after spike).** Pluggable content-source service + AEM-Sites variant (`fstabGenerator`/`configurationService`/`edsPipeline` branch) + UI step. Slots into Slice 1's plumbing.
-- **Slice 3+ (JIT):** mirrored-package config (`flow`/`supportedFlows`); the App Builder add-flow; two-way contribution.
+- **Slice 1 — repoless wiring + config-as-content writer (buildable now).** Per-flow Content-SC wizard entry; project model adds `flow`/`upstream`/`contentSourceType`; executor branches "create canonical site" (Commerce SC path; existing) vs "create repoless satellite via Configuration Service" (Content SC path; new); config writer redirected from `config.json` to AEM content nodes (configs / configs-stage / configs-dev per the CitiSignal `paths.json` pattern); dashboard `isEds` → per-`(product, ownership)` predicates. **Proves the architecture end-to-end with DA.live content first** (since DA.live is what's wired today), so AEM Sites is the only remaining variable.
+- **Slice 2 — AEM Sites as a content source.** Pluggable content-source service + AEM-Sites variant; replace the DA.live assumption in `fstabGenerator` / `configurationService` / `edsPipeline` with `ContentConfig` calls to the Admin API. Architecturally closed (CitiSignal One is the worked example); slots into Slice 1's plumbing.
+- **Slice 3+ (JIT):** mirrored-package config (`flow`/`supportedFlows`); the App Builder add-flow; the Content-SC-to-Commerce-SC PR contribution path.
 
 ## Guardrails
 
 - **YAGNI on the general composer** — build the slices, not the [compositional](../compositional-demo-builder.md) framework. Each slice extends existing slots additively.
 - **Neutral but thin** — a `flow` discriminator + per-product predicates, not a plugin architecture.
 - **Plan one slice at a time** — `/rptc:plan` Slice 1 now; the rest JIT.
+- **Manual escape hatch** — fork-and-own-your-code stays as a no-code-change fallback for the rare Content SC who needs to customize the codebase. The wizard does not orchestrate this; it's a config edit (switch `code.owner` from Commerce SC's org to the SC's own fork).
 
 ## Open product questions
 
-- **Fork sync conflict strategy** — for a content fork, reset-to-upstream (content lives in AEM Sites, not the repo) vs. merge.
+- **How a satellite site obtains the Commerce SC's backend coordinates** — wizard input (paste tenantId / view-id / locale), or programmatic discovery from the Commerce SC's published `config.json` (or its AEM-authored equivalent). The values are public, so discovery is convenience, not a security boundary.
 - **Mirroring mechanism** — one shared package definition both wizards consume vs. paired packages (see [compositional-demo-builder](../compositional-demo-builder.md)).
-- **How a content fork obtains the Commerce SC's backend coordinates** — wizard input, or read from the upstream repo's `config.json`.
+- **`code.ref` (branch/commit) pinning on the Configuration Service `CodeConfig`** — verify the API supports it. Useful for satellites that want to pin to a known-good upstream commit during a long-running demo.

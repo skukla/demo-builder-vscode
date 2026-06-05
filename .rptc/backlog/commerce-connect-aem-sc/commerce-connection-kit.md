@@ -25,13 +25,28 @@ The original goal was "author one storefront from DA.live *and* AEM Sites simult
 
 ## The connection contract (what "connects" a storefront to the backend)
 
-A commerce EDS storefront reads `config.json` (dev) / the Configuration Service `public.json` (prod):
+A commerce EDS storefront reads `config.json` (dev) / the Configuration Service `public.json` (prod) / content-authored config nodes (the CitiSignal pattern, see below):
 - **Endpoints:** `commerce-core-endpoint` (core GraphQL — cart/checkout), `commerce-endpoint` (Catalog Service / Live Search read path, or the API Mesh URL).
 - **Headers:** `x-api-key`, `Magento-Environment-Id` (the Commerce **SaaS data-space** id), `Magento-Store-Code`, `Magento-Store-View-Code`, `Magento-Website-Code`, `Magento-Customer-Group`, `Store`.
 
 **The extension already generates exactly this.** `src/features/eds/services/configGenerator.ts` emits all of the above (ACCS vs PaaS aware), and `src/features/eds/config/config-template.json` is the `public.default` block. The Commerce SC's storefront publishes it; the AEM side **discovers the same shape back** from that published config. So both producing and reading these values is existing code.
 - Seams: `configGenerator.ts`, `config-template.json`, `configurationService.ts` (config-service PUT, overlay-capable), `src/features/mesh/services/meshEndpoint.ts` (the mesh URL).
 - Sources: [Storefront configuration](https://experienceleague.adobe.com/developer/commerce/storefront/setup/configuration/commerce-configuration/), [Catalog Service GraphQL](https://developer.adobe.com/commerce/services/graphql/catalog-service/).
+
+### Config-as-content (the CitiSignal pattern, 2026-06-05)
+
+The values above don't have to live in `config.json` in the repo. The working example at [`roberttoddhoven/citisignal-one`](https://github.com/roberttoddhoven/citisignal-one) shows them **authored as content nodes in AEM** instead, with `paths.json` mapping content paths to runtime JSON endpoints:
+
+```
+/content/<site>/configs        →   /configs.json        (production wiring)
+/content/<site>/configs-stage  →   /configs-stage.json  (stage wiring)
+/content/<site>/configs-dev    →   /configs-dev.json    (dev wiring)
+/content/<site>/configuration  →   /.helix/config.json  (default fallback)
+```
+
+This is the durable pattern: **commerce wiring travels with content**, not code. Authors update it via the AEM UI; per-environment configs are first-class; promotion is content-publish, not a code merge. Under the [repoless topology](./storefront-topology.md), this is how each site authors its own per-environment commerce wiring while sharing the same code.
+
+The writer side: instead of `configGenerator.ts` producing a static `config.json`, it produces the same value-shape into AEM content nodes via the Configuration Service. The values it produces are unchanged; only the destination shifts.
 
 ## Cross-org verdict
 
