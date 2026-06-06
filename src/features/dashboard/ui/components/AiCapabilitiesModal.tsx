@@ -111,19 +111,24 @@ export function AiCapabilitiesModal({
                                 progress={progress.progress}
                             />
                         ) : (
-                            // Initial busy frame — no creationProgress has landed yet.
-                            // Keep the original static copy so the modal doesn't flash
-                            // with blank labels before the first step fires.
+                            // Busy without a `progress` payload. This branch fires for
+                            // TWO distinct operations:
+                            //   1. verify-ai-setup (runs on every dashboard mount and
+                            //      every modal open) — file checks + MCP inspection, no
+                            //      install, no file writes.
+                            //   2. regenerate-ai-files (only on explicit button click) —
+                            //      BUT only for the brief window before the first
+                            //      creationProgress payload arrives; once it does, the
+                            //      modal switches to the per-step LoadingDisplay above.
+                            // Earlier copy ("Reinstalling storefront dependencies and
+                            // rewriting AI files. This can take up to a minute.") only
+                            // fit operation 2, and misled users during the much more
+                            // common case 1. Use neutral copy that fits both.
                             <>
-                                <Spinner size="L" aria-label="Regenerating AI files" />
-                                <Flex direction="column" alignItems="center" gap="size-50">
-                                    <Text UNSAFE_className="text-sm text-gray-700">
-                                        Reinstalling storefront dependencies and rewriting AI files.
-                                    </Text>
-                                    <Text UNSAFE_className="text-sm text-gray-600">
-                                        This can take up to a minute.
-                                    </Text>
-                                </Flex>
+                                <Spinner size="L" aria-label="Checking AI setup" />
+                                <Text UNSAFE_className="text-sm text-gray-700">
+                                    Checking AI setup…
+                                </Text>
                             </>
                         )}
                     </Flex>
