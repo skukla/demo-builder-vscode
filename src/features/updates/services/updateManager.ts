@@ -1,13 +1,15 @@
 import * as fs from 'fs/promises';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
+import { isRepoCollaborator } from './collaboratorGate';
 import { ComponentRepositoryResolver, type ComponentRepositoryInfo } from './componentRepositoryResolver';
 import {
     GITHUB_API_BASE,
     buildGitHubHeaders,
     fetchWithTimeout,
 } from './githubApiClient';
-import type { ReleaseInfo, UpdateCheckResult, GitHubRelease, GitHubReleaseAsset } from './types';
+import { selectLatestForChannel } from './releaseTrack';
+import type { ReleaseInfo, UpdateCheckResult, GitHubRelease, GitHubReleaseAsset, UpdateChannel } from './types';
 import { validateGitHubDownloadURL } from '@/core/validation';
 import { Project } from '@/types';
 import type { Logger } from '@/types/logger';
@@ -51,8 +53,8 @@ export class UpdateManager {
      */
     async checkExtensionUpdate(): Promise<UpdateCheckResult> {
         const currentVersion = this.context.extension.packageJSON.version;
-        const channel = this.getUpdateChannel();
-    
+        const channel = await this.resolveEffectiveChannel(this.getUpdateChannel());
+
         const latestRelease = await this.fetchLatestRelease(this.EXTENSION_REPO, channel);
     
         if (!latestRelease) {
@@ -70,6 +72,15 @@ export class UpdateManager {
     }
 
     /**
+     * Latest final (stable) version string, or null. Used by the graduation
+     * off-ramp to detect when an installed -alpha.* has been superseded.
+     */
+    async getLatestFinalVersion(): Promise<string | null> {
+        const release = await this.fetchLatestRelease(this.EXTENSION_REPO, 'stable');
+        return release ? release.version : null;
+    }
+
+    /**
      * Check for component updates across ALL projects
      * Groups results by component with list of outdated projects for each
      *
@@ -77,7 +88,10 @@ export class UpdateManager {
      * @returns Array of components with updates, each containing list of affected projects
      */
     async checkAllProjectsForUpdates(projects: Project[]): Promise<MultiProjectUpdateResult[]> {
-        const channel = this.getUpdateChannel();
+        // Components ship no -alpha.* builds; early-access collapses to beta for
+        // component checks so EA users don't silently skip component updates.
+        const configuredChannel = this.getUpdateChannel();
+        const channel: UpdateChannel = configuredChannel === 'early-access' ? 'beta' : configuredChannel;
 
         // Collect all unique component IDs across all projects
         const componentProjectMap = new Map<string, Array<{ project: Project; currentVersion: string }>>();
@@ -158,7 +172,7 @@ export class UpdateManager {
      * Stable: Latest non-prerelease
      * Beta: Latest release (including prereleases)
      */
-    private async fetchLatestRelease(repo: string, channel: 'stable' | 'beta'): Promise<ReleaseInfo | null> {
+    private async fetchLatestRelease(repo: string, channel: UpdateChannel): Promise<ReleaseInfo | null> {
         try {
             // For stable: use /releases/latest (non-prereleases only)
             // For beta: use /releases?per_page=20 (includes prereleases, need to sort)
@@ -186,19 +200,14 @@ export class UpdateManager {
 
             const data: GitHubRelease | GitHubRelease[] = await response.json();
 
-            // Beta channel returns array, stable returns object
+            // Stable returns a single object; beta/early-access return an array.
+            // For arrays, pick the highest release the channel ACCEPTS by track
+            // (beta excludes -alpha.*, early-access takes -alpha.* only).
             let release: GitHubRelease;
             if (Array.isArray(data)) {
-                // For beta: find the latest version by semver, not by GitHub's order
-                const nonDraftReleases = data.filter((r: GitHubRelease) => !r.draft);
-                if (nonDraftReleases.length === 0) return null;
-
-                // Sort by version using semver
-                release = nonDraftReleases.sort((a: GitHubRelease, b: GitHubRelease) => {
-                    const versionA = this.parseVersionFromTag(a.tag_name);
-                    const versionB = this.parseVersionFromTag(b.tag_name);
-                    return semver.gt(versionA, versionB) ? -1 : 1;
-                })[0];
+                const selected = selectLatestForChannel(data, channel);
+                if (!selected) return null;
+                release = selected;
             } else {
                 release = data;
             }
@@ -265,9 +274,26 @@ export class UpdateManager {
         return { id: componentId, repository, name };
     }
 
-    private getUpdateChannel(): 'stable' | 'beta' {
+    private getUpdateChannel(): UpdateChannel {
         return vscode.workspace.getConfiguration('demoBuilder')
-            .get<'stable' | 'beta'>('updateChannel', 'stable');
+            .get<UpdateChannel>('updateChannel', 'stable');
+    }
+
+    /**
+     * Resolve the channel actually used for fetching. early-access is honored
+     * only for verified repo collaborators; otherwise it falls back to beta.
+     * Never throws (the gate itself fails closed).
+     */
+    private async resolveEffectiveChannel(configured: UpdateChannel): Promise<UpdateChannel> {
+        if (configured !== 'early-access') return configured;
+        try {
+            const allowed = await isRepoCollaborator(this.context.secrets, this.logger);
+            return allowed ? 'early-access' : 'beta';
+        } catch {
+            // Defensive: the gate fails closed internally, but never let an
+            // unexpected error block the update check — fall back to beta.
+            return 'beta';
+        }
     }
 
     private isNewerVersion(latest: string, current: string): boolean {
