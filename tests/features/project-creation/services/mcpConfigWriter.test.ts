@@ -20,6 +20,7 @@ import {
     generateHomeClaudeSettings,
     writeMcpConfigs,
 } from '@/features/project-creation/services/mcpConfigWriter';
+import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
 import type { Project, ComponentInstance } from '@/types/base';
 
 jest.mock('fs/promises', () => ({
@@ -114,16 +115,26 @@ describe('MCP config content', () => {
         );
     });
 
-    it('passes the per-project UDS socket path via env, and no legacy single-project env', async () => {
-        const project = makeEdsProject();
+    it('points DEMO_BUILDER_MCP_SOCKET at the projects-root socket, not a per-project socket', async () => {
+        // Under the always-root home-Chat model (PR #36), the in-extension MCP
+        // server listens on a socket keyed to the OPEN WORKSPACE folder — which
+        // is the projects root, not any individual project. The per-project
+        // mcp.json must therefore point at THAT root socket (same socket the
+        // home writer uses) — otherwise the proxy connects to a socket nothing
+        // is listening on, and the demo-builder MCP shows up as "timed out" in
+        // the AI Capabilities modal.
+        const project = makeEdsProject(); // project.path = '/projects/test-project'
         await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
         const config = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, Record<string, unknown>> };
         const env = config.mcpServers['demo-builder'].env as Record<string, string> | undefined;
 
-        // The proxy receives the explicit socket path for this project…
-        expect(env?.['DEMO_BUILDER_MCP_SOCKET']).toMatch(/\.sock$/);
-        // …but never the legacy single-project path env.
+        const rootSocket = resolveMcpSocketPath(path.dirname(project.path)); // '/projects'
+        const projectSocket = resolveMcpSocketPath(project.path);            // '/projects/test-project'
+
+        expect(env?.['DEMO_BUILDER_MCP_SOCKET']).toBe(rootSocket);
+        expect(env?.['DEMO_BUILDER_MCP_SOCKET']).not.toBe(projectSocket);
+        // …and never the legacy single-project path env.
         expect(env?.['DEMO_BUILDER_PROJECT_PATH']).toBeUndefined();
     });
 
