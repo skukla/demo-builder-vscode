@@ -70,7 +70,7 @@ project; both fail.
   `getProjectFlow` (ownership: content vs commerce) and existing product signals
   (EDS storefront vs other). Keep it a thin composition — **not** a new registry.
 - At the minimal content-entry sites, replace the local `isEds`-only branch with
-  an archetype check so a content fork is recognized and rendered.
+  an archetype check so a content-flow project (repoless satellite) is recognized and rendered.
 
 ### REFACTOR
 - Keep `isEds` intact and unchanged elsewhere — the predicate is additive.

@@ -33,14 +33,16 @@ Each SC runs **their own copy** of the Demo Builder extension, authenticated to 
 - **AEM side:** "Discover from URL" (fetch the Commerce storefront's published config, extract the commerce subset — extends existing store discovery) · "Apply" (write to the AEM storefront's config service) · "Scaffold `xcom`" (template-copy — reuses repo-from-template) · **guide** the manual AEM steps (Code Sync, Cloud Manager site, IMS roles, UE enablement).
 - **Optional:** a shared demo descriptor (brand / name / linkage).
 
-## Higher cohesion: a shared storefront codebase (synced forks)
+## Higher cohesion: a shared storefront codebase (repoless satellites)
 
-The discovery model above shares commerce **data**; each storefront's **code** stays independent. To make *both* SCs' custom code appear in one coherent storefront, raise the cohesion level — share the **code** too, via a **shared upstream storefront codebase + per-org synced forks.**
+> **Updated 2026-06-05 (repoless repivot).** This section originally described **per-org synced forks** — each SC forking the upstream and a sync engine keeping the forks aligned. That model is **retired**: the live cross-org spike proved Adobe **repoless** lets one codebase serve sites in *different* `aem.live` orgs, so no fork or sync is needed. The fork-and-sync model survives only as the manual escape hatch (Content SC who needs to customize code). See [storefront-topology](./storefront-topology.md) for the locked architecture.
 
-- **One *shared upstream* storefront** (the `xcom` base + the demo's blocks + drop-ins) = the single source of truth for code. *(This is the upstream — **not** "canonical" in ADR-003's sense; see the terminology note below.)*
-- **Each SC's storefront repo = a synced fork** of that upstream, in their own org (the cross-org rule *requires* the fork; sync keeps the forks aligned, so they're effectively one storefront deployed once per org). Within each org, that fork is the org's **canonical repo** (ADR-003 sense) — the anchor it could run repoless multisite from.
+The discovery model above shares commerce **data**; each storefront's **code** stays independent. To make *both* SCs' custom code appear in one coherent storefront, raise the cohesion level — share the **code** too, via **one shared upstream codebase that both SCs' sites reference (no forks).**
 
-> **Terminology — "canonical" vs this "upstream" (don't conflate).** [ADR-003: Multisite Architecture Seam](../../../docs/architecture/adr/003-multisite-architecture-seam.md) reserves **canonical repo** for Adobe **Repoless multisite**: one repo → many aem.live sites (per env/locale) **within one org** (`org/site` must match `owner/repo`). That's *same-org* multi-site. This federated model is *cross-org*: **each SC's repo is its own canonical** (ADR-003 sense) for their org; they cannot share one canonical across orgs, so the AEM SC's repo is a **fork** of the shared **upstream**. Net: two canonicals (one per SC/org), one upstream — never one canonical spanning orgs.
+- **One *shared upstream* storefront** (the `xcom` base + the demo's blocks + drop-ins) = the single source of truth for code, owned by the **Commerce SC**, with AEM Code Sync installed. This repo is the Commerce SC's **canonical** site (one repo → its own `aem.live` site; `org/site` matches `owner/repo`).
+- **The Content SC's `aem.live` site = a *repoless satellite*** that references the upstream's code cross-org via the Configuration Service (`code.owner = <commerceSC-org>`). **No fork, no repo of its own, no Code Sync install, no sync engine** — it reads the upstream natively, and pushes to the upstream propagate to it through the canonical's Code Sync.
+
+> **Terminology — "canonical" vs "upstream" vs "satellite" under repoless.** [ADR-003: Multisite Architecture Seam](../../../docs/architecture/adr/003-multisite-architecture-seam.md) describes Adobe **Repoless multisite**: one repo → many `aem.live` sites. Repoless is **not** restricted to one org — the 2026-06-05 spike confirmed a satellite in org B can reference code owned by org A (HTTP 201 + 45s propagation). So in this federated model: the **upstream** (= the Commerce SC's **canonical** repo/site) is the single code source; the **Content SC's site is a cross-org repoless satellite** of it. One canonical + one (or more) satellite, **one upstream repo total** — not two forks. The earlier "two canonicals, one per org, joined by a fork" framing was the pre-repivot reading; repoless replaces it with one canonical + cross-org satellites.
 
 ### Two cohesion levels (choose per demo)
 
@@ -55,7 +57,7 @@ The discovery model above shares commerce **data**; each storefront's **code** s
 The asymmetry is about who can **build**, not who can **consume** — consuming a synced artifact needs no special tooling:
 - **Commerce SC** builds custom **drop-ins** (dropin SDK + commerce/demo-builder skills — their exclusive capability) → contributes them as a **package / feature pack**.
 - **AEM SC** builds custom **blocks** (AEM modernization agent) → contributes them as a **block library**.
-- Both land in the shared upstream → **sync down to both forks** → each storefront ends up with *both* the custom blocks and the custom drop-ins, on the shared commerce data.
+- Both land in the shared upstream → **propagate to both sites automatically (via the upstream's Code Sync; both sites reference the same code)** → each storefront ends up with *both* the custom blocks and the custom drop-ins, on the shared commerce data. No fork, no per-site sync.
 
 ### The extension already has most of the spine
 
@@ -66,8 +68,8 @@ The asymmetry is about who can **build**, not who can **consume** — consuming 
 
 ### The gap (what's genuinely new)
 
-- Sync is **one-way today** (upstream → project). The shared demo needs **contribution flowing *up*** (each SC's custom code → shared upstream) **+ sync flowing down to two forks**, kept aligned as each SC contributes.
-- A **shared upstream** both projects sync from — a repo, or the artifact channels (block libraries for blocks, packages/feature packs for drop-ins).
+- The shared demo needs **contribution flowing *up*** (each SC's custom code → the shared upstream). **Downward propagation is free under repoless** — both sites reference the one upstream, so a merge to the upstream reaches both via Code Sync; there are no forks to keep aligned. The genuinely new piece is the *upward* contribution path.
+- A **shared upstream** both sites reference (repoless) — a repo, plus the artifact channels (block libraries for blocks, packages/feature packs for drop-ins) for contributing into it.
 - Contribution-to-upstream (git PR / publish a block library / publish a drop-in package) isn't automated today.
 
 ### Constraints specific to this level
@@ -102,4 +104,4 @@ The asymmetry is about who can **build**, not who can **consume** — consuming 
 - The **AEM-side scaffold + guide** flow (`xcom` template-copy + the manual AEM steps the extension can only guide).
 - Optional **shared demo descriptor**.
 - Where the "connect to a commerce demo" surface lives (Configure, dashboard, or both).
-- **(Higher cohesion, later)** the shared-codebase contribution flow — how custom blocks (block library) and custom drop-ins (package / feature pack) publish to a shared upstream and sync down to both forks, extending the existing update + block-library + feature-pack systems.
+- **(Higher cohesion, later)** the shared-codebase contribution flow — how custom blocks (block library) and custom drop-ins (package / feature pack) publish *up* to the shared upstream (downward propagation to both sites is free under repoless via Code Sync), extending the existing update + block-library + feature-pack systems.

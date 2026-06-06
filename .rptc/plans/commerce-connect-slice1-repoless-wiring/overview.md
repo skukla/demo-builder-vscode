@@ -53,11 +53,11 @@
 | Flow | Current (verified file) | Delta | Attach point |
 |---|---|---|---|
 | Wizard | `WizardContainer.tsx`, `stepFiltering.ts` | EXTEND | 2nd entry command reusing the container; flow discriminator; flow-aware filtering |
-| Executor | `features/project-creation/handlers/executor.ts` (single linear pipeline, `isEdsStack` branches) | EXTEND | add `flow`; content branch = create repoless satellite via Configuration Service + skip mesh/backend deploy; reuse Phase 5/5b |
+| Executor + EDS setup | `features/project-creation/handlers/executor.ts` + `features/eds/handlers/storefrontSetupPhases.ts` | EXTEND | add `flow`; content path = **dedicated satellite branch**: one cross-org `ConfigurationService.registerSite` (no fork, no Code Sync App, no code-sync verification), skip mesh/backend deploy, skip the GitHub config-push (Phase 5); DA.live content (Phase 5b) runs |
 | Project model | `src/types/base.ts:42` (`Project`) | EXTEND | add `flow`, `upstream{owner,repo}` |
 | Content source | DA.live today (`fstabGenerator.ts`, `edsPipeline.ts`, `ensureEdsContent`) | REUSE | Slice 1 stays on DA.live |
-| Site registration | fork-from-template via `GitHubRepoOperations.createFromTemplate` | **REPOINT** | content flow calls `ConfigurationService.PUT site config { code: { owner: <commerceSC>, repo: <upstream> } }` instead. Existing template-fork machinery survives for the canonical site and for the manual fork-and-own escape hatch. |
-| Connect-Commerce | `ConnectStoreStepContent.tsx` → `discover-store-structure` → `commerceStoreDiscovery.ts` → `configGenerator.ts` | REUSE | content fork seeds coords from upstream `config.json` (or Commerce SC's published config), confirm/override via discovery |
+| Site registration | fork-from-template via `GitHubRepoOperations.createFromTemplate` + GitHub App / code-sync | **REPLACE for content** | content flow takes the **Adobe-native repoless path**: a single cross-org `ConfigurationService.registerSite` (`code: { owner: <commerceSC>, repo: <upstream> }`, content = joiner's DA.live) with **no fork, no Code Sync App install, no code-sync verification**. The satellite reads upstream code via the Config Service `code` reference; Code Sync stays on the Commerce SC's canonical. Template-fork + code-sync machinery survives for the canonical site and the manual fork-and-own escape hatch. |
+| Connect-Commerce | `ConnectStoreStepContent.tsx` → `discover-store-structure` → `commerceStoreDiscovery.ts` → `configGenerator.ts` | REUSE | content satellite seeds coords from upstream `config.json` (or Commerce SC's published config), confirm/override via discovery |
 | Dashboard | `isEds` across ~20 files (`typeGuards.ts` + ~19 sites) | EXTEND (minimal) | per-(product, ownership) predicate; migrate only the content-flow entry sites |
 
 **Path corrections to the design doc's file map (verified on `develop`):**
@@ -72,9 +72,9 @@
 | # | Question | Decision | Rationale | Repoless impact |
 |---|---|---|---|---|
 | D1 | How does a content site obtain the Commerce SC's backend coordinates? | **Both, sharpened** — **primary:** *inherit/seed* from the upstream repo's `config.json` (or Commerce SC's published AEM-authored values; both public); **secondary:** *manual override / re-seed*. Live cross-account read is deferred. | Coords are client-visible config, so they travel safely. Avoids cross-org auth obstacles. | **Unchanged** — coords are still public, still inheritable. The Merchandising API "Authentication is not required" finding *strengthens* this decision. |
-| D2 | Sync conflict strategy for a content fork? | Default **`reset-to-upstream`**; keep `merge`-with-reset-fallback available; "promote to upstream" is the durable path. | Reliable by construction: content lives outside the repo and wiring files are preserved. | **Obsolete for satellites** under repoless — content sites read code natively; there is no satellite-side sync to drive a strategy on. The shipped `defaultSyncStrategyForProject` remains correct for commerce-flow projects (legacy and ongoing); content-flow projects under repoless never reach that code path. |
+| D2 | Sync conflict strategy for a content fork? *(question predates the repivot)* | Default **`reset-to-upstream`**; keep `merge`-with-reset-fallback available; "promote to upstream" is the durable path. | Reliable by construction: content lives outside the repo and wiring files are preserved. | **Obsolete for satellites** under repoless — content sites read code natively; there is no satellite-side sync to drive a strategy on. The shipped `defaultSyncStrategyForProject` remains correct for commerce-flow projects (legacy and ongoing); content-flow projects under repoless never reach that code path. |
 | D3 | How much `isEds` predicate centralization in Slice 1? | **Minimal additive** — introduce the predicate helper, migrate only the content-flow entry sites, leave the other ~18 `isEds` sites. | Avoids mixing a 20-site refactor with new behavior. | **Unchanged** — the predicate works the same regardless of topology. |
-| D4 (new, 2026-06-05) | How does the Content SC's wizard create their site? | `ConfigurationService.PUT /config/{org}/sites/{site}.json` with `code.owner = <commerceSC-org>`, `content.source.url = <Content SC's DA.live URL>` | One Admin API call replaces fork-from-template + sync wiring. Cross-org verified live 2026-06-05 (HTTP 201 + 45s propagation). | New — the executor's content branch hits this seam. |
+| D4 (2026-06-05; mechanic locked 2026-06-06) | How does the Content SC's wizard create their site? | **Dedicated repoless satellite path (Option B — the Adobe-native one).** A single `ConfigurationService.registerSite` → `PUT /config/{contentSC-org}/sites/{site}.json` with `code.owner = <commerceSC-org>`, `code.repo = <upstream>`, `content.source.url = <Content SC's DA.live URL>`. **No fork, no Code Sync App install, no code-sync verification, no GitHub config-push.** | One Admin API call is exactly Adobe's documented repoless mechanism — a satellite is a Config Service entry referencing upstream code, not a synced fork. Cross-org verified live 2026-06-05 (HTTP 201 + 45s propagation). Option A (reuse the full EDS pipeline with `repoInfo = upstream`) was rejected 2026-06-06: it would run App-install/code-sync/config-push against a repo the joiner doesn't own — all repoless anti-patterns. | New — the content satellite branch in `storefrontSetupPhases` hits this seam. |
 
 ---
 
@@ -87,7 +87,7 @@
 **Test categories:**
 1. **Flow predicates** (unit) — `getProjectFlow`, `isContentFlow`, `isCommerceFlow` over commerce/content/legacy projects.
 2. **Step filtering** (unit) — content flow hides prerequisites + mesh; commerce flow unchanged (regression).
-3. **Executor branch** (integration) — content flow creates the repoless satellite via Configuration Service, skips Phase 3 (mesh), skips backend deploy, still runs Phase 5/5b.
+3. **Satellite branch** (integration) — content flow creates the repoless satellite via one cross-org `ConfigurationService.registerSite`; **no** fork, **no** Code Sync App / code-sync verification, **no** Phase 5 GitHub config-push; skips Phase 3 (mesh) and backend deploy; DA.live content (Phase 5b) runs.
 4. **Backend coords** (unit/integration) — seed from upstream `config.json`; discovery/override path; PaaS vs ACCS gating.
 5. **Repoless satellite wiring** (unit) — content metadata sets `upstream.{owner,repo}`; Configuration Service PUT carries the expected payload shape (`code.owner` cross-org; `content.source.url` per the SC's DA.live).
 6. **Dashboard predicate** (unit) — content-flow project routes through the new predicate; commerce/EDS projects unchanged.
@@ -149,12 +149,13 @@ A step is not "done" until all five are green.
 ### Existing files (to modify)
 - `src/types/base.ts` — add `flow`, `upstream` to `Project` (Step 1) ✅
 - `src/types/typeGuards.ts` — add flow predicates (Steps 1, 7) ✅
-- `src/features/project-creation/handlers/executor.ts` — content branch using Configuration Service for site creation (Steps 1, 4, 5)
+- `src/features/eds/handlers/storefrontSetupPhases.ts` (+ `storefrontSetupHandlers.ts`, `storefrontSetupPhase1.ts`) — content-flow **satellite branch**: skip fork + Code Sync App + code-sync verification; one cross-org `registerSite`; skip the GitHub config-push (Steps 1, 4)
+- `src/features/project-creation/handlers/executor.ts` — persist `flow`/`upstream` on the saved content project; gate Phase 5 (GitHub config-push) off for satellites (Steps 1, 4, 5)
 - `src/commands/commandManager.ts` + `src/commands/handlers/` — register content-SC entry (Step 2) 🟡
 - `src/features/project-creation/ui/wizard/stepFiltering.ts` — flow-aware condition (Step 3) ✅
 - `src/features/project-creation/ui/components/ConnectStoreStepContent.tsx` — content-flow seeding/override (Step 5)
 - `src/features/eds/services/configGenerator.ts` — accept upstream-seeded coords (Step 5)
-- `src/features/eds/services/configurationService.ts` — exercised for satellite creation (Step 4)
+- `src/features/eds/services/configurationService.ts` — `registerSite` is the satellite-creation seam; cross-org `codeOwner = upstream` (Step 4)
 - Dashboard content-flow entry sites only (Step 7) 🟡 — predicate shipped; UI routing deferred
 
 ### New files (to create)
@@ -179,10 +180,10 @@ Screen-by-screen (Slice 1 / DA.live), with the building step and key states:
 3. **Resolve on Continue** — *Backend-Call-on-Continue; reuses `GitHubFileOperations` (public read, no auth)* — states: loading overlay / error + retry — **Step 2**.
 4. **Confirmation preview** — *new screen; reuses `ReviewStep` LabelValue / `Modal`* — "Joining **CitiSignal** by `<owner>` → backend `<endpoint>`; you'll author in your **own** DA.live (AEM in Slice 2)" → confirm / back — **Step 2**.
 5. **Trimmed wizard** — *reuses `WizardContainer` shell + seeded state; gallery suppressed; prerequisites/mesh/adobe skipped* — name your site → connect **own** DA.live → **inherited backend** (confirm, no discovery) → create — **Steps 3 (filtering), 5 (coords), 4 (executor → Configuration Service satellite creation)**.
-6. **Creation / progress** — *reuses `ProjectCreationStep` + executor content branch (now creates a repoless satellite via Configuration Service)* — **Step 4**.
+6. **Creation / progress** — *reuses `ProjectCreationStep` + the content **satellite branch**, which creates a repoless satellite via one cross-org `ConfigurationService.registerSite` — no fork, no Code Sync App, no code-sync verification, no GitHub config-push* — **Step 4**.
 7. **Done → dashboard** — *content-flow project rendered via the archetype predicate* — **Step 7**.
 
-The novelty lives in the **sequence + the two new screens (paste-link, preview) + the gallery suppression**; the parts are reused. The terminal action changed under repoless: previously the executor forked the upstream into the Content SC's org. **Now it calls `ConfigurationService.PUT`** to register their site as a repoless satellite of the Commerce SC's canonical. The user-visible flow is the same; the back-end mechanic is simpler.
+The novelty lives in the **sequence + the two new screens (paste-link, preview) + the gallery suppression**; the parts are reused. The terminal action is the **Adobe-native repoless mechanic**: previously (two-fork-sync) the flow forked the upstream into the Content SC's org and wired sync. **Now it calls `ConfigurationService.registerSite`** to register their site as a repoless satellite of the Commerce SC's canonical — a single PUT, no repo of their own. The user-visible flow is the same; the back-end mechanic is simpler and matches how Adobe's repoless is documented to work.
 
 ---
 
@@ -211,8 +212,8 @@ The novelty lives in the **sequence + the two new screens (paste-link, preview) 
 
 ### GitHub + backend services
 - `GitHubFileOperations` read-file — **public reads need no auth**; read master `config.json` + marker (Steps 2, 5). ✅
-- `GitHubRepoOperations.createFromTemplate` — survives for the canonical site (Commerce SC) and the manual fork-and-own escape hatch. **Not used for the content-SC satellite creation under repoless** — that goes through `ConfigurationService.PUT` instead.
-- **`ConfigurationService.createSite` / equivalent** (in `src/features/eds/services/configurationService.ts`) — **new primary seam** for the content-SC flow. Already speaks the Admin API; Step 4 wires it as the satellite-creation call.
+- `GitHubRepoOperations.createFromTemplate` + the GitHub Code Sync App install / code-sync verification — survive for the canonical site (Commerce SC) and the manual fork-and-own escape hatch. **None of them run for the content-SC satellite** — a satellite has no repo of its own; it reads upstream code via the Config Service `code` reference.
+- **`ConfigurationService.registerSite` + `buildSiteConfigParams`** (in `src/features/eds/services/configurationService.ts`) — **the satellite-creation seam** for the content-SC flow. Already speaks the Admin API and already separates the `org`/`site` lookup key (joiner's DA.live) from `codeOwner`/`codeRepo` (the code source); Step 4 passes the **upstream** as the code source → cross-org `code.owner`.
 - `configGenerator.generateConfigJson` — config.json shape; falls back to direct backend URL with no mesh (Steps 4, 5).
 - `ensureEdsContent` — DA.live content / Phase 5b (Step 4).
 - `populateEdsMetadata` — EDS metadata write path; extend to also write the **self-describing marker** (Steps 2, 6). ✅
@@ -257,7 +258,7 @@ The novelty lives in the **sequence + the two new screens (paste-link, preview) 
 1. Step 1 — Project model: flow + upstream + predicates ✅
 2. Step 2 — Content-SC wizard entry (Join + paste-link UX) 🟡
 3. Step 3 — Flow-aware step filtering ✅
-4. Step 4 — Executor content branch (now: Configuration Service satellite creation) 🟡
+4. Step 4 — Content satellite branch (one cross-org `ConfigurationService.registerSite`; no fork / no Code Sync App / no config-push) 🟡
 5. Step 5 — Content-fork backend coordinates (planned)
 6. Step 6 — ~~Upstream sync wiring + reset default~~ (shipped 2026-06-04; **dormant for content flow under repoless**; remains correct for commerce flow)
 7. Step 7 — Dashboard predicate (minimal additive) 🟡

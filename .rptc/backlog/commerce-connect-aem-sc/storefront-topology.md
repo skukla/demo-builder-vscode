@@ -99,6 +99,31 @@ Identical code · own content each · own per-env config · BOTH transact
 - **AEM Code Sync App installed on it** by the Commerce SC. The Content SC's site references it via `code.owner = "<commerce-sc-org>"` in its Configuration Service site config — no Code Sync install needed on the Content SC's side.
 - **Identity comes from a mirrored package.** When both SCs pick the same demo identity (e.g. "CitiSignal") from their respective wizards, the package defines the upstream's brand/design. Both sites already align by construction because they share the codebase; the package is what tells them *which* codebase to point at. See the [compositional demo builder](../compositional-demo-builder.md) direction (packages *within* composition).
 
+## Creating a satellite — the locked mechanic (Option B, the Adobe-native path)
+
+**A repoless satellite is a Configuration Service entry that references upstream code — not a fork, not a copy.** The Content SC's extension creates it with a single cross-org Admin API call:
+
+```
+PUT /config/{contentSC-org}/sites/{site}.json
+  code:    { owner: <commerceSC-org>, repo: <upstream> }
+  content: { source: { url: <Content SC's DA.live URL>, type: 'markup' } }
+```
+
+What the extension does **not** do for a satellite, by design:
+
+- **No fork / `createFromTemplate`** — the satellite has no GitHub repo of its own.
+- **No AEM Code Sync App install on the Content SC's side** — Code Sync lives only on the Commerce SC's canonical repo; the satellite reads the upstream through the `code` reference, and pushes to the upstream propagate to it through the canonical's Code Sync.
+- **No code-sync verification** on the joiner's side (nothing to verify — there is no owned repo).
+- **No GitHub config-push** — commerce config travels as content (config-as-content, below), never committed to the code repo; and you never push to a repo you don't own.
+
+The joiner's only sign-in is **Adobe-side** (DA.live / IMS, for their own content and the PUT); the upstream's repo identity is resolved from the public `storefront-share.json` with an unauthenticated read — **no GitHub sign-in on the happy path**.
+
+**One-time org prerequisite (not per-satellite):** each `aem.live` org must have a matching `github.com` org with at least one Code-Sync-synced "anchor" repo (the `kukla-demos/anchor` pattern from the live spike). This is org setup, separate from per-satellite creation.
+
+> **Why this and not the alternative.** The rejected Option A reused the full EDS storefront-setup pipeline with the satellite's `repoInfo` pointed at the upstream. That would run the GitHub-App-install check, code-sync verification, and the `config.json`-push against a repo the joiner does **not** own — all anti-patterns under repoless. Option B mirrors Adobe's documented mechanism 1:1 ([aem.live/docs/repoless](https://www.aem.live/docs/repoless)); A re-skins the two-fork model repoless was meant to replace. Decision locked 2026-06-06.
+
+The cross-org form of this exact PUT is what the 2026-06-05 spike verified live (HTTP 201 + 45s propagation — see [architecture-validation](../../research/2026-06-05-architecture-validation.md)).
+
 ## Configuration as content (the CitiSignal pattern)
 
 Commerce wiring values — `commerce-core-endpoint`, `commerce-endpoint`, `x-api-key`, `Magento-Environment-Id`, store headers — are **authored as content nodes in AEM**, not committed to GitHub. The `paths.json` file in the repo maps content-tree paths to runtime JSON endpoints:

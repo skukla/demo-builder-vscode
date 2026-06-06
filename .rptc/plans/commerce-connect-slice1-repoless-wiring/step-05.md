@@ -1,4 +1,4 @@
-# Step 5: Content-Fork Backend Coordinates (inherit from upstream + manual override)
+# Step 5: Content-Satellite Backend Coordinates (inherit from upstream + manual override)
 
 > **2026-06-05 repivot reframe:** Decision D1 (inherit/seed primary + manual override secondary) is **unchanged** — coords are public, inheritable, no cross-org auth needed. **Strengthened** by the Adobe Merchandising API docs ("Authentication is not required" verbatim) — the cross-account read story is firmer than the original "URL + public keys" phrasing. **What changes under repoless:** there is no satellite-side `config.json` file to write to; the coords live in either (a) the upstream repo's `config.json` (Slice 1 — the Content SC's site reads it via the shared codebase by construction), or (b) authored as content nodes in AEM per the CitiSignal `configs`/`configs-stage`/`configs-dev` pattern (Slice 2+, multi-env story). Slice 1's mechanic is the simpler form: the Content SC's site shares code with the Commerce SC's upstream, so when the upstream's `config.json` is wired, both sites resolve the same coords automatically. The "manual override" path now means authoring a per-site config override via the Configuration Service or in the Content SC's own DA.live content — not editing a forked repo's `config.json`. The decision shape and the test categories survive; the destination changes.
 
@@ -7,17 +7,20 @@
 key + environment id) so it transacts — implementing **PM decision D1
 ("Both"), sharpened**:
 
-- **Primary path — inherit/seed:** the content fork reads its backend
+- **Primary path — inherit/seed:** the content satellite resolves its backend
   coordinates from the **upstream repo's `config.json`** (which the Commerce SC
   wired). These are **public storefront config** (served to every browser), not
-  secrets — so they travel safely with the forked code, and the sync engine
-  already **preserves `config.json`** across syncs.
+  secrets. Under repoless the satellite **shares the upstream's code by
+  construction** (via the Config Service `code` reference), so when the upstream's
+  `config.json` is wired both sites resolve the same coords automatically — no
+  copy, no fork, no sync engine. The seed is read once at create to pre-fill the
+  connect step.
 - **Secondary path — manual override / re-seed:** the connect step lets the
   Content SC paste/confirm the backend URL the Commerce SC gives them, and
   adjust store-view if the demo needs a specific one.
 
 **What this step deliberately does NOT do:** it does **not** make the content
-fork depend on the **authenticated `discoverStoreStructure`** flow cross-account.
+satellite depend on the **authenticated `discoverStoreStructure`** flow cross-account.
 That flow (admin token for PaaS; caller IMS token + a discovery service in the
 Commerce org for ACCS) is the **Commerce SC's same-account tool** for producing
 coordinates — not something the Content SC, in a different org, should require.
@@ -28,7 +31,7 @@ verification track as the spike (see Risk 3 / overview — "unverified live").
 - [ ] `configGenerator.ts` understood — `config.json` shape, the
   `{COMMERCE_ENDPOINT}/{STORE_VIEW_CODE}/{STORE_CODE}/{WEBSITE_CODE}/...`
   replacements, and that it **prefers a direct backend URL when no mesh is
-  deployed** (exactly the content-fork case)
+  deployed** (exactly the content-satellite case)
 - [ ] `GitHubFileOperations` (fetch a file from a repo) understood
 - [ ] Steps 1–4 complete
 
@@ -37,10 +40,10 @@ verification track as the spike (see Risk 3 / overview — "unverified live").
 ## Reuse map
 
 - **`configGenerator.generateConfigJson`** — unchanged; already falls back to a direct backend URL when no mesh (the content case).
-- **`GitHubFileOperations`** read — public read of the master `config.json` + marker (no auth).
+- **`GitHubFileOperations`** read — public read of the upstream `config.json` + marker (no auth).
 - **`demo-packages.json` `configDefaults`** — store codes (shared across both SCs; no handoff).
 - **`ConnectStoreStepContent`** — reuse the step; **suppress** the authenticated discovery affordance for the content flow.
-- **`settingsSerializer`** mapping pattern — map master `config.json` → component-config defaults.
+- **`settingsSerializer`** mapping pattern — map upstream `config.json` → component-config defaults.
 - **Net-new:** the `upstreamConfigSeed` / `resolveJoinLink` mapper only.
 
 ---
@@ -50,7 +53,7 @@ verification track as the spike (see Risk 3 / overview — "unverified live").
 ### Unit: `tests/.../upstreamConfigSeed.test.ts`
 - [ ] **Seeds coords from upstream `config.json`** — given a fetched upstream
   `config.json`, extracts endpoint + website/store/store-view (+ PaaS public key
-  / env id when present) into the content fork's component-config defaults
+  / env id when present) into the content satellite's component-config defaults
   (keys `configGenerator.ts` already consumes).
 - [ ] **Missing/partial upstream config** → returns empty defaults without
   throwing (Assumption A2); the manual path can fill them.
@@ -105,7 +108,7 @@ Seed-extraction unit tests + content connect-step integration tests fail first.
 ---
 
 ## Acceptance Criteria
-- [ ] Content fork's `config.json` carries the Commerce SC's coordinates, seeded
+- [ ] Content satellite's resolved config carries the Commerce SC's coordinates, seeded
   from upstream and editable via manual override.
 - [ ] Missing upstream config degrades gracefully to manual entry.
 - [ ] No authenticated discovery / admin-cred / cross-org IMS dependency in the

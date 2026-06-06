@@ -67,10 +67,10 @@ The architecture pivot to repoless **shrinks** the build:
 |---|---|---|
 | [storefront-topology](./storefront-topology.md) | **The authoritative architecture.** Repoless with per-org content sources, validation evidence inline, two-fork model in rejected alternatives. | **Current** (2026-06-05) |
 | [commerce-connection-kit](./commerce-connection-kit.md) | The commerce-backend connection detail, with the cross-account read claim strengthened by the Merchandising API "no auth required" finding. | Updated 2026-06-04; consistent with repoless |
-| [roadmap](./roadmap.md) | The build sequence. **Pending repivot** — the sync-engine line items should drop; config-as-content writer should be added. | **Pending** |
-| [synthesis-and-build-order](./synthesis-and-build-order.md) | Design → code mapping. **Pending repivot** — Slice 1 reuse map shrinks. | **Pending** |
+| [roadmap](./roadmap.md) | The build sequence. Repoless-canonical: sync-engine line items dropped; config-as-content writer added. | **Current** (repoless) |
+| [synthesis-and-build-order](./synthesis-and-build-order.md) | Design → code mapping. Repoless-canonical: Content-SC site creation = `ConfigurationService.registerSite` (no fork / no Code Sync App / no code-sync / no config-push). | **Current** (2026-06-06) |
 | [verify-aem-sites-spike](./verify-aem-sites-spike.md) | Original gating spike. **Closed** — answered by [CitiSignal One](https://github.com/roberttoddhoven/citisignal-one) existence. | **Closed** (kept for runbook reference if a fresh end-to-end is needed) |
-| [federated-two-instance-demos](./federated-two-instance-demos.md) | The two-SC / synced-copy delivery model. Still V1-central; the synced-copy mechanic is now Configuration Service, not fork-and-sync. | Carries pre-repivot framing in places |
+| [federated-two-instance-demos](./federated-two-instance-demos.md) | The two-SC / shared-codebase delivery model. The shared-codebase mechanic is **repoless** (Configuration Service satellites), not fork-and-sync. | **Updated 2026-06-06** (fork→satellite) |
 | [aem-sc-first-run](./aem-sc-first-run.md) | The content-SC-owned storefront flow. Still V1 model; the wizard shape simplifies under repoless. | Carries pre-repivot framing |
 | [ownership-vs-connection](./ownership-vs-connection.md) | The broader product direction (compositional demo builder). Repoless aligns directly with this direction. | Still valid; old "v1 decisions" superseded by storefront-topology |
 | [user-journeys](./user-journeys.md) | Step-by-step journeys. Reflects earlier framing. | Update later |
