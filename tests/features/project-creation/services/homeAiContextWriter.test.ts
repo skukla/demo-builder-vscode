@@ -158,6 +158,14 @@ describe('ensureHomeAiContext — AGENTS.md and CLAUDE.md pointers', () => {
         // the active project before acting on any project task (ask if null).
         expect(agents).toContain('get_current_project');
         expect(agents.toLowerCase()).toContain('before starting any project task');
+        // The "state the project" example must NOT bake in a real project name —
+        // some models parrot the example verbatim instead of calling the tool,
+        // and any literal name (e.g. "citisignal-b2b") becomes the answer to
+        // "which project am I in?" for any user who happens to have that name.
+        // Use a placeholder format ("<project-name>") so the example shows shape
+        // without seeding content.
+        expect(agents).not.toContain('citisignal-b2b');
+        expect(agents).toContain('<project-name>');
         // New single-home-Chat framing: edit any project directly (subdirectories
         // of this root) and sync via sync_storefront / the sync-changes skill.
         expect(agents.toLowerCase()).toContain('subdirector');
