@@ -1,0 +1,40 @@
+/**
+ * buildJoinModeState — seeds the gallery-less content-SC (repoless satellite) wizard
+ * from a resolved JoinDescriptor (Step 4c, increment 1).
+ *
+ * Asserts the content-flow discriminators: flow:'content', the shared upstream, and
+ * the inherited brand (selectedPackage). Inherited backend coords are seeded later
+ * (Connect-Commerce / Step 5), not here.
+ */
+
+import { buildJoinModeState } from '@/features/project-creation/ui/wizard/hooks/useWizardState';
+import type { JoinDescriptor } from '@/features/project-creation/services/resolveJoinLink';
+
+const descriptor: JoinDescriptor = {
+    upstream: { owner: 'commerce-sc', repo: 'citisignal-upstream' },
+    packageId: 'citisignal',
+    commerce: { endpoint: 'https://x/graphql', storeViewCode: 'citisignal_us' },
+};
+
+describe('buildJoinModeState', () => {
+    it('seeds the content flow + shared upstream + inherited brand', () => {
+        const state = buildJoinModeState('welcome', descriptor, undefined);
+
+        expect(state.flow).toBe('content');
+        expect(state.upstream).toEqual({ owner: 'commerce-sc', repo: 'citisignal-upstream' });
+        expect(state.selectedPackage).toBe('citisignal');
+        expect(state.wizardMode).toBe('create');
+        expect(state.currentStep).toBe('welcome');
+    });
+
+    it('does not seed backend coords into componentConfigs here (deferred to Connect-Commerce/Step 5)', () => {
+        const state = buildJoinModeState('welcome', descriptor, undefined);
+        expect(state.componentConfigs).toEqual({});
+    });
+
+    it('starts unauthenticated with an empty project name (joiner names their own site)', () => {
+        const state = buildJoinModeState('welcome', descriptor, undefined);
+        expect(state.projectName).toBe('');
+        expect(state.adobeAuth).toEqual({ isAuthenticated: false, isChecking: false });
+    });
+});
