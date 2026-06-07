@@ -2,7 +2,7 @@
   "name": "adobe-demo-builder",
   "displayName": "Adobe Demo Builder",
   "description": "Create and manage Adobe Commerce demos with ease",
-  "version": "1.0.0-beta.111",
+  "version": "1.0.0-beta.112",
   "publisher": "skukla",
   "engines": {
     "vscode": "^1.84.0"
