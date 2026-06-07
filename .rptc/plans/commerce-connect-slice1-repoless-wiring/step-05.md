@@ -45,62 +45,44 @@ verification track as the spike (see Risk 3 / overview — "unverified live").
 - **`GitHubFileOperations`** read — public read of the upstream `config.json` + marker (no auth).
 - **`demo-packages.json` `configDefaults`** — store codes (shared across both SCs; no handoff).
 - **`ConnectStoreStepContent`** — reuse the step; **suppress** the authenticated discovery affordance for the content flow.
-- **`settingsSerializer`** mapping pattern — map upstream `config.json` → component-config defaults.
-- **Net-new:** the `upstreamConfigSeed` / `resolveJoinLink` mapper only.
+- **`JoinDescriptor.commerce`** (already resolved from the marker in Step 2) — the coords source; no second fetch.
+- **`envVarKeys`** constants (`ACCS_GRAPHQL_ENDPOINT`, …) — reused so the seed uses the exact keys `configGenerator` reads (no magic strings).
+- **Net-new:** `seedComponentConfigsFromCommerce(commerce)` — one pure in-memory mapper (co-located in `resolveJoinLink.ts`).
 
 ---
 
+> **Reframed 2026-06-06:** the original design re-fetched the upstream `config.json` via a new `upstreamConfigSeed.ts`. That's **redundant** — Step 2's marker resolve already carries the coords on `JoinDescriptor.commerce`. So the seed is a pure in-memory mapper, no `GitHubFileOperations` fetch. The fetch-based tests/files below are superseded by the mapper form.
+
 ## Tests to Write First
 
-### Unit: `tests/.../upstreamConfigSeed.test.ts`
-- [ ] **Seeds coords from upstream `config.json`** — given a fetched upstream
-  `config.json`, extracts endpoint + website/store/store-view (+ PaaS public key
-  / env id when present) into the content satellite's component-config defaults
-  (keys `configGenerator.ts` already consumes).
-- [ ] **Missing/partial upstream config** → returns empty defaults without
-  throwing (Assumption A2); the manual path can fill them.
-- [ ] **Does NOT call any authenticated discovery / admin-token endpoint** —
-  the seed is a plain file read; assert no admin/IMS path is invoked.
+### Unit: `tests/.../seedComponentConfigsFromCommerce.test.ts` ✅ shipped
+- [x] **Maps full coords → `ACCS_*` keys** under the ACCS backend component (the keys `configGenerator` reads).
+- [x] **Partial inherit** → maps only the coords present; **no coords** → `{}` (manual entry fills them).
+- [x] **Pure mapper** — no network/fetch, no auth (the coords are already resolved).
 
-### Integration: `tests/.../content-connect-step.test.tsx`
-- [ ] **Content flow shows the connect step pre-filled** from the upstream seed.
-- [ ] **Manual override** — the user can edit the endpoint/store-view and those
-  values win over the seed.
-- [ ] **No backend deploy / no admin-cred prompt** appears for the content flow.
+### Integration (F5): `ConnectStoreStepContent` prefill
+- [ ] **Content flow shows the connect step pre-filled** from the seeded `componentConfigs`.
+- [ ] **Manual override** — the user can edit endpoint/store-view; their values win.
+- [ ] **No discover-store-structure affordance / admin-cred prompt** for the content flow.
 
 ---
 
 ## Files to Create/Modify
-- [ ] New helper: `src/features/eds/services/upstreamConfigSeed.ts` — fetch +
-  parse the upstream repo's `config.json` (via `GitHubFileOperations`) into
-  backend-coordinate defaults using the same keys `configGenerator.ts` reads
-- [ ] `src/features/project-creation/ui/components/ConnectStoreStepContent.tsx`
-  — for content flow, initialize fields from the seed; keep them editable
-  (manual override); **suppress the authenticated discovery affordance** for the
-  content flow (it's the commerce-SC tool)
-- [ ] `src/features/project-creation/handlers/executor.ts` — content flow passes
-  the seeded/confirmed coords into Phase 4 `configGenerator`
-- [ ] test files above
+- [x] `src/features/project-creation/services/resolveJoinLink.ts` — `seedComponentConfigsFromCommerce(commerce)`: maps `JoinDescriptor.commerce` → `componentConfigs` `ACCS_*` keys (reusing `envVarKeys` constants). ACCS-first (PaaS deferred — would need the marker to carry the backend type).
+- [x] `src/features/project-creation/ui/wizard/hooks/useWizardState.ts` — `buildJoinModeState` seeds `componentConfigs` from the mapper.
+- [ ] **(F5)** `src/features/project-creation/ui/components/ConnectStoreStepContent.tsx` — for content flow, prefill fields from the seeded `componentConfigs` (kept editable); **suppress the discovery affordance** (it's the commerce-SC tool).
+- [x] **No executor change needed** — Phase 4 `generateConfigJson` already consumes `project.componentConfigs` and falls back to a direct backend URL with no mesh (the content case).
 
 ---
 
 ## Implementation Details
 
-### RED
-Seed-extraction unit tests + content connect-step integration tests fail first.
+### RED → GREEN (shipped)
+- **Seed:** `seedComponentConfigsFromCommerce(commerce)` maps the already-resolved coords to the `componentConfigs` keys `configGenerator` consumes (`ACCS_GRAPHQL_ENDPOINT`, `ACCS_WEBSITE_CODE`, `ACCS_STORE_CODE`, `ACCS_STORE_VIEW_CODE`). No fetch, no auth.
+- **Write:** content flow reuses Phase 4 `generateConfigJson` unchanged — direct backend URL with no mesh.
 
-### GREEN
-- **Seed:** `upstreamConfigSeed.ts` fetches `config.json` from
-  `upstream.{owner,repo}` and maps endpoint/store fields to the same
-  `componentConfigs` keys `configGenerator.ts` consumes
-  (`*_GRAPHQL_ENDPOINT`, `*_WEBSITE_CODE`, `*_STORE_CODE`, `*_STORE_VIEW_CODE`,
-  and the public PaaS `x-api-key`/`Magento-Environment-Id` when present).
-- **UI:** in `ConnectStoreStepContent`, when `flow==='content'`, prefill from the
-  seed and keep fields editable; do not render the discover-store-structure
-  trigger for content.
-- **Write:** content flow reuses Phase 4 `generateConfigJson` unchanged — it
-  already falls back to a direct backend URL with no mesh, which is the content
-  case.
+### Remaining (F5)
+- **UI:** in `ConnectStoreStepContent`, prefill from the seeded `componentConfigs` and suppress the `discover-store-structure` trigger for content. The *data* is seeded; this is the *render* behavior (live-verifiable).
 
 ### REFACTOR
 - Keep the seed a pure file-read mapper (no network auth) — that's what makes it

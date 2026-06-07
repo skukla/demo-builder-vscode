@@ -5,13 +5,14 @@
 - [x] Planned
 - [x] **Approved (PM sign-off: 2026-06-04)**
 - [x] **Architecture repivoted 2026-06-05** — repoless replaces two-fork-sync as the locked plan; see backlog/storefront-topology.md and research/2026-06-05-architecture-validation.md
-- [x] In Progress (TDD Phase) — Steps 1, 3, 6, 7 fully complete; Steps 2, 4 partial; Step 5 not started
+- [x] In Progress (TDD Phase) — **headless backend complete.** Steps 1, 3, 6 complete; Step 4 backend complete (4c.1–2 done, 4c.3–4 F5-gated); Step 5 headless seed done (UI prefill F5-gated); Step 7 predicate done (UI routing F5-gated); Step 2 read side done (onConfirm handoff + marker write-side remain)
+- [ ] **F5 batch** (live extension) — 4c.3–4 (join-confirm→wizard handoff + gallery suppression), Step 2 onConfirm + marker finalization hook, Step 7 dashboard routing, Step 5 connect-step prefill render
 - [ ] Efficiency Review
 - [ ] Security Review
 - [ ] Complete
 
 **Created:** 2026-06-04
-**Last Updated:** 2026-06-05 (repivot reframe; implementation status preserved)
+**Last Updated:** 2026-06-06 (reconciliation: implementation status through Step 5; decisions & findings consolidated below)
 
 ---
 
@@ -77,6 +78,26 @@
 | D2 | Sync conflict strategy for a content fork? *(question predates the repivot)* | Default **`reset-to-upstream`**; keep `merge`-with-reset-fallback available; "promote to upstream" is the durable path. | Reliable by construction: content lives outside the repo and wiring files are preserved. | **Obsolete for satellites** under repoless — content sites read code natively; there is no satellite-side sync to drive a strategy on. The shipped `defaultSyncStrategyForProject` remains correct for commerce-flow projects (legacy and ongoing); content-flow projects under repoless never reach that code path. |
 | D3 | How much `isEds` predicate centralization in Slice 1? | **Minimal additive** — introduce the predicate helper, migrate only the content-flow entry sites, leave the other ~18 `isEds` sites. | Avoids mixing a 20-site refactor with new behavior. | **Unchanged** — the predicate works the same regardless of topology. |
 | D4 (2026-06-05; mechanic locked 2026-06-06) | How does the Content SC's wizard create their site? | **Dedicated repoless satellite path (Option B — the Adobe-native one).** A single `ConfigurationService.registerSite` → `PUT /config/{contentSC-org}/sites/{site}.json` with `code.owner = <commerceSC-org>`, `code.repo = <upstream>`, `content.source.url = <Content SC's DA.live URL>`. **No fork, no Code Sync App install, no code-sync verification, no GitHub config-push.** | One Admin API call is exactly Adobe's documented repoless mechanism — a satellite is a Config Service entry referencing upstream code, not a synced fork. Cross-org verified live 2026-06-05 (HTTP 201 + 45s propagation). Option A (reuse the full EDS pipeline with `repoInfo = upstream`) was rejected 2026-06-06: it would run App-install/code-sync/config-push against a repo the joiner doesn't own — all repoless anti-patterns. | New — the content satellite branch in `storefrontSetupPhases` hits this seam. |
+
+---
+
+## Decisions & findings since approval (reconciliation, 2026-06-06)
+
+Locks and implementation findings that post-date the 2026-06-04 approval, so the plan explains *why* the code looks the way it does:
+
+**Decisions (locked):**
+- **D4 → Option B (Adobe-native).** Satellite creation is a **dedicated short path** (`executeSatelliteSetup`), not a branch through the canonical EDS pipeline. Option A (`repoInfo = upstream` through the shared pipeline) was rejected — it would run App-install / code-sync / config-push against a repo the joiner doesn't own.
+- **Multisite alignment (ADR-003).** The satellite decision is a **general primitive** `resolveSiteCodeSource(input)` gated on the presence of an `upstream` (not on `flow`), so the same primitive serves the cross-org content satellite (now) and same-org repoless multisite (deferred). Touching `registerSite`/`buildSiteConfigParams` tripped ADR-003 trigger #4; we honored its disciplines (reuse `buildSiteConfigParams` unchanged) without building the per-env list/state. *(Code-review: kept as the documented multisite down-payment; doc right-sized.)*
+- **Step 5 simplification.** The planned `upstreamConfigSeed.ts` (re-fetch the upstream `config.json`) was **dropped as redundant** — Step 2's marker resolve already carries the coords on `JoinDescriptor.commerce`, so seeding is a pure in-memory mapper (`seedComponentConfigsFromCommerce`). ACCS-first.
+
+**Findings (surfaced while wiring):**
+- **Site identity ≠ code source.** A satellite's aem.live **site** (`daLiveOrg/daLiveSite`) is decoupled from its **code** (the upstream); the canonical pipeline conflates them (repo == site). This forced the `siteOrg/siteName` split in `executeEdsPipeline` (defaulting preserves canonical) so Helix targets the satellite's site while code reads target the upstream.
+- **`edsConfig.repoUrl` is double-duty** in the executor — both the local **clone source** *and* the Phase 5/5b **push/publish target**. For a satellite these diverge, so Phase 5 (config→GitHub) + Phase 5b (content) are gated off via an explicit `isContentFlow` guard (not a fragile "repoUrl empty" skip).
+- **Satellite branch placement.** It must run **before** the orchestrator's `githubOwner`/template validation — a joiner has neither on the happy path (Adobe-side auth only).
+- **Manifest persistence gap.** The writer + loader whitelists dropped `flow`/`upstream`; both fixed so a content project survives save+reload as content.
+
+**Known debt:**
+- **Marker write-side unwired** — `publishMasterMarkerForProject` / `writeMasterMarker` (Step 2) have 0 non-test callers. The read side is wired, but nothing writes `storefront-share.json` yet, so no real storefront is joinable. Pending the starter-side finalization hook (F5 batch), **not done**.
 
 ---
 
@@ -256,17 +277,16 @@ The novelty lives in the **sequence + the two new screens (paste-link, preview) 
 
 ## Next Actions
 
-**After plan approval:**
+**Headless backend is complete.** What's done and what remains:
 1. Step 1 — Project model: flow + upstream + predicates ✅
-2. Step 2 — Content-SC wizard entry (Join + paste-link UX) 🟡
+2. Step 2 — Join/resolve read side ✅; **onConfirm→wizard handoff + marker write-side** remain (F5)
 3. Step 3 — Flow-aware step filtering ✅
-4. Step 4 — Content satellite branch (one cross-org `ConfigurationService.registerSite`; no fork / no Code Sync App / no config-push) 🟡
-5. Step 5 — Content-fork backend coordinates (planned)
-6. Step 6 — ~~Upstream sync wiring + reset default~~ (shipped 2026-06-04; **dormant for content flow under repoless**; remains correct for commerce flow)
-7. Step 7 — Dashboard predicate (minimal additive) 🟡
-8. Quality gates (Efficiency + Security)
+4. Step 4 — Satellite creation ✅ backend (`resolveSiteCodeSource`, `executeSatelliteSetup`, site/code split, executor guards, manifest persistence); **4c.3–4 (join-confirm handoff + gallery suppression)** remain (F5)
+5. Step 5 — Backend-coords seed ✅ headless (`seedComponentConfigsFromCommerce`); **connect-step prefill render** remains (F5)
+6. Step 6 — ~~Upstream sync wiring + reset default~~ (shipped; **dormant for content** under repoless; correct for commerce) ✅
+7. Step 7 — Dashboard archetype predicate ✅; **dashboard UI routing** remains (F5)
 
-**First step:** `/rptc:tdd "@commerce-connect-slice1-repoless-wiring/"`
+**Remaining = the F5 batch** (live extension): the join-confirm→seeded-wizard handoff, gallery suppression, connect-step prefill render, dashboard routing, and the marker finalization hook (write-side). **Then** the Efficiency + Security quality gates → Complete.
 
 ---
 
