@@ -10,7 +10,11 @@
  */
 
 import { parseGitHubUrl } from '@/core/utils';
+import {
+    ACCS_GRAPHQL_ENDPOINT, ACCS_WEBSITE_CODE, ACCS_STORE_CODE, ACCS_STORE_VIEW_CODE,
+} from '@/features/components/config/envVarKeys';
 import type { Project } from '@/types/base';
+import type { ComponentConfigs } from '@/types/components';
 import { isRecord } from '@/types/typeGuards';
 
 /**
@@ -29,6 +33,27 @@ export interface MasterCommerceCoords {
     websiteCode?: string;
     storeCode?: string;
     storeViewCode?: string;
+}
+
+/** The backend component the content satellite inherits (Slice 1: ACCS-first). */
+const CONTENT_BACKEND_COMPONENT_ID = 'adobe-commerce-accs';
+
+/**
+ * Seed `componentConfigs` from a join descriptor's inherited commerce coords so the
+ * Connect-Commerce step is pre-filled and Phase 4 `configGenerator` produces the
+ * right `config.json` — without a second network read (the coords are already
+ * resolved from the marker). Slice 1 is ACCS-first, so coords map to the `ACCS_*`
+ * keys `configGenerator` reads. (PaaS would require the marker to carry the backend
+ * type; deferred.) Returns `{}` when nothing is inherited (manual entry fills it).
+ */
+export function seedComponentConfigsFromCommerce(commerce?: MasterCommerceCoords): ComponentConfigs {
+    if (!commerce) return {};
+    const cfg: Record<string, string> = {};
+    if (commerce.endpoint) cfg[ACCS_GRAPHQL_ENDPOINT] = commerce.endpoint;
+    if (commerce.websiteCode) cfg[ACCS_WEBSITE_CODE] = commerce.websiteCode;
+    if (commerce.storeCode) cfg[ACCS_STORE_CODE] = commerce.storeCode;
+    if (commerce.storeViewCode) cfg[ACCS_STORE_VIEW_CODE] = commerce.storeViewCode;
+    return Object.keys(cfg).length > 0 ? { [CONTENT_BACKEND_COMPONENT_ID]: cfg } : {};
 }
 
 /** The self-describing marker the starter writes into a shareable master repo. */

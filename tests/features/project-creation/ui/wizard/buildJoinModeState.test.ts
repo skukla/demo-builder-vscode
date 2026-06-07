@@ -41,8 +41,18 @@ describe('buildJoinModeState', () => {
         expect(state.edsConfig?.daLiveSite).toBeUndefined();
     });
 
-    it('does not seed backend coords into componentConfigs here (deferred to Connect-Commerce/Step 5)', () => {
+    it('seeds the inherited backend coords into componentConfigs (Step 5)', () => {
         const state = buildJoinModeState('welcome', descriptor, undefined);
+        expect(state.componentConfigs).toEqual({
+            'adobe-commerce-accs': {
+                ACCS_GRAPHQL_ENDPOINT: 'https://x/graphql',
+                ACCS_STORE_VIEW_CODE: 'citisignal_us',
+            },
+        });
+    });
+
+    it('leaves componentConfigs empty when the descriptor carries no coords', () => {
+        const state = buildJoinModeState('welcome', { ...descriptor, commerce: undefined }, undefined);
         expect(state.componentConfigs).toEqual({});
     });
 

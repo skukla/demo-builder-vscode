@@ -12,7 +12,7 @@ import {
 } from '../wizardHelpers';
 import { hasMeshInDependencies } from '@/core/constants';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
-import type { JoinDescriptor } from '@/features/project-creation/services/resolveJoinLink';
+import { seedComponentConfigsFromCommerce, type JoinDescriptor } from '@/features/project-creation/services/resolveJoinLink';
 import type { ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
 import type { Stack } from '@/types/stacks';
 import type { WizardState, WizardStep, ComponentSelection } from '@/types/webview';
@@ -255,7 +255,8 @@ export function buildJoinModeState(
         wizardMode: 'create',
         flow: 'content',
         upstream: joinDescriptor.upstream,
-        componentConfigs: {},
+        // Inherited backend coords (resolved from the marker) → pre-fills Connect-Commerce.
+        componentConfigs: seedComponentConfigsFromCommerce(joinDescriptor.commerce),
         adobeAuth: { isAuthenticated: false, isChecking: false },
         components: initializeComponentsFromImport(null, componentDefaults),
         adobeOrg: adobeContext.org,
