@@ -248,6 +248,7 @@ export function buildJoinModeState(
     componentDefaults: ComponentSelection | undefined,
 ): WizardState {
     const adobeContext = initializeAdobeContextFromImport(null);
+    const { owner, repo } = joinDescriptor.upstream;
     return {
         currentStep: firstStep,
         projectName: '',
@@ -261,6 +262,15 @@ export function buildJoinModeState(
         adobeProject: adobeContext.project,
         adobeWorkspace: adobeContext.workspace,
         selectedPackage: joinDescriptor.packageId,
+        // Seed the satellite's code source = the upstream. `repoUrl` is the upstream
+        // (the local clone source; executor Phase 5/5b stay off via the content-flow
+        // guard). The joiner fills daLiveOrg/daLiveSite in the DataSourceConfig step.
+        edsConfig: {
+            upstream: joinDescriptor.upstream,
+            repoUrl: `https://github.com/${owner}/${repo}`,
+            templateOwner: owner,
+            templateRepo: repo,
+        },
     };
 }
 

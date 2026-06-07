@@ -394,6 +394,11 @@ export interface EDSConfig {
         error?: string;
     };
 
+    // Repoless satellite: the existing upstream repo this site references as its code
+    // source (set by the content-SC Join flow). Drives the satellite short path
+    // (no fork, cross-org registration). See step-04.
+    upstream?: { owner: string; repo: string };
+
     // Template source configuration (from package storefront)
     /** Template repository owner (e.g., 'demo-system-stores') - for GitHub reset operations */
     templateOwner?: string;

@@ -27,6 +27,20 @@ describe('buildJoinModeState', () => {
         expect(state.currentStep).toBe('welcome');
     });
 
+    it('seeds edsConfig with the upstream as the code source + clone repoUrl', () => {
+        const state = buildJoinModeState('welcome', descriptor, undefined);
+        expect(state.edsConfig?.upstream).toEqual({ owner: 'commerce-sc', repo: 'citisignal-upstream' });
+        expect(state.edsConfig?.repoUrl).toBe('https://github.com/commerce-sc/citisignal-upstream');
+        expect(state.edsConfig?.templateOwner).toBe('commerce-sc');
+        expect(state.edsConfig?.templateRepo).toBe('citisignal-upstream');
+    });
+
+    it('leaves daLiveOrg/daLiveSite unset (the joiner fills their own DA.live)', () => {
+        const state = buildJoinModeState('welcome', descriptor, undefined);
+        expect(state.edsConfig?.daLiveOrg).toBeUndefined();
+        expect(state.edsConfig?.daLiveSite).toBeUndefined();
+    });
+
     it('does not seed backend coords into componentConfigs here (deferred to Connect-Commerce/Step 5)', () => {
         const state = buildJoinModeState('welcome', descriptor, undefined);
         expect(state.componentConfigs).toEqual({});

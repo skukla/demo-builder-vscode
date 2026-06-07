@@ -343,6 +343,19 @@ export async function executeStorefrontSetupPhases(
     const skipContent = !edsConfig.contentSource || (Boolean(edsConfig.selectedSite) && !wantsToResetContent);
     logger.info(`[Storefront Setup] Content: skipContent=${skipContent}, selectedSite=${Boolean(edsConfig.selectedSite)}, resetContent=${wantsToResetContent}`);
 
+    // Repoless satellite: when the site references an existing upstream repo's code,
+    // take the dedicated short path BEFORE the canonical GitHub-owner / template
+    // validation — a satellite needs neither (no fork, no GitHub auth on the happy
+    // path, no template; code comes from the upstream). See ADR-003 + step-04.
+    const codeSource = resolveSiteCodeSource({
+        githubOwner: edsConfig.githubOwner ?? '',
+        repoName: edsConfig.repoName ?? '',
+        upstream: edsConfig.upstream,
+    });
+    if (!codeSource.createRepo) {
+        return executeSatelliteSetup(context, edsConfig, services, codeSource);
+    }
+
     const githubOwner = edsConfig.githubOwner || edsConfig.githubAuth?.user?.login;
     if (!githubOwner) {
         logger.error('[Storefront Setup] GitHub owner not found. Config:', JSON.stringify({
@@ -359,16 +372,6 @@ export async function executeStorefrontSetupPhases(
             repoName: edsConfig.repoName, templateOwner, templateRepo,
         }));
         return { success: false, error: 'GitHub template not configured. Please check your stack configuration.' };
-    }
-
-    // Repoless satellite: when the site references an existing upstream repo's code,
-    // take the dedicated short path (no fork, no Code Sync, cross-org registration).
-    // The canonical pipeline below is left byte-identical. See ADR-003 + step-04.
-    const codeSource = resolveSiteCodeSource({
-        githubOwner, repoName: edsConfig.repoName, upstream: edsConfig.upstream,
-    });
-    if (!codeSource.createRepo) {
-        return executeSatelliteSetup(context, edsConfig, services, codeSource);
     }
 
     const repoInfo: RepoInfo = { repoOwner: githubOwner, repoName: edsConfig.repoName };

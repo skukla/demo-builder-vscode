@@ -208,6 +208,16 @@ describe('satellite path (upstream present) — repoless, no fork', () => {
         expect(mockPreviewCode).not.toHaveBeenCalled();
     });
 
+    it('registers even with NO githubOwner and NO template (joiner needs neither)', async () => {
+        // The Join flow has no GitHub auth on the happy path: githubOwner/templateOwner
+        // are absent. The satellite short path must run BEFORE the canonical validation.
+        const { githubOwner: _o, templateOwner: _t, templateRepo: _r, ...rest } = createSatelliteEdsConfig();
+        const result = await executeStorefrontSetupPhases(createMockContext(), rest, new AbortController().signal);
+        expect(result.success).toBe(true);
+        expect(mockRegisterSite).toHaveBeenCalledWith(expect.objectContaining({ codeOwner: 'commerce-sc' }));
+        expect(mockCreateFromTemplate).not.toHaveBeenCalled();
+    });
+
     it('populates content with the site/code split: Helix → satellite site, code → upstream', async () => {
         await executeStorefrontSetupPhases(createMockContext(), createSatelliteEdsConfig(), new AbortController().signal);
         expect(mockExecuteEdsPipeline).toHaveBeenCalledWith(
