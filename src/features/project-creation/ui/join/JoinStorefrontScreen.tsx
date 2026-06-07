@@ -1,7 +1,8 @@
-import { Button, View, Heading, Text, ProgressCircle } from '@adobe/react-spectrum';
+import { Button, View, Flex, Text, ProgressCircle } from '@adobe/react-spectrum';
 import React, { useState, useCallback } from 'react';
 import { FormField } from '@/core/ui/components/forms/FormField';
 import { PageHeader, PageFooter, SingleColumnLayout } from '@/core/ui/components/layout';
+import { SummaryCard, LabelValue } from '@/core/ui/components/wizard';
 import type { JoinDescriptor, ResolveJoinResult } from '@/features/project-creation/services/resolveJoinLink';
 
 export interface JoinStorefrontScreenProps {
@@ -85,17 +86,21 @@ export function JoinStorefrontScreen({ onResolve, onConfirm }: JoinStorefrontScr
                         {phase.status === 'error' && <Text>{phase.error}</Text>}
 
                         {phase.status === 'resolved' && (
-                            <View marginTop="size-300">
-                                <Heading level={3}>You&apos;re joining</Heading>
-                                <Text>Brand: {phase.descriptor.packageId}</Text>
-                                <Text>
-                                    Shared by: {phase.descriptor.upstream.owner}/{phase.descriptor.upstream.repo}
+                            <Flex direction="column" gap="size-200" marginTop="size-300">
+                                <SummaryCard title="You're joining">
+                                    <LabelValue label="Brand" value={phase.descriptor.packageId} />
+                                    <LabelValue
+                                        label="Shared by"
+                                        value={`${phase.descriptor.upstream.owner}/${phase.descriptor.upstream.repo}`}
+                                    />
+                                    {phase.descriptor.commerce?.endpoint && (
+                                        <LabelValue label="Backend" value={phase.descriptor.commerce.endpoint} />
+                                    )}
+                                </SummaryCard>
+                                <Text UNSAFE_className="description-text">
+                                    You&apos;ll author content in your own AEM / DA.live.
                                 </Text>
-                                {phase.descriptor.commerce?.endpoint && (
-                                    <Text>Backend: {phase.descriptor.commerce.endpoint}</Text>
-                                )}
-                                <Text>You&apos;ll author content in your own AEM / DA.live.</Text>
-                            </View>
+                            </Flex>
                         )}
                     </SingleColumnLayout>
                 </div>

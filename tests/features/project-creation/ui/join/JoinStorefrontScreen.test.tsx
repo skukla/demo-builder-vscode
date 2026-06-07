@@ -54,9 +54,10 @@ describe('JoinStorefrontScreen', () => {
         typeLink(link);
         fireEvent.click(screen.getByRole('button', { name: /continue/i }));
 
-        expect(await screen.findByText(/Brand:\s*citisignal/i)).toBeInTheDocument();
-        expect(screen.getByText(/commerce-sc/i)).toBeInTheDocument();
-        expect(screen.getByText(/example\.commerce\/graphql/i)).toBeInTheDocument();
+        // Facts render as label/value rows (SummaryCard + LabelValue)
+        expect(await screen.findByText('citisignal')).toBeInTheDocument();        // Brand value
+        expect(screen.getByText('commerce-sc/citisignal-master')).toBeInTheDocument(); // Shared by value
+        expect(screen.getByText('https://example.commerce/graphql')).toBeInTheDocument(); // Backend value
         expect(screen.getByRole('button', { name: /^join/i })).toBeInTheDocument();
     });
 

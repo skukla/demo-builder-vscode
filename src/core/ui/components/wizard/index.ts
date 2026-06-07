@@ -6,4 +6,5 @@
 
 export { ConfigurationSummary } from './ConfigurationSummary';
 export { StatusSection, type StatusSectionProps } from './StatusSection';
+export { SummaryCard, LabelValue } from './SummaryCard';
 export { getStepStatus } from './stepStatusHelpers';
