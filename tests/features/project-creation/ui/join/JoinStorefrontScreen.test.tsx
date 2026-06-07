@@ -27,6 +27,11 @@ function typeLink(value: string) {
 }
 
 describe('JoinStorefrontScreen', () => {
+    it('renders the shared page-header chrome (title)', () => {
+        render(<JoinStorefrontScreen onResolve={jest.fn()} onConfirm={jest.fn()} />);
+        expect(screen.getByRole('heading', { name: /join a shared storefront/i })).toBeInTheDocument();
+    });
+
     it('disables Continue until a link is entered', () => {
         render(<JoinStorefrontScreen onResolve={jest.fn()} onConfirm={jest.fn()} />);
         const continueBtn = screen.getByRole('button', { name: /continue/i });

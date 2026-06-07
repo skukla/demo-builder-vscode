@@ -11,6 +11,7 @@ import {
     handleGetProjects,
     handleSelectProject,
     handleCreateProject,
+    handleJoinStorefront,
     handleImportFromFile,
     handleCopyFromExisting,
     handleExportProject,
@@ -48,6 +49,9 @@ export const projectsListHandlers = defineHandlers({
 
     // Project creation handler
     'createProject': handleCreateProject,
+
+    // Content-SC "Join a shared storefront" entry (link-resolving flow)
+    'joinStorefront': handleJoinStorefront,
 
     // Settings import/export/copy handlers
     'importFromFile': handleImportFromFile,

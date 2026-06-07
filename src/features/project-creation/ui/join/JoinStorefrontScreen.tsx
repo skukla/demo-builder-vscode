@@ -1,6 +1,7 @@
 import { Button, View, Heading, Text, ProgressCircle } from '@adobe/react-spectrum';
 import React, { useState, useCallback } from 'react';
 import { FormField } from '@/core/ui/components/forms/FormField';
+import { PageHeader, PageFooter, SingleColumnLayout } from '@/core/ui/components/layout';
 import type { JoinDescriptor, ResolveJoinResult } from '@/features/project-creation/services/resolveJoinLink';
 
 export interface JoinStorefrontScreenProps {
@@ -21,7 +22,10 @@ type Phase =
  *
  * Backend-Call-on-Continue: pasting the link is UI-only; the resolve happens on
  * Continue with a loading indicator, then a confirmation preview before joining.
- * Prop-driven so it is testable without webview plumbing.
+ * Uses the shared page chrome (PageHeader + SingleColumnLayout + PageFooter) so it
+ * matches the other single-purpose webviews; the timeline lives in the seeded
+ * Create wizard this screen launches, not here. Prop-driven so it is testable
+ * without webview plumbing.
  */
 export function JoinStorefrontScreen({ onResolve, onConfirm }: JoinStorefrontScreenProps): React.ReactElement {
     const [link, setLink] = useState('');
@@ -43,46 +47,61 @@ export function JoinStorefrontScreen({ onResolve, onConfirm }: JoinStorefrontScr
 
     const canContinue = link.trim().length > 0 && phase.status !== 'resolving';
 
-    return (
-        <View>
-            <Heading level={2}>Join a shared storefront</Heading>
-            <Text>Paste the storefront link your Commerce partner shared with you.</Text>
-
-            <FormField
-                fieldKey="joinLink"
-                label="Storefront link"
-                type="url"
-                value={link}
-                onChange={handleLinkChange}
-                placeholder="https://github.com/owner/repo"
-            />
-
-            <Button variant="cta" onPress={handleContinue} isDisabled={!canContinue}>
+    const footerAction = phase.status === 'resolved'
+        ? (
+            <Button variant="accent" onPress={() => onConfirm(phase.descriptor)}>
+                Join storefront
+            </Button>
+        )
+        : (
+            <Button variant="accent" onPress={handleContinue} isDisabled={!canContinue}>
                 Continue
             </Button>
+        );
 
-            {phase.status === 'resolving' && (
-                <ProgressCircle aria-label="Resolving storefront" isIndeterminate />
-            )}
+    return (
+        <View width="100%" height="100%">
+            <div className="content-area">
+                <PageHeader
+                    title="Join a Shared Storefront"
+                    subtitle="Set up your own storefront from a link a Commerce partner shared with you."
+                />
 
-            {phase.status === 'error' && <Text>{phase.error}</Text>}
+                <div className="step-content-area">
+                    <SingleColumnLayout maxWidth="640px" padding="size-400">
+                        <FormField
+                            fieldKey="joinLink"
+                            label="Storefront link"
+                            type="url"
+                            value={link}
+                            onChange={handleLinkChange}
+                            placeholder="https://github.com/owner/repo"
+                        />
 
-            {phase.status === 'resolved' && (
-                <View>
-                    <Heading level={3}>You&apos;re joining</Heading>
-                    <Text>Brand: {phase.descriptor.packageId}</Text>
-                    <Text>
-                        Shared by: {phase.descriptor.upstream.owner}/{phase.descriptor.upstream.repo}
-                    </Text>
-                    {phase.descriptor.commerce?.endpoint && (
-                        <Text>Backend: {phase.descriptor.commerce.endpoint}</Text>
-                    )}
-                    <Text>You&apos;ll author content in your own AEM / DA.live.</Text>
-                    <Button variant="cta" onPress={() => onConfirm(phase.descriptor)}>
-                        Join storefront
-                    </Button>
-                </View>
-            )}
+                        {phase.status === 'resolving' && (
+                            <ProgressCircle aria-label="Resolving storefront" isIndeterminate />
+                        )}
+
+                        {phase.status === 'error' && <Text>{phase.error}</Text>}
+
+                        {phase.status === 'resolved' && (
+                            <View marginTop="size-300">
+                                <Heading level={3}>You&apos;re joining</Heading>
+                                <Text>Brand: {phase.descriptor.packageId}</Text>
+                                <Text>
+                                    Shared by: {phase.descriptor.upstream.owner}/{phase.descriptor.upstream.repo}
+                                </Text>
+                                {phase.descriptor.commerce?.endpoint && (
+                                    <Text>Backend: {phase.descriptor.commerce.endpoint}</Text>
+                                )}
+                                <Text>You&apos;ll author content in your own AEM / DA.live.</Text>
+                            </View>
+                        )}
+                    </SingleColumnLayout>
+                </div>
+
+                <PageFooter rightContent={footerAction} />
+            </div>
         </View>
     );
 }
