@@ -18,7 +18,9 @@
 
 ## Executive Summary
 
-**Feature:** The first buildable slice of the two-SC synced storefront — the **repoless wiring**, exercised with **DA.live content** so it ships independently of any AEM environment. This proves the architecture end-to-end; Slice 2 (AEM Sites as a content source) slots into the same plumbing.
+> **In plain English:** this slice adds a **"Join a shared storefront"** path to the tool. A second salesperson pastes a link to someone else's demo store; the tool stands up *their own* copy that **points at the shared store's code** (no copying), shows **their own content**, and uses the **shared backend** — so they get an identical-looking, working store with no code to maintain. We build and test all of this with **DA.live content** first (which the tool already supports), so it ships without needing a live AEM environment. *(New here? See the plain-English summary + glossary in [the feature overview](../../backlog/commerce-connect-aem-sc/overview.md#in-plain-english--what-are-we-building).)*
+
+**Feature:** The first buildable slice of the two-SC synced storefront — the **repoless wiring** (a "join, don't copy" path), exercised with **DA.live content** so it ships independently of any AEM environment. This proves the architecture end-to-end; Slice 2 (AEM Sites as a content source) slots into the same plumbing.
 
 **Design source of truth:**
 - `.rptc/backlog/commerce-connect-aem-sc/overview.md`

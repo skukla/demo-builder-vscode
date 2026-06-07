@@ -2,9 +2,11 @@
 
 **Filed:** 2026-06-04 · **Repivoted:** 2026-06-05 (repoless as the architecture). The **authoritative architecture** for this feature. Read after [overview](./overview.md).
 
+> **New to this?** Read the [plain-English summary + glossary](./overview.md#in-plain-english--what-are-we-building) first. In short: one salesperson owns the store's code; a second salesperson's store **points at that code instead of copying it**, while showing their own content. This doc is the precise version of that.
+
 ## The decision (locked 2026-06-05)
 
-**Repoless: one shared codebase, per-site content sources.**
+**Repoless: one shared codebase, per-site content sources.** (Plainly: one store owns the code; other stores point at it instead of copying it, each with their own content.)
 
 - **One shared code repo (the upstream)** owned by the Commerce SC. Both SCs' `aem.live` sites point at this repo as their code source. No forks. No sync engine.
 - **Each SC's `aem.live` site is its own (org, site) pair** with its own content source. The Content SC's site points at **their own AEM Sites**, in their own Adobe org — the non-negotiable point of the feature.
@@ -120,7 +122,12 @@ The joiner's only sign-in is **Adobe-side** (DA.live / IMS, for their own conten
 
 **One-time org prerequisite (not per-satellite):** each `aem.live` org must have a matching `github.com` org with at least one Code-Sync-synced "anchor" repo (the `kukla-demos/anchor` pattern from the live spike). This is org setup, separate from per-satellite creation.
 
-**Site identity ≠ code source (the principle that drives the wiring).** A satellite's aem.live **site** is `{contentSC-org}/{site}` (its own `daLiveOrg/daLiveSite`); its **code** is the upstream (`code.owner/repo`). The canonical case conflates them (repo == site), but a satellite splits them, and the split is load-bearing: **Helix operations** (preview/publish/purge) target the satellite's *site*, while **code/component reads** target the *upstream*. This is the deeper form of the canonical-site rule — "one site, one content source" still holds; the code source is just a reference that may point elsewhere. *(Implementation-validated 2026-06-06: the build threads a site-vs-code split through the content pipeline and gates the joiner's config-push off, since `repoUrl` doubles as the local clone source.)*
+**"Which store is this?" and "whose code does it show?" are two different questions — and keeping them straight drives the whole build.** For the *original* store these are the same answer. For a *joiner's* store they differ: the **store** is the joiner's own (their own name, their own account), but the **code it shows** belongs to the shared upstream. That distinction is load-bearing:
+
+- anything that **publishes or previews the store** (so people can see it) must point at the **joiner's own store**, but
+- anything that **reads the code or components** must point at the **shared upstream**.
+
+Cross these by accident and you'd publish to the wrong place — exactly the bug the wiring guards against. *(In the precise terms: the aem.live "site" is `{joiner-org}/{site}`, the code source is the upstream's `owner/repo`; Helix preview/publish target the site, code reads target the upstream. Implementation-validated 2026-06-06; the build also turns off the joiner's config-push, since the field that holds the upstream URL doubles as the joiner's local checkout source.)*
 
 > **Why this and not the alternative.** The rejected Option A reused the full EDS storefront-setup pipeline with the satellite's `repoInfo` pointed at the upstream. That would run the GitHub-App-install check, code-sync verification, and the `config.json`-push against a repo the joiner does **not** own — all anti-patterns under repoless. Option B mirrors Adobe's documented mechanism 1:1 ([aem.live/docs/repoless](https://www.aem.live/docs/repoless)); A re-skins the two-fork model repoless was meant to replace. Decision locked 2026-06-06.
 
