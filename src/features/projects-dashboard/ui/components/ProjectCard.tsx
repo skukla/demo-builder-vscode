@@ -24,7 +24,7 @@ import {
     getStorefrontStatusVariant,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
 import type { Project } from '@/types/base';
-import { isEdsProject } from '@/types/typeGuards';
+import { isEdsProject, getProjectArchetype } from '@/types/typeGuards';
 
 export interface ProjectCardProps {
     /** The project to display */
@@ -80,6 +80,10 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     );
 
     const isEds = isEdsProject(project);
+    // A content-flow project is a repoless satellite joined to a shared upstream;
+    // mark it "Shared" so it's distinguishable from a commerce storefront.
+    const isContentFlow = getProjectArchetype(project).ownership === 'content';
+    const upstreamLabel = project.upstream ? `${project.upstream.owner}/${project.upstream.repo}` : undefined;
     const port = getFrontendPort(project);
     // EDS projects use storefront status; non-EDS use demo running status
     const statusText = isEds ? getStorefrontStatusText(project) : getStatusText(project.status, port, false);
@@ -88,7 +92,8 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     const meshText = getMeshStatusText(project);
     const meshVariant = getMeshStatusVariant(project);
 
-    const ariaLabel = `${project.name}, ${statusText}${brandStackSummary ? `, ${brandStackSummary}` : ''}`;
+    const sharedSuffix = isContentFlow ? `, Shared${upstreamLabel ? ` from ${upstreamLabel}` : ''}` : '';
+    const ariaLabel = `${project.name}, ${statusText}${brandStackSummary ? `, ${brandStackSummary}` : ''}${sharedSuffix}`;
 
     return (
         <div
@@ -127,6 +132,16 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                     className="project-card-menu-button"
                 />
             </Flex>
+
+            {/* Shared badge — content-flow (joined satellite) projects only */}
+            {isContentFlow && (
+                <Text
+                    data-testid="project-card-shared-badge"
+                    UNSAFE_className="project-card-spectrum-shared-badge"
+                >
+                    {upstreamLabel ? `Shared from ${upstreamLabel}` : 'Shared storefront'}
+                </Text>
+            )}
 
             {/* Brand & Stack Summary */}
             {brandStackSummary && (

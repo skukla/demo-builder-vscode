@@ -2395,6 +2395,19 @@ button[class*="spectrum-Button"][disabled],
     flex: 1 !important;
 }
 
+/* "Shared" pill — content-flow (joined satellite) projects */
+.project-card-spectrum-shared-badge {
+    align-self: flex-start !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    color: var(--spectrum-global-color-blue-700) !important;
+    background: var(--spectrum-global-color-blue-100) !important;
+    border-radius: 4px !important;
+    padding: 2px 6px !important;
+}
+
 /* Typography - status gets wizard label treatment */
 .project-card-spectrum-status {
     font-size: 11px !important;

@@ -1,6 +1,9 @@
 # Step 7: Dashboard Predicate — Minimal-Additive `(product, ownership)` Migration
 
-**Status: 🟡 Predicate complete (2026-06-04).** ✅ `getProjectArchetype` in `typeGuards` (composes `getProjectFlow` + `isEdsStackId`) — 5/5 tests, lint/typecheck/SOP green. **Deferred (needs F5):** routing the content-flow dashboard render sites through the predicate (live UI confirmation).
+**Status: ✅ Predicate + minimal routing shipped (2026-06-07).** `getProjectArchetype` in `typeGuards` (composes `getProjectFlow` + `isEdsStackId`) — 5/5 tests. The content-flow entry sites are now wired (PM decision: **badge + hide upstream-mutating actions**):
+- **`ProjectCard`** (home grid) shows a "Shared from owner/repo" badge when `getProjectArchetype(project).ownership === 'content'`; commerce cards unchanged. Upstream also appended to the card aria-label.
+- **`ProjectDashboardScreen`** hides the two repo-mutating EDS actions — **Sync Storefront** + **Refresh Block Library** — for a content (satellite) project (it references the upstream's code but doesn't own that repo). Threaded a new `isContentFlow` prop: `showDashboard.getInitialData` computes `getProjectFlow(project) === 'content'` → `index.tsx` → screen, reusing ActionGrid's existing `handler && ` gates (no ActionGrid change).
+- The other ~18 `isEds` sites left untouched (minimal-additive, PM decision D3). 4 new tests (2 card badge, 2 action-hiding incl. commerce regression) + 1019 dashboard/predicate regression + tsc/eslint/compile green. **F5: confirm the badge renders + the two actions are absent on a joined project.**
 
 > **2026-06-05 repivot reframe:** Survives unchanged under repoless. The predicate composes `getProjectFlow` (topology-neutral, see Step 1) with `isEdsStackId` (stack-shape, not topology). A content-flow EDS project renders the same dashboard whether it was created via fork-and-sync (old) or Configuration Service satellite (new) — same archetype, same UI surfaces. No code change required. The deferred F5 routing work proceeds as planned.
 

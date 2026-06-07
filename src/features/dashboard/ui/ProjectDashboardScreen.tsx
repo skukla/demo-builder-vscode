@@ -40,6 +40,12 @@ interface ProjectDashboardScreenProps {
     stackName?: string;
     /** Whether this is an EDS project (always published, no start/stop) */
     isEds?: boolean;
+    /**
+     * Whether this is a content-flow (repoless satellite) project. A satellite
+     * references the upstream's code but doesn't own that repo, so repo-mutating
+     * EDS actions (Sync Storefront, Refresh Block Library) are hidden.
+     */
+    isContentFlow?: boolean;
     /** Live URL for EDS projects */
     edsLiveUrl?: string;
     /** DA.live authoring URL for EDS projects */
@@ -61,7 +67,7 @@ interface ProjectDashboardScreenProps {
  *
  * @param props - Component props
  */
-export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName, isEds = false, edsLiveUrl, edsDaLiveUrl, initialMeshStatus, initialEdsStorefrontStatus }: ProjectDashboardScreenProps) {
+export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName, isEds = false, isContentFlow = false, edsLiveUrl, edsDaLiveUrl, initialMeshStatus, initialEdsStorefrontStatus }: ProjectDashboardScreenProps) {
     // Capture isEds on first render and never change it (project type doesn't change)
     const isEdsRef = useRef(isEds);
     if (isEds && !isEdsRef.current) {
@@ -282,8 +288,8 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                             handleOpenDaLive={handleOpenDaLive}
                             handleViewLogs={handleViewLogs}
                             handleDeployMesh={handleDeployMesh}
-                            handleSyncStorefront={handleSyncStorefront}
-                            handleRefreshBlockLibrary={isEdsStable ? handleRefreshBlockLibrary : undefined}
+                            handleSyncStorefront={isContentFlow ? undefined : handleSyncStorefront}
+                            handleRefreshBlockLibrary={isEdsStable && !isContentFlow ? handleRefreshBlockLibrary : undefined}
                             handleConfigure={handleConfigure}
                             handleViewComponents={handleViewComponents}
                             handleOpenDevConsole={handleOpenDevConsole}
