@@ -2,11 +2,11 @@
 
 **Filed:** 2026-06-04 · **Repivoted:** 2026-06-05 (repoless as the architecture). The **authoritative architecture** for this feature. Read after [overview](./overview.md).
 
-> **New to this?** Read the [plain-English summary + glossary](./overview.md#in-plain-english--what-are-we-building) first. In short: one salesperson owns the store's code; a second salesperson's store **points at that code instead of copying it**, while showing their own content. This doc is the precise version of that.
+> **New to this?** Read the [plain-English summary + glossary](./overview.md#in-plain-english--what-are-we-building) first. In short: one salesperson owns the **storefront code** (the website); a second salesperson's **storefront points at that code instead of copying it**, while showing their own content. Both check out through one shared **backend store**. This doc is the precise version of that.
 
 ## The decision (locked 2026-06-05)
 
-**Repoless: one shared codebase, per-site content sources.** (Plainly: one store owns the code; other stores point at it instead of copying it, each with their own content.)
+**Repoless: one shared codebase, per-site content sources.** (Plainly: one storefront owns the code; other storefronts point at it instead of copying it, each with their own content — all sharing one backend store.)
 
 - **One shared code repo (the upstream)** owned by the Commerce SC. Both SCs' `aem.live` sites point at this repo as their code source. No forks. No sync engine.
 - **Each SC's `aem.live` site is its own (org, site) pair** with its own content source. The Content SC's site points at **their own AEM Sites**, in their own Adobe org — the non-negotiable point of the feature.

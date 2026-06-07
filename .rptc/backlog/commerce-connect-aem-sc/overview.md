@@ -6,29 +6,36 @@ This file is the front door — read it first. *Part of the [compositional Adobe
 
 ## In plain English — what are we building?
 
-Two Adobe salespeople want to run **one demo store together**, but each works in their **own Adobe account**:
+First, two words that are easy to mix up:
 
-- One owns the **store's engine and code** — products, cart, checkout, and how the site looks.
-- The other wants to show **their own content** — their own pages — on that same store. Same look, same checkout, but their content, in their own account.
+- a **store** (or **backend**) = the commerce engine — products, cart, checkout. There's **one** of these, and it's **shared**.
+- a **storefront** (the **frontend**) = the *website* shoppers browse. There can be **several**, each with its own content, all talking to the one shared store.
 
-**The hard part:** normally the second person would have to **copy the whole store's code** into their account and keep the two copies in sync forever. That's fragile and high-maintenance.
+Two Adobe salespeople want to run **one demo storefront together**, but each works in their **own Adobe account**:
 
-**The trick:** Adobe has a feature that lets a second store **point at the first store's code instead of copying it**. So the second person gets a store that looks and behaves identically and shares the engine — but shows their own content, and they own **zero code**.
+- One owns the **shared store (backend)** *and* the **storefront's code** — products/cart/checkout, plus how the website looks.
+- The other wants to show **their own content** — their own pages — on a website that looks identical and checks out through that same shared store.
 
-**What we're adding to the tool:** a **"Join a shared storefront"** button. The second person pastes a link to the shared store; the tool reads the few details it needs and stands up *their* store — pointing at the shared code, wired to their own content, using the shared backend — with nothing for them to copy or maintain.
+**The hard part:** normally the second person would have to **copy the whole storefront's code** into their account and keep the two copies in sync forever. That's fragile and high-maintenance.
+
+**The trick:** Adobe has a feature that lets a second storefront **point at the first one's code instead of copying it**. So the second person gets a website that looks and behaves identically and shares the backend store — but shows their own content, and they own **zero code**.
+
+**What we're adding to the tool:** a **"Join a shared storefront"** button. The second person pastes a link to the shared storefront; the tool reads the few details it needs and stands up *their* storefront — pointing at the shared code, wired to their own content, using the shared backend store — with nothing for them to copy or maintain.
 
 **The words we use (and what they plainly mean):**
 
 | Term | Plain meaning |
 |---|---|
-| **Upstream** | The shared code everyone points at — the first person's store code. |
-| **Canonical store** | The *original* store, the one that actually **owns** the code. |
-| **Satellite** | A store that **points at** the shared code instead of owning a copy — the joiner's store. |
-| **Repoless** | Adobe's feature that makes "point at it, don't copy it" possible. |
-| **Commerce SC / Content SC** | The two salespeople: one brings the store engine, the other brings their own content. |
-| **Flow** | Which kind of project you're making: `commerce` (you own the store) or `content` (you're joining someone else's). |
+| **Store / backend** | The shared commerce engine — products, cart, checkout. One of these; both storefronts use it. |
+| **Storefront / frontend** | A *website* shoppers browse (the `eds-storefront`). Each SC gets their own; both point at the same code + backend. |
+| **Upstream** | The shared storefront **code** everyone points at (the Commerce SC's). |
+| **Canonical storefront** | The *original* storefront — the one that actually **owns** the code. |
+| **Satellite** | A storefront that **points at** the shared code instead of owning a copy — the joiner's website. |
+| **Repoless** | Adobe's feature that makes "point at the code, don't copy it" possible. |
+| **Commerce SC / Content SC** | The two salespeople: one brings the backend store + the storefront code, the other brings their own content. |
+| **Flow** | Which kind of project you're making: `commerce` (you own the storefront) or `content` (you're joining someone else's). |
 
-So when a doc says *"the canonical-site rule,"* it just means: **Adobe requires exactly one store to own the code; every other store points at it.**
+So when a doc says *"the canonical-site rule,"* it just means: **Adobe requires exactly one storefront to own the code; every other storefront points at it.**
 
 > **2026-06-05 repivot.** Earlier drafts locked the two-fork-sync model. Post-research investigation surfaced Adobe's **repoless** capability as a first-class alternative; a live cross-org test confirmed it works at runtime. The architecture flipped: one shared code repo, per-site content sources via Configuration Service, no forks. The [storefront-topology](./storefront-topology.md) doc carries the new locked plan with validation evidence. Other docs in this folder still carry some of the older framing — this overview is the current source of truth; the doc table below flags which need cascading updates.
 
