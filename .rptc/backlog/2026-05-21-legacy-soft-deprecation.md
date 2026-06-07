@@ -218,3 +218,94 @@ snapshot, then execute Batches L1 through L5 sequentially. Commit
 per batch. Standing rule: no soft deprecation — delete outright or
 migrate-then-delete."
 ```
+
+---
+
+## Cycle-4 completion status (2026-05-31)
+
+**Status: substantially complete.** The cleanly-removable Category-B surface is
+gone. Two items were deliberately deferred (caller migrations larger than the
+batch boundary), and a short list of clean follow-ups remains for a future
+cycle. Everything below reflects state on `develop` after PR #8 merged
+(merge commit `8144d59`).
+
+### Done & merged to `develop`
+
+Delivered across two stacked PRs, both merged:
+
+- **PR #6 (baseline-cleanup)** — installed CI on `develop` and landed the
+  Node-18 compatibility fixes that the cleanup depended on:
+  - `.github/workflows/ci.yml` (tsc + eslint + jest on Node 18, no path
+    filter) + branch protection now enforces the checks on every PR.
+  - `crypto.getRandomValues` → `crypto.randomBytes` in `githubHelpers.ts` /
+    `githubOAuthService.ts` (Node 18 ships no global `crypto`).
+- **PR #8 (soft-deprecation, re-derived on `develop`)** — 16 cleanup commits:
+  - **L1** zero-caller deletions: `getProjectDirectory`,
+    `getWebviewHTMLWithBundles` alias, 3 unused `WizardStep` IDs,
+    `formatElapsedTime` re-export path.
+  - **L2** WizardStep rename pass (StepLogger `adobe-setup` → `adobe-auth`).
+  - **L3.1** `WizardState.editMode`/`editProjectPath`/`editOriginalName` →
+    `wizardMode`. **L3.2** `RawComponentRegistry.components` → v3.0 sections.
+    **L3.4** `existingRepoVerified` field dropped.
+  - **L4** deprecated-API deletions: `resetViewModeOverride`,
+    `componentHasEnvVars`, `HandlerRegistryMap`, `DebugLogger.toggle()`,
+    `createBundleUris`/`BundleUris`, `resetLogsViewState`, `ErrorDisplay`,
+    empty `webviewHTMLBuilder` stub.
+  - **L5** historical-architecture comment trims.
+
+Verification at re-derive time (Node 18): tsc 0 errors, eslint 0, full jest
+suite green (≈8490 tests).
+
+### Previously-deferred items — NOW DONE (2026-05-31)
+
+Both items deferred at the #9 status snapshot have since been migrated and
+merged to `develop`:
+
+| Item | Location | Resolution |
+|---|---|---|
+| **L3.3** `ComponentInstance.endpoint` → `meshState.endpoint` | `src/types/base.ts` | **Done — PR #11.** Audited: the field was never written by current code (deployment writes only `meshState.endpoint`); all 7 reads were back-compat fallbacks. Per cycle decision, dropped legacy support outright (no migration shim) — pre-`meshState` files show a blank endpoint until next redeploy; "deployed" status keys off `meshState.envVars`, so status is unaffected. Field + fallbacks deleted, tests re-pointed to `meshState`. |
+| **L4c** `TokenManager.getAccessToken()` → `inspectToken()` | `src/features/authentication/services/tokenManager.ts` | **Done — PR #10.** Migrated all 5 callers to `(await tokenManager.inspectToken()).token`, updated the local `AuthManagerLike` interface + 3 tests, deleted the method. |
+
+Verification (Node 18) for both: tsc 0, eslint 0 errors, full jest suite green.
+
+### Remaining clean follow-ups
+
+In progress this cycle (each researched → implemented → PR'd separately):
+
+- **Pre-existing lint warnings** (15: 0 errors) — complexity/max-depth/non-null
+  in the EDS service layer + oversized test files. Quality only, no behavior
+  change. *(follow-up 1)*
+- **Mesh back-compat exports refactor** — `features/mesh/handlers/index.ts`
+  individual re-exports + `stalenessDetector.ts` back-compat exports/static
+  method. Mechanical; no behavior change. *(follow-up 2)*
+- **`ComponentHandler` untangle** — `componentHandler.ts:8` is `@deprecated`
+  but still wired into live message handling; needs a routing untangle before
+  deletion. *(follow-up 3)*
+
+Not yet scheduled:
+
+- **`demoPackageLoader` test seam** — finish the seam-injection started in
+  `edsResetParams.ts` so package-config tests inject data at the boundary
+  rather than mocking the leaf module (per `tests/README.md` standard).
+
+### Category-A kept (verified NOT soft deprecation — do not remove)
+
+- `src/features/project-creation/helpers/envFileGenerator.ts:52` — points at
+  `ProjectSetupContext`; the generator is still an active code path.
+- `src/features/project-creation/ui/steps/ProjectCreationStep.tsx:459`
+  `checkMeshAccess` — internal-only alias delegating to `runPreFlightChecks`;
+  zero external callers, harmless.
+- All 2026-05-21 Category-A entries above (stateManager/stepLogger/typeGuards
+  migration paths, spectrumTokens polymorphism, Helix/fstab external-system
+  comments) remain legitimate.
+
+`componentHandler.ts` was previously listed here as "Category-A-tangled"; it is
+now an active follow-up (#3 above) to untangle-then-delete, not a permanent keep.
+
+### Net surface
+
+With L3.3 and L4c merged, `@deprecated` in `src/` is down to **3**: the
+internal `ProjectCreationStep.checkMeshAccess` alias, `envFileGenerator`
+(active path, Category-A), and `componentHandler` (scheduled for untangle in
+follow-up #3). Every removable Category-B soft-deprecation from the 2026-05-21
+audit has now been deleted or migrated-then-deleted.

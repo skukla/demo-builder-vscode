@@ -8,6 +8,13 @@
  * - CitiSignal content copy workflow
  *
  * Extracted from DaLiveService for better modularity and testability.
+ *
+ * IMPORTANT — vscode-free invariant: this module MUST NOT import `vscode`.
+ * The standalone MCP server (`src/mcp-server.ts`) constructs DaLiveContentOperations
+ * at process start. The MCP server runs in a separate Node process WITHOUT the
+ * vscode API; pulling `vscode` here (directly or transitively) would crash the
+ * server on startup. Mirrors the same constraint already enforced on
+ * `storefrontSyncService.ts` and `helixApiClient.ts`.
  */
 
 import * as fs from 'fs';
@@ -91,7 +98,7 @@ export interface TokenProvider {
  * This matches the shape of AuthenticationService.getTokenManager().
  */
 interface TokenManager {
-    getAccessToken(): Promise<string | undefined>;
+    inspectToken(): Promise<{ valid: boolean; expiresIn: number; token?: string }>;
 }
 
 interface AuthManagerLike {
@@ -118,7 +125,7 @@ export function createDaLiveTokenProvider(authManager?: AuthManagerLike | null):
 
     return {
         getAccessToken: async () => {
-            const token = await authManager.getTokenManager().getAccessToken();
+            const token = (await authManager.getTokenManager().inspectToken()).token;
             return token ?? null;
         },
     };
@@ -901,6 +908,246 @@ export class DaLiveContentOperations {
     }
 
     /**
+     * Append a single block to the `.da/library/blocks.json` sheet (non-destructive).
+     *
+     * Sibling to the destructive `createBlockLibrary` flow: this method preserves
+     * existing rows via a read-merge-rewrite cycle and is safe to call repeatedly
+     * (e.g., from the AI promotion path). It never calls `deleteSource`.
+     *
+     * Flow:
+     *   1. GET `.da/library/blocks.json` (404 → start with empty rows).
+     *   2. If a row with `name === title` already exists, return
+     *      `{ status: 'skipped-duplicate' }` without writing.
+     *   3. Otherwise append `{ name: title, path: content.da.live/<org>/<site>/.da/library/blocks/<blockId> }`
+     *      and rewrite via `createJsonSpreadsheet` with `overwrite: true`.
+     *   4. Re-invoke `updateSiteConfig` with the `"Blocks"` section so the library
+     *      registration is present. The section title MUST be exactly "Blocks" —
+     *      DA.live's library UI only renders block lists for that exact name.
+     *
+     * @param org - Destination organization
+     * @param site - Destination site name
+     * @param block - Block descriptor `{ blockId, title }`
+     * @returns Status of the sheet operation and whether the library section
+     *          was registered in site config.
+     * @throws Propagates non-404 HTTP errors from the initial GET without writing.
+     */
+    async appendBlockToLibrary(
+        org: string,
+        site: string,
+        block: { blockId: string; title: string },
+    ): Promise<{ status: 'created' | 'appended' | 'skipped-duplicate'; siteConfigRegistered: boolean }> {
+        const token = await this.getImsToken();
+        const sheetPath = '.da/library/blocks.json';
+        const sheetUrl = `${DA_LIVE_BASE_URL}/source/${org}/${site}/${sheetPath}`;
+
+        // Step 1: read existing rows. 404 → empty; other non-OK → throw.
+        const existingRows = await this.readBlockLibraryRows(sheetUrl, token);
+        const sheetExisted = existingRows !== null;
+        const rows = existingRows ?? [];
+
+        // Step 2: idempotency check.
+        if (rows.some(r => r.name === block.title)) {
+            // Still re-register the site config — caller may be repairing a config
+            // drift even when the row already exists.
+            const configRegistered = await this.registerBlocksLibrarySection(org, site);
+            return { status: 'skipped-duplicate', siteConfigRegistered: configRegistered };
+        }
+
+        // Step 3: append and rewrite. `createJsonSpreadsheet` writes with
+        // `overwrite: true`, so the read-merge-rewrite cycle preserves all
+        // pre-existing rows.
+        const newRow = {
+            name: block.title,
+            path: `https://content.da.live/${org}/${site}/.da/library/blocks/${block.blockId}`,
+        };
+        const mergedRows = [...rows, newRow];
+        const writeResult = await this.createJsonSpreadsheet(
+            org,
+            site,
+            '.da/library/blocks',
+            ['name', 'path'],
+            mergedRows,
+            { overwrite: true },
+        );
+        if (!writeResult.success) {
+            throw new Error(`Failed to write block library sheet: ${writeResult.error ?? 'unknown error'}`);
+        }
+
+        // Step 4: register the "Blocks" section (idempotent on DA.live's side).
+        const configRegistered = await this.registerBlocksLibrarySection(org, site);
+
+        return {
+            status: sheetExisted ? 'appended' : 'created',
+            siteConfigRegistered: configRegistered,
+        };
+    }
+
+    /**
+     * Remove a single block from the DA.live authoring library (inverse of
+     * {@link appendBlockToLibrary}). Idempotent — never throws on
+     * already-absent state.
+     *
+     * Reverses exactly two library artifacts:
+     *   1. **Doc page** — `deleteSource` on `.da/library/blocks/<blockId>.html`
+     *      (the same path {@link upsertBlockDocPage} writes). Returns
+     *      `'deleted'` when a page was present and removed, `'absent'` when it
+     *      was already gone, or `'failed'` when the delete reported an error.
+     *   2. **Sheet row** — reads `.da/library/blocks.json`, filters OUT the row
+     *      whose `path` ends with `/.da/library/blocks/<blockId>` (matched by
+     *      blockId via the path, NOT by title — the caller only has blockId). If
+     *      a row was removed, rewrites the sheet via `createJsonSpreadsheet`
+     *      with `overwrite: true` (remaining rows, possibly empty) → `'removed'`.
+     *      If no matching row, or the sheet is missing (404), the sheet is left
+     *      untouched → `'absent'`.
+     *
+     * Does NOT delete the block's source files in `blocks/<blockId>/` — that is
+     * the agent's responsibility (driven by the remove-custom-block skill). It
+     * also does not touch `component-definition.json` (the MCP handler does).
+     *
+     * @param org   - DA.live organization
+     * @param site  - DA.live site
+     * @param block - Block descriptor `{ blockId }`
+     * @returns Per-artifact status `{ docPage, sheet }`.
+     */
+    async removeBlockFromLibrary(
+        org: string,
+        site: string,
+        block: { blockId: string },
+    ): Promise<{ docPage: 'deleted' | 'absent' | 'failed'; sheet: 'removed' | 'absent' }> {
+        const docPage = await this.deleteBlockDocPage(org, site, block.blockId);
+        const sheet = await this.removeBlockLibraryRow(org, site, block.blockId);
+        return { docPage, sheet };
+    }
+
+    /**
+     * Delete the doc page for a block. Probes existence first so the result can
+     * distinguish `'deleted'` (a page was there) from `'absent'` (already gone);
+     * `'failed'` only when `deleteSource` itself reports an error. The end state
+     * is identical for deleted/absent — the distinction is purely informational.
+     */
+    private async deleteBlockDocPage(
+        org: string,
+        site: string,
+        blockId: string,
+    ): Promise<'deleted' | 'absent' | 'failed'> {
+        const docPath = `.da/library/blocks/${blockId}.html`;
+        const existed = await this.sourceExists(org, site, docPath);
+        const result = await this.deleteSource(org, site, docPath);
+        if (!result.success) {
+            return 'failed';
+        }
+        return existed ? 'deleted' : 'absent';
+    }
+
+    /**
+     * Best-effort existence probe for a DA.live source path. Returns `false`
+     * on 404 or any error (used only to pick a status label, never to gate the
+     * delete itself).
+     */
+    private async sourceExists(org: string, site: string, path: string): Promise<boolean> {
+        try {
+            const token = await this.getImsToken();
+            const normalized = normalizePath(path);
+            const url = `${DA_LIVE_BASE_URL}/source/${org}/${site}/${normalized}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: { Authorization: `Bearer ${token}` },
+                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+            });
+            return response.ok;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Remove the block's row from `.da/library/blocks.json` and rewrite the
+     * sheet with the remaining rows. Matches the row by blockId via its `path`
+     * (the caller has no title). 404 sheet or no matching row → `'absent'`.
+     */
+    private async removeBlockLibraryRow(
+        org: string,
+        site: string,
+        blockId: string,
+    ): Promise<'removed' | 'absent'> {
+        const token = await this.getImsToken();
+        const sheetPath = '.da/library/blocks.json';
+        const sheetUrl = `${DA_LIVE_BASE_URL}/source/${org}/${site}/${sheetPath}`;
+
+        const existingRows = await this.readBlockLibraryRows(sheetUrl, token);
+        if (existingRows === null) {
+            return 'absent'; // sheet not present (404)
+        }
+
+        const suffix = `/.da/library/blocks/${blockId}`;
+        const remaining = existingRows.filter(
+            r => !(typeof r.path === 'string' && r.path.endsWith(suffix)),
+        );
+        if (remaining.length === existingRows.length) {
+            return 'absent'; // no matching row — nothing to rewrite
+        }
+
+        const writeResult = await this.createJsonSpreadsheet(
+            org,
+            site,
+            '.da/library/blocks',
+            ['name', 'path'],
+            remaining,
+            { overwrite: true },
+        );
+        if (!writeResult.success) {
+            throw new Error(`Failed to rewrite block library sheet: ${writeResult.error ?? 'unknown error'}`);
+        }
+        return 'removed';
+    }
+
+    /**
+     * Read the current `.da/library/blocks.json` sheet rows.
+     *
+     * Returns `null` when the sheet is missing (HTTP 404). Throws for any other
+     * non-OK response so the caller does not silently overwrite a sheet it
+     * cannot read.
+     */
+    private async readBlockLibraryRows(
+        sheetUrl: string,
+        token: string,
+    ): Promise<Array<Record<string, string>> | null> {
+        const response = await this.fetchWithRetry(sheetUrl, {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.status === 404) return null;
+        if (!response.ok) {
+            throw this.createErrorFromResponse(response, 'read block library sheet');
+        }
+        const sheet = await response.json() as {
+            data?: { data?: Array<Record<string, string>> };
+        };
+        return sheet?.data?.data ?? [];
+    }
+
+    /**
+     * Register (or re-register) the "Blocks" library section in site config.
+     *
+     * Returns `true` on success, `false` on a non-fatal failure (logged but not
+     * thrown — the sheet write has already succeeded and the caller may still
+     * be useful with a stale config).
+     */
+    private async registerBlocksLibrarySection(org: string, site: string): Promise<boolean> {
+        const result = await this.updateSiteConfig(org, site, [
+            {
+                title: 'Blocks',
+                path: `https://content.da.live/${org}/${site}/.da/library/blocks.json`,
+            },
+        ]);
+        if (!result.success) {
+            this.logger.warn(`[DA.live] Failed to register Blocks library section: ${result.error}`);
+            return false;
+        }
+        return true;
+    }
+
+    /**
      * Create block library configuration in DA.live
      *
      * Creates a single "Blocks" spreadsheet at /.da/library/blocks.json and
@@ -1003,6 +1250,51 @@ export class DaLiveContentOperations {
     }
 
     /**
+     * Upsert a single block's documentation page — always writes, overwriting
+     * any existing page at `.da/library/blocks/<blockId>.html`.
+     *
+     * Use this from the `promote_block_to_library` MCP flow where the AI may
+     * iterate on the variant HTML and expects each call to refresh the rendered
+     * preview. Contrast with {@link ensureBlockDocPages} which preserves
+     * existing pages.
+     *
+     * Wraps `exampleHtml` in the DA.live-expected document structure
+     * (`<body><header/><main><div>{html}</div></main><footer/></body>` — the
+     * inner `<div>` matters: DA.live treats direct children of `<main>` as
+     * sections, not blocks).
+     *
+     * @param org - DA.live organization
+     * @param site - DA.live site
+     * @param block - Block descriptor with `id` and `exampleHtml`
+     * @returns `'written'` when DA.live accepted the write; `'failed'` when the
+     *          underlying source call returned an error or threw. Failures are
+     *          logged and surfaced via the return value, never thrown.
+     */
+    async upsertBlockDocPage(
+        org: string,
+        site: string,
+        block: { id: string; exampleHtml: string },
+    ): Promise<'written' | 'failed'> {
+        try {
+            const docHtml = `<body><header></header><main><div>${block.exampleHtml}</div></main><footer></footer></body>`;
+            const result = await this.createSource(
+                org, site,
+                `.da/library/blocks/${block.id}.html`,
+                docHtml,
+                { overwrite: true },
+            );
+            if (!result.success) {
+                this.logger.warn(`[DA.live] Failed to upsert doc page for ${block.id}: ${result.error}`);
+                return 'failed';
+            }
+            return 'written';
+        } catch (error) {
+            this.logger.warn(`[DA.live] Failed to upsert doc page for ${block.id}: ${(error as Error).message}`);
+            return 'failed';
+        }
+    }
+
+    /**
      * Create documentation pages for blocks that have exampleHtml but no existing page.
      *
      * Non-destructive: only creates pages for blocks missing from DA.live.
@@ -1014,7 +1306,7 @@ export class DaLiveContentOperations {
      * @param site - Site name
      * @param blocks - Array of block definitions (may include exampleHtml)
      */
-    private async ensureBlockDocPages(
+    async ensureBlockDocPages(
         org: string,
         site: string,
         blocks: Array<{ title: string; id: string; exampleHtml?: string }>,
@@ -1384,29 +1676,19 @@ export class DaLiveContentOperations {
     }
 
     /**
-     * Copy content from source site to destination site
+     * Enumerate source content paths and apply the standard filters.
+     *
+     * Prefers the DA.live list API (complete), falling back to the CDN content
+     * index. The list API returns 404 (mapped to empty array) for orgs the user
+     * doesn't belong to, so also falls back when it succeeds but returns 0 paths.
+     * Then removes product-overlay documents and the library-index spreadsheet.
+     *
      * @param source - Source content configuration (org, site, indexUrl)
-     * @param destOrg - Destination organization
-     * @param destSite - Destination site
-     * @param progressCallback - Optional progress callback
-     * @param contentPatchIds - Optional content patch IDs to apply
-     * @param contentPatchSource - Optional external source for content patches
-     * @returns Copy result
+     * @returns The filtered content paths plus whether the list API was used
      */
-    async copyContentFromSource(
+    private async enumerateAndFilterContentPaths(
         source: DaLiveContentSource,
-        destOrg: string,
-        destSite: string,
-        progressCallback?: DaLiveProgressCallback,
-        contentPatchIds?: string[],
-        contentPatchSource?: ContentPatchSource,
-    ): Promise<DaLiveCopyResult> {
-        // Report initialization progress
-        progressCallback?.({ processed: 0, total: 0, percentage: 0, message: 'Enumerating source content...' });
-
-        // Enumerate content paths: prefer DA.live list API (complete), fall back to CDN index.
-        // The list API returns 404 (mapped to empty array) for orgs the user doesn't belong to,
-        // so also fall back when it succeeds but returns 0 paths.
+    ): Promise<{ contentPaths: string[]; usedDaLiveList: boolean }> {
         let contentPaths: string[];
         let usedDaLiveList = false;
 
@@ -1443,6 +1725,34 @@ export class DaLiveContentOperations {
         if (contentPaths.length < preLibraryCount) {
             this.logger.info(`[DA.live] Excluded library index (will be generated with correct paths)`);
         }
+
+        return { contentPaths, usedDaLiveList };
+    }
+
+    /**
+     * Copy content from source site to destination site
+     * @param source - Source content configuration (org, site, indexUrl)
+     * @param destOrg - Destination organization
+     * @param destSite - Destination site
+     * @param progressCallback - Optional progress callback
+     * @param contentPatchIds - Optional content patch IDs to apply
+     * @param contentPatchSource - Optional external source for content patches
+     * @returns Copy result
+     */
+    async copyContentFromSource(
+        source: DaLiveContentSource,
+        destOrg: string,
+        destSite: string,
+        progressCallback?: DaLiveProgressCallback,
+        contentPatchIds?: string[],
+        contentPatchSource?: ContentPatchSource,
+    ): Promise<DaLiveCopyResult> {
+        // Report initialization progress
+        progressCallback?.({ processed: 0, total: 0, percentage: 0, message: 'Enumerating source content...' });
+
+        // Enumerate and filter source content paths (list API w/ CDN-index fallback,
+        // product-overlay filter, library-index exclusion).
+        const { contentPaths, usedDaLiveList } = await this.enumerateAndFilterContentPaths(source);
 
         progressCallback?.({ processed: 0, total: 0, percentage: 0, message: 'Checking configurations...' });
 

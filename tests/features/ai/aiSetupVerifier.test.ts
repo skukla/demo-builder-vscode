@@ -4,7 +4,7 @@
  * Tests for the AI setup verification service:
  * - AGENTS.md check: exists and non-empty vs missing
  * - .claude/mcp.json check: valid JSON with mcpServers vs missing vs malformed
- * - mcp-binary check: dist/mcp-server.js exists vs absent (warning, not error)
+ * - mcp-binary check: dist/mcp-proxy.js exists vs absent (warning, not error)
  * - skill-files check: at least one .md in .claude/skills/
  * - Overall aggregation: error > warning > ok
  */
@@ -155,7 +155,7 @@ describe('verifyAiSetup', () => {
     });
 
     describe('mcp-binary check', () => {
-        it('returns ok when dist/mcp-server.js exists', async () => {
+        it('returns ok when dist/mcp-proxy.js exists', async () => {
             setupAllOk();
             const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
 
@@ -163,7 +163,7 @@ describe('verifyAiSetup', () => {
             expect(check?.status).toBe('ok');
         });
 
-        it('returns warning (not error) when dist/mcp-server.js is absent', async () => {
+        it('returns warning (not error) when dist/mcp-proxy.js is absent', async () => {
             setupAllOk();
             (fsPromises.access as jest.Mock).mockRejectedValue(new Error('ENOENT'));
 
@@ -174,13 +174,13 @@ describe('verifyAiSetup', () => {
             expect(check?.message).toMatch(/not found|not built/i);
         });
 
-        it('checks the mcp-server.js path inside the extension dist path', async () => {
+        it('checks the mcp-proxy.js path inside the extension dist path', async () => {
             setupAllOk();
             await verifyAiSetup(PROJECT_PATH, '/custom/ext/dist');
 
             const accessCall = (fsPromises.access as jest.Mock).mock.calls[0][0] as string;
             expect(accessCall).toContain('/custom/ext/dist');
-            expect(accessCall).toContain('mcp-server.js');
+            expect(accessCall).toContain('mcp-proxy.js');
         });
     });
 

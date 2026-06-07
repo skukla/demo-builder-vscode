@@ -19,7 +19,6 @@ import {
     exportProjectSettings,
     deleteProject,
 } from '../services';
-import { PENDING_CLAUDE_LAUNCH_KEY } from '@/commands/openInClaude';
 import { BaseWebviewCommand } from '@/core/base';
 import { COMPONENT_IDS } from '@/core/constants';
 import { executeCommandForProject } from '@/core/handlers';
@@ -27,8 +26,6 @@ import { sessionUIState } from '@/core/state/sessionUIState';
 import { openInIncognito, TIMEOUTS } from '@/core/utils';
 import { validateProjectPath, validateProjectNameSecurity, validateURL } from '@/core/validation';
 import { hasMeshDeploymentRecord, determineMeshStatus } from '@/features/dashboard/handlers/meshStatusHelpers';
-import { republishStorefrontConfig } from '@/features/eds';
-import { configureDaLivePermissions } from '@/features/eds/handlers/edsHelpers';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import type { Project } from '@/types/base';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -116,22 +113,24 @@ export const handleGetProjects: MessageHandler = async (
 /**
  * Select a project by path.
  *
- * Loads the project, sets it as the current project, and anchors the VS Code
- * workspace to the project root so that Claude Code (and any other workspace-
- * scoped tooling) reads `.claude/skills/`, `.mcp.json`, and `AGENTS.md` from
- * the right cwd.
+ * Loads the project and sets it as the current project (the persisted
+ * `currentProjectPath` pointer that `StateManager.getCurrentProject()` reads).
+ * Browsing/selecting a project NO LONGER anchors the VS Code workspace — the
+ * dashboard, component tree, and auth cache all work off that pointer, so a
+ * plain selection just surfaces the dashboard webview in-place with no reload.
+ *
+ * Nothing anchors the workspace to a project subdir in the always-root home
+ * model — dashboards render in-place off the current-project pointer.
  *
  * Behavior:
- *   - workspace already matches project + `forceNewWindow` falsy → just navigate
- *     to the project dashboard webview (no reload).
- *   - workspace differs (or no workspace) + `forceNewWindow` falsy → reopen the
- *     current window with the project as workspace. The extension reactivates;
- *     globalState carries `currentProject` across, so the dashboard surfaces
- *     automatically. We skip the explicit `showProjectDashboard` call because
- *     the reload makes it racy and unnecessary.
+ *   - plain selection (`forceNewWindow` falsy), regardless of whether the
+ *     current workspace already matches → surface the project dashboard webview
+ *     in-place. No reload, ever.
  *   - `forceNewWindow: true` (shift/cmd-click) → open the project in a NEW
  *     VS Code window; the current window is left alone (still on the projects
- *     list).
+ *     list). Note: that new window opens at the project subdir, so its
+ *     activation `shouldReHomeToRoot` check re-homes it back to the projects
+ *     root (home-on-launch) — the always-root invariant still holds.
  */
 export const handleSelectProject: MessageHandler<{ projectPath: string; forceNewWindow?: boolean }> = async (
     context: HandlerContext,
@@ -173,41 +172,32 @@ export const handleSelectProject: MessageHandler<{ projectPath: string; forceNew
         context.logger.info(`Selected project: ${project.name}`);
 
         const forceNewWindow = payload.forceNewWindow === true;
-        const currentWorkspace = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        const workspaceMatches = currentWorkspace === project.path;
 
-        if (forceNewWindow || !workspaceMatches) {
-            // Open the project folder as a workspace. `forceNewWindow=false`
-            // replaces the current window's workspace (VS Code shows its native
-            // unsaved-changes prompt if needed). `forceNewWindow=true` spawns
-            // a new window and leaves the current one alone.
-            //
-            // When replacing the current window, mark a webview transition so
-            // the outgoing dashboard's dispose() skips its projects-list
-            // auto-reopen — otherwise we'd briefly flash that panel before the
-            // reload completes. New-window opens don't reload us, so no flag.
-            if (!forceNewWindow) {
-                await BaseWebviewCommand.startWebviewTransition();
-            }
+        if (forceNewWindow) {
+            // Shift/cmd-click: open the project in a NEW VS Code window and
+            // leave the current one alone (still on the projects list). This is
+            // the only path that still anchors a workspace on selection.
             try {
                 await vscode.commands.executeCommand(
                     'vscode.openFolder',
                     vscode.Uri.file(project.path),
-                    forceNewWindow,
+                    true,
                 );
             } catch (openError) {
                 context.logger.error(
-                    'Failed to open project folder as workspace',
+                    'Failed to open project folder in new window',
                     openError instanceof Error ? openError : undefined,
                 );
-                if (!forceNewWindow) {
-                    BaseWebviewCommand.endWebviewTransition();
-                }
             }
-            // No endWebviewTransition() on the success path — the window is
-            // reloading; this extension instance is going away.
         } else {
-            // Already in the right workspace — just surface the dashboard webview.
+            // Plain selection: surface the dashboard webview in-place. We never
+            // reload the window on browse — the persisted current-project
+            // pointer (set by saveProject above) is what the dashboard reads,
+            // so a reload is unnecessary. The workspace only anchors later, on
+            // demand, when the user launches a workspace-requiring action.
+            //
+            // Mark a webview transition so the outgoing Projects List's
+            // dispose() doesn't fight the dashboard handoff.
             await BaseWebviewCommand.startWebviewTransition();
             try {
                 await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
@@ -304,15 +294,6 @@ export const handleSetViewModeOverride: MessageHandler<{ viewMode: 'cards' | 'ro
     }
     return { success: true };
 };
-
-/**
- * Reset view mode session state - for testing
- * @internal
- * @deprecated Use sessionUIState.reset() instead
- */
-export function resetViewModeOverride(): void {
-    sessionUIState.viewModeOverride = undefined;
-}
 
 // ============================================================================
 // Settings Import/Export Handlers (delegated to settingsTransferService)
@@ -692,19 +673,19 @@ export const handleOpenBrowser: MessageHandler<{ projectPath: string }> = async 
 
 /**
  * Open the configured AI chat surface for a specific project — home-grid kebab
- * "Open AI" wiring. AI = chat (terminal tab or extension URI per
- * `demoBuilder.ai.surface`), not the Prompt Library; the project's per-project
- * skills / `.mcp.json` / `AGENTS.md` only load when the VS Code workspace is
- * anchored to that project, so this handler:
+ * "Open AI" wiring. AI = chat (the Claude Code terminal tab), not the Prompt
+ * Library.
  *
- *   1. Loads the project for the given path.
- *   2. If the workspace already matches the project, dispatches
- *      `demoBuilder.openAiExperience` directly.
- *   3. Otherwise writes a pending-launch record (no prompt → bare chat) and
- *      calls `vscode.openFolder`. The activation handler in extension.ts then
- *      dispatches `demoBuilder.openInClaude` against the now-anchored
- *      workspace, which opens the configured chat. Mirrors the
- *      pending-prompt mechanism in `handleOpenInClaude` (just without a prompt).
+ * Always-root home model: the home Chat launches at the projects root, not the
+ * project subdir, so nothing anchors the workspace here. We only set the
+ * current-project pointer; the home Chat resolves "the active project" from that
+ * pointer via the `get_current_project` MCP tool.
+ *
+ * Flow:
+ *   1. Load the project for the given path and set it as the current-project
+ *      pointer (`saveProject`).
+ *   2. Dispatch `demoBuilder.openInClaude` with NO project arg — the command
+ *      always launches the home Chat at the projects root.
  */
 export const handleOpenAiForProject: MessageHandler<{ projectPath: string }> = async (
     context: HandlerContext,
@@ -723,37 +704,11 @@ export const handleOpenAiForProject: MessageHandler<{ projectPath: string }> = a
         return { success: false, error: 'Project not found' };
     }
 
-    const workspaceFolderPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-    if (workspaceFolderPath === project.path) {
-        await vscode.commands.executeCommand('demoBuilder.openAiExperience');
-        return { success: true };
-    }
-
-    const existing = context.context.globalState.get<{ prompt?: string }>(PENDING_CLAUDE_LAUNCH_KEY);
-    if (existing) {
-        context.logger.warn(
-            '[handleOpenAiForProject] overwriting existing pending Claude launch',
-        );
-    }
-    await context.context.globalState.update(PENDING_CLAUDE_LAUNCH_KEY, {
-        projectPath: project.path,
-        prompt: undefined,
-        createdAt: Date.now(),
-    });
-    try {
-        await vscode.commands.executeCommand(
-            'vscode.openFolder',
-            vscode.Uri.file(project.path),
-            false,
-        );
-    } catch (openError) {
-        await context.context.globalState.update(PENDING_CLAUDE_LAUNCH_KEY, undefined);
-        context.logger.error(
-            'Failed to open project folder for AI launch',
-            openError instanceof Error ? openError : undefined,
-        );
-        return { success: false, error: 'Failed to anchor workspace for AI launch' };
-    }
+    // Set the current-project pointer so the dashboard / state reads and the
+    // home Chat's `get_current_project` tool resolve to this project. No
+    // workspace anchor — the home Chat launches at the projects root.
+    await context.stateManager.saveProject(project);
+    await vscode.commands.executeCommand('demoBuilder.openInClaude');
     return { success: true };
 };
 
@@ -931,77 +886,29 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
                 }
 
                 const daLiveAuthService = getDaLiveAuthService(context.context);
-
-                // Initialize services
-                const { HelixService } = await import('@/features/eds/services/helixService');
                 const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
-
                 const { tokenService: githubTokenService } = getGitHubServices(context);
 
-                // Create TokenProvider adapter for DA.live operations
-                // Required to list and publish content from DA.live
-                const { createDaLiveServiceTokenProvider } = await import('@/features/eds/services/daLiveContentOperations');
-                const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
-
-                // Create HelixService with GitHub token for Admin API and DA.live token for content operations
-                const helixService = new HelixService(context.logger, githubTokenService, daLiveTokenProvider);
-
-                // Step 1: Apply EDS org config (AEM Assets, Universal Editor)
-                progress.report({ message: 'Step 1/5: Applying EDS configuration...' });
-                const { DaLiveContentOperations } = await import('@/features/eds/services/daLiveContentOperations');
-                const { applyDaLiveOrgConfigSettings } = await import('@/features/eds/handlers/edsHelpers');
-                const daLiveContentOps = new DaLiveContentOperations(daLiveTokenProvider, context.logger);
-                await applyDaLiveOrgConfigSettings(daLiveContentOps, effectiveDaLiveOrg, effectiveDaLiveSite, context.logger);
-
-                // Step 2: Regenerate and sync config.json (picks up env var changes)
-                progress.report({ message: 'Step 2/5: Regenerating storefront configuration...' });
-                const configResult = await republishStorefrontConfig({
+                // Run the shared content-republish pipeline (single source of truth —
+                // the MCP sync_content tool calls the same service).
+                progress.report({ message: 'Republishing content...' });
+                const { republishStorefrontContent } = await import('@/features/eds/services/storefrontRepublishService');
+                const contentResult = await republishStorefrontContent({
                     project,
+                    repoOwner,
+                    repoName,
+                    daLiveOrg: effectiveDaLiveOrg,
+                    daLiveSite: effectiveDaLiveSite,
                     secrets: context.context.secrets,
                     logger: context.logger,
-                    onProgress: (message) => progress.report({ message: `Step 2/5: ${message}` }),
+                    daLiveAuthService,
+                    githubTokenService,
+                    onProgress: (message) => progress.report({ message }),
                 });
-                if (!configResult.success) {
-                    context.logger.warn(`[ProjectsList] Config regeneration warning: ${configResult.error}`);
-                    // Continue with republish even if config regeneration has issues
-                } else {
-                    context.logger.debug('[ProjectsList] Config.json regenerated and synced');
+                if (!contentResult.success) {
+                    return { success: false, error: contentResult.error };
                 }
-
-                // Step 3: Sync all code files to CDN
-                progress.report({ message: 'Step 3/5: Syncing code to CDN...' });
-                await helixService.previewCode(repoOwner, repoName, '/*');
-                context.logger.debug('[ProjectsList] Code synced to CDN');
-
-                // Configure permissions via DA.live Config API (part of Step 3)
-                progress.report({ message: 'Step 3/5: Configuring site permissions...' });
-                const userEmail = await daLiveAuthService.getUserEmail();
-                if (userEmail) {
-                    await configureDaLivePermissions(daLiveTokenProvider, effectiveDaLiveOrg, effectiveDaLiveSite, userEmail, context.logger);
-                } else {
-                    context.logger.warn('[ProjectsList] No user email available for permissions');
-                }
-
-                // Step 4: Publish all content (with cache purge for republish scenarios)
-                progress.report({ message: 'Step 4/5: Purging stale cache...' });
-                await helixService.purgeCacheAll(repoOwner, repoName, 'main');
-
-                progress.report({ message: 'Step 4/5: Publishing content to CDN...' });
-                await helixService.publishAllSiteContent(
-                    repoFullName,
-                    'main',
-                    effectiveDaLiveOrg,
-                    effectiveDaLiveSite,
-                    (info) => {
-                        progress.report({ message: `Step 4/5: ${info.message}` });
-                    },
-                );
-
-                // Step 5: Verify CDN accessibility
-                progress.report({ message: 'Step 5/5: Verifying CDN...' });
-                const { verifyConfigOnCdn } = await import('@/features/eds/services/configSyncService');
-                const cdnVerified = await verifyConfigOnCdn(repoOwner, repoName, context.logger);
-                if (!cdnVerified) {
+                if (!contentResult.cdnVerified) {
                     context.logger.warn('[ProjectsList] CDN verification timed out - content may still be propagating');
                 }
 

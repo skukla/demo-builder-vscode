@@ -6,6 +6,20 @@ This project uses the RPTC (Research → Plan → TDD → Commit) workflow.
 
 All development must follow the RPTC process defined in that file.
 
+### Where research, plans, and completed work live
+
+`.rptc/` is **fully tracked in git** (only `.rptc/prompt.md` is gitignored). Read `.gitignore` lines 54-57 if in doubt. Both Claude Code and Claude Desktop should write working RPTC artifacts to these locations rather than ad-hoc paths.
+
+| Stage | Location | What goes there |
+|---|---|---|
+| Working research | `.rptc/research/<topic-slug>/research.md` | Exploratory, in-flight research generated during `/rptc:research` or equivalent |
+| Working plans | `.rptc/plans/<feature-slug>/overview.md` + `step-NN.md` | Active implementation plans being executed via TDD |
+| Completed work | `.rptc/complete/<feature-slug>/` | Plans whose implementation has shipped (move from `.rptc/plans/` when done) |
+| Curated research | `docs/research/<date>-<topic>.md` | **Promoted only.** Landmark research cited by ADRs / CHANGELOG. Don't write here directly during a session; promote from `.rptc/research/` once durable. See `docs/research/README.md` for the two-tier convention. |
+| Backlog items | `.rptc/backlog/<slug>.md` or `.rptc/backlog/<feature>/` | Designed/proposed work that isn't active |
+
+**For Claude Desktop sessions:** Desktop can't run RPTC slash commands (no plugin install), but it can — and should — write to `.rptc/research/`, `.rptc/plans/`, `.rptc/complete/`, and `.rptc/backlog/` directly. None of those paths are gitignored. Don't write research/plan files to ad-hoc locations like `docs/research/` (curated tier — promote-only) or the repo root.
+
 ---
 
 # Adobe Demo Builder VS Code Extension

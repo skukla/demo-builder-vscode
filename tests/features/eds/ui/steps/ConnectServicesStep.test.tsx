@@ -65,7 +65,7 @@ const renderWithProvider = (ui: React.ReactElement) => {
 
 // Default wizard state
 const createDefaultState = (): WizardState => ({
-    currentStep: 'connect-services',
+    currentStep: 'eds-connect-services',
     projectName: 'test-project',
     projectTemplate: 'citisignal',
     adobeAuth: { isAuthenticated: true, isChecking: false },

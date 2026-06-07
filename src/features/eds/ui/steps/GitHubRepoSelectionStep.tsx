@@ -516,7 +516,6 @@ export function GitHubRepoSelectionStep({
                     repoMode: 'existing',
                     selectedRepo: repo,
                     existingRepo: repo.fullName,
-                    existingRepoVerified: true,
                 },
             });
         },
@@ -553,7 +552,7 @@ export function GitHubRepoSelectionStep({
     const handleCreateNew = useCallback(() => {
         updateEdsConfig({
             repoMode: 'new', repoName: '', selectedRepo: undefined,
-            existingRepo: undefined, existingRepoVerified: undefined,
+            existingRepo: undefined,
             resetToTemplate: false, createdRepo: undefined,
         });
         resetLocalState();
@@ -667,7 +666,6 @@ export function GitHubRepoSelectionStep({
                 updateEdsConfig({
                     selectedRepo: undefined,
                     existingRepo: undefined,
-                    existingRepoVerified: undefined,
                     repoName: '', // Clear imported name since repo doesn't exist
                 });
             }

@@ -48,6 +48,29 @@ describe('AiOverviewScreen — user prompts', () => {
             expect(screen.queryAllByTestId('ai-prompt-card').length).toBe(1);
         });
 
+        it('loads pinned prompts on mount via list-ai-prompts (not just project.aiPrompts)', async () => {
+            // Pinned prompts live in globalState (demoBuilder.ai.globalPrompts)
+            // and reach the UI only via list-ai-prompts (which returns the
+            // merged list). Seeding userPrompts from project.aiPrompts at mount
+            // would lose them — the user sees only their per-project prompts on
+            // first open, and the pinned ones only appear after the next save
+            // (because the save response carries the merged list).
+            await renderScreen({
+                // project.aiPrompts intentionally empty — the pinned prompts
+                // arrive from list-ai-prompts, not the project prop.
+                projectOverrides: { aiPrompts: [] } as Partial<Project>,
+                requestOverrides: {
+                    'list-ai-prompts': {
+                        success: true,
+                        aiPrompts: [
+                            { id: 'g1', title: 'Pinned global prompt', prompt: 'global body', pinned: true },
+                        ],
+                    },
+                },
+            });
+            expect(screen.getByText('Pinned global prompt')).toBeInTheDocument();
+        });
+
         it('renders only the "+ New" tile when aiPrompts is undefined', async () => {
             await renderScreen();
             expect(screen.queryAllByTestId('ai-prompt-card').length).toBe(0);
@@ -97,7 +120,6 @@ describe('AiOverviewScreen — user prompts', () => {
                     status: 'ok',
                     checks: [],
                     inventory: makeFullInventory(),
-                    globalMcpRegistration: 'registered',
                 });
             });
 
@@ -141,7 +163,6 @@ describe('AiOverviewScreen — user prompts', () => {
                     status: 'ok',
                     checks: [],
                     inventory: makeFullInventory(),
-                    globalMcpRegistration: 'registered',
                 });
             });
 
@@ -184,7 +205,6 @@ describe('AiOverviewScreen — user prompts', () => {
                     status: 'ok',
                     checks: [],
                     inventory: makeFullInventory(),
-                    globalMcpRegistration: 'registered',
                 });
             });
 
@@ -220,7 +240,6 @@ describe('AiOverviewScreen — user prompts', () => {
                     status: 'ok',
                     checks: [],
                     inventory: makeFullInventory(),
-                    globalMcpRegistration: 'registered',
                 });
             });
 
@@ -251,7 +270,6 @@ describe('AiOverviewScreen — user prompts', () => {
                     status: 'ok',
                     checks: [],
                     inventory: makeFullInventory(),
-                    globalMcpRegistration: 'registered',
                 });
             });
 
@@ -288,7 +306,6 @@ describe('AiOverviewScreen — user prompts', () => {
                     status: 'ok',
                     checks: [],
                     inventory: makeFullInventory(),
-                    globalMcpRegistration: 'registered',
                 });
             });
 

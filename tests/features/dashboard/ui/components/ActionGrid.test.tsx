@@ -96,7 +96,6 @@ describe('ActionGrid', () => {
         handleConfigure: jest.fn(),
         handleViewComponents: jest.fn(),
         handleOpenDevConsole: jest.fn(),
-        handleOpenAi: jest.fn(),
         handleDeleteProject: jest.fn(),
     };
 
@@ -118,15 +117,21 @@ describe('ActionGrid', () => {
         jest.clearAllMocks();
     });
 
-    describe('Open in Claude Code removal', () => {
-        it('should not render an Open in Claude Code tile', () => {
+    describe('AI tile removal', () => {
+        it('should not render an AI tile (AI lives in the sidebar)', () => {
             render(<ActionGrid {...defaultProps} />);
 
-            expect(screen.queryByText('Open in Claude Code')).not.toBeInTheDocument();
+            expect(screen.queryByText('AI')).not.toBeInTheDocument();
         });
 
-        it('should not render an Open in Claude Code tile for EDS projects', () => {
+        it('should not render an AI tile for EDS projects', () => {
             render(<ActionGrid {...edsProps} />);
+
+            expect(screen.queryByText('AI')).not.toBeInTheDocument();
+        });
+
+        it('should not render an Open in Claude Code tile', () => {
+            render(<ActionGrid {...defaultProps} />);
 
             expect(screen.queryByText('Open in Claude Code')).not.toBeInTheDocument();
         });
@@ -164,19 +169,32 @@ describe('ActionGrid', () => {
             expect(within(primary).getByText('Open in Browser')).toBeInTheDocument();
         });
 
-        it('should place AI in the primary cluster', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
+        it('should place Author in DA.live in the primary cluster for EDS projects', () => {
+            const { container } = render(<ActionGrid {...edsProps} />);
 
             const primary = getZone(container, 'primary');
-            expect(within(primary).getByText('AI')).toBeInTheDocument();
+            expect(within(primary).getByText('Author in DA.live')).toBeInTheDocument();
+        });
+
+        it('should not render Author in DA.live for non-EDS projects', () => {
+            render(<ActionGrid {...defaultProps} />);
+
+            expect(screen.queryByText('Author in DA.live')).not.toBeInTheDocument();
         });
 
         it('should mark primary tiles with the hero accent modifier class', () => {
             render(<ActionGrid {...defaultProps} />);
 
-            const aiButton = screen.getByText('AI').closest('button');
+            const openButton = screen.getByText('Open in Browser').closest('button');
             // Mock renders UNSAFE_className as a lowercase attribute
-            expect(aiButton?.getAttribute('unsafe_classname')).toContain('dashboard-action-button--hero');
+            expect(openButton?.getAttribute('unsafe_classname')).toContain('dashboard-action-button--hero');
+        });
+
+        it('should mark Author in DA.live with the hero accent modifier class', () => {
+            render(<ActionGrid {...edsProps} />);
+
+            const authorButton = screen.getByText('Author in DA.live').closest('button');
+            expect(authorButton?.getAttribute('unsafe_classname')).toContain('dashboard-action-button--hero');
         });
 
         it('should not render Start/Stop in the primary cluster for EDS projects', () => {
@@ -208,33 +226,31 @@ describe('ActionGrid', () => {
             expect(within(storefront).getByText('Storefront')).toBeInTheDocument();
         });
 
-        it('should not label the storefront zone "Author"', () => {
-            const { container } = render(<ActionGrid {...edsProps} />);
-
-            const storefront = getZone(container, 'storefront');
-            // The zone-label text must not be "Author" (Sync pushes code, not content)
-            const label = storefront.querySelector('.dashboard-zone-label');
-            expect(label?.textContent).not.toBe('Author');
-        });
-
-        it('should place Author in DA.live in the storefront zone', () => {
-            const { container } = render(<ActionGrid {...edsProps} />);
-
-            const storefront = getZone(container, 'storefront');
-            expect(within(storefront).getByText('Author in DA.live')).toBeInTheDocument();
-        });
-
-        it('should place Sync Storefront in the storefront zone when handler provided', () => {
+        it('should place Sync Storefront in the storefront zone', () => {
             const { container } = render(<ActionGrid {...edsProps} />);
 
             const storefront = getZone(container, 'storefront');
             expect(within(storefront).getByText('Sync Storefront')).toBeInTheDocument();
         });
 
-        it('should not render Sync Storefront when handleSyncStorefront is absent', () => {
-            const { handleSyncStorefront: _handleSyncStorefront, ...edsNoSync } = edsProps;
-            render(<ActionGrid {...edsNoSync} />);
+        it('should not place Author in DA.live in the storefront zone', () => {
+            const { container } = render(<ActionGrid {...edsProps} />);
 
+            const storefront = getZone(container, 'storefront');
+            expect(within(storefront).queryByText('Author in DA.live')).not.toBeInTheDocument();
+        });
+
+        it('should not render Sync Storefront for non-EDS projects', () => {
+            render(<ActionGrid {...defaultProps} />);
+
+            expect(screen.queryByText('Sync Storefront')).not.toBeInTheDocument();
+        });
+
+        it('should not render the storefront zone when handleSyncStorefront is absent', () => {
+            const { handleSyncStorefront: _handleSyncStorefront, ...edsNoSync } = edsProps;
+            const { container } = render(<ActionGrid {...edsNoSync} />);
+
+            expect(getZone(container, 'storefront')).not.toBeInTheDocument();
             expect(screen.queryByText('Sync Storefront')).not.toBeInTheDocument();
         });
     });
@@ -493,15 +509,6 @@ describe('ActionGrid', () => {
             await user.click(screen.getByText('Configure'));
 
             expect(defaultProps.handleConfigure).toHaveBeenCalled();
-        });
-
-        it('should call handleOpenAi when AI tile clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} />);
-
-            await user.click(screen.getByText('AI'));
-
-            expect(defaultProps.handleOpenAi).toHaveBeenCalled();
         });
     });
 

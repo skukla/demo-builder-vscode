@@ -14,14 +14,11 @@
 
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { PENDING_CLAUDE_LAUNCH_KEY } from '@/commands/openInClaude';
-import { BaseWebviewCommand } from '@/core/base';
+import { COMPONENT_IDS } from '@/core/constants';
 import { clearMcpCache, inspectAllServers, verifyAiSetup } from '@/features/ai';
 import {
-    GLOBAL_MCP_REG_STATE_KEY,
-    type GlobalMcpRegistrationState,
     generateAIContextFiles,
-    registerGlobalMcp,
+    installAiDefaultsInStorefront,
 } from '@/features/project-creation/services';
 import type { AiPrompt, Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
@@ -36,11 +33,6 @@ import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/typ
  *
  * Reads projectPath from stateManager (not the webview payload) to prevent
  * a compromised webview from supplying an arbitrary filesystem path.
- *
- * Extends the response with `globalMcpRegistration` so the AI surface can
- * show the Register button when demo-builder is not yet in `~/.claude.json`.
- * The value is the persisted globalState, narrowed to `'unregistered'` when
- * the user has not been prompted yet.
  */
 export async function handleVerifyAiSetup(
     context: HandlerContext,
@@ -52,32 +44,11 @@ export async function handleVerifyAiSetup(
     // extensionDistPath is always server-side (prevent webview-supplied path traversal)
     const extensionDistPath = path.join(context.context.extensionPath, 'dist');
     const result = await verifyAiSetup(project.path, extensionDistPath);
-    const persisted = context.context.globalState.get<GlobalMcpRegistrationState>(GLOBAL_MCP_REG_STATE_KEY);
-    const globalMcpRegistration: GlobalMcpRegistrationState | 'unregistered' =
-        persisted ?? 'unregistered';
 
     return {
         success: true,
         ...result,
-        globalMcpRegistration,
     };
-}
-
-/**
- * Handle register-global-mcp — upsert the demo-builder MCP entry into
- * `~/.claude.json` and mark globalState as `'registered'`.
- *
- * Bypasses the consent prompt that `ensureGlobalMcpRegistration` runs at
- * project-creation time — this handler is invoked from the AI surface's
- * explicit Register button, so the user has already opted in.
- */
-export async function handleRegisterGlobalMcp(
-    context: HandlerContext,
-): Promise<HandlerResponse> {
-    const extensionDistPath = path.join(context.context.extensionPath, 'dist');
-    await registerGlobalMcp(extensionDistPath);
-    await context.context.globalState.update(GLOBAL_MCP_REG_STATE_KEY, 'registered');
-    return { success: true };
 }
 
 /**
@@ -112,80 +83,16 @@ export async function handleInspectMcp(
 /**
  * Handle openInClaude — dispatch Claude Code with optional prompt pre-fill.
  *
- * Two paths:
- *
- *   1. **Direct dispatch** — when no prompt is provided, OR when the workspace
- *      already matches the current project (chat panel will load correctly).
- *      Hands off to `demoBuilder.openInClaude` immediately, same as the
- *      dashboard tile.
- *
- *   2. **Pending-prompt + workspace anchor** — when the user clicked a prompt
- *      AND the current workspace is not the project. URI launches into the
- *      wrong cwd would lose per-project skills / MCPs / AGENTS.md. To resolve:
- *      write the prompt to `globalState` under `PENDING_CLAUDE_LAUNCH_KEY`,
- *      then call `vscode.openFolder` (same call `handleSelectProject` uses)
- *      to reload the window into the project workspace. The activation
- *      handler in `extension.ts` reads the pending record on next startup
- *      and fires `demoBuilder.openInClaude` with the prompt — this time with
- *      workspace = project so the chat panel loads with full context.
- *
- * The clipboard handoff (terminal surface) survives the reload because the OS
- * clipboard is global, so terminal-mode users get the same end result.
+ * Thin pass-through to the `demoBuilder.openInClaude` command. In the
+ * always-root home model that command launches the single home Chat at the
+ * projects root (never a project subdir) — nothing anchors the workspace. This
+ * handler simply forwards the (optional) prompt.
  */
 export async function handleOpenInClaude(
-    context: HandlerContext,
+    _context: HandlerContext,
     payload?: { prompt?: string },
 ): Promise<HandlerResponse> {
     const prompt = payload?.prompt;
-
-    // Pending-prompt mechanism applies ONLY when (a) a prompt was supplied and
-    // (b) we have a project to anchor to and (c) the workspace doesn't already
-    // match. Direct dispatch in every other case.
-    if (prompt) {
-        const project = await context.stateManager.getCurrentProject();
-        const workspaceFolderPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        if (project?.path && workspaceFolderPath !== project.path) {
-            // Warn if a previous pending record exists — concurrent rapid clicks
-            // race-clobber the older prompt. Not a fatal error (the newer click
-            // is presumably the intent) but worth surfacing in logs.
-            const existing = context.context.globalState.get<{ prompt: string }>(PENDING_CLAUDE_LAUNCH_KEY);
-            if (existing) {
-                context.logger.warn(
-                    `[handleOpenInClaude] overwriting existing pending Claude launch (prior prompt dropped)`,
-                );
-            }
-            await context.context.globalState.update(PENDING_CLAUDE_LAUNCH_KEY, {
-                projectPath: project.path,
-                prompt,
-                createdAt: Date.now(),
-            });
-            // Mark a webview transition so disposing dashboards don't auto-reopen
-            // the projects list mid-reload (same pattern as handleSelectProject).
-            await BaseWebviewCommand.startWebviewTransition();
-            try {
-                await vscode.commands.executeCommand(
-                    'vscode.openFolder',
-                    vscode.Uri.file(project.path),
-                    false,
-                );
-            } catch (openError) {
-                // openFolder rarely fails, but if it does: clear the pending
-                // record (otherwise next activation would replay against a
-                // mismatched workspace and discard silently), release the
-                // transition lock, and surface the failure. Mirrors
-                // handleSelectProject's defensive pattern.
-                await context.context.globalState.update(PENDING_CLAUDE_LAUNCH_KEY, undefined);
-                BaseWebviewCommand.endWebviewTransition();
-                context.logger.error(
-                    'Failed to open project folder for prompt launch',
-                    openError instanceof Error ? openError : undefined,
-                );
-                return { success: false, error: 'Failed to anchor workspace for prompt launch' };
-            }
-            return { success: true };
-        }
-    }
-
     if (prompt) {
         await vscode.commands.executeCommand('demoBuilder.openInClaude', { prompt });
     } else {
@@ -196,6 +103,23 @@ export async function handleOpenInClaude(
 
 /**
  * Handle regenerate-ai-files — re-generate AI context files for the project.
+ *
+ * For EDS projects this also runs the storefront install pipeline before
+ * rewriting context files. That step (a) ensures the storefront's package.json
+ * declares every ai-defaults MCP package as a devDep and (b) runs `npm install`
+ * so they actually exist on disk under the storefront's node_modules. Without
+ * it, projects created before a given MCP was added to ai-defaults.json end up
+ * with a `.mcp.json` that references files that aren't there — the case that
+ * surfaced as "playwright · MCP error -32000: Connection closed" in the
+ * dashboard's AI Capabilities modal.
+ *
+ * Order is load-bearing: install runs first so the path `mcpConfigWriter`
+ * later resolves to (under the storefront) is guaranteed to exist by the time
+ * any verify re-spawns. Headless projects skip the install step entirely —
+ * they have no storefront and the MCP entries that need it aren't wired.
+ *
+ * Clears the MCP inspector cache on success so the next verify re-spawns and
+ * the modal flips from a stale failure to fresh inventory.
  */
 export async function handleRegenerateAiFiles(
     context: HandlerContext,
@@ -204,8 +128,55 @@ export async function handleRegenerateAiFiles(
     if (!project) {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
+
+    // Reuse the wizard's `creationProgress` channel so the AI Capabilities modal
+    // can render per-step LoadingDisplay instead of a static spinner. Steps:
+    //   1. Installing storefront dependencies  (EDS only — the long pole)
+    //   2. Writing AGENTS.md                   ┐
+    //   3. Writing MCP configuration           │ emitted from generateAIContextFiles
+    //   4. Writing skills                      ┘ via the onProgress tracker below
+    //   5. Finalizing                          (clearMcpCache)
+    const storefrontPath = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.path;
+    const totalSteps = storefrontPath ? 5 : 4;
+    let stepNumber = 0;
+    const emit = (currentOperation: string, message?: string): void => {
+        stepNumber++;
+        const progress = Math.round((stepNumber / totalSteps) * 100);
+        void context.sendMessage('creationProgress', {
+            currentOperation,
+            progress,
+            message: message ?? '',
+            logs: [],
+        });
+    };
+
+    if (storefrontPath) {
+        emit('Installing storefront dependencies', 'This can take up to a minute');
+        const installResult = await installAiDefaultsInStorefront(storefrontPath);
+        if (!installResult.success) {
+            return {
+                success: false,
+                error: `Failed to install storefront AI dependencies: ${installResult.error ?? 'unknown error'}`,
+            };
+        }
+    }
+
     // Use server-side project.path — do not accept a webview-supplied path override.
-    await generateAIContextFiles(project.path, project, context.context.extensionPath);
+    // Pass an onProgress tracker so the three writer steps surface in the same
+    // creationProgress channel.
+    await generateAIContextFiles(
+        project.path,
+        project,
+        context.context.extensionPath,
+        (currentOperation: string, _progress: number, message?: string) => emit(currentOperation, message),
+    );
+
+    emit('Finalizing', 'Refreshing AI capability inventory');
+    // The .mcp.json may now point at newly-installed binaries (or the same
+    // binaries via storefront-anchored absolute paths). Drop the inspector
+    // cache so the next verify re-spawns from a clean slate.
+    clearMcpCache();
+
     return { success: true };
 }
 
@@ -472,7 +443,6 @@ export const aiHandlers = defineHandlers({
     'verify-ai-setup': handleVerifyAiSetup,
     'inspect-mcp': handleInspectMcp,
     'regenerate-ai-files': handleRegenerateAiFiles,
-    'register-global-mcp': handleRegisterGlobalMcp,
     'openInClaude': handleOpenInClaude,
     'save-ai-prompt': handleSaveAiPrompt,
     'delete-ai-prompt': handleDeleteAiPrompt,

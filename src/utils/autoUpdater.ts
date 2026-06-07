@@ -5,6 +5,8 @@ import axios from 'axios';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { selectLatestForChannel } from '@/features/updates/services/releaseTrack';
+import type { UpdateChannel, GitHubRelease } from '@/features/updates/services/types';
 import { UpdateInfo } from '@/types';
 import type { Logger } from '@/types/logger';
 
@@ -47,7 +49,10 @@ export class AutoUpdater {
     public async checkForUpdates(): Promise<UpdateInfo | undefined> {
         try {
             const currentVersion = this.context.extension.packageJSON.version;
-            const channel = this.getUpdateChannel();
+            // The silent background path has no collaborator gate/token, so it must
+            // never serve -alpha.* builds: early-access collapses to beta here.
+            const configuredChannel = this.getUpdateChannel();
+            const channel: UpdateChannel = configuredChannel === 'early-access' ? 'beta' : configuredChannel;
             // Debug level for background checks (only log to info when update found)
             this.logger.debug(`[Updates] Background check starting (current: ${currentVersion}, channel: ${channel})`);
 
@@ -58,7 +63,7 @@ export class AutoUpdater {
 
             // Fetch latest release from GitHub based on channel
             // Stable: /releases/latest (non-prereleases only)
-            // Beta: /releases?per_page=20 (includes prereleases, sorted by semver)
+            // Beta: /releases?per_page=20 (includes prereleases, filtered by track)
             const url = channel === 'stable'
                 ? `https://api.github.com/repos/${this.REPO}/releases/latest`
                 : `https://api.github.com/repos/${this.REPO}/releases?per_page=20`;
@@ -70,20 +75,15 @@ export class AutoUpdater {
                 timeout: TIMEOUTS.QUICK,
             });
 
-            // Get the latest release based on channel
+            // For arrays, pick the highest release the channel ACCEPTS by track.
             let release = response.data;
-            if (channel === 'beta' && Array.isArray(response.data)) {
-                // For beta: filter non-draft, sort by semver, take first
-                const nonDraftReleases = response.data.filter((r: { draft: boolean }) => !r.draft);
-                if (nonDraftReleases.length === 0) {
-                    this.logger.debug('[Updates] No releases found');
+            if (channel !== 'stable' && Array.isArray(response.data)) {
+                const selected = selectLatestForChannel(response.data as GitHubRelease[], channel);
+                if (!selected) {
+                    this.logger.debug('[Updates] No releases found for channel');
                     return undefined;
                 }
-                release = nonDraftReleases.sort((a: { tag_name: string }, b: { tag_name: string }) => {
-                    const versionA = a.tag_name.replace(/^v/, '');
-                    const versionB = b.tag_name.replace(/^v/, '');
-                    return semver.gt(versionA, versionB) ? -1 : 1;
-                })[0];
+                release = selected;
             }
 
             const latestVersion = release.tag_name.replace('v', '');
@@ -130,9 +130,9 @@ export class AutoUpdater {
         }
     }
 
-    private getUpdateChannel(): 'stable' | 'beta' {
+    private getUpdateChannel(): UpdateChannel {
         return vscode.workspace.getConfiguration('demoBuilder')
-            .get<'stable' | 'beta'>('updateChannel', 'stable');
+            .get<UpdateChannel>('updateChannel', 'stable');
     }
 
     private getMockUpdateInfo(): UpdateInfo | undefined {

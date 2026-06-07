@@ -24,9 +24,7 @@ import {
     finalizeProject,
     sendCompletionAndCleanup,
     generateAIContextFiles,
-    openProjectAsWorkspace,
     ensureEdsContent,
-    ensureGlobalMcpRegistration,
     type ComponentDefinitionEntry,
     type MeshApiConfig,
 } from '../services';
@@ -157,8 +155,7 @@ interface ProjectCreationConfig {
     customBlockLibraries?: CustomBlockLibrary[];
     // Frontend source from template (templates are source of truth for repos)
     frontendSource?: FrontendSource;
-    // Edit mode: re-use existing project directory
-    editMode?: boolean;
+    // Edit mode: re-use existing project directory (editProjectPath presence signals edit mode)
     editProjectPath?: string;
     // EDS-specific configuration (for Edge Delivery Services stacks)
     edsConfig?: {
@@ -202,7 +199,10 @@ interface ProjectCreationConfig {
 /**
  * Actual project creation logic (extracted for testability)
  */
-export async function executeProjectCreation(context: HandlerContext, config: Record<string, unknown>): Promise<void> {
+export async function executeProjectCreation(
+    context: HandlerContext,
+    config: Record<string, unknown>,
+): Promise<void> {
     const typedConfig = config as unknown as ProjectCreationConfig;
 
     // Debug: trace incoming config values for selectedPackage/selectedStack
@@ -229,26 +229,18 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     // Safety check: Ensure port is available
     await handlePortConflicts(context, typedConfig, progressTracker);
 
-    // Determine project path based on edit mode
-    const isEditMode = typedConfig.editMode && typedConfig.editProjectPath;
+    // Determine project path based on edit mode (editProjectPath presence signals edit)
+    const isEditMode = Boolean(typedConfig.editProjectPath);
     const projectPath = isEditMode && typedConfig.editProjectPath
         ? typedConfig.editProjectPath
         : path.join(os.homedir(), '.demo-builder', 'projects', typedConfig.projectName);
 
-    // Load existing project state if in edit mode (to preserve creation date)
+    // Load existing project state if in edit mode (to preserve creation date);
+    // otherwise clean up any orphaned/invalid directory (new project only).
     let existingProject: import('@/types').Project | undefined;
     if (isEditMode) {
-        context.logger.info(`[Project Edit] Editing existing project at: ${projectPath}`);
-        try {
-            existingProject = await context.stateManager.loadProjectFromPath(projectPath) ?? undefined;
-            if (existingProject) {
-                context.logger.debug('[Project Edit] Loaded existing project state for creation date preservation');
-            }
-        } catch (error) {
-            context.logger.warn(`[Project Edit] Could not load existing project state: ${(error as Error).message}`);
-        }
+        existingProject = await loadExistingProjectForEdit(projectPath, context);
     } else {
-        // Clean up orphaned/invalid directories (new project only)
         await cleanupOrphanedDirectory(projectPath, context, progressTracker, fsPromises);
     }
 
@@ -329,20 +321,9 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     // Only swap to production after ALL components install successfully.
     // This preserves the original components if installation fails.
 
-    let tempComponentsDir: string | undefined;
-
-    if (isEditMode) {
-        tempComponentsDir = path.join(projectPath, 'components.tmp');
-
-        // Clean up any stale temp directory from previous failed attempts
-        const tempDirExists = await fsPromises.access(tempComponentsDir).then(() => true).catch(() => false);
-        if (tempDirExists) {
-            context.logger.info('[Project Edit] Cleaning up stale temporary components directory');
-            await fsPromises.rm(tempComponentsDir, { recursive: true, force: true });
-        }
-
-        context.logger.info('[Project Edit] Will install components to temporary directory for atomic swap');
-    }
+    const tempComponentsDir = isEditMode
+        ? await prepareEditModeTempDir(projectPath, context)
+        : undefined;
 
     // ========================================================================
     // PHASE 1-2: COMPONENT INSTALLATION
@@ -439,30 +420,70 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         context.logger.warn('[Project Creation] Failed to generate AI context files', err instanceof Error ? err : undefined);
     }
 
-    // Phase 6b: Consent-gated global MCP registration. First time: prompt the
-    // user. Subsequent project completions: no-op (state persists). The user's
-    // choice ('registered' | 'declined') survives across activations.
-    try {
-        const extensionDistPath = path.join(context.context.extensionPath, 'dist');
-        await ensureGlobalMcpRegistration(extensionDistPath, context.context);
-    } catch (err) {
-        context.logger.warn(
-            '[Project Creation] Global MCP registration failed',
-            err instanceof Error ? err : undefined,
-        );
-    }
+    // The per-project .mcp.json written in Phase 6 lets AI agents discover this
+    // project's tools when launched from its directory, and it only loads those
+    // tools where they're relevant. No global (~/.claude.json) registration is
+    // performed — the in-extension MCP server hosts the tools per-project.
 
-    // Phase 7: Anchor the project as the current window's VS Code workspace.
-    // From here forward "Open in Claude Code" launches the chat panel into the
-    // right cwd, so per-project skills, MCPs, and AGENTS.md load. The window
-    // reloads as a side effect, so this is the last meaningful step — anything
-    // after would be cut off by the reload.
-    await openProjectAsWorkspace(projectPath, context.logger);
+    // No workspace anchoring: in the always-root home model the VS Code window
+    // stays homed at the projects root. `finalizeProject` → `saveProject`
+    // already set this new project as the current-project pointer, which the
+    // dashboards render in-place and the home Chat resolves via the
+    // `get_current_project` MCP tool. Anchoring the window to the project subdir
+    // would reload the window (killing any live MCP session) and break the
+    // single-home-Chat model, so it is intentionally omitted.
 }
 
 // ============================================================================
 // Private Helper Functions
 // ============================================================================
+
+/**
+ * Load existing project state for edit mode, used to preserve the original
+ * creation date. Failures are non-fatal (logged, returns undefined).
+ */
+async function loadExistingProjectForEdit(
+    projectPath: string,
+    context: HandlerContext,
+): Promise<import('@/types').Project | undefined> {
+    context.logger.info(`[Project Edit] Editing existing project at: ${projectPath}`);
+    try {
+        const existingProject = await context.stateManager.loadProjectFromPath(projectPath) ?? undefined;
+        if (existingProject) {
+            context.logger.debug('[Project Edit] Loaded existing project state for creation date preservation');
+        }
+        return existingProject;
+    } catch (error) {
+        context.logger.warn(`[Project Edit] Could not load existing project state: ${(error as Error).message}`);
+        return undefined;
+    }
+}
+
+/**
+ * Prepare the temporary components directory used for the edit-mode atomic swap.
+ *
+ * Components are installed here first; only after all install successfully are
+ * they swapped into production, preserving the originals on failure. Any stale
+ * temp directory from a previous failed attempt is removed first.
+ *
+ * @returns The temp components directory path.
+ */
+async function prepareEditModeTempDir(
+    projectPath: string,
+    context: HandlerContext,
+): Promise<string> {
+    const tempComponentsDir = path.join(projectPath, 'components.tmp');
+
+    // Clean up any stale temp directory from previous failed attempts
+    const tempDirExists = await fsPromises.access(tempComponentsDir).then(() => true).catch(() => false);
+    if (tempDirExists) {
+        context.logger.info('[Project Edit] Cleaning up stale temporary components directory');
+        await fsPromises.rm(tempComponentsDir, { recursive: true, force: true });
+    }
+
+    context.logger.info('[Project Edit] Will install components to temporary directory for atomic swap');
+    return tempComponentsDir;
+}
 
 /**
  * Populate EDS-specific metadata on the component instance after cloning.
@@ -565,7 +586,7 @@ async function executeMeshPhase(
         },
     };
 
-    logMeshDecisionContext(context, typedConfig, meshComponent, meshId, meshDefinition, isEditMode, existingProject);
+    logMeshDecisionContext(context, typedConfig, project, meshComponent, meshId, meshDefinition, isEditMode, existingProject);
 
     // Check for same-workspace import FIRST
     const isSameWorkspaceImport = typedConfig.importedWorkspaceId &&
@@ -581,7 +602,7 @@ async function executeMeshPhase(
             workspace: typedConfig.adobe?.workspace,
         };
         await linkExistingMesh(meshContext, importedApiMesh);
-    } else if (shouldConfigureExistingMesh(typedConfig.apiMesh, meshComponent?.endpoint)) {
+    } else if (shouldConfigureExistingMesh(typedConfig.apiMesh, project.meshState?.endpoint)) {
         await linkExistingMesh(meshContext, typedConfig.apiMesh as MeshApiConfig);
     } else if (isEditMode && existingProject?.meshState?.endpoint) {
         context.logger.info('[Mesh Setup] Edit mode - reusing existing mesh from project');
@@ -603,6 +624,7 @@ async function executeMeshPhase(
 function logMeshDecisionContext(
     context: HandlerContext,
     typedConfig: ProjectCreationConfig,
+    project: import('@/types').Project,
     meshComponent: import('@/types').ComponentInstance | undefined,
     meshId: string | undefined,
     meshDefinition: import('@/types').TransformedComponentDefinition | undefined,
@@ -616,7 +638,7 @@ function logMeshDecisionContext(
     context.logger.debug(`  - meshComponent?.path: ${meshComponent?.path}`);
     context.logger.debug(`  - meshId: ${meshId}`);
     context.logger.debug(`  - meshDefinition: ${meshDefinition ? 'found' : 'NOT FOUND'}`);
-    context.logger.debug(`  - shouldConfigureExistingMesh result: ${shouldConfigureExistingMesh(typedConfig.apiMesh, meshComponent?.endpoint)}`);
+    context.logger.debug(`  - shouldConfigureExistingMesh result: ${shouldConfigureExistingMesh(typedConfig.apiMesh, project.meshState?.endpoint)}`);
 }
 
 /**

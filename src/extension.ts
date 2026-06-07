@@ -10,14 +10,34 @@ import { CommandExecutor } from '@/core/shell';
 import { StateManager } from '@/core/state';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
+import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
+import { registerAdobeTools } from '@/features/ai/server/adobeTools';
+import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool';
+import { registerAuthTools } from '@/features/ai/server/authTools';
+import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
+import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
+import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
+import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';
+import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
+import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
+import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
+import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer';
+import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
+import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
+import { registerStorefrontTools } from '@/features/ai/server/storefrontTools';
+import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
+import { registerViewTools } from '@/features/ai/server/viewTools';
 import { AuthenticationService } from '@/features/authentication';
 import { ComponentTreeProvider } from '@/features/components/providers/componentTreeProvider';
+import { shouldAutoReopenProjectsList } from '@/features/dashboard/commands/showDashboard';
+import { seedDefaultAiPrompts } from '@/features/dashboard/services/defaultPromptsSeeder';
 import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLiveSites';
 import { manageGitHubReposCommand } from '@/features/eds/commands/manageGitHubRepos';
+import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
-import { PENDING_CLAUDE_LAUNCH_KEY } from '@/commands/openInClaude';
-import { shouldAutoReopenProjectsList } from '@/features/dashboard/commands/showDashboard';
+import { ensureHomeAiContext } from '@/features/project-creation/services/homeAiContextWriter';
 import { SidebarProvider } from '@/features/sidebar';
+import type { McpCredentialProvider } from '@/mcp-server';
 import type { Logger } from '@/types/logger';
 import { getProjectFrontendPort } from '@/types/typeGuards';
 import { AutoUpdater } from '@/utils/autoUpdater';
@@ -47,47 +67,18 @@ function shouldAutoOpenProjectsList(
     return true;
 }
 
-/** Shape of the pending-prompt record written by `handleOpenInClaude` when a workspace anchor reload is required. */
-interface PendingClaudeLaunch {
-    projectPath: string;
-    prompt: string;
-    createdAt: number;
-}
-
-/** Pending records older than this are discarded silently on activation. */
-const PENDING_LAUNCH_TTL_MS = 60_000;
-
 /**
- * Replay a pending Claude launch that was queued before a workspace anchor
- * reload. Three inline checks gate the dispatch: record present, not stale,
- * and workspace now matches the recorded `projectPath`. The record is cleared
- * unconditionally — a stale or mismatched record is dropped silently.
+ * Whether this window should re-home to the projects root on activation.
+ *
+ * In the always-root home-Chat model the VS Code window must stay homed at the
+ * projects root (so the home `.mcp.json` there reaches the root MCP socket). If
+ * a window opened anchored to a project SUBDIR (e.g. a leftover anchor from an
+ * older build), re-home it. Returns true only when `ws` is a strict descendant
+ * of `projectsRoot` — never for the root itself, an undefined workspace, or an
+ * unrelated path.
  */
-async function replayPendingClaudeLaunch(
-    context: vscode.ExtensionContext,
-    workspaceFolderPath: string | undefined,
-    log: Logger,
-): Promise<void> {
-    const pending = context.globalState.get<PendingClaudeLaunch>(PENDING_CLAUDE_LAUNCH_KEY);
-    await context.globalState.update(PENDING_CLAUDE_LAUNCH_KEY, undefined);
-    if (!pending) return;
-    const fresh = Date.now() - pending.createdAt < PENDING_LAUNCH_TTL_MS;
-    const workspaceMatches = workspaceFolderPath === pending.projectPath;
-    if (!fresh || !workspaceMatches) {
-        log.debug(
-            `[Extension] discarded pending Claude launch (fresh=${fresh}, workspaceMatches=${workspaceMatches})`,
-        );
-        return;
-    }
-    log.info('[Extension] replaying pending Claude launch with prompt pre-fill');
-    // Wrap in try/catch — a failed replay must not abort activation.
-    try {
-        await vscode.commands.executeCommand('demoBuilder.openInClaude', { prompt: pending.prompt });
-    } catch (error) {
-        log.warn(
-            `[Extension] pending Claude launch replay failed: ${error instanceof Error ? error.message : String(error)}`,
-        );
-    }
+export function shouldReHomeToRoot(ws: string | undefined, projectsRoot: string): boolean {
+    return !!ws && ws !== projectsRoot && ws.startsWith(projectsRoot + path.sep);
 }
 
 
@@ -99,6 +90,7 @@ let authenticationService: AuthenticationService;
 let componentTreeProvider: ComponentTreeProvider;
 let componentTreeView: vscode.TreeView<unknown>;
 let daLiveAuthService: DaLiveAuthService;
+let inExtensionMcpServer: InExtensionMcpServer | undefined;
 
 export async function activate(context: vscode.ExtensionContext) {
     // Initialize the debug logger first
@@ -135,6 +127,14 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Register StateManager with ServiceLocator (for commands without handler context)
         ServiceLocator.setStateManager(stateManager);
+
+        // Seed built-in AI prompts into the global store once (starter recipes that
+        // surface in every project's prompt library). Idempotent and non-fatal.
+        try {
+            await seedDefaultAiPrompts(context.globalState);
+        } catch (err) {
+            logger.error('Failed to seed default AI prompts', err);
+        }
 
         // Initialize context variables for view switching
         const hasProject = await stateManager.hasProject();
@@ -249,6 +249,24 @@ export async function activate(context: vscode.ExtensionContext) {
         const commandManager = new CommandManager(context, stateManager, logger);
         commandManager.registerCommands();
 
+        // Start the in-extension MCP server (serves Claude Code via the
+        // stdio→UDS proxy). Bound to the open workspace folder; restarted when
+        // the folder changes. Failure here must never abort activation.
+        await startInExtensionMcpServer(context);
+        context.subscriptions.push(
+            vscode.workspace.onDidChangeWorkspaceFolders(() => {
+                void startInExtensionMcpServer(context);
+            }),
+        );
+
+        // Write the home AI context at the projects root so a Chat launched
+        // there reaches the in-extension MCP server on the ROOT socket and can do
+        // global / by-name work. Best-effort and additive — never blocks or
+        // breaks activation, and changes no navigation/workspace behavior.
+        const projectsDir =
+            process.env.DEMO_BUILDER_PROJECTS_DIR ?? path.join(os.homedir(), '.demo-builder', 'projects');
+        void ensureHomeAiContext(projectsDir, path.join(context.extensionPath, 'dist'));
+
         // Register file watchers early (before loading projects)
         // This ensures the initializeFileHashes command exists when we need it
         registerFileWatchers(context);
@@ -323,24 +341,28 @@ export async function activate(context: vscode.ExtensionContext) {
         // project creation completes (see executor.ts). The user is asked once;
         // the choice persists in globalState. No activation-time auto-write.
 
-        // When this window is anchored to a Demo Builder project (e.g. just
-        // opened via tile-click), focus the Demo Builder Activity Bar so the
-        // sidebar becomes visible. The visibility subscription (line 133)
-        // then fires and auto-opens the projects list. Without this, a new
-        // project window inherits whichever Activity Bar view was previously
-        // focused (often Explorer) and the user has no Demo Builder UI until
-        // they click the Activity Bar icon themselves.
-        const activationWorkspace = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        if (shouldAutoReopenProjectsList(activationWorkspace, false)) {
-            await vscode.commands.executeCommand('workbench.view.extension.demoBuilder');
+        // Always-root home model: the VS Code window must stay homed at the
+        // projects root so the home `.mcp.json` there reaches the root MCP socket
+        // and one home Chat can address any project by name. If this window opened
+        // anchored to a project SUBDIR (e.g. a leftover anchor from an older
+        // build), re-home it to the projects root and bail — the post-reopen
+        // activation runs the cold-start path below.
+        const projectsRoot =
+            process.env.DEMO_BUILDER_PROJECTS_DIR ?? path.join(os.homedir(), '.demo-builder', 'projects');
+        const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (shouldReHomeToRoot(ws, projectsRoot)) {
+            await fs.mkdir(projectsRoot, { recursive: true }).catch(() => {});
+            await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(projectsRoot), false);
+            return;
         }
 
-        // Replay any pending prompt launch that was queued before a workspace
-        // anchor reload (see handleOpenInClaude in features/dashboard/handlers/
-        // aiHandlers.ts). The record carries `{ projectPath, prompt, createdAt }`
-        // and only fires if all three checks pass: present, not stale (<60s),
-        // and workspace folder now matches the recorded projectPath.
-        await replayPendingClaudeLaunch(context, activationWorkspace, logger);
+        // Cold start always lands on the projects list as the home screen. For a
+        // root-anchored (or non-project) workspace, focus the Demo Builder
+        // Activity Bar so the tree-view visibility subscription auto-opens the
+        // projects list (guarded by shouldAutoOpenProjectsList).
+        if (shouldAutoReopenProjectsList(ws, false)) {
+            await vscode.commands.executeCommand('workbench.view.extension.demoBuilder');
+        }
 
         logger.info('[Extension] Ready');
 
@@ -359,6 +381,7 @@ export function deactivate() {
     autoUpdater?.dispose();
     componentTreeView?.dispose();
     componentTreeProvider?.dispose();
+    inExtensionMcpServer?.dispose();
     stateManager?.dispose();
     externalCommandManager?.dispose();
     daLiveAuthService?.dispose();
@@ -368,6 +391,62 @@ export function deactivate() {
     ServiceLocator.reset();
 
     logger.info('Adobe Demo Builder extension deactivated.');
+}
+
+/**
+ * Start (or restart) the in-extension MCP server for the currently-open
+ * workspace folder. No-ops when no project workspace is open. The socket path
+ * is derived from the workspace folder so each window/project gets its own
+ * socket; the proxy resolves the same path from its cwd / env. Never throws —
+ * MCP availability must not affect the rest of the extension.
+ */
+async function startInExtensionMcpServer(context: vscode.ExtensionContext): Promise<void> {
+    try {
+        inExtensionMcpServer?.dispose();
+        inExtensionMcpServer = undefined;
+
+        const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (!workspacePath) {
+            return;
+        }
+        const projectsDir =
+            process.env.DEMO_BUILDER_PROJECTS_DIR ?? path.join(os.homedir(), '.demo-builder', 'projects');
+        // Handler-backed read/status tools dispatch through the existing handler
+        // maps with a fresh headless context per call.
+        const ctxFactory = () => createHeadlessHandlerContext(context, stateManager, logger);
+        // Resolve DA.live / GitHub tokens from the live sign-in session so the
+        // credential-needing tools (sync_storefront, promote_block_to_library)
+        // see the same auth get_auth_status / sign_in operate on. Resolved fresh
+        // per call (token expiry); failures degrade to null (treated as no token).
+        const credentials: McpCredentialProvider = {
+            getDaLiveToken: () => getDaLiveAuthService(context).getAccessToken(),
+            getGitHubToken: async () => (await getGitHubServices(ctxFactory()).tokenService.getToken())?.token ?? null,
+        };
+        const server = new InExtensionMcpServer(
+            resolveMcpSocketPath(workspacePath),
+            projectsDir,
+            logger,
+            (mcpServer) => {
+                registerDescriptorTools(mcpServer, [...READ_DESCRIPTORS, ...ACTION_DESCRIPTORS], ctxFactory);
+                registerDiscoveryTools(mcpServer);
+                registerAuthTools(mcpServer, ctxFactory);
+                registerAdobeTools(mcpServer, ctxFactory);
+                registerCreateProjectTool(mcpServer, ctxFactory);
+                registerCurrentProjectTool(mcpServer, ctxFactory);
+                registerCloudResourceTools(mcpServer, ctxFactory);
+                registerStorefrontTools(mcpServer, ctxFactory);
+                registerEdsResetTool(mcpServer, ctxFactory);
+                registerDeleteProjectTool(mcpServer, ctxFactory);
+                registerApplyUpdatesTool(mcpServer, ctxFactory);
+                registerViewTools(mcpServer, (commandId) => Promise.resolve(vscode.commands.executeCommand(commandId)));
+            },
+            credentials,
+        );
+        await server.start();
+        inExtensionMcpServer = server;
+    } catch (err) {
+        logger.error('Failed to start in-extension MCP server', err instanceof Error ? err : undefined);
+    }
 }
 
 function registerFileWatchers(context: vscode.ExtensionContext) {

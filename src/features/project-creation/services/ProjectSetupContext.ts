@@ -15,7 +15,6 @@
 import type { Project } from '@/types';
 import type { ComponentRegistry, EnvVarDefinition, TransformedComponentDefinition } from '@/types/components';
 import type { HandlerContext } from '@/types/handlers';
-import { getMeshComponentInstance } from '@/types/typeGuards';
 
 /**
  * Unified context for project setup operations
@@ -74,13 +73,10 @@ export class ProjectSetupContext {
     }
 
     /**
-     * Get mesh endpoint from project state (single source of truth)
-     * 
-     * Prioritizes meshState.endpoint (authoritative) with fallback to
-     * componentInstances for backward compatibility.
+     * Get mesh endpoint from project state (meshState is the single source of truth)
      */
     getMeshEndpoint(): string | undefined {
-        return this.project.meshState?.endpoint || getMeshComponentInstance(this.project)?.endpoint;
+        return this.project.meshState?.endpoint;
     }
 
     /**

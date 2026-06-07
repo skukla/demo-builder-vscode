@@ -9,8 +9,8 @@
  * @module features/eds/handlers/storefrontSetupPhaseHelpers
  */
 
-import type { HandlerContext } from '@/types/handlers';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
+import type { HandlerContext } from '@/types/handlers';
 
 /**
  * Check GitHub App installation for existing repos. Returns early result if not installed.

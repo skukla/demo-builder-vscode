@@ -191,10 +191,8 @@ export class ComponentRegistryManager {
 
         const groups = raw.selectionGroups || {};
 
-        // Build unified components map from v3.0.0 sections OR v2.0 components
-        // This supports both the new sectioned structure and legacy unified structure
+        // Build unified components map from v3.0.0 sectioned structure
         const componentsMap: Record<string, RawComponentDefinition> = {
-            ...(raw.components || {}),      // v2.0 legacy structure
             ...(raw.frontends || {}),       // v3.0.0: frontends section
             ...(raw.backends || {}),        // v3.0.0: backends section
             ...(raw.mesh || {}),            // v3.0.0: mesh section (contains commerce-mesh)

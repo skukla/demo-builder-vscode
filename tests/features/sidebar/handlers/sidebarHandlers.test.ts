@@ -131,22 +131,6 @@ describe('sidebarHandlers', () => {
     });
 
     describe('handleSetContext', () => {
-        it('should accept wizard context', async () => {
-            const context = createMockContext();
-            const wizardContext: SidebarContext = {
-                type: 'wizard',
-                step: 3,
-                total: 6,
-            };
-
-            const result = await handleSetContext(context, { context: wizardContext });
-
-            expect(result.success).toBe(true);
-            expect(context.logger.info).toHaveBeenCalledWith(
-                expect.stringContaining('wizard')
-            );
-        });
-
         it('should accept projects context', async () => {
             const context = createMockContext();
             const projectsContext: SidebarContext = { type: 'projects' };

@@ -8,7 +8,6 @@
 import { useCallback, Dispatch, SetStateAction } from 'react';
 import type { UniqueField } from '../configureTypes';
 import type { Project } from '@/types/base';
-import { getMeshComponentInstance } from '@/types/typeGuards';
 import { ComponentConfigs } from '@/types/webview';
 
 interface UseConfigureFieldsProps {
@@ -52,17 +51,8 @@ export function useConfigureFields({
 
     const getFieldValue = useCallback((field: UniqueField): string | boolean | undefined => {
         // Special handling for MESH_ENDPOINT - read from meshState (authoritative)
-        // with fallback to componentInstance for backward compatibility
-        if (field.key === 'MESH_ENDPOINT') {
-            // Primary: meshState.endpoint (authoritative location)
-            if (project.meshState?.endpoint) {
-                return project.meshState.endpoint;
-            }
-            // Fallback: componentInstances (legacy, for old projects)
-            const meshComponent = getMeshComponentInstance(project);
-            if (meshComponent?.endpoint) {
-                return meshComponent.endpoint;
-            }
+        if (field.key === 'MESH_ENDPOINT' && project.meshState?.endpoint) {
+            return project.meshState.endpoint;
         }
 
         // Check component configs for value

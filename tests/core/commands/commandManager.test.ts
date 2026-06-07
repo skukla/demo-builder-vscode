@@ -50,11 +50,11 @@ jest.mock('@/features/dashboard/commands/openAi', () => {
         ShowAiCommand: MockShowAiCommand,
     };
 });
-jest.mock('@/commands/aiMenu', () => {
-    const MockAiMenuCommand = jest.fn().mockImplementation(function(this: any) {
+jest.mock('@/commands/showPromptsPicker', () => {
+    const MockShowPromptsPickerCommand = jest.fn().mockImplementation(function(this: any) {
         this.execute = jest.fn().mockResolvedValue(undefined);
     });
-    return { AiMenuCommand: MockAiMenuCommand };
+    return { ShowPromptsPickerCommand: MockShowPromptsPickerCommand };
 });
 jest.mock('@/commands/openInClaude', () => {
     const MockOpenInClaudeCommand = jest.fn().mockImplementation(function(this: any) {
@@ -149,11 +149,11 @@ describe('CommandManager', () => {
             );
         });
 
-        it('should register all 25 commands (26 total, but resetAll only in dev mode)', () => {
+        it('should register all 26 commands (27 total, but resetAll only in dev mode)', () => {
             commandManager.registerCommands();
 
-            // Verify registerCommand was called 25 times (resetAll excluded - dev mode only)
-            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(25);
+            // Verify registerCommand was called 27 times (resetAll excluded - dev mode only)
+            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(27);
 
             // Verify all commands are registered (in order of registration)
             const expectedCommands = [
@@ -170,11 +170,13 @@ describe('CommandManager', () => {
                 'demoBuilder.navigate',
                 'demoBuilder.deployMesh',
                 'demoBuilder.syncStorefront',
+                'demoBuilder.refreshBlockLibrary',
                 'demoBuilder.checkForUpdates',
                 'demoBuilder.openInClaude',
                 'demoBuilder.openAi',
                 'demoBuilder.openAiExperience',
-                'demoBuilder.aiMenu',
+                'demoBuilder.showPromptsPicker',
+                'demoBuilder.openModernizationAgent',
                 'demoBuilder.diagnostics',
                 'demoBuilder.setRecommendedZoom',
                 'demoBuilder.resetZoom',
@@ -339,8 +341,9 @@ describe('CommandManager', () => {
 
             await navigateHandler({ target: 'ai' });
 
-            // Chat-first: navigate('ai') now opens the AI experience directly.
-            // The prompt manager (openAi) stays reachable via the aiMenu Manage item.
+            // Chat-first: navigate('ai') opens the AI experience directly.
+            // The prompt manager (openAi) stays reachable via the prompt picker's
+            // "Manage prompts…" row.
             expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openAiExperience');
         });
 

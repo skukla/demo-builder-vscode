@@ -112,6 +112,20 @@ describe('inspectSkills', () => {
             );
         });
 
+        it('classifies both custom-block skills (register + remove) as demo-builder', async () => {
+            setupFs({
+                [`${SKILLS_DIR}/register-custom-block.md`]: frontmatter('register-custom-block', 'Register a block'),
+                [`${SKILLS_DIR}/remove-custom-block.md`]: frontmatter('remove-custom-block', 'Remove a block'),
+            });
+
+            const result = await inspectSkills(PROJECT_PATH);
+
+            expect(result).toHaveLength(2);
+            for (const entry of result) {
+                expect(entry.source).toBe('demo-builder');
+            }
+        });
+
         it('extracts the description field from frontmatter', async () => {
             setupFs({
                 [`${SKILLS_DIR}/add-component.md`]: frontmatter('add-component', 'Add or enable a component'),

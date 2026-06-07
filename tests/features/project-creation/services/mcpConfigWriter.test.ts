@@ -13,15 +13,14 @@
  */
 
 import * as fsPromises from 'fs/promises';
-import * as os from 'os';
 import * as path from 'path';
-import * as vscode from 'vscode';
 import {
-    ensureGlobalMcpRegistration,
+    buildHomeGitSyncCommand,
     generateClaudeSettings,
-    registerGlobalMcp,
+    generateHomeClaudeSettings,
     writeMcpConfigs,
 } from '@/features/project-creation/services/mcpConfigWriter';
+import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
 import type { Project, ComponentInstance } from '@/types/base';
 
 jest.mock('fs/promises', () => ({
@@ -30,12 +29,6 @@ jest.mock('fs/promises', () => ({
     readFile: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
     appendFile: jest.fn().mockResolvedValue(undefined),
 }));
-
-jest.mock('vscode', () => ({
-    window: {
-        showInformationMessage: jest.fn(),
-    },
-}), { virtual: true });
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -83,6 +76,10 @@ function makeHeadlessProject(overrides: Partial<Project> = {}): Project {
 
 const EXTENSION_DIST = '/path/to/extension/dist';
 
+// Already-resolved Node binary threaded into the git-sync hook's `node -e`
+// tool-input extractor (see resolveNodePath / buildToolFileExtraction).
+const NODE_PATH = '/usr/local/bin/node';
+
 /**
  * Capture the McpConfig written to a specific file path from the writeFile mock.
  * Returns parsed JSON or throws if the file was not written.
@@ -103,7 +100,7 @@ describe('MCP config content', () => {
         jest.clearAllMocks();
     });
 
-    it('always includes the demo-builder server pointing to dist/mcp-server.js', async () => {
+    it('always includes the demo-builder server pointing to dist/mcp-proxy.js', async () => {
         const project = makeEdsProject();
         await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
@@ -114,17 +111,31 @@ describe('MCP config content', () => {
         expect(path.isAbsolute(command)).toBe(true);
         expect(path.basename(command)).toMatch(/^node(\.exe)?$/);
         expect((config.mcpServers['demo-builder'].args as string[]).join(' ')).toContain(
-            `${EXTENSION_DIST}/mcp-server.js`,
+            `${EXTENSION_DIST}/mcp-proxy.js`,
         );
     });
 
-    it('does not include DEMO_BUILDER_PROJECT_PATH env var (multi-project mode)', async () => {
-        const project = makeEdsProject();
+    it('points DEMO_BUILDER_MCP_SOCKET at the projects-root socket, not a per-project socket', async () => {
+        // Under the always-root home-Chat model (PR #36), the in-extension MCP
+        // server listens on a socket keyed to the OPEN WORKSPACE folder — which
+        // is the projects root, not any individual project. The per-project
+        // mcp.json must therefore point at THAT root socket (same socket the
+        // home writer uses) — otherwise the proxy connects to a socket nothing
+        // is listening on, and the demo-builder MCP shows up as "timed out" in
+        // the AI Capabilities modal.
+        const project = makeEdsProject(); // project.path = '/projects/test-project'
         await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
         const config = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, Record<string, unknown>> };
+        const env = config.mcpServers['demo-builder'].env as Record<string, string> | undefined;
 
-        expect(config.mcpServers['demo-builder'].env).toBeUndefined();
+        const rootSocket = resolveMcpSocketPath(path.dirname(project.path)); // '/projects'
+        const projectSocket = resolveMcpSocketPath(project.path);            // '/projects/test-project'
+
+        expect(env?.['DEMO_BUILDER_MCP_SOCKET']).toBe(rootSocket);
+        expect(env?.['DEMO_BUILDER_MCP_SOCKET']).not.toBe(projectSocket);
+        // …and never the legacy single-project path env.
+        expect(env?.['DEMO_BUILDER_PROJECT_PATH']).toBeUndefined();
     });
 
     it('emits demo-builder plus every server declared in ai-defaults.json', async () => {
@@ -132,9 +143,12 @@ describe('MCP config content', () => {
         await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
         const config = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, unknown> };
-        // ai-defaults.json ships with the Adobe App Builder MCP as `commerce-extensibility`.
+        // ai-defaults.json ships with the Adobe App Builder MCP as `commerce-extensibility`
+        // and Playwright MCP as `playwright` (for the EDS site-scraping skills).
         // If/when more defaults are added, this test should reflect them.
-        expect(Object.keys(config.mcpServers).sort()).toEqual(['commerce-extensibility', 'demo-builder']);
+        expect(Object.keys(config.mcpServers).sort()).toEqual(
+            ['commerce-extensibility', 'demo-builder', 'playwright'],
+        );
     });
 
     it('anchors the Adobe App Builder MCP args to the storefront path so Claude Code (cwd=project.path) can spawn it', async () => {
@@ -191,7 +205,7 @@ describe('MCP config content', () => {
 describe('generateClaudeSettings', () => {
     it('returns a hooks structure with PostToolUse for EDS projects', () => {
         const project = makeEdsProject();
-        const settings = generateClaudeSettings(project);
+        const settings = generateClaudeSettings(project, NODE_PATH);
 
         expect(settings.hooks).toBeDefined();
         expect(settings.hooks?.['PostToolUse']).toBeDefined();
@@ -200,7 +214,7 @@ describe('generateClaudeSettings', () => {
 
     it('PostToolUse hook matches Write and Edit tools', () => {
         const project = makeEdsProject();
-        const settings = generateClaudeSettings(project);
+        const settings = generateClaudeSettings(project, NODE_PATH);
         const hook = settings.hooks?.['PostToolUse']?.[0];
 
         expect(hook?.matcher).toMatch(/Write|Edit/);
@@ -208,7 +222,7 @@ describe('generateClaudeSettings', () => {
 
     it('PostToolUse hook command references the storefront local path', () => {
         const project = makeEdsProject();
-        const settings = generateClaudeSettings(project);
+        const settings = generateClaudeSettings(project, NODE_PATH);
         const hook = settings.hooks?.['PostToolUse']?.[0];
         const command = hook?.hooks?.[0]?.command ?? '';
 
@@ -217,7 +231,7 @@ describe('generateClaudeSettings', () => {
 
     it('PostToolUse hook command includes git commit and push', () => {
         const project = makeEdsProject();
-        const settings = generateClaudeSettings(project);
+        const settings = generateClaudeSettings(project, NODE_PATH);
         const hook = settings.hooks?.['PostToolUse']?.[0];
         const command = hook?.hooks?.[0]?.command ?? '';
 
@@ -228,7 +242,7 @@ describe('generateClaudeSettings', () => {
 
     it('returns no PostToolUse hook for headless projects (no storefront path)', () => {
         const project = makeHeadlessProject();
-        const settings = generateClaudeSettings(project);
+        const settings = generateClaudeSettings(project, NODE_PATH);
 
         expect(settings.hooks?.['PostToolUse']).toBeUndefined();
     });
@@ -240,7 +254,7 @@ describe('generateClaudeSettings', () => {
                 'eds-storefront': { ...makeEdsInstance(), path: dangerousPath },
             },
         });
-        const settings = generateClaudeSettings(project);
+        const settings = generateClaudeSettings(project, NODE_PATH);
 
         expect(settings.hooks?.['PostToolUse']).toBeUndefined();
     });
@@ -252,14 +266,14 @@ describe('generateClaudeSettings', () => {
                 'eds-storefront': { ...makeEdsInstance(), path: dangerousPath },
             },
         });
-        const settings = generateClaudeSettings(project);
+        const settings = generateClaudeSettings(project, NODE_PATH);
 
         expect(settings.hooks?.['PostToolUse']).toBeUndefined();
     });
 
     it('PostToolUse hook uses a static commit message (no dynamic filename expansion)', () => {
         const project = makeEdsProject();
-        const settings = generateClaudeSettings(project);
+        const settings = generateClaudeSettings(project, NODE_PATH);
         const command = settings.hooks?.['PostToolUse']?.[0]?.hooks?.[0]?.command ?? '';
 
         // The commit -m value must be a static string — no $() in the -m argument
@@ -268,23 +282,27 @@ describe('generateClaudeSettings', () => {
     });
 
     describe('PostToolUse hook hardening', () => {
-        it('uses jq as the primary JSON parser', () => {
+        it('extracts the tool input with a single node -e invocation (no jq/python3/grep cascade)', () => {
             const project = makeEdsProject();
-            const command = generateClaudeSettings(project).hooks?.['PostToolUse']?.[0]?.hooks?.[0]?.command ?? '';
-            expect(command).toContain('jq');
+            const command = generateClaudeSettings(project, NODE_PATH).hooks?.['PostToolUse']?.[0]?.hooks?.[0]?.command ?? '';
+
+            // Parses via the resolved node binary, reading the env var directly.
+            expect(command).toContain(`TOOL_FILE=$("${NODE_PATH}" -e '`);
+            expect(command).toContain('process.env.CLAUDE_TOOL_INPUT');
+            expect(command).toContain('JSON.parse');
+            // Recursive first-string file_path finder (parity with old `.. | .file_path`).
+            expect(command).toContain('file_path');
+            // The old 3-tier shell cascade is gone.
+            expect(command).not.toContain('jq');
+            expect(command).not.toContain('python3');
+            expect(command).not.toContain('grep');
+            expect(command).not.toContain('sed');
         });
 
-        it('falls back to python3 when jq is not available', () => {
+        it('returns no PostToolUse hook when nodePath contains shell metacharacters', () => {
             const project = makeEdsProject();
-            const command = generateClaudeSettings(project).hooks?.['PostToolUse']?.[0]?.hooks?.[0]?.command ?? '';
-            expect(command).toContain('python3');
-        });
-
-        it('falls back to grep/sed when jq and python3 are not available', () => {
-            const project = makeEdsProject();
-            const command = generateClaudeSettings(project).hooks?.['PostToolUse']?.[0]?.hooks?.[0]?.command ?? '';
-            expect(command).toContain('grep');
-            expect(command).toContain('sed');
+            const settings = generateClaudeSettings(project, '/usr/local/bin/node;rm -rf /');
+            expect(settings.hooks?.['PostToolUse']).toBeUndefined();
         });
 
         it('produces a hook for storefront paths containing spaces', () => {
@@ -295,7 +313,7 @@ describe('generateClaudeSettings', () => {
                 },
             });
 
-            const settings = generateClaudeSettings(project);
+            const settings = generateClaudeSettings(project, NODE_PATH);
             expect(settings.hooks?.['PostToolUse']).toBeDefined();
             const command = settings.hooks?.['PostToolUse']?.[0]?.hooks?.[0]?.command ?? '';
             expect(command).toContain(pathWithSpaces);
@@ -309,7 +327,7 @@ describe('generateClaudeSettings', () => {
                 },
             });
 
-            const command = generateClaudeSettings(project).hooks?.['PostToolUse']?.[0]?.hooks?.[0]?.command ?? '';
+            const command = generateClaudeSettings(project, NODE_PATH).hooks?.['PostToolUse']?.[0]?.hooks?.[0]?.command ?? '';
             expect(command).toContain(`"${pathWithSpaces}"`);
         });
 
@@ -319,9 +337,91 @@ describe('generateClaudeSettings', () => {
                     'eds-storefront': { ...makeEdsInstance(), path: '/projects/test;rm -rf /' },
                 },
             });
-            const settings = generateClaudeSettings(project);
+            const settings = generateClaudeSettings(project, NODE_PATH);
             expect(settings.hooks?.['PostToolUse']).toBeUndefined();
         });
+    });
+});
+
+// ─── buildHomeGitSyncCommand / generateHomeClaudeSettings ────────────────────
+
+describe('buildHomeGitSyncCommand', () => {
+    const HOME_ROOT = '/Users/demo/.demo-builder/projects';
+
+    it('extracts the edited file with a single node -e invocation (no jq/python3/grep cascade)', () => {
+        const command = buildHomeGitSyncCommand(HOME_ROOT, NODE_PATH);
+        expect(command).toContain(`TOOL_FILE=$("${NODE_PATH}" -e '`);
+        expect(command).toContain('process.env.CLAUDE_TOOL_INPUT');
+        expect(command).toContain('JSON.parse');
+        expect(command).toContain('file_path');
+        expect(command).toContain('TOOL_FILE=');
+        expect(command).not.toContain('jq');
+        expect(command).not.toContain('python3');
+        expect(command).not.toContain('grep');
+        expect(command).not.toContain('sed');
+    });
+
+    it('bails when no file was edited / payload could not be parsed', () => {
+        const command = buildHomeGitSyncCommand(HOME_ROOT, NODE_PATH);
+        expect(command).toContain('[ -z "$TOOL_FILE" ] && exit 0');
+    });
+
+    it('resolves the enclosing git repo via rev-parse --show-toplevel', () => {
+        const command = buildHomeGitSyncCommand(HOME_ROOT, NODE_PATH);
+        expect(command).toContain('rev-parse --show-toplevel');
+        expect(command).toContain('TOP=$(git -C "$(dirname "$TOOL_FILE")" rev-parse --show-toplevel 2>/dev/null) || exit 0');
+    });
+
+    it('applies the root-scope case guard with the quoted projects root (subpath only)', () => {
+        const command = buildHomeGitSyncCommand(HOME_ROOT, NODE_PATH);
+        expect(command).toContain(`case "$TOP" in "${HOME_ROOT}"/*) ;; *) exit 0 ;; esac`);
+    });
+
+    it('applies the origin-remote guard so only storefront repos are committed', () => {
+        const command = buildHomeGitSyncCommand(HOME_ROOT, NODE_PATH);
+        expect(command).toContain('git -C "$TOP" remote get-url origin >/dev/null 2>&1 || exit 0');
+    });
+
+    it('commits and pushes the resolved repo top with a static message', () => {
+        const command = buildHomeGitSyncCommand(HOME_ROOT, NODE_PATH);
+        expect(command).toContain('git -C "$TOP" add -A');
+        expect(command).toContain('git -C "$TOP" commit -m "AI: sync files"');
+        expect(command).toContain('git -C "$TOP" push');
+    });
+
+    it('returns an empty string when the projects root contains shell metacharacters', () => {
+        expect(buildHomeGitSyncCommand('/tmp/a;b', NODE_PATH)).toBe('');
+    });
+
+    it('returns an empty string when nodePath contains shell metacharacters', () => {
+        expect(buildHomeGitSyncCommand(HOME_ROOT, '/usr/local/bin/node;rm -rf /')).toBe('');
+    });
+});
+
+describe('generateHomeClaudeSettings', () => {
+    const HOME_ROOT = '/Users/demo/.demo-builder/projects';
+
+    it('wraps the home git-sync command as a Write|Edit PostToolUse hook', () => {
+        const settings = generateHomeClaudeSettings(HOME_ROOT, NODE_PATH);
+        const hook = settings.hooks?.['PostToolUse']?.[0];
+
+        expect(hook?.matcher).toBe('Write|Edit');
+        const command = hook?.hooks?.[0]?.command ?? '';
+        expect(command).toBe(buildHomeGitSyncCommand(HOME_ROOT, NODE_PATH));
+        expect(command).toContain(`case "$TOP" in "${HOME_ROOT}"/*)`);
+        expect(command).toContain('remote get-url origin');
+    });
+
+    it('returns {} (no hook) when the projects root is unsafe', () => {
+        const settings = generateHomeClaudeSettings('/tmp/a;b', NODE_PATH);
+        expect(settings).toEqual({});
+        expect(settings.hooks).toBeUndefined();
+    });
+
+    it('returns {} (no hook) when nodePath is unsafe', () => {
+        const settings = generateHomeClaudeSettings(HOME_ROOT, '/usr/local/bin/node;rm -rf /');
+        expect(settings).toEqual({});
+        expect(settings.hooks).toBeUndefined();
     });
 });
 
@@ -444,165 +544,5 @@ describe('writeMcpConfigs', () => {
         await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
         expect(fsPromises.appendFile as jest.Mock).not.toHaveBeenCalled();
-    });
-});
-
-// ─── Global MCP registration ────────────────────────────────────────────────
-
-const GLOBAL_CLAUDE_CONFIG_PATH = path.join(os.homedir(), '.claude.json');
-const GLOBAL_MCP_REG_STATE_KEY = 'demoBuilder.ai.globalMcpRegistration';
-
-function makeMockExtensionContext(initialState?: 'registered' | 'declined'): {
-    globalState: { get: jest.Mock; update: jest.Mock };
-} {
-    const store: Record<string, unknown> = {};
-    if (initialState !== undefined) store[GLOBAL_MCP_REG_STATE_KEY] = initialState;
-    return {
-        globalState: {
-            get: jest.fn((key: string) => store[key]),
-            update: jest.fn(async (key: string, value: unknown) => {
-                store[key] = value;
-            }),
-        },
-    };
-}
-
-describe('registerGlobalMcp', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-    });
-
-    it('writes the demo-builder entry to ~/.claude.json (not ~/.claude/.mcp.json)', async () => {
-        await registerGlobalMcp(EXTENSION_DIST);
-
-        const writeFileMock = fsPromises.writeFile as jest.Mock;
-        const call = writeFileMock.mock.calls.find(
-            ([p]: [string]) => String(p) === GLOBAL_CLAUDE_CONFIG_PATH,
-        );
-        expect(call).toBeDefined();
-        const written = call ? (call[1] as string) : '';
-        const parsed = JSON.parse(written);
-        expect(parsed.mcpServers['demo-builder']).toBeDefined();
-        expect(path.isAbsolute(parsed.mcpServers['demo-builder'].command)).toBe(true);
-        expect(parsed.mcpServers['demo-builder'].args).toEqual([`${EXTENSION_DIST}/mcp-server.js`]);
-    });
-
-    it('never writes the legacy ~/.claude/.mcp.json path', async () => {
-        await registerGlobalMcp(EXTENSION_DIST);
-
-        const writeFileMock = fsPromises.writeFile as jest.Mock;
-        const wrote = writeFileMock.mock.calls.some(([p]: [string]) =>
-            String(p) === path.join(os.homedir(), '.claude', '.mcp.json'),
-        );
-        expect(wrote).toBe(false);
-    });
-
-    it('preserves every existing field in ~/.claude.json when upserting', async () => {
-        const existing = {
-            theme: 'dark',
-            mcpServers: {
-                'other-server': { command: 'npx', args: ['other-mcp'] },
-            },
-            customSettings: { foo: 'bar' },
-        };
-        (fsPromises.readFile as jest.Mock).mockResolvedValueOnce(JSON.stringify(existing));
-
-        await registerGlobalMcp(EXTENSION_DIST);
-
-        const writeFileMock = fsPromises.writeFile as jest.Mock;
-        const call = writeFileMock.mock.calls.find(([p]: [string]) => String(p) === GLOBAL_CLAUDE_CONFIG_PATH);
-        const parsed = JSON.parse(call?.[1] as string);
-
-        expect(parsed.theme).toBe('dark');
-        expect(parsed.customSettings).toEqual({ foo: 'bar' });
-        expect(parsed.mcpServers['other-server']).toEqual({ command: 'npx', args: ['other-mcp'] });
-        expect(parsed.mcpServers['demo-builder']).toBeDefined();
-    });
-
-    it('creates ~/.claude.json when missing', async () => {
-        await expect(registerGlobalMcp(EXTENSION_DIST)).resolves.not.toThrow();
-
-        const writeFileMock = fsPromises.writeFile as jest.Mock;
-        expect(writeFileMock).toHaveBeenCalled();
-    });
-
-    it('throws when ~/.claude.json is malformed (does not overwrite valid-but-unreadable user state)', async () => {
-        (fsPromises.readFile as jest.Mock).mockResolvedValueOnce('{ not valid json');
-
-        await expect(registerGlobalMcp(EXTENSION_DIST)).rejects.toThrow(/malformed|JSON/i);
-        expect(fsPromises.writeFile).not.toHaveBeenCalled();
-    });
-});
-
-describe('ensureGlobalMcpRegistration', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-    });
-
-    it('prompts the user with a modal dialog and three buttons when state is undefined', async () => {
-        const ctx = makeMockExtensionContext(undefined);
-        const showInfo = vscode.window.showInformationMessage as jest.Mock;
-        showInfo.mockResolvedValueOnce(undefined); // user dismisses
-
-        await ensureGlobalMcpRegistration(EXTENSION_DIST, ctx as unknown as never);
-
-        expect(showInfo).toHaveBeenCalledTimes(1);
-        const [, options, ...buttons] = showInfo.mock.calls[0];
-        expect(options).toEqual({ modal: true });
-        expect(buttons).toEqual(['Register', 'Not Now', "Don't Ask Again"]);
-    });
-
-    it('registers and persists "registered" state when user clicks Register', async () => {
-        const ctx = makeMockExtensionContext(undefined);
-        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValueOnce('Register');
-
-        await ensureGlobalMcpRegistration(EXTENSION_DIST, ctx as unknown as never);
-
-        // Wrote to ~/.claude.json
-        const writeFileMock = fsPromises.writeFile as jest.Mock;
-        expect(writeFileMock.mock.calls.some(([p]: [string]) => String(p) === GLOBAL_CLAUDE_CONFIG_PATH)).toBe(true);
-        expect(ctx.globalState.update).toHaveBeenCalledWith(GLOBAL_MCP_REG_STATE_KEY, 'registered');
-    });
-
-    it('persists "declined" state when user clicks Don\'t Ask Again, without writing config', async () => {
-        const ctx = makeMockExtensionContext(undefined);
-        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValueOnce("Don't Ask Again");
-
-        await ensureGlobalMcpRegistration(EXTENSION_DIST, ctx as unknown as never);
-
-        const writeFileMock = fsPromises.writeFile as jest.Mock;
-        expect(writeFileMock.mock.calls.some(([p]: [string]) => String(p) === GLOBAL_CLAUDE_CONFIG_PATH)).toBe(false);
-        expect(ctx.globalState.update).toHaveBeenCalledWith(GLOBAL_MCP_REG_STATE_KEY, 'declined');
-    });
-
-    it('leaves state undefined and does not register when user clicks Not Now', async () => {
-        const ctx = makeMockExtensionContext(undefined);
-        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValueOnce('Not Now');
-
-        await ensureGlobalMcpRegistration(EXTENSION_DIST, ctx as unknown as never);
-
-        const writeFileMock = fsPromises.writeFile as jest.Mock;
-        expect(writeFileMock.mock.calls.some(([p]: [string]) => String(p) === GLOBAL_CLAUDE_CONFIG_PATH)).toBe(false);
-        expect(ctx.globalState.update).not.toHaveBeenCalled();
-    });
-
-    it('does nothing and does not prompt when state is "registered"', async () => {
-        const ctx = makeMockExtensionContext('registered');
-        const showInfo = vscode.window.showInformationMessage as jest.Mock;
-
-        await ensureGlobalMcpRegistration(EXTENSION_DIST, ctx as unknown as never);
-
-        expect(showInfo).not.toHaveBeenCalled();
-        expect(fsPromises.writeFile).not.toHaveBeenCalled();
-    });
-
-    it('does nothing and does not prompt when state is "declined"', async () => {
-        const ctx = makeMockExtensionContext('declined');
-        const showInfo = vscode.window.showInformationMessage as jest.Mock;
-
-        await ensureGlobalMcpRegistration(EXTENSION_DIST, ctx as unknown as never);
-
-        expect(showInfo).not.toHaveBeenCalled();
-        expect(fsPromises.writeFile).not.toHaveBeenCalled();
     });
 });

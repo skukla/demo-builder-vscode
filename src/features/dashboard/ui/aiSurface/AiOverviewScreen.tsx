@@ -47,14 +47,33 @@ function generateAiPromptId(): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.ReactElement {
+    // Seed from project.aiPrompts so the first paint isn't empty in cases where
+    // it carries the project's per-project prompts. The mount effect below
+    // immediately replaces this with the MERGED list from `list-ai-prompts`
+    // (pinned-in-globalState + per-project) — the same list the post-save
+    // handlers return. Without that fetch, the user sees only per-project
+    // prompts on first open, and pinned ones only "appear" after the next save.
     const [userPrompts, setUserPrompts] = useState<AiPrompt[]>(project.aiPrompts ?? []);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<AiPrompt | null>(null);
 
-    // Reset the prompt list when the project changes.
+    // Fetch the merged prompt list on mount (and whenever the project changes).
+    // Pinned prompts live in globalState and reach the UI only via this
+    // handler — the project prop carries the per-project subset only.
     useEffect(() => {
-        setUserPrompts(project.aiPrompts ?? []);
-    }, [project.path, project.aiPrompts]);
+        let cancelled = false;
+        void (async () => {
+            const response = await webviewClient.request<{ success?: boolean; aiPrompts?: AiPrompt[] }>(
+                'list-ai-prompts',
+                {},
+            );
+            if (cancelled) return;
+            if (response?.success && Array.isArray(response.aiPrompts)) {
+                setUserPrompts(response.aiPrompts);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [project.path]);
 
     const handleClose = useCallback(() => {
         webviewClient.postMessage('cancel');

@@ -4,8 +4,9 @@ import {
 } from '@adobe/react-spectrum';
 import React from 'react';
 import { ConfigNavigationPanel } from '../components/ConfigNavigationPanel';
-import { StoreConfigFieldRow } from '../components/StoreConfigFieldRow';
 import { ServiceGroupList } from '../components/ServiceGroupList';
+import { StoreConfigFieldRow } from '../components/StoreConfigFieldRow';
+import { useAutoStoreDetect } from '../hooks/useAutoStoreDetect';
 import { useComponentConfig } from '../hooks/useComponentConfig';
 import { useConfigNavigation } from '../hooks/useConfigNavigation';
 import { useStoreDiscovery } from '../hooks/useStoreDiscovery';
@@ -13,7 +14,6 @@ import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
 import { BaseStepProps } from '@/types/wizard';
-import { useAutoStoreDetect } from '../hooks/useAutoStoreDetect';
 
 // Re-export types for component consumption
 export type { ComponentConfigs } from '@/types/webview';

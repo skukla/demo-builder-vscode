@@ -18,16 +18,3 @@ declare global {
 export function getBaseUri(): string | undefined {
     return window.__WEBVIEW_BASE_URI__;
 }
-
-/**
- * Resolve a media path to a full URI
- * @param path - Relative path within media directory (e.g., "help/screenshot.png")
- * @returns Full URI string, or the original path if baseUri is not set
- */
-export function resolveMediaPath(path: string): string {
-    const baseUri = getBaseUri();
-    if (!baseUri) {
-        return path;
-    }
-    return `${baseUri}/media/${path}`;
-}

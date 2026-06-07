@@ -44,9 +44,9 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
     // Validate project name using shared validation function
     // In edit mode, allow the original project name (user is keeping it)
     const validateProjectName = useCallback((value: string): string | undefined => {
-        const allowedName = state.editMode ? state.editOriginalName : undefined;
+        const allowedName = state.wizardMode === 'edit' ? state.editOriginalName : undefined;
         return getProjectNameError(value, existingProjectNames, allowedName);
-    }, [existingProjectNames, state.editMode, state.editOriginalName]);
+    }, [existingProjectNames, state.wizardMode, state.editOriginalName]);
 
     /**
      * Get validation state for project name field

@@ -2,7 +2,7 @@
   "name": "adobe-demo-builder",
   "displayName": "Adobe Demo Builder",
   "description": "Create and manage Adobe Commerce demos with ease",
-  "version": "1.0.0-beta.111",
+  "version": "1.0.0-beta.112",
   "publisher": "skukla",
   "engines": {
     "vscode": "^1.84.0"
@@ -53,6 +53,11 @@
         "category": "Demo Builder"
       },
       {
+        "command": "demoBuilder.diagnostics",
+        "title": "Diagnostics",
+        "category": "Demo Builder"
+      },
+      {
         "command": "demoBuilder.syncStorefront",
         "title": "Sync Storefront",
         "category": "Demo Builder"
@@ -65,6 +70,11 @@
       {
         "command": "demoBuilder.openAi",
         "title": "Manage AI Prompts",
+        "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.openModernizationAgent",
+        "title": "Open AEM Modernization Agent",
         "category": "Demo Builder"
       },
       {
@@ -126,10 +136,16 @@
             "type": "string",
             "enum": [
               "stable",
-              "beta"
+              "beta",
+              "early-access"
+            ],
+            "enumDescriptions": [
+              "Production releases only",
+              "Beta prereleases (testing)",
+              "Alpha preview builds — honored only for repository collaborators; others fall back to beta"
             ],
             "default": "stable",
-            "description": "Update channel: stable (production releases) or beta (testing)"
+            "description": "Update channel: stable (production), beta (testing), or early-access (collaborator-only alpha preview; falls back to beta if you are not a repository collaborator)"
           },
           "demoBuilder.logLevel": {
             "type": "string",
@@ -381,6 +397,7 @@
     "@types/node": "^24.3.1",
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",
+    "@types/sanitize-html": "^2.16.1",
     "@types/semver": "^7.5.8",
     "@types/vscode": "^1.74.0",
     "@vscode/test-electron": "^2.5.2",
@@ -428,6 +445,7 @@
     "execa": "^5.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "sanitize-html": "^2.17.4",
     "semver": "^7.5.4",
     "uuid": "^13.0.0",
     "xterm": "^5.3.0",

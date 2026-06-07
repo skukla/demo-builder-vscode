@@ -272,6 +272,107 @@ async function pipelinePublishContent(
     }
 }
 
+/**
+ * Step 2: configure the block library.
+ *
+ * Copies block doc pages from library content sources (DA.live API, 403-tolerant),
+ * then builds the authoring library from the template (or the user's repo, per the
+ * load-bearing `blockCollectionIds` routing). Returns the resulting library paths.
+ */
+async function pipelineConfigureBlockLibrary(
+    services: EdsPipelineServices,
+    params: EdsPipelineParams,
+    onProgress?: EdsPipelineProgressCallback,
+): Promise<string[]> {
+    const { daLiveContentOps, githubFileOps, logger } = services;
+    const {
+        repoOwner,
+        repoName,
+        daLiveOrg,
+        daLiveSite,
+        templateOwner,
+        templateRepo,
+        blockCollectionIds,
+        libraryContentSources,
+    } = params;
+
+    onProgress?.({
+        operation: 'block-library',
+        message: 'Configuring block library...',
+    });
+
+    // Copy block doc pages from library content sources via DA.live API.
+    // This works for orgs the user owns (has DA.live auth on). For
+    // third-party orgs (403), we log a warning and fall back to CDN-based
+    // copy inside createBlockLibraryFromTemplate.
+    if (libraryContentSources?.length) {
+        await copyLibraryDocPages(
+            daLiveContentOps, libraryContentSources, daLiveOrg, daLiveSite, logger,
+        );
+    }
+
+    // Load-bearing: truthy `blockCollectionIds` (including the empty
+    // array `[]`) routes the comp-def read to the USER's repo so any
+    // MCP-promoted blocks survive a destructive rebuild. `undefined`
+    // falls back to the template repo (initial setup / template-only
+    // refresh). Do NOT change this to `blockCollectionIds?.length`
+    // — RefreshBlockLibraryCommand passes `[]` deliberately as the
+    // "rebuild from user repo" signal. See src/commands/refreshBlockLibrary.ts.
+    const compDefOwner = blockCollectionIds ? repoOwner : templateOwner;
+    const compDefRepo = blockCollectionIds ? repoName : templateRepo;
+
+    const libResult = await daLiveContentOps.createBlockLibraryFromTemplate(
+        daLiveOrg, daLiveSite, compDefOwner, compDefRepo,
+        (owner, repo, path) => githubFileOps.getFileContent(owner, repo, path),
+        libraryContentSources,
+        blockCollectionIds,
+    );
+
+    if (libResult.blocksCount > 0) {
+        logger.info(`[EdsPipeline] Block library: ${libResult.blocksCount} blocks configured`);
+        onProgress?.({
+            operation: 'block-library',
+            message: `Block library configured (${libResult.blocksCount} blocks)`,
+        });
+    }
+
+    return libResult.paths;
+}
+
+/**
+ * Copy block doc pages from library content sources via the DA.live API.
+ *
+ * Works for orgs the user owns (has DA.live auth on). For third-party orgs the
+ * API returns 403 — that's tolerated and logged, since the CDN-based fallback
+ * inside createBlockLibraryFromTemplate handles those sources. Any other error
+ * is propagated.
+ */
+async function copyLibraryDocPages(
+    daLiveContentOps: DaLiveContentOperations,
+    libraryContentSources: Array<{ org: string; site: string }>,
+    daLiveOrg: string,
+    daLiveSite: string,
+    logger: Logger,
+): Promise<void> {
+    for (const libSource of libraryContentSources) {
+        try {
+            logger.info(`[EdsPipeline] Copying block doc pages from ${libSource.org}/${libSource.site}`);
+            await daLiveContentOps.copyContent(
+                { org: libSource.org, site: libSource.site, path: '.da/library/blocks' },
+                { org: daLiveOrg, site: daLiveSite, path: '.da/library/blocks' },
+                { recursive: true },
+            );
+        } catch (error) {
+            // 403 = no auth on source org — CDN fallback will handle it
+            if (error instanceof DaLiveError && error.statusCode === 403) {
+                logger.info(`[EdsPipeline] No DA.live access to ${libSource.org}/${libSource.site}, will use CDN fallback`);
+            } else {
+                throw error; // Unexpected error — propagate
+            }
+        }
+    }
+}
+
 // ==========================================================
 // Pipeline
 // ==========================================================
@@ -293,14 +394,12 @@ export async function executeEdsPipeline(
     services: EdsPipelineServices,
     onProgress?: EdsPipelineProgressCallback,
 ): Promise<EdsPipelineResult> {
-    const { daLiveContentOps, githubFileOps, helixService, logger } = services;
+    const { daLiveContentOps, helixService, logger } = services;
     const {
         repoOwner,
         repoName,
         daLiveOrg,
         daLiveSite,
-        templateOwner,
-        templateRepo,
         clearExistingContent = false,
         skipContent = false,
         skipPublish = skipContent,
@@ -308,8 +407,6 @@ export async function executeEdsPipeline(
         contentPatches,
         contentPatchSource,
         includeBlockLibrary = false,
-        blockCollectionIds,
-        libraryContentSources,
         purgeCache = false,
     } = params;
 
@@ -341,54 +438,7 @@ export async function executeEdsPipeline(
 
         // Step 2: Block Library
         if (includeBlockLibrary) {
-            onProgress?.({
-                operation: 'block-library',
-                message: 'Configuring block library...',
-            });
-
-            // Copy block doc pages from library content sources via DA.live API.
-            // This works for orgs the user owns (has DA.live auth on). For
-            // third-party orgs (403), we log a warning and fall back to CDN-based
-            // copy inside createBlockLibraryFromTemplate.
-            if (libraryContentSources?.length) {
-                for (const libSource of libraryContentSources) {
-                    try {
-                        logger.info(`[EdsPipeline] Copying block doc pages from ${libSource.org}/${libSource.site}`);
-                        await daLiveContentOps.copyContent(
-                            { org: libSource.org, site: libSource.site, path: '.da/library/blocks' },
-                            { org: daLiveOrg, site: daLiveSite, path: '.da/library/blocks' },
-                            { recursive: true },
-                        );
-                    } catch (error) {
-                        // 403 = no auth on source org — CDN fallback will handle it
-                        if (error instanceof DaLiveError && error.statusCode === 403) {
-                            logger.info(`[EdsPipeline] No DA.live access to ${libSource.org}/${libSource.site}, will use CDN fallback`);
-                        } else {
-                            throw error; // Unexpected error — propagate
-                        }
-                    }
-                }
-            }
-
-            const compDefOwner = blockCollectionIds ? repoOwner : templateOwner;
-            const compDefRepo = blockCollectionIds ? repoName : templateRepo;
-
-            const libResult = await daLiveContentOps.createBlockLibraryFromTemplate(
-                daLiveOrg, daLiveSite, compDefOwner, compDefRepo,
-                (owner, repo, path) => githubFileOps.getFileContent(owner, repo, path),
-                libraryContentSources,
-                blockCollectionIds,
-            );
-
-            libraryPaths = libResult.paths;
-
-            if (libResult.blocksCount > 0) {
-                logger.info(`[EdsPipeline] Block library: ${libResult.blocksCount} blocks configured`);
-                onProgress?.({
-                    operation: 'block-library',
-                    message: `Block library configured (${libResult.blocksCount} blocks)`,
-                });
-            }
+            libraryPaths = await pipelineConfigureBlockLibrary(services, params, onProgress);
         }
 
         // Step 3: EDS Settings

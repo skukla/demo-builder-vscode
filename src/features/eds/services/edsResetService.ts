@@ -21,29 +21,32 @@
  * @module features/eds/services/edsResetService
  */
 
+import { getGitHubServices, configureDaLivePermissions, getDaLiveAuthService, ensureDaLiveAuth } from '../handlers/edsHelpers';
+import { verifyCdnResources } from './configSyncService';
+import { buildSiteConfigParams, ConfigurationService } from './configurationService';
+import { DaLiveContentOperations } from './daLiveContentOperations';
 import type { TokenProvider } from './daLiveOrgOperations';
-import type { Logger } from '@/types/logger';
+import { executeEdsPipeline } from './edsPipeline';
+import { redeployApiMesh } from './edsResetMeshHelper';
+import { extractResetParams, type EdsResetParams, type EdsResetProgress, type EdsResetResult, type ExtractParamsResult } from './edsResetParams';
+import { resetRepoToTemplate } from './edsResetRepoHelper';
 import type { GitHubFileOperations } from './githubFileOperations';
 import type { GitHubTokenService } from './githubTokenService';
-import type { HandlerContext } from '@/types/handlers';
-import type { EdsResetParams, EdsResetProgress, EdsResetResult } from './edsResetParams';
-import { DaLiveAuthError, GitHubAppNotInstalledError } from './types';
-import { buildSiteConfigParams, ConfigurationService } from './configurationService';
 import { HelixService } from './helixService';
-import { DaLiveContentOperations } from './daLiveContentOperations';
-import { executeEdsPipeline } from './edsPipeline';
-import { verifyCdnResources } from './configSyncService';
 import { updateStorefrontState } from './storefrontStalenessDetector';
-import { getGitHubServices, configureDaLivePermissions, getDaLiveAuthService, ensureDaLiveAuth } from '../handlers/edsHelpers';
-import { redeployApiMesh } from './edsResetMeshHelper';
-import { resetRepoToTemplate } from './edsResetRepoHelper';
+import { DaLiveAuthError, GitHubAppNotInstalledError } from './types';
+import type { HandlerContext } from '@/types/handlers';
+import type { Logger } from '@/types/logger';
 
 // ==========================================================
 // Re-exports for backward compatibility
 // ==========================================================
 
-export type { EdsResetParams, EdsResetProgress, EdsResetResult, ExtractParamsResult } from './edsResetParams';
-export { extractResetParams } from './edsResetParams';
+// Re-exports from the consolidated import above — kept here for the long-standing
+// downstream-consumer API. Splitting the import/re-export means the no-duplicate-imports
+// rule sees a single `from './edsResetParams'` statement.
+export { extractResetParams };
+export type { EdsResetParams, EdsResetProgress, EdsResetResult, ExtractParamsResult };
 
 // ==========================================================
 // Constants

@@ -126,7 +126,7 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         }
     }
 
-    const meshEndpoint = project.meshState?.endpoint || meshComponent?.endpoint;
+    const meshEndpoint = project.meshState?.endpoint;
     const statusData = buildStatusPayload(
         project,
         frontendConfigChanged,
@@ -285,16 +285,34 @@ export const handleSyncStorefront: MessageHandler = async () => {
 };
 
 /**
- * Handle 'openAi' message — launch the configured AI chat surface for the current
- * project (terminal tab or extension URI, depending on `demoBuilder.ai.surface`).
+ * Handle 'refreshBlockLibrary' message - Rebuild the DA.live authoring library
+ * from the project's current component-definition.json.
  *
- * The project dashboard's AI tile is a chat-launcher, not a prompt-manager —
- * delegates to `demoBuilder.openAiExperience` (the chat). The Prompt Library
- * webview (`demoBuilder.openAi`) is reached from the wand QuickPick's
- * "Manage prompts…" or the "Demo Builder: Manage AI Prompts" palette entry.
+ * EDS-only kebab action for users who hand-edit component-definition.json
+ * outside the AI flow and want to re-sync the DA.live library destructively.
+ *
+ * Return contract: `{ success: true }` means the command was **dispatched**, not
+ * that the rebuild succeeded. The pipeline runs asynchronously under the
+ * RefreshBlockLibraryCommand and reports its outcome via VS Code notifications
+ * (progress + success/error toasts). The webview does not poll for completion;
+ * the kebab item simply fires-and-forgets and the user watches the notification.
  */
-export const handleOpenAi: MessageHandler = async (_context) => {
-    await vscode.commands.executeCommand('demoBuilder.openAiExperience');
+export const handleRefreshBlockLibrary: MessageHandler = async (context) => {
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return { success: false, error: 'No project loaded', code: ErrorCode.PROJECT_NOT_FOUND };
+    }
+
+    const { isEdsProject } = await import('@/types/typeGuards');
+    if (!isEdsProject(project)) {
+        return {
+            success: false,
+            error: 'Block library refresh applies to EDS projects only',
+            code: ErrorCode.INVALID_OPERATION,
+        };
+    }
+
+    await vscode.commands.executeCommand('demoBuilder.refreshBlockLibrary');
     return { success: true };
 };
 
@@ -534,7 +552,6 @@ export const dashboardHandlers = defineHandlers({
     'viewDebugLogs': handleViewDebugLogs,
     'configure': handleConfigure,
     'openDevConsole': handleOpenDevConsole,
-    'openAi': handleOpenAi,
     'navigateBack': handleNavigateBack,
     'viewComponents': handleViewComponents,
 
@@ -543,6 +560,9 @@ export const dashboardHandlers = defineHandlers({
 
     // EDS storefront sync
     'syncStorefront': handleSyncStorefront,
+
+    // EDS block library refresh (re-sync DA.live library from component-definition.json)
+    'refreshBlockLibrary': handleRefreshBlockLibrary,
 
     // Authentication handlers
     'reAuthenticate': handleReAuthenticate,

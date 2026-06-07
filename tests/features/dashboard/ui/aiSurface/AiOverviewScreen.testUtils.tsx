@@ -133,21 +133,30 @@ export async function renderScreen(opts: {
     const { webviewClient } = jest.requireMock('@/core/ui/utils/WebviewClient') as {
         webviewClient: { request: jest.Mock; postMessage: jest.Mock; onMessage: jest.Mock };
     };
+    const project = makeProject(opts.projectOverrides);
     const defaultVerifyResponse = {
         success: true,
         status: opts.status ?? 'ok',
         checks: [],
         inventory: opts.inventory ?? makeFullInventory(),
-        globalMcpRegistration: 'registered',
     };
     webviewClient.request.mockImplementation((type: string) => {
         if (opts.requestOverrides && type in opts.requestOverrides) {
             return Promise.resolve(opts.requestOverrides[type]);
         }
+        // The screen now fetches the merged prompt list (pinned-from-globalState
+        // + per-project) on mount via `list-ai-prompts`. Default to mirroring
+        // `project.aiPrompts` so existing tests that drive the seed via the
+        // project prop still see the same initial render. Override via
+        // `requestOverrides['list-ai-prompts']` for tests that need to assert
+        // pinned-vs-project routing.
+        if (type === 'list-ai-prompts') {
+            return Promise.resolve({ success: true, aiPrompts: project.aiPrompts ?? [] });
+        }
         return Promise.resolve(defaultVerifyResponse);
     });
 
-    const project = makeProject(opts.projectOverrides);
+
     let result!: ReturnType<typeof render>;
     await act(async () => {
         result = render(

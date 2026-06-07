@@ -10,8 +10,13 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import type * as vscode from 'vscode';
+import { applyDaLiveOrgConfigSettings, configureDaLivePermissions } from '../handlers/edsHelpers';
 import { generateConfigJson, extractConfigParams } from './configGenerator';
-import { syncConfigToRemote } from './configSyncService';
+import { syncConfigToRemote, verifyConfigOnCdn } from './configSyncService';
+import type { DaLiveAuthService } from './daLiveAuthService';
+import { DaLiveContentOperations, createDaLiveServiceTokenProvider } from './daLiveContentOperations';
+import type { GitHubTokenService } from './githubTokenService';
+import { HelixService } from './helixService';
 import { updateStorefrontState } from './storefrontStalenessDetector';
 import type { PhaseProgressCallback } from './types';
 import { COMPONENT_IDS } from '@/core/constants';
@@ -246,4 +251,114 @@ export async function republishStorefrontConfig(
 export function needsStorefrontRepublish(project: Project): boolean {
     const status = project.edsStorefrontStatusSummary;
     return status === 'stale' || status === 'update-declined';
+}
+
+// ==========================================================
+// Full content republish (config + code + DA.live content)
+// ==========================================================
+
+/** Parameters for the full storefront content republish pipeline. */
+export interface RepublishContentParams {
+    project: Project;
+    /** GitHub repo owner. */
+    repoOwner: string;
+    /** GitHub repo name. */
+    repoName: string;
+    /** DA.live organization. */
+    daLiveOrg: string;
+    /** DA.live site. */
+    daLiveSite: string;
+    /** Secret storage for the GitHub token (config.json push). */
+    secrets: vscode.SecretStorage;
+    logger: Logger;
+    /** Authenticated DA.live auth service (token provider + user email source). */
+    daLiveAuthService: DaLiveAuthService;
+    /** GitHub token service for the Helix Admin API. */
+    githubTokenService: GitHubTokenService;
+    /** Optional per-step progress callback. */
+    onProgress?: (message: string) => void;
+}
+
+/** Result of the full content republish. */
+export interface RepublishContentResult {
+    success: boolean;
+    error?: string;
+    /** Whether config.json was verified on the CDN (best-effort — may still be propagating). */
+    cdnVerified?: boolean;
+}
+
+/**
+ * Republish ALL storefront content to the CDN — the headless 5-step pipeline
+ * (EDS config → config.json → code → permissions → publish + verify) that
+ * `handleRepublishContent` wraps with UI (auth modal, progress, status).
+ *
+ * Single source of truth: both the dashboard's Republish button and the MCP
+ * `sync_content` tool call this, so the pipeline never diverges. Callers are
+ * responsible for ensuring DA.live + GitHub auth before invoking (the UI pops a
+ * sign-in modal; the MCP tool returns a `needsAuth` handoff).
+ */
+export async function republishStorefrontContent(
+    params: RepublishContentParams,
+): Promise<RepublishContentResult> {
+    const {
+        project,
+        repoOwner,
+        repoName,
+        daLiveOrg,
+        daLiveSite,
+        secrets,
+        logger,
+        daLiveAuthService,
+        githubTokenService,
+    } = params;
+    const report = (message: string): void => params.onProgress?.(message);
+
+    try {
+        const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
+        const helixService = new HelixService(logger, githubTokenService, daLiveTokenProvider);
+        const daLiveContentOps = new DaLiveContentOperations(daLiveTokenProvider, logger);
+
+        // Step 1: Apply EDS org config (AEM Assets, Universal Editor).
+        report('Applying EDS configuration...');
+        await applyDaLiveOrgConfigSettings(daLiveContentOps, daLiveOrg, daLiveSite, logger);
+
+        // Step 2: Regenerate + sync config.json (picks up env var changes).
+        report('Regenerating storefront configuration...');
+        const configResult = await republishStorefrontConfig({ project, secrets, logger, onProgress: report });
+        if (!configResult.success) {
+            logger.warn(`[Republish] Config regeneration warning: ${configResult.error}`);
+        }
+
+        // Step 3: Sync code to CDN + configure site permissions.
+        report('Syncing code to CDN...');
+        await helixService.previewCode(repoOwner, repoName, '/*');
+        const userEmail = await daLiveAuthService.getUserEmail();
+        if (userEmail) {
+            report('Configuring site permissions...');
+            await configureDaLivePermissions(daLiveTokenProvider, daLiveOrg, daLiveSite, userEmail, logger);
+        } else {
+            logger.warn('[Republish] No user email available for permissions');
+        }
+
+        // Step 4: Purge stale cache + publish all content.
+        report('Purging stale cache...');
+        await helixService.purgeCacheAll(repoOwner, repoName, 'main');
+        report('Publishing content to CDN...');
+        await helixService.publishAllSiteContent(
+            `${repoOwner}/${repoName}`,
+            'main',
+            daLiveOrg,
+            daLiveSite,
+            (info) => report(info.message),
+        );
+
+        // Step 5: Verify config.json on the CDN (best-effort).
+        report('Verifying CDN...');
+        const cdnVerified = await verifyConfigOnCdn(repoOwner, repoName, logger);
+        return { success: true, cdnVerified };
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logger.error('[Republish] Content republish failed', error instanceof Error ? error : undefined);
+        return { success: false, error: message };
+    }
 }

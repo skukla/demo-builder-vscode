@@ -2,8 +2,8 @@
  * Integration Tests: Mesh Endpoint Single Source of Truth
  *
  * Verifies that frontend component .env files receive MESH_ENDPOINT from
- * `componentInstances['commerce-mesh'].endpoint` (the single source of truth)
- * rather than from `componentConfigs`.
+ * `meshState.endpoint` (the single source of truth) rather than from
+ * `componentConfigs`.
  *
  * This is the verification step for the mesh endpoint refactoring that
  * eliminates duplicate state storage.
@@ -141,19 +141,24 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
         jest.clearAllMocks();
     });
 
-    describe('MESH_ENDPOINT comes from componentInstances (single source of truth)', () => {
-        it('should pass mesh endpoint from componentInstances to envFileGenerator', async () => {
-            // Given: Project with commerce-mesh endpoint in componentInstances
+    describe('MESH_ENDPOINT comes from meshState (single source of truth)', () => {
+        it('should pass mesh endpoint from meshState to envFileGenerator', async () => {
+            // Given: Project with mesh endpoint in meshState
             const correctEndpoint = 'https://correct-endpoint.adobeioruntime.net/api/mesh/graphql';
 
             const context = createMinimalContext({
+                meshState: {
+                    envVars: {},
+                    sourceHash: null,
+                    lastDeployed: '2024-01-01',
+                    endpoint: correctEndpoint,
+                },
                 componentInstances: {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'Commerce Mesh',
                         subType: 'mesh',
                         status: 'deployed',
-                        endpoint: correctEndpoint,
                     },
                     'headless': {
                         id: 'headless',
@@ -181,19 +186,24 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
             expect(content).toContain(`MESH_ENDPOINT=${correctEndpoint}`);
         });
 
-        it('should use componentInstances endpoint even when componentConfigs has different value', async () => {
-            // Given: componentInstances has correct endpoint, componentConfigs has stale endpoint
+        it('should use meshState endpoint even when componentConfigs has different value', async () => {
+            // Given: meshState has correct endpoint, componentConfigs has stale endpoint
             const correctEndpoint = 'https://correct.adobeioruntime.net/api/mesh/graphql';
             const staleEndpoint = 'https://stale.adobeioruntime.net/api/mesh/graphql';
 
             const context = createMinimalContext({
+                meshState: {
+                    envVars: {},
+                    sourceHash: null,
+                    lastDeployed: '2024-01-01',
+                    endpoint: correctEndpoint,
+                },
                 componentInstances: {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'Commerce Mesh',
                         subType: 'mesh',
                         status: 'deployed',
-                        endpoint: correctEndpoint,
                     },
                     'headless': {
                         id: 'headless',
@@ -299,7 +309,6 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
                         name: 'Commerce Mesh',
                         subType: 'mesh',
                         status: 'ready',
-                        endpoint: '', // Empty string
                     },
                     'headless': {
                         id: 'headless',
@@ -345,13 +354,18 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
             const correctEndpoint = 'https://correct.adobeioruntime.net/api/mesh/graphql';
 
             const context = createMinimalContext({
+                meshState: {
+                    envVars: {},
+                    sourceHash: null,
+                    lastDeployed: '2024-01-01',
+                    endpoint: correctEndpoint,
+                },
                 componentInstances: {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
                         name: 'Commerce Mesh',
                         subType: 'mesh',
                         status: 'deployed',
-                        endpoint: correctEndpoint,
                     },
                     'headless': {
                         id: 'headless',
@@ -418,7 +432,6 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
                         name: 'Commerce Mesh',
                         subType: 'mesh',
                         status: 'deployed',
-                        endpoint: 'https://endpoint.io/graphql',
                         path: '/test/project/commerce-mesh',
                     },
                     'headless': {

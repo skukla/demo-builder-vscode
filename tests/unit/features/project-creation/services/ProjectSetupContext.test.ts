@@ -221,31 +221,6 @@ describe('ProjectSetupContext', () => {
             expect(endpoint).toBe('https://mesh.adobe.io/graphql');
         });
 
-        it('should fall back to componentInstances mesh endpoint', () => {
-            const projectWithInstance = {
-                ...mockProject,
-                meshState: undefined,
-                componentInstances: {
-                    'eds-commerce-mesh': {
-                        id: 'eds-commerce-mesh',
-                        name: 'EDS Commerce API Mesh',
-                        subType: 'mesh',
-                        endpoint: 'https://fallback-mesh.adobe.io/graphql',
-                    },
-                },
-            } as Project;
-
-            const context = new ProjectSetupContext(
-                mockHandlerContext,
-                mockRegistry,
-                projectWithInstance,
-                mockConfig,
-            );
-
-            const endpoint = context.getMeshEndpoint();
-            expect(endpoint).toBe('https://fallback-mesh.adobe.io/graphql');
-        });
-
         it('should return undefined when no mesh endpoint exists', () => {
             const projectWithoutMesh = {
                 ...mockProject,

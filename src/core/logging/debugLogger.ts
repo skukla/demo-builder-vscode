@@ -277,14 +277,6 @@ export class DebugLogger {
     }
 
     /**
-     * Toggle the Logs output channel visibility
-     * @deprecated Use show() or showDebug() directly for clarity
-     */
-    public toggle(): void {
-        this.show(true);
-    }
-
-    /**
      * Clear the Logs output channel
      */
     public clear(): void {

@@ -11,7 +11,7 @@
  */
 
 import { Project } from '@/types';
-import { getMeshComponentInstance, hasEntries, getProjectFrontendPort } from '@/types/typeGuards';
+import { hasEntries, getProjectFrontendPort } from '@/types/typeGuards';
 
 /**
  * Mesh status info for UI updates
@@ -76,24 +76,15 @@ export function hasMeshDeploymentRecord(project: Project): boolean {
 /**
  * Get mesh endpoint from meshState (single source of truth)
  *
- * Falls back to componentInstances['commerce-mesh'].endpoint for backward
- * compatibility with old project files.
- *
  * See docs/architecture/state-ownership.md for details.
  *
  * @param project - The project to check
  * @returns The mesh endpoint value if found, undefined otherwise
  */
 export function getMeshEndpoint(project: Project): string | undefined {
-    // Primary: meshState.endpoint (authoritative location)
-    if (project.meshState?.endpoint && typeof project.meshState.endpoint === 'string' && project.meshState.endpoint.trim() !== '') {
-        return project.meshState.endpoint;
-    }
-
-    // Fallback: componentInstances mesh endpoint (deprecated, for old projects)
-    const legacyEndpoint = getMeshComponentInstance(project)?.endpoint;
-    if (legacyEndpoint && typeof legacyEndpoint === 'string' && legacyEndpoint.trim() !== '') {
-        return legacyEndpoint;
+    const endpoint = project.meshState?.endpoint;
+    if (endpoint && typeof endpoint === 'string' && endpoint.trim() !== '') {
+        return endpoint;
     }
 
     return undefined;

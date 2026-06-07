@@ -22,7 +22,7 @@ describe('StatusDot', () => {
             renderWithProviders(<StatusDot variant="success" />);
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveStyle({
-                backgroundColor: 'var(--db-status-dot-success)'
+                backgroundColor: 'var(--db-status-dot-success, #10b981)'
             });
         });
 
@@ -30,7 +30,7 @@ describe('StatusDot', () => {
             renderWithProviders(<StatusDot variant="error" />);
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveStyle({
-                backgroundColor: 'var(--db-status-dot-error)'
+                backgroundColor: 'var(--db-status-dot-error, #ef4444)'
             });
         });
 
@@ -38,7 +38,7 @@ describe('StatusDot', () => {
             renderWithProviders(<StatusDot variant="warning" />);
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveStyle({
-                backgroundColor: 'var(--db-status-dot-warning)'
+                backgroundColor: 'var(--db-status-dot-warning, #f59e0b)'
             });
         });
 
@@ -46,7 +46,7 @@ describe('StatusDot', () => {
             renderWithProviders(<StatusDot variant="info" />);
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveStyle({
-                backgroundColor: 'var(--db-status-dot-info)'
+                backgroundColor: 'var(--db-status-dot-info, #3b82f6)'
             });
         });
 
@@ -54,7 +54,7 @@ describe('StatusDot', () => {
             renderWithProviders(<StatusDot variant="neutral" />);
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveStyle({
-                backgroundColor: 'var(--db-status-dot-neutral)'
+                backgroundColor: 'var(--db-status-dot-neutral, #6b7280)'
             });
         });
     });
@@ -107,6 +107,15 @@ describe('StatusDot', () => {
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveClass('shrink-0');
         });
+
+        // A bare <span> defaults to display:inline (ignores width/height). The
+        // dot pins display:inline-block inline so its box can't collapse if the
+        // .inline-block utility class fails to load in a given webview.
+        it('pins display:inline-block inline (box does not depend on a utility class)', () => {
+            renderWithProviders(<StatusDot variant="success" />);
+            const dot = screen.getByRole('presentation');
+            expect(dot).toHaveStyle({ display: 'inline-block' });
+        });
     });
 
     describe('Accessibility', () => {
@@ -128,7 +137,7 @@ describe('StatusDot', () => {
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveClass('custom-status');
             expect(dot).toHaveStyle({
-                backgroundColor: 'var(--db-status-dot-warning)',
+                backgroundColor: 'var(--db-status-dot-warning, #f59e0b)',
                 width: '10px',
                 height: '10px'
             });

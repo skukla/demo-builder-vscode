@@ -14,12 +14,12 @@
  */
 
 import * as vscode from 'vscode';
+import { hasWriteAccess } from './edsDaLiveOrgHandlers';
 import {
     getDaLiveAuthService,
     validateDaLiveToken,
     offerSaveDefaultOrg,
 } from './edsHelpers';
-import { hasWriteAccess } from './edsDaLiveOrgHandlers';
 import { getBookmarkletUrl } from '@/features/eds/utils/daLiveTokenBookmarklet';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 

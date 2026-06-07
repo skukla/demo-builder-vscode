@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { getCompletedStepIndices } from '../wizardHelpers';
 import { FOCUSABLE_SELECTOR } from '@/core/ui/hooks';
 import { hasValidTitle } from '@/core/ui/utils/titleHelpers';
 import { vscode } from '@/core/ui/utils/vscode-api';
@@ -29,16 +28,18 @@ interface UseWizardEffectsProps {
 /**
  * Hook to manage wizard side effects including:
  * - Auto-focus on step change
- * - Sidebar step change notifications
  * - Project title hydration from API
  * - Component data loading
+ *
+ * Wizard step progress (timeline) is now rendered inside the wizard webview's
+ * left column — no postMessage round-trip to the sidebar is needed.
  */
 export function useWizardEffects({
     state,
     setState,
-    WIZARD_STEPS,
-    completedSteps,
-    confirmedSteps,
+    WIZARD_STEPS: _WIZARD_STEPS,
+    completedSteps: _completedSteps,
+    confirmedSteps: _confirmedSteps,
     stepContentRef,
     setComponentsData,
 }: UseWizardEffectsProps): void {
@@ -48,7 +49,7 @@ export function useWizardEffects({
     // Auto-focus first element in step content when step changes
     useEffect(() => {
         // Don't auto-focus on steps that manage their own focus or use natural tab order
-        const selfManagedFocusSteps = new Set(['component-selection', 'component-config', 'prerequisites']);
+        const selfManagedFocusSteps = new Set(['component-selection', 'prerequisites']);
 
         if (selfManagedFocusSteps.has(state.currentStep)) {
             return;
@@ -66,28 +67,6 @@ export function useWizardEffects({
 
         return () => clearTimeout(timer);
     }, [state.currentStep, stepContentRef]);
-
-    // Notify sidebar of step changes (for wizard progress display)
-    // Also sends the filtered steps array so sidebar shows correct steps based on stack selection
-    useEffect(() => {
-        const stepIndex = WIZARD_STEPS.findIndex(step => step.id === state.currentStep);
-        if (stepIndex >= 0) {
-            // Convert steps to sidebar format (id, label)
-            const sidebarSteps = WIZARD_STEPS.map(step => ({
-                id: step.id,
-                label: step.name,
-            }));
-
-            vscode.postMessage('wizardStepChanged', {
-                step: stepIndex + 1,
-                completedSteps: getCompletedStepIndices(completedSteps, WIZARD_STEPS),
-                confirmedSteps: getCompletedStepIndices(confirmedSteps, WIZARD_STEPS),
-                steps: sidebarSteps,
-                // Show confirmed step indicators for any review mode (edit/import/copy)
-                isEditMode: state.wizardMode ? state.wizardMode !== 'create' : state.editMode,
-            });
-        }
-    }, [state.currentStep, state.editMode, state.wizardMode, completedSteps, confirmedSteps, WIZARD_STEPS]);
 
     // Hydrate project title from API if needed (handles old projects without projectTitle stored)
     useEffect(() => {

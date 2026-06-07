@@ -30,8 +30,11 @@ let showInputBoxCalls: Array<{
 let showInputBoxResponses: Array<string | undefined> = [];
 let showInputBoxIndex = 0;
 
-// Track showInformationMessage calls (Step 1: open DA.live prompt)
-let showInfoMessageResponse: string | undefined;
+// Track showInformationMessage calls. The auth flow shows up to two info messages:
+// (1) initial "Open DA.live" / "I have my token" picker, (2) post-browser "Paste Token"
+// gate when the user took the browser route. Mock returns responses[i] for the i-th call.
+let showInfoMessageResponses: Array<string | undefined> = [];
+let showInfoMessageIndex = 0;
 
 // Mock fetch for org verification
 const mockFetch = jest.fn();
@@ -54,7 +57,9 @@ jest.mock('vscode', () => {
                 return Promise.resolve(response);
             }),
             showInformationMessage: jest.fn().mockImplementation(() => {
-                return Promise.resolve(showInfoMessageResponse);
+                const response = showInfoMessageResponses[showInfoMessageIndex];
+                showInfoMessageIndex++;
+                return Promise.resolve(response);
             }),
             showQuickPick: jest.fn(),
             showErrorMessage: jest.fn(),
@@ -159,7 +164,8 @@ function resetTrackingState(): void {
     showInputBoxCalls = [];
     showInputBoxResponses = [];
     showInputBoxIndex = 0;
-    showInfoMessageResponse = undefined;
+    showInfoMessageResponses = [];
+    showInfoMessageIndex = 0;
     (vscode.window.showInputBox as jest.Mock).mockClear();
     (vscode.window.showInformationMessage as jest.Mock).mockClear();
 }
@@ -188,7 +194,7 @@ describe('showDaLiveAuthQuickPick', () => {
     // =========================================================================
     describe('Token-first input flow', () => {
         it('should show info message as first step', async () => {
-            showInfoMessageResponse = undefined;
+            showInfoMessageResponses = [undefined];
 
             await showDaLiveAuthQuickPick(mockContext);
 
@@ -201,7 +207,7 @@ describe('showDaLiveAuthQuickPick', () => {
         });
 
         it('should show token input with password masking as step 2', async () => {
-            showInfoMessageResponse = 'I have my token';
+            showInfoMessageResponses = ['I have my token'];
             showInputBoxResponses = [undefined]; // cancel at token
 
             await showDaLiveAuthQuickPick(mockContext);
@@ -213,7 +219,7 @@ describe('showDaLiveAuthQuickPick', () => {
         });
 
         it('should show org input as step 3 after token', async () => {
-            showInfoMessageResponse = 'I have my token';
+            showInfoMessageResponses = ['I have my token'];
             showInputBoxResponses = [validToken, undefined]; // enter token, cancel at org
 
             await showDaLiveAuthQuickPick(mockContext);
@@ -226,12 +232,62 @@ describe('showDaLiveAuthQuickPick', () => {
         });
 
         it('should open DA.live when user clicks Open DA.live button', async () => {
-            showInfoMessageResponse = 'Open DA.live';
+            // After the browser opens, a post-browser "Paste Token" gate is shown;
+            // confirm it so the flow continues into the input box.
+            showInfoMessageResponses = ['Open DA.live', 'Paste Token'];
             showInputBoxResponses = [undefined]; // cancel at token
 
             await showDaLiveAuthQuickPick(mockContext);
 
             expect(vscode.env.openExternal).toHaveBeenCalled();
+        });
+
+        it('should show a Paste Token gate after opening the browser', async () => {
+            showInfoMessageResponses = ['Open DA.live', 'Paste Token'];
+            showInputBoxResponses = [undefined]; // cancel at token
+
+            await showDaLiveAuthQuickPick(mockContext);
+
+            // Two info messages total: initial choice + post-browser paste gate.
+            const infoCalls = (vscode.window.showInformationMessage as jest.Mock).mock.calls;
+            expect(infoCalls).toHaveLength(2);
+            expect(infoCalls[1][0]).toEqual(expect.stringContaining('Paste Token'));
+            expect(infoCalls[1]).toContain('Paste Token');
+        });
+
+        it('should open the token input box only AFTER the Paste Token gate is clicked', async () => {
+            showInfoMessageResponses = ['Open DA.live', 'Paste Token'];
+            showInputBoxResponses = [undefined]; // cancel at token
+
+            await showDaLiveAuthQuickPick(mockContext);
+
+            // showInputBox is called after the gate — verify it ran exactly once
+            // for the token step (org input wouldn't fire because we cancelled).
+            expect(showInputBoxCalls).toHaveLength(1);
+            expect(showInputBoxCalls[0].title).toEqual(expect.stringContaining('Step 1/2'));
+        });
+
+        it('should cancel the flow when the Paste Token gate is dismissed', async () => {
+            // User dismissed the post-browser gate (clicked X / pressed Escape).
+            showInfoMessageResponses = ['Open DA.live', undefined];
+
+            const result = await showDaLiveAuthQuickPick(mockContext);
+
+            expect(result).toEqual({ success: false, cancelled: true });
+            // Input box must not open — user never confirmed they have the token.
+            expect(showInputBoxCalls).toHaveLength(0);
+        });
+
+        it('should skip the Paste Token gate when the user already has a token', async () => {
+            // User picked "I have my token" — no browser opens, no gate shown.
+            showInfoMessageResponses = ['I have my token'];
+            showInputBoxResponses = [undefined];
+
+            await showDaLiveAuthQuickPick(mockContext);
+
+            const infoCalls = (vscode.window.showInformationMessage as jest.Mock).mock.calls;
+            expect(infoCalls).toHaveLength(1); // only the initial choice, no gate
+            expect(vscode.env.openExternal).not.toHaveBeenCalled();
         });
     });
 
@@ -240,7 +296,7 @@ describe('showDaLiveAuthQuickPick', () => {
     // =========================================================================
     describe('org access and write-access verification', () => {
         it('should verify org access and write permissions', async () => {
-            showInfoMessageResponse = 'I have my token';
+            showInfoMessageResponses = ['I have my token'];
             showInputBoxResponses = [validToken, 'my-org'];
             mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
             mockHasWriteAccess.mockResolvedValueOnce(true);
@@ -258,7 +314,7 @@ describe('showDaLiveAuthQuickPick', () => {
         });
 
         it('should show error when org returns 403 (access denied)', async () => {
-            showInfoMessageResponse = 'I have my token';
+            showInfoMessageResponses = ['I have my token'];
             showInputBoxResponses = [validToken, 'forbidden-org'];
             mockFetch.mockResolvedValueOnce({ ok: false, status: 403 });
 
@@ -271,7 +327,7 @@ describe('showDaLiveAuthQuickPick', () => {
         });
 
         it('should show error when org returns 404 (not found)', async () => {
-            showInfoMessageResponse = 'I have my token';
+            showInfoMessageResponses = ['I have my token'];
             showInputBoxResponses = [validToken, 'nonexistent-org'];
             mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
 
@@ -284,7 +340,7 @@ describe('showDaLiveAuthQuickPick', () => {
         });
 
         it('should show error when user has read-only access', async () => {
-            showInfoMessageResponse = 'I have my token';
+            showInfoMessageResponses = ['I have my token'];
             showInputBoxResponses = [validToken, 'readonly-org'];
             mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
             mockHasWriteAccess.mockResolvedValueOnce(false);
@@ -298,7 +354,7 @@ describe('showDaLiveAuthQuickPick', () => {
         });
 
         it('should show error on server error', async () => {
-            showInfoMessageResponse = 'I have my token';
+            showInfoMessageResponses = ['I have my token'];
             showInputBoxResponses = [validToken, 'my-org'];
             mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
 
@@ -316,7 +372,7 @@ describe('showDaLiveAuthQuickPick', () => {
     // =========================================================================
     describe('successful authentication', () => {
         it('should store token via auth service on success', async () => {
-            showInfoMessageResponse = 'I have my token';
+            showInfoMessageResponses = ['I have my token'];
             showInputBoxResponses = [validToken, 'my-org'];
             mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
             mockHasWriteAccess.mockResolvedValueOnce(true);
@@ -333,7 +389,7 @@ describe('showDaLiveAuthQuickPick', () => {
         });
 
         it('should return success with email on valid auth', async () => {
-            showInfoMessageResponse = 'I have my token';
+            showInfoMessageResponses = ['I have my token'];
             showInputBoxResponses = [validToken, 'my-org'];
             mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
             mockHasWriteAccess.mockResolvedValueOnce(true);
@@ -347,7 +403,7 @@ describe('showDaLiveAuthQuickPick', () => {
         });
 
         it('should show success message with org name', async () => {
-            showInfoMessageResponse = 'I have my token';
+            showInfoMessageResponses = ['I have my token'];
             showInputBoxResponses = [validToken, 'my-org'];
             mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
             mockHasWriteAccess.mockResolvedValueOnce(true);
@@ -366,7 +422,7 @@ describe('showDaLiveAuthQuickPick', () => {
     // =========================================================================
     describe('error handling', () => {
         it('should show error on invalid token format', async () => {
-            showInfoMessageResponse = 'I have my token';
+            showInfoMessageResponses = ['I have my token'];
             showInputBoxResponses = ['not-a-jwt-token', 'my-org'];
 
             const result = await showDaLiveAuthQuickPick(mockContext);
@@ -379,7 +435,7 @@ describe('showDaLiveAuthQuickPick', () => {
 
         it('should show error on expired token', async () => {
             const expiredToken = 'eyJhbGciOiJIUzI1NiJ9.eyJjbGllbnRfaWQiOiJkYXJrYWxsZXkiLCJjcmVhdGVkX2F0IjoiMTAwMDAwMDAwMDAwMCIsImV4cGlyZXNfaW4iOiIxMDAwIn0.sig';
-            showInfoMessageResponse = 'I have my token';
+            showInfoMessageResponses = ['I have my token'];
             showInputBoxResponses = [expiredToken, 'my-org'];
 
             const result = await showDaLiveAuthQuickPick(mockContext);
@@ -391,7 +447,7 @@ describe('showDaLiveAuthQuickPick', () => {
         });
 
         it('should show error on network failure', async () => {
-            showInfoMessageResponse = 'I have my token';
+            showInfoMessageResponses = ['I have my token'];
             showInputBoxResponses = [validToken, 'my-org'];
             mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
@@ -409,7 +465,7 @@ describe('showDaLiveAuthQuickPick', () => {
     // =========================================================================
     describe('user cancellation', () => {
         it('should return cancelled when user dismisses info message', async () => {
-            showInfoMessageResponse = undefined;
+            showInfoMessageResponses = [undefined];
 
             const result = await showDaLiveAuthQuickPick(mockContext);
 
@@ -417,7 +473,7 @@ describe('showDaLiveAuthQuickPick', () => {
         });
 
         it('should return cancelled when user cancels at token step', async () => {
-            showInfoMessageResponse = 'I have my token';
+            showInfoMessageResponses = ['I have my token'];
             showInputBoxResponses = [undefined];
 
             const result = await showDaLiveAuthQuickPick(mockContext);
@@ -426,7 +482,7 @@ describe('showDaLiveAuthQuickPick', () => {
         });
 
         it('should return cancelled when user cancels at org step', async () => {
-            showInfoMessageResponse = 'I have my token';
+            showInfoMessageResponses = ['I have my token'];
             showInputBoxResponses = [validToken, undefined];
 
             const result = await showDaLiveAuthQuickPick(mockContext);
@@ -435,7 +491,7 @@ describe('showDaLiveAuthQuickPick', () => {
         });
 
         it('should log cancellation at info message step', async () => {
-            showInfoMessageResponse = undefined;
+            showInfoMessageResponses = [undefined];
 
             await showDaLiveAuthQuickPick(mockContext);
 
@@ -445,7 +501,7 @@ describe('showDaLiveAuthQuickPick', () => {
         });
 
         it('should log cancellation at token step', async () => {
-            showInfoMessageResponse = 'I have my token';
+            showInfoMessageResponses = ['I have my token'];
             showInputBoxResponses = [undefined];
 
             await showDaLiveAuthQuickPick(mockContext);
@@ -456,7 +512,7 @@ describe('showDaLiveAuthQuickPick', () => {
         });
 
         it('should log cancellation at org step', async () => {
-            showInfoMessageResponse = 'I have my token';
+            showInfoMessageResponses = ['I have my token'];
             showInputBoxResponses = [validToken, undefined];
 
             await showDaLiveAuthQuickPick(mockContext);

@@ -4,16 +4,13 @@
  * Helper functions extracted from ConfigureScreen.tsx to reduce file size.
  */
 
-import React from 'react';
 import type {
     ComponentsData,
     ComponentData,
     UniqueField,
     ServiceGroup,
     ComponentInstance,
-    FormFieldRenderContext,
 } from './configureTypes';
-import { FormField } from '@/core/ui/components/forms';
 import { NavigationSection } from '@/core/ui/components/navigation';
 
 /**
@@ -67,44 +64,6 @@ export function toNavigationSection(
 }
 
 /**
- * Render a FormField component with proper value/error handling
- *
- * SOP §6: Extracted callback body complexity to named helper
- *
- * @param field - The field definition
- * @param context - Render context with callbacks and state
- * @returns FormField JSX element
- */
-export function renderFormField(
-    field: UniqueField,
-    context: FormFieldRenderContext,
-): React.ReactElement {
-    const value = context.getFieldValue(field);
-    const error = context.validationErrors[field.key];
-    const showError = error && context.touchedFields.has(field.key);
-    const hasDefault = value && field.default && value === field.default;
-
-    return (
-        <FormField
-            key={field.key}
-            fieldKey={field.key}
-            label={field.label}
-            type={field.type as 'text' | 'url' | 'password' | 'select' | 'number'}
-            value={value !== undefined && value !== null ? String(value) : ''}
-            onChange={(val) => context.updateField(field, val)}
-            placeholder={field.placeholder}
-            description={field.description}
-            required={field.required}
-            error={error}
-            showError={!!showError}
-            options={field.options}
-            selectableDefaultProps={hasDefault ? context.selectableDefaultProps : undefined}
-            help={field.help}
-        />
-    );
-}
-
-/**
  * Check if a component has environment variables configured.
  *
  * SOP Compliance: Reduces optional chaining depth from 3 levels to 1.
@@ -120,14 +79,6 @@ export function hasComponentEnvVars(componentDef: ComponentData | undefined): bo
     const required = componentDef.configuration.requiredEnvVars?.length || 0;
     const optional = componentDef.configuration.optionalEnvVars?.length || 0;
     return required > 0 || optional > 0;
-}
-
-/**
- * Check if a component has environment variables configured
- * @deprecated Use hasComponentEnvVars instead, which handles undefined input
- */
-export function componentHasEnvVars(componentDef: ComponentData): boolean {
-    return hasComponentEnvVars(componentDef);
 }
 
 /**
@@ -162,7 +113,7 @@ export function discoverComponentsFromInstances(
 
     for (const [id, instance] of Object.entries(componentInstances)) {
         const componentDef = allComponentDefs.find((c: ComponentData) => c.id === id);
-        if (componentDef && componentHasEnvVars(componentDef)) {
+        if (componentDef && hasComponentEnvVars(componentDef)) {
             discovered.push({
                 id: componentDef.id,
                 data: componentDef,

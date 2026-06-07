@@ -23,6 +23,17 @@ jest.mock('@/features/dashboard/handlers/meshStatusHelpers', () => ({
     determineMeshStatus: jest.fn().mockResolvedValue('deployed'),
 }));
 
+// Make filesystem path-safety checks deterministic and independent of the host.
+// validateProjectPath() canonicalizes via fs.realpathSync; on a machine without
+// a real ~/.demo-builder/projects directory the validator would reject otherwise
+// valid in-tree paths. Identity realpathSync keeps the security prefix check
+// intact (traversal paths still resolve outside the base) while letting valid
+// project paths through regardless of what exists on disk.
+jest.mock('fs', () => ({
+    ...jest.requireActual('fs'),
+    realpathSync: jest.fn((p: string) => p),
+}));
+
 jest.mock('@/features/mesh/services/stalenessDetector', () => ({
     detectMeshChanges: jest.fn().mockResolvedValue({ hasChanges: false }),
 }));
@@ -469,7 +480,7 @@ describe('dashboardHandlers', () => {
 
         afterEach(() => setWorkspaceFolder(null));
 
-        it('dispatches demoBuilder.openAiExperience when the workspace already matches the project', async () => {
+        it('sets the current-project pointer and dispatches demoBuilder.openInClaude with NO project arg (always-root home Chat)', async () => {
             const project = createMockProject({ name: 'AI Target' });
             setWorkspaceFolder(project.path);
             const context = makeContext([project]);
@@ -478,8 +489,13 @@ describe('dashboardHandlers', () => {
             const result = await handleOpenAiForProject(context, { projectPath: project.path });
 
             expect(result.success).toBe(true);
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openAiExperience');
-            // No workspace anchoring needed.
+            // Pointer set so the dashboard/state reads and the home Chat's
+            // get_current_project tool resolve here.
+            expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
+            // Forwards to the command with NO project — the home Chat always
+            // launches at the projects root.
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openInClaude');
+            // The handler never anchors (no pending record, no openFolder).
             expect(context.context.globalState.update).not.toHaveBeenCalled();
             expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
                 'vscode.openFolder',
@@ -488,7 +504,7 @@ describe('dashboardHandlers', () => {
             );
         });
 
-        it('writes a pending-launch record and anchors the workspace via vscode.openFolder when workspace ≠ project', async () => {
+        it('never anchors the workspace even when workspace ≠ project', async () => {
             const project = createMockProject({ name: 'AI Target' });
             setWorkspaceFolder('/some/other/repo');
             const context = makeContext([project]);
@@ -497,22 +513,16 @@ describe('dashboardHandlers', () => {
             const result = await handleOpenAiForProject(context, { projectPath: project.path });
 
             expect(result.success).toBe(true);
-            // Pending record carries no prompt — replay opens the bare chat.
-            expect(context.context.globalState.update).toHaveBeenCalledWith(
-                'demoBuilder.ai.pendingClaudeLaunch',
-                expect.objectContaining({
-                    projectPath: project.path,
-                    prompt: undefined,
-                    createdAt: expect.any(Number),
-                }),
-            );
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+            expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
+            // No pending record / openFolder written by the handler.
+            expect(context.context.globalState.update).not.toHaveBeenCalled();
+            expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
                 'vscode.openFolder',
-                expect.objectContaining({ fsPath: project.path }),
-                false,
+                expect.anything(),
+                expect.anything(),
             );
-            // The chat dispatch happens post-reload via replayPendingClaudeLaunch — not inline.
-            expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith('demoBuilder.openAiExperience');
+            // Just forwards to the command with no project arg.
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openInClaude');
         });
 
         it('returns error when projectPath is missing', async () => {

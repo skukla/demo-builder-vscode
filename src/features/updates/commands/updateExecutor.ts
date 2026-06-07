@@ -449,7 +449,7 @@ export async function performAddonUpdates(
  * Mutate a commitSha, save, and rollback on failure.
  * Prevents in-memory state poisoning when save throws.
  */
-async function updateCommitShaWithRollback(
+export async function updateCommitShaWithRollback(
     target: { commitSha: string } | undefined,
     newSha: string,
     save: () => Promise<void>,
@@ -511,6 +511,27 @@ async function applyBlockLibraryUpdate(
         effectiveBehavior = choice === 'Update' ? 'enabled' : 'disabled';
     }
 
+    await applyBlockLibraryUpdateResolved(item, effectiveBehavior as 'enabled' | 'disabled', ctx);
+}
+
+/**
+ * Apply a block library update with the sync behavior ALREADY resolved to a
+ * concrete action ('enabled' | 'disabled') — no 'ask', no modal. Shared by the
+ * UI `applyBlockLibraryUpdate` (which resolves 'ask' via a prompt) and the
+ * headless `updateApplyService` (which resolves 'ask' to the safe 'disabled'
+ * default). Keeps the snapshot/marker logic in one place.
+ */
+export async function applyBlockLibraryUpdateResolved(
+    item: Pick<BlockLibraryUpdateItem, 'project' | 'library' | 'latestCommit'>,
+    effectiveBehavior: 'enabled' | 'disabled',
+    ctx: UpdateContext,
+): Promise<void> {
+    const lib = item.project.installedBlockLibraries?.find(l => l.name === item.library.name);
+    if (!lib) {
+        ctx.logger.warn(`[Updates] Block library "${item.library.name}" not in installedBlockLibraries; skipping`);
+        return;
+    }
+
     if (effectiveBehavior === 'disabled') {
         await applyDisabledMarker(lib, item.latestCommit, item.project, ctx);
         ctx.logger.info(`[Updates] Sync disabled — recorded marker for "${item.library.name}" at ${item.latestCommit.substring(0, 7)}`);
@@ -555,7 +576,7 @@ async function applyDisabledMarker(
 }
 
 async function reinstallBlockLibraryFiles(
-    item: BlockLibraryUpdateItem,
+    item: Pick<BlockLibraryUpdateItem, 'project' | 'library'>,
     ctx: UpdateContext,
 ): Promise<void> {
     const storefront = item.project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];

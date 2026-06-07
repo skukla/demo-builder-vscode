@@ -62,19 +62,6 @@ jest.mock('@/types/typeGuards', () => ({
     hasEntries: jest.fn((obj: any) => obj && Object.keys(obj).length > 0),
 }));
 
-jest.mock('@/features/project-creation/config/demo-packages.json', () => ({
-    packages: [{
-        id: 'citisignal',
-        storefronts: {
-            'eds-paas': {
-                templateOwner: 'template-owner',
-                templateRepo: 'template-repo',
-                contentSource: { org: 'content-org', site: 'content-site' },
-            },
-        },
-    }],
-}), { virtual: true });
-
 jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
     getBlockLibraryName: jest.fn(),

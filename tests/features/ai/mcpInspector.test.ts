@@ -23,6 +23,12 @@ const clientInstances: Array<{
 }> = [];
 const transportInstances: Array<{ command: string; args: string[]; env?: Record<string, string>; cwd?: string; stderr?: string }> = [];
 
+// Per-transport stderr chunk queues, indexed by the order in which transports
+// are constructed. Tests pre-populate via queueStderr(index, [...]) before
+// invoking inspectAllServers; the mocked transport's stderr.read() drains
+// from the corresponding queue, mirroring Node's paused-Readable semantics.
+const pendingStderrQueues: Buffer[][] = [];
+
 jest.mock('@modelcontextprotocol/sdk/client/index.js', () => ({
     Client: jest.fn().mockImplementation(() => {
         const instance = {
@@ -39,8 +45,18 @@ jest.mock('@modelcontextprotocol/sdk/client/stdio.js', () => ({
     StdioClientTransport: jest.fn().mockImplementation((opts: {
         command: string; args: string[]; env?: Record<string, string>; cwd?: string; stderr?: string;
     }) => {
+        const idx = transportInstances.length;
         transportInstances.push(opts);
-        return { stderr: opts.stderr === 'pipe' ? { on: jest.fn() } : undefined };
+        const stderrPipe = opts.stderr === 'pipe'
+            ? {
+                on: jest.fn(),
+                read: jest.fn(() => {
+                    const queue = pendingStderrQueues[idx];
+                    return queue ? (queue.shift() ?? null) : null;
+                }),
+            }
+            : undefined;
+        return { stderr: stderrPipe };
     }),
     // Mirror the SDK's safe-to-inherit env allowlist. Tests assert this set,
     // not process.env's full contents.
@@ -67,6 +83,7 @@ beforeEach(() => {
     jest.clearAllMocks();
     clientInstances.length = 0;
     transportInstances.length = 0;
+    pendingStderrQueues.length = 0;
     clearMcpCache();
 });
 
@@ -412,63 +429,6 @@ describe('inspectAllServers', () => {
             const failEntry = (byId['good']?.status === 'ok') ? byId['bad'] : byId['good'];
             expect(okEntry.status).toBe('ok');
             expect(failEntry.status).toBe('error');
-        });
-    });
-
-    describe('caching', () => {
-        it('returns cached result on second call without spawning again', async () => {
-            setMcpJson({ mcpServers: { 'srv': { command: 'node', args: [] } } });
-
-            await inspectAllServers(PROJECT_PATH);
-            await inspectAllServers(PROJECT_PATH);
-
-            // Two cached results → only one spawn
-            expect(clientInstances).toHaveLength(1);
-        });
-
-        it('re-spawns after clearMcpCache() clears all entries', async () => {
-            setMcpJson({ mcpServers: { 'srv': { command: 'node', args: [] } } });
-
-            await inspectAllServers(PROJECT_PATH);
-            clearMcpCache();
-            await inspectAllServers(PROJECT_PATH);
-
-            expect(clientInstances).toHaveLength(2);
-        });
-
-        it('re-spawns only the cleared server when clearMcpCache(id) is called', async () => {
-            setMcpJson({
-                mcpServers: {
-                    'srv-a': { command: 'node', args: [] },
-                    'srv-b': { command: 'node', args: [] },
-                },
-            });
-
-            await inspectAllServers(PROJECT_PATH); // 2 spawns
-            clearMcpCache('srv-a');
-            await inspectAllServers(PROJECT_PATH); // re-spawn only srv-a → 1 new
-
-            expect(clientInstances).toHaveLength(3);
-        });
-
-        it('does not cache timeout or error results (always retried next call)', async () => {
-            setMcpJson({ mcpServers: { 'bad': { command: 'node', args: [] } } });
-
-            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js') as { Client: jest.Mock };
-            ClientModule.Client.mockImplementation(() => {
-                const instance = {
-                    connect: jest.fn().mockRejectedValue(new Error('crash')),
-                    listTools: jest.fn(),
-                    close: jest.fn().mockResolvedValue(undefined),
-                };
-                clientInstances.push(instance);
-                return instance;
-            });
-
-            await inspectAllServers(PROJECT_PATH);
-            await inspectAllServers(PROJECT_PATH);
-
-            expect(clientInstances).toHaveLength(2);
         });
     });
 });

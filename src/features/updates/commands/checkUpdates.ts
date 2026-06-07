@@ -26,6 +26,7 @@ import { AddonUpdateChecker } from '@/features/updates/services/addonUpdateCheck
 import { AdobeMcpUpdateChecker } from '@/features/updates/services/adobeMcpUpdateChecker';
 import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
+import { shouldOfferGraduation } from '@/features/updates/services/releaseTrack';
 import { TemplateUpdateChecker, TemplateUpdateResult } from '@/features/updates/services/templateUpdateChecker';
 import { UpdateManager, MultiProjectUpdateResult } from '@/features/updates/services/updateManager';
 import { Project } from '@/types';
@@ -141,6 +142,11 @@ export class CheckUpdatesCommand extends BaseCommand {
                         };
                     },
                 );
+
+                // Early-access graduation off-ramp: if the user is on an alpha that a
+                // final release has superseded, offer to switch channels. Runs before the
+                // "no updates" early return because graduation has no update to report.
+                await this.maybeOfferGraduation(extensionUpdate.current);
 
                 if (!hasUpdates) {
                     this.logger.info('[Updates] ✓ No updates available - Demo Builder is up to date');
@@ -275,6 +281,55 @@ export class CheckUpdatesCommand extends BaseCommand {
                 selectedBlockLibraries, selectedInspectors, templateSyncSucceeded, ctx,
             );
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // Early-access graduation off-ramp
+    // -----------------------------------------------------------------------
+
+    /**
+     * When the user is on the early-access channel and running an -alpha.* build
+     * that a final release has superseded, prompt them to switch back to a
+     * non-preview channel. Prompt-only: the channel is changed only on an
+     * explicit choice.
+     */
+    private async maybeOfferGraduation(installedVersion: string): Promise<void> {
+        // Best-effort nicety: never let the off-ramp abort the core update flow.
+        try {
+            const channel = vscode.workspace.getConfiguration('demoBuilder')
+                .get<string>('updateChannel', 'stable');
+            if (channel !== 'early-access') {
+                return;
+            }
+
+            const updateManager = new UpdateManager(this.context, this.logger);
+            const latestFinal = await updateManager.getLatestFinalVersion();
+            if (!shouldOfferGraduation(installedVersion, latestFinal)) {
+                return;
+            }
+
+            const choice = await vscode.window.showInformationMessage(
+                `A final release (v${latestFinal}) now supersedes your preview build (v${installedVersion}). `
+                + 'Switch off the early-access channel to keep receiving updates?',
+                'Switch to Beta',
+                'Switch to Stable',
+                'Stay',
+            );
+
+            if (choice === 'Switch to Beta') {
+                await this.setChannel('beta');
+            } else if (choice === 'Switch to Stable') {
+                await this.setChannel('stable');
+            }
+        } catch (error) {
+            this.logger.debug(`[Updates] Graduation off-ramp skipped: ${(error as Error).message}`);
+        }
+    }
+
+    private async setChannel(channel: 'stable' | 'beta'): Promise<void> {
+        await vscode.workspace.getConfiguration('demoBuilder')
+            .update('updateChannel', channel, vscode.ConfigurationTarget.Global);
+        this.logger.info(`[Updates] Update channel switched to ${channel} (graduation off-ramp)`);
     }
 
     // -----------------------------------------------------------------------

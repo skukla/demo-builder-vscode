@@ -75,20 +75,6 @@ jest.mock('@/core/constants', () => ({
     },
 }));
 
-// Mock demo-packages.json — provide minimal data for extractResetParams
-jest.mock('@/features/project-creation/config/demo-packages.json', () => ({
-    packages: [{
-        id: 'citisignal',
-        storefronts: {
-            'eds-paas': {
-                templateOwner: 'test-owner',
-                templateRepo: 'test-template',
-                contentSource: { org: 'content-org', site: 'content-site', indexPath: 'index.json' },
-            },
-        },
-    }],
-}), { virtual: true });
-
 jest.mock('@/types/typeGuards', () => ({
     getMeshComponentInstance: jest.fn((project: any) => {
         if (!project?.componentInstances) return undefined;
@@ -128,6 +114,18 @@ jest.mock('@/features/eds/services/githubAppService', () => ({
 
 import * as vscode from 'vscode';
 import { resetEdsProjectWithUI } from '@/features/eds/services/edsResetUI';
+
+// Injected demo-packages fixture for extractResetParams (replaces config leaf mock)
+const testPackages = [{
+    id: 'citisignal',
+    storefronts: {
+        'eds-paas': {
+            templateOwner: 'test-owner',
+            templateRepo: 'test-template',
+            contentSource: { org: 'content-org', site: 'content-site', indexPath: 'index.json' },
+        },
+    },
+}];
 
 // =============================================================================
 // Helpers
@@ -221,7 +219,7 @@ describe('resetEdsProjectWithUI - Adobe I/O Auth', () => {
             .mockResolvedValueOnce('Reset Project');
 
         // When
-        const result = await resetEdsProjectWithUI({ project, context });
+        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
 
         // Then: Should call ensureAdobeIOAuth with project context
         expect(mockEnsureAdobeIOAuth).toHaveBeenCalledWith(
@@ -251,7 +249,7 @@ describe('resetEdsProjectWithUI - Adobe I/O Auth', () => {
             .mockResolvedValueOnce('Reset Project');
 
         // When
-        await resetEdsProjectWithUI({ project, context });
+        await resetEdsProjectWithUI({ project, context, packages: testPackages });
 
         // Then: Should call ensureAdobeIOAuth with undefined fields
         expect(mockEnsureAdobeIOAuth).toHaveBeenCalledWith(
@@ -278,7 +276,7 @@ describe('resetEdsProjectWithUI - Adobe I/O Auth', () => {
             .mockResolvedValueOnce('Reset Project');
 
         // When
-        const result = await resetEdsProjectWithUI({ project, context });
+        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
 
         // Then: Should return auth error
         expect(result.success).toBe(false);

@@ -155,11 +155,4 @@ describe('StalenessDetectorService - DI Pattern', () => {
             expect(mockLogger.debug).toHaveBeenCalled();
         });
     });
-
-    describe('Static Utility Methods (Backward Compatibility)', () => {
-        it('should export getMeshEnvVars as static method for backward compatibility', () => {
-            // This allows existing code to continue working
-            expect(typeof StalenessDetectorService.getMeshEnvVars).toBe('function');
-        });
-    });
 });

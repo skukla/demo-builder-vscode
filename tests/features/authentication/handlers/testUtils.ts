@@ -7,7 +7,6 @@
 import type { HandlerContext } from '@/types/handlers';
 import type { AdobeOrg, AdobeProject } from '@/features/authentication/services/types';
 import type { PrerequisitesManager } from '@/features/prerequisites';
-import type { ComponentHandler } from '@/features/components/handlers/componentHandler';
 import type { ErrorLogger } from '@/core/logging/errorLogger';
 import type { ProgressUnifier } from '@/core/utils/progressUnifier';
 import type { StepLogger } from '@/core/logging/stepLogger';
@@ -63,7 +62,6 @@ export function createMockHandlerContext(overrides?: Partial<HandlerContext>): j
             validateAndClearInvalidOrgContext: jest.fn(),
             testDeveloperPermissions: jest.fn(),
         } as any, // Simplified mock - full AuthenticationService interface not needed for tests
-        componentHandler: {} as ComponentHandler,
         errorLogger: {} as ErrorLogger,
         progressUnifier: {} as ProgressUnifier,
         stepLogger: {} as StepLogger,

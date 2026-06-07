@@ -1,10 +1,12 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { AiMenuCommand } from './aiMenu';
 import { ConfigureCommand } from './configure';
 import { DiagnosticsCommand } from './diagnostics';
 import { OpenInClaudeCommand } from './openInClaude';
+import { OpenModernizationAgentCommand } from './openModernizationAgent';
+import { RefreshBlockLibraryCommand } from './refreshBlockLibrary';
+import { ShowPromptsPickerCommand } from './showPromptsPicker';
 import { BaseWebviewCommand } from '@/core/base';
 import { ResetAiOnboardingCommand } from '@/core/commands/ResetAiOnboardingCommand';
 import { ResetAllCommand } from '@/core/commands/ResetAllCommand';
@@ -81,8 +83,8 @@ export class CommandManager {
             // args[0] may contain { importedSettings, sourceDescription } when launched from Import
             const options = args[0] as Parameters<typeof this.createProjectWebview.execute>[0] | undefined;
             await this.createProjectWebview.execute(options);
-            // Show sidebar for wizard progress (after webview is loaded)
-            await vscode.commands.executeCommand('workbench.view.extension.demoBuilder');
+            // Wizard progress now renders inside the wizard webview's left
+            // column; no sidebar reveal needed.
         });
 
         // Project Dashboard (Post-creation guide)
@@ -207,6 +209,17 @@ export class CommandManager {
         );
         this.registerCommand('demoBuilder.syncStorefront', () => syncStorefront.execute());
 
+        // Refresh Block Library (EDS projects only — dashboard kebab) —
+        // destructive rebuild of the DA.live authoring library from the project's
+        // current component-definition.json. No package.json contribution: the
+        // dashboard is the only entrypoint.
+        const refreshBlockLibrary = new RefreshBlockLibraryCommand(
+            this.context,
+            this.stateManager,
+            this.logger,
+        );
+        this.registerCommand('demoBuilder.refreshBlockLibrary', () => refreshBlockLibrary.execute());
+
         // Check Updates
         const checkUpdates = new CheckUpdatesCommand(
             this.context,
@@ -243,14 +256,28 @@ export class CommandManager {
             await openInClaude.execute();
         });
 
-        // AI Menu — chat-first QuickPick (Open Chat + prompts + manage/new).
-        const aiMenu = new AiMenuCommand(
+        // Show Prompts Picker — single-purpose prompt QuickPick. Replaces the
+        // state-aware AiMenuCommand. Always shows the picker; selection inserts
+        // via openInClaude or routes to the prompt library.
+        const showPromptsPicker = new ShowPromptsPickerCommand(
             this.context,
             this.stateManager,
             this.logger,
         );
-        this.registerCommand('demoBuilder.aiMenu', async () => {
-            await aiMenu.execute();
+        this.registerCommand('demoBuilder.showPromptsPicker', async () => {
+            await showPromptsPicker.execute();
+        });
+
+        // Open AEM Modernization Agent — launches aemcoder.adobe.io in the
+        // browser. Entry point for the Mod Agent workflow described in the
+        // scrape-reference-site skill.
+        const openModernizationAgent = new OpenModernizationAgentCommand(
+            this.context,
+            this.stateManager,
+            this.logger,
+        );
+        this.registerCommand('demoBuilder.openModernizationAgent', async () => {
+            await openModernizationAgent.execute();
         });
 
         // Navigate — internal routing command for sidebar nav clicks.
@@ -266,7 +293,8 @@ export class CommandManager {
                     break;
                 case 'ai':
                     // Chat-first: open the AI experience directly. The prompt
-                    // manager (openAi) stays reachable via the aiMenu Manage item.
+                    // manager (openAi) stays reachable via the Prompts picker's
+                    // "Manage prompts…" row.
                     await vscode.commands.executeCommand('demoBuilder.openAiExperience');
                     break;
                 case 'updates':

@@ -53,7 +53,10 @@ describe('SidebarProvider', () => {
     };
 
     beforeEach(() => {
-        // Create mock extension context
+        // Create mock extension context. globalState backs the persistent
+        // update-check throttle (`lastUpdateCheck`); a no-op store is
+        // enough for tests that don't exercise the throttle.
+        const globalStateStore: Record<string, unknown> = {};
         mockContext = {
             extensionPath: '/mock/extension/path',
             extensionUri: {
@@ -61,6 +64,14 @@ describe('SidebarProvider', () => {
                 path: '/mock/extension/path',
             },
             subscriptions: [],
+            globalState: {
+                get: jest.fn((key: string, defaultValue?: unknown) =>
+                    key in globalStateStore ? globalStateStore[key] : defaultValue,
+                ),
+                update: jest.fn(async (key: string, value: unknown) => {
+                    globalStateStore[key] = value;
+                }),
+            },
         } as unknown as vscode.ExtensionContext;
 
         // Create mock state manager
@@ -247,10 +258,16 @@ describe('SidebarProvider', () => {
             );
         });
 
-        it('should route openAiMenu message to the demoBuilder.aiMenu command', async () => {
-            await messageHandler({ type: 'openAiMenu' });
+        it('routes openAiChat to demoBuilder.openAiExperience', async () => {
+            await messageHandler({ type: 'openAiChat' });
 
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.aiMenu');
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openAiExperience');
+        });
+
+        it('routes showPrompts to demoBuilder.showPromptsPicker', async () => {
+            await messageHandler({ type: 'showPrompts' });
+
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.showPromptsPicker');
         });
     });
 
@@ -354,7 +371,7 @@ describe('SidebarProvider', () => {
         });
 
         it('should send context update to webview', async () => {
-            const context = { type: 'wizard' as const, step: 2, total: 6 };
+            const context = { type: 'projectsList' as const };
 
             await provider.updateContext(context);
 
@@ -363,26 +380,180 @@ describe('SidebarProvider', () => {
                 data: { context },
             });
         });
+    });
 
-        it('should store wizard context locally', async () => {
-            const wizardContext = { type: 'wizard' as const, step: 2, total: 6 };
-            await provider.updateContext(wizardContext);
+    // ------------------------------------------------------------------------
+    // Update-check throttle
+    // ------------------------------------------------------------------------
+    // The sidebar fires an auto-update check on first activation. Without a
+    // persistent throttle, every workspace reload re-fires it, which is the
+    // "we check for updates again" symptom users see when switching projects.
+    // The throttle skips the auto-check when `lastUpdateCheck` (a ms
+    // timestamp in globalState) is within UPDATE_CHECK_THROTTLE_MS.
+    // ------------------------------------------------------------------------
 
-            // Clear the mock to reset call history
-            mockWebviewView.webview.postMessage.mockClear();
+    describe('update-check throttle', () => {
+        const NOW = 1_700_000_000_000;
+        const ONE_HOUR_MS = 60 * 60 * 1000;
 
-            // Now get context should return wizard
-            const messageHandler = mockWebviewView.webview.onDidReceiveMessage.mock.calls[0][0];
-            await messageHandler({ type: 'getContext' });
+        let globalStateStore: Record<string, unknown>;
+        let mockWebviewView: {
+            webview: {
+                options: Record<string, unknown>;
+                html: string;
+                onDidReceiveMessage: jest.Mock;
+                postMessage: jest.Mock;
+                asWebviewUri: jest.Mock;
+            };
+            onDidDispose: jest.Mock;
+            onDidChangeVisibility: jest.Mock;
+            visible: boolean;
+        };
+        let executeCommandMock: jest.Mock;
 
-            expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    type: 'contextResponse',
-                    data: expect.objectContaining({
-                        context: { type: 'wizard', step: 2, total: 6 },
+        beforeEach(() => {
+            jest.useFakeTimers();
+            jest.setSystemTime(NOW);
+
+            globalStateStore = {};
+            mockContext = {
+                extensionPath: '/mock/extension/path',
+                extensionUri: { fsPath: '/mock/extension/path', path: '/mock/extension/path' },
+                subscriptions: [],
+                globalState: {
+                    get: jest.fn((key: string, defaultValue?: unknown) =>
+                        key in globalStateStore ? globalStateStore[key] : defaultValue,
+                    ),
+                    update: jest.fn(async (key: string, value: unknown) => {
+                        globalStateStore[key] = value;
                     }),
-                })
+                },
+            } as unknown as vscode.ExtensionContext;
+
+            provider = new SidebarProvider(
+                mockContext,
+                mockStateManager as any,
+                mockLogger as any,
             );
+
+            mockWebviewView = {
+                webview: {
+                    options: {},
+                    html: '',
+                    onDidReceiveMessage: jest.fn(() => ({ dispose: jest.fn() })),
+                    postMessage: jest.fn(),
+                    asWebviewUri: jest.fn((uri) => uri),
+                },
+                onDidDispose: jest.fn(() => ({ dispose: jest.fn() })),
+                onDidChangeVisibility: jest.fn(() => ({ dispose: jest.fn() })),
+                visible: true,
+            };
+
+            executeCommandMock = vscode.commands.executeCommand as jest.Mock;
+            executeCommandMock.mockClear();
+            executeCommandMock.mockResolvedValue(undefined);
+        });
+
+        afterEach(() => {
+            jest.useRealTimers();
+        });
+
+        const wasCheckCommandInvoked = (): boolean =>
+            executeCommandMock.mock.calls.some(call => call[0] === 'demoBuilder.checkForUpdates');
+
+        it('runs the update check on first activation (no prior timestamp)', () => {
+            provider.resolveWebviewView(
+                mockWebviewView as unknown as vscode.WebviewView,
+                {} as vscode.WebviewViewResolveContext,
+                { isCancellationRequested: false } as vscode.CancellationToken,
+            );
+
+            expect(wasCheckCommandInvoked()).toBe(true);
+        });
+
+        it('records the timestamp in globalState when the check runs', () => {
+            provider.resolveWebviewView(
+                mockWebviewView as unknown as vscode.WebviewView,
+                {} as vscode.WebviewViewResolveContext,
+                { isCancellationRequested: false } as vscode.CancellationToken,
+            );
+
+            const update = mockContext.globalState.update as unknown as jest.Mock;
+            expect(update).toHaveBeenCalledWith('lastUpdateCheck', NOW);
+        });
+
+        it('skips the update check when the last check was within the throttle window', () => {
+            globalStateStore['lastUpdateCheck'] = NOW - (30 * 60 * 1000); // 30 min ago
+
+            provider.resolveWebviewView(
+                mockWebviewView as unknown as vscode.WebviewView,
+                {} as vscode.WebviewViewResolveContext,
+                { isCancellationRequested: false } as vscode.CancellationToken,
+            );
+
+            expect(wasCheckCommandInvoked()).toBe(false);
+        });
+
+        it('runs the update check when the throttle window has elapsed', () => {
+            globalStateStore['lastUpdateCheck'] = NOW - (ONE_HOUR_MS + 1); // just past throttle
+
+            provider.resolveWebviewView(
+                mockWebviewView as unknown as vscode.WebviewView,
+                {} as vscode.WebviewViewResolveContext,
+                { isCancellationRequested: false } as vscode.CancellationToken,
+            );
+
+            expect(wasCheckCommandInvoked()).toBe(true);
+        });
+
+        it('skips the check at the throttle boundary (last check exactly THROTTLE_MS ago)', () => {
+            globalStateStore['lastUpdateCheck'] = NOW - ONE_HOUR_MS;
+
+            provider.resolveWebviewView(
+                mockWebviewView as unknown as vscode.WebviewView,
+                {} as vscode.WebviewViewResolveContext,
+                { isCancellationRequested: false } as vscode.CancellationToken,
+            );
+
+            // At exactly the boundary the check is still throttled; one
+            // additional millisecond reliably crosses it.
+            expect(wasCheckCommandInvoked()).toBe(false);
+        });
+
+        it('skips the check when auto-update is disabled, regardless of throttle state', () => {
+            const getConfig = vscode.workspace.getConfiguration as jest.Mock;
+            getConfig.mockReturnValue({ get: jest.fn().mockReturnValue(false) });
+
+            provider.resolveWebviewView(
+                mockWebviewView as unknown as vscode.WebviewView,
+                {} as vscode.WebviewViewResolveContext,
+                { isCancellationRequested: false } as vscode.CancellationToken,
+            );
+
+            expect(wasCheckCommandInvoked()).toBe(false);
+        });
+
+        it('rolls the timestamp back when the network call rejects (no throttle on retry)', async () => {
+            const previous = NOW - (2 * ONE_HOUR_MS);
+            globalStateStore['lastUpdateCheck'] = previous;
+            executeCommandMock.mockImplementation((cmd: string) => {
+                if (cmd === 'demoBuilder.checkForUpdates') {
+                    return Promise.reject(new Error('network unreachable'));
+                }
+                return Promise.resolve(undefined);
+            });
+
+            provider.resolveWebviewView(
+                mockWebviewView as unknown as vscode.WebviewView,
+                {} as vscode.WebviewViewResolveContext,
+                { isCancellationRequested: false } as vscode.CancellationToken,
+            );
+
+            // Flush the rejection so the rollback runs.
+            await Promise.resolve();
+            await Promise.resolve();
+
+            expect(globalStateStore['lastUpdateCheck']).toBe(previous);
         });
     });
 });

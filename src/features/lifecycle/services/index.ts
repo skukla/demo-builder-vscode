@@ -7,5 +7,4 @@
 
 export {
     toggleLogsPanel,
-    resetLogsViewState,
 } from './lifecycleService';

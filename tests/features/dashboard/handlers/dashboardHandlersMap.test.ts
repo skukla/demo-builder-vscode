@@ -49,7 +49,6 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'viewDebugLogs')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'configure')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'openDevConsole')).toBe(true);
-            expect(hasHandler(dashboardHandlers, 'openAi')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'navigateBack')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'viewComponents')).toBe(true);
         });
@@ -88,8 +87,11 @@ describe('dashboardHandlers', () => {
             const types = getRegisteredTypes(dashboardHandlers);
 
             // Then: Exactly 19 handlers
-            // 2 init + 2 lifecycle + 10 navigation + 1 mesh + 1 syncStorefront + 1 auth + 1 project + 1 reset = 19
-            // (openInClaude removed with the dashboard tile — see dashboard-tile-layout redesign)
+            // 2 init + 2 lifecycle + 9 navigation + 1 mesh + 1 syncStorefront +
+            // 1 refreshBlockLibrary + 1 auth + 1 project + 1 reset = 19
+            // (openAi removed with the dashboard AI tile — AI now lives globally
+            //  in the sidebar, not as a project-scoped tile; see dashboard
+            //  primary-zone consolidation)
             expect(types).toHaveLength(19);
         });
 

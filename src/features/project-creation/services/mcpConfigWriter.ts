@@ -20,12 +20,11 @@
 
 import * as childProcess from 'child_process';
 import * as fsPromises from 'fs/promises';
-import * as os from 'os';
 import * as path from 'path';
 import { promisify } from 'util';
-import * as vscode from 'vscode';
 import aiDefaultsConfig from '../config/ai-defaults.json';
 import { COMPONENT_IDS } from '@/core/constants';
+import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
 import type { AiDefaults } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';
 
@@ -33,24 +32,12 @@ const execFile = promisify(childProcess.execFile);
 
 const aiDefaults: AiDefaults = aiDefaultsConfig as AiDefaults;
 
-/**
- * globalState key tracking user consent for registering demo-builder in the
- * canonical Claude Code user config (~/.claude.json).
- *
- * Three states:
- *   - undefined: user has not been asked yet
- *   - 'registered': user accepted, demo-builder entry is in ~/.claude.json
- *   - 'declined': user opted out of the prompt; do not ask again
- */
-export const GLOBAL_MCP_REG_STATE_KEY = 'demoBuilder.ai.globalMcpRegistration';
-
-export type GlobalMcpRegistrationState = 'registered' | 'declined';
-
 // ─── MCP entry shape ──────────────────────────────────────────────────────────
 
-interface McpServerEntry {
+export interface McpServerEntry {
     command: string;
     args: string[];
+    env?: Record<string, string>;
 }
 
 interface McpConfig {
@@ -95,12 +82,16 @@ export async function writeMcpConfigs(
         await fsPromises.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
     };
 
-    const mcpConfig = await buildMcpConfig(extensionDistPath, project);
+    // Resolve the Node binary once and thread it to BOTH the MCP proxy entry
+    // and the git-sync hook extractor (which now parses tool input via `node -e`).
+    const nodePath = await resolveNodePath();
+
+    const mcpConfig = await buildMcpConfig(extensionDistPath, project, nodePath);
 
     await writeJson(path.join(projectPath, '.claude', 'mcp.json'), mcpConfig);
     await writeJson(path.join(projectPath, '.mcp.json'), mcpConfig);
 
-    const claudeSettings = generateClaudeSettings(project);
+    const claudeSettings = generateClaudeSettings(project, nodePath);
     await writeJson(path.join(projectPath, '.claude', 'settings.json'), claudeSettings);
 
     await ensureMcpFilesGitignored(projectPath);
@@ -108,104 +99,55 @@ export async function writeMcpConfigs(
 
 
 /**
- * Upsert the demo-builder MCP server entry into Claude Code's canonical
- * user-scope config file: `~/.claude.json` top-level `mcpServers` field
- * (verified against Claude Code v2.1.x on 2026-05-20).
- *
- * Preserves every other field in the file. Idempotent. Does NOT prompt the
- * user — callers must obtain consent first (see `ensureGlobalMcpRegistration`).
- *
- * Throws if `~/.claude.json` exists but is malformed, so we never overwrite a
- * valid-but-unreadable user-curated config.
- */
-export async function registerGlobalMcp(extensionDistPath: string): Promise<void> {
-    const configPath = path.join(os.homedir(), '.claude.json');
-
-    let config: Record<string, unknown> = {};
-    try {
-        const raw = await fsPromises.readFile(configPath, 'utf-8');
-        try {
-            config = JSON.parse(raw) as Record<string, unknown>;
-        } catch (err) {
-            throw new Error(
-                `~/.claude.json is malformed — refusing to overwrite valid-but-unreadable ` +
-                `user config: ${err instanceof Error ? err.message : String(err)}`,
-            );
-        }
-    } catch (err) {
-        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
-            throw err;
-        }
-        // Missing file — start with an empty object
-    }
-
-    if (!config.mcpServers || typeof config.mcpServers !== 'object') {
-        config.mcpServers = {};
-    }
-
-    const nodePath = await resolveNodePath();
-    (config.mcpServers as Record<string, unknown>)['demo-builder'] = {
-        command: nodePath,
-        args: [path.join(extensionDistPath, 'mcp-server.js')],
-    };
-
-    await fsPromises.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
-}
-
-/**
- * Consent-gated global MCP registration.
- *
- * Called after a project creation completes. Prompts the user the first time;
- * remembers the choice via `globalState`. Subsequent calls no-op once the
- * state is set, so this is safe to call after every project completion.
- *
- * The AI Configuration tab exposes a `[Register]` button that calls
- * `registerGlobalMcp` directly, bypassing the consent prompt for users who
- * opted out earlier.
- */
-export async function ensureGlobalMcpRegistration(
-    extensionDistPath: string,
-    context: vscode.ExtensionContext,
-): Promise<void> {
-    const state = context.globalState.get<GlobalMcpRegistrationState>(GLOBAL_MCP_REG_STATE_KEY);
-    if (state === 'registered' || state === 'declined') return;
-
-    // Modal so the prompt persists until the user responds. Non-modal info
-    // notifications auto-dismiss after a few seconds, and users were missing
-    // the prompt entirely when it appeared during a long project creation.
-    const choice = await vscode.window.showInformationMessage(
-        'Demo Builder can register its MCP server with Claude Code so AI agents can ' +
-        'discover your projects from any directory. This adds a `demo-builder` entry ' +
-        'to your Claude Code user config (~/.claude.json). Register now?',
-        { modal: true },
-        'Register',
-        'Not Now',
-        "Don't Ask Again",
-    );
-
-    if (choice === 'Register') {
-        await registerGlobalMcp(extensionDistPath);
-        await context.globalState.update(GLOBAL_MCP_REG_STATE_KEY, 'registered');
-    } else if (choice === "Don't Ask Again") {
-        await context.globalState.update(GLOBAL_MCP_REG_STATE_KEY, 'declined');
-    }
-    // 'Not Now' or dialog dismissal: leave state undefined, re-prompt next time.
-}
-
-/**
  * Generate .claude/settings.json with PostToolUse git sync hook.
  * Hook is only added when the project has an EDS storefront with a local path
- * and that path contains no shell metacharacters.
+ * and that path (and `nodePath`, interpolated into the hook) contains no shell
+ * metacharacters.
+ *
+ * `nodePath` is the already-resolved Node binary (see `resolveNodePath`) used
+ * by the hook's `node -e` tool-input extractor.
  */
-export function generateClaudeSettings(project: Project): ClaudeSettings {
+export function generateClaudeSettings(project: Project, nodePath: string): ClaudeSettings {
     const storefrontPath = resolveStorefrontPath(project);
     if (!storefrontPath) {
         return {};
     }
 
-    const command = buildGitSyncCommand(storefrontPath);
+    const command = buildGitSyncCommand(storefrontPath, nodePath);
     if (!command) {
         // Path contained shell metacharacters — skip hook for safety
+        return {};
+    }
+
+    return {
+        hooks: {
+            PostToolUse: [
+                {
+                    matcher: 'Write|Edit',
+                    hooks: [{ type: 'command', command }],
+                },
+            ],
+        },
+    };
+}
+
+/**
+ * Generate .claude/settings.json for the SINGLE home Chat (rooted at the Demo
+ * Builder projects root). Installs a project-aware PostToolUse git-sync hook
+ * that auto-commits/pushes storefront edits made anywhere under the projects
+ * root — the home analogue of the per-project hook.
+ *
+ * Returns `{}` (no hook) when `projectsRoot` (or `nodePath`, interpolated into
+ * the hook) contains shell metacharacters — an attacker-controlled value must
+ * not become part of an executed shell command.
+ *
+ * `nodePath` is the already-resolved Node binary (see `resolveNodePath`) used
+ * by the hook's `node -e` tool-input extractor.
+ */
+export function generateHomeClaudeSettings(projectsRoot: string, nodePath: string): ClaudeSettings {
+    const command = buildHomeGitSyncCommand(projectsRoot, nodePath);
+    if (!command) {
+        // Root contained shell metacharacters — skip hook for safety
         return {};
     }
 
@@ -233,7 +175,7 @@ export function generateClaudeSettings(project: Project): ClaudeSettings {
  * Falls back to `process.execPath` if resolution fails (better than nothing —
  * user can fix the path manually in ~/.claude/.mcp.json).
  */
-async function resolveNodePath(): Promise<string> {
+export async function resolveNodePath(): Promise<string> {
     try {
         // `which node` finds the node binary (resolves fnm/nvm shims)
         const { stdout: whichOut } = await execFile('which', ['node']);
@@ -259,16 +201,46 @@ async function resolveNodePath(): Promise<string> {
     return process.execPath;
 }
 
+/**
+ * Build the `demo-builder` MCP entry: the stdio→UDS proxy pointed at an explicit
+ * socket path. The in-extension server (when the matching folder is the open
+ * workspace) listens on that same path. Stable across restarts — no
+ * per-activation rewrite needed.
+ *
+ * Shared by the per-project writer (socket keyed to `project.path`) and the home
+ * writer (socket keyed to the projects root). `nodePath` may be supplied by the
+ * caller to avoid resolving it twice; otherwise it is resolved here.
+ */
+export async function buildDemoBuilderMcpEntry(
+    extensionDistPath: string,
+    socketPath: string,
+    nodePath?: string,
+): Promise<McpServerEntry> {
+    const resolvedNode = nodePath ?? (await resolveNodePath());
+    return {
+        command: resolvedNode,
+        args: [path.join(extensionDistPath, 'mcp-proxy.js')],
+        env: { DEMO_BUILDER_MCP_SOCKET: socketPath },
+    };
+}
+
 async function buildMcpConfig(
     extensionDistPath: string,
     project: Project,
+    nodePath: string,
 ): Promise<McpConfig> {
-    const nodePath = await resolveNodePath();
+    // The in-extension MCP server listens on a socket keyed to the OPEN
+    // WORKSPACE — under the always-root home-Chat model (PR #36) that's the
+    // projects root, not any individual project. Point the proxy at THAT
+    // root socket so the per-project mcp.json reaches the live server.
+    // (Keying to project.path produced "demo-builder: timed out" in the AI
+    // Capabilities modal whenever the workspace was the projects root.)
     const mcpServers: Record<string, McpServerEntry> = {
-        'demo-builder': {
-            command: nodePath,
-            args: [path.join(extensionDistPath, 'mcp-server.js')],
-        },
+        'demo-builder': await buildDemoBuilderMcpEntry(
+            extensionDistPath,
+            resolveMcpSocketPath(path.dirname(project.path)),
+            nodePath,
+        ),
     };
 
     // ai-defaults.json packages live under the storefront's node_modules
@@ -308,25 +280,62 @@ function resolveStorefrontPath(project: Project): string | undefined {
 const SHELL_METACHAR_RE = /["`$;|&<>\n\r\\'*?[\](){}]/;
 
 /**
+ * Build the shell snippet that extracts the edited file path from the
+ * PostToolUse payload into `$TOOL_FILE`.
+ *
+ * Parses `$CLAUDE_TOOL_INPUT` with a single `node -e` invocation using the
+ * already-resolved Node binary (the same one the MCP proxy depends on) — no
+ * `jq`/`python3`/`grep`+`sed` cascade. The Node one-liner:
+ *   - reads `process.env.CLAUDE_TOOL_INPUT` directly (defaulting to `"{}"`), so
+ *     the shell never expands the env var,
+ *   - `JSON.parse`s it inside try/catch (parse failure ⇒ prints nothing),
+ *   - recursively finds the FIRST string-valued `file_path` at any nesting depth
+ *     (parity with the old `.. | .file_path` recursion; Claude passes it at
+ *     `tool_input.file_path`),
+ *   - writes that path (or empty string) to stdout with NO trailing newline.
+ *
+ * The JS contains NO single-quote characters, so the whole `-e '…'` is wrapped
+ * in single quotes with no escaping. `nodePath` is interpolated double-quoted.
+ * Shared by the per-project and the home git-sync hooks. Callers guard
+ * `nodePath` with `SHELL_METACHAR_RE` before interpolating it here.
+ */
+function buildToolFileExtraction(nodePath: string): string {
+    // No single quotes anywhere in this script — it is wrapped in single quotes
+    // for the shell. Double quotes only. Reads the env var directly (no shell
+    // expansion of $CLAUDE_TOOL_INPUT), recurses for the first string file_path,
+    // and writes it with no trailing newline.
+    const script =
+        `try{` +
+        `var o=JSON.parse(process.env.CLAUDE_TOOL_INPUT||"{}");` +
+        `var f=function(v){` +
+        `if(v&&typeof v==="object"){` +
+        `if(typeof v.file_path==="string")return v.file_path;` +
+        `for(var k in v){var r=f(v[k]);if(typeof r==="string")return r}` +
+        `}` +
+        `return null` +
+        `};` +
+        `var p=f(o);` +
+        `if(typeof p==="string")process.stdout.write(p)` +
+        `}catch(e){}`;
+
+    return `TOOL_FILE=$("${nodePath}" -e '${script}'); `;
+}
+
+/**
  * Build the PostToolUse git sync shell command for the storefront path.
  *
  * Returns an empty string (no hook installed) if `storefrontPath` contains
  * shell metacharacters — an attacker-controlled path must not become part of
  * an executed shell command.
  *
- * JSON-parsing strategy is a tolerant fallback chain so the hook works in
- * environments missing one of the tools:
- *   1. `jq` — primary, robust JSON parser (widely available)
- *   2. `python3` — secondary, present on every modern macOS/Linux install
- *   3. `grep`/`sed` — last-resort regex
+ * Extracts the edited file into `$TOOL_FILE` (see `buildToolFileExtraction`),
+ * then commits + pushes only when that file is under the storefront path.
  *
- * The chain uses `||` so each tool only runs if the previous one produced
- * empty output (or failed). The query is `.. | objects | .file_path? // empty`
- * for jq, equivalent recursive logic for python3, and a `grep -o` pattern for
- * the last-resort path — all three extract `file_path` at any nesting depth.
+ * `nodePath` is interpolated into the extractor command, so it is subject to
+ * the same `SHELL_METACHAR_RE` guard as `storefrontPath`.
  */
-function buildGitSyncCommand(storefrontPath: string): string {
-    if (SHELL_METACHAR_RE.test(storefrontPath)) {
+function buildGitSyncCommand(storefrontPath: string, nodePath: string): string {
+    if (SHELL_METACHAR_RE.test(storefrontPath) || SHELL_METACHAR_RE.test(nodePath)) {
         // Unsafe path — skip hook rather than risk shell injection
         return '';
     }
@@ -336,29 +345,65 @@ function buildGitSyncCommand(storefrontPath: string): string {
     // shell arguments. The double quotes preserve any spaces.
     const quoted = `"${storefrontPath}"`;
 
-    const jqExtract = `jq -r '.. | objects | .file_path? // empty' 2>/dev/null`;
-    const pythonExtract =
-        `python3 -c 'import json,sys\n` +
-        `def find(o):\n` +
-        `    if isinstance(o,dict):\n` +
-        `        if "file_path" in o: print(o["file_path"]); return True\n` +
-        `        return any(find(v) for v in o.values())\n` +
-        `    if isinstance(o,list):\n` +
-        `        return any(find(v) for v in o)\n` +
-        `    return False\n` +
-        `find(json.load(sys.stdin))' 2>/dev/null`;
-    const grepSedExtract =
-        `grep -o '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | ` +
-        `sed 's/"file_path"[[:space:]]*:[[:space:]]*"//;s/"$//'`;
-
     return (
-        `TOOL_FILE=$(echo "$CLAUDE_TOOL_INPUT" | ${jqExtract}); ` +
-        `[ -z "$TOOL_FILE" ] && TOOL_FILE=$(echo "$CLAUDE_TOOL_INPUT" | ${pythonExtract}); ` +
-        `[ -z "$TOOL_FILE" ] && TOOL_FILE=$(echo "$CLAUDE_TOOL_INPUT" | ${grepSedExtract}); ` +
+        buildToolFileExtraction(nodePath) +
         `if [[ "$TOOL_FILE" == ${quoted}* ]]; then ` +
         `git -C ${quoted} add -A && ` +
         `git -C ${quoted} commit -m "AI: sync files" && ` +
         `git -C ${quoted} push; fi`
+    );
+}
+
+/**
+ * Build the project-aware PostToolUse git-sync command for the SINGLE home Chat
+ * (rooted at the Demo Builder projects root). Auto-commits/pushes a storefront
+ * edit made anywhere under `<root>/<project>/...` — the home analogue of the
+ * per-project `buildGitSyncCommand`.
+ *
+ * Unlike the per-project hook (which targets one fixed storefront path), the
+ * home Chat can edit ANY project under the root, so this command resolves the
+ * enclosing git repo at runtime and applies layered safety guards:
+ *
+ *   1. Returns `''` (no hook) if `projectsRoot` (or `nodePath`, interpolated into
+ *      the extractor) contains shell metacharacters — an attacker-controlled
+ *      value must never become part of a shell command. Same guard as
+ *      `buildGitSyncCommand`.
+ *   2. Extracts the edited file into `$TOOL_FILE`; `[ -z … ] && exit 0` bails
+ *      when nothing was edited or the payload couldn't be parsed.
+ *   3. Resolves the enclosing repo via `git rev-parse --show-toplevel` from the
+ *      edited file's directory; `|| exit 0` bails when the file isn't in a repo.
+ *   4. ROOT-SCOPE guard: `case "$TOP" in "<root>"/*) … *) exit 0` — only proceed
+ *      when the repo top is strictly UNDER the projects root. `"<root>"/*`
+ *      requires a subpath, so the root itself (and files written directly under
+ *      it, e.g. `.claude/`) never trigger a commit.
+ *   5. REMOTE guard: `git remote get-url origin || exit 0` — only repos that
+ *      have an `origin` remote (i.e. the storefront repos Helix watches). Never
+ *      commit+push a random non-remote repo a user happens to have under root.
+ *   6. Commit + push the resolved repo top.
+ *
+ * The root is double-quoted everywhere it is interpolated. The metachar guard
+ * already rejects quotes, so quoting is purely to preserve spaces in the path.
+ */
+export function buildHomeGitSyncCommand(projectsRoot: string, nodePath: string): string {
+    if (SHELL_METACHAR_RE.test(projectsRoot) || SHELL_METACHAR_RE.test(nodePath)) {
+        // Unsafe root — skip hook rather than risk shell injection
+        return '';
+    }
+
+    // SHELL_METACHAR_RE already rejects any quote characters, so no further
+    // escaping is needed before interpolating into double-quoted shell
+    // arguments. The double quotes preserve any spaces in the root path.
+    const quotedRoot = `"${projectsRoot}"`;
+
+    return (
+        buildToolFileExtraction(nodePath) +
+        `[ -z "$TOOL_FILE" ] && exit 0; ` +
+        `TOP=$(git -C "$(dirname "$TOOL_FILE")" rev-parse --show-toplevel 2>/dev/null) || exit 0; ` +
+        `case "$TOP" in ${quotedRoot}/*) ;; *) exit 0 ;; esac; ` +
+        `git -C "$TOP" remote get-url origin >/dev/null 2>&1 || exit 0; ` +
+        `git -C "$TOP" add -A && ` +
+        `git -C "$TOP" commit -m "AI: sync files" && ` +
+        `git -C "$TOP" push`
     );
 }
 

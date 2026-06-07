@@ -259,17 +259,16 @@ describe('wizardHelpers - state & config', () => {
             expect(config.adobe?.workspace).toBe('ws-789');
         });
 
-        it('should include editMode and editProjectPath for edit flows', () => {
+        it('should include editProjectPath for edit flows', () => {
             const state: WizardState = {
                 currentStep: 'review',
                 projectName: 'test-project',
-                editMode: true,
+                wizardMode: 'edit',
                 editProjectPath: '/path/to/project',
             };
 
             const config = buildProjectConfig(state);
 
-            expect(config.editMode).toBe(true);
             expect(config.editProjectPath).toBe('/path/to/project');
         });
 

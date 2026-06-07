@@ -1,8 +1,6 @@
 /**
  * Bundle URI Utility Tests
  *
- * TDD: Tests written FIRST to define behavior before implementation.
- *
  * This utility consolidates the duplicated bundle URI construction pattern
  * found in 4 webview command files:
  * - showDashboard.ts
@@ -13,7 +11,7 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { createBundleUris, type BundleUriOptions, type BundleUris } from '@/core/utils/bundleUri';
+import { getBundleUri, type BundleUriOptions } from '@/core/utils/bundleUri';
 
 // Mock VS Code API
 jest.mock('vscode', () => ({
@@ -25,7 +23,7 @@ jest.mock('vscode', () => ({
     },
 }));
 
-describe('createBundleUris', () => {
+describe('getBundleUri', () => {
     // Mock webview that simulates VS Code panel.webview
     const mockWebview = {
         asWebviewUri: jest.fn((uri: vscode.Uri) => ({
@@ -42,20 +40,16 @@ describe('createBundleUris', () => {
     });
 
     describe('basic functionality', () => {
-        it('should create bundle URIs for a feature bundle name', () => {
+        it('should return a webview URI for a feature bundle name', () => {
             const options: BundleUriOptions = {
                 webview: mockWebview as unknown as vscode.Webview,
                 extensionPath,
                 featureBundleName: 'dashboard',
             };
 
-            const result = createBundleUris(options);
+            const result = getBundleUri(options);
 
             expect(result).toBeDefined();
-            expect(result.runtime).toBeDefined();
-            expect(result.vendors).toBeDefined();
-            expect(result.common).toBeDefined();
-            expect(result.feature).toBeDefined();
         });
 
         it('should call asWebviewUri once for the feature bundle', () => {
@@ -65,7 +59,7 @@ describe('createBundleUris', () => {
                 featureBundleName: 'wizard',
             };
 
-            createBundleUris(options);
+            getBundleUri(options);
 
             // esbuild produces a single self-contained bundle — one asWebviewUri call
             expect(mockWebview.asWebviewUri).toHaveBeenCalledTimes(1);
@@ -78,7 +72,7 @@ describe('createBundleUris', () => {
                 featureBundleName: 'dashboard',
             };
 
-            createBundleUris(options);
+            getBundleUri(options);
 
             // esbuild produces one bundle — verify the single asWebviewUri call uses the feature bundle path
             expect(mockWebview.asWebviewUri).toHaveBeenCalledWith(
@@ -103,31 +97,13 @@ describe('createBundleUris', () => {
                 featureBundleName: featureName,
             };
 
-            createBundleUris(options);
+            getBundleUri(options);
 
             expect(mockWebview.asWebviewUri).toHaveBeenCalledWith(
                 expect.objectContaining({
                     fsPath: path.join(webviewPath, expectedFileName),
                 })
             );
-        });
-    });
-
-    describe('return type conformance', () => {
-        it('should return BundleUris compatible with getWebviewHTMLWithBundles', () => {
-            const options: BundleUriOptions = {
-                webview: mockWebview as unknown as vscode.Webview,
-                extensionPath,
-                featureBundleName: 'dashboard',
-            };
-
-            const result: BundleUris = createBundleUris(options);
-
-            // Verify type compatibility by checking required properties
-            expect(typeof result.runtime).toBe('object');
-            expect(typeof result.vendors).toBe('object');
-            expect(typeof result.common).toBe('object');
-            expect(typeof result.feature).toBe('object');
         });
     });
 
@@ -140,7 +116,7 @@ describe('createBundleUris', () => {
             };
 
             // Should not throw
-            expect(() => createBundleUris(options)).not.toThrow();
+            expect(() => getBundleUri(options)).not.toThrow();
         });
 
         it('should handle feature bundle name with special characters', () => {
@@ -150,7 +126,7 @@ describe('createBundleUris', () => {
                 featureBundleName: 'my-feature',
             };
 
-            createBundleUris(options);
+            getBundleUri(options);
 
             expect(mockWebview.asWebviewUri).toHaveBeenCalledWith(
                 expect.objectContaining({

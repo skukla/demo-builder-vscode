@@ -3,14 +3,24 @@
  *
  * Displays the project dashboard actions as small, grouped, prioritized tiles
  * organized into labeled zones:
- *  - Hero zone (accent): Start/Stop (non-EDS, mutually exclusive), Open in Browser, AI.
- *  - Storefront zone (EDS only): Author in DA.live, Sync Storefront.
- *  - Build zone: Deploy Mesh (when hasMesh), Configure, Logs, and a "More" overflow
- *    menu holding Components and Dev Console.
+ *  - Primary zone (accent): Start/Stop (non-EDS, mutually exclusive), Open in
+ *    Browser, and Author in DA.live (EDS only). These are the surfaces you
+ *    use the project through — see it as a customer, edit it as a creator.
+ *  - Storefront zone (EDS only): Sync Storefront. Sits on row 1 next to
+ *    Primary so storefront ops are visually adjacent to the storefront
+ *    authoring surface.
+ *  - Build zone: Deploy Mesh (when hasMesh), Configure, Logs, and a "More"
+ *    overflow menu holding Components, Refresh Block Library (EDS only),
+ *    and Dev Console.
  *  - Delete footer: isolated below the zones, destructive styling.
  *
- * Gating is behavioral, not displayed: the Storefront zone renders only for EDS
- * projects; Start/Stop only for non-EDS; Deploy Mesh only when hasMesh.
+ * Gating is behavioral, not displayed: Author in DA.live and Sync Storefront
+ * render only for EDS projects; Start/Stop only for non-EDS; Deploy Mesh only
+ * when hasMesh.
+ *
+ * AI access is provided globally via the sidebar (Chat + Prompts) — the MCP
+ * is wired at the extension level, so a project-scoped AI tile here would be
+ * a redundant second door to the same surface.
  *
  * Note: EDS Publish and Reset actions are available via the project card kebab menu,
  * not on this dashboard detail view.
@@ -28,7 +38,6 @@ import {
 import Delete from '@spectrum-icons/workflow/Delete';
 import Edit from '@spectrum-icons/workflow/Edit';
 import Globe from '@spectrum-icons/workflow/Globe';
-import MagicWand from '@spectrum-icons/workflow/MagicWand';
 import More from '@spectrum-icons/workflow/More';
 import PlayCircle from '@spectrum-icons/workflow/PlayCircle';
 import PublishCheck from '@spectrum-icons/workflow/PublishCheck';
@@ -39,7 +48,7 @@ import ViewList from '@spectrum-icons/workflow/ViewList';
 import React from 'react';
 
 /** Overflow menu item keys. */
-type OverflowKey = 'components' | 'devConsole';
+type OverflowKey = 'components' | 'refreshBlockLibrary' | 'devConsole';
 
 /**
  * Props for the ActionGrid component
@@ -77,14 +86,14 @@ export interface ActionGridProps {
     handleDeployMesh: () => void;
     /** Handler for Sync Storefront button (EDS projects only) */
     handleSyncStorefront?: () => void;
+    /** Handler for Refresh Block Library overflow item (EDS projects only) */
+    handleRefreshBlockLibrary?: () => void;
     /** Handler for Configure button */
     handleConfigure: () => void;
     /** Handler for Components button (overflow menu) */
     handleViewComponents: () => void;
     /** Handler for Dev Console button (overflow menu) */
     handleOpenDevConsole: () => void;
-    /** Handler for AI — opens the standalone AI surface */
-    handleOpenAi: () => void;
     /** Handler for Delete button */
     handleDeleteProject: () => void;
 }
@@ -113,27 +122,36 @@ export function ActionGrid({
     handleViewLogs,
     handleDeployMesh,
     handleSyncStorefront,
+    handleRefreshBlockLibrary,
     handleConfigure,
     handleViewComponents,
     handleOpenDevConsole,
-    handleOpenAi,
     handleDeleteProject,
 }: ActionGridProps): React.ReactElement {
     const handleOverflowAction = (key: React.Key): void => {
-        if (key === ('components' satisfies OverflowKey)) {
-            handleViewComponents();
-        } else if (key === ('devConsole' satisfies OverflowKey)) {
-            handleOpenDevConsole();
+        switch (key) {
+            case 'components' satisfies OverflowKey:
+                handleViewComponents();
+                return;
+            case 'refreshBlockLibrary' satisfies OverflowKey:
+                handleRefreshBlockLibrary?.();
+                return;
+            case 'devConsole' satisfies OverflowKey:
+                handleOpenDevConsole();
+                return;
         }
     };
 
     return (
         <div className="dashboard-zones">
-            {/* Row 1 — two labeled clusters share one row: Primary (universal,
-                accent) + Storefront (EDS-only). Storefront hides on non-EDS,
-                leaving Primary alone. */}
+            {/* Row 1 — Primary (universal) + Storefront (EDS-only). Storefront
+                hides on non-EDS, leaving Primary alone. */}
             <div className="dashboard-zone-row">
-                {/* Primary cluster — most-frequent / outcome actions */}
+                {/* Primary zone — the surfaces you use the project through:
+                    see it as a customer (Open in Browser) and edit it as a
+                    creator (Author in DA.live, EDS only). Start/Stop also
+                    lives here for non-EDS projects as their lifecycle
+                    equivalent. */}
                 <div className="dashboard-zone-section" data-zone="primary">
                     <span className="dashboard-zone-label">Primary</span>
                     <div className="dashboard-zone-grid">
@@ -183,56 +201,48 @@ export function ActionGrid({
                             </ActionButton>
                         )}
 
-                        {/* AI — standalone AI surface */}
-                        <ActionButton
-                            onPress={handleOpenAi}
-                            isQuiet
-                            UNSAFE_className="dashboard-action-button dashboard-action-button--hero"
-                            aria-label="AI"
-                        >
-                            <MagicWand size="L" />
-                            <Text UNSAFE_className="icon-label">AI</Text>
-                        </ActionButton>
-                    </div>
-                </div>
-
-                {/* Storefront cluster — EDS only (content via DA.live, code via Sync) */}
-                {isEds && (
-                    <div className="dashboard-zone-section" data-zone="storefront">
-                        <span className="dashboard-zone-label">Storefront</span>
-                        <div className="dashboard-zone-grid">
+                        {/* Author in DA.live — EDS only, content authoring surface */}
+                        {isEds && (
                             <ActionButton
                                 onPress={handleOpenDaLive}
                                 isQuiet
                                 isDisabled={isOpeningBrowser}
-                                UNSAFE_className="dashboard-action-button"
+                                UNSAFE_className="dashboard-action-button dashboard-action-button--hero"
                             >
                                 <Edit size="L" />
                                 <Text UNSAFE_className="icon-label">Author in DA.live</Text>
                             </ActionButton>
-                            {handleSyncStorefront && (
-                                <ActionButton
-                                    onPress={handleSyncStorefront}
-                                    isQuiet
-                                    UNSAFE_className="dashboard-action-button"
-                                    data-action="sync-storefront"
-                                >
-                                    <PublishCheck size="L" />
-                                    <Text UNSAFE_className="icon-label">Sync Storefront</Text>
-                                </ActionButton>
-                            )}
+                        )}
+                    </div>
+                </div>
+
+                {/* Storefront cluster — EDS only. Sync Storefront pushes
+                    storefront code; placed adjacent to the Author surface so
+                    storefront-related actions are visually grouped. */}
+                {isEds && handleSyncStorefront && (
+                    <div className="dashboard-zone-section" data-zone="storefront">
+                        <span className="dashboard-zone-label">Storefront</span>
+                        <div className="dashboard-zone-grid">
+                            <ActionButton
+                                onPress={handleSyncStorefront}
+                                isQuiet
+                                UNSAFE_className="dashboard-action-button"
+                                data-action="sync-storefront"
+                            >
+                                <PublishCheck size="L" />
+                                <Text UNSAFE_className="icon-label">Sync Storefront</Text>
+                            </ActionButton>
                         </div>
                     </div>
                 )}
             </div>
 
-            {/* Build zone — deploy/configure/logs plus an overflow menu */}
+            {/* Build zone — deploy/configure/logs plus an overflow menu. */}
             <div className="dashboard-zone-section" data-zone="build">
                 <span className="dashboard-zone-label">Build</span>
                 {/* On EDS, row 1 is two clusters (Primary | Storefront) on a
-                    fixed column grid. Build uses the same aligned column grid so
-                    its tiles line up under the clusters above. Non-EDS rows are
-                    uniform, so the plain flex grid already aligns. */}
+                    fixed column grid. Build uses the same aligned column grid
+                    so its tiles line up under the clusters above. */}
                 <div className={`dashboard-zone-grid${isEds ? ' dashboard-zone-grid--aligned' : ''}`}>
                     {hasMesh && (
                         <ActionButton
@@ -278,6 +288,9 @@ export function ActionGrid({
                         </ActionButton>
                         <Menu onAction={handleOverflowAction}>
                             <Item key="components">Components</Item>
+                            {isEds && handleRefreshBlockLibrary ? (
+                                <Item key="refreshBlockLibrary">Refresh Block Library</Item>
+                            ) : null}
                             <Item key="devConsole">Dev Console</Item>
                         </Menu>
                     </MenuTrigger>

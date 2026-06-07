@@ -10,9 +10,10 @@
  * Extracted from GitHubService for better modularity.
  */
 
+import * as crypto from 'crypto';
 import { Octokit } from '@octokit/core';
 import { retry } from '@octokit/plugin-retry';
-import type { GitHubUser, GitHubApiError } from './types';
+import type { GitHubUser } from './types';
 
 // Re-export for backward compatibility
 export const ERROR_MESSAGES = {
@@ -22,14 +23,6 @@ export const ERROR_MESSAGES = {
     REPO_EXISTS: 'Repository name already exists',
     SERVICE_UNAVAILABLE: 'GitHub service is temporarily unavailable',
 } as const;
-
-/**
- * Create an unauthenticated Octokit instance with retry plugin
- */
-export function createOctokit(): InstanceType<typeof Octokit> {
-    const OctokitWithRetry = Octokit.plugin(retry);
-    return new OctokitWithRetry();
-}
 
 /**
  * Create an authenticated Octokit instance with retry plugin
@@ -46,9 +39,7 @@ export function createAuthenticatedOctokit(token: string): InstanceType<typeof O
  * Returns a 32-character hex string
  */
 export function generateOAuthState(): string {
-    const array = new Uint8Array(16);
-    crypto.getRandomValues(array);
-    return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+    return crypto.randomBytes(16).toString('hex');
 }
 
 /**
@@ -76,48 +67,4 @@ export function mapToGitHubUser(data: {
         name: data.name || null,
         avatarUrl: data.avatar_url || null,
     };
-}
-
-/**
- * Wrap Octokit instance with error handling for common scenarios
- */
-export function wrapOctokitWithErrorHandling(
-    octokit: InstanceType<typeof Octokit>,
-    onUnauthorized: () => Promise<void>,
-): InstanceType<typeof Octokit> {
-    const originalRequest = octokit.request.bind(octokit);
-
-    const wrappedOctokit = Object.create(octokit);
-    wrappedOctokit.request = async (...args: Parameters<typeof octokit.request>) => {
-        try {
-            return await originalRequest(...args);
-        } catch (error) {
-            const apiError = error as GitHubApiError;
-
-            if (apiError.status === 401) {
-                await onUnauthorized();
-                throw error;
-            }
-
-            if (apiError.status === 403) {
-                const rateLimitRemaining = apiError.headers?.['x-ratelimit-remaining'];
-                if (rateLimitRemaining === '0') {
-                    const resetTime = apiError.headers?.['x-ratelimit-reset'];
-                    throw new Error(
-                        `GitHub API rate limit exceeded. Resets at ${new Date(
-                            parseInt(resetTime || '0') * 1000,
-                        ).toISOString()}`,
-                    );
-                }
-            }
-
-            if (apiError.status === 503) {
-                throw new Error(ERROR_MESSAGES.SERVICE_UNAVAILABLE);
-            }
-
-            throw error;
-        }
-    };
-
-    return wrappedOctokit;
 }

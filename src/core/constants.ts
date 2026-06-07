@@ -8,6 +8,13 @@
 export const LAST_UPDATE_CHECK_VERSION = 'lastUpdateCheckVersion';
 
 /**
+ * Global state key for the timestamp (ms) of the last successful auto
+ * update check. Read by `SidebarProvider.triggerUpdateCheck` to throttle
+ * the auto-check across workspace reloads.
+ */
+export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
+
+/**
  * Component IDs for standardized component instance access
  *
  * These IDs match the component definitions in templates/components.json

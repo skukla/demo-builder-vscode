@@ -24,7 +24,6 @@ jest.mock('@/core/di', () => ({
     },
 }));
 
-jest.mock('@/features/components/handlers/componentHandler');
 jest.mock('@/features/prerequisites/services/PrerequisitesManager');
 
 /**

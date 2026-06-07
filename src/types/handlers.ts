@@ -57,7 +57,6 @@ export interface ProjectConfig {
     importedWorkspaceId?: string;
     importedMeshEndpoint?: string;
     frontendSource?: unknown;
-    editMode?: boolean;
     editProjectPath?: string;
     edsConfig?: unknown;
     // Legacy fields (kept for backwards compatibility)
@@ -217,12 +216,6 @@ export interface HandlerResponse {
     message?: string;
     [key: string]: unknown;
 }
-
-/**
- * HandlerRegistry - Maps message types to handler functions
- * @deprecated Use HandlerMap (object literal) instead
- */
-export type HandlerRegistryMap = Map<string, MessageHandler>;
 
 /**
  * AnyMessageHandler - Permissive type for handler functions

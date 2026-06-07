@@ -10,6 +10,7 @@
  */
 
 import * as vscode from 'vscode';
+import { readDaAuthHelperToken, writeDaAuthHelperToken } from './daAuthHelperToken';
 import { getLogger } from '@/core/logging';
 
 // ==========================================================
@@ -93,6 +94,19 @@ export class DaLiveAuthService {
      * The 5-minute expiration buffer prevents tokens from expiring mid-operation.
      */
     async getStoredToken(): Promise<DaLiveTokenInfo | null> {
+        const fromState = this.readValidStateToken();
+        if (fromState) {
+            return fromState;
+        }
+        // Fallback: a token the agent obtained via the `da-auth` skill (cached by
+        // da-auth-helper at ~/.aem/da-token.json) — the same admin.da.live IMS
+        // credential, just a different front door. Hydrate it into globalState so
+        // the rest of the extension and our MCP tools recognize the same sign-in.
+        return this.hydrateFromDaAuthHelper();
+    }
+
+    /** Read a still-valid token from globalState (with the 5-minute buffer), or null. */
+    private readValidStateToken(): DaLiveTokenInfo | null {
         const accessToken = this.context.globalState.get<string>(STATE_KEYS.accessToken);
         const expiresAt = this.context.globalState.get<number>(STATE_KEYS.tokenExpiration);
         const email = this.context.globalState.get<string>(STATE_KEYS.userEmail);
@@ -107,6 +121,36 @@ export class DaLiveAuthService {
         }
 
         return { accessToken, expiresAt, email };
+    }
+
+    /**
+     * Adopt a still-valid token from the da-auth-helper cache (`~/.aem/da-token.json`)
+     * when globalState has none. Caches it into globalState (best-effort) so
+     * subsequent reads are fast and the extension's own flows see the same token.
+     * Returns null when there is no usable cached token.
+     */
+    private async hydrateFromDaAuthHelper(): Promise<DaLiveTokenInfo | null> {
+        const helperToken = readDaAuthHelperToken();
+        if (!helperToken) {
+            return null;
+        }
+        // Apply the same 5-minute expiry buffer as state tokens.
+        if (helperToken.expiresAt < Date.now() + 5 * 60 * 1000) {
+            return null;
+        }
+
+        try {
+            await this.storeToken(helperToken.accessToken, {
+                expiresAt: helperToken.expiresAt,
+                email: helperToken.email,
+            });
+            this.logger.info('[DA.live Auth] Adopted token from da-auth-helper cache (~/.aem/da-token.json)');
+        } catch (error) {
+            // Caching is best-effort; the token is still usable for this call.
+            this.logger.warn(`[DA.live Auth] Could not cache da-auth-helper token: ${(error as Error).message}`);
+        }
+
+        return { accessToken: helperToken.accessToken, expiresAt: helperToken.expiresAt, email: helperToken.email };
     }
 
     /**
@@ -234,6 +278,24 @@ export class DaLiveAuthService {
         await this.context.globalState.update(STATE_KEYS.setupComplete, true);
 
         this.logger.info('[DA.live Auth] Token stored successfully');
+
+        this.mirrorToDaAuthHelper(token);
+    }
+
+    /**
+     * Mirror the just-stored token into the da-auth-helper cache so a sign-in
+     * done through the extension is recognized by the agent's `da-auth` skill
+     * too (the reverse of the read fallback). Best-effort, merge-preserving, and
+     * freshness-guarded — see writeDaAuthHelperToken.
+     */
+    private mirrorToDaAuthHelper(token: string): void {
+        const expiresAt = this.context.globalState.get<number>(STATE_KEYS.tokenExpiration);
+        if (!expiresAt) {
+            return;
+        }
+        if (writeDaAuthHelperToken({ accessToken: token, expiresAt })) {
+            this.logger.debug('[DA.live Auth] Mirrored token to da-auth-helper cache (~/.aem/da-token.json)');
+        }
     }
 
     /**

@@ -199,11 +199,10 @@ ACCS_STORE_VIEW_CODE=citisignal_us
             subType: 'mesh',
             path: mockMeshPath,
             status: 'deployed',
-            endpoint: mockMeshEndpoint,
             lastUpdated: new Date(),
         };
 
-        // Project with mesh endpoint in componentInstances (single source of truth)
+        // Project with mesh endpoint in meshState (single source of truth)
         const mockProjectWithMeshEndpoint: Project = {
             name: 'Test Project',
             path: '/projects/demo',
@@ -217,18 +216,23 @@ ACCS_STORE_VIEW_CODE=citisignal_us
                     subType: 'mesh',
                     path: mockMeshPath,
                     status: 'deployed',
-                    endpoint: mockMeshEndpoint,
                 },
+            },
+            meshState: {
+                envVars: {},
+                sourceHash: null,
+                lastDeployed: '2024-01-01',
+                endpoint: mockMeshEndpoint,
             },
         };
 
-        // Project WITHOUT mesh endpoint in componentInstances (incomplete config)
+        // Project WITHOUT a mesh endpoint (incomplete config)
         const mockProjectWithoutMeshEndpoint: Project = {
             name: 'Test Project',
             path: '/projects/demo',
             createdAt: new Date(),
             status: 'ready',
-            // No commerce-mesh in componentInstances means no endpoint
+            // No meshState.endpoint means no endpoint
         };
 
         it('returns config-incomplete when .env file is missing', async () => {
@@ -265,7 +269,7 @@ ADOBE_CATALOG_API_KEY=api-key-123
             expect(result).toBe('config-incomplete');
         });
 
-        it('returns config-incomplete when meshComponent has endpoint but project has no commerce-mesh in componentInstances', async () => {
+        it('returns config-incomplete when project has no meshState.endpoint', async () => {
             mockFs.readFile.mockResolvedValue(`
 ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql
 ADOBE_CATALOG_SERVICE_ENDPOINT=https://catalog.example.com
@@ -277,14 +281,12 @@ ADOBE_COMMERCE_STORE_CODE=main_store
 ADOBE_CATALOG_API_KEY=api-key-123
 `);
 
-            // Component passed to determineMeshStatus has endpoint, but project has no commerce-mesh in componentInstances
-            // getMeshEndpoint() reads from project.componentInstances, not from component arg
-            const componentWithEndpoint = { ...mockMeshComponent, endpoint: mockMeshEndpoint };
-
+            // getMeshEndpoint() reads from project.meshState.endpoint (single source of truth);
+            // a project without it is config-incomplete regardless of .env completeness
             const result = await determineMeshStatus(
                 { hasChanges: false },
-                componentWithEndpoint,
-                mockProjectWithoutMeshEndpoint, // No commerce-mesh in componentInstances
+                mockMeshComponent,
+                mockProjectWithoutMeshEndpoint, // No meshState.endpoint
             );
 
             expect(result).toBe('config-incomplete');
@@ -347,7 +349,6 @@ ACCS_STORE_VIEW_CODE=citisignal_us
                 subType: 'mesh',
                 path: mockMeshPath,
                 status: 'deployed',
-                endpoint: mockMeshEndpoint,
                 lastUpdated: new Date(),
             };
 
@@ -364,8 +365,13 @@ ACCS_STORE_VIEW_CODE=citisignal_us
                         subType: 'mesh',
                         path: mockMeshPath,
                         status: 'deployed',
-                        endpoint: mockMeshEndpoint,
                     },
+                },
+                meshState: {
+                    envVars: {},
+                    sourceHash: null,
+                    lastDeployed: '2024-01-01',
+                    endpoint: mockMeshEndpoint,
                 },
             };
 

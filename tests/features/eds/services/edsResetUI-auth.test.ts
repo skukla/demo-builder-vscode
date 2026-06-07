@@ -75,20 +75,6 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
     },
 }));
 
-// Mock demo-packages.json for extractResetParams
-jest.mock('@/features/project-creation/config/demo-packages.json', () => ({
-    packages: [{
-        id: 'citisignal',
-        storefronts: {
-            'eds-paas': {
-                templateOwner: 'test-owner',
-                templateRepo: 'test-template',
-                contentSource: { org: 'content-org', site: 'content-site', indexPath: 'index.json' },
-            },
-        },
-    }],
-}), { virtual: true });
-
 jest.mock('@/types/typeGuards', () => ({
     getMeshComponentInstance: jest.fn((project: any) => {
         if (!project?.componentInstances) return undefined;
@@ -133,6 +119,18 @@ jest.mock('@/features/eds/services/edsResetService', () => ({
 
 import * as vscode from 'vscode';
 import { resetEdsProjectWithUI } from '@/features/eds/services/edsResetUI';
+
+// Injected demo-packages fixture for extractResetParams (replaces config leaf mock)
+const testPackages = [{
+    id: 'citisignal',
+    storefronts: {
+        'eds-paas': {
+            templateOwner: 'test-owner',
+            templateRepo: 'test-template',
+            contentSource: { org: 'content-org', site: 'content-site', indexPath: 'index.json' },
+        },
+    },
+}];
 
 // =============================================================================
 // Helpers
@@ -219,7 +217,7 @@ describe('edsResetUI - checkDaLiveAuth (refactored to use ensureDaLiveAuth)', ()
         const context = createMockContext();
 
         // When: resetEdsProjectWithUI is called
-        const result = await resetEdsProjectWithUI({ project, context });
+        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
 
         // Then: ensureDaLiveAuth should have been called with context
         expect(mockEnsureDaLiveAuth).toHaveBeenCalledWith(
@@ -239,7 +237,7 @@ describe('edsResetUI - checkDaLiveAuth (refactored to use ensureDaLiveAuth)', ()
         const context = createMockContext();
 
         // When
-        const result = await resetEdsProjectWithUI({ project, context });
+        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
 
         // Then: Reset should proceed
         expect(result.success).toBe(true);
@@ -252,7 +250,7 @@ describe('edsResetUI - checkDaLiveAuth (refactored to use ensureDaLiveAuth)', ()
         const context = createMockContext();
 
         // When
-        const result = await resetEdsProjectWithUI({ project, context });
+        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
 
         // Then: Should return DALIVE_AUTH_REQUIRED error
         expect(result.success).toBe(false);
@@ -273,7 +271,7 @@ describe('edsResetUI - checkDaLiveAuth (refactored to use ensureDaLiveAuth)', ()
         const context = createMockContext();
 
         // When
-        const result = await resetEdsProjectWithUI({ project, context });
+        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
 
         // Then: Should return DALIVE_AUTH_REQUIRED error with error message
         expect(result.success).toBe(false);
@@ -302,7 +300,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
         const context = createMockContext();
 
         // When
-        const result = await resetEdsProjectWithUI({ project, context });
+        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
 
         // Then: ensureAdobeIOAuth should have been called
         expect(mockEnsureAdobeIOAuth).toHaveBeenCalledWith(
@@ -329,7 +327,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
         const context = createMockContext();
 
         // When
-        const result = await resetEdsProjectWithUI({ project, context });
+        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
 
         // Then: Reset should proceed
         expect(result.success).toBe(true);
@@ -342,7 +340,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
         const context = createMockContext();
 
         // When
-        const result = await resetEdsProjectWithUI({ project, context });
+        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
 
         // Then: Should return ADOBE_AUTH_REQUIRED
         expect(result.success).toBe(false);
@@ -357,7 +355,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
         const context = createMockContext();
 
         // When
-        const result = await resetEdsProjectWithUI({ project, context });
+        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
 
         // Then: Should return ADOBE_AUTH_REQUIRED
         expect(result.success).toBe(false);
@@ -370,7 +368,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
         const context = createMockContext();
 
         // When
-        const result = await resetEdsProjectWithUI({ project, context });
+        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
 
         // Then: ensureAdobeIOAuth should NOT have been called
         expect(mockEnsureAdobeIOAuth).not.toHaveBeenCalled();
@@ -386,7 +384,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
         const context = createMockContext();
 
         // When
-        await resetEdsProjectWithUI({ project, context, logPrefix: '[Dashboard]' });
+        await resetEdsProjectWithUI({ project, context, logPrefix: '[Dashboard]', packages: testPackages });
 
         // Then: logPrefix should be forwarded
         expect(mockEnsureAdobeIOAuth).toHaveBeenCalledWith(

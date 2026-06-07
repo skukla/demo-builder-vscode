@@ -14,6 +14,8 @@
  * @module features/eds/handlers
  */
 
+import * as vscode from 'vscode';
+import { discoverStoreStructure } from '../services/commerceStoreDiscovery';
 import {
     handleVerifyDaLiveOrg,
     handleGetDaLiveSites,
@@ -37,7 +39,6 @@ import {
     handleCancelStorefrontSetup,
     handleResumeStorefrontSetup,
 } from './storefrontSetupHandlers';
-import * as vscode from 'vscode';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateURL } from '@/core/validation';
@@ -46,9 +47,8 @@ import {
     PAAS_ADMIN_PASSWORD,
 } from '@/features/components/config/envVarKeys';
 import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
-import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
-import { discoverStoreStructure } from '../services/commerceStoreDiscovery';
 import type { StoreDiscoveryParams } from '@/types/commerceStore';
+import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
 // clearServiceCache is an internal helper — re-exported here to keep edsHelpers internal
 export { clearServiceCache } from './edsHelpers';
@@ -318,7 +318,7 @@ async function buildAccsDiscoveryParams(
         return { success: false, error: 'Adobe authentication required' };
     }
 
-    const imsToken = await context.authManager.getTokenManager().getAccessToken();
+    const imsToken = (await context.authManager.getTokenManager().inspectToken()).token;
     if (!imsToken) {
         await context.sendMessage('store-discovery-result', {
             success: false,

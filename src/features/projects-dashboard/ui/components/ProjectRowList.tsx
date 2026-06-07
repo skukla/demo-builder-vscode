@@ -6,8 +6,8 @@
  */
 
 import React from 'react';
-import { ProjectRow } from './ProjectRow';
 import type { ProjectActions } from './ProjectActionsMenu';
+import { ProjectRow } from './ProjectRow';
 import type { Project } from '@/types/base';
 
 export interface ProjectRowListProps {

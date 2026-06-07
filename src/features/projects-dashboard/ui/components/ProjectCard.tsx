@@ -11,8 +11,7 @@
 import { Flex, Text } from '@adobe/react-spectrum';
 import PinOn from '@spectrum-icons/workflow/PinOn';
 import React, { useCallback, useMemo } from 'react';
-import { ProjectActionsMenu } from './ProjectActionsMenu';
-import type { ProjectActions } from './ProjectActionsMenu';
+import { ProjectActionsMenu, type ProjectActions } from './ProjectActionsMenu';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { getBrandStackSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import {

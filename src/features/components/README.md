@@ -141,7 +141,6 @@ features/components/
 │   ├── componentManager.ts     # Component lifecycle (extensible)
 │   └── types.ts                # Type definitions
 ├── handlers/
-│   ├── componentHandler.ts     # Legacy handler (to be migrated)
 │   └── componentHandlers.ts    # Message handlers
 ├── providers/
 │   └── componentTreeProvider.ts # File browser with .env hiding

@@ -182,15 +182,6 @@ export class TokenManager {
     }
 
     /**
-     * Get current access token
-     * @deprecated Use inspectToken() for atomic access to token and expiry
-     */
-    async getAccessToken(): Promise<string | undefined> {
-        const result = await this.inspectToken();
-        return result.token;
-    }
-
-    /**
      * Check if token is valid and not expired
      * Uses atomic token inspection to prevent race conditions
      */

@@ -19,7 +19,6 @@ src/features/eds/
 │   ├── daLiveContentOperations.ts  # DA.live content copy with progress
 │   ├── daLiveOrgOperations.ts      # DA.live org access verification
 │   ├── daLiveConfigService.ts      # DA.live config/permissions spreadsheets
-│   ├── daLiveOrgConfigService.ts   # DA.live org-level configuration
 │   ├── daLiveConstants.ts          # DA.live shared constants
 │   ├── daLiveMimeTypes.ts          # MIME type mapping for DA.live uploads
 │   ├── daLiveSpreadsheetUtils.ts   # Spreadsheet parsing utilities
@@ -57,7 +56,6 @@ src/features/eds/
 │   └── daLiveTokenBookmarklet.ts  # DA.live token bookmarklet generator
 ├── ui/
 │   ├── components/
-│   │   ├── DaLiveOrgConfigSection.tsx   # DA.live org configuration
 │   │   ├── DaLiveServiceCard.tsx        # DA.live service card
 │   │   ├── GitHubAppInstallDialog.tsx   # GitHub App install dialog
 │   │   ├── GitHubServiceCard.tsx        # GitHub service card
@@ -86,7 +84,6 @@ src/features/eds/
 │   ├── edsDaLiveHandlers.ts        # DA.live content handlers
 │   ├── edsDaLiveAuthHandlers.ts    # DA.live auth handlers
 │   ├── edsDaLiveOrgHandlers.ts     # DA.live org handlers
-│   ├── edsDaLiveOrgConfigHandlers.ts # DA.live org config handlers
 │   ├── storefrontSetupHandlers.ts  # Storefront setup orchestration + cleanup
 │   ├── storefrontSetupTypes.ts     # Shared types: StorefrontSetupResult, SetupServices, RepoInfo
 │   ├── storefrontSetupPhase1.ts    # Phase 1: GitHub repo creation/selection
@@ -118,6 +115,14 @@ Orchestrates complete EDS project setup through phases:
 | `publish` | 65-95% | Purge CDN cache, publish content and block library to CDN |
 | `auth-recovery` | (paused) | DA.live token expired; prompts re-authentication (up to 2 attempts) |
 | `complete` | 100% | Setup complete |
+
+#### Block library lifecycle (post-setup)
+
+Three paths keep the DA.live authoring library in sync with the user's blocks:
+
+1. **Initial setup** (above) — destructive `createBlockLibrary` rebuilds from `component-definition.json`.
+2. **AI-driven incremental promote** — the `promote_block_to_library` MCP tool sanitizes the AI-supplied HTML via `sanitize-html` at the MCP boundary (allowlist for the EDS authoring vocabulary; strips scripts, framing tags, and `javascript:`/`data:` URLs), then calls `appendBlockToLibrary` (read–merge–rewrite, idempotent on `name` collision) and `upsertBlockDocPage` (overwrite-always). Used by Claude Code via the `register-custom-block` skill after the AI authors a new block.
+3. **User-initiated full refresh** — the dashboard's More-menu "Refresh Block Library" action runs `executeEdsPipeline` with `{ includeBlockLibrary: true, skipContent: true, blockCollectionIds: [] }`. The empty (truthy) `blockCollectionIds` is load-bearing — it tells the pipeline to read `component-definition.json` from the user's repo, not the template, so MCP-promoted blocks survive the rebuild.
 
 #### Mid-Pipeline Token Recovery
 

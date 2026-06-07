@@ -17,12 +17,12 @@ import { DaLiveAuthService, parseJwtPayload } from '../services/daLiveAuthServic
 import { DaLiveConfigService } from '../services/daLiveConfigService';
 import { DaLiveContentOperations } from '../services/daLiveContentOperations';
 import { type TokenProvider } from '../services/daLiveOrgOperations';
-import { hasWriteAccess } from './edsDaLiveOrgHandlers';
 import { GitHubFileOperations } from '../services/githubFileOperations';
 import { GitHubOAuthService } from '../services/githubOAuthService';
 import { GitHubRepoOperations } from '../services/githubRepoOperations';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { HelixService } from '../services/helixService';
+import { hasWriteAccess } from './edsDaLiveOrgHandlers';
 import { getLogger } from '@/core/logging';
 import { showOneTimeTip } from '@/core/utils/oneTimeTip';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -335,10 +335,26 @@ export async function showDaLiveAuthQuickPick(
         return { success: false, cancelled: true };
     }
 
-    // Open DA.live if requested
+    // Open DA.live if requested, then gate on an explicit "I'm back" click before
+    // opening the input box. Without this gate, the input box opens immediately at
+    // top-of-window — but the user is in the browser doing OAuth, and when they
+    // return, the dashboard webview owns the visual center and the input strip is
+    // easy to miss. A bottom-right notification with an action button gives the
+    // user an attention-grabbing surface to confirm "I have the token" before we
+    // open the paste field.
     if (openDaLiveChoice === 'Open DA.live') {
         context.logger.debug('[DA.live Auth] Opening DA.live in browser');
         await vscode.env.openExternal(vscode.Uri.parse('https://da.live'));
+
+        const pasteChoice = await vscode.window.showInformationMessage(
+            'When you have your DA.live token (via the bookmarklet), click "Paste Token" to open the paste box.',
+            { modal: false },
+            'Paste Token',
+        );
+        if (pasteChoice !== 'Paste Token') {
+            context.logger.info('[DA.live Auth] User cancelled at post-browser paste gate');
+            return { success: false, cancelled: true };
+        }
     }
 
     // Step 2: Ask for token (password-masked)

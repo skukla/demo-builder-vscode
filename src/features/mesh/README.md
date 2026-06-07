@@ -256,7 +256,8 @@ if (result.success) {
     // Update project state (use appropriate mesh component ID based on stack)
     const meshId = 'eds-commerce-mesh'; // or 'headless-commerce-mesh' for headless stacks
     project.componentInstances![meshId].status = 'deployed';
-    project.componentInstances![meshId].endpoint = result.endpoint;
+    // meshState.endpoint is the single source of truth for the mesh endpoint
+    project.meshState = { ...project.meshState, endpoint: result.endpoint } as typeof project.meshState;
     await stateManager.saveProject(project);
 }
 ```

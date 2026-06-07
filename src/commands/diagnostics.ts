@@ -4,6 +4,8 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di';
 import { getLogger, CommandResultWithContext } from '@/core/logging';
+import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
+import { probeInExtensionMcpTools } from '@/features/ai/server/mcpToolProbe';
 import { parseJSON } from '@/types/typeGuards';
 
 // Diagnostic Type Definitions
@@ -101,6 +103,19 @@ interface TestResults {
     fileSystem: FileSystemTest;
 }
 
+interface McpInfo {
+    /** True when a workspace is open and the in-extension server was reachable. */
+    running: boolean;
+    /** Absolute socket path probed (when a workspace is open). */
+    socketPath?: string;
+    /** Tool names the in-extension server exposed (sorted). */
+    tools?: string[];
+    /** Whether the auth `sign_in` tool is present (the common "is it there?" check). */
+    hasSignIn?: boolean;
+    /** Why the probe did not run / failed (no workspace, socket missing, timeout). */
+    error?: string;
+}
+
 interface DiagnosticsReport {
     timestamp: string;
     system: SystemInfo;
@@ -109,6 +124,7 @@ interface DiagnosticsReport {
     adobe: AdobeCLIInfo;
     environment: EnvironmentInfo;
     tests: TestResults;
+    mcp: McpInfo;
 }
 
 export class DiagnosticsCommand {
@@ -129,6 +145,7 @@ export class DiagnosticsCommand {
             adobe: {} as AdobeCLIInfo,
             environment: {} as EnvironmentInfo,
             tests: {} as TestResults,
+            mcp: {} as McpInfo,
         };
 
         try {
@@ -155,7 +172,11 @@ export class DiagnosticsCommand {
             // Run diagnostic tests
             this.logger.debug('Running diagnostic tests...');
             report.tests = await this.runTests();
-            
+
+            // In-extension MCP server tool surface
+            this.logger.debug('Probing in-extension MCP server...');
+            report.mcp = await this.checkMcp();
+
             // Log the full report
             this.logger.debug('DIAGNOSTIC REPORT', report);
             
@@ -368,25 +389,37 @@ export class DiagnosticsCommand {
                     useNodeVersion: 'auto',
                 });
             } else {
-                execResult = await commandManager.execute(command);
+                // Other tools (git, fnm): run through a shell so the multi-word
+                // "<tool> --version" string is parsed and executed. With execa's
+                // default shell:false the whole string is treated as a single
+                // binary name → the command never runs and stdout comes back
+                // empty (the "✅ git: <blank>" symptom). enhancePath surfaces
+                // tools installed outside the GUI launchd PATH.
+                execResult = await commandManager.execute(command, { shell: true, enhancePath: true });
             }
-            const { stdout, stderr } = execResult;
+            const { stdout, stderr, code } = execResult;
             const duration = Date.now() - startTime;
+            const trimmedStdout = stdout.trim();
 
             const result: CommandResultWithContext = {
-                stdout: stdout.trim(),
+                stdout: trimmedStdout,
                 stderr: stderr.trim(),
-                code: 0,
+                code: code ?? 0,
                 duration,
                 cwd: process.cwd(),
             };
 
             this.logger.logCommand(command, result);
 
+            // The command ran without throwing, but a non-zero exit means the
+            // tool isn't actually usable — e.g. a shell "command not found" (127)
+            // resolves rather than throws. Treat only a clean exit as installed so
+            // a failed probe reports "❌ Not installed" instead of "✅ <blank>".
             return {
-                installed: true,
-                output: stdout.trim(),
+                installed: code === 0,
+                output: trimmedStdout,
                 error: stderr.trim(),
+                code: code ?? undefined,
                 duration,
             };
         } catch (error: unknown) {
@@ -475,6 +508,33 @@ export class DiagnosticsCommand {
         }
     }
 
+    /**
+     * Probe the in-extension MCP server for its live tool surface. Connects to
+     * the per-workspace socket and lists tools — the ground truth for what the
+     * AI agent actually sees (e.g. whether `sign_in` is registered). Never
+     * throws: no workspace or an unreachable socket yields a structured result.
+     */
+    private async checkMcp(): Promise<McpInfo> {
+        const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (!workspacePath) {
+            return { running: false, error: 'No workspace folder open — the in-extension MCP server runs per project.' };
+        }
+
+        const socketPath = resolveMcpSocketPath(workspacePath);
+        const result = await probeInExtensionMcpTools(socketPath);
+        if (!result.ok) {
+            return { running: false, socketPath, error: result.error };
+        }
+
+        const tools = result.tools ?? [];
+        return {
+            running: true,
+            socketPath,
+            tools,
+            hasSignIn: tools.includes('sign_in'),
+        };
+    }
+
     private showSummary(report: DiagnosticsReport): void {
         this.logger.info('=== DIAGNOSTICS SUMMARY ===');
         this.logger.info(`System: ${report.system.platform} ${report.system.release}`);
@@ -509,6 +569,19 @@ export class DiagnosticsCommand {
         this.logger.info(`  Browser Launch: ${report.tests.browserLaunch.available ? 'Available' : 'Not available'}`);
         this.logger.info(`  Adobe Login Command: ${report.tests.adobeLoginCommand.available ? 'Available' : 'Not available'}`);
         this.logger.info(`  File System Access: ${report.tests.fileSystem.canWrite ? 'OK' : 'Failed'}`);
+
+        // In-extension MCP server
+        this.logger.info('');
+        this.logger.info('MCP Server (in-extension):');
+        if (report.mcp.running) {
+            const tools = report.mcp.tools ?? [];
+            this.logger.info(`  Reachable: Yes (${tools.length} tool${tools.length === 1 ? '' : 's'})`);
+            this.logger.info(`  sign_in tool: ${report.mcp.hasSignIn ? '✅ present' : '❌ missing'}`);
+            this.logger.info(`  Tools: ${tools.join(', ')}`);
+        } else {
+            this.logger.info(`  Reachable: No`);
+            this.logger.info(`  Reason: ${report.mcp.error ?? 'unknown'}`);
+        }
 
         this.logger.info('');
         this.logger.info('Use VS Code\'s "Set Log Level..." command to see debug/trace details');

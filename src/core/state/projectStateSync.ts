@@ -5,13 +5,13 @@
  * Used by features to maintain consistent project state.
  */
 
-import { Project } from '@/types';
-import { getComponentInstancesByType } from '@/types/typeGuards';
 import {
     PAAS_URL, PAAS_ENVIRONMENT_ID, PAAS_STORE_VIEW_CODE,
     PAAS_WEBSITE_CODE, PAAS_STORE_CODE, PAAS_CUSTOMER_GROUP,
     CATALOG_API_KEY,
 } from '@/features/components/config/envVarKeys';
+import { Project } from '@/types';
+import { getComponentInstancesByType } from '@/types/typeGuards';
 
 /**
  * Frontend env vars tracked for change detection.
