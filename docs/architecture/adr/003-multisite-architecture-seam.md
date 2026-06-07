@@ -119,6 +119,19 @@ Implement multisite when ANY of these become true:
 - Adobe's CitiSignal template (or whichever template Demo Builder defaults to) starts assuming multisite — e.g., references multiple aem.live sites in its `helix-sitemap.yaml` or expects per-env Config Service entries.
 - An RPTC feature cycle proposes touching `buildSiteConfigParams`, `extractResetParams`, or `deployMeshComponent` in a way that would benefit from the multi-env shape.
 
+### Addendum (2026-06-06) — Slice 1 repoless satellite trips trigger #4, partially
+
+The commerce-connect "two-SC synced storefront" feature (Slice 1, branch `claude/commerce-connect-slice-1-plan-bgVlb`) introduces a **repoless satellite** for the Content SC: a site whose `code` references the Commerce SC's existing repo cross-org, created via `registerSite` with **no fork, no Code Sync App install, no code-sync verification, no config-push**. This **touches `buildSiteConfigParams` / `registerSite`** → it trips trigger criterion #4 above.
+
+**Decision: honor the disciplines, do not implement full multisite.** The satellite is built as a **general primitive** — `resolveSiteCodeSource(edsConfig) → { codeOwner, codeRepo, createRepo }` — that decides a site's code source by the **presence of an upstream code reference**, not by the content flow. This is *exactly* the multisite shape, at n=1:
+
+- **Cross-org instance (Slice 1):** `code.owner` = a different org (the Content SC referencing the Commerce SC's repo).
+- **Same-org, multi-env instance (this ADR's multisite):** `code.owner` = your own canonical, looped per environment.
+
+`buildSiteConfigParams`'s signature is **unchanged** (the future `…ForEnvironments` list variant is still added alongside it per Step 2 below). **What Slice 1 does NOT build:** the `environments` state map (Step 1), the per-env list/loop, per-env mesh, per-env preview URLs — all remain deferred exactly as specified here.
+
+**Effect on the deferred implementation:** Step 2 ("Config Service per-env registration") now has a **tested foundation** — "register a site whose code lives in a referenced repo" exists and is exercised. When multisite is genuinely triggered (a customer asks per env/locale), the remaining work is the env **loop** + the load-bearing **Step 1 state migration**, not a re-derivation of the registration mechanic. See the feature's `.rptc/plans/commerce-connect-slice1-repoless-wiring/step-04.md` (§Multisite alignment).
+
 ### Trade-offs Accepted
 
 - **Slightly slower future implementation**: without scaffold built today, the future cycle does both the implementation AND the migration of existing state. The migration is the harder part.

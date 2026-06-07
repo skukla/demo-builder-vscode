@@ -33,6 +33,8 @@
 
 **Forward-compat (see [engagement-modes-and-ownership](../../backlog/commerce-connect-aem-sc/engagement-modes-and-ownership.md)):** the design session surfaced an access-driven model with three engagement modes (A solo / B co-located single-org collaboration / C federated cross-org). Slice 1 builds Mode C's repoless substrate. Two constraints on this slice so it doesn't foreclose the others: (1) **do not hard-wire `flow:'commerce'` ⇒ DA.live** — content source is a separate dimension; (2) keep "who hosts the shared repo" **process-driven**, not a code-fixed role.
 
+**Forward-compat with multisite ([ADR-003](../../../docs/architecture/adr/003-multisite-architecture-seam.md)):** Step 4's satellite-creation is built as a **general primitive** (`resolveSiteCodeSource` → `{codeOwner, codeRepo, createRepo}`), gated on the **presence of an `upstream` code reference**, not on `flow === 'content'`. This is the *same* primitive multisite needs — the content satellite is the cross-org instance; multisite is the same-org, multi-env instance. Step 4 touching `registerSite`/`buildSiteConfigParams` trips ADR-003's trigger #4, so it honors ADR-003's disciplines (reuse `buildSiteConfigParams` unchanged; parameter-driven) — but does **not** build the per-env list/state (still deferred). Net: Slice 1 leaves multisite's deferred "Step 2" with a tested foundation.
+
 **Estimated Complexity:** Medium (shrunk from Medium-Complex by repoless)
 **Estimated Timeline:** 3–4 days (shrunk from 4–6 days by repoless)
 

@@ -1,118 +1,92 @@
-# Step 4: Content Flow → Repoless Satellite via Configuration Service (the Adobe-native path)
+# Step 4: Repoless Satellite Site Creation — the general primitive (content flow is its first caller)
 
-**Status: 🟡 Config gate done (2026-06-04).** ✅ `supportedFlows` added to `stacks.json` (EDS=`['commerce','content']`, headless=`['commerce']`), the `Stack` type, `stacks.schema.json`, and the alignment test's field list — 116 template/alignment tests green, lint/typecheck/SOP clean. **Remaining:** the content-flow satellite-creation path + its integration test.
+**Status: 🟡 Config gate done (2026-06-04).** ✅ `supportedFlows` added to `stacks.json` (EDS=`['commerce','content']`, headless=`['commerce']`), the `Stack` type, `stacks.schema.json`, and the alignment test's field list — 116 template/alignment tests green, lint/typecheck/SOP clean. **Remaining:** the general repoless-satellite primitive + its tests.
 
-> **2026-06-05 repivot + 2026-06-06 mechanic lock:** The config gate (`supportedFlows`) survives unchanged — it gates which stacks expose the content flow regardless of topology. **The locked satellite-creation mechanic is the dedicated short path (the Adobe-native repoless one):**
+> **2026-06-05 repivot + 2026-06-06 mechanic lock + 2026-06-06 multisite-alignment:** The config gate (`supportedFlows`) survives unchanged. The locked satellite-creation mechanic is the Adobe-native repoless one (Option B), and — per the multisite-alignment decision below — it is built as a **general primitive**, not a content-flow special case.
 >
-> **For the content (Content-SC) flow, a repoless satellite has no GitHub repo of its own. The extension does NOT fork the upstream, does NOT install the AEM Code Sync GitHub App on the joiner's side, and does NOT run code-sync verification. It creates the site with a single cross-org Configuration Service registration:**
+> **A repoless satellite is any site whose code references an *existing* repo it did not just create.** The extension creates it with a single cross-org-capable Configuration Service registration:
 > ```
-> PUT /config/{contentSC-org}/sites/{site}.json
->   code:    { owner: <commerceSC-org>, repo: <upstream> }
->   content: { source: { url: <Content SC's DA.live URL>, type: 'markup' } }
+> PUT /config/{org}/sites/{site}.json
+>   code:    { owner: <codeOwner>, repo: <codeRepo> }   ← a referenced repo, not a fresh fork
+>   content: { source: { url: <site's content source>, type: 'markup' } }
 > ```
-> **Code Sync stays entirely on the Commerce SC's canonical repo; the satellite reads the upstream code through the Config Service `code` reference.** Verified live 2026-06-05 (HTTP 201 + 45s propagation through the upstream's Code Sync — see [architecture-validation](../../research/2026-06-05-architecture-validation.md)). This is exactly Adobe's documented repoless mechanism ([aem.live/docs/repoless](https://www.aem.live/docs/repoless)); the satellite is a Config Service entry that references upstream code, not a synced fork.
->
-> **Why not reuse the full EDS storefront-setup pipeline with `repoInfo = upstream`?** That was the rejected Option A. It would run the GitHub-App-install check, code-sync verification, and the Phase 5 `config.json`-push against a repo the joiner does **not** own — all anti-patterns under repoless (a satellite needs no App install, and config travels as content, never pushed to the code repo). The full discussion is in the decision trail below.
+> For a satellite the extension **does NOT** fork (`createFromTemplate`), install the AEM Code Sync App, run code-sync verification, or push `config.json` to the code repo. Code Sync lives only on the **canonical** repo (the one whose `org/site` matches `owner/repo`); the satellite reads that repo's code through the `code` reference. Verified live 2026-06-05 (HTTP 201 + 45s propagation — [architecture-validation](../../research/2026-06-05-architecture-validation.md)).
 
-**Purpose:** Make the **content flow create a repoless satellite** through a dedicated,
-minimal path — one cross-org `ConfigurationService.registerSite` call plus DA.live
-content — driven by **configuration + seeded data**, never forking and never touching
-the upstream repo. Three config facts still hold and do real work:
+## Multisite alignment (why this is a *general* primitive — see [ADR-003](../../../docs/architecture/adr/003-multisite-architecture-seam.md))
 
-- **No mesh — by config.** Mesh is an `optionalDependencies` entry in `stacks.json`
-  (not a default); the content path simply doesn't include it, and `executeMeshPhase`
-  **already no-ops when no mesh component is present** (`else if (meshComponent?.path && meshDefinition)`).
-  So there is *nothing to skip* there.
-- **Backend by URL — not provisioned.** There is no separate "backend deploy" phase;
-  the backend is just coordinates in the seeded config (Step 5) consumed by
-  `configGenerator`. Nothing to skip there either.
-- **Code source is a reference, not a fork.** The satellite reads the upstream via the
-  Config Service `code: { owner, repo }` block. **No fork, no `createFromTemplate`, no
-  Code Sync App install, no code-sync verification on the joiner's side.**
+The repoless-satellite mechanism this step builds is **the same primitive multisite needs.** ADR-003 (Multisite Architecture Seam, Accepted/deferred) defines multisite as *one repo → many `aem.live` sites*, each its own Configuration Service registration. The **content satellite** (Slice 1) is the **cross-org** instance (`code.owner` = a different org); **multisite** (future) is the **same-org, multi-env** instance (`code.owner` = your own canonical). One primitive, two callers.
 
-**What is genuinely net-new in this step:** a **satellite-creation branch** for the
-content flow that bypasses the repo-creation + code-sync machinery and calls
-`ConfigurationService.registerSite` with the upstream as `code.owner/repo` and the
-joiner's own DA.live as the content source. The GitHub `config.json`-push (Phase 5)
-does **not** run for a satellite — the joiner owns no repo, and commerce config travels
-as content (config-as-content is Slice 2). DA.live content setup (Phase 5b) runs as usual.
+**This step trips ADR-003's own trigger criterion #4** — *"an RPTC cycle proposes touching `buildSiteConfigParams` / `registerSite` in a way that would benefit from the multi-env shape."* The response is **not** to implement full multisite (heavy 5-step lift; YAGNI until a customer asks), but to honor ADR-003's two disciplines so the seam is multi-env-ready:
 
-> **Supersedes** both the earlier "branch the executor / skip mesh+backend" framing
-> *and* the interim Option-A "reuse the pipeline with `repoInfo = upstream`" lean. The
-> commerce/EDS path is untouched; the content path is a short, dedicated satellite
-> registration.
+- **Function-signature discipline (already satisfied):** `buildSiteConfigParams(repoOwner, repoName, daLiveOrg, daLiveSite)` is already fully parameter-driven. We **reuse it unchanged**, passing the referenced repo as the code coords. ADR-003's future list variant (`buildSiteConfigParamsForEnvironments → SiteRegistrationParams[]`) is added *alongside* it later; our single-satellite call is the n=1 case.
+- **Gate on "code reference", not "content flow":** the satellite decision keys on the **presence of an `upstream` code reference**, not on `flow === 'content'`. The content flow is one caller that supplies an upstream; future multisite is another caller that supplies same-org per-env coords. Gating on the code reference is what keeps the primitive general.
+
+**Down-payment on multisite:** once this ships, ADR-003's deferred *"Step 2 — Config Service per-env registration"* is mostly done — the "register a site whose code lives in a referenced repo" path exists and is tested. Multisite then needs only the env **loop** (`Promise.all(envs.map(registerSite))`) and the load-bearing **Step 1 state migration** (`environments` map) — not a re-derivation of the registration mechanic.
+
+**What this step does NOT build (YAGNI / ADR-003 deferral):** the per-env list variant, the `environments` state map, per-env mesh, per-env preview URLs. Single-satellite primitive only.
+
+## The primitive: `resolveSiteCodeSource(edsConfig)`
+
+A small **pure function** (no class, no registry — "neutral but thin") that decides a site's code source:
+
+```ts
+type SiteCodeSource = { codeOwner: string; codeRepo: string; createRepo: boolean };
+
+resolveSiteCodeSource(edsConfig): SiteCodeSource
+//  canonical (no upstream):  { codeOwner: githubOwner, codeRepo: repoName,        createRepo: true  }
+//  satellite (has upstream): { codeOwner: upstream.owner, codeRepo: upstream.repo, createRepo: false }
+```
+
+`createRepo` gates Phase 1's fork; `codeOwner/codeRepo` feed `buildSiteConfigParams` in Phase 3. The content flow makes it a satellite by carrying an `upstream`; the commerce flow (no upstream) stays canonical and byte-identical to today. A future multisite caller produces a satellite with a same-org `codeOwner` — the same shape.
+
+**Purpose:** Make site creation honor `resolveSiteCodeSource`: a **canonical** site forks + installs Code Sync + registers (today's behavior, unchanged); a **satellite** skips all of that and does one cross-org-capable `registerSite` against the referenced repo, plus DA.live content. Three config facts still hold:
+
+- **No mesh — by config.** Mesh is `optionalDependencies` in `stacks.json`; the content path omits it and `executeMeshPhase` already no-ops. Nothing to skip.
+- **Backend by URL — not provisioned.** Backend is coords in seeded config (Step 5), consumed by `configGenerator`. Nothing to skip.
+- **Code source is a reference, not a fork** — expressed by `resolveSiteCodeSource` returning `createRepo: false`.
 
 **Prerequisites:**
 - [ ] Steps 1 (flow/upstream), 2 (join resolve seeds `upstream` + coords), 3 (filtering)
-- [ ] `ConfigurationService.registerSite` / `buildSiteConfigParams` understood — already
-  separates the Config Service lookup key (`org`/`site` = joiner's DA.live) from the code
-  source (`codeOwner`/`codeRepo`); the cross-org case is just `codeOwner = <commerceSC-org>`
-- [ ] The EDS storefront-setup pipeline (`executeStorefrontSetupPhases`) understood — esp.
-  that Phase 1 forks (`createFromTemplate`) and Phase 3 registers the site; the content
-  path takes neither the fork nor the code-sync verification
-- [ ] `executeMeshPhase` no-ops without a mesh component; mesh is `optionalDependencies`
-- [ ] **Org-level repoless prerequisite:** each `aem.live` org needs a matching `github.com`
-  org with at least one Code-Sync-synced "anchor" repo (the `kukla-demos/anchor` pattern).
-  This is a one-time org preflight (Risk 3), **not** part of per-satellite creation.
+- [ ] `buildSiteConfigParams` / `registerSite` understood — already separate the lookup key (`org`/`site`) from the code source (`codeOwner`/`codeRepo`); reused unchanged
+- [ ] ADR-003 read — the multi-env shape this primitive must not foreclose
+- [ ] `executeStorefrontSetupPhases` understood — Phase 1 forks, Phase 3 registers; the satellite path takes neither the fork nor code-sync
+- [ ] **Org-level repoless prerequisite (one-time, not per-site):** each `aem.live` org needs a matching `github.com` org with at least one Code-Sync-synced "anchor" repo (the `kukla-demos/anchor` pattern). A preflight (Risk 3), separate from per-satellite creation.
 
 ---
 
 ## Reuse map (satellite path)
-- **`ConfigurationService.registerSite` + `buildSiteConfigParams`** — the satellite-creation
-  seam. Already speaks the Admin API and already separates `org`/`site` (joiner's DA.live
-  lookup key) from `codeOwner`/`codeRepo` (the code source). Content flow passes the
-  **upstream** owner/repo as the code source → cross-org `code.owner`. **Primary reuse.**
-- **`stacks.json` dependency set** — content path carries no mesh dependency → existing mesh no-op. No imperative skip.
-- **`executeMeshPhase`** — unchanged; no-ops when no mesh present.
-- **`configGenerator.generateConfigJson`** — unchanged; consumes seeded coords; direct backend URL when no mesh.
-- **`ensureEdsContent`** (Phase 5b) — unchanged; sets up the joiner's **own** DA.live content.
-- **NOT reused for the content flow:** `GitHubRepoOperations.createFromTemplate` (no fork),
-  the GitHub Code Sync App install check, code-sync verification, and the Phase 5
-  `config.json`-push (no owned repo). These remain for the commerce/EDS canonical path and
-  the manual fork-and-own escape hatch.
-- **Net-new:** the content-flow satellite branch that routes to `registerSite` instead of
-  the fork+code-sync sequence; gated so absent-`flow` behavior is byte-identical to today.
-
-## Config gating — `supportedFlows` (config + schema)
-- `supportedFlows?: ('commerce' | 'content')[]` on `stacks.json` (+ `stacks.schema.json`)
-  expresses *which stacks the content flow may use* as **data**, not a hardcoded predicate.
-  EDS stacks support both; non-EDS (headless) support `'commerce'` only. ✅ shipped 2026-06-04.
+- **`buildSiteConfigParams` + `registerSite`** — reused **unchanged**; the satellite passes the referenced repo as code coords → cross-org `code.owner`. ADR-003-aligned (parameter-driven).
+- **`stacks.json` dependency set / `executeMeshPhase`** — content omits mesh → existing no-op. No imperative skip.
+- **`configGenerator.generateConfigJson`** — unchanged; direct backend URL when no mesh.
+- **`ensureEdsContent`** (Phase 5b) — unchanged; sets up the site's own DA.live content.
+- **NOT reused for a satellite:** `createFromTemplate` (no fork), the GitHub Code Sync App install check, code-sync verification, the Phase 5 `config.json`-push. These remain for the canonical path + the manual fork-and-own escape hatch.
+- **Net-new:** `resolveSiteCodeSource` (the one pure primitive) + the orchestration honoring `createRepo` / code coords. Gated so a canonical (no upstream) is byte-identical to today.
 
 ---
 
 ## Tests to Write First
 
-### Characterization (Risk-1 guard): `tests/.../executor-commerce-regression.test.ts`
-- [ ] Commerce/EDS path still runs Phase 3 mesh **when a mesh component IS present** (capture current behavior so nothing regresses).
-- [ ] Commerce/EDS path still **forks** (`createFromTemplate`), runs code-sync, and registers the site with the joiner's **own** owner (regression baseline for the satellite branch).
+### Unit: `tests/.../resolveSiteCodeSource.test.ts` (the primitive)
+- [ ] **No upstream → canonical** — `{ codeOwner: githubOwner, codeRepo: repoName, createRepo: true }`.
+- [ ] **Upstream present → satellite** — `{ codeOwner: upstream.owner, codeRepo: upstream.repo, createRepo: false }` (cross-org: `upstream.owner` ≠ `githubOwner`).
+- [ ] **Decision keys on `upstream`, not `flow`** — an upstream with `flow` absent still resolves to a satellite (the primitive is flow-agnostic; multisite-forward-compat).
+- [ ] **Same-org upstream still a satellite** — `upstream.owner === githubOwner` → `createRepo: false` (the multisite shape; documents that the primitive already supports it).
 
-### Integration: `tests/.../storefrontSetupPhases-repoless.test.ts` (satellite path)
-- [ ] **Content flow registers a cross-org satellite** — `registerSite` invoked with
-  `codeOwner = <commerceSC/upstream owner>`, `codeRepo = <upstream>`, and `org`/`site` =
-  the joiner's **own** DA.live org/site; `content.source.url` = the joiner's DA.live.
-- [ ] **No fork for content flow** — `createFromTemplate` NOT invoked.
-- [ ] **No code-sync machinery for content flow** — GitHub App install check / code-sync
-  verification NOT invoked (the satellite has no owned repo to sync).
-- [ ] **No GitHub config-push for content flow** — Phase 5 `config.json`→repo NOT invoked;
-  DA.live content (Phase 5b) DOES run.
-- [ ] **Commerce flow unchanged** — fork + code-sync + Phase 5 all still run; `registerSite`
-  uses the joiner's own owner (regression).
+### Integration: `tests/.../storefrontSetupPhases-repoless.test.ts` (the seam honors it)
+- [ ] **Satellite registers cross-org** — upstream present → `registerSite` called with `codeOwner = upstream.owner`; `org`/`site` = the site's own DA.live.
+- [ ] **No fork / no code-sync for a satellite** — `createFromTemplate` and the App-install / code-sync verification NOT invoked.
+- [ ] **No GitHub config-push for a satellite** — Phase 5 `config.json`→repo NOT invoked; DA.live content (Phase 5b) DOES run.
+- [ ] **Canonical (no upstream) unchanged** — fork + code-sync + Phase 5 all run; `registerSite` uses `githubOwner` (regression).
 
 ### Config: `tests/.../stacks-supportedFlows.test.ts` ✅
-- [ ] EDS stacks declare `supportedFlows` including `'content'`; non-EDS stacks do not.
 
 ---
 
 ## Files to Create/Modify
-- [ ] `src/features/eds/handlers/storefrontSetupHandlers.ts` — thread `flow?`/`upstream?`
-  into `StorefrontSetupStartPayload['edsConfig']` so the satellite branch can see them
-- [ ] `src/features/eds/handlers/storefrontSetupPhases.ts` (and/or `storefrontSetupPhase1.ts`)
-  — content-flow satellite branch: skip fork + code-sync; build `registerSite` params with
-  the upstream as `codeOwner/codeRepo`; skip the GitHub config-push
-- [ ] `src/features/project-creation/config/stacks.json` + `stacks.schema.json` — `supportedFlows` ✅
-- [ ] `src/features/project-creation/handlers/executor.ts` — ensure the saved content project
-  carries `flow:'content'` + `upstream` (Step 1 already added the fields; verify the content
-  path persists them) and that Phase 5 (GitHub config-push) is gated off for satellites
+- [ ] **New:** `resolveSiteCodeSource` (pure primitive) — co-located with the storefront-setup phases (or `configurationService.ts` beside `buildSiteConfigParams`)
+- [ ] `src/features/eds/handlers/storefrontSetupHandlers.ts` — thread `upstream?` into `StorefrontSetupStartPayload['edsConfig']`
+- [ ] `src/features/eds/handlers/storefrontSetupPhases.ts` / `storefrontSetupPhase1.ts` — honor `resolveSiteCodeSource`: `createRepo: false` skips the fork + code-sync; Phase 3 builds params from the resolved code coords
+- [ ] `src/features/project-creation/handlers/executor.ts` — persist `flow`/`upstream`; gate Phase 5 (config-push) off for satellites
 - [ ] test files above
 
 ---
@@ -120,34 +94,26 @@ as content (config-as-content is Slice 2). DA.live content setup (Phase 5b) runs
 ## Implementation Details
 
 ### RED
-Characterization (commerce fork + mesh + code-sync) passes against current code. The
-satellite integration test fails because the content flow currently has no satellite branch
-(it would fork like commerce).
+The primitive's unit tests fail (function doesn't exist). The satellite integration test fails (no satellite path — content flow currently forks like canonical). Canonical/commerce characterization passes against current code.
 
 ### GREEN
-- **Satellite branch:** when `flow === 'content'` (and an `upstream` is present), route the
-  content flow to a short sequence: **skip** the fork (`createFromTemplate`), the GitHub App
-  install check, and code-sync verification; call `ConfigurationService.registerSite` with
-  `buildSiteConfigParams(upstream.owner, upstream.repo, joinerDaLiveOrg, joinerDaLiveSite, …)`
-  → cross-org `code.owner`; then run DA.live content (Phase 5b) as usual. Gate Phase 5
-  (`config.json`→GitHub) off for satellites. Prefer a predicate-named guard
-  (`isContentFlow(...)` / `shouldCreateSatellite(...)`) over inline `if`s.
-- Keep every guard gated so **absent `flow` ⇒ today's commerce/EDS behavior exactly**.
-- `supportedFlows` config + schema already shipped.
+- Add `resolveSiteCodeSource(edsConfig)` — returns canonical when no `upstream`, satellite (`createRepo: false`, referenced code coords) when an `upstream` is present.
+- Phase 1: `if (!codeSource.createRepo) { skip fork + waitForContent + App-install/code-sync }`.
+- Phase 3: `buildSiteConfigParams(codeSource.codeOwner, codeSource.codeRepo, daLiveOrg, daLiveSite)` — unchanged function, resolved coords.
+- Gate Phase 5 (`config.json`→GitHub) off when `!createRepo`.
+- All gated so **no `upstream` ⇒ today's canonical/commerce behavior exactly.**
 
 ### REFACTOR
-- One predicate decides "satellite vs fork"; no scattered conditionals.
-- Document inline (brief) + in the plan: the satellite is a Config Service entry referencing
-  upstream code — **no fork, no Code Sync App, no config-push** — per Adobe's repoless model.
+- Keep `resolveSiteCodeSource` a one-function pure predicate (no abstraction layers).
+- Inline + plan docs: a satellite references upstream code — no fork / no Code Sync / no config-push — per Adobe repoless; and the primitive is multi-env-ready per ADR-003 (don't build the list variant yet).
 
 ---
 
 ## Acceptance Criteria
-- [ ] Commerce characterization test green before + after (fork + mesh + code-sync + Phase 5 intact).
-- [ ] Content flow creates a repoless satellite: `registerSite` cross-org (`code.owner = commerceSC`,
-  content = joiner's DA.live); **no** fork, **no** code-sync, **no** GitHub config-push.
-- [ ] DA.live content (Phase 5b) runs for the satellite; project saved with `flow:'content'` + `upstream`.
-- [ ] `supportedFlows` in `stacks.json` + `stacks.schema.json`; non-EDS stacks are commerce-only. ✅
-- [ ] Content branching is gated and predicate-named; full build + existing EDS/executor tests green.
+- [ ] `resolveSiteCodeSource`: canonical without upstream; satellite (`createRepo: false`, referenced coords) with upstream; decision keys on `upstream`, not `flow`.
+- [ ] Canonical characterization green before + after (fork + code-sync + Phase 5 intact).
+- [ ] Satellite: `registerSite` cross-org (`code.owner` = referenced repo); no fork, no code-sync, no config-push; Phase 5b content runs; project saved with `flow`/`upstream`.
+- [ ] `buildSiteConfigParams` signature unchanged (ADR-003 list variant deferred); no per-env state/list built.
+- [ ] Branching gated + predicate-named; full build + existing EDS/executor tests green.
 
 **Estimated time:** 5–7 hours
