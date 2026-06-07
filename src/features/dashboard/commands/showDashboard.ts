@@ -16,7 +16,7 @@ import { Project, ComponentInstance } from '@/types';
 import type { DemoPackage } from '@/types/demoPackages';
 import { HandlerContext, SharedState } from '@/types/handlers';
 import type { Stack, StacksConfig } from '@/types/stacks';
-import { getComponentInstanceValues, isEdsProject, getEdsLiveUrl, getEdsDaLiveUrl, getProjectFlow } from '@/types/typeGuards';
+import { getComponentInstanceValues, isEdsProject, getEdsLiveUrl, getEdsDaLiveUrl, isContentFlow } from '@/types/typeGuards';
 
 /** Absolute path to the Demo Builder projects directory (`~/.demo-builder/projects`). */
 const DEMO_BUILDER_PROJECTS_BASE = path.join(os.homedir(), '.demo-builder', 'projects');
@@ -146,7 +146,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         const isEds = isEdsProject(project);
         // Content-flow projects are repoless satellites — they don't own the
         // upstream repo, so the dashboard hides repo-mutating EDS actions.
-        const isContentFlow = getProjectFlow(project ?? {}) === 'content';
+        const isContentFlowProject = isContentFlow(project ?? {});
         const edsLiveUrl = getEdsLiveUrl(project);
         const edsDaLiveUrl = getEdsDaLiveUrl(project);
 
@@ -163,7 +163,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
             packageName,
             stackName,
             isEds,
-            isContentFlow,
+            isContentFlow: isContentFlowProject,
             edsLiveUrl,
             edsDaLiveUrl,
             initialEdsStorefrontStatus,

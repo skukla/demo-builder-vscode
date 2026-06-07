@@ -8,7 +8,7 @@
  * Includes a kebab menu for additional actions like Export.
  */
 
-import { Flex, Text } from '@adobe/react-spectrum';
+import { Badge, Flex, Text } from '@adobe/react-spectrum';
 import PinOn from '@spectrum-icons/workflow/PinOn';
 import React, { useCallback, useMemo } from 'react';
 import { ProjectActionsMenu, type ProjectActions } from './ProjectActionsMenu';
@@ -133,14 +133,12 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                 />
             </Flex>
 
-            {/* Shared badge — content-flow (joined satellite) projects only */}
+            {/* Shared badge — content-flow (joined satellite) projects only.
+                Reuses the Spectrum Badge primitive (info = informational). */}
             {isContentFlow && (
-                <Text
-                    data-testid="project-card-shared-badge"
-                    UNSAFE_className="project-card-spectrum-shared-badge"
-                >
+                <Badge variant="info" alignSelf="start">
                     {upstreamLabel ? `Shared from ${upstreamLabel}` : 'Shared storefront'}
-                </Text>
+                </Badge>
             )}
 
             {/* Brand & Stack Summary */}

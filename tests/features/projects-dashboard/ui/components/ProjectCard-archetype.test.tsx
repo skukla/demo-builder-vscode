@@ -31,12 +31,11 @@ const contentProject = createMockProject({
 describe('ProjectCard — content (joined) archetype', () => {
     it('shows a "Shared" badge naming the upstream for a content-flow project', () => {
         renderCard(contentProject);
-        expect(screen.getByTestId('project-card-shared-badge')).toBeInTheDocument();
-        expect(screen.getByText(/commerce-sc\/citisignal-upstream/)).toBeInTheDocument();
+        expect(screen.getByText(/Shared from commerce-sc\/citisignal-upstream/)).toBeInTheDocument();
     });
 
     it('does NOT show the shared badge for a commerce project', () => {
         renderCard(createMockProject({ name: 'My Commerce Site', selectedStack: 'eds-accs' }));
-        expect(screen.queryByTestId('project-card-shared-badge')).not.toBeInTheDocument();
+        expect(screen.queryByText(/shared from/i)).not.toBeInTheDocument();
     });
 });
