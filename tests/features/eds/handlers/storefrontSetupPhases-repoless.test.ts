@@ -119,6 +119,9 @@ global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 });
 
 // =============================================================================
 import { executeStorefrontSetupPhases } from '@/features/eds/handlers/storefrontSetupPhases';
+import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
+
+const mockExecuteEdsPipeline = executeEdsPipeline as jest.MockedFunction<typeof executeEdsPipeline>;
 
 function createMockContext(): HandlerContext {
     return {
@@ -160,6 +163,7 @@ function createSatelliteEdsConfig() {
         daLiveSite: 'citisignal',
         githubOwner: 'content-sc',
         upstream: { owner: 'commerce-sc', repo: 'citisignal-upstream' },
+        contentSource: { org: 'brand-src', site: 'citisignal' },
     };
 }
 
@@ -202,5 +206,17 @@ describe('satellite path (upstream present) — repoless, no fork', () => {
     it('does NOT run code-sync / CDN code preview for the satellite', async () => {
         await executeStorefrontSetupPhases(createMockContext(), createSatelliteEdsConfig(), new AbortController().signal);
         expect(mockPreviewCode).not.toHaveBeenCalled();
+    });
+
+    it('populates content with the site/code split: Helix → satellite site, code → upstream', async () => {
+        await executeStorefrontSetupPhases(createMockContext(), createSatelliteEdsConfig(), new AbortController().signal);
+        expect(mockExecuteEdsPipeline).toHaveBeenCalledWith(
+            expect.objectContaining({
+                siteOrg: 'content-sc', siteName: 'citisignal',     // Helix → the satellite's own site
+                repoOwner: 'commerce-sc', repoName: 'citisignal-upstream', // code reads → the upstream
+                daLiveOrg: 'content-sc', daLiveSite: 'citisignal',
+            }),
+            expect.anything(),
+        );
     });
 });

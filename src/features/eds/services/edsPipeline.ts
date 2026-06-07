@@ -47,6 +47,16 @@ export interface EdsPipelineParams {
     templateOwner: string;
     templateRepo: string;
 
+    /**
+     * The aem.live SITE identity for Helix operations (preview/publish/purge/unpublish),
+     * decoupled from the code source. Defaults to `repoOwner`/`repoName` (the canonical
+     * case, where site == code). A **repoless satellite** sets these to its own
+     * `daLiveOrg`/`daLiveSite` while `repoOwner`/`repoName` point at the upstream code.
+     * See ADR-003 (site-vs-code identity) + step-04.
+     */
+    siteOrg?: string;
+    siteName?: string;
+
     // Content management
     /** Delete all existing DA.live content before populating (true = clean slate) */
     clearExistingContent?: boolean;
@@ -116,13 +126,13 @@ async function pipelineClearContent(
     context: {
         daLiveOrg: string;
         daLiveSite: string;
-        repoOwner: string;
-        repoName: string;
+        siteOrg: string;
+        siteName: string;
     },
     onProgress?: EdsPipelineProgressCallback,
 ): Promise<void> {
     const { daLiveContentOps, helixService, logger } = services;
-    const { daLiveOrg, daLiveSite, repoOwner, repoName } = context;
+    const { daLiveOrg, daLiveSite, siteOrg, siteName } = context;
 
     onProgress?.({ operation: 'content-clear', message: 'Clearing existing DA.live content...' });
     logger.info(`[EdsPipeline] Clearing all DA.live content for ${daLiveOrg}/${daLiveSite}`);
@@ -154,7 +164,7 @@ async function pipelineClearContent(
         });
 
         try {
-            await helixService.unpublishPages(repoOwner, repoName, 'main', webPaths);
+            await helixService.unpublishPages(siteOrg, siteName, 'main', webPaths);
         } catch (error) {
             logger.warn(`[EdsPipeline] CDN unpublish failed (non-fatal): ${(error as Error).message}`);
         }
@@ -410,6 +420,11 @@ export async function executeEdsPipeline(
         purgeCache = false,
     } = params;
 
+    // Helix targets the aem.live SITE; code reads target repoOwner/repoName.
+    // Canonical: site == code (defaults). Satellite: site = own daLiveOrg/daLiveSite.
+    const siteOrg = params.siteOrg ?? repoOwner;
+    const siteName = params.siteName ?? repoName;
+
     let contentFilesCopied = 0;
     let libraryPaths: string[] = [];
 
@@ -418,7 +433,7 @@ export async function executeEdsPipeline(
         if (clearExistingContent) {
             await pipelineClearContent(
                 services,
-                { daLiveOrg, daLiveSite, repoOwner, repoName },
+                { daLiveOrg, daLiveSite, siteOrg, siteName },
                 onProgress,
             );
         }
@@ -457,14 +472,14 @@ export async function executeEdsPipeline(
                 message: 'Purging stale cache...',
             });
 
-            await helixService.purgeCacheAll(repoOwner, repoName, 'main');
+            await helixService.purgeCacheAll(siteOrg, siteName, 'main');
             logger.info('[EdsPipeline] Stale cache purged');
         }
 
         // Step 5: Content Publish
         if (!skipPublish) {
             await pipelinePublishContent(
-                helixService, repoOwner, repoName, daLiveOrg, daLiveSite, logger, onProgress,
+                helixService, siteOrg, siteName, daLiveOrg, daLiveSite, logger, onProgress,
             );
         } else {
             logger.info('[EdsPipeline] Skipping content publish (skipPublish=true)');
@@ -479,7 +494,7 @@ export async function executeEdsPipeline(
 
             try {
                 const { bulkPreviewAndPublish } = await import('../handlers/edsHelpers');
-                await bulkPreviewAndPublish(helixService, repoOwner, repoName, libraryPaths, logger);
+                await bulkPreviewAndPublish(helixService, siteOrg, siteName, libraryPaths, logger);
                 logger.info('[EdsPipeline] Block library published');
             } catch (libPublishError) {
                 // Non-fatal -- library config was created, publishing can be retried

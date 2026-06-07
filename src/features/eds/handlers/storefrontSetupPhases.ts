@@ -282,6 +282,32 @@ async function executeSatelliteSetup(
         MAX_REAUTH_ATTEMPTS,
     );
 
+    // Populate the satellite's OWN content: Helix targets the satellite's site
+    // (daLiveOrg/daLiveSite); code/component reads come from the upstream (repoInfo).
+    const skipContent = !edsConfig.contentSource;
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'content', message: 'Populating satellite content...', progress: 70,
+    });
+    await withDaLiveAuthRetry(
+        context,
+        () => executeEdsPipeline(
+            {
+                repoOwner: repoInfo.repoOwner, repoName: repoInfo.repoName,
+                siteOrg: edsConfig.daLiveOrg, siteName: edsConfig.daLiveSite,
+                daLiveOrg: edsConfig.daLiveOrg, daLiveSite: edsConfig.daLiveSite,
+                templateOwner: repoInfo.repoOwner, templateRepo: repoInfo.repoName,
+                contentSource: edsConfig.contentSource, skipContent,
+            },
+            {
+                daLiveContentOps: services.daLiveContentOps,
+                githubFileOps: services.githubFileOps,
+                helixService: services.helixService,
+                logger,
+            },
+        ),
+        MAX_REAUTH_ATTEMPTS,
+    );
+
     await context.sendMessage('storefront-setup-progress', {
         phase: 'complete', message: 'Satellite site registered', progress: 100,
     });
