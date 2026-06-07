@@ -8,7 +8,8 @@
  * happens later, at fork creation (decision A).
  */
 
-import { resolveJoinLink, type MasterFileReader, type ResolveJoinResult } from '../services/resolveJoinLink';
+import * as vscode from 'vscode';
+import { resolveJoinLink, type JoinDescriptor, type MasterFileReader, type ResolveJoinResult } from '../services/resolveJoinLink';
 import { defineHandlers, type HandlerContext } from '@/types/handlers';
 
 export interface ResolveJoinDeps {
@@ -73,7 +74,16 @@ export const joinHandlers = defineHandlers({
         return { success: true, data: result };
     },
     'join-confirm': async (context: HandlerContext, data?: unknown) => {
-        context.logger.debug(`[Join] confirm received: ${JSON.stringify(data)}`);
+        const descriptor = (data as { descriptor?: JoinDescriptor } | undefined)?.descriptor;
+        if (!descriptor?.upstream?.owner || !descriptor.upstream.repo) {
+            return { success: false, error: 'No storefront descriptor in join-confirm.' };
+        }
+        context.logger.info(
+            `[Join] Launching seeded wizard for ${descriptor.upstream.owner}/${descriptor.upstream.repo}`,
+        );
+        // Hand off to the existing create wizard, seeded with the resolved descriptor
+        // (flow:'content' + upstream + inherited coords; brand gallery suppressed).
+        await vscode.commands.executeCommand('demoBuilder.createProject', { joinDescriptor: descriptor });
         return { success: true };
     },
 });

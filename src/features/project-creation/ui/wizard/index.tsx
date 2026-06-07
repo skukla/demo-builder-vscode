@@ -16,6 +16,7 @@ interface WizardInitData extends WebviewInitData {
     existingProjectNames?: string[];
     importedSettings?: ImportedSettings | null;
     editProject?: EditProjectConfig | null;
+    joinDescriptor?: import('@/features/project-creation/services/resolveJoinLink').JoinDescriptor | null;
     projectsViewMode?: 'cards' | 'rows';
     blockLibraryDefaults?: string[];
     customBlockLibraryDefaults?: CustomBlockLibrary[];
@@ -51,6 +52,7 @@ root.render(
                     existingProjectNames={data?.existingProjectNames}
                     importedSettings={data?.importedSettings}
                     editProject={data?.editProject ?? undefined}
+                    joinDescriptor={data?.joinDescriptor ?? undefined}
                     projectsViewMode={data?.projectsViewMode}
                     blockLibraryDefaults={data?.blockLibraryDefaults}
                     customBlockLibraryDefaults={data?.customBlockLibraryDefaults}

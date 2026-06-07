@@ -67,6 +67,8 @@ interface WizardContainerProps {
     importedSettings?: ImportedSettings | null;
     /** Edit project configuration for edit mode */
     editProject?: EditProjectConfig;
+    /** Resolved Join descriptor — seeds the gallery-less content-SC (satellite) flow */
+    joinDescriptor?: import('@/features/project-creation/services/resolveJoinLink').JoinDescriptor | null;
     /** Initial view mode for template gallery (from settings) */
     projectsViewMode?: 'cards' | 'rows';
     /** User's saved block library default preferences (from settings) */
@@ -81,6 +83,7 @@ export function WizardContainer({
     existingProjectNames,
     importedSettings,
     editProject,
+    joinDescriptor,
     projectsViewMode,
     blockLibraryDefaults: initialBlockLibraryDefaults,
     customBlockLibraryDefaults: initialCustomBlockLibraryDefaults,
@@ -143,6 +146,7 @@ export function WizardContainer({
         existingProjectNames,
         importedSettings,
         editProject,
+        joinDescriptor,
         stacks,
     });
 

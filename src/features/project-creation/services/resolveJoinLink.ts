@@ -9,7 +9,10 @@
  * GitHubFileOperations read.
  */
 
-import { parseGitHubUrl } from '@/core/utils';
+// Import from the specific module (not the `@/core/utils` barrel) so this stays
+// webview-bundle-safe — the barrel drags in Node-only utils (browserUtils → `util`),
+// and `seedComponentConfigsFromCommerce` here is imported by the wizard webview.
+import { parseGitHubUrl } from '@/core/utils/githubUrlParser';
 import {
     ACCS_GRAPHQL_ENDPOINT, ACCS_WEBSITE_CODE, ACCS_STORE_CODE, ACCS_STORE_VIEW_CODE,
 } from '@/features/components/config/envVarKeys';

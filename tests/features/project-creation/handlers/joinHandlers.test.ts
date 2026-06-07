@@ -5,12 +5,21 @@
  * reader.
  */
 
+const mockExecuteCommand = jest.fn();
+jest.mock('vscode', () => ({
+    commands: { executeCommand: (...args: unknown[]) => mockExecuteCommand(...args) },
+}), { virtual: true });
+
 import {
     handleResolveJoinLink,
     createPublicMasterReader,
+    joinHandlers,
     type FetchLike,
 } from '@/features/project-creation/handlers/joinHandlers';
 import { buildMasterMarker, serializeMasterMarker } from '@/features/project-creation/services/resolveJoinLink';
+import type { HandlerContext } from '@/types/handlers';
+
+const mockContext = { logger: { info: jest.fn(), debug: jest.fn() } } as unknown as HandlerContext;
 
 const fakeFetch = (status: number, body = ''): { fetch: FetchLike; url: () => string } => {
     let captured = '';
@@ -72,5 +81,23 @@ describe('createPublicMasterReader (unauthenticated public read)', () => {
     it('throws on other HTTP errors', async () => {
         const read = createPublicMasterReader(fakeFetch(500).fetch);
         await expect(read('o', 'r', 'p')).rejects.toThrow();
+    });
+});
+
+describe('join-confirm → seeded wizard handoff', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    const descriptor = { upstream: { owner: 'commerce-sc', repo: 'citisignal-master' }, packageId: 'citisignal' };
+
+    it('launches the create wizard seeded with the resolved descriptor', async () => {
+        const result = await joinHandlers['join-confirm'](mockContext, { descriptor });
+        expect(result).toEqual({ success: true });
+        expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.createProject', { joinDescriptor: descriptor });
+    });
+
+    it('errors and does NOT launch when the descriptor is missing', async () => {
+        const result = await joinHandlers['join-confirm'](mockContext, {});
+        expect(result.success).toBe(false);
+        expect(mockExecuteCommand).not.toHaveBeenCalled();
     });
 });
