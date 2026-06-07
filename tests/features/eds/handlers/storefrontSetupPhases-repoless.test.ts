@@ -119,9 +119,19 @@ global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 });
 
 // =============================================================================
 import { executeStorefrontSetupPhases } from '@/features/eds/handlers/storefrontSetupPhases';
+import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
 import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
 
 const mockExecuteEdsPipeline = executeEdsPipeline as jest.MockedFunction<typeof executeEdsPipeline>;
+const mockEnsureDaLiveAuth = ensureDaLiveAuth as jest.MockedFunction<typeof ensureDaLiveAuth>;
+
+// A missing/expired DA.live token surfaces from registerSite as a 401 (see
+// configurationService): the auth-failure shape the recovery path keys on.
+const AUTH_FAILURE = {
+    success: false,
+    statusCode: 401,
+    error: 'DA.live authentication required. Please sign in to DA.live first.',
+};
 
 function createMockContext(): HandlerContext {
     return {
@@ -228,5 +238,37 @@ describe('satellite path (upstream present) — repoless, no fork', () => {
             }),
             expect.anything(),
         );
+    });
+});
+
+// Registration is the satellite's whole deliverable, so a DA.live token that
+// expires mid-pipeline must NOT be swallowed into a false "registered" success.
+// It must re-authenticate and retry (and fail loud if it can't recover).
+describe('satellite registration — DA.live auth recovery (no false success)', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true } as Awaited<ReturnType<typeof ensureDaLiveAuth>>);
+    });
+
+    it('re-authenticates and retries when registration reports an auth failure', async () => {
+        mockRegisterSite
+            .mockResolvedValueOnce(AUTH_FAILURE)   // token expired on first attempt
+            .mockResolvedValueOnce({ success: true }); // succeeds after re-auth
+
+        const result = await executeStorefrontSetupPhases(createMockContext(), createSatelliteEdsConfig(), new AbortController().signal);
+
+        expect(mockEnsureDaLiveAuth).toHaveBeenCalled();   // re-auth was triggered
+        expect(mockRegisterSite).toHaveBeenCalledTimes(2); // and registration retried
+        expect(result.success).toBe(true);
+    });
+
+    it('fails loud (does NOT return success) when the auth failure cannot be recovered', async () => {
+        mockRegisterSite.mockResolvedValue(AUTH_FAILURE); // never recovers
+
+        await expect(
+            executeStorefrontSetupPhases(createMockContext(), createSatelliteEdsConfig(), new AbortController().signal),
+        ).rejects.toThrow();
+        // Retried (re-auth attempted) rather than swallowed after the first failure.
+        expect(mockRegisterSite.mock.calls.length).toBeGreaterThan(1);
     });
 });
