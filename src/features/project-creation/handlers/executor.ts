@@ -416,6 +416,10 @@ export async function executeProjectCreation(
 
     await setupEdsContent(context, typedConfig, isEdsStack, progressTracker);
 
+    // Phase 5c: Publish the storefront-share.json marker so a content SC can join
+    // this commerce storefront (write-side pair of resolveJoinLink).
+    await writeStorefrontShareMarker(context, project, typedConfig, isEdsStack);
+
     await finalizeProject(finalizationContext);
     await sendCompletionAndCleanup(finalizationContext);
 
@@ -540,6 +544,45 @@ async function populateEdsMetadata(
     };
     await context.stateManager.saveProject(project);
     context.logger.debug(`[Project Creation] Populated EDS metadata for ${COMPONENT_IDS.EDS_STOREFRONT}: githubRepo=${edsInstance.metadata?.githubRepo}`);
+}
+
+/**
+ * Phase 5c: Write the `storefront-share.json` marker into a created commerce/EDS
+ * storefront so a content SC can later join it (the write-side pair of
+ * `resolveJoinLink`). Commerce-flow EDS creates only — the content (satellite)
+ * flow joins an existing marker rather than publishing one. Non-fatal: a failure
+ * logs a warning and does not abort project creation.
+ */
+async function writeStorefrontShareMarker(
+    context: HandlerContext,
+    project: import('@/types').Project,
+    typedConfig: ProjectCreationConfig,
+    isEdsStack: boolean,
+): Promise<void> {
+    if (!isEdsStack || isContentFlow(typedConfig)) return;
+    const repoInfo = typedConfig.edsConfig?.repoUrl ? parseGitHubUrl(typedConfig.edsConfig.repoUrl) : null;
+    if (!repoInfo) return;
+
+    try {
+        const { publishMasterMarkerForProject } = await import('@/features/project-creation/services/resolveJoinLink');
+        const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
+        const { GitHubFileOperations } = await import('@/features/eds/services/githubFileOperations');
+        const githubFileOps = new GitHubFileOperations(
+            new GitHubTokenService(context.context.secrets, context.logger),
+            context.logger,
+        );
+        const published = await publishMasterMarkerForProject(
+            { owner: repoInfo.owner, repo: repoInfo.repo, project },
+            async (owner, repo, markerPath, content, message) => {
+                await githubFileOps.createOrUpdateFile(owner, repo, markerPath, content, message);
+            },
+        );
+        if (published) {
+            context.logger.info(`[Project Creation] Wrote storefront-share.json marker to ${repoInfo.owner}/${repoInfo.repo}`);
+        }
+    } catch (error) {
+        context.logger.warn(`[Project Creation] Could not write storefront-share.json marker: ${(error as Error).message}`);
+    }
 }
 
 /**

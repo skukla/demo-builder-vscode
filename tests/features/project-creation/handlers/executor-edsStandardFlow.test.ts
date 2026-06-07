@@ -45,6 +45,15 @@ jest.mock('fs', () => ({
     readFileSync: jest.fn().mockReturnValue('{}'),
 }));
 
+// Phase 5c (storefront-share.json marker) writes via GitHubFileOperations.
+const mockCreateOrUpdateFile = jest.fn().mockResolvedValue({ sha: 'x', commitSha: 'y' });
+jest.mock('@/features/eds/services/githubFileOperations', () => ({
+    GitHubFileOperations: jest.fn().mockImplementation(() => ({ createOrUpdateFile: mockCreateOrUpdateFile })),
+}));
+jest.mock('@/features/eds/services/githubTokenService', () => ({
+    GitHubTokenService: jest.fn().mockImplementation(() => ({})),
+}));
+
 jest.mock('@/features/components/services/componentManager', () => ({
     ComponentManager: jest.fn().mockImplementation(() => ({
         installComponent: jest.fn().mockImplementation((project, componentDef) => {
@@ -403,6 +412,52 @@ describe('Executor - EDS Standard Flow', () => {
 
             expect(syncConfigToRemote).toHaveBeenCalled();
             expect(ensureEdsContent).toHaveBeenCalled();
+        });
+    });
+
+    describe('Phase 5c — storefront-share.json marker (starter side)', () => {
+        const markerEdsConfig = (over: Record<string, unknown>) => ({
+            projectName: 'test-share',
+            selectedStack: 'eds-accs',
+            selectedPackage: 'citisignal',
+            edsConfig: {
+                repoName: 'citisignal', repoMode: 'new' as const,
+                repoUrl: 'https://github.com/me/citisignal',
+                daLiveOrg: 'me', daLiveSite: 'citisignal', githubOwner: 'me',
+                preflightComplete: true, contentSource: { org: 'src', site: 'citisignal' },
+            },
+            components: { frontend: 'eds-storefront', dependencies: [] },
+            componentConfigs: {
+                'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: 'https://x/graphql', ACCS_STORE_VIEW_CODE: 'citisignal_us' },
+            },
+            ...over,
+        });
+
+        it('writes storefront-share.json (packageId + coords) for a commerce storefront', async () => {
+            mockContext = createMockContext();
+            const { executeProjectCreation } = await import('@/features/project-creation/handlers/executor');
+
+            await executeProjectCreation(mockContext as HandlerContext, markerEdsConfig({}));
+
+            expect(mockCreateOrUpdateFile).toHaveBeenCalledWith(
+                'me', 'citisignal', 'storefront-share.json', expect.any(String), expect.any(String),
+            );
+            const parsed = JSON.parse(mockCreateOrUpdateFile.mock.calls[0][3]);
+            expect(parsed.packageId).toBe('citisignal');
+            expect(parsed.commerce.endpoint).toBe('https://x/graphql');
+            expect(parsed.commerce.storeViewCode).toBe('citisignal_us');
+        });
+
+        it('does NOT write the marker for the content (satellite) flow', async () => {
+            mockContext = createMockContext();
+            const { executeProjectCreation } = await import('@/features/project-creation/handlers/executor');
+
+            await executeProjectCreation(
+                mockContext as HandlerContext,
+                markerEdsConfig({ flow: 'content', upstream: { owner: 'commerce-sc', repo: 'up' } }),
+            );
+
+            expect(mockCreateOrUpdateFile).not.toHaveBeenCalled();
         });
     });
 
