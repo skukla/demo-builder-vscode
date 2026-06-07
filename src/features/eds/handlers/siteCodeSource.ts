@@ -1,23 +1,12 @@
 /**
- * resolveSiteCodeSource — the general repoless-satellite primitive.
+ * resolveSiteCodeSource — decide a site's code source from the presence of an
+ * `upstream` reference: no upstream → **canonical** (own repo, created fresh);
+ * has upstream → **satellite** (references an existing repo, `createRepo: false`).
  *
- * Decides where a site's code comes from, keyed on the presence of an `upstream`
- * code reference (NOT on the project's `flow`):
- *
- *   - no upstream  → **canonical**: create a fresh repo from the operator's own coords
- *                    (today's commerce/EDS behavior, unchanged).
- *   - has upstream → **satellite**: reference an existing repo via the Configuration
- *                    Service `code` block; no fork, no Code Sync App install, no
- *                    code-sync verification, no config-push.
- *
- * This is the single primitive shared by two callers — the content satellite (Slice 1,
- * cross-org: `upstream.owner !== githubOwner`) and Adobe Repoless **multisite**
- * (deferred, same-org per-env: `upstream.owner === githubOwner`). Both resolve to
- * `createRepo: false`. Keeping the decision on `upstream` rather than `flow` is what
- * keeps it general — see ADR-003 (Multisite Architecture Seam).
- *
- * `codeOwner`/`codeRepo` feed the existing `buildSiteConfigParams` unchanged;
- * `createRepo` gates the Phase 1 fork.
+ * Today this drives one decision (`!createRepo` ≡ "is a satellite"). It returns a
+ * typed `{codeOwner, codeRepo, createRepo}` so the same primitive serves both callers
+ * in ADR-003's terms: the cross-org content satellite (now) and same-org repoless
+ * multisite (deferred), which would consume `codeOwner/codeRepo` per environment.
  */
 
 /** The inputs the code-source decision depends on (parameter-driven per ADR-003). */
