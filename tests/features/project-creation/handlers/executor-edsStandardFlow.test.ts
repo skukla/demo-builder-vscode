@@ -39,6 +39,12 @@ jest.mock('fs/promises', () => ({
     rmdir: jest.fn().mockResolvedValue(undefined),
 }));
 
+// validateConfigJson (Phase 5) reads config.json via the sync `fs` module.
+jest.mock('fs', () => ({
+    existsSync: jest.fn().mockReturnValue(true),
+    readFileSync: jest.fn().mockReturnValue('{}'),
+}));
+
 jest.mock('@/features/components/services/componentManager', () => ({
     ComponentManager: jest.fn().mockImplementation(() => ({
         installComponent: jest.fn().mockImplementation((project, componentDef) => {
@@ -128,6 +134,16 @@ jest.mock('@/features/project-creation/services', () => ({
     finalizeProject: jest.fn().mockResolvedValue(undefined),
     sendCompletionAndCleanup: jest.fn().mockResolvedValue(undefined),
     generateAIContextFiles: jest.fn().mockResolvedValue(undefined),
+    ensureEdsContent: jest.fn().mockResolvedValue(false),
+}));
+
+// Phase 5 (config.json → GitHub) + its state update — mocked so we can assert
+// they are SKIPPED for the content (repoless satellite) flow.
+jest.mock('@/features/eds/services/configSyncService', () => ({
+    syncConfigToRemote: jest.fn().mockResolvedValue({ success: true, githubPushed: true, cdnPublished: true }),
+}));
+jest.mock('@/features/eds/services/storefrontStalenessDetector', () => ({
+    updateStorefrontState: jest.fn().mockResolvedValue(undefined),
 }));
 
 describe('Executor - EDS Standard Flow', () => {
@@ -337,6 +353,56 @@ describe('Executor - EDS Standard Flow', () => {
                 daLiveOrg: 'test-org',
                 daLiveSite: 'test-site',
             });
+        });
+    });
+
+    describe('Content flow (repoless satellite) — Phase 5/5b gating', () => {
+        // A satellite needs repoUrl for the local clone (upstream), but must NEVER push
+        // config.json to it (Phase 5) or publish to its site (Phase 5b) — the satellite
+        // branch already populated content, and config-as-content is Slice 2.
+        const baseEdsConfig = (over: Record<string, unknown>) => ({
+            projectName: 'test-satellite',
+            selectedStack: 'eds-paas',
+            edsConfig: {
+                repoName: 'citisignal-upstream',
+                repoMode: 'new' as const,
+                repoUrl: 'https://github.com/commerce-sc/citisignal-upstream', // upstream (for clone)
+                daLiveOrg: 'content-sc',
+                daLiveSite: 'citisignal',
+                githubOwner: 'content-sc',
+                preflightComplete: true,
+                contentSource: { org: 'brand-src', site: 'citisignal' },
+            },
+            components: { frontend: 'eds-storefront', dependencies: [] },
+            componentConfigs: {},
+            ...over,
+        });
+
+        it('skips Phase 5 (config→GitHub) and Phase 5b (content) for the content flow', async () => {
+            const { syncConfigToRemote } = await import('@/features/eds/services/configSyncService');
+            const { ensureEdsContent } = await import('@/features/project-creation/services');
+            mockContext = createMockContext();
+            const { executeProjectCreation } = await import('@/features/project-creation/handlers/executor');
+
+            await executeProjectCreation(
+                mockContext as HandlerContext,
+                baseEdsConfig({ flow: 'content', upstream: { owner: 'commerce-sc', repo: 'citisignal-upstream' } }),
+            );
+
+            expect(syncConfigToRemote).not.toHaveBeenCalled();
+            expect(ensureEdsContent).not.toHaveBeenCalled();
+        });
+
+        it('still runs Phase 5 + Phase 5b for the commerce/EDS flow (regression)', async () => {
+            const { syncConfigToRemote } = await import('@/features/eds/services/configSyncService');
+            const { ensureEdsContent } = await import('@/features/project-creation/services');
+            mockContext = createMockContext();
+            const { executeProjectCreation } = await import('@/features/project-creation/handlers/executor');
+
+            await executeProjectCreation(mockContext as HandlerContext, baseEdsConfig({}));
+
+            expect(syncConfigToRemote).toHaveBeenCalled();
+            expect(ensureEdsContent).toHaveBeenCalled();
         });
     });
 

@@ -39,7 +39,7 @@ import { AdobeConfig } from '@/types/base';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
 import type { Stack } from '@/types/stacks';
-import { getProjectFrontendPort, getComponentConfigPort, isEdsStackId, getMeshComponentInstance, getMeshComponentId } from '@/types/typeGuards';
+import { getProjectFrontendPort, getComponentConfigPort, isEdsStackId, getMeshComponentInstance, getMeshComponentId, isContentFlow } from '@/types/typeGuards';
 import type { MeshPhaseState } from '@/types/webview';
 
 // EDS config.json sync to remote (Phase 5)
@@ -769,6 +769,14 @@ async function syncEdsConfigToRemote(
         return;
     }
 
+    // Repoless satellite (content flow): never push config.json to the code repo —
+    // the joiner doesn't own it, and commerce config travels as content (Slice 2).
+    // `repoUrl` here is the upstream (used only as the local clone source).
+    if (isContentFlow(typedConfig)) {
+        context.logger.info('[Phase 5] Skipped — content flow (repoless satellite does not push config to the upstream)');
+        return;
+    }
+
     progressTracker('Syncing Config', 92, 'Pushing config.json to GitHub...');
 
     const repoUrl = typedConfig.edsConfig?.repoUrl;
@@ -867,6 +875,14 @@ async function setupEdsContent(
     progressTracker: ProgressTracker,
 ): Promise<void> {
     if (!isEdsStack || !typedConfig.edsConfig?.contentSource || !typedConfig.edsConfig?.repoUrl) {
+        return;
+    }
+
+    // Repoless satellite (content flow): content is already populated by the satellite
+    // setup branch, targeting the satellite's OWN site. Skip the executor's content
+    // step, which would (re)publish using the upstream repoUrl as the site identity.
+    if (isContentFlow(typedConfig)) {
+        context.logger.info('[Phase 5b] Skipped — content flow (satellite content handled in storefront setup)');
         return;
     }
 
