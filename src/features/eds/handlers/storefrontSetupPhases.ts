@@ -22,11 +22,12 @@ import { GitHubRepoOperations } from '../services/githubRepoOperations';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { HelixService } from '../services/helixService';
 import { DaLiveAuthError } from '../services/types';
-import { ensureDaLiveAuth, getDaLiveAuthService } from './edsHelpers';
+import { configureDaLivePermissions, ensureDaLiveAuth, getDaLiveAuthService } from './edsHelpers';
+import { resolveSiteCodeSource, type SiteCodeSource } from './siteCodeSource';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { executePhaseGitHubRepo } from './storefrontSetupPhase1';
 import { executePhaseHelixConfig, type BlockLibraryOptions } from './storefrontSetupPhase2';
-import { executePhaseCodeSync } from './storefrontSetupPhase3';
+import { executePhaseCodeSync, registerConfigurationService } from './storefrontSetupPhase3';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
 import { getBlockLibraryContentSource } from '@/features/project-creation/services/blockLibraryLoader';
 import type { HandlerContext } from '@/types/handlers';
@@ -246,6 +247,49 @@ async function runEdsPipelineWithRecovery(
 // ==========================================================
 
 /**
+ * Repoless satellite setup — the dedicated short path (Adobe-native).
+ *
+ * A satellite references an existing upstream repo's code via the Configuration
+ * Service `code` block, so there is NO fork, NO Code Sync App install, NO code-sync
+ * verification, and NO CDN code preview (Code Sync lives on the canonical repo).
+ * It only configures the joiner's own DA.live permissions and registers the site
+ * cross-org (`code.owner` = the upstream). Content population is a separate phase
+ * (the satellite's site identity is decoupled from its code source — see step-04).
+ */
+async function executeSatelliteSetup(
+    context: HandlerContext,
+    edsConfig: StorefrontSetupStartPayload['edsConfig'],
+    services: SetupServices,
+    codeSource: SiteCodeSource,
+): Promise<StorefrontSetupResult> {
+    const logger = context.logger;
+    const repoInfo: RepoInfo = { repoOwner: codeSource.codeOwner, repoName: codeSource.codeRepo };
+
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'site-config', message: 'Registering repoless satellite site...', progress: 40,
+    });
+
+    const userEmail = (await services.daLiveAuthService.getUserEmail()) || edsConfig.githubAuth?.user?.email;
+    if (userEmail) {
+        await configureDaLivePermissions(
+            services.daLiveTokenProvider, edsConfig.daLiveOrg, edsConfig.daLiveSite, userEmail, logger,
+        );
+    }
+
+    await withDaLiveAuthRetry(
+        context,
+        () => registerConfigurationService(context, services, repoInfo, edsConfig, logger),
+        MAX_REAUTH_ATTEMPTS,
+    );
+
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'complete', message: 'Satellite site registered', progress: 100,
+    });
+    logger.info(`[Storefront Setup] Repoless satellite registered: code=${repoInfo.repoOwner}/${repoInfo.repoName}, site=${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}`);
+    return { success: true, ...repoInfo };
+}
+
+/**
  * Execute all storefront setup phases
  *
  * This runs the remote setup operations:
@@ -289,6 +333,16 @@ export async function executeStorefrontSetupPhases(
             repoName: edsConfig.repoName, templateOwner, templateRepo,
         }));
         return { success: false, error: 'GitHub template not configured. Please check your stack configuration.' };
+    }
+
+    // Repoless satellite: when the site references an existing upstream repo's code,
+    // take the dedicated short path (no fork, no Code Sync, cross-org registration).
+    // The canonical pipeline below is left byte-identical. See ADR-003 + step-04.
+    const codeSource = resolveSiteCodeSource({
+        githubOwner, repoName: edsConfig.repoName, upstream: edsConfig.upstream,
+    });
+    if (!codeSource.createRepo) {
+        return executeSatelliteSetup(context, edsConfig, services, codeSource);
     }
 
     const repoInfo: RepoInfo = { repoOwner: githubOwner, repoName: edsConfig.repoName };

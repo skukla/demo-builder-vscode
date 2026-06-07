@@ -1,6 +1,11 @@
 # Step 4: Repoless Satellite Site Creation — the general primitive (content flow is its first caller)
 
-**Status: 🟡 Config gate done (2026-06-04).** ✅ `supportedFlows` added to `stacks.json` (EDS=`['commerce','content']`, headless=`['commerce']`), the `Stack` type, `stacks.schema.json`, and the alignment test's field list — 116 template/alignment tests green, lint/typecheck/SOP clean. **Remaining:** the general repoless-satellite primitive + its tests.
+**Status: 🟡 Primitive + satellite registration shipped (2026-06-06).**
+- ✅ `supportedFlows` config gate (2026-06-04) — 116 template/alignment tests green.
+- ✅ **`resolveSiteCodeSource`** primitive (pure; gates on `upstream`, not `flow`) — 4/4 unit tests; multisite-shape guards included.
+- ✅ **Dedicated satellite branch** `executeSatelliteSetup` in `storefrontSetupPhases.ts` (early-return; canonical pipeline byte-identical) + `upstream` threaded into `edsConfig` + `registerConfigurationService` exported/reused. Satellite: **no fork, no Code Sync, no CDN code preview, cross-org `registerSite`** (`code.owner` = upstream, `org/site` = joiner's DA.live). 4/4 integration (incl. canonical regression characterization) + 86/86 storefront-setup suite + eslint/tsc/SOP green.
+- **Architectural finding (logged):** a satellite's **site identity** (`daLiveOrg/daLiveSite`) is **decoupled** from its **code source** (upstream); the canonical pipeline conflates them (repo == site). So satellite **content population** (Helix preview/publish must target the satellite's site, not the upstream) is a **separate increment**, not the existing content pipeline run as-is.
+- **Remaining:** (a) satellite content population (Phase 5b for the satellite's own site identity); (b) executor Phase 5 (`config.json`→GitHub) gated off for satellites; (c) persist `flow`/`upstream` on the saved content project; (d) thread `upstream` from the join descriptor into the wizard→`edsConfig` payload (F5 path).
 
 > **2026-06-05 repivot + 2026-06-06 mechanic lock + 2026-06-06 multisite-alignment:** The config gate (`supportedFlows`) survives unchanged. The locked satellite-creation mechanic is the Adobe-native repoless one (Option B), and — per the multisite-alignment decision below — it is built as a **general primitive**, not a content-flow special case.
 >

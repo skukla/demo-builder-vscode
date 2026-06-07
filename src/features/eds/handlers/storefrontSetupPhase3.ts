@@ -194,7 +194,7 @@ async function verifyCodeSync(
  * via client-side JavaScript; folder mapping is the wrong mechanism for SEO-sensitive
  * Commerce PDPs.
  */
-async function registerConfigurationService(
+export async function registerConfigurationService(
     context: HandlerContext,
     services: SetupServices,
     repoInfo: RepoInfo,
