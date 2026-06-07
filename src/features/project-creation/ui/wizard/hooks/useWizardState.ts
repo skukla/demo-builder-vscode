@@ -263,6 +263,10 @@ export function buildJoinModeState(
         adobeProject: adobeContext.project,
         adobeWorkspace: adobeContext.workspace,
         selectedPackage: joinDescriptor.packageId,
+        // Architecture is inherited (the joiner doesn't pick it). Slice 1 is ACCS-first —
+        // matching seedComponentConfigsFromCommerce's ACCS assumption — so the inherited
+        // stack is EDS + ACCS. (A PaaS upstream would carry the backend in the descriptor.)
+        selectedStack: 'eds-accs',
         // Seed the satellite's code source = the upstream. `repoUrl` is the upstream
         // (the local clone source; executor Phase 5/5b stay off via the content-flow
         // guard). The joiner fills daLiveOrg/daLiveSite in the DataSourceConfig step.

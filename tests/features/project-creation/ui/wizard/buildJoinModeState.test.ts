@@ -23,6 +23,7 @@ describe('buildJoinModeState', () => {
         expect(state.flow).toBe('content');
         expect(state.upstream).toEqual({ owner: 'commerce-sc', repo: 'citisignal-upstream' });
         expect(state.selectedPackage).toBe('citisignal');
+        expect(state.selectedStack).toBe('eds-accs'); // architecture inherited (ACCS-first)
         expect(state.wizardMode).toBe('create');
         expect(state.currentStep).toBe('welcome');
     });
