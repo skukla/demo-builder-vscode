@@ -29,6 +29,8 @@ export interface ProjectManifest {
     edsStorefrontStatusSummary?: Project['edsStorefrontStatusSummary'];
     selectedPackage?: string;
     selectedStack?: string;
+    flow?: Project['flow'];
+    upstream?: Project['upstream'];
     selectedAddons?: string[];
     selectedBlockLibraries?: string[];
     customBlockLibraries?: CustomBlockLibrary[];
@@ -91,6 +93,8 @@ export class ProjectFileLoader {
                 edsStorefrontStatusSummary: manifest.edsStorefrontStatusSummary,
                 selectedPackage: manifest.selectedPackage,
                 selectedStack: manifest.selectedStack,
+                flow: manifest.flow,
+                upstream: manifest.upstream,
                 selectedAddons: manifest.selectedAddons,
                 selectedBlockLibraries: manifest.selectedBlockLibraries,
                 customBlockLibraries: manifest.customBlockLibraries,
