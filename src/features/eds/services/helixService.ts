@@ -394,6 +394,32 @@ export class HelixService {
      * @param apiKey - Optional Admin API Key (used for unpublish jobs created with API key auth)
      * @throws Error if job fails or times out
      */
+    /**
+     * Walk `status.data.resources` after a bulk job completes and surface any
+     * per-path failures. The Helix bulk API marks the job `finished` even when
+     * every path inside it failed with 4xx/5xx — those statuses live only in
+     * `data.resources[]`. Without this check the storefront-setup pipeline
+     * silently claims success while the live site 404s.
+     *
+     * Backward-compatible: completes cleanly when `data.resources` is absent or
+     * empty (older API responses that don't include the array).
+     */
+    private assertBulkResourcesSucceeded(status: JobStatusResponse, topic: string): void {
+        const resources = status.data?.resources ?? [];
+        const failed = resources.filter((r) => r.status >= 400);
+        if (failed.length > 0) {
+            const sample = failed.slice(0, 10).map((r) => `${r.path} → ${r.status}`).join(', ');
+            const truncated = failed.length > 10 ? ', ...' : '';
+            this.logger.error(
+                `[Helix] Bulk ${topic} job finished but ${failed.length}/${resources.length} paths failed: ${sample}${truncated}`,
+            );
+            throw new Error(
+                `Bulk ${topic}: ${failed.length}/${resources.length} paths failed (first: ${failed[0].path} → ${failed[0].status})`,
+            );
+        }
+        this.logger.debug(`[Helix] Bulk ${topic} job completed: ${resources.length} paths succeeded`);
+    }
+
     private async pollJobCompletion(
         org: string,
         site: string,
@@ -446,11 +472,11 @@ export class HelixService {
 
                 // Check job state - handle both 'stopped' and 'finished' states
                 if (status.state === 'stopped' || status.state === 'finished' || status.status === 'finished') {
-                    // Job completed
+                    // Job-level failure (e.g. job machinery never dispatched)
                     if (status.error) {
                         throw new Error(`Bulk ${topic} job failed: ${status.error}`);
                     }
-                    this.logger.debug(`[Helix] Bulk ${topic} job completed successfully`);
+                    this.assertBulkResourcesSucceeded(status, topic);
                     return;
                 }
 
