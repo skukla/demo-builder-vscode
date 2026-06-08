@@ -332,5 +332,176 @@ describe('HelixService - Preview/Publish', () => {
             expect(mockFetch).toHaveBeenCalledTimes(3);
             expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('falling back to page-by-page'));
         });
+
+        describe('Bulk job per-path failure detection', () => {
+            // The Helix bulk API marks the job `finished` even when every path
+            // inside it failed with 4xx/5xx. Per-path results live in
+            // `data.resources[]`. Previously the polling code only checked
+            // `state` and top-level `error`, silently passing over per-path
+            // failures. These tests lock down the new behavior.
+
+            it('previewAllContent throws when any resource in data.resources failed with 4xx/5xx', async () => {
+                mockFetch.mockResolvedValueOnce({
+                    ok: true, status: 202,
+                    json: () => Promise.resolve({ job: { name: 'preview-job-x', topic: 'preview', state: 'created' } }),
+                });
+                mockFetch.mockResolvedValueOnce({
+                    ok: true, status: 200,
+                    json: () => Promise.resolve({
+                        state: 'finished',
+                        progress: { processed: 3, total: 3 },
+                        data: {
+                            resources: [
+                                { path: '/', status: 200 },
+                                { path: '/cart', status: 500 },
+                                { path: '/checkout', status: 502 },
+                            ],
+                        },
+                    }),
+                });
+
+                await expect(
+                    service.previewAllContent('testuser', 'my-site', 'main', undefined, ['/', '/cart', '/checkout']),
+                ).rejects.toThrow(/2\/3 paths failed/);
+            });
+
+            it('publishAllContent throws when any resource in data.resources failed with 4xx/5xx', async () => {
+                mockFetch.mockResolvedValueOnce({
+                    ok: true, status: 202,
+                    json: () => Promise.resolve({ job: { name: 'publish-job-x', topic: 'live', state: 'created' } }),
+                });
+                mockFetch.mockResolvedValueOnce({
+                    ok: true, status: 200,
+                    json: () => Promise.resolve({
+                        state: 'finished',
+                        progress: { processed: 2, total: 2 },
+                        data: {
+                            resources: [
+                                { path: '/about', status: 200 },
+                                { path: '/contact', status: 404 },
+                            ],
+                        },
+                    }),
+                });
+
+                await expect(
+                    service.publishAllContent('testuser', 'my-site', 'main', undefined, ['/about', '/contact']),
+                ).rejects.toThrow(/1\/2 paths failed/);
+            });
+
+            it('logs an error with the failing paths and their statuses (capped at 10)', async () => {
+                const failingResources = Array.from({ length: 15 }, (_, i) => ({
+                    path: `/page-${i + 1}`,
+                    status: 500,
+                }));
+                mockFetch.mockResolvedValueOnce({
+                    ok: true, status: 202,
+                    json: () => Promise.resolve({ job: { name: 'preview-job-many', topic: 'preview', state: 'created' } }),
+                });
+                mockFetch.mockResolvedValueOnce({
+                    ok: true, status: 200,
+                    json: () => Promise.resolve({
+                        state: 'finished',
+                        data: { resources: failingResources },
+                    }),
+                });
+
+                await expect(
+                    service.previewAllContent('testuser', 'my-site', 'main', undefined, ['/page-1']),
+                ).rejects.toThrow();
+
+                expect(mockLogger.error).toHaveBeenCalledWith(
+                    expect.stringContaining('15/15 paths failed'),
+                );
+                const loggedMessage = (mockLogger.error.mock.calls[0]?.[0] as string) ?? '';
+                // First 10 paths are mentioned; 11th onward truncated
+                expect(loggedMessage).toContain('/page-1 → 500');
+                expect(loggedMessage).toContain('/page-10 → 500');
+                expect(loggedMessage).not.toContain('/page-11');
+                expect(loggedMessage).toContain('...');
+            });
+
+            it('completes successfully when every resource in data.resources is 2xx', async () => {
+                mockFetch.mockResolvedValueOnce({
+                    ok: true, status: 202,
+                    json: () => Promise.resolve({ job: { name: 'preview-job-ok', topic: 'preview', state: 'created' } }),
+                });
+                mockFetch.mockResolvedValueOnce({
+                    ok: true, status: 200,
+                    json: () => Promise.resolve({
+                        state: 'finished',
+                        progress: { processed: 3, total: 3 },
+                        data: {
+                            resources: [
+                                { path: '/', status: 200 },
+                                { path: '/about', status: 200 },
+                                { path: '/contact', status: 204 },
+                            ],
+                        },
+                    }),
+                });
+
+                await expect(
+                    service.previewAllContent('testuser', 'my-site', 'main', undefined, ['/', '/about', '/contact']),
+                ).resolves.toBeUndefined();
+            });
+
+            it('completes when data.resources is absent (backward-compatible with older API responses)', async () => {
+                mockFetch.mockResolvedValueOnce({
+                    ok: true, status: 202,
+                    json: () => Promise.resolve({ job: { name: 'preview-job-legacy', topic: 'preview', state: 'created' } }),
+                });
+                mockFetch.mockResolvedValueOnce({
+                    ok: true, status: 200,
+                    json: () => Promise.resolve({
+                        state: 'finished',
+                        progress: { processed: 1, total: 1 },
+                        // no data field at all
+                    }),
+                });
+
+                await expect(
+                    service.previewAllContent('testuser', 'my-site', 'main', undefined, ['/']),
+                ).resolves.toBeUndefined();
+            });
+
+            it('completes when data.resources is an empty array', async () => {
+                mockFetch.mockResolvedValueOnce({
+                    ok: true, status: 202,
+                    json: () => Promise.resolve({ job: { name: 'preview-job-empty', topic: 'preview', state: 'created' } }),
+                });
+                mockFetch.mockResolvedValueOnce({
+                    ok: true, status: 200,
+                    json: () => Promise.resolve({
+                        state: 'finished',
+                        progress: { processed: 0, total: 0 },
+                        data: { resources: [] },
+                    }),
+                });
+
+                await expect(
+                    service.previewAllContent('testuser', 'my-site', 'main', undefined, ['/']),
+                ).resolves.toBeUndefined();
+            });
+
+            it('still throws on top-level job error before inspecting resources', async () => {
+                mockFetch.mockResolvedValueOnce({
+                    ok: true, status: 202,
+                    json: () => Promise.resolve({ job: { name: 'preview-job-err', topic: 'preview', state: 'created' } }),
+                });
+                mockFetch.mockResolvedValueOnce({
+                    ok: true, status: 200,
+                    json: () => Promise.resolve({
+                        state: 'finished',
+                        error: 'auth expired mid-job',
+                        data: { resources: [{ path: '/', status: 200 }] },
+                    }),
+                });
+
+                await expect(
+                    service.previewAllContent('testuser', 'my-site', 'main', undefined, ['/']),
+                ).rejects.toThrow(/auth expired mid-job/);
+            });
+        });
     });
 });
