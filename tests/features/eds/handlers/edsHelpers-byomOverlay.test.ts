@@ -55,7 +55,7 @@ jest.mock('@/features/eds/handlers/edsDaLiveOrgHandlers', () => ({
     hasWriteAccess: jest.fn(),
 }));
 
-import { resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
+import { resolveByomOverlayUrl, appendOverlayCoords } from '@/features/eds/handlers/edsHelpers';
 import * as vscode from 'vscode';
 
 describe('resolveByomOverlayUrl', () => {
@@ -303,5 +303,92 @@ describe('resolveByomOverlayUrl', () => {
 
             expect(result).toBeUndefined();
         });
+    });
+});
+
+describe('appendOverlayCoords', () => {
+    it('appends org and site as query parameters to a URL with no existing query string', () => {
+        const result = appendOverlayCoords(
+            'https://overlay.example.com/render-pdp',
+            'adobe-commerce',
+            'boilerplate-b2b',
+        );
+
+        expect(result).toBe('https://overlay.example.com/render-pdp?org=adobe-commerce&site=boilerplate-b2b');
+    });
+
+    it('preserves and extends an existing query string', () => {
+        const result = appendOverlayCoords(
+            'https://overlay.example.com/render-pdp?env=prod',
+            'adobe-commerce',
+            'boilerplate-b2b',
+        );
+
+        expect(result).toMatch(/^https:\/\/overlay\.example\.com\/render-pdp\?/);
+        expect(result).toContain('env=prod');
+        expect(result).toContain('org=adobe-commerce');
+        expect(result).toContain('site=boilerplate-b2b');
+    });
+
+    it('overwrites pre-existing org/site query params (idempotent stamping)', () => {
+        const result = appendOverlayCoords(
+            'https://overlay.example.com/render-pdp?org=old&site=stale',
+            'fresh-org',
+            'fresh-site',
+        );
+
+        expect(result).toContain('org=fresh-org');
+        expect(result).toContain('site=fresh-site');
+        expect(result).not.toContain('org=old');
+        expect(result).not.toContain('site=stale');
+    });
+
+    it('URL-encodes special characters in org and site values', () => {
+        const result = appendOverlayCoords(
+            'https://overlay.example.com/render-pdp',
+            'org with spaces',
+            'site&with=specials',
+        );
+
+        // URLSearchParams encodes space as '+', not '%20', but both forms are valid
+        expect(result).toMatch(/org=org(\+|%20)with(\+|%20)spaces/);
+        expect(result).toContain('site=site%26with%3Dspecials');
+    });
+
+    it('preserves the URL path and fragment when present', () => {
+        const result = appendOverlayCoords(
+            'https://overlay.example.com/api/v1/web/accs-discovery/render-pdp#anchor',
+            'adobe-commerce',
+            'b2b',
+        );
+
+        expect(result).toContain('/api/v1/web/accs-discovery/render-pdp');
+        expect(result).toContain('#anchor');
+    });
+
+    it('throws when org is empty', () => {
+        expect(() =>
+            appendOverlayCoords('https://overlay.example.com/render-pdp', '', 'b2b'),
+        ).toThrow();
+    });
+
+    it('throws when site is empty', () => {
+        expect(() =>
+            appendOverlayCoords('https://overlay.example.com/render-pdp', 'adobe-commerce', ''),
+        ).toThrow();
+    });
+
+    it('throws on malformed URL input', () => {
+        expect(() =>
+            appendOverlayCoords('not-a-url', 'org', 'site'),
+        ).toThrow();
+    });
+
+    it('returns the same shape regardless of input port or trailing slash', () => {
+        const a = appendOverlayCoords('https://overlay.example.com/path', 'o', 's');
+        const b = appendOverlayCoords('https://overlay.example.com/path/', 'o', 's');
+
+        expect(a).toContain('org=o&site=s');
+        expect(b).toContain('org=o&site=s');
     });
 });

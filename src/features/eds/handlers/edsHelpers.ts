@@ -285,6 +285,30 @@ export function resolveByomOverlayUrl(fromConfig?: string): string | undefined {
     return fromConfig && fromConfig.length > 0 ? fromConfig : undefined;
 }
 
+/**
+ * Stamp the calling storefront's coordinates onto a BYOM overlay URL.
+ *
+ * The shared `render-pdp` action receives requests from Helix without a
+ * site-context header (`x-forwarded-host` does not arrive). The action
+ * recovers context by reading `org` and `site` query params from the
+ * registered overlay URL, which Helix preserves verbatim across overlay
+ * dispatch. So each storefront's Configuration Service registration must
+ * carry its own org/site coordinates on the URL.
+ *
+ * Existing query params are preserved; an existing `org`/`site` param is
+ * overwritten with the supplied value (idempotent re-stamping on reset).
+ *
+ * @throws if the URL is malformed, or if `org`/`site` is empty
+ */
+export function appendOverlayCoords(url: string, org: string, site: string): string {
+    if (!org) throw new Error('appendOverlayCoords: org is required');
+    if (!site) throw new Error('appendOverlayCoords: site is required');
+    const parsed = new URL(url);  // throws on malformed input
+    parsed.searchParams.set('org', org);
+    parsed.searchParams.set('site', site);
+    return parsed.toString();
+}
+
 function isAcceptedOverlayUrl(value: string): boolean {
     let parsed: URL;
     try {
