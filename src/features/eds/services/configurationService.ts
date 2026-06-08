@@ -66,12 +66,20 @@ export function buildSiteConfigParams(
     repoOwner: string, repoName: string, daLiveOrg: string, daLiveSite: string,
     overlayUrl?: string,
 ): SiteRegistrationParams {
-    // The Config Service lookup key must use the DA.live org/site, not the GitHub repo name.
-    // The da.live editor constructs its preview URL from the DA.live site path
-    // (e.g. /preview/skukla/b2b-content/...), so Helix looks up /config/skukla/sites/b2b-content.json.
-    // codeOwner/codeRepo tells Helix where to find the GitHub code repository (blocks, config, etc.).
+    // The Config Service lookup key must use the GitHub owner/repo, not the
+    // DA.live org/site. Helix's preview/publish/live operations issue requests
+    // to /preview/{owner}/{repo}/main/... and look up the site config at
+    // /config/{owner}/sites/{repo}.json. Registering under the DA.live name
+    // (e.g. /sites/b2b-boilerplate-content.json when the repo is
+    // skukla/b2b-boilerplate) leaves the config invisible to those operations
+    // — every preview/publish silently fails because Helix has no content
+    // source mapping for the lookup key it actually checks.
+    //
+    // contentSourceUrl still points at DA.live — that's where content lives.
+    // The DA.live editor reads its own config from DA.live's service, not
+    // from Helix's site config, so this rename does not affect the editor.
     return {
-        org: daLiveOrg, site: daLiveSite,
+        org: repoOwner, site: repoName,
         codeOwner: repoOwner, codeRepo: repoName,
         contentSourceUrl: buildContentSourceUrl(daLiveOrg, daLiveSite),
         ...(overlayUrl && { contentOverlayUrl: overlayUrl }),
