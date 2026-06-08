@@ -52,10 +52,12 @@ const CONTENT_BACKEND_COMPONENT_ID = 'adobe-commerce-accs';
 export function seedComponentConfigsFromCommerce(commerce?: MasterCommerceCoords): ComponentConfigs {
     if (!commerce) return {};
     const cfg: Record<string, string> = {};
-    if (commerce.endpoint) cfg[ACCS_GRAPHQL_ENDPOINT] = commerce.endpoint;
-    if (commerce.websiteCode) cfg[ACCS_WEBSITE_CODE] = commerce.websiteCode;
-    if (commerce.storeCode) cfg[ACCS_STORE_CODE] = commerce.storeCode;
-    if (commerce.storeViewCode) cfg[ACCS_STORE_VIEW_CODE] = commerce.storeViewCode;
+    // typeof guards: coords originate from an untrusted remote marker, so a
+    // malformed field must not leak a non-string into a Record<string,string>.
+    if (typeof commerce.endpoint === 'string') cfg[ACCS_GRAPHQL_ENDPOINT] = commerce.endpoint;
+    if (typeof commerce.websiteCode === 'string') cfg[ACCS_WEBSITE_CODE] = commerce.websiteCode;
+    if (typeof commerce.storeCode === 'string') cfg[ACCS_STORE_CODE] = commerce.storeCode;
+    if (typeof commerce.storeViewCode === 'string') cfg[ACCS_STORE_VIEW_CODE] = commerce.storeViewCode;
     return Object.keys(cfg).length > 0 ? { [CONTENT_BACKEND_COMPONENT_ID]: cfg } : {};
 }
 
@@ -190,6 +192,20 @@ function parseMarker(raw: string): MasterMarker | null {
     if (!isRecord(parsed) || typeof parsed.packageId !== 'string' || parsed.packageId.length === 0) {
         return null;
     }
-    const commerce = isRecord(parsed.commerce) ? (parsed.commerce as MasterCommerceCoords) : undefined;
-    return { packageId: parsed.packageId, commerce };
+    return { packageId: parsed.packageId, commerce: parseCommerceCoords(parsed.commerce) };
+}
+
+/**
+ * Sanitize the untrusted `commerce` object from a remote marker: keep only the
+ * known coords whose values are actually strings, so a malformed/hostile marker
+ * cannot smuggle a non-string into the typed descriptor (and downstream config).
+ */
+function parseCommerceCoords(raw: unknown): MasterCommerceCoords | undefined {
+    if (!isRecord(raw)) return undefined;
+    const out: MasterCommerceCoords = {};
+    if (typeof raw.endpoint === 'string') out.endpoint = raw.endpoint;
+    if (typeof raw.websiteCode === 'string') out.websiteCode = raw.websiteCode;
+    if (typeof raw.storeCode === 'string') out.storeCode = raw.storeCode;
+    if (typeof raw.storeViewCode === 'string') out.storeViewCode = raw.storeViewCode;
+    return Object.keys(out).length > 0 ? out : undefined;
 }

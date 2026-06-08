@@ -81,4 +81,16 @@ describe('resolveJoinLink', () => {
         expect(result.ok).toBe(false);
         expect(readFile).not.toHaveBeenCalled();
     });
+
+    it('drops non-string commerce coords from an untrusted marker', async () => {
+        const readFile: MasterFileReader = jest.fn().mockResolvedValue(JSON.stringify({
+            packageId: 'citisignal',
+            commerce: { endpoint: { nested: true }, websiteCode: 42, storeViewCode: 'citisignal_us' },
+        }));
+        const result = await resolveJoinLink(link, readFile);
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.descriptor.commerce).toEqual({ storeViewCode: 'citisignal_us' });
+        }
+    });
 });

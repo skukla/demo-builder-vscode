@@ -36,4 +36,13 @@ describe('seedComponentConfigsFromCommerce', () => {
         expect(seedComponentConfigsFromCommerce(undefined)).toEqual({});
         expect(seedComponentConfigsFromCommerce({})).toEqual({});
     });
+
+    it('drops non-string field values (defensive against a malformed remote marker)', () => {
+        const cfg = seedComponentConfigsFromCommerce({
+            endpoint: { evil: 1 } as unknown as string,
+            websiteCode: 123 as unknown as string,
+            storeViewCode: 'citisignal_us',
+        });
+        expect(cfg).toEqual({ 'adobe-commerce-accs': { ACCS_STORE_VIEW_CODE: 'citisignal_us' } });
+    });
 });
