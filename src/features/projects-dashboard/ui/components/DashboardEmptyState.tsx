@@ -73,14 +73,17 @@ export const DashboardEmptyState: React.FC<DashboardEmptyStateProps> = ({
                         <Text>{buttonText}</Text>
                     </Button>
 
-                    {/* Join entry for an invited content SC (paste a shared link) */}
+                    {/* Join entry for an invited content SC (paste a shared link).
+                        Short visible label ("Join") matches the sibling New/Import
+                        buttons (the full phrase lives in the menu + aria-label). */}
                     {onJoinStorefront && (
                         <Button
                             variant="secondary"
                             onPress={onJoinStorefront}
+                            aria-label="Join a shared storefront"
                         >
                             <LinkOut />
-                            <Text>Join a Shared Storefront</Text>
+                            <Text>Join</Text>
                         </Button>
                     )}
 
