@@ -13,7 +13,7 @@
 
 import { z } from 'zod';
 import { ServiceLocator } from '@/core/di';
-import { appendOverlayCoords, getDaLiveAuthService, getGitHubServices, resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
+import { getDaLiveAuthService, getGitHubServices, resolveByomOverlayConfig } from '@/features/eds/handlers/edsHelpers';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
 import { executeEdsReset, extractResetParams } from '@/features/eds/services/edsResetService';
 import type { HandlerContext } from '@/types/handlers';
@@ -112,16 +112,17 @@ export function registerEdsResetTool(
             const phases: Array<{ step: number; totalSteps: number; message: string }> = [];
             const tokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
             try {
-                // VS Code setting wins over demo-packages.json. Stamp coords so the
-                // shared render-pdp action knows which storefront the request is for.
-                const baseOverlayUrl = resolveByomOverlayUrl(paramsResult.params.byomOverlayUrl);
-                const byomOverlayUrl = baseOverlayUrl
-                    ? appendOverlayCoords(baseOverlayUrl, paramsResult.params.daLiveOrg, paramsResult.params.daLiveSite)
-                    : undefined;
+                // VS Code settings (`demoBuilder.byom.overlayUrl` + `.overlaySharedSecret`)
+                // win over demo-packages.json. The helper stamps `?org=&site=&key=` so
+                // the shared render-pdp action can identify the storefront and validate.
                 const result = await executeEdsReset(
                     {
                         ...paramsResult.params,
-                        byomOverlayUrl,
+                        byomOverlayUrl: resolveByomOverlayConfig(
+                            paramsResult.params.byomOverlayUrl,
+                            paramsResult.params.daLiveOrg,
+                            paramsResult.params.daLiveSite,
+                        ),
                         includeBlockLibrary: args?.includeBlockLibrary ?? false,
                         verifyCdn: args?.verifyCdn ?? false,
                         redeployMesh: hasMesh,

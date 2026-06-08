@@ -300,9 +300,14 @@
         "properties": {
           "demoBuilder.byom.overlayUrl": {
             "type": "string",
-            "default": "",
+            "default": "https://285361-249darkllama-stage.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp",
             "format": "uri",
-            "description": "URL of a shared overlay action that renders product detail page (PDP) HTML from the storefront's Commerce catalog — the BYOM (Bring Your Own Markup) endpoint your Adobe Demo System administrator deploys (the `render-pdp` action in the ACCS Discovery App Builder app). When set, the URL is registered with the AEM Configuration Service whenever an EDS storefront is created or reset so PDP routes pass through the overlay. When empty, no overlay is registered. Only `https://` URLs (and `http://localhost` for local dev) are accepted; other schemes are ignored with a log warning."
+            "description": "URL of the shared overlay action that renders product detail page (PDP) HTML from the storefront's Commerce catalog — the BYOM (Bring Your Own Markup) endpoint deployed by your Adobe Demo System administrator (the `render-pdp` action in the ACCS Discovery App Builder app). Defaults to the team's deployed instance, so most SCs leave this unchanged. Override only when pointing at a different deployment (staging, dev). The extension automatically appends `?org=&site=&key=` per storefront — do not include those in the setting value. Only `https://` URLs (and `http://localhost` for local dev) are accepted; other schemes are ignored with a log warning. Pair with `demoBuilder.byom.overlaySharedSecret`."
+          },
+          "demoBuilder.byom.overlaySharedSecret": {
+            "type": "string",
+            "default": "",
+            "description": "Shared secret that the BYOM overlay action validates per request. Your Adobe Demo System administrator gives you this value when the action is deployed; paste it here once. The secret is sent as a `key` query parameter on the registered overlay URL (the same way `org` and `site` are sent) because Helix does not forward registration-set auth headers. The setting lives only in your local VS Code settings — it is not committed to source control or shipped in the extension. When empty, no overlay is registered even if `demoBuilder.byom.overlayUrl` is set."
           }
         }
       },
