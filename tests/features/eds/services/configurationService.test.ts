@@ -384,6 +384,138 @@ describe('ConfigurationService', () => {
             expect(result.error).toContain('auth failed');
             expect(result.statusCode).toBe(401);
         });
+
+        // Legacy-registration cleanup. Storefronts created on builds before
+        // commit 164fd251 registered their Helix site config under the DA.live
+        // site name; current builds register under the GitHub repo name.
+        // When `legacyLookupKey` is supplied, updateSiteConfig must DELETE
+        // that legacy registration before the normal DELETE+PUT, otherwise
+        // Helix elects the orphan as the primary content site and 403s every
+        // write against the new registration.
+        describe('legacy lookup key cleanup', () => {
+            const paramsWithLegacy: SiteRegistrationParams = {
+                org: 'skukla',
+                site: 'b2b-boilerplate',
+                codeOwner: 'skukla',
+                codeRepo: 'b2b-boilerplate',
+                contentSourceUrl: 'https://content.da.live/skukla/b2b-boilerplate-content/',
+                legacyLookupKey: { org: 'skukla', site: 'b2b-boilerplate-content' },
+            };
+
+            it('DELETEs the legacy registration before the normal DELETE+PUT when legacyLookupKey is set', async () => {
+                fetchSpy
+                    .mockResolvedValueOnce(new Response(null, { status: 204 })) // legacy DELETE
+                    .mockResolvedValueOnce(new Response(null, { status: 200 })) // normal DELETE
+                    .mockResolvedValueOnce(new Response(null, { status: 201 })); // PUT
+
+                const result = await service.updateSiteConfig(paramsWithLegacy);
+
+                expect(result.success).toBe(true);
+                expect(fetchSpy).toHaveBeenCalledTimes(3);
+
+                // First call: DELETE at the LEGACY key (DA site name)
+                expect(fetchSpy.mock.calls[0][1].method).toBe('DELETE');
+                expect(fetchSpy.mock.calls[0][0]).toBe(
+                    'https://admin.hlx.page/config/skukla/sites/b2b-boilerplate-content.json',
+                );
+                // Second call: DELETE at the NEW key (GitHub repo name)
+                expect(fetchSpy.mock.calls[1][1].method).toBe('DELETE');
+                expect(fetchSpy.mock.calls[1][0]).toBe(
+                    'https://admin.hlx.page/config/skukla/sites/b2b-boilerplate.json',
+                );
+                // Third call: PUT at the NEW key
+                expect(fetchSpy.mock.calls[2][1].method).toBe('PUT');
+                expect(fetchSpy.mock.calls[2][0]).toBe(
+                    'https://admin.hlx.page/config/skukla/sites/b2b-boilerplate.json',
+                );
+            });
+
+            it('treats a 404 on the legacy DELETE as success (no orphan to clean up)', async () => {
+                fetchSpy
+                    .mockResolvedValueOnce(new Response('Not Found', { status: 404 })) // legacy DELETE 404
+                    .mockResolvedValueOnce(new Response(null, { status: 200 })) // normal DELETE
+                    .mockResolvedValueOnce(new Response(null, { status: 201 })); // PUT
+
+                const result = await service.updateSiteConfig(paramsWithLegacy);
+
+                expect(result.success).toBe(true);
+                expect(fetchSpy).toHaveBeenCalledTimes(3);
+            });
+
+            it('does not invoke a legacy DELETE when legacyLookupKey is absent', async () => {
+                fetchSpy
+                    .mockResolvedValueOnce(new Response(null, { status: 200 })) // normal DELETE
+                    .mockResolvedValueOnce(new Response(null, { status: 201 })); // PUT
+
+                const result = await service.updateSiteConfig(params);
+
+                expect(result.success).toBe(true);
+                expect(fetchSpy).toHaveBeenCalledTimes(2);
+                // The first call goes to the new registration, not any legacy one.
+                expect(fetchSpy.mock.calls[0][0]).toBe(
+                    'https://admin.hlx.page/config/test-user/sites/my-site.json',
+                );
+            });
+
+            it('does not invoke a legacy DELETE when the legacy key matches the current key', async () => {
+                // Edge case: someone constructs params with legacyLookupKey === current key.
+                // The pre-flight DELETE would otherwise duplicate the normal DELETE.
+                const paramsSameKey: SiteRegistrationParams = {
+                    ...params,
+                    legacyLookupKey: { org: params.org, site: params.site },
+                };
+                fetchSpy
+                    .mockResolvedValueOnce(new Response(null, { status: 200 })) // normal DELETE
+                    .mockResolvedValueOnce(new Response(null, { status: 201 })); // PUT
+
+                const result = await service.updateSiteConfig(paramsSameKey);
+
+                expect(result.success).toBe(true);
+                expect(fetchSpy).toHaveBeenCalledTimes(2);
+            });
+
+            it('proceeds with the normal flow even when the legacy DELETE fails with a non-404 error', async () => {
+                // The legacy cleanup is best-effort. A 403 or 500 on the legacy
+                // DELETE shouldn't block the user from re-registering the new
+                // site — the orphan is a self-inflicted state, not a security
+                // boundary. Log it and continue.
+                fetchSpy
+                    .mockResolvedValueOnce(new Response('Forbidden', { status: 403 })) // legacy DELETE 403
+                    .mockResolvedValueOnce(new Response(null, { status: 200 })) // normal DELETE
+                    .mockResolvedValueOnce(new Response(null, { status: 201 })); // PUT
+
+                const result = await service.updateSiteConfig(paramsWithLegacy);
+
+                expect(result.success).toBe(true);
+                expect(fetchSpy).toHaveBeenCalledTimes(3);
+            });
+        });
+    });
+
+    // ==========================================================
+    // buildSiteConfigParams legacy-key population
+    // ==========================================================
+
+    describe('buildSiteConfigParams — legacyLookupKey population', () => {
+        it('sets legacyLookupKey to the DA.live org/site when it differs from the GitHub repo name', () => {
+            // Real-world case: GitHub repo "b2b-boilerplate", DA site "b2b-boilerplate-content"
+            const params = buildSiteConfigParams(
+                'skukla', 'b2b-boilerplate', 'skukla', 'b2b-boilerplate-content',
+            );
+
+            expect(params.legacyLookupKey).toEqual({
+                org: 'skukla',
+                site: 'b2b-boilerplate-content',
+            });
+        });
+
+        it('omits legacyLookupKey when the GitHub repo name and DA site name match', () => {
+            const params = buildSiteConfigParams(
+                'skukla', 'matching-name', 'skukla', 'matching-name',
+            );
+
+            expect(params.legacyLookupKey).toBeUndefined();
+        });
     });
 
     // ==========================================================
