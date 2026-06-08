@@ -21,7 +21,7 @@ import { GitHubRepoOperations } from '../services/githubRepoOperations';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { ToolManager } from '../services/toolManager';
 import type { EdsMetadata, EdsCleanupOptions } from '../services/types';
-import { ensureDaLiveAuth, getDaLiveAuthService, resolveByomOverlayUrl } from './edsHelpers';
+import { appendOverlayCoords, ensureDaLiveAuth, getDaLiveAuthService, resolveByomOverlayUrl } from './edsHelpers';
 import { executeStorefrontSetupPhases } from './storefrontSetupPhases';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { hasMeshInDependencies } from '@/core/constants';
@@ -311,11 +311,15 @@ export async function handleStartStorefrontSetup(
 
     // Resolve BYOM overlay URL — VS Code setting (`demoBuilder.byom.overlayUrl`)
     // takes precedence over any value baked into the storefront's demo-packages.json.
-    // Registered universally for EDS storefronts so any storefront type benefits as
-    // soon as the SC configures the shared overlay action URL.
+    // Stamp this storefront's org/site as `?org=...&site=...` so the shared
+    // render-pdp action can identify which storefront the request is for (Helix
+    // does not forward x-forwarded-host through the overlay path).
+    const baseOverlayUrl = resolveByomOverlayUrl(edsConfig.byomOverlayUrl);
     const effectiveEdsConfig = {
         ...edsConfig,
-        byomOverlayUrl: resolveByomOverlayUrl(edsConfig.byomOverlayUrl),
+        byomOverlayUrl: baseOverlayUrl
+            ? appendOverlayCoords(baseOverlayUrl, edsConfig.daLiveOrg, edsConfig.daLiveSite)
+            : undefined,
     };
 
     try {

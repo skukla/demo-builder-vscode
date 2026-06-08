@@ -31,6 +31,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     configureDaLivePermissions: jest.fn(),
     getDaLiveAuthService: jest.fn().mockReturnValue({ getAccessToken: jest.fn().mockResolvedValue('mock-token') }),
     resolveByomOverlayUrl: jest.fn((fromConfig?: string) => fromConfig),
+    appendOverlayCoords: jest.fn((url: string, org: string, site: string) => `${url}?org=${org}&site=${site}`),
 }));
 
 jest.mock('@/features/eds/handlers/storefrontSetupPhases', () => ({
