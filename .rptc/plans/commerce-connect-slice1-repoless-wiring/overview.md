@@ -5,11 +5,11 @@
 - [x] Planned
 - [x] **Approved (PM sign-off: 2026-06-04)**
 - [x] **Architecture repivoted 2026-06-05** — repoless replaces two-fork-sync as the locked plan; see backlog/storefront-topology.md and research/2026-06-05-architecture-validation.md
-- [x] In Progress (TDD Phase) — **headless backend complete.** Steps 1, 3, 6 complete; Step 4 backend complete (4c.1–2 done, 4c.3–4 F5-gated); Step 5 headless seed done (UI prefill F5-gated); Step 7 predicate done (UI routing F5-gated); Step 2 read side done (onConfirm handoff + marker write-side remain)
-- [ ] **F5 batch** (live extension) — 4c.3–4 (join-confirm→wizard handoff + gallery suppression), Step 2 onConfirm + marker finalization hook, Step 7 dashboard routing, Step 5 connect-step prefill render
-- [ ] Efficiency Review
-- [ ] Security Review
-- [ ] Complete
+- [x] In Progress (TDD Phase) — **headless complete (2026-06-07).** Steps 1–7 implemented and gate-passed. Step 2 (join read + screen chrome + home-screen entry), Step 4 (satellite primitive + marker write-side, Phase 5c), Step 5 (commerce-coords seed), Step 7 (archetype + dashboard badge/action-hiding) all landed. Only live-extension (F5) verification remains.
+- [ ] **F5 batch** (live extension) — the join round trip (Part C: paste link → seeded wizard → satellite `registerSite`) + visual confirmations (Shared badge, hidden upstream-mutating actions, Join screen chrome, "Private" badge). All headless logic is unit/integration-proven; these checks are inherently interactive.
+- [x] **Efficiency Review (2026-06-07)** — pass. Agent-flagged "unused" predicates/archetype/`supportedFlows`/`resolveSiteCodeSource` intentionally **kept**: they are the thin, documented product-neutral spine the backlog mandates ahead of the content-owner / federated / AEM-owner / multisite milestones (see `backlog/ownership-vs-connection.md`; ADR-003). Genuine finding (granular marker-helper exports) noted as low-value.
+- [x] **Security Review (2026-06-07)** — pass. No exploitable findings (untrusted pasted-URL → `raw.githubusercontent.com` fetch has no host/protocol SSRF; no injection/auth-bypass; the registerSite 401-tagging is fail-closed). The one robustness gap — unvalidated remote `commerce` coords — is **fixed** (`parseCommerceCoords` + `typeof` guards; commit 9529b54).
+- [ ] Complete — **pending F5 sign-off only.**
 
 **Created:** 2026-06-04
 **Last Updated:** 2026-06-06 (reconciliation: implementation status through Step 5; decisions & findings consolidated below)
