@@ -20,6 +20,13 @@ import { joinHandlers } from '@/features/project-creation/handlers/joinHandlers'
 import { HandlerContext, SharedState } from '@/types/handlers';
 
 export class JoinStorefrontCommand extends BaseWebviewCommand {
+    /**
+     * Set once the user confirms a join, so the panel's disposal (the wizard is
+     * taking over) does NOT reopen the projects list. On a plain close (cancel)
+     * this stays false and the projects list is re-surfaced — see dispose().
+     */
+    private navigatingForward = false;
+
     constructor(
         context: vscode.ExtensionContext,
         stateManager: import('@/core/state').StateManager,
@@ -67,7 +74,15 @@ export class JoinStorefrontCommand extends BaseWebviewCommand {
         for (const messageType of getRegisteredTypes(joinHandlers)) {
             comm.onStreaming(messageType, async (data: unknown) => {
                 const context = this.createHandlerContext();
-                return dispatchHandler(joinHandlers, context, messageType, data);
+                const result = await dispatchHandler(joinHandlers, context, messageType, data);
+                // A confirmed join has launched the seeded wizard — hand off to it:
+                // mark forward navigation (so dispose() won't reopen the projects
+                // list) and close this panel so no stale Join tab lingers.
+                if (messageType === 'join-confirm' && (result as { success?: boolean })?.success) {
+                    this.navigatingForward = true;
+                    this.panel?.dispose();
+                }
+                return result;
             });
         }
     }
@@ -76,6 +91,20 @@ export class JoinStorefrontCommand extends BaseWebviewCommand {
         await this.createOrRevealPanel();
         if (!this.communicationManager) {
             await this.initializeCommunication();
+        }
+    }
+
+    /**
+     * Opening the Join screen disposed the projects list (single-surface model),
+     * so on a plain close we re-surface it — otherwise the user is stranded on a
+     * blank editor. Suppressed when handing off forward to the seeded wizard.
+     * Mirrors the Project Dashboard's auto-reopen safety net.
+     */
+    public override dispose(): void {
+        const reopenProjectsList = !this.navigatingForward;
+        super.dispose();
+        if (reopenProjectsList) {
+            void vscode.commands.executeCommand('demoBuilder.showProjectsList');
         }
     }
 
