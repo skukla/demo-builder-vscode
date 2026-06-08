@@ -215,6 +215,52 @@ describe('ConfigurationService', () => {
             );
             expect(params.contentOverlayUrl).toBe('https://byom.example.com');
         });
+
+        // Helix's preview/publish/live operations look up the site config at
+        // /config/{githubOwner}/sites/{githubRepo}.json — using the GitHub
+        // identifiers, not the DA.live identifiers. Registering under the
+        // DA.live name (the old behavior) leaves the config invisible to those
+        // operations and every preview/publish silently fails.
+        describe('Config Service lookup key (Helix preview/publish contract)', () => {
+            it('uses the GitHub owner/repo as the Config Service lookup key', () => {
+                const params = buildSiteConfigParams(
+                    'my-owner', 'my-repo', 'my-dalive-org', 'my-dalive-site',
+                );
+
+                expect(params.org).toBe('my-owner');
+                expect(params.site).toBe('my-repo');
+            });
+
+            it('keeps codeOwner/codeRepo identical to the lookup key (Helix code source)', () => {
+                const params = buildSiteConfigParams(
+                    'my-owner', 'my-repo', 'my-dalive-org', 'my-dalive-site',
+                );
+
+                expect(params.codeOwner).toBe('my-owner');
+                expect(params.codeRepo).toBe('my-repo');
+            });
+
+            it('still points the content source URL at the DA.live org/site (where content actually lives)', () => {
+                const params = buildSiteConfigParams(
+                    'my-owner', 'my-repo', 'my-dalive-org', 'my-dalive-site',
+                );
+
+                expect(params.contentSourceUrl).toBe(
+                    'https://content.da.live/my-dalive-org/my-dalive-site/',
+                );
+            });
+
+            it('handles the case where the GitHub repo name differs from the DA.live site name', () => {
+                // Real-world example: GitHub repo "b2b-boilerplate", DA site "b2b-boilerplate-content"
+                const params = buildSiteConfigParams(
+                    'skukla', 'b2b-boilerplate', 'skukla', 'b2b-boilerplate-content',
+                );
+
+                expect(params.org).toBe('skukla');
+                expect(params.site).toBe('b2b-boilerplate');
+                expect(params.contentSourceUrl).toContain('b2b-boilerplate-content');
+            });
+        });
     });
 
     // ==========================================================
