@@ -128,7 +128,7 @@ export class GitHubAppService {
         const data = await response.json();
         const codeStatus = data?.code?.status;
 
-        this.logger.debug(`[GitHub App] Code status for ${owner}/${repo}: ${codeStatus}`);
+        this.logger.trace(`[GitHub App] ${owner}/${repo} raw code.status=${codeStatus}`);
 
         if (codeStatus === undefined) {
             // Response shape was unrecognized — don't conclude "not installed"
@@ -144,7 +144,14 @@ export class GitHubAppService {
             isInstalled = codeStatus === 200 || codeStatus === 400;
         }
 
-        this.logger.debug(`[GitHub App] Code status for ${owner}/${repo}: ${codeStatus}, installed: ${isInstalled}`);
+        // A 400 here is not an HTTP error from our call — it's the AEM Code Sync
+        // app's reported state: installed, sync still initializing. Annotate so the
+        // bare status code doesn't read like a failure.
+        const statusHint = codeStatus === 200 ? ' (installed; syncing)'
+            : codeStatus === 400 ? ' (installed; sync initializing)'
+            : codeStatus === 404 ? ' (not installed)'
+            : '';
+        this.logger.debug(`[GitHub App] ${owner}/${repo}: installed=${isInstalled}, code.status=${codeStatus}${statusHint}`);
 
         if (codeStatus === 404) {
             this.logger.info(`[GitHub App] AEM Code Sync app not installed for ${owner}/${repo} (code.status: 404)`);
