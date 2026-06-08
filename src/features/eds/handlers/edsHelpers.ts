@@ -286,27 +286,95 @@ export function resolveByomOverlayUrl(fromConfig?: string): string | undefined {
 }
 
 /**
- * Stamp the calling storefront's coordinates onto a BYOM overlay URL.
+ * Resolve the shared secret for the BYOM overlay action from the
+ * `demoBuilder.byom.overlaySharedSecret` VS Code setting.
+ *
+ * The shared `render-pdp` action in `accs-discovery-service` validates
+ * incoming requests against `OVERLAY_SHARED_SECRET` (set in the action's
+ * `.env` at deploy time). On the Helix→action call path there is no
+ * confirmed way to make Helix forward a registration-set auth header, so
+ * the secret rides the registered overlay URL as a `key` query param —
+ * the same transport `org`/`site` already use.
+ *
+ * The secret lives in user-scoped VS Code settings (not committed to this
+ * public repo and not bundled in the extension binary). Each SC pastes
+ * the value once after the administrator deploys the action.
+ *
+ * Rotation: update `OVERLAY_SHARED_SECRET` in the `accs-discovery-service`
+ * `.env`, run `aio app deploy`, then send the new value to SCs so they
+ * can update their setting. Old storefronts re-stamp the new secret on
+ * the next reset.
+ *
+ * @returns the trimmed secret, or undefined when not configured
+ */
+export function resolveByomOverlaySharedSecret(): string | undefined {
+    const raw = vscode.workspace
+        .getConfiguration('demoBuilder.byom')
+        .get<string>('overlaySharedSecret', '');
+    const trimmed = typeof raw === 'string' ? raw.trim() : '';
+    return trimmed.length > 0 ? trimmed : undefined;
+}
+
+/**
+ * Stamp the calling storefront's coordinates and the shared secret onto a
+ * BYOM overlay URL.
  *
  * The shared `render-pdp` action receives requests from Helix without a
  * site-context header (`x-forwarded-host` does not arrive). The action
- * recovers context by reading `org` and `site` query params from the
- * registered overlay URL, which Helix preserves verbatim across overlay
- * dispatch. So each storefront's Configuration Service registration must
- * carry its own org/site coordinates on the URL.
+ * recovers context by reading `org`, `site`, and `key` query params from
+ * the registered overlay URL, which Helix preserves verbatim across
+ * overlay dispatch. So each storefront's Configuration Service
+ * registration must carry its own coordinates and the shared secret on
+ * the URL.
  *
- * Existing query params are preserved; an existing `org`/`site` param is
- * overwritten with the supplied value (idempotent re-stamping on reset).
+ * Existing query params are preserved; an existing `org`/`site`/`key`
+ * param is overwritten with the supplied value (idempotent re-stamping
+ * on reset).
  *
- * @throws if the URL is malformed, or if `org`/`site` is empty
+ * @throws if the URL is malformed, or if `org`/`site`/`key` is empty
  */
-export function appendOverlayCoords(url: string, org: string, site: string): string {
-    if (!org) throw new Error('appendOverlayCoords: org is required');
-    if (!site) throw new Error('appendOverlayCoords: site is required');
+export function appendOverlayParams(
+    url: string,
+    org: string,
+    site: string,
+    key: string,
+): string {
+    if (!org) throw new Error('appendOverlayParams: org is required');
+    if (!site) throw new Error('appendOverlayParams: site is required');
+    if (!key) throw new Error('appendOverlayParams: key is required');
     const parsed = new URL(url);  // throws on malformed input
     parsed.searchParams.set('org', org);
     parsed.searchParams.set('site', site);
+    parsed.searchParams.set('key', key);
     return parsed.toString();
+}
+
+/**
+ * Compose the fully-stamped BYOM overlay URL for a storefront, or undefined
+ * when the overlay should not be registered.
+ *
+ * Wraps `resolveByomOverlayUrl` + `resolveByomOverlaySharedSecret` +
+ * `appendOverlayParams` into a single call site-friendly helper. Returns
+ * undefined (no overlay registered) when either the URL or the secret is
+ * missing. Logs a warning when the URL is configured but the secret is
+ * not — that's the breadcrumb that tells the SC "you also need to set
+ * the secret."
+ */
+export function resolveByomOverlayConfig(
+    fromConfigUrl: string | undefined,
+    org: string,
+    site: string,
+): string | undefined {
+    const baseUrl = resolveByomOverlayUrl(fromConfigUrl);
+    if (!baseUrl) return undefined;
+    const secret = resolveByomOverlaySharedSecret();
+    if (!secret) {
+        getLogger().warn(
+            '[BYOM] demoBuilder.byom.overlayUrl is configured but demoBuilder.byom.overlaySharedSecret is not. Skipping overlay registration.',
+        );
+        return undefined;
+    }
+    return appendOverlayParams(baseUrl, org, site, secret);
 }
 
 function isAcceptedOverlayUrl(value: string): boolean {

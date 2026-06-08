@@ -247,7 +247,7 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
     } = options;
 
     const vscode = await import('vscode');
-    const { appendOverlayCoords, getDaLiveAuthService, resolveByomOverlayUrl } = await import('../handlers/edsHelpers');
+    const { getDaLiveAuthService, resolveByomOverlayConfig } = await import('../handlers/edsHelpers');
     const { createDaLiveServiceTokenProvider } = await import('./daLiveContentOperations');
     const { getMeshComponentInstance } = await import('@/types/typeGuards');
 
@@ -303,14 +303,16 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
 
                 // Execute reset
                 const tokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
-                // VS Code setting wins over demo-packages.json. Stamp coords so the
-                // shared render-pdp action knows which storefront the request is for.
-                const baseOverlayUrl = resolveByomOverlayUrl(paramsResult.params.byomOverlayUrl);
+                // VS Code settings (`demoBuilder.byom.overlayUrl` + `.overlaySharedSecret`)
+                // win over demo-packages.json. The helper stamps `?org=&site=&key=` so
+                // the shared render-pdp action can identify the storefront and validate.
                 const resetParams: EdsResetParams = {
                     ...paramsResult.params,
-                    byomOverlayUrl: baseOverlayUrl
-                        ? appendOverlayCoords(baseOverlayUrl, paramsResult.params.daLiveOrg, paramsResult.params.daLiveSite)
-                        : undefined,
+                    byomOverlayUrl: resolveByomOverlayConfig(
+                        paramsResult.params.byomOverlayUrl,
+                        paramsResult.params.daLiveOrg,
+                        paramsResult.params.daLiveSite,
+                    ),
                     includeBlockLibrary, verifyCdn, redeployMesh: redeployMesh ?? hasMesh,
                 };
 

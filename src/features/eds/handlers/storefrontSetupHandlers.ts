@@ -21,7 +21,7 @@ import { GitHubRepoOperations } from '../services/githubRepoOperations';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { ToolManager } from '../services/toolManager';
 import type { EdsMetadata, EdsCleanupOptions } from '../services/types';
-import { appendOverlayCoords, ensureDaLiveAuth, getDaLiveAuthService, resolveByomOverlayUrl } from './edsHelpers';
+import { ensureDaLiveAuth, getDaLiveAuthService, resolveByomOverlayConfig } from './edsHelpers';
 import { executeStorefrontSetupPhases } from './storefrontSetupPhases';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { hasMeshInDependencies } from '@/core/constants';
@@ -309,17 +309,20 @@ export async function handleStartStorefrontSetup(
         return { success: false, error: 'DA.live authentication required' };
     }
 
-    // Resolve BYOM overlay URL — VS Code setting (`demoBuilder.byom.overlayUrl`)
-    // takes precedence over any value baked into the storefront's demo-packages.json.
-    // Stamp this storefront's org/site as `?org=...&site=...` so the shared
-    // render-pdp action can identify which storefront the request is for (Helix
-    // does not forward x-forwarded-host through the overlay path).
-    const baseOverlayUrl = resolveByomOverlayUrl(edsConfig.byomOverlayUrl);
+    // Compose the BYOM overlay URL the Configuration Service will register.
+    // VS Code settings (`demoBuilder.byom.overlayUrl` + `.overlaySharedSecret`)
+    // take precedence over any value baked into demo-packages.json. The helper
+    // stamps `?org=...&site=...&key=...` onto the URL so the shared render-pdp
+    // action can identify the storefront and validate the call (Helix does not
+    // forward `x-forwarded-host` or registration-set auth headers through the
+    // overlay path; query string is the only confirmed transport).
     const effectiveEdsConfig = {
         ...edsConfig,
-        byomOverlayUrl: baseOverlayUrl
-            ? appendOverlayCoords(baseOverlayUrl, edsConfig.daLiveOrg, edsConfig.daLiveSite)
-            : undefined,
+        byomOverlayUrl: resolveByomOverlayConfig(
+            edsConfig.byomOverlayUrl,
+            edsConfig.daLiveOrg,
+            edsConfig.daLiveSite,
+        ),
     };
 
     try {
