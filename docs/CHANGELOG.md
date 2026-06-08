@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`demoBuilder.byom.overlayUrl` setting — universal BYOM overlay registration.** Adds a workspace-level setting that, when populated, gets registered with the AEM Configuration Service as `content.overlay` whenever an EDS storefront is created or reset. The setting takes precedence over any `byomOverlayUrl` baked into `demo-packages.json`; storefronts without the setting configured behave as before. URL validation requires `https://` (or `http://` on a loopback host for local dev) and a 2048-character cap; rejected values log a fingerprint, never the raw URL, so a paste with a query-string secret doesn't leak. Wired into storefront create (`storefrontSetupHandlers`), reset (`edsResetUI`), and the AI reset tool (`edsResetTool`). Block library refresh is intentionally not wired — it runs the EDS content pipeline only, not the Configuration Service path. Companion work tracks separately as a `render-pdp` action in the shared `accs-discovery-service` App Builder app.
+
 ## [1.0.0-beta.112] - 2026-06-07
 
 ### Added

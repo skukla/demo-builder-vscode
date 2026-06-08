@@ -13,7 +13,7 @@
 
 import { z } from 'zod';
 import { ServiceLocator } from '@/core/di';
-import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
+import { getDaLiveAuthService, getGitHubServices, resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
 import { executeEdsReset, extractResetParams } from '@/features/eds/services/edsResetService';
 import type { HandlerContext } from '@/types/handlers';
@@ -115,6 +115,8 @@ export function registerEdsResetTool(
                 const result = await executeEdsReset(
                     {
                         ...paramsResult.params,
+                        // VS Code setting wins over demo-packages.json baked value.
+                        byomOverlayUrl: resolveByomOverlayUrl(paramsResult.params.byomOverlayUrl),
                         includeBlockLibrary: args?.includeBlockLibrary ?? false,
                         verifyCdn: args?.verifyCdn ?? false,
                         redeployMesh: hasMesh,

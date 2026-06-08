@@ -247,7 +247,7 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
     } = options;
 
     const vscode = await import('vscode');
-    const { getDaLiveAuthService } = await import('../handlers/edsHelpers');
+    const { getDaLiveAuthService, resolveByomOverlayUrl } = await import('../handlers/edsHelpers');
     const { createDaLiveServiceTokenProvider } = await import('./daLiveContentOperations');
     const { getMeshComponentInstance } = await import('@/types/typeGuards');
 
@@ -305,6 +305,8 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
                 const tokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
                 const resetParams: EdsResetParams = {
                     ...paramsResult.params,
+                    // VS Code setting wins over demo-packages.json baked value.
+                    byomOverlayUrl: resolveByomOverlayUrl(paramsResult.params.byomOverlayUrl),
                     includeBlockLibrary, verifyCdn, redeployMesh: redeployMesh ?? hasMesh,
                 };
 

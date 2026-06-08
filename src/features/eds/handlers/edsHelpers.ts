@@ -239,6 +239,82 @@ export function offerSaveDefaultOrg(
 }
 
 // ==========================================================
+// BYOM Overlay URL resolution
+// ==========================================================
+
+const BYOM_MAX_URL_LENGTH = 2048;
+const BYOM_LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+/**
+ * Resolve the BYOM (Bring Your Own Markup) overlay URL with this precedence:
+ *   1. VS Code setting `demoBuilder.byom.overlayUrl` (trimmed, non-empty, valid URL,
+ *      `https://` scheme or `http://` on a loopback host, ≤ 2048 chars).
+ *   2. `fromConfig` parameter (a fallback usually sourced from demo-packages.json).
+ *   3. undefined.
+ *
+ * Invalid setting values log a fingerprint-only warning (raw URL is not logged,
+ * to avoid leaking secrets that may appear in query strings) and fall through
+ * to `fromConfig`.
+ *
+ * Used by storefront create, storefront reset, and the AI tool reset path so
+ * every EDS create/recreate registers the same overlay against the AEM
+ * Configuration Service when the SC has configured one.
+ *
+ * @param fromConfig - Optional URL from demo-packages.json or similar config
+ * @returns The resolved URL, or undefined when none resolves
+ */
+export function resolveByomOverlayUrl(fromConfig?: string): string | undefined {
+    const raw = vscode.workspace
+        .getConfiguration('demoBuilder.byom')
+        .get<string>('overlayUrl', '');
+    // VS Code's typed `get<string>` returns the default on type mismatch, but
+    // be defensive about non-string values (corrupted user settings.json).
+    const trimmed = typeof raw === 'string' ? raw.trim() : '';
+
+    if (trimmed.length > 0) {
+        const valid = trimmed.length <= BYOM_MAX_URL_LENGTH && isAcceptedOverlayUrl(trimmed);
+        if (valid) {
+            return trimmed;
+        }
+        getLogger().warn(
+            `[BYOM] Ignoring invalid demoBuilder.byom.overlayUrl setting (${describeRejectedUrl(trimmed)}). Expected https:// (or http://localhost for local dev), max ${BYOM_MAX_URL_LENGTH} chars.`,
+        );
+        // fall through to fromConfig
+    }
+
+    return fromConfig && fromConfig.length > 0 ? fromConfig : undefined;
+}
+
+function isAcceptedOverlayUrl(value: string): boolean {
+    let parsed: URL;
+    try {
+        parsed = new URL(value);
+    } catch {
+        return false;
+    }
+    if (parsed.protocol === 'https:') return true;
+    if (parsed.protocol === 'http:' && BYOM_LOOPBACK_HOSTS.has(parsed.hostname)) return true;
+    return false;
+}
+
+/**
+ * Describe a rejected URL without echoing it. Avoids leaking secrets that
+ * sometimes appear in query strings (e.g., when a user pastes a token-bearing
+ * URL by mistake).
+ */
+function describeRejectedUrl(value: string): string {
+    if (value.length > BYOM_MAX_URL_LENGTH) {
+        return `length=${value.length} chars, exceeds ${BYOM_MAX_URL_LENGTH}`;
+    }
+    try {
+        const parsed = new URL(value);
+        return `scheme="${parsed.protocol.replace(/:$/, '')}", host="${parsed.hostname}"`;
+    } catch {
+        return `length=${value.length} chars, not URL-shaped`;
+    }
+}
+
+// ==========================================================
 // DA.live Token-First Authentication
 // ==========================================================
 

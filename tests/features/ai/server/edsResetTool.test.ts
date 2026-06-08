@@ -11,6 +11,7 @@ jest.mock('@/features/eds/services/edsResetService', () => ({
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getGitHubServices: jest.fn(),
     getDaLiveAuthService: jest.fn(),
+    resolveByomOverlayUrl: jest.fn((fromConfig?: string) => fromConfig),
 }));
 jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({})),

@@ -21,7 +21,7 @@ import { GitHubRepoOperations } from '../services/githubRepoOperations';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { ToolManager } from '../services/toolManager';
 import type { EdsMetadata, EdsCleanupOptions } from '../services/types';
-import { ensureDaLiveAuth, getDaLiveAuthService } from './edsHelpers';
+import { ensureDaLiveAuth, getDaLiveAuthService, resolveByomOverlayUrl } from './edsHelpers';
 import { executeStorefrontSetupPhases } from './storefrontSetupPhases';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { hasMeshInDependencies } from '@/core/constants';
@@ -305,11 +305,20 @@ export async function handleStartStorefrontSetup(
         return { success: false, error: 'DA.live authentication required' };
     }
 
+    // Resolve BYOM overlay URL — VS Code setting (`demoBuilder.byom.overlayUrl`)
+    // takes precedence over any value baked into the storefront's demo-packages.json.
+    // Registered universally for EDS storefronts so any storefront type benefits as
+    // soon as the SC configures the shared overlay action URL.
+    const effectiveEdsConfig = {
+        ...edsConfig,
+        byomOverlayUrl: resolveByomOverlayUrl(edsConfig.byomOverlayUrl),
+    };
+
     try {
         // Execute storefront setup phases
         const result = await executeStorefrontSetupPhases(
             context,
-            edsConfig,
+            effectiveEdsConfig,
             abortController.signal,
             {
                 selectedBlockLibraries: payload.selectedBlockLibraries,

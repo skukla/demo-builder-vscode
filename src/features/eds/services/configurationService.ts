@@ -56,6 +56,23 @@ export interface SiteRegistrationParams {
     contentOverlayUrl?: string;
 }
 
+/**
+ * Strip query string and fragment from a URL before logging.
+ *
+ * The BYOM overlay URL is user-supplied via the `demoBuilder.byom.overlayUrl`
+ * setting; pasted values may include a secret in the query string (e.g., a
+ * tokenized URL). Logging the bare scheme + host + path keeps debug output
+ * useful for ops without echoing potential secrets to the Debug channel.
+ */
+function stripUrlQueryAndFragment(url: string): string {
+    try {
+        const parsed = new URL(url);
+        return `${parsed.protocol}//${parsed.host}${parsed.pathname}`;
+    } catch {
+        return '[unparseable URL]';
+    }
+}
+
 /** Build the DA.live content source URL for a given org and site */
 function buildContentSourceUrl(daLiveOrg: string, daLiveSite: string): string {
     return `https://content.da.live/${daLiveOrg}/${daLiveSite}/`;
@@ -130,7 +147,10 @@ export class ConfigurationService {
         this.logger.info(`[ConfigService] Registering site: ${org}/${site}`);
         this.logger.debug(`[ConfigService] Code: ${codeOwner}/${codeRepo}, Content: ${contentSourceUrl}`);
         if (contentOverlayUrl) {
-            this.logger.debug(`[ConfigService] Content overlay: ${contentOverlayUrl}`);
+            // Strip query/fragment from the overlay URL before logging — the
+            // overlay URL is user-supplied via VS Code settings and may include
+            // a secret in its query string (e.g., a paste with a token).
+            this.logger.debug(`[ConfigService] Content overlay: ${stripUrlQueryAndFragment(contentOverlayUrl)}`);
         }
 
         const source = { url: contentSourceUrl, type: contentSourceType || 'markup' };
