@@ -312,15 +312,32 @@ export function appendOverlayParams(url: string, org: string, site: string): str
 
 /**
  * Compose the fully-stamped BYOM overlay URL for a storefront, or undefined
- * when no URL is configured (no overlay registered).
+ * when no overlay should be registered.
+ *
+ * Two settings gate this:
+ * 1. `demoBuilder.byom.enabled` (boolean, default true). When false, returns
+ *    undefined immediately — the storefront registers without an overlay.
+ * 2. `demoBuilder.byom.overlayUrl` (string). When enabled is true but the URL
+ *    resolves to nothing (setting and fromConfig both empty), logs a warning
+ *    and returns undefined — the user asked for BYOM but didn't supply a URL.
  */
 export function resolveByomOverlayConfig(
     fromConfigUrl: string | undefined,
     org: string,
     site: string,
 ): string | undefined {
+    const enabled = vscode.workspace
+        .getConfiguration('demoBuilder.byom')
+        .get<boolean>('enabled', true);
+    if (!enabled) return undefined;
+
     const baseUrl = resolveByomOverlayUrl(fromConfigUrl);
-    if (!baseUrl) return undefined;
+    if (!baseUrl) {
+        getLogger().warn(
+            '[BYOM] demoBuilder.byom.enabled is on but demoBuilder.byom.overlayUrl is empty. Skipping overlay registration.',
+        );
+        return undefined;
+    }
     return appendOverlayParams(baseUrl, org, site);
 }
 

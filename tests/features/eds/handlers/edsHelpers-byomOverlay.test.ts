@@ -15,15 +15,20 @@
 // usually require `var` (hoisted decl) + assignment inside the factory.
 /* eslint-disable no-var */
 var mockSettingValue: unknown;
+var mockEnabledValue: unknown;
 var mockWarn: jest.Mock;
 /* eslint-enable no-var */
 
 jest.mock('vscode', () => {
     mockSettingValue = '';
+    mockEnabledValue = undefined;  // honor the default
     return {
         workspace: {
             getConfiguration: jest.fn().mockReturnValue({
-                get: jest.fn((_key: string, defaultValue?: unknown) => {
+                get: jest.fn((key: string, defaultValue?: unknown) => {
+                    if (key === 'enabled') {
+                        return mockEnabledValue === undefined ? defaultValue : mockEnabledValue;
+                    }
                     return mockSettingValue === undefined ? defaultValue : mockSettingValue;
                 }),
             }),
@@ -249,6 +254,7 @@ describe('resolveByomOverlayConfig', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockSettingValue = '';
+        mockEnabledValue = undefined;  // honor the default (true)
     });
 
     it('returns a fully-stamped URL when the overlay URL is configured', () => {
@@ -285,5 +291,57 @@ describe('resolveByomOverlayConfig', () => {
         mockSettingValue = 'https://overlay.example.com/render-pdp';
 
         expect(() => resolveByomOverlayConfig(undefined, 'org', '')).toThrow();
+    });
+
+    // demoBuilder.byom.enabled toggle — the user-facing on/off switch.
+    // Default is on (true). Off short-circuits before reading the URL.
+    describe('enabled toggle', () => {
+        it('returns undefined when the toggle is explicitly off, even with a valid URL', () => {
+            mockEnabledValue = false;
+            mockSettingValue = 'https://overlay.example.com/render-pdp';
+
+            const result = resolveByomOverlayConfig(undefined, 'org', 'site');
+
+            expect(result).toBeUndefined();
+        });
+
+        it('does not warn when the toggle is off (off is a deliberate state, not a misconfiguration)', () => {
+            mockEnabledValue = false;
+            mockSettingValue = '';
+
+            resolveByomOverlayConfig(undefined, 'org', 'site');
+
+            expect(mockWarn).not.toHaveBeenCalled();
+        });
+
+        it('stamps the URL when the toggle is explicitly on', () => {
+            mockEnabledValue = true;
+            mockSettingValue = 'https://overlay.example.com/render-pdp';
+
+            const result = resolveByomOverlayConfig(undefined, 'org', 'site');
+
+            expect(result).toBe('https://overlay.example.com/render-pdp?org=org&site=site');
+        });
+
+        it('defaults to on when the toggle is missing from settings (treats absent key as true)', () => {
+            mockEnabledValue = undefined;  // simulates the user never having touched the setting
+            mockSettingValue = 'https://overlay.example.com/render-pdp';
+
+            const result = resolveByomOverlayConfig(undefined, 'org', 'site');
+
+            expect(result).toBe('https://overlay.example.com/render-pdp?org=org&site=site');
+        });
+
+        it('warns when the toggle is on but the URL resolves to nothing (a real misconfiguration)', () => {
+            mockEnabledValue = true;
+            mockSettingValue = '';
+
+            const result = resolveByomOverlayConfig(undefined, 'org', 'site');
+
+            expect(result).toBeUndefined();
+            expect(mockWarn).toHaveBeenCalledWith(
+                expect.stringContaining('demoBuilder.byom.overlayUrl is empty'),
+            );
+        });
     });
 });

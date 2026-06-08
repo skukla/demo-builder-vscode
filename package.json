@@ -297,11 +297,16 @@
       {
         "title": "BYOM Overlay",
         "properties": {
+          "demoBuilder.byom.enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Register the PDP overlay action on each EDS storefront created by this extension. When off, no overlay is registered (storefronts behave as if BYOM didn't exist)."
+          },
           "demoBuilder.byom.overlayUrl": {
             "type": "string",
             "default": "https://285361-249darkllama-stage.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp",
             "format": "uri",
-            "description": "PDP overlay endpoint. Defaults to the team's deployed instance; override to point at a custom deployment (staging, dev). Leave empty to disable overlay registration entirely."
+            "description": "PDP overlay endpoint. Defaults to the team's deployed instance; override to point at a custom deployment (staging, dev)."
           }
         }
       },
