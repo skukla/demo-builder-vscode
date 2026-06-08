@@ -27,6 +27,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     }),
     getGitHubServices: jest.fn().mockReturnValue({ tokenService: {} }),
     showDaLiveAuthQuickPick: jest.fn(),
+    resolveByomOverlayUrl: jest.fn((fromConfig?: string) => fromConfig),
 }));
 
 // Mock ensureAdobeIOAuth

@@ -295,6 +295,17 @@
         }
       },
       {
+        "title": "BYOM Overlay",
+        "properties": {
+          "demoBuilder.byom.overlayUrl": {
+            "type": "string",
+            "default": "",
+            "format": "uri",
+            "description": "URL of a shared overlay action that renders product detail page (PDP) HTML from the storefront's Commerce catalog — the BYOM (Bring Your Own Markup) endpoint your Adobe Demo System administrator deploys (the `render-pdp` action in the ACCS Discovery App Builder app). When set, the URL is registered with the AEM Configuration Service whenever an EDS storefront is created or reset so PDP routes pass through the overlay. When empty, no overlay is registered. Only `https://` URLs (and `http://localhost` for local dev) are accepted; other schemes are ignored with a log warning."
+          }
+        }
+      },
+      {
         "title": "AI",
         "properties": {
           "demoBuilder.ai.engine": {
