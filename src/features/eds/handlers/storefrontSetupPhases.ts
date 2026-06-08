@@ -215,6 +215,12 @@ async function runEdsPipelineWithRecovery(
                     daLiveOrg: edsConfig.daLiveOrg, daLiveSite: edsConfig.daLiveSite,
                     templateOwner, templateRepo,
                     clearExistingContent: wantsToResetContent, skipContent,
+                    // Always publish: skipContent only means "don't re-copy" (content
+                    // is already authored in DA.live), but DA.live content is not LIVE
+                    // until published. Reusing an existing site without a reset must
+                    // still publish, or the live site renders 404. Mirrors
+                    // edsResetService / refreshBlockLibrary, which also pass false.
+                    skipPublish: false,
                     contentSource: edsConfig.contentSource,
                     contentPatches: edsConfig.contentPatches, contentPatchSource: edsConfig.contentPatchSource,
                     includeBlockLibrary: true, blockCollectionIds, libraryContentSources,
