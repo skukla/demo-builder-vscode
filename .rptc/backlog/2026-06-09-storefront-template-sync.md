@@ -4,9 +4,12 @@ title: Sync storefront templates with canonical Boilerplate Commerce upstream
 status: backlog
 created: 2026-06-09
 priority: medium
+gated-by: 2026-06-09-evaluate-thin-layer-storefront-model
 ---
 
 # Sync storefront templates with canonical Boilerplate Commerce upstream
+
+> **GATED.** Do not start this work until `2026-06-09-evaluate-thin-layer-storefront-model.md` has been completed. If that research concludes the forks should be retired in favor of a thin-layer Demo Builder customization model, this sync project becomes irrelevant — we'd be syncing repos we're about to drop. Only proceed with the sync work below if the research validates that fork maintenance is the right ongoing path.
 
 ## Provenance
 
