@@ -176,7 +176,7 @@ If Phase 1's behavior diverges from this in production, those four probes locali
 | Overlay URL resolution + stamping | `src/features/eds/handlers/edsHelpers.ts` (`resolveByomOverlayConfig`, `appendOverlayParams`) |
 | Configuration Service registration with overlay | `src/features/eds/services/configurationService.ts` (`registerSite`, `updateSiteConfig`, `buildSiteConfigParams`) |
 | Smart-404 snippet generation + install | `src/features/eds/services/pdp404HandlerPublisher.ts` |
-| Pipeline integration (the step that vendors into delayed.js) | `src/features/eds/services/edsPipeline.ts` (Step 7, after Library Publish) |
+| Install call sites (alongside inspector tagging) | `src/features/eds/handlers/storefrontSetupPhase2.ts` (create / edit) and `src/features/eds/services/edsResetRepoHelper.ts` (reset) |
 | Settings | `package.json` (`demoBuilder.byom.enabled`, `demoBuilder.byom.overlayUrl`) |
 
 ---

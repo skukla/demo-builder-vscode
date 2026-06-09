@@ -20,7 +20,6 @@
 import type { DaLiveContentOperations } from './daLiveContentOperations';
 import type { GitHubFileOperations } from './githubFileOperations';
 import type { HelixService } from './helixService';
-import { installSmart404Handler } from './pdp404HandlerPublisher';
 import { DaLiveAuthError, DaLiveError } from './types';
 import type { ContentPatchSource } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
@@ -413,7 +412,7 @@ export async function executeEdsPipeline(
     services: EdsPipelineServices,
     onProgress?: EdsPipelineProgressCallback,
 ): Promise<EdsPipelineResult> {
-    const { daLiveContentOps, githubFileOps, helixService, logger } = services;
+    const { daLiveContentOps, helixService, logger } = services;
     const {
         repoOwner,
         repoName,
@@ -512,34 +511,13 @@ export async function executeEdsPipeline(
         }
 
         // Step 7: Smart 404 page for BYOM PDP routing. Phase 1 of the PDP routing
-        // workstream — see docs/architecture/eds-byom-pdp-routing.md.
-        //
-        // Gated by:
-        //  - !skipPublish — narrow paths like Refresh Block Library bypass the
-        //    full publish cycle and don't need to reinstall the snippet.
-        //  - params.byomOverlayUrl — when BYOM is disabled (no overlay URL),
-        //    PDPs aren't being routed through the action, so the smart 404
-        //    has nothing useful to do.
-        // Every failure inside installSmart404Handler is logged and skipped;
-        // the storefront still works without it (visitors hitting cold PDPs
-        // just get the default Helix 404).
-        if (!skipPublish && params.byomOverlayUrl) {
-            onProgress?.({
-                operation: 'pdp-404-handler',
-                message: 'Installing PDP routing handler...',
-            });
-
-            await installSmart404Handler(
-                githubFileOps,
-                helixService,
-                repoOwner,
-                repoName,
-                params.byomOverlayUrl,
-                logger,
-                daLiveOrg,
-                daLiveSite,
-            );
-        }
+        // (Smart 404 PDP handler install moved out of this pipeline.
+        //  The install is a storefront-code modification — semantically
+        //  identical to inspector tagging — so it now lives alongside
+        //  inspector tagging in `storefrontSetupPhase2.ts` (create/edit)
+        //  and `edsResetRepoHelper.ts` (reset). That ensures it runs on
+        //  every storefront-code setup path, not just publish-bearing
+        //  paths. See docs/architecture/eds-byom-pdp-routing.md.)
 
         return {
             success: true,

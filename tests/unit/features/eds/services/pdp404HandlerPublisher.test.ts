@@ -128,7 +128,6 @@ describe('installSmart404Handler', () => {
         getFileContent: jest.Mock;
         createOrUpdateFile: jest.Mock;
     };
-    let mockHelix: { previewCode: jest.Mock };
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -142,12 +141,11 @@ describe('installSmart404Handler', () => {
                 commitSha: 'commit-sha',
             }),
         };
-        mockHelix = { previewCode: jest.fn().mockResolvedValue(undefined) };
     });
 
     it('installs the snippet on the happy path', async () => {
         const result = await installSmart404Handler(
-            mockGithub as never, mockHelix as never,
+            mockGithub as never,
             repoOwner, repoName, overlayUrl, mockLogger as never,
             daLiveOrg, daLiveSite,
         );
@@ -160,12 +158,11 @@ describe('installSmart404Handler', () => {
             expect.any(String),
             'existing-file-sha',
         );
-        expect(mockHelix.previewCode).toHaveBeenCalledWith(repoOwner, repoName, '/scripts/delayed.js');
     });
 
     it('appends the snippet to the existing delayed.js content (preserves prior content)', async () => {
         await installSmart404Handler(
-            mockGithub as never, mockHelix as never,
+            mockGithub as never,
             repoOwner, repoName, overlayUrl, mockLogger as never,
             daLiveOrg, daLiveSite,
         );
@@ -178,7 +175,7 @@ describe('installSmart404Handler', () => {
 
     it('skips when BYOM is disabled (overlayUrl is undefined)', async () => {
         const result = await installSmart404Handler(
-            mockGithub as never, mockHelix as never,
+            mockGithub as never,
             repoOwner, repoName, undefined, mockLogger as never,
             daLiveOrg, daLiveSite,
         );
@@ -186,12 +183,11 @@ describe('installSmart404Handler', () => {
         expect(result).toEqual({ installed: false, reason: 'BYOM disabled' });
         expect(mockGithub.getFileContent).not.toHaveBeenCalled();
         expect(mockGithub.createOrUpdateFile).not.toHaveBeenCalled();
-        expect(mockHelix.previewCode).not.toHaveBeenCalled();
     });
 
     it('skips when the overlay URL cannot be parsed', async () => {
         const result = await installSmart404Handler(
-            mockGithub as never, mockHelix as never,
+            mockGithub as never,
             repoOwner, repoName, 'not-a-url', mockLogger as never,
             daLiveOrg, daLiveSite,
         );
@@ -203,7 +199,7 @@ describe('installSmart404Handler', () => {
 
     it('skips when the overlay URL is the wrong shape', async () => {
         const result = await installSmart404Handler(
-            mockGithub as never, mockHelix as never,
+            mockGithub as never,
             repoOwner, repoName,
             'https://example.com/api/v1/web/accs-discovery/discover-stores',
             mockLogger as never,
@@ -217,7 +213,7 @@ describe('installSmart404Handler', () => {
     it('skips gracefully when delayed.js is missing from the storefront', async () => {
         mockGithub.getFileContent.mockResolvedValue(null);
         const result = await installSmart404Handler(
-            mockGithub as never, mockHelix as never,
+            mockGithub as never,
             repoOwner, repoName, overlayUrl, mockLogger as never,
             daLiveOrg, daLiveSite,
         );
@@ -228,12 +224,14 @@ describe('installSmart404Handler', () => {
     });
 
     it('idempotent: skips when the snippet marker is already present', async () => {
+        // Lets the step run safely on every create/edit/reset without
+        // piling up duplicate snippets in delayed.js.
         mockGithub.getFileContent.mockResolvedValue({
             content: 'existing stuff\n// === Smart 404 PDP rebuild (Demo Builder) ===\n// snippet body...\n',
             sha: 'sha-already-installed',
         });
         const result = await installSmart404Handler(
-            mockGithub as never, mockHelix as never,
+            mockGithub as never,
             repoOwner, repoName, overlayUrl, mockLogger as never,
             daLiveOrg, daLiveSite,
         );
@@ -241,13 +239,12 @@ describe('installSmart404Handler', () => {
         expect(result.installed).toBe(false);
         expect(result.reason).toBe('already installed');
         expect(mockGithub.createOrUpdateFile).not.toHaveBeenCalled();
-        expect(mockHelix.previewCode).not.toHaveBeenCalled();
     });
 
     it('skips gracefully when the GitHub commit fails', async () => {
         mockGithub.createOrUpdateFile.mockRejectedValue(new Error('GitHub 422 conflict'));
         const result = await installSmart404Handler(
-            mockGithub as never, mockHelix as never,
+            mockGithub as never,
             repoOwner, repoName, overlayUrl, mockLogger as never,
             daLiveOrg, daLiveSite,
         );
@@ -255,27 +252,11 @@ describe('installSmart404Handler', () => {
         expect(result.installed).toBe(false);
         expect(result.reason).toContain('GitHub commit failed');
         expect(result.reason).toContain('GitHub 422 conflict');
-        expect(mockHelix.previewCode).not.toHaveBeenCalled();
-    });
-
-    it('reports installed=true even if Helix code preview throws (commit landed)', async () => {
-        // The commit IS the install. Preview failure is a deferred-effect
-        // problem: the snippet is in the repo and the next code-preview
-        // cycle (or the next reset) will activate it.
-        mockHelix.previewCode.mockRejectedValue(new Error('Helix admin 502'));
-        const result = await installSmart404Handler(
-            mockGithub as never, mockHelix as never,
-            repoOwner, repoName, overlayUrl, mockLogger as never,
-            daLiveOrg, daLiveSite,
-        );
-
-        expect(result.installed).toBe(true);
-        expect(mockGithub.createOrUpdateFile).toHaveBeenCalled();
     });
 
     it('passes the storefront org and site through to the vendored snippet', async () => {
         await installSmart404Handler(
-            mockGithub as never, mockHelix as never,
+            mockGithub as never,
             repoOwner, repoName, overlayUrl, mockLogger as never,
             'custom-org', 'custom-site',
         );

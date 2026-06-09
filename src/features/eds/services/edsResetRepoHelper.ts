@@ -15,6 +15,7 @@ import { assertValidGitHubSlug, type EdsResetParams } from './edsResetParams';
 import { generateFstabContent } from './fstabGenerator';
 import type { GitHubFileOperations } from './githubFileOperations';
 import { generateInspectorTreeEntries, installInspectorTagging } from './inspectorHelpers';
+import { installSmart404Handler } from './pdp404HandlerPublisher';
 import type { GitHubTreeInput } from './types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
@@ -247,6 +248,22 @@ export async function resetRepoToTemplate(
 
     const { blockCollectionIds, libraryContentSources } = await reinstallBlockLibraries(
         project, repoOwner, repoName, githubFileOps, context.logger, report,
+    );
+
+    // Install the smart 404 PDP handler into the storefront's
+    // scripts/delayed.js. Same shape as inspector tagging — vendors a
+    // small JS snippet into storefront code. The pipeline's subsequent
+    // bulk Helix code preview picks up the committed change. Non-fatal:
+    // skipped silently when BYOM overlay is unset and on every other
+    // failure mode (see installSmart404Handler).
+    await installSmart404Handler(
+        githubFileOps,
+        repoOwner,
+        repoName,
+        params.byomOverlayUrl,
+        context.logger,
+        daLiveOrg,
+        daLiveSite,
     );
 
     return { filesReset: resetResult.fileCount, blockCollectionIds, libraryContentSources };

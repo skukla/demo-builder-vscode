@@ -16,6 +16,7 @@ import { installFeaturePacks } from '../services/featurePackInstaller';
 import { generateFstabContent } from '../services/fstabGenerator';
 import { GitHubFileOperations } from '../services/githubFileOperations';
 import { generateInspectorTreeEntries, installInspectorTagging } from '../services/inspectorHelpers';
+import { installSmart404Handler } from '../services/pdp404HandlerPublisher';
 import { type GitHubTreeInput } from '../services/types';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { checkGitHubAppForExistingRepo } from './storefrontSetupPhaseHelpers';
@@ -103,6 +104,22 @@ export async function executePhaseHelixConfig(
             logger.warn(`[Storefront Setup] Feature pack installation warning: ${fpResult.error}`);
         }
     }
+
+    // Install the smart 404 PDP handler into the storefront's
+    // scripts/delayed.js. Same shape as inspector tagging — vendors a
+    // small JS snippet into storefront code. The surrounding pipeline's
+    // bulk Helix code preview picks up the committed change. Non-fatal:
+    // skipped silently when BYOM overlay is unset and on every other
+    // failure mode (see installSmart404Handler).
+    await installSmart404Handler(
+        githubFileOps,
+        repoInfo.repoOwner,
+        repoInfo.repoName,
+        edsConfig.byomOverlayUrl,
+        logger,
+        edsConfig.daLiveOrg,
+        edsConfig.daLiveSite,
+    );
 
     if (useExistingRepo) {
         const earlyReturn = await checkGitHubAppForExistingRepo(context, services, repoInfo);

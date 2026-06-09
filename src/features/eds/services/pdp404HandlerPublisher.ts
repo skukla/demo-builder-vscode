@@ -36,7 +36,6 @@
  */
 
 import { GitHubFileOperations } from './githubFileOperations';
-import { HelixService } from './helixService';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -158,11 +157,18 @@ export interface Pdp404InstallResult {
 /**
  * Install the smart 404 handler for one storefront.
  *
+ * Called from the two places that modify the storefront's GitHub repo
+ * — `storefrontSetupPhase2.ts` (create/edit) and `edsResetRepoHelper.ts`
+ * (reset) — alongside `installInspectorTagging`. Both operations share
+ * the same shape: vendor a small JS file into the storefront's code.
+ * Both run before the surrounding pipeline's bulk Helix code preview,
+ * which picks up the committed change and makes it live.
+ *
  * Non-fatal at every step: any failure is logged and the function
  * returns `{ installed: false, reason }`. The storefront still works
  * without the smart 404 — visitors hitting cold PDPs just get the
- * default Helix 404 page. We never want this step to break a create
- * or reset.
+ * default Helix 404 page. We never want this step to break a create,
+ * edit, or reset.
  *
  * Skip cases:
  *   - BYOM disabled (`overlayUrl` is `undefined`): nothing to install.
@@ -172,12 +178,9 @@ export interface Pdp404InstallResult {
  *     skip (the storefront isn't an EDS storefront we recognize).
  *   - Snippet marker already present: idempotent skip (already installed).
  *   - GitHub commit fails (network, auth): log and skip.
- *   - Helix code preview fails: log warning, but report installed=true
- *     (the commit landed; the next code-preview cycle will pick it up).
  */
 export async function installSmart404Handler(
     githubFileOps: GitHubFileOperations,
-    helixService: HelixService,
     repoOwner: string,
     repoName: string,
     overlayUrl: string | undefined,
@@ -207,7 +210,8 @@ export async function installSmart404Handler(
     }
 
     // Idempotent: if the marker is already present, do nothing. Lets the
-    // step run on every reset without piling up duplicate snippets.
+    // step run on every create/edit/reset without piling up duplicate
+    // snippets.
     if (existing.content.includes(SMART_404_MARKER_START)) {
         logger.info('[PDP404] Smart 404 snippet already present in delayed.js — skipping');
         return { installed: false, reason: 'already installed' };
@@ -230,18 +234,6 @@ export async function installSmart404Handler(
         const reason = (error as Error).message ?? 'unknown';
         logger.warn(`[PDP404] GitHub commit failed: ${reason} — skipping smart 404 install`);
         return { installed: false, reason: `GitHub commit failed: ${reason}` };
-    }
-
-    // Preview the updated code on Helix so the snippet takes effect on
-    // the live tier. Non-fatal: if this fails, the commit is still on
-    // the repo and the next storefront reset (or any other code-preview
-    // event) will pick it up.
-    try {
-        await helixService.previewCode(repoOwner, repoName, '/scripts/delayed.js');
-        logger.info(`[PDP404] Smart 404 handler installed and previewed on Helix (${repoOwner}/${repoName})`);
-    } catch (error) {
-        const reason = (error as Error).message ?? 'unknown';
-        logger.warn(`[PDP404] Helix code preview failed: ${reason} — snippet is in repo but not yet live`);
     }
 
     return { installed: true };
