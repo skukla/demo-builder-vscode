@@ -117,6 +117,27 @@ describe('buildSmart404Snippet', () => {
         expect(snippet).toContain('=== end Smart 404 PDP rebuild ===');
     });
 
+    it('shows a "Loading product…" state during the cold-publish window', () => {
+        // Without this, the cold path leaves "Page Not Found" visible
+        // for the ~1-2 second action call, which looks broken to a
+        // user (they might leave the page or click "Go home"). The
+        // snippet replaces <main> content with a loading message the
+        // moment the gates pass, before any fetch fires.
+        const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
+        expect(snippet).toContain('Loading product');
+        // Replacement targets <main> to preserve storefront chrome
+        // (header, footer) — body is too aggressive, would wipe the nav.
+        expect(snippet).toContain("querySelector('main')");
+    });
+
+    it('surfaces a fallback message when the action fails after retry', () => {
+        // If the user is left staring at "Loading product…" forever,
+        // that's worse than the original 404. After the retry path
+        // exhausts, swap to an explicit failure message.
+        const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
+        expect(snippet).toContain('Product not available');
+    });
+
     it('retries the action call once with backoff on 5xx (covers I/O Runtime cold start)', () => {
         // Cold-path action calls can land on a freshly-warmed I/O
         // Runtime container that 503s once before responding normally.

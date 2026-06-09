@@ -131,7 +131,10 @@ const SMART_404_SNIPPET_TEMPLATE = `
 
 ${SMART_404_MARKER_START}
 // Auto-publishes the per-product page when a visitor hits a cold PDP
-// URL. Matches /products/{urlKey}/{sku}; otherwise no-op.
+// URL. Matches /products/{urlKey}/{sku}; otherwise no-op. Replaces the
+// storefront's default "Page Not Found" body with a "Loading product…"
+// state the moment the gate passes so the user gets immediate feedback
+// during the ~1-2 second cold-publish window.
 (function smart404PdpRebuild() {
   if (!window.isErrorPage) return;
   const RETRY_FLAG = 'pdpRetry';
@@ -140,6 +143,14 @@ ${SMART_404_MARKER_START}
   if (new URLSearchParams(location.search).has(RETRY_FLAG)) return;
   const [, urlKey, sku] = m;
   const lc = '/products/' + urlKey.toLowerCase() + '/' + sku.toLowerCase();
+  // Replace the 404 body with a loading state. Element-level inline
+  // style attributes are allowed by storefront CSPs by default
+  // (they govern style tags, not the style attribute). Reusing
+  // the storefront's <main> keeps header/footer chrome intact.
+  const mainEl = document.querySelector('main');
+  const LOADING_HTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:50vh;padding:40px 20px;font-size:1.25rem;color:#666;">Loading product…</div>';
+  const ERROR_HTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:50vh;padding:40px 20px;font-size:1.25rem;color:#666;">Product not available.</div>';
+  if (mainEl) mainEl.innerHTML = LOADING_HTML;
   (async () => {
     if (lc !== location.pathname) {
       try {
@@ -163,8 +174,11 @@ ${SMART_404_MARKER_START}
     if (r && r.ok) {
       const sep = lc.includes('?') ? '&' : '?';
       location.replace(lc + sep + RETRY_FLAG + '=1');
+      return;
     }
-    // Otherwise swallow; default 404 chrome stays visible.
+    // Action failed after retry. Surface the failure to the user
+    // instead of leaving "Loading product…" hanging forever.
+    if (mainEl) mainEl.innerHTML = ERROR_HTML;
   })();
 })();
 ${SMART_404_MARKER_END}
