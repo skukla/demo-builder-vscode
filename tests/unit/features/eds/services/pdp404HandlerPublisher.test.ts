@@ -130,6 +130,18 @@ describe('buildSmart404Snippet', () => {
         expect(snippet).toContain("querySelector('main')");
     });
 
+    it('uses storefront design tokens with hardcoded fallbacks for the loading state styling', () => {
+        // Aligns the loading state visually with each storefront's
+        // brand/spacing/typography when those tokens are defined
+        // (aem-boilerplate-commerce ships --color-brand-500,
+        // --spacing-large, --type-body-1-default-font). Fallbacks
+        // preserve a clean default if a storefront doesn't.
+        const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
+        expect(snippet).toContain('var(--color-brand-500,#666)');
+        expect(snippet).toContain('var(--spacing-large,40px)');
+        expect(snippet).toContain('var(--type-body-1-default-font,1.25rem/1.5 sans-serif)');
+    });
+
     it('surfaces a fallback message when the action fails after retry', () => {
         // If the user is left staring at "Loading product…" forever,
         // that's worse than the original 404. After the retry path

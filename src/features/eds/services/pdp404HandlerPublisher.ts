@@ -147,9 +147,13 @@ ${SMART_404_MARKER_START}
   // style attributes are allowed by storefront CSPs by default
   // (they govern style tags, not the style attribute). Reusing
   // the storefront's <main> keeps header/footer chrome intact.
+  // Uses the storefront's design tokens (color/spacing/typography)
+  // when present, with hardcoded fallbacks so the loading state still
+  // renders cleanly when a storefront doesn't define them.
   const mainEl = document.querySelector('main');
-  const LOADING_HTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:50vh;padding:40px 20px;font-size:1.25rem;color:#666;">Loading product…</div>';
-  const ERROR_HTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:50vh;padding:40px 20px;font-size:1.25rem;color:#666;">Product not available.</div>';
+  const STYLE = 'display:flex;align-items:center;justify-content:center;min-height:50vh;padding:var(--spacing-large,40px) var(--spacing-medium,20px);font:var(--type-body-1-default-font,1.25rem/1.5 sans-serif);color:var(--color-brand-500,#666);';
+  const LOADING_HTML = '<div style="' + STYLE + '">Loading product…</div>';
+  const ERROR_HTML = '<div style="' + STYLE + '">Product not available.</div>';
   if (mainEl) mainEl.innerHTML = LOADING_HTML;
   (async () => {
     if (lc !== location.pathname) {
