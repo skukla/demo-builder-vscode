@@ -66,21 +66,30 @@ const SMART_404_HEAD_MARKER_END = '<!-- === end Smart 404 PDP eager redirect ===
  * to load (1-2 seconds) before the snippet there could trigger a
  * redirect.
  *
- * Pure URL manipulation: no org/site/triggerUrl templating needed.
+ * Pure URL manipulation: no org/site/triggerUrl templating needed. The
+ * `__NONCE__` placeholder gets substituted with the storefront's actual
+ * CSP nonce at vendor time — we read it from an existing nonced script
+ * in head.html rather than hardcoding it, so future nonce rotations or
+ * template changes don't silently block the snippet.
+ *
+ * `document.prerendering` guard: head.html declares speculation rules
+ * that pre-render PDP URLs on hover. Running `location.replace()` inside
+ * a prerender context is unspecified browser behavior — at best it
+ * wastes the prerender, at worst the real click still goes through the
+ * cold flash. Bail out of prerender; the real navigation re-fires the
+ * snippet.
+ *
  * No-ops on every non-PDP path. Doesn't compete with the delayed.js
  * snippet — covers the mixed-case case; the delayed.js snippet handles
  * the lowercase-cold case (URL is already lowercase but not yet
  * published).
- *
- * CSP: requires `nonce="aem"` because the storefront's CSP is
- * `script-src 'nonce-aem' 'strict-dynamic' ...`. Inline scripts
- * without the nonce are blocked.
  */
-const SMART_404_HEAD_SNIPPET = `
+const SMART_404_HEAD_SNIPPET_TEMPLATE = `
 
 ${SMART_404_HEAD_MARKER_START}
-<script nonce="aem">
+<script nonce="__NONCE__">
   (function () {
+    if (document.prerendering) return;
     var m = location.pathname.match(/^\\/products\\/([^/]+)\\/([^/]+)$/);
     if (!m) return;
     var lc = '/products/' + m[1].toLowerCase() + '/' + m[2].toLowerCase();
@@ -89,6 +98,22 @@ ${SMART_404_HEAD_MARKER_START}
 </script>
 ${SMART_404_HEAD_MARKER_END}
 `;
+
+/**
+ * Extract the CSP nonce from an existing `<script nonce="...">` tag in
+ * head.html. Returns `undefined` when no nonced script is found — in
+ * which case the eager redirect install is skipped (we can't be sure an
+ * inline script without the right nonce will execute).
+ *
+ * Matches both single and double quotes; first match wins. Storefront
+ * head.html files conventionally use one nonce string for all inline
+ * scripts (aem-boilerplate-commerce uses "aem"), so first-match is
+ * stable.
+ */
+export function extractCspNonce(headHtmlContent: string): string | undefined {
+    const match = headHtmlContent.match(/<script[^>]*\snonce=["']([^"']+)["']/i);
+    return match?.[1] || undefined;
+}
 
 /**
  * Smart 404 JS template. Three substitutions handled by
@@ -123,13 +148,23 @@ ${SMART_404_MARKER_START}
       } catch (_) { /* fall through to trigger */ }
     }
     const triggerUrl = '__TRIGGER_URL__?org=__ORG__&site=__SITE__&path=' + encodeURIComponent(lc);
-    try {
-      const r = await fetch(triggerUrl, { method: 'POST' });
-      if (r.ok) {
-        const sep = lc.includes('?') ? '&' : '?';
-        location.replace(lc + sep + RETRY_FLAG + '=1');
-      }
-    } catch (_) { /* swallow; default 404 chrome stays visible */ }
+    // One retry on 5xx with 1s backoff. Covers I/O Runtime cold start +
+    // transient runtime failures without piling up retries that would
+    // make a real outage take twice as long to surface.
+    async function tryTrigger() {
+      try { return await fetch(triggerUrl, { method: 'POST' }); }
+      catch (_) { return null; }
+    }
+    let r = await tryTrigger();
+    if (!r || (r.status >= 500 && r.status < 600)) {
+      await new Promise((res) => setTimeout(res, 1000));
+      r = await tryTrigger();
+    }
+    if (r && r.ok) {
+      const sep = lc.includes('?') ? '&' : '?';
+      location.replace(lc + sep + RETRY_FLAG + '=1');
+    }
+    // Otherwise swallow; default 404 chrome stays visible.
   })();
 })();
 ${SMART_404_MARKER_END}
@@ -310,16 +345,27 @@ async function installSmart404HeadRedirect(
         logger.info('[PDP404] Eager redirect already present in head.html — skipping');
         return;
     }
+    // Detect the CSP nonce from an existing nonced script. If none is
+    // found, the storefront either doesn't use CSP nonces or our
+    // detector can't recognize the convention — either way, we can't
+    // be sure our inline script will execute, so skip rather than
+    // ship a snippet that will be silently blocked.
+    const nonce = extractCspNonce(existing.content);
+    if (!nonce) {
+        logger.warn('[PDP404] head.html has no nonced script tag — skipping eager redirect (delayed.js fallback still active)');
+        return;
+    }
+    const snippet = SMART_404_HEAD_SNIPPET_TEMPLATE.replace(/__NONCE__/g, nonce);
     try {
         await githubFileOps.createOrUpdateFile(
             repoOwner,
             repoName,
             'head.html',
-            existing.content + SMART_404_HEAD_SNIPPET,
+            existing.content + snippet,
             'chore(demo-builder): vendor smart 404 eager redirect into head.html',
             existing.sha,
         );
-        logger.info(`[PDP404] Vendored eager redirect into head.html (${repoOwner}/${repoName})`);
+        logger.info(`[PDP404] Vendored eager redirect into head.html (${repoOwner}/${repoName}, nonce="${nonce}")`);
     } catch (error) {
         const reason = (error as Error).message ?? 'unknown';
         logger.warn(`[PDP404] head.html commit failed: ${reason} — eager redirect not installed (delayed.js fallback still active)`);

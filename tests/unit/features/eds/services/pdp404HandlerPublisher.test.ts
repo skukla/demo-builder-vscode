@@ -17,6 +17,7 @@
 import {
     buildSmart404Snippet,
     derivePrepublishUrl,
+    extractCspNonce,
     installSmart404Handler,
 } from '@/features/eds/services/pdp404HandlerPublisher';
 
@@ -115,6 +116,52 @@ describe('buildSmart404Snippet', () => {
         expect(snippet).toContain('=== Smart 404 PDP rebuild (Demo Builder) ===');
         expect(snippet).toContain('=== end Smart 404 PDP rebuild ===');
     });
+
+    it('retries the action call once with backoff on 5xx (covers I/O Runtime cold start)', () => {
+        // Cold-path action calls can land on a freshly-warmed I/O
+        // Runtime container that 503s once before responding normally.
+        // Without retry, the very first visitor to a SKU after action
+        // idle eats the 503 and sees "Page Not Found". With retry, the
+        // user sees one extra second and the page renders.
+        const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
+        // 5xx detection
+        expect(snippet).toContain('r.status >= 500');
+        expect(snippet).toContain('r.status < 600');
+        // 1-second backoff
+        expect(snippet).toContain('setTimeout(res, 1000)');
+    });
+});
+
+describe('extractCspNonce', () => {
+    it('returns the nonce from a standard nonced script tag (double quotes)', () => {
+        expect(extractCspNonce('<script nonce="aem" type="importmap">{}</script>')).toBe('aem');
+    });
+
+    it('handles single-quoted nonce attributes', () => {
+        expect(extractCspNonce("<script nonce='aem' type='module'></script>")).toBe('aem');
+    });
+
+    it('returns first match when multiple nonced scripts are present', () => {
+        // Storefront convention is one nonce per page; first-match is stable.
+        const head = '<script nonce="first">a</script>\n<script nonce="second">b</script>';
+        expect(extractCspNonce(head)).toBe('first');
+    });
+
+    it('returns undefined when head.html has no nonced scripts', () => {
+        expect(extractCspNonce('<meta charset="UTF-8">\n<title>plain</title>')).toBeUndefined();
+    });
+
+    it('returns undefined when nonce attribute is empty', () => {
+        expect(extractCspNonce('<script nonce="">x</script>')).toBeUndefined();
+    });
+
+    it('case-insensitive for the script tag name', () => {
+        expect(extractCspNonce('<SCRIPT NONCE="aem">x</SCRIPT>')).toBe('aem');
+    });
+
+    it('matches nonce on any nonced script regardless of other attributes', () => {
+        expect(extractCspNonce('<script type="importmap" nonce="aem" id="x">{}</script>')).toBe('aem');
+    });
 });
 
 describe('installSmart404Handler', () => {
@@ -131,14 +178,14 @@ describe('installSmart404Handler', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        // Default mock: getFileContent returns plausible content for any
-        // path. Tests that need to differentiate head.html from
-        // delayed.js override this via mockImplementation per-test.
+        // Default mock: head.html includes at least one nonced <script>
+        // matching the convention from aem-boilerplate-commerce. Tests
+        // that need to exercise the "no nonce" path override per-test.
         mockGithub = {
             getFileContent: jest.fn().mockImplementation((_o, _r, path) => {
                 if (path === 'head.html') {
                     return Promise.resolve({
-                        content: '<meta charset="UTF-8">\n<title>placeholder</title>\n',
+                        content: '<meta charset="UTF-8">\n<script nonce="aem" type="importmap">{}</script>\n<title>placeholder</title>\n',
                         sha: 'head-sha',
                     });
                 }
@@ -190,12 +237,76 @@ describe('installSmart404Handler', () => {
         // Snippet preserved through to the commit
         expect(headContent).toContain('<meta charset="UTF-8">');
         expect(headContent).toContain('Smart 404 PDP eager redirect');
-        // CSP requires nonce="aem" — without it the inline script
-        // gets blocked by 'script-src nonce-aem strict-dynamic'.
+        // Nonce extracted dynamically from the existing nonced script
+        // in head.html (the importmap in the default mock uses "aem").
         expect(headContent).toContain('nonce="aem"');
         // Performs the actual mixed-case → lowercase rewrite
         expect(headContent).toContain('toLowerCase()');
         expect(headContent).toContain('location.replace');
+        // Speculation Rules guard: head.html declares prerender hints,
+        // so the snippet must bail out when running inside a prerender
+        // context. Without this, location.replace() during prerender
+        // either wastes the prerender or causes inconsistent behavior
+        // across browsers.
+        expect(headContent).toContain('document.prerendering');
+    });
+
+    it('extracts the CSP nonce dynamically from head.html instead of hardcoding "aem"', async () => {
+        // If the storefront's CSP nonce ever rotates or the template
+        // changes the string (rebrand, security audit), a hardcoded
+        // nonce silently breaks the eager redirect with no visible
+        // error. Dynamic extraction means we follow the template.
+        mockGithub.getFileContent.mockImplementation((_o, _r, path) => {
+            if (path === 'head.html') {
+                return Promise.resolve({
+                    content: '<script nonce="future-rotated-nonce" type="importmap">{}</script>',
+                    sha: 'head-sha',
+                });
+            }
+            return Promise.resolve({
+                content: '// delayed.js\n',
+                sha: 'delayed-sha',
+            });
+        });
+
+        await installSmart404Handler(
+            mockGithub as never,
+            repoOwner, repoName, overlayUrl, mockLogger as never,
+            daLiveOrg, daLiveSite,
+        );
+
+        const headCall = mockGithub.createOrUpdateFile.mock.calls.find(c => c[2] === 'head.html');
+        const headContent = headCall![3] as string;
+        expect(headContent).toContain('nonce="future-rotated-nonce"');
+        expect(headContent).not.toContain('nonce="aem"');
+    });
+
+    it('skips head.html vendor when no nonced script tag exists (eager redirect would be silently blocked)', async () => {
+        // No nonce = our inline script would likely be blocked by CSP.
+        // Better to skip the install cleanly than ship dead code.
+        // delayed.js fallback still applies.
+        mockGithub.getFileContent.mockImplementation((_o, _r, path) => {
+            if (path === 'head.html') {
+                return Promise.resolve({
+                    content: '<meta charset="UTF-8">\n<title>no nonced scripts here</title>',
+                    sha: 'head-sha',
+                });
+            }
+            return Promise.resolve({
+                content: '// delayed.js\n',
+                sha: 'delayed-sha',
+            });
+        });
+
+        const result = await installSmart404Handler(
+            mockGithub as never,
+            repoOwner, repoName, overlayUrl, mockLogger as never,
+            daLiveOrg, daLiveSite,
+        );
+
+        expect(result).toEqual({ installed: true });
+        const headCommits = mockGithub.createOrUpdateFile.mock.calls.filter(c => c[2] === 'head.html');
+        expect(headCommits).toHaveLength(0);
     });
 
     it('head.html vendor is idempotent: skips if marker already present', async () => {
