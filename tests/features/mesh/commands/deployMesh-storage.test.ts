@@ -31,6 +31,22 @@ jest.mock('@/features/mesh/services/meshConfig', () => ({
     getMeshNodeVersion: jest.fn(() => '18'),
 }));
 
+// The DeployMeshCommand gates App Builder operations on
+// projectRequiresAppBuilder + testDeveloperPermissions. These tests focus on
+// storage behavior, not the gate — stub the predicate to false so deployment
+// proceeds to the storage assertions.
+jest.mock('@/features/components/services/projectAppBuilderPredicate', () => ({
+    projectRequiresAppBuilder: jest.fn(() => false),
+}));
+jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
+    ComponentRegistryManager: jest.fn().mockImplementation(() => ({
+        loadRegistry: jest.fn().mockResolvedValue({
+            version: 'test',
+            components: { frontends: [], backends: [], dependencies: [], mesh: [], appBuilder: [] },
+        }),
+    })),
+}));
+
 // Mock dynamic imports
 jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     ProjectDashboardWebviewCommand: {

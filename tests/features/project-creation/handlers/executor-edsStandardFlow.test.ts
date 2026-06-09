@@ -27,7 +27,17 @@ jest.mock('@/core/di', () => ({
         getCommandExecutor: jest.fn().mockReturnValue({
             execute: jest.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '' }),
         }),
+        getAuthenticationService: jest.fn().mockReturnValue({
+            testDeveloperPermissions: jest.fn().mockResolvedValue({ hasPermissions: true }),
+        }),
     },
+}));
+
+// executeMeshPhase gates App Builder operations on projectRequiresAppBuilder.
+// These tests don't exercise the permission gate — stub the predicate so the
+// gate is a no-op and the flow under test proceeds.
+jest.mock('@/features/components/services/projectAppBuilderPredicate', () => ({
+    projectRequiresAppBuilder: jest.fn(() => false),
 }));
 
 jest.mock('fs/promises', () => ({

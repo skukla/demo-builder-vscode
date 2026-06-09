@@ -622,6 +622,31 @@ async function executeMeshPhase(
     isEditMode: string | boolean | undefined,
     existingProject: import('@/types').Project | undefined,
 ): Promise<void> {
+    // App Builder permission gate. Mesh deployment is an App Builder operation:
+    // it creates a workspace credential and deploys an action package, both of
+    // which require the Developer/System-Admin role in the IMS org. Demos
+    // without App Builder components don't trigger this gate.
+    //
+    // See `projectAppBuilderPredicate.ts` for the source of truth on which
+    // components count as App Builder.
+    const { projectRequiresAppBuilder } = await import(
+        '@/features/components/services/projectAppBuilderPredicate'
+    );
+    if (projectRequiresAppBuilder(project, setupContext.registry)) {
+        const { ServiceLocator } = await import('@/core/di');
+        const authService = ServiceLocator.getAuthenticationService();
+        const permissionCheck = await authService.testDeveloperPermissions();
+        if (!permissionCheck.hasPermissions) {
+            const errorMessage = permissionCheck.error
+                || 'Your account lacks Developer or System Admin role for this organization. '
+                + 'API Mesh deployment requires App Builder access. '
+                + 'Please select a different organization or contact your administrator.';
+            context.logger.error(`[Mesh Setup] Developer permission gate failed: ${errorMessage}`);
+            throw new Error(errorMessage);
+        }
+        context.logger.debug('[Mesh Setup] Developer permission gate passed');
+    }
+
     const meshComponent = getMeshComponentInstance(project);
     const meshId = getMeshComponentId(project);
     const meshDefinition = meshId ? componentDefinitions.get(meshId)?.definition : undefined;
