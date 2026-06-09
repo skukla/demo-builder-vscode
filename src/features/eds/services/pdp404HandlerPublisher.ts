@@ -129,71 +129,67 @@ export function extractCspNonce(headHtmlContent: string): string | undefined {
  */
 const SMART_404_SNIPPET_TEMPLATE = `
 ${SMART_404_MARKER_START}
-/* eslint-disable */
 // Auto-publishes the per-product page when a visitor hits a cold PDP
 // URL. Matches /products/{urlKey}/{sku}; otherwise no-op. Replaces the
 // storefront's default "Page Not Found" body with a "Loading product…"
 // state the moment the gate passes so the user gets immediate feedback
 // during the ~1-2 second cold-publish window.
-//
-// Lint is disabled for this block because the snippet is generated
-// code vendored by Demo Builder, not source the storefront developer
-// should be modifying. Different storefront forks ship different
-// ESLint configs (no-restricted-globals on 'location', prefer-template,
-// wrap-iife style, etc.); rather than chase every config we silence
-// lint on our generated block and rely on our own test suite to keep
-// the snippet correct.
 (function smart404PdpRebuild() {
   if (!window.isErrorPage) return;
   const RETRY_FLAG = 'pdpRetry';
-  const m = location.pathname.match(/^\\/products\\/([^/]+)\\/([^/]+)$/);
+  const m = window.location.pathname.match(/^\\/products\\/([^/]+)\\/([^/]+)$/);
   if (!m) return;
-  if (new URLSearchParams(location.search).has(RETRY_FLAG)) return;
+  if (new URLSearchParams(window.location.search).has(RETRY_FLAG)) return;
   const [, urlKey, sku] = m;
-  const lc = '/products/' + urlKey.toLowerCase() + '/' + sku.toLowerCase();
+  const lc = \`/products/\${urlKey.toLowerCase()}/\${sku.toLowerCase()}\`;
   // Replace the 404 body with a loading state. Element-level inline
-  // style attributes are allowed by storefront CSPs by default
-  // (they govern style tags, not the style attribute). Reusing
-  // the storefront's <main> keeps header/footer chrome intact.
-  // Uses the storefront's design tokens (color/spacing/typography)
-  // when present, with hardcoded fallbacks so the loading state still
-  // renders cleanly when a storefront doesn't define them.
+  // style attributes are governed by style-src 'unsafe-inline' (not
+  // the nonce or strict-dynamic), and storefront CSPs we have
+  // inspected allow this by default. Reusing the storefront <main>
+  // keeps header and footer chrome intact. Uses the storefront design
+  // tokens with hardcoded fallbacks so the loading state still
+  // renders cleanly when a storefront does not define them.
   const mainEl = document.querySelector('main');
   const STYLE = 'display:flex;align-items:center;justify-content:center;min-height:50vh;padding:var(--spacing-large,40px) var(--spacing-medium,20px);font:var(--type-body-1-default-font,1.25rem/1.5 sans-serif);color:var(--color-brand-500,#666);';
-  const LOADING_HTML = '<div style="' + STYLE + '">Loading product…</div>';
-  const ERROR_HTML = '<div style="' + STYLE + '">Product not available.</div>';
+  const LOADING_HTML = \`<div style="\${STYLE}">Loading product…</div>\`;
+  const ERROR_HTML = \`<div style="\${STYLE}">Product not available.</div>\`;
   if (mainEl) mainEl.innerHTML = LOADING_HTML;
   (async () => {
-    if (lc !== location.pathname) {
+    if (lc !== window.location.pathname) {
       try {
         const head = await fetch(lc, { method: 'HEAD' });
-        if (head.ok) { location.replace(lc); return; }
+        if (head.ok) {
+          window.location.replace(lc);
+          return;
+        }
       } catch (_) { /* fall through to trigger */ }
     }
-    const triggerUrl = '__TRIGGER_URL__?org=__ORG__&site=__SITE__&path=' + encodeURIComponent(lc);
-    // One retry on 5xx with 1s backoff. Covers I/O Runtime cold start +
-    // transient runtime failures without piling up retries that would
-    // make a real outage take twice as long to surface.
+    const triggerUrl = \`__TRIGGER_URL__?org=__ORG__&site=__SITE__&path=\${encodeURIComponent(lc)}\`;
+    // One retry on 5xx with 1s backoff. Covers I/O Runtime cold start
+    // + transient runtime failures without piling up retries that
+    // would make a real outage take twice as long to surface.
     async function tryTrigger() {
-      try { return await fetch(triggerUrl, { method: 'POST' }); }
-      catch (_) { return null; }
+      try {
+        return await fetch(triggerUrl, { method: 'POST' });
+      } catch (_) {
+        return null;
+      }
     }
     let r = await tryTrigger();
     if (!r || (r.status >= 500 && r.status < 600)) {
-      await new Promise((res) => setTimeout(res, 1000));
+      await new Promise((res) => { setTimeout(res, 1000); });
       r = await tryTrigger();
     }
     if (r && r.ok) {
       const sep = lc.includes('?') ? '&' : '?';
-      location.replace(lc + sep + RETRY_FLAG + '=1');
+      window.location.replace(\`\${lc}\${sep}\${RETRY_FLAG}=1\`);
       return;
     }
     // Action failed after retry. Surface the failure to the user
     // instead of leaving "Loading product…" hanging forever.
     if (mainEl) mainEl.innerHTML = ERROR_HTML;
   })();
-})();
-/* eslint-enable */
+}());
 ${SMART_404_MARKER_END}
 `;
 

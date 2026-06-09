@@ -109,22 +109,59 @@ describe('buildSmart404Snippet', () => {
         expect(snippet).toContain('Smart 404 PDP rebuild');
     });
 
-    it('wraps the snippet in eslint-disable so storefront npm run lint passes', () => {
-        // Storefront forks ship varying ESLint configs (aem-boilerplate-
-        // commerce disallows raw `location`, prefers template literals,
-        // requires a specific IIFE style, etc.). Our snippet trips
-        // ~14 of those rules on every storefront. Wrapping it in
-        // eslint-disable silences our generated block without chasing
-        // each storefront's lint config.
+    it('snippet is lint-clean (no eslint-disable directives, follows aem-boilerplate-commerce rules)', () => {
+        // The snippet has to pass `npm run lint` on the storefront repo
+        // after Demo Builder commits it to scripts/delayed.js. We
+        // explicitly rewrote it to follow the boilerplate's ESLint
+        // rules (window.location not bare location, template literals
+        // not string concat, wrap-iife "inside" style, braced promise
+        // executor, brace-style for try/catch). Pinning the absence of
+        // eslint-disable here so a future contributor doesn't reach for
+        // the easy fix when adding new code; rewrite the new code to be
+        // lint-clean instead.
         const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
-        expect(snippet).toContain('/* eslint-disable */');
-        expect(snippet).toContain('/* eslint-enable */');
-        // The disable must come BEFORE the function definition, so the
-        // function and everything inside it is covered.
-        const disableIdx = snippet.indexOf('/* eslint-disable */');
-        const fnIdx = snippet.indexOf('function smart404PdpRebuild');
-        expect(disableIdx).toBeGreaterThan(-1);
-        expect(fnIdx).toBeGreaterThan(disableIdx);
+        expect(snippet).not.toContain('eslint-disable');
+        expect(snippet).not.toContain('eslint-enable');
+    });
+
+    it('uses window.location everywhere (no bare location — no-restricted-globals)', () => {
+        const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
+        // Every `location` reference must be `window.location`. Catches
+        // regressions where a contributor copies in code using bare
+        // `location` without thinking about the storefront lint config.
+        const bareLocationMatches = snippet.match(/\b(?<!window\.)location\b/g) || [];
+        expect(bareLocationMatches).toHaveLength(0);
+    });
+
+    it('uses template literals (no string concatenation — prefer-template)', () => {
+        const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
+        // Spot-check the obvious construction points. A future
+        // contributor reaching for `'a' + b + 'c'` will trip this and
+        // get redirected to template literals.
+        expect(snippet).toContain('`/products/${urlKey.toLowerCase()}/${sku.toLowerCase()}`');
+        expect(snippet).toContain('encodeURIComponent(lc)');
+        expect(snippet).toContain('${lc}${sep}${RETRY_FLAG}=1');
+    });
+
+    it('outer function IIFE uses inside-parens style (wrap-iife)', () => {
+        const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
+        // The outer `(function smart404PdpRebuild() {...})` IIFE must
+        // close as `}());`, NOT `})();`. The inner `(async () => {})()`
+        // arrow IIFE is exempt — wrap-iife only governs function
+        // expressions, not arrow functions.
+        expect(snippet).toContain('}());');
+        // Spot-check: the outer IIFE's close, right before the marker
+        // end, must be `}());` (the inside-parens variant).
+        const beforeMarkerEnd = snippet.split('// === end Smart 404 PDP rebuild ===')[0];
+        expect(beforeMarkerEnd).toMatch(/\}\(\)\);\s*$/);
+    });
+
+    it('promise executor wraps setTimeout in a block (no-promise-executor-return)', () => {
+        const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
+        // `(res) => setTimeout(res, 1000)` would return setTimeout's
+        // value from the executor — trips no-promise-executor-return.
+        // Wrap in a block to discard the return.
+        expect(snippet).toContain('(res) => { setTimeout(res, 1000); }');
     });
 
     it('bookends the snippet with stable start and end markers for idempotency', () => {
