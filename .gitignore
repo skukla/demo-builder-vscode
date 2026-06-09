@@ -51,10 +51,9 @@ yarn-error.log*
 # Workflows and analysis are temporary - valuable docs extracted to docs/architecture/
 .claude/
 
-# RPTC workflow temporary files
+# RPTC workflow — only the working prompt is throwaway; plans, research,
+# and backlog are tracked artifacts per the policy in .rptc/CLAUDE.md.
 .rptc/prompt.md
-.rptc/plans/
-.rptc/research/
 
 # Analysis artifacts
 report/
