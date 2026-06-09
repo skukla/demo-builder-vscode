@@ -33,6 +33,7 @@ import { resetRepoToTemplate } from './edsResetRepoHelper';
 import type { GitHubFileOperations } from './githubFileOperations';
 import type { GitHubTokenService } from './githubTokenService';
 import { HelixService } from './helixService';
+import { migrateStorefrontNamingIfNeeded } from './storefrontNameMigration';
 import { updateStorefrontState } from './storefrontStalenessDetector';
 import { DaLiveAuthError, GitHubAppNotInstalledError } from './types';
 import type { HandlerContext } from '@/types/handlers';
@@ -332,6 +333,26 @@ export async function executeEdsReset(
     let contentCopied = 0;
 
     try {
+        // Step 0: One-time DA/repo name migration for storefronts created on
+        // pre-`164fd251` builds where the DA site name doesn't match the
+        // GitHub repo name. No-op when they already match. Mutates
+        // params.daLiveSite and project metadata in place when it runs so
+        // the rest of the pipeline uses the new (matching) name.
+        const configServiceForMigration = new ConfigurationService(tokenProvider, context.logger);
+        const migrationResult = await migrateStorefrontNamingIfNeeded(
+            params,
+            params.project,
+            daLiveContentOps,
+            configServiceForMigration,
+            context.logger,
+        );
+        if (migrationResult.error) {
+            return {
+                success: false,
+                error: migrationResult.error,
+            };
+        }
+
         // Step 1: Reset repo to template
         const repoResetResult = await resetRepoToTemplate(params, context, githubFileOps, report);
         filesReset = repoResetResult.filesReset;
