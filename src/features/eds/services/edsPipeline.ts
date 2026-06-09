@@ -20,6 +20,7 @@
 import type { DaLiveContentOperations } from './daLiveContentOperations';
 import type { GitHubFileOperations } from './githubFileOperations';
 import type { HelixService } from './helixService';
+import { publishStorefront404Page } from './pdp404HandlerPublisher';
 import { DaLiveAuthError, DaLiveError } from './types';
 import type { ContentPatchSource } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
@@ -510,14 +511,38 @@ export async function executeEdsPipeline(
             }
         }
 
-        // Step 7: Smart 404 page for BYOM PDP routing. Phase 1 of the PDP routing
-        // (Smart 404 PDP handler install moved out of this pipeline.
-        //  The install is a storefront-code modification — semantically
-        //  identical to inspector tagging — so it now lives alongside
-        //  inspector tagging in `storefrontSetupPhase2.ts` (create/edit)
-        //  and `edsResetRepoHelper.ts` (reset). That ensures it runs on
-        //  every storefront-code setup path, not just publish-bearing
-        //  paths. See docs/architecture/eds-byom-pdp-routing.md.)
+        // Step 7: Publish a minimal storefront /404 page so Helix uses it
+        // on 404 responses instead of its hardcoded default 404 template.
+        // The default template bypasses the storefront's head.html
+        // (smaller importmap, no speculation rules, no nonced inline
+        // scripts from head.html), which means our smart-404 redirect
+        // snippet — installed into head.html by installSmart404Handler —
+        // never runs on 404 paths. Authoring /404 in the storefront's
+        // DA.live ensures Helix serves it via normal EDS rendering with
+        // head.html injection. See ADR-005 and the byom-pdp-routing doc.
+        //
+        // Gated on:
+        //  - !skipPublish — narrow paths like Refresh Block Library don't
+        //    need to republish /404.
+        //  - params.byomOverlayUrl — when BYOM is disabled, nothing in
+        //    head.html does anything on 404s, so the /404 page would be
+        //    inert. Skip publishing it to avoid noise.
+        if (!skipPublish && params.byomOverlayUrl) {
+            onProgress?.({
+                operation: 'pdp-404-page',
+                message: 'Publishing storefront /404 page...',
+            });
+            await publishStorefront404Page(
+                daLiveContentOps,
+                helixService,
+                repoOwner,
+                repoName,
+                daLiveOrg,
+                daLiveSite,
+                params.byomOverlayUrl,
+                logger,
+            );
+        }
 
         return {
             success: true,

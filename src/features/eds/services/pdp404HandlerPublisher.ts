@@ -35,7 +35,9 @@
  * @module features/eds/services/pdp404HandlerPublisher
  */
 
+import { DaLiveContentOperations } from './daLiveContentOperations';
 import { GitHubFileOperations } from './githubFileOperations';
+import { HelixService } from './helixService';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -353,6 +355,100 @@ export async function installSmart404Handler(
  * Non-fatal at every step. Failures degrade the UX (visible 404 flash
  * persists until `delayed.js` fires) but never break the storefront.
  */
+/**
+ * Minimal storefront /404 page body. Contains no inline scripts (EDS
+ * strips those from authored content anyway) — its job is purely to
+ * exist as an authored page in DA.live so Helix uses it for 404
+ * responses instead of falling back to Helix's hardcoded default 404
+ * template.
+ *
+ * When Helix serves this page on a 404 response, it goes through
+ * normal EDS rendering: storefront's `head.html` is injected (which
+ * has our eager redirect snippet), `delayed.js` loads (which has our
+ * cold-path snippet), and Helix's own runtime script tag sets
+ * `window.isErrorPage = true` for our gate. Without this authored
+ * page, Helix's default 404 template bypasses `head.html` entirely
+ * and our snippet never runs.
+ *
+ * The body content is what visitors see during the brief window
+ * before our snippet redirects them. Kept minimal and neutral; for
+ * non-PDP 404s (no redirect), this is the visible page.
+ */
+const STOREFRONT_404_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Page Not Found</title>
+</head>
+<body>
+<header></header>
+<main>
+<div>
+<h1>Page Not Found</h1>
+<p>The page you are looking for does not exist.</p>
+</div>
+</main>
+<footer></footer>
+</body>
+</html>`;
+
+/**
+ * Publish a minimal storefront `/404` page so Helix uses it on 404
+ * responses (instead of the Helix-default hardcoded 404 template that
+ * bypasses the storefront's `head.html`).
+ *
+ * Pairs with `installSmart404Handler`: the handler vendors the
+ * redirect snippet into `head.html` and `delayed.js` in the storefront
+ * code, but those only run on pages where Helix injects the storefront
+ * head. Without an authored `/404`, Helix uses its default template
+ * and our snippet never reaches the browser on 404 paths.
+ *
+ * Non-fatal at every step. The storefront still works without it;
+ * 404s just fall back to Helix's default template and visitors see
+ * the 2-second flash before delayed.js fires (or nothing at all, if
+ * Helix's default also bypasses delayed.js).
+ *
+ * Skip cases:
+ *   - BYOM disabled (`overlayUrl` is `undefined`): no smart-404 work
+ *     happens anyway, so the /404 page would never run our snippet.
+ *   - DA.live write fails: log and skip.
+ *   - Helix preview/publish fails: log and skip.
+ */
+export async function publishStorefront404Page(
+    daLiveContentOps: DaLiveContentOperations,
+    helixService: HelixService,
+    repoOwner: string,
+    repoName: string,
+    daLiveOrg: string,
+    daLiveSite: string,
+    overlayUrl: string | undefined,
+    logger: Logger,
+): Promise<Pdp404InstallResult> {
+    if (!overlayUrl) {
+        logger.info('[PDP404] BYOM disabled (no overlayUrl) — skipping /404 page publish');
+        return { installed: false, reason: 'BYOM disabled' };
+    }
+
+    const writeResult = await daLiveContentOps.createSource(
+        daLiveOrg, daLiveSite, '/404.html', STOREFRONT_404_HTML, { overwrite: true },
+    );
+    if (!writeResult.success) {
+        logger.warn(`[PDP404] DA.live write of /404 failed: ${writeResult.error ?? 'unknown'} — Helix will fall back to its default 404 template`);
+        return { installed: false, reason: `DA write failed: ${writeResult.error ?? 'unknown'}` };
+    }
+    logger.info(`[PDP404] Wrote /404.html to ${daLiveOrg}/${daLiveSite}`);
+
+    try {
+        await helixService.previewAndPublishPage(repoOwner, repoName, '/404');
+        logger.info(`[PDP404] Storefront /404 page published to ${repoOwner}/${repoName}`);
+        return { installed: true };
+    } catch (error) {
+        const reason = (error as Error).message ?? 'unknown';
+        logger.warn(`[PDP404] Helix preview/publish of /404 failed: ${reason} — page is in DA but not yet on the live tier`);
+        return { installed: false, reason: `Helix publish failed: ${reason}` };
+    }
+}
+
 async function installSmart404HeadRedirect(
     githubFileOps: GitHubFileOperations,
     repoOwner: string,

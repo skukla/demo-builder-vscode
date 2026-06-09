@@ -19,6 +19,7 @@ import {
     derivePrepublishUrl,
     extractCspNonce,
     installSmart404Handler,
+    publishStorefront404Page,
 } from '@/features/eds/services/pdp404HandlerPublisher';
 
 const mockLogger = {
@@ -569,5 +570,95 @@ describe('installSmart404Handler', () => {
         const writtenContent = mockGithub.createOrUpdateFile.mock.calls[0][3] as string;
         expect(writtenContent).toContain('org=custom-org');
         expect(writtenContent).toContain('site=custom-site');
+    });
+});
+
+describe('publishStorefront404Page', () => {
+    const repoOwner = 'skukla';
+    const repoName = 'citisignal-b2b';
+    const daLiveOrg = 'skukla';
+    const daLiveSite = 'citisignal-b2b';
+    const overlayUrl = 'https://example.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp';
+
+    let mockDa: { createSource: jest.Mock };
+    let mockHelix: { previewAndPublishPage: jest.Mock };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockDa = { createSource: jest.fn().mockResolvedValue({ success: true }) };
+        mockHelix = { previewAndPublishPage: jest.fn().mockResolvedValue(undefined) };
+    });
+
+    it('writes minimal /404 page and triggers Helix preview+publish on the happy path', async () => {
+        // Without this authored page, Helix uses its hardcoded default
+        // 404 template which bypasses head.html entirely — and our smart
+        // 404 redirect snippet (installed into head.html) never reaches
+        // the browser on 404 paths.
+        const result = await publishStorefront404Page(
+            mockDa as never, mockHelix as never,
+            repoOwner, repoName, daLiveOrg, daLiveSite, overlayUrl, mockLogger as never,
+        );
+
+        expect(result).toEqual({ installed: true });
+        expect(mockDa.createSource).toHaveBeenCalledWith(
+            daLiveOrg, daLiveSite, '/404.html',
+            expect.stringContaining('Page Not Found'),
+            { overwrite: true },
+        );
+        expect(mockHelix.previewAndPublishPage).toHaveBeenCalledWith(repoOwner, repoName, '/404');
+    });
+
+    it('writes NO inline scripts in the page body (EDS would strip them anyway, snippet lives in head.html)', async () => {
+        // Regression guard: an earlier (broken) version of this pipeline
+        // embedded the smart-404 JS as a body <script> in /404.html. EDS
+        // stripped it during content decoration; the page rendered empty
+        // and the redirect never fired. The snippet now lives in
+        // head.html via installSmart404Handler; the /404 page just needs
+        // to exist as authored content so Helix uses it.
+        await publishStorefront404Page(
+            mockDa as never, mockHelix as never,
+            repoOwner, repoName, daLiveOrg, daLiveSite, overlayUrl, mockLogger as never,
+        );
+
+        const writtenHtml = mockDa.createSource.mock.calls[0][3] as string;
+        expect(writtenHtml).not.toMatch(/<script[^>]*>[\s\S]*<\/script>/);
+    });
+
+    it('skips when BYOM is disabled (overlayUrl undefined)', async () => {
+        const result = await publishStorefront404Page(
+            mockDa as never, mockHelix as never,
+            repoOwner, repoName, daLiveOrg, daLiveSite, undefined, mockLogger as never,
+        );
+
+        expect(result).toEqual({ installed: false, reason: 'BYOM disabled' });
+        expect(mockDa.createSource).not.toHaveBeenCalled();
+        expect(mockHelix.previewAndPublishPage).not.toHaveBeenCalled();
+    });
+
+    it('skips gracefully when DA.live write fails', async () => {
+        mockDa.createSource.mockResolvedValue({ success: false, error: 'auth expired' });
+        const result = await publishStorefront404Page(
+            mockDa as never, mockHelix as never,
+            repoOwner, repoName, daLiveOrg, daLiveSite, overlayUrl, mockLogger as never,
+        );
+
+        expect(result.installed).toBe(false);
+        expect(result.reason).toContain('DA write failed');
+        expect(mockHelix.previewAndPublishPage).not.toHaveBeenCalled();
+    });
+
+    it('skips gracefully when Helix preview/publish throws', async () => {
+        // DA write succeeded; Helix publish failed. The page is in DA
+        // but not on the live tier. Visitors keep getting Helix's
+        // default 404 until the next reset. Logged as a warning.
+        mockHelix.previewAndPublishPage.mockRejectedValue(new Error('Helix admin 502'));
+        const result = await publishStorefront404Page(
+            mockDa as never, mockHelix as never,
+            repoOwner, repoName, daLiveOrg, daLiveSite, overlayUrl, mockLogger as never,
+        );
+
+        expect(result.installed).toBe(false);
+        expect(result.reason).toContain('Helix publish failed');
+        expect(mockDa.createSource).toHaveBeenCalled();
     });
 });
