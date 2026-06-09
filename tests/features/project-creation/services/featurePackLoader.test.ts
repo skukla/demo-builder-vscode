@@ -208,7 +208,13 @@ describe('featurePackLoader', () => {
             expect(pack?.name).toBe('B2B Commerce');
             expect(pack?.blocks?.install).toBe(true);
             expect(pack?.initializers?.install).toBe(true);
-            expect(pack?.initializers?.files).toHaveLength(4);
+            // 6 initializers covering each b2b storefront drop-in:
+            // company, company-switcher, purchase-order, quick-order,
+            // quote-management, requisition-list. Names match the actual
+            // files in aem-boilerplate-commerce@b2b under scripts/initializers/
+            // (singular nouns with hyphens; the prior assertion of 4 was
+            // pinned to wrong filenames that didn't exist upstream).
+            expect(pack?.initializers?.files).toHaveLength(6);
             expect(pack?.dependencies).toBeDefined();
         });
 

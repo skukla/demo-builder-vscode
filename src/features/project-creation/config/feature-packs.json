@@ -24,17 +24,20 @@
         "sourceDir": "scripts/initializers",
         "files": [
           "company.js",
-          "purchaseorders.js",
-          "quotes.js",
-          "requisitionlists.js"
+          "company-switcher.js",
+          "purchase-order.js",
+          "quick-order.js",
+          "quote-management.js",
+          "requisition-list.js"
         ]
       },
       "dependencies": {
-        "@dropins/storefront-account-b2b": "^1.0.0",
-        "@dropins/storefront-company-switcher": "^1.0.0",
-        "@dropins/storefront-purchase-orders": "^1.0.0",
-        "@dropins/storefront-quotes": "^1.0.0",
-        "@dropins/storefront-requisition-lists": "^1.0.0"
+        "@dropins/storefront-company-management": "~1.2.0",
+        "@dropins/storefront-company-switcher": "~1.1.1",
+        "@dropins/storefront-purchase-order": "~1.1.1",
+        "@dropins/storefront-quick-order": "~1.0.1",
+        "@dropins/storefront-quote-management": "~1.1.2",
+        "@dropins/storefront-requisition-list": "~1.3.0"
       }
     }
   ]
