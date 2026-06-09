@@ -417,7 +417,13 @@ export class HelixService {
                 `Bulk ${topic}: ${failed.length}/${resources.length} paths failed (first: ${failed[0].path} → ${failed[0].status})`,
             );
         }
-        this.logger.debug(`[Helix] Bulk ${topic} job completed: ${resources.length} paths succeeded`);
+        // Helix's preview/publish bulk endpoints don't always populate
+        // `data.resources` even on successful jobs — for those, the only
+        // truth is `progress.processed`. Report the count Helix actually
+        // returned: prefer `resources.length`, fall back to processed.
+        const processed = status.progress?.processed ?? status.processed ?? 0;
+        const count = resources.length > 0 ? resources.length : processed;
+        this.logger.debug(`[Helix] Bulk ${topic} job completed: ${count} paths processed`);
     }
 
     private async pollJobCompletion(

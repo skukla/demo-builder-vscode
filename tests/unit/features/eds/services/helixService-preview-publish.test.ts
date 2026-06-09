@@ -465,6 +465,35 @@ describe('HelixService - Preview/Publish', () => {
                 ).resolves.toBeUndefined();
             });
 
+            it('logs the processed-path count when resources is absent — not "0 paths" (avoids false alarms)', async () => {
+                // Helix's preview/publish bulk endpoints don't always populate
+                // `data.resources` on successful jobs. The poll's "completed"
+                // log line must report the real work done (progress.processed),
+                // not "0 paths succeeded" which historically scared SCs into
+                // thinking publish had failed when it had not.
+                mockFetch.mockResolvedValueOnce({
+                    ok: true, status: 202,
+                    json: () => Promise.resolve({ job: { name: 'preview-job-processed', topic: 'preview', state: 'created' } }),
+                });
+                mockFetch.mockResolvedValueOnce({
+                    ok: true, status: 200,
+                    json: () => Promise.resolve({
+                        state: 'finished',
+                        progress: { processed: 78, total: 78 },
+                        // no data.resources — typical of bulk preview/publish responses
+                    }),
+                });
+
+                await service.previewAllContent('testuser', 'my-site', 'main', undefined, ['/']);
+
+                expect(mockLogger.debug).toHaveBeenCalledWith(
+                    expect.stringContaining('78 paths processed'),
+                );
+                // No "0 paths" false alarm anywhere in the debug stream.
+                const allDebugMessages = mockLogger.debug.mock.calls.map((c: unknown[]) => String(c[0]));
+                expect(allDebugMessages.every((msg: string) => !msg.includes('0 paths'))).toBe(true);
+            });
+
             it('completes when data.resources is an empty array', async () => {
                 mockFetch.mockResolvedValueOnce({
                     ok: true, status: 202,
