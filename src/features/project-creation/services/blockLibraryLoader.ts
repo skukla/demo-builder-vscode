@@ -63,9 +63,18 @@ export function getNativeBlockLibraries(
 /**
  * Get the IDs of block libraries that should be pre-selected by default.
  *
- * When `userDefaults` is provided (from VS Code settings), uses those
- * preferences instead of the `default` field from block-libraries.json.
- * Only libraries that are available for the given stack/package are returned.
+ * Pre-selection is the user's VS Code-settings preference
+ * (`demoBuilder.blockLibraries.defaults`), intersected with what's actually
+ * available for the chosen stack and package. The setting defaults to `[]`
+ * — no libraries pre-checked across packages — and is intentionally NOT
+ * tied to any specific package: package-native libraries (e.g. Isle5 for
+ * the Isle5 package) get auto-installed via the native path, separately
+ * from this checkbox-default logic.
+ *
+ * Legacy fallback: if `userDefaults` is omitted entirely, falls back to the
+ * `default` field on each library entry. No bundled library uses that
+ * field today; it's preserved for forward-compat with externally-supplied
+ * registries.
  *
  * @param stack - The selected stack object
  * @param packageId - The selected package ID

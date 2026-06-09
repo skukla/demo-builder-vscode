@@ -212,10 +212,8 @@
               ]
             },
             "uniqueItems": true,
-            "default": [
-              "isle5"
-            ],
-            "description": "Block libraries to include by default for new EDS projects"
+            "default": [],
+            "description": "Block libraries to pre-select by default for new EDS projects. Empty by default — package-native block libraries (e.g. Isle5 for the Isle5 package, BuildRight for the BuildRight package) are always installed automatically regardless of this setting. Use this to add OTHER libraries you'd like pre-checked across all your projects."
           },
           "demoBuilder.blockLibraries.custom": {
             "type": "array",

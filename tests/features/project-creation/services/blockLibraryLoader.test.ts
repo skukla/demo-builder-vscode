@@ -183,21 +183,27 @@ describe('blockLibraryLoader', () => {
     });
 
     describe('getDefaultBlockLibraryIds', () => {
-        it('should return isle5 as default for EDS stacks', () => {
+        it('returns empty array when no userDefaults provided and no bundled library has default:true', () => {
+            // Contract change (2026-06-09): no bundled library defaults to pre-checked
+            // across packages. Package-native libraries (Isle5 for the Isle5 package,
+            // etc.) get auto-installed via the native path, separately from this
+            // checkbox-default logic. Other libraries are pre-checked only when the
+            // user explicitly sets `demoBuilder.blockLibraries.defaults` in VS Code.
             const edsStack = makeStack();
             const defaults = getDefaultBlockLibraryIds(edsStack, 'custom');
 
-            expect(defaults).toContain('isle5');
+            expect(defaults).toEqual([]);
         });
 
-        it('should not return isle5 as default for Isle5 package (native, not available)', () => {
+        it('returns empty array for Isle5 package without userDefaults (isle5 is native, not in available)', () => {
             const edsStack = makeStack();
             const defaults = getDefaultBlockLibraryIds(edsStack, 'isle5');
 
             expect(defaults).not.toContain('isle5');
+            expect(defaults).toEqual([]);
         });
 
-        it('should not include storefront libraries as defaults', () => {
+        it('does not include storefront-specific libraries as defaults', () => {
             const edsStack = makeStack();
             const defaults = getDefaultBlockLibraryIds(edsStack, 'custom');
 
@@ -205,7 +211,7 @@ describe('blockLibraryLoader', () => {
             expect(defaults).not.toContain('buildright-blocks');
         });
 
-        it('should return empty array for headless stacks', () => {
+        it('returns empty array for headless stacks', () => {
             const headlessStack = makeStack({
                 id: 'headless-paas',
                 frontend: 'headless',
@@ -215,7 +221,7 @@ describe('blockLibraryLoader', () => {
             expect(defaults).toHaveLength(0);
         });
 
-        it('should use userDefaults when provided instead of config defaults', () => {
+        it('uses userDefaults when provided (intersection with available)', () => {
             const edsStack = makeStack();
             const userDefaults = ['demo-team-blocks'];
             const defaults = getDefaultBlockLibraryIds(edsStack, 'custom', userDefaults);
@@ -224,23 +230,26 @@ describe('blockLibraryLoader', () => {
             expect(defaults).toContain('demo-team-blocks');
         });
 
-        it('should filter out native libraries even with userDefaults', () => {
+        it('filters out native libraries even when userDefaults includes them', () => {
             const edsStack = makeStack();
             const userDefaults = ['isle5', 'demo-team-blocks'];
-            // CitiSignal package should not see demo-team-blocks even if userDefaults includes it
+            // CitiSignal package should not see demo-team-blocks (it's native to citisignal,
+            // auto-installed via the native path, not exposed as a checkbox).
             const defaults = getDefaultBlockLibraryIds(edsStack, 'citisignal', userDefaults);
 
             expect(defaults).toContain('isle5');
             expect(defaults).not.toContain('demo-team-blocks');
         });
 
-        it('should fall back to config defaults when userDefaults is undefined', () => {
+        it('when explicitly opted in via userDefaults, isle5 IS pre-selected for non-isle5 packages', () => {
+            // Validates the user-opt-in path: a user who sets
+            // `demoBuilder.blockLibraries.defaults` = ['isle5'] in VS Code still
+            // gets isle5 pre-checked on Custom/CitiSignal/etc. demos. Native-path
+            // auto-install for the isle5 package itself remains separate.
             const edsStack = makeStack();
-            const defaults = getDefaultBlockLibraryIds(edsStack, 'custom', undefined);
+            const defaults = getDefaultBlockLibraryIds(edsStack, 'custom', ['isle5']);
 
-            // Same as without userDefaults — isle5 has default: true in config
             expect(defaults).toContain('isle5');
-            expect(defaults).not.toContain('demo-team-blocks');
         });
     });
 

@@ -31,7 +31,6 @@
       },
       "nativeForPackages": ["isle5"],
       "stackTypes": ["eds-storefront"],
-      "default": true,
       "contentSource": {
         "org": "stephen-garner-adobe",
         "site": "isle5"
