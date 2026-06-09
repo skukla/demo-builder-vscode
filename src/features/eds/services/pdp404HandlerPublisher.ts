@@ -1,22 +1,31 @@
 /**
- * Smart 404 page publisher — Phase 1 of BYOM PDP routing.
+ * Smart 404 handler installer — Phase 1 of BYOM PDP routing.
  *
- * Generates a custom `/404.html` document and publishes it to the
- * storefront's DA.live site, then runs preview+publish via Helix admin
- * so it serves on the live tier for every 404 the storefront returns.
+ * Vendors a small JS snippet into the storefront's `scripts/delayed.js`
+ * that fires when EDS serves a 404 for a cold PDP URL. The snippet:
  *
- * The page contains embedded JS that:
- *   1. Detects PDP-shape URLs (`/products/{urlKey}/{sku}`).
- *   2. Tries a lowercase variant via HEAD — handles the case where a
- *      prior visitor already triggered the publish. (Helix normalizes
+ *   1. Gates on `window.isErrorPage` (set by the storefront's head.html
+ *      whenever Helix returns a 404), so it's inert on every other page.
+ *   2. Detects PDP-shape URLs (`/products/{urlKey}/{sku}`).
+ *   3. Tries a lowercase variant via HEAD first — handles the case where
+ *      a prior visitor already triggered the publish. (Helix normalizes
  *      content-bus paths to lowercase before storing, so storefront PLPs
  *      that generate mixed-case URLs need this redirect to find the
  *      cached page.)
- *   3. Otherwise POSTs to the sibling `prepublish-pdp` action with the
+ *   4. Otherwise POSTs to the sibling `prepublish-pdp` action with the
  *      lowercase path. The action calls Helix admin preview+publish on
  *      the storefront's behalf and returns success.
- *   4. Reloads to the lowercase URL with a `?pdpRetry=1` guard so we
+ *   5. Reloads to the lowercase URL with a `?pdpRetry=1` guard so we
  *      never loop infinitely on a real failure.
+ *
+ * Why vendor into `delayed.js` rather than publish an authored `/404`
+ * page (the v1 approach we shipped earlier today): EDS's content
+ * decoration pipeline strips `<script>` tags from authored content for
+ * security, so an authored `/404` page with embedded JS publishes as
+ * empty content. Visitors hitting cold PDPs would just see the EDS
+ * default 404 page with no recovery. Vendoring into `delayed.js` mirrors
+ * the existing inspector-tagging pattern — the snippet rides the
+ * storefront's code, not its content, and never gets stripped.
  *
  * Together with the existing `render-pdp` overlay registration, this is
  * everything Demo Builder ships for Phase 1 PDP routing. See
@@ -26,75 +35,63 @@
  * @module features/eds/services/pdp404HandlerPublisher
  */
 
-import { DaLiveContentOperations } from './daLiveContentOperations';
+import { GitHubFileOperations } from './githubFileOperations';
 import { HelixService } from './helixService';
 import type { Logger } from '@/types/logger';
 
 /**
- * Smart 404 HTML template. Three substitutions handled by
- * `buildSmart404Html`:
+ * Marker comment that bookends the smart 404 snippet inside `delayed.js`.
+ *
+ * Used to detect "already installed" so re-running the installer doesn't
+ * duplicate the snippet. Stable string — do not edit without bumping
+ * every storefront's `delayed.js`.
+ */
+const SMART_404_MARKER_START = '// === Smart 404 PDP rebuild (Demo Builder) ===';
+const SMART_404_MARKER_END = '// === end Smart 404 PDP rebuild ===';
+
+/**
+ * Smart 404 JS template. Three substitutions handled by
+ * `buildSmart404Snippet`:
  *   __TRIGGER_URL__ — sibling `prepublish-pdp` endpoint URL
  *   __ORG__         — storefront's DA.live org (also the action's `org` param)
  *   __SITE__        — storefront's DA.live site (also the action's `site` param)
  *
- * Kept compact so the page loads fast even on slow connections; the
- * goal is "trigger publish, redirect" not "show a beautiful error page."
- * The storefront's `scripts.js` decorates this with the standard
- * header/footer chrome when EDS serves it.
+ * Wrapped in an IIFE and gated on `window.isErrorPage` so it's inert on
+ * every other page. Sits inside `delayed.js`, so it runs after the EDS
+ * critical-path scripts complete — a brief flash of the default "Page
+ * Not Found" content is visible before the redirect fires.
  */
-const SMART_404_TEMPLATE = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Loading product…</title>
-</head>
-<body>
-<main></main>
-<script>
-(async () => {
+const SMART_404_SNIPPET_TEMPLATE = `
+
+${SMART_404_MARKER_START}
+// Auto-publishes the per-product page when a visitor hits a cold PDP
+// URL. Matches /products/{urlKey}/{sku}; otherwise no-op.
+(function smart404PdpRebuild() {
+  if (!window.isErrorPage) return;
   const RETRY_FLAG = 'pdpRetry';
-  const fallback = () => { document.querySelector('main').innerHTML = '<h1>Page Not Found</h1>'; };
-
   const m = location.pathname.match(/^\\/products\\/([^/]+)\\/([^/]+)$/);
-  if (!m) { fallback(); return; }
-
-  // Infinite-loop guard: if we already redirected once and ended up
-  // back on the 404, give up rather than retry.
-  if (new URLSearchParams(location.search).has(RETRY_FLAG)) {
-    document.querySelector('main').innerHTML = '<h1>Product not available</h1>';
-    return;
-  }
-
+  if (!m) return;
+  if (new URLSearchParams(location.search).has(RETRY_FLAG)) return;
   const [, urlKey, sku] = m;
   const lc = '/products/' + urlKey.toLowerCase() + '/' + sku.toLowerCase();
-
-  // Fast path: the lowercase variant may already be published by a
-  // previous visitor. HEAD-check before invoking the trigger.
-  if (lc !== location.pathname) {
-    try {
-      const head = await fetch(lc, { method: 'HEAD' });
-      if (head.ok) { location.replace(lc); return; }
-    } catch (_) { /* fall through to trigger */ }
-  }
-
-  // Slow path: call the sibling action to trigger Helix admin
-  // preview+publish for the lowercase path, then reload.
-  const triggerUrl = '__TRIGGER_URL__?org=__ORG__&site=__SITE__&path=' + encodeURIComponent(lc);
-  try {
-    const r = await fetch(triggerUrl, { method: 'POST' });
-    if (r.ok) {
-      const sep = lc.includes('?') ? '&' : '?';
-      location.replace(lc + sep + RETRY_FLAG + '=1');
-      return;
+  (async () => {
+    if (lc !== location.pathname) {
+      try {
+        const head = await fetch(lc, { method: 'HEAD' });
+        if (head.ok) { location.replace(lc); return; }
+      } catch (_) { /* fall through to trigger */ }
     }
-  } catch (_) { /* fall through */ }
-
-  document.querySelector('main').innerHTML = '<h1>Product not available</h1>';
+    const triggerUrl = '__TRIGGER_URL__?org=__ORG__&site=__SITE__&path=' + encodeURIComponent(lc);
+    try {
+      const r = await fetch(triggerUrl, { method: 'POST' });
+      if (r.ok) {
+        const sep = lc.includes('?') ? '&' : '?';
+        location.replace(lc + sep + RETRY_FLAG + '=1');
+      }
+    } catch (_) { /* swallow; default 404 chrome stays visible */ }
+  })();
 })();
-</script>
-</body>
-</html>
+${SMART_404_MARKER_END}
 `;
 
 /**
@@ -105,13 +102,13 @@ const SMART_404_TEMPLATE = `<!DOCTYPE html>
 const TRIGGER_URL_MAX_LENGTH = 2048;
 
 /**
- * Generate the smart 404 page HTML for a specific storefront.
+ * Generate the smart 404 JS snippet for a specific storefront.
  *
- * Substitutes the three runtime values into the static template. Returns
- * the HTML string, ready to be written to DA.live.
+ * Substitutes the three runtime values into the static template and
+ * returns the snippet ready to be appended to `delayed.js`.
  */
-export function buildSmart404Html(triggerUrl: string, org: string, site: string): string {
-    return SMART_404_TEMPLATE
+export function buildSmart404Snippet(triggerUrl: string, org: string, site: string): string {
+    return SMART_404_SNIPPET_TEMPLATE
         .replace(/__TRIGGER_URL__/g, triggerUrl)
         .replace(/__ORG__/g, encodeURIComponent(org))
         .replace(/__SITE__/g, encodeURIComponent(site));
@@ -131,7 +128,7 @@ export function buildSmart404Html(triggerUrl: string, org: string, site: string)
  * appends fresh ones at request time).
  *
  * Returns `undefined` when the input doesn't look like a parseable
- * overlay URL — callers skip publishing the smart 404 in that case
+ * overlay URL — callers skip installing the smart 404 in that case
  * rather than ship a broken page.
  */
 export function derivePrepublishUrl(overlayUrl: string): string | undefined {
@@ -149,74 +146,103 @@ export function derivePrepublishUrl(overlayUrl: string): string | undefined {
 }
 
 /**
- * Outcome of a single publish attempt. Surfaces in the pipeline log
+ * Outcome of a single install attempt. Surfaces in the pipeline log
  * and is asserted by the tests.
  */
-export interface Pdp404PublishResult {
-    published: boolean;
-    /** Set when published=false to explain why the step was skipped. */
+export interface Pdp404InstallResult {
+    installed: boolean;
+    /** Set when installed=false to explain why the step was skipped. */
     reason?: string;
 }
 
 /**
- * Publish the smart 404 page for one storefront.
+ * Install the smart 404 handler for one storefront.
  *
  * Non-fatal at every step: any failure is logged and the function
- * returns `{ published: false, reason }`. The storefront still works
+ * returns `{ installed: false, reason }`. The storefront still works
  * without the smart 404 — visitors hitting cold PDPs just get the
  * default Helix 404 page. We never want this step to break a create
  * or reset.
  *
  * Skip cases:
- *   - BYOM disabled (`overlayUrl` is `undefined`): nothing to register.
+ *   - BYOM disabled (`overlayUrl` is `undefined`): nothing to install.
  *   - Overlay URL doesn't parse or doesn't have the expected shape:
  *     can't derive the trigger URL.
- *   - DA write fails (network, auth): log and skip.
- *   - Helix preview/publish fails: log and skip.
+ *   - `scripts/delayed.js` doesn't exist in the storefront: log warning,
+ *     skip (the storefront isn't an EDS storefront we recognize).
+ *   - Snippet marker already present: idempotent skip (already installed).
+ *   - GitHub commit fails (network, auth): log and skip.
+ *   - Helix code preview fails: log warning, but report installed=true
+ *     (the commit landed; the next code-preview cycle will pick it up).
  */
-export async function publishSmart404Handler(
+export async function installSmart404Handler(
+    githubFileOps: GitHubFileOperations,
     helixService: HelixService,
-    daLiveContentOps: DaLiveContentOperations,
-    daLiveOrg: string,
-    daLiveSite: string,
     repoOwner: string,
     repoName: string,
     overlayUrl: string | undefined,
     logger: Logger,
-): Promise<Pdp404PublishResult> {
+    daLiveOrg: string,
+    daLiveSite: string,
+): Promise<Pdp404InstallResult> {
     if (!overlayUrl) {
-        logger.info('[PDP404] BYOM disabled (no overlayUrl) — skipping smart 404 publish');
-        return { published: false, reason: 'BYOM disabled' };
+        logger.info('[PDP404] BYOM disabled (no overlayUrl) — skipping smart 404 install');
+        return { installed: false, reason: 'BYOM disabled' };
     }
 
     const triggerUrl = derivePrepublishUrl(overlayUrl);
     if (!triggerUrl) {
-        logger.warn('[PDP404] Could not derive prepublish-pdp URL from overlay URL — skipping smart 404 publish');
-        return { published: false, reason: 'invalid overlay URL' };
+        logger.warn('[PDP404] Could not derive prepublish-pdp URL from overlay URL — skipping smart 404 install');
+        return { installed: false, reason: 'invalid overlay URL' };
     }
 
-    const html = buildSmart404Html(triggerUrl, daLiveOrg, daLiveSite);
-
-    // Write to DA.live. `createSource` returns a structured result rather
-    // than throwing; turn a non-success into a skip with a reason.
-    const writeResult = await daLiveContentOps.createSource(
-        daLiveOrg, daLiveSite, '/404.html', html, { overwrite: true },
-    );
-    if (!writeResult.success) {
-        logger.warn(`[PDP404] DA.live write failed: ${writeResult.error ?? 'unknown'} — skipping publish`);
-        return { published: false, reason: `DA write failed: ${writeResult.error ?? 'unknown'}` };
+    // Read the storefront's existing `scripts/delayed.js`. If absent, the
+    // storefront doesn't have the EDS delayed-load module and we have
+    // nowhere to vendor into — skip with a warning rather than create the
+    // file ourselves (we don't know the right surrounding boilerplate).
+    const existing = await githubFileOps.getFileContent(repoOwner, repoName, 'scripts/delayed.js');
+    if (!existing?.content) {
+        logger.warn('[PDP404] scripts/delayed.js not found — skipping smart 404 install');
+        return { installed: false, reason: 'delayed.js missing' };
     }
-    logger.info(`[PDP404] Wrote /404.html to ${daLiveOrg}/${daLiveSite}`);
 
-    // Preview + publish via Helix admin. `previewAndPublishPage` throws
-    // on network failure or non-2xx from Helix; catch and skip.
+    // Idempotent: if the marker is already present, do nothing. Lets the
+    // step run on every reset without piling up duplicate snippets.
+    if (existing.content.includes(SMART_404_MARKER_START)) {
+        logger.info('[PDP404] Smart 404 snippet already present in delayed.js — skipping');
+        return { installed: false, reason: 'already installed' };
+    }
+
+    const snippet = buildSmart404Snippet(triggerUrl, daLiveOrg, daLiveSite);
+    const newContent = existing.content + snippet;
+
     try {
-        await helixService.previewAndPublishPage(repoOwner, repoName, '/404');
-        logger.info(`[PDP404] Smart 404 handler published to ${repoOwner}/${repoName}`);
-        return { published: true };
+        await githubFileOps.createOrUpdateFile(
+            repoOwner,
+            repoName,
+            'scripts/delayed.js',
+            newContent,
+            'chore(demo-builder): vendor smart 404 PDP handler into delayed.js',
+            existing.sha,
+        );
+        logger.info(`[PDP404] Vendored smart 404 snippet into scripts/delayed.js (${repoOwner}/${repoName})`);
     } catch (error) {
         const reason = (error as Error).message ?? 'unknown';
-        logger.warn(`[PDP404] Helix preview/publish failed: ${reason} — page is in DA but not yet on live tier`);
-        return { published: false, reason: `Helix publish failed: ${reason}` };
+        logger.warn(`[PDP404] GitHub commit failed: ${reason} — skipping smart 404 install`);
+        return { installed: false, reason: `GitHub commit failed: ${reason}` };
     }
+
+    // Preview the updated code on Helix so the snippet takes effect on
+    // the live tier. Non-fatal: if this fails, the commit is still on
+    // the repo and the next storefront reset (or any other code-preview
+    // event) will pick it up.
+    try {
+        await helixService.previewCode(repoOwner, repoName, '/scripts/delayed.js');
+        logger.info(`[PDP404] Smart 404 handler installed and previewed on Helix (${repoOwner}/${repoName})`);
+    } catch (error) {
+        const reason = (error as Error).message ?? 'unknown';
+        logger.warn(`[PDP404] Helix code preview failed: ${reason} — snippet is in repo but not yet live`);
+    }
+
+    return { installed: true };
 }

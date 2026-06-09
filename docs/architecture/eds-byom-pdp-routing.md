@@ -14,7 +14,7 @@ EDS storefronts use one of three mechanisms to route per-product URLs (`/product
 2. **Per-product DA pages** — manual, one document per SKU, breaks as soon as the catalog changes.
 3. **BYOM (Bring Your Own Markup) overlay** — Adobe's documented replacement: the Configuration Service `content.overlay` field, when set, makes Helix call an external action for the path before falling back to authored content.
 
-Demo Builder targets multi-tenant demos: any SC, any catalog, install-and-go. None of the first two options fit. Phase 1 ships the third — a shared overlay action that serves a generic PDP template multi-tenant, paired with a smart `/404.html` that triggers Helix admin to publish each PDP path on first request.
+Demo Builder targets multi-tenant demos: any SC, any catalog, install-and-go. None of the first two options fit. Phase 1 ships the third — a shared overlay action that serves a generic PDP template multi-tenant, paired with a small JS snippet vendored into the storefront's `scripts/delayed.js` that detects 404s on PDP paths and asks Helix admin to publish them on first visit.
 
 ---
 
@@ -27,9 +27,12 @@ Demo Builder targets multi-tenant demos: any SC, any catalog, install-and-go. No
 │    • Configuration Service site config with                │
 │      content.overlay.url = <render-pdp endpoint>           │
 │      ?org=<daLiveOrg>&site=<daLiveSite>                    │
-│    • /404.html in DA.live containing the smart-404 JS      │
+│    • Smart-404 JS snippet appended to                      │
+│      scripts/delayed.js in the storefront's GitHub repo,   │
 │      with the storefront's org, site, and the              │
-│      prepublish-pdp endpoint URL templated in              │
+│      prepublish-pdp endpoint URL templated in. The         │
+│      snippet is gated on window.isErrorPage so it's        │
+│      inert on every non-404 page.                          │
 │                                                            │
 └────────────────────────────────────────────────────────────┘
                               │
@@ -64,8 +67,9 @@ The two repos coordinate via three URL strings — the `render-pdp` overlay URL,
 ```
 1. Visitor clicks product card on PLP → /products/orchard-2/Orchard2
 2. Helix looks up content-bus at lowercase path /products/orchard-2/orchard2.md
-   → not found → serves the custom /404.html
-3. Smart-404 JS runs in the browser:
+   → not found → serves the storefront's default 404 page (head.html
+   sets window.isErrorPage = true; body shows "Page Not Found")
+3. delayed.js loads, the smart-404 snippet checks window.isErrorPage:
    a. Recognizes PDP-shape URL
    b. Computes lowercase variant /products/orchard-2/orchard2
    c. HEAD checks lowercase variant → 404 (not yet published)
@@ -110,7 +114,7 @@ The cold path runs once per SKU across all visitors to a storefront. Every subse
 | `render-pdp` overlay action | `accs-discovery-service`, already deployed | Returns generic PDP template for `/products/{urlKey}/{sku}`; returns 404 for non-PDP paths |
 | `prepublish-pdp` trigger action | `accs-discovery-service`, deployed | Validates + relays to Helix admin preview/publish |
 | Configuration Service registration with overlay URL | This repo, existing (`ConfigurationService.registerSite` / `updateSiteConfig` with `byomOverlayUrl`) | Wires the overlay into the site config so Helix calls `render-pdp` during admin preview |
-| Smart `/404.html` publish step | This repo, this slice (`pdp404HandlerPublisher.ts` + pipeline step) | Generates and publishes the smart-404 page at create/reset |
+| Smart-404 snippet install step | This repo, this slice (`pdp404HandlerPublisher.ts` + pipeline step) | Vendors the smart-404 JS into `scripts/delayed.js` at create/reset |
 | `demoBuilder.byom.enabled` setting | This repo, existing | Master toggle; when off, no overlay registers and no 404 publishes |
 | `demoBuilder.byom.overlayUrl` setting | This repo, existing | Override for non-default deployments (staging, dev). Defaults to the shared deployed action. |
 
@@ -171,8 +175,8 @@ If Phase 1's behavior diverges from this in production, those four probes locali
 |---|---|
 | Overlay URL resolution + stamping | `src/features/eds/handlers/edsHelpers.ts` (`resolveByomOverlayConfig`, `appendOverlayParams`) |
 | Configuration Service registration with overlay | `src/features/eds/services/configurationService.ts` (`registerSite`, `updateSiteConfig`, `buildSiteConfigParams`) |
-| Smart-404 page generation + publish | `src/features/eds/services/pdp404HandlerPublisher.ts` |
-| Pipeline integration (the step that publishes /404) | `src/features/eds/services/edsPipeline.ts` (Step 7, after Library Publish) |
+| Smart-404 snippet generation + install | `src/features/eds/services/pdp404HandlerPublisher.ts` |
+| Pipeline integration (the step that vendors into delayed.js) | `src/features/eds/services/edsPipeline.ts` (Step 7, after Library Publish) |
 | Settings | `package.json` (`demoBuilder.byom.enabled`, `demoBuilder.byom.overlayUrl`) |
 
 ---

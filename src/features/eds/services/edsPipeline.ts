@@ -20,7 +20,7 @@
 import type { DaLiveContentOperations } from './daLiveContentOperations';
 import type { GitHubFileOperations } from './githubFileOperations';
 import type { HelixService } from './helixService';
-import { publishSmart404Handler } from './pdp404HandlerPublisher';
+import { installSmart404Handler } from './pdp404HandlerPublisher';
 import { DaLiveAuthError, DaLiveError } from './types';
 import type { ContentPatchSource } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
@@ -413,7 +413,7 @@ export async function executeEdsPipeline(
     services: EdsPipelineServices,
     onProgress?: EdsPipelineProgressCallback,
 ): Promise<EdsPipelineResult> {
-    const { daLiveContentOps, helixService, logger } = services;
+    const { daLiveContentOps, githubFileOps, helixService, logger } = services;
     const {
         repoOwner,
         repoName,
@@ -516,28 +516,28 @@ export async function executeEdsPipeline(
         //
         // Gated by:
         //  - !skipPublish — narrow paths like Refresh Block Library bypass the
-        //    full publish cycle and don't need to republish the 404.
+        //    full publish cycle and don't need to reinstall the snippet.
         //  - params.byomOverlayUrl — when BYOM is disabled (no overlay URL),
         //    PDPs aren't being routed through the action, so the smart 404
         //    has nothing useful to do.
-        // Every failure inside publishSmart404Handler is logged and skipped;
+        // Every failure inside installSmart404Handler is logged and skipped;
         // the storefront still works without it (visitors hitting cold PDPs
         // just get the default Helix 404).
         if (!skipPublish && params.byomOverlayUrl) {
             onProgress?.({
                 operation: 'pdp-404-handler',
-                message: 'Publishing PDP routing handler...',
+                message: 'Installing PDP routing handler...',
             });
 
-            await publishSmart404Handler(
+            await installSmart404Handler(
+                githubFileOps,
                 helixService,
-                daLiveContentOps,
-                daLiveOrg,
-                daLiveSite,
                 repoOwner,
                 repoName,
                 params.byomOverlayUrl,
                 logger,
+                daLiveOrg,
+                daLiveSite,
             );
         }
 
