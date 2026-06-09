@@ -207,6 +207,7 @@ async function runContentPipeline(
     const {
         repoOwner, repoName, daLiveOrg, daLiveSite, templateOwner, templateRepo,
         contentSource: contentSourceConfig, includeBlockLibrary = false, contentPatches,
+        byomOverlayUrl,
     } = params;
 
     // tokenProvider required: DA.live content operations (copy, publish) need IMS token
@@ -223,6 +224,7 @@ async function runContentPipeline(
                     blockCollectionIds: repoResetResult.blockCollectionIds,
                     libraryContentSources: repoResetResult.libraryContentSources,
                     purgeCache: true, skipPublish: false,
+                    byomOverlayUrl,
                 },
                 { daLiveContentOps, githubFileOps, helixService, logger: context.logger },
                 (info) => mapPipelineProgress(info, report),

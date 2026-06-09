@@ -112,6 +112,7 @@ Orchestrates complete EDS project setup through phases:
 | `content` | 49-58% | Clear existing DA.live content, copy demo content from source |
 | `block-library` | 58-65% | Create block library in DA.live, apply EDS settings |
 | `publish` | 65-95% | Purge CDN cache, publish content and block library to CDN |
+| `pdp-404-handler` | 95-97% | Publish smart `/404.html` for BYOM PDP routing (see [eds-byom-pdp-routing.md](../../../docs/architecture/eds-byom-pdp-routing.md)) |
 | `auth-recovery` | (paused) | DA.live token expired; prompts re-authentication (up to 2 attempts) |
 | `complete` | 100% | Setup complete |
 
@@ -146,6 +147,14 @@ If the DA.live token expires during content pipeline execution (phases 4-5), the
 
 - **edsResetService** - Core reset logic: template reset, block library reinstallation (built-in + custom), inspector tagging, code sync, config service update, mesh redeploy
 - **edsResetUI** - UI orchestration: auth checks, progress notifications, confirmation dialogs
+
+### BYOM PDP Routing (pdp404HandlerPublisher)
+
+Phase 1 of the BYOM workstream that makes `/products/{urlKey}/{sku}` URLs work for every storefront without per-product authoring.
+
+- **pdp404HandlerPublisher** - Generates and publishes a smart `/404.html` page at create/reset time. The page's embedded JS detects PDP-shape URLs, redirects mixed-case requests to their lowercase variant, and POSTs to a sibling `prepublish-pdp` action that triggers Helix admin preview/publish on the visitor's behalf. Gated by `params.byomOverlayUrl` — when BYOM is off, the step is skipped.
+
+The full architecture (request flows, dependencies on Helix/Catalog Service case handling, Phase 2 evolution path, cross-repo seam with `accs-discovery-service`) lives in [`docs/architecture/eds-byom-pdp-routing.md`](../../../docs/architecture/eds-byom-pdp-routing.md). The decision rationale lives in [ADR-005](../../../docs/architecture/adr/005-byom-pdp-routing.md).
 
 ### Commerce Store Discovery (commerceStoreDiscovery)
 
