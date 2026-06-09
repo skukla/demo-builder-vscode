@@ -72,7 +72,6 @@ src/features/eds/
 │   │   ├── GitHubRepoSelectionStep.tsx  # Repository selection/creation
 │   │   ├── GitHubSetupStep.tsx          # GitHub configuration
 │   │   ├── DaLiveSetupStep.tsx          # DA.live site configuration
-│   │   ├── DataSourceConfigStep.tsx     # Commerce data source config
 │   │   └── StorefrontSetupStep.tsx      # Storefront setup execution
 │   └── styles/
 │       ├── connect-services.css     # Connect services step styles

@@ -51,9 +51,11 @@ yarn-error.log*
 # Workflows and analysis are temporary - valuable docs extracted to docs/architecture/
 .claude/
 
-# RPTC workflow temporary files
-# .rptc/plans/ and .rptc/research/ are tracked (durable in this ephemeral
-# container — gitignored files are lost on restart). Only prompt.md (transient) is ignored.
+# Cursor IDE rules — per-developer AI tool config, same policy as .claude/.
+.cursor/
+
+# RPTC workflow — only the working prompt is throwaway; plans, research,
+# and backlog are tracked artifacts per the policy in .rptc/CLAUDE.md.
 .rptc/prompt.md
 
 # Analysis artifacts

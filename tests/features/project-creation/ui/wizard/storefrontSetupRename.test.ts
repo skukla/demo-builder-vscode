@@ -64,7 +64,6 @@ describe('Storefront Setup Rename - Type Safety', () => {
             'adobe-workspace',
             'eds-connect-services',
             'eds-repository-config',
-            'eds-data-source',
             'settings',
             'review',
             'create-project',

@@ -14,8 +14,7 @@ export type WizardStep =
     | 'adobe-project'  // Adobe project selection step
     | 'adobe-workspace'  // Adobe workspace selection step
     | 'eds-connect-services'  // EDS: Combined GitHub + DA.live authentication (conditional: requiresGitHub OR requiresDaLive stack)
-    | 'eds-repository-config'  // EDS: Repository and DA.live configuration (conditional: requiresGitHub stack)
-    | 'eds-data-source'  // EDS: ACCS data source configuration (conditional: requiresDaLive stack)
+    | 'eds-repository-config'  // EDS: Repository configuration. DA.live site name is derived from the repo name (see backlog 2026-06-08-unify-da-site-and-repo-name).
     | 'storefront-setup'  // EDS: Storefront setup (GitHub repo, DA.live content, Helix config)
     | 'settings'  // Component-specific settings collection
     | 'review'

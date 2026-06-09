@@ -3,6 +3,14 @@
  */
 
 /**
+ * Extension/component update channel.
+ * - stable: production final releases only
+ * - beta: final + -beta.* prereleases
+ * - early-access: -alpha.* prereleases (collaborator-gated)
+ */
+export type UpdateChannel = 'stable' | 'beta' | 'early-access';
+
+/**
  * GitHub Release information
  */
 export interface ReleaseInfo {

@@ -188,7 +188,7 @@ function createProjectWithMesh(): Project {
                 metadata: {
                     githubRepo: 'test-owner/test-repo',
                     daLiveOrg: 'test-org',
-                    daLiveSite: 'test-site',
+                    daLiveSite: 'test-repo',
                 },
             },
             'commerce-mesh': {
@@ -262,7 +262,7 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
         await executeEdsReset(
             {
                 repoOwner: 'test-owner', repoName: 'test-repo',
-                daLiveOrg: 'test-org', daLiveSite: 'test-site',
+                daLiveOrg: 'test-org', daLiveSite: 'test-repo',
                 templateOwner: 'template-owner', templateRepo: 'template-repo',
                 project, redeployMesh: true,
             },
@@ -288,7 +288,7 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
         await executeEdsReset(
             {
                 repoOwner: 'test-owner', repoName: 'test-repo',
-                daLiveOrg: 'test-org', daLiveSite: 'test-site',
+                daLiveOrg: 'test-org', daLiveSite: 'test-repo',
                 templateOwner: 'template-owner', templateRepo: 'template-repo',
                 project, redeployMesh: true,
             },
@@ -319,7 +319,7 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
         const result = await executeEdsReset(
             {
                 repoOwner: 'test-owner', repoName: 'test-repo',
-                daLiveOrg: 'test-org', daLiveSite: 'test-site',
+                daLiveOrg: 'test-org', daLiveSite: 'test-repo',
                 templateOwner: 'template-owner', templateRepo: 'template-repo',
                 project, redeployMesh: true,
             },
@@ -345,7 +345,7 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
         await executeEdsReset(
             {
                 repoOwner: 'test-owner', repoName: 'test-repo',
-                daLiveOrg: 'test-org', daLiveSite: 'test-site',
+                daLiveOrg: 'test-org', daLiveSite: 'test-repo',
                 templateOwner: 'template-owner', templateRepo: 'template-repo',
                 project, redeployMesh: false,
             },

@@ -151,11 +151,11 @@ describe('AiCapabilitiesModal', () => {
         expect(screen.getByRole('button', { name: /regenerating/i })).toBeInTheDocument();
     });
 
-    it('replaces the body with a centered loading state while a regenerate is in flight', () => {
+    it('replaces the body with a centered loading state while busy', () => {
         renderModal({ skills: SKILLS, mcps: MCPS, isBusy: true });
         const loading = screen.getByTestId('ai-capabilities-loading');
         expect(loading).toBeInTheDocument();
-        expect(loading).toHaveTextContent(/up to a minute|installing|reinstalling|regenerating/i);
+        expect(loading).toHaveTextContent(/checking ai setup/i);
         // Body lists must NOT render while busy — that's the whole point of
         // body replacement (avoids backdrop-color clash with the shared overlay).
         expect(screen.queryByTestId('ai-mcps-list')).not.toBeInTheDocument();
@@ -202,10 +202,19 @@ describe('AiCapabilitiesModal', () => {
         expect(loading).toHaveTextContent(/This can take up to a minute/);
     });
 
-    it('falls back to the original static text when busy but no progress has arrived yet', () => {
+    it('shows a neutral "checking" message when busy without progress (fits both verify and pre-progress regen)', () => {
+        // isBusy is set true during BOTH verify-ai-setup (which runs on every
+        // dashboard mount and View AI Capabilities open) AND regenerate-ai-files.
+        // The static fallback (when no creationProgress payload has landed yet)
+        // must therefore read accurately for both. The old text — "Reinstalling
+        // storefront dependencies and rewriting AI files. This can take up to a
+        // minute." — was specific to regen, so it misled users during plain
+        // verify (no install, no rewrites, no "minute"). Use a neutral message
+        // that fits both; regen still shows its per-step LoadingDisplay once
+        // creationProgress arrives.
         renderModal({ skills: SKILLS, mcps: MCPS, isBusy: true });
         const loading = screen.getByTestId('ai-capabilities-loading');
-        // Initial busy state (before first creationProgress) still reads cleanly.
-        expect(loading).toHaveTextContent(/up to a minute|reinstalling|regenerating/i);
+        expect(loading).toHaveTextContent(/checking ai setup/i);
+        expect(loading).not.toHaveTextContent(/reinstalling|up to a minute/i);
     });
 });

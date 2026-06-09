@@ -185,7 +185,7 @@ function createProject(): Project {
                 metadata: {
                     githubRepo: 'test-owner/test-repo',
                     daLiveOrg: 'test-org',
-                    daLiveSite: 'test-site',
+                    daLiveSite: 'test-repo',
                 },
             },
         },
@@ -197,7 +197,7 @@ function createResetParams() {
         repoOwner: 'test-owner',
         repoName: 'test-repo',
         daLiveOrg: 'test-org',
-        daLiveSite: 'test-site',
+        daLiveSite: 'test-repo',
         templateOwner: 'template-owner',
         templateRepo: 'template-repo',
         contentSource: { org: 'content-org', site: 'content-site' },

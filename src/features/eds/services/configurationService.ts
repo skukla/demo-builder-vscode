@@ -54,6 +54,12 @@ export interface SiteRegistrationParams {
     /** Optional BYOM content overlay URL. When set, the registration body
      *  includes a `content.overlay` block alongside `content.source`. */
     contentOverlayUrl?: string;
+    /** Optional legacy Configuration Service lookup key (org + site). When
+     *  set and different from {org, site}, updateSiteConfig DELETEs that
+     *  registration before the normal DELETE+PUT — best-effort, 404 is
+     *  treated as success. Cleans up orphan registrations left behind by
+     *  pre-`164fd251` builds that keyed site configs by DA.live site name. */
+    legacyLookupKey?: { org: string; site: string };
 }
 
 /**
@@ -95,11 +101,22 @@ export function buildSiteConfigParams(
     // contentSourceUrl still points at DA.live — that's where content lives.
     // The DA.live editor reads its own config from DA.live's service, not
     // from Helix's site config, so this rename does not affect the editor.
+    // Storefronts created on builds before commit 164fd251 keyed their
+    // site config by the DA.live site name. When the DA.live site name
+    // differs from the GitHub repo name (the usual case — wizards default
+    // to a `-content` suffix on DA), that prior registration lingers as an
+    // orphan and Helix elects it primary for content operations, 403'ing
+    // every write against the new registration. updateSiteConfig uses
+    // this hint to DELETE the orphan as part of the next reset/create.
+    const legacyLookupKey = daLiveSite !== repoName
+        ? { org: daLiveOrg, site: daLiveSite }
+        : undefined;
     return {
         org: repoOwner, site: repoName,
         codeOwner: repoOwner, codeRepo: repoName,
         contentSourceUrl: buildContentSourceUrl(daLiveOrg, daLiveSite),
         ...(overlayUrl && { contentOverlayUrl: overlayUrl }),
+        ...(legacyLookupKey && { legacyLookupKey }),
     };
 }
 
@@ -188,8 +205,10 @@ export class ConfigurationService {
      * @returns Result with success/error status
      */
     async updateSiteConfig(params: SiteRegistrationParams): Promise<ConfigServiceResult> {
-        const { org, site } = params;
+        const { org, site, legacyLookupKey } = params;
         this.logger.info(`[ConfigService] Updating site config: ${org}/${site}`);
+
+        await this.cleanUpLegacyRegistration(legacyLookupKey, { org, site });
 
         const deleteResult = await this.deleteSiteConfig(org, site);
         if (!deleteResult.success && deleteResult.statusCode !== 404) {
@@ -201,6 +220,34 @@ export class ConfigurationService {
         }
 
         return this.registerSite(params);
+    }
+
+    /**
+     * Best-effort cleanup of a legacy site registration left behind by
+     * pre-`164fd251` builds, where site configs were keyed by DA.live site
+     * name instead of GitHub repo name. Skips when no legacy key is set,
+     * or when the legacy key matches the current key (would be redundant).
+     * Treats 404 and non-404 errors as success — the legacy DELETE must
+     * never block the normal update flow.
+     */
+    private async cleanUpLegacyRegistration(
+        legacy: { org: string; site: string } | undefined,
+        current: { org: string; site: string },
+    ): Promise<void> {
+        if (!legacy) return;
+        if (legacy.org === current.org && legacy.site === current.site) return;
+
+        this.logger.info(
+            `[ConfigService] Cleaning up legacy site registration: ${legacy.org}/${legacy.site}`,
+        );
+        const result = await this.deleteSiteConfig(legacy.org, legacy.site);
+        if (result.statusCode === 404) {
+            this.logger.debug('[ConfigService] No legacy registration to clean up (404)');
+        } else if (!result.success) {
+            this.logger.warn(
+                `[ConfigService] Legacy registration cleanup failed (${result.statusCode ?? 'unknown'}) — continuing anyway: ${result.error ?? ''}`,
+            );
+        }
     }
 
     // ==========================================================

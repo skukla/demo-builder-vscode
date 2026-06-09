@@ -2,7 +2,7 @@
   "name": "adobe-demo-builder",
   "displayName": "Adobe Demo Builder",
   "description": "Create and manage Adobe Commerce demos with ease",
-  "version": "1.0.0-beta.111",
+  "version": "1.0.0-beta.112",
   "publisher": "skukla",
   "engines": {
     "vscode": "^1.84.0"
@@ -60,6 +60,11 @@
       {
         "command": "demoBuilder.diagnostics",
         "title": "Diagnostics",
+        "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.migrateStorefrontNames",
+        "title": "Migrate Storefront Names",
         "category": "Demo Builder"
       },
       {
@@ -141,10 +146,16 @@
             "type": "string",
             "enum": [
               "stable",
-              "beta"
+              "beta",
+              "early-access"
+            ],
+            "enumDescriptions": [
+              "Production releases only",
+              "Beta prereleases (testing)",
+              "Alpha preview builds — honored only for repository collaborators; others fall back to beta"
             ],
             "default": "stable",
-            "description": "Update channel: stable (production releases) or beta (testing)"
+            "description": "Update channel: stable (production), beta (testing), or early-access (collaborator-only alpha preview; falls back to beta if you are not a repository collaborator)"
           },
           "demoBuilder.logLevel": {
             "type": "string",

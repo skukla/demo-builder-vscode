@@ -229,10 +229,16 @@ async function buildMcpConfig(
     project: Project,
     nodePath: string,
 ): Promise<McpConfig> {
+    // The in-extension MCP server listens on a socket keyed to the OPEN
+    // WORKSPACE — under the always-root home-Chat model (PR #36) that's the
+    // projects root, not any individual project. Point the proxy at THAT
+    // root socket so the per-project mcp.json reaches the live server.
+    // (Keying to project.path produced "demo-builder: timed out" in the AI
+    // Capabilities modal whenever the workspace was the projects root.)
     const mcpServers: Record<string, McpServerEntry> = {
         'demo-builder': await buildDemoBuilderMcpEntry(
             extensionDistPath,
-            resolveMcpSocketPath(project.path),
+            resolveMcpSocketPath(path.dirname(project.path)),
             nodePath,
         ),
     };
