@@ -271,6 +271,62 @@ export function canProceedFromAuth(
 }
 
 // =============================================================================
+// Storefront Flow Predicates
+// =============================================================================
+// SOP §4: Centralized flow detection. The `flow` discriminator distinguishes the
+// commerce-SC storefront from the content-SC fork. Absent ⇒ 'commerce' so legacy
+// projects are unchanged. Structurally typed so both the saved `Project` and the
+// in-flight `ProjectCreationConfig` satisfy it.
+
+/** A record that may carry a storefront flow discriminator. */
+type FlowBearing = { flow?: 'commerce' | 'content' };
+
+/**
+ * Resolve a record's storefront flow, defaulting legacy records (no `flow`) to
+ * 'commerce' so existing behavior is preserved.
+ */
+export function getProjectFlow(record: FlowBearing): 'commerce' | 'content' {
+    return record.flow ?? 'commerce';
+}
+
+/**
+ * True only for the content-SC flow (a fork that inherits a shared master).
+ */
+export function isContentFlow(record: FlowBearing): boolean {
+    return getProjectFlow(record) === 'content';
+}
+
+/**
+ * True for the commerce flow — including legacy records with no `flow` set.
+ */
+export function isCommerceFlow(record: FlowBearing): boolean {
+    return getProjectFlow(record) === 'commerce';
+}
+
+/** A project's archetype as a per-(product, ownership) descriptor. */
+export interface ProjectArchetype {
+    product: 'eds-storefront' | 'headless-storefront' | 'other';
+    ownership: 'commerce' | 'content';
+}
+
+/**
+ * Resolve a project's archetype — ownership from the flow predicate, product from
+ * the existing EDS/stack signal. Lets the dashboard recognize a content-SC fork
+ * additively, without rewriting every `isEds` call site.
+ */
+export function getProjectArchetype(project: Project | undefined | null): ProjectArchetype {
+    const ownership = getProjectFlow(project ?? {});
+    const stack = project?.selectedStack;
+    let product: ProjectArchetype['product'] = 'other';
+    if (isEdsStackId(stack)) {
+        product = 'eds-storefront';
+    } else if (stack?.startsWith('headless')) {
+        product = 'headless-storefront';
+    }
+    return { product, ownership };
+}
+
+// =============================================================================
 // EDS (Edge Delivery Services) Project Functions
 // =============================================================================
 // SOP §4: Centralized EDS detection for use across features

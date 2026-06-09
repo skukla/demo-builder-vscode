@@ -1,11 +1,11 @@
-import { View, Text, Flex, Heading, Divider } from '@adobe/react-spectrum';
+import { View, Heading, Divider } from '@adobe/react-spectrum';
 import React, { useMemo } from 'react';
 import { getStackById } from '../hooks/useSelectedStack';
 import { hasRequiredReviewData } from './reviewPredicates';
 import { buildComponentInfoList, resolveServiceNames } from './reviewStepHelpers';
 import { COMPONENT_IDS } from '@/core/constants';
+import { SummaryCard, LabelValue } from '@/core/ui/components/wizard';
 import { useCanProceed } from '@/core/ui/hooks';
-import { cn } from '@/core/ui/utils/classNames';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import type { WizardState } from '@/types/webview';
@@ -35,70 +35,6 @@ interface ReviewStepProps extends BaseStepProps {
     packages?: DemoPackage[];
     /** Available stacks for name resolution */
     stacks?: Stack[];
-}
-
-/**
- * LabelValue - Single row with label and value
- * Uses fixed-width labels for consistent alignment across all cards
- * Supports optional sub-items displayed as a secondary line
- */
-function LabelValue({ label, value, icon, subItems }: {
-    label: string;
-    value: React.ReactNode;
-    icon?: React.ReactNode;
-    subItems?: string[];
-}) {
-    return (
-        <Flex gap="size-200" alignItems="start">
-            <Text
-                UNSAFE_className="review-label"
-                UNSAFE_style={{
-                    width: '120px',
-                    flexShrink: 0,
-                }}
-            >
-                {label}
-            </Text>
-            <Flex direction="column" gap="size-50" flex={1}>
-                <Flex gap="size-100" alignItems="center">
-                    {icon}
-                    {typeof value === 'string' ? (
-                        <Text UNSAFE_className="text-md">{value}</Text>
-                    ) : (
-                        value
-                    )}
-                </Flex>
-                {subItems && subItems.length > 0 && (
-                    <Text UNSAFE_className="description-text">
-                        {subItems.join(' · ')}
-                    </Text>
-                )}
-            </Flex>
-        </Flex>
-    );
-}
-
-/**
- * Section - Group of label/value pairs with heading in a subtle card
- * Uses background instead of dividers for cleaner visual separation
- */
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-    return (
-        <View
-            padding="size-200"
-            borderRadius="medium"
-            UNSAFE_style={{
-                backgroundColor: 'var(--spectrum-gray-75)',
-            }}
-        >
-            <Text UNSAFE_className={cn('text-sm', 'font-semibold', 'text-gray-600', 'text-uppercase', 'letter-spacing-05')}>
-                {title}
-            </Text>
-            <Flex direction="column" gap="size-150" marginTop="size-150">
-                {children}
-            </Flex>
-        </View>
-    );
 }
 
 /** Derive GitHub repo display info from EDS config */
@@ -149,10 +85,10 @@ function ProjectConfigSection({ packageName, stackName }: {
 }) {
     if (!packageName && !stackName) return <View />;
     return (
-        <Section title="PROJECT CONFIGURATION">
+        <SummaryCard title="PROJECT CONFIGURATION">
             {packageName && <LabelValue label="Package" value={packageName} />}
             {stackName && <LabelValue label="Architecture" value={stackName} />}
-        </Section>
+        </SummaryCard>
     );
 }
 
@@ -164,11 +100,11 @@ function AdobeIOSection({ orgName, projectName, workspaceName }: {
 }) {
     if (!orgName && !projectName && !workspaceName) return <View />;
     return (
-        <Section title="ADOBE I/O">
+        <SummaryCard title="ADOBE I/O">
             {orgName && <LabelValue label="Organization" value={orgName} />}
             {projectName && <LabelValue label="Project" value={projectName} />}
             {workspaceName && <LabelValue label="Workspace" value={workspaceName} />}
-        </Section>
+        </SummaryCard>
     );
 }
 
@@ -178,11 +114,11 @@ function ComponentsSection({ componentInfo }: {
 }) {
     if (componentInfo.length === 0) return <View />;
     return (
-        <Section title="COMPONENTS">
+        <SummaryCard title="COMPONENTS">
             {componentInfo.map((item, index) => (
                 <LabelValue key={index} label={item.label} value={item.value} subItems={item.subItems} />
             ))}
-        </Section>
+        </SummaryCard>
     );
 }
 
@@ -193,7 +129,7 @@ function EdsSection({ githubRepoInfo, daLiveInfo, aemAssetsEnabled }: {
     aemAssetsEnabled: boolean;
 }) {
     return (
-        <Section title="EDGE DELIVERY SERVICES">
+        <SummaryCard title="EDGE DELIVERY SERVICES">
             {githubRepoInfo && (
                 <LabelValue
                     label="GitHub Repository"
@@ -214,7 +150,7 @@ function EdsSection({ githubRepoInfo, daLiveInfo, aemAssetsEnabled }: {
                     value="Enabled"
                 />
             )}
-        </Section>
+        </SummaryCard>
     );
 }
 

@@ -296,6 +296,22 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
         </div>
     );
 
+    // Content-SC "Join" flow: brand, design, and architecture are INHERITED from the
+    // shared upstream, so the joiner picks none of them — suppress the brand gallery and
+    // show a read-only summary. They only name their own site here (content comes next).
+    if (state.flow === 'content' && state.upstream) {
+        return (
+            <SingleColumnLayout>
+                {projectNameField}
+                <Text UNSAFE_className="description-text-spaced">
+                    You&rsquo;re joining <strong>{state.selectedPackage}</strong>, shared from{' '}
+                    {state.upstream.owner}/{state.upstream.repo}. The brand, design, and architecture
+                    are inherited — you&rsquo;ll connect your own content next.
+                </Text>
+            </SingleColumnLayout>
+        );
+    }
+
     // Package mode: Expandable cards with architecture selection built-in
     // When importing, package/stack are pre-selected in state - gallery handles display
     if (hasPackages && hasStacks) {

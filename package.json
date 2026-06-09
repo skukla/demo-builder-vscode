@@ -48,6 +48,11 @@
         "category": "Demo Builder"
       },
       {
+        "command": "demoBuilder.joinStorefront",
+        "title": "Join a Shared Storefront",
+        "category": "Demo Builder"
+      },
+      {
         "command": "demoBuilder.checkForUpdates",
         "title": "Check for Updates",
         "category": "Demo Builder"

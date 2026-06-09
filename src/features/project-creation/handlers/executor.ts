@@ -39,7 +39,7 @@ import { AdobeConfig } from '@/types/base';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
 import type { Stack } from '@/types/stacks';
-import { getProjectFrontendPort, getComponentConfigPort, isEdsStackId, getMeshComponentInstance, getMeshComponentId } from '@/types/typeGuards';
+import { getProjectFrontendPort, getComponentConfigPort, isEdsStackId, getMeshComponentInstance, getMeshComponentId, isContentFlow } from '@/types/typeGuards';
 import type { MeshPhaseState } from '@/types/webview';
 
 // EDS config.json sync to remote (Phase 5)
@@ -147,6 +147,10 @@ interface ProjectCreationConfig {
     // Package/Stack selections
     selectedPackage?: string;
     selectedStack?: string;
+    // Storefront archetype flow (absent ⇒ 'commerce' / legacy) + the upstream this
+    // fork was created from and syncs against (content flow / two-fork plumbing).
+    flow?: 'commerce' | 'content';
+    upstream?: { owner: string; repo: string };
     // Selected optional addons (e.g., ['adobe-commerce-aco'])
     selectedAddons?: string[];
     // Selected block library IDs (e.g., ['isle5', 'demo-team-blocks'])
@@ -276,6 +280,8 @@ export async function executeProjectCreation(
         componentConfigs: (typedConfig.componentConfigs || {}) as Record<string, Record<string, string | number | boolean | undefined>>,
         selectedPackage: typedConfig.selectedPackage,
         selectedStack: typedConfig.selectedStack,
+        flow: typedConfig.flow,
+        upstream: typedConfig.upstream,
         selectedAddons: typedConfig.selectedAddons,
         selectedBlockLibraries: typedConfig.selectedBlockLibraries,
         customBlockLibraries: typedConfig.customBlockLibraries,
@@ -410,6 +416,10 @@ export async function executeProjectCreation(
 
     await setupEdsContent(context, typedConfig, isEdsStack, progressTracker);
 
+    // Phase 5c: Publish the storefront-share.json marker so a content SC can join
+    // this commerce storefront (write-side pair of resolveJoinLink).
+    await writeStorefrontShareMarker(context, project, typedConfig, isEdsStack);
+
     await finalizeProject(finalizationContext);
     await sendCompletionAndCleanup(finalizationContext);
 
@@ -534,6 +544,45 @@ async function populateEdsMetadata(
     };
     await context.stateManager.saveProject(project);
     context.logger.debug(`[Project Creation] Populated EDS metadata for ${COMPONENT_IDS.EDS_STOREFRONT}: githubRepo=${edsInstance.metadata?.githubRepo}`);
+}
+
+/**
+ * Phase 5c: Write the `storefront-share.json` marker into a created commerce/EDS
+ * storefront so a content SC can later join it (the write-side pair of
+ * `resolveJoinLink`). Commerce-flow EDS creates only — the content (satellite)
+ * flow joins an existing marker rather than publishing one. Non-fatal: a failure
+ * logs a warning and does not abort project creation.
+ */
+async function writeStorefrontShareMarker(
+    context: HandlerContext,
+    project: import('@/types').Project,
+    typedConfig: ProjectCreationConfig,
+    isEdsStack: boolean,
+): Promise<void> {
+    if (!isEdsStack || isContentFlow(typedConfig)) return;
+    const repoInfo = typedConfig.edsConfig?.repoUrl ? parseGitHubUrl(typedConfig.edsConfig.repoUrl) : null;
+    if (!repoInfo) return;
+
+    try {
+        const { publishMasterMarkerForProject } = await import('@/features/project-creation/services/resolveJoinLink');
+        const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
+        const { GitHubFileOperations } = await import('@/features/eds/services/githubFileOperations');
+        const githubFileOps = new GitHubFileOperations(
+            new GitHubTokenService(context.context.secrets, context.logger),
+            context.logger,
+        );
+        const published = await publishMasterMarkerForProject(
+            { owner: repoInfo.owner, repo: repoInfo.repo, project },
+            async (owner, repo, markerPath, content, message) => {
+                await githubFileOps.createOrUpdateFile(owner, repo, markerPath, content, message);
+            },
+        );
+        if (published) {
+            context.logger.info(`[Project Creation] Wrote storefront-share.json marker to ${repoInfo.owner}/${repoInfo.repo}`);
+        }
+    } catch (error) {
+        context.logger.warn(`[Project Creation] Could not write storefront-share.json marker: ${(error as Error).message}`);
+    }
 }
 
 /**
@@ -763,6 +812,14 @@ async function syncEdsConfigToRemote(
         return;
     }
 
+    // Repoless satellite (content flow): never push config.json to the code repo —
+    // the joiner doesn't own it, and commerce config travels as content (Slice 2).
+    // `repoUrl` here is the upstream (used only as the local clone source).
+    if (isContentFlow(typedConfig)) {
+        context.logger.info('[Phase 5] Skipped — content flow (repoless satellite does not push config to the upstream)');
+        return;
+    }
+
     progressTracker('Syncing Config', 92, 'Pushing config.json to GitHub...');
 
     const repoUrl = typedConfig.edsConfig?.repoUrl;
@@ -861,6 +918,14 @@ async function setupEdsContent(
     progressTracker: ProgressTracker,
 ): Promise<void> {
     if (!isEdsStack || !typedConfig.edsConfig?.contentSource || !typedConfig.edsConfig?.repoUrl) {
+        return;
+    }
+
+    // Repoless satellite (content flow): content is already populated by the satellite
+    // setup branch, targeting the satellite's OWN site. Skip the executor's content
+    // step, which would (re)publish using the upstream repoUrl as the site identity.
+    if (isContentFlow(typedConfig)) {
+        context.logger.info('[Phase 5b] Skipped — content flow (satellite content handled in storefront setup)');
         return;
     }
 

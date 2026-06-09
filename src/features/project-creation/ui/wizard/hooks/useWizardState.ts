@@ -12,6 +12,7 @@ import {
 } from '../wizardHelpers';
 import { hasMeshInDependencies } from '@/core/constants';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
+import { seedComponentConfigsFromCommerce, type JoinDescriptor } from '@/features/project-creation/services/resolveJoinLink';
 import type { ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
 import type { Stack } from '@/types/stacks';
 import type { WizardState, WizardStep, ComponentSelection } from '@/types/webview';
@@ -24,6 +25,8 @@ interface UseWizardStateProps {
     existingProjectNames?: string[];
     importedSettings?: ImportedSettings | null;
     editProject?: EditProjectConfig;
+    /** Resolved Join descriptor — seeds the gallery-less content-SC (satellite) flow */
+    joinDescriptor?: JoinDescriptor | null;
     /** Available stacks for filtering steps based on selectedStack */
     stacks?: Stack[];
 }
@@ -231,7 +234,53 @@ function buildEditModeState(
 }
 
 /**
- * Compute initial state based on mode (edit vs create) and any imported settings
+ * Initialize wizard state for the content-SC (repoless satellite) "Join" flow.
+ *
+ * Seeds the content-flow discriminators inherited from the resolved descriptor:
+ * `flow:'content'`, the shared `upstream`, and the inherited brand (`selectedPackage`).
+ * The brand gallery is suppressed downstream (WelcomeStep keys on flow+upstream).
+ * Inherited backend coords (`joinDescriptor.commerce`) are seeded into
+ * `componentConfigs` by the Connect-Commerce step seeding (Step 5), not here.
+ */
+export function buildJoinModeState(
+    firstStep: WizardStep,
+    joinDescriptor: JoinDescriptor,
+    componentDefaults: ComponentSelection | undefined,
+): WizardState {
+    const adobeContext = initializeAdobeContextFromImport(null);
+    const { owner, repo } = joinDescriptor.upstream;
+    return {
+        currentStep: firstStep,
+        projectName: '',
+        wizardMode: 'create',
+        flow: 'content',
+        upstream: joinDescriptor.upstream,
+        // Inherited backend coords (resolved from the marker) → pre-fills Connect-Commerce.
+        componentConfigs: seedComponentConfigsFromCommerce(joinDescriptor.commerce),
+        adobeAuth: { isAuthenticated: false, isChecking: false },
+        components: initializeComponentsFromImport(null, componentDefaults),
+        adobeOrg: adobeContext.org,
+        adobeProject: adobeContext.project,
+        adobeWorkspace: adobeContext.workspace,
+        selectedPackage: joinDescriptor.packageId,
+        // Architecture is inherited (the joiner doesn't pick it). Slice 1 is ACCS-first —
+        // matching seedComponentConfigsFromCommerce's ACCS assumption — so the inherited
+        // stack is EDS + ACCS. (A PaaS upstream would carry the backend in the descriptor.)
+        selectedStack: 'eds-accs',
+        // Seed the satellite's code source = the upstream. `repoUrl` is the upstream
+        // (the local clone source; executor Phase 5/5b stay off via the content-flow
+        // guard). The joiner fills daLiveOrg/daLiveSite in the DataSourceConfig step.
+        edsConfig: {
+            upstream: joinDescriptor.upstream,
+            repoUrl: `https://github.com/${owner}/${repo}`,
+            templateOwner: owner,
+            templateRepo: repo,
+        },
+    };
+}
+
+/**
+ * Compute initial state based on mode (edit vs create vs join) and any imported settings
  */
 function computeInitialState(
     wizardSteps: { id: string; name: string; enabled: boolean }[] | undefined,
@@ -239,11 +288,16 @@ function computeInitialState(
     importedSettings: ImportedSettings | null | undefined,
     componentDefaults: ComponentSelection | undefined,
     existingProjectNames: string[],
+    joinDescriptor: JoinDescriptor | null | undefined,
 ): WizardState {
     const firstStep = getFirstEnabledStep(wizardSteps);
 
     if (editProject) {
         return buildEditModeState(firstStep, editProject);
+    }
+
+    if (joinDescriptor) {
+        return buildJoinModeState(firstStep, joinDescriptor, componentDefaults);
     }
 
     // CREATE/IMPORT MODE
@@ -299,11 +353,12 @@ export function useWizardState({
     existingProjectNames,
     importedSettings,
     editProject,
+    joinDescriptor,
     stacks,
 }: UseWizardStateProps): UseWizardStateReturn {
     // Main wizard state (declared before WIZARD_STEPS so we can use selectedStack)
     const [state, setState] = useState<WizardState>(() =>
-        computeInitialState(wizardSteps, editProject, importedSettings, componentDefaults, existingProjectNames || []),
+        computeInitialState(wizardSteps, editProject, importedSettings, componentDefaults, existingProjectNames || [], joinDescriptor),
     );
 
     // Filter steps based on enabled flag AND stack conditions
@@ -326,6 +381,7 @@ export function useWizardState({
                 id: step.id,
                 name: step.name,
                 description: step.description,
+                flow: originalStep?.flow,
                 condition: originalStep?.condition,
             };
         });
@@ -345,6 +401,7 @@ export function useWizardState({
             isEditMode: !!editProject,
             hasAdobeIO: meshIncluded,
             hasAdobeAuth: meshIncluded || isAccsBackend,
+            flow: state.flow,
         });
 
         return filteredSteps.map(step => ({
@@ -352,7 +409,7 @@ export function useWizardState({
             name: step.name,
             description: step.description,
         }));
-    }, [wizardSteps, stacks, state.selectedStack, state.selectedOptionalDependencies, editProject]);
+    }, [wizardSteps, stacks, state.selectedStack, state.selectedOptionalDependencies, editProject, state.flow]);
 
     // Step completion tracking
     // Neither import mode nor edit mode pre-marks steps as completed

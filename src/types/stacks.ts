@@ -61,6 +61,13 @@ export interface Stack {
 
     /** Whether this stack requires DA.live access */
     requiresDaLive?: boolean;
+
+    /**
+     * Which storefront flows this stack supports (config-driven content-flow gate).
+     * EDS stacks support both ['commerce','content']; non-EDS are ['commerce'].
+     * Absent ⇒ treat as commerce-only.
+     */
+    supportedFlows?: Array<'commerce' | 'content'>;
 }
 
 /**
