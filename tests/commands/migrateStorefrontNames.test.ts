@@ -52,9 +52,11 @@ jest.mock('@/features/eds/services/edsResetParams', () => ({
     })),
 }));
 
-jest.mock('@/features/project-creation/config/demo-packages.json', () => ({
-    packages: [],
-}), { virtual: true });
+// Note: demo-packages.json is intentionally NOT mocked here.
+// The command imports it for the `packages` array, but the array is passed
+// straight into the mocked `resolveStorefrontConfig` above — so the real JSON
+// loads and is never read by the test path. Mocking the JSON directly would
+// violate the no-config-leaf-mocks SOP (tests/sop/no-config-leaf-mocks.test.ts).
 
 // ---------------------------------------------------------------------------
 // Imports.
