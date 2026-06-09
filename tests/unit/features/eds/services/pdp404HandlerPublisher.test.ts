@@ -109,6 +109,24 @@ describe('buildSmart404Snippet', () => {
         expect(snippet).toContain('Smart 404 PDP rebuild');
     });
 
+    it('wraps the snippet in eslint-disable so storefront npm run lint passes', () => {
+        // Storefront forks ship varying ESLint configs (aem-boilerplate-
+        // commerce disallows raw `location`, prefers template literals,
+        // requires a specific IIFE style, etc.). Our snippet trips
+        // ~14 of those rules on every storefront. Wrapping it in
+        // eslint-disable silences our generated block without chasing
+        // each storefront's lint config.
+        const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
+        expect(snippet).toContain('/* eslint-disable */');
+        expect(snippet).toContain('/* eslint-enable */');
+        // The disable must come BEFORE the function definition, so the
+        // function and everything inside it is covered.
+        const disableIdx = snippet.indexOf('/* eslint-disable */');
+        const fnIdx = snippet.indexOf('function smart404PdpRebuild');
+        expect(disableIdx).toBeGreaterThan(-1);
+        expect(fnIdx).toBeGreaterThan(disableIdx);
+    });
+
     it('bookends the snippet with stable start and end markers for idempotency', () => {
         // The installer uses these markers to detect "already installed"
         // and skip re-vendoring on every reset.

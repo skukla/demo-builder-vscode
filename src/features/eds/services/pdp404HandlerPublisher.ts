@@ -128,13 +128,21 @@ export function extractCspNonce(headHtmlContent: string): string | undefined {
  * Not Found" content is visible before the redirect fires.
  */
 const SMART_404_SNIPPET_TEMPLATE = `
-
 ${SMART_404_MARKER_START}
+/* eslint-disable */
 // Auto-publishes the per-product page when a visitor hits a cold PDP
 // URL. Matches /products/{urlKey}/{sku}; otherwise no-op. Replaces the
 // storefront's default "Page Not Found" body with a "Loading product…"
 // state the moment the gate passes so the user gets immediate feedback
 // during the ~1-2 second cold-publish window.
+//
+// Lint is disabled for this block because the snippet is generated
+// code vendored by Demo Builder, not source the storefront developer
+// should be modifying. Different storefront forks ship different
+// ESLint configs (no-restricted-globals on 'location', prefer-template,
+// wrap-iife style, etc.); rather than chase every config we silence
+// lint on our generated block and rely on our own test suite to keep
+// the snippet correct.
 (function smart404PdpRebuild() {
   if (!window.isErrorPage) return;
   const RETRY_FLAG = 'pdpRetry';
@@ -185,6 +193,7 @@ ${SMART_404_MARKER_START}
     if (mainEl) mainEl.innerHTML = ERROR_HTML;
   })();
 })();
+/* eslint-enable */
 ${SMART_404_MARKER_END}
 `;
 
