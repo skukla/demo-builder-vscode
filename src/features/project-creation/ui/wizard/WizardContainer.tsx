@@ -40,7 +40,6 @@ import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjec
 import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
 import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
 import { ConnectServicesStep } from '@/features/eds/ui/steps/ConnectServicesStep';
-import { DataSourceConfigStep } from '@/features/eds/ui/steps/DataSourceConfigStep';
 import { GitHubRepoSelectionStep } from '@/features/eds/ui/steps/GitHubRepoSelectionStep';
 import { StorefrontSetupStep } from '@/features/eds/ui/steps/StorefrontSetupStep';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
@@ -314,8 +313,6 @@ export function WizardContainer({
                 return <ConnectServicesStep {...props} />;
             case 'eds-repository-config':
                 return <GitHubRepoSelectionStep {...props} />;
-            case 'eds-data-source':
-                return <DataSourceConfigStep {...props} />;
             case 'storefront-setup':
                 return <StorefrontSetupStep {...props} />;
             case 'settings':
