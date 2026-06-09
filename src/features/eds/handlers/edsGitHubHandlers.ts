@@ -14,6 +14,7 @@
  */
 
 import * as vscode from 'vscode';
+import { GitHubTokenService } from '../services/githubTokenService';
 import { GITHUB_SCOPES } from '../services/types';
 import { getGitHubServices } from './edsHelpers';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -128,14 +129,12 @@ export async function handleGitHubOAuth(
 ): Promise<HandlerResponse> {
     try {
         context.logger.debug('[EDS] Starting GitHub OAuth via VS Code authentication');
+        const { tokenService } = getGitHubServices(context);
 
-        // Use VS Code's built-in GitHub authentication
-        const session = await vscode.authentication.getSession(
-            'github',
-            [...GITHUB_SCOPES],
-            { createIfNone: true },
-        );
-
+        // First attempt: let VS Code return its cached session if one exists,
+        // or prompt fresh auth via createIfNone. This is the fast path for
+        // the common case.
+        let session = await acquireGitHubSession(tokenService, { forceNew: false });
         if (!session) {
             context.logger.debug('[EDS] GitHub auth cancelled by user');
             await context.sendMessage('github-oauth-error', {
@@ -143,25 +142,47 @@ export async function handleGitHubOAuth(
             });
             return { success: false, error: 'Authentication cancelled' };
         }
-
         context.logger.debug('[EDS] GitHub session obtained for:', session.account.label);
 
-        // Store the token in GitHubTokenService for API operations
-        const { tokenService } = getGitHubServices(context);
-        await tokenService.storeToken({
-            token: session.accessToken,
-            tokenType: 'bearer',
-            scopes: [...GITHUB_SCOPES],
-        });
+        // Sanity-check the token. The common failure here isn't a real auth
+        // problem — it's VS Code returning a stale cached session for a
+        // token that's been revoked since (user cleared the OAuth app in
+        // GitHub Settings, password reset, OAuth app de-authorized at the
+        // org level, etc.). In that case, `forceNewSession` invalidates the
+        // cache and prompts a fresh browser-side OAuth flow that mints a
+        // working token. See the `validateToken` side-effect note below.
+        const validation = await tokenService.validateToken();
+        if (!validation.valid) {
+            context.logger.warn(
+                '[EDS] Initial GitHub token failed validation — likely stale cached VS Code session; forcing fresh OAuth',
+            );
 
-        // VS Code's getSession() already proved the token is valid for this
-        // user — `session.account.label` is the GitHub login. Skipping a
-        // post-store validateToken() roundtrip avoids a class of bug where a
-        // transient GET /user 401 (rate-limit, network blip, scope quirk on
-        // an enterprise account) would clear the just-stored token and leave
-        // the UI thinking auth succeeded while every subsequent API call
-        // fails. Richer fields (email/name/avatarUrl) are fetched lazily
-        // wherever they're actually needed.
+            // `validateToken` clears the stored token on 401 as a side effect.
+            // Defensive explicit clear here as well: future refactors of
+            // `validateToken` mustn't break the precondition that our store is
+            // empty before the forced re-auth writes a new token.
+            await tokenService.clearToken();
+
+            session = await acquireGitHubSession(tokenService, {
+                forceNew: true,
+                reauthDetail: 'Your previous GitHub authorization is no longer valid. Re-authorize Demo Builder to continue.',
+            });
+            if (!session) {
+                context.logger.debug('[EDS] GitHub re-authorization cancelled by user');
+                await context.sendMessage('github-oauth-error', {
+                    error: 'Re-authorization cancelled',
+                });
+                return { success: false, error: 'Re-authorization cancelled' };
+            }
+            context.logger.info('[EDS] GitHub re-authorization succeeded for:', session.account.label);
+        }
+
+        // session.account.label is the GitHub login. Do NOT re-validate after a
+        // forced re-auth — the token was just minted; a transient 401 here
+        // would falsely flag a working session as broken and re-prompt
+        // indefinitely. Trust VS Code's session as the source of truth for the
+        // user identity; richer profile fields are fetched lazily by
+        // downstream code that needs them.
         const user = {
             login: session.account.label,
             email: null,
@@ -187,6 +208,38 @@ export async function handleGitHubOAuth(
 }
 
 /**
+ * Acquire a GitHub session via VS Code's auth provider and store its token.
+ *
+ * Wraps `vscode.authentication.getSession` with the two modes the OAuth flows
+ * need: cached-or-create (default) and force-new-session (for stale-session
+ * recovery and explicit account changes). Centralizes the
+ * `[...GITHUB_SCOPES]` + `storeToken` boilerplate that was previously
+ * duplicated across `handleGitHubOAuth` and `handleGitHubChangeAccount`.
+ *
+ * Returns the session on success, or `undefined` if the user cancelled.
+ */
+async function acquireGitHubSession(
+    tokenService: GitHubTokenService,
+    options: { forceNew: boolean; reauthDetail?: string },
+): Promise<vscode.AuthenticationSession | undefined> {
+    const session = await vscode.authentication.getSession(
+        'github',
+        [...GITHUB_SCOPES],
+        options.forceNew
+            ? { forceNewSession: { detail: options.reauthDetail ?? 'Re-authorize Demo Builder to use GitHub' } }
+            : { createIfNone: true },
+    );
+    if (!session) return undefined;
+
+    await tokenService.storeToken({
+        token: session.accessToken,
+        tokenType: 'bearer',
+        scopes: [...GITHUB_SCOPES],
+    });
+    return session;
+}
+
+/**
  * Change GitHub account
  *
  * Clears stored token and forces fresh OAuth flow with full scope authorization.
@@ -201,17 +254,14 @@ export async function handleGitHubChangeAccount(
         context.logger.debug('[EDS] Changing GitHub account');
         const { tokenService } = getGitHubServices(context);
 
-        // Clear stored token
+        // Clear stored token before fresh auth — the new session must not
+        // inherit any state from the old one.
         await tokenService.clearToken();
 
-        // Force new session to ensure fresh authorization with all required scopes
-        // This prompts the user to re-authorize, showing the full scope list
-        const session = await vscode.authentication.getSession(
-            'github',
-            [...GITHUB_SCOPES],
-            { forceNewSession: { detail: 'Re-authorize to grant all required permissions' } },
-        );
-
+        const session = await acquireGitHubSession(tokenService, {
+            forceNew: true,
+            reauthDetail: 'Re-authorize to grant all required permissions',
+        });
         if (!session) {
             context.logger.debug('[EDS] GitHub account change cancelled');
             await context.sendMessage('github-auth-status', {
@@ -220,20 +270,21 @@ export async function handleGitHubChangeAccount(
             return { success: true };
         }
 
-        // Store new token
-        await tokenService.storeToken({
-            token: session.accessToken,
-            tokenType: 'bearer',
-            scopes: [...GITHUB_SCOPES],
-        });
+        // session.account.label is the new login. Symmetric with
+        // handleGitHubOAuth: trust VS Code's session as source of truth and
+        // skip the validateToken roundtrip — it would clear the fresh token
+        // on any transient 401 (see the comment in handleGitHubOAuth).
+        const user = {
+            login: session.account.label,
+            email: null,
+            name: null,
+            avatarUrl: null,
+        };
 
-        // Get user info by validating the token
-        const validation = await tokenService.validateToken();
-
-        context.logger.debug('[EDS] GitHub account changed to:', validation.user?.login);
+        context.logger.debug('[EDS] GitHub account changed to:', user.login);
         await context.sendMessage('github-auth-complete', {
             isAuthenticated: true,
-            user: validation.user,
+            user,
         });
 
         return { success: true };
