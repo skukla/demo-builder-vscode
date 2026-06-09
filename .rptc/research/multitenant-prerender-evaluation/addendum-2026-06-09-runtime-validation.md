@@ -94,6 +94,42 @@ The blocker was UA, not architectural. App Builder runtime's `fetch` can set the
 
 ---
 
+## Finding 4: Catalog Service GraphQL is **case-insensitive on SKU lookup** — load-bearing for Phase 1's casing fix
+
+**Why this matters**: Finding 2 established that Helix normalizes paths to lowercase before storing in content-bus. So the smart-404 page Phase 1 ships has to redirect mixed-case PDP URLs to their lowercase variant before the page can serve. That redirect changes the URL the browser lands on — which is also the URL the drop-in parses to get the SKU it queries Commerce with.
+
+If Commerce's SKU lookup were case-sensitive, the chain would still 404-fix the routing but the drop-in's lookup would fail (querying `orchard2` when the actual SKU is `Orchard2`), and the page would serve the generic template with empty product details — a different but still-broken outcome.
+
+**Test**: query Catalog Service for the same SKU at both casings.
+
+```
+# Mixed-case (the actual stored SKU):
+curl -X POST … -d '{"query":"{ products(skus: [\"Orchard2\"]) { sku name } }"}' \
+  https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql
+→ {"products":[{"sku":"Orchard2","name":"Orchard 2"}]}
+
+# Lowercase (what the drop-in will send after the smart-404 redirects):
+curl -X POST … -d '{"query":"{ products(skus: [\"orchard2\"]) { sku name } }"}' \
+  https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql
+→ {"products":[{"sku":"Orchard2","name":"Orchard 2"}]}
+```
+
+Both queries return the same product. The `products(skus: […])` filter is case-insensitive on this Catalog Service endpoint. Phase 1's smart-404 casing fix therefore works end-to-end: lowercase URL → lowercase SKU in drop-in's query → Commerce returns the canonical mixed-case product → page populates correctly.
+
+**Dependency this introduces.** Phase 1 now depends on `products(skus: […])` staying case-insensitive in Adobe's Catalog Service / Commerce Optimizer. If this ever changes (case-sensitive lookup, deprecated `eq` filter, etc.), Phase 1's casing fix breaks silently — the URL would resolve, but every PDP would render with no product data.
+
+**Mitigation if that dependency breaks.** Options ranked by effort:
+
+1. The storefront's drop-in normalizes the SKU before querying (titlecase/uppercase, or query both casings, or fetch by `url_key` instead of `sku`). Small storefront-side change.
+2. The smart-404 redirect target preserves the original mixed-case URL via `history.replaceState` after the page loads at the lowercase URL. Hacky but feasible.
+3. The render-pdp action injects the canonical SKU casing into a `<meta>` tag on the returned template, and the drop-in reads from there. Cleanest if we're already in the action codebase.
+
+Worth periodically re-running the two `curl` commands above to confirm the dependency still holds. If they ever diverge, Phase 1 needs one of the mitigations above before further work.
+
+**Source**: probed live 2026-06-09 against `na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql` with the citisignal-b2b storefront's public headers.
+
+---
+
 ## What this changes for Phase 1 — and what it doesn't
 
 ### Doesn't change
@@ -176,4 +212,19 @@ curl -s -X POST -H "Content-Type: application/json" \
   -H "Magento-Website-Code: citisignal" \
   -d '{"query":"{productSearch(phrase:\"\", page_size:10){items{productView{sku urlKey name}}}}"}' \
   "$ENDPOINT"
+
+# Finding 4: case-insensitivity check (rerun periodically to confirm Phase 1's dependency holds)
+CATALOG_HEADERS=(-H "Content-Type: application/json"
+  -H "Store: citisignal_us"
+  -H "Magento-Store-Code: citisignal_store"
+  -H "Magento-Store-View-Code: citisignal_us"
+  -H "Magento-Website-Code: citisignal")
+for q in '"Orchard2"' '"orchard2"' '"ORCHARD2"'; do
+  echo -n "sku=$q → "
+  curl -s -X POST "${CATALOG_HEADERS[@]}" \
+    -d "{\"query\":\"{ products(skus: [$q]) { sku name } }\"}" \
+    "$ENDPOINT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('data',{}).get('products') or d.get('errors'))"
+done
+# All three should return the same product. If any return [] or null, Phase 1's
+# casing fix has a new gap — see Finding 4's "Mitigation if that dependency breaks."
 ```
