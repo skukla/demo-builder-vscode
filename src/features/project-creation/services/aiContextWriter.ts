@@ -48,6 +48,7 @@ export function generateAgentsMd(project: Project, stacksConfig: Stack[]): strin
     sections.push(buildHowToChangeThings());
     sections.push(buildEndpoints(project));
     sections.push(buildStorefront(project));
+    sections.push(buildPdpRouting(project));
     sections.push(buildComponentRepositories(project));
     sections.push(buildBlockLibraries(project));
     sections.push(buildAdobeIo(project));
@@ -184,6 +185,49 @@ function buildStorefront(project: Project): string {
     lines.push('> For live: push changes to GitHub — Helix picks up the update automatically.');
 
     return lines.join('\n');
+}
+
+/**
+ * PDP routing context for EDS storefronts.
+ *
+ * Tells the AI two things that aren't obvious from the code:
+ *   1. Per-product URLs (`/products/{urlKey}/{sku}`) route through a BYOM
+ *      overlay + smart 404, NOT folder mapping (deprecated) or per-product
+ *      DA pages (the manual workaround). New SKUs work on first click.
+ *   2. The Phase 1 limitation: the overlay returns a generic template, so
+ *      SC customizations to `/products/default` show on that path but
+ *      don't yet appear on real product URLs. Phase 2 closes this gap.
+ *
+ * Without this section, AI agents debugging PDP issues default to
+ * suggesting folder mapping or per-product DA pages — both wrong. And
+ * AI editing PDP layouts will mislead the SC about where the changes
+ * appear.
+ */
+function buildPdpRouting(project: Project): string {
+    if (!isEdsProject(project)) return '';
+
+    return [
+        '## PDP Routing (How Product Pages Work)',
+        '',
+        'Per-product URLs (`/products/{urlKey}/{sku}`) are routed automatically — **do not** create per-product DA pages manually, and **do not** configure folder mapping (deprecated by Adobe).',
+        '',
+        '**How it works:** A BYOM overlay + smart `/404.html` handles every product URL on demand:',
+        '- First visitor to a SKU → smart 404 triggers a publish → page serves (~2s)',
+        '- Subsequent visitors → instant',
+        '- Mixed-case SKU URLs → smart 404 redirects to the lowercase variant',
+        '- New SKUs added in Commerce → work on first click; no manual step',
+        '- Deleted SKUs → URL still serves cached HTML; the drop-in shows empty product details',
+        '',
+        '**Phase 1 limitation (matters when customizing PDPs):** the overlay returns a generic PDP template, not the storefront\'s authored `/products/default`. SC tweaks to `/products/default` (extra blocks, custom layout) appear when visiting `/products/default` directly but **do not yet appear on real product URLs** like `/products/orchard-2/orchard2`. Phase 2 closes this gap by having the overlay render against the SC\'s authored template.',
+        '',
+        '**When PDPs 404 in a freshly-created storefront**, check in this order:',
+        '1. Is `demoBuilder.byom.enabled` on? (default true)',
+        '2. Was the storefront reset after the latest extension update?',
+        '3. Is the `render-pdp` overlay action reachable? (`curl <overlayUrl>`)',
+        '4. Is the smart `/404.html` published? (`curl https://main--{repo}--{owner}.aem.live/404.html`)',
+        '',
+        'Full architecture, request flows, and load-bearing dependencies: see `docs/architecture/eds-byom-pdp-routing.md` in the demo-builder-vscode repo. Decision rationale: ADR-005.',
+    ].join('\n');
 }
 
 /**

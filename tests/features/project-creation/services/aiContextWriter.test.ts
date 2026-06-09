@@ -137,6 +137,44 @@ describe('aiContextWriter', () => {
             });
         });
 
+        describe('PDP routing section', () => {
+            it('includes the PDP Routing section for EDS projects', () => {
+                const result = generateAgentsMd(makeEdsProject(), STACKS);
+                expect(result).toContain('## PDP Routing');
+            });
+
+            it('warns against per-product DA pages and folder mapping', () => {
+                const result = generateAgentsMd(makeEdsProject(), STACKS);
+                expect(result).toContain('do not');
+                expect(result).toContain('per-product DA pages');
+                expect(result).toContain('folder mapping');
+            });
+
+            it('documents the Phase 1 limitation about generic templates', () => {
+                const result = generateAgentsMd(makeEdsProject(), STACKS);
+                expect(result).toContain('Phase 1');
+                expect(result).toContain('/products/default');
+                expect(result).toContain('Phase 2');
+            });
+
+            it('provides a debugging checklist for 404s', () => {
+                const result = generateAgentsMd(makeEdsProject(), STACKS);
+                expect(result).toContain('byom.enabled');
+                expect(result).toContain('render-pdp');
+                expect(result).toContain('404.html');
+            });
+
+            it('links to the architecture doc', () => {
+                const result = generateAgentsMd(makeEdsProject(), STACKS);
+                expect(result).toContain('docs/architecture/eds-byom-pdp-routing.md');
+            });
+
+            it('omits the PDP Routing section for headless projects', () => {
+                const result = generateAgentsMd(makeHeadlessProject(), STACKS);
+                expect(result).not.toContain('## PDP Routing');
+            });
+        });
+
         describe('headless projects', () => {
             it('includes the Commerce endpoint URL', () => {
                 const project = makeHeadlessProject();
