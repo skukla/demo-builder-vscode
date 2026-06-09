@@ -32,6 +32,7 @@ export interface ProjectManifest {
     flow?: Project['flow'];
     upstream?: Project['upstream'];
     selectedAddons?: string[];
+    selectedFeaturePacks?: string[];
     selectedBlockLibraries?: string[];
     customBlockLibraries?: CustomBlockLibrary[];
     aiPrompts?: AiPrompt[];
@@ -96,6 +97,7 @@ export class ProjectFileLoader {
                 flow: manifest.flow,
                 upstream: manifest.upstream,
                 selectedAddons: manifest.selectedAddons,
+                selectedFeaturePacks: manifest.selectedFeaturePacks,
                 selectedBlockLibraries: manifest.selectedBlockLibraries,
                 customBlockLibraries: manifest.customBlockLibraries,
                 aiPrompts: manifest.aiPrompts,

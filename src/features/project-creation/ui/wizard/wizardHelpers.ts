@@ -284,6 +284,8 @@ export interface ImportedSettings {
     selectedStack?: string;
     /** Selected optional addons (e.g., ['adobe-commerce-aco']) */
     selectedAddons?: string[];
+    /** Selected feature pack IDs (e.g., ['b2b-commerce']) */
+    selectedFeaturePacks?: string[];
     /** Selected block library IDs (e.g., ['isle5', 'demo-team-blocks']) */
     selectedBlockLibraries?: string[];
     /** Custom block libraries added by URL */

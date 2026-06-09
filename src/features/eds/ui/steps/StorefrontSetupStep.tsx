@@ -308,11 +308,12 @@ export function StorefrontSetupStep({
             backendComponentId: state.components?.backend,
             dependencies: [...(state.components?.dependencies || []), ...(state.selectedOptionalDependencies || [])],
             selectedAddons: state.selectedAddons,
+            selectedFeaturePacks: state.selectedFeaturePacks,
             selectedBlockLibraries: state.selectedBlockLibraries,
             customBlockLibraries: state.customBlockLibraries,
             selectedPackage: state.selectedPackage,
         });
-    }, [state.projectName, state.edsConfig, state.componentConfigs, state.components?.backend, state.components?.dependencies, state.selectedOptionalDependencies, state.selectedAddons, state.selectedBlockLibraries, state.customBlockLibraries, state.selectedPackage]);
+    }, [state.projectName, state.edsConfig, state.componentConfigs, state.components?.backend, state.components?.dependencies, state.selectedOptionalDependencies, state.selectedAddons, state.selectedFeaturePacks, state.selectedBlockLibraries, state.customBlockLibraries, state.selectedPackage]);
 
     /**
      * Handle GitHub App installation detected
@@ -345,6 +346,7 @@ export function StorefrontSetupStep({
         backendComponentId: state.components?.backend,
         dependencies: [...(state.components?.dependencies || []), ...(state.selectedOptionalDependencies || [])],
         selectedAddons: state.selectedAddons,
+        selectedFeaturePacks: state.selectedFeaturePacks,
         selectedBlockLibraries: state.selectedBlockLibraries,
         customBlockLibraries: state.customBlockLibraries,
         selectedPackage: state.selectedPackage,
@@ -429,6 +431,7 @@ export function StorefrontSetupStep({
             backendComponentId: initialConfigRef.current.backendComponentId,
             dependencies: initialConfigRef.current.dependencies,
             selectedAddons: initialConfigRef.current.selectedAddons,
+            selectedFeaturePacks: initialConfigRef.current.selectedFeaturePacks,
             selectedBlockLibraries: initialConfigRef.current.selectedBlockLibraries,
             customBlockLibraries: initialConfigRef.current.customBlockLibraries,
             selectedPackage: initialConfigRef.current.selectedPackage,
