@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ConfigureCommand } from './configure';
 import { DiagnosticsCommand } from './diagnostics';
+import { MigrateStorefrontNamesCommand } from './migrateStorefrontNames';
 import { OpenInClaudeCommand } from './openInClaude';
 import { OpenModernizationAgentCommand } from './openModernizationAgent';
 import { RefreshBlockLibraryCommand } from './refreshBlockLibrary';
@@ -331,6 +332,18 @@ export class CommandManager {
         // Diagnostics
         const diagnostics = new DiagnosticsCommand();
         this.registerCommand('demoBuilder.diagnostics', () => diagnostics.execute());
+
+        // One-shot storefront name migration (heals pre-`164fd251` storefronts
+        // without requiring a destructive reset).
+        const migrateStorefrontNames = new MigrateStorefrontNamesCommand(
+            this.context,
+            this.stateManager,
+            this.logger,
+        );
+        this.registerCommand(
+            'demoBuilder.migrateStorefrontNames',
+            () => migrateStorefrontNames.execute(),
+        );
 
         // Set Recommended Zoom (120% for better visibility during demos)
         this.registerCommand('demoBuilder.setRecommendedZoom', async () => {

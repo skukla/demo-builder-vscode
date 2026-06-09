@@ -58,6 +58,11 @@
         "category": "Demo Builder"
       },
       {
+        "command": "demoBuilder.migrateStorefrontNames",
+        "title": "Migrate Storefront Names",
+        "category": "Demo Builder"
+      },
+      {
         "command": "demoBuilder.syncStorefront",
         "title": "Sync Storefront",
         "category": "Demo Builder"

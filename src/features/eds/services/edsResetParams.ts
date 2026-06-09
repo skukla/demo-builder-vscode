@@ -152,7 +152,7 @@ interface StorefrontConfig {
  *
  * @returns The matching storefront config, or an empty object if none matches.
  */
-function resolveStorefrontConfig(
+export function resolveStorefrontConfig(
     project: Project,
     packages: typeof demoPackagesConfig.packages,
 ): StorefrontConfig {
