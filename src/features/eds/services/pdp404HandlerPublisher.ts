@@ -49,6 +49,48 @@ const SMART_404_MARKER_START = '// === Smart 404 PDP rebuild (Demo Builder) ==='
 const SMART_404_MARKER_END = '// === end Smart 404 PDP rebuild ===';
 
 /**
+ * Marker comment that bookends the eager mixed-case redirect snippet
+ * inside `head.html`. Same role as `SMART_404_MARKER_START` for the
+ * delayed.js snippet — used to detect "already installed" so re-runs
+ * are no-ops. Two distinct markers because the two snippets live in
+ * different files and the idempotency check has to be per-file.
+ */
+const SMART_404_HEAD_MARKER_START = '<!-- === Smart 404 PDP eager redirect (Demo Builder) === -->';
+const SMART_404_HEAD_MARKER_END = '<!-- === end Smart 404 PDP eager redirect === -->';
+
+/**
+ * Eager mixed-case → lowercase redirect, vendored into `head.html` so
+ * it fires synchronously before any body paint. Eliminates the visible
+ * "Page Not Found" flash on the common PDP path — a PLP click against
+ * a mixed-case product URL — which would otherwise wait for `delayed.js`
+ * to load (1-2 seconds) before the snippet there could trigger a
+ * redirect.
+ *
+ * Pure URL manipulation: no org/site/triggerUrl templating needed.
+ * No-ops on every non-PDP path. Doesn't compete with the delayed.js
+ * snippet — covers the mixed-case case; the delayed.js snippet handles
+ * the lowercase-cold case (URL is already lowercase but not yet
+ * published).
+ *
+ * CSP: requires `nonce="aem"` because the storefront's CSP is
+ * `script-src 'nonce-aem' 'strict-dynamic' ...`. Inline scripts
+ * without the nonce are blocked.
+ */
+const SMART_404_HEAD_SNIPPET = `
+
+${SMART_404_HEAD_MARKER_START}
+<script nonce="aem">
+  (function () {
+    var m = location.pathname.match(/^\\/products\\/([^/]+)\\/([^/]+)$/);
+    if (!m) return;
+    var lc = '/products/' + m[1].toLowerCase() + '/' + m[2].toLowerCase();
+    if (lc !== location.pathname) location.replace(lc);
+  })();
+</script>
+${SMART_404_HEAD_MARKER_END}
+`;
+
+/**
  * Smart 404 JS template. Three substitutions handled by
  * `buildSmart404Snippet`:
  *   __TRIGGER_URL__ — sibling `prepublish-pdp` endpoint URL
@@ -236,5 +278,50 @@ export async function installSmart404Handler(
         return { installed: false, reason: `GitHub commit failed: ${reason}` };
     }
 
+    // Vendor the eager mixed-case redirect into head.html. Non-fatal at
+    // every step: a failure here means the user still gets the slower
+    // path (delayed.js handles it after ~1-2s) but the storefront still
+    // works. We log and continue rather than report install failure for
+    // the whole handler.
+    await installSmart404HeadRedirect(githubFileOps, repoOwner, repoName, logger);
+
     return { installed: true };
+}
+
+/**
+ * Vendor the eager mixed-case redirect script into `head.html`. Same
+ * shape as the delayed.js install: read, idempotent-check, commit.
+ *
+ * Non-fatal at every step. Failures degrade the UX (visible 404 flash
+ * persists until `delayed.js` fires) but never break the storefront.
+ */
+async function installSmart404HeadRedirect(
+    githubFileOps: GitHubFileOperations,
+    repoOwner: string,
+    repoName: string,
+    logger: Logger,
+): Promise<void> {
+    const existing = await githubFileOps.getFileContent(repoOwner, repoName, 'head.html');
+    if (!existing?.content) {
+        logger.warn('[PDP404] head.html not found — skipping eager redirect install');
+        return;
+    }
+    if (existing.content.includes(SMART_404_HEAD_MARKER_START)) {
+        logger.info('[PDP404] Eager redirect already present in head.html — skipping');
+        return;
+    }
+    try {
+        await githubFileOps.createOrUpdateFile(
+            repoOwner,
+            repoName,
+            'head.html',
+            existing.content + SMART_404_HEAD_SNIPPET,
+            'chore(demo-builder): vendor smart 404 eager redirect into head.html',
+            existing.sha,
+        );
+        logger.info(`[PDP404] Vendored eager redirect into head.html (${repoOwner}/${repoName})`);
+    } catch (error) {
+        const reason = (error as Error).message ?? 'unknown';
+        logger.warn(`[PDP404] head.html commit failed: ${reason} — eager redirect not installed (delayed.js fallback still active)`);
+    }
 }

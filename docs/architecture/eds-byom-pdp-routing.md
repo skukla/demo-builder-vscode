@@ -23,16 +23,21 @@ Demo Builder targets multi-tenant demos: any SC, any catalog, install-and-go. No
 ```
 ┌─ This repo (demo-builder-vscode) ──────────────────────────┐
 │                                                            │
-│  Create / reset pipeline writes:                           │
+│  Create / reset / edit pipeline writes:                    │
 │    • Configuration Service site config with                │
 │      content.overlay.url = <render-pdp endpoint>           │
 │      ?org=<daLiveOrg>&site=<daLiveSite>                    │
+│    • Eager mixed-case → lowercase redirect snippet         │
+│      prepended to head.html. Runs synchronously before     │
+│      body paint. Handles the common case (PLP click on a   │
+│      mixed-case product URL) with zero visible 404 flash.  │
 │    • Smart-404 JS snippet appended to                      │
 │      scripts/delayed.js in the storefront's GitHub repo,   │
 │      with the storefront's org, site, and the              │
-│      prepublish-pdp endpoint URL templated in. The         │
-│      snippet is gated on window.isErrorPage so it's        │
-│      inert on every non-404 page.                          │
+│      prepublish-pdp endpoint URL templated in. Gated on    │
+│      window.isErrorPage. Handles the cold case (lowercase  │
+│      URL that's never been published yet) by calling       │
+│      prepublish-pdp and redirecting after success.         │
 │                                                            │
 └────────────────────────────────────────────────────────────┘
                               │
@@ -66,10 +71,18 @@ The two repos coordinate via three URL strings — the `render-pdp` overlay URL,
 
 ```
 1. Visitor clicks product card on PLP → /products/orchard-2/Orchard2
-2. Helix looks up content-bus at lowercase path /products/orchard-2/orchard2.md
-   → not found → serves the storefront's default 404 page (head.html
-   sets window.isErrorPage = true; body shows "Page Not Found")
-3. delayed.js loads, the smart-404 snippet checks window.isErrorPage:
+2. Helix looks up content-bus at the mixed-case path → 404 (Helix
+   stores content-bus paths in lowercase; mixed case never matches).
+3. head.html eager redirect fires synchronously before body paint:
+   detects PDP shape, computes lowercase /products/orchard-2/orchard2,
+   calls location.replace(). No visible 404 flash.
+4. Browser navigates to lowercase URL. Helix looks up the lowercase
+   path:
+   - If already published (warm path): Helix serves the cached page
+     → drop-in runs → done.
+   - If not yet published (cold path): Helix 404s again → storefront
+     renders its default 404 chrome. delayed.js loads, the smart-404
+     snippet checks window.isErrorPage:
    a. Recognizes PDP-shape URL
    b. Computes lowercase variant /products/orchard-2/orchard2
    c. HEAD checks lowercase variant → 404 (not yet published)

@@ -131,10 +131,21 @@ describe('installSmart404Handler', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        // Default mock: getFileContent returns plausible content for any
+        // path. Tests that need to differentiate head.html from
+        // delayed.js override this via mockImplementation per-test.
         mockGithub = {
-            getFileContent: jest.fn().mockResolvedValue({
-                content: '// Existing delayed.js contents\nexport default {};\n',
-                sha: 'existing-file-sha',
+            getFileContent: jest.fn().mockImplementation((_o, _r, path) => {
+                if (path === 'head.html') {
+                    return Promise.resolve({
+                        content: '<meta charset="UTF-8">\n<title>placeholder</title>\n',
+                        sha: 'head-sha',
+                    });
+                }
+                return Promise.resolve({
+                    content: '// Existing delayed.js contents\nexport default {};\n',
+                    sha: 'existing-file-sha',
+                });
             }),
             createOrUpdateFile: jest.fn().mockResolvedValue({
                 sha: 'new-file-sha',
@@ -158,6 +169,101 @@ describe('installSmart404Handler', () => {
             expect.any(String),
             'existing-file-sha',
         );
+    });
+
+    it('also vendors the eager redirect into head.html (eliminates the visible 404 flash)', async () => {
+        // The head.html vendor handles the most common case — a PLP
+        // click against a mixed-case product URL. Without this, every
+        // PDP visit waits ~2 seconds for delayed.js to fire the
+        // redirect. With it, the redirect happens synchronously
+        // before any 404 paint.
+        await installSmart404Handler(
+            mockGithub as never,
+            repoOwner, repoName, overlayUrl, mockLogger as never,
+            daLiveOrg, daLiveSite,
+        );
+
+        expect(mockGithub.getFileContent).toHaveBeenCalledWith(repoOwner, repoName, 'head.html');
+        const headCall = mockGithub.createOrUpdateFile.mock.calls.find(c => c[2] === 'head.html');
+        expect(headCall).toBeDefined();
+        const headContent = headCall![3] as string;
+        // Snippet preserved through to the commit
+        expect(headContent).toContain('<meta charset="UTF-8">');
+        expect(headContent).toContain('Smart 404 PDP eager redirect');
+        // CSP requires nonce="aem" — without it the inline script
+        // gets blocked by 'script-src nonce-aem strict-dynamic'.
+        expect(headContent).toContain('nonce="aem"');
+        // Performs the actual mixed-case → lowercase rewrite
+        expect(headContent).toContain('toLowerCase()');
+        expect(headContent).toContain('location.replace');
+    });
+
+    it('head.html vendor is idempotent: skips if marker already present', async () => {
+        // Lets the install step run on every create/edit/reset without
+        // piling up duplicate head.html snippets.
+        mockGithub.getFileContent.mockImplementation((_o, _r, path) => {
+            if (path === 'head.html') {
+                return Promise.resolve({
+                    content: '<meta charset="UTF-8">\n<!-- === Smart 404 PDP eager redirect (Demo Builder) === -->\n<script>existing</script>\n',
+                    sha: 'head-sha',
+                });
+            }
+            return Promise.resolve({
+                content: '// Existing delayed.js contents\n',
+                sha: 'delayed-sha',
+            });
+        });
+
+        await installSmart404Handler(
+            mockGithub as never,
+            repoOwner, repoName, overlayUrl, mockLogger as never,
+            daLiveOrg, daLiveSite,
+        );
+
+        const headCommits = mockGithub.createOrUpdateFile.mock.calls.filter(c => c[2] === 'head.html');
+        expect(headCommits).toHaveLength(0);
+    });
+
+    it('head.html vendor failure is non-fatal: installed=true still, delayed.js fallback active', async () => {
+        // If head.html commit fails (network, conflict), the user gets
+        // the slower delayed.js path. We never want to report install
+        // failure for the whole handler just because the UX polish step
+        // failed.
+        mockGithub.createOrUpdateFile.mockImplementation((_o, _r, path) => {
+            if (path === 'head.html') {
+                return Promise.reject(new Error('head.html conflict'));
+            }
+            return Promise.resolve({ sha: 'new-sha', commitSha: 'commit-sha' });
+        });
+
+        const result = await installSmart404Handler(
+            mockGithub as never,
+            repoOwner, repoName, overlayUrl, mockLogger as never,
+            daLiveOrg, daLiveSite,
+        );
+
+        expect(result).toEqual({ installed: true });
+    });
+
+    it('skips head.html vendor when the file is missing (degrades gracefully)', async () => {
+        mockGithub.getFileContent.mockImplementation((_o, _r, path) => {
+            if (path === 'head.html') return Promise.resolve(null);
+            return Promise.resolve({
+                content: '// Existing delayed.js contents\n',
+                sha: 'delayed-sha',
+            });
+        });
+
+        const result = await installSmart404Handler(
+            mockGithub as never,
+            repoOwner, repoName, overlayUrl, mockLogger as never,
+            daLiveOrg, daLiveSite,
+        );
+
+        // delayed.js install still succeeds → installed=true
+        expect(result).toEqual({ installed: true });
+        const headCommits = mockGithub.createOrUpdateFile.mock.calls.filter(c => c[2] === 'head.html');
+        expect(headCommits).toHaveLength(0);
     });
 
     it('appends the snippet to the existing delayed.js content (preserves prior content)', async () => {
