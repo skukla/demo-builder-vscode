@@ -20,6 +20,7 @@
 import type { DaLiveContentOperations } from './daLiveContentOperations';
 import type { GitHubFileOperations } from './githubFileOperations';
 import type { HelixService } from './helixService';
+import { publishSmart404Handler } from './pdp404HandlerPublisher';
 import { DaLiveAuthError, DaLiveError } from './types';
 import type { ContentPatchSource } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
@@ -74,6 +75,14 @@ export interface EdsPipelineParams {
     // Publish
     purgeCache?: boolean;
     skipPublish?: boolean;
+
+    /**
+     * BYOM overlay URL stamped onto the storefront's Configuration Service
+     * registration. When set AND `skipPublish` is false, the pipeline also
+     * publishes a smart `/404.html` page that handles PDP routing.
+     * See `pdp404HandlerPublisher.ts` and `docs/architecture/eds-byom-pdp-routing.md`.
+     */
+    byomOverlayUrl?: string;
 }
 
 /** Service dependencies — callers construct and pass these in */
@@ -500,6 +509,36 @@ export async function executeEdsPipeline(
                 // Non-fatal -- library config was created, publishing can be retried
                 logger.warn(`[EdsPipeline] Block library publish failed: ${(libPublishError as Error).message}`);
             }
+        }
+
+        // Step 7: Smart 404 page for BYOM PDP routing. Phase 1 of the PDP routing
+        // workstream — see docs/architecture/eds-byom-pdp-routing.md.
+        //
+        // Gated by:
+        //  - !skipPublish — narrow paths like Refresh Block Library bypass the
+        //    full publish cycle and don't need to republish the 404.
+        //  - params.byomOverlayUrl — when BYOM is disabled (no overlay URL),
+        //    PDPs aren't being routed through the action, so the smart 404
+        //    has nothing useful to do.
+        // Every failure inside publishSmart404Handler is logged and skipped;
+        // the storefront still works without it (visitors hitting cold PDPs
+        // just get the default Helix 404).
+        if (!skipPublish && params.byomOverlayUrl) {
+            onProgress?.({
+                operation: 'pdp-404-handler',
+                message: 'Publishing PDP routing handler...',
+            });
+
+            await publishSmart404Handler(
+                helixService,
+                daLiveContentOps,
+                daLiveOrg,
+                daLiveSite,
+                repoOwner,
+                repoName,
+                params.byomOverlayUrl,
+                logger,
+            );
         }
 
         return {

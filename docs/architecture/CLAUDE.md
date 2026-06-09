@@ -117,6 +117,28 @@
 
 ---
 
+### [`eds-byom-pdp-routing.md`](eds-byom-pdp-routing.md)
+**Purpose**: How PDP URLs (`/products/{urlKey}/{sku}`) work for every storefront
+
+**When to Read**:
+- Touching anything in `src/features/eds/services/pdp404HandlerPublisher.ts` or the smart-404 step in `executeEdsPipeline`
+- Debugging PDP 404s in a live storefront
+- Planning Phase 2 (server-side render against the SC's authored template)
+- Understanding the two-repo seam with `accs-discovery-service`
+
+**Topics Covered**:
+- The shared `render-pdp` overlay + browser-side smart 404 + admin-trigger architecture
+- Cold-path and warm-path request flows
+- Phase 1 scope (what ships) vs Phase 2 (deferred)
+- Load-bearing dependencies: Helix path-lowercasing, Catalog Service case-insensitivity, open Helix admin POST
+- Verification probes for the live system
+
+**Reading Time**: 10 minutes
+
+**Related**: [ADR-005](adr/005-byom-pdp-routing.md) for decision rationale; `.rptc/research/multitenant-prerender-evaluation/` for empirical research
+
+---
+
 ## Reading Paths
 
 ### For New Contributors

@@ -23,6 +23,12 @@ Tell the user this up front:
 
 Don't paper over this. End users seeing a demo trust it more if it says "this section uses Adobe's product detail drop-in, themed to match" than if the demo silently degrades.
 
+### Phase 1 PDP routing caveat (load-bearing)
+
+Customizations you make to the PDP template (e.g., adding a related-products block, rearranging sections in `/products/default`) appear at `/products/default` itself but **do not yet appear on real product URLs** like `/products/{urlKey}/{sku}`. Phase 1 of the BYOM PDP routing ships a shared overlay that returns a generic template; Phase 2 will evolve it to render against the SC's authored template.
+
+Tell the user explicitly when you customize a PDP block: "This change shows on `/products/default`. Real product URLs will pick it up once Phase 2 ships. Today, real PDPs always render the generic Phase 1 template." This prevents the "I customized it but my product page doesn't show the change" confusion. Architecture detail: `docs/architecture/eds-byom-pdp-routing.md` in the demo-builder-vscode repo.
+
 ## What's customizable
 
 For each drop-in, these levers exist:

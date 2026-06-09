@@ -226,6 +226,7 @@ async function runEdsPipelineWithRecovery(
                     contentPatches: edsConfig.contentPatches, contentPatchSource: edsConfig.contentPatchSource,
                     includeBlockLibrary: true, blockCollectionIds, libraryContentSources,
                     purgeCache: Boolean(edsConfig.resetToTemplate || wantsToResetContent),
+                    byomOverlayUrl: edsConfig.byomOverlayUrl,
                 },
                 {
                     daLiveContentOps: services.daLiveContentOps,
