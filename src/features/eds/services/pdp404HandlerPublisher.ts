@@ -35,9 +35,7 @@
  * @module features/eds/services/pdp404HandlerPublisher
  */
 
-import { DaLiveContentOperations } from './daLiveContentOperations';
 import { GitHubFileOperations } from './githubFileOperations';
-import { HelixService } from './helixService';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -345,6 +343,14 @@ export async function installSmart404Handler(
     // the whole handler.
     await installSmart404HeadRedirect(githubFileOps, repoOwner, repoName, logger);
 
+    // Vendor the same eager redirect into the storefront's static
+    // 404.html file. Helix serves this file on 404 responses for
+    // unknown paths (NOT the authored /404 page in DA.live — that's
+    // only used for direct /404 GETs). Without this, the mixed-case
+    // PDP 404 → eager-redirect flow never fires because the served
+    // 404 page bypasses head.html entirely.
+    await installSmart404On404HtmlFile(githubFileOps, repoOwner, repoName, logger);
+
     return { installed: true };
 }
 
@@ -356,96 +362,60 @@ export async function installSmart404Handler(
  * persists until `delayed.js` fires) but never break the storefront.
  */
 /**
- * Minimal storefront /404 page body. Contains no inline scripts (EDS
- * strips those from authored content anyway) — its job is purely to
- * exist as an authored page in DA.live so Helix uses it for 404
- * responses instead of falling back to Helix's hardcoded default 404
- * template.
+ * Vendor the eager redirect into the storefront's static `404.html`
+ * file. Helix serves this file on 404 responses for unknown paths,
+ * bypassing `head.html` entirely — so the same snippet that's in
+ * head.html needs to be in 404.html as well.
  *
- * When Helix serves this page on a 404 response, it goes through
- * normal EDS rendering: storefront's `head.html` is injected (which
- * has our eager redirect snippet), `delayed.js` loads (which has our
- * cold-path snippet), and Helix's own runtime script tag sets
- * `window.isErrorPage = true` for our gate. Without this authored
- * page, Helix's default 404 template bypasses `head.html` entirely
- * and our snippet never runs.
+ * Same shape as `installSmart404HeadRedirect`: read, idempotent-check,
+ * extract nonce, commit. Inserts the snippet right before `</head>`
+ * so it runs as part of head parsing (synchronous, before body paint).
  *
- * The body content is what visitors see during the brief window
- * before our snippet redirects them. Kept minimal and neutral; for
- * non-PDP 404s (no redirect), this is the visible page.
+ * Non-fatal at every step. Failures degrade the UX (mixed-case URLs
+ * still show the visible Helix-default 404 page until delayed.js
+ * fires, ~1-2s later) but never break the storefront.
  */
-const STOREFRONT_404_HTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Page Not Found</title>
-</head>
-<body>
-<header></header>
-<main>
-<div>
-<h1>Page Not Found</h1>
-<p>The page you are looking for does not exist.</p>
-</div>
-</main>
-<footer></footer>
-</body>
-</html>`;
-
-/**
- * Publish a minimal storefront `/404` page so Helix uses it on 404
- * responses (instead of the Helix-default hardcoded 404 template that
- * bypasses the storefront's `head.html`).
- *
- * Pairs with `installSmart404Handler`: the handler vendors the
- * redirect snippet into `head.html` and `delayed.js` in the storefront
- * code, but those only run on pages where Helix injects the storefront
- * head. Without an authored `/404`, Helix uses its default template
- * and our snippet never reaches the browser on 404 paths.
- *
- * Non-fatal at every step. The storefront still works without it;
- * 404s just fall back to Helix's default template and visitors see
- * the 2-second flash before delayed.js fires (or nothing at all, if
- * Helix's default also bypasses delayed.js).
- *
- * Skip cases:
- *   - BYOM disabled (`overlayUrl` is `undefined`): no smart-404 work
- *     happens anyway, so the /404 page would never run our snippet.
- *   - DA.live write fails: log and skip.
- *   - Helix preview/publish fails: log and skip.
- */
-export async function publishStorefront404Page(
-    daLiveContentOps: DaLiveContentOperations,
-    helixService: HelixService,
+async function installSmart404On404HtmlFile(
+    githubFileOps: GitHubFileOperations,
     repoOwner: string,
     repoName: string,
-    daLiveOrg: string,
-    daLiveSite: string,
-    overlayUrl: string | undefined,
     logger: Logger,
-): Promise<Pdp404InstallResult> {
-    if (!overlayUrl) {
-        logger.info('[PDP404] BYOM disabled (no overlayUrl) — skipping /404 page publish');
-        return { installed: false, reason: 'BYOM disabled' };
+): Promise<void> {
+    const existing = await githubFileOps.getFileContent(repoOwner, repoName, '404.html');
+    if (!existing?.content) {
+        logger.warn('[PDP404] storefront 404.html not found — skipping eager redirect on 404.html');
+        return;
     }
-
-    const writeResult = await daLiveContentOps.createSource(
-        daLiveOrg, daLiveSite, '/404.html', STOREFRONT_404_HTML, { overwrite: true },
-    );
-    if (!writeResult.success) {
-        logger.warn(`[PDP404] DA.live write of /404 failed: ${writeResult.error ?? 'unknown'} — Helix will fall back to its default 404 template`);
-        return { installed: false, reason: `DA write failed: ${writeResult.error ?? 'unknown'}` };
+    if (existing.content.includes(SMART_404_HEAD_MARKER_START)) {
+        logger.info('[PDP404] Eager redirect already present in 404.html — skipping');
+        return;
     }
-    logger.info(`[PDP404] Wrote /404.html to ${daLiveOrg}/${daLiveSite}`);
-
+    const nonce = extractCspNonce(existing.content);
+    if (!nonce) {
+        logger.warn('[PDP404] 404.html has no nonced script tag — skipping eager redirect on 404.html (delayed.js fallback still active)');
+        return;
+    }
+    const snippet = SMART_404_HEAD_SNIPPET_TEMPLATE.replace(/__NONCE__/g, nonce);
+    // Insert before </head> so the snippet runs during head parsing,
+    // before any body paint. If </head> is missing for any reason,
+    // append at the end as a safe fallback.
+    const headClose = existing.content.lastIndexOf('</head>');
+    const newContent = headClose >= 0
+        ? existing.content.slice(0, headClose) + snippet + existing.content.slice(headClose)
+        : existing.content + snippet;
     try {
-        await helixService.previewAndPublishPage(repoOwner, repoName, '/404');
-        logger.info(`[PDP404] Storefront /404 page published to ${repoOwner}/${repoName}`);
-        return { installed: true };
+        await githubFileOps.createOrUpdateFile(
+            repoOwner,
+            repoName,
+            '404.html',
+            newContent,
+            'chore(demo-builder): vendor smart 404 eager redirect into 404.html',
+            existing.sha,
+        );
+        logger.info(`[PDP404] Vendored eager redirect into 404.html (${repoOwner}/${repoName}, nonce="${nonce}")`);
     } catch (error) {
         const reason = (error as Error).message ?? 'unknown';
-        logger.warn(`[PDP404] Helix preview/publish of /404 failed: ${reason} — page is in DA but not yet on the live tier`);
-        return { installed: false, reason: `Helix publish failed: ${reason}` };
+        logger.warn(`[PDP404] 404.html commit failed: ${reason} — eager redirect not installed on 404.html (delayed.js fallback still active)`);
     }
 }
 

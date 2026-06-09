@@ -20,7 +20,6 @@
 import type { DaLiveContentOperations } from './daLiveContentOperations';
 import type { GitHubFileOperations } from './githubFileOperations';
 import type { HelixService } from './helixService';
-import { publishStorefront404Page } from './pdp404HandlerPublisher';
 import { DaLiveAuthError, DaLiveError } from './types';
 import type { ContentPatchSource } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
@@ -511,38 +510,15 @@ export async function executeEdsPipeline(
             }
         }
 
-        // Step 7: Publish a minimal storefront /404 page so Helix uses it
-        // on 404 responses instead of its hardcoded default 404 template.
-        // The default template bypasses the storefront's head.html
-        // (smaller importmap, no speculation rules, no nonced inline
-        // scripts from head.html), which means our smart-404 redirect
-        // snippet — installed into head.html by installSmart404Handler —
-        // never runs on 404 paths. Authoring /404 in the storefront's
-        // DA.live ensures Helix serves it via normal EDS rendering with
-        // head.html injection. See ADR-005 and the byom-pdp-routing doc.
-        //
-        // Gated on:
-        //  - !skipPublish — narrow paths like Refresh Block Library don't
-        //    need to republish /404.
-        //  - params.byomOverlayUrl — when BYOM is disabled, nothing in
-        //    head.html does anything on 404s, so the /404 page would be
-        //    inert. Skip publishing it to avoid noise.
-        if (!skipPublish && params.byomOverlayUrl) {
-            onProgress?.({
-                operation: 'pdp-404-page',
-                message: 'Publishing storefront /404 page...',
-            });
-            await publishStorefront404Page(
-                daLiveContentOps,
-                helixService,
-                repoOwner,
-                repoName,
-                daLiveOrg,
-                daLiveSite,
-                params.byomOverlayUrl,
-                logger,
-            );
-        }
+        // (Smart 404 plumbing lives entirely in storefront code now:
+        //  - scripts/delayed.js — cold-path action call + Loading state
+        //  - head.html — eager mixed-case → lowercase redirect on 200s
+        //  - 404.html — same eager redirect for Helix-served 404s
+        //  All three are installed by installSmart404Handler from
+        //  storefrontSetupPhase2 (create/edit) and edsResetRepoHelper
+        //  (reset). The DA.live /404 page publish path that briefly
+        //  lived here didn't help — Helix uses the static 404.html
+        //  file, not authored content, on 404 responses.)
 
         return {
             success: true,

@@ -19,7 +19,6 @@ import {
     derivePrepublishUrl,
     extractCspNonce,
     installSmart404Handler,
-    publishStorefront404Page,
 } from '@/features/eds/services/pdp404HandlerPublisher';
 
 const mockLogger = {
@@ -267,15 +266,22 @@ describe('installSmart404Handler', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        // Default mock: head.html includes at least one nonced <script>
-        // matching the convention from aem-boilerplate-commerce. Tests
-        // that need to exercise the "no nonce" path override per-test.
+        // Default mock: head.html and 404.html both include nonced
+        // <script> tags matching the convention from
+        // aem-boilerplate-commerce. Tests that need to exercise the
+        // "no nonce" / "file missing" paths override per-test.
         mockGithub = {
             getFileContent: jest.fn().mockImplementation((_o, _r, path) => {
                 if (path === 'head.html') {
                     return Promise.resolve({
                         content: '<meta charset="UTF-8">\n<script nonce="aem" type="importmap">{}</script>\n<title>placeholder</title>\n',
                         sha: 'head-sha',
+                    });
+                }
+                if (path === '404.html') {
+                    return Promise.resolve({
+                        content: '<!DOCTYPE html><html><head><script nonce="aem">w.x=1;</script></head><body></body></html>',
+                        sha: '404-sha',
                     });
                 }
                 return Promise.resolve({
@@ -368,6 +374,104 @@ describe('installSmart404Handler', () => {
         const headContent = headCall![3] as string;
         expect(headContent).toContain('nonce="future-rotated-nonce"');
         expect(headContent).not.toContain('nonce="aem"');
+    });
+
+    it('also vendors the eager redirect into 404.html (Helix serves the static 404.html on unknown-path 404s, bypassing head.html)', async () => {
+        // The boilerplate ships a static 404.html at the repo root.
+        // Helix serves THAT on 404 responses for unknown paths — not
+        // head.html, not authored DA.live content. So the same eager
+        // redirect snippet has to be in 404.html too, otherwise the
+        // mixed-case PDP flow keeps showing the visible 404 page until
+        // delayed.js fires ~1-2s later.
+        mockGithub.getFileContent.mockImplementation((_o, _r, path) => {
+            if (path === 'head.html') {
+                return Promise.resolve({
+                    content: '<script nonce="aem" type="importmap">{}</script>',
+                    sha: 'head-sha',
+                });
+            }
+            if (path === '404.html') {
+                return Promise.resolve({
+                    content: '<!DOCTYPE html><html><head><title>Page not found</title><script nonce="aem">window.isErrorPage = true;</script></head><body><h1>404</h1></body></html>',
+                    sha: '404-sha',
+                });
+            }
+            return Promise.resolve({
+                content: '// delayed.js\n',
+                sha: 'delayed-sha',
+            });
+        });
+
+        await installSmart404Handler(
+            mockGithub as never,
+            repoOwner, repoName, overlayUrl, mockLogger as never,
+            daLiveOrg, daLiveSite,
+        );
+
+        expect(mockGithub.getFileContent).toHaveBeenCalledWith(repoOwner, repoName, '404.html');
+        const fourOhFourCall = mockGithub.createOrUpdateFile.mock.calls.find(c => c[2] === '404.html');
+        expect(fourOhFourCall).toBeDefined();
+        const fourOhFourContent = fourOhFourCall![3] as string;
+        // Snippet present
+        expect(fourOhFourContent).toContain('Smart 404 PDP eager redirect');
+        // Inserted before </head>, not appended after the closing tags
+        const snippetIdx = fourOhFourContent.indexOf('Smart 404 PDP eager redirect');
+        const headCloseIdx = fourOhFourContent.indexOf('</head>');
+        expect(snippetIdx).toBeLessThan(headCloseIdx);
+        // Uses the dynamically extracted nonce
+        expect(fourOhFourContent).toContain('nonce="aem"');
+        // Original content preserved (title, body, etc.)
+        expect(fourOhFourContent).toContain('Page not found');
+        expect(fourOhFourContent).toContain('window.isErrorPage = true');
+    });
+
+    it('404.html vendor is idempotent: skips if marker already present', async () => {
+        mockGithub.getFileContent.mockImplementation((_o, _r, path) => {
+            if (path === '404.html') {
+                return Promise.resolve({
+                    content: '<!DOCTYPE html><html><head>\n<!-- === Smart 404 PDP eager redirect (Demo Builder) === -->\n<script nonce="aem">existing</script>\n</head></html>',
+                    sha: '404-sha',
+                });
+            }
+            if (path === 'head.html') {
+                return Promise.resolve({
+                    content: '<script nonce="aem" type="importmap">{}</script>',
+                    sha: 'head-sha',
+                });
+            }
+            return Promise.resolve({
+                content: '// delayed.js\n',
+                sha: 'delayed-sha',
+            });
+        });
+
+        await installSmart404Handler(
+            mockGithub as never,
+            repoOwner, repoName, overlayUrl, mockLogger as never,
+            daLiveOrg, daLiveSite,
+        );
+
+        const fourOhFourCommits = mockGithub.createOrUpdateFile.mock.calls.filter(c => c[2] === '404.html');
+        expect(fourOhFourCommits).toHaveLength(0);
+    });
+
+    it('404.html vendor failure is non-fatal: installed=true still, delayed.js fallback active', async () => {
+        // Same contract as head.html: a failed 404.html commit degrades
+        // UX (visible 404 page persists until delayed.js fires) but
+        // never breaks the storefront. installed=true because delayed.js
+        // is the load-bearing piece.
+        mockGithub.createOrUpdateFile.mockImplementation((_o, _r, path) => {
+            if (path === '404.html') return Promise.reject(new Error('404.html conflict'));
+            return Promise.resolve({ sha: 'new-sha', commitSha: 'commit-sha' });
+        });
+
+        const result = await installSmart404Handler(
+            mockGithub as never,
+            repoOwner, repoName, overlayUrl, mockLogger as never,
+            daLiveOrg, daLiveSite,
+        );
+
+        expect(result).toEqual({ installed: true });
     });
 
     it('skips head.html vendor when no nonced script tag exists (eager redirect would be silently blocked)', async () => {
@@ -573,92 +677,3 @@ describe('installSmart404Handler', () => {
     });
 });
 
-describe('publishStorefront404Page', () => {
-    const repoOwner = 'skukla';
-    const repoName = 'citisignal-b2b';
-    const daLiveOrg = 'skukla';
-    const daLiveSite = 'citisignal-b2b';
-    const overlayUrl = 'https://example.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp';
-
-    let mockDa: { createSource: jest.Mock };
-    let mockHelix: { previewAndPublishPage: jest.Mock };
-
-    beforeEach(() => {
-        jest.clearAllMocks();
-        mockDa = { createSource: jest.fn().mockResolvedValue({ success: true }) };
-        mockHelix = { previewAndPublishPage: jest.fn().mockResolvedValue(undefined) };
-    });
-
-    it('writes minimal /404 page and triggers Helix preview+publish on the happy path', async () => {
-        // Without this authored page, Helix uses its hardcoded default
-        // 404 template which bypasses head.html entirely — and our smart
-        // 404 redirect snippet (installed into head.html) never reaches
-        // the browser on 404 paths.
-        const result = await publishStorefront404Page(
-            mockDa as never, mockHelix as never,
-            repoOwner, repoName, daLiveOrg, daLiveSite, overlayUrl, mockLogger as never,
-        );
-
-        expect(result).toEqual({ installed: true });
-        expect(mockDa.createSource).toHaveBeenCalledWith(
-            daLiveOrg, daLiveSite, '/404.html',
-            expect.stringContaining('Page Not Found'),
-            { overwrite: true },
-        );
-        expect(mockHelix.previewAndPublishPage).toHaveBeenCalledWith(repoOwner, repoName, '/404');
-    });
-
-    it('writes NO inline scripts in the page body (EDS would strip them anyway, snippet lives in head.html)', async () => {
-        // Regression guard: an earlier (broken) version of this pipeline
-        // embedded the smart-404 JS as a body <script> in /404.html. EDS
-        // stripped it during content decoration; the page rendered empty
-        // and the redirect never fired. The snippet now lives in
-        // head.html via installSmart404Handler; the /404 page just needs
-        // to exist as authored content so Helix uses it.
-        await publishStorefront404Page(
-            mockDa as never, mockHelix as never,
-            repoOwner, repoName, daLiveOrg, daLiveSite, overlayUrl, mockLogger as never,
-        );
-
-        const writtenHtml = mockDa.createSource.mock.calls[0][3] as string;
-        expect(writtenHtml).not.toMatch(/<script[^>]*>[\s\S]*<\/script>/);
-    });
-
-    it('skips when BYOM is disabled (overlayUrl undefined)', async () => {
-        const result = await publishStorefront404Page(
-            mockDa as never, mockHelix as never,
-            repoOwner, repoName, daLiveOrg, daLiveSite, undefined, mockLogger as never,
-        );
-
-        expect(result).toEqual({ installed: false, reason: 'BYOM disabled' });
-        expect(mockDa.createSource).not.toHaveBeenCalled();
-        expect(mockHelix.previewAndPublishPage).not.toHaveBeenCalled();
-    });
-
-    it('skips gracefully when DA.live write fails', async () => {
-        mockDa.createSource.mockResolvedValue({ success: false, error: 'auth expired' });
-        const result = await publishStorefront404Page(
-            mockDa as never, mockHelix as never,
-            repoOwner, repoName, daLiveOrg, daLiveSite, overlayUrl, mockLogger as never,
-        );
-
-        expect(result.installed).toBe(false);
-        expect(result.reason).toContain('DA write failed');
-        expect(mockHelix.previewAndPublishPage).not.toHaveBeenCalled();
-    });
-
-    it('skips gracefully when Helix preview/publish throws', async () => {
-        // DA write succeeded; Helix publish failed. The page is in DA
-        // but not on the live tier. Visitors keep getting Helix's
-        // default 404 until the next reset. Logged as a warning.
-        mockHelix.previewAndPublishPage.mockRejectedValue(new Error('Helix admin 502'));
-        const result = await publishStorefront404Page(
-            mockDa as never, mockHelix as never,
-            repoOwner, repoName, daLiveOrg, daLiveSite, overlayUrl, mockLogger as never,
-        );
-
-        expect(result.installed).toBe(false);
-        expect(result.reason).toContain('Helix publish failed');
-        expect(mockDa.createSource).toHaveBeenCalled();
-    });
-});
