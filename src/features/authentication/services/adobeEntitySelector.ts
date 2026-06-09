@@ -127,10 +127,17 @@ export class AdobeEntitySelector {
 
     /**
      * Select organization
-     * @param orgId - The organization ID to select
-     * @param options.skipPermissionCheck - Skip Developer permission test (use when permissions are already verified, e.g. reset flow)
+     *
+     * Pure selection: switches the Adobe CLI's org context to `orgId` and
+     * updates local caches. No permission checking — Developer/System-Admin
+     * gating is a concern of App Builder *operations* (mesh creation, mesh
+     * deployment), not org selection. Projects that don't include App Builder
+     * (most demo packages today) should be able to select any IMS org the
+     * user has access to. App Builder entry points run
+     * `OrganizationValidator.testDeveloperPermissions()` themselves when
+     * needed.
      */
-    async selectOrganization(orgId: string, options?: { skipPermissionCheck?: boolean }): Promise<boolean> {
+    async selectOrganization(orgId: string): Promise<boolean> {
         try {
             // SECURITY: Validate orgId to prevent command injection
             validateOrgId(orgId);
@@ -177,25 +184,11 @@ export class AdobeEntitySelector {
                     org: { id: orgId, name: orgName, code: selectedOrg?.code || orgId },
                 });
 
-                // Test Developer permissions after org selection (skip during reset/restore flows)
-                if (!options?.skipPermissionCheck) {
-                    this.debugLogger.debug('[Entity Selector] Testing Developer permissions after org selection');
-                    const permissionCheck = await this.organizationValidator.testDeveloperPermissions();
-
-                    if (!permissionCheck.hasPermissions) {
-                        this.debugLogger.error('[Entity Selector] User lacks Developer permissions for this organization');
-                        const errorMessage = permissionCheck.error || 'Insufficient permissions for App Builder access';
-                        this.logger.error(`[Entity Selector] Developer permissions check failed: ${errorMessage}`);
-
-                        // Throw error with specific message to signal permission failure to UI
-                        throw new Error(errorMessage);
-                    }
-
-                    this.debugLogger.debug('[Entity Selector] Developer permissions confirmed');
-                } else {
-                    this.debugLogger.debug('[Entity Selector] Skipping permission check (caller already verified)');
-                }
-
+                // Developer-role checking lives at App Builder operation
+                // entry points, not here. See the class doc on
+                // `selectOrganization` for the rationale. The
+                // `OrganizationValidator.testDeveloperPermissions()` method
+                // remains available for those entry points to call.
                 return true;
             }
 

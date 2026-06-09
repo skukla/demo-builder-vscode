@@ -154,13 +154,25 @@ export async function handleGitHubOAuth(
             scopes: [...GITHUB_SCOPES],
         });
 
-        // Get full user info by validating the token
-        const validation = await tokenService.validateToken();
+        // VS Code's getSession() already proved the token is valid for this
+        // user — `session.account.label` is the GitHub login. Skipping a
+        // post-store validateToken() roundtrip avoids a class of bug where a
+        // transient GET /user 401 (rate-limit, network blip, scope quirk on
+        // an enterprise account) would clear the just-stored token and leave
+        // the UI thinking auth succeeded while every subsequent API call
+        // fails. Richer fields (email/name/avatarUrl) are fetched lazily
+        // wherever they're actually needed.
+        const user = {
+            login: session.account.label,
+            email: null,
+            name: null,
+            avatarUrl: null,
+        };
 
-        context.logger.debug('[EDS] GitHub OAuth completed for user:', validation.user?.login);
+        context.logger.debug('[EDS] GitHub OAuth completed for user:', user.login);
         await context.sendMessage('github-auth-complete', {
             isAuthenticated: true,
-            user: validation.user,
+            user,
         });
 
         return { success: true };

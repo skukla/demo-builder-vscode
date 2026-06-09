@@ -170,27 +170,46 @@ describe('EDS Handlers', () => {
                 accessToken: 'new-token',
                 account: { label: 'testuser' },
             });
-            // validateToken returns { valid, user } structure
-            mockGitHubTokenService.validateToken.mockResolvedValue({
-                valid: true,
-                user: {
-                    login: 'newuser',
-                    email: 'new@example.com',
-                    avatarUrl: 'https://example.com/new-avatar',
-                },
-            });
 
             const { handleGitHubOAuth } = await import('@/features/eds/handlers/edsGitHubHandlers');
 
             // When: Start OAuth flow (uses VS Code auth internally)
             const result = await handleGitHubOAuth(mockContext);
 
-            // Then: Should send auth-complete message
+            // Then: Should send auth-complete message with the session's user
+            // login. The handler intentionally does NOT call validateToken
+            // post-store — see the comment in handleGitHubOAuth for why.
             expect(result.success).toBe(true);
             expect(mockGitHubTokenService.storeToken).toHaveBeenCalled();
+            expect(mockGitHubTokenService.validateToken).not.toHaveBeenCalled();
             expect(mockContext.sendMessage).toHaveBeenCalledWith('github-auth-complete', expect.objectContaining({
                 isAuthenticated: true,
-                user: expect.objectContaining({ login: 'newuser' }),
+                user: expect.objectContaining({ login: 'testuser' }),
+            }));
+        });
+
+        it('should NOT clear the just-stored token even if a stale validateToken mock would 401', async () => {
+            // Regression guard against the bug where validateToken's
+            // auto-clear-on-401 would torch the token immediately after the
+            // OAuth handler stored it. The handler must not invoke
+            // validateToken at all on the post-store path.
+            const vscode = await import('vscode');
+            (vscode.authentication.getSession as jest.Mock).mockResolvedValue({
+                accessToken: 'new-token',
+                account: { label: 'leahrayard' },
+            });
+            mockGitHubTokenService.validateToken.mockResolvedValue({ valid: false });
+            mockGitHubTokenService.clearToken.mockResolvedValue(undefined);
+
+            const { handleGitHubOAuth } = await import('@/features/eds/handlers/edsGitHubHandlers');
+
+            const result = await handleGitHubOAuth(mockContext);
+
+            expect(result.success).toBe(true);
+            expect(mockGitHubTokenService.clearToken).not.toHaveBeenCalled();
+            expect(mockContext.sendMessage).toHaveBeenCalledWith('github-auth-complete', expect.objectContaining({
+                isAuthenticated: true,
+                user: expect.objectContaining({ login: 'leahrayard' }),
             }));
         });
 
