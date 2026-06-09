@@ -25,19 +25,39 @@ This is mentioned explicitly in `docs/architecture/eds-byom-pdp-routing.md` Phas
 
 ## What to ship
 
-A small change in the storefront's PDP rendering path: when the Commerce drop-in finishes its query and has no product data, render a clear empty state instead of an empty `product-details` block.
+Possibly very little. The principle is **let the drop-in do the empty-state work if it can** — Adobe's `@dropins/storefront-pdp` is designed for production storefronts where Commerce occasionally returns empty, so a built-in or configurable empty state is more likely than not. Investigation first; implementation only as much as needed.
 
-The drop-in handles its own no-data rendering today by leaving the block empty. The fix is to add a wrapper that detects empty state and surfaces a user-facing message — something like:
+### Phase 0: investigate (15–30 min)
+
+Before writing any code, answer: **what does `@dropins/storefront-pdp` actually do when Commerce returns no product?**
+
+1. Read the drop-in's source / docs for an empty-state slot, callback, or render prop.
+2. Test the current behavior on a Demo-Builder-created storefront: visit a known-missing SKU URL while logged in (e.g., `/products/orchard-2/this-sku-does-not-exist`). Capture what renders.
+3. Classify the finding into one of three buckets.
+
+### Three possible outcomes — effort scales accordingly
+
+| Finding | What to ship | Effort |
+|---|---|---|
+| **Built-in acceptable empty state** | Confirm the message is clear, document the finding, close as not-needed. | 0 (investigation only) |
+| **Configurable empty state we have to opt into** | Enable / configure the existing mechanism at the drop-in's mount point. | ~15 min |
+| **No empty state — renders nothing or a broken skeleton** | Add a thin wrapper around the drop-in that detects "Commerce resolved with no data" and surfaces a user-facing message. | ~2 h |
+
+The wrapping fallback (third row) is what the original Phase 1 deferral assumed — but it was speculation. The investigation is what decides.
+
+### If a wrapper IS needed (third row only)
+
+Likely message:
 
 > **Product not available**
 > This product is no longer in the catalog. [Continue shopping →]
 
-Implementation likely lives in either:
+Implementation site (only relevant if we're actually building):
 
-- The PDP page template's authored content (`/products/default`) — surrounds the `product-details` block with a fallback that shows when the block is empty.
-- The block code in the storefront repo's `blocks/commerce-product-details/` (or whatever the actual block name is) — adds an empty-state branch after the Commerce query resolves.
+- Page template (`/products/default`) — surround the `product-details` block with a fallback that shows when the block is empty.
+- Block code (`blocks/commerce-product-details/` or wherever the drop-in mounts) — extend the no-data branch.
 
-Needs investigation to pick the cleaner approach.
+The cleaner choice depends on what the drop-in exposes; settle this during Phase 0.
 
 ## Where the fix lives
 
@@ -65,7 +85,12 @@ If the thin-layer evaluation outcome retires the forks, this fix ships as a Demo
 
 ## Effort
 
-~2 hours including testing, assuming the implementation lives in either the page template or a single block. More if it needs to thread through multiple drop-in components.
+Investigation-bounded:
+
+- **Phase 0 investigation**: 15–30 min, always required.
+- **Phase 1 implementation**: 0, ~15 min, or ~2 h depending on what Phase 0 finds. Most likely outcome is the middle row (config the drop-in), based on how Adobe's drop-ins generally handle missing data.
+
+Worst-case total: ~2.5 hours. Likely-case total: under 1 hour.
 
 ## Risks
 
@@ -75,7 +100,7 @@ If the thin-layer evaluation outcome retires the forks, this fix ships as a Demo
 
 ## Kickoff prompt
 
-> Implement the graceful empty state described in `.rptc/backlog/2026-06-09-pdp-graceful-empty-state.md`. Start by reading the Commerce drop-in's PDP rendering code on `skukla/citisignal-eds-boilerplate` to identify where the no-data branch should hook in. Pick the cleaner implementation site (block code vs page template) and prototype on citisignal. Verify the fix doesn't fire during the loading window. Once confirmed, the same approach extends to other templates or becomes a Demo Builder code patch depending on the thin-layer evaluation outcome.
+> Resolve the empty-PDP UX gap described in `.rptc/backlog/2026-06-09-pdp-graceful-empty-state.md`. **Do not write implementation code until Phase 0 is complete.** Start by reading `@dropins/storefront-pdp`'s source/docs for any built-in or configurable empty state, then verify on a Demo-Builder-created storefront by visiting a known-missing SKU URL and capturing what renders. Classify the finding against the three-row decision matrix in the file. Most likely outcome is "configure the drop-in" (~15 min). If a wrapper is genuinely required, prototype on `skukla/citisignal-eds-boilerplate` first; the same change either propagates per-fork or becomes a Demo Builder code patch depending on the thin-layer evaluation outcome.
 
 ## Related work
 
