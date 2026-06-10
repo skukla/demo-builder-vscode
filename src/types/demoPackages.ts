@@ -63,6 +63,27 @@ export interface ContentPatchSource {
 }
 
 /**
+ * CodePatchSource - External repository for code patches.
+ *
+ * Sibling of {@link ContentPatchSource}. Code patches are file-level
+ * edits applied to a cloned storefront repo during create/reset, after
+ * reset-to-template and after block install. The engine knows no canonical
+ * file by name; everything comes from the external ledger fetched here.
+ *
+ * Per ADR-006 D3 the canonical home is `skukla/eds-demo-patches` (the
+ * generalized successor to `eds-demo-content-patches`); a path of e.g.
+ * `citisignal` selects the patch family for a storefront.
+ */
+export interface CodePatchSource {
+    /** GitHub owner/organization of the patch repository */
+    owner: string;
+    /** GitHub repository name */
+    repo: string;
+    /** Path within repo to the patch family directory (contains code-patches.json) */
+    path: string;
+}
+
+/**
  * Storefront - A storefront variant within a package
  *
  * Storefronts are keyed by stack ID (e.g., 'headless-paas', 'eds-paas')

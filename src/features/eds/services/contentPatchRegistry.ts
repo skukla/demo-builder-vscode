@@ -14,7 +14,7 @@
  */
 
 import contentPatchesConfig from '../config/content-patches.json';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { fetchExternalPatches } from './externalPatchFetcher';
 import type { Logger } from '@/types';
 import type { ContentPatchSource } from '@/types/demoPackages';
 
@@ -52,50 +52,13 @@ export function getContentPatchById(id: string): ContentPatch | undefined {
     return CONTENT_PATCHES.find((p) => p.id === id);
 }
 
-// Cache the fetch Promise per source so concurrent callers share one in-flight request
-const externalPatchCache = new Map<string, Promise<ContentPatch[]>>();
+const CONTENT_PATCHES_FILENAME = 'patches.json';
 
 /**
- * Fetch patches.json from external repository (with per-source caching).
- * Caches the Promise itself so concurrent batch calls share a single HTTP request.
+ * Get content patches - from external source if configured, else local.
  *
- * @param source - External patch source configuration
- * @param logger - Logger instance
- * @returns Array of all patches from the external file
- */
-function fetchExternalPatches(source: ContentPatchSource, logger: Logger): Promise<ContentPatch[]> {
-    const cacheKey = `${source.owner}/${source.repo}/${source.path}`;
-    const cached = externalPatchCache.get(cacheKey);
-    if (cached) {
-        return cached;
-    }
-
-    logger.info(`[ContentPatch] Fetching patches from ${source.owner}/${source.repo}`);
-    const url = `https://raw.githubusercontent.com/${source.owner}/${source.repo}/main/${source.path}/patches.json`;
-
-    const promise = (async () => {
-        const response = await fetch(url, {
-            signal: AbortSignal.timeout(TIMEOUTS.PREREQUISITE_CHECK),
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch patches: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        return (data.patches || []) as ContentPatch[];
-    })();
-
-    externalPatchCache.set(cacheKey, promise);
-
-    // Remove from cache on failure so the next call retries
-    promise.catch(() => externalPatchCache.delete(cacheKey));
-
-    return promise;
-}
-
-/**
- * Get content patches - from external source if configured, else local
+ * External fetch uses the shared `externalPatchFetcher` (same per-source
+ * promise cache + failed-promise eviction that `codePatchRegistry` uses).
  *
  * @param patchIds - Array of patch IDs to retrieve
  * @param source - Optional external patch source configuration
@@ -111,7 +74,7 @@ export async function getContentPatches(
 
     if (source) {
         try {
-            allPatches = await fetchExternalPatches(source, logger);
+            allPatches = await fetchExternalPatches<ContentPatch>(source, CONTENT_PATCHES_FILENAME, logger);
         } catch (error) {
             logger.warn(`[ContentPatch] External fetch failed, falling back to local: ${(error as Error).message}`);
             allPatches = CONTENT_PATCHES;
