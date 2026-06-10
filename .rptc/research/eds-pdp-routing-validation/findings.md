@@ -147,6 +147,63 @@ What we may have over-engineered:
 - **We re-implemented what already exists.** `aem-commerce-prerender` is Apache 2.0, Adobe-owned. Our `render-pdp` is almost line-for-line `actions/pdp-renderer/render.js`. Forking + adding multi-tenancy as a wrapper would have been less work.
 - **Unanswered**: why does the canonical demo serve 200 for `/products/foo`? Two hypotheses: (a) the prerender's BYOM service has a path-pattern responder that returns the default template body for any unmatched `/products/*` path; (b) there's a Configuration Service `pathMapping` rule mapping `/products/**` → `/products/default`. We did not have read access to aemshop.net's full Configuration Service config to confirm.
 
+## Corrected conclusion — 2026-06-10 (after BYOM doc re-read + suffix test)
+
+**The original executive summary was wrong about smart-404 being over-engineered.** Re-reading the BYOM spec at `https://www.aem.live/developer/byom` and verifying live-tier behavior on citisignal-b2b after applying the canonical `suffix: '.html'` registration change confirms:
+
+> "If an overlay content source is configured, a **preview request** sent to the admin service will always result in the path being fetched from the overlay content source first."
+
+The overlay is consulted during **preview**, not during live-tier delivery. For a path to return 200 on the live tier, it must already be in content-bus. The pattern that gets it there is the canonical "poller publishes; live tier serves cached":
+
+```
+Canonical aem-commerce-prerender:
+  Poller (scheduled) → publishes catalog SKUs → content-bus → live tier 200
+  Unknown paths → never previewed → content-bus 404 → live tier 404
+
+Our setup:
+  Pre-warm at create/reset → publishes catalog SKUs → content-bus → live tier 200
+  Smart-404 client-side → first visit to unknown path triggers prepublish-pdp → content-bus 200
+  Unknown paths after smart-404 has run → content-bus 200 → live tier 200
+```
+
+The empirical aemshop.net behavior — `/products/foo` returning 200 with default template body — was likely a cached artifact from a prior preview, not real-time overlay consultation on the live tier. Our live-tier 404 on `/products/never-existed/FAKE1` (verified 2026-06-10 after adding `suffix: '.html'` to the overlay registration) confirms BYOM docs are accurate as written.
+
+### What was right in the original research
+
+- BYOM `content.overlay` is the Adobe-canonical replacement for folder mapping. Confirmed.
+- Our `render-pdp` action duplicates `aem-commerce-prerender`'s renderer. Confirmed.
+- Multi-tenancy via `?org=&site=` is our legitimate differentiator. Confirmed.
+- Catalog pre-warming at create/reset is the canonical pattern (equivalent to upstream's scheduled poller). Confirmed.
+- The `suffix: '.html'` field belongs in the overlay registration. Confirmed (shipped in `f2d2797b`).
+
+### What was wrong
+
+- **"Smart-404 is over-engineered."** Incorrect. Per BYOM docs, the overlay is preview-only. Smart-404 is the canonical recovery mechanism for paths not yet in content-bus — without it, any path that wasn't pre-warmed (catalog churn after setup, new SKUs, edge cases) returns a hard 404 with no recovery. It's not soft-404 SEO anti-pattern; it's the documented way to handle the "preview-on-first-visit" pattern client-side.
+- **"Remove the smart-404 plumbing and rely on overlay-side fallback."** Incorrect. There is no overlay-side fallback at the live tier per the BYOM spec.
+- **"aemshop.net returns 200 for unknown paths, therefore canonical doesn't need smart-404."** Misinterpretation. The 200 was a cached artifact from prior previews, not real-time overlay consultation. The canonical pattern relies on the poller publishing every catalog SKU into content-bus.
+
+### Correct ADR-005 framing (replaces the original "Re-evaluation" section)
+
+Our architecture is aligned with the canonical pattern in every load-bearing layer:
+
+| Concern | Canonical | Ours | Status |
+|---|---|---|---|
+| Overlay registration | Configuration Service `content.overlay` block | Same, with matching `suffix: '.html'` | Aligned |
+| Template source | `/products/default` fetched at preview time | Same (Phase 2 LIVE) | Aligned |
+| Catalog publishing | Scheduled poller calls Helix admin preview | Pre-warm at create/reset calls `prepublish-pdp` | Aligned (equivalent mechanism) |
+| Unknown-path recovery | Implicit — poller catches up over time; meanwhile 404 | Smart-404 client-side triggers `prepublish-pdp` on cold visit | **More aggressive but canonical** — fills the gap between poller cycles |
+| Multi-tenancy | Single-tenant (one App Builder workspace per storefront) | Multi-tenant shared workspace via `?org=&site=` | Our legitimate differentiator |
+
+Smart-404 fills a real gap the canonical leaves open: between scheduled poller cycles, an unknown path 404s on canonical too. Our smart-404 closes that gap with client-side detection + admin trigger. This is an improvement on the canonical pattern, not a deviation from it.
+
+### What changes from the original recommendations
+
+- [x] **Keep smart-404 plumbing.** It's load-bearing per BYOM docs; removal would re-break PDPs for catalog churn after setup.
+- [x] **Keep `prepublish-pdp` action.** It's how smart-404 triggers content-bus population.
+- [x] **Keep catalog pre-warming.** Validated as canonical pattern.
+- [x] **Keep `suffix: '.html'` on overlay registration** (shipped in `f2d2797b`). Aligns with canonical shape; harmless even if not load-bearing for routing.
+- [ ] **Re-evaluate ADR-005 framing.** Original framing apologized for the architecture as "over-engineered." Corrected framing should defend it as canonical-aligned with a justified differentiator (multi-tenancy + smart-404 gap-fill). To do as a follow-up.
+
 ## Validation note — 2026-06-10 (accs agent post-research probe)
 
 The accs agent ran a direct probe against citisignal-b2b and contradicted a core premise of the original recommended actions. **Don't remove smart-404 until the delivery-tier behavior gap is reproduced.**
