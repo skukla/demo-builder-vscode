@@ -30,6 +30,167 @@ jest.mock('@/core/logging', () => ({
     })),
 }));
 
+describe('buildArchiveUrl', () => {
+    // Test the SHA-vs-branch URL routing directly. The wider
+    // `downloadRepoContents`/`resetRepoToTemplate` integration brings extensive
+    // Octokit + zip-buffer mocking that obscures this one load-bearing branch.
+    // ADR-006 Step 4: thin-layer reset passes the LKG SHA, forked reset passes `main`.
+
+     
+    let buildArchiveUrl: any;
+
+    beforeEach(async () => {
+        jest.resetModules();
+        const module = await import('@/features/eds/services/githubFileOperations');
+        buildArchiveUrl = module.buildArchiveUrl;
+    });
+
+    it('uses the branch URL shape for "main"', () => {
+        const { url, isSha } = buildArchiveUrl('skukla', 'citisignal-b2b', 'main');
+        expect(isSha).toBe(false);
+        expect(url).toBe('https://github.com/skukla/citisignal-b2b/archive/refs/heads/main.zip');
+    });
+
+    it('uses the branch URL shape for any non-SHA ref (custom branches)', () => {
+        const { url, isSha } = buildArchiveUrl('skukla', 'citisignal-b2b', 'feature/x');
+        expect(isSha).toBe(false);
+        expect(url).toBe('https://github.com/skukla/citisignal-b2b/archive/refs/heads/feature/x.zip');
+    });
+
+    it('uses the SHA URL shape for a full 40-hex commit SHA (lowercase)', () => {
+        const sha = 'a1b2c3d4e5f6789012345678901234567890abcd';
+        const { url, isSha } = buildArchiveUrl('skukla', 'citisignal-b2b', sha);
+        expect(isSha).toBe(true);
+        expect(url).toBe(`https://github.com/skukla/citisignal-b2b/archive/${sha}.zip`);
+    });
+
+    it('uses the SHA URL shape for a full 40-hex commit SHA (mixed case)', () => {
+        const sha = 'A1B2C3D4E5F6789012345678901234567890ABCD';
+        const { url, isSha } = buildArchiveUrl('skukla', 'citisignal-b2b', sha);
+        expect(isSha).toBe(true);
+        expect(url).toBe(`https://github.com/skukla/citisignal-b2b/archive/${sha}.zip`);
+    });
+
+    it('treats a short SHA (7 chars) as a branch ref, not a SHA', () => {
+        // GitHub's archive URL endpoint only resolves full SHAs; short SHAs
+        // would 404 there but work as a ref/branch in some contexts. Defensive
+        // routing: if it's not exactly 40 hex chars, treat as branch.
+        const { isSha } = buildArchiveUrl('skukla', 'citisignal-b2b', 'a1b2c3d');
+        expect(isSha).toBe(false);
+    });
+
+    it('treats a 40-char non-hex string as a branch ref (defensive)', () => {
+        const { isSha } = buildArchiveUrl('skukla', 'citisignal-b2b', 'g'.repeat(40));
+        expect(isSha).toBe(false);
+    });
+});
+
+describe('resetRepoToTemplate — target branch vs template ref separation', () => {
+    // Regression test for an ADR-006 Step 4 bug: `resetRepoToTemplate` previously
+    // used a single `branch` parameter for BOTH the target branch lookup (getBranchInfo
+    // / updateBranchRef on the user's repo) AND the template download ref. When the
+    // thin-layer wiring started passing the LKG SHA as the template ref, getBranchInfo
+    // hit the GitHub branches API with the SHA → 404 "Branch not found", killing every
+    // thin-layer reset before any file changed. The target branch is always `main`;
+    // only the template download accepts a SHA.
+
+     
+    let GitHubFileOperations: any;
+     
+    let mockTokenService: any;
+
+    const LKG_SHA = 'a1b2c3d4e5f6789012345678901234567890abcd';
+
+    beforeEach(async () => {
+        jest.clearAllMocks();
+        jest.resetModules();
+        mockTokenService = {
+            getToken: jest.fn().mockResolvedValue({ token: 'ghp_test' }),
+            clearToken: jest.fn(),
+        };
+        const module = await import('@/features/eds/services/githubFileOperations');
+        GitHubFileOperations = module.GitHubFileOperations;
+    });
+
+    it('calls getBranchInfo with the target branch "main" — NOT the templateRef', async () => {
+        const service = new GitHubFileOperations(mockTokenService);
+
+        // Stub the internals just enough: getBranchInfo + downloadRepoContents +
+        // createTree + createCommit + updateBranchRef. We're asserting the
+        // arguments passed to getBranchInfo, not exercising the full Tree API.
+        const getBranchInfoSpy = jest.spyOn(service, 'getBranchInfo')
+            .mockResolvedValue({ commitSha: 'parent-sha', treeSha: 'parent-tree' });
+         
+        (service as any).downloadRepoContents = jest.fn().mockResolvedValue(new Map());
+         
+        (service as any).createTree = jest.fn().mockResolvedValue('new-tree-sha');
+         
+        (service as any).createCommit = jest.fn().mockResolvedValue('new-commit-sha');
+         
+        (service as any).updateBranchRef = jest.fn().mockResolvedValue(undefined);
+
+        await service.resetRepoToTemplate(
+            'hlxsites', 'aem-boilerplate-commerce',
+            'user', 'user-storefront',
+            new Map(),
+            LKG_SHA, // <-- the LKG SHA, NOT 'main'
+        );
+
+        // Target branch lookup MUST be 'main' even though templateRef is a SHA.
+        expect(getBranchInfoSpy).toHaveBeenCalledWith('user', 'user-storefront', 'main');
+    });
+
+    it('passes the templateRef (SHA-shaped or branch) through to downloadRepoContents', async () => {
+        const service = new GitHubFileOperations(mockTokenService);
+        jest.spyOn(service, 'getBranchInfo')
+            .mockResolvedValue({ commitSha: 'parent-sha', treeSha: 'parent-tree' });
+         
+        const downloadSpy = jest.fn().mockResolvedValue(new Map());
+         
+        (service as any).downloadRepoContents = downloadSpy;
+         
+        (service as any).createTree = jest.fn().mockResolvedValue('new-tree-sha');
+         
+        (service as any).createCommit = jest.fn().mockResolvedValue('new-commit-sha');
+         
+        (service as any).updateBranchRef = jest.fn().mockResolvedValue(undefined);
+
+        await service.resetRepoToTemplate(
+            'hlxsites', 'aem-boilerplate-commerce',
+            'user', 'user-storefront',
+            new Map(),
+            LKG_SHA,
+        );
+
+        expect(downloadSpy).toHaveBeenCalledWith('hlxsites', 'aem-boilerplate-commerce', LKG_SHA);
+    });
+
+    it('calls updateBranchRef with the target branch "main" — NOT the templateRef', async () => {
+        const service = new GitHubFileOperations(mockTokenService);
+        jest.spyOn(service, 'getBranchInfo')
+            .mockResolvedValue({ commitSha: 'parent-sha', treeSha: 'parent-tree' });
+         
+        (service as any).downloadRepoContents = jest.fn().mockResolvedValue(new Map());
+         
+        (service as any).createTree = jest.fn().mockResolvedValue('new-tree-sha');
+         
+        (service as any).createCommit = jest.fn().mockResolvedValue('new-commit-sha');
+         
+        const updateRefSpy = jest.fn().mockResolvedValue(undefined);
+         
+        (service as any).updateBranchRef = updateRefSpy;
+
+        await service.resetRepoToTemplate(
+            'hlxsites', 'aem-boilerplate-commerce',
+            'user', 'user-storefront',
+            new Map(),
+            LKG_SHA,
+        );
+
+        expect(updateRefSpy).toHaveBeenCalledWith('user', 'user-storefront', 'main', 'new-commit-sha');
+    });
+});
+
 describe('GitHub File Operations', () => {
     let GitHubFileOperations: any;
     let mockTokenService: any;

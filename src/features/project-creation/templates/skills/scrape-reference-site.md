@@ -70,6 +70,8 @@ Set the user's expectations honestly:
 - **PDP / PLP with commerce dropins**: 60-75% first-pass, 85-90% after iteration cap. Commerce dropins are Adobe-owned React components with a customization ceiling — `commerce-block-mapper` handles this honestly.
 - **Animations / complex JS interactions**: 50-70%. EDS is static-first; some interactions don't translate.
 
+**PDP URLs route automatically — don't replicate the reference's URL scheme manually.** When a scraped reference site uses paths like `/products/{slug}` or per-product files, you don't need to recreate that routing. Demo Builder's BYOM smart 404 + render-pdp overlay handles every `/products/{urlKey}/{sku}` URL on demand once the storefront is created or reset. Skip any "replicate the per-product page structure" subtask. Architecture: `docs/architecture/eds-byom-pdp-routing.md` in the demo-builder-vscode repo.
+
 Demos for non-technical audiences usually accept brand identity, layout structure, and major sections looking right. Sub-pixel spacing rarely matters at the demo bar.
 
 ## Font and asset licensing

@@ -512,7 +512,10 @@ export function GitHubRepoSelectionStep({
                     customerGroup: edsConfig?.customerGroup || '',
                     repoName: repo.name,
                     daLiveOrg: edsConfig?.daLiveOrg || '',
-                    daLiveSite: edsConfig?.daLiveSite || '',
+                    // DA.live site name is locked to the GitHub repo name —
+                    // see backlog 2026-06-08-unify-da-site-and-repo-name for
+                    // why the dual-identifier model was retired.
+                    daLiveSite: repo.name,
                     repoMode: 'existing',
                     selectedRepo: repo,
                     existingRepo: repo.fullName,
@@ -554,6 +557,8 @@ export function GitHubRepoSelectionStep({
             repoMode: 'new', repoName: '', selectedRepo: undefined,
             existingRepo: undefined,
             resetToTemplate: false, createdRepo: undefined,
+            // Names are locked together; clear daLiveSite alongside.
+            daLiveSite: '',
         });
         resetLocalState();
     }, [updateEdsConfig, resetLocalState]);
@@ -569,7 +574,10 @@ export function GitHubRepoSelectionStep({
 
     const handleRepoNameChange = useCallback((value: string) => {
         const normalized = normalizeRepositoryName(value);
-        updateEdsConfig({ repoName: normalized });
+        // DA.live site name is locked to the GitHub repo name — see backlog
+        // 2026-06-08-unify-da-site-and-repo-name for why the dual-identifier
+        // model was retired.
+        updateEdsConfig({ repoName: normalized, daLiveSite: normalized });
         setRepoNameError(getRepositoryNameError(normalized));
     }, [updateEdsConfig]);
 

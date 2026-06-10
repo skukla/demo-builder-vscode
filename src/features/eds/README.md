@@ -32,6 +32,12 @@ src/features/eds/
 │   ├── resourceCleanupHelpers.ts   # Shared cleanup helper functions
 │   ├── toolManager.ts              # Commerce demo ingestion tool management
 │   ├── contentPatchRegistry.ts     # Content patch definitions for demo customization
+│   ├── codePatchRegistry.ts        # Code patch engine v2 (ADR-006) — generic patch ledger fetched from external eds-demo-patches repo
+│   ├── codePatchPipelineHelpers.ts # Canonical (pre-reset) + block (post-install) phase wrappers around the engine
+│   ├── externalPatchFetcher.ts     # Shared HTTP + per-source promise cache for content/code patch ledgers
+│   ├── lkgReader.ts                # Reads `last-known-good` SHA from patches repo; supports per-ledger `lkgFile` for multi-canonical patches repos (ADR-006)
+│   ├── lkgPinHelper.ts             # Create-path LKG pin (Step 4b — mirrors edsResetRepoHelper's reset-path pinning so fresh creates produce a repo byte-identical to an immediate reset)
+│   ├── patchReportHelper.ts        # Unified content + code patch result aggregation + warning toast
 │   ├── blockCollectionHelpers.ts   # Block collection installation from source repo with version tracking
 │   ├── edsResetParams.ts            # Reset parameter types and extractResetParams validation
 │   ├── edsResetRepoHelper.ts        # Repo reset helpers (template reset, block libraries, inspector)
@@ -72,7 +78,6 @@ src/features/eds/
 │   │   ├── GitHubRepoSelectionStep.tsx  # Repository selection/creation
 │   │   ├── GitHubSetupStep.tsx          # GitHub configuration
 │   │   ├── DaLiveSetupStep.tsx          # DA.live site configuration
-│   │   ├── DataSourceConfigStep.tsx     # Commerce data source config
 │   │   └── StorefrontSetupStep.tsx      # Storefront setup execution
 │   └── styles/
 │       ├── connect-services.css     # Connect services step styles
@@ -113,6 +118,7 @@ Orchestrates complete EDS project setup through phases:
 | `content` | 49-58% | Clear existing DA.live content, copy demo content from source |
 | `block-library` | 58-65% | Create block library in DA.live, apply EDS settings |
 | `publish` | 65-95% | Purge CDN cache, publish content and block library to CDN |
+| `pdp-404-handler` | 95-97% | Publish smart `/404.html` for BYOM PDP routing (see [eds-byom-pdp-routing.md](../../../docs/architecture/eds-byom-pdp-routing.md)) |
 | `auth-recovery` | (paused) | DA.live token expired; prompts re-authentication (up to 2 attempts) |
 | `complete` | 100% | Setup complete |
 
@@ -147,6 +153,37 @@ If the DA.live token expires during content pipeline execution (phases 4-5), the
 
 - **edsResetService** - Core reset logic: template reset, block library reinstallation (built-in + custom), inspector tagging, code sync, config service update, mesh redeploy
 - **edsResetUI** - UI orchestration: auth checks, progress notifications, confirmation dialogs
+
+### BYOM PDP Routing (pdp404HandlerPublisher)
+
+Phase 1 of the BYOM workstream that makes `/products/{urlKey}/{sku}` URLs work for every storefront without per-product authoring.
+
+- **pdp404HandlerPublisher** - Generates and publishes a smart `/404.html` page at create/reset time. The page's embedded JS detects PDP-shape URLs, redirects mixed-case requests to their lowercase variant, and POSTs to a sibling `prepublish-pdp` action that triggers Helix admin preview/publish on the visitor's behalf. Gated by `params.byomOverlayUrl` — when BYOM is off, the step is skipped.
+
+The full architecture (request flows, dependencies on Helix/Catalog Service case handling, Phase 2 evolution path, cross-repo seam with `accs-discovery-service`) lives in [`docs/architecture/eds-byom-pdp-routing.md`](../../../docs/architecture/eds-byom-pdp-routing.md). The decision rationale lives in [ADR-005](../../../docs/architecture/adr/005-byom-pdp-routing.md).
+
+### Code Patches — Thin-Layer Storefront (ADR-006)
+
+A generic patch engine that lets demo packages ship targeted file edits against a canonical storefront template, retiring the practice of maintaining storefront-shaped forks for small customizations. **Live on develop.** Three demo packages now drive the thin-layer pipeline:
+
+- **CitiSignal (PaaS + ACCS)** — 7 patches against `hlxsites/aem-boilerplate-commerce`; replaces the retired `skukla/citisignal-eds-boilerplate` fork.
+- **custom (PaaS + ACCS)** — 2 universal patches (header + sidebar) against the same canonical.
+- **b2b (PaaS + ACCS)** — 5 patches (2 universal + 3 SKU/slash) against `adobe-commerce/boilerplate-b2b-template` — a different upstream from citisignal+custom; supported via the multi-canonical `lkgFile` field on `CodePatchSource`.
+
+The mechanism:
+
+- **codePatchRegistry** — Pure engine. `applyCodePatches(files, patchIds, source, logger)` mutates a `Map<string, string>` working set and reports per-patch results. No canonical-file knowledge; the ledger comes from `source`. Mirrors the v1 system at commit `f6a7d029^:src/features/eds/services/templatePatchRegistry.ts`.
+- **codePatchPipelineHelpers** — Two phase wrappers around the engine:
+  - `applyCanonicalCodePatches` fetches missing template files into the `fileOverrides` map that drives the bulk Git Tree reset (canonical-file patches land in the same atomic commit).
+  - `applyBlockCodePatches` reads installed library blocks via `GitHubFileOperations`, runs the engine, writes patched files back with one commit per file. Phase routing is mechanical: targets starting with `blocks/` → block-phase, everything else → canonical-phase.
+- **lkgPinHelper** — Create-path counterpart to `edsResetRepoHelper`'s reset-side pinning. Runs after `generate-from-template` to bulk-Tree-reset the new repo to canonical@LKG with canonical patches applied. Result: a fresh create produces a repo byte-identical to what an immediate reset would produce. Create and reset mirror.
+- **externalPatchFetcher** — Shared HTTP fetch + per-source promise cache. Used by both `contentPatchRegistry` and `codePatchRegistry` so the two patch domains share one network surface.
+- **lkgReader** — Reads the plain-text `last-known-good` SHA file from the patches repo (D2 in ADR-006 — Chromium LKGR / Nix `git-revision` convention). Supports per-ledger `lkgFile` for multi-canonical patches repos (b2b's ledger tracks `adobe-commerce/boilerplate-b2b-template` and reads `b2b/last-known-good`; citisignal+custom share the root LKG). Strict 40-hex validation; returns `undefined` for all failure modes so the caller can fall back to `main` HEAD per D1 (proceed-and-warn).
+- **patchReportHelper** — Unified `PatchReport` shape for content + code patch results. `reportUnapplied(report, logger, showWarning?)` is the one-call exit point — UI callers inject `vscode.window.showWarningMessage`; headless (MCP/AI) contexts get warn-level logging only. The orchestrator (`executeStorefrontSetupPhases`) creates one shared report per setup that aggregates canonical (Step 1 pin) + block + content patches, so a single toast surfaces every unapplied patch.
+
+`EdsStorefrontMetadata.lkgSource` marks a storefront as thin-layer; when present, `TemplateUpdateChecker` reads the verified canonical SHA from the patches repo's per-ledger LKG file instead of comparing against the template's `main`. Storefronts pin to the LKG SHA at **both create and reset time** via `buildArchiveUrl` (exported from `githubFileOperations`), which routes the SHA-vs-branch URL shape on `https://github.com/{owner}/{repo}/archive/*.zip`.
+
+The full decision rationale and step-by-step implementation status lives in [ADR-006](../../../docs/architecture/adr/006-thin-layer-storefront-customization.md).
 
 ### Commerce Store Discovery (commerceStoreDiscovery)
 

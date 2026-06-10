@@ -283,7 +283,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         const projectsViewMode = config.get<'cards' | 'rows'>('projectsViewMode', 'cards');
 
         // Get block library default settings (single array setting)
-        const blockLibraryDefaults = config.get<string[]>('blockLibraries.defaults', ['isle5']);
+        const blockLibraryDefaults = config.get<string[]>('blockLibraries.defaults', []);
 
         // Get custom block library defaults from settings
         const customBlockLibraryDefaults = parseCustomBlockLibrarySettings(
@@ -437,7 +437,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             }
             if (e.affectsConfiguration('demoBuilder.blockLibraries.defaults')) {
                 const config = vscode.workspace.getConfiguration('demoBuilder');
-                const blockLibraryDefaults = config.get<string[]>('blockLibraries.defaults', ['isle5']);
+                const blockLibraryDefaults = config.get<string[]>('blockLibraries.defaults', []);
                 this.sendMessage('blockLibraryDefaultsUpdated', { blockLibraryDefaults });
             }
         });

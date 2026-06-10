@@ -282,6 +282,8 @@ export interface ImportedSettings {
     selectedStack?: string;
     /** Selected optional addons (e.g., ['adobe-commerce-aco']) */
     selectedAddons?: string[];
+    /** Selected feature pack IDs (e.g., ['b2b-commerce']) */
+    selectedFeaturePacks?: string[];
     /** Selected block library IDs (e.g., ['isle5', 'demo-team-blocks']) */
     selectedBlockLibraries?: string[];
     /** Custom block libraries added by URL */
@@ -630,6 +632,8 @@ function buildProjectEdsConfig(wizardState: WizardState) {
         patches: eds.patches,
         contentPatches: eds.contentPatches,
         contentPatchSource: eds.contentPatchSource,
+        codePatches: eds.codePatches,
+        codePatchSource: eds.codePatchSource,
         repoUrl: eds.repoUrl,
         preflightComplete: eds.preflightComplete,
     };

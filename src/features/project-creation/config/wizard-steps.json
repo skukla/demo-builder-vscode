@@ -75,15 +75,6 @@
       }
     },
     {
-      "id": "eds-data-source",
-      "name": "Content Configuration",
-      "description": "Select or create a DA.live site for your content.",
-      "enabled": true,
-      "condition": {
-        "stackRequires": "requiresDaLive"
-      }
-    },
-    {
       "id": "review",
       "name": "Final Review",
       "description": "Review your project configuration before creation.",

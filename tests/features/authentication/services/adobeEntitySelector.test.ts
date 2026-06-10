@@ -123,7 +123,10 @@ describe('AdobeEntitySelector', () => {
             expect(mockCacheManager.setCachedWorkspace).toHaveBeenCalledWith(undefined);
         });
 
-        it('should test developer permissions after selection', async () => {
+        it('should NOT test developer permissions by default', async () => {
+            // The default behavior is to let any IMS-authenticated SC pick
+            // any org. Developer-role gating is opt-in per call, at the
+            // App Builder entry points that actually require it.
             mockCommandExecutor.execute.mockResolvedValue({
                 stdout: 'Organization selected',
                 stderr: '',
@@ -135,26 +138,7 @@ describe('AdobeEntitySelector', () => {
 
             await selector.selectOrganization('org1');
 
-            expect(mockOrgValidator.testDeveloperPermissions).toHaveBeenCalled();
-        });
-
-        it('should return false when permissions check fails', async () => {
-            mockCommandExecutor.execute.mockResolvedValue({
-                stdout: 'Organization selected',
-                stderr: '',
-                code: 0,
-            });
-            mockFetcher.getOrganizations.mockResolvedValue([
-                { id: 'org1', code: 'ORG@AdobeOrg', name: 'Test Org' },
-            ]);
-            mockOrgValidator.testDeveloperPermissions.mockResolvedValue({
-                hasPermissions: false,
-                error: 'Insufficient permissions',
-            });
-
-            const result = await selector.selectOrganization('org1');
-
-            expect(result).toBe(false);
+            expect(mockOrgValidator.testDeveloperPermissions).not.toHaveBeenCalled();
         });
 
         it('should return false on CLI failure', async () => {
@@ -456,7 +440,14 @@ describe('AdobeEntitySelector', () => {
             );
         });
 
-        it('should skip permission check when skipPermissionCheck option is true', async () => {
+        it('never tests Developer permissions — that concern moved to App Builder operations', async () => {
+            // Pre-2026-06 behavior: every selectOrganization call ran
+            // `aio app list` to gate on Developer/System-Admin role. That
+            // locked SCs out of orgs for demos that never touch App Builder
+            // (CitiSignal, Isle5, etc.). Permission gating now lives at the
+            // App Builder operation entry points themselves (mesh create/
+            // deploy), so the only projects that ever trigger the check are
+            // those that include App Builder.
             mockCommandExecutor.execute.mockResolvedValue({
                 stdout: 'Organization selected',
                 stderr: '',
@@ -466,24 +457,10 @@ describe('AdobeEntitySelector', () => {
                 { id: 'org1', code: 'ORG@AdobeOrg', name: 'Test Org' },
             ]);
 
-            await selector.selectOrganization('org1', { skipPermissionCheck: true });
+            const result = await selector.selectOrganization('org1');
 
+            expect(result).toBe(true);
             expect(mockOrgValidator.testDeveloperPermissions).not.toHaveBeenCalled();
-        });
-
-        it('should still check permissions by default', async () => {
-            mockCommandExecutor.execute.mockResolvedValue({
-                stdout: 'Organization selected',
-                stderr: '',
-                code: 0,
-            });
-            mockFetcher.getOrganizations.mockResolvedValue([
-                { id: 'org1', code: 'ORG@AdobeOrg', name: 'Test Org' },
-            ]);
-
-            await selector.selectOrganization('org1');
-
-            expect(mockOrgValidator.testDeveloperPermissions).toHaveBeenCalled();
         });
     });
 });

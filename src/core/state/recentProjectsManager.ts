@@ -20,6 +20,7 @@ export interface RecentProject {
     selectedPackage?: string | null;
     selectedStack?: string | null;
     selectedAddons?: string[];
+    selectedFeaturePacks?: string[];
     selectedBlockLibraries?: string[];
 }
 
@@ -111,6 +112,7 @@ export class RecentProjectsManager {
             selectedPackage: project.selectedPackage ?? null,
             selectedStack: project.selectedStack ?? null,
             selectedAddons: project.selectedAddons ?? [],
+            selectedFeaturePacks: project.selectedFeaturePacks ?? [],
             selectedBlockLibraries: project.selectedBlockLibraries ?? [],
         });
 

@@ -21,7 +21,7 @@ import { GitHubRepoOperations } from '../services/githubRepoOperations';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { ToolManager } from '../services/toolManager';
 import type { EdsMetadata, EdsCleanupOptions } from '../services/types';
-import { ensureDaLiveAuth, getDaLiveAuthService } from './edsHelpers';
+import { ensureDaLiveAuth, getDaLiveAuthService, resolveByomOverlayConfig } from './edsHelpers';
 import { executeStorefrontSetupPhases } from './storefrontSetupPhases';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { hasMeshInDependencies } from '@/core/constants';
@@ -117,6 +117,15 @@ export interface StorefrontSetupStartPayload {
         contentPatches?: string[];
         // External source for content patches (from demo-packages.json storefronts)
         contentPatchSource?: {
+            owner: string;
+            repo: string;
+            path: string;
+        };
+        // Code patch IDs to apply during create/reset (ADR-006 Step 5; sibling
+        // of contentPatches, operates on repo files).
+        codePatches?: string[];
+        // External code-patch source (thin-layer storefronts per ADR-006).
+        codePatchSource?: {
             owner: string;
             repo: string;
             path: string;
@@ -305,11 +314,27 @@ export async function handleStartStorefrontSetup(
         return { success: false, error: 'DA.live authentication required' };
     }
 
+    // Compose the BYOM overlay URL the Configuration Service will register.
+    // VS Code setting `demoBuilder.byom.overlayUrl` takes precedence over any
+    // value baked into demo-packages.json. The helper stamps `?org=...&site=...`
+    // onto the URL so the shared multi-tenant `render-pdp` action can identify
+    // which storefront's `/products/default` template to fetch (Helix does not
+    // forward `x-forwarded-host` or registration-set auth headers through the
+    // overlay path; query string is the only confirmed transport).
+    const effectiveEdsConfig = {
+        ...edsConfig,
+        byomOverlayUrl: resolveByomOverlayConfig(
+            edsConfig.byomOverlayUrl,
+            edsConfig.daLiveOrg,
+            edsConfig.daLiveSite,
+        ),
+    };
+
     try {
         // Execute storefront setup phases
         const result = await executeStorefrontSetupPhases(
             context,
-            edsConfig,
+            effectiveEdsConfig,
             abortController.signal,
             {
                 selectedBlockLibraries: payload.selectedBlockLibraries,

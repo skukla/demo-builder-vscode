@@ -129,6 +129,15 @@
           "contentSource": {
             "org": "hlxsites",
             "site": "aem-boilerplate-commerce"
+          },
+          "codePatches": [
+            "header-nav-tools-defensive",
+            "commerce-account-sidebar-selector-race"
+          ],
+          "codePatchSource": {
+            "owner": "skukla",
+            "repo": "eds-demo-patches",
+            "path": "custom"
           }
         },
         "eds-accs": {
@@ -154,6 +163,15 @@
           "contentSource": {
             "org": "hlxsites",
             "site": "aem-boilerplate-commerce"
+          },
+          "codePatches": [
+            "header-nav-tools-defensive",
+            "commerce-account-sidebar-selector-race"
+          ],
+          "codePatchSource": {
+            "owner": "skukla",
+            "repo": "eds-demo-patches",
+            "path": "custom"
           }
         }
       }
@@ -203,6 +221,19 @@
           "contentSource": {
             "org": "adobe-commerce",
             "site": "boilerplate-b2b"
+          },
+          "codePatches": [
+            "header-nav-tools-defensive",
+            "product-link-sku-encoding",
+            "product-link-sku-slash-encoding",
+            "aem-assets-sku-sanitization",
+            "commerce-account-sidebar-selector-race"
+          ],
+          "codePatchSource": {
+            "owner": "skukla",
+            "repo": "eds-demo-patches",
+            "path": "b2b",
+            "lkgFile": "b2b/last-known-good"
           }
         },
         "eds-accs": {
@@ -228,6 +259,19 @@
           "contentSource": {
             "org": "adobe-commerce",
             "site": "boilerplate-b2b"
+          },
+          "codePatches": [
+            "header-nav-tools-defensive",
+            "product-link-sku-encoding",
+            "product-link-sku-slash-encoding",
+            "aem-assets-sku-sanitization",
+            "commerce-account-sidebar-selector-race"
+          ],
+          "codePatchSource": {
+            "owner": "skukla",
+            "repo": "eds-demo-patches",
+            "path": "b2b",
+            "lkgFile": "b2b/last-known-good"
           }
         }
       }
@@ -286,14 +330,14 @@
           ],
           "source": {
             "type": "git",
-            "url": "https://github.com/skukla/citisignal-eds-boilerplate",
+            "url": "https://github.com/hlxsites/aem-boilerplate-commerce",
             "branch": "main",
             "gitOptions": {
               "shallow": true
             }
           },
-          "templateOwner": "skukla",
-          "templateRepo": "citisignal-eds-boilerplate",
+          "templateOwner": "hlxsites",
+          "templateRepo": "aem-boilerplate-commerce",
           "contentSource": {
             "org": "demo-system-stores",
             "site": "accs-citisignal"
@@ -307,7 +351,21 @@
           ],
           "contentPatchSource": {
             "owner": "skukla",
-            "repo": "eds-demo-content-patches",
+            "repo": "eds-demo-patches",
+            "path": "citisignal"
+          },
+          "codePatches": [
+            "header-nav-tools-defensive",
+            "product-link-sku-encoding",
+            "product-link-sku-slash-encoding",
+            "aem-assets-sku-sanitization",
+            "commerce-account-sidebar-selector-race",
+            "product-teaser-sku-encoding",
+            "product-teaser-image-url-handling"
+          ],
+          "codePatchSource": {
+            "owner": "skukla",
+            "repo": "eds-demo-patches",
             "path": "citisignal"
           }
         },
@@ -323,14 +381,14 @@
           ],
           "source": {
             "type": "git",
-            "url": "https://github.com/skukla/citisignal-eds-boilerplate",
+            "url": "https://github.com/hlxsites/aem-boilerplate-commerce",
             "branch": "main",
             "gitOptions": {
               "shallow": true
             }
           },
-          "templateOwner": "skukla",
-          "templateRepo": "citisignal-eds-boilerplate",
+          "templateOwner": "hlxsites",
+          "templateRepo": "aem-boilerplate-commerce",
           "contentSource": {
             "org": "demo-system-stores",
             "site": "accs-citisignal"
@@ -342,7 +400,21 @@
           ],
           "contentPatchSource": {
             "owner": "skukla",
-            "repo": "eds-demo-content-patches",
+            "repo": "eds-demo-patches",
+            "path": "citisignal"
+          },
+          "codePatches": [
+            "header-nav-tools-defensive",
+            "product-link-sku-encoding",
+            "product-link-sku-slash-encoding",
+            "aem-assets-sku-sanitization",
+            "commerce-account-sidebar-selector-race",
+            "product-teaser-sku-encoding",
+            "product-teaser-image-url-handling"
+          ],
+          "codePatchSource": {
+            "owner": "skukla",
+            "repo": "eds-demo-patches",
             "path": "citisignal"
           }
         }

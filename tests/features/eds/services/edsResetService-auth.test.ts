@@ -154,7 +154,7 @@ function createProjectWithMesh(adobeContext?: {
                 metadata: {
                     githubRepo: 'test-org/test-repo',
                     daLiveOrg: 'test-org',
-                    daLiveSite: 'test-site',
+                    daLiveSite: 'test-repo',
                 },
             },
             'commerce-mesh': {

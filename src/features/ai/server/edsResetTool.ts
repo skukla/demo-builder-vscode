@@ -13,7 +13,7 @@
 
 import { z } from 'zod';
 import { ServiceLocator } from '@/core/di';
-import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
+import { getDaLiveAuthService, getGitHubServices, resolveByomOverlayConfig } from '@/features/eds/handlers/edsHelpers';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
 import { executeEdsReset, extractResetParams } from '@/features/eds/services/edsResetService';
 import type { HandlerContext } from '@/types/handlers';
@@ -112,9 +112,18 @@ export function registerEdsResetTool(
             const phases: Array<{ step: number; totalSteps: number; message: string }> = [];
             const tokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
             try {
+                // VS Code setting `demoBuilder.byom.overlayUrl` wins over
+                // demo-packages.json. The helper stamps `?org=&site=` so the
+                // shared multi-tenant `render-pdp` action can identify which
+                // storefront's `/products/default` template to fetch.
                 const result = await executeEdsReset(
                     {
                         ...paramsResult.params,
+                        byomOverlayUrl: resolveByomOverlayConfig(
+                            paramsResult.params.byomOverlayUrl,
+                            paramsResult.params.daLiveOrg,
+                            paramsResult.params.daLiveSite,
+                        ),
                         includeBlockLibrary: args?.includeBlockLibrary ?? false,
                         verifyCdn: args?.verifyCdn ?? false,
                         redeployMesh: hasMesh,

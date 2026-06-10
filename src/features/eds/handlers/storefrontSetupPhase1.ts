@@ -7,6 +7,8 @@
  * @module features/eds/handlers/storefrontSetupPhase1
  */
 
+import { pinRepoToLkg } from '../services/lkgPinHelper';
+import type { PatchReport } from '../services/patchReportHelper';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
 import type { HandlerContext } from '@/types/handlers';
@@ -22,6 +24,7 @@ export async function executePhaseGitHubRepo(
     signal: AbortSignal,
     templateOwner: string,
     templateRepo: string,
+    patchReport?: PatchReport,
 ): Promise<StorefrontSetupResult | null> {
     const logger = context.logger;
     if (signal.aborted) {
@@ -41,16 +44,88 @@ export async function executePhaseGitHubRepo(
         await context.sendMessage('storefront-setup-progress', {
             phase: 'repository',
             message: `Using repository: ${repoInfo.repoOwner}/${repoInfo.repoName}`,
-            progress: 15,
+            progress: 10,
             ...repoInfo,
         });
+
+        // ADR-006 Step 4b applies here too: the wizard's "Create Repository"
+        // button creates the repo BEFORE storefront setup runs, so this branch
+        // sees the repo at template HEAD with no canonical patches applied.
+        // Without the pin step, canonical-phase patches (e.g., b2b's
+        // product-link-sku-encoding / product-link-sku-slash-encoding /
+        // aem-assets-sku-sanitization) silently do NOT apply — only block-phase
+        // patches (which run later in the pipeline) land. No-op for forked
+        // storefronts (codePatchSource absent).
+        await announcePinAndComplete(context, edsConfig, services, repoInfo, templateOwner, templateRepo, patchReport);
     } else if (useExistingRepo) {
-        await executePhaseExistingRepo(context, edsConfig, services, repoInfo, templateOwner, templateRepo);
+        await executePhaseExistingRepo(context, edsConfig, services, repoInfo, templateOwner, templateRepo, patchReport);
     } else {
-        await executePhaseNewRepo(context, edsConfig, services, repoInfo, signal, templateOwner, templateRepo);
+        await executePhaseNewRepo(context, edsConfig, services, repoInfo, signal, templateOwner, templateRepo, patchReport);
     }
 
     return null;
+}
+
+/**
+ * Wrap `pinIfThinLayer` with the surrounding "Pinning... → Repository ready"
+ * progress messages so the wizard's repository phase tells a consistent
+ * story for both the `usePreCreatedRepo` branch (repo created by the
+ * wizard's "Create Repository" button before storefront setup runs) and
+ * the `executePhaseNewRepo` branch (repo created inside Phase 1 itself).
+ * Both paths land on a fresh template HEAD that needs the same Step 4b pin.
+ *
+ * Not used by `executePhaseExistingRepo` — that path has its own
+ * "Resetting repository to template..." progress message and reset-vs-pin
+ * branching, and is only reached when the user explicitly asked to reset
+ * an already-populated repo.
+ */
+async function announcePinAndComplete(
+    context: HandlerContext,
+    edsConfig: StorefrontSetupStartPayload['edsConfig'],
+    services: SetupServices,
+    repoInfo: RepoInfo,
+    templateOwner: string,
+    templateRepo: string,
+    patchReport: PatchReport | undefined,
+): Promise<void> {
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'repository', message: 'Pinning to verified canonical state...', progress: 12,
+    });
+    await pinIfThinLayer(edsConfig, services, repoInfo, templateOwner, templateRepo, context.logger, patchReport);
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'repository', message: 'Repository ready', progress: 15, ...repoInfo,
+    });
+}
+
+/**
+ * Pin a thin-layer storefront's repo to LKG with canonical patches applied,
+ * if `edsConfig.codePatchSource` is configured (i.e., the storefront is
+ * thin-layer per ADR-006). No-op for forked storefronts. Errors propagate
+ * — the caller decides whether to abort or proceed.
+ */
+async function pinIfThinLayer(
+    edsConfig: StorefrontSetupStartPayload['edsConfig'],
+    services: SetupServices,
+    repoInfo: RepoInfo,
+    templateOwner: string,
+    templateRepo: string,
+    logger: HandlerContext['logger'],
+    patchReport: PatchReport | undefined,
+): Promise<void> {
+    if (!edsConfig.codePatchSource || !edsConfig.codePatches) return;
+    const { repoOwner, repoName } = repoInfo;
+    if (!repoOwner || !repoName) return;  // Defensive — phases above populate both before this runs.
+    await pinRepoToLkg(
+        {
+            repoOwner, repoName,
+            templateOwner, templateRepo,
+            codePatches: edsConfig.codePatches,
+            codePatchSource: edsConfig.codePatchSource,
+            patchReport,
+        },
+        services.githubFileOps,
+        logger,
+    );
 }
 
 /**
@@ -63,6 +138,7 @@ async function executePhaseExistingRepo(
     repoInfo: RepoInfo,
     templateOwner: string,
     templateRepo: string,
+    patchReport?: PatchReport,
 ): Promise<void> {
     const logger = context.logger;
 
@@ -100,10 +176,17 @@ async function executePhaseExistingRepo(
             phase: 'repository', message: 'Resetting repository to template...', progress: 6,
         });
 
-        await services.githubRepoOps.resetToTemplate(
-            repoInfo.repoOwner, repoInfo.repoName,
-            templateOwner, templateRepo, 'main', 'chore: reset to template',
-        );
+        if (edsConfig.codePatchSource) {
+            // Thin-layer flow: bulk Tree reset to canonical@LKG + apply canonical
+            // patches in the same atomic commit. Mirrors the dashboard reset action.
+            await pinIfThinLayer(edsConfig, services, repoInfo, templateOwner, templateRepo, logger, patchReport);
+        } else {
+            // Legacy/forked flow: simple resetToTemplate against template main.
+            await services.githubRepoOps.resetToTemplate(
+                repoInfo.repoOwner, repoInfo.repoName,
+                templateOwner, templateRepo, 'main', 'chore: reset to template',
+            );
+        }
         logger.info('[Storefront Setup] Repository reset to template');
     }
 
@@ -123,6 +206,7 @@ async function executePhaseNewRepo(
     signal: AbortSignal,
     templateOwner: string,
     templateRepo: string,
+    patchReport?: PatchReport,
 ): Promise<void> {
     const logger = context.logger;
 
@@ -153,7 +237,10 @@ async function executePhaseNewRepo(
 
     await services.githubRepoOps.waitForContent(repoInfo.repoOwner, repoInfo.repoName, signal);
 
-    await context.sendMessage('storefront-setup-progress', {
-        phase: 'repository', message: 'Repository ready', progress: 15, ...repoInfo,
-    });
+    // ADR-006 Step 4b: pin freshly-created thin-layer repos to LKG with
+    // canonical-phase patches applied. `generate-from-template` produces at
+    // canonical HEAD; this follow-up Tree reset brings the repo to byte-
+    // identical parity with what a reset would produce. No-op for forked
+    // storefronts (codePatchSource absent).
+    await announcePinAndComplete(context, edsConfig, services, repoInfo, templateOwner, templateRepo, patchReport);
 }

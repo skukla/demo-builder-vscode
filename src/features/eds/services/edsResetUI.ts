@@ -247,7 +247,7 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
     } = options;
 
     const vscode = await import('vscode');
-    const { getDaLiveAuthService } = await import('../handlers/edsHelpers');
+    const { getDaLiveAuthService, resolveByomOverlayConfig } = await import('../handlers/edsHelpers');
     const { createDaLiveServiceTokenProvider } = await import('./daLiveContentOperations');
     const { getMeshComponentInstance } = await import('@/types/typeGuards');
 
@@ -303,8 +303,17 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
 
                 // Execute reset
                 const tokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
+                // VS Code setting `demoBuilder.byom.overlayUrl` wins over
+                // demo-packages.json. The helper stamps `?org=&site=` so the
+                // shared multi-tenant `render-pdp` action can identify which
+                // storefront's `/products/default` template to fetch.
                 const resetParams: EdsResetParams = {
                     ...paramsResult.params,
+                    byomOverlayUrl: resolveByomOverlayConfig(
+                        paramsResult.params.byomOverlayUrl,
+                        paramsResult.params.daLiveOrg,
+                        paramsResult.params.daLiveSite,
+                    ),
                     includeBlockLibrary, verifyCdn, redeployMesh: redeployMesh ?? hasMesh,
                 };
 

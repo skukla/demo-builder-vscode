@@ -14,8 +14,7 @@ export type WizardStep =
     | 'adobe-project'  // Adobe project selection step
     | 'adobe-workspace'  // Adobe workspace selection step
     | 'eds-connect-services'  // EDS: Combined GitHub + DA.live authentication (conditional: requiresGitHub OR requiresDaLive stack)
-    | 'eds-repository-config'  // EDS: Repository and DA.live configuration (conditional: requiresGitHub stack)
-    | 'eds-data-source'  // EDS: ACCS data source configuration (conditional: requiresDaLive stack)
+    | 'eds-repository-config'  // EDS: Repository configuration. DA.live site name is derived from the repo name (see backlog 2026-06-08-unify-da-site-and-repo-name).
     | 'storefront-setup'  // EDS: Storefront setup (GitHub repo, DA.live content, Helix config)
     | 'settings'  // Component-specific settings collection
     | 'review'
@@ -409,6 +408,19 @@ export interface EDSConfig {
     contentPatches?: string[];
     /** External source for content patches (from demo-packages.json storefronts) */
     contentPatchSource?: {
+        owner: string;
+        repo: string;
+        path: string;
+    };
+    /** Code patch IDs to apply during create/reset (ADR-006 Step 5). Sibling of
+     *  contentPatches but operates on repo files. Empty / undefined for legacy
+     *  / non-thin-layer storefronts. */
+    codePatches?: string[];
+    /** External code-patch source. When set, the storefront is "thin-layer" per
+     *  ADR-006 — lastSyncedCommit records the LKG SHA read from this repo's
+     *  `last-known-good` file, and reset pins to LKG. Canonical home:
+     *  skukla/eds-demo-patches. */
+    codePatchSource?: {
         owner: string;
         repo: string;
         path: string;

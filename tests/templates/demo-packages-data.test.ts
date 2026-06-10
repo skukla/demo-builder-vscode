@@ -228,7 +228,7 @@ describe('demo-packages.json', () => {
             const patchSource = edsAccs.contentPatchSource as { owner: string; repo: string; path: string };
             expect(patchSource).toBeDefined();
             expect(patchSource.owner).toBe('skukla');
-            expect(patchSource.repo).toBe('eds-demo-content-patches');
+            expect(patchSource.repo).toBe('eds-demo-patches');
             expect(patchSource.path).toBe('citisignal');
         });
 

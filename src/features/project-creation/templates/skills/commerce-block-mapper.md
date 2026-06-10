@@ -23,6 +23,14 @@ Tell the user this up front:
 
 Don't paper over this. End users seeing a demo trust it more if it says "this section uses Adobe's product detail drop-in, themed to match" than if the demo silently degrades.
 
+### PDP customizations inherit on every product URL (Phase 2 LIVE)
+
+Customizations to the PDP template — adding a related-products block, rearranging sections in `/products/default`, tweaking colors or copy — **inherit on every real product URL** like `/products/{urlKey}/{sku}` automatically. Phase 2 of the BYOM routing (LIVE since 2026-06-09) has the shared `render-pdp` overlay fetch the storefront's authored `/products/default` and serve it on every PDP path. So a change you make to `/products/default` appears on every real PDP on next visit (or, more reliably, after the next reset, which pre-publishes the catalog into Helix content-bus).
+
+Tell the user explicitly when you customize a PDP block: "This change shows on `/products/default` and inherits on every real product URL automatically. Most products will pick it up on next visit; for guaranteed propagation across the whole catalog, run a reset (which re-pre-warms every SKU)." Architecture detail: `docs/architecture/eds-byom-pdp-routing.md` in the demo-builder-vscode repo.
+
+**What still won't work:** server-side SEO metadata per SKU (JSON-LD, Merchant Center, per-SKU og:image). The overlay returns the same template body for every SKU; per-SKU product data is fetched client-side by the drop-in. If a demo needs production-grade SEO, that's Tier 3 SSR — out of scope for Demo Builder.
+
 ## What's customizable
 
 For each drop-in, these levers exist:

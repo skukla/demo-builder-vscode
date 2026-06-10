@@ -28,6 +28,7 @@ import {
 } from './daLiveConstants';
 import { getMimeType } from './daLiveMimeTypes';
 import { convertSpreadsheetJsonToHtml } from './daLiveSpreadsheetUtils';
+import { addContentResult, type PatchReport } from './patchReportHelper';
 import {
     DaLiveError,
     DaLiveAuthError,
@@ -370,7 +371,14 @@ export class DaLiveContentOperations {
     }
 
     /**
-     * Process HTML content: apply patches and transform for DA.live
+     * Process HTML content: apply patches and transform for DA.live.
+     *
+     * When `patchReport` is supplied, each content-patch result (applied or
+     * not) is routed into the unified report via `addContentResult` so the
+     * pipeline's final `reportUnapplied` toast can name unapplied content
+     * patches alongside unapplied code patches. Without a report (e.g.
+     * one-off content copies outside the create/reset pipeline), the
+     * previous debug-log behavior is preserved.
      */
     private async processHtmlContent(
         sourceResponse: Response,
@@ -378,6 +386,7 @@ export class DaLiveContentOperations {
         sourceBaseUrl: string,
         contentPatchIds?: string[],
         contentPatchSource?: ContentPatchSource,
+        patchReport?: PatchReport,
     ): Promise<Blob> {
         let htmlText = await sourceResponse.text();
 
@@ -389,7 +398,9 @@ export class DaLiveContentOperations {
             htmlText = patchedHtml;
 
             for (const result of results) {
-                if (!result.applied && result.reason) {
+                if (patchReport) {
+                    addContentResult(patchReport, result);
+                } else if (!result.applied && result.reason) {
                     this.logger.debug(`[DA.live] Content patch '${result.patchId}' not applied to ${sourcePath}: ${result.reason}`);
                 }
             }
@@ -418,6 +429,7 @@ export class DaLiveContentOperations {
         destPath: string,
         contentPatchIds?: string[],
         contentPatchSource?: ContentPatchSource,
+        patchReport?: PatchReport,
     ): Promise<boolean> {
         const sourceBaseUrl = `https://main--${source.site}--${source.org}.aem.live`;
 
@@ -447,7 +459,7 @@ export class DaLiveContentOperations {
                 const daPath = this.resolveDaPath(destPath, isHtml);
 
                 const contentBlob = isHtml
-                    ? await this.processHtmlContent(sourceResponse, sourcePath, sourceBaseUrl, contentPatchIds, contentPatchSource)
+                    ? await this.processHtmlContent(sourceResponse, sourcePath, sourceBaseUrl, contentPatchIds, contentPatchSource, patchReport)
                     : await sourceResponse.blob();
 
                 const destUrl = `${DA_LIVE_BASE_URL}/source/${destination.org}/${destination.site}/${daPath}`;
@@ -665,13 +677,66 @@ export class DaLiveContentOperations {
     }
 
     /**
+     * Copy an entire DA.live site tree to a new site name in one operation.
+     *
+     * Uses DA's `POST /copy/{org}/{site}` endpoint with `destination=/{org}/{destSite}/`
+     * — a single request that recursively duplicates the source tree under
+     * the destination path. The destination namespace is auto-created.
+     *
+     * Used by the storefront name-migration path on reset to move content
+     * from a legacy `<repo>-content` site to the matching `<repo>` site
+     * before re-registering Helix against the new DA URL. The source is
+     * NOT modified; the caller deletes it after verifying the new site.
+     *
+     * @param srcOrg - source DA.live org
+     * @param srcSite - source DA.live site
+     * @param destOrg - destination DA.live org (typically same as srcOrg)
+     * @param destSite - destination DA.live site
+     * @returns success or failure with status detail
+     */
+    async copyDaLiveSite(
+        srcOrg: string, srcSite: string,
+        destOrg: string, destSite: string,
+    ): Promise<{ success: true } | { success: false; error: string; status?: number }> {
+        const token = await this.getImsToken();
+        const url = `${DA_LIVE_BASE_URL}/copy/${srcOrg}/${srcSite}/`;
+        const formData = new FormData();
+        formData.append('destination', `/${destOrg}/${destSite}/`);
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` },
+                body: formData,
+                signal: AbortSignal.timeout(TIMEOUTS.VERY_LONG),
+            });
+
+            if (response.status === 204 || response.ok) {
+                this.logger.info(
+                    `[DA.live] Copied site ${srcOrg}/${srcSite} → ${destOrg}/${destSite} (status=${response.status})`,
+                );
+                return { success: true };
+            }
+
+            const bodyText = await response.text().catch(() => '');
+            return {
+                success: false,
+                status: response.status,
+                error: `Copy failed: ${response.status} ${response.statusText}${bodyText ? ` — ${bodyText.slice(0, 200)}` : ''}`,
+            };
+        } catch (error) {
+            return { success: false, error: (error as Error).message };
+        }
+    }
+
+    /**
      * Delete the site root entry so the site disappears from org listing.
      *
      * Sends `DELETE /source/{org}/{site}/` to remove the root directory marker.
      * Best-effort: 404 means it was already gone; other errors are logged but
      * don't fail the overall operation.
      */
-    private async deleteSiteRoot(org: string, site: string): Promise<void> {
+    async deleteSiteRoot(org: string, site: string): Promise<void> {
         const token = await this.getImsToken();
         const url = `${DA_LIVE_BASE_URL}/source/${org}/${site}/`;
 
@@ -1737,6 +1802,13 @@ export class DaLiveContentOperations {
      * @param progressCallback - Optional progress callback
      * @param contentPatchIds - Optional content patch IDs to apply
      * @param contentPatchSource - Optional external source for content patches
+     * @param patchReport - Optional patch report. When supplied, per-page
+     *   content-patch results (applied or not) are routed into the report
+     *   via `addContentResult`, so the pipeline's final `reportUnapplied`
+     *   call surfaces unapplied content patches in the same toast as
+     *   unapplied code patches. Without a report, the old debug-log
+     *   behavior is preserved (for callers outside the create/reset
+     *   pipeline that don't aggregate patch results).
      * @returns Copy result
      */
     async copyContentFromSource(
@@ -1746,6 +1818,7 @@ export class DaLiveContentOperations {
         progressCallback?: DaLiveProgressCallback,
         contentPatchIds?: string[],
         contentPatchSource?: ContentPatchSource,
+        patchReport?: PatchReport,
     ): Promise<DaLiveCopyResult> {
         // Report initialization progress
         progressCallback?.({ processed: 0, total: 0, percentage: 0, message: 'Enumerating source content...' });
@@ -1852,6 +1925,7 @@ export class DaLiveContentOperations {
                         sourcePath,
                         contentPatchIds,
                         contentPatchSource,
+                        patchReport,
                     );
                     return { path: sourcePath, success };
                 }),

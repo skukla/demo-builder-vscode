@@ -502,13 +502,13 @@ export class AuthenticationService {
     }
 
     /**
-     * Select organization
-     * @param options.skipPermissionCheck - Skip Developer permission test (use during reset/restore when permissions are already verified)
+     * Select organization. Pure selection — no permission checking.
+     * See `AdobeEntitySelector.selectOrganization` for the rationale.
      */
-    async selectOrganization(orgId: string, options?: { skipPermissionCheck?: boolean }): Promise<boolean> {
+    async selectOrganization(orgId: string): Promise<boolean> {
         return withTiming('selectOrganization', async () => {
             const { selector } = await this.ensureEntities();
-            return selector.selectOrganization(orgId, options);
+            return selector.selectOrganization(orgId);
         });
     }
 

@@ -260,7 +260,7 @@ async function restoreAdobeContext(
 
     progress.report({ message: 'Setting Adobe context...' });
     if (project.adobe?.organization) {
-        await authService.selectOrganization(project.adobe.organization, { skipPermissionCheck: true });
+        await authService.selectOrganization(project.adobe.organization);
     }
     if (project.adobe?.projectId && project.adobe?.organization) {
         await authService.selectProject(project.adobe.projectId, project.adobe.organization);

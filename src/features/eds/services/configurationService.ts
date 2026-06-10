@@ -54,6 +54,29 @@ export interface SiteRegistrationParams {
     /** Optional BYOM content overlay URL. When set, the registration body
      *  includes a `content.overlay` block alongside `content.source`. */
     contentOverlayUrl?: string;
+    /** Optional legacy Configuration Service lookup key (org + site). When
+     *  set and different from {org, site}, updateSiteConfig DELETEs that
+     *  registration before the normal DELETE+PUT — best-effort, 404 is
+     *  treated as success. Cleans up orphan registrations left behind by
+     *  pre-`164fd251` builds that keyed site configs by DA.live site name. */
+    legacyLookupKey?: { org: string; site: string };
+}
+
+/**
+ * Strip query string and fragment from a URL before logging.
+ *
+ * The BYOM overlay URL is user-supplied via the `demoBuilder.byom.overlayUrl`
+ * setting; pasted values may include a secret in the query string (e.g., a
+ * tokenized URL). Logging the bare scheme + host + path keeps debug output
+ * useful for ops without echoing potential secrets to the Debug channel.
+ */
+function stripUrlQueryAndFragment(url: string): string {
+    try {
+        const parsed = new URL(url);
+        return `${parsed.protocol}//${parsed.host}${parsed.pathname}`;
+    } catch {
+        return '[unparseable URL]';
+    }
 }
 
 /** Build the DA.live content source URL for a given org and site */
@@ -66,15 +89,34 @@ export function buildSiteConfigParams(
     repoOwner: string, repoName: string, daLiveOrg: string, daLiveSite: string,
     overlayUrl?: string,
 ): SiteRegistrationParams {
-    // The Config Service lookup key must use the DA.live org/site, not the GitHub repo name.
-    // The da.live editor constructs its preview URL from the DA.live site path
-    // (e.g. /preview/skukla/b2b-content/...), so Helix looks up /config/skukla/sites/b2b-content.json.
-    // codeOwner/codeRepo tells Helix where to find the GitHub code repository (blocks, config, etc.).
+    // The Config Service lookup key must use the GitHub owner/repo, not the
+    // DA.live org/site. Helix's preview/publish/live operations issue requests
+    // to /preview/{owner}/{repo}/main/... and look up the site config at
+    // /config/{owner}/sites/{repo}.json. Registering under the DA.live name
+    // (e.g. /sites/b2b-boilerplate-content.json when the repo is
+    // skukla/b2b-boilerplate) leaves the config invisible to those operations
+    // — every preview/publish silently fails because Helix has no content
+    // source mapping for the lookup key it actually checks.
+    //
+    // contentSourceUrl still points at DA.live — that's where content lives.
+    // The DA.live editor reads its own config from DA.live's service, not
+    // from Helix's site config, so this rename does not affect the editor.
+    // Storefronts created on builds before commit 164fd251 keyed their
+    // site config by the DA.live site name. When the DA.live site name
+    // differs from the GitHub repo name (the usual case — wizards default
+    // to a `-content` suffix on DA), that prior registration lingers as an
+    // orphan and Helix elects it primary for content operations, 403'ing
+    // every write against the new registration. updateSiteConfig uses
+    // this hint to DELETE the orphan as part of the next reset/create.
+    const legacyLookupKey = daLiveSite !== repoName
+        ? { org: daLiveOrg, site: daLiveSite }
+        : undefined;
     return {
-        org: daLiveOrg, site: daLiveSite,
+        org: repoOwner, site: repoName,
         codeOwner: repoOwner, codeRepo: repoName,
         contentSourceUrl: buildContentSourceUrl(daLiveOrg, daLiveSite),
         ...(overlayUrl && { contentOverlayUrl: overlayUrl }),
+        ...(legacyLookupKey && { legacyLookupKey }),
     };
 }
 
@@ -130,7 +172,10 @@ export class ConfigurationService {
         this.logger.info(`[ConfigService] Registering site: ${org}/${site}`);
         this.logger.debug(`[ConfigService] Code: ${codeOwner}/${codeRepo}, Content: ${contentSourceUrl}`);
         if (contentOverlayUrl) {
-            this.logger.debug(`[ConfigService] Content overlay: ${contentOverlayUrl}`);
+            // Strip query/fragment from the overlay URL before logging — the
+            // overlay URL is user-supplied via VS Code settings and may include
+            // a secret in its query string (e.g., a paste with a token).
+            this.logger.debug(`[ConfigService] Content overlay: ${stripUrlQueryAndFragment(contentOverlayUrl)}`);
         }
 
         const source = { url: contentSourceUrl, type: contentSourceType || 'markup' };
@@ -138,7 +183,20 @@ export class ConfigurationService {
             version: 1,
             code: { owner: codeOwner, repo: codeRepo },
             content: contentOverlayUrl
-                ? { source, overlay: { url: contentOverlayUrl, type: 'markup' } }
+                // The `suffix: '.html'` matches the canonical
+                // `aem-commerce-prerender` setup wizard's registration shape.
+                // BYOM docs (https://www.aem.live/developer/byom) describe
+                // `suffix` as the field that makes Helix's admin service
+                // append the suffix before fetching from the overlay URL.
+                // Empirical observation (citisignal-b2b 2026-06-10): without
+                // `suffix`, Helix's live tier returns 404 for any unmatched
+                // `/products/*` path EVEN THOUGH our overlay action returns
+                // 200 with the default template body when called directly.
+                // The canonical demo at aemshop.net returns 200 in the same
+                // scenario. The only known registration-shape difference
+                // between the two was the suffix.
+                // See: .rptc/research/eds-pdp-routing-validation/findings.md
+                ? { source, overlay: { url: contentOverlayUrl, type: 'markup', suffix: '.html' } }
                 : { source },
         };
 
@@ -160,8 +218,10 @@ export class ConfigurationService {
      * @returns Result with success/error status
      */
     async updateSiteConfig(params: SiteRegistrationParams): Promise<ConfigServiceResult> {
-        const { org, site } = params;
+        const { org, site, legacyLookupKey } = params;
         this.logger.info(`[ConfigService] Updating site config: ${org}/${site}`);
+
+        await this.cleanUpLegacyRegistration(legacyLookupKey, { org, site });
 
         const deleteResult = await this.deleteSiteConfig(org, site);
         if (!deleteResult.success && deleteResult.statusCode !== 404) {
@@ -173,6 +233,34 @@ export class ConfigurationService {
         }
 
         return this.registerSite(params);
+    }
+
+    /**
+     * Best-effort cleanup of a legacy site registration left behind by
+     * pre-`164fd251` builds, where site configs were keyed by DA.live site
+     * name instead of GitHub repo name. Skips when no legacy key is set,
+     * or when the legacy key matches the current key (would be redundant).
+     * Treats 404 and non-404 errors as success — the legacy DELETE must
+     * never block the normal update flow.
+     */
+    private async cleanUpLegacyRegistration(
+        legacy: { org: string; site: string } | undefined,
+        current: { org: string; site: string },
+    ): Promise<void> {
+        if (!legacy) return;
+        if (legacy.org === current.org && legacy.site === current.site) return;
+
+        this.logger.info(
+            `[ConfigService] Cleaning up legacy site registration: ${legacy.org}/${legacy.site}`,
+        );
+        const result = await this.deleteSiteConfig(legacy.org, legacy.site);
+        if (result.statusCode === 404) {
+            this.logger.debug('[ConfigService] No legacy registration to clean up (404)');
+        } else if (!result.success) {
+            this.logger.warn(
+                `[ConfigService] Legacy registration cleanup failed (${result.statusCode ?? 'unknown'}) — continuing anyway: ${result.error ?? ''}`,
+            );
+        }
     }
 
     // ==========================================================

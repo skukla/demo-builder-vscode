@@ -135,6 +135,45 @@
         "contentPatchSource": {
           "$ref": "#/definitions/contentPatchSource",
           "description": "External repository for content patches (if not using bundled patches)"
+        },
+        "codePatches": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Array of code patch IDs to apply during create/reset (canonical files + installed blocks). Sibling of contentPatches; operates on repo files. ADR-006 Step 5."
+        },
+        "codePatchSource": {
+          "$ref": "#/definitions/codePatchSource",
+          "description": "External repository for code patches. When set, the storefront is thin-layer per ADR-006 — lastSyncedCommit records the LKG SHA and reset pins to LKG."
+        }
+      }
+    },
+    "codePatchSource": {
+      "type": "object",
+      "description": "External GitHub repository for code patches (thin-layer storefronts per ADR-006). Canonical home: skukla/eds-demo-patches.",
+      "required": ["owner", "repo", "path"],
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "description": "GitHub owner/organization of the patch repository"
+        },
+        "repo": {
+          "type": "string",
+          "minLength": 1,
+          "description": "GitHub repository name"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Path within repo to the patch family directory (contains code-patches.json)"
+        },
+        "lkgFile": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Optional. Repo-relative path to the LKG file when the ledger tracks a non-default canonical (multi-canonical patches repos). Defaults to root 'last-known-good'. Example: b2b → 'b2b/last-known-good'."
         }
       }
     },

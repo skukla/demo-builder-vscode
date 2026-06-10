@@ -164,7 +164,13 @@ describe('ConfigurationService', () => {
             expect(result.error).toContain('DA.live authentication required');
         });
 
-        it('should include content.overlay block when contentOverlayUrl is provided', async () => {
+        it('should include content.overlay block with suffix:".html" when contentOverlayUrl is provided', async () => {
+            // The `suffix: '.html'` matches the canonical
+            // `aem-commerce-prerender` registration shape. Without it,
+            // Helix's live tier 404s for unmatched `/products/*` paths
+            // even though the overlay action returns 200 with the default
+            // template. See .rptc/research/eds-pdp-routing-validation/
+            // findings.md for the empirical reproduction.
             await service.registerSite({
                 ...params,
                 contentOverlayUrl: 'https://byom.example.com',
@@ -180,6 +186,7 @@ describe('ConfigurationService', () => {
                 overlay: {
                     url: 'https://byom.example.com',
                     type: 'markup',
+                    suffix: '.html',
                 },
             });
         });
@@ -214,6 +221,52 @@ describe('ConfigurationService', () => {
                 'owner', 'repo', 'org', 'site', 'https://byom.example.com',
             );
             expect(params.contentOverlayUrl).toBe('https://byom.example.com');
+        });
+
+        // Helix's preview/publish/live operations look up the site config at
+        // /config/{githubOwner}/sites/{githubRepo}.json — using the GitHub
+        // identifiers, not the DA.live identifiers. Registering under the
+        // DA.live name (the old behavior) leaves the config invisible to those
+        // operations and every preview/publish silently fails.
+        describe('Config Service lookup key (Helix preview/publish contract)', () => {
+            it('uses the GitHub owner/repo as the Config Service lookup key', () => {
+                const params = buildSiteConfigParams(
+                    'my-owner', 'my-repo', 'my-dalive-org', 'my-dalive-site',
+                );
+
+                expect(params.org).toBe('my-owner');
+                expect(params.site).toBe('my-repo');
+            });
+
+            it('keeps codeOwner/codeRepo identical to the lookup key (Helix code source)', () => {
+                const params = buildSiteConfigParams(
+                    'my-owner', 'my-repo', 'my-dalive-org', 'my-dalive-site',
+                );
+
+                expect(params.codeOwner).toBe('my-owner');
+                expect(params.codeRepo).toBe('my-repo');
+            });
+
+            it('still points the content source URL at the DA.live org/site (where content actually lives)', () => {
+                const params = buildSiteConfigParams(
+                    'my-owner', 'my-repo', 'my-dalive-org', 'my-dalive-site',
+                );
+
+                expect(params.contentSourceUrl).toBe(
+                    'https://content.da.live/my-dalive-org/my-dalive-site/',
+                );
+            });
+
+            it('handles the case where the GitHub repo name differs from the DA.live site name', () => {
+                // Real-world example: GitHub repo "b2b-boilerplate", DA site "b2b-boilerplate-content"
+                const params = buildSiteConfigParams(
+                    'skukla', 'b2b-boilerplate', 'skukla', 'b2b-boilerplate-content',
+                );
+
+                expect(params.org).toBe('skukla');
+                expect(params.site).toBe('b2b-boilerplate');
+                expect(params.contentSourceUrl).toContain('b2b-boilerplate-content');
+            });
         });
     });
 
@@ -337,6 +390,138 @@ describe('ConfigurationService', () => {
             expect(result.success).toBe(false);
             expect(result.error).toContain('auth failed');
             expect(result.statusCode).toBe(401);
+        });
+
+        // Legacy-registration cleanup. Storefronts created on builds before
+        // commit 164fd251 registered their Helix site config under the DA.live
+        // site name; current builds register under the GitHub repo name.
+        // When `legacyLookupKey` is supplied, updateSiteConfig must DELETE
+        // that legacy registration before the normal DELETE+PUT, otherwise
+        // Helix elects the orphan as the primary content site and 403s every
+        // write against the new registration.
+        describe('legacy lookup key cleanup', () => {
+            const paramsWithLegacy: SiteRegistrationParams = {
+                org: 'skukla',
+                site: 'b2b-boilerplate',
+                codeOwner: 'skukla',
+                codeRepo: 'b2b-boilerplate',
+                contentSourceUrl: 'https://content.da.live/skukla/b2b-boilerplate-content/',
+                legacyLookupKey: { org: 'skukla', site: 'b2b-boilerplate-content' },
+            };
+
+            it('DELETEs the legacy registration before the normal DELETE+PUT when legacyLookupKey is set', async () => {
+                fetchSpy
+                    .mockResolvedValueOnce(new Response(null, { status: 204 })) // legacy DELETE
+                    .mockResolvedValueOnce(new Response(null, { status: 200 })) // normal DELETE
+                    .mockResolvedValueOnce(new Response(null, { status: 201 })); // PUT
+
+                const result = await service.updateSiteConfig(paramsWithLegacy);
+
+                expect(result.success).toBe(true);
+                expect(fetchSpy).toHaveBeenCalledTimes(3);
+
+                // First call: DELETE at the LEGACY key (DA site name)
+                expect(fetchSpy.mock.calls[0][1].method).toBe('DELETE');
+                expect(fetchSpy.mock.calls[0][0]).toBe(
+                    'https://admin.hlx.page/config/skukla/sites/b2b-boilerplate-content.json',
+                );
+                // Second call: DELETE at the NEW key (GitHub repo name)
+                expect(fetchSpy.mock.calls[1][1].method).toBe('DELETE');
+                expect(fetchSpy.mock.calls[1][0]).toBe(
+                    'https://admin.hlx.page/config/skukla/sites/b2b-boilerplate.json',
+                );
+                // Third call: PUT at the NEW key
+                expect(fetchSpy.mock.calls[2][1].method).toBe('PUT');
+                expect(fetchSpy.mock.calls[2][0]).toBe(
+                    'https://admin.hlx.page/config/skukla/sites/b2b-boilerplate.json',
+                );
+            });
+
+            it('treats a 404 on the legacy DELETE as success (no orphan to clean up)', async () => {
+                fetchSpy
+                    .mockResolvedValueOnce(new Response('Not Found', { status: 404 })) // legacy DELETE 404
+                    .mockResolvedValueOnce(new Response(null, { status: 200 })) // normal DELETE
+                    .mockResolvedValueOnce(new Response(null, { status: 201 })); // PUT
+
+                const result = await service.updateSiteConfig(paramsWithLegacy);
+
+                expect(result.success).toBe(true);
+                expect(fetchSpy).toHaveBeenCalledTimes(3);
+            });
+
+            it('does not invoke a legacy DELETE when legacyLookupKey is absent', async () => {
+                fetchSpy
+                    .mockResolvedValueOnce(new Response(null, { status: 200 })) // normal DELETE
+                    .mockResolvedValueOnce(new Response(null, { status: 201 })); // PUT
+
+                const result = await service.updateSiteConfig(params);
+
+                expect(result.success).toBe(true);
+                expect(fetchSpy).toHaveBeenCalledTimes(2);
+                // The first call goes to the new registration, not any legacy one.
+                expect(fetchSpy.mock.calls[0][0]).toBe(
+                    'https://admin.hlx.page/config/test-user/sites/my-site.json',
+                );
+            });
+
+            it('does not invoke a legacy DELETE when the legacy key matches the current key', async () => {
+                // Edge case: someone constructs params with legacyLookupKey === current key.
+                // The pre-flight DELETE would otherwise duplicate the normal DELETE.
+                const paramsSameKey: SiteRegistrationParams = {
+                    ...params,
+                    legacyLookupKey: { org: params.org, site: params.site },
+                };
+                fetchSpy
+                    .mockResolvedValueOnce(new Response(null, { status: 200 })) // normal DELETE
+                    .mockResolvedValueOnce(new Response(null, { status: 201 })); // PUT
+
+                const result = await service.updateSiteConfig(paramsSameKey);
+
+                expect(result.success).toBe(true);
+                expect(fetchSpy).toHaveBeenCalledTimes(2);
+            });
+
+            it('proceeds with the normal flow even when the legacy DELETE fails with a non-404 error', async () => {
+                // The legacy cleanup is best-effort. A 403 or 500 on the legacy
+                // DELETE shouldn't block the user from re-registering the new
+                // site — the orphan is a self-inflicted state, not a security
+                // boundary. Log it and continue.
+                fetchSpy
+                    .mockResolvedValueOnce(new Response('Forbidden', { status: 403 })) // legacy DELETE 403
+                    .mockResolvedValueOnce(new Response(null, { status: 200 })) // normal DELETE
+                    .mockResolvedValueOnce(new Response(null, { status: 201 })); // PUT
+
+                const result = await service.updateSiteConfig(paramsWithLegacy);
+
+                expect(result.success).toBe(true);
+                expect(fetchSpy).toHaveBeenCalledTimes(3);
+            });
+        });
+    });
+
+    // ==========================================================
+    // buildSiteConfigParams legacy-key population
+    // ==========================================================
+
+    describe('buildSiteConfigParams — legacyLookupKey population', () => {
+        it('sets legacyLookupKey to the DA.live org/site when it differs from the GitHub repo name', () => {
+            // Real-world case: GitHub repo "b2b-boilerplate", DA site "b2b-boilerplate-content"
+            const params = buildSiteConfigParams(
+                'skukla', 'b2b-boilerplate', 'skukla', 'b2b-boilerplate-content',
+            );
+
+            expect(params.legacyLookupKey).toEqual({
+                org: 'skukla',
+                site: 'b2b-boilerplate-content',
+            });
+        });
+
+        it('omits legacyLookupKey when the GitHub repo name and DA site name match', () => {
+            const params = buildSiteConfigParams(
+                'skukla', 'matching-name', 'skukla', 'matching-name',
+            );
+
+            expect(params.legacyLookupKey).toBeUndefined();
         });
     });
 

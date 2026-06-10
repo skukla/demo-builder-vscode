@@ -33,6 +33,8 @@ import { resetRepoToTemplate } from './edsResetRepoHelper';
 import type { GitHubFileOperations } from './githubFileOperations';
 import type { GitHubTokenService } from './githubTokenService';
 import { HelixService } from './helixService';
+import { createPatchReport, addCodeResult, reportUnapplied } from './patchReportHelper';
+import { migrateStorefrontNamingIfNeeded } from './storefrontNameMigration';
 import { updateStorefrontState } from './storefrontStalenessDetector';
 import { DaLiveAuthError, GitHubAppNotInstalledError } from './types';
 import type { HandlerContext } from '@/types/handlers';
@@ -59,6 +61,7 @@ const MAX_REAUTH_ATTEMPTS = 2;
 const PIPELINE_STEP_MAP: Record<string, number> = {
     'content-clear': 8, 'content-copy': 8, 'block-library': 9,
     'eds-settings': 10, 'cache-purge': 11, 'content-publish': 11, 'library-publish': 11,
+    'catalog-prewarm': 11,
 };
 
 // ==========================================================
@@ -195,7 +198,11 @@ function mapPipelineProgress(
  */
 async function runContentPipeline(
     params: EdsResetParams,
-    repoResetResult: { blockCollectionIds?: string[]; libraryContentSources: Array<{ org: string; site: string }> },
+    repoResetResult: {
+        blockCollectionIds?: string[];
+        libraryContentSources: Array<{ org: string; site: string }>;
+        canonicalCodePatchResults?: import('./codePatchRegistry').CodePatchResult[];
+    },
     daLiveContentOps: DaLiveContentOperations,
     githubFileOps: GitHubFileOperations,
     githubTokenService: GitHubTokenService,
@@ -205,8 +212,20 @@ async function runContentPipeline(
 ): Promise<number> {
     const {
         repoOwner, repoName, daLiveOrg, daLiveSite, templateOwner, templateRepo,
-        contentSource: contentSourceConfig, includeBlockLibrary = false, contentPatches,
+        contentSource: contentSourceConfig, includeBlockLibrary = false,
+        contentPatches, contentPatchSource,
+        codePatches, codePatchSource,
+        byomOverlayUrl, project,
     } = params;
+
+    // Seed the pipeline's patch report with the canonical-phase code-patch
+    // results from `resetRepoToTemplate`. The pipeline appends block-phase
+    // results and (eventually) content-patch results to the same report so
+    // the final aggregate carries everything the UI surface needs.
+    const patchReport = createPatchReport();
+    for (const r of repoResetResult.canonicalCodePatchResults ?? []) {
+        addCodeResult(patchReport, r);
+    }
 
     // tokenProvider required: DA.live content operations (copy, publish) need IMS token
     const helixService = new HelixService(context.logger, githubTokenService, tokenProvider);
@@ -218,10 +237,13 @@ async function runContentPipeline(
                 {
                     repoOwner, repoName, daLiveOrg, daLiveSite, templateOwner, templateRepo,
                     clearExistingContent: true, skipContent: !contentSourceConfig,
-                    contentSource: contentSourceConfig, contentPatches, includeBlockLibrary,
+                    contentSource: contentSourceConfig, contentPatches, contentPatchSource, includeBlockLibrary,
+                    codePatches, codePatchSource, patchReport,
                     blockCollectionIds: repoResetResult.blockCollectionIds,
                     libraryContentSources: repoResetResult.libraryContentSources,
                     purgeCache: true, skipPublish: false,
+                    byomOverlayUrl,
+                    project,
                 },
                 { daLiveContentOps, githubFileOps, helixService, logger: context.logger },
                 (info) => mapPipelineProgress(info, report),
@@ -230,6 +252,11 @@ async function runContentPipeline(
             if (!pipelineResult.success) {
                 throw new Error(pipelineResult.error || 'Content pipeline failed');
             }
+
+            // Surface unapplied patches (if any) via the unified toast helper.
+            // Headless callers (MCP/AI reset) get warn-level logging only; UI
+            // callers can wrap this function and inject `showWarning` later.
+            reportUnapplied(patchReport, context.logger);
 
             context.logger.info('[EdsReset] Content pipeline completed successfully');
             return pipelineResult.contentFilesCopied;
@@ -332,6 +359,26 @@ export async function executeEdsReset(
     let contentCopied = 0;
 
     try {
+        // Step 0: One-time DA/repo name migration for storefronts created on
+        // pre-`164fd251` builds where the DA site name doesn't match the
+        // GitHub repo name. No-op when they already match. Mutates
+        // params.daLiveSite and project metadata in place when it runs so
+        // the rest of the pipeline uses the new (matching) name.
+        const configServiceForMigration = new ConfigurationService(tokenProvider, context.logger);
+        const migrationResult = await migrateStorefrontNamingIfNeeded(
+            params,
+            params.project,
+            daLiveContentOps,
+            configServiceForMigration,
+            context.logger,
+        );
+        if (migrationResult.error) {
+            return {
+                success: false,
+                error: migrationResult.error,
+            };
+        }
+
         // Step 1: Reset repo to template
         const repoResetResult = await resetRepoToTemplate(params, context, githubFileOps, report);
         filesReset = repoResetResult.filesReset;

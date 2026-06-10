@@ -47,6 +47,10 @@ export class RefreshBlockLibraryCommand extends BaseCommand {
             await this.showError(`Cannot refresh block library: ${paramsResult.error}`);
             return;
         }
+        // Refresh runs the EDS content pipeline only — it does not re-register
+        // the site with the AEM Configuration Service, so it has no BYOM overlay
+        // hook today. Overlay URL changes take effect on the next storefront
+        // create or reset.
         const params = paramsResult.params;
 
         // Minimal HandlerContext for the auth retry helper — `ensureDaLiveAuth`
