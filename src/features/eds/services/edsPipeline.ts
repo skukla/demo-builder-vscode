@@ -21,9 +21,15 @@ import type { DaLiveContentOperations } from './daLiveContentOperations';
 import type { GitHubFileOperations } from './githubFileOperations';
 import type { HelixService } from './helixService';
 import { prewarmCatalog } from './catalogPrewarmService';
+import { applyBlockCodePatches } from './codePatchPipelineHelpers';
+import {
+    createPatchReport,
+    addCodeResult,
+    type PatchReport,
+} from './patchReportHelper';
 import { DaLiveAuthError, DaLiveError } from './types';
 import type { Project } from '@/types/base';
-import type { ContentPatchSource } from '@/types/demoPackages';
+import type { ContentPatchSource, CodePatchSource } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
 
 // ==========================================================
@@ -66,6 +72,18 @@ export interface EdsPipelineParams {
     contentSource?: { org: string; site: string; indexPath?: string };
     contentPatches?: string[];
     contentPatchSource?: ContentPatchSource;
+
+    /** Code patch IDs to apply post-block-install (block-targeting subset of the ledger).
+     *  Canonical-file patches are applied earlier by `resetRepoToTemplate` against the
+     *  same ledger. Both phases route results into the pipeline's patchReport. */
+    codePatches?: string[];
+    /** External code-patch source. Sibling of `contentPatchSource`. */
+    codePatchSource?: CodePatchSource;
+
+    /** Optional preexisting patch report. When provided, the pipeline appends to it
+     *  (so canonical-phase results from `resetRepoToTemplate` survive into the final
+     *  pipeline result). When absent, the pipeline creates a fresh report. */
+    patchReport?: PatchReport;
 
     // Block library
     includeBlockLibrary?: boolean;
@@ -111,6 +129,11 @@ export interface EdsPipelineResult {
     contentFilesCopied: number;
     libraryPaths: string[];
     error?: string;
+    /** Aggregated patch report (content + code). Callers pass it to
+     *  `reportUnapplied(report, logger, vscode.window.showWarningMessage)`
+     *  to surface unapplied patches via a single toast (one per create/reset,
+     *  not one per patch domain). Always present even when the report is empty. */
+    patchReport?: PatchReport;
 }
 
 // ==========================================================
@@ -425,7 +448,7 @@ export async function executeEdsPipeline(
     services: EdsPipelineServices,
     onProgress?: EdsPipelineProgressCallback,
 ): Promise<EdsPipelineResult> {
-    const { daLiveContentOps, helixService, logger } = services;
+    const { daLiveContentOps, githubFileOps, helixService, logger } = services;
     const {
         repoOwner,
         repoName,
@@ -437,9 +460,18 @@ export async function executeEdsPipeline(
         contentSource,
         contentPatches,
         contentPatchSource,
+        codePatches,
+        codePatchSource,
         includeBlockLibrary = false,
         purgeCache = false,
     } = params;
+
+    // Patch report: reuse caller's report when threaded through (so canonical-
+    // phase results from `resetRepoToTemplate` survive into the final result),
+    // else start fresh. Both `addContentResult` and `addCodeResult` mutate
+    // through the same reference, so the final pipeline result always carries
+    // the full report.
+    const patchReport = params.patchReport ?? createPatchReport();
 
     // Helix targets the aem.live SITE; code reads target repoOwner/repoName.
     // Canonical: site == code (defaults). Satellite: site = own daLiveOrg/daLiveSite.
@@ -475,6 +507,34 @@ export async function executeEdsPipeline(
         // Step 2: Block Library
         if (includeBlockLibrary) {
             libraryPaths = await pipelineConfigureBlockLibrary(services, params, onProgress);
+        }
+
+        // Step 2.5: Block-targeting code patches (post-install).
+        // Canonical-file patches were applied earlier in `resetRepoToTemplate`
+        // via `applyCanonicalCodePatches`. The block-targeting subset of the
+        // same ledger runs here, AFTER block install, so installed library
+        // blocks are present in the repo to be patched. Phase routing is by
+        // target prefix (`blocks/...` → here; everything else → canonical).
+        // Non-fatal per ADR-006 D1: results go to `patchReport`; the caller
+        // surfaces unapplied patches via the one-toast helper.
+        if (codePatches && codePatches.length > 0 && codePatchSource) {
+            try {
+                const blockResults = await applyBlockCodePatches(
+                    githubFileOps,
+                    repoOwner,
+                    repoName,
+                    codePatches,
+                    codePatchSource,
+                    logger,
+                );
+                for (const r of blockResults) addCodeResult(patchReport, r);
+            } catch (codePatchError) {
+                // `applyBlockCodePatches` is internally non-fatal except for
+                // `critical: true` patches, where the engine throws
+                // `CodePatchCriticalError`. Re-throw so callers see the failed
+                // result on `error.result` rather than a partially-applied state.
+                throw codePatchError;
+            }
         }
 
         // Step 3: EDS Settings
@@ -567,6 +627,7 @@ export async function executeEdsPipeline(
             success: true,
             contentFilesCopied,
             libraryPaths,
+            patchReport,
         };
     } catch (error) {
         // Re-throw auth errors so callers can offer re-authentication
@@ -578,6 +639,7 @@ export async function executeEdsPipeline(
             success: false,
             contentFilesCopied,
             libraryPaths,
+            patchReport,
             error: errorMessage,
         };
     }

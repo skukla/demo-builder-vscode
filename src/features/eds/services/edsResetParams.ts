@@ -14,6 +14,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
 import type { Project } from '@/types/base';
 import type { HandlerResponse } from '@/types/handlers';
+import type { CodePatchSource } from '@/types/demoPackages';
 
 // ==========================================================
 // Types
@@ -54,6 +55,14 @@ export interface EdsResetParams {
     redeployMesh?: boolean;
     /** Content patches to apply during content copy */
     contentPatches?: string[];
+    /** Code patch IDs to apply during reset (canonical files + installed blocks) */
+    codePatches?: string[];
+    /**
+     * External repository for code patches. When set, `codePatches` IDs are
+     * fetched from this source. Distinct from `contentPatchSource` so a
+     * storefront can pin code and content ledgers independently.
+     */
+    codePatchSource?: CodePatchSource;
 }
 
 /**

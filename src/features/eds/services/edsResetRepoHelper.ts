@@ -10,6 +10,8 @@
  */
 
 import { installBlockCollections } from './blockCollectionHelpers';
+import type { CodePatchResult } from './codePatchRegistry';
+import { applyCanonicalCodePatches } from './codePatchPipelineHelpers';
 import { generateConfigJson, extractConfigParams } from './configGenerator';
 import { assertValidGitHubSlug, type EdsResetParams } from './edsResetParams';
 import { generateFstabContent } from './fstabGenerator';
@@ -211,8 +213,17 @@ export async function resetRepoToTemplate(
     context: HandlerContext,
     githubFileOps: GitHubFileOperations,
     report: (step: number, message: string) => void,
-): Promise<{ filesReset: number; blockCollectionIds?: string[]; libraryContentSources: Array<{ org: string; site: string }> }> {
-    const { repoOwner, repoName, daLiveOrg, daLiveSite, templateOwner, templateRepo, project, includeBlockLibrary = false } = params;
+): Promise<{
+    filesReset: number;
+    blockCollectionIds?: string[];
+    libraryContentSources: Array<{ org: string; site: string }>;
+    canonicalCodePatchResults?: CodePatchResult[];
+}> {
+    const {
+        repoOwner, repoName, daLiveOrg, daLiveSite, templateOwner, templateRepo,
+        project, includeBlockLibrary = false,
+        codePatches, codePatchSource,
+    } = params;
 
     report(1, 'Resetting repository to template...');
     context.logger.info(`[EdsReset] Resetting repo using bulk tree operations`);
@@ -237,6 +248,19 @@ export async function resetRepoToTemplate(
 
     if (includeBlockLibrary) {
         await fetchPlaceholderFiles(fileOverrides, templateOwner, templateRepo, context.logger);
+    }
+
+    // Canonical-phase code patches: apply BEFORE the bulk reset so patched
+    // canonical files (`head.html`, `scripts/*.js`, etc.) land in the same
+    // atomic Git Tree commit as `fileOverrides`. Block-targeting patches
+    // run later in `executeEdsPipeline` after the block library install.
+    // Non-fatal per ADR-006 D1; results are surfaced via the pipeline's
+    // patchReport (callers pass it forward into `executeEdsPipeline`).
+    let canonicalCodePatchResults: CodePatchResult[] | undefined;
+    if (codePatches && codePatches.length > 0 && codePatchSource) {
+        canonicalCodePatchResults = await applyCanonicalCodePatches(
+            fileOverrides, templateOwner, templateRepo, codePatches, codePatchSource, context.logger,
+        );
     }
 
     const resetResult = await githubFileOps.resetRepoToTemplate(
@@ -266,5 +290,10 @@ export async function resetRepoToTemplate(
         daLiveSite,
     );
 
-    return { filesReset: resetResult.fileCount, blockCollectionIds, libraryContentSources };
+    return {
+        filesReset: resetResult.fileCount,
+        blockCollectionIds,
+        libraryContentSources,
+        canonicalCodePatchResults,
+    };
 }

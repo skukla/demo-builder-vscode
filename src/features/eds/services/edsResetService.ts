@@ -28,6 +28,7 @@ import { DaLiveContentOperations } from './daLiveContentOperations';
 import type { TokenProvider } from './daLiveOrgOperations';
 import { executeEdsPipeline } from './edsPipeline';
 import { redeployApiMesh } from './edsResetMeshHelper';
+import { createPatchReport, addCodeResult, reportUnapplied } from './patchReportHelper';
 import { extractResetParams, type EdsResetParams, type EdsResetProgress, type EdsResetResult, type ExtractParamsResult } from './edsResetParams';
 import { resetRepoToTemplate } from './edsResetRepoHelper';
 import type { GitHubFileOperations } from './githubFileOperations';
@@ -197,7 +198,11 @@ function mapPipelineProgress(
  */
 async function runContentPipeline(
     params: EdsResetParams,
-    repoResetResult: { blockCollectionIds?: string[]; libraryContentSources: Array<{ org: string; site: string }> },
+    repoResetResult: {
+        blockCollectionIds?: string[];
+        libraryContentSources: Array<{ org: string; site: string }>;
+        canonicalCodePatchResults?: import('./codePatchRegistry').CodePatchResult[];
+    },
     daLiveContentOps: DaLiveContentOperations,
     githubFileOps: GitHubFileOperations,
     githubTokenService: GitHubTokenService,
@@ -208,8 +213,18 @@ async function runContentPipeline(
     const {
         repoOwner, repoName, daLiveOrg, daLiveSite, templateOwner, templateRepo,
         contentSource: contentSourceConfig, includeBlockLibrary = false, contentPatches,
+        codePatches, codePatchSource,
         byomOverlayUrl, project,
     } = params;
+
+    // Seed the pipeline's patch report with the canonical-phase code-patch
+    // results from `resetRepoToTemplate`. The pipeline appends block-phase
+    // results and (eventually) content-patch results to the same report so
+    // the final aggregate carries everything the UI surface needs.
+    const patchReport = createPatchReport();
+    for (const r of repoResetResult.canonicalCodePatchResults ?? []) {
+        addCodeResult(patchReport, r);
+    }
 
     // tokenProvider required: DA.live content operations (copy, publish) need IMS token
     const helixService = new HelixService(context.logger, githubTokenService, tokenProvider);
@@ -222,6 +237,7 @@ async function runContentPipeline(
                     repoOwner, repoName, daLiveOrg, daLiveSite, templateOwner, templateRepo,
                     clearExistingContent: true, skipContent: !contentSourceConfig,
                     contentSource: contentSourceConfig, contentPatches, includeBlockLibrary,
+                    codePatches, codePatchSource, patchReport,
                     blockCollectionIds: repoResetResult.blockCollectionIds,
                     libraryContentSources: repoResetResult.libraryContentSources,
                     purgeCache: true, skipPublish: false,
@@ -235,6 +251,11 @@ async function runContentPipeline(
             if (!pipelineResult.success) {
                 throw new Error(pipelineResult.error || 'Content pipeline failed');
             }
+
+            // Surface unapplied patches (if any) via the unified toast helper.
+            // Headless callers (MCP/AI reset) get warn-level logging only; UI
+            // callers can wrap this function and inject `showWarning` later.
+            reportUnapplied(patchReport, context.logger);
 
             context.logger.info('[EdsReset] Content pipeline completed successfully');
             return pipelineResult.contentFilesCopied;
