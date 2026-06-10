@@ -93,7 +93,22 @@ ${SMART_404_HEAD_MARKER_START}
     var m = location.pathname.match(/^\\/products\\/([^/]+)\\/([^/]+)$/);
     if (!m) return;
     var lc = '/products/' + m[1].toLowerCase() + '/' + m[2].toLowerCase();
-    if (lc !== location.pathname) location.replace(lc);
+    // Mixed case: redirect to lowercase before any paint
+    if (lc !== location.pathname) {
+      location.replace(lc);
+      return;
+    }
+    // Already lowercase. If this is a 404 page (cold path: SKU never
+    // published), the storefront's default 404 chrome will paint before
+    // delayed.js loads and runs our cold-path snippet. Hide body until
+    // delayed.js takes over — eliminates the visible flash. On non-404
+    // pages window.isErrorPage is undefined so we skip the hide.
+    if (window.isErrorPage && !new URLSearchParams(location.search).has('pdpRetry')) {
+      var s = document.createElement('style');
+      s.id = 'smart-404-cold-hide';
+      s.textContent = 'body { visibility: hidden; }';
+      document.head.appendChild(s);
+    }
   })();
 </script>
 ${SMART_404_HEAD_MARKER_END}
@@ -142,18 +157,30 @@ ${SMART_404_MARKER_START}
   if (new URLSearchParams(window.location.search).has(RETRY_FLAG)) return;
   const [, urlKey, sku] = m;
   const lc = \`/products/\${urlKey.toLowerCase()}/\${sku.toLowerCase()}\`;
+  // Reveal the body now that we're ready to show our own loading state.
+  // The eager script in 404.html injected a "visibility: hidden" style
+  // to suppress the default 404 chrome during the cold-path window;
+  // removing it now lets our loading state render.
+  const hideStyle = document.getElementById('smart-404-cold-hide');
+  if (hideStyle) hideStyle.remove();
   // Replace the 404 body with a loading state. Element-level inline
   // style attributes are governed by style-src 'unsafe-inline' (not
   // the nonce or strict-dynamic), and storefront CSPs we have
   // inspected allow this by default. Reusing the storefront <main>
   // keeps header and footer chrome intact. Uses the storefront design
   // tokens with hardcoded fallbacks so the loading state still
-  // renders cleanly when a storefront does not define them.
+  // renders cleanly when a storefront does not define them. Clear
+  // main's class so the default 404 chrome (e.g. main.error's own
+  // flex layout) does not compete with our flex centering and push
+  // the message off-center.
   const mainEl = document.querySelector('main');
   const STYLE = 'display:flex;align-items:center;justify-content:center;min-height:50vh;padding:var(--spacing-large,40px) var(--spacing-medium,20px);font:var(--type-body-1-default-font,1.25rem/1.5 sans-serif);color:var(--color-brand-500,#666);';
   const LOADING_HTML = \`<div style="\${STYLE}">Loading product…</div>\`;
   const ERROR_HTML = \`<div style="\${STYLE}">Product not available.</div>\`;
-  if (mainEl) mainEl.innerHTML = LOADING_HTML;
+  if (mainEl) {
+    mainEl.className = '';
+    mainEl.innerHTML = LOADING_HTML;
+  }
   (async () => {
     if (lc !== window.location.pathname) {
       try {

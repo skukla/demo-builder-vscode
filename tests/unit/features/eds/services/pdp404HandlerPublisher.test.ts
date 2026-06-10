@@ -172,6 +172,23 @@ describe('buildSmart404Snippet', () => {
         expect(snippet).toContain('=== end Smart 404 PDP rebuild ===');
     });
 
+    it('removes the eager-script hide style and clears main.className before showing loading state', () => {
+        // Two regressions this test pins:
+        // 1. The eager script in 404.html injects #smart-404-cold-hide
+        //    to suppress the visible 404 chrome during the cold-path
+        //    window. delayed.js must remove it before painting the
+        //    loading state, otherwise the user sees nothing.
+        // 2. The boilerplate's 404.html ships <main class="error"> with
+        //    its own flex layout (align-items:center, max-width, etc.)
+        //    that fought our flex-centered loading div and pushed it
+        //    off-center. Clearing className strips .error so our
+        //    centering wins.
+        const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
+        expect(snippet).toContain("getElementById('smart-404-cold-hide')");
+        expect(snippet).toContain('hideStyle.remove()');
+        expect(snippet).toContain("mainEl.className = ''");
+    });
+
     it('shows a "Loading product…" state during the cold-publish window', () => {
         // Without this, the cold path leaves "Page Not Found" visible
         // for the ~1-2 second action call, which looks broken to a
@@ -344,6 +361,15 @@ describe('installSmart404Handler', () => {
         // either wastes the prerender or causes inconsistent behavior
         // across browsers.
         expect(headContent).toContain('document.prerendering');
+        // Cold-path body hide: when isErrorPage is true and the URL is
+        // already lowercase (cold case where delayed.js will fire), the
+        // eager script injects #smart-404-cold-hide to suppress the
+        // visible 404 chrome until delayed.js paints our loading state.
+        // Without this, never-visited products show a ~700ms flash of
+        // "Page Not Found" before "Loading product…" appears.
+        expect(headContent).toContain('window.isErrorPage');
+        expect(headContent).toContain("'smart-404-cold-hide'");
+        expect(headContent).toContain('visibility: hidden');
     });
 
     it('extracts the CSP nonce dynamically from head.html instead of hardcoding "aem"', async () => {
