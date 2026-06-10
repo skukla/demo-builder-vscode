@@ -140,7 +140,7 @@ Consequences of the gate:
 
 This works *because* the patch ledger is single-digit and targets stable anchor points; the policy above is what keeps the gate advancing near-continuously.
 
-Our fork (`skukla/citisignal-eds-boilerplate`) is archived as a reference once Demo Builder no longer points at it — which requires the block-source flip to land first (the product-teaser fixes ride as day-one code patches, so the flip does not wait on the demo team). The demo team's `accs-citisignal` remains live in its block-source role. New canonical commits then reach every Demo Builder storefront on next reset, automatically via the last-known-good gate — the sync project (`2026-06-09-storefront-template-sync.md`) is dropped rather than executed.
+Our fork (`skukla/citisignal-eds-boilerplate`) is archived as a reference once Demo Builder no longer points at it. The block-source flip shipped in `5cfb5b68` (Step 5b): `block-libraries.json::demo-team-blocks.source` now points at `demo-system-stores/accs-citisignal`, the product-teaser fixes ship as day-one code patches against that same demo-team source, and the fork is no longer referenced by any code path in this repo. Archival waits on a ~30-day soak so any SC still creating against the old config gets a reset window. The demo team's `accs-citisignal` remains live in its block-source role. New canonical commits reach every Demo Builder storefront on next reset, automatically via the last-known-good gate — the sync project (`2026-06-09-storefront-template-sync.md`) is dropped rather than executed.
 
 ### Why not the alternatives
 
@@ -186,22 +186,22 @@ Our fork (`skukla/citisignal-eds-boilerplate`) is archived as a reference once D
 
 ## Implementation Status
 
-Tracked in `.rptc/plans/thin-layer-storefront-adr-006/`. As of 2026-06-10:
+Tracked in `.rptc/plans/thin-layer-storefront-adr-006/`. As of 2026-06-10 (live):
 
 | Step | Status | Notes |
 |---|---|---|
 | 1. Code-patch engine v2 (TDD) | **Landed** | `codePatchRegistry.ts`, `externalPatchFetcher.ts`; shared per-source caching with `contentPatchRegistry` |
-| 2. Pipeline integration + report helper + critical-abort | **Landed** | `codePatchPipelineHelpers.ts` (canonical + block phases), `patchReportHelper.ts` (unified content+code toast); CREATE + RESET paths both surface unapplied patches via `reportUnapplied` |
-| 3. LKG pointer (record at create + LKG-aware update check) | **Landed** | `lkgReader.ts`, `EdsStorefrontMetadata.lkgSource`, `TemplateUpdateChecker.checkThinLayerUpdates` |
-| 4. Clone canonical at LKG + sync-strategy redirect | **Landed (partial)** | RESET pins to LKG via `buildArchiveUrl` SHA-vs-branch routing; Step 4b (create-time pinning + templateSyncService merge→reset gating) deferred — practical effect lands once Step 5 wires real `codePatchSource` values |
-| 5a. Wizard / types / handler plumbing | **Landed** | `Storefront.codePatches` + `codePatchSource`, `EDSConfig`, JSON schema, wizard helpers, `extractResetParams` carries all patch fields end-to-end |
-| 5b. JSON flip in `demo-packages.json` / `block-libraries.json` | **Gated** | Blocked on external work in `skukla/eds-demo-patches` (Steps 6+7). The flip is the cutover trigger; landing it before the ledger + gate exist would ship broken creates. |
-| 6. External `eds-demo-patches` patches repo content | **Gated** | External work — out of this repo's scope |
-| 7. Daily LKG drift-gate (GitHub Actions cron) | **Gated** | External work — out of this repo's scope |
-| 8. Upstream PRs to canonical for retired fork-only fixes | **Gated** | External work — out of this repo's scope |
-| 9. Migration cutover (sequencing gate + cleanup) | **Pending** | Awaits Steps 5b + 6 + 7 |
+| 2. Pipeline integration + report helper + critical-abort | **Landed** | `codePatchPipelineHelpers.ts` (canonical + block phases), `patchReportHelper.ts` (unified content+code toast); CREATE + RESET + IMPORT paths all surface unapplied patches via `reportUnapplied` |
+| 3. LKG pointer (record at create + LKG-aware update check) | **Landed** | `lkgReader.ts` (supports per-ledger `lkgFile` for multi-canonical patches repos), `EdsStorefrontMetadata.lkgSource`, `TemplateUpdateChecker.checkThinLayerUpdates` |
+| 4. Clone canonical at LKG + sync-strategy redirect | **Landed** | RESET pins to LKG via `buildArchiveUrl` SHA-vs-branch routing. Step 4b (`lkgPinHelper.ts`) closed the create/reset asymmetry — fresh creates also pin to LKG with canonical patches applied, byte-identical to an immediate reset. |
+| 5a. Wizard / types / handler plumbing | **Landed** | `Storefront.codePatches` + `codePatchSource` (with optional `lkgFile`), `EDSConfig`, JSON schema, wizard helpers, `extractResetParams` carries all patch fields end-to-end |
+| 5b. JSON flip in `demo-packages.json` / `block-libraries.json` | **Landed** | CitiSignal (PaaS + ACCS) shipped in `5cfb5b68`; smoke-tested live on `skukla/citisignal-b2b`. `custom` (PaaS + ACCS) and `b2b` (PaaS + ACCS) shipped in `8cee8984` — extending thin-layer to two more demo packages with multi-canonical support (b2b tracks the B2B template; citisignal+custom share hlxsites canonical). |
+| 6. External `eds-demo-patches` patches repo content | **Landed** | `skukla/eds-demo-patches@2174e9a`: `citisignal/`, `custom/`, `b2b/` ledgers (14 patches total) |
+| 7. Daily LKG drift-gate (GitHub Actions cron) | **Landed** | Multi-canonical gate in `skukla/eds-demo-patches/scripts/lkg-gate.sh`; per-ledger `canonical` + `lkgFile` fields; clones each unique canonical once per run; advances each LKG pointer independently |
+| 8. Upstream PRs to canonical for retired fork-only fixes | **Pending** | Non-blocking by design. Each patch's `exit` field carries the upstream PR queue; gate auto-retires when a patch's fix lands upstream. |
+| 9. Migration cutover (sequencing gate + cleanup) | **Substantially complete** | CitiSignal cutover smoke-tested live (skukla/citisignal-b2b). Fork archival (`skukla/citisignal-eds-boilerplate`) waits on a ~30-day soak so any SC still creating against the old config gets a reset window. |
 
-The machinery for Steps 1–5a is wired on develop but **dormant** — no demo package currently sets `codePatches`/`codePatchSource`, so the new code paths short-circuit until the JSON flip activates them. The path through the codebase has been audited end-to-end (verify-loop, `9b78c9dc` → `[this commit]`) to ensure that when Step 5b lands, the wiring works without further code changes.
+**Live on develop.** Three demo packages now drive the thin-layer pipeline — CitiSignal, `custom`, and `b2b`. The mechanism handles multi-canonical patches repos (the gate at `skukla/eds-demo-patches` clones one canonical for citisignal+custom and a different one for b2b, advancing per-ledger LKG pointers independently). The earlier "dormant until Step 5b" framing is now historical.
 
 ---
 
