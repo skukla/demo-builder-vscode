@@ -706,6 +706,55 @@ button[class*="spectrum-Button"][disabled],
     min-width: 0 !important;
 }
 
+/* --------------------------------------------------------------------------
+   Responsive layout: narrow-viewport adjustments for the wizard chrome and
+   the shared TwoColumnLayout primitive. Without these, on a 13-14" laptop at
+   ideal zoom (effective ~1280px logical width), the 280px progress rail
+   leaves the main column too narrow to fit the 800px left content + a
+   readable summary panel side-by-side — labels in the right column wrap to
+   two and three lines. Two breakpoints:
+
+     <= 1280px viewport: collapse the progress rail to an icons-only column
+       (preserves spatial wayfinding) and free up ~232px for content.
+
+     <= 1180px viewport: stack TwoColumnLayout columns vertically (summary
+       slides under active content) so the right column never falls below
+       its rightMinWidth floor.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 1280px) {
+    .wizard-timeline-column {
+        flex: 0 0 56px !important;
+    }
+    /* Hide the SETUP PROGRESS header label and individual step labels when
+       the rail collapses; the dots + their connector line still convey
+       position and status. */
+    .wizard-timeline-column .timeline-header-label,
+    .wizard-timeline-column .timeline-step-label {
+        display: none !important;
+    }
+}
+
+@media (max-width: 1180px) {
+    /* TwoColumnLayout stack mode: row → column. Each column becomes
+       full-width; the left max-width and right min-width are released so
+       neither one squeezes the other, and the divider moves from between
+       them to above the summary card. */
+    .two-column-layout {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+    .two-column-layout-left {
+        max-width: none !important;
+    }
+    .two-column-layout-right {
+        flex: 0 0 auto !important;
+        min-width: 0 !important;
+        border-left: none !important;
+        border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
+    }
+}
+
 /* Step main content area */
 .step-main-content {
     flex: 1 !important;

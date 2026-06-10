@@ -277,8 +277,8 @@ export function TimelineNav({
             UNSAFE_className={containerClass}
         >
             {showHeader && (
-                <View marginBottom={compact ? 'size-200' : 'size-400'}>
-                    <Text UNSAFE_className={cn('text-xs', 'text-uppercase', 'letter-spacing-05', 'text-gray-600', 'font-semibold')}>
+                <View marginBottom={compact ? 'size-200' : 'size-400'} UNSAFE_className="timeline-header">
+                    <Text UNSAFE_className={cn('text-xs', 'text-uppercase', 'letter-spacing-05', 'text-gray-600', 'font-semibold', 'timeline-header-label')}>
                         {headerText}
                     </Text>
                 </View>
@@ -338,7 +338,7 @@ export function TimelineNav({
 
                                     {/* Step label */}
                                     <Text
-                                        UNSAFE_className={getTimelineLabelClasses(status)}
+                                        UNSAFE_className={cn(getTimelineLabelClasses(status), 'timeline-step-label')}
                                     >
                                         {step.name}
                                     </Text>
