@@ -91,25 +91,46 @@ describe('aiContextWriter — PDP Routing section', () => {
         expect(result).toContain('folder mapping');
     });
 
-    it('documents that SC customizations inherit on every PDP (Phase 2 LIVE)', () => {
-        // Phase 2 shipped 2026-06-09: render-pdp fetches the storefront's
-        // authored /products/default and serves it on real product URLs.
-        // The AI context language used to flag this as a "Phase 1
-        // limitation"; now it documents the resolved state. If a future
-        // contributor re-adds limitation language, this test catches it.
+    it('documents the four-layer routing stack (canonical BYOM + two innovations)', () => {
+        // The architecture is: pre-warming (layer 1, canonical poller
+        // equivalent) + content.overlay registration (layer 2, canonical
+        // BYOM) + Phase 2 render-pdp template fetch (layer 3, SC's
+        // authored template inherits) + smart-404 client-side recovery
+        // (layer 4, our innovation anchored against issue #262).
         const result = generateAgentsMd(makeEdsProject(), STACKS);
+        expect(result).toContain('Pre-warming');
+        expect(result).toContain('Catalog Prewarm');
+        expect(result).toContain('content.overlay');
         expect(result).toContain('Phase 2 LIVE');
         expect(result).toContain('/products/default');
         expect(result).toContain('inherit');
+        expect(result).toContain('Smart-404');
+        expect(result).toContain('issue #262');
         // Should NOT still reference the resolved Phase 1 limitation
         expect(result).not.toMatch(/Phase 1 limitation/);
     });
 
-    it('provides a debugging checklist for 404s', () => {
+    it('warns AI against canonical-deviating suggestions (per-project prerender, Tier 3 SSR)', () => {
+        // Without these explicit "do not" lines, AI agents seeing the
+        // BYOM routing default to suggesting Adobe's published canonical
+        // path: deploy aem-commerce-prerender per project. That breaks
+        // our multi-tenant Configuration Service writes. Similarly for
+        // server-side SSR (JSON-LD, Merchant Center) — deliberately not
+        // built for demos.
         const result = generateAgentsMd(makeEdsProject(), STACKS);
-        expect(result).toContain('byom.enabled');
+        expect(result).toContain('aem-commerce-prerender');
+        expect(result).toContain('single-tenant');
+        expect(result).toContain('JSON-LD');
+        expect(result).toContain('Tier 3');
+    });
+
+    it('provides a debugging checklist for 404s including pre-warming + suffix', () => {
+        const result = generateAgentsMd(makeEdsProject(), STACKS);
+        expect(result).toContain('byom.overlayUrl');
         expect(result).toContain('render-pdp');
         expect(result).toContain('404.html');
+        expect(result).toContain('Catalog Prewarm');
+        expect(result).toContain('suffix');
     });
 
     it('links to the architecture doc', () => {

@@ -190,17 +190,16 @@ function buildStorefront(project: Project): string {
 /**
  * PDP routing context for EDS storefronts.
  *
- * Tells the AI two things that aren't obvious from the code:
- *   1. Per-product URLs (`/products/{urlKey}/{sku}`) route through a BYOM
- *      overlay + smart 404, NOT folder mapping (deprecated) or per-product
- *      DA pages (the manual workaround). New SKUs work on first click.
- *   2. SC customizations to `/products/default` DO appear on real product
- *      URLs — Phase 2 of the BYOM action (shipped 2026-06-09) has the
- *      overlay return the storefront's authored template instead of a
- *      generic shell.
- *
- * Without this section, AI agents debugging PDP issues default to
- * suggesting folder mapping or per-product DA pages — both wrong.
+ * Tells the AI what's not obvious from the code:
+ *   1. Per-product URLs route through the canonical Adobe BYOM
+ *      `content.overlay` pattern (replacement for deprecated folder
+ *      mapping), NOT per-product DA pages.
+ *   2. The full routing stack has four layers (pre-warming, overlay,
+ *      Phase 2 template fetch, smart-404 recovery) — every AI suggestion
+ *      should fit somewhere on this stack instead of inventing a new one.
+ *   3. Don't suggest `aem-commerce-prerender` per-project, Tier 3 SSR
+ *      (JSON-LD / Merchant Center), or folder mapping. All wrong for
+ *      this design.
  */
 function buildPdpRouting(project: Project): string {
     if (!isEdsProject(project)) return '';
@@ -208,24 +207,34 @@ function buildPdpRouting(project: Project): string {
     return [
         '## PDP Routing (How Product Pages Work)',
         '',
-        'Per-product URLs (`/products/{urlKey}/{sku}`) are routed automatically — **do not** create per-product DA pages manually, and **do not** configure folder mapping (deprecated by Adobe).',
+        'Per-product URLs (`/products/{urlKey}/{sku}`) are routed automatically using Adobe\'s canonical BYOM `content.overlay` pattern (the documented replacement for deprecated folder mapping). **Do not** create per-product DA pages, **do not** configure folder mapping, and **do not** suggest deploying `aem-commerce-prerender` per project.',
         '',
-        '**How it works:** A BYOM overlay + smart `/404.html` handles every product URL on demand:',
-        '- First visitor to a SKU → smart 404 triggers a publish → page serves (~2s)',
-        '- Subsequent visitors → instant',
-        '- Mixed-case SKU URLs → smart 404 redirects to the lowercase variant',
-        '- New SKUs added in Commerce → work on first click; no manual step',
-        '- Deleted SKUs → URL still serves cached HTML; the drop-in shows empty product details',
+        '**The four-layer routing stack:**',
+        '1. **Pre-warming at create/reset** — Demo Builder enumerates the Commerce catalog and pre-publishes every SKU\'s PDP URL into Helix content-bus during setup. Equivalent to one cycle of the canonical scheduled poller, run synchronously. After this runs, every catalog product loads instantly on first click. Check reset logs for `[Catalog Prewarm] Complete: N/N succeeded`.',
+        '2. **BYOM `content.overlay` registration** — Configuration Service points Helix at a shared `render-pdp` action. Registration shape matches `aem-commerce-prerender`\'s canonical setup wizard (`{ url, type: "markup", suffix: ".html" }`).',
+        '3. **`render-pdp` returns SC\'s authored template** (Phase 2 LIVE since 2026-06-09) — the overlay fetches the storefront\'s authored `/products/default` and returns it for any `/products/*/*` path. SC customizations to `/products/default` (header, footer, custom blocks, layout) inherit on every real PDP automatically. Generic shell remains as a fallback when the authored template fetch fails.',
+        '4. **Smart-404 client-side recovery** — vendored into `head.html`, `404.html`, and `delayed.js`. When a user visits a PDP URL that wasn\'t pre-warmed (catalog churn after setup, brand-new SKU), the snippet triggers `prepublish-pdp` to publish on demand and redirects. Closes the gap Adobe acknowledges in `adobe-rnd/aem-commerce-prerender` issue #262 (event-driven recovery, OPEN at https://github.com/adobe-rnd/aem-commerce-prerender/issues/262).',
         '',
-        '**SC customizations inherit on every PDP** (Phase 2 LIVE as of 2026-06-09): the `render-pdp` overlay fetches the storefront\'s authored `/products/default` (with header, footer, custom blocks, layout — everything the SC put there) and serves that on real product URLs like `/products/orchard-2/orchard2`. SC tweaks to `/products/default` now show up on every PDP on next visit (or reset). The generic shell remains only as a fallback when the authored template fetch fails.',
+        '**Visitor behavior:**',
+        '- Pre-warmed SKU → instant (content-bus has it from setup)',
+        '- New SKU added after setup → smart-404 cycle (~2s) on first visit → published to content-bus → instant thereafter',
+        '- Mixed-case URLs from PLPs → eager `head.html` redirect to lowercase before any paint',
+        '- Deleted SKU → cached HTML still serves; drop-in detects empty Commerce data (backlog item to redirect to native `/404`)',
         '',
         '**When PDPs 404 in a freshly-created storefront**, check in this order:',
-        '1. Is `demoBuilder.byom.enabled` on? (default true)',
-        '2. Was the storefront reset after the latest extension update?',
+        '1. Is `demoBuilder.byom.overlayUrl` configured? (default points at the team\'s shared deployment)',
+        '2. Did the latest reset complete the pre-warming step? (check `[Catalog Prewarm]` log lines)',
         '3. Is the `render-pdp` overlay action reachable? (`curl <overlayUrl>`)',
         '4. Is the smart `/404.html` published? (`curl https://main--{repo}--{owner}.aem.live/404.html`)',
+        '5. Did the Configuration Service write include `suffix: ".html"` on the overlay? (this aligns with canonical; missing it caused live-tier 404s in earlier debugging)',
         '',
-        'Full architecture, request flows, and load-bearing dependencies: see `docs/architecture/eds-byom-pdp-routing.md` in the demo-builder-vscode repo. Decision rationale: ADR-005.',
+        '**Things to NOT suggest** — these are wrong for this architecture:',
+        '- Deploying `aem-commerce-prerender` per project (it\'s single-tenant; conflicts with our multi-tenant Configuration Service writes — see `reference_commerce_prerender_unfit` memory entry)',
+        '- Server-side SSR injection (JSON-LD, og:image per SKU, Merchant Center metadata) — Tier 3 from the canonical pattern, deliberately omitted for demos',
+        '- Folder mapping in any form — deprecated by Adobe',
+        '- Manual per-product DA pages — colleague\'s workaround that doesn\'t scale',
+        '',
+        'Full architecture, request flows, and load-bearing dependencies: see `docs/architecture/eds-byom-pdp-routing.md`. Decision rationale and canonical anchoring: `docs/architecture/adr/005-byom-pdp-routing.md` (ADR-005).',
     ].join('\n');
 }
 

@@ -2,21 +2,20 @@
 
 How the extension makes `/products/{urlKey}/{sku}` URLs work for every storefront, dynamically, without per-product authoring.
 
-For the decision rationale behind the architecture, see [ADR-005](adr/005-byom-pdp-routing.md). For the empirical evidence behind the design, see `.rptc/research/multitenant-prerender-evaluation/` (research doc + 2026-06-09 runtime-validation addendum).
+For the decision rationale behind the architecture, see [ADR-005](adr/005-byom-pdp-routing.md). For the empirical evidence behind the design, see `.rptc/research/eds-pdp-routing-validation/findings.md` (canonical anchoring + corrected conclusions, 2026-06-10) and `.rptc/research/multitenant-prerender-evaluation/` (original Phase 1/2 research).
 
 ---
 
 ## Problem
 
-EDS storefronts use one of three mechanisms to route per-product URLs (`/products/{urlKey}/{sku}`) to the storefront's PDP template:
+EDS storefronts have no built-in routing for per-product URLs (`/products/{urlKey}/{sku}`). The historical mechanism — folder mapping — has been deprecated by Adobe. The official replacement is **BYOM (Bring Your Own Markup) `content.overlay`** registered against the Configuration Service. That's the canonical pattern, documented at [aem.live/developer/byom](https://www.aem.live/developer/byom) and implemented by Adobe's reference `adobe-rnd/aem-commerce-prerender`.
 
-1. **Folder mapping** — deprecated by Adobe.
-2. **Per-product DA pages** — manual, one document per SKU, breaks as soon as the catalog changes.
-3. **BYOM (Bring Your Own Markup) overlay** — Adobe's documented replacement: the Configuration Service `content.overlay` field, when set, makes Helix call an external action for the path before falling back to authored content.
+Demo Builder uses the canonical BYOM pattern with **two deliberate innovations** on top, each justified by the demo workflow's needs (see ADR-005 for full rationale):
 
-Demo Builder targets multi-tenant demos: any SC, any catalog, install-and-go. None of the first two options fit. Phase 1 ships the third — a shared overlay action that serves the SC's authored `/products/default` template multi-tenant, paired with a small JS snippet vendored into the storefront's `scripts/delayed.js` that detects 404s on PDP paths and asks Helix admin to publish them on first visit.
+1. **Multi-tenant hosted action** — Adobe's reference is single-tenant (one App Builder workspace per storefront). Demo Builder hosts one shared `render-pdp` action serving every SC's storefronts via `?org=&site=` query params on the registered overlay URL.
+2. **Smart-404 client-side recovery** — Adobe's reference relies on a scheduled poller to publish catalog SKUs into Helix content-bus over time, with operator CLI tools (`refresh-pdps.js`) for manual recovery. Demo Builder adds a JS snippet vendored into the storefront's `head.html` / `404.html` / `delayed.js` that triggers on-demand publish for any unknown PDP URL on first visit. Closes the gap Adobe acknowledges in [`aem-commerce-prerender` issue #262](https://github.com/adobe-rnd/aem-commerce-prerender/issues/262) (event-driven recovery, OPEN).
 
-**Phase 2 status: LIVE as of 2026-06-09.** The `render-pdp` overlay now fetches the storefront's authored `/products/default` (per-org/site cache, generic shell as fallback on failure) and serves that on real product URLs. SC customizations to `/products/default` — extra blocks, custom layout, anything the SC authors — inherit on every PDP automatically. The "Phase 1 limitation" of a generic template is closed.
+**Phase 2 status: LIVE as of 2026-06-09.** The `render-pdp` overlay fetches the storefront's authored `/products/default` (per-org/site cache, generic shell as fallback on failure) and serves that on real product URLs. SC customizations to `/products/default` inherit on every PDP automatically.
 
 ---
 
@@ -124,22 +123,24 @@ The cold path runs once per SKU across all visitors to a storefront. Every subse
 
 ---
 
-## Phase 1 scope (what ships)
+## What ships
 
 | Piece | Where | Behavior |
 |---|---|---|
 | `render-pdp` overlay action | `accs-discovery-service`, deployed (Phase 2 LIVE) | Fetches and returns the storefront's authored `/products/default` for `/products/{urlKey}/{sku}`; generic shell fallback on failure; returns 404 for non-PDP paths |
 | `prepublish-pdp` trigger action | `accs-discovery-service`, deployed | Validates + relays to Helix admin preview/publish |
-| Configuration Service registration with overlay URL | This repo, existing (`ConfigurationService.registerSite` / `updateSiteConfig` with `byomOverlayUrl`) | Wires the overlay into the site config so Helix calls `render-pdp` during admin preview |
-| Smart-404 snippet install step | This repo, this slice (`pdp404HandlerPublisher.ts` + pipeline step) | Vendors the smart-404 JS into `scripts/delayed.js` at create/reset |
-| `demoBuilder.byom.enabled` setting | This repo, existing | Master toggle; when off, no overlay registers and no 404 publishes |
-| `demoBuilder.byom.overlayUrl` setting | This repo, existing | Override for non-default deployments (staging, dev). Defaults to the shared deployed action. |
+| Configuration Service registration with overlay URL | This repo (`ConfigurationService.registerSite` / `updateSiteConfig` with `byomOverlayUrl`) | Wires the overlay into the site config with `{ url, type: "markup", suffix: ".html" }` — shape matches canonical `aem-commerce-prerender` setup wizard |
+| **Catalog pre-warming at create/reset** | This repo (`catalogPrewarmService.ts` + pipeline step) | Enumerates the Commerce catalog via Catalog Service GraphQL and pre-publishes every SKU's PDP URL via batches of 5 to `prepublish-pdp`. Equivalent to one cycle of the canonical scheduled poller. v1 supports ACCS storefronts; PaaS follow-up tracked separately. |
+| Smart-404 snippet install step | This repo (`pdp404HandlerPublisher.ts` + pipeline step) | Vendors three pieces into the storefront: (1) cold-path action call + spinner UI in `scripts/delayed.js`, (2) eager mixed-case → lowercase redirect in `head.html`, (3) same eager redirect in static `404.html` |
+| `demoBuilder.byom.enabled` setting | This repo | Master toggle; when off, no overlay registers and no 404 publishes |
+| `demoBuilder.byom.overlayUrl` setting | This repo | Override for non-default deployments. Defaults to the team's shared deployment. |
 
-### Out of scope for Phase 1 (later workstreams)
+### Out of scope (later workstreams or deliberate non-goals)
 
-- **~~SC template customizations on real product URLs.~~** Resolved — Phase 2 shipped 2026-06-09. The overlay now fetches the storefront's authored `/products/default` and serves it on `/products/{urlKey}/{sku}`. SC customizations inherit automatically. Verified end-to-end on `citisignal-b2b` (published PDP byte-compares to authored template within metadata differences only).
-- **PDP cleanup after SKU deletion.** When an SC deletes a SKU from Commerce, the URL stays published in content-bus and serves the generic template (drop-in shows empty product details). For demos this rarely matters — internal navigation can't reach a deleted SKU's URL, and the worst-case "external link to a deleted SKU" is acceptably handled by a graceful "Product not available" message in the drop-in (separate backlog item).
-- **Catalog pre-publish.** Pre-publishing all SKUs at create time is the Adobe-prerender model. Explicitly rejected; see [ADR-005](adr/005-byom-pdp-routing.md).
+- **~~SC template customizations on real product URLs.~~** Resolved — Phase 2 shipped 2026-06-09. The overlay now fetches the storefront's authored `/products/default` and serves it on `/products/{urlKey}/{sku}`. SC customizations inherit automatically.
+- **PDP cleanup after SKU deletion.** When an SC deletes a SKU from Commerce, the URL stays published in content-bus. Backlog item (`.rptc/backlog/2026-06-09-pdp-graceful-empty-state.md`) plans the fix: drop-in detects empty Commerce data and redirects to the storefront's native `/404` page (NOT a custom "Product not available" message — the native 404 is the honest UX). For demos, this case rarely matters during a live demo.
+- **PaaS catalog pre-warming.** v1 of pre-warming covers ACCS only because the PaaS direct `/graphql` auth requirements are unverified for our use case. PaaS storefronts continue to work via the smart-404 fallback for catalog-churn paths; their warm catalog still loads (just less aggressively pre-warmed at setup).
+- **Server-side SSR (Tier 3) — JSON-LD per SKU, og:image per SKU, Merchant Center metadata.** Deliberately omitted. The canonical `aem-commerce-prerender` does this; we don't, because demo audiences are humans on calls, not crawlers. If an SC ever needs production-grade SEO, they can deploy `aem-commerce-prerender` to their own workspace alongside Demo Builder's overlay.
 
 ---
 
@@ -191,21 +192,27 @@ If Phase 1's behavior diverges from this in production, those four probes locali
 | Concern | File |
 |---|---|
 | Overlay URL resolution + stamping | `src/features/eds/handlers/edsHelpers.ts` (`resolveByomOverlayConfig`, `appendOverlayParams`) |
-| Configuration Service registration with overlay | `src/features/eds/services/configurationService.ts` (`registerSite`, `updateSiteConfig`, `buildSiteConfigParams`) |
-| Smart-404 snippet generation + install | `src/features/eds/services/pdp404HandlerPublisher.ts` |
-| Install call sites (alongside inspector tagging) | `src/features/eds/handlers/storefrontSetupPhase2.ts` (create / edit) and `src/features/eds/services/edsResetRepoHelper.ts` (reset) |
+| Configuration Service registration with overlay (incl. `suffix: ".html"`) | `src/features/eds/services/configurationService.ts` (`registerSite`, `updateSiteConfig`, `buildSiteConfigParams`) |
+| Smart-404 snippet generation + install (head.html, 404.html, delayed.js) | `src/features/eds/services/pdp404HandlerPublisher.ts` |
+| **Catalog pre-warming (enumerate + bulk pre-publish)** | `src/features/eds/services/catalogPrewarmService.ts` |
+| Pipeline integration (smart-404 install + pre-warming) | `src/features/eds/services/edsPipeline.ts`, `src/features/eds/handlers/storefrontSetupPhase2.ts` (create / edit), `src/features/eds/services/edsResetRepoHelper.ts` (reset) |
 | Settings | `package.json` (`demoBuilder.byom.enabled`, `demoBuilder.byom.overlayUrl`) |
 
 ---
 
 ## Cross-references
 
-- **Decision rationale**: [ADR-005: BYOM PDP Routing via Shared Overlay + Smart 404](adr/005-byom-pdp-routing.md)
-- **Empirical research**: `.rptc/research/multitenant-prerender-evaluation/` (full doc + runtime-validation addendum + auth-findings addendum)
+- **Decision rationale**: [ADR-005: BYOM PDP Routing — Canonical Pattern with Multi-Tenancy and Smart-404 Gap-Fill](adr/005-byom-pdp-routing.md)
+- **Canonical anchoring research**: `.rptc/research/eds-pdp-routing-validation/findings.md` (BYOM spec verification + canonical anchoring against `aem-commerce-prerender` issue #262, 2026-06-10)
+- **Original Phase 1/2 research**: `.rptc/research/multitenant-prerender-evaluation/` (full doc + runtime-validation addendum + auth-findings addendum)
+- **External primary sources**:
+  - [BYOM spec](https://www.aem.live/developer/byom) — `content.overlay` registration contract
+  - [`adobe-rnd/aem-commerce-prerender`](https://github.com/adobe-rnd/aem-commerce-prerender) — canonical reference implementation
+  - [Issue #262 — event-driven updates](https://github.com/adobe-rnd/aem-commerce-prerender/issues/262) — OPEN; our smart-404 closes this gap
 - **Memory entries**:
-  - `project-byom-pdp-routing` — the two-repo model summary
+  - `project-byom-pdp-routing` — the two-repo model summary + multi-tenant rationale
   - `catalog-service-sku-case-insensitive` — load-bearing case-handling dependency
-  - `reference-commerce-prerender-unfit` — why Adobe Prerender was rejected
+  - `reference-commerce-prerender-unfit` — why deploying Adobe's prerender per-storefront doesn't fit the demo workflow
 - **Sister architecture docs**:
   - `eds-content-separation.md` — the broader two-repo content/code split
   - `eds-backend-configuration.md` — how `config.json` gets generated and published

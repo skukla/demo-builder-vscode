@@ -310,10 +310,10 @@ export async function handleStartStorefrontSetup(
     }
 
     // Compose the BYOM overlay URL the Configuration Service will register.
-    // VS Code settings (`demoBuilder.byom.overlayUrl` + `.overlaySharedSecret`)
-    // take precedence over any value baked into demo-packages.json. The helper
-    // stamps `?org=...&site=...&key=...` onto the URL so the shared render-pdp
-    // action can identify the storefront and validate the call (Helix does not
+    // VS Code setting `demoBuilder.byom.overlayUrl` takes precedence over any
+    // value baked into demo-packages.json. The helper stamps `?org=...&site=...`
+    // onto the URL so the shared multi-tenant `render-pdp` action can identify
+    // which storefront's `/products/default` template to fetch (Helix does not
     // forward `x-forwarded-host` or registration-set auth headers through the
     // overlay path; query string is the only confirmed transport).
     const effectiveEdsConfig = {
