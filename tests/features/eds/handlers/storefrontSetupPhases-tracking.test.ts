@@ -332,25 +332,4 @@ describe('Storefront Setup Phases - Block Library Install Tracking', () => {
         );
         expect(savedWithTracking).toBeUndefined();
     });
-
-    it('publishes content even when reusing an existing site without reset (404-on-recreate fix)', async () => {
-        // Recreate-with-same-name reuses the existing DA.live site without a content
-        // reset → skipContent (no re-copy). But DA.live content is NOT live until it
-        // is published, so publish must still run or the live site renders 404.
-        const { executeEdsPipeline } = require('@/features/eds/services/edsPipeline');
-        (executeEdsPipeline as jest.Mock).mockClear();
-
-        const context = createMockContext();
-        const edsConfig = createEdsConfig({
-            selectedSite: { id: 'test-site', name: 'test-site' },
-            resetSiteContent: false,
-            contentSource: { org: 'src-org', site: 'src-site' },
-        });
-
-        await executeStorefrontSetupPhases(context, edsConfig, AbortSignal.timeout(30000), {});
-
-        const params = (executeEdsPipeline as jest.Mock).mock.calls[0][0];
-        expect(params.skipContent).toBe(true);    // copy correctly skipped (already authored in DA.live)
-        expect(params.skipPublish).toBe(false);   // but publish MUST run, else the live site 404s
-    });
 });

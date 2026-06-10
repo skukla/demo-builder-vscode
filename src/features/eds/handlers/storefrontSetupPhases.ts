@@ -24,12 +24,11 @@ import { GitHubTokenService } from '../services/githubTokenService';
 import { HelixService } from '../services/helixService';
 import { createPatchReport, reportUnapplied, type PatchReport } from '../services/patchReportHelper';
 import { DaLiveAuthError } from '../services/types';
-import { configureDaLivePermissions, ensureDaLiveAuth, getDaLiveAuthService } from './edsHelpers';
-import { resolveSiteCodeSource, type SiteCodeSource } from './siteCodeSource';
+import { ensureDaLiveAuth, getDaLiveAuthService } from './edsHelpers';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { executePhaseGitHubRepo } from './storefrontSetupPhase1';
 import { executePhaseHelixConfig, type BlockLibraryOptions } from './storefrontSetupPhase2';
-import { executePhaseCodeSync, registerConfigurationService } from './storefrontSetupPhase3';
+import { executePhaseCodeSync } from './storefrontSetupPhase3';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
 import { getBlockLibraryContentSource } from '@/features/project-creation/services/blockLibraryLoader';
 import type { HandlerContext } from '@/types/handlers';
@@ -225,12 +224,6 @@ async function runEdsPipelineWithRecovery(
                     daLiveOrg: edsConfig.daLiveOrg, daLiveSite: edsConfig.daLiveSite,
                     templateOwner, templateRepo,
                     clearExistingContent: wantsToResetContent, skipContent,
-                    // Always publish: skipContent only means "don't re-copy" (content
-                    // is already authored in DA.live), but DA.live content is not LIVE
-                    // until published. Reusing an existing site without a reset must
-                    // still publish, or the live site renders 404. Mirrors
-                    // edsResetService / refreshBlockLibrary, which also pass false.
-                    skipPublish: false,
                     contentSource: edsConfig.contentSource,
                     contentPatches: edsConfig.contentPatches, contentPatchSource: edsConfig.contentPatchSource,
                     codePatches: edsConfig.codePatches, codePatchSource: edsConfig.codePatchSource,
@@ -270,81 +263,6 @@ async function runEdsPipelineWithRecovery(
 // ==========================================================
 
 /**
- * Repoless satellite setup — the dedicated short path (Adobe-native).
- *
- * A satellite references an existing upstream repo's code via the Configuration
- * Service `code` block, so there is NO fork, NO Code Sync App install, NO code-sync
- * verification, and NO CDN code preview (Code Sync lives on the canonical repo).
- * It only configures the joiner's own DA.live permissions and registers the site
- * cross-org (`code.owner` = the upstream). Content population is a separate phase
- * (the satellite's site identity is decoupled from its code source — see step-04).
- */
-async function executeSatelliteSetup(
-    context: HandlerContext,
-    edsConfig: StorefrontSetupStartPayload['edsConfig'],
-    services: SetupServices,
-    codeSource: SiteCodeSource,
-): Promise<StorefrontSetupResult> {
-    const logger = context.logger;
-    const repoInfo: RepoInfo = { repoOwner: codeSource.codeOwner, repoName: codeSource.codeRepo };
-
-    await context.sendMessage('storefront-setup-progress', {
-        phase: 'site-config', message: 'Registering repoless satellite site...', progress: 40,
-    });
-
-    const userEmail = (await services.daLiveAuthService.getUserEmail()) || edsConfig.githubAuth?.user?.email;
-    if (userEmail) {
-        await configureDaLivePermissions(
-            services.daLiveTokenProvider, edsConfig.daLiveOrg, edsConfig.daLiveSite, userEmail, logger,
-        );
-    }
-
-    await withDaLiveAuthRetry(
-        context,
-        () => registerConfigurationService(context, services, repoInfo, edsConfig, logger),
-        MAX_REAUTH_ATTEMPTS,
-    );
-
-    // Populate the satellite's OWN content: Helix targets the satellite's site
-    // (daLiveOrg/daLiveSite); code/component reads come from the upstream (repoInfo).
-    const skipContent = !edsConfig.contentSource;
-    await context.sendMessage('storefront-setup-progress', {
-        phase: 'content', message: 'Populating satellite content...', progress: 70,
-    });
-    const satelliteResult = await withDaLiveAuthRetry(
-        context,
-        () => executeEdsPipeline(
-            {
-                repoOwner: repoInfo.repoOwner, repoName: repoInfo.repoName,
-                siteOrg: edsConfig.daLiveOrg, siteName: edsConfig.daLiveSite,
-                daLiveOrg: edsConfig.daLiveOrg, daLiveSite: edsConfig.daLiveSite,
-                templateOwner: repoInfo.repoOwner, templateRepo: repoInfo.repoName,
-                contentSource: edsConfig.contentSource, skipContent,
-            },
-            {
-                daLiveContentOps: services.daLiveContentOps,
-                githubFileOps: services.githubFileOps,
-                helixService: services.helixService,
-                logger,
-            },
-        ),
-        MAX_REAUTH_ATTEMPTS,
-    );
-    // Satellite path doesn't currently configure content/code patches, but the
-    // pipeline still returns a patchReport — surface anything that does land
-    // there (e.g., upstream content patches threaded in by a future change).
-    if (satelliteResult?.patchReport) {
-        reportUnapplied(satelliteResult.patchReport, logger, vscode.window.showWarningMessage);
-    }
-
-    await context.sendMessage('storefront-setup-progress', {
-        phase: 'complete', message: 'Satellite site registered', progress: 100,
-    });
-    logger.info(`[Storefront Setup] Repoless satellite registered: code=${repoInfo.repoOwner}/${repoInfo.repoName}, site=${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}`);
-    return { success: true, ...repoInfo };
-}
-
-/**
  * Execute all storefront setup phases
  *
  * This runs the remote setup operations:
@@ -371,19 +289,6 @@ export async function executeStorefrontSetupPhases(
     const wantsToResetContent = Boolean(edsConfig.resetSiteContent);
     const skipContent = !edsConfig.contentSource || (Boolean(edsConfig.selectedSite) && !wantsToResetContent);
     logger.info(`[Storefront Setup] Content: skipContent=${skipContent}, selectedSite=${Boolean(edsConfig.selectedSite)}, resetContent=${wantsToResetContent}`);
-
-    // Repoless satellite: when the site references an existing upstream repo's code,
-    // take the dedicated short path BEFORE the canonical GitHub-owner / template
-    // validation — a satellite needs neither (no fork, no GitHub auth on the happy
-    // path, no template; code comes from the upstream). See ADR-003 + step-04.
-    const codeSource = resolveSiteCodeSource({
-        githubOwner: edsConfig.githubOwner ?? '',
-        repoName: edsConfig.repoName ?? '',
-        upstream: edsConfig.upstream,
-    });
-    if (!codeSource.createRepo) {
-        return executeSatelliteSetup(context, edsConfig, services, codeSource);
-    }
 
     const githubOwner = edsConfig.githubOwner || edsConfig.githubAuth?.user?.login;
     if (!githubOwner) {

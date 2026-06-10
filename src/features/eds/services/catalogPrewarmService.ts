@@ -34,12 +34,12 @@
  */
 
 import { extractConfigParams, generateHeaders, type ConfigGeneratorParams } from './configGenerator';
+import type { EdsPipelineProgressCallback } from './edsPipeline';
 import { derivePrepublishUrl } from './pdp404HandlerPublisher';
 import { runInBatches } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
-import type { EdsPipelineProgressCallback } from './edsPipeline';
 
 /**
  * Concurrency for the bulk prepublish-pdp POST calls. Helix admin

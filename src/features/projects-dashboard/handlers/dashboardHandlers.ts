@@ -246,27 +246,6 @@ export const handleCreateProject: MessageHandler = async (
 };
 
 /**
- * Open the "Join a shared storefront" entry (content-SC link-resolving flow).
- */
-export const handleJoinStorefront: MessageHandler = async (
-    context: HandlerContext,
-): Promise<HandlerResponse> => {
-    try {
-        context.logger.info('Opening Join a Shared Storefront from dashboard');
-        await vscode.commands.executeCommand('demoBuilder.joinStorefront');
-        return {
-            success: true,
-        };
-    } catch (error) {
-        context.logger.error('Failed to open Join a Shared Storefront', error instanceof Error ? error : undefined);
-        return {
-            success: false,
-            error: 'Failed to open Join a Shared Storefront',
-        };
-    }
-};
-
-/**
  * Open help/support URL
  */
 export const handleOpenHelp: MessageHandler = async (

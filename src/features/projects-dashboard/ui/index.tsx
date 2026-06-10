@@ -154,16 +154,6 @@ const ProjectsDashboardApp: React.FC = () => {
         }
     }, []);
 
-    // Handle "Join a shared storefront" (content-SC link-resolving entry)
-    const handleJoinStorefront = useCallback(async () => {
-        try {
-            await webviewClient.postMessage('joinStorefront');
-            // Join screen opens, handled by extension
-        } catch (error) {
-            console.error('Failed to open Join a Shared Storefront:', error);
-        }
-    }, []);
-
     // Handle copy from existing project
     const handleCopyFromExisting = useCallback(async () => {
         try {
@@ -430,7 +420,6 @@ const ProjectsDashboardApp: React.FC = () => {
                 runningProjectPath={runningProjectPath}
                 onSelectProject={handleSelectProject}
                 onCreateProject={handleCreateProject}
-                onJoinStorefront={handleJoinStorefront}
                 onCopyFromExisting={handleCopyFromExisting}
                 onImportFromFile={handleImportFromFile}
                 actions={projectActions}

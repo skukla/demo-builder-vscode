@@ -374,7 +374,7 @@ export class CommandExecutor {
                 throw new Error(`Command timed out after ${options.timeout}ms`);
             }
 
-            if (result.exitCode && result.exitCode !== 0 && !(options as ExecuteOptions).expectNonZeroExit) {
+            if (result.exitCode && result.exitCode !== 0) {
                 this.logger.debug(`[Command Executor] Process exited with code ${result.exitCode} after ${duration}ms`);
             }
 

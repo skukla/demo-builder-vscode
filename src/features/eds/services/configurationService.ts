@@ -332,11 +332,7 @@ export class ConfigurationService {
         } catch (error) {
             const message = (error as Error).message;
             this.logger.error(`[ConfigService] Request failed: ${message}`);
-            // A missing/expired DA.live token throws before the request is sent.
-            // Tag it as a 401 so registration callers trigger DA.live re-auth + retry
-            // instead of swallowing it as a generic, non-recoverable warning.
-            const statusCode = /authentication required/i.test(message) ? 401 : undefined;
-            return { success: false, error: message, statusCode };
+            return { success: false, error: message };
         }
     }
 

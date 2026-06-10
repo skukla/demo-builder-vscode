@@ -25,10 +25,6 @@ export interface WizardState {
     projectName: string;
     selectedPackage?: string;  // Selected package ID (e.g., 'citisignal', 'buildright')
     selectedStack?: string;  // Selected stack ID (e.g., 'headless-paas', 'eds-paas')
-    /** Storefront archetype flow ('commerce' | 'content'); absent ⇒ commerce. */
-    flow?: 'commerce' | 'content';
-    /** Upstream/master a content fork was created from (two-fork plumbing). */
-    upstream?: { owner: string; repo: string };
     selectedAddons?: string[];  // Selected addon IDs (e.g., ['adobe-commerce-aco'])
     selectedBlockLibraries?: string[];  // Selected block library IDs (e.g., ['isle5', 'demo-team-blocks'])
     selectedFeaturePacks?: string[];  // Selected feature pack IDs (e.g., ['b2b-commerce'])
@@ -392,11 +388,6 @@ export interface EDSConfig {
         org?: string;
         error?: string;
     };
-
-    // Repoless satellite: the existing upstream repo this site references as its code
-    // source (set by the content-SC Join flow). Drives the satellite short path
-    // (no fork, cross-org registration). See step-04.
-    upstream?: { owner: string; repo: string };
 
     // Template source configuration (from package storefront)
     /** Template repository owner (e.g., 'demo-system-stores') - for GitHub reset operations */

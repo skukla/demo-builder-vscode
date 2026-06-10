@@ -49,21 +49,6 @@ jest.mock('fs/promises', () => ({
     rmdir: jest.fn().mockResolvedValue(undefined),
 }));
 
-// validateConfigJson (Phase 5) reads config.json via the sync `fs` module.
-jest.mock('fs', () => ({
-    existsSync: jest.fn().mockReturnValue(true),
-    readFileSync: jest.fn().mockReturnValue('{}'),
-}));
-
-// Phase 5c (storefront-share.json marker) writes via GitHubFileOperations.
-const mockCreateOrUpdateFile = jest.fn().mockResolvedValue({ sha: 'x', commitSha: 'y' });
-jest.mock('@/features/eds/services/githubFileOperations', () => ({
-    GitHubFileOperations: jest.fn().mockImplementation(() => ({ createOrUpdateFile: mockCreateOrUpdateFile })),
-}));
-jest.mock('@/features/eds/services/githubTokenService', () => ({
-    GitHubTokenService: jest.fn().mockImplementation(() => ({})),
-}));
-
 jest.mock('@/features/components/services/componentManager', () => ({
     ComponentManager: jest.fn().mockImplementation(() => ({
         installComponent: jest.fn().mockImplementation((project, componentDef) => {
@@ -153,16 +138,6 @@ jest.mock('@/features/project-creation/services', () => ({
     finalizeProject: jest.fn().mockResolvedValue(undefined),
     sendCompletionAndCleanup: jest.fn().mockResolvedValue(undefined),
     generateAIContextFiles: jest.fn().mockResolvedValue(undefined),
-    ensureEdsContent: jest.fn().mockResolvedValue(false),
-}));
-
-// Phase 5 (config.json → GitHub) + its state update — mocked so we can assert
-// they are SKIPPED for the content (repoless satellite) flow.
-jest.mock('@/features/eds/services/configSyncService', () => ({
-    syncConfigToRemote: jest.fn().mockResolvedValue({ success: true, githubPushed: true, cdnPublished: true }),
-}));
-jest.mock('@/features/eds/services/storefrontStalenessDetector', () => ({
-    updateStorefrontState: jest.fn().mockResolvedValue(undefined),
 }));
 
 describe('Executor - EDS Standard Flow', () => {
@@ -372,102 +347,6 @@ describe('Executor - EDS Standard Flow', () => {
                 daLiveOrg: 'test-org',
                 daLiveSite: 'test-site',
             });
-        });
-    });
-
-    describe('Content flow (repoless satellite) — Phase 5/5b gating', () => {
-        // A satellite needs repoUrl for the local clone (upstream), but must NEVER push
-        // config.json to it (Phase 5) or publish to its site (Phase 5b) — the satellite
-        // branch already populated content, and config-as-content is Slice 2.
-        const baseEdsConfig = (over: Record<string, unknown>) => ({
-            projectName: 'test-satellite',
-            selectedStack: 'eds-paas',
-            edsConfig: {
-                repoName: 'citisignal-upstream',
-                repoMode: 'new' as const,
-                repoUrl: 'https://github.com/commerce-sc/citisignal-upstream', // upstream (for clone)
-                daLiveOrg: 'content-sc',
-                daLiveSite: 'citisignal',
-                githubOwner: 'content-sc',
-                preflightComplete: true,
-                contentSource: { org: 'brand-src', site: 'citisignal' },
-            },
-            components: { frontend: 'eds-storefront', dependencies: [] },
-            componentConfigs: {},
-            ...over,
-        });
-
-        it('skips Phase 5 (config→GitHub) and Phase 5b (content) for the content flow', async () => {
-            const { syncConfigToRemote } = await import('@/features/eds/services/configSyncService');
-            const { ensureEdsContent } = await import('@/features/project-creation/services');
-            mockContext = createMockContext();
-            const { executeProjectCreation } = await import('@/features/project-creation/handlers/executor');
-
-            await executeProjectCreation(
-                mockContext as HandlerContext,
-                baseEdsConfig({ flow: 'content', upstream: { owner: 'commerce-sc', repo: 'citisignal-upstream' } }),
-            );
-
-            expect(syncConfigToRemote).not.toHaveBeenCalled();
-            expect(ensureEdsContent).not.toHaveBeenCalled();
-        });
-
-        it('still runs Phase 5 + Phase 5b for the commerce/EDS flow (regression)', async () => {
-            const { syncConfigToRemote } = await import('@/features/eds/services/configSyncService');
-            const { ensureEdsContent } = await import('@/features/project-creation/services');
-            mockContext = createMockContext();
-            const { executeProjectCreation } = await import('@/features/project-creation/handlers/executor');
-
-            await executeProjectCreation(mockContext as HandlerContext, baseEdsConfig({}));
-
-            expect(syncConfigToRemote).toHaveBeenCalled();
-            expect(ensureEdsContent).toHaveBeenCalled();
-        });
-    });
-
-    describe('Phase 5c — storefront-share.json marker (starter side)', () => {
-        const markerEdsConfig = (over: Record<string, unknown>) => ({
-            projectName: 'test-share',
-            selectedStack: 'eds-accs',
-            selectedPackage: 'citisignal',
-            edsConfig: {
-                repoName: 'citisignal', repoMode: 'new' as const,
-                repoUrl: 'https://github.com/me/citisignal',
-                daLiveOrg: 'me', daLiveSite: 'citisignal', githubOwner: 'me',
-                preflightComplete: true, contentSource: { org: 'src', site: 'citisignal' },
-            },
-            components: { frontend: 'eds-storefront', dependencies: [] },
-            componentConfigs: {
-                'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: 'https://x/graphql', ACCS_STORE_VIEW_CODE: 'citisignal_us' },
-            },
-            ...over,
-        });
-
-        it('writes storefront-share.json (packageId + coords) for a commerce storefront', async () => {
-            mockContext = createMockContext();
-            const { executeProjectCreation } = await import('@/features/project-creation/handlers/executor');
-
-            await executeProjectCreation(mockContext as HandlerContext, markerEdsConfig({}));
-
-            expect(mockCreateOrUpdateFile).toHaveBeenCalledWith(
-                'me', 'citisignal', 'storefront-share.json', expect.any(String), expect.any(String),
-            );
-            const parsed = JSON.parse(mockCreateOrUpdateFile.mock.calls[0][3]);
-            expect(parsed.packageId).toBe('citisignal');
-            expect(parsed.commerce.endpoint).toBe('https://x/graphql');
-            expect(parsed.commerce.storeViewCode).toBe('citisignal_us');
-        });
-
-        it('does NOT write the marker for the content (satellite) flow', async () => {
-            mockContext = createMockContext();
-            const { executeProjectCreation } = await import('@/features/project-creation/handlers/executor');
-
-            await executeProjectCreation(
-                mockContext as HandlerContext,
-                markerEdsConfig({ flow: 'content', upstream: { owner: 'commerce-sc', repo: 'up' } }),
-            );
-
-            expect(mockCreateOrUpdateFile).not.toHaveBeenCalled();
         });
     });
 

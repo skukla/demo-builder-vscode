@@ -289,11 +289,6 @@ export const StatusLight: React.FC<any> = ({ children, variant, ...props }) => (
     <span data-testid="spectrum-statuslight" data-variant={variant} {...filterSpectrumProps(props)}>{children}</span>
 );
 
-// Badge mock
-export const Badge: React.FC<any> = ({ children, variant, ...props }) => (
-    <span data-testid="spectrum-badge" data-variant={variant} {...filterSpectrumProps(props)}>{children}</span>
-);
-
 // Well mock
 export const Well: React.FC<any> = ({ children, ...props }) => (
     <div data-testid="spectrum-well" {...filterSpectrumProps(props)}>{children}</div>

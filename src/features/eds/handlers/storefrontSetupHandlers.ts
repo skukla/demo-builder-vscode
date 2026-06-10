@@ -79,10 +79,6 @@ export interface StorefrontSetupStartPayload {
         // Template repository info (from stack/brand config) for GitHub reset operations
         templateOwner?: string;
         templateRepo?: string;
-        // Repoless satellite: when present, this site REFERENCES an existing upstream
-        // repo's code (cross-org or same-org) instead of forking. Drives
-        // resolveSiteCodeSource → no fork, no Code Sync App install, cross-org registration.
-        upstream?: { owner: string; repo: string };
         // DA.live content source (explicit config, not derived from GitHub URL)
         contentSource?: {
             org: string;

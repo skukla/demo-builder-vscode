@@ -69,13 +69,6 @@ export interface WizardStepWithCondition {
     /** Optional description for the step */
     description?: string;
 
-    /**
-     * Optional storefront flow this step belongs to. Absent ⇒ shown for all flows.
-     * Composed with (not folded into) `condition`, so a flow-only step is not
-     * treated as "conditional" by the no-stack branch.
-     */
-    flow?: 'commerce' | 'content';
-
     /** Optional condition for showing this step */
     condition?: StepCondition;
 }
@@ -90,8 +83,6 @@ export interface FilterOptions {
     hasAdobeIO?: boolean;
     /** Whether the project requires Adobe authentication (mesh OR ACCS backend) */
     hasAdobeAuth?: boolean;
-    /** Current storefront flow; defaults to 'commerce' when absent. */
-    flow?: 'commerce' | 'content';
 }
 
 /**
@@ -115,12 +106,6 @@ export function filterStepsForStack(
 ): WizardStepWithCondition[] {
     const { isEditMode = false } = options;
 
-    // Flow pre-filter: a step tagged with a flow is shown only for that flow.
-    // Applied BEFORE the stack/no-stack logic so a flow-only step is not treated
-    // as "has a condition" by the no-stack branch. Absent flow ⇒ shown for all.
-    const currentFlow = options.flow ?? 'commerce';
-    const flowSteps = steps.filter(step => !step.flow || step.flow === currentFlow);
-
     // Helper to check if step should be hidden due to createModeOnly in edit mode
     const isHiddenInEditMode = (step: WizardStepWithCondition): boolean => {
         return isEditMode && step.condition?.createModeOnly === true;
@@ -132,7 +117,7 @@ export function filterStepsForStack(
     // Hide steps that require specific stack properties (requiresGitHub, etc.)
     // Hide createModeOnly steps in edit mode
     if (!stack) {
-        return flowSteps.filter(step => {
+        return steps.filter(step => {
             if (isHiddenInEditMode(step)) return false;
             if (!step.condition) return true;
             if (step.condition.showWhenNoStack) return true;
@@ -140,7 +125,7 @@ export function filterStepsForStack(
         });
     }
 
-    return flowSteps.filter(step => {
+    return steps.filter(step => {
         // Hide createModeOnly steps in edit mode
         if (isHiddenInEditMode(step)) {
             return false;

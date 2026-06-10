@@ -262,37 +262,5 @@ describe('ProjectConfigWriter atomic writes', () => {
             const parsed = JSON.parse(writeCall![1] as string);
             expect(parsed.aiPrompts).toBeUndefined();
         });
-
-        // Regression: persisting flow/upstream so a content (repoless satellite) project
-        // survives save+reload as a content project. Without these, the dashboard archetype
-        // predicate would see a commerce project after reload.
-        it('should include flow + upstream in manifest for a content (satellite) project', async () => {
-            const project = createTestProject({
-                name: 'satellite-project',
-                flow: 'content',
-                upstream: { owner: 'commerce-sc', repo: 'citisignal-upstream' },
-            });
-
-            await writer.saveProjectConfig(project, project.path);
-
-            const writeCall = mockFs.writeFile.mock.calls.find(
-                (call) => call[0].toString().endsWith('.tmp'),
-            );
-            const parsed = JSON.parse(writeCall![1] as string);
-            expect(parsed.flow).toBe('content');
-            expect(parsed.upstream).toEqual({ owner: 'commerce-sc', repo: 'citisignal-upstream' });
-        });
-
-        it('should omit flow + upstream from manifest for a commerce/legacy project', async () => {
-            const project = createTestProject({ name: 'commerce-project' });
-            await writer.saveProjectConfig(project, project.path);
-
-            const writeCall = mockFs.writeFile.mock.calls.find(
-                (call) => call[0].toString().endsWith('.tmp'),
-            );
-            const parsed = JSON.parse(writeCall![1] as string);
-            expect(parsed.flow).toBeUndefined();
-            expect(parsed.upstream).toBeUndefined();
-        });
     });
 });

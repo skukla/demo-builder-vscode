@@ -36,7 +36,7 @@ describe('buildArchiveUrl', () => {
     // Octokit + zip-buffer mocking that obscures this one load-bearing branch.
     // ADR-006 Step 4: thin-layer reset passes the LKG SHA, forked reset passes `main`.
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     let buildArchiveUrl: any;
 
     beforeEach(async () => {
@@ -94,9 +94,9 @@ describe('resetRepoToTemplate — target branch vs template ref separation', () 
     // thin-layer reset before any file changed. The target branch is always `main`;
     // only the template download accepts a SHA.
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     let GitHubFileOperations: any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     let mockTokenService: any;
 
     const LKG_SHA = 'a1b2c3d4e5f6789012345678901234567890abcd';
@@ -120,13 +120,13 @@ describe('resetRepoToTemplate — target branch vs template ref separation', () 
         // arguments passed to getBranchInfo, not exercising the full Tree API.
         const getBranchInfoSpy = jest.spyOn(service, 'getBranchInfo')
             .mockResolvedValue({ commitSha: 'parent-sha', treeSha: 'parent-tree' });
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         (service as any).downloadRepoContents = jest.fn().mockResolvedValue(new Map());
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         (service as any).createTree = jest.fn().mockResolvedValue('new-tree-sha');
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         (service as any).createCommit = jest.fn().mockResolvedValue('new-commit-sha');
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         (service as any).updateBranchRef = jest.fn().mockResolvedValue(undefined);
 
         await service.resetRepoToTemplate(
@@ -144,15 +144,15 @@ describe('resetRepoToTemplate — target branch vs template ref separation', () 
         const service = new GitHubFileOperations(mockTokenService);
         jest.spyOn(service, 'getBranchInfo')
             .mockResolvedValue({ commitSha: 'parent-sha', treeSha: 'parent-tree' });
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         const downloadSpy = jest.fn().mockResolvedValue(new Map());
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         (service as any).downloadRepoContents = downloadSpy;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         (service as any).createTree = jest.fn().mockResolvedValue('new-tree-sha');
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         (service as any).createCommit = jest.fn().mockResolvedValue('new-commit-sha');
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         (service as any).updateBranchRef = jest.fn().mockResolvedValue(undefined);
 
         await service.resetRepoToTemplate(
@@ -169,15 +169,15 @@ describe('resetRepoToTemplate — target branch vs template ref separation', () 
         const service = new GitHubFileOperations(mockTokenService);
         jest.spyOn(service, 'getBranchInfo')
             .mockResolvedValue({ commitSha: 'parent-sha', treeSha: 'parent-tree' });
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         (service as any).downloadRepoContents = jest.fn().mockResolvedValue(new Map());
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         (service as any).createTree = jest.fn().mockResolvedValue('new-tree-sha');
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         (service as any).createCommit = jest.fn().mockResolvedValue('new-commit-sha');
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         const updateRefSpy = jest.fn().mockResolvedValue(undefined);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         (service as any).updateBranchRef = updateRefSpy;
 
         await service.resetRepoToTemplate(
