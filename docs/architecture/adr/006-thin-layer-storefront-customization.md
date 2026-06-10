@@ -59,7 +59,7 @@ The layer, by customization class:
 | Per-demo Commerce config (`demo-config.json`) | Create-time config templating | **Exists** |
 | DA content | `contentSource` copy + `contentPatches` | **Exists** |
 | Smart-404 PDP recovery | Marker-bounded vendoring (ADR-005) | **Exists** |
-| File modifications (33 audited files, consolidating to a target ledger of ~5–6 patches — see patch policy below) | **Code-patches registry (v2)** — reinstate the removed template-patch system, with definitions externalized (see synthesis below); each patch named, precondition-matched, and loud on failure | **Reinstate + externalize** |
+| File modifications (33 audited files, consolidating to a target ledger of ~6–8 patches — see patch policy below) | **Code-patches registry (v2)** — reinstate the removed template-patch system, with definitions externalized (see synthesis below); each patch named, precondition-matched, and loud on failure | **Reinstate + externalize** |
 
 Patches that fix genuine canonical bugs (e.g. the `aem.js` `createOptimizedPicture` origin fix, the account-sidebar selector race) should additionally be PR'd upstream so the patch set shrinks over time rather than grows.
 
@@ -98,8 +98,9 @@ A patch is a **liability with an exit plan, not a customization mechanism**. The
 | 4 genuine canonical bugs (sidebar selector race, `aem.js` origin handling, header nav-tools defensiveness, SKU slash encoding) | **Upstream PRs**; patch only as carry until each PR merges, then delete | ≤4 expiring patches |
 | Carousel autoplay removal | Demo preference — drop it, or propose upstream as a block option | 0 |
 | Trivia (`delayed.js` comment removal, READMEs) | Drop | 0 |
+| 2 fixes to demo-team blocks (product-teaser SKU-encoding portability, image-URL handling) | Code patches targeting the library-installed block, applied post-install; PRs filed to `demo-system-stores` as exits (see "Two upstreams") | 2 expiring patches |
 
-Steady state: **~5–6 active patches**, each with a declared exit (upstream merge → delete; additive restructure → delete). New patches require justifying why neither additive nor upstream works. The exits are machine-watched, not memory-dependent: the daily gate detects when a fix has landed upstream and proposes the patch's retirement automatically (see below).
+Steady state: **~6–8 active patches**, each with a declared exit (upstream merge → delete; additive restructure → delete). New patches require justifying why neither additive nor upstream works. The exits are machine-watched, not memory-dependent: the daily gate detects when a fix has landed upstream and proposes the patch's retirement automatically (see below).
 
 ### Two upstreams, one policy
 
@@ -111,9 +112,9 @@ The demo team ships general-purpose blocks (the 9 audited ones, and future addit
 
 So Demo Builder tracks **two upstreams** — Adobe's canonical for the base storefront, the demo team's boilerplate for the block collection — under one policy:
 
-1. **Upstream-first**: fixes to canonical code PR to `hlxsites`; fixes to demo-team blocks PR to `demo-system-stores`. Migration prerequisite: our fork carries two product-teaser fixes (SKU-encoding portability, image-URL handling) that the demo team's repo lacks — **PR them to the demo team before flipping the block source**, or they're lost.
-2. **If an upstream won't take a fix, carry it as a code patch.** Patches apply *after* block installation in the create/reset sequence, so they can target installed demo-team blocks exactly as they target canonical files. Same ledger, same exit policy, same gate — the daily check verifies preconditions against both upstreams.
-3. **Last resort for a chronically broken demo-team block**: shadow it with a higher-priority override library entry (library order feeds the dedup, so an earlier source wins). This is a deliberate single-block copy — the one place the copy smell is permitted, and it's visible in config rather than buried in a fork.
+1. **Our modifications to library-sourced blocks are code patches, by design** (owner decision 2026-06-10): any change we need to a block that comes from *any* block library is expressed as a code patch from day one — patches apply *after* block installation in the create/reset sequence, so they target installed library blocks exactly as they target canonical files. Same ledger, same gate; the daily check verifies block-targeting patches against the block-source repo. We never edit library blocks in place and never carry private copies.
+2. **Upstream-first is the exit, not the gatekeeper**: each block patch files a PR to the owning upstream (`hlxsites` for canonical, `demo-system-stores` for demo-team blocks) and retires when it merges — the gate's obsolete-patch detection covers this automatically. Concretely for migration: our fork's two product-teaser fixes (SKU-encoding portability, image-URL handling) become day-one code patches with PRs filed to the demo team; **the block-source flip is not blocked on their review cadence**.
+3. **Last resort for a chronically broken demo-team block** (breakage too structural for a sensible patch): shadow it with a higher-priority override library entry (library order feeds the dedup, so an earlier source wins). This is a deliberate single-block copy — the one place the copy smell is permitted, and it's visible in config rather than buried in a fork.
 
 ### Tracking canonical via a last-known-good gate
 
@@ -139,12 +140,12 @@ Consequences of the gate:
 
 This works *because* the patch ledger is single-digit and targets stable anchor points; the policy above is what keeps the gate advancing near-continuously.
 
-Our fork (`skukla/citisignal-eds-boilerplate`) is archived as a reference once Demo Builder no longer points at it — which requires the block-source flip and the product-teaser upstream PRs to land first. The demo team's `accs-citisignal` remains live in its block-source role. New canonical commits then reach every Demo Builder storefront on next reset, automatically via the last-known-good gate — the sync project (`2026-06-09-storefront-template-sync.md`) is dropped rather than executed.
+Our fork (`skukla/citisignal-eds-boilerplate`) is archived as a reference once Demo Builder no longer points at it — which requires the block-source flip to land first (the product-teaser fixes ride as day-one code patches, so the flip does not wait on the demo team). The demo team's `accs-citisignal` remains live in its block-source role. New canonical commits then reach every Demo Builder storefront on next reset, automatically via the last-known-good gate — the sync project (`2026-06-09-storefront-template-sync.md`) is dropped rather than executed.
 
 ### Why not the alternatives
 
 - **Keep + sync (the gated sync project):** rejected by the numbers. We would be hand-syncing two repos to store one customization set, 30% of whose diff is itself prior sync labor. The audit's per-commit view shows ~70% "modificational" commits, but spot-checks proved that measure is dominated by merge commits, churn, and upstream catch-up mislabeled as modification — not by customizations that need a fork.
-- **Drop forks with no code-patches mechanism (>85% band):** not supported by the data. 33 files of real modification exist; without a patch layer they'd be lost or smuggled back in as ad-hoc vendoring. (The patch policy above shrinks the 33 to ~5–6, but not to zero — slash-SKU image handling and the brand-CSS injection point can't be expressed purely additively today.)
+- **Drop forks with no code-patches mechanism (>85% band):** not supported by the data. 33 files of real modification exist; without a patch layer they'd be lost or smuggled back in as ad-hoc vendoring. (The patch policy above shrinks the 33 audited files to a ~6–8 patch ledger, but not to zero — slash-SKU image handling and the brand-CSS injection point can't be expressed purely additively today.)
 - **Pin canonical + bundle patch definitions in the extension** (considered and rejected 2026-06-10): maximizes test atomicity (CI asserts every precondition against the pinned ref), but every upstream improvement then requires a pin-bump and an extension release, with storefronts running stale boilerplate between bumps — the fork-sync treadmill in miniature. Rejected by owner in favor of the last-known-good gate, which delivers pinning's safety with automation doing the bumping.
 - **Raw HEAD with an alert-only canary** (the intermediate design, superseded same day): builds straight from canonical `main` and relies on a daily check plus loud create-time failure. Rejected because a breaking canonical change blocks SC creates/resets until a patch fix lands; the LKG gate closes that window entirely at the cost of storefronts being at most ~a day behind.
 

@@ -9,7 +9,7 @@
 - **Update system**: real work, but contained. Four touchpoints change (template-commit recording, template-update checking, template sync, reset helper); the fork-sync subsystem degrades gracefully to a no-op for CitiSignal without code changes; everything else (extension/component/addon updates) is untouched.
 - **AI tooling**: effectively zero impact. All 9 MCP tools and all 12 shipped skills are fork-agnostic — they operate on the user's storefront repo and config, never on the template's identity. One stale doc note found (unrelated to ADR-006).
 - **One naming trap resolved**: the `accs-citisignal` *DA.live content site* (`demo-system-stores/accs-citisignal` on content.da.live) is **not** the GitHub fork and **survives** ADR-006. Only the GitHub code repos retire. The shared name is a coincidence of provenance, not a dependency.
-- **One open decision blocks config work**: where the 9 custom blocks live once the fork is archived (`block-libraries.json` currently sources them from the fork).
+- **Blocks decision resolved (2026-06-10)**: the 9 blocks are the demo team's — `demo-team-blocks.source` flips to their live boilerplate (`demo-system-stores/accs-citisignal`); our modifications to library blocks ship as day-one code patches with upstream PRs as exits (see 1.6).
 
 ---
 
@@ -98,7 +98,7 @@ All 12 skills in `src/features/project-creation/templates/skills/` enumerated an
 6. `block-libraries.json` — flip `demo-team-blocks.source` to `demo-system-stores/accs-citisignal` (the demo team's boilerplate; resolved decision, see 1.6). **Prerequisite: PR the fork's two product-teaser fixes to the demo team first.**
 7. `forkSyncService` subsystem — no change now (no-ops for canonical templates); schedule retirement when the last forked-template package is gone.
 8. AI tooling — nothing required; optionally fix the stale `aiContextWriter.ts:309` note while in the area.
-9. Sequencing constraint: nothing may still point at `skukla/citisignal-eds-boilerplate` on the day it's archived — the block-source flip (item 6) and the teaser PRs must land first. (`accs-citisignal` is not archived; it stays live as the block-source upstream.)
+9. Sequencing constraint: nothing may still point at `skukla/citisignal-eds-boilerplate` on the day it's archived — the block-source flip (item 6, with the teaser fixes carried as code patches) must land first. (`accs-citisignal` is not archived; it stays live as the block-source upstream.)
 
 ## Sources
 
