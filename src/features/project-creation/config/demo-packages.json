@@ -307,7 +307,7 @@
           ],
           "contentPatchSource": {
             "owner": "skukla",
-            "repo": "eds-demo-content-patches",
+            "repo": "eds-demo-patches",
             "path": "citisignal"
           }
         },
@@ -342,7 +342,7 @@
           ],
           "contentPatchSource": {
             "owner": "skukla",
-            "repo": "eds-demo-content-patches",
+            "repo": "eds-demo-patches",
             "path": "citisignal"
           }
         }
