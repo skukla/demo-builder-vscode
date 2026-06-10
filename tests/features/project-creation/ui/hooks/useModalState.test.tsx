@@ -229,6 +229,36 @@ describe('useModalState', () => {
 
             expect(result.current.modalCustomBlockLibraries).toEqual([parentLib]);
         });
+
+        it('clears stale optional deps when the new package does NOT require mesh', async () => {
+            // Cross-package leak scenario: a previous package selection (e.g.,
+            // Custom) auto-added `eds-accs-mesh` to selectedOptionalDependencies.
+            // The user backs out and clicks a different card (e.g., CitiSignal)
+            // that does NOT require mesh. handleCardClick must clear the stale
+            // mesh entry — otherwise the new package silently inherits mesh
+            // even though it doesn't offer it. Mirrors handleStackSelect's
+            // clear-on-no-mesh behavior.
+            const { getResolvedMeshRequirement } = await import(
+                '@/features/project-creation/services/demoPackageLoader'
+            );
+            (getResolvedMeshRequirement as jest.Mock).mockReturnValue(false);
+
+            const onOptionalDependenciesChange = jest.fn();
+            const { result } = renderHook(() =>
+                useModalState({
+                    ...defaultProps,
+                    selectedOptionalDependencies: ['eds-accs-mesh'],
+                    onOptionalDependenciesChange,
+                })
+            );
+
+            act(() => {
+                result.current.handleCardClick(testPackage);
+            });
+
+            expect(result.current.modalOptionalDeps).toEqual([]);
+            expect(onOptionalDependenciesChange).toHaveBeenCalledWith([]);
+        });
     });
 
     // --- handleStackSelect ---

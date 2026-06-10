@@ -95,3 +95,4 @@ Inventory of ~20 pre-existing code-pattern violations surfaced by an SOP scan ru
 ### DaLivePermissions log message chops the owner name ([`2026-06-10-dalive-permission-log-typo.md`](2026-06-10-dalive-permission-log-typo.md))
 
 Surfaced by the ADR-006 Step 5b smoke test. The `[DaLiveConfig] Granting access to <user> for <owner>/<repo>` info line drops the first character of the owner — printed `ukla/citisignal-b2b` instead of `skukla/citisignal-b2b`. Cosmetic only; the actual permission grant works (subsequent log lines correctly use `skukla`), so the bug is a string-slice in the log path, not in the API call. Single-file, single-line fix; ~5 minutes including a one-line test assertion. Pick up any time.
+

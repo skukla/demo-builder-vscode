@@ -47,7 +47,7 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
         checkInProgressRef,
         checkPrerequisites,
         installPrerequisite,
-    } = usePrerequisiteState(scrollToTop, state.selectedStack);
+    } = usePrerequisiteState(scrollToTop, state.selectedStack, state.selectedOptionalDependencies);
 
     // Auto-scroll hook with actual checks (pass the shared ref)
     const {

@@ -259,7 +259,7 @@ function computeOverallStatus(
  */
 async function initializePrerequisiteCheck(
     context: HandlerContext,
-    payload?: { selectedStack?: string; isRecheck?: boolean },
+    payload?: { selectedStack?: string; isRecheck?: boolean; selectedOptionalDependencies?: string[] },
 ): Promise<void> {
     context.stepLogger?.log('prerequisites', 'Starting prerequisites check', 'info');
 
@@ -271,16 +271,24 @@ async function initializePrerequisiteCheck(
     if (payload?.selectedStack) {
         const stack = getStackById(payload.selectedStack);
         if (stack) {
+            // Use the user's actual optional-dependency picks, not `stack.optionalDependencies`.
+            // The original implementation pulled in all of the stack's optional deps on the
+            // premise that prerequisites ran before the Architecture Modal — which stopped being
+            // true when the modal moved into WelcomeStep. Honoring the user's real selection
+            // here keeps the prereq check aligned with the project they actually configured
+            // (e.g., CitiSignal + EDS+ACCS without mesh no longer triggers the api-mesh prereq).
+            const userOptionalDeps = payload?.selectedOptionalDependencies ?? [];
             context.sharedState.currentComponentSelection = {
                 frontend: stack.frontend,
                 backend: stack.backend,
-                // Include all optional deps so prerequisites are ready regardless of user's mesh choice
-                // (prerequisites run before the Architecture Modal where mesh is toggled)
-                dependencies: [...(stack.dependencies || []), ...(stack.optionalDependencies || [])],
+                dependencies: [...(stack.dependencies || []), ...userOptionalDeps],
                 integrations: [],
                 appBuilder: [],
             };
-            context.logger.debug(`[Prerequisites] Built component selection from stack: ${payload.selectedStack}`);
+            context.logger.debug(
+                `[Prerequisites] Built component selection from stack: ${payload.selectedStack} `
+                + `(optional deps: ${userOptionalDeps.length ? userOptionalDeps.join(', ') : 'none'})`,
+            );
         }
     }
 
@@ -325,7 +333,7 @@ async function sendPrerequisitesListToUI(
  */
 export async function handleCheckPrerequisites(
     context: HandlerContext,
-    payload?: { selectedStack?: string; isRecheck?: boolean },
+    payload?: { selectedStack?: string; isRecheck?: boolean; selectedOptionalDependencies?: string[] },
 ): Promise<SimpleResult> {
     try {
         await initializePrerequisiteCheck(context, payload);

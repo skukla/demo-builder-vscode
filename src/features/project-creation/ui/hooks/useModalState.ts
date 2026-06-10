@@ -168,14 +168,20 @@ export function useModalState(props: UseModalStateProps): UseModalStateReturn {
         setModalCustomBlockLibraries(initialCustomLibs);
         // Save pre-modal state for cancel/revert
         preModalOptionalDepsRef.current = selectedOptionalDependencies;
-        // Initialize modal optional deps: auto-select mesh only when resolved requirement is true
+        // Initialize modal optional deps based on the resolved mesh requirement
+        // for the newly-clicked package. Mirrors handleStackSelect's logic to
+        // avoid the cross-package leak that happens when a user picks Custom
+        // (mesh auto-added), backs out, and picks CitiSignal — without this,
+        // the previously-added mesh would survive in selectedOptionalDependencies
+        // for a package that doesn't even offer it.
         const currentStack = selectedStack ? stacks.find(s => s.id === selectedStack) : undefined;
         const meshDeps = resolveMeshOptionalDeps(pkg, selectedStack ?? '', currentStack);
         if (meshDeps !== null) {
             setModalOptionalDeps(meshDeps);
             onOptionalDependenciesChange?.(meshDeps);
         } else {
-            setModalOptionalDeps(selectedOptionalDependencies);
+            setModalOptionalDeps([]);
+            onOptionalDependenciesChange?.([]);
         }
         setModalPackageId(pkg.id);
     }, []);
