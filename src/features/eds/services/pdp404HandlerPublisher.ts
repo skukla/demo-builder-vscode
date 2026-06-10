@@ -100,13 +100,16 @@ ${SMART_404_HEAD_MARKER_START}
     }
     // Already lowercase. If this is a 404 page (cold path: SKU never
     // published), the storefront's default 404 chrome will paint before
-    // delayed.js loads and runs our cold-path snippet. Hide body until
-    // delayed.js takes over — eliminates the visible flash. On non-404
-    // pages window.isErrorPage is undefined so we skip the hide.
+    // delayed.js loads and runs our cold-path snippet. Hide just the
+    // <main> (not the whole body) so the storefront's header and footer
+    // — populated by scripts.js as usual — stay visible while we wait.
+    // User sees real storefront chrome around a loading area, not a
+    // blank page. On non-404 pages window.isErrorPage is undefined so
+    // we skip the hide.
     if (window.isErrorPage && !new URLSearchParams(location.search).has('pdpRetry')) {
       var s = document.createElement('style');
       s.id = 'smart-404-cold-hide';
-      s.textContent = 'body { visibility: hidden; }';
+      s.textContent = 'main { visibility: hidden; }';
       document.head.appendChild(s);
     }
   })();
@@ -174,9 +177,16 @@ ${SMART_404_MARKER_START}
   // flex layout) does not compete with our flex centering and push
   // the message off-center.
   const mainEl = document.querySelector('main');
-  const STYLE = 'display:flex;align-items:center;justify-content:center;min-height:50vh;padding:var(--spacing-large,40px) var(--spacing-medium,20px);font:var(--type-body-1-default-font,1.25rem/1.5 sans-serif);color:var(--color-brand-500,#666);';
-  const LOADING_HTML = \`<div style="\${STYLE}">Loading product…</div>\`;
-  const ERROR_HTML = \`<div style="\${STYLE}">Product not available.</div>\`;
+  // Loading state: a centered spinner with "Loading product…" caption.
+  // Uses storefront design tokens for color/typography with hardcoded
+  // fallbacks. Spinner is a CSS-only rotating ring (no images, no
+  // assets to load) so it renders instantly the moment we paint.
+  const WRAP = 'display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:50vh;padding:var(--spacing-large,40px) var(--spacing-medium,20px);gap:var(--spacing-medium,20px);';
+  const SPIN = 'width:48px;height:48px;border:4px solid var(--color-neutral-200,#f0f0f0);border-top-color:var(--color-brand-500,#454545);border-radius:50%;animation:smart404Spin 0.8s linear infinite;';
+  const TEXT = 'font:var(--type-body-1-default-font,1.25rem/1.5 sans-serif);color:var(--color-brand-500,#454545);';
+  const ANIM = '<style>@keyframes smart404Spin{to{transform:rotate(360deg)}}</style>';
+  const LOADING_HTML = \`<div style="\${WRAP}"><div style="\${SPIN}"></div><div style="\${TEXT}">Loading product…</div></div>\${ANIM}\`;
+  const ERROR_HTML = \`<div style="\${WRAP}"><div style="\${TEXT}">Product not available.</div></div>\`;
   if (mainEl) {
     mainEl.className = '';
     mainEl.innerHTML = LOADING_HTML;

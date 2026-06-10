@@ -189,14 +189,19 @@ describe('buildSmart404Snippet', () => {
         expect(snippet).toContain("mainEl.className = ''");
     });
 
-    it('shows a "Loading product…" state during the cold-publish window', () => {
+    it('shows a spinner + "Loading product…" caption during the cold-publish window', () => {
         // Without this, the cold path leaves "Page Not Found" visible
-        // for the ~1-2 second action call, which looks broken to a
-        // user (they might leave the page or click "Go home"). The
-        // snippet replaces <main> content with a loading message the
-        // moment the gates pass, before any fetch fires.
+        // for the ~1-2 second action call. Spinner + caption is more
+        // intentional than text-only — clearly communicates "something
+        // is loading" rather than a static error message.
         const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
         expect(snippet).toContain('Loading product');
+        // CSS-only rotating ring (border-top-color + animation keyframe)
+        // — no image asset, renders instantly when the loading state
+        // paints.
+        expect(snippet).toContain('@keyframes smart404Spin');
+        expect(snippet).toContain('border-top-color');
+        expect(snippet).toContain('border-radius:50%');
         // Replacement targets <main> to preserve storefront chrome
         // (header, footer) — body is too aggressive, would wipe the nav.
         expect(snippet).toContain("querySelector('main')");
@@ -209,7 +214,8 @@ describe('buildSmart404Snippet', () => {
         // --spacing-large, --type-body-1-default-font). Fallbacks
         // preserve a clean default if a storefront doesn't.
         const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
-        expect(snippet).toContain('var(--color-brand-500,#666)');
+        expect(snippet).toContain('var(--color-brand-500,#454545)');
+        expect(snippet).toContain('var(--color-neutral-200,#f0f0f0)');
         expect(snippet).toContain('var(--spacing-large,40px)');
         expect(snippet).toContain('var(--type-body-1-default-font,1.25rem/1.5 sans-serif)');
     });
@@ -361,15 +367,17 @@ describe('installSmart404Handler', () => {
         // either wastes the prerender or causes inconsistent behavior
         // across browsers.
         expect(headContent).toContain('document.prerendering');
-        // Cold-path body hide: when isErrorPage is true and the URL is
+        // Cold-path main hide: when isErrorPage is true and the URL is
         // already lowercase (cold case where delayed.js will fire), the
         // eager script injects #smart-404-cold-hide to suppress the
         // visible 404 chrome until delayed.js paints our loading state.
-        // Without this, never-visited products show a ~700ms flash of
-        // "Page Not Found" before "Loading product…" appears.
+        // The selector is `main` (NOT `body`) so the storefront's
+        // header and footer — populated by scripts.js — stay visible
+        // while we wait. Body-level hide was too aggressive and made
+        // the cold-path window look like a blank page.
         expect(headContent).toContain('window.isErrorPage');
         expect(headContent).toContain("'smart-404-cold-hide'");
-        expect(headContent).toContain('visibility: hidden');
+        expect(headContent).toContain('main { visibility: hidden; }');
     });
 
     it('extracts the CSP nonce dynamically from head.html instead of hardcoding "aem"', async () => {
