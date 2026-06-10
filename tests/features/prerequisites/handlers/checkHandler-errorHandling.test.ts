@@ -256,10 +256,17 @@ describe('Prerequisites Check Handler - Error Handling & Edge Cases', () => {
                 .mockResolvedValueOnce(mockNodeResult)
                 .mockResolvedValueOnce(mockNpmResult);
 
-            // Pass selectedStack - handler will look up stack from stacks.json
-            await handleCheckPrerequisites(context, { selectedStack: 'headless-paas' });
+            // Pass selectedStack + the user's opt-in for the stack's optional deps.
+            // The handler builds dependencies from `stack.dependencies + user's picks`,
+            // not from `stack.optionalDependencies` — so the user explicitly opting in
+            // to `headless-commerce-mesh` is what puts it in the selection.
+            await handleCheckPrerequisites(context, {
+                selectedStack: 'headless-paas',
+                selectedOptionalDependencies: ['headless-commerce-mesh'],
+            });
 
-            // Handler derives componentSelection from the headless-paas stack
+            // Handler derives componentSelection from the headless-paas stack and
+            // honors the user's optional-dependency picks
             expect(context.sharedState.currentComponentSelection).toEqual({
                 frontend: 'headless',
                 backend: 'adobe-commerce-paas',

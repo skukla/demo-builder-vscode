@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.114] - 2026-06-10
+
+### Fixed
+
+- **Prerequisite check honors the user's optional-dependency picks.** `checkHandler.initializePrerequisiteCheck` previously built the project's component selection from `stack.dependencies + stack.optionalDependencies`, slamming all of the stack's optional deps (notably `eds-accs-mesh` for the `eds-accs` stack) into the selection regardless of what the user actually configured in the Architecture Modal. A stale comment ("prerequisites run before the Architecture Modal") was load-bearing for the original implementation, but the modal moved into WelcomeStep — by the time prerequisites runs, the user has already made a real opt-in choice. The handler now consumes a new `selectedOptionalDependencies` field on the `check-prerequisites` payload (forwarded from `usePrerequisiteState`) and uses it directly. A CitiSignal + EDS+ACCS demo without mesh no longer triggers the api-mesh prereq or surfaces App-Builder gating downstream. The `wizardHelpers.buildProjectConfig` path already used the user's actual selection; this aligns the prereq handler with the same source of truth.
+
+- **Architecture Modal — cross-package optional-deps leak.** The modal-open handler (`useModalState.handleCardClick`) carried the existing `selectedOptionalDependencies` into modal state for the newly clicked package, even when the new package didn't require or offer the deps. Repro: pick Custom (mesh auto-added) → back out → pick CitiSignal → mesh quietly survives in the wizard state for a package that doesn't offer it. The handler now mirrors `handleStackSelect`'s clear-on-no-mesh behavior — sets modal optional deps to `[]` and propagates the cleared value to the parent via `onOptionalDependenciesChange`. Eliminates the silent inheritance.
+
+- **Token validation timeout (`TIMEOUTS.QUICK` → new `TIMEOUTS.TOKEN_VALIDATION`).** The Adobe IMS token-read in `tokenManager.inspectToken` (`aio config get ims.contexts.cli.access_token --json`) was capped at 5s, which routinely failed on slow networks — the 3-attempt retry loop's exponential backoff exited cleanly but the timeout itself was too tight, producing a "token expired, please re-authenticate" cascade where the underlying token was valid the whole time. Bumped to 10s (matching the precedent set by the v1.5.0 `CONFIG_WRITE` bump). The retry loop is unchanged; worst-case bounded auth wall-clock now sits at ~33s, well inside the legitimate auth flow's wall-clock budget.
+
 ## [1.0.0-beta.113] - 2026-06-10
 
 ### Added

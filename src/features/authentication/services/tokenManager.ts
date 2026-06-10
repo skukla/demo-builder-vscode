@@ -87,7 +87,7 @@ export class TokenManager {
                 // Using --json flag ensures atomic read of both fields
                 const cmdResult = await this.commandManager.execute(
                     'aio config get ims.contexts.cli.access_token --json',
-                    { encoding: 'utf8', timeout: TIMEOUTS.QUICK },
+                    { encoding: 'utf8', timeout: TIMEOUTS.TOKEN_VALIDATION },
                 );
 
                 if (cmdResult.code !== 0 || !cmdResult.stdout) {

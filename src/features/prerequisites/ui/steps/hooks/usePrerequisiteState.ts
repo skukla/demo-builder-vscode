@@ -105,10 +105,16 @@ interface UsePrerequisiteStateReturn {
  *
  * @param scrollToTop - Function to scroll to top of container
  * @param selectedStack - The selected stack ID from wizard state (source of truth for components)
+ * @param selectedOptionalDependencies - User's actual opt-in for the stack's optional deps (mesh, etc.).
+ *   The handler used to slam ALL `stack.optionalDependencies` into the component selection on the
+ *   premise that prereqs ran before the Architecture Modal — that's been false since the modal
+ *   moved into WelcomeStep. Passing the user's real choice lets prereq checks reflect the project
+ *   the user actually configured.
  */
 export function usePrerequisiteState(
     scrollToTop: () => void,
     selectedStack?: string,
+    selectedOptionalDependencies?: string[],
 ): UsePrerequisiteStateReturn {
     const [checks, setChecks] = useState<PrerequisiteCheck[]>(INITIAL_LOADING_STATE);
     const [isChecking, setIsChecking] = useState(false);
@@ -125,13 +131,17 @@ export function usePrerequisiteState(
         checkInProgressRef.current = true;
         setIsChecking(true);
 
-        // Send selectedStack - backend will look up components from stack config
+        // Send selectedStack + the user's optional dependency picks so the backend
+        // rebuilds the component selection from what the user ACTUALLY configured,
+        // not from `stack.optionalDependencies` (which would include mesh whether
+        // the user opted in or not).
         webviewClient.postMessage('check-prerequisites', {
             isRecheck: isRecheck ?? false,
             selectedStack,
+            selectedOptionalDependencies: selectedOptionalDependencies ?? [],
         });
         scrollToTop();
-    }, [scrollToTop, selectedStack]);
+    }, [scrollToTop, selectedStack, selectedOptionalDependencies]);
 
     // Install prerequisite function
     const installPrerequisite = useCallback((index: number) => {
