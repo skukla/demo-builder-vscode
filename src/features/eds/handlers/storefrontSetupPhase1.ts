@@ -44,9 +44,19 @@ export async function executePhaseGitHubRepo(
         await context.sendMessage('storefront-setup-progress', {
             phase: 'repository',
             message: `Using repository: ${repoInfo.repoOwner}/${repoInfo.repoName}`,
-            progress: 15,
+            progress: 10,
             ...repoInfo,
         });
+
+        // ADR-006 Step 4b applies here too: the wizard's "Create Repository"
+        // button creates the repo BEFORE storefront setup runs, so this branch
+        // sees the repo at template HEAD with no canonical patches applied.
+        // Without the pin step, canonical-phase patches (e.g., b2b's
+        // product-link-sku-encoding / product-link-sku-slash-encoding /
+        // aem-assets-sku-sanitization) silently do NOT apply — only block-phase
+        // patches (which run later in the pipeline) land. No-op for forked
+        // storefronts (codePatchSource absent).
+        await announcePinAndComplete(context, edsConfig, services, repoInfo, templateOwner, templateRepo, patchReport);
     } else if (useExistingRepo) {
         await executePhaseExistingRepo(context, edsConfig, services, repoInfo, templateOwner, templateRepo, patchReport);
     } else {
@@ -54,6 +64,37 @@ export async function executePhaseGitHubRepo(
     }
 
     return null;
+}
+
+/**
+ * Wrap `pinIfThinLayer` with the surrounding "Pinning... → Repository ready"
+ * progress messages so the wizard's repository phase tells a consistent
+ * story for both the `usePreCreatedRepo` branch (repo created by the
+ * wizard's "Create Repository" button before storefront setup runs) and
+ * the `executePhaseNewRepo` branch (repo created inside Phase 1 itself).
+ * Both paths land on a fresh template HEAD that needs the same Step 4b pin.
+ *
+ * Not used by `executePhaseExistingRepo` — that path has its own
+ * "Resetting repository to template..." progress message and reset-vs-pin
+ * branching, and is only reached when the user explicitly asked to reset
+ * an already-populated repo.
+ */
+async function announcePinAndComplete(
+    context: HandlerContext,
+    edsConfig: StorefrontSetupStartPayload['edsConfig'],
+    services: SetupServices,
+    repoInfo: RepoInfo,
+    templateOwner: string,
+    templateRepo: string,
+    patchReport: PatchReport | undefined,
+): Promise<void> {
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'repository', message: 'Pinning to verified canonical state...', progress: 12,
+    });
+    await pinIfThinLayer(edsConfig, services, repoInfo, templateOwner, templateRepo, context.logger, patchReport);
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'repository', message: 'Repository ready', progress: 15, ...repoInfo,
+    });
 }
 
 /**
@@ -201,12 +242,5 @@ async function executePhaseNewRepo(
     // canonical HEAD; this follow-up Tree reset brings the repo to byte-
     // identical parity with what a reset would produce. No-op for forked
     // storefronts (codePatchSource absent).
-    await context.sendMessage('storefront-setup-progress', {
-        phase: 'repository', message: 'Pinning to verified canonical state...', progress: 12,
-    });
-    await pinIfThinLayer(edsConfig, services, repoInfo, templateOwner, templateRepo, logger, patchReport);
-
-    await context.sendMessage('storefront-setup-progress', {
-        phase: 'repository', message: 'Repository ready', progress: 15, ...repoInfo,
-    });
+    await announcePinAndComplete(context, edsConfig, services, repoInfo, templateOwner, templateRepo, patchReport);
 }
