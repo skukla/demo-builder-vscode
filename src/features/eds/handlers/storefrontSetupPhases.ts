@@ -22,7 +22,7 @@ import { GitHubFileOperations } from '../services/githubFileOperations';
 import { GitHubRepoOperations } from '../services/githubRepoOperations';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { HelixService } from '../services/helixService';
-import { reportUnapplied } from '../services/patchReportHelper';
+import { createPatchReport, reportUnapplied, type PatchReport } from '../services/patchReportHelper';
 import { DaLiveAuthError } from '../services/types';
 import { configureDaLivePermissions, ensureDaLiveAuth, getDaLiveAuthService } from './edsHelpers';
 import { resolveSiteCodeSource, type SiteCodeSource } from './siteCodeSource';
@@ -209,6 +209,7 @@ async function runEdsPipelineWithRecovery(
     wantsToResetContent: boolean,
     skipContent: boolean,
     onProgress: (info: PipelineProgressInfo) => void,
+    patchReport?: PatchReport,
 ): Promise<{ libraryPaths: string[] }> {
     // Fetch the project for catalog pre-warming (v1 ACCS only). Optional
     // — pipeline skips pre-warming when project is undefined. We read it
@@ -233,6 +234,11 @@ async function runEdsPipelineWithRecovery(
                     contentSource: edsConfig.contentSource,
                     contentPatches: edsConfig.contentPatches, contentPatchSource: edsConfig.contentPatchSource,
                     codePatches: edsConfig.codePatches, codePatchSource: edsConfig.codePatchSource,
+                    // Thread the orchestrator's shared patch report through so canonical-phase
+                    // results (from Step 1 LKG-pinning) + block-phase + content-patch results
+                    // all aggregate into ONE report. The orchestrator owns reportUnapplied so
+                    // there's a single toast per setup, not one per source.
+                    patchReport,
                     includeBlockLibrary: true, blockCollectionIds, libraryContentSources,
                     purgeCache: Boolean(edsConfig.resetToTemplate || wantsToResetContent),
                     byomOverlayUrl: edsConfig.byomOverlayUrl,
@@ -247,13 +253,6 @@ async function runEdsPipelineWithRecovery(
                 onProgress,
             );
             if (!result.success) throw new Error(result.error || 'Content pipeline failed');
-            // Surface unapplied patches via the unified toast (ADR-006 D1).
-            // The pipeline always returns a report; reportUnapplied is a no-op
-            // when nothing is unapplied. Without this, content + code patches
-            // run silently during CREATE and the user-visible signal is lost.
-            if (result.patchReport) {
-                reportUnapplied(result.patchReport, logger, vscode.window.showWarningMessage);
-            }
             return { libraryPaths: result.libraryPaths };
         },
         MAX_REAUTH_ATTEMPTS,
@@ -409,9 +408,15 @@ export async function executeStorefrontSetupPhases(
     const effectiveBlockLibraries = options?.selectedBlockLibraries ?? [];
     const phaseOptions: BlockLibraryOptions = { ...options, useExistingRepo };
 
+    // Shared patch report — canonical-phase results from Phase 1's LKG pin
+    // and block-phase + content-patch results from the pipeline both append
+    // here, so the single reportUnapplied call below covers everything in
+    // one toast (ADR-006 D1).
+    const patchReport = createPatchReport();
+
     try {
         const phase1Result = await executePhaseGitHubRepo(
-            context, edsConfig, services, repoInfo, signal, templateOwner, templateRepo,
+            context, edsConfig, services, repoInfo, signal, templateOwner, templateRepo, patchReport,
         );
         if (phase1Result) return phase1Result;
 
@@ -425,8 +430,12 @@ export async function executeStorefrontSetupPhases(
             context, logger, services, repoInfo, edsConfig, templateOwner, templateRepo,
             blockCollectionIds, buildLibraryContentSources(effectiveBlockLibraries),
             wantsToResetContent, skipContent, buildPipelineProgressCallback(context),
+            patchReport,
         );
         if (signal.aborted) throw new Error('Operation cancelled');
+
+        // Single toast covering canonical + block + content patches.
+        reportUnapplied(patchReport, logger, vscode.window.showWarningMessage);
 
         await context.sendMessage('storefront-setup-progress', {
             phase: 'complete',
