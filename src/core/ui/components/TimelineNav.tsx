@@ -277,7 +277,7 @@ export function TimelineNav({
             UNSAFE_className={containerClass}
         >
             {showHeader && (
-                <View marginBottom={compact ? 'size-200' : 'size-400'} UNSAFE_className="timeline-header">
+                <View marginBottom={compact ? 'size-200' : 'size-400'}>
                     <Text UNSAFE_className={cn('text-xs', 'text-uppercase', 'letter-spacing-05', 'text-gray-600', 'font-semibold', 'timeline-header-label')}>
                         {headerText}
                     </Text>
@@ -298,18 +298,25 @@ export function TimelineNav({
                     return (
                         <View key={step.id} position="relative">
                             {/* Step item - role/tabIndex/keyboard conditionally applied when clickable */}
+                            {/* The `data-step-name` attribute powers a CSS-only `::after` tooltip in
+                                custom-spectrum.css, scoped to the rail-collapse media query — it shows
+                                each step's name on hover ONLY when the rail is collapsed (labels are
+                                hidden by then), and is structurally inert at wider viewports. */}
                             {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- role and tabIndex are conditionally set when isClickable; non-clickable steps are inert */}
                             <div
                                 data-testid={`timeline-step-${step.id}`}
+                                data-step-name={step.name}
                                 role={isClickable ? 'button' : undefined}
                                 tabIndex={isClickable ? 0 : undefined}
                                 aria-current={!step.isExiting && actualIndex === currentStepIndex ? 'step' : undefined}
+                                aria-label={step.name}
                                 style={{
                                     marginBottom: displayIndex < displaySteps.length - 1 ? stepSpacing : undefined,
                                     // Staggered animation delay for cascade effect
                                     animationDelay: isEntering ? `${displayIndex * 40}ms` : undefined,
                                 }}
                                 className={cn(
+                                    'timeline-step',
                                     isClickable ? 'cursor-pointer' : 'cursor-default',
                                     status === 'upcoming' ? 'opacity-50' : 'opacity-100',
                                     'transition-opacity',
