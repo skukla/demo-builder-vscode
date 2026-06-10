@@ -59,6 +59,12 @@ unreachable.
    helper so content and code patches surface identically — a small consistency win, not a new system.
 5. Idempotency across reset: re-running reset re-applies cleanly (engine detects already-applied) so repeated
    resets are safe.
+6. **Live-publish of patched paths (v1 operational lesson — see `v1-prior-art.md`):** in v1, `previewCode` only
+   synced patched code to the preview domain (`.aem.page`); `cfbd05ba` had to add an explicit publish of the
+   patched file paths to live (`.aem.live`). Verify whether the current reset pipeline's code-sync/publish step
+   already covers files modified post-reset; if not, end the patch-apply slot with a publish of the applied
+   patch paths (v1's `getAppliedPatchPaths` shape). Test: patched file content is served on the **live** domain,
+   not just preview.
 
 ## Dependencies / ordering note
 

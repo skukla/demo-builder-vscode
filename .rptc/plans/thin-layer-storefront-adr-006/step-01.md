@@ -12,12 +12,11 @@ definitions fetched from the patches repo. This **recovers and refactors** the v
 2026-01-20, removed 2026-02-01), externalizing the definitions (v1's one structural flaw was bundling payloads in
 the extension).
 
-> **Finding F1 (corrected):** the v1 source **is recoverable** — it was hidden only by a shallow clone. After
-> `git fetch --unshallow`, recover it directly:
-> `git show f6a7d029^:src/features/eds/services/templatePatchRegistry.ts` (+ `config/template-patches.json`,
-> `config/patches/{id}.ts`, and `tests/features/eds/services/templatePatchRegistry.test.ts`). **Seed v2 from this
-> real code**, applying three deltas: rename `filePath`→`target`; externalize payloads to `eds-demo-patches`
-> (don't re-bundle `config/patches/*.ts`); reuse `contentPatchRegistry`'s fetch/cache. *(Re-cloning for TDD
+> **Finding F1 (corrected):** the v1 source **is recoverable** — it was hidden only by a shallow clone. The full
+> recovered system (file inventory, verified shapes, apply algorithm, wiring, sample payload, and the v1→v2 delta
+> table) is captured in **[`v1-prior-art.md`](v1-prior-art.md)** in this plan folder — that document is Step 1's
+> starting point. Seed v2 from the real v1 code (`git show 'f6a7d029^:…'`); the v1 test suite at
+> `f6a7d029^:tests/features/eds/services/templatePatchRegistry.test.ts` seeds the RED phase. *(Re-cloning for TDD
 > requires `git fetch --unshallow` first, or the v1 history won't be present.)*
 
 ## Design anchor (reuse, do not reinvent)

@@ -313,6 +313,7 @@ Decisions table). Summary so the steps are unambiguous:
 
 ## Step Files
 
+- `v1-prior-art.md` — **Recovered v1 template-patch system** (file inventory, verified shapes, apply algorithm, wiring, the live-publish lesson, v1→v2 deltas) — Step 1's starting point
 - `step-01.md` — Code-patch engine v2 (generic, externalized)
 - `step-02.md` — Reset/create pipeline integration
 - `step-03.md` — LKG pointer: record at create + LKG-aware update check
