@@ -151,7 +151,7 @@ These resolve the four items ADR-006 left to the implementation workstream. They
 
 | # | Question | Decision | Effect |
 |---|---|---|---|
-| D1 | Failure mode when the patches repo is unreachable / a precondition no longer matches | **Proceed and warn** — never block demo create/reset | Step 2 is non-fatal by default; failures raise a **loud, persistent** notification (not just a log line). A per-patch `critical: true` escape hatch is specified but defaults off. LKG-unreachable falls back to canonical HEAD with a warning. |
+| D1 | Failure mode when the patches repo is unreachable / a precondition no longer matches | **Proceed and warn** — never block demo create/reset | Step 2 is non-fatal by default. On failure it shows a **one-time warning toast at create/reset** (`vscode.window.showWarningMessage`, reusing the `configure.ts` pattern) naming the patches that didn't apply — **no dashboard badge and no new persisted project state**. The durable signal lives in the drift-gate (Steps 2/7), which turns red *before* any storefront sees a broken patch. A per-patch `critical: true` escape hatch is specified but defaults off. LKG-unreachable falls back to canonical HEAD with the same toast. For parity, the existing **content-patch** path (silent `logger.debug` today) emits the same toast. |
 | D2 | `last-known-good` file format/location | **Industry-standard convention** | A plain-text `last-known-good` file at the patches-repo root holding **only** the verified canonical SHA — matching Chromium LKGR / NixOS channel `git-revision`. Rich detail (verifiedAt, canonical ref, patch-set state) goes in the automation **commit message**; the file's git history is the audit log. |
 | D3 | Patch-definition home | **Generalize to `eds-demo-patches`** | Migrate `skukla/eds-demo-content-patches` → brand-neutral `eds-demo-patches` (content + code patch sets); update existing `contentPatchSource` references in lockstep. |
 | D4 | Smart-404 vendoring onto v2 engine? | **Keep special-cased; do NOT migrate now** | Smart-404 stays its own mechanism with definitions **bundled in the extension** (off the network path) — it is load-bearing for PDP routing and, given D1's proceed-and-warn, must not share a failure mode with the optional patch fetch. Backlog item filed to revisit engine-internals unification after v2 ships (definitions stay bundled regardless). |
@@ -240,7 +240,7 @@ and on the LKG read/compare logic — these are the new load-bearing surfaces.
 | R1 | **Archival sequencing** — archiving the fork while something still points at it breaks creates/resets (archived repos are read-only). | High | Step 5 flips **both** pointers (template + block source) before Step 9. Teaser fixes ride as day-one patches so the flip never waits on demo-team review. Step 9 opens with a "nothing references the fork" grep/verify gate across `demo-packages.json`, `block-libraries.json`, and any project metadata. |
 | R2 | **generate-from-template produces a repo at template HEAD**, not the LKG SHA (impact-analysis 1.5 caveat). | High | Step 4 verifies the caveat empirically first, then pins via a follow-up reset/force-push to the LKG tree (the reset path already does a Git Tree reset — reuse it) or an alternate clone-at-SHA strategy. Tests assert the created repo's HEAD == LKG SHA. |
 | R3 | **Patches repo load-bearing at create/reset** — if `raw.githubusercontent` / the repo is unreachable, creates/resets need a defined failure mode (same dependency `contentPatches` already has). | Med | **Resolved (D1): proceed and warn.** Step 2 surfaces a loud, persistent, actionable notification and continues; LKG-unreachable falls back to canonical HEAD with a warning. Reuse `contentPatchRegistry`'s timeout + cache. Smart-404 stays bundled (D4) so PDP routing survives an outage. Per-patch `critical:true` reserved for any future hard-fail need. |
-| R4 | **Silent patch drift** — a precondition that no longer matches ships stale/[]missing fixes. | Med | Loud per-patch failure at create/reset (the `911b6ac8` "not applied — code structure changed" case becomes a surfaced warning), **plus** the daily gate turning red before storefronts ever see it. Never silently skip (engine returns an explicit failed-patch result; pipeline surfaces it as a loud, persistent warning per D1 — not a silent pass, and not a hard block). |
+| R4 | **Silent patch drift** — a precondition that no longer matches ships stale/[]missing fixes. | Med | Loud per-patch failure at create/reset (the `911b6ac8` "not applied — code structure changed" case becomes a surfaced warning), **plus** the daily gate turning red before storefronts ever see it. Never silently skip (engine returns an explicit failed-patch result; pipeline surfaces it as a one-time warning toast at create/reset per D1 — not a silent pass, not a hard block, and not a persistent dashboard badge). |
 | R5 | **LKG pointer stalls** during a canonical incident — storefronts build progressively older (but verified) boilerplate; nobody is paged (by design). | Low (accepted in ADR) | Touched-file FYI + red-run logs in the gate; recovery is a push to the patches repo, no extension release in the path. Documented as accepted negative consequence. |
 | R6 | **CSS theming stays modificational** — brand theming ships as append-dominant patches (EDS loads block CSS from fixed paths). | Low | Consolidate to one vendored `<link>` + an additive brand stylesheet (Step 6) to minimize per-file CSS patches; revisit only if churn proves high (ADR "Neutral"). |
 | R7 | **Two product-teaser carries lost** if not PR'd to the demo team before the block-source flip. | Med | Step 6 authors them as day-one code patches (applied post-install); Step 8 files the PRs as exits. The flip does not depend on PR acceptance. |
@@ -268,7 +268,7 @@ and on the LKG read/compare logic — these are the new load-bearing surfaces.
 The four implementation-workstream questions ADR-006 left open are **now decided** (D1–D4 in the Owner
 Decisions table). Summary so the steps are unambiguous:
 
-1. **Failure mode (→ D1):** proceed and warn (loud, persistent); never block create/reset. `critical:true` reserved.
+1. **Failure mode (→ D1):** proceed and warn via a **one-time toast at create/reset** (reuse `showWarningMessage`); **no dashboard badge, no new persisted state** — the drift-gate is the durable signal. Never block create/reset. `critical:true` reserved. Content patches emit the same toast for parity.
 2. **`last-known-good` format (→ D2):** plain-text one-line SHA file at the patches-repo root (Chromium LKGR / Nix `git-revision` convention); detail in the commit message.
 3. **Patches repo (→ D3):** generalize to `eds-demo-patches`.
 4. **Smart-404 (→ D4):** keep special-cased and bundled in the extension; do not migrate onto v2 now.
@@ -282,6 +282,12 @@ Decisions table). Summary so the steps are unambiguous:
   engine is built fresh from the *living* `contentPatchRegistry.ts` + `pdp404HandlerPublisher.ts` (ADR confirms
   the interfaces are "near-identical"); the ADR's v1 description is treated as the spec, not a code source. No
   schedule impact, but Step 1 should not plan to `git show` the old files.
+- **F2 — content patches surface failures silently today** (`contentPatchRegistry.ts:178` →
+  `daLiveContentOperations.ts:391` = `logger.debug` only). The dashboard health badges
+  (`useDashboardStatus.ts`) are single-status-per-surface enums, not a fit for granular per-patch warnings,
+  and adding a persistent patch badge would require a new `codePatchState` manifest field + badge surgery.
+  This is why D1 lands on a **one-time toast** (loud in the moment, reusing `showWarningMessage`) rather than a
+  persistent dashboard surface — and why the code-patch and content-patch paths are unified onto that one toast.
 
 ---
 
