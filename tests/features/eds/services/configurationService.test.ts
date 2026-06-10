@@ -167,7 +167,13 @@ describe('ConfigurationService', () => {
             expect(result.statusCode).toBe(401);
         });
 
-        it('should include content.overlay block when contentOverlayUrl is provided', async () => {
+        it('should include content.overlay block with suffix:".html" when contentOverlayUrl is provided', async () => {
+            // The `suffix: '.html'` matches the canonical
+            // `aem-commerce-prerender` registration shape. Without it,
+            // Helix's live tier 404s for unmatched `/products/*` paths
+            // even though the overlay action returns 200 with the default
+            // template. See .rptc/research/eds-pdp-routing-validation/
+            // findings.md for the empirical reproduction.
             await service.registerSite({
                 ...params,
                 contentOverlayUrl: 'https://byom.example.com',
@@ -183,6 +189,7 @@ describe('ConfigurationService', () => {
                 overlay: {
                     url: 'https://byom.example.com',
                     type: 'markup',
+                    suffix: '.html',
                 },
             });
         });

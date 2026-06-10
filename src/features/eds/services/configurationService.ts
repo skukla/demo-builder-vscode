@@ -183,7 +183,20 @@ export class ConfigurationService {
             version: 1,
             code: { owner: codeOwner, repo: codeRepo },
             content: contentOverlayUrl
-                ? { source, overlay: { url: contentOverlayUrl, type: 'markup' } }
+                // The `suffix: '.html'` matches the canonical
+                // `aem-commerce-prerender` setup wizard's registration shape.
+                // BYOM docs (https://www.aem.live/developer/byom) describe
+                // `suffix` as the field that makes Helix's admin service
+                // append the suffix before fetching from the overlay URL.
+                // Empirical observation (citisignal-b2b 2026-06-10): without
+                // `suffix`, Helix's live tier returns 404 for any unmatched
+                // `/products/*` path EVEN THOUGH our overlay action returns
+                // 200 with the default template body when called directly.
+                // The canonical demo at aemshop.net returns 200 in the same
+                // scenario. The only known registration-shape difference
+                // between the two was the suffix.
+                // See: .rptc/research/eds-pdp-routing-validation/findings.md
+                ? { source, overlay: { url: contentOverlayUrl, type: 'markup', suffix: '.html' } }
                 : { source },
         };
 
