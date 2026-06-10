@@ -125,6 +125,15 @@ export interface StorefrontSetupStartPayload {
             repo: string;
             path: string;
         };
+        // Code patch IDs to apply during create/reset (ADR-006 Step 5; sibling
+        // of contentPatches, operates on repo files).
+        codePatches?: string[];
+        // External code-patch source (thin-layer storefronts per ADR-006).
+        codePatchSource?: {
+            owner: string;
+            repo: string;
+            path: string;
+        };
         // GitHub auth info from Connect Services step
         githubAuth?: {
             isAuthenticated?: boolean;

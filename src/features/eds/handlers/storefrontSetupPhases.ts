@@ -230,6 +230,7 @@ async function runEdsPipelineWithRecovery(
                     skipPublish: false,
                     contentSource: edsConfig.contentSource,
                     contentPatches: edsConfig.contentPatches, contentPatchSource: edsConfig.contentPatchSource,
+                    codePatches: edsConfig.codePatches, codePatchSource: edsConfig.codePatchSource,
                     includeBlockLibrary: true, blockCollectionIds, libraryContentSources,
                     purgeCache: Boolean(edsConfig.resetToTemplate || wantsToResetContent),
                     byomOverlayUrl: edsConfig.byomOverlayUrl,

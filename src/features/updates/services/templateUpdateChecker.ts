@@ -14,6 +14,7 @@ import {
     getLatestBranchCommit,
 } from './githubApiClient';
 import { COMPONENT_IDS } from '@/core/constants';
+import { readLkgSha } from '@/features/eds/services/lkgReader';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 
@@ -88,7 +89,6 @@ export class TemplateUpdateChecker {
             // is ahead; updates are offered only when the LKG pointer advances
             // (the drift-gate has verified a newer SHA against the patches).
             if (lkgSource) {
-                const { readLkgSha } = await import('@/features/eds/services/lkgReader');
                 const currentLkg = await readLkgSha(lkgSource, this.logger);
                 if (!currentLkg) {
                     this.logger.warn(`[TemplateUpdates] LKG unreachable for ${lkgSource.owner}/${lkgSource.repo} — skipping update check`);

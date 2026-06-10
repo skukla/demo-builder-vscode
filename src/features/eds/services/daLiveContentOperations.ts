@@ -28,6 +28,7 @@ import {
 } from './daLiveConstants';
 import { getMimeType } from './daLiveMimeTypes';
 import { convertSpreadsheetJsonToHtml } from './daLiveSpreadsheetUtils';
+import { addContentResult, type PatchReport } from './patchReportHelper';
 import {
     DaLiveError,
     DaLiveAuthError,
@@ -370,7 +371,14 @@ export class DaLiveContentOperations {
     }
 
     /**
-     * Process HTML content: apply patches and transform for DA.live
+     * Process HTML content: apply patches and transform for DA.live.
+     *
+     * When `patchReport` is supplied, each content-patch result (applied or
+     * not) is routed into the unified report via `addContentResult` so the
+     * pipeline's final `reportUnapplied` toast can name unapplied content
+     * patches alongside unapplied code patches. Without a report (e.g.
+     * one-off content copies outside the create/reset pipeline), the
+     * previous debug-log behavior is preserved.
      */
     private async processHtmlContent(
         sourceResponse: Response,
@@ -378,6 +386,7 @@ export class DaLiveContentOperations {
         sourceBaseUrl: string,
         contentPatchIds?: string[],
         contentPatchSource?: ContentPatchSource,
+        patchReport?: PatchReport,
     ): Promise<Blob> {
         let htmlText = await sourceResponse.text();
 
@@ -389,7 +398,9 @@ export class DaLiveContentOperations {
             htmlText = patchedHtml;
 
             for (const result of results) {
-                if (!result.applied && result.reason) {
+                if (patchReport) {
+                    addContentResult(patchReport, result);
+                } else if (!result.applied && result.reason) {
                     this.logger.debug(`[DA.live] Content patch '${result.patchId}' not applied to ${sourcePath}: ${result.reason}`);
                 }
             }
@@ -418,6 +429,7 @@ export class DaLiveContentOperations {
         destPath: string,
         contentPatchIds?: string[],
         contentPatchSource?: ContentPatchSource,
+        patchReport?: PatchReport,
     ): Promise<boolean> {
         const sourceBaseUrl = `https://main--${source.site}--${source.org}.aem.live`;
 
@@ -452,7 +464,7 @@ export class DaLiveContentOperations {
                 const daPath = this.resolveDaPath(destPath, isHtml);
 
                 const contentBlob = isHtml
-                    ? await this.processHtmlContent(sourceResponse, sourcePath, sourceBaseUrl, contentPatchIds, contentPatchSource)
+                    ? await this.processHtmlContent(sourceResponse, sourcePath, sourceBaseUrl, contentPatchIds, contentPatchSource, patchReport)
                     : await sourceResponse.blob();
 
                 const destUrl = `${DA_LIVE_BASE_URL}/source/${destination.org}/${destination.site}/${daPath}`;
@@ -1795,6 +1807,13 @@ export class DaLiveContentOperations {
      * @param progressCallback - Optional progress callback
      * @param contentPatchIds - Optional content patch IDs to apply
      * @param contentPatchSource - Optional external source for content patches
+     * @param patchReport - Optional patch report. When supplied, per-page
+     *   content-patch results (applied or not) are routed into the report
+     *   via `addContentResult`, so the pipeline's final `reportUnapplied`
+     *   call surfaces unapplied content patches in the same toast as
+     *   unapplied code patches. Without a report, the old debug-log
+     *   behavior is preserved (for callers outside the create/reset
+     *   pipeline that don't aggregate patch results).
      * @returns Copy result
      */
     async copyContentFromSource(
@@ -1804,6 +1823,7 @@ export class DaLiveContentOperations {
         progressCallback?: DaLiveProgressCallback,
         contentPatchIds?: string[],
         contentPatchSource?: ContentPatchSource,
+        patchReport?: PatchReport,
     ): Promise<DaLiveCopyResult> {
         // Report initialization progress
         progressCallback?.({ processed: 0, total: 0, percentage: 0, message: 'Enumerating source content...' });
@@ -1910,6 +1930,7 @@ export class DaLiveContentOperations {
                         sourcePath,
                         contentPatchIds,
                         contentPatchSource,
+                        patchReport,
                     );
                     return { path: sourcePath, success };
                 }),

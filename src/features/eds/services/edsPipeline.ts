@@ -252,6 +252,7 @@ async function pipelineCopyContent(
     daLiveSite: string,
     contentPatches: string[] | undefined,
     contentPatchSource: ContentPatchSource | undefined,
+    patchReport: PatchReport,
     logger: Logger,
     onProgress?: EdsPipelineProgressCallback,
 ): Promise<number> {
@@ -286,6 +287,7 @@ async function pipelineCopyContent(
         },
         contentPatches,
         contentPatchSource,
+        patchReport,
     );
 
     if (!contentResult.success) {
@@ -522,7 +524,7 @@ export async function executeEdsPipeline(
             }
             contentFilesCopied = await pipelineCopyContent(
                 daLiveContentOps, contentSource, daLiveOrg, daLiveSite,
-                contentPatches, contentPatchSource, logger, onProgress,
+                contentPatches, contentPatchSource, patchReport, logger, onProgress,
             );
         } else {
             logger.info('[EdsPipeline] Skipping content copy (skipContent=true)');
