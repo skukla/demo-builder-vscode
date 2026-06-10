@@ -13,8 +13,8 @@
 import { COMPONENT_IDS } from '@/core/constants';
 import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
 import type { Project } from '@/types/base';
-import type { HandlerResponse } from '@/types/handlers';
 import type { CodePatchSource } from '@/types/demoPackages';
+import type { HandlerResponse } from '@/types/handlers';
 
 // ==========================================================
 // Types

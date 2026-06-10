@@ -23,10 +23,9 @@ import {
     applyBlockCodePatches,
 } from '@/features/eds/services/codePatchPipelineHelpers';
 import { _clearCodePatchCacheForTests } from '@/features/eds/services/codePatchRegistry';
+import type { GitHubFileOperations } from '@/features/eds/services/githubFileOperations';
 import type { Logger } from '@/types';
 import type { CodePatchSource } from '@/types/demoPackages';
-import type { GitHubFileOperations } from '@/features/eds/services/githubFileOperations';
-import type { CodePatch } from '@/features/eds/services/codePatchRegistry';
 
 const mockLogger: Logger = {
     info: jest.fn(),
@@ -53,20 +52,9 @@ afterEach(() => {
     global.fetch = originalFetch;
 });
 
-function mockLedger(patches: CodePatch[]): jest.Mock {
-    const mock = jest.fn().mockImplementation((url: string) => {
-        if (url.includes('code-patches.json')) {
-            return Promise.resolve({
-                ok: true,
-                json: () => Promise.resolve({ patches }),
-            });
-        }
-        // Default: HTTP 404 (callers can override per test)
-        return Promise.resolve({ ok: false, status: 404, statusText: 'Not Found' });
-    });
-    global.fetch = mock;
-    return mock;
-}
+// `mockLedger` helper removed — tests inline their fetch mocks (each test
+// sets up the ledger + per-target fetch behavior it needs, keeping the
+// expectation visible inline).
 
 // ==========================================================================
 // applyCanonicalCodePatches — pre-reset phase

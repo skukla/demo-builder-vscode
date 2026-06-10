@@ -38,12 +38,11 @@
  * @module features/eds/services/codePatchPipelineHelpers
  */
 
-import { applyCodePatches, getCodePatches } from './codePatchRegistry';
+import { applyCodePatches, getCodePatches, type CodePatchResult } from './codePatchRegistry';
+import type { GitHubFileOperations } from './githubFileOperations';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types';
 import type { CodePatchSource } from '@/types/demoPackages';
-import type { CodePatchResult } from './codePatchRegistry';
-import type { GitHubFileOperations } from './githubFileOperations';
 
 const BLOCK_TARGET_PREFIX = 'blocks/';
 

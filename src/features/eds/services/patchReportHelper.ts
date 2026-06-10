@@ -21,9 +21,9 @@
  * @module features/eds/services/patchReportHelper
  */
 
-import type { Logger } from '@/types';
-import type { ContentPatchResult } from './contentPatchRegistry';
 import type { CodePatchResult } from './codePatchRegistry';
+import type { ContentPatchResult } from './contentPatchRegistry';
+import type { Logger } from '@/types';
 
 /**
  * Normalized per-patch entry. Content and code results are merged onto

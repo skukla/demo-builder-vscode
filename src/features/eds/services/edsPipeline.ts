@@ -17,11 +17,11 @@
  * @module features/eds/services/edsPipeline
  */
 
+import { prewarmCatalog } from './catalogPrewarmService';
+import { applyBlockCodePatches } from './codePatchPipelineHelpers';
 import type { DaLiveContentOperations } from './daLiveContentOperations';
 import type { GitHubFileOperations } from './githubFileOperations';
 import type { HelixService } from './helixService';
-import { prewarmCatalog } from './catalogPrewarmService';
-import { applyBlockCodePatches } from './codePatchPipelineHelpers';
 import {
     createPatchReport,
     addCodeResult,
@@ -139,6 +139,30 @@ export interface EdsPipelineResult {
 // ==========================================================
 // Pipeline Helpers
 // ==========================================================
+
+/**
+ * Block-phase code-patch application slot. No-op when there are no patches
+ * configured. `applyBlockCodePatches` is internally non-fatal except for
+ * `critical: true` patches, where the engine throws `CodePatchCriticalError`
+ * — that propagates naturally to the pipeline's outer try/catch so callers
+ * see the failed result on `error.result` rather than a partially-applied
+ * state.
+ */
+async function pipelineApplyBlockCodePatches(
+    githubFileOps: GitHubFileOperations,
+    repoOwner: string,
+    repoName: string,
+    codePatches: string[] | undefined,
+    codePatchSource: CodePatchSource | undefined,
+    patchReport: PatchReport,
+    logger: Logger,
+): Promise<void> {
+    if (!codePatches || codePatches.length === 0 || !codePatchSource) return;
+    const blockResults = await applyBlockCodePatches(
+        githubFileOps, repoOwner, repoName, codePatches, codePatchSource, logger,
+    );
+    for (const r of blockResults) addCodeResult(patchReport, r);
+}
 
 /**
  * Convert DA.live paths to web paths for Admin API.
@@ -517,25 +541,9 @@ export async function executeEdsPipeline(
         // target prefix (`blocks/...` → here; everything else → canonical).
         // Non-fatal per ADR-006 D1: results go to `patchReport`; the caller
         // surfaces unapplied patches via the one-toast helper.
-        if (codePatches && codePatches.length > 0 && codePatchSource) {
-            try {
-                const blockResults = await applyBlockCodePatches(
-                    githubFileOps,
-                    repoOwner,
-                    repoName,
-                    codePatches,
-                    codePatchSource,
-                    logger,
-                );
-                for (const r of blockResults) addCodeResult(patchReport, r);
-            } catch (codePatchError) {
-                // `applyBlockCodePatches` is internally non-fatal except for
-                // `critical: true` patches, where the engine throws
-                // `CodePatchCriticalError`. Re-throw so callers see the failed
-                // result on `error.result` rather than a partially-applied state.
-                throw codePatchError;
-            }
-        }
+        await pipelineApplyBlockCodePatches(
+            githubFileOps, repoOwner, repoName, codePatches, codePatchSource, patchReport, logger,
+        );
 
         // Step 3: EDS Settings
         onProgress?.({

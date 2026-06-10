@@ -27,7 +27,6 @@ import {
     formatUnappliedToast,
     logUnapplied,
     reportUnapplied,
-    type PatchReport,
 } from '@/features/eds/services/patchReportHelper';
 import type { Logger } from '@/types';
 

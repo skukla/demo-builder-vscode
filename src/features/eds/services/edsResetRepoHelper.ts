@@ -10,8 +10,8 @@
  */
 
 import { installBlockCollections } from './blockCollectionHelpers';
-import type { CodePatchResult } from './codePatchRegistry';
 import { applyCanonicalCodePatches } from './codePatchPipelineHelpers';
+import type { CodePatchResult } from './codePatchRegistry';
 import { generateConfigJson, extractConfigParams } from './configGenerator';
 import { assertValidGitHubSlug, type EdsResetParams } from './edsResetParams';
 import { generateFstabContent } from './fstabGenerator';
