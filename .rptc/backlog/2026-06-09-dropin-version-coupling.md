@@ -9,6 +9,8 @@ related: 2026-06-09-evaluate-thin-layer-storefront-model
 
 # Drop-in version coupling — citisignal drifted, buildright unexpectedly empty
 
+> **Update 2026-06-10**: the thin-layer audit (`.rptc/research/thin-layer-storefront-evaluation/findings.md`) found citisignal's `package.json`/`package-lock.json` are **verbatim copies of an older canonical version** (blob-identical), not deliberate pinning — the drift in Finding 1 is stale catch-up, not customization. ADR-006 retires the forks; pointing at canonical HEAD resolves Finding 1 entirely. Finding 2 (buildright's missing `@dropins/*` pins) folds into `.rptc/backlog/2026-06-10-buildright-eds-disposition.md`.
+
 ## Provenance
 
 Surfaced 2026-06-09 during the small-items sweep after the My Account left-nav fix shipped. Filed alongside the storefront-template-sync and thin-layer-evaluation backlog items as part of the broader fork-drift audit.

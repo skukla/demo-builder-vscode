@@ -1,13 +1,16 @@
 ---
 id: 2026-06-09-evaluate-thin-layer-storefront-model
 title: Evaluate dropping storefront forks in favor of thin-layer customization via Demo Builder
-status: backlog
+status: shipped
 priority: high
 created: 2026-06-09
+resolved: 2026-06-10
 gates: 2026-06-09-storefront-template-sync
 ---
 
 # Evaluate dropping storefront forks in favor of thin-layer customization
+
+> **RESOLVED 2026-06-10 — drop the forks, add a code-patches mechanism** (the 60–85% band of the decision matrix below). Audit findings: `.rptc/research/thin-layer-storefront-evaluation/findings.md`. Decision record: `docs/architecture/adr/006-thin-layer-storefront-customization.md`. The gated sync project is dropped accordingly. Scope note: the audit covered the two citisignal forks only; `buildright-eds` was excluded per owner direction (it isn't a git fork of canonical) and its disposition is tracked in `.rptc/backlog/2026-06-10-buildright-eds-disposition.md`.
 
 ## Provenance
 

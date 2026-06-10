@@ -1,15 +1,18 @@
 ---
 id: 2026-06-09-storefront-template-sync
 title: Sync storefront templates with canonical Boilerplate Commerce upstream
-status: backlog
+status: dropped
 created: 2026-06-09
+resolved: 2026-06-10
 priority: medium
 gated-by: 2026-06-09-evaluate-thin-layer-storefront-model
 ---
 
 # Sync storefront templates with canonical Boilerplate Commerce upstream
 
-> **GATED.** Do not start this work until `2026-06-09-evaluate-thin-layer-storefront-model.md` has been completed. If that research concludes the forks should be retired in favor of a thin-layer Demo Builder customization model, this sync project becomes irrelevant — we'd be syncing repos we're about to drop. Only proceed with the sync work below if the research validates that fork maintenance is the right ongoing path.
+> **DROPPED 2026-06-10.** The gating research concluded the citisignal forks should be retired in favor of thin-layer customization (audit: `.rptc/research/thin-layer-storefront-evaluation/findings.md`; decision: ADR-006). Phases 1–2 (cherry-pick syncs of the two citisignal repos) are therefore moot — we'd be syncing repos we're retiring. Phase 3 (buildright fresh-fork) was outside the audit's scope; buildright's disposition is tracked separately in `.rptc/backlog/2026-06-10-buildright-eds-disposition.md`. The drift inventory and per-repo strategy analysis below are preserved for reference.
+>
+> Original gate note: do not start this work until `2026-06-09-evaluate-thin-layer-storefront-model.md` has been completed. If that research concludes the forks should be retired in favor of a thin-layer Demo Builder customization model, this sync project becomes irrelevant — we'd be syncing repos we're about to drop.
 
 ## Provenance
 
