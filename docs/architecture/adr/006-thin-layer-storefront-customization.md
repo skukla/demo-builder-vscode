@@ -3,7 +3,7 @@
 **Status**: Accepted
 **Date**: 2026-06-10
 **Decision Maker**: Project Owner (confirmed 2026-06-10 on the audit findings)
-**Implementer**: Not started — implementation is a separate workstream (see "What This ADR Does Not Decide")
+**Implementer**: In progress — see [Implementation Status](#implementation-status) below for which steps are live on develop vs. gated on external work.
 
 ---
 
@@ -181,6 +181,27 @@ Our fork (`skukla/citisignal-eds-boilerplate`) is archived as a reference once D
 
 - **CSS theming stays expressed as modifications.** EDS loads block CSS from fixed per-block paths, so brand theming on canonical blocks ships as append-dominant patches rather than overlay files. Acceptable; revisit only if patch churn on CSS proves high.
 - **The smart-404 vendoring (ADR-005) is unchanged** — it becomes one resident of a generalized layer rather than a special case.
+
+---
+
+## Implementation Status
+
+Tracked in `.rptc/plans/thin-layer-storefront-adr-006/`. As of 2026-06-10:
+
+| Step | Status | Notes |
+|---|---|---|
+| 1. Code-patch engine v2 (TDD) | **Landed** | `codePatchRegistry.ts`, `externalPatchFetcher.ts`; shared per-source caching with `contentPatchRegistry` |
+| 2. Pipeline integration + report helper + critical-abort | **Landed** | `codePatchPipelineHelpers.ts` (canonical + block phases), `patchReportHelper.ts` (unified content+code toast); CREATE + RESET paths both surface unapplied patches via `reportUnapplied` |
+| 3. LKG pointer (record at create + LKG-aware update check) | **Landed** | `lkgReader.ts`, `EdsStorefrontMetadata.lkgSource`, `TemplateUpdateChecker.checkThinLayerUpdates` |
+| 4. Clone canonical at LKG + sync-strategy redirect | **Landed (partial)** | RESET pins to LKG via `buildArchiveUrl` SHA-vs-branch routing; Step 4b (create-time pinning + templateSyncService merge→reset gating) deferred — practical effect lands once Step 5 wires real `codePatchSource` values |
+| 5a. Wizard / types / handler plumbing | **Landed** | `Storefront.codePatches` + `codePatchSource`, `EDSConfig`, JSON schema, wizard helpers, `extractResetParams` carries all patch fields end-to-end |
+| 5b. JSON flip in `demo-packages.json` / `block-libraries.json` | **Gated** | Blocked on external work in `skukla/eds-demo-patches` (Steps 6+7). The flip is the cutover trigger; landing it before the ledger + gate exist would ship broken creates. |
+| 6. External `eds-demo-patches` patches repo content | **Gated** | External work — out of this repo's scope |
+| 7. Daily LKG drift-gate (GitHub Actions cron) | **Gated** | External work — out of this repo's scope |
+| 8. Upstream PRs to canonical for retired fork-only fixes | **Gated** | External work — out of this repo's scope |
+| 9. Migration cutover (sequencing gate + cleanup) | **Pending** | Awaits Steps 5b + 6 + 7 |
+
+The machinery for Steps 1–5a is wired on develop but **dormant** — no demo package currently sets `codePatches`/`codePatchSource`, so the new code paths short-circuit until the JSON flip activates them. The path through the codebase has been audited end-to-end (verify-loop, `9b78c9dc` → `[this commit]`) to ensure that when Step 5b lands, the wiring works without further code changes.
 
 ---
 

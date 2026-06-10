@@ -13,6 +13,7 @@
  * @module features/eds/handlers/storefrontSetupPhases
  */
 
+import * as vscode from 'vscode';
 import { ConfigurationService } from '../services/configurationService';
 import { createDaLiveServiceTokenProvider, DaLiveContentOperations } from '../services/daLiveContentOperations';
 import { executeEdsPipeline } from '../services/edsPipeline';
@@ -21,6 +22,7 @@ import { GitHubFileOperations } from '../services/githubFileOperations';
 import { GitHubRepoOperations } from '../services/githubRepoOperations';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { HelixService } from '../services/helixService';
+import { reportUnapplied } from '../services/patchReportHelper';
 import { DaLiveAuthError } from '../services/types';
 import { configureDaLivePermissions, ensureDaLiveAuth, getDaLiveAuthService } from './edsHelpers';
 import { resolveSiteCodeSource, type SiteCodeSource } from './siteCodeSource';
@@ -245,6 +247,13 @@ async function runEdsPipelineWithRecovery(
                 onProgress,
             );
             if (!result.success) throw new Error(result.error || 'Content pipeline failed');
+            // Surface unapplied patches via the unified toast (ADR-006 D1).
+            // The pipeline always returns a report; reportUnapplied is a no-op
+            // when nothing is unapplied. Without this, content + code patches
+            // run silently during CREATE and the user-visible signal is lost.
+            if (result.patchReport) {
+                reportUnapplied(result.patchReport, logger, vscode.window.showWarningMessage);
+            }
             return { libraryPaths: result.libraryPaths };
         },
         MAX_REAUTH_ATTEMPTS,
@@ -303,7 +312,7 @@ async function executeSatelliteSetup(
     await context.sendMessage('storefront-setup-progress', {
         phase: 'content', message: 'Populating satellite content...', progress: 70,
     });
-    await withDaLiveAuthRetry(
+    const satelliteResult = await withDaLiveAuthRetry(
         context,
         () => executeEdsPipeline(
             {
@@ -322,6 +331,12 @@ async function executeSatelliteSetup(
         ),
         MAX_REAUTH_ATTEMPTS,
     );
+    // Satellite path doesn't currently configure content/code patches, but the
+    // pipeline still returns a patchReport — surface anything that does land
+    // there (e.g., upstream content patches threaded in by a future change).
+    if (satelliteResult?.patchReport) {
+        reportUnapplied(satelliteResult.patchReport, logger, vscode.window.showWarningMessage);
+    }
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'complete', message: 'Satellite site registered', progress: 100,

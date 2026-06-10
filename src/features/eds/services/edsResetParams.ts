@@ -55,6 +55,8 @@ export interface EdsResetParams {
     redeployMesh?: boolean;
     /** Content patches to apply during content copy */
     contentPatches?: string[];
+    /** External source for content patches (sibling of codePatchSource). */
+    contentPatchSource?: { owner: string; repo: string; path: string };
     /** Code patch IDs to apply during reset (canonical files + installed blocks) */
     codePatches?: string[];
     /**
@@ -152,6 +154,9 @@ interface StorefrontConfig {
     templateRepo?: string;
     contentSource?: { org: string; site: string; indexPath?: string };
     contentPatches?: string[];
+    contentPatchSource?: { owner: string; repo: string; path: string };
+    codePatches?: string[];
+    codePatchSource?: CodePatchSource;
     byomOverlayUrl?: string;
 }
 
@@ -200,6 +205,9 @@ export function extractResetParams(
         templateRepo,
         contentSource: contentSourceConfig,
         contentPatches,
+        contentPatchSource,
+        codePatches,
+        codePatchSource,
         byomOverlayUrl,
     } = resolveStorefrontConfig(project, packages);
 
@@ -265,6 +273,9 @@ export function extractResetParams(
             ...(byomOverlayUrl && { byomOverlayUrl }),
             project,
             contentPatches,
+            ...(contentPatchSource && { contentPatchSource }),
+            codePatches,
+            ...(codePatchSource && { codePatchSource }),
         },
     };
 }

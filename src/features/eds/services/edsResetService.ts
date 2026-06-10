@@ -212,7 +212,8 @@ async function runContentPipeline(
 ): Promise<number> {
     const {
         repoOwner, repoName, daLiveOrg, daLiveSite, templateOwner, templateRepo,
-        contentSource: contentSourceConfig, includeBlockLibrary = false, contentPatches,
+        contentSource: contentSourceConfig, includeBlockLibrary = false,
+        contentPatches, contentPatchSource,
         codePatches, codePatchSource,
         byomOverlayUrl, project,
     } = params;
@@ -236,7 +237,7 @@ async function runContentPipeline(
                 {
                     repoOwner, repoName, daLiveOrg, daLiveSite, templateOwner, templateRepo,
                     clearExistingContent: true, skipContent: !contentSourceConfig,
-                    contentSource: contentSourceConfig, contentPatches, includeBlockLibrary,
+                    contentSource: contentSourceConfig, contentPatches, contentPatchSource, includeBlockLibrary,
                     codePatches, codePatchSource, patchReport,
                     blockCollectionIds: repoResetResult.blockCollectionIds,
                     libraryContentSources: repoResetResult.libraryContentSources,

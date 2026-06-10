@@ -22,6 +22,14 @@ import { readLkgSha } from '@/features/eds/services/lkgReader';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 
+/** Runtime shape guard for the LkgSource shape stored on EdsStorefrontMetadata. */
+function isLkgSource(value: unknown): value is { owner: string; repo: string } {
+    return typeof value === 'object'
+        && value !== null
+        && typeof (value as { owner: unknown }).owner === 'string'
+        && typeof (value as { repo: unknown }).repo === 'string';
+}
+
 /**
  * Result of checking for template updates
  */
@@ -109,7 +117,13 @@ export class TemplateUpdateChecker {
         const templateOwner = metadata.templateOwner as string | undefined;
         const templateRepo = metadata.templateRepo as string | undefined;
         const lastSyncedCommit = metadata.lastSyncedCommit as string | undefined;
-        const lkgSource = metadata.lkgSource as { owner: string; repo: string } | undefined;
+        // Shape-validate lkgSource at the read boundary — a future migration
+        // could write a different shape, and an unchecked cast would let the
+        // checker construct an undefined-segment URL inside readLkgSha. The
+        // strings are equally cast-only but flat enough that the same risk
+        // doesn't really apply (a missing string fails the validation block
+        // below; a malformed nested object would silently progress).
+        const lkgSource = isLkgSource(metadata.lkgSource) ? metadata.lkgSource : undefined;
 
         if (!templateOwner || !templateRepo) {
             this.logger.debug(`[TemplateUpdates] Missing template info for ${project.name}`);
