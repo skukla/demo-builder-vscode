@@ -559,3 +559,186 @@ Greps confirming no `content/query.yaml` write in our code:
 
 External docs:
 - `https://www.aem.live/developer/byom` — BYOM overlay spec; quotes "If the resource is not found in the overlay content source, the admin service fetches the path from the primary content source as a fallback" and `"suffix": ".html"` semantics for the primary source.
+
+---
+
+## Smart-404 canonical anchoring — 2026-06-10
+
+### Question
+What does the canonical `adobe-rnd/aem-commerce-prerender` do about user visits to SKUs the scheduled poller hasn't yet published?
+
+Specifically: if a SKU is added to Commerce, then visited before the next 5-minute poller cycle runs, what does the canonical do to recover?
+
+### Methodology
+
+Cloned both repos fresh for this investigation:
+- `git clone --depth 1 https://github.com/adobe-rnd/aem-commerce-prerender.git → /tmp/canonical-check/aem-commerce-prerender`
+- `git clone --depth 1 https://github.com/hlxsites/aem-boilerplate-commerce.git → /tmp/canonical-check/aem-boilerplate-commerce`
+
+Read full source of every action in `actions/`, the setup wizard in `bin/setup/`, all docs in `docs/`, and the boilerplate's `head.html`, `404.html`, `scripts/delayed.js`. Enumerated all GitHub issues on the prerender repo. Discussions are disabled on the repo (verified via API: `gh api repos/adobe-rnd/aem-commerce-prerender/discussions` → 410).
+
+### What I found
+
+#### Canonical poller behavior
+**File**: `actions/check-product-changes/index.js` (full file read; 99 lines).
+
+- Single action, single concern: "scan catalog for diffs and publish what changed."
+- Triggered by Adobe I/O Runtime scheduler trigger (`/whisk.system/alarms/interval`), 5-minute interval per the commented-out triggers block in `app.config.yaml` lines 53–82.
+- Notably the trigger is **commented out by default** in the template; customer uncomments after testing manually (README step 11, lines 104–129).
+- Uses `web: "no"` annotation (`app.config.yaml:23`) — **not externally invokable as an HTTP endpoint**.
+- Internally calls `poll(cfg, ...)` from `actions/check-product-changes/poller.js`. The action does NOT accept a SKU parameter; it only does a full catalog scan with mutex `running='true'` via state lib.
+- **There is no code path for "publish this specific SKU now."** The action is exclusively a scheduled batch scan.
+
+#### Other actions (full enumeration from `app.config.yaml`)
+All 5 actions confirmed by reading both `app.config.yaml` lines 11–52 and every action's `index.js`:
+
+| Action | Web? | Purpose | Accepts on-demand SKU? |
+|---|---|---|---|
+| `pdp-renderer` | yes | Returns rendered HTML for a given path. **This is what the overlay points at.** Receives `__ow_path` like `/products/{urlKey}/{sku}`, calls Catalog Service, returns HTML. | Yes — but it's only called by Helix overlay infrastructure during preview, not by users. |
+| `check-product-changes` | **no** | Scheduled batch poller. Not externally callable. | No — full-catalog scan only. |
+| `fetch-all-products` | yes | Scrapes catalog into Files storage as product list manifest. | No — full-catalog scrape only. |
+| `get-overlay-url` | (no `web` set → defaults web=no per OpenWhisk) | Returns the App Builder Files base URL for overlay config. Setup-time only. | No. |
+| `mark-up-clean-up` | (no `web` set) | Removes orphaned markup files for SKUs no longer in catalog. | No. |
+
+**There is no action that accepts "publish this SKU now" requests.** The closest candidate (`pdp-renderer`) is the actual rendering endpoint Helix calls during preview, not an on-demand-publish trigger.
+
+#### How the canonical actually surfaces a new product to live tier
+Per `README.md:79–90` and `docs/RUNBOOK.md:212–234`:
+
+1. Poller runs (scheduled, default 5 min).
+2. Poller calls `pdp-renderer` to generate HTML for changed SKUs.
+3. Poller writes HTML to App Builder Files storage at the overlay URL.
+4. Poller calls Helix Admin API preview/publish for each changed path.
+5. Helix preview fetches the overlay URL (rendered HTML in Files storage).
+6. Once published to live, subsequent visits hit content-bus and return 200.
+
+**The entire on-demand recovery path is through the poller.** There is no client-triggered shortcut.
+
+#### Manual recovery tools
+Confirmed via `grep -rn "refresh-pdps" /tmp/canonical-check/aem-commerce-prerender/`:
+- `docs/POST-SETUP.md:73` — references `refresh-pdps.js` ("cleans up the internal list of tracked products and forces restart of the product change detector: this way all the products in the catalog will be republished")
+- `tools/README.md:5` — references the same
+
+**Note**: the actual `refresh-pdps.js` file is NOT in the repo. Only `check-products-count.js` and `get-stats.js` are present in `tools/` (verified by `ls /tmp/canonical-check/aem-commerce-prerender/tools/`). The script is documented but apparently lives elsewhere or has been removed. Either way it's a CLI tool requiring `AIO_RUNTIME_*` env vars — not a runtime/user-facing recovery mechanism.
+
+Also documented in `docs/RUNBOOK.md:6–12`: a UI button "Force re-publishing all PDPs" at https://prerender.aem-storefront.com/#/markup-storage. Process: "Click Reset Products List → Click Trigger Product Scraper → Wait for 5 minutes." This is an operator UI, not user-facing recovery.
+
+#### Documented guidance on the gap
+**Most damning quote** from `docs/RUNBOOK.md:16`:
+> "If a product page returns a 404, you can first check the list in the (Management Tool)[https://prerender.aem-storefront.com/#products]; if your search returns no results, it is very likely that the product was not published."
+
+That's the entire user-facing guidance for 404s on PDPs: *operator investigates via management UI*. No automatic recovery, no client-side trigger, no on-demand publish endpoint mentioned. The implicit expectation: the next poller cycle will publish it.
+
+`docs/USE-CASES.md:17` lists "Supports only soft 404s instead of real HTTP 404 responses" as a *disadvantage* of folder mapping that prerender solves — but this is about the static-render approach giving hard 404s when products genuinely don't exist, NOT about between-cycle catalog churn.
+
+`docs/POST-SETUP.md` — no guidance on "new SKU added between cycles," "force publish single SKU," "404 recovery." The only operator action it documents is `refresh-pdps.js` (CLI, full re-poll, not single-SKU).
+
+#### Boilerplate-side client recovery
+Grep evidence (negative result):
+```bash
+grep -rln "head.html\|delayed.js\|404.html\|scripts.js" /tmp/canonical-check/aem-commerce-prerender/
+# → 0 matches. The canonical never touches the storefront frontend.
+
+grep -rn "prepublish\|admin\.hlx\|aem-storefront-prerender\|render-pdp\|on.demand" \
+  /tmp/canonical-check/aem-boilerplate-commerce/scripts/scripts.js \
+  /tmp/canonical-check/aem-boilerplate-commerce/scripts/delayed.js \
+  /tmp/canonical-check/aem-boilerplate-commerce/scripts/aem.js \
+  /tmp/canonical-check/aem-boilerplate-commerce/head.html \
+  /tmp/canonical-check/aem-boilerplate-commerce/404.html
+# → 0 matches.
+```
+
+- `aem-boilerplate-commerce/404.html` (full read): pure static 404 page. Contains analytics RUM tracking (`sampleRUM('404', ...)`), a Go-Back button, "Go home" link. **Zero on-demand publish triggering.**
+- `aem-boilerplate-commerce/head.html` (full read): import map + module preloads. **Zero recovery scripts.**
+- `aem-boilerplate-commerce/scripts/delayed.js` (full read, 66 lines): purely Commerce events SDK / Adobe Experience Platform analytics initialization. **Zero recovery scripts.**
+
+**The boilerplate has no client-side product-publish-trigger anywhere.** Our smart-404 vendored snippet has no equivalent in the canonical stack.
+
+#### Community discussion of this gap
+GitHub Issues searched on `adobe-rnd/aem-commerce-prerender` (open + closed, full repo issue list dumped via `gh issue list --state all --limit 100`):
+
+**Issue #262 — "feature: event-driven updates"** (OPEN, author: sirugh, who is an Adobe collaborator per `association: collaborator`):
+> "Today, the application is written to query for products and product changes **on an interval**. This can lead to excessive querying against the backend. Instead we should rewrite the application to use event-driven approach. This subscribes to events that are published from the commerce environment and then generates markup based on those change events."
+>
+> Comment from same author: "one consideration of event driven updates is back pressure due to incoming events being throttled by AEM limitations (600/minute on BYOM sources). If the system receives 100,000 events, we still cannot process them all that quickly. Always, we are limited by EDS 600/minute."
+
+This is **explicit Adobe-collaborator confirmation that the canonical is polling-only today, and event-driven recovery is a not-yet-implemented future feature.**
+
+**Issue #220 — "Missing product template page leads to 404"** — unrelated; about misconfigured `PRODUCTS_TEMPLATE` URL serving 404 content as a template, not about catalog-churn 404s.
+
+**Issue #273 — "published-products-index is not viable for catalogs >50k SKUs"** — about index scaling, not on-demand publish.
+
+**Issue #197 — "Robust tracing and monitoring for failures"** — about observability, not recovery.
+
+Searches for "between cycles," "on-demand," "new sku" returned 0 results. No community member has raised the gap our smart-404 closes — likely because the use case ("user visits a brand-new SKU within minutes of catalog change") is not the primary canonical workload (production retail catalogs change slowly relative to traffic).
+
+### Answer
+
+**The canonical has manual CLI/UI tools but no runtime equivalent of smart-404. Our smart-404 is novel and solves the same problem.**
+
+Specifically:
+- The canonical accepts 5-minute-cycle 404s by design for new SKUs.
+- Adobe itself has filed issue #262 requesting an event-driven alternative; it's open and unaddressed.
+- The only "recovery" tooling is operator-facing (CLI + management UI), requiring human intervention.
+- Neither the prerender repo nor the boilerplate-commerce repo contains any client-side or 404-page-triggered publish mechanism.
+
+Our smart-404 is therefore a deliberate addition that closes a documented gap in the canonical (#262). It is not a pattern Adobe has shipped — but the gap it closes is a pattern Adobe has acknowledged as a problem worth solving.
+
+### Implication for our architecture
+
+**A. Match canonical strictly** — Remove smart-404, accept catalog-churn 404s. SCs reset before demos.
+- Cost: removing ~500 lines of storefront vendoring (head.html injection, 404.html injection, delayed.js hook).
+- Risk: any SKU added during demo prep = broken PDP until next poller cycle (we'd need a poller, which we don't have — see B).
+- Honest assessment: for a *demo product* where SCs are actively staging new SKUs minutes before a demo starts, 5-30 min cold-start delays are demo-breaking. This is exactly the pain we built smart-404 to solve.
+
+**B. Implement canonical mechanism** — Add scheduled poller to `accs-discovery-service`. Runs every N minutes, scans Catalog Service for changes, calls Helix Admin API preview/publish for new SKU paths.
+- Cost: meaningful new action work — `check-product-changes` analog, state management for "what's already published," scheduler triggers, an unpublish/cleanup analog.
+- Pro: matches documented Adobe pattern.
+- Con: even with a poller, the gap remains. The poller has the same 5-min worst-case staleness for our demo workflow. Issue #262 itself acknowledges polling is the wrong long-term answer.
+- Con: significant ongoing maintenance — we now maintain a fork of canonical operational tooling.
+
+**C. Keep smart-404 as deliberate deviation** — Document in ADR-005 as our innovation. Justify based on demo workflow needs and explicit reference to canonical issue #262.
+- Cost: ADR doc update (~1 hour).
+- Pro: instant recovery for catalog churn during demos — exactly the demo workflow need.
+- Pro: anchors against the canonical's own acknowledged gap. Solicitor can defend it: "Adobe filed #262 asking for this; we shipped a demo-scoped solution."
+- Con: not the documented Adobe pattern. SE field may push back on demo-only nature.
+
+**Recommendation: Path C.**
+
+Justification:
+- Empirical: the canonical equivalent does not exist (confirmed by exhaustive code+docs+issue review). Path A would silently degrade the demo experience for the exact use case demo builders care about. Path B replicates the gap.
+- Architectural: smart-404 is small (~500 lines vendored), local to storefront, and solves a real and Adobe-acknowledged problem (#262).
+- Risk: the only real cost is field-engineering pushback. The ADR makes this defensible: "matches canonical at overlay/poller layer; adds optional demo-scoped recovery shim for the documented gap in issue #262."
+- Future-proof: if Adobe ships event-driven updates per #262, we can deprecate smart-404 in favor of the canonical mechanism. Path C costs us nothing if the canonical evolves.
+
+The user was right to push back on "smart-404 is canonical." It is not. It is our deliberate addition closing a canonical gap. Path C is the honest framing.
+
+### Sources
+
+Files read (canonical prerender, `/tmp/canonical-check/aem-commerce-prerender/`):
+- `app.config.yaml` — all 5 actions, scheduler trigger structure (commented), web/no annotations
+- `actions/pdp-renderer/index.js` (86 lines, full read) — confirms it returns HTML for a path, throws 404 if product not found; called by Helix overlay infra
+- `actions/pdp-renderer/lib.js` (210 lines, full read) — `extractPathDetails` for path parsing; no on-demand publish path
+- `actions/check-product-changes/index.js` (99 lines, full read) — confirms scheduled-batch-only with mutex
+- `actions/get-overlay-url/index.js` (62 lines, full read) — confirms setup-time-only utility
+- `bin/setup/index.js:1–300` — confirms setup wizard does not touch frontend files
+- `tools/` dir listing — confirms `refresh-pdps.js` is not present in repo despite being documented
+- `docs/USE-CASES.md` (full read) — line 17 quote about soft 404s as folder-mapping disadvantage
+- `docs/POST-SETUP.md` (full read) — line 34 confirms pdp-renderer is the validation URL; lines 73–76 reference refresh-pdps.js
+- `docs/RUNBOOK.md` (full read) — line 16 quote: "If a product page returns a 404, you can first check the list in the Management Tool"; lines 6–12 force-republish workflow; lines 212–234 AEM_BACKEND_FETCH_FAILED diagnosis
+- `README.md:79–90` — overlay config shape; `:104–129` confirms triggers are commented-out template defaults
+
+Files read (boilerplate commerce, `/tmp/canonical-check/aem-boilerplate-commerce/`):
+- `404.html` (124 lines, full read) — confirms stock 404 page, no recovery hooks
+- `head.html` (60 lines, full read) — confirms no recovery hooks
+- `scripts/delayed.js` (66 lines, full read) — confirms only analytics initialization
+
+GitHub Issues queried via `gh issue list --repo adobe-rnd/aem-commerce-prerender --state all --limit 100`:
+- Issue #262 "feature: event-driven updates" (OPEN; Adobe collaborator author) — definitive confirmation polling-only is current state
+- Issue #220 "Missing product template page leads to 404 response page being used for pdp rendering" (OPEN) — unrelated to gap
+- Issues #273, #197 — adjacent but unrelated
+
+GitHub Discussions: confirmed disabled via API (HTTP 410 from `gh api repos/adobe-rnd/aem-commerce-prerender/discussions`).
+
+External:
+- BYOM docs at `https://www.aem.live/developer/byom` — overlay-only-during-preview semantics (validated previously in this research).
