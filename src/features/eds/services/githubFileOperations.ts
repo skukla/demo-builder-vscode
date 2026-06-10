@@ -28,6 +28,34 @@ const ERROR_MESSAGES = {
 } as const;
 
 /**
+ * Build the GitHub archive URL for a repo+ref. Detects whether `ref` is a
+ * branch name (e.g. `main`) or a full 40-hex commit SHA — they take
+ * different URL shapes:
+ *
+ *   branch: `archive/refs/heads/{branch}.zip`
+ *   SHA:    `archive/{sha}.zip`
+ *
+ * Used by `downloadRepoContents`. Exported so the SHA-vs-branch routing
+ * is directly unit-testable (the wider `resetRepoToTemplate` integration
+ * brings extensive Octokit + zip-buffer mocking that obscures this one
+ * load-bearing branch).
+ *
+ * ADR-006 Step 4: passing the LKG SHA here is how reset pins thin-layer
+ * storefronts to a verified canonical state instead of canonical HEAD.
+ */
+export function buildArchiveUrl(
+    owner: string,
+    repo: string,
+    ref: string,
+): { url: string; isSha: boolean } {
+    const isSha = /^[0-9a-f]{40}$/i.test(ref);
+    const url = isSha
+        ? `https://github.com/${owner}/${repo}/archive/${ref}.zip`
+        : `https://github.com/${owner}/${repo}/archive/refs/heads/${ref}.zip`;
+    return { url, isSha };
+}
+
+/**
  * GitHub File Operations Service
  */
 export class GitHubFileOperations {
@@ -433,9 +461,8 @@ export class GitHubFileOperations {
             throw new Error(ERROR_MESSAGES.NOT_AUTHENTICATED);
         }
 
-        // Use direct GitHub archive URL (doesn't count against API rate limits)
-        const zipUrl = `https://github.com/${owner}/${repo}/archive/refs/heads/${ref}.zip`;
-        this.logger.debug(`[GitHub] Downloading repository archive from ${owner}/${repo}@${ref}`);
+        const { url: zipUrl, isSha } = buildArchiveUrl(owner, repo, ref);
+        this.logger.debug(`[GitHub] Downloading repository archive from ${owner}/${repo}@${ref} (${isSha ? 'SHA' : 'branch'})`);
 
         const response = await fetch(zipUrl, {
             headers: {

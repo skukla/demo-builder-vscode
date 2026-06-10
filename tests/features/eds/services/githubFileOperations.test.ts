@@ -30,6 +30,61 @@ jest.mock('@/core/logging', () => ({
     })),
 }));
 
+describe('buildArchiveUrl', () => {
+    // Test the SHA-vs-branch URL routing directly. The wider
+    // `downloadRepoContents`/`resetRepoToTemplate` integration brings extensive
+    // Octokit + zip-buffer mocking that obscures this one load-bearing branch.
+    // ADR-006 Step 4: thin-layer reset passes the LKG SHA, forked reset passes `main`.
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let buildArchiveUrl: any;
+
+    beforeEach(async () => {
+        jest.resetModules();
+        const module = await import('@/features/eds/services/githubFileOperations');
+        buildArchiveUrl = module.buildArchiveUrl;
+    });
+
+    it('uses the branch URL shape for "main"', () => {
+        const { url, isSha } = buildArchiveUrl('skukla', 'citisignal-b2b', 'main');
+        expect(isSha).toBe(false);
+        expect(url).toBe('https://github.com/skukla/citisignal-b2b/archive/refs/heads/main.zip');
+    });
+
+    it('uses the branch URL shape for any non-SHA ref (custom branches)', () => {
+        const { url, isSha } = buildArchiveUrl('skukla', 'citisignal-b2b', 'feature/x');
+        expect(isSha).toBe(false);
+        expect(url).toBe('https://github.com/skukla/citisignal-b2b/archive/refs/heads/feature/x.zip');
+    });
+
+    it('uses the SHA URL shape for a full 40-hex commit SHA (lowercase)', () => {
+        const sha = 'a1b2c3d4e5f6789012345678901234567890abcd';
+        const { url, isSha } = buildArchiveUrl('skukla', 'citisignal-b2b', sha);
+        expect(isSha).toBe(true);
+        expect(url).toBe(`https://github.com/skukla/citisignal-b2b/archive/${sha}.zip`);
+    });
+
+    it('uses the SHA URL shape for a full 40-hex commit SHA (mixed case)', () => {
+        const sha = 'A1B2C3D4E5F6789012345678901234567890ABCD';
+        const { url, isSha } = buildArchiveUrl('skukla', 'citisignal-b2b', sha);
+        expect(isSha).toBe(true);
+        expect(url).toBe(`https://github.com/skukla/citisignal-b2b/archive/${sha}.zip`);
+    });
+
+    it('treats a short SHA (7 chars) as a branch ref, not a SHA', () => {
+        // GitHub's archive URL endpoint only resolves full SHAs; short SHAs
+        // would 404 there but work as a ref/branch in some contexts. Defensive
+        // routing: if it's not exactly 40 hex chars, treat as branch.
+        const { isSha } = buildArchiveUrl('skukla', 'citisignal-b2b', 'a1b2c3d');
+        expect(isSha).toBe(false);
+    });
+
+    it('treats a 40-char non-hex string as a branch ref (defensive)', () => {
+        const { isSha } = buildArchiveUrl('skukla', 'citisignal-b2b', 'g'.repeat(40));
+        expect(isSha).toBe(false);
+    });
+});
+
 describe('GitHub File Operations', () => {
     let GitHubFileOperations: any;
     let mockTokenService: any;

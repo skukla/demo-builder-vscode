@@ -12,6 +12,7 @@
 import { installBlockCollections } from './blockCollectionHelpers';
 import { applyCanonicalCodePatches } from './codePatchPipelineHelpers';
 import type { CodePatchResult } from './codePatchRegistry';
+import { readLkgSha } from './lkgReader';
 import { generateConfigJson, extractConfigParams } from './configGenerator';
 import { assertValidGitHubSlug, type EdsResetParams } from './edsResetParams';
 import { generateFstabContent } from './fstabGenerator';
@@ -250,6 +251,25 @@ export async function resetRepoToTemplate(
         await fetchPlaceholderFiles(fileOverrides, templateOwner, templateRepo, context.logger);
     }
 
+    // Determine the template ref to reset against. Thin-layer storefronts
+    // (codePatchSource configured) pin to the verified canonical LKG SHA;
+    // legacy / forked packages continue to use `main` HEAD. LKG fetch
+    // failure falls back to `main` with a warn (ADR-006 D1 proceed-and-warn)
+    // so a transient patches-repo outage doesn't block reset entirely.
+    let templateRef = 'main';
+    if (codePatchSource) {
+        const lkg = await readLkgSha(
+            { owner: codePatchSource.owner, repo: codePatchSource.repo },
+            context.logger,
+        );
+        if (lkg) {
+            templateRef = lkg;
+            context.logger.info(`[EdsReset] Pinning reset to LKG ${lkg.substring(0, 7)} (from ${codePatchSource.owner}/${codePatchSource.repo})`);
+        } else {
+            context.logger.warn(`[EdsReset] LKG unreachable for ${codePatchSource.owner}/${codePatchSource.repo} — falling back to template main HEAD`);
+        }
+    }
+
     // Canonical-phase code patches: apply BEFORE the bulk reset so patched
     // canonical files (`head.html`, `scripts/*.js`, etc.) land in the same
     // atomic Git Tree commit as `fileOverrides`. Block-targeting patches
@@ -264,7 +284,7 @@ export async function resetRepoToTemplate(
     }
 
     const resetResult = await githubFileOps.resetRepoToTemplate(
-        templateOwner, templateRepo, repoOwner, repoName, fileOverrides, 'main',
+        templateOwner, templateRepo, repoOwner, repoName, fileOverrides, templateRef,
     );
 
     context.logger.info(`[EdsReset] Repository reset complete: ${resetResult.fileCount} files, commit ${resetResult.commitSha.substring(0, 7)}`);
