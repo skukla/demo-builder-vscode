@@ -448,9 +448,14 @@ export class DaLiveContentOperations {
                 });
 
                 if (!sourceResponse.ok) {
-                    // 404 is expected for blocks without doc pages on the CDN — log at debug
-                    const logLevel = sourceResponse.status === 404 ? 'debug' : 'warn';
-                    this.logger[logLevel](`[DA.live] Failed to fetch source ${sourcePath}: ${sourceResponse.status}`);
+                    if (sourceResponse.status === 404) {
+                        // Not a failure: the source simply has no page here (e.g. a
+                        // block without a published doc page). The caller generates a
+                        // doc/stub page instead, so this is an expected branch.
+                        this.logger.debug(`[DA.live] No source page at ${sourcePath} — will generate instead`);
+                    } else {
+                        this.logger.warn(`[DA.live] Failed to fetch source ${sourcePath}: ${sourceResponse.status}`);
+                    }
                     return false;
                 }
 

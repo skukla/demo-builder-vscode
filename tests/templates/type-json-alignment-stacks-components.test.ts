@@ -16,6 +16,7 @@ import * as path from 'path';
 const STACK_FIELDS = new Set([
     'id', 'name', 'description', 'icon', 'frontend', 'backend',
     'dependencies', 'optionalDependencies', 'optionalAddons', 'features', 'requiresGitHub', 'requiresDaLive',
+    'supportedFlows',
 ]);
 
 const COMPONENTS_ROOT_FIELDS = new Set([

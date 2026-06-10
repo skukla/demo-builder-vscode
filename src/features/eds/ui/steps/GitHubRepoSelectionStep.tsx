@@ -17,6 +17,7 @@
 
 import {
     ActionButton,
+    Badge,
     Button,
     Checkbox,
     DialogTrigger,
@@ -766,7 +767,7 @@ export function GitHubRepoSelectionStep({
                         renderDescription={(item) => (
                             <Text slot="description">
                                 {item.isPrivate && (
-                                    <span className="repo-private-badge">Private</span>
+                                    <Badge variant="neutral" marginEnd="size-75">Private</Badge>
                                 )}
                                 {item.description || <span className="repo-no-description">No description</span>}
                             </Text>

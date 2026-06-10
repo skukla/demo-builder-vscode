@@ -20,13 +20,16 @@
       "id": "prerequisites",
       "name": "Prerequisites",
       "description": "Verify that required tools are installed on your system.",
-      "enabled": true
+      "enabled": true,
+      "flow": "commerce",
+      "_comment": "Commerce flow only — a content-SC fork authors content and does not provision the local dev stack."
     },
     {
       "id": "adobe-auth",
       "name": "Adobe Authentication",
       "description": "Authenticate with Adobe to access Adobe services and store discovery.",
       "enabled": true,
+      "flow": "commerce",
       "condition": {
         "requiresAdobeAuth": true
       }
@@ -36,6 +39,7 @@
       "name": "I/O Project Selection",
       "description": "Select the Adobe I/O project for your demo.",
       "enabled": true,
+      "flow": "commerce",
       "condition": {
         "requiresAdobeIO": true
       }
@@ -45,6 +49,7 @@
       "name": "Workspace Selection",
       "description": "Select the workspace within your project.",
       "enabled": true,
+      "flow": "commerce",
       "condition": {
         "requiresAdobeIO": true
       }

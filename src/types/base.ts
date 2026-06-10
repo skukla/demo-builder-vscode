@@ -66,6 +66,13 @@ export interface Project {
     selectedPackage?: string;
     /** Stack ID selected during project creation (e.g., 'headless-paas') */
     selectedStack?: string;
+    /**
+     * Storefront archetype flow. Absent ⇒ 'commerce' (legacy projects).
+     * 'content' = a content-SC fork that inherits a shared master/upstream.
+     */
+    flow?: 'commerce' | 'content';
+    /** Neutral upstream/master this fork was created from and syncs against. */
+    upstream?: { owner: string; repo: string };
     /** Optional addons selected during project creation (e.g., ['adobe-commerce-aco']) */
     selectedAddons?: string[];
     /** Block library IDs selected during project creation (e.g., ['isle5', 'demo-team-blocks']) */

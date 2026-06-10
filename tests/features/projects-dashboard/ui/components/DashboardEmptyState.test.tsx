@@ -102,6 +102,22 @@ describe('DashboardEmptyState', () => {
             const buttons = screen.getAllByRole('button');
             expect(buttons).toHaveLength(1);
         });
+
+        it('renders a Join entry and fires onJoinStorefront when provided', () => {
+            const onJoinStorefront = jest.fn();
+            renderWithProvider(
+                <DashboardEmptyState onCreate={jest.fn()} onJoinStorefront={onJoinStorefront} />,
+            );
+
+            const joinButton = screen.getByRole('button', { name: /join a shared storefront/i });
+            fireEvent.click(joinButton);
+            expect(onJoinStorefront).toHaveBeenCalledTimes(1);
+        });
+
+        it('does NOT render the Join entry when onJoinStorefront is absent', () => {
+            renderWithProvider(<DashboardEmptyState onCreate={jest.fn()} />);
+            expect(screen.queryByRole('button', { name: /join a shared storefront/i })).not.toBeInTheDocument();
+        });
     });
 
     describe('accessibility', () => {

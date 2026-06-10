@@ -40,6 +40,7 @@ describe('projectsListHandlers', () => {
             // When: Checking for creation message types
             // Then: Creation handler present
             expect(hasHandler(projectsListHandlers, 'createProject')).toBe(true);
+            expect(hasHandler(projectsListHandlers, 'joinStorefront')).toBe(true);
         });
 
         it('should include settings import/export handlers', () => {
@@ -105,9 +106,9 @@ describe('projectsListHandlers', () => {
             expect(hasHandler(projectsListHandlers, 'openAi')).toBe(true);
         });
 
-        it('should have exactly 22 handlers', () => {
+        it('should have exactly 23 handlers', () => {
             const types = getRegisteredTypes(projectsListHandlers);
-            expect(types).toHaveLength(22);
+            expect(types).toHaveLength(23);
         });
 
         it('should have handlers as functions', () => {

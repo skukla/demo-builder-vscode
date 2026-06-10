@@ -21,6 +21,7 @@ import Add from '@spectrum-icons/workflow/Add';
 import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
 import Copy from '@spectrum-icons/workflow/Copy';
 import Import from '@spectrum-icons/workflow/Import';
+import LinkOut from '@spectrum-icons/workflow/LinkOut';
 import React, { useState, useMemo, useEffect } from 'react';
 import { DashboardEmptyState } from './components/DashboardEmptyState';
 import type { ProjectActions } from './components/ProjectActionsMenu';
@@ -46,6 +47,8 @@ export interface ProjectsDashboardProps {
     onSelectProject: (project: Project, opts?: { forceNewWindow?: boolean }) => void;
     /** Callback to create a new project */
     onCreateProject: () => void;
+    /** Callback to open the "Join a shared storefront" (content-SC) entry */
+    onJoinStorefront?: () => void;
     /** Callback to copy settings from existing project */
     onCopyFromExisting?: () => void;
     /** Callback to import settings from file */
@@ -81,6 +84,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     runningProjectPath,
     onSelectProject,
     onCreateProject,
+    onJoinStorefront,
     onCopyFromExisting,
     onImportFromFile,
     actions = {},
@@ -161,6 +165,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                     >
                         <DashboardEmptyState
                             onCreate={onCreateProject}
+                            onJoinStorefront={onJoinStorefront}
                             onImportFromFile={onImportFromFile}
                         />
                     </Flex>
@@ -215,17 +220,20 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                                 onAction={(key) => {
                                     if (key === 'new') {
                                         onCreateProject();
+                                    } else if (key === 'join' && onJoinStorefront) {
+                                        onJoinStorefront();
                                     } else if (key === 'copy' && onCopyFromExisting) {
                                         onCopyFromExisting();
                                     } else if (key === 'import' && onImportFromFile) {
                                         onImportFromFile();
                                     }
                                 }}
-                                items={buildMenuItems({ onCopyFromExisting, onImportFromFile })}
+                                items={buildMenuItems({ onJoinStorefront, onCopyFromExisting, onImportFromFile })}
                             >
                                 {(item) => (
                                     <Item key={item.key} textValue={item.label}>
                                         {item.icon === 'add' && <Add size="S" />}
+                                        {item.icon === 'join' && <LinkOut size="S" />}
                                         {item.icon === 'copy' && <Copy size="S" />}
                                         {item.icon === 'import' && <Import size="S" />}
                                         <Text>{item.label}</Text>

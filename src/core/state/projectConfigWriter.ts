@@ -104,6 +104,12 @@ export class ProjectConfigWriter {
             if (project.selectedStack !== undefined) {
                 manifest.selectedStack = project.selectedStack;
             }
+            if (project.flow !== undefined) {
+                manifest.flow = project.flow;
+            }
+            if (project.upstream !== undefined) {
+                manifest.upstream = project.upstream;
+            }
             if (project.selectedAddons?.length) {
                 manifest.selectedAddons = project.selectedAddons;
             }

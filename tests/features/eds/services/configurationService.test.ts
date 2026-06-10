@@ -155,13 +155,16 @@ describe('ConfigurationService', () => {
             expect(result.error).toBe('Network timeout');
         });
 
-        it('should throw when IMS token is missing', async () => {
+        it('surfaces a missing IMS token as a 401 auth failure (so callers can re-auth + retry)', async () => {
             mockTokenProvider.getAccessToken.mockResolvedValueOnce(null);
 
             const result = await service.registerSite(params);
 
             expect(result.success).toBe(false);
             expect(result.error).toContain('DA.live authentication required');
+            // A missing/expired token is an auth failure, not a generic error: tag it 401
+            // so the registration retry wrapper re-authenticates instead of swallowing it.
+            expect(result.statusCode).toBe(401);
         });
 
         it('should include content.overlay block with suffix:".html" when contentOverlayUrl is provided', async () => {

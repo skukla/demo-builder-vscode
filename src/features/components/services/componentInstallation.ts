@@ -162,13 +162,16 @@ export class ComponentInstallation {
         const commandManager = ServiceLocator.getCommandExecutor();
         let detectedVersion: string | null = null;
 
-        // Strategy 1: Try git describe for tagged commits
+        // Strategy 1: Try git describe for tagged commits.
+        // A non-zero exit here just means "HEAD is not on an exact tag" (normal for
+        // storefront repos cloned from a template) — it's a branch, not a failure.
         const tagResult = await commandManager.execute(
             'git describe --tags --exact-match HEAD',
             {
                 cwd: componentPath,
                 enhancePath: true,
                 shell: DEFAULT_SHELL,
+                expectNonZeroExit: true,
             },
         );
 
@@ -179,8 +182,9 @@ export class ComponentInstallation {
             return detectedVersion;
         }
 
-        // No git tag found (expected for repos without tags) - try other strategies
-        this.logger.trace(`[ComponentManager] No git tag found, checking package.json`);
+        // No exact release tag on HEAD (normal for storefront repos cloned from a
+        // template) — fall through to package.json, then commit hash.
+        this.logger.debug(`[ComponentManager] No release tag on HEAD — using package.json version`);
 
         // Strategy 2: Try reading package.json version
         const packageJsonPath = path.join(componentPath, 'package.json');

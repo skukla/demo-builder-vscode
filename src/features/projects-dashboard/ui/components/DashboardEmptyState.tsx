@@ -8,11 +8,14 @@ import { Flex, Text, Button } from '@adobe/react-spectrum';
 import type { FocusableRefValue } from '@react-types/shared';
 import Add from '@spectrum-icons/workflow/Add';
 import Import from '@spectrum-icons/workflow/Import';
+import LinkOut from '@spectrum-icons/workflow/LinkOut';
 import React, { useCallback } from 'react';
 
 export interface DashboardEmptyStateProps {
     /** Callback when the create button is clicked */
     onCreate: () => void;
+    /** Callback when "Join a shared storefront" is clicked (content-SC entry) */
+    onJoinStorefront?: () => void;
     /** Callback when import from file is clicked */
     onImportFromFile?: () => void;
     /** Custom title (defaults to "No projects yet") */
@@ -28,6 +31,7 @@ export interface DashboardEmptyStateProps {
  */
 export const DashboardEmptyState: React.FC<DashboardEmptyStateProps> = ({
     onCreate,
+    onJoinStorefront,
     onImportFromFile,
     title = 'No projects yet',
     buttonText = 'New',
@@ -68,6 +72,20 @@ export const DashboardEmptyState: React.FC<DashboardEmptyStateProps> = ({
                         <Add />
                         <Text>{buttonText}</Text>
                     </Button>
+
+                    {/* Join entry for an invited content SC (paste a shared link).
+                        Short visible label ("Join Shared") keeps the row compact
+                        like New/Import; the full phrase lives in the menu + aria-label. */}
+                    {onJoinStorefront && (
+                        <Button
+                            variant="secondary"
+                            onPress={onJoinStorefront}
+                            aria-label="Join a shared storefront"
+                        >
+                            <LinkOut />
+                            <Text>Join Shared</Text>
+                        </Button>
+                    )}
 
                     {/* Import option for users with exported settings */}
                     {onImportFromFile && (
