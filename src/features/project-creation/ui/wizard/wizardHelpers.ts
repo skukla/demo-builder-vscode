@@ -634,6 +634,8 @@ function buildProjectEdsConfig(wizardState: WizardState) {
         patches: eds.patches,
         contentPatches: eds.contentPatches,
         contentPatchSource: eds.contentPatchSource,
+        codePatches: eds.codePatches,
+        codePatchSource: eds.codePatchSource,
         repoUrl: eds.repoUrl,
         preflightComplete: eds.preflightComplete,
     };

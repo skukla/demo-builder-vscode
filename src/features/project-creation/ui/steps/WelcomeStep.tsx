@@ -151,6 +151,8 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
                 patches: storefront.patches,
                 contentPatches: storefront.contentPatches,
                 contentPatchSource: storefront.contentPatchSource,
+                codePatches: storefront.codePatches,
+                codePatchSource: storefront.codePatchSource,
             } : undefined;
 
             // Only set selectedStack - stack config is the source of truth for components

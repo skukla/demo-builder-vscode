@@ -421,6 +421,19 @@ export interface EDSConfig {
         repo: string;
         path: string;
     };
+    /** Code patch IDs to apply during create/reset (ADR-006 Step 5). Sibling of
+     *  contentPatches but operates on repo files. Empty / undefined for legacy
+     *  / non-thin-layer storefronts. */
+    codePatches?: string[];
+    /** External code-patch source. When set, the storefront is "thin-layer" per
+     *  ADR-006 — lastSyncedCommit records the LKG SHA read from this repo's
+     *  `last-known-good` file, and reset pins to LKG. Canonical home:
+     *  skukla/eds-demo-patches. */
+    codePatchSource?: {
+        owner: string;
+        repo: string;
+        path: string;
+    };
 
     // Repository creation state (set by GitHubRepoSelectionStep when creating new repo)
     /** Created repository info - set when repo is created in selection step, before proceeding */

@@ -119,6 +119,15 @@ export interface Storefront {
     contentPatches?: string[];
     /** External repository for content patches (if not using bundled patches) */
     contentPatchSource?: ContentPatchSource;
+    /** Code patch IDs to apply during create/reset (canonical files + installed blocks).
+     *  Sibling of contentPatches but operates on repo files. Step 5 of ADR-006 wires
+     *  the CitiSignal storefront entries with these IDs pointing at the ledger in
+     *  the eds-demo-patches repo. Empty / undefined for non-thin-layer storefronts. */
+    codePatches?: string[];
+    /** External repository for code patches. When set, the storefront is "thin-layer"
+     *  (per ADR-006) — `lastSyncedCommit` records the LKG SHA read from this repo's
+     *  `last-known-good` file rather than canonical main HEAD, and reset pins to LKG. */
+    codePatchSource?: CodePatchSource;
     /** API Mesh requirement for this storefront (overrides package-level requiresMesh).
      *  - true: mesh auto-included, no user choice
      *  - false: no mesh, no user choice
