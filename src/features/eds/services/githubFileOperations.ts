@@ -531,7 +531,11 @@ export class GitHubFileOperations {
      * @param targetOwner - Target repo owner
      * @param targetRepo - Target repo name
      * @param fileOverrides - Map of path -> content for files to override (e.g., fstab.yaml)
-     * @param branch - Branch to reset (default: 'main')
+     * @param templateRef - Template ref to clone FROM. May be a branch name OR a
+     *   40-hex commit SHA (ADR-006 Step 4: thin-layer storefronts pin to LKG SHA).
+     *   The target repo's `main` branch is always the destination — `templateRef`
+     *   only controls which template revision is downloaded, not which target
+     *   branch is reset.
      * @returns Object with commit SHA and file counts
      */
     async resetRepoToTemplate(
@@ -540,16 +544,22 @@ export class GitHubFileOperations {
         targetOwner: string,
         targetRepo: string,
         fileOverrides: Map<string, string>,
-        branch = 'main',
+        templateRef = 'main',
     ): Promise<{ commitSha: string; fileCount: number }> {
-        this.logger.info(`[GitHub] Resetting ${targetOwner}/${targetRepo} to template ${templateOwner}/${templateRepo}`);
+        // Target branch is always `main` regardless of which template revision
+        // we're cloning from — the LKG SHA flows into `downloadRepoContents`
+        // only. Conflating these two values (the pre-Step-4 code did) makes
+        // getBranchInfo hit the GitHub branches API with a SHA, which 404s
+        // with "Branch not found".
+        const targetBranch = 'main';
+        this.logger.info(`[GitHub] Resetting ${targetOwner}/${targetRepo}@${targetBranch} to template ${templateOwner}/${templateRepo}@${templateRef}`);
 
         // Step 1: Get target branch info (need current commit as parent)
-        const targetBranchInfo = await this.getBranchInfo(targetOwner, targetRepo, branch);
+        const targetBranchInfo = await this.getBranchInfo(targetOwner, targetRepo, targetBranch);
         this.logger.info(`[GitHub] Target branch commit: ${targetBranchInfo.commitSha.substring(0, 7)}`);
 
         // Step 2: Download entire template repo as zipball (single request - avoids rate limits)
-        const templateContents = await this.downloadRepoContents(templateOwner, templateRepo, branch);
+        const templateContents = await this.downloadRepoContents(templateOwner, templateRepo, templateRef);
 
         // Step 3: Build tree entries with content
         const treeEntries: GitHubTreeInput[] = [];
@@ -604,8 +614,8 @@ export class GitHubFileOperations {
         this.logger.info(`[GitHub] Created commit: ${commitSha.substring(0, 7)}`);
 
         // Step 6: Update branch to point to new commit
-        await this.updateBranchRef(targetOwner, targetRepo, branch, commitSha);
-        this.logger.info(`[GitHub] Updated branch ${branch} to ${commitSha.substring(0, 7)}`);
+        await this.updateBranchRef(targetOwner, targetRepo, targetBranch, commitSha);
+        this.logger.info(`[GitHub] Updated branch ${targetBranch} to ${commitSha.substring(0, 7)}`);
 
         return {
             commitSha,
