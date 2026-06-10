@@ -275,13 +275,20 @@ Decisions table). Summary so the steps are unambiguous:
 
 ## Findings worth the owner's eye (no decision needed)
 
-- **F1 — v1 prior art is NOT recoverable from this repo's history.** ADR-006 / `findings.md` cite the removed
-  v1 template-patch system as recoverable at `f6a7d029^:src/features/eds/services/templatePatchRegistry.ts`
-  (and `config/patches/`). Those SHAs (`f6a7d029`, `6026b695`) **do not resolve** in this repo (verified this
-  session) — likely a squashed/rewritten history or a cite from a different working tree. **Mitigation:** the v2
-  engine is built fresh from the *living* `contentPatchRegistry.ts` + `pdp404HandlerPublisher.ts` (ADR confirms
-  the interfaces are "near-identical"); the ADR's v1 description is treated as the spec, not a code source. No
-  schedule impact, but Step 1 should not plan to `git show` the old files.
+- **F1 — v1 prior art IS recoverable (the ADR was right); a shallow clone hid it.** The session's working copy
+  was a **shallow clone** with history only back to 2026-03-02, so the v1 template-patch system (added 2026-01-20,
+  removed 2026-02-01) and its SHAs (`f6a7d029`, `6026b695`) were grafted off and didn't resolve. After
+  `git fetch --unshallow` (2011 commits, back to 2025-08-28), the cited SHAs resolve and all v1 files are present:
+  `src/features/eds/services/templatePatchRegistry.ts` (+ test), `config/template-patches.json` (+ `.schema.json`),
+  and `config/patches/{index,aem-assets-sku-sanitization,header-nav-tools-defensive,product-link-sku-encoding,
+  product-link-sku-slash-encoding,personalization-auth-guard}.ts`. **Verified v1 shape** (`f6a7d029^`):
+  `TemplatePatch { id, filePath, description, searchPattern, replacement }` + `PatchResult { patchId, filePath,
+  applied, reason }` — near-identical to `contentPatchRegistry`, exactly as the ADR claimed. **Consequence for
+  Step 1:** seed the v2 engine from the actual v1 `templatePatchRegistry.ts` (`git show f6a7d029^:…`), keeping its
+  shape but (a) renaming `filePath`→`target`, (b) **externalizing** the payloads to `eds-demo-patches` instead of
+  bundling `config/patches/*.ts` (v1's one structural flaw), and (c) reusing `contentPatchRegistry`'s
+  fetch/cache. Net: the engine is recovered + refactored, not reinvented. (Anyone re-cloning for TDD must
+  `git fetch --unshallow` first.)
 - **F2 — content patches surface failures silently today** (`contentPatchRegistry.ts:178` →
   `daLiveContentOperations.ts:391` = `logger.debug` only). The dashboard health badges
   (`useDashboardStatus.ts`) are single-status-per-surface enums, not a fit for granular per-patch warnings,

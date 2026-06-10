@@ -8,13 +8,17 @@
 
 Introduce a generic **code-patch engine** that applies named patches to files in a cloned storefront repo at
 create/reset time. The engine knows no canonical file by name — every coupling lives in externalized patch
-definitions fetched from the patches repo. This reinstates the *capability* of the v1 template-patch system
-(removed 2026-02-01), but with definitions externalized (v1's one structural flaw was bundling payloads in the
-extension).
+definitions fetched from the patches repo. This **recovers and refactors** the v1 template-patch system (added
+2026-01-20, removed 2026-02-01), externalizing the definitions (v1's one structural flaw was bundling payloads in
+the extension).
 
-> **Finding F1 (overview):** the v1 source is **not recoverable** from this repo — the cited SHAs (`f6a7d029`,
-> `6026b695`) do not resolve here. Build the engine fresh from the *living* `contentPatchRegistry.ts` +
-> `pdp404HandlerPublisher.ts`; do **not** plan to `git show` the old files. The ADR's v1 description is the spec.
+> **Finding F1 (corrected):** the v1 source **is recoverable** — it was hidden only by a shallow clone. After
+> `git fetch --unshallow`, recover it directly:
+> `git show f6a7d029^:src/features/eds/services/templatePatchRegistry.ts` (+ `config/template-patches.json`,
+> `config/patches/{id}.ts`, and `tests/features/eds/services/templatePatchRegistry.test.ts`). **Seed v2 from this
+> real code**, applying three deltas: rename `filePath`→`target`; externalize payloads to `eds-demo-patches`
+> (don't re-bundle `config/patches/*.ts`); reuse `contentPatchRegistry`'s fetch/cache. *(Re-cloning for TDD
+> requires `git fetch --unshallow` first, or the v1 history won't be present.)*
 
 ## Design anchor (reuse, do not reinvent)
 
