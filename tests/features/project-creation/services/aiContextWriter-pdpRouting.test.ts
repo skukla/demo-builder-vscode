@@ -91,11 +91,18 @@ describe('aiContextWriter — PDP Routing section', () => {
         expect(result).toContain('folder mapping');
     });
 
-    it('documents the Phase 1 limitation about generic templates', () => {
+    it('documents that SC customizations inherit on every PDP (Phase 2 LIVE)', () => {
+        // Phase 2 shipped 2026-06-09: render-pdp fetches the storefront's
+        // authored /products/default and serves it on real product URLs.
+        // The AI context language used to flag this as a "Phase 1
+        // limitation"; now it documents the resolved state. If a future
+        // contributor re-adds limitation language, this test catches it.
         const result = generateAgentsMd(makeEdsProject(), STACKS);
-        expect(result).toContain('Phase 1');
+        expect(result).toContain('Phase 2 LIVE');
         expect(result).toContain('/products/default');
-        expect(result).toContain('Phase 2');
+        expect(result).toContain('inherit');
+        // Should NOT still reference the resolved Phase 1 limitation
+        expect(result).not.toMatch(/Phase 1 limitation/);
     });
 
     it('provides a debugging checklist for 404s', () => {

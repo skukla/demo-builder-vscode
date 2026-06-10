@@ -194,14 +194,13 @@ function buildStorefront(project: Project): string {
  *   1. Per-product URLs (`/products/{urlKey}/{sku}`) route through a BYOM
  *      overlay + smart 404, NOT folder mapping (deprecated) or per-product
  *      DA pages (the manual workaround). New SKUs work on first click.
- *   2. The Phase 1 limitation: the overlay returns a generic template, so
- *      SC customizations to `/products/default` show on that path but
- *      don't yet appear on real product URLs. Phase 2 closes this gap.
+ *   2. SC customizations to `/products/default` DO appear on real product
+ *      URLs — Phase 2 of the BYOM action (shipped 2026-06-09) has the
+ *      overlay return the storefront's authored template instead of a
+ *      generic shell.
  *
  * Without this section, AI agents debugging PDP issues default to
- * suggesting folder mapping or per-product DA pages — both wrong. And
- * AI editing PDP layouts will mislead the SC about where the changes
- * appear.
+ * suggesting folder mapping or per-product DA pages — both wrong.
  */
 function buildPdpRouting(project: Project): string {
     if (!isEdsProject(project)) return '';
@@ -218,7 +217,7 @@ function buildPdpRouting(project: Project): string {
         '- New SKUs added in Commerce → work on first click; no manual step',
         '- Deleted SKUs → URL still serves cached HTML; the drop-in shows empty product details',
         '',
-        '**Phase 1 limitation (matters when customizing PDPs):** the overlay returns a generic PDP template, not the storefront\'s authored `/products/default`. SC tweaks to `/products/default` (extra blocks, custom layout) appear when visiting `/products/default` directly but **do not yet appear on real product URLs** like `/products/orchard-2/orchard2`. Phase 2 closes this gap by having the overlay render against the SC\'s authored template.',
+        '**SC customizations inherit on every PDP** (Phase 2 LIVE as of 2026-06-09): the `render-pdp` overlay fetches the storefront\'s authored `/products/default` (with header, footer, custom blocks, layout — everything the SC put there) and serves that on real product URLs like `/products/orchard-2/orchard2`. SC tweaks to `/products/default` now show up on every PDP on next visit (or reset). The generic shell remains only as a fallback when the authored template fetch fails.',
         '',
         '**When PDPs 404 in a freshly-created storefront**, check in this order:',
         '1. Is `demoBuilder.byom.enabled` on? (default true)',

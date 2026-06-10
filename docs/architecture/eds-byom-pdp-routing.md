@@ -14,7 +14,9 @@ EDS storefronts use one of three mechanisms to route per-product URLs (`/product
 2. **Per-product DA pages** — manual, one document per SKU, breaks as soon as the catalog changes.
 3. **BYOM (Bring Your Own Markup) overlay** — Adobe's documented replacement: the Configuration Service `content.overlay` field, when set, makes Helix call an external action for the path before falling back to authored content.
 
-Demo Builder targets multi-tenant demos: any SC, any catalog, install-and-go. None of the first two options fit. Phase 1 ships the third — a shared overlay action that serves a generic PDP template multi-tenant, paired with a small JS snippet vendored into the storefront's `scripts/delayed.js` that detects 404s on PDP paths and asks Helix admin to publish them on first visit.
+Demo Builder targets multi-tenant demos: any SC, any catalog, install-and-go. None of the first two options fit. Phase 1 ships the third — a shared overlay action that serves the SC's authored `/products/default` template multi-tenant, paired with a small JS snippet vendored into the storefront's `scripts/delayed.js` that detects 404s on PDP paths and asks Helix admin to publish them on first visit.
+
+**Phase 2 status: LIVE as of 2026-06-09.** The `render-pdp` overlay now fetches the storefront's authored `/products/default` (per-org/site cache, generic shell as fallback on failure) and serves that on real product URLs. SC customizations to `/products/default` — extra blocks, custom layout, anything the SC authors — inherit on every PDP automatically. The "Phase 1 limitation" of a generic template is closed.
 
 ---
 
@@ -48,7 +50,9 @@ Demo Builder targets multi-tenant demos: any SC, any catalog, install-and-go. No
 │                                                            │
 │  render-pdp:  GET /api/v1/web/accs-discovery/render-pdp    │
 │    Called by Helix during admin preview/publish.           │
-│    Returns generic PDP template HTML (Phase 1).            │
+│    Fetches the storefront's authored /products/default     │
+│    from https://main--{site}--{org}.aem.live and serves    │
+│    it (per-org/site cache; generic shell on fetch fail).   │
 │    Returns 404 for non-PDP paths so Helix falls back to    │
 │    authored content.                                       │
 │                                                            │
@@ -90,7 +94,7 @@ The two repos coordinate via three URL strings — the `render-pdp` overlay URL,
 4. prepublish-pdp action:
    a. Validates path matches /products/{urlKey}/{sku} shape
    b. POST admin.hlx.page/preview/.../products/orchard-2/orchard2
-      → Helix calls render-pdp overlay → gets generic template HTML
+      → Helix calls render-pdp overlay → gets SC's authored /products/default template
       → stores at lowercase path in content-bus
    c. POST admin.hlx.page/live/.../products/orchard-2/orchard2
       → Helix promotes preview to live
@@ -124,16 +128,16 @@ The cold path runs once per SKU across all visitors to a storefront. Every subse
 
 | Piece | Where | Behavior |
 |---|---|---|
-| `render-pdp` overlay action | `accs-discovery-service`, already deployed | Returns generic PDP template for `/products/{urlKey}/{sku}`; returns 404 for non-PDP paths |
+| `render-pdp` overlay action | `accs-discovery-service`, deployed (Phase 2 LIVE) | Fetches and returns the storefront's authored `/products/default` for `/products/{urlKey}/{sku}`; generic shell fallback on failure; returns 404 for non-PDP paths |
 | `prepublish-pdp` trigger action | `accs-discovery-service`, deployed | Validates + relays to Helix admin preview/publish |
 | Configuration Service registration with overlay URL | This repo, existing (`ConfigurationService.registerSite` / `updateSiteConfig` with `byomOverlayUrl`) | Wires the overlay into the site config so Helix calls `render-pdp` during admin preview |
 | Smart-404 snippet install step | This repo, this slice (`pdp404HandlerPublisher.ts` + pipeline step) | Vendors the smart-404 JS into `scripts/delayed.js` at create/reset |
 | `demoBuilder.byom.enabled` setting | This repo, existing | Master toggle; when off, no overlay registers and no 404 publishes |
 | `demoBuilder.byom.overlayUrl` setting | This repo, existing | Override for non-default deployments (staging, dev). Defaults to the shared deployed action. |
 
-### Out of scope for Phase 1 (deferred to Phase 2 or later)
+### Out of scope for Phase 1 (later workstreams)
 
-- **SC template customizations on real product URLs.** The overlay returns a generic template, not the SC's authored `/products/default`. Customizations applied to `/products/default` (extra blocks, layout tweaks) appear when visiting `/products/default` directly but not on `/products/{urlKey}/{sku}`. Phase 2 Design (A) closes this gap by having the action fetch and inject into the storefront's authored template.
+- **~~SC template customizations on real product URLs.~~** Resolved — Phase 2 shipped 2026-06-09. The overlay now fetches the storefront's authored `/products/default` and serves it on `/products/{urlKey}/{sku}`. SC customizations inherit automatically. Verified end-to-end on `citisignal-b2b` (published PDP byte-compares to authored template within metadata differences only).
 - **PDP cleanup after SKU deletion.** When an SC deletes a SKU from Commerce, the URL stays published in content-bus and serves the generic template (drop-in shows empty product details). For demos this rarely matters — internal navigation can't reach a deleted SKU's URL, and the worst-case "external link to a deleted SKU" is acceptably handled by a graceful "Product not available" message in the drop-in (separate backlog item).
 - **Catalog pre-publish.** Pre-publishing all SKUs at create time is the Adobe-prerender model. Explicitly rejected; see [ADR-005](adr/005-byom-pdp-routing.md).
 

@@ -3,7 +3,7 @@
 **Status**: Accepted
 **Date**: 2026-06-09
 **Decision Maker**: Project Owner
-**Implementer**: Phase 1 ship 2026-06-09 (this slice). Phase 2 deferred — design recorded but no implementation.
+**Implementer**: Phase 1 ship 2026-06-09 (this slice). Phase 2 ship 2026-06-09 (later same day; verified live on `citisignal-b2b`).
 
 ---
 
@@ -46,14 +46,14 @@ The combination of "publish on first hit" (smart-404) + "no per-tenant state" (a
 
 Phase 1 ships:
 
-1. The `render-pdp` overlay action in `accs-discovery-service` returns a generic PDP template for `/products/{urlKey}/{sku}` paths and 404 for everything else.
+1. The `render-pdp` overlay action in `accs-discovery-service` returns a PDP template for `/products/{urlKey}/{sku}` paths and 404 for everything else. Phase 2 (LIVE 2026-06-09) has the action fetch the storefront's authored `/products/default` from `main--{site}--{org}.aem.live` and serve that template (per-org/site cached, generic shell as fallback on fetch failure); Phase 1 originally shipped a generic shell.
 2. The Configuration Service registration in this extension (`buildSiteConfigParams` → `registerSite` / `updateSiteConfig`) sets `content.overlay.url` to the deployed `render-pdp` URL with `?org=&site=` stamped on per storefront.
 3. The extension publishes a custom `/404.html` to DA.live at create/reset. The page's embedded JS detects PDP-shape URLs, redirects to the lowercase variant if it exists, and otherwise POSTs to a sibling `prepublish-pdp` action that calls Helix admin to publish the path on demand.
 4. The `prepublish-pdp` action is gated to PDP-shape paths only; relies on Helix admin POST being currently unauthenticated.
 
-Phase 2 (deferred, design recorded):
+Phase 2 (LIVE 2026-06-09):
 
-- Evolve `render-pdp` to fetch the storefront's authored `/products/default` template at request time and inject Commerce data into the `product-details` block. Same admin trigger flow; only what the action returns changes. Honors SC template customizations automatically.
+- `render-pdp` fetches the storefront's authored `/products/default` from `https://main--{site}--{org}.aem.live/products/default` with a browser User-Agent, caches the result per org/site, and serves it. Generic shell remains as a fallback on fetch failure. Same admin trigger flow; only what the action returns changes. Honors SC template customizations automatically. Verified live on `citisignal-b2b` — published PDPs structurally match the authored template (same block classes, same header/footer markers).
 
 ---
 
@@ -62,7 +62,7 @@ Phase 2 (deferred, design recorded):
 - **The shape of authentication for `prepublish-pdp` if Helix admin POST is ever locked down.** Phase 1 explicitly depends on the current open-admin behavior. If Helix changes, the path forward is the GitHub App pattern (action authenticates as an app SCs install), but that's significant infrastructure and is not part of Phase 1.
 - **Cleanup after SKU deletion.** Tracked separately in the backlog as "graceful 'Product not available' handling in the drop-in" — a smaller fix than a dedicated cleanup workstream.
 - **PDP staleness in multi-day POCs.** Same backlog item handles the realistic exposure path (external link to a deleted SKU).
-- **Phase 2 implementation timing.** Phase 2's design is in the original research; whether/when to build it is owned by the project owner.
+- ~~**Phase 2 implementation timing.**~~ Resolved — Phase 2 shipped 2026-06-09.
 
 ---
 
@@ -74,11 +74,11 @@ Phase 2 (deferred, design recorded):
 - Catalog churn is invisible from the SC's perspective — new SKUs work on first click, deletions don't break navigation.
 - Storefront repositories are untouched. No coordination required with Adobe or with Stephen Garner (Isle5 owner) for Phase 1. No extension-side patches against the canonical templates.
 - Demo Builder's role is bounded: register the overlay, publish one custom 404 page, done. No ongoing per-storefront state to manage.
-- Phase 2 upgrade path is clean: only the `render-pdp` action changes; every existing storefront's PDPs pick up SC customizations on next reset (or on next per-URL re-publish) without any extension shipping.
+- Phase 2 upgrade path was clean as predicted: only the `render-pdp` action changed; every existing storefront's PDPs pick up SC customizations on next reset (or on next per-URL re-publish) without any extension shipping. Shipped same day as Phase 1.
 
 ### Negative
 
-- Phase 1 PDPs render the *generic* template, not the SC's customized PDP. SC tweaks to `/products/default` don't appear on real product URLs until Phase 2 ships. Documented in the architecture doc; not a Phase 1 deliverable.
+- ~~Phase 1 PDPs render the *generic* template, not the SC's customized PDP.~~ Resolved — Phase 2 (LIVE 2026-06-09) has `render-pdp` fetch the authored template, so SC customizations now appear on every product URL.
 - ~2-3 second latency on the cold path (first visitor per SKU). Acceptable for demos, would not be for production.
 - Phase 1 depends on Helix admin POST being unauthenticated. If Helix changes, Phase 1 needs follow-up work in the action repo.
 - Phase 1 depends on Catalog Service being case-insensitive on SKU lookups. If that changes, every PDP renders with empty product data (silent rot). Detection probe is documented.
