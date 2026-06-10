@@ -47,6 +47,33 @@ generic template, falling back to the generic template on any failure. Shipped o
   `/products/default` (generic template only as a fallback). The §5 *template-divergence* concern is
   addressed — PDPs now inherit SC customizations rather than rendering a generic shell.
 - Run the end-to-end browser verification on a customized storefront when convenient.
+- **Clean up the probe paths below** (you hold the tokens; the credential-free probes couldn't —
+  DELETE is auth-gated).
+
+## Cleanup debt — exact probe paths to delete (skukla/citisignal-b2b, branch `main`)
+
+Created during the Helix admin auth probing. **3 preview entries to delete; 1 is also published
+(unpublish from the live tier too).** Nothing else.
+
+| Path | Preview | Live |
+|---|:---:|:---:|
+| `/products/orchard-2/probe` | delete | — |
+| `/products/verify-1781012023/probe` | delete | — |
+| `/products/verify-pub-1781012309/probe` | delete | **unpublish** |
+
+```bash
+ADMIN=https://admin.hlx.page
+S=skukla/citisignal-b2b/main
+AUTH=(-H "x-auth-token: $GITHUB_TOKEN" -H "x-content-source-authorization: Bearer $DA_LIVE_TOKEN")
+
+# 1. Unpublish the one live page
+curl -X DELETE "${AUTH[@]}" "$ADMIN/live/$S/products/verify-pub-1781012309/probe" -w '\n%{http_code}\n'
+
+# 2. Delete the three preview entries
+for p in products/orchard-2/probe products/verify-1781012023/probe products/verify-pub-1781012309/probe; do
+  curl -X DELETE "${AUTH[@]}" "$ADMIN/preview/$S/$p" -w "\n$p %{http_code}\n"
+done
+```
 
 Full server-side detail: `accs-discovery-service/docs/research/helix-admin-auth-findings.md` and the
 repo README's `/render-pdp` section.
