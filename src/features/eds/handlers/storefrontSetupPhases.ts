@@ -96,6 +96,7 @@ function buildPipelineProgressCallback(context: HandlerContext): (info: Pipeline
             'cache-purge': { phase: 'publish', progress: PIPELINE_PROGRESS.CACHE_PURGE },
             'content-publish': { phase: 'publish', progress: PIPELINE_PROGRESS.CONTENT_PUBLISH_START },
             'library-publish': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
+            'catalog-prewarm': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
         };
         const m = mapping[info.operation] ?? { phase: info.operation, progress: PIPELINE_PROGRESS.CONTENT_COPY_START };
         let progress = m.progress;
@@ -207,6 +208,11 @@ async function runEdsPipelineWithRecovery(
     skipContent: boolean,
     onProgress: (info: PipelineProgressInfo) => void,
 ): Promise<{ libraryPaths: string[] }> {
+    // Fetch the project for catalog pre-warming (v1 ACCS only). Optional
+    // — pipeline skips pre-warming when project is undefined. We read it
+    // here so the pipeline call site stays declarative.
+    const project = await context.stateManager.getCurrentProject();
+
     return withDaLiveAuthRetry(
         context,
         async () => {
@@ -227,6 +233,7 @@ async function runEdsPipelineWithRecovery(
                     includeBlockLibrary: true, blockCollectionIds, libraryContentSources,
                     purgeCache: Boolean(edsConfig.resetToTemplate || wantsToResetContent),
                     byomOverlayUrl: edsConfig.byomOverlayUrl,
+                    project: project ?? undefined,
                 },
                 {
                     daLiveContentOps: services.daLiveContentOps,

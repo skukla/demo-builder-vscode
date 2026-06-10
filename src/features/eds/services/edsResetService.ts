@@ -60,6 +60,7 @@ const MAX_REAUTH_ATTEMPTS = 2;
 const PIPELINE_STEP_MAP: Record<string, number> = {
     'content-clear': 8, 'content-copy': 8, 'block-library': 9,
     'eds-settings': 10, 'cache-purge': 11, 'content-publish': 11, 'library-publish': 11,
+    'catalog-prewarm': 11,
 };
 
 // ==========================================================
@@ -207,7 +208,7 @@ async function runContentPipeline(
     const {
         repoOwner, repoName, daLiveOrg, daLiveSite, templateOwner, templateRepo,
         contentSource: contentSourceConfig, includeBlockLibrary = false, contentPatches,
-        byomOverlayUrl,
+        byomOverlayUrl, project,
     } = params;
 
     // tokenProvider required: DA.live content operations (copy, publish) need IMS token
@@ -225,6 +226,7 @@ async function runContentPipeline(
                     libraryContentSources: repoResetResult.libraryContentSources,
                     purgeCache: true, skipPublish: false,
                     byomOverlayUrl,
+                    project,
                 },
                 { daLiveContentOps, githubFileOps, helixService, logger: context.logger },
                 (info) => mapPipelineProgress(info, report),

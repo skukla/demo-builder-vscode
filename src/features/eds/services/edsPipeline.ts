@@ -20,7 +20,9 @@
 import type { DaLiveContentOperations } from './daLiveContentOperations';
 import type { GitHubFileOperations } from './githubFileOperations';
 import type { HelixService } from './helixService';
+import { prewarmCatalog } from './catalogPrewarmService';
 import { DaLiveAuthError, DaLiveError } from './types';
+import type { Project } from '@/types/base';
 import type { ContentPatchSource } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
 
@@ -82,6 +84,17 @@ export interface EdsPipelineParams {
      * See `pdp404HandlerPublisher.ts` and `docs/architecture/eds-byom-pdp-routing.md`.
      */
     byomOverlayUrl?: string;
+
+    /**
+     * Project reference used by the catalog pre-warming step (v1 ACCS only).
+     * When provided AND `byomOverlayUrl` is set AND `skipPublish` is false,
+     * the pipeline enumerates the storefront's Commerce catalog and
+     * pre-publishes every product's PDP path so first-visit cold paths
+     * never fire during demos. When absent, pre-warming is skipped silently
+     * (the smart-404 fallback still handles cold paths at runtime).
+     * See `catalogPrewarmService.ts`.
+     */
+    project?: Project;
 }
 
 /** Service dependencies — callers construct and pass these in */
@@ -519,6 +532,36 @@ export async function executeEdsPipeline(
         //  (reset). The DA.live /404 page publish path that briefly
         //  lived here didn't help — Helix uses the static 404.html
         //  file, not authored content, on 404 responses.)
+
+        // Step 8: Catalog pre-warming (v1 ACCS only). Enumerate the
+        // storefront's Commerce catalog and pre-publish every product
+        // path so first-visit cold paths never fire during demos.
+        // Non-fatal: failures fall through to the smart-404 fallback,
+        // which still handles unknown SKUs at runtime. Gated on:
+        //  - params.project — caller opts in by passing the project
+        //  - params.byomOverlayUrl — same gate as smart-404 install
+        //  - !skipPublish — refresh-block-library and similar narrow
+        //    paths skip pre-warming
+        if (!skipPublish && params.byomOverlayUrl && params.project) {
+            try {
+                const result = await prewarmCatalog(
+                    params.project,
+                    params.byomOverlayUrl,
+                    daLiveOrg,
+                    daLiveSite,
+                    logger,
+                    onProgress,
+                );
+                if (!result.skipped) {
+                    logger.info(`[EdsPipeline] Catalog pre-warming: ${result.succeeded}/${result.attempted} SKUs pre-published`);
+                }
+            } catch (prewarmError) {
+                // Defense in depth — prewarmCatalog is already non-fatal
+                // internally, but a thrown exception here must not abort
+                // the pipeline. Smart-404 fallback handles uncovered SKUs.
+                logger.warn(`[EdsPipeline] Catalog pre-warming threw unexpectedly: ${(prewarmError as Error).message}`);
+            }
+        }
 
         return {
             success: true,
