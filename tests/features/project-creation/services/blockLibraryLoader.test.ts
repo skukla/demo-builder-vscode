@@ -264,11 +264,13 @@ describe('blockLibraryLoader', () => {
         });
 
         it('should return source for demo-team-blocks', () => {
+            // ADR-006 Step 5b: source flipped from the retired skukla/citisignal-eds-boilerplate
+            // fork to the demo team's accs-citisignal repo.
             const source = getBlockLibrarySource('demo-team-blocks');
 
             expect(source).toBeDefined();
-            expect(source?.owner).toBe('skukla');
-            expect(source?.repo).toBe('citisignal-eds-boilerplate');
+            expect(source?.owner).toBe('demo-system-stores');
+            expect(source?.repo).toBe('accs-citisignal');
         });
 
         it('should return source for buildright-blocks', () => {

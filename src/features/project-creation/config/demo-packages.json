@@ -286,14 +286,14 @@
           ],
           "source": {
             "type": "git",
-            "url": "https://github.com/skukla/citisignal-eds-boilerplate",
+            "url": "https://github.com/hlxsites/aem-boilerplate-commerce",
             "branch": "main",
             "gitOptions": {
               "shallow": true
             }
           },
-          "templateOwner": "skukla",
-          "templateRepo": "citisignal-eds-boilerplate",
+          "templateOwner": "hlxsites",
+          "templateRepo": "aem-boilerplate-commerce",
           "contentSource": {
             "org": "demo-system-stores",
             "site": "accs-citisignal"
@@ -306,6 +306,20 @@
             "smart-watches-url-path"
           ],
           "contentPatchSource": {
+            "owner": "skukla",
+            "repo": "eds-demo-patches",
+            "path": "citisignal"
+          },
+          "codePatches": [
+            "header-nav-tools-defensive",
+            "product-link-sku-encoding",
+            "product-link-sku-slash-encoding",
+            "aem-assets-sku-sanitization",
+            "commerce-account-sidebar-selector-race",
+            "product-teaser-sku-encoding",
+            "product-teaser-image-url-handling"
+          ],
+          "codePatchSource": {
             "owner": "skukla",
             "repo": "eds-demo-patches",
             "path": "citisignal"
@@ -323,14 +337,14 @@
           ],
           "source": {
             "type": "git",
-            "url": "https://github.com/skukla/citisignal-eds-boilerplate",
+            "url": "https://github.com/hlxsites/aem-boilerplate-commerce",
             "branch": "main",
             "gitOptions": {
               "shallow": true
             }
           },
-          "templateOwner": "skukla",
-          "templateRepo": "citisignal-eds-boilerplate",
+          "templateOwner": "hlxsites",
+          "templateRepo": "aem-boilerplate-commerce",
           "contentSource": {
             "org": "demo-system-stores",
             "site": "accs-citisignal"
@@ -341,6 +355,20 @@
             "smart-watches-category-id-accs"
           ],
           "contentPatchSource": {
+            "owner": "skukla",
+            "repo": "eds-demo-patches",
+            "path": "citisignal"
+          },
+          "codePatches": [
+            "header-nav-tools-defensive",
+            "product-link-sku-encoding",
+            "product-link-sku-slash-encoding",
+            "aem-assets-sku-sanitization",
+            "commerce-account-sidebar-selector-race",
+            "product-teaser-sku-encoding",
+            "product-teaser-image-url-handling"
+          ],
+          "codePatchSource": {
             "owner": "skukla",
             "repo": "eds-demo-patches",
             "path": "citisignal"
