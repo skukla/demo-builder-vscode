@@ -68,6 +68,7 @@ export class TemplateUpdateChecker {
         const templateOwner = metadata.templateOwner as string | undefined;
         const templateRepo = metadata.templateRepo as string | undefined;
         const lastSyncedCommit = metadata.lastSyncedCommit as string | undefined;
+        const lkgSource = metadata.lkgSource as { owner: string; repo: string } | undefined;
 
         // Validate required template metadata
         if (!templateOwner || !templateRepo) {
@@ -81,7 +82,48 @@ export class TemplateUpdateChecker {
         }
 
         try {
-            // Fetch template's latest commit SHA
+            // Thin-layer path (ADR-006): when `lkgSource` was persisted at create
+            // time, compare against the current LKG SHA — NOT canonical `main`.
+            // A storefront is up-to-date when it matches LKG even if canonical
+            // is ahead; updates are offered only when the LKG pointer advances
+            // (the drift-gate has verified a newer SHA against the patches).
+            if (lkgSource) {
+                const { readLkgSha } = await import('@/features/eds/services/lkgReader');
+                const currentLkg = await readLkgSha(lkgSource, this.logger);
+                if (!currentLkg) {
+                    this.logger.warn(`[TemplateUpdates] LKG unreachable for ${lkgSource.owner}/${lkgSource.repo} — skipping update check`);
+                    return null;
+                }
+                if (currentLkg === lastSyncedCommit) {
+                    return {
+                        hasUpdates: false,
+                        currentCommit: lastSyncedCommit,
+                        latestCommit: currentLkg,
+                        commitsBehind: 0,
+                        templateOwner,
+                        templateRepo,
+                    };
+                }
+                // LKG advanced. Use canonical commit comparison for the
+                // commits-behind count (gives the user the same "N commits
+                // behind" UX as forked storefronts).
+                const comparison = await compareCommits(
+                    this.secrets, templateOwner, templateRepo,
+                    lastSyncedCommit, currentLkg,
+                );
+                const commitsBehind = comparison?.ahead_by ?? 0;
+                return {
+                    hasUpdates: commitsBehind > 0,
+                    currentCommit: lastSyncedCommit,
+                    latestCommit: currentLkg,
+                    commitsBehind,
+                    templateOwner,
+                    templateRepo,
+                };
+            }
+
+            // Forked path (legacy / non-thin-layer): unchanged. Fetch template
+            // `main` HEAD and compare directly.
             const latestCommit = await getLatestBranchCommit(
                 this.secrets, templateOwner, templateRepo, 'main',
             );

@@ -599,8 +599,22 @@ export interface EdsMetadata {
     templateOwner?: string;
     /** Template repository name for update checks */
     templateRepo?: string;
-    /** Commit SHA when project was created or last synced with template */
+    /** Commit SHA when project was created or last synced with template.
+     *
+     *  For thin-layer storefronts (ADR-006), this is the verified canonical
+     *  Last-Known-Good (LKG) SHA read from the patches repo at create time —
+     *  NOT the template repo's `main` HEAD. `templateUpdateChecker` compares
+     *  against the current LKG (read from `lkgSource`), so a storefront is
+     *  up-to-date when it matches LKG even if canonical `main` is ahead. */
     lastSyncedCommit?: string;
+    /** When set, the storefront is "thin-layer": `lastSyncedCommit` was read
+     *  from this patches repo's `last-known-good` file at create time, and the
+     *  update checker fetches the current LKG from the same source to compare.
+     *  Absent for forked storefronts (legacy / non-thin-layer packages). */
+    lkgSource?: {
+        owner: string;
+        repo: string;
+    };
 }
 
 /**

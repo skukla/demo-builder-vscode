@@ -199,6 +199,18 @@ interface ProjectCreationConfig {
             repo: string;
             path: string;
         };
+        // Code patch IDs to apply (canonical + block) — Step 5 populates these.
+        codePatches?: string[];
+        // External source for code patches (e.g., skukla/eds-demo-patches/citisignal).
+        // When set, the storefront is "thin-layer": `lastSyncedCommit` records the
+        // verified canonical LKG SHA (per ADR-006 D2) rather than the template
+        // repo's `main` HEAD, so "is there an update?" means "did the LKG pointer
+        // advance?" not "is canonical main ahead of where we created?".
+        codePatchSource?: {
+            owner: string;
+            repo: string;
+            path: string;
+        };
     };
 }
 
@@ -529,11 +541,18 @@ async function populateEdsMetadata(
             ? `${typedConfig.edsConfig.githubOwner}/${typedConfig.edsConfig.repoName}`
             : undefined);
 
-    // Fetch template commit SHA for future update detection
+    // Fetch template commit SHA for future update detection. For thin-layer
+    // packages this reads the patches-repo LKG; for legacy/forked packages
+    // it falls through to template HEAD. The lkgSource — when set — is
+    // persisted alongside so the update checker can compare against the
+    // same LKG file the create flow consulted.
     const lastSyncedCommit = await fetchTemplateCommitSha(context, typedConfig.edsConfig);
 
     const templateOwner = typedConfig.edsConfig.templateOwner;
     const templateRepo = typedConfig.edsConfig.templateRepo;
+    const lkgSource = typedConfig.edsConfig.codePatchSource
+        ? { owner: typedConfig.edsConfig.codePatchSource.owner, repo: typedConfig.edsConfig.codePatchSource.repo }
+        : undefined;
 
     edsInstance.metadata = {
         ...edsInstance.metadata,
@@ -544,6 +563,7 @@ async function populateEdsMetadata(
         templateOwner,
         templateRepo,
         lastSyncedCommit,
+        ...(lkgSource ? { lkgSource } : {}),
     };
     await context.stateManager.saveProject(project);
     context.logger.debug(`[Project Creation] Populated EDS metadata for ${COMPONENT_IDS.EDS_STOREFRONT}: githubRepo=${edsInstance.metadata?.githubRepo}`);
@@ -589,14 +609,39 @@ async function writeStorefrontShareMarker(
 }
 
 /**
- * Fetch the template's current commit SHA for template sync feature.
+ * Fetch the canonical commit SHA to record as `lastSyncedCommit`.
+ *
+ * Thin-layer storefronts (package has `codePatchSource` configured per
+ * ADR-006): read the verified canonical SHA from the patches repo's
+ * `last-known-good` file (D2 — Chromium LKGR / Nix git-revision convention).
+ * If unreachable, fall back to template HEAD with a warn line (D1
+ * proceed-and-warn).
+ *
+ * Forked storefronts (no `codePatchSource`): unchanged — fetch the template
+ * repo's `main` HEAD as `lastSyncedCommit`. Mixed fleets coexist during
+ * migration.
  */
 async function fetchTemplateCommitSha(
     context: HandlerContext,
     edsConfig: NonNullable<ProjectCreationConfig['edsConfig']>,
 ): Promise<string | undefined> {
-    const { templateOwner, templateRepo } = edsConfig;
+    const { templateOwner, templateRepo, codePatchSource } = edsConfig;
     if (!templateOwner || !templateRepo) return undefined;
+
+    // Thin-layer path: read LKG from patches repo. Fall back to template
+    // HEAD on LKG fetch failure (warn already logged inside readLkgSha).
+    if (codePatchSource) {
+        const { readLkgSha } = await import('@/features/eds/services/lkgReader');
+        const lkg = await readLkgSha(
+            { owner: codePatchSource.owner, repo: codePatchSource.repo },
+            context.logger,
+        );
+        if (lkg) {
+            context.logger.debug(`[Project Creation] Recorded LKG SHA: ${lkg.substring(0, 7)} (from ${codePatchSource.owner}/${codePatchSource.repo})`);
+            return lkg;
+        }
+        context.logger.warn(`[Project Creation] LKG unreachable for ${codePatchSource.owner}/${codePatchSource.repo} — falling back to template HEAD`);
+    }
 
     try {
         const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
