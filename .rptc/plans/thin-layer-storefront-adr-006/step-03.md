@@ -26,7 +26,9 @@ ADR-006 that would offer storefronts canonical states our patches have never bee
 ## Approach (to detail in TDD after approval)
 
 1. A small `readLkgSha(codePatchSource)` helper: fetch `last-known-good` from the patches repo (reuse the
-   content-patch fetch + cache; format per Q2 — recommend a one-line SHA file at repo root).
+   content-patch fetch + cache). **Format resolved (D2):** a plain-text one-line file at the `eds-demo-patches`
+   root holding only the verified canonical SHA — `trim()` the body, validate it's a 40-hex SHA. If unreachable,
+   warn and fall back to canonical HEAD (D1).
 2. `fetchTemplateCommitSha`: branch on whether the package is thin-layer (has a `codePatchSource` / LKG source).
    Thin-layer → `readLkgSha`. Non-thin-layer (isle5/buildright, still forked) → unchanged behavior.
 3. `templateUpdateChecker`: for thin-layer packages, compare `lastSyncedCommit` vs LKG SHA (equal ⇒ up to date;
@@ -38,8 +40,8 @@ ADR-006 that would offer storefronts canonical states our patches have never bee
 
 - **Mixed fleet:** both thin-layer (CitiSignal) and forked (isle5/buildright) packages coexist during migration.
   The branch must be driven by package config, not hardcoded, so each package gets the right semantics.
-- **Q2 dependency:** the `last-known-good` file format/location must be fixed before this lands so Steps 3, 6, 7
-  agree. Recommend resolving Q2 at approval.
+- **LKG format (resolved D2):** plain-text one-line SHA file at the `eds-demo-patches` root — Steps 3, 6, 7 all
+  read/write this exact shape (Chromium LKGR / Nix `git-revision` convention).
 - **Backward compat:** existing CitiSignal projects created pre-migration carry a fork SHA in `lastSyncedCommit`.
   Define behavior for them (recommend: treated as "needs reset to canonical@LKG"; covered in Step 9 migration).
 

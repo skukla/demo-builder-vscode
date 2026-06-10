@@ -8,8 +8,13 @@
 
 Introduce a generic **code-patch engine** that applies named patches to files in a cloned storefront repo at
 create/reset time. The engine knows no canonical file by name — every coupling lives in externalized patch
-definitions fetched from the patches repo. This reinstates the v1 template-patch capability that was removed in
-`f6a7d029`, but with definitions externalized (v1's one structural flaw was bundling payloads in the extension).
+definitions fetched from the patches repo. This reinstates the *capability* of the v1 template-patch system
+(removed 2026-02-01), but with definitions externalized (v1's one structural flaw was bundling payloads in the
+extension).
+
+> **Finding F1 (overview):** the v1 source is **not recoverable** from this repo — the cited SHAs (`f6a7d029`,
+> `6026b695`) do not resolve here. Build the engine fresh from the *living* `contentPatchRegistry.ts` +
+> `pdp404HandlerPublisher.ts`; do **not** plan to `git show` the old files. The ADR's v1 description is the spec.
 
 ## Design anchor (reuse, do not reinvent)
 
@@ -31,7 +36,8 @@ Two living mechanisms already encode 90% of this; the engine is their synthesis:
 - **Possibly extract:** a shared `externalPatchFetch` helper used by both `contentPatchRegistry` and
   `codePatchRegistry` (DRY — see Constraints).
 - **Config:** `src/features/eds/config/code-patches.json` is **not** added (definitions are external, per ADR);
-  a local fallback is out of scope unless Q3 resolves otherwise.
+  no local fallback (D3: definitions live in `eds-demo-patches`). `CodePatchSource` defaults point at
+  `owner: skukla, repo: eds-demo-patches`.
 
 ## Approach (to detail in TDD after approval)
 

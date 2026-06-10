@@ -1,6 +1,6 @@
 # Step 06 — Extract & Consolidate the Patch Ledger
 
-**Repo:** `skukla/eds-demo-content-patches` (or generalized successor — Q3). **Out of current session scope.**
+**Repo:** `skukla/eds-demo-patches` (generalized from `eds-demo-content-patches` — D3). **Out of current session scope.**
 **Depends on:** the audit (`findings.md`). **Blocks:** Steps 5, 7, 8.
 **Status:** proposed (no code yet)
 
@@ -29,8 +29,11 @@ additive nor upstream works.
 
 ## Scope / artifacts (in the patches repo)
 
-- `citisignal/code-patches.json` (or per Q3 naming) — the v2 code-patch definitions: `{id, target, description,
-  precondition, replacement, exit}` each.
+- `citisignal/code-patches.json` — the v2 code-patch definitions: `{id, target, description, precondition,
+  replacement, exit, critical?}` each (`critical` defaults off per D1).
+- **Repo migration (D3):** rename/move `eds-demo-content-patches` → `eds-demo-patches`; relocate the existing
+  `citisignal/patches.json` (content patches) and update the extension's `contentPatchSource` defaults in
+  lockstep (Step 5) so nothing dangles.
 - The additive brand stylesheet asset + the `head.html` `<link>` vendor patch (the CSS consolidation).
 - Each patch annotated with its `exit` (upstream PR URL once filed in Step 8, or "additive-restructure").
 

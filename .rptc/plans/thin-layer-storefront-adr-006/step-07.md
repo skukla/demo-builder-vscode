@@ -1,6 +1,6 @@
 # Step 07 — Drift-Gate Workflow (patches repo)
 
-**Repo:** `skukla/eds-demo-content-patches` (or successor — Q3). **Out of current session scope.**
+**Repo:** `skukla/eds-demo-patches` (generalized — D3). **Out of current session scope.**
 **Depends on:** Step 6 (ledger). **Blocks:** Step 5.
 **Status:** proposed (no code yet)
 
@@ -16,8 +16,10 @@ release-engineering pattern (Chromium LKGR / Nix channel promotion) at miniature
 - A small **check script** (alongside the patch definitions) that:
   1. Clones canonical `hlxsites/aem-boilerplate-commerce` `main`.
   2. Verifies every patch's `precondition` still matches its `target`.
-- `last-known-good` — a one-line file holding the verified canonical SHA (format per Q2). One writer (the gate),
-  many readers (every extension create/reset).
+- `last-known-good` — a plain-text one-line file at the repo root holding **only** the verified canonical SHA
+  (D2: Chromium LKGR / Nix `git-revision` convention). One writer (the gate), many readers (every extension
+  create/reset). Rich detail (verifiedAt, canonical ref, which patches passed) goes in the **commit message**,
+  not the file; the file's git history is the audit log.
 
 ## Behavior (ADR-006 §"Tracking canonical via a last-known-good gate")
 

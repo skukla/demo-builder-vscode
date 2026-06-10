@@ -21,8 +21,8 @@ the teaser fixes exist as day-one patches (Step 6).**
 | `source.url` / `templateOwner` / `templateRepo` | `skukla/citisignal-eds-boilerplate` | `hlxsites/aem-boilerplate-commerce` — **mirror the `custom` package shape** (~`:109–133`) |
 | `contentSource` | `demo-system-stores/accs-citisignal` | **Unchanged** (DA.live content site, not the fork) |
 | `contentPatches` / `contentPatchSource` | present | unchanged; gains a **sibling code-patch source** |
-| **new:** `codePatches` / `codePatchSource` | — | the patch ID list + `{owner, repo, path}` for the patches repo |
-| **new:** LKG source | — | where to read `last-known-good` (per Q2/Q3; likely same patches repo) |
+| **new:** `codePatches` / `codePatchSource` | — | the patch ID list + `{owner, repo, path}` → `skukla/eds-demo-patches` (D3) |
+| **new:** LKG source | — | reads the root `last-known-good` SHA file from the same `eds-demo-patches` repo (D2/D3) |
 
 Apply to both CitiSignal EDS storefronts (PaaS + ACCS).
 

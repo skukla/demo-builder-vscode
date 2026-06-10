@@ -39,9 +39,14 @@ unreachable.
 2. Apply **canonical-file patches** in the reset/repo-tree phase; apply **block-targeting patches** after block
    install. (A single ledger; each patch's `target` determines which phase touches it — or split into two
    declared groups. Decide grouping in TDD; recommend deriving phase from `target` prefix, e.g. `blocks/…`.)
-3. **Failure handling (Risk R3 / Q1):** on a non-matching precondition, do not silently continue — surface a
-   loud, actionable error and (recommended) fail the create/reset for CitiSignal, since patches are not cosmetic.
-   On patches-repo unreachable, reuse the content-patch timeout and apply the same Q1 decision.
+3. **Failure handling (Risk R3 — resolved by owner decision D1: proceed and warn):** on a non-matching
+   precondition, do **not** silently continue and do **not** hard-block the demo — surface a **loud, persistent,
+   actionable** notification and continue the create/reset. On patches-repo unreachable, reuse the content-patch
+   timeout, warn, and proceed (LKG-unreachable falls back to canonical HEAD with a warning — see Step 4). Specify
+   a per-patch `critical: true` flag (defaults off) that, when set, escalates that one patch to a hard abort —
+   reserved for a future need, not used by the initial CitiSignal ledger.
+   *(Smart-404 is unaffected: per D4 it stays bundled in the extension and off this network path, so PDP routing
+   survives an `eds-demo-patches` outage.)*
 4. Idempotency across reset: re-running reset re-applies cleanly (engine detects already-applied) so repeated
    resets are safe.
 
@@ -52,7 +57,9 @@ The pipeline already applies `contentPatches` during content copy (pipeline Step
 
 ## Risks (this step)
 
-- **R3** (patches repo load-bearing): the defined failure mode is decided here. Needs owner answer on Q1.
+- **R3** (patches repo load-bearing): failure mode resolved (D1 = proceed and warn, loud + persistent). Risk is
+  now "a transient outage ships a cosmetically-degraded storefront" — accepted; smart-404/PDP routing is off this
+  path (D4).
 - **Phase routing:** mis-routing a block patch to the pre-install phase would fail its precondition (block not
   present yet). Tests must cover both phases explicitly.
 - **Commit topology:** block install and smart-404 each create their own atomic commit; ensure code patches
@@ -62,11 +69,12 @@ The pipeline already applies `contentPatches` during content copy (pipeline Step
 ## Test / verification
 
 - Integration: patch a canonical file post-reset; patch an installed library block post-install; assert order.
-- Failure: broken precondition → loud failure, no silent continue; patches repo unreachable → Q1 behavior.
+- Failure: broken precondition → loud, persistent warning, create/reset still completes (D1); `critical:true`
+  patch → hard abort; patches repo unreachable → warn + proceed (canonical-HEAD fallback).
 - Idempotency: reset twice → stable result, no double application.
 
 ## Exit criteria
 
 - A CitiSignal create/reset (in a test harness) clones template, installs blocks, applies a canonical-file patch
-  and a block-targeting patch, and fails loudly on a deliberately-broken precondition — with the Q1 failure mode
-  implemented and tested.
+  and a block-targeting patch, and on a deliberately-broken precondition **warns loudly and still completes**
+  (D1) — while a `critical:true` patch aborts. Failure mode implemented and tested.

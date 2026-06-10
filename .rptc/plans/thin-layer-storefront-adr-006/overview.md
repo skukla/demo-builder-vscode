@@ -52,7 +52,7 @@ re-litigate it.
 | Repo | In session scope? | Work |
 |---|---|---|
 | `skukla/demo-builder-vscode` (this repo) | ✅ | Steps 1–5, 9 — engine, pipeline, LKG plumbing, config flips, cutover |
-| `skukla/eds-demo-content-patches` (or generalized successor) | ❌ (out of scope now) | Steps 6–7 — patch ledger + drift-gate workflow |
+| `skukla/eds-demo-patches` (generalized from `eds-demo-content-patches` — owner decision) | ❌ (out of scope now) | Steps 6–7 — patch ledger + drift-gate workflow |
 | `hlxsites/aem-boilerplate-commerce` | ❌ | Step 8 — 4 upstream PRs (patch exits) |
 | `demo-system-stores/accs-citisignal` | ❌ | Step 8 — 2 product-teaser PRs; becomes the live block-source upstream |
 
@@ -145,6 +145,21 @@ All decisions, evidence, and touchpoint analysis already exist — this plan exe
 
 ---
 
+## Owner Decisions (captured this planning session, 2026-06-10)
+
+These resolve the four items ADR-006 left to the implementation workstream. They are settled — do not re-open.
+
+| # | Question | Decision | Effect |
+|---|---|---|---|
+| D1 | Failure mode when the patches repo is unreachable / a precondition no longer matches | **Proceed and warn** — never block demo create/reset | Step 2 is non-fatal by default; failures raise a **loud, persistent** notification (not just a log line). A per-patch `critical: true` escape hatch is specified but defaults off. LKG-unreachable falls back to canonical HEAD with a warning. |
+| D2 | `last-known-good` file format/location | **Industry-standard convention** | A plain-text `last-known-good` file at the patches-repo root holding **only** the verified canonical SHA — matching Chromium LKGR / NixOS channel `git-revision`. Rich detail (verifiedAt, canonical ref, patch-set state) goes in the automation **commit message**; the file's git history is the audit log. |
+| D3 | Patch-definition home | **Generalize to `eds-demo-patches`** | Migrate `skukla/eds-demo-content-patches` → brand-neutral `eds-demo-patches` (content + code patch sets); update existing `contentPatchSource` references in lockstep. |
+| D4 | Smart-404 vendoring onto v2 engine? | **Keep special-cased; do NOT migrate now** | Smart-404 stays its own mechanism with definitions **bundled in the extension** (off the network path) — it is load-bearing for PDP routing and, given D1's proceed-and-warn, must not share a failure mode with the optional patch fetch. Backlog item filed to revisit engine-internals unification after v2 ships (definitions stay bundled regardless). |
+
+**D1 + D4 interaction (the load-bearing rationale):** with proceed-and-warn, a transiently-missing CitiSignal patch yields a slightly-off (theming/SKU/block) storefront — acceptable. But PDP routing is core demo functionality, so smart-404 is deliberately kept **off** the network-dependent path; an `eds-demo-patches` outage degrades cosmetics, never PDP routing.
+
+---
+
 ## Step Structure, Order & Dependencies
 
 The work is four workstreams. Within the extension, Steps 1→2→3→4 are a dependency chain; Step 5 (config)
@@ -224,8 +239,8 @@ and on the LKG read/compare logic — these are the new load-bearing surfaces.
 |---|---|---|---|
 | R1 | **Archival sequencing** — archiving the fork while something still points at it breaks creates/resets (archived repos are read-only). | High | Step 5 flips **both** pointers (template + block source) before Step 9. Teaser fixes ride as day-one patches so the flip never waits on demo-team review. Step 9 opens with a "nothing references the fork" grep/verify gate across `demo-packages.json`, `block-libraries.json`, and any project metadata. |
 | R2 | **generate-from-template produces a repo at template HEAD**, not the LKG SHA (impact-analysis 1.5 caveat). | High | Step 4 verifies the caveat empirically first, then pins via a follow-up reset/force-push to the LKG tree (the reset path already does a Git Tree reset — reuse it) or an alternate clone-at-SHA strategy. Tests assert the created repo's HEAD == LKG SHA. |
-| R3 | **Patches repo load-bearing at create/reset** — if `raw.githubusercontent` / the repo is unreachable, creates/resets need a defined failure mode (same dependency `contentPatches` already has). | Med | Decide and test the failure mode in Step 2: fail the create loudly (patches are not optional for CitiSignal) vs. proceed-without and warn. Reuse `contentPatchRegistry`'s timeout + cache; surface a clear actionable error. **Owner input requested** (see Open Questions Q1). |
-| R4 | **Silent patch drift** — a precondition that no longer matches ships stale/[]missing fixes. | Med | Loud per-patch failure at create/reset (the `911b6ac8` "not applied — code structure changed" case becomes a surfaced warning), **plus** the daily gate turning red before storefronts ever see it. Never silently skip (engine returns an explicit failed-patch result; pipeline treats it as an error per R3 decision). |
+| R3 | **Patches repo load-bearing at create/reset** — if `raw.githubusercontent` / the repo is unreachable, creates/resets need a defined failure mode (same dependency `contentPatches` already has). | Med | **Resolved (D1): proceed and warn.** Step 2 surfaces a loud, persistent, actionable notification and continues; LKG-unreachable falls back to canonical HEAD with a warning. Reuse `contentPatchRegistry`'s timeout + cache. Smart-404 stays bundled (D4) so PDP routing survives an outage. Per-patch `critical:true` reserved for any future hard-fail need. |
+| R4 | **Silent patch drift** — a precondition that no longer matches ships stale/[]missing fixes. | Med | Loud per-patch failure at create/reset (the `911b6ac8` "not applied — code structure changed" case becomes a surfaced warning), **plus** the daily gate turning red before storefronts ever see it. Never silently skip (engine returns an explicit failed-patch result; pipeline surfaces it as a loud, persistent warning per D1 — not a silent pass, and not a hard block). |
 | R5 | **LKG pointer stalls** during a canonical incident — storefronts build progressively older (but verified) boilerplate; nobody is paged (by design). | Low (accepted in ADR) | Touched-file FYI + red-run logs in the gate; recovery is a push to the patches repo, no extension release in the path. Documented as accepted negative consequence. |
 | R6 | **CSS theming stays modificational** — brand theming ships as append-dominant patches (EDS loads block CSS from fixed paths). | Low | Consolidate to one vendored `<link>` + an additive brand stylesheet (Step 6) to minimize per-file CSS patches; revisit only if churn proves high (ADR "Neutral"). |
 | R7 | **Two product-teaser carries lost** if not PR'd to the demo team before the block-source flip. | Med | Step 6 authors them as day-one code patches (applied post-install); Step 8 files the PRs as exits. The flip does not depend on PR acceptance. |
@@ -248,22 +263,25 @@ and on the LKG read/compare logic — these are the new load-bearing surfaces.
 
 ---
 
-## Open Questions for Owner (before TDD detail)
+## Resolved Questions (this session) → see "Owner Decisions" above
 
-These are genuine forks-in-the-road the ADR explicitly left to the implementation workstream
-("What This ADR Does Not Decide"). None block approving the **structure**; they shape Steps 1–2 detail.
+The four implementation-workstream questions ADR-006 left open are **now decided** (D1–D4 in the Owner
+Decisions table). Summary so the steps are unambiguous:
 
-1. **Q1 — Create/reset failure mode when the patches repo is unreachable** (R3). Fail the create loudly, or
-   proceed-without-patches and warn? ADR leans "defined failure mode"; recommendation: **fail loudly for
-   CitiSignal** (patches are not cosmetic), proceed-with-warning only if a package marks patches optional.
-2. **Q2 — `last-known-good` file format & location.** Recommendation: a one-line `last-known-good` file at the
-   patches repo root (plus the existing per-brand `patches.json`), holding the verified canonical SHA; commit
-   history is the audit log. Confirm filename/path so Steps 3, 6, 7 agree.
-3. **Q3 — Patches repo name.** Keep `skukla/eds-demo-content-patches` (add `citisignal/code-patches.json` +
-   root `last-known-good`) or generalize to `eds-demo-patches`? Affects `CodePatchSource` defaults in config.
-4. **Q4 — Does smart-404 vendoring migrate onto the v2 engine now, or stay special-cased?** ADR says this is an
-   implementation choice. Recommendation: **keep it special-cased** for this initiative (it injects net-new
-   marker-bounded snippets with its own idempotency contract); revisit later.
+1. **Failure mode (→ D1):** proceed and warn (loud, persistent); never block create/reset. `critical:true` reserved.
+2. **`last-known-good` format (→ D2):** plain-text one-line SHA file at the patches-repo root (Chromium LKGR / Nix `git-revision` convention); detail in the commit message.
+3. **Patches repo (→ D3):** generalize to `eds-demo-patches`.
+4. **Smart-404 (→ D4):** keep special-cased and bundled in the extension; do not migrate onto v2 now.
+
+## Findings worth the owner's eye (no decision needed)
+
+- **F1 — v1 prior art is NOT recoverable from this repo's history.** ADR-006 / `findings.md` cite the removed
+  v1 template-patch system as recoverable at `f6a7d029^:src/features/eds/services/templatePatchRegistry.ts`
+  (and `config/patches/`). Those SHAs (`f6a7d029`, `6026b695`) **do not resolve** in this repo (verified this
+  session) — likely a squashed/rewritten history or a cite from a different working tree. **Mitigation:** the v2
+  engine is built fresh from the *living* `contentPatchRegistry.ts` + `pdp404HandlerPublisher.ts` (ADR confirms
+  the interfaces are "near-identical"); the ADR's v1 description is treated as the spec, not a code source. No
+  schedule impact, but Step 1 should not plan to `git show` the old files.
 
 ---
 
