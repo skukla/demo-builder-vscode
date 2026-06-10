@@ -129,6 +129,15 @@
           "contentSource": {
             "org": "hlxsites",
             "site": "aem-boilerplate-commerce"
+          },
+          "codePatches": [
+            "header-nav-tools-defensive",
+            "commerce-account-sidebar-selector-race"
+          ],
+          "codePatchSource": {
+            "owner": "skukla",
+            "repo": "eds-demo-patches",
+            "path": "custom"
           }
         },
         "eds-accs": {
@@ -154,6 +163,15 @@
           "contentSource": {
             "org": "hlxsites",
             "site": "aem-boilerplate-commerce"
+          },
+          "codePatches": [
+            "header-nav-tools-defensive",
+            "commerce-account-sidebar-selector-race"
+          ],
+          "codePatchSource": {
+            "owner": "skukla",
+            "repo": "eds-demo-patches",
+            "path": "custom"
           }
         }
       }
@@ -203,6 +221,19 @@
           "contentSource": {
             "org": "adobe-commerce",
             "site": "boilerplate-b2b"
+          },
+          "codePatches": [
+            "header-nav-tools-defensive",
+            "product-link-sku-encoding",
+            "product-link-sku-slash-encoding",
+            "aem-assets-sku-sanitization",
+            "commerce-account-sidebar-selector-race"
+          ],
+          "codePatchSource": {
+            "owner": "skukla",
+            "repo": "eds-demo-patches",
+            "path": "b2b",
+            "lkgFile": "b2b/last-known-good"
           }
         },
         "eds-accs": {
@@ -228,6 +259,19 @@
           "contentSource": {
             "org": "adobe-commerce",
             "site": "boilerplate-b2b"
+          },
+          "codePatches": [
+            "header-nav-tools-defensive",
+            "product-link-sku-encoding",
+            "product-link-sku-slash-encoding",
+            "aem-assets-sku-sanitization",
+            "commerce-account-sidebar-selector-race"
+          ],
+          "codePatchSource": {
+            "owner": "skukla",
+            "repo": "eds-demo-patches",
+            "path": "b2b",
+            "lkgFile": "b2b/last-known-good"
           }
         }
       }

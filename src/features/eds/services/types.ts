@@ -614,6 +614,10 @@ export interface EdsMetadata {
     lkgSource?: {
         owner: string;
         repo: string;
+        /** Per-ledger LKG file path when the ledger tracks a non-default
+         *  canonical (e.g., b2b → `b2b/last-known-good`). Omitted for
+         *  ledgers sharing the default root LKG. */
+        lkgFile?: string;
     };
 }
 

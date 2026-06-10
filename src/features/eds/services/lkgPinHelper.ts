@@ -92,7 +92,7 @@ export async function pinRepoToLkg(
     // "no pinning" with a warn — the storefront stays at template HEAD and
     // the next reset will reconcile. D1 proceed-and-warn.
     const lkgSha = await readLkgSha(
-        { owner: codePatchSource.owner, repo: codePatchSource.repo },
+        { owner: codePatchSource.owner, repo: codePatchSource.repo, lkgFile: codePatchSource.lkgFile },
         logger,
     );
     if (!lkgSha) {

@@ -70,6 +70,22 @@ describe('readLkgSha — happy path', () => {
         const calledUrl = fetchMock.mock.calls[0][0] as string;
         expect(calledUrl).toBe('https://raw.githubusercontent.com/skukla/eds-demo-patches/main/last-known-good');
     });
+
+    it('honors lkgFile when set — for multi-canonical patches repos (e.g., b2b)', async () => {
+        const fetchMock = jest.fn().mockResolvedValue({
+            ok: true,
+            text: () => Promise.resolve(VALID_SHA),
+        });
+        global.fetch = fetchMock;
+
+        await readLkgSha(
+            { owner: 'skukla', repo: 'eds-demo-patches', lkgFile: 'b2b/last-known-good' },
+            mockLogger,
+        );
+
+        const calledUrl = fetchMock.mock.calls[0][0] as string;
+        expect(calledUrl).toBe('https://raw.githubusercontent.com/skukla/eds-demo-patches/main/b2b/last-known-good');
+    });
 });
 
 // ==========================================================================

@@ -81,6 +81,12 @@ export interface CodePatchSource {
     repo: string;
     /** Path within repo to the patch family directory (contains code-patches.json) */
     path: string;
+    /** Repo-relative path to the LKG file when this ledger tracks a non-default
+     *  canonical (multi-canonical patches repos). Omitted when the ledger
+     *  shares the default root `last-known-good` — e.g., citisignal + custom
+     *  both track hlxsites/aem-boilerplate-commerce and share root LKG; b2b
+     *  tracks the B2B template and sets `lkgFile: "b2b/last-known-good"`. */
+    lkgFile?: string;
 }
 
 /**

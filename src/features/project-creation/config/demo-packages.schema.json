@@ -169,6 +169,11 @@
           "type": "string",
           "minLength": 1,
           "description": "Path within repo to the patch family directory (contains code-patches.json)"
+        },
+        "lkgFile": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Optional. Repo-relative path to the LKG file when the ledger tracks a non-default canonical (multi-canonical patches repos). Defaults to root 'last-known-good'. Example: b2b → 'b2b/last-known-good'."
         }
       }
     },

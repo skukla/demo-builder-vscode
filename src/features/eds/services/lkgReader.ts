@@ -27,13 +27,18 @@ const MALFORMED_BODY_LOG_CAP = 80;
 /**
  * Patches-repo coordinates needed to construct the LKG fetch URL.
  *
- * Note: this is intentionally narrower than `CodePatchSource` — LKG lives
- * at the patches-repo ROOT, not in any `path` subdirectory. Callers pass
- * `{owner, repo}` directly without leaking their `path` choice.
+ * `lkgFile` lets multi-canonical patches repos (where each ledger may
+ * track a different upstream) point at per-ledger LKG files. When
+ * omitted, defaults to `last-known-good` at the repo root — the
+ * single-canonical case used by `citisignal` + `custom` (both track
+ * `hlxsites/aem-boilerplate-commerce` and share one LKG). The `b2b`
+ * ledger tracks the B2B template and sets `lkgFile: 'b2b/last-known-good'`.
  */
 export interface LkgSource {
     owner: string;
     repo: string;
+    /** Repo-relative path to the LKG file. Defaults to `last-known-good`. */
+    lkgFile?: string;
 }
 
 /**
@@ -49,7 +54,8 @@ export async function readLkgSha(
     source: LkgSource,
     logger: Logger,
 ): Promise<string | undefined> {
-    const url = `https://raw.githubusercontent.com/${source.owner}/${source.repo}/main/last-known-good`;
+    const filePath = source.lkgFile ?? 'last-known-good';
+    const url = `https://raw.githubusercontent.com/${source.owner}/${source.repo}/main/${filePath}`;
     try {
         const response = await fetch(url, {
             signal: AbortSignal.timeout(TIMEOUTS.NORMAL),

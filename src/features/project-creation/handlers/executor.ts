@@ -210,6 +210,10 @@ interface ProjectCreationConfig {
             owner: string;
             repo: string;
             path: string;
+            /** Per-ledger LKG file when the ledger tracks a non-default canonical
+             *  (e.g., b2b's B2B template). Omitted for ledgers sharing the
+             *  default root `last-known-good`. */
+            lkgFile?: string;
         };
     };
 }
@@ -551,7 +555,15 @@ async function populateEdsMetadata(
     const templateOwner = typedConfig.edsConfig.templateOwner;
     const templateRepo = typedConfig.edsConfig.templateRepo;
     const lkgSource = typedConfig.edsConfig.codePatchSource
-        ? { owner: typedConfig.edsConfig.codePatchSource.owner, repo: typedConfig.edsConfig.codePatchSource.repo }
+        ? {
+            owner: typedConfig.edsConfig.codePatchSource.owner,
+            repo: typedConfig.edsConfig.codePatchSource.repo,
+            // Carry lkgFile when present (b2b case) so update checks against
+            // multi-canonical patches repos read the right per-ledger file.
+            ...(typedConfig.edsConfig.codePatchSource.lkgFile
+                ? { lkgFile: typedConfig.edsConfig.codePatchSource.lkgFile }
+                : {}),
+        }
         : undefined;
 
     edsInstance.metadata = {
@@ -633,7 +645,7 @@ async function fetchTemplateCommitSha(
     if (codePatchSource) {
         const { readLkgSha } = await import('@/features/eds/services/lkgReader');
         const lkg = await readLkgSha(
-            { owner: codePatchSource.owner, repo: codePatchSource.repo },
+            { owner: codePatchSource.owner, repo: codePatchSource.repo, lkgFile: codePatchSource.lkgFile },
             context.logger,
         );
         if (lkg) {

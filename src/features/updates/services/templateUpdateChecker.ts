@@ -22,12 +22,15 @@ import { readLkgSha } from '@/features/eds/services/lkgReader';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 
-/** Runtime shape guard for the LkgSource shape stored on EdsStorefrontMetadata. */
-function isLkgSource(value: unknown): value is { owner: string; repo: string } {
-    return typeof value === 'object'
-        && value !== null
-        && typeof (value as { owner: unknown }).owner === 'string'
-        && typeof (value as { repo: unknown }).repo === 'string';
+/** Runtime shape guard for the LkgSource shape stored on EdsStorefrontMetadata.
+ *  `lkgFile` is optional — present for ledgers with non-default LKG paths
+ *  (e.g., b2b), absent for ledgers sharing the root `last-known-good`. */
+function isLkgSource(value: unknown): value is { owner: string; repo: string; lkgFile?: string } {
+    if (typeof value !== 'object' || value === null) return false;
+    const obj = value as { owner: unknown; repo: unknown; lkgFile?: unknown };
+    if (typeof obj.owner !== 'string' || typeof obj.repo !== 'string') return false;
+    if (obj.lkgFile !== undefined && typeof obj.lkgFile !== 'string') return false;
+    return true;
 }
 
 /**
@@ -105,7 +108,7 @@ export class TemplateUpdateChecker {
         templateOwner: string;
         templateRepo: string;
         lastSyncedCommit: string;
-        lkgSource?: { owner: string; repo: string };
+        lkgSource?: { owner: string; repo: string; lkgFile?: string };
     } | null {
         const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
         if (!edsInstance?.metadata) {
@@ -148,7 +151,7 @@ export class TemplateUpdateChecker {
      * "update available" — D1 proceed-and-warn).
      */
     private async checkThinLayerUpdates(
-        lkgSource: { owner: string; repo: string },
+        lkgSource: { owner: string; repo: string; lkgFile?: string },
         lastSyncedCommit: string,
         templateOwner: string,
         templateRepo: string,

@@ -12,12 +12,12 @@
 import { installBlockCollections } from './blockCollectionHelpers';
 import { applyCanonicalCodePatches } from './codePatchPipelineHelpers';
 import type { CodePatchResult } from './codePatchRegistry';
-import { readLkgSha } from './lkgReader';
 import { generateConfigJson, extractConfigParams } from './configGenerator';
 import { assertValidGitHubSlug, type EdsResetParams } from './edsResetParams';
 import { generateFstabContent } from './fstabGenerator';
 import type { GitHubFileOperations } from './githubFileOperations';
 import { generateInspectorTreeEntries, installInspectorTagging } from './inspectorHelpers';
+import { readLkgSha } from './lkgReader';
 import { installSmart404Handler } from './pdp404HandlerPublisher';
 import type { GitHubTreeInput } from './types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -259,7 +259,7 @@ export async function resetRepoToTemplate(
     let templateRef = 'main';
     if (codePatchSource) {
         const lkg = await readLkgSha(
-            { owner: codePatchSource.owner, repo: codePatchSource.repo },
+            { owner: codePatchSource.owner, repo: codePatchSource.repo, lkgFile: codePatchSource.lkgFile },
             context.logger,
         );
         if (lkg) {
