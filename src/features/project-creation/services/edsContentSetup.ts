@@ -14,8 +14,10 @@
  * - configureDaLivePermissions / applyDaLiveOrgConfigSettings from edsHelpers
  */
 
+import * as vscode from 'vscode';
 import { parseGitHubUrl } from '@/core/utils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { createPatchReport, reportUnapplied } from '@/features/eds/services/patchReportHelper';
 import type { Logger } from '@/types/logger';
 
 interface EdsContentConfig {
@@ -105,6 +107,12 @@ export async function ensureEdsContent(
     const contentSource = config.contentSource;
     const indexPath = contentSource.indexPath || '/full-index.json';
 
+    // Aggregate per-page content-patch results so the final reportUnapplied call
+    // can surface them in one warning toast (ADR-006 D1 — mirrors the create/reset
+    // pipeline behavior). Without this, content patches that fail their precondition
+    // would silent-debug-log here and the import path would miss the user signal.
+    const patchReport = createPatchReport();
+
     const contentResult = await daLiveContentOps.copyContentFromSource(
         {
             org: contentSource.org,
@@ -119,6 +127,7 @@ export async function ensureEdsContent(
         },
         config.contentPatches,
         config.contentPatchSource,
+        patchReport,
     );
 
     if (!contentResult.success) {
@@ -208,5 +217,10 @@ export async function ensureEdsContent(
     }
 
     logger.info('[EDS Content] Content published to CDN');
+
+    // Surface unapplied content patches via the unified toast — same D1 contract
+    // as the create/reset pipeline. No-op when nothing failed precondition.
+    reportUnapplied(patchReport, logger, vscode.window.showWarningMessage);
+
     return true;
 }
