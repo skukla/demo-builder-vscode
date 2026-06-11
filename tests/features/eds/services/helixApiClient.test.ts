@@ -19,7 +19,7 @@ import {
 
 const TOKENS: HelixTokens = {
     githubToken: 'gh-token-abc',
-    daLiveToken: 'dalive-ims-xyz',
+    contentSourceAuthorization: 'Bearer dalive-ims-xyz',
 };
 
 describe('helixApiClient', () => {
@@ -60,7 +60,19 @@ describe('helixApiClient', () => {
             const init = mockFetch.mock.calls[0][1] as RequestInit;
             const headers = init.headers as Record<string, string>;
             expect(headers['x-auth-token']).toBe('gh-token-abc');
+            // The content-source-authorization value is now pre-resolved by the
+            // caller (DaLiveContentSource → `Bearer <imsToken>`); byte-identical wire.
             expect(headers['x-content-source-authorization']).toBe('Bearer dalive-ims-xyz');
+        });
+
+        it('omits x-content-source-authorization when none is provided (AEM owns read auth server-side)', async () => {
+            await previewPage('myorg', 'mysite', '/', 'main', { githubToken: 'gh-token-abc' });
+
+            const init = mockFetch.mock.calls[0][1] as RequestInit;
+            const headers = init.headers as Record<string, string>;
+            expect(headers['x-auth-token']).toBe('gh-token-abc');
+            // No empty `Bearer ` — the header is absent entirely.
+            expect(headers).not.toHaveProperty('x-content-source-authorization');
         });
 
         it('throws HelixApiError(401) on 401', async () => {

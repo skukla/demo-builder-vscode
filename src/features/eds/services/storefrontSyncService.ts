@@ -109,7 +109,7 @@ export async function syncAndPublish(input: SyncAndPublishInput): Promise<SyncAn
             input.githubRepo.site,
             '/',
             input.githubRepo.branch ?? 'main',
-            { githubToken: input.githubToken, daLiveToken: input.daLiveToken },
+            { githubToken: input.githubToken, contentSourceAuthorization: `Bearer ${input.daLiveToken}` },
         );
         result.helixPublished = true;
     }

@@ -528,7 +528,7 @@ async function publishStorefrontAndDaLive(
             ctx.githubRepo.site,
             `/.da/library/blocks/${blockId}`,
             ctx.githubRepo.branch ?? 'main',
-            { githubToken, daLiveToken },
+            { githubToken, contentSourceAuthorization: `Bearer ${daLiveToken}` },
         );
     } catch {
         return 'partial';
@@ -574,7 +574,7 @@ async function unpublishStorefrontAndDaLive(
             ctx.githubRepo.site,
             `/.da/library/blocks/${blockId}`,
             ctx.githubRepo.branch ?? 'main',
-            { githubToken, daLiveToken },
+            { githubToken, contentSourceAuthorization: `Bearer ${daLiveToken}` },
         );
         return ok ? 'success' : 'partial';
     } catch {

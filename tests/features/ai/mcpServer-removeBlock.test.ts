@@ -195,7 +195,8 @@ describe('toolHandlers.removeBlockFromLibrary', () => {
             GITHUB_SITE,
             `/.da/library/blocks/${BLOCK_ID}`,
             'main',
-            { githubToken: 'github-token', daLiveToken: 'da-live-token' },
+            // daLiveToken pre-resolved into the content-source-authorization header value.
+            { githubToken: 'github-token', contentSourceAuthorization: 'Bearer da-live-token' },
         );
         expect(result.unpublish).toBe('success');
     });

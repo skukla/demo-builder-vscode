@@ -163,7 +163,9 @@ describe('storefrontSyncService.syncAndPublish', () => {
 
             expect(previewMock).toHaveBeenCalledWith(
                 'owner', 'repo', '/', 'main',
-                { githubToken: 'gh-token', daLiveToken: 'dalive-ims' },
+                // daLiveToken is now pre-resolved into the content-source-authorization
+                // header value by the caller — byte-identical wire.
+                { githubToken: 'gh-token', contentSourceAuthorization: 'Bearer dalive-ims' },
             );
         });
 

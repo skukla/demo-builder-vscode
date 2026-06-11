@@ -18,8 +18,13 @@ const DEFAULT_TIMEOUT_MS = 180_000;
 export interface HelixTokens {
     /** GitHub token used as `x-auth-token` header */
     githubToken: string;
-    /** DA.live IMS access token used for the `x-content-source-authorization` header */
-    daLiveToken: string;
+    /**
+     * Pre-resolved `x-content-source-authorization` header value (content-source
+     * neutral — produced by the active `ContentSource.getContentSourceAuthorization()`;
+     * DA.live → `Bearer <imsToken>`). When `undefined`, the header is omitted —
+     * AEM Sites authorizes the content read server-side, so no token is sent.
+     */
+    contentSourceAuthorization?: string;
 }
 
 export interface HelixApiOptions {
@@ -40,9 +45,14 @@ function normalizeWebPath(p: string): string {
 }
 
 function buildHeaders(tokens: HelixTokens): Record<string, string> {
+    // The content-source-authorization value is produced by the active
+    // ContentSource (DA.live → `Bearer <imsToken>`); AEM yields none and the
+    // header is omitted (read is authorized inside AEM).
     return {
         'x-auth-token': tokens.githubToken,
-        'x-content-source-authorization': `Bearer ${tokens.daLiveToken}`,
+        ...(tokens.contentSourceAuthorization
+            ? { 'x-content-source-authorization': tokens.contentSourceAuthorization }
+            : {}),
     };
 }
 
