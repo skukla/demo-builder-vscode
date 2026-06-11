@@ -1,12 +1,23 @@
-# Implementation Plan (SCAFFOLD): Commerce-Connect Slice 2 — AEM Sites as a content source
+# Implementation Plan: Commerce-Connect Slice 2 — AEM Sites as a content source
 
 ## Status Tracking
 
-- [x] **Scaffold — PM-approved for delegation; four open questions resolved (2026-06-11)**
-- [ ] Planned (planner output reviewed + approved)
-- [ ] In Progress (TDD)
+- [x] Scaffold — PM-approved for delegation; four open questions resolved (2026-06-11)
+- [x] **Planned — detailed pass complete; step-01..08 written; PM reviewed (2026-06-11)**
+- [ ] In Progress (TDD) — *not started; PM saved plan only*
 - [ ] Quality gates (Efficiency + Security)
 - [ ] Complete
+
+> **Planner corrections folded into this plan (override the scaffold's earlier framing):**
+> - **`fstabGenerator.ts` is OUT of scope.** Code review showed it is canonical-only DA.live cleanup plumbing that never runs on the satellite path. Do **not** factor it behind `ContentSource`. (Scaffold's "factor fstabGenerator" was wrong.)
+> - **`ContentSource` is a 2-method interface** (`buildRegistrationSource` + `getContentSourceAuthorization` + `type`). Point-at means no content-copy/publish members — those stay on `DaLiveContentOperations`, off the interface.
+> - The real DA.live coupling on the satellite content axis is narrow: the registration `source` payload (`configurationService.ts:181`) and the Helix auth header (`helixApiClient.ts:45`).
+>
+> **PM decisions on planner recommendations (2026-06-11):**
+> - **R2 (manual-fallback boundary):** ACCEPTED — automation owns registration + best-effort 3-node authoring; on missing auth or 401/403 the writer returns `manualFallbackRequired` with exact paths+payloads and setup completes green.
+> - **R3 (interface surface):** ACCEPTED — the 2-method minimum.
+> - **R4 (wizard surface):** ACCEPTED — extend `ConnectServicesStep` (not a standalone step).
+> - **R1 (AEM auth model):** ⏳ **STILL OPEN — PM deciding.** Step 04 + Step 07 auth field depend on this. Options: tech-account/IMS bearer (recommended) · a different AEM grant · defer-with-stub (build the port now, pin the grant before Step 04's live F5).
 
 **Created:** 2026-06-11
 **Predecessor:** `.rptc/complete/commerce-connect-slice1-repoless-wiring/` (repoless join shipped + F5-verified)
