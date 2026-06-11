@@ -99,6 +99,54 @@ describe('GitHub Repository Operations', () => {
                 service.createFromTemplate('adobe', 'template', 'new-repo')
             ).rejects.toThrow('Not authenticated');
         });
+
+        it('targets the team-org namespace when targetOwner is provided (Step 4 of picker plan)', async () => {
+            // Given: a successful create, with targetOwner set to a team org
+            const service = new GitHubRepoOperations(mockTokenService);
+            mockOctokitRequest.mockResolvedValue({
+                data: {
+                    id: 99, name: 'leah-demo',
+                    full_name: 'demo-system-stores/leah-demo',
+                    html_url: 'https://github.com/demo-system-stores/leah-demo',
+                    clone_url: 'https://github.com/demo-system-stores/leah-demo.git',
+                    default_branch: 'main',
+                },
+            });
+
+            // When: createFromTemplate is called with the team org as the target owner
+            await service.createFromTemplate(
+                'adobe', 'template', 'leah-demo', false, 'demo-system-stores',
+            );
+
+            // Then: GitHub generate API receives the owner override so the
+            // repo is created under the team org rather than the authenticated user
+            expect(mockOctokitRequest).toHaveBeenCalledWith(
+                'POST /repos/{template_owner}/{template_repo}/generate',
+                expect.objectContaining({ owner: 'demo-system-stores' }),
+            );
+        });
+
+        it('omits the owner parameter when targetOwner is undefined (default: authenticated user)', async () => {
+            // Given: a successful create with no targetOwner — back-compat path
+            const service = new GitHubRepoOperations(mockTokenService);
+            mockOctokitRequest.mockResolvedValue({
+                data: {
+                    id: 99, name: 'leah-demo',
+                    full_name: 'leahrayard/leah-demo',
+                    html_url: 'https://github.com/leahrayard/leah-demo',
+                    clone_url: 'https://github.com/leahrayard/leah-demo.git',
+                    default_branch: 'main',
+                },
+            });
+
+            // When: createFromTemplate called without targetOwner
+            await service.createFromTemplate('adobe', 'template', 'leah-demo');
+
+            // Then: the API call body has no `owner` key — GitHub defaults to
+            // creating under the authenticated user
+            const requestBody = mockOctokitRequest.mock.calls[0][1];
+            expect(requestBody.owner).toBeUndefined();
+        });
     });
 
     describe('listUserRepositories', () => {

@@ -14,11 +14,9 @@
  */
 
 import * as vscode from 'vscode';
-import { hasWriteAccess } from './edsDaLiveOrgHandlers';
 import {
     getDaLiveAuthService,
     validateDaLiveToken,
-    offerSaveDefaultOrg,
 } from './edsHelpers';
 import { getBookmarkletUrl } from '@/features/eds/utils/daLiveTokenBookmarklet';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -267,50 +265,15 @@ export async function handleStoreDaLiveTokenWithOrg(
             return { success: false, error: validation.error };
         }
 
-        // Verify org access BEFORE storing the token
-        context.logger.debug('[EDS] Verifying org access with token');
-        const orgResponse = await fetch(`https://admin.da.live/list/${orgName}/`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-            },
-        });
-
-        if (orgResponse.status === 403) {
-            await context.sendMessage('dalive-token-with-org-result', {
-                success: false,
-                error: `Access denied to organization "${orgName}". Please check the name or your permissions.`,
-            });
-            return { success: false, error: 'Access denied' };
-        }
-
-        if (orgResponse.status === 404) {
-            await context.sendMessage('dalive-token-with-org-result', {
-                success: false,
-                error: `Organization "${orgName}" not found. Please check the name.`,
-            });
-            return { success: false, error: 'Organization not found' };
-        }
-
-        if (!orgResponse.ok) {
-            await context.sendMessage('dalive-token-with-org-result', {
-                success: false,
-                error: `Failed to verify organization: ${orgResponse.status}`,
-            });
-            return { success: false, error: 'Verification failed' };
-        }
-
-        // Verify write access before storing
-        const writable = await hasWriteAccess(orgName, token);
-        if (!writable) {
-            await context.sendMessage('dalive-token-with-org-result', {
-                success: false,
-                error: `You have read-only access to "${orgName}". Please enter an organization you own.`,
-            });
-            return { success: false, error: 'Read-only access' };
-        }
-
-        // Org verified with write access! Store via service
+        // Pre-auth verification gate removed (Step 4 of the namespace-picker
+        // plan). The picker now provides only namespaces the user is verifiably
+        // a GitHub member of, so the "does DA.live's admin already know this
+        // org" check is no longer load-bearing — it just blocked first-time
+        // DA.live users whose AEM Code Sync app hadn't been installed yet.
+        // First-time setup is handled by Phase 3 of the create pipeline,
+        // which detects missing Code Sync and prompts install. Any genuine
+        // write failure now surfaces at the actual write site with contextual
+        // error messaging, not as a generic "organization not found".
         const tokenExpiry = validation.expiresAt || (Date.now() + 24 * 60 * 60 * 1000);
         const authService = getDaLiveAuthService(context.context);
         await authService.storeToken(token, {
@@ -319,12 +282,9 @@ export async function handleStoreDaLiveTokenWithOrg(
             orgName,
         });
 
-        context.logger.info('[EDS] DA.live token stored and org verified:', orgName);
+        context.logger.info('[EDS] DA.live token stored, namespace pinned to:', orgName);
 
-        // Offer to save org as default (one-time, non-blocking)
-        offerSaveDefaultOrg(context, orgName);
-
-        // Send success with verified org
+        // Send success with the picked namespace
         await context.sendMessage('dalive-token-with-org-result', {
             success: true,
             email: validation.email,

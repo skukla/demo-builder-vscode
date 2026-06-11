@@ -77,10 +77,16 @@ export class GitHubRepoOperations {
         templateRepo: string,
         newRepoName: string,
         isPrivate = false,
+        targetOwner?: string,
     ): Promise<GitHubRepo> {
         const octokit = await this.ensureAuthenticated();
 
         try {
+            // GitHubs template-generate endpoint creates under the authenticated
+            // user by default. Pass `owner` to target a different namespace
+            // (team org). The caller is the wizards namespace picker — when
+            // the user picked their personal account, targetOwner can be their
+            // own login or undefined; both create under the authenticated user.
             const response = await octokit.request(
                 'POST /repos/{template_owner}/{template_repo}/generate',
                 {
@@ -88,6 +94,7 @@ export class GitHubRepoOperations {
                     template_repo: templateRepo,
                     name: newRepoName,
                     private: isPrivate,
+                    ...(targetOwner ? { owner: targetOwner } : {}),
                 },
             );
 
