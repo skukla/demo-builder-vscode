@@ -1,16 +1,25 @@
 /**
  * DA.live Config Service
  *
- * Client for the DA.live Config API (admin.da.live/config/) that manages
- * site permissions and configuration using the multi-sheet format.
+ * Client for the DA.live Config API (admin.da.live/config/) that manages EDS
+ * site **content permissions** — who may read/write the content — using the
+ * multi-sheet format with a permissions sheet.
  *
- * This is the correct API for configuring EDS site permissions, replacing
- * the broken admin.hlx.page/config/ approach. The DA.live Config API uses:
+ * Scope note (avoid the "orphaned code" trap): this is the correct API
+ * specifically for configuring DA.live content *permissions*; for that one
+ * purpose it replaced an earlier, broken attempt to set permissions via
+ * admin.hlx.page/config/. It does NOT supersede `configurationService.ts`,
+ * which still owns site *registration* (the code-repo + content-source
+ * `{ code, content.source }` body) via admin.hlx.page/config/. The two
+ * services are complementary, not duplicates: one says *what the site is*,
+ * this one says *who may touch its content*.
+ *
+ * The DA.live Config API uses:
  * - Endpoint: PUT https://admin.da.live/config/{org}/{site}/
  * - Auth: Bearer ${daLiveToken} (DA.live IMS token)
  * - Format: FormData with multi-sheet JSON config
  *
- * Key differences from the old approach:
+ * Key differences from the broken permissions approach:
  * - Uses DA.live IMS token (not GitHub token)
  * - Uses multi-sheet config format with permissions sheet
  * - Proper permission row structure (path, groups, actions)

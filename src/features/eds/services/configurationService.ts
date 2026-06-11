@@ -7,6 +7,11 @@
  *
  * The Configuration Service manages server-side site configuration in Helix 5.
  *
+ * Scope: this service owns site *registration* (code repo + content source).
+ * DA.live content *permissions* (who may read/write) are a separate concern
+ * handled by `daLiveConfigService.ts` (admin.da.live/config/). The two are
+ * complementary, not duplicates.
+ *
  * Authentication: Uses Adobe IMS token via Authorization Bearer header.
  * The IMS token is obtained from the DA.live auth flow (same token used
  * for DA.live content operations). The user must have admin role on the
