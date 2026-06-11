@@ -15,8 +15,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
-import { clearMcpCache, inspectAllServers, verifyAiSetup } from '@/features/ai';
-import type { AiVerificationResult } from '@/features/ai';
+import { clearMcpCache, inspectAllServers, verifyAiSetup, type AiVerificationResult } from '@/features/ai';
 import {
     generateAIContextFiles,
     installAiDefaultsInStorefront,
