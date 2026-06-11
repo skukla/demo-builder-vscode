@@ -2,8 +2,8 @@
 
 ## Status Tracking
 
-- [ ] **Scaffold — pending PM approval to delegate to Master Feature Planner**
-- [ ] Planned (Master Planner output reviewed + approved)
+- [x] **Scaffold — PM-approved for delegation; four open questions resolved (2026-06-11)**
+- [ ] Planned (planner output reviewed + approved)
 - [ ] In Progress (TDD)
 - [ ] Quality gates (Efficiency + Security)
 - [ ] Complete
@@ -26,9 +26,11 @@ Make the storefront **content source pluggable** and add an **AEM-Sites variant*
 
 1. **Build + F5 end-to-end.** A live AEM-as-Cloud-Service Author instance with an EDS license is available, so Slice 2 is built *and* live-verified — not headless-deferred like Slice 1's interim phase.
 2. **Config-as-content writer is IN scope.** Without it the F5 gate (AEM page transacts) can't go green. A **manual-author fallback is allowed for the first end-to-end** so the source-swap seam isn't blocked on the writer being perfect.
-3. **Seam depth → Master Planner's call.** Thin discriminated branch (`da-live | aem-sites`) vs. a `ContentSource` interface — the planner decides based on how the ~115 DA.live couplings actually factor (note: there are exactly two sources, so YAGNI pressure is real).
+3. **Seam depth → `ContentSource` interface.** PM chose the full abstraction over a thin discriminated branch. Plan to a `ContentSource` boundary (DA.live + AEM as the two implementations), not a `contentSourceType` switch. *Planner note:* this **overrides the YAGNI default** (there are only two sources today), so justify the interface's member surface against the ~115 DA.live couplings — keep it a real seam factored from actual call sites, not ceremony. The DA.live implementation is a refactor-in-place of today's code; AEM is the net-new implementation.
+4. **Multi-env: all three from day one.** The config-as-content writer authors `configs` **+ `configs-stage` + `configs-dev`** (full CitiSignal-style `paths.json` mapping), not prod-only.
+5. **Content model: point-at, no-copy** (confirmed against `roadmap.md` item 3 + `engagement-modes-and-ownership.md:73`). Slice 2 **wires** the joiner's already-authored AEM instance as the source — the AEM instance *is* the content ("the Content SC's content **lives in** their AEM Sites"). It does **not** copy or scaffold content. The PM's "long-term" option splits into already-planned, **out-of-scope** later work: (a) extension-driven AEM **env setup + `xcom` scaffold** = the **front-door / first-run, Slice 3** (`slice1-discovery.md:76`); (b) **seed brand starter content** = an **optional** step in the Joiner journey that can ride Slice 2's path later but is **not** required for the F5 gate. → **No content-copy step in Slice 2.**
 
-**Scope boundary (PM-stated, unobjected):** Slice 2 = the **joiner's content-source swap** (extends Slice 1's repoless join). It is **NOT** the AEM-SC front-door / first-run (the content-SC who *owns* an AEM storefront) — that remains the separate front-door slice in `aem-sc-first-run.md`.
+**Scope boundary (PM-stated, unobjected):** Slice 2 = the **joiner's content-source swap** (extends Slice 1's repoless join). It is **NOT** the AEM-SC front-door / first-run (the content-SC who *owns* an AEM storefront) — that remains the separate front-door slice in `aem-sc-first-run.md` (Slice 3/4).
 
 ---
 
@@ -46,21 +48,26 @@ Make the storefront **content source pluggable** and add an **AEM-Sites variant*
 
 ## Known work areas (planner to decompose into TDD steps)
 
-1. **Content-source seam** — factor the DA.live assumption in `fstabGenerator` / `configurationService` / `edsPipeline` behind a content-source-neutral boundary (depth TBD by planner). Extend `contentSourceType` and the Helix `source` payload to carry AEM.
-2. **AEM-Sites variant** — the AEM counterpart to `daLiveContentOperations`: point the satellite at the AEM content tree, AEM auth/token wiring (`x-content-source-authorization` equivalent), `fstab`/`paths.json` mapping for the AEM source.
-3. **Config-as-content writer** — write `configs*` nodes (commerce wiring: `commerce-core-endpoint`, `x-api-key`, `Magento-Environment-Id`, store headers) into the AEM content tree via the Authoring/Admin API, instead of committing `config.json` repo-side. Include the **manual-author fallback** path for first end-to-end.
+1. **Content-source seam (`ContentSource` interface)** — factor the DA.live assumption in `fstabGenerator` / `configurationService` / `edsPipeline` behind a `ContentSource` boundary. DA.live becomes one implementation (refactor-in-place of current code); the Helix `source` payload and `contentSourceType` are produced *through* the interface, not switched inline.
+2. **AEM-Sites variant (`ContentSource` impl)** — the AEM implementation: point the satellite at the **already-authored** AEM content tree (no copy), AEM auth/token wiring (`x-content-source-authorization` equivalent), `fstab`/`paths.json` mapping for the AEM source. Net-new, but smaller than the DA.live ops module since there is no content-copy/publish path.
+3. **Config-as-content writer (multi-env)** — write `configs` **+ `configs-stage` + `configs-dev`** nodes (commerce wiring: `commerce-core-endpoint`, `x-api-key`, `Magento-Environment-Id`, store headers) into the AEM content tree via the Configuration/Authoring API per the CitiSignal `paths.json` mapping, instead of committing `config.json` repo-side. Include the **manual-author fallback** path for first end-to-end.
 4. **Wizard/connect surface** — let the joiner declare an AEM content source (likely a content-source choice on the Connect/Join path); prefill + validation parallel to Slice 1's connect-step.
 5. **Dashboard/marker** — reflect content-source type where Slice 1 surfaces share/marker state, if the planner finds it warranted.
 
 ---
 
-## Open questions for the Master Planner
+## Resolved (PM, 2026-06-11) — were open questions
 
-- **Seam depth** (decision #3) — recommend thin branch vs. `ContentSource` interface, with the factoring evidence.
-- **Author-in-place vs. copy** — does Slice 2 *copy* starter content into the joiner's AEM tree, or *wire* an already-authored AEM instance as the source (no copy)? The repoless/CitiSignal model leans "the AEM instance IS the content," which may eliminate a DA.live-style content-copy step entirely. Resolve early — it reshapes work area 2.
-- **AEM auth model** — what token/credential does the satellite use to point at the AEM source, and where does it come from in the wizard?
-- **Manual-fallback boundary** — exactly where the writer's automation stops and manual authoring begins for the first F5.
-- **Multi-env** — is `configs-stage`/`configs-dev` in Slice 2, or just `configs` (prod) with multi-env as a noted follow-on?
+- ✅ **Seam depth** → `ContentSource` interface (decision #3). Planner factors the member surface from real call sites.
+- ✅ **Author-in-place vs. copy** → **point-at, no-copy** (decision #5). No content-copy step in Slice 2.
+- ✅ **Multi-env** → **all three** `configs` / `configs-stage` / `configs-dev` (decision #4).
+
+## Still open for the planner
+
+- **AEM auth model** — what token/credential the satellite uses to point at the AEM source, and where it comes from in the wizard (the `x-content-source-authorization` equivalent for AEM). **Security-review focal point.**
+- **Manual-fallback boundary** — exactly where the writer's automation stops and manual authoring begins for the first F5 (decision #2 allows the fallback; planner pins the line).
+- **`ContentSource` member surface** — the concrete interface shape, derived from the DA.live call sites it must cover, kept minimal per the planner-note on decision #3.
+- **Wizard surface for the AEM source** — where on the Connect/Join path the joiner declares the AEM content source + its auth, paralleling Slice 1's connect-step.
 
 ---
 
@@ -72,4 +79,4 @@ Make the storefront **content source pluggable** and add an **AEM-Sites variant*
 
 ---
 
-> **Next action:** PM approval to delegate this scaffold to the **Master Feature Planner** for the comprehensive, TDD-ready step breakdown (`step-NN.md` + test strategy + risk map), per RPTC.
+> **Next action:** PM approved delegation (2026-06-11). Hand this scaffold to the detailed-planning pass — run via the built-in **Plan architect agent** (the RPTC Master Feature Planner agent isn't installed in this session) — for the comprehensive, TDD-ready step breakdown (`step-NN.md` + test strategy + risk map). PM reviews/approves the planner output before saving and starting TDD.
