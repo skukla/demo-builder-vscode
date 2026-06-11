@@ -33,7 +33,7 @@ export async function executePhaseCodeSync(
         phase: 'code-sync', message: 'Verifying code synchronization...', progress: 40,
     });
 
-    const codeSyncResult = await verifyCodeSync(context, services, repoInfo, signal);
+    const codeSyncResult = await verifyCodeSync(context, services, repoInfo, signal, edsConfig);
     if (codeSyncResult) return codeSyncResult;
 
     await context.sendMessage('storefront-setup-progress', {
@@ -115,6 +115,7 @@ async function verifyCodeSync(
     services: SetupServices,
     repoInfo: RepoInfo,
     signal: AbortSignal,
+    edsConfig: StorefrontSetupStartPayload['edsConfig'],
 ): Promise<StorefrontSetupResult | null> {
     const logger = context.logger;
     const { githubAppService } = services;
@@ -135,11 +136,29 @@ async function verifyCodeSync(
 
         if (!initialCheck.isInstalled) {
             const installUrl = githubAppService.getInstallUrl(repoInfo.repoOwner, repoInfo.repoName);
-            logger.info(`[Storefront Setup] GitHub App not installed. Install URL: ${installUrl}`);
+
+            // Differentiate the install-prompt message based on whether the
+            // repo lives in the SC's personal namespace or a team org. SCs
+            // can install GitHub Apps on their own accounts (personal case);
+            // they typically cannot install on a team org without admin
+            // rights (team-org case), so the messaging needs to direct them
+            // to ask the org admin rather than implying they can fix it
+            // themselves.
+            const githubUser = edsConfig.githubAuth?.user?.login;
+            const isTeamOrg = !!githubUser && repoInfo.repoOwner !== githubUser;
+
+            const message = isTeamOrg
+                ? `AEM Code Sync is not installed on ${repoInfo.repoOwner}. `
+                  + `Installing it on a GitHub organization requires admin rights — ask your `
+                  + `team admin to install it from: ${installUrl}`
+                : 'The AEM Code Sync GitHub App must be installed to continue.';
+
+            logger.info(`[Storefront Setup] GitHub App not installed (isTeamOrg=${isTeamOrg}). Install URL: ${installUrl}`);
 
             await context.sendMessage('storefront-setup-github-app-required', {
                 owner: repoInfo.repoOwner, repo: repoInfo.repoName, installUrl,
-                message: 'The AEM Code Sync GitHub App must be installed to continue.',
+                isTeamOrg,
+                message,
             });
 
             return { success: false, error: 'GitHub App installation required', ...repoInfo };

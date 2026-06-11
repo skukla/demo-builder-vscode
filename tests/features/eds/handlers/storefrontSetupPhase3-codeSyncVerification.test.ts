@@ -130,6 +130,76 @@ beforeEach(() => {
 
 describe('executePhaseCodeSync — code sync verification gate', () => {
     describe('GitHub App not installed', () => {
+        it('uses team-org messaging when the namespace differs from the authenticated GitHub user (Step 5 of picker plan)', async () => {
+            // Picker scenario: SC authenticated as `leahrayard` but picked the
+            // team org `demo-system-stores` as the demo namespace. Phase 3
+            // surfaces the install prompt but with "ask your team admin"
+            // framing because the SC cant install on the team org themselves.
+            const context = makeContext();
+            const services = makeServices({ isInstalled: false });
+
+            const repoInfo: RepoInfo = {
+                repoOwner: 'demo-system-stores',
+                repoName: 'leah-demo',
+                repoUrl: 'https://github.com/demo-system-stores/leah-demo',
+            };
+            const edsConfig = {
+                ...EDS_CONFIG,
+                daLiveOrg: 'demo-system-stores',
+                githubAuth: {
+                    isAuthenticated: true,
+                    user: { login: 'leahrayard' },
+                },
+            } as unknown as typeof EDS_CONFIG;
+
+            await executePhaseCodeSync(
+                context, edsConfig, services, repoInfo, new AbortController().signal,
+            );
+
+            expect(context.sendMessage).toHaveBeenCalledWith(
+                'storefront-setup-github-app-required',
+                expect.objectContaining({
+                    owner: 'demo-system-stores',
+                    isTeamOrg: true,
+                    message: expect.stringContaining('admin'),
+                }),
+            );
+        });
+
+        it('uses self-install messaging when the namespace matches the authenticated GitHub user (personal namespace case)', async () => {
+            // Picker scenario: SC authenticated as `leahrayard` AND picked
+            // their personal account. They can install on their own user,
+            // so the message stays as the existing "must be installed" copy.
+            const context = makeContext();
+            const services = makeServices({ isInstalled: false });
+
+            const repoInfo: RepoInfo = {
+                repoOwner: 'leahrayard',
+                repoName: 'leah-demo',
+                repoUrl: 'https://github.com/leahrayard/leah-demo',
+            };
+            const edsConfig = {
+                ...EDS_CONFIG,
+                daLiveOrg: 'leahrayard',
+                githubAuth: {
+                    isAuthenticated: true,
+                    user: { login: 'leahrayard' },
+                },
+            } as unknown as typeof EDS_CONFIG;
+
+            await executePhaseCodeSync(
+                context, edsConfig, services, repoInfo, new AbortController().signal,
+            );
+
+            expect(context.sendMessage).toHaveBeenCalledWith(
+                'storefront-setup-github-app-required',
+                expect.objectContaining({
+                    owner: 'leahrayard',
+                    isTeamOrg: false,
+                }),
+            );
+        });
+
         it('surfaces the install dialog and fails even when the code-bus poll would succeed (regression for false-positive verified)', async () => {
             // The bug: scripts/aem.js was on the bus from initial template seed,
             // so polling returned 200 and Demo Builder declared "verified" while
