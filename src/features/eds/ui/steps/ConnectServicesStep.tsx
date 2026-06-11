@@ -98,7 +98,9 @@ export function ConnectServicesStep({
                     error={daLiveAuth.error}
                     showInput={showDaLiveInput}
                     setupComplete={daLiveAuth.setupComplete}
-                    defaultOrg={state.edsConfig?.daLiveOrg}
+                    githubUser={gitHubAuth.user?.login}
+                    availableOrgs={gitHubAuth.orgs}
+                    defaultNamespace={gitHubAuth.defaultNamespace}
                     onSetup={handleDaLiveSetup}
                     onSubmit={handleDaLiveSubmit}
                     onReset={handleDaLiveReset}

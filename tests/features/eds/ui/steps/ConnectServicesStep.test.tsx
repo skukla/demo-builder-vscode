@@ -15,12 +15,26 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import type { WizardState } from '@/types/webview';
 
-// Mock the auth hooks
-const mockGitHubAuth = {
+// Mock the auth hooks. The picker pulls `user.login`, `orgs`, and
+// `defaultNamespace` from the GitHub-auth result — wire them here so the
+// picker renders with content rather than the empty-and-disabled state.
+const mockGitHubAuth: {
+    isChecking: boolean;
+    isAuthenticating: boolean;
+    isAuthenticated: boolean;
+    user: { login: string } | undefined;
+    orgs: string[];
+    defaultNamespace: string | undefined;
+    error: string | undefined;
+    startOAuth: jest.Mock;
+    changeAccount: jest.Mock;
+} = {
     isChecking: false,
     isAuthenticating: false,
-    isAuthenticated: false,
-    user: undefined,
+    isAuthenticated: true,
+    user: { login: 'testuser' },
+    orgs: ['demo-system-stores'],
+    defaultNamespace: 'testuser',
     error: undefined,
     startOAuth: jest.fn(),
     changeAccount: jest.fn(),
@@ -88,12 +102,18 @@ describe('ConnectServicesStep', () => {
         mockUpdateState = jest.fn();
         mockSetCanProceed = jest.fn();
 
-        // Reset mock auth states
+        // Reset mock auth states. Default: GitHub unauthenticated. Tests
+        // that need GitHub auth set (e.g. picker-rendering tests) override
+        // per-case. Orgs and defaultNamespace stay populated so that when
+        // a test does flip isAuthenticated=true + user.login, the picker
+        // has content to render without extra wiring.
         Object.assign(mockGitHubAuth, {
             isChecking: false,
             isAuthenticating: false,
             isAuthenticated: false,
             user: undefined,
+            orgs: ['demo-system-stores'],
+            defaultNamespace: 'testuser',
             error: undefined,
         });
 
@@ -226,7 +246,7 @@ describe('ConnectServicesStep', () => {
             fireEvent.click(setupButton);
 
             // Verify form is showing
-            expect(screen.getByPlaceholderText('Organization')).toBeInTheDocument();
+            expect(screen.getByRole("button", { name: /github namespace/i })).toBeInTheDocument();
 
             // When: Clicking Cancel
             const cancelButton = screen.getByText('Cancel');
@@ -234,7 +254,7 @@ describe('ConnectServicesStep', () => {
 
             // Then: Form should be hidden, showing Set up button again
             await waitFor(() => {
-                expect(screen.queryByPlaceholderText('Organization')).not.toBeInTheDocument();
+                expect(screen.queryByRole("button", { name: /github namespace/i })).not.toBeInTheDocument();
             });
         });
 
@@ -262,7 +282,7 @@ describe('ConnectServicesStep', () => {
 
             // Then: Input form should be shown
             await waitFor(() => {
-                expect(screen.getByPlaceholderText('Organization')).toBeInTheDocument();
+                expect(screen.getByRole("button", { name: /github namespace/i })).toBeInTheDocument();
             });
         });
 
@@ -285,7 +305,7 @@ describe('ConnectServicesStep', () => {
             fireEvent.click(changeButton);
 
             // Then: Should show input form (handleDaLiveReset shows input without calling resetAuth)
-            expect(screen.getByPlaceholderText('Organization')).toBeInTheDocument();
+            expect(screen.getByRole("button", { name: /github namespace/i })).toBeInTheDocument();
         });
     });
 
@@ -318,8 +338,10 @@ describe('ConnectServicesStep', () => {
     });
 
     describe('token verification', () => {
-        it('should call storeTokenWithOrg when submitting credentials', async () => {
-            // Given: DA.live input form is showing
+        it('should call storeTokenWithOrg with the pre-selected namespace when submitting credentials', async () => {
+            // Given: DA.live input form is showing. The picker pre-selects
+            // testuser (the mocked defaultNamespace) — submitting without
+            // changing it sends testuser as the namespace.
             const state = createDefaultState();
 
             renderWithProvider(
@@ -334,18 +356,15 @@ describe('ConnectServicesStep', () => {
             const setupButton = screen.getByText('Set up DA.live');
             fireEvent.click(setupButton);
 
-            // When: Entering credentials and clicking Verify
-            const orgInput = screen.getByPlaceholderText('Organization');
+            // When: Entering token (namespace is already at its default) and clicking Verify
             const tokenInput = screen.getByPlaceholderText('Token');
-
-            fireEvent.change(orgInput, { target: { value: 'my-org' } });
             fireEvent.change(tokenInput, { target: { value: 'my-token' } });
 
             const verifyButton = screen.getByText('Verify');
             fireEvent.click(verifyButton);
 
-            // Then: Should call storeTokenWithOrg with token and org
-            expect(mockDaLiveAuth.storeTokenWithOrg).toHaveBeenCalledWith('my-token', 'my-org');
+            // Then: storeTokenWithOrg called with token + the picker's default namespace
+            expect(mockDaLiveAuth.storeTokenWithOrg).toHaveBeenCalledWith('my-token', 'testuser');
         });
     });
 });

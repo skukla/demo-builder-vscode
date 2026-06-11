@@ -195,8 +195,8 @@ describe('DaLiveServiceCard', () => {
     });
 
     describe('Input Form', () => {
-        it('should show input form when showInput is true', async () => {
-            // Given: showInput is true
+        it('should show input form with namespace picker when showInput is true and githubUser is known', async () => {
+            // Given: showInput is true and GitHub OAuth has populated user + orgs
             const { DaLiveServiceCard } = await import(
                 '@/features/eds/ui/components/DaLiveServiceCard'
             );
@@ -209,6 +209,9 @@ describe('DaLiveServiceCard', () => {
                         isAuthenticating={false}
                         isAuthenticated={false}
                         showInput={true}
+                        githubUser="leahrayard"
+                        availableOrgs={['demo-system-stores', 'adobe']}
+                        defaultNamespace="leahrayard"
                         onSetup={mockOnSetup}
                         onSubmit={mockOnSubmit}
                         onReset={mockOnReset}
@@ -217,8 +220,8 @@ describe('DaLiveServiceCard', () => {
                 </TestWrapper>
             );
 
-            // Then: Should show org and token inputs
-            expect(screen.getByPlaceholderText(/organization/i)).toBeInTheDocument();
+            // Then: namespace picker and token input both render
+            expect(screen.getByRole('button', { name: /github namespace/i })).toBeInTheDocument();
             expect(screen.getByPlaceholderText(/token/i)).toBeInTheDocument();
         });
 

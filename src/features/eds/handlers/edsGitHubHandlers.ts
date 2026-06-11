@@ -16,6 +16,7 @@
 import * as vscode from 'vscode';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { GITHUB_SCOPES } from '../services/types';
+import { getDefaultNamespace } from './edsNamespaceResolver';
 import { getGitHubServices } from './edsHelpers';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
@@ -60,10 +61,12 @@ export async function handleCheckGitHubAuth(
             if (validation.valid && validation.user) {
                 context.logger.debug('[EDS] GitHub auth valid for user:', validation.user.login);
                 const orgs = await tokenService.getUserOrgs();
+                const defaultNamespace = getDefaultNamespace(validation.user.login, orgs);
                 await context.sendMessage('github-auth-status', {
                     isAuthenticated: true,
                     user: validation.user,
                     orgs,
+                    defaultNamespace,
                 });
                 return { success: true };
             }
@@ -94,11 +97,15 @@ export async function handleCheckGitHubAuth(
             const validation = await tokenService.validateToken();
 
             const orgs = await tokenService.getUserOrgs();
+            const defaultNamespace = validation.user
+                ? getDefaultNamespace(validation.user.login, orgs)
+                : undefined;
 
             await context.sendMessage('github-auth-status', {
                 isAuthenticated: true,
                 user: validation.user,
                 orgs,
+                defaultNamespace,
             });
             return { success: true };
         }
@@ -200,12 +207,17 @@ export async function handleGitHubOAuth(
         // auth prompt fires. Failures degrade to "personal account only" —
         // see githubTokenService.getUserOrgs for the contract.
         const orgs = await tokenService.getUserOrgs();
-        context.logger.debug(`[EDS] GitHub OAuth completed for user: ${user.login}, orgs: ${orgs.join(', ') || '(none)'}`);
+        const defaultNamespace = getDefaultNamespace(user.login, orgs);
+        context.logger.debug(
+            `[EDS] GitHub OAuth completed for user: ${user.login}, `
+            + `orgs: ${orgs.join(', ') || '(none)'}, default: ${defaultNamespace}`,
+        );
 
         await context.sendMessage('github-auth-complete', {
             isAuthenticated: true,
             user,
             orgs,
+            defaultNamespace,
         });
 
         return { success: true };

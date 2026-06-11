@@ -22,6 +22,10 @@ interface GitHubAuthStatusData {
         avatarUrl?: string;
         email?: string;
     };
+    /** GitHub orgs the user is a member of — populates the wizard's namespace picker */
+    orgs?: string[];
+    /** Which namespace the picker should pre-select (resolved from demoBuilder.eds.githubOrg setting) */
+    defaultNamespace?: string;
     error?: string;
 }
 
@@ -52,6 +56,10 @@ interface UseGitHubAuthReturn {
     isChecking: boolean;
     /** Authenticated user info */
     user?: { login: string; avatarUrl?: string; email?: string };
+    /** GitHub orgs the user is a member of */
+    orgs: string[];
+    /** Namespace pre-selected in the picker, resolved from demoBuilder.eds.githubOrg */
+    defaultNamespace?: string;
     /** Error message if auth failed */
     error?: string;
     /** Start OAuth flow */
@@ -71,6 +79,10 @@ export function useGitHubAuth({
 }: UseGitHubAuthProps): UseGitHubAuthReturn {
     // Track whether initial auth check is in progress
     const [isChecking, setIsChecking] = useState(true);
+    // Orgs + default-namespace are session-scoped — never persisted to wizard
+    // state because they're freshly resolved at every OAuth completion.
+    const [orgs, setOrgs] = useState<string[]>([]);
+    const [defaultNamespace, setDefaultNamespace] = useState<string | undefined>(undefined);
 
     const edsConfig = state.edsConfig;
     const githubAuth = edsConfig?.githubAuth;
@@ -144,6 +156,8 @@ export function useGitHubAuth({
 
             // Initial check complete
             setIsChecking(false);
+            setOrgs(authData.orgs ?? []);
+            setDefaultNamespace(authData.defaultNamespace);
 
             updateGitHubAuthRef.current({
                 isAuthenticated: authData.isAuthenticated,
@@ -160,6 +174,8 @@ export function useGitHubAuth({
 
             // Auth complete
             setIsChecking(false);
+            setOrgs(authData.orgs ?? []);
+            setDefaultNamespace(authData.defaultNamespace);
 
             updateGitHubAuthRef.current({
                 isAuthenticated: authData.isAuthenticated,
@@ -196,6 +212,8 @@ export function useGitHubAuth({
         isAuthenticating: githubAuth?.isAuthenticating || false,
         isChecking,
         user: githubAuth?.user,
+        orgs,
+        defaultNamespace,
         error: githubAuth?.error,
         startOAuth,
         checkAuthStatus,

@@ -51,10 +51,16 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     clearServiceCache: jest.fn(),
 }));
 
-// Mock vscode authentication
+// Mock vscode authentication + workspace (the namespace resolver reads
+// demoBuilder.eds.githubOrg via workspace.getConfiguration)
 jest.mock('vscode', () => ({
     authentication: {
         getSession: jest.fn(),
+    },
+    workspace: {
+        getConfiguration: jest.fn(() => ({
+            get: jest.fn((_key: string, defaultValue: string) => defaultValue),
+        })),
     },
 }));
 

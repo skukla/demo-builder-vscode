@@ -19,10 +19,10 @@
  * />
  */
 
-import { Flex, Text, ProgressCircle } from '@adobe/react-spectrum';
+import { Flex, Text, ProgressCircle, Picker, Item } from '@adobe/react-spectrum';
 import Alert from '@spectrum-icons/workflow/Alert';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import React, { useEffect, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
 /** Props for DaLiveServiceCard component */
 export interface DaLiveServiceCardProps {
@@ -54,8 +54,12 @@ export interface DaLiveServiceCardProps {
     onOpenBookmarkletSetup?: () => void;
     /** Show compact view (minimal details when another card is active) */
     compact?: boolean;
-    /** Default org name from config setting (for pre-filling) */
-    defaultOrg?: string;
+    /** GitHub username (from OAuth) — shown as the "Personal account" option */
+    githubUser?: string;
+    /** GitHub orgs the user is a member of — shown as additional picker options */
+    availableOrgs?: readonly string[];
+    /** Namespace pre-selected in the picker, resolved from demoBuilder.eds.githubOrg setting */
+    defaultNamespace?: string;
 }
 
 /**
@@ -79,30 +83,44 @@ export function DaLiveServiceCard({
     onOpenDaLive,
     onOpenBookmarkletSetup,
     compact = false,
-    defaultOrg,
+    githubUser,
+    availableOrgs = [],
+    defaultNamespace,
 }: DaLiveServiceCardProps): React.ReactElement {
-    const [orgValue, setOrgValue] = useState(defaultOrg || '');
+    // Picker options: personal account always first, then orgs alphabetically.
+    // The picker's `key` is the namespace slug — that's what gets passed to
+    // onSubmit, used for repo creation and DA.live writes.
+    const namespaceOptions = useMemo(() => {
+        const options: { key: string; label: string }[] = [];
+        if (githubUser) {
+            options.push({ key: githubUser, label: `${githubUser} (Personal account)` });
+        }
+        const sortedOrgs = [...availableOrgs].sort((a, b) => a.localeCompare(b));
+        for (const org of sortedOrgs) {
+            options.push({ key: org, label: org });
+        }
+        return options;
+    }, [githubUser, availableOrgs]);
+
+    // Default selection: from the resolver (server-resolved against setting +
+    // membership), falling back to the personal user, falling back to first
+    // option (defensive — handles the edge case where githubUser is undefined).
+    const [selectedNamespace, setSelectedNamespace] = useState<string>(
+        defaultNamespace || githubUser || namespaceOptions[0]?.key || '',
+    );
     const [tokenValue, setTokenValue] = useState('');
 
-    // Sync defaultOrg prop into local state when it arrives async and field is empty
-    useEffect(() => {
-        if (defaultOrg && !orgValue) {
-            setOrgValue(defaultOrg);
-        }
-    }, [defaultOrg]); // eslint-disable-line react-hooks/exhaustive-deps
-
     const isLoading = isChecking || (isAuthenticating && !showInput);
-    const canSubmit = orgValue.trim() !== '' && tokenValue.trim() !== '';
+    const canSubmit = selectedNamespace.trim() !== '' && tokenValue.trim() !== '';
 
     const handleSubmit = () => {
         if (canSubmit) {
-            onSubmit(orgValue.trim(), tokenValue.trim());
+            onSubmit(selectedNamespace.trim(), tokenValue.trim());
             setTokenValue('');
         }
     };
 
     const handleCancel = () => {
-        setOrgValue('');
         setTokenValue('');
         onCancelInput();
     };
@@ -129,13 +147,16 @@ export function DaLiveServiceCard({
                     </Flex>
                 ) : showInput ? (
                     <div className="dalive-input-form">
-                        <input
-                            type="text"
-                            placeholder="Organization"
-                            value={orgValue}
-                            onChange={(e) => setOrgValue(e.target.value)}
-                            className="service-input"
-                        />
+                        <Picker
+                            label="GitHub namespace for this demo"
+                            selectedKey={selectedNamespace}
+                            onSelectionChange={(key) => setSelectedNamespace(String(key))}
+                            items={namespaceOptions}
+                            width="100%"
+                            isDisabled={namespaceOptions.length === 0}
+                        >
+                            {(item) => <Item key={item.key}>{item.label}</Item>}
+                        </Picker>
                         <input
                             type="password"
                             placeholder="Token"
