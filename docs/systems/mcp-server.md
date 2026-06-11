@@ -193,8 +193,8 @@ Take `delete_mesh` as a representative action tool:
 1. Claude Code → proxy → socket → the per-connection `McpServer` receives a
    `tools/call` for `delete_mesh` with `{ confirm: true }`.
 2. The SDK validates the arguments against the tool's Zod `inputSchema`.
-3. `withToolLogging` logs `[MCP] tool: delete_mesh` to the "Demo Builder: Logs"
-   channel and the **argument keys** (never values) to "Demo Builder: Debug",
+3. `withToolLogging` logs `[MCP] tool: delete_mesh` to the "Demo Builder: User Logs"
+   channel and the **argument keys** (never values) to "Demo Builder: Debug Logs",
    then calls the handler.
 4. The handler builds a **headless `HandlerContext`** via the injected
    `ctxFactory` (see §8) and dispatches to the *same* mesh-deletion service/

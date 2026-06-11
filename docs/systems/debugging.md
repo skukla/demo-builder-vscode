@@ -10,13 +10,13 @@ The Demo Builder extension includes a comprehensive debugging system designed to
 
 The debugging system uses two separate output channels to organize information:
 
-1. **Demo Builder: Logs** - User-facing messages
+1. **Demo Builder: User Logs** - User-facing messages
    - Info, warning, and error messages
    - High-level operation status
    - User-friendly feedback
    - What end users need for getting help
 
-2. **Demo Builder: Debug** - Detailed diagnostic information
+2. **Demo Builder: Debug Logs** - Detailed diagnostic information
    - Command execution logs with stdout/stderr
    - Environment variables and PATH
    - Token parsing details

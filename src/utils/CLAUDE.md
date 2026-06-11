@@ -194,8 +194,8 @@ class StateManager {
 **Purpose**: Central debug logging system with dual output channels
 
 **Architecture**:
-- **"Demo Builder: Logs"** - User-facing messages
-- **"Demo Builder: Debug"** - Detailed diagnostic information
+- **"Demo Builder: User Logs"** - User-facing messages
+- **"Demo Builder: Debug Logs"** - Detailed diagnostic information
 
 **Key Features**:
 - Singleton pattern for global access
@@ -252,8 +252,8 @@ logger.logCommand('npm install', {
 **Usage**:
 ```typescript
 const logger = new Logger('Demo Builder');
-logger.info('Message');  // Goes to "Demo Builder: Logs"
-logger.debug('Details'); // Goes to "Demo Builder: Debug"
+logger.info('Message');  // Goes to "Demo Builder: User Logs"
+logger.debug('Details'); // Goes to "Demo Builder: Debug Logs"
 ```
 
 ### Error Logger

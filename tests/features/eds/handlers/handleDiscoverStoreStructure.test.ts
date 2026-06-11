@@ -344,4 +344,57 @@ describe('handleDiscoverStoreStructure', () => {
             expect.stringContaining('1 websites'),
         );
     });
+
+    // ----------------------------------------------------------
+    // Store Discovery token + service observability (ACCS path)
+    // ----------------------------------------------------------
+
+    it('logs IMS token validity (valid=false, no token value) before discovery', async () => {
+        const context = createMockContext({
+            authManager: {
+                getTokenManager: jest.fn().mockReturnValue({
+                    inspectToken: jest.fn().mockResolvedValue({ valid: false, expiresIn: 0 }),
+                }),
+            } as unknown as HandlerContext['authManager'],
+        });
+
+        await handleDiscoverStoreStructure(context, {
+            backendType: 'accs',
+            baseUrl: 'https://accs.test',
+        });
+
+        expect(context.logger.info).toHaveBeenCalledWith(
+            expect.stringContaining('[Store Discovery] IMS token: valid=false'),
+        );
+        expect(context.logger.info).toHaveBeenCalledWith(
+            expect.stringContaining('present=false'),
+        );
+    });
+
+    it('never logs the IMS token value in any log argument', async () => {
+        const context = createMockContext(); // default token 'mock-ims-token'
+        mockDiscoverStoreStructure.mockResolvedValue({ success: true, data: MOCK_STORE_DATA });
+
+        await handleDiscoverStoreStructure(context, {
+            backendType: 'accs',
+            baseUrl: 'https://accs.test',
+        });
+
+        const allInfo = (context.logger.info as jest.Mock).mock.calls.flat().join('\n');
+        expect(allInfo).not.toContain('mock-ims-token');
+    });
+
+    it('logs the resolved discovery service URL before delegating', async () => {
+        const context = createMockContext(); // default token present + valid
+        mockDiscoverStoreStructure.mockResolvedValue({ success: true, data: MOCK_STORE_DATA });
+
+        await handleDiscoverStoreStructure(context, {
+            backendType: 'accs',
+            baseUrl: 'https://accs.test',
+        });
+
+        expect(context.logger.info).toHaveBeenCalledWith(
+            expect.stringContaining(`[Store Discovery] discovery service: ${MOCK_DISCOVERY_SERVICE.serviceUrl}`),
+        );
+    });
 });

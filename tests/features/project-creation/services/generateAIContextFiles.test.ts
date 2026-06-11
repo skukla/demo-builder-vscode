@@ -22,7 +22,7 @@ jest.mock('@/features/project-creation/services/mcpConfigWriter', () => ({
 }));
 
 jest.mock('@/features/project-creation/services/skillsWriter', () => ({
-    writeSkillFiles: jest.fn().mockResolvedValue(undefined),
+    writeSkillFiles: jest.fn().mockResolvedValue({ written: [] }),
 }));
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -49,7 +49,7 @@ describe('generateAIContextFiles', () => {
 
     it('calls writeAgentsMd with projectPath and project', async () => {
         const project = makeProject();
-        await expect(generateAIContextFiles('/projects/test', project, '/ext/path')).resolves.toBeUndefined();
+        await expect(generateAIContextFiles('/projects/test', project, '/ext/path')).resolves.toMatchObject({ skills: expect.any(Array) });
 
         // Third argument is stacksConfig.stacks loaded from stacks.json — verify it contains
         // real stack data (not an empty array), and that each element has the expected shape.
@@ -62,7 +62,7 @@ describe('generateAIContextFiles', () => {
 
     it('calls writeMcpConfigs with projectPath, project, and extensionPath joined with dist', async () => {
         const project = makeProject();
-        await expect(generateAIContextFiles('/projects/test', project, '/ext/path')).resolves.toBeUndefined();
+        await expect(generateAIContextFiles('/projects/test', project, '/ext/path')).resolves.toMatchObject({ skills: expect.any(Array) });
 
         // No settings argument — writeMcpConfigs takes only the three positional
         // args. External MCPs come from Claude Code's session-level catalog.
@@ -71,7 +71,7 @@ describe('generateAIContextFiles', () => {
 
     it('calls writeSkillFiles with projectPath and project (no settings)', async () => {
         const project = makeProject();
-        await expect(generateAIContextFiles('/projects/test', project, '/ext/path')).resolves.toBeUndefined();
+        await expect(generateAIContextFiles('/projects/test', project, '/ext/path')).resolves.toMatchObject({ skills: expect.any(Array) });
 
         // writeSkillFiles takes only projectPath and project — SkillsSettings is
         // gone, and the writer always emits the same three skills.

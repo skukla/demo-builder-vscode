@@ -155,14 +155,14 @@ If you encounter issues, especially on different systems:
 1. Open Command Palette (`Cmd+Shift+P`)
 2. Run: `Demo Builder: Diagnostics`
 3. Check the output in:
-   - **Demo Builder: Logs** - User-friendly summary
-   - **Demo Builder: Debug** - Detailed diagnostic information
+   - **Demo Builder: User Logs** - User-friendly summary
+   - **Demo Builder: Debug Logs** - Detailed diagnostic information
 
 ### Output Channels
 
 The extension uses two output channels:
-- **Demo Builder: Logs** - General information, warnings, and errors
-- **Demo Builder: Debug** - Detailed debugging information for troubleshooting
+- **Demo Builder: User Logs** - General information, warnings, and errors
+- **Demo Builder: Debug Logs** - Detailed debugging information for troubleshooting
 
 Access them via: View → Output → Select channel from dropdown
 

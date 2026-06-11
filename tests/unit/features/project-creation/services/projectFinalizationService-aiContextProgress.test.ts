@@ -33,7 +33,7 @@ describe('generateAIContextFiles — progress + serialization', () => {
         jest.clearAllMocks();
         (writeAgentsMd as jest.Mock).mockResolvedValue(undefined);
         (writeMcpConfigs as jest.Mock).mockResolvedValue(undefined);
-        (writeSkillFiles as jest.Mock).mockResolvedValue(undefined);
+        (writeSkillFiles as jest.Mock).mockResolvedValue({ written: [] });
     });
 
     it('invokes onProgress once per writer in fixed order', async () => {
@@ -92,7 +92,7 @@ describe('generateAIContextFiles — progress + serialization', () => {
     it('works without onProgress (backward-compatible default)', async () => {
         await expect(
             generateAIContextFiles(project.path, project, extensionPath),
-        ).resolves.toBeUndefined();
+        ).resolves.toMatchObject({ skills: expect.any(Array) });
         expect(writeAgentsMd).toHaveBeenCalled();
         expect(writeMcpConfigs).toHaveBeenCalled();
         expect(writeSkillFiles).toHaveBeenCalled();

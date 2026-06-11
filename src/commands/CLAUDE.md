@@ -361,7 +361,7 @@ class DeployMeshCommand extends BaseCommand {
 ### showLogs
 
 **Purpose**: Display extension logs
-- Opens "Demo Builder: Logs" output channel
+- Opens "Demo Builder: User Logs" output channel
 - Shows user-facing messages
 - Quick access to error/warning information
 

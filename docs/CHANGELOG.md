@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **AEM Assets binding now writes to the per-site DA.live config.** The `aem.repositoryId` binding that surfaces the AEM Assets panel in the DA.live Library was written to the org config (`/config/<org>`), but DA.live reads it from the per-site config (`/config/<org>/<site>`) — so first-time SCs got their block library (written site-scoped) but no AEM Assets panel (the binding landed org-scoped, where the per-site Library never reads it). The beta.115 401 fix made the org write *succeed*, which unmasked this scope mismatch. `applyDaLiveOrgConfigSettings` now writes `aem.repositoryId` site-scoped via the new `DaLiveContentOperations.applySiteConfig`; `editor.path` stays org-scoped (the Universal Editor punch-out path mapping). Both methods delegate to an extracted `writeMergedDataConfig` helper that preserves all existing config sheets (`library`, `permissions`) and keeps the first-time-user 401 write-access ownership probe (keyed on the org). Supersedes the beta.115 org-scoped behavior for `aem.repositoryId`; the beta.115 401 handling remains valid for `editor.path`, which still uses `applyOrgConfig`.
 
+- **AI verification and store discovery now log to the established channels.** Both flows ran silently: the AI verification modal (verify → skills → MCP inspect) emitted nothing, and store discovery surfaced a `401` with no local trace of the token state. Added `[AI Verify]` logging (start, checks, skills, per-MCP status with the proxy stderr tail on timeout, plus the proxy target socket vs the server's bound socket for socket-mismatch diagnosis) and `[Store Discovery]` logging (IMS token validity/expiry — never the token value — and the resolved discovery service URL before the call). `writeSkillFiles`/`generateAIContextFiles` now report which files they wrote so "Regenerate AI files" logs its output. Also corrected stale references to the renamed log channels (`Demo Builder: Logs`/`Demo Builder: Debug` → `Demo Builder: User Logs`/`Demo Builder: Debug Logs`) across docs and one user-facing toast. Observability only — no flow behavior changed.
+
 ## [1.0.0-beta.115] - 2026-06-11
 
 ### Fixed
@@ -341,7 +343,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Enhanced Debugging System**: 
   - New diagnostics command (`Demo Builder: Diagnostics`) for comprehensive system analysis
-  - Dual output channel architecture: "Demo Builder: Logs" for user messages, "Demo Builder: Debug" for detailed diagnostics
+  - Dual output channel architecture: "Demo Builder: User Logs" for user messages, "Demo Builder: Debug Logs" for detailed diagnostics
   - Command execution logging with stdout, stderr, exit codes, and timing information
   - Environment variable and PATH logging for troubleshooting platform-specific issues
   - Export debug log capability for sharing diagnostic reports

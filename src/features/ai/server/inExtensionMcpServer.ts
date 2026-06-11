@@ -32,7 +32,7 @@ const SERVER_VERSION = '1.0.0';
  *
  * Logs the tool NAME and arg KEYS only — never arg values — because args can
  * carry secrets (e.g. `update_project_config.content` holds `.env` contents).
- * `info` → "Demo Builder: Logs"; `debug` → "Demo Builder: Debug"; errors → both.
+ * `info` → "Demo Builder: User Logs"; `debug` → "Demo Builder: Debug Logs"; errors → both.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function withToolLogging(server: any, logger: Logger): any {

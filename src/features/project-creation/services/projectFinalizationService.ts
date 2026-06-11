@@ -174,12 +174,19 @@ export async function generateAIContextFiles(
     project: Project,
     extensionPath: string,
     onProgress?: ProgressTracker,
-): Promise<void> {
+): Promise<{ skills: string[] }> {
     const distPath = path.join(extensionPath, 'dist');
+    let skills: string[] = [];
     const steps: Array<{ label: string; run: () => Promise<void> }> = [
         { label: 'Writing AGENTS.md', run: () => writeAgentsMd(projectPath, project, stacksConfig.stacks as Stack[]) },
         { label: 'Writing MCP configuration', run: () => writeMcpConfigs(projectPath, project, distPath) },
-        { label: 'Writing skills', run: () => writeSkillFiles(projectPath, project) },
+        {
+            label: 'Writing skills',
+            run: async () => {
+                const summary = await writeSkillFiles(projectPath, project);
+                skills = summary?.written ?? [];
+            },
+        },
     ];
 
     const errors: string[] = [];
@@ -195,4 +202,6 @@ export async function generateAIContextFiles(
     if (errors.length > 0) {
         throw new Error(`AI context file generation failed: ${errors.join('; ')}`);
     }
+
+    return { skills };
 }
