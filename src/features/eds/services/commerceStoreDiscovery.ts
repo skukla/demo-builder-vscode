@@ -243,18 +243,26 @@ export async function discoverStoreStructure(
         );
         return { success: true, data };
     } catch (error) {
-        const message = (error as Error).message;
+        // Structural checks (error.name, instanceof) instead of substring
+        // matches. The substring approach used to collide with service-response
+        // error messages that happen to contain "timeout" or "fetch failed" in
+        // the body text — those collisions swallowed the HTTP status code we
+        // now go out of our way to preserve in fetchViaDiscoveryService.
+        //
+        // AbortSignal.timeout() throws AbortError reliably. Node's fetch
+        // surfaces network failures (DNS, connect, ECONNREFUSED) as TypeError
+        // with the literal message "fetch failed" — the underlying cause sits
+        // on err.cause but the type + message pair is sufficient to classify.
+        const err = error as Error;
 
-        // Friendly message for timeout
-        if (message.includes('abort') || message.includes('timeout')) {
+        if (err.name === 'AbortError') {
             return { success: false, error: 'Connection timed out. Check the Commerce URL and try again.' };
         }
 
-        // Friendly message for network errors
-        if (message.includes('fetch failed') || message.includes('ECONNREFUSED')) {
+        if (err instanceof TypeError && err.message === 'fetch failed') {
             return { success: false, error: 'Cannot reach the Commerce instance. Check the URL and ensure the server is running.' };
         }
 
-        return { success: false, error: message };
+        return { success: false, error: err.message };
     }
 }
