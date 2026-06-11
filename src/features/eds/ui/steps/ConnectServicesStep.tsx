@@ -8,7 +8,9 @@
 
 import React, { useState } from 'react';
 import { GitHubServiceCard, DaLiveServiceCard } from '../components';
+import { ContentSourceSelector } from '../components/ContentSourceSelector';
 import { getBookmarkletSetupPageUrl } from '../helpers/bookmarkletSetupPage';
+import { useAemContentSource } from '../hooks/useAemContentSource';
 import { useDaLiveAuth } from '../hooks/useDaLiveAuth';
 import { useGitHubAuth } from '../hooks/useGitHubAuth';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
@@ -35,11 +37,19 @@ export function ConnectServicesStep({
     // DA.live auth state
     const daLiveAuth = useDaLiveAuth({ state, updateState });
 
+    // Content-source declaration (join/content flow only): DA.live default or
+    // AEM Sites (author URL + content path — no credential; Slice 2 R1).
+    const isJoinFlow = state.flow === 'content';
+    const aemContentSource = useAemContentSource({ state, updateState });
+
     // Enable Continue when both services are connected AND verification is complete
-    // Must wait for isChecking to complete to handle expired tokens in edit mode
+    // Must wait for isChecking to complete to handle expired tokens in edit mode.
+    // An AEM-Sites source additionally requires a valid author URL + content path
+    // (isSourceValid is always true for DA.live, preserving today's gating).
     useCanProceedAll([
         gitHubAuth.isAuthenticated && !gitHubAuth.isChecking,
         daLiveAuth.isAuthenticated && !daLiveAuth.isChecking,
+        !isJoinFlow || aemContentSource.isSourceValid,
     ], setCanProceed);
 
     const handleDaLiveSetup = () => {
@@ -107,6 +117,7 @@ export function ConnectServicesStep({
                     onOpenBookmarkletSetup={daLiveAuth.bookmarkletUrl ? handleOpenBookmarkletSetup : undefined}
                 />
             </div>
+            {isJoinFlow && <ContentSourceSelector {...aemContentSource} />}
         </SingleColumnLayout>
     );
 }
