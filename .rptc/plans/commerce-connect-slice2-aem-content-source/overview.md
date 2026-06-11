@@ -17,7 +17,8 @@
 > - **R2 (manual-fallback boundary):** ACCEPTED — automation owns registration + best-effort 3-node authoring; on missing auth or 401/403 the writer returns `manualFallbackRequired` with exact paths+payloads and setup completes green.
 > - **R3 (interface surface):** ACCEPTED — the 2-method minimum.
 > - **R4 (wizard surface):** ACCEPTED — extend `ConnectServicesStep` (not a standalone step).
-> - **R1 (AEM auth model):** ⏳ **STILL OPEN — PM deciding.** Step 04 + Step 07 auth field depend on this. Options: tech-account/IMS bearer (recommended) · a different AEM grant · defer-with-stub (build the port now, pin the grant before Step 04's live F5).
+> - **R1 (AEM auth model):** ⏳ **Direction set; verification running (2026-06-11).** Credential type = **OAuth Server-to-Server** (modern "tech account" — NOT the deprecated JWT Service Account). UX strategy is tiered, all behind the credential-agnostic `getContentSourceAuthorization()` port: **(C)** paste a dev token = quick-start to unblock the first F5 (aligns with the manual-author fallback); **(B)** OAuth S2S credential entered once + stored in VS Code `secrets` = durable baseline; **(A)** reuse the wizard's existing `aio`/IMS identity = the headline UX win **if feasible** (zero new credential steps — strictly better than the DA.live bookmarklet). A research pass is verifying *what token the AEM-Sites content source actually accepts* and whether (A) is possible; Step 04/Step 07 finalize once it returns.
+> - **Cloud Manager access:** **OUT of Slice 2 (PM, 2026-06-11).** It is the environment/pipeline *provisioning* plane (create EDS site, env discovery) and belongs with the **Slice 3 front-door** (`aem-sc-first-run.md`). It is a *distinct credential/role* from the Slice 2 content-source READ token; do not conflate them.
 
 **Created:** 2026-06-11
 **Predecessor:** `.rptc/complete/commerce-connect-slice1-repoless-wiring/` (repoless join shipped + F5-verified)

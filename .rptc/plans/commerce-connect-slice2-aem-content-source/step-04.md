@@ -2,8 +2,13 @@
 
 **Goal:** The net-new AEM implementation: produce the AEM registration `source` block and the AEM Helix auth header. **No content copy/publish** (point-at — the AEM instance IS the content).
 
-## ⚠️ Blocked on R1 (AEM auth model — PM deciding)
-`getContentSourceAuthorization()`'s token model is R1. Recommended: AEM tech-account / IMS service-credential bearer, stored in VS Code `secrets` (never the manifest). If R1 = defer-with-stub, this step pins the real grant just before the live F5.
+## ⚠️ R1 direction set; verification running
+`getContentSourceAuthorization()`'s token model is R1. **Credential = OAuth Server-to-Server** (modern tech account; NOT deprecated JWT Service Account), stored in VS Code `secrets` (never the manifest). Tiered UX behind this one port:
+- **(C)** paste a dev token — quick-start to unblock the first F5 (aligns with the manual-author fallback).
+- **(B)** OAuth S2S credential entered once — durable baseline.
+- **(A)** reuse the wizard's existing `aio`/IMS identity — preferred if the verification confirms a user IMS token carries the content-read scope (zero new credential UX).
+
+Implement the port + ship (C) first so this step lands; (A)/(B) refine once the research pass confirms what token the AEM-Sites content source accepts. Cloud Manager creds are NOT used here (Slice 3).
 
 ## RED tests
 - `tests/features/eds/services/contentSource/aemContentSource.test.ts`
