@@ -34,7 +34,10 @@ export function createContentSource(input: ContentSourceFactoryInput): ContentSo
                     'Content source "aem-sites" requires aemContentSource config (authorUrl + contentPath)',
                 );
             }
-            return new AemContentSource(input.aemContentSource.authorUrl);
+            return new AemContentSource(
+                input.aemContentSource.authorUrl,
+                input.aemContentSource.contentPath,
+            );
         default:
             throw new Error(
                 `Unknown content source type: "${type}" (expected "da-live" or "aem-sites")`,

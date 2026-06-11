@@ -276,8 +276,12 @@ async function executeSatelliteSetup(
         phase: 'site-config', message: 'Registering repoless satellite site...', progress: 40,
     });
 
+    // AEM is point-at: content lives in the joiner's AEM instance, not DA.live,
+    // so neither DA.live permissions nor the DA.live content-population pipeline apply.
+    const isAemSource = edsConfig.contentSourceType === 'aem-sites';
+
     const userEmail = (await services.daLiveAuthService.getUserEmail()) || edsConfig.githubAuth?.user?.email;
-    if (userEmail) {
+    if (userEmail && !isAemSource) {
         await configureDaLivePermissions(
             services.daLiveTokenProvider, edsConfig.daLiveOrg, edsConfig.daLiveSite, userEmail, logger,
         );
@@ -291,7 +295,8 @@ async function executeSatelliteSetup(
 
     // Populate the satellite's OWN content: Helix targets the satellite's site
     // (daLiveOrg/daLiveSite); code/component reads come from the upstream (repoInfo).
-    const skipContent = !edsConfig.contentSource;
+    // AEM (point-at) skips population entirely — the AEM instance IS the content.
+    const skipContent = isAemSource || !edsConfig.contentSource;
     await context.sendMessage('storefront-setup-progress', {
         phase: 'content', message: 'Populating satellite content...', progress: 70,
     });

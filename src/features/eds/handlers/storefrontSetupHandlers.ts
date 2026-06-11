@@ -91,6 +91,10 @@ export interface StorefrontSetupStartPayload {
         };
         // Optional BYOM content overlay URL (from demo-packages.json storefronts)
         byomOverlayUrl?: string;
+        // Content source backing the satellite (Slice 2). Absent ⇒ 'da-live'.
+        contentSourceType?: 'da-live' | 'aem-sites';
+        // AEM-Sites content source config (present when contentSourceType === 'aem-sites').
+        aemContentSource?: { authorUrl: string; contentPath: string };
         // Selected existing repository (from searchable list)
         selectedRepo?: {
             name: string;

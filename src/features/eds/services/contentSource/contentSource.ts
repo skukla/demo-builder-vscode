@@ -15,14 +15,16 @@
  * @module features/eds/services/contentSource/contentSource
  */
 
-/** Coordinates a ContentSource needs to build its registration `source` block. */
+/**
+ * Coordinates a ContentSource needs to build its registration `source` block.
+ * DA.live derives its URL from org/site; AEM carries its own author URL +
+ * content path as construction config, so it ignores these.
+ */
 export interface ContentSourceCoords {
-    /** Content org/owner (for DA.live, the DA.live org; for AEM, the author host owner). */
+    /** Content org/owner (for DA.live, the DA.live org). */
     org: string;
     /** Content site name. */
     site: string;
-    /** AEM-only (point-at): the authored content tree root, e.g. `/content/<site>`. */
-    contentPath?: string;
 }
 
 export interface ContentSource {

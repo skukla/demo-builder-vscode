@@ -48,17 +48,6 @@ describe('DaLiveContentSource', () => {
             expect(block.url).toBe('https://content.da.live/skukla/b2b-boilerplate-content/');
         });
 
-        it('ignores contentPath (DA.live mounts at the org/site root, not a subtree)', () => {
-            const source = new DaLiveContentSource(mockTokenProvider as any);
-
-            const block = source.buildRegistrationSource({
-                org: 'o',
-                site: 's',
-                contentPath: '/content/ignored',
-            });
-
-            expect(block.url).toBe('https://content.da.live/o/s/');
-        });
     });
 
     describe('getContentSourceAuthorization', () => {

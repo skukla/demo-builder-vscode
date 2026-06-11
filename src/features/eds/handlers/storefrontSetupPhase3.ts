@@ -8,6 +8,7 @@
  */
 
 import { buildSiteConfigParams, ConfigurationService } from '../services/configurationService';
+import { createContentSource } from '../services/contentSource/contentSourceFactory';
 import { DaLiveAuthError } from '../services/types';
 import { configureDaLivePermissions } from './edsHelpers';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
@@ -208,9 +209,19 @@ export async function registerConfigurationService(
     });
 
     try {
+        // The registration `content.source` block is produced through the active
+        // ContentSource (DA.live by default; AEM points at the author URL/content
+        // path). For AEM, getContentSourceAuthorization yields null so the Helix
+        // header is omitted (read is AEM-owned).
+        const contentSource = createContentSource({
+            contentSourceType: edsConfig.contentSourceType,
+            tokenProvider: services.daLiveTokenProvider,
+            aemContentSource: edsConfig.aemContentSource,
+        });
         const siteParams = buildSiteConfigParams(
             repoInfo.repoOwner, repoInfo.repoName, edsConfig.daLiveOrg, edsConfig.daLiveSite,
             edsConfig.byomOverlayUrl,
+            contentSource,
         );
         await performSiteConfigRegistration(configurationService, siteParams, edsConfig, context, logger);
     } catch (error) {

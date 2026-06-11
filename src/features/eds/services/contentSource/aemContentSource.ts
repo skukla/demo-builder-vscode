@@ -34,10 +34,13 @@ function assertSafeContentPath(path: string): void {
 export class AemContentSource implements ContentSource {
     readonly type = 'aem-sites' as const;
 
-    private readonly authorOrigin: string;
+    private readonly registrationUrl: string;
 
-    /** @param authorUrl AEM-as-Cloud-Service author host, e.g. `https://author-pXXXX-eYYYY.adobeaemcloud.com`. */
-    constructor(authorUrl: string) {
+    /**
+     * @param authorUrl AEM-as-Cloud-Service author host, e.g. `https://author-pXXXX-eYYYY.adobeaemcloud.com`.
+     * @param contentPath Authored content tree root, e.g. `/content/<site>`.
+     */
+    constructor(authorUrl: string, contentPath: string) {
         let parsed: URL;
         try {
             parsed = new URL(authorUrl);
@@ -47,19 +50,23 @@ export class AemContentSource implements ContentSource {
         if (parsed.protocol !== 'https:') {
             throw new Error(`Invalid AEM author URL: must use https (got "${parsed.protocol}")`);
         }
-        // Normalize away a trailing slash so joins with the content path are clean.
-        this.authorOrigin = authorUrl.replace(/\/+$/, '');
-    }
-
-    buildRegistrationSource(coords: ContentSourceCoords): { url: string; type: string } {
-        const { contentPath } = coords;
         if (!contentPath) {
             throw new Error('AEM content source requires a content path (the authored tree root, e.g. /content/<site>)');
         }
         assertSafeContentPath(contentPath);
 
+        // Normalize away a trailing slash on the origin + ensure a leading slash
+        // on the path, so the join is clean.
+        const origin = authorUrl.replace(/\/+$/, '');
         const path = contentPath.startsWith('/') ? contentPath : `/${contentPath}`;
-        return { url: `${this.authorOrigin}${path}`, type: 'markup' };
+        this.registrationUrl = `${origin}${path}`;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    buildRegistrationSource(_coords: ContentSourceCoords): { url: string; type: string } {
+        // AEM ignores the satellite org/site coords — its source URL is the
+        // configured author URL + content path (point-at).
+        return { url: this.registrationUrl, type: 'markup' };
     }
 
     async getContentSourceAuthorization(): Promise<string | null> {
