@@ -5,7 +5,7 @@
 - [x] Scaffold — PM-approved for delegation; four open questions resolved (2026-06-11)
 - [x] **Planned — detailed pass complete; step-01..08 written; PM reviewed (2026-06-11)**
 - [x] **Reshaped around reuse + verified auth research (2026-06-11)** — R1 resolved (two auth legs: read=AEM-owned/null, write=reuse IMS token); `aemAuth` field/secret/auth-card dropped; capability map confirms reuse-and-extend of `src/features/eds/`. Steps 03/04/06/07 + risk map updated.
-- [~] **In Progress (TDD) — Steps 01–05 DONE + committed + pushed (2026-06-11). Steps 06–08 remain.** See "Session handoff" below.
+- [~] **In Progress (TDD) — Steps 01–07 DONE + committed + pushed (2026-06-11). Step 08 (optional dashboard marker, PM-gated) + live F5 remain.** See "Session handoff" below.
 - [ ] Quality gates (Efficiency + Security)
 - [ ] Complete
 
@@ -32,11 +32,13 @@
 
 ---
 
-## Session handoff (resume here) — 2026-06-11
+## Session handoff (resume here) — 2026-06-11 (session 2)
 
-**Branch:** `claude/commerce-connect-slice-1-plan-bgVlb` (fully pushed). **Baseline:** EDS+core/state regression green at **1295 tests**; `npm run test:typecheck` clean.
+**Branch:** `claude/commerce-connect-slice-1-plan-bgVlb` (fully pushed through Step 07). **Baseline:** EDS regression green at **1062 tests** + project-creation at **1114**; `npm run test:typecheck` + lint clean.
 
-### Done (committed, TDD'd, green) — Steps 01–05
+> **Working-copy note:** development on this branch happens in the dedicated worktree `adobe-demo-system/demo-builder-slice2-worktree` (pinned to this branch) — the main `demo-builder-vscode` checkout is in use by other in-flight work. Don't switch branches in the main checkout.
+
+### Done (committed, TDD'd, green) — Steps 01–07
 | Step | Commit summary | Key files |
 |---|---|---|
 | 01 | ContentSource seam + DaLiveContentSource (refactor-in-place) | `src/features/eds/services/contentSource/{contentSource,daLiveContentSource}.ts`; `configurationService.ts` (buildSiteConfigParams routes through it) |
@@ -44,19 +46,25 @@
 | 03 | Factory + type/manifest plumbing | `contentSourceFactory.ts`; `base.ts`, `webview.ts` (EDSConfig), `demoPackages.ts`; `projectConfigWriter.ts` + `projectFileLoader.ts` round-trip |
 | 04 | AemContentSource (point-at, null read auth, validation) | `src/features/eds/services/contentSource/aemContentSource.ts` |
 | 05 | Satellite path honors ContentSource for AEM | `storefrontSetupPhase3.ts` (constructs source, threads into registration), `storefrontSetupPhases.ts` (gates DA.live pipeline + permissions for AEM), `storefrontSetupHandlers.ts` (payload type) |
+| 06 | Config-as-content writer + executor Phase 5 wiring (`0725d45c`) | `configAsContentWriter.ts` (writer + `createAemAuthoringWritePort`); `executor.ts` (content-flow branch calls writer for aem-sites, non-fatal); `executor-aemConfigAsContent.test.ts` |
+| 07 | Wizard content-source choice on Connect step (`8a78f00b`) | `aemContentSourceValidation.ts`, `useAemContentSource.ts`, `ContentSourceSelector.tsx`, `ConnectServicesStep.tsx` (join-flow-only chooser + Continue gate) |
 
 ### Design decisions made during TDD (carry forward)
 - **`AemContentSource` constructor is `(authorUrl, contentPath)`** — content path is fixed AEM config, NOT per-registration coords. So `ContentSourceCoords` is `{ org, site }` only, and `buildSiteConfigParams` stays content-source-neutral. The factory builds a fully-configured source.
 - **`getContentSourceAuthorization()` → `null` for AEM** (read is AEM-owned); the Helix `x-content-source-authorization` header is omitted.
 - **Registration `content.source.url` = `<authorUrl><contentPath>`** (e.g. `https://author-pXXXX-eYYYY…/content/<site>`), `type: 'markup'`. **Exact shape is still a live-test item** — confirm at F5.
-- TDD note: Steps 01–04 were strict RED→GREEN; **Step 05's integration was source-then-test** (the unit pieces were RED-first; the phases integration test was written right after and locks the behavior).
+- **Step 06:** the writer derives the config document once via `extractConfigParams` + `generateConfigJson` (value parity with repo-side config.json) and loops it over `configs`/`configs-stage`/`configs-dev`. ANY failed write (not just 401/403) takes the R2 `manualFallbackRequired` path — one non-fatal branch, never blocks setup; payloads are public storefront config, the IMS token is never logged. The AEM authoring call is a **provisional `PUT <authorUrl><path>` with `Authorization: Bearer <IMS>`**, isolated behind `ContentWritePort` — the exact API shape is an F5 live-test item. The executor integration point is **Phase 5's content-flow guard** (`executor.ts` `syncEdsConfigToRemote`): registration happens at preflight and commerce values exist post-Phase-4, so this IS "after registration" from step-06.
+- **Step 07:** the chooser renders only when `state.flow === 'content'`; Continue gate = GitHub + DA.live (unchanged — registration still needs the IMS identity) **plus AEM URL/path validity** when aem-sites is selected. Fields seed `edsConfig.contentSourceType`/`aemContentSource` and ride the existing setup payload (no new plumbing). No credential affordance (R1).
+- TDD note: Steps 01–04, 06, 07 were strict RED→GREEN; **Step 05's integration was source-then-test** (the unit pieces were RED-first; the phases integration test was written right after and locks the behavior).
 
-### Next: Step 06 (start here)
-**`configAsContentWriter`** — author `configs` + `configs-stage` + `configs-dev` into the AEM content tree via the authoring API, reusing the existing IMS token, with the **R2 manual-fallback** (missing token / 401 / 403 → return `manualFallbackRequired` with exact paths+payloads, setup still green). Reuse `configGenerator.ts` value-derivation. See `step-06.md`. Then **Step 07** (wizard surface, `step-07.md`) and **Step 08** (dashboard marker + the live F5 — needs the AEM instance `author-p57319-e1619941`; hand the PM the F5 script in `step-08.md`).
+### Next: Step 08 + live F5
+- **Step 08 dashboard marker is OPTIONAL and PM-gated** (`step-08.md`) — awaiting the PM's call; tiny read-only render of `contentSourceType` where Slice 1 surfaces share state.
+- **Live F5** (PM runs it against `author-p57319-e1619941`): script in `step-08.md` § "Single live-F5 verification script". It confirms the three R1 live-test items: (1) registration URL shape for an AEM-author markup source, (2) the satellite renders from AEM content, (3) the authoring API accepts the extension-held IMS token for the config-node writes (else the R2 fallback prints the three nodes for manual authoring — setup stays green either way).
+- After F5: quality gates (Efficiency + Security; focal points in the `step-08.md` risk map), then move the plan to `.rptc/complete/`.
 
 ### Verify on resume
 ```
-npm run test:file -- tests/features/eds/services/contentSource/ tests/features/eds/handlers/storefrontSetupPhases-aem.test.ts
+npm run test:file -- tests/features/eds/services/contentSource/ tests/features/eds/services/configAsContentWriter.test.ts tests/features/eds/handlers/storefrontSetupPhases-aem.test.ts tests/features/project-creation/handlers/executor-aemConfigAsContent.test.ts tests/features/eds/ui/steps/ConnectServicesStep-contentSource.test.tsx
 npm run test:typecheck
 ```
 **Design sources:** `.rptc/backlog/commerce-connect-aem-sc/storefront-topology.md`, `verify-aem-sites-spike.md`, `aem-sc-first-run.md`; ADR-006 (`.rptc/plans/thin-layer-storefront-adr-006/`)
