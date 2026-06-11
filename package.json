@@ -257,8 +257,9 @@
           "demoBuilder.daLive.authoringExperience": {
             "type": "string",
             "enum": ["universal-editor", "experience-workspace"],
+            "enumItemLabels": ["DA.live Classic", "Experience Workspace"],
             "default": "universal-editor",
-            "description": "Default AEM authoring experience for new EDS projects. Universal Editor preserves the current da.live doc editor + punch-out; Experience Workspace uses the da.live-native canvas. Override per project from the project menu."
+            "description": "Default AEM authoring experience for new EDS projects. DA.live Classic opens the da.live doc editor (with the Universal Editor punch-out for Sidekick Edit); Experience Workspace uses the da.live-native canvas. Override per project from the project's Configure screen."
           }
         }
       },
