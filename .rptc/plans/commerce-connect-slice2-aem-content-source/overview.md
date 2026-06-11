@@ -35,7 +35,7 @@
 
 ## Objective
 
-Make the storefront **content source pluggable** and add an **AEM-Sites variant**, so a repoless joiner can author in their **own AEM Sites** instance instead of DA.live. Replace the DA.live assumption baked into `fstabGenerator` / `configurationService` / `edsPipeline` with content-source-neutral calls, and add the **config-as-content writer** so commerce wiring lands where an AEM-authored storefront reads it.
+Make the storefront **content source pluggable** and add an **AEM-Sites variant**, so a repoless joiner can author in their **own AEM Sites** instance instead of DA.live. Route the two narrow DA.live couplings — the registration `source` payload (`configurationService`) and the Helix content-source auth header (`helixApiClient`) — through a content-source-neutral `ContentSource` seam, gate the DA.live content-population pipeline for the AEM (point-at) source, and add the **config-as-content writer** so commerce wiring lands where an AEM-authored storefront reads it. (`fstabGenerator` is **not** touched — it is canonical-only cleanup, off the satellite path.)
 
 **Success criterion (F5, end-to-end):** an AEM-authored `xcom` page rendered via Edge Delivery shows **live products/prices** and a shopper can **add to cart and reach checkout** — driven by an extension-created repoless satellite whose content source is AEM Sites and whose commerce wiring was written as content.
 
@@ -65,9 +65,9 @@ Make the storefront **content source pluggable** and add an **AEM-Sites variant*
 
 ---
 
-## Known work areas (planner to decompose into TDD steps)
+## Known work areas (now decomposed into step-01..08)
 
-1. **Content-source seam (`ContentSource` interface)** — factor the DA.live assumption in `fstabGenerator` / `configurationService` / `edsPipeline` behind a `ContentSource` boundary. DA.live becomes one implementation (refactor-in-place of current code); the Helix `source` payload and `contentSourceType` are produced *through* the interface, not switched inline.
+1. **Content-source seam (`ContentSource` interface)** [→ steps 01–02] — factor the narrow DA.live couplings (`configurationService` registration `source` payload; `helixApiClient` auth header) behind a `ContentSource` boundary. DA.live becomes one implementation (refactor-in-place of current code); the Helix `source` payload and `contentSourceType` are produced *through* the interface, not switched inline.
 2. **AEM-Sites variant (`ContentSource` impl)** — the AEM implementation: point the satellite at the **already-authored** AEM content tree (no copy); `buildRegistrationSource` → `{ url: authorUrl + contentPath (franklin.delivery mountpoint), type: 'markup' }`; `getContentSourceAuthorization()` → **`null`** (read is AEM-owned, no token). Net-new but tiny (≈ `DaLiveContentSource`), since there is no content-copy/publish path and no read-auth to handle.
 3. **Config-as-content writer (multi-env)** — write `configs` **+ `configs-stage` + `configs-dev`** nodes (commerce wiring: `commerce-core-endpoint`, `x-api-key`, `Magento-Environment-Id`, store headers) into the AEM content tree via the Configuration/Authoring API per the CitiSignal `paths.json` mapping, instead of committing `config.json` repo-side. Include the **manual-author fallback** path for first end-to-end.
 4. **Wizard/connect surface** — let the joiner declare an AEM content source (likely a content-source choice on the Connect/Join path); prefill + validation parallel to Slice 1's connect-step.
@@ -98,8 +98,8 @@ Slice 2 is **reuse-and-extend of `src/features/eds/`, not build-new** — the DA
 
 - TDD headless (unit + integration) for the seam, AEM variant, and writer — matching Slice 1's proven discipline.
 - **Live F5 against the available AEM instance** for the end-to-end success criterion above.
-- Quality gates: Efficiency + Security (the AEM auth/token handling and the Authoring-API write are the security-review focal points).
+- Quality gates: Efficiency + Security (focal points: the config-as-content **write** auth — reused IMS token + redaction; read carries no token — and **URL/path validation** into the registration URL).
 
 ---
 
-> **Next action:** PM approved delegation (2026-06-11). Hand this scaffold to the detailed-planning pass — run via the built-in **Plan architect agent** (the RPTC Master Feature Planner agent isn't installed in this session) — for the comprehensive, TDD-ready step breakdown (`step-NN.md` + test strategy + risk map). PM reviews/approves the planner output before saving and starting TDD.
+> **Next action:** Detailed plan complete and **reshaped around reuse** (2026-06-11); steps 01–08 are TDD-ready. **Awaiting PM go to begin TDD at Step 01** (`ContentSource` seam, characterization-locked so the DA.live path stays byte-identical). Order: headless steps 01–07 first; the **live F5** (Step 08 script) runs against the available AEM instance once the AEM impl (04) + config-as-content writer (06) land. The three live-test items (R1, above) are confirmed at that F5, with the R2 manual fallback as backstop.
