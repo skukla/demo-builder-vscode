@@ -81,18 +81,23 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'resetProject')).toBe(true);
         });
 
-        it('should have exactly 19 handlers', () => {
+        it('registers the authoring-experience flip handler', () => {
+            expect(hasHandler(dashboardHandlers, 'setAuthoringExperience')).toBe(true);
+        });
+
+        it('should have exactly 20 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers);
 
-            // Then: Exactly 19 handlers
-            // 2 init + 2 lifecycle + 9 navigation + 1 mesh + 1 syncStorefront +
-            // 1 refreshBlockLibrary + 1 auth + 1 project + 1 reset = 19
+            // Then: Exactly 20 handlers
+            // 2 init + 2 lifecycle + 9 navigation + 1 setAuthoringExperience +
+            // 1 mesh + 1 syncStorefront + 1 refreshBlockLibrary + 1 auth +
+            // 1 project + 1 reset = 20
             // (openAi removed with the dashboard AI tile — AI now lives globally
             //  in the sidebar, not as a project-scoped tile; see dashboard
             //  primary-zone consolidation)
-            expect(types).toHaveLength(19);
+            expect(types).toHaveLength(20);
         });
 
         it('should have handlers as functions', () => {

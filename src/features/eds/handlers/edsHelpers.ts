@@ -23,8 +23,10 @@ import { GitHubRepoOperations } from '../services/githubRepoOperations';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { HelixService } from '../services/helixService';
 import { getLogger } from '@/core/logging';
+import { COMPONENT_IDS } from '@/core/constants';
 import { showOneTimeTip } from '@/core/utils/oneTimeTip';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { AuthoringExperience, Project } from '@/types';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 
@@ -338,6 +340,56 @@ export function resolveByomOverlayConfig(
         return undefined;
     }
     return appendOverlayParams(baseUrl, org, site);
+}
+
+const AUTHORING_EXPERIENCES: ReadonlySet<string> = new Set<AuthoringExperience>([
+    'universal-editor',
+    'experience-workspace',
+]);
+
+/**
+ * Resolve the AEM authoring experience for a project.
+ *
+ * Precedence (mirrors resolveByomOverlayConfig):
+ * 1. Per-project metadata value — if it is a recognized union member, it wins.
+ * 2. Global setting demoBuilder.daLive.authoringExperience (default
+ *    'universal-editor').
+ * Any unrecognized result coerces to 'universal-editor' (fail-safe), so a
+ * corrupted setting or stray metadata can never break the Author button.
+ *
+ * @param metadataValue - The per-project `authoringExperience` metadata value
+ * @returns The resolved authoring experience
+ */
+export function resolveAuthoringExperience(
+    metadataValue: string | undefined,
+): AuthoringExperience {
+    if (metadataValue && AUTHORING_EXPERIENCES.has(metadataValue)) {
+        return metadataValue as AuthoringExperience;
+    }
+
+    const globalValue = vscode.workspace
+        .getConfiguration('demoBuilder.daLive')
+        .get<string>('authoringExperience', 'universal-editor');
+
+    return AUTHORING_EXPERIENCES.has(globalValue)
+        ? (globalValue as AuthoringExperience)
+        : 'universal-editor';
+}
+
+/**
+ * Resolve the authoring experience for a project by reading its EDS
+ * component-instance `authoringExperience` metadata, then applying the
+ * resolveAuthoringExperience precedence (per-project → global → UE).
+ *
+ * @param project - The project (any project; non-EDS yields the global default)
+ * @returns The resolved authoring experience
+ */
+export function resolveProjectAuthoringExperience(
+    project: Project | undefined | null,
+): AuthoringExperience {
+    const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+    const metadataValue = edsInstance?.metadata?.authoringExperience as string | undefined;
+    return resolveAuthoringExperience(metadataValue);
 }
 
 function isAcceptedOverlayUrl(value: string): boolean {
@@ -669,54 +721,47 @@ export async function applyDaLiveOrgConfigSettings(
     daLiveOrg: string,
     daLiveSite: string,
     logger: Logger,
+    experience: AuthoringExperience = 'universal-editor',
 ): Promise<void> {
     try {
         const edsSettings = vscode.workspace.getConfiguration('demoBuilder.daLive');
         const aemAuthorUrl = edsSettings.get<string>('aemAuthorUrl');
         const imsOrgId = edsSettings.get<string>('IMSOrgId');
-        const editorPathPrefix = edsSettings.get<string>('editorPathPrefix') || 'site/to/path/content';
 
         // Nothing configured - skip silently
         if (!aemAuthorUrl && !imsOrgId) {
             return;
         }
 
-        const appliedKeys: string[] = [];
-        const failures: string[] = [];
-
-        // aem.repositoryId → SITE config. da.live's Library reads the AEM Assets
-        // binding from the per-site config, so it must be written site-scoped.
+        // Both keys land in the SAME per-site config (/config/<org>/<site>), so
+        // collect them and write once — one GET-merge-POST round-trip, no window
+        // for a concurrent writer to slip between two separate writes.
+        //   - aem.repositoryId: da.live's Library reads the AEM Assets binding
+        //     from the per-site config.
+        //   - editor.path: site-scoped, keyed on /<org>/<site>, so flipping one
+        //     project's authoring experience never clobbers a sibling site's row.
+        //     UE: punch-out to experience.adobe.com. EW: da.live-native canvas.
+        const updates: Record<string, string> = {};
         if (aemAuthorUrl) {
-            const result = await daLiveContentOps.applySiteConfig(daLiveOrg, daLiveSite, {
-                'aem.repositoryId': aemAuthorUrl,
-            });
-            if (result.success) {
-                appliedKeys.push('aem.repositoryId');
-            } else {
-                failures.push(`aem.repositoryId: ${result.error}`);
-            }
+            updates['aem.repositoryId'] = aemAuthorUrl;
         }
-
-        // editor.path → ORG config (Universal Editor path mapping stays org-scoped).
         if (imsOrgId) {
-            // Dummy path prefix prevents auto-redirect to UE (no real content matches it)
-            // Full UE URL enables punch-out option from doc-based editing
-            const editorPath = `${editorPathPrefix}=https://experience.adobe.com/#/@${imsOrgId}/aem/editor/canvas/main--${daLiveSite}--${daLiveOrg}.ue.da.live`;
-            const result = await daLiveContentOps.applyOrgConfig(daLiveOrg, {
-                'editor.path': editorPath,
-            });
-            if (result.success) {
-                appliedKeys.push('editor.path');
-            } else {
-                failures.push(`editor.path: ${result.error}`);
-            }
+            const editorValue = experience === 'experience-workspace'
+                ? 'https://da.live/canvas#'
+                : `https://experience.adobe.com/#/@${imsOrgId}/aem/editor/canvas/main--${daLiveSite}--${daLiveOrg}.ue.da.live`;
+            updates['editor.path'] = `/${daLiveOrg}/${daLiveSite}=${editorValue}`;
         }
 
-        if (appliedKeys.length > 0) {
-            logger.info(`[EDS Config] Applied: ${appliedKeys.join(', ')}`);
+        const appliedKeys = Object.keys(updates);
+        if (appliedKeys.length === 0) {
+            return;
         }
-        if (failures.length > 0) {
-            logger.warn(`[EDS Config] Failed to apply settings: ${failures.join('; ')}`);
+
+        const result = await daLiveContentOps.applySiteConfig(daLiveOrg, daLiveSite, updates);
+        if (result.success) {
+            logger.info(`[EDS Config] Applied: ${appliedKeys.join(', ')}`);
+        } else {
+            logger.warn(`[EDS Config] Failed to apply settings (${appliedKeys.join(', ')}): ${result.error}`);
         }
     } catch (error) {
         logger.warn(`[EDS Config] Error: ${(error as Error).message}`);

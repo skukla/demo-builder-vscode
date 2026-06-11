@@ -30,6 +30,7 @@ import {
     handleCopyProjectPath,
     handleOpenAiForProject,
     handleSetProjectPinned,
+    handleSetAuthoringExperience,
 } from './dashboardHandlers';
 import { defineHandlers } from '@/types/handlers';
 
@@ -89,4 +90,7 @@ export const projectsListHandlers = defineHandlers({
 
     // Pin / unpin a project — pinned projects sort first on the dashboard
     'setProjectPinned': handleSetProjectPinned,
+
+    // Flip a project's AEM authoring experience (UE ↔ Experience Workspace)
+    'setAuthoringExperience': handleSetAuthoringExperience,
 });

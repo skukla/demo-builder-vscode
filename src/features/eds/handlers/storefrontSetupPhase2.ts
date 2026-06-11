@@ -17,6 +17,7 @@ import { generateFstabContent } from '../services/fstabGenerator';
 import { GitHubFileOperations } from '../services/githubFileOperations';
 import { generateInspectorTreeEntries, installInspectorTagging } from '../services/inspectorHelpers';
 import { installSmart404Handler } from '../services/pdp404HandlerPublisher';
+import { installQuickEdit } from '../services/quickEditPublisher';
 import { type GitHubTreeInput } from '../services/types';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { checkGitHubAppForExistingRepo } from './storefrontSetupPhaseHelpers';
@@ -119,6 +120,17 @@ export async function executePhaseHelixConfig(
         logger,
         edsConfig.daLiveOrg,
         edsConfig.daLiveSite,
+    );
+
+    // Wire Quick Edit (Experience Workspace WYSIWYG dependency) into the
+    // storefront's scripts/scripts.js + tools/quick-edit/quick-edit.js.
+    // Brand-agnostic, idempotent, non-fatal — inert under Universal Editor,
+    // active under Experience Workspace. See installQuickEdit.
+    await installQuickEdit(
+        githubFileOps,
+        repoInfo.repoOwner,
+        repoInfo.repoName,
+        logger,
     );
 
     if (useExistingRepo) {

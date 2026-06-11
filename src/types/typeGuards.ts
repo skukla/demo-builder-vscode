@@ -367,10 +367,20 @@ export function getEdsPreviewUrl(project: Project | undefined | null): string | 
  *
  * Constructs the URL from DA.live org and site stored in COMPONENT_IDS.EDS_STOREFRONT component instance metadata.
  *
+ * The resolved authoring experience selects the URL form (vscode stays OUT of
+ * this file — the caller resolves and passes it in):
+ *   - 'universal-editor' (default): https://da.live/#/<org>/<site>
+ *   - 'experience-workspace': https://da.live/canvas#/<org>/<site>/
+ *     (param-less, trailing slash = site root).
+ *
  * @param project - The EDS project (can be undefined/null)
- * @returns The DA.live authoring URL (e.g., https://da.live/#/org/site), or undefined if not available
+ * @param experience - The resolved authoring experience (default 'universal-editor')
+ * @returns The DA.live authoring URL, or undefined if not available
  */
-export function getEdsDaLiveUrl(project: Project | undefined | null): string | undefined {
+export function getEdsDaLiveUrl(
+    project: Project | undefined | null,
+    experience: 'universal-editor' | 'experience-workspace' = 'universal-editor',
+): string | undefined {
     if (!isEdsProject(project)) return undefined;
     const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
     const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
@@ -378,6 +388,9 @@ export function getEdsDaLiveUrl(project: Project | undefined | null): string | u
 
     if (!daLiveOrg || !daLiveSite) return undefined;
 
+    if (experience === 'experience-workspace') {
+        return `https://da.live/canvas#/${daLiveOrg}/${daLiveSite}/`;
+    }
     return `https://da.live/#/${daLiveOrg}/${daLiveSite}`;
 }
 

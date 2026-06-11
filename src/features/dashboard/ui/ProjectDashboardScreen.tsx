@@ -24,6 +24,7 @@ import { StatusCard } from '@/core/ui/components/feedback';
 import { PageLayout, PageHeader } from '@/core/ui/components/layout';
 import { useFocusTrap, useSingleTimer } from '@/core/ui/hooks';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { AuthoringExperience } from '@/types/base';
 
 /**
  * Props for the ProjectDashboardScreen component
@@ -44,6 +45,8 @@ interface ProjectDashboardScreenProps {
     edsLiveUrl?: string;
     /** DA.live authoring URL for EDS projects */
     edsDaLiveUrl?: string;
+    /** Resolved authoring experience (drives the Author label + flip target) */
+    authoringExperience?: AuthoringExperience;
     /** Initial mesh status from card grid computation (avoids loading flash) */
     initialMeshStatus?: string;
     /** Initial EDS storefront status (for dynamic status display) */
@@ -61,7 +64,7 @@ interface ProjectDashboardScreenProps {
  *
  * @param props - Component props
  */
-export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName, isEds = false, edsLiveUrl, edsDaLiveUrl, initialMeshStatus, initialEdsStorefrontStatus }: ProjectDashboardScreenProps) {
+export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName, isEds = false, edsLiveUrl, edsDaLiveUrl, authoringExperience, initialMeshStatus, initialEdsStorefrontStatus }: ProjectDashboardScreenProps) {
     // Capture isEds on first render and never change it (project type doesn't change)
     const isEdsRef = useRef(isEds);
     if (isEds && !isEdsRef.current) {
@@ -118,6 +121,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
         handleOpenBrowser,
         handleOpenLiveSite,
         handleOpenDaLive,
+        handleSetAuthoringExperience,
         handleConfigure,
         handleOpenDevConsole,
         handleDeleteProject,
@@ -131,6 +135,8 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
         setIsLogsHoverSuppressed,
         edsLiveUrl: edsLiveUrlStable,
         edsDaLiveUrl: edsDaLiveUrlStable,
+        projectPath: project?.path,
+        authoringExperience,
     });
 
     // Focus trap for accessibility
@@ -280,6 +286,8 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                             handleOpenBrowser={handleOpenBrowser}
                             handleOpenLiveSite={handleOpenLiveSite}
                             handleOpenDaLive={handleOpenDaLive}
+                            authoringExperience={authoringExperience}
+                            handleSetAuthoringExperience={isEdsStable ? handleSetAuthoringExperience : undefined}
                             handleViewLogs={handleViewLogs}
                             handleDeployMesh={handleDeployMesh}
                             handleSyncStorefront={handleSyncStorefront}

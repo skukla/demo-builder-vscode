@@ -26,8 +26,14 @@ import { sessionUIState } from '@/core/state/sessionUIState';
 import { openInIncognito, TIMEOUTS } from '@/core/utils';
 import { validateProjectPath, validateProjectNameSecurity, validateURL } from '@/core/validation';
 import { hasMeshDeploymentRecord, determineMeshStatus } from '@/features/dashboard/handlers/meshStatusHelpers';
+import {
+    applyDaLiveOrgConfigSettings,
+    getDaLiveAuthService,
+    resolveProjectAuthoringExperience,
+} from '@/features/eds/handlers/edsHelpers';
+import { DaLiveContentOperations, createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
-import type { Project } from '@/types/base';
+import type { AuthoringExperience, Project } from '@/types/base';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
 import { getMeshComponentInstance, getEdsLiveUrl, getEdsDaLiveUrl } from '@/types/typeGuards';
 
@@ -55,6 +61,13 @@ export const handleGetProjects: MessageHandler = async (
             if (project) {
                 projects.push(project);
             }
+        }
+
+        // Enrich projects with the resolved authoring experience so the card
+        // grid can render the Author label + flip control without importing the
+        // resolver or `vscode` into the webview (presentational UI).
+        for (const project of projects) {
+            project.resolvedAuthoringExperience = resolveProjectAuthoringExperience(project);
         }
 
         // Enrich projects with mesh staleness status (full fidelity check)
@@ -785,7 +798,7 @@ export const handleOpenDaLive: MessageHandler<{ projectPath: string }> = async (
         return { success: false, error: 'Project not found' };
     }
 
-    const daLiveUrl = getEdsDaLiveUrl(project);
+    const daLiveUrl = getEdsDaLiveUrl(project, resolveProjectAuthoringExperience(project));
 
     if (!daLiveUrl) {
         return { success: false, error: 'DA.live URL not available' };
@@ -1061,3 +1074,95 @@ export const handleSetProjectPinned: MessageHandler<{ projectPath: string; pinne
         return { success: false, error: 'Failed to set project pinned state' };
     }
 };
+
+// ============================================================================
+// Authoring Experience (Universal Editor ↔ Experience Workspace)
+// ============================================================================
+
+const AUTHORING_EXPERIENCES: readonly AuthoringExperience[] = [
+    'universal-editor',
+    'experience-workspace',
+];
+
+/**
+ * Flip a single project's AEM authoring experience.
+ *
+ * Persists the per-project `authoringExperience` metadata (pure-local, via
+ * `saveProjectConfigOnly` — no `onProjectChanged` side effects) then immediately
+ * re-applies the site-scoped `editor.path` so the DA punch-out matches the new
+ * experience. The re-apply is non-fatal: the metadata write stands even if DA is
+ * unreachable, mirroring the non-fatal posture of `applyDaLiveOrgConfigSettings`.
+ *
+ * This is intentionally NOT the full republish pipeline — only the thin Step-1
+ * editor.path re-apply (no config regen, no Helix).
+ */
+export const handleSetAuthoringExperience: MessageHandler<{
+    projectPath: string;
+    experience: AuthoringExperience;
+}> = async (context, payload): Promise<HandlerResponse> => {
+    if (!payload?.projectPath || !AUTHORING_EXPERIENCES.includes(payload.experience)) {
+        return { success: false, error: 'projectPath and a valid experience are required' };
+    }
+
+    try {
+        validateProjectPath(payload.projectPath);
+    } catch {
+        return { success: false, error: 'Invalid project path' };
+    }
+
+    try {
+        const project = await context.stateManager.loadProjectFromPath(
+            payload.projectPath,
+            undefined,
+            { persistAfterLoad: false },
+        );
+        if (!project) {
+            return { success: false, error: 'Project not found' };
+        }
+
+        const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+        if (!edsInstance) {
+            return { success: false, error: 'Authoring experience is only available for EDS projects' };
+        }
+        edsInstance.metadata = { ...edsInstance.metadata, authoringExperience: payload.experience };
+
+        // Pure-local persist — saveProject would fire onProjectChanged side effects.
+        await context.stateManager.saveProjectConfigOnly(project);
+
+        // Re-apply site-scoped editor.path so the DA punch-out matches the flip.
+        const warning = await reapplyEditorPath(context, edsInstance, payload.experience);
+        return warning ? { success: true, warning } : { success: true };
+    } catch (error) {
+        context.logger.error('Failed to set authoring experience', error instanceof Error ? error : undefined);
+        return { success: false, error: 'Failed to set authoring experience' };
+    }
+};
+
+/**
+ * Thin extraction of republish Step 1: re-apply the site-scoped editor.path for
+ * the flipped experience. Non-fatal — returns a warning string on failure rather
+ * than throwing, so the metadata write is never lost.
+ */
+async function reapplyEditorPath(
+    context: HandlerContext,
+    edsInstance: NonNullable<Project['componentInstances']>[string],
+    experience: AuthoringExperience,
+): Promise<string | undefined> {
+    const daLiveOrg = edsInstance.metadata?.daLiveOrg as string | undefined;
+    const daLiveSite = edsInstance.metadata?.daLiveSite as string | undefined;
+    if (!daLiveOrg || !daLiveSite) {
+        return undefined;
+    }
+
+    try {
+        const daLiveAuthService = getDaLiveAuthService(context.context);
+        const tokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
+        const daLiveContentOps = new DaLiveContentOperations(tokenProvider, context.logger);
+        await applyDaLiveOrgConfigSettings(daLiveContentOps, daLiveOrg, daLiveSite, context.logger, experience);
+        return undefined;
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        context.logger.warn(`[ProjectsList] editor.path re-apply failed (metadata still saved): ${message}`);
+        return 'Authoring experience saved, but updating the DA editor link failed. It will sync on the next republish.';
+    }
+}

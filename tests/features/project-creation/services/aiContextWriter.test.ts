@@ -129,6 +129,23 @@ describe('aiContextWriter', () => {
                 expect(result).toContain('https://da.live/\\#/my-org/my-site');
             });
 
+            it('uses the Experience Workspace canvas URL when the project is set to EW', () => {
+                // Per-project authoringExperience wins over the global default (UE),
+                // so the resolver returns EW without reading vscode config.
+                const project = makeEdsProject({
+                    componentInstances: {
+                        'eds-storefront': makeEdsStorefrontInstance({
+                            authoringExperience: 'experience-workspace',
+                        }),
+                    },
+                });
+                const result = generateAgentsMd(project, STACKS);
+
+                // Param-less canvas form, trailing slash = site root; # escaped at the boundary.
+                expect(result).toContain('https://da.live/canvas\\#/my-org/my-site/');
+                expect(result).not.toContain('https://da.live/\\#/my-org/my-site');
+            });
+
             it('includes the local storefront path', () => {
                 const project = makeEdsProject();
                 const result = generateAgentsMd(project, STACKS);

@@ -22,6 +22,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateURL } from '@/core/validation';
 import { toggleLogsPanel } from '@/features/lifecycle/handlers/lifecycleHandlers';
 import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
+import { handleSetAuthoringExperience } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler , defineHandlers } from '@/types/handlers';
@@ -548,6 +549,7 @@ export const dashboardHandlers = defineHandlers({
     'openBrowser': handleOpenBrowser,
     'openLiveSite': handleOpenLiveSite,
     'openDaLive': handleOpenDaLive,
+    'setAuthoringExperience': handleSetAuthoringExperience,
     'viewLogs': handleViewLogs,
     'viewDebugLogs': handleViewDebugLogs,
     'configure': handleConfigure,

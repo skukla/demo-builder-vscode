@@ -2,21 +2,28 @@
  * edsHelpers — applyDaLiveOrgConfigSettings routing tests
  *
  * applyDaLiveOrgConfigSettings reads two VS Code settings and routes each to a
- * different config scope on DA.live:
- *   - aem.repositoryId (from demoBuilder.daLive.aemAuthorUrl) → SITE config
- *     (applySiteConfig) — da.live's Library reads the AEM Assets binding from
- *     the per-site config, so it must be written site-scoped.
- *   - editor.path (built from demoBuilder.daLive.IMSOrgId) → ORG config
- *     (applyOrgConfig) — Universal Editor path mapping stays org-scoped.
+ * config scope on DA.live. Both are now SITE-scoped (applySiteConfig):
+ *   - aem.repositoryId (from demoBuilder.daLive.aemAuthorUrl) → SITE config —
+ *     da.live's Library reads the AEM Assets binding from the per-site config.
+ *   - editor.path (built from demoBuilder.daLive.IMSOrgId) → SITE config. This
+ *     is the LOAD-BEARING per-project isolation change: flipping one project's
+ *     authoring experience must never clobber sibling sites sharing the same DA
+ *     org, so editor.path is keyed on the per-site `/<org>/<site>` row and
+ *     written via applySiteConfig — NOT applyOrgConfig.
  *
- * Each write is independent (either or both may run). Neither setting → no
- * calls at all (skip silently).
+ * editor.path also branches on the resolved authoring experience:
+ *   - Universal Editor: row value punches out to experience.adobe.com.
+ *   - Experience Workspace: row value is the da.live-native canvas.
+ *
+ * Both keys land in the same per-site config, so they are written in a SINGLE
+ * merged applySiteConfig call when both are present (one round-trip, no window
+ * for a concurrent writer to slip between two writes). Either alone still writes
+ * once; neither setting → no calls at all (skip silently).
  */
 
 /* eslint-disable no-var */
 var mockAemAuthorUrl: string | undefined;
 var mockImsOrgId: string | undefined;
-var mockEditorPathPrefix: string | undefined;
 /* eslint-enable no-var */
 
 jest.mock('vscode', () => {
@@ -26,9 +33,6 @@ jest.mock('vscode', () => {
                 get: jest.fn((key: string, defaultValue?: unknown) => {
                     if (key === 'aemAuthorUrl') return mockAemAuthorUrl;
                     if (key === 'IMSOrgId') return mockImsOrgId;
-                    if (key === 'editorPathPrefix') {
-                        return mockEditorPathPrefix === undefined ? defaultValue : mockEditorPathPrefix;
-                    }
                     return defaultValue;
                 }),
             }),
@@ -67,6 +71,7 @@ const AEM_AUTHOR_URL = 'author-p158081-e1683323.adobeaemcloud.com';
 const IMS_ORG_ID = 'ABCDEF1234567890@AdobeOrg';
 const DA_LIVE_ORG = 'leahrayard';
 const DA_LIVE_SITE = 'leah-b2b-demo';
+const SITE_ROW_KEY = `/${DA_LIVE_ORG}/${DA_LIVE_SITE}`;
 
 describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
     let mockApplySiteConfig: jest.Mock;
@@ -78,7 +83,6 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         jest.clearAllMocks();
         mockAemAuthorUrl = undefined;
         mockImsOrgId = undefined;
-        mockEditorPathPrefix = undefined;
 
         mockApplySiteConfig = jest.fn().mockResolvedValue({ success: true });
         mockApplyOrgConfig = jest.fn().mockResolvedValue({ success: true });
@@ -95,10 +99,12 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         } as unknown as Logger;
     });
 
-    it('routes aem.repositoryId to applySiteConfig with the org and site', async () => {
+    it('routes aem.repositoryId to applySiteConfig with the org and site (regression guard)', async () => {
         mockAemAuthorUrl = AEM_AUTHOR_URL;
 
-        await applyDaLiveOrgConfigSettings(mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger);
+        await applyDaLiveOrgConfigSettings(
+            mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'universal-editor',
+        );
 
         expect(mockApplySiteConfig).toHaveBeenCalledWith(DA_LIVE_ORG, DA_LIVE_SITE, {
             'aem.repositoryId': AEM_AUTHOR_URL,
@@ -106,34 +112,79 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         expect(mockApplyOrgConfig).not.toHaveBeenCalled();
     });
 
-    it('routes editor.path to applyOrgConfig with the org only', async () => {
+    it('routes Universal Editor editor.path to applySiteConfig with a site-scoped row', async () => {
         mockImsOrgId = IMS_ORG_ID;
 
-        await applyDaLiveOrgConfigSettings(mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger);
+        await applyDaLiveOrgConfigSettings(
+            mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'universal-editor',
+        );
 
-        expect(mockApplyOrgConfig).toHaveBeenCalledTimes(1);
-        const [org, updates] = mockApplyOrgConfig.mock.calls[0];
+        expect(mockApplySiteConfig).toHaveBeenCalledTimes(1);
+        const [org, site, updates] = mockApplySiteConfig.mock.calls[0];
         expect(org).toBe(DA_LIVE_ORG);
-        expect(updates['editor.path']).toContain(IMS_ORG_ID);
-        expect(updates['editor.path']).toContain(`main--${DA_LIVE_SITE}--${DA_LIVE_ORG}.ue.da.live`);
-        expect(mockApplySiteConfig).not.toHaveBeenCalled();
+        expect(site).toBe(DA_LIVE_SITE);
+        const editorRow = updates['editor.path'];
+        expect(editorRow).toBe(
+            `${SITE_ROW_KEY}=https://experience.adobe.com/#/@${IMS_ORG_ID}/aem/editor/canvas/main--${DA_LIVE_SITE}--${DA_LIVE_ORG}.ue.da.live`,
+        );
+
+        // LOAD-BEARING: editor.path must NOT go through the org-scoped write —
+        // that is what isolates sibling sites in a shared DA org.
+        expect(mockApplyOrgConfig).not.toHaveBeenCalled();
     });
 
-    it('calls BOTH writes when both settings are present (each is independent)', async () => {
+    it('routes Experience Workspace editor.path to applySiteConfig with the canvas row', async () => {
+        mockImsOrgId = IMS_ORG_ID;
+
+        await applyDaLiveOrgConfigSettings(
+            mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'experience-workspace',
+        );
+
+        expect(mockApplySiteConfig).toHaveBeenCalledTimes(1);
+        const [org, site, updates] = mockApplySiteConfig.mock.calls[0];
+        expect(org).toBe(DA_LIVE_ORG);
+        expect(site).toBe(DA_LIVE_SITE);
+        expect(updates['editor.path']).toBe(`${SITE_ROW_KEY}=https://da.live/canvas#`);
+
+        expect(mockApplyOrgConfig).not.toHaveBeenCalled();
+    });
+
+    it('never calls applyOrgConfig for editor.path (sibling-site isolation proof)', async () => {
         mockAemAuthorUrl = AEM_AUTHOR_URL;
         mockImsOrgId = IMS_ORG_ID;
 
-        await applyDaLiveOrgConfigSettings(mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger);
+        await applyDaLiveOrgConfigSettings(
+            mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'universal-editor',
+        );
 
-        expect(mockApplySiteConfig).toHaveBeenCalledWith(DA_LIVE_ORG, DA_LIVE_SITE, {
-            'aem.repositoryId': AEM_AUTHOR_URL,
-        });
-        expect(mockApplyOrgConfig).toHaveBeenCalledTimes(1);
-        expect(mockApplyOrgConfig.mock.calls[0][0]).toBe(DA_LIVE_ORG);
+        expect(mockApplyOrgConfig).not.toHaveBeenCalled();
+    });
+
+    it('writes BOTH site-scoped keys in a SINGLE merged applySiteConfig call', async () => {
+        mockAemAuthorUrl = AEM_AUTHOR_URL;
+        mockImsOrgId = IMS_ORG_ID;
+
+        await applyDaLiveOrgConfigSettings(
+            mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'universal-editor',
+        );
+
+        // One round-trip carrying both keys — not two separate writes to the
+        // same per-site config document.
+        expect(mockApplySiteConfig).toHaveBeenCalledTimes(1);
+        const [org, site, updates] = mockApplySiteConfig.mock.calls[0];
+        expect(org).toBe(DA_LIVE_ORG);
+        expect(site).toBe(DA_LIVE_SITE);
+        expect(updates['aem.repositoryId']).toBe(AEM_AUTHOR_URL);
+        expect(updates['editor.path']).toBe(
+            `${SITE_ROW_KEY}=https://experience.adobe.com/#/@${IMS_ORG_ID}/aem/editor/canvas/main--${DA_LIVE_SITE}--${DA_LIVE_ORG}.ue.da.live`,
+        );
+        expect(mockApplyOrgConfig).not.toHaveBeenCalled();
     });
 
     it('skips silently when neither setting is configured (no calls)', async () => {
-        await applyDaLiveOrgConfigSettings(mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger);
+        await applyDaLiveOrgConfigSettings(
+            mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'universal-editor',
+        );
 
         expect(mockApplySiteConfig).not.toHaveBeenCalled();
         expect(mockApplyOrgConfig).not.toHaveBeenCalled();

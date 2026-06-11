@@ -56,13 +56,17 @@ describe('useDashboardActions', () => {
         jest.useRealTimers();
     });
 
-    const renderActionsHook = (isOpeningBrowser = false) => {
+    const renderActionsHook = (
+        isOpeningBrowser = false,
+        extra: { projectPath?: string; authoringExperience?: 'universal-editor' | 'experience-workspace' } = {},
+    ) => {
         return renderHook(() =>
             useDashboardActions({
                 isOpeningBrowser,
                 setIsTransitioning: mockSetIsTransitioning,
                 setIsOpeningBrowser: mockSetIsOpeningBrowser,
                 setIsLogsHoverSuppressed: mockSetIsLogsHoverSuppressed,
+                ...extra,
             })
         );
     };
@@ -275,6 +279,50 @@ describe('useDashboardActions', () => {
             });
 
             expect(mockPostMessage).toHaveBeenCalledWith('reAuthenticate');
+        });
+    });
+
+    describe('Authoring Experience Flip', () => {
+        it('posts setAuthoringExperience with the opposite experience (UE → EW)', () => {
+            const { result } = renderActionsHook(false, {
+                projectPath: '/proj/eds',
+                authoringExperience: 'universal-editor',
+            });
+
+            act(() => {
+                result.current.handleSetAuthoringExperience();
+            });
+
+            expect(mockPostMessage).toHaveBeenCalledWith('setAuthoringExperience', {
+                projectPath: '/proj/eds',
+                experience: 'experience-workspace',
+            });
+        });
+
+        it('posts setAuthoringExperience with the opposite experience (EW → UE)', () => {
+            const { result } = renderActionsHook(false, {
+                projectPath: '/proj/eds',
+                authoringExperience: 'experience-workspace',
+            });
+
+            act(() => {
+                result.current.handleSetAuthoringExperience();
+            });
+
+            expect(mockPostMessage).toHaveBeenCalledWith('setAuthoringExperience', {
+                projectPath: '/proj/eds',
+                experience: 'universal-editor',
+            });
+        });
+
+        it('does not post when projectPath is missing', () => {
+            const { result } = renderActionsHook(false, { authoringExperience: 'universal-editor' });
+
+            act(() => {
+                result.current.handleSetAuthoringExperience();
+            });
+
+            expect(mockPostMessage).not.toHaveBeenCalled();
         });
     });
 

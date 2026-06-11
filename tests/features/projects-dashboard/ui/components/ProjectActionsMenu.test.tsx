@@ -34,6 +34,21 @@ const menuItemLabels = (): string[] =>
 const edsProject = (name = 'EDS Project') =>
     createMockProject({ name, selectedStack: 'eds-dalive' } as any);
 
+/**
+ * An EDS project carrying a resolved authoring experience in its view model.
+ * The backend stamps `resolvedAuthoringExperience` so the UI stays presentational
+ * (no resolver / vscode in the webview).
+ */
+const edsProjectWithExperience = (
+    experience: 'universal-editor' | 'experience-workspace',
+    name = 'EDS Project',
+) =>
+    createMockProject({
+        name,
+        selectedStack: 'eds-dalive',
+        resolvedAuthoringExperience: experience,
+    } as any);
+
 describe('ProjectActionsMenu', () => {
     describe('rendering and gating', () => {
         it('renders the kebab trigger when at least one action is wired', () => {
@@ -227,20 +242,99 @@ describe('ProjectActionsMenu', () => {
     });
 
     describe('EDS vs non-EDS placement', () => {
-        it('hides Start/Stop and puts Open in Browser + Author in DA.live in USE for EDS', () => {
+        it('hides Start/Stop and puts Open in Browser + Author in USE for EDS', () => {
             const actions: ProjectActions = {
                 onStartDemo: jest.fn(),
                 onStopDemo: jest.fn(),
                 onOpenLiveSite: jest.fn(),
                 onOpenDaLive: jest.fn(),
             };
-            renderWithProvider(<ProjectActionsMenu project={edsProject()} actions={actions} />);
+            renderWithProvider(
+                <ProjectActionsMenu project={edsProjectWithExperience('universal-editor')} actions={actions} />,
+            );
             openMenu();
 
             expect(screen.queryByText('Start Demo')).not.toBeInTheDocument();
             expect(screen.queryByText('Stop Demo')).not.toBeInTheDocument();
             expect(screen.getByText('Open in Browser')).toBeInTheDocument();
-            expect(screen.getByText('Author in DA.live')).toBeInTheDocument();
+            expect(screen.getByText('Author in Universal Editor')).toBeInTheDocument();
+        });
+    });
+
+    describe('Authoring experience (label + flip)', () => {
+        it('labels Author with Universal Editor when the resolved experience is UE', () => {
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={edsProjectWithExperience('universal-editor')}
+                    actions={{ onOpenDaLive: jest.fn() }}
+                />,
+            );
+            openMenu();
+
+            expect(screen.getByText('Author in Universal Editor')).toBeInTheDocument();
+            expect(screen.queryByText('Author in Experience Workspace')).not.toBeInTheDocument();
+        });
+
+        it('labels Author with Experience Workspace when the resolved experience is EW', () => {
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={edsProjectWithExperience('experience-workspace')}
+                    actions={{ onOpenDaLive: jest.fn() }}
+                />,
+            );
+            openMenu();
+
+            expect(screen.getByText('Author in Experience Workspace')).toBeInTheDocument();
+            expect(screen.queryByText('Author in Universal Editor')).not.toBeInTheDocument();
+        });
+
+        it('offers a flip to Experience Workspace for a UE EDS project and invokes the callback with the opposite experience', () => {
+            const project = edsProjectWithExperience('universal-editor');
+            const onSetAuthoringExperience = jest.fn();
+            renderWithProvider(
+                <ProjectActionsMenu project={project} actions={{ onSetAuthoringExperience }} />,
+            );
+            openMenu();
+
+            const flip = screen.getByText('Switch to Experience Workspace');
+            expect(flip).toBeInTheDocument();
+            flip.click();
+
+            expect(onSetAuthoringExperience).toHaveBeenCalledWith(project, 'experience-workspace');
+        });
+
+        it('offers a flip to Universal Editor for an EW EDS project and invokes the callback with the opposite experience', () => {
+            const project = edsProjectWithExperience('experience-workspace');
+            const onSetAuthoringExperience = jest.fn();
+            renderWithProvider(
+                <ProjectActionsMenu project={project} actions={{ onSetAuthoringExperience }} />,
+            );
+            openMenu();
+
+            const flip = screen.getByText('Switch to Universal Editor');
+            expect(flip).toBeInTheDocument();
+            flip.click();
+
+            expect(onSetAuthoringExperience).toHaveBeenCalledWith(project, 'universal-editor');
+        });
+
+        it('shows no Author item and no flip action for non-EDS projects', () => {
+            // Author + flip are EDS-only. With a non-EDS project and another
+            // action wired (so the kebab still renders), neither appears.
+            const actions: ProjectActions = {
+                onOpenDaLive: jest.fn(),
+                onSetAuthoringExperience: jest.fn(),
+                onRename: jest.fn(),
+            };
+            renderWithProvider(
+                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} actions={actions} />,
+            );
+            openMenu();
+
+            expect(screen.queryByText('Author in Universal Editor')).not.toBeInTheDocument();
+            expect(screen.queryByText('Author in Experience Workspace')).not.toBeInTheDocument();
+            expect(screen.queryByText('Switch to Experience Workspace')).not.toBeInTheDocument();
+            expect(screen.queryByText('Switch to Universal Editor')).not.toBeInTheDocument();
         });
     });
 

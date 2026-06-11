@@ -105,9 +105,13 @@ describe('projectsListHandlers', () => {
             expect(hasHandler(projectsListHandlers, 'openAi')).toBe(true);
         });
 
-        it('should have exactly 22 handlers', () => {
+        it('should include the authoring-experience flip handler', () => {
+            expect(hasHandler(projectsListHandlers, 'setAuthoringExperience')).toBe(true);
+        });
+
+        it('should have exactly 23 handlers', () => {
             const types = getRegisteredTypes(projectsListHandlers);
-            expect(types).toHaveLength(22);
+            expect(types).toHaveLength(23);
         });
 
         it('should have handlers as functions', () => {

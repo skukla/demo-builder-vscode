@@ -13,7 +13,7 @@ import { RenameProjectDialog } from './components/RenameProjectDialog';
 import { ProjectsDashboard } from './ProjectsDashboard';
 import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import type { Project } from '@/types/base';
+import type { AuthoringExperience, Project } from '@/types/base';
 
 // Import global styles
 import '@/core/ui/styles/index.css';
@@ -383,6 +383,26 @@ const ProjectsDashboardApp: React.FC = () => {
         }
     }, [fetchProjects]);
 
+    // Flip a project's AEM authoring experience (UE ↔ Experience Workspace).
+    // The backend persists the metadata and re-applies the DA editor.path, then
+    // we re-fetch so the relabeled Author item + flip target update.
+    const handleSetAuthoringExperience = useCallback(async (
+        project: Project,
+        experience: AuthoringExperience,
+    ) => {
+        try {
+            const response = await webviewClient.request<{ success: boolean }>('setAuthoringExperience', {
+                projectPath: project.path,
+                experience,
+            });
+            if (response?.success) {
+                await fetchProjects(true);
+            }
+        } catch (error) {
+            console.error('Failed to set authoring experience:', error);
+        }
+    }, [fetchProjects]);
+
     // Handle view mode override - saves to backend for session persistence
     const handleViewModeOverride = useCallback((mode: 'cards' | 'rows') => {
         setInitialViewMode(mode);
@@ -397,6 +417,7 @@ const ProjectsDashboardApp: React.FC = () => {
         onOpenBrowser: handleOpenBrowser,
         onOpenLiveSite: handleOpenLiveSite,
         onOpenDaLive: handleOpenDaLive,
+        onSetAuthoringExperience: handleSetAuthoringExperience,
         onResetProject: handleResetProject,
         onRepublishContent: handleRepublishContent,
         onEdit: handleEditProject,
@@ -408,8 +429,8 @@ const ProjectsDashboardApp: React.FC = () => {
         onDelete: handleDeleteProject,
     }), [
         handleStartDemo, handleStopDemo, handleOpenBrowser, handleOpenLiveSite,
-        handleOpenDaLive, handleResetProject, handleRepublishContent, handleEditProject,
-        handleRenameProject, handleCopyPath, handleExportProject,
+        handleOpenDaLive, handleSetAuthoringExperience, handleResetProject, handleRepublishContent,
+        handleEditProject, handleRenameProject, handleCopyPath, handleExportProject,
         handleOpenAiForProject, handlePinToggle, handleDeleteProject,
     ]);
 

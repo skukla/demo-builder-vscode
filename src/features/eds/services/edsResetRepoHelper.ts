@@ -19,6 +19,7 @@ import type { GitHubFileOperations } from './githubFileOperations';
 import { generateInspectorTreeEntries, installInspectorTagging } from './inspectorHelpers';
 import { readLkgSha } from './lkgReader';
 import { installSmart404Handler } from './pdp404HandlerPublisher';
+import { installQuickEdit } from './quickEditPublisher';
 import type { GitHubTreeInput } from './types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
@@ -308,6 +309,17 @@ export async function resetRepoToTemplate(
         context.logger,
         daLiveOrg,
         daLiveSite,
+    );
+
+    // Wire Quick Edit (Experience Workspace WYSIWYG dependency) into the
+    // storefront's scripts/scripts.js + tools/quick-edit/quick-edit.js.
+    // Brand-agnostic, idempotent, non-fatal. Mirrors the create path so a
+    // reset reconciles Quick Edit wiring just like every other vendored file.
+    await installQuickEdit(
+        githubFileOps,
+        repoOwner,
+        repoName,
+        context.logger,
     );
 
     return {

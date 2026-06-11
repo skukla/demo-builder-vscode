@@ -44,11 +44,19 @@ import PublishCheck from '@spectrum-icons/workflow/PublishCheck';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import Settings from '@spectrum-icons/workflow/Settings';
 import StopCircle from '@spectrum-icons/workflow/StopCircle';
+import Switch from '@spectrum-icons/workflow/Switch';
 import ViewList from '@spectrum-icons/workflow/ViewList';
 import React from 'react';
+import type { AuthoringExperience } from '@/types/base';
 
 /** Overflow menu item keys. */
 type OverflowKey = 'components' | 'refreshBlockLibrary' | 'devConsole';
+
+/** Human-readable label per authoring experience. */
+const EXPERIENCE_LABEL: Record<AuthoringExperience, string> = {
+    'universal-editor': 'Universal Editor',
+    'experience-workspace': 'Experience Workspace',
+};
 
 /**
  * Props for the ActionGrid component
@@ -80,6 +88,10 @@ export interface ActionGridProps {
     handleOpenLiveSite?: () => void;
     /** Handler for Open DA.live button (EDS only) */
     handleOpenDaLive?: () => void;
+    /** Resolved authoring experience — drives the Author label + flip target (EDS only) */
+    authoringExperience?: AuthoringExperience;
+    /** Handler for the authoring-experience flip control (EDS only) */
+    handleSetAuthoringExperience?: () => void;
     /** Handler for Logs button */
     handleViewLogs: () => void;
     /** Handler for Deploy Mesh button */
@@ -119,6 +131,8 @@ export function ActionGrid({
     handleOpenBrowser,
     handleOpenLiveSite,
     handleOpenDaLive,
+    authoringExperience = 'universal-editor',
+    handleSetAuthoringExperience,
     handleViewLogs,
     handleDeployMesh,
     handleSyncStorefront,
@@ -128,6 +142,8 @@ export function ActionGrid({
     handleOpenDevConsole,
     handleDeleteProject,
 }: ActionGridProps): React.ReactElement {
+    const otherExperience: AuthoringExperience =
+        authoringExperience === 'experience-workspace' ? 'universal-editor' : 'experience-workspace';
     const handleOverflowAction = (key: React.Key): void => {
         switch (key) {
             case 'components' satisfies OverflowKey:
@@ -201,7 +217,8 @@ export function ActionGrid({
                             </ActionButton>
                         )}
 
-                        {/* Author in DA.live — EDS only, content authoring surface */}
+                        {/* Author — EDS only. Labeled from the resolved authoring
+                            experience (Universal Editor / Experience Workspace). */}
                         {isEds && (
                             <ActionButton
                                 onPress={handleOpenDaLive}
@@ -210,7 +227,23 @@ export function ActionGrid({
                                 UNSAFE_className="dashboard-action-button dashboard-action-button--hero"
                             >
                                 <Edit size="L" />
-                                <Text UNSAFE_className="icon-label">Author in DA.live</Text>
+                                <Text UNSAFE_className="icon-label">
+                                    Author in {EXPERIENCE_LABEL[authoringExperience]}
+                                </Text>
+                            </ActionButton>
+                        )}
+
+                        {/* Flip control — EDS only. Switches to the other experience. */}
+                        {isEds && handleSetAuthoringExperience && (
+                            <ActionButton
+                                onPress={handleSetAuthoringExperience}
+                                isQuiet
+                                UNSAFE_className="dashboard-action-button"
+                            >
+                                <Switch size="L" />
+                                <Text UNSAFE_className="icon-label">
+                                    Switch to {EXPERIENCE_LABEL[otherExperience]}
+                                </Text>
                             </ActionButton>
                         )}
                     </div>

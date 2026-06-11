@@ -5,6 +5,7 @@ export {
     Project,
     CustomIconPaths,
     ComponentInstance,
+    AuthoringExperience,
     ComponentStatus,
     ProjectTemplate,
     ProjectStatus,

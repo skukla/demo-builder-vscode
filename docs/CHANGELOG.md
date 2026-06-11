@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Per-project authoring experience — Universal Editor or Experience Workspace.** SCs choose, per project, which AEM authoring experience a storefront uses. A new global setting `demoBuilder.daLive.authoringExperience` (default `universal-editor`, preserving current behavior) sets the default for new projects; a per-project override on the EDS component metadata wins over it (resolver mirrors the BYOM-overlay precedence: per-project → global → Universal Editor). The "Author" button relabels to match ("Author in Universal Editor" / "Author in Experience Workspace"), and a flip action in the projects-list kebab and the project dashboard switches a single project between the two. Flipping persists the choice locally and immediately re-applies the DA `editor.path` row — no full republish. Universal Editor opens `https://da.live/#/<org>/<site>` with the experience.adobe.com punch-out; Experience Workspace opens the da.live-native canvas at `https://da.live/canvas#/<org>/<site>/`. Existing projects have no stored choice and resolve to Universal Editor, so their behavior is unchanged.
+
+- **Quick Edit wiring for every EDS storefront.** A new brand-agnostic vendoring step (modeled on the PDP 404 handler) adds the Quick Edit WYSIWYG dependency to every EDS project at create and reset: it exports `loadPage` and adds a `?quick-edit` dynamic-import branch in `scripts/scripts.js`, writes `tools/quick-edit/quick-edit.js`, and registers a `quick-edit` Sidekick plugin through the Config Service. The wiring is inert under Universal Editor and powers the Experience Workspace Layout (WYSIWYG) view. Idempotent and non-fatal; an extension-side anchor-match test pins the two `scripts.js` anchors to the canonical boilerplate.
+
+### Changed
+
+- **DA `editor.path` now writes site-scoped.** The Universal Editor punch-out path mapping moved from the org config (`/config/<org>`, via `applyOrgConfig`) to the per-site config (`/config/<org>/<site>`, via `applySiteConfig`) with a `/<org>/<site>` row key. Projects that share a DA org are now isolated: flipping one project's authoring experience no longer clobbers another site's `editor.path` row. Supersedes the beta.116 statement that `editor.path` stays org-scoped.
+
+### Removed
+
+- **`demoBuilder.daLive.editorPathPrefix` setting.** The real per-site `/<org>/<site>` `editor.path` key replaces the dummy left-hand prefix this setting supplied, leaving it with no readers.
+
 ## [1.0.0-beta.116] - 2026-06-11
 
 ### Fixed

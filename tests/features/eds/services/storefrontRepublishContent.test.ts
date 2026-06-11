@@ -24,6 +24,7 @@ jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     applyDaLiveOrgConfigSettings: jest.fn(async () => undefined),
     configureDaLivePermissions: jest.fn(async () => ({ success: true })),
+    resolveProjectAuthoringExperience: jest.fn(() => 'universal-editor'),
 }));
 jest.mock('@/features/eds/services/configSyncService', () => ({
     syncConfigToRemote: jest.fn(async () => ({ success: true })),
