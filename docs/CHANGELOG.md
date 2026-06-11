@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **AEM Assets binding now writes to the per-site DA.live config.** The `aem.repositoryId` binding that surfaces the AEM Assets panel in the DA.live Library was written to the org config (`/config/<org>`), but DA.live reads it from the per-site config (`/config/<org>/<site>`) — so first-time SCs got their block library (written site-scoped) but no AEM Assets panel (the binding landed org-scoped, where the per-site Library never reads it). The beta.115 401 fix made the org write *succeed*, which unmasked this scope mismatch. `applyDaLiveOrgConfigSettings` now writes `aem.repositoryId` site-scoped via the new `DaLiveContentOperations.applySiteConfig`; `editor.path` stays org-scoped (the Universal Editor punch-out path mapping). Both methods delegate to an extracted `writeMergedDataConfig` helper that preserves all existing config sheets (`library`, `permissions`) and keeps the first-time-user 401 write-access ownership probe (keyed on the org). Supersedes the beta.115 org-scoped behavior for `aem.repositoryId`; the beta.115 401 handling remains valid for `editor.path`, which still uses `applyOrgConfig`.
+
 ## [1.0.0-beta.115] - 2026-06-11
 
 ### Fixed

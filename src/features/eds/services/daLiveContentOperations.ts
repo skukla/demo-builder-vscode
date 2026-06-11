@@ -2406,8 +2406,56 @@ export class DaLiveContentOperations {
         org: string,
         configUpdates: Record<string, string>,
     ): Promise<{ success: boolean; error?: string }> {
+        return this.writeMergedDataConfig(`${DA_LIVE_BASE_URL}/config/${org}`, org, configUpdates);
+    }
+
+    /**
+     * Apply site-level configuration settings
+     *
+     * Writes to the per-SITE config (/config/{org}/{site}). da.live's Library
+     * reads the AEM Assets binding (aem.repositoryId) from the site config, so
+     * that binding must be written site-scoped for the AEM Assets panel to
+     * appear for first-time users.
+     *
+     * IMPORTANT: Preserves all existing sheets (library, permissions, etc.) —
+     * only updates the data sheet. The block library lives in the site config,
+     * so clobbering other sheets here would remove it.
+     *
+     * 401 ownership is governed by the ORG (org ownership grants site writes),
+     * so the write-access probe is keyed on the org, not the site.
+     *
+     * @param org - DA.live organization name
+     * @param site - DA.live site name
+     * @param configUpdates - Key-value pairs to update in the config
+     * @returns Success status with optional error message
+     */
+    async applySiteConfig(
+        org: string,
+        site: string,
+        configUpdates: Record<string, string>,
+    ): Promise<{ success: boolean; error?: string }> {
+        return this.writeMergedDataConfig(`${DA_LIVE_BASE_URL}/config/${org}/${site}`, org, configUpdates);
+    }
+
+    /**
+     * Read the config at configUrl, merge configUpdates into its data sheet
+     * (preserving ALL other sheets), and POST it back.
+     *
+     * Shared by applyOrgConfig (/config/{org}) and applySiteConfig
+     * (/config/{org}/{site}). The 401 ownership probe uses `org` because
+     * org ownership governs both org and site config writes.
+     *
+     * @param configUrl - Full DA.live config endpoint URL
+     * @param org - DA.live organization name (used for the 401 ownership probe)
+     * @param configUpdates - Key-value pairs to merge into the data sheet
+     * @returns Success status with optional error message
+     */
+    private async writeMergedDataConfig(
+        configUrl: string,
+        org: string,
+        configUpdates: Record<string, string>,
+    ): Promise<{ success: boolean; error?: string }> {
         const token = await this.getImsToken();
-        const configUrl = `${DA_LIVE_BASE_URL}/config/${org}`;
 
         // First, get existing config to preserve ALL sheets (data, permissions, etc.)
         // CRITICAL: If the GET fails, we must NOT write a skeleton config that
@@ -2433,8 +2481,8 @@ export class DaLiveContentOperations {
                     ':type': 'multi-sheet',
                 };
             } else if (getResponse.status === 401) {
-                // DA.live returns 401 (not 404) when /config/<org>/ has never
-                // been written. We can't safely treat 401 as "create fresh"
+                // DA.live returns 401 (not 404) when the config has never been
+                // written. We can't safely treat 401 as "create fresh"
                 // unconditionally — the endpoint's owner-auth model means
                 // the same 401 can mean "you don't own this org," and
                 // writing skeleton config to someone else's org would erase
@@ -2460,14 +2508,14 @@ export class DaLiveContentOperations {
             } else {
                 return {
                     success: false,
-                    error: `Failed to read existing org config: ${getResponse.status} ${getResponse.statusText}`,
+                    error: `Failed to read existing config: ${getResponse.status} ${getResponse.statusText}`,
                 };
             }
         } catch (error) {
             // Network/timeout error — cannot safely write without reading first
             return {
                 success: false,
-                error: `Cannot read existing org config: ${(error as Error).message}`,
+                error: `Cannot read existing config: ${(error as Error).message}`,
             };
         }
 
@@ -2498,7 +2546,7 @@ export class DaLiveContentOperations {
             },
         };
 
-        // POST to /config/{org} API endpoint using FormData
+        // POST to the config API endpoint using FormData
         const formData = new FormData();
         formData.append('config', JSON.stringify(configData));
 
@@ -2513,14 +2561,14 @@ export class DaLiveContentOperations {
             });
 
             if (response.ok) {
-                this.logger.info(`[DA.live] Org config applied for ${org}: ${Object.keys(configUpdates).join(', ')}`);
+                this.logger.info(`[DA.live] Config applied at ${configUrl}: ${Object.keys(configUpdates).join(', ')}`);
                 return { success: true };
             }
 
             const errorText = await response.text().catch(() => '');
             return {
                 success: false,
-                error: `Failed to apply org config: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`,
+                error: `Failed to apply config: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`,
             };
         } catch (error) {
             return { success: false, error: `Config API error: ${(error as Error).message}` };
