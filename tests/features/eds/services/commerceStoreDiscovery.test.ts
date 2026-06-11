@@ -279,6 +279,68 @@ describe('commerceStoreDiscovery', () => {
             }
         });
 
+        it('should surface HTTP status + body when the discovery service rejects (for field diagnostics)', async () => {
+            // The discovery service can reject for several distinct reasons —
+            // invalid token, identity not on the email-domain allowlist, ACCS
+            // unreachable from the service, etc. Until now, only the body's
+            // `error` field was preserved and "Token is invalid or expired"
+            // came back for many of these. Asserting the new format here pins
+            // status + statusText + body into the surfaced error so field
+            // logs reveal which underlying cause fired.
+            fetchSpy.mockResolvedValueOnce({
+                ok: false,
+                status: 401,
+                statusText: 'Unauthorized',
+                text: () => Promise.resolve('{"error":"Token is invalid or expired"}'),
+            });
+
+            const result = await discoverStoreStructure({
+                backendType: 'accs',
+                baseUrl: 'https://na1-sandbox.api.commerce.adobe.com',
+                imsToken: 'mock-ims-token',
+                discoveryServiceUrl: 'https://actions.adobeioruntime.net/api/v1/web/discovery',
+            });
+
+            expect(result.success).toBe(false);
+            if (!result.success) {
+                expect(result.error).toContain('401');
+                expect(result.error).toContain('Unauthorized');
+                expect(result.error).toContain('Token is invalid or expired');
+            }
+        });
+
+        it('should surface raw body when discovery service returns non-JSON error', async () => {
+            // Defense for service-side bugs (e.g., HTML error page from a misconfigured
+            // proxy). Body still flows through unparsed; the status code still narrows
+            // the cause.
+            //
+            // Body text is chosen to avoid the orchestrator's substring classifier
+            // (commerceStoreDiscovery.ts:228) — it rewrites any error containing
+            // "timeout"/"abort"/"fetch failed"/"ECONNREFUSED" into a fixed friendly
+            // message. Worth tightening that classifier separately so the status
+            // code survives those collisions too; out of scope for this change.
+            fetchSpy.mockResolvedValueOnce({
+                ok: false,
+                status: 502,
+                statusText: 'Bad Gateway',
+                text: () => Promise.resolve('<html>upstream unavailable</html>'),
+            });
+
+            const result = await discoverStoreStructure({
+                backendType: 'accs',
+                baseUrl: 'https://na1-sandbox.api.commerce.adobe.com',
+                imsToken: 'mock-ims-token',
+                discoveryServiceUrl: 'https://actions.adobeioruntime.net/api/v1/web/discovery',
+            });
+
+            expect(result.success).toBe(false);
+            if (!result.success) {
+                expect(result.error).toContain('502');
+                expect(result.error).toContain('Bad Gateway');
+                expect(result.error).toContain('upstream unavailable');
+            }
+        });
+
         it('should return friendly error on timeout', async () => {
             fetchSpy.mockRejectedValueOnce(new Error('The operation was aborted'));
 

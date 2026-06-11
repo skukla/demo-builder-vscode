@@ -154,9 +154,30 @@ async function fetchViaDiscoveryService(
     });
 
     if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        const errorMsg = (body as { error?: string }).error || `Service returned ${response.status}`;
-        throw new Error(errorMsg);
+        // Capture status + body so the caller can distinguish 401 (token rejected),
+        // 403 (caller not authorized — e.g. email-domain allowlist), 5xx (service
+        // bug) at log-read time. Without this, the service's own `error` field is
+        // surfaced verbatim — which today often reads "Token is invalid or expired"
+        // for many distinct underlying causes, making field diagnosis impossible
+        // without access to the service's own logs.
+        //
+        // Format: "<HTTP status> <statusText> — <body.error or stringified body>".
+        // The previous behavior is preserved as a substring when body.error is set
+        // (callers grepping for the old message keep working).
+        const rawBody = await response.text().catch(() => '');
+        let parsedError = '';
+        try {
+            const parsed = JSON.parse(rawBody);
+            if (parsed && typeof parsed === 'object') {
+                parsedError = (parsed as { error?: string }).error ?? '';
+            }
+        } catch {
+            // Body wasn't JSON — fall through to using rawBody directly
+        }
+        const detail = parsedError || rawBody || '(empty body)';
+        throw new Error(
+            `${response.status} ${response.statusText} — ${detail}`,
+        );
     }
 
     const body = await response.json() as { success: boolean; data?: CommerceStoreStructure; error?: string };
