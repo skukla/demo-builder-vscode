@@ -22,9 +22,7 @@ import { GitHubOAuthService } from '../services/githubOAuthService';
 import { GitHubRepoOperations } from '../services/githubRepoOperations';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { HelixService } from '../services/helixService';
-import { hasWriteAccess } from './edsDaLiveOrgHandlers';
 import { getLogger } from '@/core/logging';
-import { showOneTimeTip } from '@/core/utils/oneTimeTip';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
@@ -197,46 +195,6 @@ export function validateDaLiveToken(token: string): DaLiveTokenValidationResult 
 // ==========================================================
 // DA.live Default Org Tip
 // ==========================================================
-
-/**
- * Show a one-time tip offering to save the org name as a default setting.
- *
- * Only shown when:
- * - The config setting is not already set
- * - The tip has not been shown before (tracked via globalState)
- *
- * Non-blocking: uses fire-and-forget `.then()` so it never delays the caller.
- *
- * @param context - Handler context for globalState access
- * @param orgName - The verified org name to offer saving
- */
-export function offerSaveDefaultOrg(
-    context: HandlerContext,
-    orgName: string,
-): void {
-    const config = vscode.workspace.getConfiguration('demoBuilder');
-
-    // Already configured — nothing to do
-    if (config.get<string>('daLive.defaultOrg', '')) {
-        return;
-    }
-
-    showOneTimeTip(context.context.globalState, {
-        stateKey: 'daLive.defaultOrgTipShown',
-        message: `Tip: Save "${orgName}" as your default DA.live org so it auto-fills next time.`,
-        actions: [`Save "${orgName}"`, 'Open Settings'],
-        onAction: (selection) => {
-            if (selection === `Save "${orgName}"`) {
-                config.update('daLive.defaultOrg', orgName, vscode.ConfigurationTarget.Global);
-            } else if (selection === 'Open Settings') {
-                vscode.commands.executeCommand(
-                    'workbench.action.openSettings',
-                    'demoBuilder.daLive.defaultOrg',
-                );
-            }
-        },
-    });
-}
 
 // ==========================================================
 // BYOM Overlay URL resolution
@@ -513,13 +471,15 @@ export async function showDaLiveAuthQuickPick(
         return { success: false, cancelled: true };
     }
 
-    // Step 3: Ask for org name
-    const defaultOrg = vscode.workspace.getConfiguration('demoBuilder').get<string>('daLive.defaultOrg', '');
+    // Step 3: Ask for org name. The wizard uses a Spectrum picker populated
+    // from GitHub org memberships (see DaLiveServiceCard); this auth flow is
+    // a fallback for command-palette and MCP entry points where the React
+    // webview isnt available. Free-text input remains here; converting to a
+    // VS Code QuickPick populated from /user/orgs is a separate follow-up.
     const orgName = await vscode.window.showInputBox({
         title: 'Sign in to DA.live (Step 2/2)',
-        prompt: 'Enter your DA.live organization name',
-        placeHolder: 'e.g. my-org',
-        value: defaultOrg,
+        prompt: 'Enter your DA.live organization name (your GitHub username or a team org you belong to)',
+        placeHolder: 'e.g. leahrayard or demo-system-stores',
         ignoreFocusOut: true,
         validateInput: (value) => {
             if (!value?.trim()) {
@@ -555,40 +515,14 @@ export async function showDaLiveAuthQuickPick(
                     return { success: false, error: validation.error };
                 }
 
-                // Verify org access
-                context.logger.debug(`[DA.live Auth] Verifying org access: ${trimmedOrg}`);
-                const orgResponse = await fetch(`https://admin.da.live/list/${trimmedOrg}/`, {
-                    method: 'GET',
-                    headers: { 'Authorization': `Bearer ${trimmedToken}` },
-                });
+                // Pre-auth verification gate removed (Step 6 of the namespace
+                // picker plan). It was blocking first-time DA.live users whose
+                // AEM Code Sync app hadnt been installed yet; first-time setup
+                // is handled by Phase 3 of the create pipeline. Genuine write
+                // failures surface at the actual write site with contextual
+                // error messaging.
 
-                if (orgResponse.status === 403) {
-                    const error = `Access denied to organization "${trimmedOrg}". Please check the name or your permissions.`;
-                    await vscode.window.showErrorMessage(error);
-                    return { success: false, error };
-                }
-
-                if (orgResponse.status === 404) {
-                    const error = `Organization "${trimmedOrg}" not found. Please check the name.`;
-                    await vscode.window.showErrorMessage(error);
-                    return { success: false, error };
-                }
-
-                if (!orgResponse.ok) {
-                    const error = `Failed to verify organization: ${orgResponse.status}`;
-                    await vscode.window.showErrorMessage(error);
-                    return { success: false, error };
-                }
-
-                // Verify write access
-                const writable = await hasWriteAccess(trimmedOrg, trimmedToken);
-                if (!writable) {
-                    const error = `You have read-only access to "${trimmedOrg}". Please enter an organization you own.`;
-                    await vscode.window.showErrorMessage(error);
-                    return { success: false, error };
-                }
-
-                // Store token with verified org
+                // Store token with the entered org
                 const tokenExpiry = validation.expiresAt || (Date.now() + 24 * 60 * 60 * 1000);
                 const authService = getDaLiveAuthService(context.context);
                 await authService.storeToken(trimmedToken, {
@@ -597,11 +531,8 @@ export async function showDaLiveAuthQuickPick(
                     orgName: trimmedOrg,
                 });
 
-                context.logger.info(`[DA.live Auth] Successfully authenticated to org: ${trimmedOrg}`);
+                context.logger.info(`[DA.live Auth] Token stored, namespace pinned to: ${trimmedOrg}`);
                 vscode.window.setStatusBarMessage(`✅ Connected to DA.live (${trimmedOrg})`, TIMEOUTS.STATUS_BAR_INFO);
-
-                // Offer to save org as default (one-time, non-blocking)
-                offerSaveDefaultOrg(context, trimmedOrg);
 
                 return {
                     success: true,

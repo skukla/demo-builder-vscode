@@ -62,9 +62,11 @@ export async function handleCheckDaLiveAuth(
 
         // Check if user has completed bookmarklet setup before
         const setupComplete = authService.isSetupComplete();
-        // Get cached org name (from previous successful verification)
-        const cachedOrgName = authService.getOrgName()
-            || vscode.workspace.getConfiguration('demoBuilder').get<string>('daLive.defaultOrg', '');
+        // Get cached org name (from previous successful verification). The
+        // demoBuilder.daLive.defaultOrg fallback was removed alongside the
+        // setting — defaults now come from the wizards namespace picker via
+        // demoBuilder.eds.githubOrg, not from this cached lookup.
+        const cachedOrgName = authService.getOrgName();
 
         const isAuth = await authService.isAuthenticated();
 

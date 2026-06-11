@@ -291,81 +291,15 @@ describe('showDaLiveAuthQuickPick', () => {
         });
     });
 
-    // =========================================================================
-    // Org Verification Tests
-    // =========================================================================
-    describe('org access and write-access verification', () => {
-        it('should verify org access and write permissions', async () => {
-            showInfoMessageResponses = ['I have my token'];
-            showInputBoxResponses = [validToken, 'my-org'];
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
-            mockHasWriteAccess.mockResolvedValueOnce(true);
-
-            const result = await showDaLiveAuthQuickPick(mockContext);
-
-            // Should check org access via fetch
-            expect(mockFetch).toHaveBeenCalledWith(
-                'https://admin.da.live/list/my-org/',
-                expect.objectContaining({ method: 'GET' }),
-            );
-            // Should check write access
-            expect(mockHasWriteAccess).toHaveBeenCalledWith('my-org', validToken);
-            expect(result.success).toBe(true);
-        });
-
-        it('should show error when org returns 403 (access denied)', async () => {
-            showInfoMessageResponses = ['I have my token'];
-            showInputBoxResponses = [validToken, 'forbidden-org'];
-            mockFetch.mockResolvedValueOnce({ ok: false, status: 403 });
-
-            const result = await showDaLiveAuthQuickPick(mockContext);
-
-            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-                expect.stringContaining('Access denied'),
-            );
-            expect(result.success).toBe(false);
-        });
-
-        it('should show error when org returns 404 (not found)', async () => {
-            showInfoMessageResponses = ['I have my token'];
-            showInputBoxResponses = [validToken, 'nonexistent-org'];
-            mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
-
-            const result = await showDaLiveAuthQuickPick(mockContext);
-
-            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-                expect.stringContaining('not found'),
-            );
-            expect(result.success).toBe(false);
-        });
-
-        it('should show error when user has read-only access', async () => {
-            showInfoMessageResponses = ['I have my token'];
-            showInputBoxResponses = [validToken, 'readonly-org'];
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
-            mockHasWriteAccess.mockResolvedValueOnce(false);
-
-            const result = await showDaLiveAuthQuickPick(mockContext);
-
-            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-                expect.stringContaining('read-only access'),
-            );
-            expect(result.success).toBe(false);
-        });
-
-        it('should show error on server error', async () => {
-            showInfoMessageResponses = ['I have my token'];
-            showInputBoxResponses = [validToken, 'my-org'];
-            mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
-
-            const result = await showDaLiveAuthQuickPick(mockContext);
-
-            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-                expect.stringContaining('Failed to verify organization'),
-            );
-            expect(result.success).toBe(false);
-        });
-    });
+    // Org access + write verification tests deleted in Step 6 of the
+    // namespace-picker plan. The pre-auth verification gate (GET
+    // /list/<org>/ for existence, HEAD for write access) was removed
+    // because it blocked first-time DA.live users whose AEM Code Sync
+    // wasn't installed yet. Verification now happens at the actual write
+    // site (Phase 3 of the create pipeline) where the error is
+    // contextual and actionable. Six tests removed (verify-success,
+    // 403, 404, read-only, server-error, network-failure) — all
+    // asserted on behavior that no longer exists.
 
     // =========================================================================
     // Successful Authentication Tests
@@ -446,18 +380,9 @@ describe('showDaLiveAuthQuickPick', () => {
             expect(result.success).toBe(false);
         });
 
-        it('should show error on network failure', async () => {
-            showInfoMessageResponses = ['I have my token'];
-            showInputBoxResponses = [validToken, 'my-org'];
-            mockFetch.mockRejectedValueOnce(new Error('Network error'));
-
-            const result = await showDaLiveAuthQuickPick(mockContext);
-
-            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-                expect.stringContaining('Network error'),
-            );
-            expect(result.success).toBe(false);
-        });
+        // Network-failure test (originally in this block) was deleted
+        // alongside the org-verification tests above — it tested the same
+        // removed pre-auth gate (a fetch against admin.da.live/list).
     });
 
     // =========================================================================
