@@ -5,7 +5,7 @@
 - [x] Scaffold — PM-approved for delegation; four open questions resolved (2026-06-11)
 - [x] **Planned — detailed pass complete; step-01..08 written; PM reviewed (2026-06-11)**
 - [x] **Reshaped around reuse + verified auth research (2026-06-11)** — R1 resolved (two auth legs: read=AEM-owned/null, write=reuse IMS token); `aemAuth` field/secret/auth-card dropped; capability map confirms reuse-and-extend of `src/features/eds/`. Steps 03/04/06/07 + risk map updated.
-- [ ] In Progress (TDD) — *not started; PM saved plan only*
+- [~] **In Progress (TDD) — Steps 01–05 DONE + committed + pushed (2026-06-11). Steps 06–08 remain.** See "Session handoff" below.
 - [ ] Quality gates (Efficiency + Security)
 - [ ] Complete
 
@@ -29,6 +29,36 @@
 
 **Created:** 2026-06-11
 **Predecessor:** `.rptc/complete/commerce-connect-slice1-repoless-wiring/` (repoless join shipped + F5-verified)
+
+---
+
+## Session handoff (resume here) — 2026-06-11
+
+**Branch:** `claude/commerce-connect-slice-1-plan-bgVlb` (fully pushed). **Baseline:** EDS+core/state regression green at **1295 tests**; `npm run test:typecheck` clean.
+
+### Done (committed, TDD'd, green) — Steps 01–05
+| Step | Commit summary | Key files |
+|---|---|---|
+| 01 | ContentSource seam + DaLiveContentSource (refactor-in-place) | `src/features/eds/services/contentSource/{contentSource,daLiveContentSource}.ts`; `configurationService.ts` (buildSiteConfigParams routes through it) |
+| 02 | Helix auth header through the seam (omit-when-null) | `helixApiClient.ts` (`HelixTokens.contentSourceAuthorization?`); callers in `storefrontSyncService.ts`, `mcp-server.ts` |
+| 03 | Factory + type/manifest plumbing | `contentSourceFactory.ts`; `base.ts`, `webview.ts` (EDSConfig), `demoPackages.ts`; `projectConfigWriter.ts` + `projectFileLoader.ts` round-trip |
+| 04 | AemContentSource (point-at, null read auth, validation) | `src/features/eds/services/contentSource/aemContentSource.ts` |
+| 05 | Satellite path honors ContentSource for AEM | `storefrontSetupPhase3.ts` (constructs source, threads into registration), `storefrontSetupPhases.ts` (gates DA.live pipeline + permissions for AEM), `storefrontSetupHandlers.ts` (payload type) |
+
+### Design decisions made during TDD (carry forward)
+- **`AemContentSource` constructor is `(authorUrl, contentPath)`** — content path is fixed AEM config, NOT per-registration coords. So `ContentSourceCoords` is `{ org, site }` only, and `buildSiteConfigParams` stays content-source-neutral. The factory builds a fully-configured source.
+- **`getContentSourceAuthorization()` → `null` for AEM** (read is AEM-owned); the Helix `x-content-source-authorization` header is omitted.
+- **Registration `content.source.url` = `<authorUrl><contentPath>`** (e.g. `https://author-pXXXX-eYYYY…/content/<site>`), `type: 'markup'`. **Exact shape is still a live-test item** — confirm at F5.
+- TDD note: Steps 01–04 were strict RED→GREEN; **Step 05's integration was source-then-test** (the unit pieces were RED-first; the phases integration test was written right after and locks the behavior).
+
+### Next: Step 06 (start here)
+**`configAsContentWriter`** — author `configs` + `configs-stage` + `configs-dev` into the AEM content tree via the authoring API, reusing the existing IMS token, with the **R2 manual-fallback** (missing token / 401 / 403 → return `manualFallbackRequired` with exact paths+payloads, setup still green). Reuse `configGenerator.ts` value-derivation. See `step-06.md`. Then **Step 07** (wizard surface, `step-07.md`) and **Step 08** (dashboard marker + the live F5 — needs the AEM instance `author-p57319-e1619941`; hand the PM the F5 script in `step-08.md`).
+
+### Verify on resume
+```
+npm run test:file -- tests/features/eds/services/contentSource/ tests/features/eds/handlers/storefrontSetupPhases-aem.test.ts
+npm run test:typecheck
+```
 **Design sources:** `.rptc/backlog/commerce-connect-aem-sc/storefront-topology.md`, `verify-aem-sites-spike.md`, `aem-sc-first-run.md`; ADR-006 (`.rptc/plans/thin-layer-storefront-adr-006/`)
 
 ---
