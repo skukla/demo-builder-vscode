@@ -72,3 +72,31 @@ Distinct credential scoped to **Cloud Manager roles** (Deployment Manager, etc.)
 ## Honesty notes
 
 `www.aem.live` and `experienceleague.adobe.com` **403 direct fetch** — aem.live claims rest on search extracts + GitHub-confirmed repo configs (Medium where mechanism is inferred). `adobe/helix-admin` is **not public** (404), so admin token-handling code wasn't inspected. Repo-config claims are **High** (raw-file reads). JWT dates are **High** (Adobe primary docs).
+
+---
+
+## Addendum (2026-06-11) — programmatic S2S + auto-provisioning
+
+Refines the picture (mostly High confidence):
+
+- **`@adobe/aio-lib-console` exposes `createOAuthServerToServerCredential(orgId, projectId, workspaceId, name, description)`** → `Promise<Response>` (confirmed in repo `src/index.js`, `types.d.ts`, e2e tests). REST: `POST /console/organizations/{orgId}/projects/{projectId}/workspaces/{workspaceId}/credentials/oauth_server_to_server`. SDK `init(accessToken, apiKey, env)` accepts a **user** token, so an `aio login` token works — **but the caller must hold Developer or System-Administrator role** (an org admin grants that first). **High.** Exact JSON response shape (where `client_secret` surfaces) is **undocumented** — likely a follow-up `getCredentials` call. **Med.** Source: https://github.com/adobe/aio-lib-console
+- **Security framing:** creating an S2S credential mints a `client_id`+`client_secret` non-human identity; Adobe guidance = treat as secret, store securely, org-admin manages via Admin Console → Users → API credentials, and an admin must grant the technical account its Product Profile. Programmatic creation is *possible* but privilege-sensitive — **anti-pattern to do silently.** **High.**
+- **The content-read technical account is AUTO-CREATED by Cloud Manager on first publish** (UE "Publish → Preview" wires it); needs Product-Profile READ. The extension likely needs to *create* **no** credential for content-read — AEM provisions it. **High.**
+- **Code Sync GitHub app auto-registers** the site/config from the repo's `fstab.yaml` (config later lives in the config service; `fstab.yaml` becomes optional). No manual content-read-token registration at `admin.hlx.page`; Content Source URL editable via `https://tools.aem.live/tools/site-admin/index.html`. **High.** Sources: https://www.aem.live/developer/ue-tutorial, https://www.aem.live/docs/config-service-setup
+- **Dual-token confirmed:** UE write-back → **author's own IMS token**; EDS markup read → **technical account**. **High.** Source: https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/implementing/developing/universal-editor/authentication
+
+**Net:** the S2S credential the extension *could* mint via `aio-lib-console` is for its **own** server-side API calls (Cloud Manager / User Management), **not** content-read (auto-provisioned in AEM). Reinforces "extension passes no content-read token"; the live open question shifts to how much of the **first-publish / Product-Profile** wiring the extension should guide vs. leave manual.
+
+### Cloud Manager API + User Management API (for the broader capability map)
+
+**Cloud Manager** (`https://cloudmanager.adobe.io`; `@adobe/aio-cli-plugin-cloudmanager` + `@adobe/aio-lib-cloudmanager`):
+- **READ is fully API-driven** — `GET /api/programs`, `/api/program/{id}/environments`, etc. The **author hostname** (`author-pXXXX-eYYYY.adobeaemcloud.com`) comes from the environment's HAL `_links → http://ns.adobe.com/adobecloud/rel/author` href (no flat `host` field). **High** ([api.yaml](https://raw.githubusercontent.com/AdobeDocs/cloudmanager-api-docs/master/swagger-specs/api.yaml)).
+- **CREATE is NOT public API.** No POST to create program/environment in the current spec or CLI; **Edge Delivery site creation is the UI "one-click" flow** (needs EDS license + **Business Owner** role). Treat program/env/EDS-site provisioning as a **human/Adobe-provisioned** action. **High** (CM docs via search; pages 403).
+- Auth: OAuth S2S, three headers (`Authorization`, `x-api-key`, `x-gw-ims-org-id`); roles (Business Owner / Program Manager / Deployment Manager / Developer) gate ops. **High.**
+
+**User Management API** (`POST https://usermanagement.adobe.io/v2/usermanagement/action/{orgId}`):
+- Adding a **human/federated user** to a Product Profile is well-supported (`add → group`), but requires **System Administrator** to create the UMAPI integration. **High.**
+- **Granting a *technical account* (`@techacct.adobe.com`) read membership in an AEM Product Profile is NOT a documented UMAPI operation.** Canonical path = **Developer Console → API credential → "Edit product profiles"** (attach the AEM read profile to the S2S credential) — an Admin/Developer-Console action, not a UMAPI call. **Med** (inferred; EL pages 403).
+- Product-profile membership is a **privileged, admin-gated** operation either way. **High.**
+
+**Capability-map implication:** the *read/discovery* plane (programs, environments, author hostname) is cleanly API+UX-assistable — same shape as today's org/workspace picker. The *provisioning* plane (create env, one-click EDS site) and the *entitlement* plane (Product-Profile membership, credential→profile association) are **admin-gated, mostly UI-only, and privilege-sensitive** → guide + verify, not silently automate. (This is the front-door / Slice-3 boundary, reinforced.)
