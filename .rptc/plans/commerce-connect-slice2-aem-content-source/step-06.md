@@ -9,11 +9,12 @@
   - Writer derives the **same** commerce values today's `config.json` carries (reuse `extractConfigParamsFromConfigs` / `generateHeaders` — parity on `commerce-core-endpoint`, `x-api-key`, `Magento-Environment-Id`, store headers).
   - Authors **all three** nodes at CitiSignal `paths.json`-mapped paths: `/content/<site>/configs`, `/configs-stage`, `/configs-dev` (three write calls, correct paths).
   - Writer goes through a content-write port (both DA.live `createSource` and AEM authoring API satisfiable; AEM authoring write is the real target).
-  - **Manual-fallback boundary (R2 — ACCEPTED):** when `aemAuth` is absent OR a write returns 401/403, the writer stops cleanly, returns `manualFallbackRequired` with exact paths + JSON payloads, and **does not fail the whole setup**. Test both auto-write success and the fallback branch.
-  - Security: no secret values logged (redaction test).
+  - **Write auth = the existing `aio`/IMS token** (the same identity the extension already holds — JCR write-back uses the author's own IMS token; verified dual-token model). **No new credential/secret.**
+  - **Manual-fallback boundary (R2 — ACCEPTED):** when **the IMS token is missing/unauthorized** OR a write returns 401/403, the writer stops cleanly, returns `manualFallbackRequired` with exact paths + JSON payloads, and **does not fail the whole setup**. Test both auto-write success and the fallback branch. *(Live-test item: confirm the authoring API accepts the extension-held IMS token for the config-node write; R2 covers failure.)*
+  - Security: no secret/token values logged (redaction test) — applies to the reused IMS token.
 
 ## GREEN surface
-- New `src/features/eds/services/configAsContentWriter.ts` — takes `{ contentSource, project, environments: ['prod','stage','dev'] }`, derives values via existing config-generator functions, writes via the authoring API.
+- New `src/features/eds/services/configAsContentWriter.ts` — takes `{ contentSource, project, environments: ['prod','stage','dev'] }`, derives values via existing config-generator functions, writes via the authoring API authenticated with the existing IMS token provider (reuse `daLiveTokenProvider`'s IMS identity — no new provider).
 - Reuse `configGenerator.ts` extraction functions unchanged (no duplication).
 - Edit the satellite path to call the writer **after** registration when `contentSourceType === 'aem-sites'`. Edit executor Phase 5 guard (`executor.ts:818` `syncEdsConfigToRemote` skips for content flow) — the AEM writer is the content-flow replacement.
 

@@ -21,7 +21,7 @@
 - **Coverage:** 80%+ overall; 100% on the two `ContentSource` impls + factory (small, pure, security-load-bearing). `npm run test:file` per step (5-10s loop); `test:fast` before each REFACTOR close.
 
 ### Single live-F5 verification script (end-to-end success criterion)
-1. Run the **Join** flow against the repoless satellite path; on Connect, choose **AEM Sites**, enter the live AEM-as-Cloud-Service Author URL + auth, point at the already-authored `xcom` tree (`/content/<site>`).
+1. Run the **Join** flow against the repoless satellite path; on Connect, choose **AEM Sites**, enter the live AEM-as-Cloud-Service Author URL + content path, point at the already-authored `xcom` tree (`/content/<site>`). *(No auth field — read is AEM-owned; the config write reuses the existing Adobe login.)*
 2. Let setup register the satellite (cross-org `code.owner` = upstream; `content.source` = AEM author URL/contentPath) and run the config-as-content writer for `configs`/`configs-stage`/`configs-dev` (or, on the R2 fallback, author the three printed nodes manually).
 3. Open the satellite's `aem.live` page for an AEM-authored `xcom` product page.
 4. **Assert:** page renders **live products and prices** (commerce drop-ins read the authored `configs` node → Commerce SC backend).
@@ -34,7 +34,7 @@
 
 | # | Risk | L/I | Mitigation | Gate |
 |---|---|---|---|---|
-| R-A | AEM auth/token handling (R1) — wrong model = 401/403; leaked token = incident | M/H | Pin R1 before Step 04. `getContentSourceAuthorization()` = single choke point; redact in logs; store via VS Code `secrets` | **Security** |
+| R-A | AEM **write** auth (config-as-content writer reuses the IMS token) — 401/403 or leaked token | L/M | R1 resolved: **read carries no token** (`getContentSourceAuthorization()` → `null`). Write reuses the **existing** IMS identity (no new secret); R2 fallback on 401/403; redact the token in logs | **Security** |
 | R-B | Breaking the DA.live path during refactor (01-02, 05) | M/H | Characterization locks byte-identical body+headers BEFORE refactor; default-to-DA.live; full EDS regression green | Eff + Sec |
 | R-C | Multi-env authoring write — partial writes leave inconsistent storefront | M/M | Idempotent overwrite; all-three-or-report; R2 fallback prints exact paths+payloads; split 06a/06b if needed | Security |
 | R-D | Manual-fallback ambiguity | M/M | R2 pins the line; typed `manualFallbackRequired`, not a silent skip | Efficiency |
@@ -42,7 +42,7 @@
 | R-F | fstabGenerator mis-touch (scaffold implied it; code says canonical-only) | L/M | **Do not touch it** in Slice 2 | Efficiency |
 | R-G | AEM URL/path injection into the registration URL | L/H | Validate https + path-segment safety in `AemContentSource` (04), reuse `validatePathSegment` | **Security** |
 
-**Security focal points:** R-A (token model + redaction), R-C (authoring-API write auth), R-G (URL/path validation).
+**Security focal points:** R-C / R-A (authoring-API **write** auth — reused IMS token + redaction; read carries no token), R-G (URL/path validation into the registration URL).
 **Efficiency focal points:** R-B / R-E / R-F.
 
 ---

@@ -7,11 +7,11 @@
   - absent / `'da-live'` → `DaLiveContentSource`.
   - `'aem-sites'` → `AemContentSource` (RED until Step 04, or stub a throwing placeholder here and fill in 04).
   - unknown value → throws a clear config error (NO silent DA.live fallback for an explicit bad value).
-- Manifest round-trip: `contentSourceType?: 'da-live'|'aem-sites'` and the AEM auth field survive the manifest writer/loader whitelist (mirror Slice 1's persist round-trip test; `step-04.md` bullet (b) — both writer and loader drop unknown fields).
+- Manifest round-trip: `contentSourceType?: 'da-live'|'aem-sites'` and `aemContentSource?: { authorUrl, contentPath }` survive the manifest writer/loader whitelist (mirror Slice 1's persist round-trip test — both writer and loader drop unknown fields). **No secret field** — read is AEM-owned, write reuses the existing IMS token.
 
 ## GREEN surface
 - New `src/features/eds/services/contentSource/contentSourceFactory.ts` (small 3-case `switch`, no registry/DI).
-- Edit `src/types/webview.ts` (EDSConfig, ~line 399): add `contentSourceType?`, `aemContentSource?: { authorUrl: string; contentPath: string }`, `aemAuth?` (shape depends on R1).
+- Edit `src/types/webview.ts` (EDSConfig, ~line 399): add `contentSourceType?` and `aemContentSource?: { authorUrl: string; contentPath: string }`. **No `aemAuth`** (R1 resolved: read = AEM-owned/null, write = existing IMS token).
 - Edit `src/types/base.ts` + manifest writer/loader whitelist to carry the new fields.
 - Edit `src/types/demoPackages.ts`: optional `aemContentSource` alongside `DaLiveContentSource` so a package storefront can declare an AEM source.
 
@@ -19,7 +19,7 @@
 - Factory stays a trivial selector — no abstraction layer.
 
 ## Dependency note
-- The exact `aemAuth` field shape is **blocked on R1** (AEM auth model). If R1 = defer-with-stub, land this step with `aemAuth` as an opaque secret-ref placeholder and finalize in Step 04.
+- R1 is **resolved** — no `aemAuth` field to plumb. The only AEM-specific config is `aemContentSource: { authorUrl, contentPath }`.
 
 ## Done-when
 - Factory branch coverage incl. error case green; manifest round-trip green; existing callers unaffected (default DA.live).

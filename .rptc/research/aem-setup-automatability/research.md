@@ -25,9 +25,9 @@ The extension **already implements the full DA.live EDS flow** in `src/features/
 
 **So the AEM-Sites work is mostly (a) Cloud Manager program/env identification (new) and (b) pointing `content.source` at the AEM-author `franklin.delivery` mountpoint instead of `content.da.live` — plus guide+verify of the in-AEM auth tab.** This is reuse-and-extend, not build-new.
 
-**Two verified nuances (so it's not a one-line value swap):**
-1. **AEM-Sites uses the nested `url: …franklin.delivery…` + `type: markup` form** — which `fstabGenerator.ts` currently emits *only* for the DA.live simple-string case and whose comment reserves the nested form "for external BYOM markup services only." So AEM-Sites rides the **BYOM/`type: markup`** path, not the native DA.live string path (consistent with the auth research's BYOM-header note). `configurationService.registerSite` already destructures a `contentSourceType` param, so the service is general enough — but `fstabGenerator` needs a real (small) AEM branch.
-2. **Two config-service code paths exist:** `configurationService.ts` → `PUT admin.hlx.page/config/{org}/sites/{site}.json`, and the newer `daLiveConfigService.ts` → `PUT admin.da.live/config/{org}/{site}/`, whose own comment says it *"replaces the broken admin.hlx.page/config approach"* for DA.live. **Which endpoint the AEM-author source registers against is a live-test item** (likely `admin.hlx.page/config` stays correct for non-DA.live markup sources).
+**Verified against the repoless-satellite code path (corrects two earlier worries):**
+1. **The seam is `configurationService.registerSite`, NOT `fstabGenerator`.** The repoless satellite registers via the **Configuration Service** `PUT admin.hlx.page/config/{org}/sites/{site}.json` (`storefrontSetupPhase3.ts:238`, `storefrontSetupPhases.ts:57`), which already threads a `contentSourceType` param and builds `content: { source: { url, type } }`. `fstabGenerator.ts` is **canonical-only DA.live cleanup that never runs on the satellite path** (confirmed; Slice-2 plan line 12) — so the AEM delta is the registration `source` payload's `url`+`type`, not an fstab branch. (The nested `type: markup` form still applies, but as the Config Service `source` value, not as committed fstab.)
+2. **No config-endpoint ambiguity.** `configurationService.ts` (→ `admin.hlx.page/config`) does **site registration**; `daLiveConfigService.ts` (→ `admin.da.live/config`) does only **DA.live user-access grants** (`edsHelpers.ts:735 grantUserAccess`) + cleanup. AEM-Sites registration correctly rides `configurationService`; the `admin.da.live` path is DA.live-permissions-only and N/A to AEM (AEM owns its own read auth). The "which endpoint?" worry was a false alarm.
 
 ---
 
@@ -73,5 +73,5 @@ The extension **already implements the full DA.live EDS flow** in `src/features/
 3. **Cloud Manager EDS-site create** — any non-UI/API provisioning path + exact roles, or strictly UI one-click? (Med: UI-only.)
 4. **UMAPI Product-Profile target** — exact profile/group name + code for the EDS/`franklin.delivery` READ entitlement. (auth-research open #2.)
 5. **Is `x-content-source-authorization` exercised on the native push path** — decides if the extension passes any token. (auth-research open #3.)
-6. **Which config endpoint registers an AEM-author source** — `admin.hlx.page/config` (`configurationService.ts`) vs the newer `admin.da.live/config` (`daLiveConfigService.ts`, which superseded the former *for DA.live*). Verify against the live instance before wiring Slice-2's registration.
+6. ~~Which config endpoint registers an AEM-author source~~ — **RESOLVED in code:** registration rides `configurationService` (`admin.hlx.page/config`); `admin.da.live/config` is DA.live-user-access-only. No live test needed for this.
 </content>
