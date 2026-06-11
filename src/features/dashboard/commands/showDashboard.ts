@@ -122,6 +122,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         stackName?: string;
         isEds: boolean;
         isContentFlow: boolean;
+        contentSourceType?: 'da-live' | 'aem-sites';
         edsLiveUrl?: string;
         edsDaLiveUrl?: string;
         initialEdsStorefrontStatus?: string;
@@ -164,6 +165,9 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
             stackName,
             isEds,
             isContentFlow: isContentFlowProject,
+            // Persisted content source (Slice 2) — drives the read-only
+            // "Content source: AEM Sites" subtitle marker.
+            contentSourceType: project?.contentSourceType,
             edsLiveUrl,
             edsDaLiveUrl,
             initialEdsStorefrontStatus,

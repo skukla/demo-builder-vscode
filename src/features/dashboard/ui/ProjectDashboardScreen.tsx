@@ -46,6 +46,12 @@ interface ProjectDashboardScreenProps {
      * EDS actions (Sync Storefront, Refresh Block Library) are hidden.
      */
     isContentFlow?: boolean;
+    /**
+     * Content source backing the storefront (Slice 2). Absent ⇒ 'da-live'
+     * (legacy/DA.live — no marker shown); 'aem-sites' renders a read-only
+     * "Content source: AEM Sites" marker in the header subtitle.
+     */
+    contentSourceType?: 'da-live' | 'aem-sites';
     /** Live URL for EDS projects */
     edsLiveUrl?: string;
     /** DA.live authoring URL for EDS projects */
@@ -54,6 +60,19 @@ interface ProjectDashboardScreenProps {
     initialMeshStatus?: string;
     /** Initial EDS storefront status (for dynamic status display) */
     initialEdsStorefrontStatus?: 'published' | 'stale' | 'update-declined' | 'not-published';
+}
+
+/**
+ * Header subtitle from brand/stack (e.g., "CitiSignal · Headless + PaaS"),
+ * plus the read-only content-source marker for AEM-Sites satellites (Slice 2).
+ */
+function buildDashboardSubtitle(
+    brandName?: string,
+    stackName?: string,
+    contentSourceType?: 'da-live' | 'aem-sites',
+): string | undefined {
+    const contentSourceMarker = contentSourceType === 'aem-sites' ? 'Content source: AEM Sites' : undefined;
+    return [brandName, stackName, contentSourceMarker].filter(Boolean).join(' · ') || undefined;
 }
 
 /**
@@ -67,7 +86,7 @@ interface ProjectDashboardScreenProps {
  *
  * @param props - Component props
  */
-export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName, isEds = false, isContentFlow = false, edsLiveUrl, edsDaLiveUrl, initialMeshStatus, initialEdsStorefrontStatus }: ProjectDashboardScreenProps) {
+export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName, isEds = false, isContentFlow = false, contentSourceType, edsLiveUrl, edsDaLiveUrl, initialMeshStatus, initialEdsStorefrontStatus }: ProjectDashboardScreenProps) {
     // Capture isEds on first render and never change it (project type doesn't change)
     const isEdsRef = useRef(isEds);
     if (isEds && !isEdsRef.current) {
@@ -164,8 +183,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
     // Derived values
     const displayName = statusDisplayName || project?.name || 'Demo Project';
 
-    // Build subtitle from brand/stack (e.g., "CitiSignal · Headless + PaaS")
-    const brandStackSubtitle = [brandName, stackName].filter(Boolean).join(' · ') || undefined;
+    const brandStackSubtitle = buildDashboardSubtitle(brandName, stackName, contentSourceType);
 
     // Button disabled states
     const isStartDisabled = isStartActionDisabled(isTransitioning, meshStatus, status || 'ready');

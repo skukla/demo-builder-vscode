@@ -26,6 +26,7 @@ root.render(
                 stackName={data?.stackName}
                 isEds={data?.isEds}
                 isContentFlow={data?.isContentFlow}
+                contentSourceType={data?.contentSourceType}
                 edsLiveUrl={data?.edsLiveUrl}
                 edsDaLiveUrl={data?.edsDaLiveUrl}
                 initialMeshStatus={data?.initialMeshStatus}
