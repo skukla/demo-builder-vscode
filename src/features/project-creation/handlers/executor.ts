@@ -33,7 +33,9 @@ import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { COMPONENT_IDS } from '@/core/constants';
 import { parseGitHubUrl } from '@/core/utils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { createAemAuthoringWritePort, writeConfigAsContent } from '@/features/eds/services/configAsContentWriter';
 import { syncConfigToRemote } from '@/features/eds/services/configSyncService';
+import { createDaLiveTokenProvider } from '@/features/eds/services/daLiveContentOperations';
 import { TransformedComponentDefinition } from '@/types';
 import { AdobeConfig } from '@/types/base';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
@@ -189,6 +191,10 @@ interface ProjectCreationConfig {
         // Note: previewUrl/liveUrl not stored - derived from githubRepo by typeGuards
         // Patch IDs to apply during reset (from demo-packages.json)
         patches?: string[];
+        // Content source backing the satellite (Slice 2). Absent ⇒ 'da-live'.
+        contentSourceType?: 'da-live' | 'aem-sites';
+        // AEM-Sites content source config (present when contentSourceType === 'aem-sites').
+        aemContentSource?: { authorUrl: string; contentPath: string };
         // Content patch IDs to apply during DA.live content copy
         contentPatches?: string[];
         // External source for content patches (from demo-packages.json)
@@ -813,10 +819,12 @@ async function syncEdsConfigToRemote(
     }
 
     // Repoless satellite (content flow): never push config.json to the code repo —
-    // the joiner doesn't own it, and commerce config travels as content (Slice 2).
+    // the joiner doesn't own it, and commerce config travels as content. For an
+    // AEM-Sites source that means authoring the configs nodes into the AEM tree
+    // (the content-flow replacement for this phase); for DA.live it stays a skip.
     // `repoUrl` here is the upstream (used only as the local clone source).
     if (isContentFlow(typedConfig)) {
-        context.logger.info('[Phase 5] Skipped — content flow (repoless satellite does not push config to the upstream)');
+        await writeAemConfigAsContent(context, project, typedConfig, progressTracker);
         return;
     }
 
@@ -866,6 +874,67 @@ async function syncEdsConfigToRemote(
     updateStorefrontState(project, project.componentConfigs || {});
     project.edsStorefrontStatusSummary = 'published';
     await context.stateManager.saveProject(project);
+}
+
+/**
+ * Phase 5, content-flow replacement: author the commerce config into the AEM
+ * content tree (config-as-content, Slice 2 Step 06) when the satellite's
+ * content source is AEM Sites. DA.live content flow keeps the plain skip
+ * (its config already travels as content on the DA.live side).
+ *
+ * Non-fatal by design (R2): on missing IMS token or 401/403 the writer returns
+ * `manualFallbackRequired` with the exact node paths + payloads — surfaced in
+ * the logs for manual authoring — and setup completes green. The payloads are
+ * PUBLIC storefront config (config.json is served to browsers); the IMS token
+ * itself is never logged.
+ */
+async function writeAemConfigAsContent(
+    context: HandlerContext,
+    project: import('@/types').Project,
+    typedConfig: ProjectCreationConfig,
+    progressTracker: ProgressTracker,
+): Promise<void> {
+    const edsConfig = typedConfig.edsConfig;
+    if (edsConfig?.contentSourceType !== 'aem-sites' || !edsConfig.aemContentSource) {
+        context.logger.info('[Phase 5] Skipped — content flow (repoless satellite does not push config to the upstream)');
+        return;
+    }
+
+    progressTracker('Writing Commerce Config', 92, 'Authoring commerce config into AEM...');
+
+    try {
+        // Write auth = the EXISTING IMS identity the extension already holds
+        // (verified dual-token model) — no new credential.
+        const tokenProvider = createDaLiveTokenProvider(context.authManager);
+        const writePort = createAemAuthoringWritePort(
+            edsConfig.aemContentSource.authorUrl, tokenProvider, context.logger,
+        );
+        const result = await writeConfigAsContent({
+            project,
+            coords: {
+                githubOwner: edsConfig.githubOwner || typedConfig.upstream?.owner || '',
+                repoName: edsConfig.repoName,
+                daLiveOrg: edsConfig.daLiveOrg,
+                daLiveSite: edsConfig.daLiveSite,
+            },
+            contentPath: edsConfig.aemContentSource.contentPath,
+            writePort,
+            logger: context.logger,
+        });
+
+        if (result.success) {
+            context.logger.info(`[Phase 5] Commerce config authored into AEM: ${result.writtenPaths.join(', ')}`);
+            return;
+        }
+
+        context.logger.warn(`[Phase 5] ${result.reason}`);
+        for (const write of result.writes) {
+            context.logger.info(`[Phase 5] Manual config-as-content node — author at ${write.path}:\n${write.payload}`);
+        }
+        progressTracker('Writing Commerce Config', 94, 'Commerce config needs manual authoring in AEM (see logs)');
+    } catch (error) {
+        context.logger.warn(`[Phase 5] AEM config-as-content write skipped: ${(error as Error).message}`);
+    }
 }
 
 /**
