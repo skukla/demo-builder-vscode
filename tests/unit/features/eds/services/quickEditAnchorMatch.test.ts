@@ -30,6 +30,7 @@ import { resolve } from 'path';
 import {
     QUICK_EDIT_LOAD_PAGE_ANCHOR,
     QUICK_EDIT_BRANCH_ANCHOR,
+    QUICK_EDIT_LOADLAZY_ANCHOR,
 } from '@/features/eds/services/quickEditPublisher';
 
 /** LKG SHA the canonical fixture is pinned to (see fixture README). */
@@ -71,5 +72,19 @@ describe('Quick Edit anchor-match against pinned-canonical boilerplate', () => {
 
     it('the canonical scripts.js does not already contain a quick-edit branch', () => {
         expect(CANONICAL_SCRIPTS_JS).not.toContain('quick-edit');
+    });
+
+    // ── loadLazy anchor (edit #3 — the Sidekick custom:quick-edit listener) ──
+    // The EW canvas dispatches `custom:quick-edit` on the Sidekick. Edit #3
+    // inserts the listener at the top of loadLazy's body. Its anchor is the
+    // literal `async function loadLazy(doc) {` declaration.
+
+    it('the canonical scripts.js still contains the loadLazy anchor', () => {
+        expect(CANONICAL_SCRIPTS_JS).toContain(QUICK_EDIT_LOADLAZY_ANCHOR);
+    });
+
+    it('the loadLazy anchor matches exactly once (unambiguous first-match)', () => {
+        const count = CANONICAL_SCRIPTS_JS.split(QUICK_EDIT_LOADLAZY_ANCHOR).length - 1;
+        expect(count).toBe(1);
     });
 });

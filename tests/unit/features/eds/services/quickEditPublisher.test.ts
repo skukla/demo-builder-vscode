@@ -23,6 +23,8 @@ import {
     QUICK_EDIT_LOAD_PAGE_ANCHOR,
     QUICK_EDIT_LOAD_PAGE_EXPORTED,
     QUICK_EDIT_BRANCH_MARKER,
+    QUICK_EDIT_LOADLAZY_ANCHOR,
+    QUICK_EDIT_SIDEKICK_MARKER,
     QUICK_EDIT_JS_PATH,
     SCRIPTS_JS_PATH,
     buildQuickEditScriptsJs,
@@ -36,12 +38,17 @@ const mockLogger = {
     error: jest.fn(),
 };
 
-// Minimal canonical-shaped scripts.js: the loadPage declaration plus the
-// standalone `loadPage();` call. Mirrors the pinned boilerplate's shape
-// without pulling the whole 220-line file into the unit test (the full
+// Minimal canonical-shaped scripts.js: the loadLazy + loadPage declarations
+// plus the standalone `loadPage();` call. Mirrors the pinned boilerplate's
+// shape without pulling the whole 220-line file into the unit test (the full
 // file is asserted by quickEditAnchorMatch.test.ts).
 const CANONICAL_SCRIPTS_JS = [
     '// ... eager/lazy/delayed helpers above ...',
+    '',
+    'async function loadLazy(doc) {',
+    '  loadHeader(doc.querySelector(\'header\'));',
+    '  loadFooter(doc.querySelector(\'footer\'));',
+    '}',
     '',
     'async function loadPage() {',
     '  await loadEager(document);',
@@ -89,6 +96,82 @@ describe('buildQuickEditScriptsJs', () => {
         const out = buildQuickEditScriptsJs(CANONICAL_SCRIPTS_JS);
         const exportedCount = out.split(QUICK_EDIT_LOAD_PAGE_EXPORTED).length - 1;
         expect(exportedCount).toBe(1);
+    });
+
+    it('inserts the Sidekick custom:quick-edit listener at the top of loadLazy', () => {
+        const out = buildQuickEditScriptsJs(CANONICAL_SCRIPTS_JS);
+        // Idempotency marker present ...
+        expect(out).toContain(QUICK_EDIT_SIDEKICK_MARKER);
+        // ... it registers the custom:quick-edit Sidekick listener ...
+        expect(out).toContain("addEventListener('custom:quick-edit'");
+        // ... and it imports the net-new quick-edit module.
+        expect(out).toContain("import('../tools/quick-edit/quick-edit.js')");
+    });
+
+    it('places the sidekick listener immediately after the loadLazy declaration', () => {
+        const out = buildQuickEditScriptsJs(CANONICAL_SCRIPTS_JS);
+        const anchorIdx = out.indexOf(QUICK_EDIT_LOADLAZY_ANCHOR);
+        const markerIdx = out.indexOf(QUICK_EDIT_SIDEKICK_MARKER);
+        expect(anchorIdx).toBeGreaterThanOrEqual(0);
+        expect(markerIdx).toBeGreaterThan(anchorIdx);
+        // The marker is the first thing inside the loadLazy body (nothing of
+        // the original body precedes it).
+        const between = out.slice(anchorIdx + QUICK_EDIT_LOADLAZY_ANCHOR.length, markerIdx);
+        expect(between.trim()).toBe('');
+    });
+
+    it('only inserts the sidekick listener once (first-match-only)', () => {
+        const out = buildQuickEditScriptsJs(CANONICAL_SCRIPTS_JS);
+        const markerCount = out.split(QUICK_EDIT_SIDEKICK_MARKER).length - 1;
+        expect(markerCount).toBe(1);
+    });
+
+    it('does not double-insert when the sidekick listener is already present', () => {
+        const once = buildQuickEditScriptsJs(CANONICAL_SCRIPTS_JS);
+        const twice = buildQuickEditScriptsJs(once);
+        const markerCount = twice.split(QUICK_EDIT_SIDEKICK_MARKER).length - 1;
+        expect(markerCount).toBe(1);
+    });
+
+    it('adds the sidekick listener to a partially-vendored file (IIFE present, listener missing)', () => {
+        // The user's exact case: an earlier incomplete vendoring added the
+        // export + the ?quick-edit IIFE branch but never the Sidekick listener.
+        // Simulate that state: a fully-vendored file with the entire sidekick
+        // block excised (everything from the marker to the end of loadLazy's
+        // listener wiring), leaving the export + IIFE branch untouched.
+        const partial = [
+            '// ... eager/lazy/delayed helpers above ...',
+            '',
+            QUICK_EDIT_LOADLAZY_ANCHOR,
+            '  loadHeader(doc.querySelector(\'header\'));',
+            '  loadFooter(doc.querySelector(\'footer\'));',
+            '}',
+            '',
+            QUICK_EDIT_LOAD_PAGE_EXPORTED,
+            '  await loadEager(document);',
+            '  await loadLazy(document);',
+            '  loadDelayed();',
+            '}',
+            '',
+            'loadPage();',
+            '',
+            QUICK_EDIT_BRANCH_MARKER,
+            '(() => {',
+            "  const hasQE = new URL(window.location.href).searchParams.has('quick-edit');",
+            "  if (hasQE) import('../tools/quick-edit/quick-edit.js').then((mod) => mod.default());",
+            '})();',
+            '// === end Quick Edit dynamic import ===',
+            '',
+        ].join('\n');
+        // Guard: the partial really is missing the listener but keeps the IIFE.
+        expect(partial).not.toContain(QUICK_EDIT_SIDEKICK_MARKER);
+        expect(partial).toContain(QUICK_EDIT_BRANCH_MARKER);
+
+        const repaired = buildQuickEditScriptsJs(partial);
+        expect(repaired).toContain(QUICK_EDIT_SIDEKICK_MARKER);
+        expect(repaired).toContain("addEventListener('custom:quick-edit'");
+        // No duplicate IIFE branch was added.
+        expect(repaired.split(QUICK_EDIT_BRANCH_MARKER).length - 1).toBe(1);
     });
 });
 
@@ -182,6 +265,49 @@ describe('installQuickEdit', () => {
         expect(result).toEqual({ installed: false, reason: 'already installed' });
         const scriptsCommits = mockGithub.createOrUpdateFile.mock.calls.filter(c => c[2] === SCRIPTS_JS_PATH);
         expect(scriptsCommits).toHaveLength(0);
+    });
+
+    it('re-vendors a partially-wired scripts.js (export + IIFE present, sidekick listener missing)', async () => {
+        // The user's exact case: a prior incomplete vendoring left the export
+        // and the ?quick-edit IIFE branch but never the Sidekick listener. The
+        // "already installed" gate now requires BOTH markers, so this file is
+        // re-transformed to add the listener.
+        const partial = [
+            'async function loadLazy(doc) {',
+            '  loadHeader(doc.querySelector(\'header\'));',
+            '}',
+            '',
+            QUICK_EDIT_LOAD_PAGE_EXPORTED,
+            '  await loadLazy(document);',
+            '}',
+            '',
+            'loadPage();',
+            '',
+            QUICK_EDIT_BRANCH_MARKER,
+            '(() => {})();',
+            '// === end Quick Edit dynamic import ===',
+            '',
+        ].join('\n');
+        mockGithub.getFileContent.mockImplementation((_o, _r, path) => {
+            if (path === SCRIPTS_JS_PATH) {
+                return Promise.resolve({ content: partial, sha: 'scripts-sha' });
+            }
+            return Promise.resolve(null);
+        });
+
+        const result = await installQuickEdit(
+            mockGithub as never, repoOwner, repoName, mockLogger as never,
+        );
+
+        expect(result).toEqual({ installed: true });
+        const scriptsCall = mockGithub.createOrUpdateFile.mock.calls.find(c => c[2] === SCRIPTS_JS_PATH);
+        expect(scriptsCall).toBeDefined();
+        const writtenContent = scriptsCall![3] as string;
+        // The listener was added ...
+        expect(writtenContent).toContain(QUICK_EDIT_SIDEKICK_MARKER);
+        expect(writtenContent).toContain("addEventListener('custom:quick-edit'");
+        // ... without duplicating the already-present IIFE branch.
+        expect(writtenContent.split(QUICK_EDIT_BRANCH_MARKER).length - 1).toBe(1);
     });
 
     it('is idempotent for quick-edit.js: skips the write when the module already exists', async () => {

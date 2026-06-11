@@ -18,13 +18,17 @@ import { detectStorefrontChanges, isEdsProject, republishStorefrontConfig } from
 import {
     applyDaLiveOrgConfigSettings,
     getDaLiveAuthService,
+    resolveByomOverlayConfig,
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
+import { ConfigurationService, buildSiteConfigParams } from '@/features/eds/services/configurationService';
 import { DaLiveContentOperations, createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
+import { resolveStorefrontConfig } from '@/features/eds/services/edsResetParams';
 import { GitHubFileOperations } from '@/features/eds/services/githubFileOperations';
 import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
 import { HelixService } from '@/features/eds/services/helixService';
 import { installQuickEdit } from '@/features/eds/services/quickEditPublisher';
+import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { handleRenameProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { Project } from '@/types';
@@ -348,6 +352,8 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 if (experience === 'experience-workspace') {
                     progress.report({ message: 'Wiring Quick Edit into the storefront…' });
                     await this.ensureQuickEditVendored(project);
+                    progress.report({ message: 'Registering Quick Edit plugin…' });
+                    await this.registerQuickEditPlugin(project);
                 }
             },
         );
@@ -424,6 +430,67 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             this.logger.warn(`[Configure] Quick Edit vendoring failed (authoring experience still saved): ${message}`);
+        }
+    }
+
+    /**
+     * Register the `quick-edit` Sidekick plugin for an existing project flipped
+     * to Experience Workspace.
+     *
+     * The plugin (which dispatches the `custom:quick-edit` event the EW canvas
+     * relies on) ships in `config-template.json` and is registered at
+     * create/reset via the Config Service. A project flipped to EW through
+     * Configure never went through that path, so we (re-)register the site
+     * config here — mirroring `edsResetService.publishConfigAndRegisterSite`
+     * (`updateSiteConfig(buildSiteConfigParams(...))`).
+     *
+     * Non-fatal: logs a warning on failure and never throws (the metadata save
+     * already stands).
+     */
+    private async registerQuickEditPlugin(project: Project): Promise<void> {
+        try {
+            const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+            const githubRepo = edsInstance?.metadata?.githubRepo as string | undefined;
+            const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
+            const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
+            if (!githubRepo || !daLiveOrg || !daLiveSite) {
+                return;
+            }
+
+            const [repoOwner, repoName] = githubRepo.split('/');
+            if (!repoOwner || !repoName) {
+                return;
+            }
+
+            // The VS Code setting `demoBuilder.byom.overlayUrl` wins over the
+            // package default; undefined when BYOM is disabled or unset (the
+            // common case for a flip), which buildSiteConfigParams accepts.
+            const byomOverlayUrl = this.resolveByomOverlay(project, daLiveOrg, repoName);
+
+            const tokenProvider = createDaLiveServiceTokenProvider(getDaLiveAuthService(this.context));
+            const configService = new ConfigurationService(tokenProvider, this.logger);
+            await configService.updateSiteConfig(
+                buildSiteConfigParams(repoOwner, repoName, daLiveOrg, daLiveSite, byomOverlayUrl),
+            );
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            this.logger.warn(`[Configure] Quick Edit plugin registration failed (authoring experience still saved): ${message}`);
+        }
+    }
+
+    /**
+     * Resolve the BYOM overlay URL the same way reset/migrate do: pull the base
+     * from the demo-packages config, then let the VS Code setting override.
+     * Returns undefined when BYOM is disabled or no URL is configured.
+     */
+    private resolveByomOverlay(project: Project, daLiveOrg: string, repoName: string): string | undefined {
+        try {
+            const { byomOverlayUrl: baseUrl } = resolveStorefrontConfig(project, demoPackagesConfig.packages);
+            return resolveByomOverlayConfig(baseUrl, daLiveOrg, repoName);
+        } catch {
+            // resolveStorefrontConfig can throw on a malformed manifest; the
+            // plugin registration should still proceed without an overlay.
+            return undefined;
         }
     }
 

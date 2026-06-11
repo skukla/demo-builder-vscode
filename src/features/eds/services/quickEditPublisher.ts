@@ -2,7 +2,7 @@
  * Quick Edit vendoring step — Experience Workspace (EW) WYSIWYG wiring.
  *
  * Vendors da.live's Quick Edit dependency into every EDS storefront so the
- * EW "Layout" (WYSIWYG) view can invoke it. Two surgical edits to
+ * EW "Layout" (WYSIWYG) view can invoke it. Three surgical edits to
  * `scripts/scripts.js` plus one net-new module file. Inert under Universal
  * Editor (the Sidekick `quick-edit` plugin — registered separately in the
  * Config Service template — only fires under EW), so this runs for ALL EDS
@@ -21,6 +21,9 @@
  *   1. Add `export` to the `loadPage` declaration.
  *   2. Append a `?quick-edit` query-param dynamic-import branch that imports
  *      `../tools/quick-edit/quick-edit.js`.
+ *   3. Insert a Sidekick `custom:quick-edit` event listener at the top of
+ *      `loadLazy` — the path the EW canvas uses to enter Quick Edit. Without
+ *      it the EW Layout (WYSIWYG) view renders blank.
  *
  * The Sidekick `quick-edit` plugin entry (the Config-Service half of the
  * wiring) lives in `config-template.json` — see Step 2.
@@ -64,6 +67,58 @@ export const QUICK_EDIT_BRANCH_ANCHOR = 'loadPage();';
  * (which could legitimately appear elsewhere). Bookends the appended branch.
  */
 export const QUICK_EDIT_BRANCH_MARKER = '// === Quick Edit dynamic import (Demo Builder) ===';
+
+/**
+ * Literal anchor for edit #3 — the canonical `loadLazy` declaration. The
+ * Sidekick `custom:quick-edit` listener block is inserted at the top of
+ * loadLazy's body (immediately after this line). This is the listener the EW
+ * canvas relies on — the canvas dispatches `custom:quick-edit` on the
+ * Sidekick, and without this listener the Layout (WYSIWYG) view renders blank.
+ *
+ * Verified byte-identical in BOTH the pinned canonical fixture
+ * (`aem-boilerplate-commerce-scripts.js:175`) and the live B2B template.
+ * Pinned by `quickEditAnchorMatch.test.ts`. DO NOT edit without bumping the
+ * canonical fixture.
+ */
+export const QUICK_EDIT_LOADLAZY_ANCHOR = 'async function loadLazy(doc) {';
+
+/**
+ * Idempotency marker for edit #3. Lets `installQuickEdit` detect "sidekick
+ * listener already present" so a previously-vendored-but-incomplete repo (the
+ * common case: export + IIFE present, listener missing) gets the listener
+ * added on re-run, while a fully-vendored repo is left untouched.
+ */
+export const QUICK_EDIT_SIDEKICK_MARKER = '// === Quick Edit Sidekick listener (Demo Builder) ===';
+
+/**
+ * The Sidekick `custom:quick-edit` listener block inserted at the top of
+ * `loadLazy`'s body.
+ *
+ * Verbatim from Adobe's documented Quick Edit wiring (docs.da.live, "Option 2:
+ * Existing Projects"), 2-space indented to match the file. Registers a
+ * listener for the `custom:quick-edit` event the EW canvas dispatches on the
+ * `aem-sidekick` element; on fire it dynamically imports the vendored Quick
+ * Edit module. Handles both the Sidekick-already-present and
+ * Sidekick-arrives-later cases. Leads with the idempotency marker.
+ */
+const QUICK_EDIT_SIDEKICK_BLOCK = `
+  ${QUICK_EDIT_SIDEKICK_MARKER}
+  const loadQuickEdit = async (...args) => {
+    // eslint-disable-next-line import/no-cycle
+    const { default: initQuickEdit } = await import('../tools/quick-edit/quick-edit.js');
+    initQuickEdit(...args);
+  };
+  const addQuickEditSidekickListeners = (sk) => {
+    sk.addEventListener('custom:quick-edit', loadQuickEdit);
+  };
+  const quickEditSidekick = document.querySelector('aem-sidekick');
+  if (quickEditSidekick) {
+    addQuickEditSidekickListeners(quickEditSidekick);
+  } else {
+    document.addEventListener('sidekick-ready', () => {
+      addQuickEditSidekickListeners(document.querySelector('aem-sidekick'));
+    }, { once: true });
+  }`;
 
 /**
  * The `?quick-edit` dynamic-import branch appended to `scripts/scripts.js`.
@@ -167,22 +222,36 @@ export interface QuickEditInstallResult {
 }
 
 /**
- * Apply both `scripts/scripts.js` edits to the existing file content.
+ * Apply all three `scripts/scripts.js` edits to the existing file content.
  *
  * Pure transform (no I/O). First-match-only for each edit, like the patch
- * engine. Composes the two edits: adds `export` to `loadPage`, then appends
- * the `?quick-edit` dynamic-import branch after the standalone `loadPage();`
- * call.
+ * engine, and each edit is skipped when its marker is already present (so a
+ * partially-vendored file gets exactly the missing edits, never duplicates).
+ * Composes the edits:
+ *   1. adds `export` to `loadPage`,
+ *   2. appends the `?quick-edit` dynamic-import branch after the standalone
+ *      `loadPage();` call,
+ *   3. inserts the Sidekick `custom:quick-edit` listener at the top of
+ *      `loadLazy`'s body (the edit the EW canvas relies on).
  */
 export function buildQuickEditScriptsJs(existing: string): string {
-    const exported = existing.replace(
-        QUICK_EDIT_LOAD_PAGE_ANCHOR,
-        QUICK_EDIT_LOAD_PAGE_EXPORTED,
-    );
-    return exported.replace(
-        QUICK_EDIT_BRANCH_ANCHOR,
-        `${QUICK_EDIT_BRANCH_ANCHOR}${QUICK_EDIT_BRANCH}`,
-    );
+    const exported = existing.includes(QUICK_EDIT_LOAD_PAGE_EXPORTED)
+        ? existing
+        : existing.replace(QUICK_EDIT_LOAD_PAGE_ANCHOR, QUICK_EDIT_LOAD_PAGE_EXPORTED);
+
+    const withBranch = exported.includes(QUICK_EDIT_BRANCH_MARKER)
+        ? exported
+        : exported.replace(
+            QUICK_EDIT_BRANCH_ANCHOR,
+            `${QUICK_EDIT_BRANCH_ANCHOR}${QUICK_EDIT_BRANCH}`,
+        );
+
+    return withBranch.includes(QUICK_EDIT_SIDEKICK_MARKER)
+        ? withBranch
+        : withBranch.replace(
+            QUICK_EDIT_LOADLAZY_ANCHOR,
+            `${QUICK_EDIT_LOADLAZY_ANCHOR}${QUICK_EDIT_SIDEKICK_BLOCK}`,
+        );
 }
 
 /**
@@ -239,9 +308,14 @@ async function installQuickEditScripts(
         return { installed: false, reason: 'scripts.js missing' };
     }
 
+    // "Already installed" requires ALL THREE edits. A repo vendored before the
+    // Sidekick listener shipped has the export + IIFE branch but NOT the
+    // listener — re-running adds just the listener (buildQuickEditScriptsJs is
+    // per-edit idempotent), repairing the EW blank-canvas bug.
     const hasExport = existing.content.includes(QUICK_EDIT_LOAD_PAGE_EXPORTED);
     const hasBranch = existing.content.includes(QUICK_EDIT_BRANCH_MARKER);
-    if (hasExport && hasBranch) {
+    const hasSidekick = existing.content.includes(QUICK_EDIT_SIDEKICK_MARKER);
+    if (hasExport && hasBranch && hasSidekick) {
         logger.info('[QuickEdit] scripts/scripts.js already wired — skipping');
         return { installed: false, reason: 'already installed' };
     }
