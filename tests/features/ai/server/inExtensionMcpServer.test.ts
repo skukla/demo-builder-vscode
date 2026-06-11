@@ -226,4 +226,97 @@ describe('InExtensionMcpServer', () => {
             }),
         ).rejects.toMatchObject({ code: expect.stringMatching(/ENOENT|ECONNREFUSED/) });
     });
+
+    // ─── Dual-listen (workspace-mode mismatch protection) ────────────────────
+    //
+    // The decouple-project-from-workspace gap: switching projects via the home
+    // grid reloads VS Code's workspace folder to the project folder. The
+    // server binds the workspace-folder socket, but proxies spawned from
+    // per-project `.mcp.json` files target the projects-root socket. Without
+    // the secondary listener, the proxy times out at 15s and AI Verification
+    // surfaces "demo-builder · timed out." These tests pin the secondary-bind
+    // behavior so the fix doesn't regress. They also exist as a tripwire — if
+    // the decouple work later removes the secondary bind without updating
+    // these tests, that's surfaced cleanly.
+
+    it('binds the secondary socket when it differs from the primary (workspace = project folder)', async () => {
+        const id = Math.random().toString(16).slice(2, 10);
+        const secondarySocketPath = path.join(os.tmpdir(), `dbmcp-test-secondary-${id}.sock`);
+        server = new InExtensionMcpServer(
+            socketPath,
+            projectsDir,
+            makeLogger(),
+            undefined,
+            undefined,
+            secondarySocketPath,
+        );
+        await server.start();
+
+        // Both sockets should accept connections and return the same tool list.
+        const primaryTools = await listToolsOverSocket(socketPath);
+        const secondaryTools = await listToolsOverSocket(secondarySocketPath);
+
+        expect(primaryTools.sort()).toEqual(secondaryTools.sort());
+        expect(primaryTools).toContain('list_projects');
+
+        // Both socket files should exist with owner-only perms.
+        expect(fs.statSync(socketPath).mode & 0o777).toBe(0o600);
+        expect(fs.statSync(secondarySocketPath).mode & 0o777).toBe(0o600);
+    });
+
+    it('skips the secondary bind when it matches the primary (workspace = projects root)', async () => {
+        // When the always-root model holds, secondarySocketPath collapses to
+        // the primary. The server should detect this and bind once, not twice.
+        const logger = makeLogger();
+        server = new InExtensionMcpServer(
+            socketPath,
+            projectsDir,
+            logger,
+            undefined,
+            undefined,
+            socketPath, // same path as primary — dedup expected
+        );
+        await server.start();
+
+        // "in-extension server listening on" log should fire exactly once.
+        const info = logger.info as jest.Mock;
+        const listenLogs = info.mock.calls.filter(([msg]) =>
+            /\[MCP\] in-extension server listening on/.test(String(msg)),
+        );
+        expect(listenLogs).toHaveLength(1);
+
+        // The single socket still works.
+        const names = await listToolsOverSocket(socketPath);
+        expect(names).toContain('list_projects');
+    });
+
+    it('dispose() closes BOTH sockets when dual-listen is active', async () => {
+        const id = Math.random().toString(16).slice(2, 10);
+        const secondarySocketPath = path.join(os.tmpdir(), `dbmcp-test-secondary-${id}.sock`);
+        server = new InExtensionMcpServer(
+            socketPath,
+            projectsDir,
+            makeLogger(),
+            undefined,
+            undefined,
+            secondarySocketPath,
+        );
+        await server.start();
+        server.dispose();
+        await new Promise((r) => setTimeout(r, 50));
+
+        // Both socket files cleaned up.
+        for (const p of [socketPath, secondarySocketPath]) {
+            await expect(
+                new Promise((resolve, reject) => {
+                    const s = net.connect(p);
+                    s.once('connect', () => {
+                        s.destroy();
+                        resolve(undefined);
+                    });
+                    s.once('error', reject);
+                }),
+            ).rejects.toMatchObject({ code: expect.stringMatching(/ENOENT|ECONNREFUSED/) });
+        }
+    });
 });
