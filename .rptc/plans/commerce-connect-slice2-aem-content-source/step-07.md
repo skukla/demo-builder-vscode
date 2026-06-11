@@ -16,7 +16,7 @@
 - Reuse existing service-card components; no new card framework.
 
 ## Dependency note
-- Auth field shape depends on **R1**. If R1 = defer-with-stub, render a single secret-ref field now and refine when the grant is pinned.
+- Auth UI depends on **R1** (ideal-first, no dev-token paste). If verification picks **(A)** reuse-`aio`/IMS, there is **no new auth field** — the content-source step just confirms the AEM author URL + content path. If **(B)** OAuth S2S, render a guided S2S-credential card (client-id/secret → `secrets`), styled like the existing service cards. Build the non-auth fields (author URL, content path, https validation) now; add the auth affordance once A vs B is settled.
 
 ## Done-when
 - Choice-gating + validation + seeding tests green; DA.live flow regression intact; full regression green.

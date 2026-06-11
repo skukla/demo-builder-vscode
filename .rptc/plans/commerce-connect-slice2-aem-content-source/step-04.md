@@ -2,13 +2,12 @@
 
 **Goal:** The net-new AEM implementation: produce the AEM registration `source` block and the AEM Helix auth header. **No content copy/publish** (point-at — the AEM instance IS the content).
 
-## ⚠️ R1 direction set; verification running
-`getContentSourceAuthorization()`'s token model is R1. **Credential = OAuth Server-to-Server** (modern tech account; NOT deprecated JWT Service Account), stored in VS Code `secrets` (never the manifest). Tiered UX behind this one port:
-- **(C)** paste a dev token — quick-start to unblock the first F5 (aligns with the manual-author fallback).
-- **(B)** OAuth S2S credential entered once — durable baseline.
-- **(A)** reuse the wizard's existing `aio`/IMS identity — preferred if the verification confirms a user IMS token carries the content-read scope (zero new credential UX).
+## ⚠️ R1 — ideal-first; verification running (no dev-token quick-start)
+`getContentSourceAuthorization()`'s token model is R1. PM ruled out a throwaway dev-token paste — build the ideal first. Clean either/or behind this one port (never the bookmarklet pattern):
+- **(A)** reuse the wizard's existing `aio`/IMS identity — zero new credential UX; build this **if** the verification confirms a user IMS token carries the AEM content-read scope.
+- **(B)** OAuth Server-to-Server (modern; NOT deprecated JWT), set up once via a guided card + stored in VS Code `secrets` — build this **if (A) is infeasible**.
 
-Implement the port + ship (C) first so this step lands; (A)/(B) refine once the research pass confirms what token the AEM-Sites content source accepts. Cloud Manager creds are NOT used here (Slice 3).
+The running research pass picks A vs B. Implement the port + its tests now (token provider is mockable headlessly); wire the chosen real provider when the pass returns. No live F5 until the chosen ideal is built. Cloud Manager creds are NOT used here (Slice 3).
 
 ## RED tests
 - `tests/features/eds/services/contentSource/aemContentSource.test.ts`
