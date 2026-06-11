@@ -23,6 +23,7 @@ import {
 import { DaLiveContentOperations, createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
 import { GitHubFileOperations } from '@/features/eds/services/githubFileOperations';
 import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
+import { HelixService } from '@/features/eds/services/helixService';
 import { installQuickEdit } from '@/features/eds/services/quickEditPublisher';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { handleRenameProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
@@ -30,7 +31,7 @@ import { Project } from '@/types';
 import type { AuthoringExperience } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, SharedState } from '@/types/handlers';
-import { getComponentInstanceEntries } from '@/types/typeGuards';
+import { getComponentInstanceEntries, getEdsDaLiveUrl } from '@/types/typeGuards';
 
 const AUTHORING_EXPERIENCES: ReadonlySet<AuthoringExperience> = new Set<AuthoringExperience>([
     'universal-editor',
@@ -242,19 +243,23 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 
                 await this.stateManager.saveProject(project);
 
-                // Re-apply the site-scoped editor.path when the experience changed.
-                // Non-fatal: a DA failure never blocks the save.
+                // Push the new Author label + DA URL to an already-open dashboard
+                // immediately (a fast, local postMessage — NOT a network call, so
+                // it stays in the synchronous save path; the deferred DA side-
+                // effects below are the slow network work). Non-fatal: a missing
+                // dashboard or a postMessage failure must never block the save.
                 if (authoringChanged && data.authoringExperience) {
-                    await this.reapplyEditorPath(project, data.authoringExperience);
-                }
-
-                // Flipping TO Experience Workspace needs the Quick Edit wiring
-                // vendored into the repo (the EW Layout view depends on it). It's
-                // vendored at create/reset for all projects, so an existing project
-                // flipped via Configure won't have it until now. Idempotent +
-                // non-fatal: never blocks the save.
-                if (authoringChanged && data.authoringExperience === 'experience-workspace') {
-                    await this.ensureQuickEditVendored(project);
+                    try {
+                        const edsDaLiveUrl = getEdsDaLiveUrl(project, data.authoringExperience);
+                        await ProjectDashboardWebviewCommand.sendAuthoringExperienceUpdate(
+                            data.authoringExperience,
+                            edsDaLiveUrl,
+                        );
+                    } catch (error) {
+                        this.logger.warn(
+                            `[Configure] Failed to push authoring-experience update to dashboard: ${(error as Error).message}`,
+                        );
+                    }
                 }
 
                 // Register programmatic writes BEFORE writing files
@@ -263,8 +268,20 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 // Regenerate .env files
                 await this.regenerateEnvFiles(project, data.componentConfigs);
 
-                // Return success immediately so UI can reset (don't block on notifications)
+                // Return success immediately so the Save button resets. The
+                // authoring-experience side-effects below are network-bound (DA
+                // editor.path, Quick Edit vendoring, Helix code preview), so they
+                // run AFTER the response behind a progress toast — the button never
+                // appears to hang. All side-effects are individually non-fatal.
                 const result = { success: true };
+
+                if (authoringChanged && data.authoringExperience) {
+                    const experience = data.authoringExperience;
+                    const flippedProject = project;
+                    setImmediate(() => {
+                        void this.applyAuthoringSideEffects(flippedProject, experience);
+                    });
+                }
 
                 // Show success notification after returning (non-blocking)
                 setImmediate(() => {
@@ -303,6 +320,34 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         }
         edsInstance.metadata = { ...edsInstance.metadata, authoringExperience: experience };
         return true;
+    }
+
+    /**
+     * Run the authoring-experience DA side-effects behind a progress toast, after
+     * the save response has returned. Both steps are network-bound and already
+     * non-fatal, so the toast gives the user immediate "this is working" feedback
+     * without ever blocking the Save button.
+     */
+    private async applyAuthoringSideEffects(
+        project: Project,
+        experience: AuthoringExperience,
+    ): Promise<void> {
+        const label = experience === 'experience-workspace' ? 'Experience Workspace' : 'DA.live Classic';
+        await vscode.window.withProgress(
+            {
+                location: vscode.ProgressLocation.Notification,
+                title: `Switching authoring to ${label}…`,
+                cancellable: false,
+            },
+            async (progress) => {
+                progress.report({ message: 'Updating the DA.live editor link…' });
+                await this.reapplyEditorPath(project, experience);
+                if (experience === 'experience-workspace') {
+                    progress.report({ message: 'Wiring Quick Edit into the storefront…' });
+                    await this.ensureQuickEditVendored(project);
+                }
+            },
+        );
     }
 
     /**
@@ -364,6 +409,15 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             const githubTokenService = new GitHubTokenService(this.context.secrets, this.logger);
             const githubFileOps = new GitHubFileOperations(githubTokenService, this.logger);
             await installQuickEdit(githubFileOps, repoOwner, repoName, this.logger);
+
+            // Push the committed Quick Edit code live so the Experience Workspace
+            // Layout (WYSIWYG) view works immediately, without a full reset. The
+            // create/reset/republish paths previewCode('/*') after vendoring via
+            // the surrounding pipeline; the flip has no such pipeline, so it
+            // previews here. Non-fatal — covered by the outer catch.
+            const daLiveTokenProvider = createDaLiveServiceTokenProvider(getDaLiveAuthService(this.context));
+            const helixService = new HelixService(this.logger, githubTokenService, daLiveTokenProvider);
+            await helixService.previewCode(repoOwner, repoName, '/*');
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             this.logger.warn(`[Configure] Quick Edit vendoring failed (authoring experience still saved): ${message}`);

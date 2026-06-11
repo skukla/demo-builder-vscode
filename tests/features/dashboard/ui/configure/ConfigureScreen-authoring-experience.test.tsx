@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
@@ -157,8 +157,22 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
         );
 
         expect(screen.getByRole('radiogroup', { name: 'Authoring Experience' })).toBeInTheDocument();
-        expect(screen.getByText('Universal Editor')).toBeInTheDocument();
+        expect(screen.getByText('DA.live Classic')).toBeInTheDocument();
         expect(screen.getByText('Experience Workspace')).toBeInTheDocument();
+    });
+
+    it('adds a corresponding "Authoring" section to the right-column navigation for EDS', () => {
+        renderWithProvider(
+            <ConfigureScreen
+                project={mockProject as any}
+                componentsData={mockComponentsData}
+                isEds
+                authoringExperience="universal-editor"
+            />
+        );
+
+        const rightColumn = screen.getByTestId('right-column');
+        expect(within(rightColumn).getByText('Authoring')).toBeInTheDocument();
     });
 
     it('defaults the selection to the initial authoringExperience value', () => {

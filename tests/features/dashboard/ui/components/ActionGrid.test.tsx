@@ -174,20 +174,20 @@ describe('ActionGrid', () => {
             const { container } = render(<ActionGrid {...edsProps} />);
 
             const primary = getZone(container, 'primary');
-            expect(within(primary).getByText('Author in Universal Editor')).toBeInTheDocument();
+            expect(within(primary).getByText('Author in DA.live Classic')).toBeInTheDocument();
         });
 
         it('should label the Author button from the resolved experience (EW)', () => {
             render(<ActionGrid {...edsProps} authoringExperience="experience-workspace" />);
 
             expect(screen.getByText('Author in Experience Workspace')).toBeInTheDocument();
-            expect(screen.queryByText('Author in Universal Editor')).not.toBeInTheDocument();
+            expect(screen.queryByText('Author in DA.live Classic')).not.toBeInTheDocument();
         });
 
         it('should not render an Author button for non-EDS projects', () => {
             render(<ActionGrid {...defaultProps} />);
 
-            expect(screen.queryByText('Author in Universal Editor')).not.toBeInTheDocument();
+            expect(screen.queryByText('Author in DA.live Classic')).not.toBeInTheDocument();
             expect(screen.queryByText('Author in Experience Workspace')).not.toBeInTheDocument();
         });
 
@@ -202,7 +202,7 @@ describe('ActionGrid', () => {
         it('should mark the Author button with the hero accent modifier class', () => {
             render(<ActionGrid {...edsProps} />);
 
-            const authorButton = screen.getByText('Author in Universal Editor').closest('button');
+            const authorButton = screen.getByText('Author in DA.live Classic').closest('button');
             expect(authorButton?.getAttribute('unsafe_classname')).toContain('dashboard-action-button--hero');
         });
 
@@ -246,7 +246,7 @@ describe('ActionGrid', () => {
             const { container } = render(<ActionGrid {...edsProps} />);
 
             const storefront = getZone(container, 'storefront');
-            expect(within(storefront).queryByText('Author in Universal Editor')).not.toBeInTheDocument();
+            expect(within(storefront).queryByText('Author in DA.live Classic')).not.toBeInTheDocument();
         });
 
         it('should not render Sync Storefront for non-EDS projects', () => {
@@ -539,7 +539,7 @@ describe('ActionGrid', () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...edsProps} />);
 
-            await user.click(screen.getByText('Author in Universal Editor'));
+            await user.click(screen.getByText('Author in DA.live Classic'));
 
             expect(edsProps.handleOpenDaLive).toHaveBeenCalled();
         });
@@ -555,7 +555,7 @@ describe('ActionGrid', () => {
             render(<ActionGrid {...edsProps} authoringExperience="universal-editor" />);
 
             expect(screen.queryByText('Switch to Experience Workspace')).not.toBeInTheDocument();
-            expect(screen.queryByText('Switch to Universal Editor')).not.toBeInTheDocument();
+            expect(screen.queryByText('Switch to DA.live Classic')).not.toBeInTheDocument();
         });
 
         it('should call handleSyncStorefront when Sync Storefront clicked', async () => {

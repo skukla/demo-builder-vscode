@@ -286,6 +286,28 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
     }
 
     /**
+     * Public method to push a live authoring-experience update (called by the
+     * Configure save handler). Updates an already-open dashboard's Author tile
+     * label + DA URL instantly — no reopen required. No-op if no dashboard is
+     * open. Modeled on sendMeshStatusUpdate.
+     */
+    public static async sendAuthoringExperienceUpdate(
+        authoringExperience: AuthoringExperience,
+        edsDaLiveUrl?: string,
+    ): Promise<void> {
+        const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');
+        if (panel) {
+            await panel.webview.postMessage({
+                type: 'authoringExperienceUpdate',
+                payload: {
+                    authoringExperience,
+                    edsDaLiveUrl,
+                },
+            });
+        }
+    }
+
+    /**
      * Public method to trigger a full status refresh (called after config changes)
      */
     public static async refreshStatus(): Promise<void> {

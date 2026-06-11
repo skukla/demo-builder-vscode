@@ -23,6 +23,7 @@ import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
 import { StatusCard } from '@/core/ui/components/feedback';
 import { PageLayout, PageHeader } from '@/core/ui/components/layout';
 import { useFocusTrap, useSingleTimer } from '@/core/ui/hooks';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AuthoringExperience } from '@/types/base';
 
@@ -72,18 +73,20 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
     }
     const isEdsStable = isEdsRef.current;
     
-    // Capture EDS URLs on first render and preserve them (URLs don't change during dashboard session)
+    // Capture the EDS live (published) URL on first render and preserve it — the
+    // live site URL doesn't change during a dashboard session.
     const edsLiveUrlRef = useRef(edsLiveUrl);
-    const edsDaLiveUrlRef = useRef(edsDaLiveUrl);
     if (edsLiveUrl && !edsLiveUrlRef.current) {
         edsLiveUrlRef.current = edsLiveUrl;
     }
-    if (edsDaLiveUrl && !edsDaLiveUrlRef.current) {
-        edsDaLiveUrlRef.current = edsDaLiveUrl;
-    }
     const edsLiveUrlStable = edsLiveUrlRef.current;
-    const edsDaLiveUrlStable = edsDaLiveUrlRef.current;
-    
+
+    // Authoring experience + DA.live URL are LIVE: a Configure save can flip the
+    // experience while the dashboard is open, so they're state (seeded from the
+    // open-time props) updated by the `authoringExperienceUpdate` message below.
+    const [liveAuthoringExperience, setLiveAuthoringExperience] = useState(authoringExperience);
+    const [liveEdsDaLiveUrl, setLiveEdsDaLiveUrl] = useState(edsDaLiveUrl);
+
     // State for browser opening and logs hover suppression (passed to actions hook)
     const [isOpeningBrowser, setIsOpeningBrowser] = useState(false);
     const [isLogsHoverSuppressed, setIsLogsHoverSuppressed] = useState(false);
@@ -133,7 +136,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
         setIsOpeningBrowser,
         setIsLogsHoverSuppressed,
         edsLiveUrl: edsLiveUrlStable,
-        edsDaLiveUrl: edsDaLiveUrlStable,
+        edsDaLiveUrl: liveEdsDaLiveUrl,
     });
 
     // Focus trap for accessibility
@@ -157,6 +160,23 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
             }, TIMEOUTS.UI_UPDATE_DELAY);
         }
     }, []); // eslint-disable-line react-hooks/exhaustive-deps -- mount-once effect for initial focus; focusTimer is stable, projectStatus read only on mount
+
+    // Subscribe to live authoring-experience updates pushed by the Configure save
+    // handler. Mirrors the meshStatusUpdate subscription in useDashboardStatus:
+    // onMessage returns an unsubscribe fn used for cleanup. Only ever moves the
+    // value to a new defined value (never clears it), preserving the prop seed.
+    useEffect(() => {
+        const unsubscribe = webviewClient.onMessage('authoringExperienceUpdate', (data: unknown) => {
+            const payload = data as { authoringExperience?: AuthoringExperience; edsDaLiveUrl?: string };
+            if (payload.authoringExperience) {
+                setLiveAuthoringExperience(payload.authoringExperience);
+            }
+            if (payload.edsDaLiveUrl) {
+                setLiveEdsDaLiveUrl(payload.edsDaLiveUrl);
+            }
+        });
+        return unsubscribe;
+    }, []);
 
     // Derived values
     const displayName = statusDisplayName || project?.name || 'Demo Project';
@@ -283,7 +303,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                             handleOpenBrowser={handleOpenBrowser}
                             handleOpenLiveSite={handleOpenLiveSite}
                             handleOpenDaLive={handleOpenDaLive}
-                            authoringExperience={authoringExperience}
+                            authoringExperience={liveAuthoringExperience}
                             handleViewLogs={handleViewLogs}
                             handleDeployMesh={handleDeployMesh}
                             handleSyncStorefront={handleSyncStorefront}

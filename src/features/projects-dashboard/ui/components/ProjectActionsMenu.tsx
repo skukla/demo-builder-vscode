@@ -45,7 +45,7 @@ const DEFAULT_AUTHORING_EXPERIENCE: AuthoringExperience = 'universal-editor';
 
 /** Human-readable label per authoring experience (for the Author item). */
 const EXPERIENCE_LABEL: Record<AuthoringExperience, string> = {
-    'universal-editor': 'Universal Editor',
+    'universal-editor': 'DA.live Classic',
     'experience-workspace': 'Experience Workspace',
 };
 

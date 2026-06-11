@@ -57,6 +57,13 @@ jest.mock('@/features/eds/services/quickEditPublisher', () => ({
     installQuickEdit: (...args: unknown[]) => mockInstallQuickEdit(...args),
 }));
 
+// HelixService — after vendoring, the flip previews the code ('/*') so the
+// committed Quick Edit change goes live (the EW Layout view). Non-fatal.
+const mockPreviewCode = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/features/eds/services/helixService', () => ({
+    HelixService: jest.fn().mockImplementation(() => ({ previewCode: mockPreviewCode })),
+}));
+
 // GitHub services constructed by ensureQuickEditVendored. Constructors are
 // stubbed so no real Octokit/secrets access occurs; installQuickEdit is mocked
 // so the file ops object is never actually used.
@@ -69,6 +76,15 @@ jest.mock('@/features/eds/services/githubTokenService', () => ({
     GitHubTokenService: jest.fn().mockImplementation((...args) => mockGitHubTokenService(...args)),
 }));
 
+// Dashboard live-update push — the save handler posts the new authoring label +
+// DA URL to an already-open dashboard immediately after the metadata save.
+const mockSendAuthoringExperienceUpdate = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/features/dashboard/commands/showDashboard', () => ({
+    ProjectDashboardWebviewCommand: {
+        sendAuthoringExperienceUpdate: (...args: unknown[]) => mockSendAuthoringExperienceUpdate(...args),
+    },
+}));
+
 const NO_REPO = Symbol('no-repo');
 
 /** Build an EDS project with a given stored authoring experience + DA coords. */
@@ -77,6 +93,9 @@ function makeEdsProject(stored?: string, githubRepo: string | typeof NO_REPO = '
     return {
         name: 'Test Project',
         path: '/test/project',
+        // EDS stack id so the real getEdsDaLiveUrl (typeGuards.isEdsProject) resolves
+        // the DA URL pushed to the dashboard on a flip.
+        selectedStack: 'eds-citisignal',
         componentInstances: {
             [COMPONENT_IDS.EDS_STOREFRONT]: {
                 metadata: {
@@ -101,7 +120,18 @@ function captureSaveHandler(command: ConfigureProjectWebviewCommand): (data: unk
     (command as unknown as { initializeMessageHandlers: (c: unknown) => void }).initializeMessageHandlers(fakeComm);
     const handler = handlers.get('save-configuration');
     if (!handler) throw new Error('save-configuration handler not registered');
-    return handler;
+    // The handler returns success immediately and defers the authoring DA
+    // side-effects (editor.path re-apply + Quick Edit vendoring/preview) to a
+    // post-response setImmediate behind a progress toast, so the Save button never
+    // blocks. Wrap so each save() drains those deferred immediates + microtasks
+    // before resolving — keeping side-effect assertions valid.
+    return async (data: unknown) => {
+        const result = await handler(data);
+        for (let i = 0; i < 5; i++) {
+            await new Promise<void>((resolve) => setImmediate(resolve));
+        }
+        return result;
+    };
 }
 
 describe('ConfigureProjectWebviewCommand - save-configuration authoring experience', () => {
@@ -186,6 +216,32 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
         expect(mockApplyDaLiveOrgConfigSettings).not.toHaveBeenCalled();
     });
 
+    // ── Live dashboard push ──────────────────────────────────────────────────
+    // An already-open dashboard freezes its Author label + DA URL at open. On a
+    // flip, the save handler pushes the new values so the tile updates instantly.
+
+    it('pushes the new authoring experience + DA URL to the dashboard when it changed', async () => {
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('universal-editor'));
+        const save = captureSaveHandler(command);
+
+        await save({ componentConfigs: {}, authoringExperience: 'experience-workspace' });
+
+        expect(mockSendAuthoringExperienceUpdate).toHaveBeenCalledTimes(1);
+        expect(mockSendAuthoringExperienceUpdate).toHaveBeenCalledWith(
+            'experience-workspace',
+            'https://da.live/canvas#/my-org/my-site/',
+        );
+    });
+
+    it('does NOT push a dashboard update when the experience is unchanged', async () => {
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('experience-workspace'));
+        const save = captureSaveHandler(command);
+
+        await save({ componentConfigs: {}, authoringExperience: 'experience-workspace' });
+
+        expect(mockSendAuthoringExperienceUpdate).not.toHaveBeenCalled();
+    });
+
     it('is non-fatal: a DA failure still resolves the save successfully', async () => {
         mockApplyDaLiveOrgConfigSettings.mockRejectedValueOnce(new Error('DA down'));
         mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('universal-editor'));
@@ -217,6 +273,24 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
         const [, repoOwner, repoName] = mockInstallQuickEdit.mock.calls[0];
         expect(repoOwner).toBe('acme-org');
         expect(repoName).toBe('acme-storefront');
+
+        // Code preview pushes the committed Quick Edit change live (EW Layout view).
+        expect(mockPreviewCode).toHaveBeenCalledWith('acme-org', 'acme-storefront', '/*');
+    });
+
+    it('is non-fatal: a code-preview failure still resolves the save and keeps the metadata', async () => {
+        mockPreviewCode.mockRejectedValueOnce(new Error('Helix down'));
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('universal-editor'));
+        const save = captureSaveHandler(command);
+
+        const result = await save({
+            componentConfigs: {},
+            authoringExperience: 'experience-workspace',
+        });
+
+        expect(result).toEqual({ success: true });
+        const meta = savedProject?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata;
+        expect(meta?.authoringExperience).toBe('experience-workspace');
     });
 
     it('does NOT vendor Quick Edit when flipping TO universal-editor', async () => {

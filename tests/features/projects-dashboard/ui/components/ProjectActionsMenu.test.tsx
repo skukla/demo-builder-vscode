@@ -257,7 +257,7 @@ describe('ProjectActionsMenu', () => {
             expect(screen.queryByText('Start Demo')).not.toBeInTheDocument();
             expect(screen.queryByText('Stop Demo')).not.toBeInTheDocument();
             expect(screen.getByText('Open in Browser')).toBeInTheDocument();
-            expect(screen.getByText('Author in Universal Editor')).toBeInTheDocument();
+            expect(screen.getByText('Author in DA.live Classic')).toBeInTheDocument();
         });
     });
 
@@ -265,7 +265,7 @@ describe('ProjectActionsMenu', () => {
         // The authoring-experience FLIP control was relocated to the Configure
         // webview (setup-time preference with an explicit Save). The dynamic
         // "Author in X" label STAYS here — it reflects the resolved experience.
-        it('labels Author with Universal Editor when the resolved experience is UE', () => {
+        it('labels Author with DA.live Classic when the resolved experience is UE', () => {
             renderWithProvider(
                 <ProjectActionsMenu
                     project={edsProjectWithExperience('universal-editor')}
@@ -274,7 +274,7 @@ describe('ProjectActionsMenu', () => {
             );
             openMenu();
 
-            expect(screen.getByText('Author in Universal Editor')).toBeInTheDocument();
+            expect(screen.getByText('Author in DA.live Classic')).toBeInTheDocument();
             expect(screen.queryByText('Author in Experience Workspace')).not.toBeInTheDocument();
         });
 
@@ -288,7 +288,7 @@ describe('ProjectActionsMenu', () => {
             openMenu();
 
             expect(screen.getByText('Author in Experience Workspace')).toBeInTheDocument();
-            expect(screen.queryByText('Author in Universal Editor')).not.toBeInTheDocument();
+            expect(screen.queryByText('Author in DA.live Classic')).not.toBeInTheDocument();
         });
 
         it('shows no Author item for non-EDS projects', () => {
@@ -303,7 +303,7 @@ describe('ProjectActionsMenu', () => {
             );
             openMenu();
 
-            expect(screen.queryByText('Author in Universal Editor')).not.toBeInTheDocument();
+            expect(screen.queryByText('Author in DA.live Classic')).not.toBeInTheDocument();
             expect(screen.queryByText('Author in Experience Workspace')).not.toBeInTheDocument();
         });
 
@@ -317,7 +317,7 @@ describe('ProjectActionsMenu', () => {
             openMenu();
 
             expect(screen.queryByText('Switch to Experience Workspace')).not.toBeInTheDocument();
-            expect(screen.queryByText('Switch to Universal Editor')).not.toBeInTheDocument();
+            expect(screen.queryByText('Switch to DA.live Classic')).not.toBeInTheDocument();
         });
     });
 

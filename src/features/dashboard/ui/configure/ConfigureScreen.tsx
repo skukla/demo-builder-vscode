@@ -144,21 +144,16 @@ interface AuthoringExperienceFieldProps {
  * than on the dashboard/kebab action surfaces.
  */
 function AuthoringExperienceField({ value, onChange }: AuthoringExperienceFieldProps): React.ReactElement {
+    // aria-label (not label): the "Authoring" section heading already names this,
+    // so a visible RadioGroup label would be a redundant subheading.
     return (
         <RadioGroup
-            label="Authoring Experience"
+            aria-label="Authoring Experience"
             value={value}
             onChange={(next) => onChange(next as AuthoringExperience)}
-            marginTop="size-200"
         >
-            <Radio value="universal-editor">
-                Universal Editor
-                <Text slot="description">Author in Adobe Experience Cloud&apos;s Universal Editor.</Text>
-            </Radio>
-            <Radio value="experience-workspace">
-                Experience Workspace
-                <Text slot="description">Author in the DA.live-native Experience Workspace canvas.</Text>
-            </Radio>
+            <Radio value="universal-editor">DA.live Classic</Radio>
+            <Radio value="experience-workspace">Experience Workspace</Radio>
         </RadioGroup>
     );
 }
@@ -444,8 +439,22 @@ export function ConfigureScreen({
 
     // Navigation sections for NavigationPanel
     const navigationSections = useMemo<NavigationSection[]>(() => {
-        return serviceGroups.map(group => toNavigationSection(group, isFieldComplete));
-    }, [serviceGroups, isFieldComplete]);
+        const sections = serviceGroups.map(group => toNavigationSection(group, isFieldComplete));
+        // Mirror the left-column "Authoring" section in the right-column nav (EDS
+        // only). It has no navigable fields — it's a single radio — so the field
+        // list is empty and it always reads complete.
+        if (isEds) {
+            sections.push({
+                id: 'authoring-experience',
+                label: 'Authoring',
+                fields: [],
+                isComplete: true,
+                completedCount: 0,
+                totalCount: 0,
+            });
+        }
+        return sections;
+    }, [serviceGroups, isFieldComplete, isEds]);
 
     const toggleNavSection = useCallback((sectionId: string) => {
         const wasExpanded = expandedNavSections.has(sectionId);

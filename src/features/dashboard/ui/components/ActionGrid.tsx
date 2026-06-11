@@ -53,7 +53,7 @@ type OverflowKey = 'components' | 'refreshBlockLibrary' | 'devConsole';
 
 /** Human-readable label per authoring experience. */
 const EXPERIENCE_LABEL: Record<AuthoringExperience, string> = {
-    'universal-editor': 'Universal Editor',
+    'universal-editor': 'DA.live Classic',
     'experience-workspace': 'Experience Workspace',
 };
 
