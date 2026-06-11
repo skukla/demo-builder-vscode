@@ -324,6 +324,9 @@
             "enum": [
               "claude-code"
             ],
+            "enumItemLabels": [
+              "Claude Code"
+            ],
             "enumDescriptions": [
               "Anthropic's Claude Code (CLI)."
             ],
