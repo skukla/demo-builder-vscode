@@ -237,13 +237,18 @@
         }
       },
       {
-        "title": "DA.live",
+        "title": "EDS",
         "properties": {
-          "demoBuilder.daLive.defaultOrg": {
+          "demoBuilder.eds.githubOrg": {
             "type": "string",
             "default": "",
-            "description": "Default DA.live organization name. Auto-fills the organization field during authentication."
-          },
+            "description": "Default GitHub organization to pre-select in the wizard's namespace picker. When empty, your personal GitHub username (from OAuth) is used as the default. You can still pick a different namespace per demo. Set this globally (e.g., 'demo-system-stores') if your team standardizes on a default."
+          }
+        }
+      },
+      {
+        "title": "DA.live",
+        "properties": {
           "demoBuilder.daLive.aemAuthorUrl": {
             "type": "string",
             "default": "author-p158081-e1683323.adobeaemcloud.com",
