@@ -5,7 +5,7 @@
 - [x] Scaffold — PM-approved for delegation; four open questions resolved (2026-06-11)
 - [x] **Planned — detailed pass complete; step-01..08 written; PM reviewed (2026-06-11)**
 - [x] **Reshaped around reuse + verified auth research (2026-06-11)** — R1 resolved (two auth legs: read=AEM-owned/null, write=reuse IMS token); `aemAuth` field/secret/auth-card dropped; capability map confirms reuse-and-extend of `src/features/eds/`. Steps 03/04/06/07 + risk map updated.
-- [~] **In Progress (TDD) — Steps 01–07 DONE + committed + pushed (2026-06-11). Step 08 (optional dashboard marker, PM-gated) + live F5 remain.** See "Session handoff" below.
+- [~] **In Progress (TDD) — Steps 01–08 ALL DONE + committed + pushed (2026-06-11; Step 08 PM-approved same day). Only the live F5 + quality gates remain.** See "Session handoff" below.
 - [ ] Quality gates (Efficiency + Security)
 - [ ] Complete
 
@@ -48,6 +48,7 @@
 | 05 | Satellite path honors ContentSource for AEM | `storefrontSetupPhase3.ts` (constructs source, threads into registration), `storefrontSetupPhases.ts` (gates DA.live pipeline + permissions for AEM), `storefrontSetupHandlers.ts` (payload type) |
 | 06 | Config-as-content writer + executor Phase 5 wiring (`0725d45c`) | `configAsContentWriter.ts` (writer + `createAemAuthoringWritePort`); `executor.ts` (content-flow branch calls writer for aem-sites, non-fatal); `executor-aemConfigAsContent.test.ts` |
 | 07 | Wizard content-source choice on Connect step (`8a78f00b`) | `aemContentSourceValidation.ts`, `useAemContentSource.ts`, `ContentSourceSelector.tsx`, `ConnectServicesStep.tsx` (join-flow-only chooser + Continue gate) |
+| 08 | Dashboard content-source marker (`574189be`, PM-approved) | `ProjectDashboardScreen.tsx` (`buildDashboardSubtitle` — "Content source: AEM Sites" in header subtitle), `showDashboard.ts` + `ui/index.tsx` (persisted `contentSourceType` plumbing) |
 
 ### Design decisions made during TDD (carry forward)
 - **`AemContentSource` constructor is `(authorUrl, contentPath)`** — content path is fixed AEM config, NOT per-registration coords. So `ContentSourceCoords` is `{ org, site }` only, and `buildSiteConfigParams` stays content-source-neutral. The factory builds a fully-configured source.
@@ -57,10 +58,10 @@
 - **Step 07:** the chooser renders only when `state.flow === 'content'`; Continue gate = GitHub + DA.live (unchanged — registration still needs the IMS identity) **plus AEM URL/path validity** when aem-sites is selected. Fields seed `edsConfig.contentSourceType`/`aemContentSource` and ride the existing setup payload (no new plumbing). No credential affordance (R1).
 - TDD note: Steps 01–04, 06, 07 were strict RED→GREEN; **Step 05's integration was source-then-test** (the unit pieces were RED-first; the phases integration test was written right after and locks the behavior).
 
-### Next: Step 08 + live F5
-- **Step 08 dashboard marker is OPTIONAL and PM-gated** (`step-08.md`) — awaiting the PM's call; tiny read-only render of `contentSourceType` where Slice 1 surfaces share state.
-- **Live F5** (PM runs it against `author-p57319-e1619941`): script in `step-08.md` § "Single live-F5 verification script". It confirms the three R1 live-test items: (1) registration URL shape for an AEM-author markup source, (2) the satellite renders from AEM content, (3) the authoring API accepts the extension-held IMS token for the config-node writes (else the R2 fallback prints the three nodes for manual authoring — setup stays green either way).
+### Next: live F5, then quality gates
+- **Live F5** (PM runs it against `author-p57319-e1619941`): script in `step-08.md` § "Single live-F5 verification script". It confirms the three R1 live-test items: (1) registration URL shape for an AEM-author markup source, (2) the satellite renders from AEM content, (3) the authoring API accepts the extension-held IMS token for the config-node writes (else the R2 fallback prints the three nodes for manual authoring — setup stays green either way). Fold results/evidence + any `createAemAuthoringWritePort` API-shape adjustment back into this plan.
 - After F5: quality gates (Efficiency + Security; focal points in the `step-08.md` risk map), then move the plan to `.rptc/complete/`.
+- Known pre-existing (NOT Slice 2): the dashboard handlers/services jest run warns "worker process failed to exit gracefully" — leak predates Step 08 (verified by isolation).
 
 ### Verify on resume
 ```
