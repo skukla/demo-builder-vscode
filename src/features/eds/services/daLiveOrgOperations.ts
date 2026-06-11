@@ -305,3 +305,35 @@ export class DaLiveOrgOperations {
         return new DaLiveError(message, `HTTP_${status}`, status);
     }
 }
+
+/**
+ * Check whether a DA.live org grants write access to the token holder.
+ *
+ * Sends `HEAD /list/{org}` and reads the `X-da-actions` response header.
+ * The header value looks like `/=read,write` or `/=read`.
+ *
+ * Exported as a free function (not an instance method) because callers
+ * already have the IMS token in hand at the call site — passing it
+ * explicitly is simpler than re-fetching via `tokenProvider`. Used by
+ * the list-orgs handler (to flag each org's writability) and by
+ * `applyOrgConfig`'s 401-handling branch (to verify ownership before
+ * creating a fresh config sheet).
+ *
+ * @returns `true` if the header contains "write", `false` otherwise
+ *          (including network failures and non-2xx responses).
+ */
+export async function hasWriteAccess(orgName: string, token: string): Promise<boolean> {
+    try {
+        const res = await fetch(`https://admin.da.live/list/${orgName}/`, {
+            method: 'HEAD',
+            headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!res.ok) {
+            return false;
+        }
+        const actions = res.headers.get('x-da-actions') ?? '';
+        return actions.includes('write');
+    } catch {
+        return false;
+    }
+}

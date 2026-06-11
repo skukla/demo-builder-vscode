@@ -22,7 +22,7 @@ import { GitHubOAuthService } from '../services/githubOAuthService';
 import { GitHubRepoOperations } from '../services/githubRepoOperations';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { HelixService } from '../services/helixService';
-import { hasWriteAccess } from './edsDaLiveOrgHandlers';
+import { hasWriteAccess } from '../services/daLiveOrgOperations';
 import { getLogger } from '@/core/logging';
 import { showOneTimeTip } from '@/core/utils/oneTimeTip';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

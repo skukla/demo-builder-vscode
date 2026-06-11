@@ -103,9 +103,9 @@ jest.mock('@/features/eds/services/daLiveAuthService', () => {
     };
 });
 
-// Mock hasWriteAccess (imported by edsHelpers from edsDaLiveOrgHandlers)
+// Mock hasWriteAccess (now imported by edsHelpers from the service layer)
 const mockHasWriteAccess = jest.fn();
-jest.mock('@/features/eds/handlers/edsDaLiveOrgHandlers', () => ({
+jest.mock('@/features/eds/services/daLiveOrgOperations', () => ({
     hasWriteAccess: (...args: unknown[]) => mockHasWriteAccess(...args),
 }));
 

@@ -40,9 +40,9 @@ let showInfoMessageIndex = 0;
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
-// Mock hasWriteAccess (from edsDaLiveOrgHandlers)
+// Mock hasWriteAccess (now lives in the service layer)
 const mockHasWriteAccess = jest.fn();
-jest.mock('@/features/eds/handlers/edsDaLiveOrgHandlers', () => ({
+jest.mock('@/features/eds/services/daLiveOrgOperations', () => ({
     hasWriteAccess: (...args: unknown[]) => mockHasWriteAccess(...args),
 }));
 

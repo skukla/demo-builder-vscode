@@ -12,6 +12,7 @@
  */
 
 import { validateDaLiveToken } from './edsHelpers';
+import { hasWriteAccess } from '@/features/eds/services/daLiveOrgOperations';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
 // ==========================================================
@@ -243,34 +244,6 @@ export async function handleGetDaLiveSites(
             error: errorMessage,
         });
         return { success: false, error: errorMessage };
-    }
-}
-
-// ==========================================================
-// Write-Access Helpers
-// ==========================================================
-
-/**
- * Check whether a DA.live org grants write access to the token holder.
- *
- * Sends `HEAD /list/{org}` and reads the `X-da-actions` response header.
- * The header value looks like `/=read,write` or `/=read`.
- *
- * @returns `true` if the header contains "write", `false` otherwise.
- */
-export async function hasWriteAccess(orgName: string, token: string): Promise<boolean> {
-    try {
-        const res = await fetch(`https://admin.da.live/list/${orgName}/`, {
-            method: 'HEAD',
-            headers: { 'Authorization': `Bearer ${token}` },
-        });
-        if (!res.ok) {
-            return false;
-        }
-        const actions = res.headers.get('x-da-actions') ?? '';
-        return actions.includes('write');
-    } catch {
-        return false;
     }
 }
 

@@ -55,7 +55,7 @@ jest.mock('@/features/eds/services/githubRepoOperations');
 jest.mock('@/features/eds/services/githubFileOperations');
 jest.mock('@/features/eds/services/githubOAuthService');
 jest.mock('@/features/eds/services/daLiveAuthService');
-jest.mock('@/features/eds/handlers/edsDaLiveOrgHandlers', () => ({
+jest.mock('@/features/eds/services/daLiveOrgOperations', () => ({
     hasWriteAccess: jest.fn(),
 }));
 
