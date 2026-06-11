@@ -257,7 +257,7 @@ const result = await dispatchHandler(meshHandlers, context, messageType, data);
 - `StepLogger` - Configuration-driven logging
 
 **Responsibilities:**
-- Dual output channels ("Demo Builder: Logs", "Demo Builder: Debug")
+- Dual output channels ("Demo Builder: User Logs", "Demo Builder: Debug Logs")
 - Configuration-driven step names (wizard-steps.json)
 - Message templates (logging.json)
 - Command execution logging with timing

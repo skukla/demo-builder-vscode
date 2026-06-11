@@ -35,6 +35,11 @@ import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
 
 const socketPath = process.env.DEMO_BUILDER_MCP_SOCKET || resolveMcpSocketPath(process.cwd());
 
+// Surface the target socket on raw stderr (this process has no logger). The
+// inspector captures this tail on failure, letting the proxy's target socket be
+// compared against the server's bound socket ([MCP] … listening on <path>).
+process.stderr.write(`Demo Builder MCP proxy target socket: ${socketPath}\n`);
+
 // Per-drop reconnect window (~23s total). Long enough to ride out a window
 // reload, short enough to fail clearly when VS Code has actually closed.
 const RETRY_DELAYS_MS = [250, 500, 1000, 1500, 2000, 2000, 3000, 3000, 5000, 5000];

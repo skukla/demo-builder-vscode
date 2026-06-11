@@ -38,8 +38,8 @@ The Demo Builder extension uses a sophisticated, configuration-driven logging sy
 **Purpose**: Central logging system with dual output channels.
 
 **Output Channels**:
-- **"Demo Builder: Logs"**: User-facing messages
-- **"Demo Builder: Debug"**: Detailed diagnostic information
+- **"Demo Builder: User Logs"**: User-facing messages
+- **"Demo Builder: Debug Logs"**: Detailed diagnostic information
 
 **Features**:
 - Singleton pattern for global access

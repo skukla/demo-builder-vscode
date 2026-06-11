@@ -681,25 +681,42 @@ export async function applyDaLiveOrgConfigSettings(
             return;
         }
 
-        const configUpdates: Record<string, string> = {};
+        const appliedKeys: string[] = [];
+        const failures: string[] = [];
 
+        // aem.repositoryId → SITE config. da.live's Library reads the AEM Assets
+        // binding from the per-site config, so it must be written site-scoped.
         if (aemAuthorUrl) {
-            configUpdates['aem.repositoryId'] = aemAuthorUrl;
+            const result = await daLiveContentOps.applySiteConfig(daLiveOrg, daLiveSite, {
+                'aem.repositoryId': aemAuthorUrl,
+            });
+            if (result.success) {
+                appliedKeys.push('aem.repositoryId');
+            } else {
+                failures.push(`aem.repositoryId: ${result.error}`);
+            }
         }
 
+        // editor.path → ORG config (Universal Editor path mapping stays org-scoped).
         if (imsOrgId) {
             // Dummy path prefix prevents auto-redirect to UE (no real content matches it)
             // Full UE URL enables punch-out option from doc-based editing
             const editorPath = `${editorPathPrefix}=https://experience.adobe.com/#/@${imsOrgId}/aem/editor/canvas/main--${daLiveSite}--${daLiveOrg}.ue.da.live`;
-            configUpdates['editor.path'] = editorPath;
+            const result = await daLiveContentOps.applyOrgConfig(daLiveOrg, {
+                'editor.path': editorPath,
+            });
+            if (result.success) {
+                appliedKeys.push('editor.path');
+            } else {
+                failures.push(`editor.path: ${result.error}`);
+            }
         }
 
-        const result = await daLiveContentOps.applyOrgConfig(daLiveOrg, configUpdates);
-
-        if (result.success) {
-            logger.info(`[EDS Config] Applied: ${Object.keys(configUpdates).join(', ')}`);
-        } else {
-            logger.warn(`[EDS Config] Failed to apply settings: ${result.error}`);
+        if (appliedKeys.length > 0) {
+            logger.info(`[EDS Config] Applied: ${appliedKeys.join(', ')}`);
+        }
+        if (failures.length > 0) {
+            logger.warn(`[EDS Config] Failed to apply settings: ${failures.join('; ')}`);
         }
     } catch (error) {
         logger.warn(`[EDS Config] Error: ${(error as Error).message}`);

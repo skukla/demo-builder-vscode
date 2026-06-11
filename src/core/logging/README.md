@@ -382,8 +382,8 @@ errorLogger.logError(
 2. **Channel Routing Rule (Critical)**:
 
    The key principle for clean logging:
-   - **User Logs channel** ("Demo Builder: Logs"): User milestones only
-   - **Debug Logs channel** ("Demo Builder: Debug"): Technical flow details
+   - **User Logs channel** ("Demo Builder: User Logs"): User milestones only
+   - **Debug Logs channel** ("Demo Builder: Debug Logs"): Technical flow details
 
    **Rule: If a message has a `[ComponentName]` prefix, it should use `debug()` NOT `info()`**
 
@@ -414,8 +414,8 @@ errorLogger.logError(
    ```
 
    **Why This Matters**:
-   - Users see clean, actionable output in "Demo Builder: Logs"
-   - Technical details remain available in "Demo Builder: Debug" for support
+   - Users see clean, actionable output in "Demo Builder: User Logs"
+   - Technical details remain available in "Demo Builder: Debug Logs" for support
    - Prevents log noise from obscuring important milestones
 
 3. **Include Context**: Always provide context in error messages (what operation failed)

@@ -116,7 +116,7 @@ export const DEMO_BUILDER_SKILLS: ReadonlyArray<{ filename: string; content: str
 export async function writeSkillFiles(
     projectPath: string,
     project: Project,
-): Promise<void> {
+): Promise<{ written: string[] }> {
     const skillsDir = path.join(projectPath, '.claude', 'skills');
     await fsPromises.mkdir(skillsDir, { recursive: true });
 
@@ -145,6 +145,11 @@ export async function writeSkillFiles(
             skillsDir,
         );
     }
+
+    // Summary for the handler boundary to log (Adobe bundle skills are copied
+    // into subdirectories and aren't included here — only the always-written
+    // Demo-Builder skill filenames).
+    return { written: DEMO_BUILDER_SKILLS.map(({ filename }) => filename) };
 }
 
 // ─── Private helpers ──────────────────────────────────────────────────────────

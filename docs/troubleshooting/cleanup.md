@@ -128,7 +128,7 @@ You **rarely** need to manually clean up, but it might be useful if:
 **Solution**: This should never happen now! The pre-flight check handles it.
 
 If you still see this error:
-1. Check logs: `Demo Builder: Logs` output channel
+1. Check logs: `Demo Builder: User Logs` output channel
 2. Look for: `[Project Creation] Found X existing files/folders, cleaning up...`
 3. If cleanup failed, manually remove: `rm -rf ~/.demo-builder/projects/<name>`
 

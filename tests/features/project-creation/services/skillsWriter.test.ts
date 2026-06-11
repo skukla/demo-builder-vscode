@@ -428,7 +428,9 @@ describe('skillsWriter', () => {
         it('skips gracefully when the Adobe package is not yet installed (ENOENT)', async () => {
             mockMissingAdobeBundle();
 
-            await expect(writeSkillFiles('/projects/test', makeEdsProject())).resolves.toBeUndefined();
+            await expect(writeSkillFiles('/projects/test', makeEdsProject())).resolves.toMatchObject({
+                written: expect.any(Array),
+            });
 
             const files = writtenFiles();
             expect(files.some(p => p.includes('/.claude/skills/aem-'))).toBe(false);
@@ -445,6 +447,36 @@ describe('skillsWriter', () => {
             expect(files.some(p => p.endsWith('add-component.md'))).toBe(true);
             expect(files.some(p => p.endsWith('sync-changes.md'))).toBe(true);
             expect(files.some(p => p.endsWith('update-credentials.md'))).toBe(true);
+        });
+    });
+
+    describe('return summary', () => {
+        it('returns the list of skill filenames written (the twelve Demo-Builder skills)', async () => {
+            mockMissingAdobeBundle();
+
+            const summary = await writeSkillFiles('/projects/test', makeEdsProject());
+
+            expect(summary.written).toEqual(
+                expect.arrayContaining([
+                    'add-component.md',
+                    'sync-changes.md',
+                    'update-credentials.md',
+                    'create-eds-project.md',
+                    'register-custom-block.md',
+                ]),
+            );
+            // Twelve Demo-Builder skills are always written.
+            expect(summary.written).toHaveLength(12);
+        });
+
+        it('returns bare filenames (basenames), not absolute paths', async () => {
+            mockMissingAdobeBundle();
+
+            const summary = await writeSkillFiles('/projects/test', makeEdsProject());
+
+            for (const name of summary.written) {
+                expect(path.basename(name)).toBe(name);
+            }
         });
     });
 });

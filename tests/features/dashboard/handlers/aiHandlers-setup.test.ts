@@ -148,6 +148,114 @@ describe('aiHandlers — setup & verification', () => {
         });
     });
 
+    describe('handleVerifyAiSetup — observability logging', () => {
+        const makeResult = (overrides: Record<string, unknown> = {}) => ({
+            status: 'ok',
+            checks: [
+                { name: 'agents-md', status: 'ok' },
+                { name: 'mcp-config', status: 'ok' },
+            ],
+            inventory: {
+                skills: [{ name: 'add-component', description: null, path: '/p', source: 'demo-builder' }],
+                mcps: [{ id: 'demo-builder', status: 'ok', tools: [{ name: 't', description: 'd' }] }],
+                sessionMcps: [],
+            },
+            ...overrides,
+        });
+
+        it('logs the start line with the project path before verifying', async () => {
+            (verifyAiSetup as jest.Mock).mockResolvedValue(makeResult());
+
+            const context = createMockContext();
+            await handleVerifyAiSetup(context);
+
+            expect(context.logger.info).toHaveBeenCalledWith(
+                expect.stringContaining('[AI Verify] Verifying AI setup: /projects/test'),
+            );
+        });
+
+        it('logs the skills summary count at info when there is no skillsError', async () => {
+            (verifyAiSetup as jest.Mock).mockResolvedValue(makeResult());
+
+            const context = createMockContext();
+            await handleVerifyAiSetup(context);
+
+            expect(context.logger.info).toHaveBeenCalledWith(
+                expect.stringContaining('[AI Verify] skills: 1 found'),
+            );
+        });
+
+        it('warns with the error when inventory.skillsError is present', async () => {
+            (verifyAiSetup as jest.Mock).mockResolvedValue(
+                makeResult({
+                    inventory: {
+                        skills: [],
+                        skillsError: 'EACCES reading skills dir',
+                        mcps: [],
+                        sessionMcps: [],
+                    },
+                }),
+            );
+
+            const context = createMockContext();
+            await handleVerifyAiSetup(context);
+
+            expect(context.logger.warn).toHaveBeenCalledWith(
+                expect.stringContaining('EACCES reading skills dir'),
+            );
+        });
+
+        it('warns with the captured stderr tail for a non-ok mcp entry (timeout)', async () => {
+            const STDERR_TAIL = 'Demo Builder MCP proxy target socket: /tmp/x.sock\nError: connect ENOENT';
+            (verifyAiSetup as jest.Mock).mockResolvedValue(
+                makeResult({
+                    inventory: {
+                        skills: [],
+                        mcps: [{ id: 'demo-builder', status: 'timeout', error: STDERR_TAIL }],
+                        sessionMcps: [],
+                    },
+                }),
+            );
+
+            const context = createMockContext();
+            await handleVerifyAiSetup(context);
+
+            const warnArgs = (context.logger.warn as jest.Mock).mock.calls.flat().join('\n');
+            expect(warnArgs).toContain('[AI Verify] mcp demo-builder: timeout');
+            expect(warnArgs).toContain(STDERR_TAIL);
+        });
+
+        it('warns when inventory.mcpsError is present', async () => {
+            (verifyAiSetup as jest.Mock).mockResolvedValue(
+                makeResult({
+                    inventory: {
+                        skills: [],
+                        mcps: [],
+                        mcpsError: 'inspection rejected: spawn failed',
+                        sessionMcps: [],
+                    },
+                }),
+            );
+
+            const context = createMockContext();
+            await handleVerifyAiSetup(context);
+
+            expect(context.logger.warn).toHaveBeenCalledWith(
+                expect.stringContaining('inspection rejected: spawn failed'),
+            );
+        });
+
+        it('does NOT warn for an ok mcp entry (uses debug instead)', async () => {
+            (verifyAiSetup as jest.Mock).mockResolvedValue(makeResult());
+
+            const context = createMockContext();
+            await handleVerifyAiSetup(context);
+
+            const warnArgs = (context.logger.warn as jest.Mock).mock.calls.flat().join('\n');
+            expect(warnArgs).not.toContain('mcp demo-builder');
+        });
+    });
+
     describe('handleInspectMcp', () => {
         beforeEach(() => {
             (clearMcpCache as jest.Mock).mockClear();
@@ -239,6 +347,7 @@ describe('aiHandlers — setup & verification', () => {
                 } as unknown as HandlerContext['stateManager'],
             });
 
+            (generateAIContextFiles as jest.Mock).mockResolvedValue({ skills: [] });
             const result = await handleRegenerateAiFiles(context);
 
             // Fourth arg is the onProgress tracker the handler passes so
@@ -419,6 +528,43 @@ describe('aiHandlers — setup & verification', () => {
                     '/mock/extension/path',
                     expect.any(Function),
                 );
+            });
+        });
+
+        describe('observability logging', () => {
+            it('logs the start line at info', async () => {
+                (generateAIContextFiles as jest.Mock).mockResolvedValue({ skills: [] });
+
+                const context = createMockContext({
+                    stateManager: {
+                        getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
+                    } as unknown as HandlerContext['stateManager'],
+                });
+
+                await handleRegenerateAiFiles(context);
+
+                expect(context.logger.info).toHaveBeenCalledWith(
+                    expect.stringContaining('[AI Verify] Regenerating AI files'),
+                );
+            });
+
+            it('logs the regenerated skill-files summary (count + names) at info', async () => {
+                (generateAIContextFiles as jest.Mock).mockResolvedValue({
+                    skills: ['add-component.md', 'sync-changes.md'],
+                });
+
+                const context = createMockContext({
+                    stateManager: {
+                        getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
+                    } as unknown as HandlerContext['stateManager'],
+                });
+
+                await handleRegenerateAiFiles(context);
+
+                const infoArgs = (context.logger.info as jest.Mock).mock.calls.flat().join('\n');
+                expect(infoArgs).toContain('[AI Verify] Regenerated 2 skill files');
+                expect(infoArgs).toContain('add-component.md');
+                expect(infoArgs).toContain('sync-changes.md');
             });
         });
     });
