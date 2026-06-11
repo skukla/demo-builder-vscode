@@ -422,6 +422,16 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
             getDaLiveToken: () => getDaLiveAuthService(context).getAccessToken(),
             getGitHubToken: async () => (await getGitHubServices(ctxFactory()).tokenService.getToken())?.token ?? null,
         };
+        // Workspace mode mismatch protection: when the workspace is a project
+        // folder (set by `vscode.openFolder` during project-switch from the
+        // home grid), the server binds the project-folder socket, but proxies
+        // spawned from per-project `.mcp.json` files target the projects-root
+        // socket (per mcpConfigWriter's resolveMcpSocketPath(path.dirname(
+        // project.path)) contract). Listening on both sockets bridges the
+        // mismatch. When workspace IS the projects root, the secondary path
+        // collapses to the primary and the server transparently single-binds.
+        // Goes away when the decouple-project-from-workspace backlog ships.
+        const projectsRootSocketPath = resolveMcpSocketPath(projectsDir);
         const server = new InExtensionMcpServer(
             resolveMcpSocketPath(workspacePath),
             projectsDir,
@@ -441,6 +451,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerViewTools(mcpServer, (commandId) => Promise.resolve(vscode.commands.executeCommand(commandId)));
             },
             credentials,
+            projectsRootSocketPath,
         );
         await server.start();
         inExtensionMcpServer = server;

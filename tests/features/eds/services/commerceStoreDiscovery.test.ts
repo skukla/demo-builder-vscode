@@ -279,8 +279,72 @@ describe('commerceStoreDiscovery', () => {
             }
         });
 
-        it('should return friendly error on timeout', async () => {
-            fetchSpy.mockRejectedValueOnce(new Error('The operation was aborted'));
+        it('should surface HTTP status + body when the discovery service rejects (for field diagnostics)', async () => {
+            // The discovery service can reject for several distinct reasons —
+            // invalid token, identity not on the email-domain allowlist, ACCS
+            // unreachable from the service, etc. Until now, only the body's
+            // `error` field was preserved and "Token is invalid or expired"
+            // came back for many of these. Asserting the new format here pins
+            // status + statusText + body into the surfaced error so field
+            // logs reveal which underlying cause fired.
+            fetchSpy.mockResolvedValueOnce({
+                ok: false,
+                status: 401,
+                statusText: 'Unauthorized',
+                text: () => Promise.resolve('{"error":"Token is invalid or expired"}'),
+            });
+
+            const result = await discoverStoreStructure({
+                backendType: 'accs',
+                baseUrl: 'https://na1-sandbox.api.commerce.adobe.com',
+                imsToken: 'mock-ims-token',
+                discoveryServiceUrl: 'https://actions.adobeioruntime.net/api/v1/web/discovery',
+            });
+
+            expect(result.success).toBe(false);
+            if (!result.success) {
+                expect(result.error).toContain('401');
+                expect(result.error).toContain('Unauthorized');
+                expect(result.error).toContain('Token is invalid or expired');
+            }
+        });
+
+        it('should surface raw body when discovery service returns non-JSON error', async () => {
+            // Defense for service-side bugs (e.g., HTML error page from a misconfigured
+            // proxy). Body still flows through unparsed; the status code still narrows
+            // the cause. The orchestrator's classifier was tightened in the same PR
+            // so that body text containing "timeout"/"abort"/"fetch failed" no longer
+            // collides with the friendly-error branch — those branches now key on
+            // error.name === 'AbortError' and the TypeError("fetch failed") pair.
+            fetchSpy.mockResolvedValueOnce({
+                ok: false,
+                status: 502,
+                statusText: 'Bad Gateway',
+                text: () => Promise.resolve('<html>upstream unavailable</html>'),
+            });
+
+            const result = await discoverStoreStructure({
+                backendType: 'accs',
+                baseUrl: 'https://na1-sandbox.api.commerce.adobe.com',
+                imsToken: 'mock-ims-token',
+                discoveryServiceUrl: 'https://actions.adobeioruntime.net/api/v1/web/discovery',
+            });
+
+            expect(result.success).toBe(false);
+            if (!result.success) {
+                expect(result.error).toContain('502');
+                expect(result.error).toContain('Bad Gateway');
+                expect(result.error).toContain('upstream unavailable');
+            }
+        });
+
+        it('should return friendly error when the request actually aborts (AbortSignal.timeout fires)', async () => {
+            // The classifier keys on error.name === 'AbortError' now, not on
+            // substring matches. Mock the real shape that AbortSignal.timeout
+            // produces — `new Error()` with name reassigned to AbortError.
+            const abortError = new Error('The operation was aborted due to timeout');
+            abortError.name = 'AbortError';
+            fetchSpy.mockRejectedValueOnce(abortError);
 
             const result = await discoverStoreStructure({
                 backendType: 'paas',
@@ -295,8 +359,11 @@ describe('commerceStoreDiscovery', () => {
             }
         });
 
-        it('should return friendly error on network failure', async () => {
-            fetchSpy.mockRejectedValueOnce(new Error('fetch failed'));
+        it('should return friendly error on actual network failure (TypeError("fetch failed") from Node fetch)', async () => {
+            // The classifier keys on `error instanceof TypeError && message === "fetch failed"`.
+            // Plain Error("fetch failed") no longer trips it — only the actual
+            // Node-fetch failure shape.
+            fetchSpy.mockRejectedValueOnce(new TypeError('fetch failed'));
 
             const result = await discoverStoreStructure({
                 backendType: 'paas',
@@ -308,6 +375,37 @@ describe('commerceStoreDiscovery', () => {
             expect(result.success).toBe(false);
             if (!result.success) {
                 expect(result.error).toContain('Cannot reach');
+            }
+        });
+
+        it('should NOT swallow status code when service response body happens to contain "timeout" or "abort"', async () => {
+            // Pins the win from tightening the classifier. Before this change,
+            // ANY error message containing "timeout" or "abort" got rewritten
+            // to "Connection timed out." — including service-response errors
+            // whose body text happened to contain those words. Now the
+            // classifier requires error.name === 'AbortError' for the rewrite,
+            // so the status code survives.
+            fetchSpy.mockResolvedValueOnce({
+                ok: false,
+                status: 504,
+                statusText: 'Gateway Timeout',
+                text: () => Promise.resolve('{"error":"upstream timeout — discovery service rejected after 30s"}'),
+            });
+
+            const result = await discoverStoreStructure({
+                backendType: 'accs',
+                baseUrl: 'https://na1-sandbox.api.commerce.adobe.com',
+                imsToken: 'mock-ims-token',
+                discoveryServiceUrl: 'https://actions.adobeioruntime.net/api/v1/web/discovery',
+            });
+
+            expect(result.success).toBe(false);
+            if (!result.success) {
+                // Status code survives — this is the regression check.
+                expect(result.error).toContain('504');
+                expect(result.error).toContain('Gateway Timeout');
+                // And the rewrite-to-friendly-timeout did NOT fire.
+                expect(result.error).not.toBe('Connection timed out. Check the Commerce URL and try again.');
             }
         });
 

@@ -25,8 +25,11 @@ export {
     handleVerifyDaLiveOrg,
     handleGetDaLiveSites,
     handleListDaLiveOrgs,
-    hasWriteAccess,
 } from './edsDaLiveOrgHandlers';
+// hasWriteAccess moved to the service layer (daLiveOrgOperations) as
+// part of the AEM Assets first-time-user fix. Re-export removed; no
+// external consumer was importing it via this barrel — direct importers
+// are updated to pull from the service directly.
 
 // Re-export all DA.live auth handlers
 export {

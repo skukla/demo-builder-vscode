@@ -27,6 +27,7 @@ import {
     normalizePath,
 } from './daLiveConstants';
 import { getMimeType } from './daLiveMimeTypes';
+import { hasWriteAccess } from './daLiveOrgOperations';
 import { convertSpreadsheetJsonToHtml } from './daLiveSpreadsheetUtils';
 import { addContentResult, type PatchReport } from './patchReportHelper';
 import {
@@ -2426,6 +2427,31 @@ export class DaLiveContentOperations {
                 existingRows = dataSheet?.data || [];
             } else if (getResponse.status === 404) {
                 // No existing config — safe to create fresh (no permissions to lose)
+                existingConfig = {
+                    ':version': 3,
+                    ':names': ['data'],
+                    ':type': 'multi-sheet',
+                };
+            } else if (getResponse.status === 401) {
+                // DA.live returns 401 (not 404) when /config/<org>/ has never
+                // been written. We can't safely treat 401 as "create fresh"
+                // unconditionally — the endpoint's owner-auth model means
+                // the same 401 can mean "you don't own this org," and
+                // writing skeleton config to someone else's org would erase
+                // their permissions sheet.
+                //
+                // The disambiguation is a separate write-access probe via
+                // HEAD /list/<org>/, which returns the user's permissions
+                // in the x-da-actions header. If write access is present,
+                // the user is the legitimate owner (just first-time on
+                // /config/) and creating fresh is safe. If not, we refuse.
+                const canWrite = await hasWriteAccess(org, token);
+                if (!canWrite) {
+                    return {
+                        success: false,
+                        error: `Cannot read or write to org config (401): verify DA.live ownership of "${org}".`,
+                    };
+                }
                 existingConfig = {
                     ':version': 3,
                     ':names': ['data'],

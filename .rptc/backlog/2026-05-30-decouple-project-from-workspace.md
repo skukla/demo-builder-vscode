@@ -81,3 +81,42 @@ When this work is picked up:
   the proxy needs. Just delay or scope its lifecycle.
 - A backlog item, not a feature request — the throttle commit fixed the
   highest-irritation slice; the rest is polish.
+
+## Acceptance criteria: remove the dual-listen MCP shim shipped in `.115`
+
+A tactical workaround landed in `.115`: `InExtensionMcpServer` listens on
+**both** the workspace-folder socket AND the projects-root socket when they
+differ (see `src/features/ai/server/inExtensionMcpServer.ts` —
+`secondarySocketPath` constructor parameter and `bindSocket()` private method).
+The fix addressed the symptom of the workspace-reload model — AI Verification
+showing `demo-builder · timed out` whenever a user opened a project from the
+home grid — without solving the root cause this plan exists to address.
+
+Once this decouple work ships and the workspace stays as the projects root
+regardless of which project the user is "in":
+
+- The server's primary `socketPath` and secondary `secondarySocketPath` always
+  collapse to the same value (the projects-root socket)
+- The secondary-bind branch becomes dead code (the dedup case always hits)
+- The constructor's `secondarySocketPath` parameter has no callers passing a
+  distinct value
+
+**Cleanup required as part of this plan**:
+
+1. Remove the `secondarySocketPath` constructor parameter from
+   `InExtensionMcpServer`
+2. Inline `bindSocket()` back into `start()` (single socket again,
+   simpler control flow)
+3. Update `extension.ts` to stop computing and passing
+   `resolveMcpSocketPath(projectsDir)` as the second socket argument
+4. Remove the three dual-listen tests in
+   `tests/features/ai/server/inExtensionMcpServer.test.ts` (the "binds the
+   secondary socket when it differs from the primary", "skips the secondary
+   bind when it matches the primary", and "dispose() closes BOTH sockets
+   when dual-listen is active" cases)
+5. Drop ~25 lines net — the simplification is the win
+
+If decouple ships and dual-listen stays in the codebase, that's zombie code
+masking the architectural improvement. The dual-listen pattern was deliberate
+tactical scaffolding for `.115`; its removal is part of this plan's
+acceptance criteria.
