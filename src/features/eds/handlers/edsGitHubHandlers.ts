@@ -59,9 +59,11 @@ export async function handleCheckGitHubAuth(
 
             if (validation.valid && validation.user) {
                 context.logger.debug('[EDS] GitHub auth valid for user:', validation.user.login);
+                const orgs = await tokenService.getUserOrgs();
                 await context.sendMessage('github-auth-status', {
                     isAuthenticated: true,
                     user: validation.user,
+                    orgs,
                 });
                 return { success: true };
             }
@@ -91,9 +93,12 @@ export async function handleCheckGitHubAuth(
             // Get full user info by validating the new token
             const validation = await tokenService.validateToken();
 
+            const orgs = await tokenService.getUserOrgs();
+
             await context.sendMessage('github-auth-status', {
                 isAuthenticated: true,
                 user: validation.user,
+                orgs,
             });
             return { success: true };
         }
@@ -190,10 +195,17 @@ export async function handleGitHubOAuth(
             avatarUrl: null,
         };
 
-        context.logger.debug('[EDS] GitHub OAuth completed for user:', user.login);
+        // Fetch the user's GitHub org memberships for the wizard's namespace
+        // picker. Read-org scope is already in GITHUB_SCOPES, so no extra
+        // auth prompt fires. Failures degrade to "personal account only" —
+        // see githubTokenService.getUserOrgs for the contract.
+        const orgs = await tokenService.getUserOrgs();
+        context.logger.debug(`[EDS] GitHub OAuth completed for user: ${user.login}, orgs: ${orgs.join(', ') || '(none)'}`);
+
         await context.sendMessage('github-auth-complete', {
             isAuthenticated: true,
             user,
+            orgs,
         });
 
         return { success: true };

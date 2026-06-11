@@ -148,6 +148,34 @@ export class GitHubTokenService {
     }
 
     /**
+     * Fetch the GitHub orgs the authenticated user is a member of.
+     *
+     * Used to populate the wizard's namespace picker (this user's personal
+     * account + the orgs they belong to are the valid demo targets). Returns
+     * just the org `login` slugs — the wizard doesn't need richer org data.
+     * Returns `[]` on any failure so the picker degrades to "personal account
+     * only" rather than blocking the flow.
+     *
+     * Requires the `read:org` OAuth scope, which is already in `GITHUB_SCOPES`.
+     */
+    async getUserOrgs(): Promise<string[]> {
+        const token = await this.getToken();
+        if (!token) {
+            return [];
+        }
+
+        try {
+            const octokit = this.createAuthenticatedOctokit(token.token);
+            const response = await octokit.request('GET /user/orgs', {
+                per_page: 100,
+            });
+            return response.data.map((org: { login: string }) => org.login);
+        } catch {
+            return [];
+        }
+    }
+
+    /**
      * Map GitHub API user response to GitHubUser
      */
     private mapToGitHubUser(data: {
