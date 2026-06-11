@@ -267,6 +267,41 @@ describe('ConfigurationService', () => {
     });
 
     // ==========================================================
+    // buildSiteConfigParams — ContentSource seam (Slice 2, Step 01)
+    // ==========================================================
+
+    describe('buildSiteConfigParams — ContentSource seam', () => {
+        it('routes the registration source block through an injected ContentSource', () => {
+            const fakeSource = {
+                type: 'aem-sites' as const,
+                buildRegistrationSource: jest.fn().mockReturnValue({
+                    url: 'https://author-p1-e1.adobeaemcloud.com/content/demo',
+                    type: 'markup',
+                }),
+                getContentSourceAuthorization: jest.fn(),
+            };
+
+            const params = buildSiteConfigParams(
+                'owner', 'repo', 'dalive-org', 'dalive-site', undefined, fakeSource as any,
+            );
+
+            // The seam passes the DA.live (content) coords, not the GitHub repo coords.
+            expect(fakeSource.buildRegistrationSource).toHaveBeenCalledWith({
+                org: 'dalive-org', site: 'dalive-site',
+            });
+            expect(params.contentSourceUrl).toBe('https://author-p1-e1.adobeaemcloud.com/content/demo');
+            expect(params.contentSourceType).toBe('markup');
+        });
+
+        it('defaults to the DA.live content source when none is injected (existing callers unaffected)', () => {
+            const params = buildSiteConfigParams('owner', 'repo', 'org', 'site');
+
+            expect(params.contentSourceUrl).toBe('https://content.da.live/org/site/');
+            expect(params.contentSourceType).toBe('markup');
+        });
+    });
+
+    // ==========================================================
     // deleteSiteConfig
     // ==========================================================
 

@@ -26,6 +26,8 @@
  */
 
 import type { TokenProvider } from './daLiveContentOperations';
+import type { ContentSource } from './contentSource/contentSource';
+import { DaLiveContentSource } from './contentSource/daLiveContentSource';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
@@ -84,15 +86,11 @@ function stripUrlQueryAndFragment(url: string): string {
     }
 }
 
-/** Build the DA.live content source URL for a given org and site */
-function buildContentSourceUrl(daLiveOrg: string, daLiveSite: string): string {
-    return `https://content.da.live/${daLiveOrg}/${daLiveSite}/`;
-}
-
 /** Build site config params from repo and DA.live identifiers */
 export function buildSiteConfigParams(
     repoOwner: string, repoName: string, daLiveOrg: string, daLiveSite: string,
     overlayUrl?: string,
+    contentSource: ContentSource = new DaLiveContentSource(),
 ): SiteRegistrationParams {
     // The Config Service lookup key must use the GitHub owner/repo, not the
     // DA.live org/site. Helix's preview/publish/live operations issue requests
@@ -116,10 +114,15 @@ export function buildSiteConfigParams(
     const legacyLookupKey = daLiveSite !== repoName
         ? { org: daLiveOrg, site: daLiveSite }
         : undefined;
+    // The registration `source` block is produced through the ContentSource
+    // seam (DA.live by default). For DA.live this is byte-identical to the old
+    // inline `https://content.da.live/{org}/{site}/` + `type: 'markup'`.
+    const source = contentSource.buildRegistrationSource({ org: daLiveOrg, site: daLiveSite });
     return {
         org: repoOwner, site: repoName,
         codeOwner: repoOwner, codeRepo: repoName,
-        contentSourceUrl: buildContentSourceUrl(daLiveOrg, daLiveSite),
+        contentSourceUrl: source.url,
+        contentSourceType: source.type,
         ...(overlayUrl && { contentOverlayUrl: overlayUrl }),
         ...(legacyLookupKey && { legacyLookupKey }),
     };
