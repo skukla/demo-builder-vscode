@@ -55,7 +55,17 @@ describe('Dashboard Lifecycle Handlers', () => {
     const mockExecuteCommand = vscode.commands.executeCommand as jest.Mock;
 
     beforeEach(() => {
+        // Fake timers: both handlers schedule a deferred sendDemoStatusUpdate via
+        // setTimeout (DEMO_STATUS_UPDATE_DELAY). A real pending timer outlives the
+        // suite and keeps the Jest worker alive past its exit grace period
+        // ("worker process has failed to exit gracefully").
+        jest.useFakeTimers();
         jest.clearAllMocks();
+    });
+
+    afterEach(() => {
+        jest.clearAllTimers();
+        jest.useRealTimers();
     });
 
     describe('handleStartDemo', () => {
