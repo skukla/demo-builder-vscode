@@ -310,7 +310,7 @@ export async function activate(context: vscode.ExtensionContext) {
         );
 
         context.subscriptions.push(
-            vscode.commands.registerCommand('demoBuilder.cleanupDaLiveSites', cleanupDaLiveSitesCommand),
+            vscode.commands.registerCommand('demoBuilder.cleanupDaLiveSites', () => cleanupDaLiveSitesCommand(context)),
         );
 
         context.subscriptions.push(

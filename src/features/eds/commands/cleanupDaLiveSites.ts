@@ -15,6 +15,7 @@ import * as vscode from 'vscode';
 import { DaLiveConfigService } from '../services/daLiveConfigService';
 import { DaLiveContentOperations } from '../services/daLiveContentOperations';
 import { DaLiveOrgOperations } from '../services/daLiveOrgOperations';
+import { GitHubTokenService } from '../services/githubTokenService';
 import { getLinkedEdsProjects } from '../services/resourceCleanupHelpers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger } from '@/core/logging';
@@ -26,27 +27,22 @@ interface SiteQuickPickItem extends vscode.QuickPickItem {
     isLinked?: boolean; // Whether site is linked to a Demo Builder project
 }
 
-export async function cleanupDaLiveSitesCommand(): Promise<void> {
+interface NamespaceQuickPickItem extends vscode.QuickPickItem {
+    namespace: string;
+}
+
+export async function cleanupDaLiveSitesCommand(context: vscode.ExtensionContext): Promise<void> {
     const logger = getLogger();
 
     try {
-        // Step 1: Prompt for org name (pre-filled from settings if configured)
-        const defaultOrg = vscode.workspace.getConfiguration('demoBuilder').get<string>('daLive.defaultOrg', '');
-
-        const orgName = await vscode.window.showInputBox({
-            prompt: 'Enter DA.live organization name',
-            placeHolder: 'e.g., skukla',
-            value: defaultOrg,
-            validateInput: (value) => {
-                if (!value?.trim()) {
-                    return 'Organization name is required';
-                }
-                return null;
-            },
-        });
-
+        // Step 1: Pick the DA.live namespace using the same model as the
+        // wizards picker — personal GitHub account + every org the user is
+        // a member of, pre-selecting demoBuilder.eds.githubOrg if set. Replaces
+        // the legacy free-text input + demoBuilder.daLive.defaultOrg lookup
+        // (both removed alongside the wizards setting in Step 6).
+        const orgName = await pickNamespace(context, logger);
         if (!orgName) {
-            return; // User cancelled
+            return; // User cancelled or no namespace available
         }
 
         // Step 2: Check authentication and fetch sites from org
@@ -254,4 +250,58 @@ export async function cleanupDaLiveSitesCommand(): Promise<void> {
             `Failed to manage DA.live sites: ${(error as Error).message}`,
         );
     }
+}
+
+
+/**
+ * Show a QuickPick of GitHub namespaces the authenticated user can target —
+ * personal account plus every org they belong to. Returns the picked slug,
+ * or undefined if the user cancelled or has no GitHub auth.
+ *
+ * Mirrors the wizards Spectrum picker (DaLiveServiceCard) but uses the
+ * native VS Code QuickPick UI because this command runs outside the
+ * webview. Default selection (the "$(check)" prefix) reads from
+ * demoBuilder.eds.githubOrg if set AND the user is a member, falling
+ * back to the personal account.
+ */
+async function pickNamespace(
+    context: vscode.ExtensionContext,
+    logger: ReturnType<typeof getLogger>,
+): Promise<string | undefined> {
+    const tokenService = new GitHubTokenService(context.secrets, logger);
+    const validation = await tokenService.validateToken();
+    if (!validation.valid || !validation.user) {
+        vscode.window.showErrorMessage(
+            "Sign in to GitHub via Demo Builder first — needed to list available namespaces.",
+        );
+        return undefined;
+    }
+
+    const githubUser = validation.user.login;
+    const orgs = await tokenService.getUserOrgs();
+    const setting = vscode.workspace
+        .getConfiguration("demoBuilder.eds")
+        .get<string>("githubOrg", "")
+        .trim();
+    const defaultNamespace =
+        setting && orgs.includes(setting) ? setting : githubUser;
+
+    const items: NamespaceQuickPickItem[] = [
+        {
+            label: `${defaultNamespace === githubUser ? "$(check) " : ""}${githubUser} (Personal account)`,
+            namespace: githubUser,
+        },
+        ...orgs.sort((a, b) => a.localeCompare(b)).map((org) => ({
+            label: `${org === defaultNamespace ? "$(check) " : ""}${org}`,
+            namespace: org,
+        })),
+    ];
+
+    const picked = await vscode.window.showQuickPick(items, {
+        title: "Manage DA.live Sites",
+        placeHolder: "Pick the DA.live namespace whose sites you want to manage",
+        ignoreFocusOut: true,
+    });
+
+    return picked?.namespace;
 }
