@@ -82,6 +82,7 @@ const mockSendAuthoringExperienceUpdate = jest.fn().mockResolvedValue(undefined)
 jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     ProjectDashboardWebviewCommand: {
         sendAuthoringExperienceUpdate: (...args: unknown[]) => mockSendAuthoringExperienceUpdate(...args),
+        refreshStatus: jest.fn().mockResolvedValue(undefined),
     },
 }));
 
@@ -324,5 +325,33 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
         expect(result).toEqual({ success: true });
         const meta = savedProject?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata;
         expect(meta?.authoringExperience).toBe('experience-workspace');
+    });
+
+    // ── Single-toast: the authoring progress toast is the confirmation ───────
+    it('suppresses the generic "saved" toast when the authoring experience changed', async () => {
+        // Use the real showPostSaveNotifications (beforeEach stubs it out).
+        delete (command as unknown as Record<string, unknown>).showPostSaveNotifications;
+        const successSpy = jest
+            .spyOn(command as unknown as { showSuccessMessage: (m: string) => void }, 'showSuccessMessage')
+            .mockImplementation(() => {});
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('universal-editor'));
+        const save = captureSaveHandler(command);
+
+        await save({ componentConfigs: {}, authoringExperience: 'experience-workspace' });
+
+        expect(successSpy).not.toHaveBeenCalled();
+    });
+
+    it('shows the generic "saved" toast for a save with no authoring change', async () => {
+        delete (command as unknown as Record<string, unknown>).showPostSaveNotifications;
+        const successSpy = jest
+            .spyOn(command as unknown as { showSuccessMessage: (m: string) => void }, 'showSuccessMessage')
+            .mockImplementation(() => {});
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('experience-workspace'));
+        const save = captureSaveHandler(command);
+
+        await save({ componentConfigs: {}, authoringExperience: 'experience-workspace' });
+
+        expect(successSpy).toHaveBeenCalledWith('Configuration saved successfully');
     });
 });

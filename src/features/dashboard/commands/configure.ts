@@ -283,9 +283,12 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                     });
                 }
 
-                // Show success notification after returning (non-blocking)
+                // Show success notification after returning (non-blocking). When the
+                // authoring experience changed, its own progress toast is the
+                // confirmation, so suppress the generic "saved" toast to avoid a
+                // double notification.
                 setImmediate(() => {
-                    this.showPostSaveNotifications(project, meshChanges, storefrontChanges);
+                    this.showPostSaveNotifications(project, meshChanges, storefrontChanges, authoringChanged);
                 });
 
                 return result;
@@ -605,6 +608,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         project: Project,
         meshChanges: { hasChanges: boolean },
         storefrontChanges: { hasChanges: boolean },
+        authoringChanged = false,
     ): Promise<void> {
         await ProjectDashboardWebviewCommand.refreshStatus();
 
@@ -621,7 +625,9 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             contextualNotificationShown = await this.handleRestartNotification();
         }
 
-        if (!contextualNotificationShown) {
+        // An authoring-experience change shows its own progress toast (the
+        // confirmation), so skip the generic "saved" toast to avoid doubling up.
+        if (!contextualNotificationShown && !authoringChanged) {
             this.showSuccessMessage('Configuration saved successfully');
         }
     }
