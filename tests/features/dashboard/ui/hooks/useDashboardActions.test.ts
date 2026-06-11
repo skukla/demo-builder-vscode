@@ -58,7 +58,7 @@ describe('useDashboardActions', () => {
 
     const renderActionsHook = (
         isOpeningBrowser = false,
-        extra: { projectPath?: string; authoringExperience?: 'universal-editor' | 'experience-workspace' } = {},
+        extra: { edsLiveUrl?: string; edsDaLiveUrl?: string } = {},
     ) => {
         return renderHook(() =>
             useDashboardActions({
@@ -282,47 +282,16 @@ describe('useDashboardActions', () => {
         });
     });
 
-    describe('Authoring Experience Flip', () => {
-        it('posts setAuthoringExperience with the opposite experience (UE → EW)', () => {
-            const { result } = renderActionsHook(false, {
-                projectPath: '/proj/eds',
-                authoringExperience: 'universal-editor',
-            });
+    // The authoring-experience flip was relocated to the Configure webview
+    // (setup-time preference with an explicit Save), so the hook no longer
+    // exposes handleSetAuthoringExperience.
+    describe('Authoring Experience (flip removed)', () => {
+        it('does not expose a handleSetAuthoringExperience handler', () => {
+            const { result } = renderActionsHook();
 
-            act(() => {
-                result.current.handleSetAuthoringExperience();
-            });
-
-            expect(mockPostMessage).toHaveBeenCalledWith('setAuthoringExperience', {
-                projectPath: '/proj/eds',
-                experience: 'experience-workspace',
-            });
-        });
-
-        it('posts setAuthoringExperience with the opposite experience (EW → UE)', () => {
-            const { result } = renderActionsHook(false, {
-                projectPath: '/proj/eds',
-                authoringExperience: 'experience-workspace',
-            });
-
-            act(() => {
-                result.current.handleSetAuthoringExperience();
-            });
-
-            expect(mockPostMessage).toHaveBeenCalledWith('setAuthoringExperience', {
-                projectPath: '/proj/eds',
-                experience: 'universal-editor',
-            });
-        });
-
-        it('does not post when projectPath is missing', () => {
-            const { result } = renderActionsHook(false, { authoringExperience: 'universal-editor' });
-
-            act(() => {
-                result.current.handleSetAuthoringExperience();
-            });
-
-            expect(mockPostMessage).not.toHaveBeenCalled();
+            expect(
+                (result.current as Record<string, unknown>).handleSetAuthoringExperience,
+            ).toBeUndefined();
         });
     });
 

@@ -105,7 +105,6 @@ describe('ActionGrid', () => {
         authoringExperience: 'universal-editor' as const,
         handleOpenLiveSite: jest.fn(),
         handleOpenDaLive: jest.fn(),
-        handleSetAuthoringExperience: jest.fn(),
         handleSyncStorefront: jest.fn(),
     };
 
@@ -545,29 +544,15 @@ describe('ActionGrid', () => {
             expect(edsProps.handleOpenDaLive).toHaveBeenCalled();
         });
 
-        it('should render a flip control labeled for the opposite experience (UE → switch to EW)', () => {
-            render(<ActionGrid {...edsProps} authoringExperience="universal-editor" />);
-
-            expect(screen.getByText('Switch to Experience Workspace')).toBeInTheDocument();
-        });
-
-        it('should render a flip control labeled for the opposite experience (EW → switch to UE)', () => {
+        it('labels the Author button for the resolved experience (EW)', () => {
             render(<ActionGrid {...edsProps} authoringExperience="experience-workspace" />);
 
-            expect(screen.getByText('Switch to Universal Editor')).toBeInTheDocument();
+            expect(screen.getByText('Author in Experience Workspace')).toBeInTheDocument();
         });
 
-        it('should call handleSetAuthoringExperience when the flip control clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+        it('renders no authoring-experience flip/switch control (relocated to Configure)', () => {
+            // The flip control moved to the Configure webview (setup-time preference).
             render(<ActionGrid {...edsProps} authoringExperience="universal-editor" />);
-
-            await user.click(screen.getByText('Switch to Experience Workspace'));
-
-            expect(edsProps.handleSetAuthoringExperience).toHaveBeenCalled();
-        });
-
-        it('should not render a flip control for non-EDS projects', () => {
-            render(<ActionGrid {...defaultProps} />);
 
             expect(screen.queryByText('Switch to Experience Workspace')).not.toBeInTheDocument();
             expect(screen.queryByText('Switch to Universal Editor')).not.toBeInTheDocument();

@@ -1,0 +1,254 @@
+/**
+ * ConfigureProjectWebviewCommand — save-configuration authoring-experience behavior.
+ *
+ * The per-project authoring experience is a setup-time preference saved from the
+ * Configure webview. On save, the handler persists it into the EDS component
+ * metadata and, ONLY when it changed, re-applies the site-scoped DA editor.path
+ * via applyDaLiveOrgConfigSettings (non-fatal).
+ */
+
+import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
+import * as vscode from 'vscode';
+import { COMPONENT_IDS } from '@/core/constants';
+import { Logger } from '@/core/logging';
+import { StateManager } from '@/core/state';
+import type { Project } from '@/types';
+
+jest.mock('vscode');
+jest.mock('@/core/state');
+jest.mock('@/features/components/services/ComponentRegistryManager');
+
+jest.mock('@/core/logging', () => ({
+    getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
+    Logger: jest.fn().mockImplementation(() => ({
+        debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(),
+    })),
+}));
+
+// Mesh / storefront staleness — return "no changes" so the save path stays simple.
+jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+    detectMeshChanges: jest.fn().mockResolvedValue({ hasChanges: false }),
+}));
+
+// EDS feature index (isEdsProject + detectStorefrontChanges + republish).
+jest.mock('@/features/eds', () => ({
+    isEdsProject: jest.fn(() => true),
+    detectStorefrontChanges: jest.fn(() => ({ hasChanges: false })),
+    republishStorefrontConfig: jest.fn(),
+}));
+
+// EDS helpers — applyDaLiveOrgConfigSettings is the re-apply we assert on.
+const mockApplyDaLiveOrgConfigSettings = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/features/eds/handlers/edsHelpers', () => ({
+    applyDaLiveOrgConfigSettings: (...args: unknown[]) => mockApplyDaLiveOrgConfigSettings(...args),
+    getDaLiveAuthService: jest.fn(() => ({})),
+    resolveProjectAuthoringExperience: jest.fn(() => 'universal-editor'),
+}));
+
+jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+    createDaLiveServiceTokenProvider: jest.fn(() => ({})),
+    DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
+}));
+
+// Quick Edit vendoring — flipping to Experience Workspace must vendor Quick Edit
+// into the storefront repo on the spot (idempotent, non-fatal).
+const mockInstallQuickEdit = jest.fn().mockResolvedValue({ installed: true });
+jest.mock('@/features/eds/services/quickEditPublisher', () => ({
+    installQuickEdit: (...args: unknown[]) => mockInstallQuickEdit(...args),
+}));
+
+// GitHub services constructed by ensureQuickEditVendored. Constructors are
+// stubbed so no real Octokit/secrets access occurs; installQuickEdit is mocked
+// so the file ops object is never actually used.
+const mockGitHubFileOperations = jest.fn().mockImplementation(() => ({}));
+jest.mock('@/features/eds/services/githubFileOperations', () => ({
+    GitHubFileOperations: jest.fn().mockImplementation((...args) => mockGitHubFileOperations(...args)),
+}));
+const mockGitHubTokenService = jest.fn().mockImplementation(() => ({}));
+jest.mock('@/features/eds/services/githubTokenService', () => ({
+    GitHubTokenService: jest.fn().mockImplementation((...args) => mockGitHubTokenService(...args)),
+}));
+
+const NO_REPO = Symbol('no-repo');
+
+/** Build an EDS project with a given stored authoring experience + DA coords. */
+function makeEdsProject(stored?: string, githubRepo: string | typeof NO_REPO = 'acme-org/acme-storefront'): Project {
+    const repo = githubRepo === NO_REPO ? undefined : githubRepo;
+    return {
+        name: 'Test Project',
+        path: '/test/project',
+        componentInstances: {
+            [COMPONENT_IDS.EDS_STOREFRONT]: {
+                metadata: {
+                    daLiveOrg: 'my-org',
+                    daLiveSite: 'my-site',
+                    ...(repo ? { githubRepo: repo } : {}),
+                    ...(stored ? { authoringExperience: stored } : {}),
+                },
+            },
+        },
+    } as unknown as Project;
+}
+
+/** Capture the save-configuration streaming handler registered by the command. */
+function captureSaveHandler(command: ConfigureProjectWebviewCommand): (data: unknown) => Promise<unknown> {
+    const handlers = new Map<string, (data: unknown) => Promise<unknown>>();
+    const fakeComm = {
+        onStreaming: (type: string, fn: (data: unknown) => Promise<unknown>) => {
+            handlers.set(type, fn);
+        },
+    };
+    (command as unknown as { initializeMessageHandlers: (c: unknown) => void }).initializeMessageHandlers(fakeComm);
+    const handler = handlers.get('save-configuration');
+    if (!handler) throw new Error('save-configuration handler not registered');
+    return handler;
+}
+
+describe('ConfigureProjectWebviewCommand - save-configuration authoring experience', () => {
+    let command: ConfigureProjectWebviewCommand;
+    let mockContext: vscode.ExtensionContext;
+    let mockStateManager: jest.Mocked<StateManager>;
+    let mockLogger: Logger;
+    let savedProject: Project | undefined;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        savedProject = undefined;
+
+        mockContext = {
+            subscriptions: [],
+            extensionPath: '/test/extension/path',
+            extensionUri: vscode.Uri.file('/test/extension/path'),
+            secrets: { get: jest.fn(), store: jest.fn() },
+            globalState: { get: jest.fn(), update: jest.fn() },
+        } as unknown as vscode.ExtensionContext;
+
+        mockLogger = {
+            debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(),
+        } as unknown as Logger;
+
+        mockStateManager = {
+            getCurrentProject: jest.fn(),
+            saveProject: jest.fn().mockImplementation((p: Project) => {
+                savedProject = p;
+                return Promise.resolve();
+            }),
+        } as unknown as jest.Mocked<StateManager>;
+
+        command = new ConfigureProjectWebviewCommand(
+            mockContext,
+            mockStateManager as unknown as StateManager,
+            mockLogger,
+        );
+
+        // Stub side-effecting private methods so the save path doesn't touch disk.
+        (command as any).registerProgrammaticWrites = jest.fn().mockResolvedValue(undefined);
+        (command as any).regenerateEnvFiles = jest.fn().mockResolvedValue(undefined);
+        (command as any).showPostSaveNotifications = jest.fn();
+    });
+
+    it('persists the changed authoringExperience into EDS metadata', async () => {
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('universal-editor'));
+        const save = captureSaveHandler(command);
+
+        const result = await save({
+            componentConfigs: {},
+            authoringExperience: 'experience-workspace',
+        });
+
+        expect(result).toEqual({ success: true });
+        const meta = savedProject?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata;
+        expect(meta?.authoringExperience).toBe('experience-workspace');
+    });
+
+    it('re-applies editor.path with the new experience when it changed', async () => {
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('universal-editor'));
+        const save = captureSaveHandler(command);
+
+        await save({ componentConfigs: {}, authoringExperience: 'experience-workspace' });
+
+        expect(mockApplyDaLiveOrgConfigSettings).toHaveBeenCalledTimes(1);
+        expect(mockApplyDaLiveOrgConfigSettings).toHaveBeenCalledWith(
+            expect.anything(),
+            'my-org',
+            'my-site',
+            expect.anything(),
+            'experience-workspace',
+        );
+    });
+
+    it('does NOT re-apply editor.path when the experience is unchanged', async () => {
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('experience-workspace'));
+        const save = captureSaveHandler(command);
+
+        await save({ componentConfigs: {}, authoringExperience: 'experience-workspace' });
+
+        expect(mockApplyDaLiveOrgConfigSettings).not.toHaveBeenCalled();
+    });
+
+    it('is non-fatal: a DA failure still resolves the save successfully', async () => {
+        mockApplyDaLiveOrgConfigSettings.mockRejectedValueOnce(new Error('DA down'));
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('universal-editor'));
+        const save = captureSaveHandler(command);
+
+        const result = await save({
+            componentConfigs: {},
+            authoringExperience: 'experience-workspace',
+        });
+
+        expect(result).toEqual({ success: true });
+        // Metadata write still stands.
+        const meta = savedProject?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata;
+        expect(meta?.authoringExperience).toBe('experience-workspace');
+    });
+
+    // ── Quick Edit vendoring on the EW flip ──────────────────────────────────
+    // The EW Layout/WYSIWYG view needs Quick Edit wiring in the repo. An existing
+    // project flipped to EW via Configure won't have it until a reset, so the flip
+    // vendors it on the spot (idempotent → no-op when already present).
+
+    it('vendors Quick Edit (parsed owner/repo) when flipping TO experience-workspace', async () => {
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('universal-editor'));
+        const save = captureSaveHandler(command);
+
+        await save({ componentConfigs: {}, authoringExperience: 'experience-workspace' });
+
+        expect(mockInstallQuickEdit).toHaveBeenCalledTimes(1);
+        const [, repoOwner, repoName] = mockInstallQuickEdit.mock.calls[0];
+        expect(repoOwner).toBe('acme-org');
+        expect(repoName).toBe('acme-storefront');
+    });
+
+    it('does NOT vendor Quick Edit when flipping TO universal-editor', async () => {
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('experience-workspace'));
+        const save = captureSaveHandler(command);
+
+        await save({ componentConfigs: {}, authoringExperience: 'universal-editor' });
+
+        expect(mockInstallQuickEdit).not.toHaveBeenCalled();
+    });
+
+    it('skips Quick Edit vendoring when no githubRepo metadata is present', async () => {
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('universal-editor', NO_REPO));
+        const save = captureSaveHandler(command);
+
+        await save({ componentConfigs: {}, authoringExperience: 'experience-workspace' });
+
+        expect(mockInstallQuickEdit).not.toHaveBeenCalled();
+    });
+
+    it('is non-fatal: a Quick Edit vendoring failure still resolves the save and keeps the metadata', async () => {
+        mockInstallQuickEdit.mockRejectedValueOnce(new Error('GitHub down'));
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('universal-editor'));
+        const save = captureSaveHandler(command);
+
+        const result = await save({
+            componentConfigs: {},
+            authoringExperience: 'experience-workspace',
+        });
+
+        expect(result).toEqual({ success: true });
+        const meta = savedProject?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata;
+        expect(meta?.authoringExperience).toBe('experience-workspace');
+    });
+});

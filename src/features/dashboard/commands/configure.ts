@@ -13,13 +13,29 @@ import { parseEnvFile } from '@/core/utils/envParser';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { normalizeIfUrl } from '@/core/validation/Validator';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
+import { COMPONENT_IDS } from '@/core/constants';
 import { detectStorefrontChanges, isEdsProject, republishStorefrontConfig } from '@/features/eds';
+import {
+    applyDaLiveOrgConfigSettings,
+    getDaLiveAuthService,
+    resolveProjectAuthoringExperience,
+} from '@/features/eds/handlers/edsHelpers';
+import { DaLiveContentOperations, createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
+import { GitHubFileOperations } from '@/features/eds/services/githubFileOperations';
+import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
+import { installQuickEdit } from '@/features/eds/services/quickEditPublisher';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { handleRenameProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { Project } from '@/types';
+import type { AuthoringExperience } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, SharedState } from '@/types/handlers';
 import { getComponentInstanceEntries } from '@/types/typeGuards';
+
+const AUTHORING_EXPERIENCES: ReadonlySet<AuthoringExperience> = new Set<AuthoringExperience>([
+    'universal-editor',
+    'experience-workspace',
+]);
 
 // Component configuration type (key-value pairs for environment variables)
 type ComponentConfigs = Record<string, Record<string, string>>;
@@ -39,6 +55,10 @@ interface ConfigureInitialData {
     };
     existingEnvValues: Record<string, Record<string, string>>;
     existingProjectNames: string[];
+    /** Whether this is an EDS project — gates the Authoring Experience radio. */
+    isEds: boolean;
+    /** Resolved authoring experience seeding the radio (EDS only). */
+    authoringExperience: AuthoringExperience;
 }
 
 export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
@@ -154,6 +174,8 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             componentsData,
             existingEnvValues,
             existingProjectNames,
+            isEds: isEdsProject(project),
+            authoringExperience: resolveProjectAuthoringExperience(project),
         };
     }
 
@@ -170,7 +192,11 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 
         // save-configuration stays inline — depends on private notification/deployment
         // methods that need `this` binding (same mixed pattern as Wizard)
-        comm.onStreaming('save-configuration', async (data: { componentConfigs: ComponentConfigs; newProjectName?: string }) => {
+        comm.onStreaming('save-configuration', async (data: {
+            componentConfigs: ComponentConfigs;
+            newProjectName?: string;
+            authoringExperience?: AuthoringExperience;
+        }) => {
             try {
                 let project = await this.stateManager.getCurrentProject();
                 if (!project) {
@@ -209,7 +235,27 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 if (storefrontChanges.hasChanges) {
                     project.edsStorefrontStatusSummary = 'stale';
                 }
+
+                // Persist the EDS authoring-experience preference (setup-time choice).
+                // Capture whether it changed so we can re-apply the DA editor.path after save.
+                const authoringChanged = this.applyAuthoringExperienceMetadata(project, data.authoringExperience);
+
                 await this.stateManager.saveProject(project);
+
+                // Re-apply the site-scoped editor.path when the experience changed.
+                // Non-fatal: a DA failure never blocks the save.
+                if (authoringChanged && data.authoringExperience) {
+                    await this.reapplyEditorPath(project, data.authoringExperience);
+                }
+
+                // Flipping TO Experience Workspace needs the Quick Edit wiring
+                // vendored into the repo (the EW Layout view depends on it). It's
+                // vendored at create/reset for all projects, so an existing project
+                // flipped via Configure won't have it until now. Idempotent +
+                // non-fatal: never blocks the save.
+                if (authoringChanged && data.authoringExperience === 'experience-workspace') {
+                    await this.ensureQuickEditVendored(project);
+                }
 
                 // Register programmatic writes BEFORE writing files
                 await this.registerProgrammaticWrites(project, data.componentConfigs);
@@ -232,6 +278,96 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 return { success: false, error: (error as Error).message, code: ErrorCode.CONFIG_INVALID };
             }
         });
+    }
+
+    /**
+     * Persist the EDS authoring-experience preference onto the project's EDS
+     * component-instance metadata. No-op for non-EDS projects or unrecognized
+     * values. Returns whether the stored value actually changed (so the caller
+     * can decide whether to re-apply the DA editor.path).
+     */
+    private applyAuthoringExperienceMetadata(
+        project: Project,
+        experience: AuthoringExperience | undefined,
+    ): boolean {
+        if (!experience || !AUTHORING_EXPERIENCES.has(experience) || !isEdsProject(project)) {
+            return false;
+        }
+        const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+        if (!edsInstance) {
+            return false;
+        }
+        const previous = edsInstance.metadata?.authoringExperience as AuthoringExperience | undefined;
+        if (previous === experience) {
+            return false;
+        }
+        edsInstance.metadata = { ...edsInstance.metadata, authoringExperience: experience };
+        return true;
+    }
+
+    /**
+     * Re-apply the site-scoped DA.live editor.path so the punch-out matches the
+     * new authoring experience. Moved here from the projects-list flip handler.
+     * Non-fatal: logs a warning on failure and never throws (the metadata write
+     * already stands).
+     */
+    private async reapplyEditorPath(
+        project: Project,
+        experience: AuthoringExperience,
+    ): Promise<void> {
+        const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+        const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
+        const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
+        if (!daLiveOrg || !daLiveSite) {
+            return;
+        }
+
+        try {
+            const daLiveAuthService = getDaLiveAuthService(this.context);
+            const tokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
+            const daLiveContentOps = new DaLiveContentOperations(tokenProvider, this.logger);
+            await applyDaLiveOrgConfigSettings(daLiveContentOps, daLiveOrg, daLiveSite, this.logger, experience);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            this.logger.warn(`[Configure] editor.path re-apply failed (authoring experience still saved): ${message}`);
+        }
+    }
+
+    /**
+     * Vendor the Quick Edit wiring into the storefront repo so the Experience
+     * Workspace Layout/WYSIWYG view has its repo-side dependency. Mirrors the
+     * create/reset path's installQuickEdit call; idempotent (installQuickEdit
+     * no-ops without a commit when the anchors are already transformed).
+     *
+     * Scope: only the VENDORED FILES (scripts.js wiring + tools/quick-edit/) are
+     * handled here. The Sidekick `quick-edit` plugin (Config Service) is still
+     * delivered at create/reset via config-template.json — out of scope for the
+     * flip.
+     *
+     * Non-fatal: any failure is logged and swallowed. The save (and the
+     * authoring-experience metadata write) must never fail because of this.
+     */
+    private async ensureQuickEditVendored(project: Project): Promise<void> {
+        try {
+            const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+            const githubRepo = edsInstance?.metadata?.githubRepo as string | undefined;
+            if (!githubRepo) {
+                return;
+            }
+
+            // githubRepo is already "owner/repo" — a simple split is sufficient.
+            const [repoOwner, repoName] = githubRepo.split('/');
+            if (!repoOwner || !repoName) {
+                return;
+            }
+
+            const githubTokenService = new GitHubTokenService(this.context.secrets, this.logger);
+            const githubFileOps = new GitHubFileOperations(githubTokenService, this.logger);
+            await installQuickEdit(githubFileOps, repoOwner, repoName, this.logger);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            this.logger.warn(`[Configure] Quick Edit vendoring failed (authoring experience still saved): ${message}`);
+        }
     }
 
     /**

@@ -121,7 +121,6 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
         handleOpenBrowser,
         handleOpenLiveSite,
         handleOpenDaLive,
-        handleSetAuthoringExperience,
         handleConfigure,
         handleOpenDevConsole,
         handleDeleteProject,
@@ -135,8 +134,6 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
         setIsLogsHoverSuppressed,
         edsLiveUrl: edsLiveUrlStable,
         edsDaLiveUrl: edsDaLiveUrlStable,
-        projectPath: project?.path,
-        authoringExperience,
     });
 
     // Focus trap for accessibility
@@ -287,7 +284,6 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                             handleOpenLiveSite={handleOpenLiveSite}
                             handleOpenDaLive={handleOpenDaLive}
                             authoringExperience={authoringExperience}
-                            handleSetAuthoringExperience={isEdsStable ? handleSetAuthoringExperience : undefined}
                             handleViewLogs={handleViewLogs}
                             handleDeployMesh={handleDeployMesh}
                             handleSyncStorefront={handleSyncStorefront}

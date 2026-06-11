@@ -467,8 +467,14 @@ export const Switch: React.FC<any> = ({
 );
 
 // Radio and RadioGroup mocks
-export const RadioGroup: React.FC<any> = ({ children, value, onChange, ...props }) => (
-    <div data-testid="spectrum-radiogroup" role="radiogroup" {...filterSpectrumProps(props)}>
+export const RadioGroup: React.FC<any> = ({ children, value, onChange, label, ...props }) => (
+    <div
+        data-testid="spectrum-radiogroup"
+        role="radiogroup"
+        aria-label={typeof label === 'string' ? label : undefined}
+        {...filterSpectrumProps(props)}
+    >
+        {label ? <span>{label}</span> : null}
         {React.Children.map(children, (child: any) =>
             React.cloneElement(child, { selectedValue: value, onSelect: onChange })
         )}

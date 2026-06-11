@@ -106,9 +106,13 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
             mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'universal-editor',
         );
 
+        // 4th arg is removeKeys. This case is UE (default experience) with no
+        // IMSOrgId, so there is no editor.path row to write → the stale row is
+        // cleared in the SAME call that writes aem.repositoryId. The no-op
+        // optimization absorbs the case where no stale row actually exists.
         expect(mockApplySiteConfig).toHaveBeenCalledWith(DA_LIVE_ORG, DA_LIVE_SITE, {
             'aem.repositoryId': AEM_AUTHOR_URL,
-        });
+        }, ['editor.path']);
         expect(mockApplyOrgConfig).not.toHaveBeenCalled();
     });
 
@@ -120,13 +124,15 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         );
 
         expect(mockApplySiteConfig).toHaveBeenCalledTimes(1);
-        const [org, site, updates] = mockApplySiteConfig.mock.calls[0];
+        const [org, site, updates, removeKeys] = mockApplySiteConfig.mock.calls[0];
         expect(org).toBe(DA_LIVE_ORG);
         expect(site).toBe(DA_LIVE_SITE);
         const editorRow = updates['editor.path'];
         expect(editorRow).toBe(
             `${SITE_ROW_KEY}=https://experience.adobe.com/#/@${IMS_ORG_ID}/aem/editor/canvas/main--${DA_LIVE_SITE}--${DA_LIVE_ORG}.ue.da.live`,
         );
+        // Writing a row → nothing to clear.
+        expect(removeKeys).toEqual([]);
 
         // LOAD-BEARING: editor.path must NOT go through the org-scoped write —
         // that is what isolates sibling sites in a shared DA org.
@@ -141,10 +147,12 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         );
 
         expect(mockApplySiteConfig).toHaveBeenCalledTimes(1);
-        const [org, site, updates] = mockApplySiteConfig.mock.calls[0];
+        const [org, site, updates, removeKeys] = mockApplySiteConfig.mock.calls[0];
         expect(org).toBe(DA_LIVE_ORG);
         expect(site).toBe(DA_LIVE_SITE);
         expect(updates['editor.path']).toBe(`${SITE_ROW_KEY}=https://da.live/canvas#`);
+        // EW always writes the canvas row → nothing to clear.
+        expect(removeKeys).toEqual([]);
 
         expect(mockApplyOrgConfig).not.toHaveBeenCalled();
     });
@@ -181,12 +189,41 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         expect(mockApplyOrgConfig).not.toHaveBeenCalled();
     });
 
-    it('skips silently when neither setting is configured (no calls)', async () => {
+    it('writes the EW editor.path even when no DA.live settings are configured', async () => {
+        // EW's editor.path value (the da.live canvas) is a constant that needs
+        // neither aemAuthorUrl nor IMSOrgId, so flipping to EW must take effect on
+        // DA even in a minimally-configured environment.
+        await applyDaLiveOrgConfigSettings(
+            mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'experience-workspace',
+        );
+
+        expect(mockApplySiteConfig).toHaveBeenCalledTimes(1);
+        const [org, site, updates] = mockApplySiteConfig.mock.calls[0];
+        expect(org).toBe(DA_LIVE_ORG);
+        expect(site).toBe(DA_LIVE_SITE);
+        expect(updates['editor.path']).toBe(`${SITE_ROW_KEY}=https://da.live/canvas#`);
+        expect(updates['aem.repositoryId']).toBeUndefined();
+        expect(mockApplyOrgConfig).not.toHaveBeenCalled();
+    });
+
+    it('clears a stale editor.path for Universal Editor when no IMSOrgId is configured', async () => {
+        // UE's editor.path embeds the IMS org id, so with no IMSOrgId there is
+        // nothing to WRITE — but da.live may still hold a stale Experience
+        // Workspace canvas row from a prior flip. The correct UE-without-IMSOrgId
+        // state is NO editor.path row, so applySiteConfig must be CALLED with
+        // empty updates and removeKeys: ['editor.path'] to clear it. (The
+        // applySiteConfig no-op optimization absorbs the case where no stale row
+        // exists, so this is cheap on a fresh UE project.)
         await applyDaLiveOrgConfigSettings(
             mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'universal-editor',
         );
 
-        expect(mockApplySiteConfig).not.toHaveBeenCalled();
+        expect(mockApplySiteConfig).toHaveBeenCalledTimes(1);
+        const [org, site, updates, removeKeys] = mockApplySiteConfig.mock.calls[0];
+        expect(org).toBe(DA_LIVE_ORG);
+        expect(site).toBe(DA_LIVE_SITE);
+        expect(updates).toEqual({});
+        expect(removeKeys).toEqual(['editor.path']);
         expect(mockApplyOrgConfig).not.toHaveBeenCalled();
     });
 });

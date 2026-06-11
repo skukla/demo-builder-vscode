@@ -6,6 +6,8 @@ import {
     Link,
     Flex,
     TextField,
+    RadioGroup,
+    Radio,
 } from '@adobe/react-spectrum';
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useFieldFocusTracking } from './hooks/useFieldFocusTracking';
@@ -26,7 +28,7 @@ import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelp
 import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreConfigFieldRow';
 import { useAutoStoreDetect } from '@/features/components/ui/hooks/useAutoStoreDetect';
 import { useStoreDiscovery } from '@/features/components/ui/hooks/useStoreDiscovery';
-import type { Project } from '@/types/base';
+import type { AuthoringExperience, Project } from '@/types/base';
 import { hasEntries } from '@/types/typeGuards';
 import { ComponentEnvVar, ComponentConfigs } from '@/types/webview';
 
@@ -48,6 +50,10 @@ interface ConfigureScreenProps {
     componentsData: ComponentsData;
     existingEnvValues?: Record<string, Record<string, string>>;
     existingProjectNames?: string[];
+    /** Whether this is an EDS project — gates the Authoring Experience radio. */
+    isEds?: boolean;
+    /** Resolved authoring experience seeding the radio (EDS only). */
+    authoringExperience?: AuthoringExperience;
 }
 
 interface ComponentData {
@@ -127,13 +133,48 @@ function getSaveButtonLabel(isSaving: boolean, isDeploying: boolean): string {
     return 'Save Changes';
 }
 
+interface AuthoringExperienceFieldProps {
+    value: AuthoringExperience;
+    onChange: (value: AuthoringExperience) => void;
+}
+
+/**
+ * EDS-only authoring-experience preference. A setup-time choice (saved via the
+ * Configure footer's Save), not an on-the-fly action — so it lives here rather
+ * than on the dashboard/kebab action surfaces.
+ */
+function AuthoringExperienceField({ value, onChange }: AuthoringExperienceFieldProps): React.ReactElement {
+    return (
+        <RadioGroup
+            label="Authoring Experience"
+            value={value}
+            onChange={(next) => onChange(next as AuthoringExperience)}
+            marginTop="size-200"
+        >
+            <Radio value="universal-editor">
+                Universal Editor
+                <Text slot="description">Author in Adobe Experience Cloud&apos;s Universal Editor.</Text>
+            </Radio>
+            <Radio value="experience-workspace">
+                Experience Workspace
+                <Text slot="description">Author in the DA.live-native Experience Workspace canvas.</Text>
+            </Radio>
+        </RadioGroup>
+    );
+}
+
 export function ConfigureScreen({
     project,
     componentsData,
     existingEnvValues,
     existingProjectNames = [],
+    isEds = false,
+    authoringExperience: initialAuthoringExperience,
 }: ConfigureScreenProps) {
     const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>({});
+    const [authoringExperience, setAuthoringExperience] = useState<AuthoringExperience>(
+        initialAuthoringExperience ?? 'universal-editor',
+    );
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
     const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
     const [isSaving, setIsSaving] = useState(false);
@@ -442,9 +483,12 @@ export function ConfigureScreen({
         try {
             // Include projectName if it changed
             const newProjectName = projectName.trim() !== project.name ? projectName.trim() : undefined;
+            // The authoring-experience preference is EDS-only; for non-EDS projects
+            // it is omitted entirely so the payload shape is unchanged.
             const result = await webviewClient.request<SaveConfigurationResponse>('save-configuration', {
                 componentConfigs,
                 newProjectName,
+                ...(isEds ? { authoringExperience } : {}),
             });
             if (!result.success) {
                 throw new Error(result.error || 'Failed to save configuration');
@@ -455,7 +499,7 @@ export function ConfigureScreen({
         } finally {
             setIsSaving(false);
         }
-    }, [componentConfigs, projectName, project.name]);
+    }, [componentConfigs, projectName, project.name, isEds, authoringExperience]);
 
     const handleCancel = useCallback(() => {
         webviewClient.postMessage('cancel');
@@ -463,6 +507,21 @@ export function ConfigureScreen({
 
     // Can save if no validation errors (env vars and project name)
     const canSave = !hasEntries(validationErrors) && !projectNameError;
+
+    // EDS-only authoring-experience preference. Rendered inside the form's
+    // section fragment (so a non-EDS null never reaches Form's child typing).
+    const authoringExperienceSection = isEds ? (
+        <ConfigSection
+            id="authoring-experience"
+            label="Authoring"
+            showDivider={serviceGroups.length > 0}
+        >
+            <AuthoringExperienceField
+                value={authoringExperience}
+                onChange={setAuthoringExperience}
+            />
+        </ConfigSection>
+    ) : null;
 
     return (
         <div
@@ -505,9 +564,12 @@ export function ConfigureScreen({
                                 </ConfigSection>
 
                                 {serviceGroups.length === 0 ? (
-                                    <Text UNSAFE_className="text-gray-600">
-                                        No components requiring configuration were found.
-                                    </Text>
+                                    <>
+                                        <Text UNSAFE_className="text-gray-600">
+                                            No components requiring configuration were found.
+                                        </Text>
+                                        {authoringExperienceSection}
+                                    </>
                                 ) : (
                                     <>
                                         {serviceGroups.map((group, index) => (
@@ -554,6 +616,7 @@ export function ConfigureScreen({
                                                 ))}
                                             </ConfigSection>
                                         ))}
+                                        {authoringExperienceSection}
                                     </>
                                 )}
                             </Form>

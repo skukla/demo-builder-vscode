@@ -261,7 +261,10 @@ describe('ProjectActionsMenu', () => {
         });
     });
 
-    describe('Authoring experience (label + flip)', () => {
+    describe('Authoring experience label', () => {
+        // The authoring-experience FLIP control was relocated to the Configure
+        // webview (setup-time preference with an explicit Save). The dynamic
+        // "Author in X" label STAYS here — it reflects the resolved experience.
         it('labels Author with Universal Editor when the resolved experience is UE', () => {
             renderWithProvider(
                 <ProjectActionsMenu
@@ -288,42 +291,11 @@ describe('ProjectActionsMenu', () => {
             expect(screen.queryByText('Author in Universal Editor')).not.toBeInTheDocument();
         });
 
-        it('offers a flip to Experience Workspace for a UE EDS project and invokes the callback with the opposite experience', () => {
-            const project = edsProjectWithExperience('universal-editor');
-            const onSetAuthoringExperience = jest.fn();
-            renderWithProvider(
-                <ProjectActionsMenu project={project} actions={{ onSetAuthoringExperience }} />,
-            );
-            openMenu();
-
-            const flip = screen.getByText('Switch to Experience Workspace');
-            expect(flip).toBeInTheDocument();
-            flip.click();
-
-            expect(onSetAuthoringExperience).toHaveBeenCalledWith(project, 'experience-workspace');
-        });
-
-        it('offers a flip to Universal Editor for an EW EDS project and invokes the callback with the opposite experience', () => {
-            const project = edsProjectWithExperience('experience-workspace');
-            const onSetAuthoringExperience = jest.fn();
-            renderWithProvider(
-                <ProjectActionsMenu project={project} actions={{ onSetAuthoringExperience }} />,
-            );
-            openMenu();
-
-            const flip = screen.getByText('Switch to Universal Editor');
-            expect(flip).toBeInTheDocument();
-            flip.click();
-
-            expect(onSetAuthoringExperience).toHaveBeenCalledWith(project, 'universal-editor');
-        });
-
-        it('shows no Author item and no flip action for non-EDS projects', () => {
-            // Author + flip are EDS-only. With a non-EDS project and another
-            // action wired (so the kebab still renders), neither appears.
+        it('shows no Author item for non-EDS projects', () => {
+            // Author is EDS-only. With a non-EDS project and another action wired
+            // (so the kebab still renders), it does not appear.
             const actions: ProjectActions = {
                 onOpenDaLive: jest.fn(),
-                onSetAuthoringExperience: jest.fn(),
                 onRename: jest.fn(),
             };
             renderWithProvider(
@@ -333,6 +305,17 @@ describe('ProjectActionsMenu', () => {
 
             expect(screen.queryByText('Author in Universal Editor')).not.toBeInTheDocument();
             expect(screen.queryByText('Author in Experience Workspace')).not.toBeInTheDocument();
+        });
+
+        it('renders no flip/switch control (relocated to Configure)', () => {
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={edsProjectWithExperience('universal-editor')}
+                    actions={{ onOpenDaLive: jest.fn() }}
+                />,
+            );
+            openMenu();
+
             expect(screen.queryByText('Switch to Experience Workspace')).not.toBeInTheDocument();
             expect(screen.queryByText('Switch to Universal Editor')).not.toBeInTheDocument();
         });

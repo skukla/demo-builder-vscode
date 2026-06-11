@@ -205,4 +205,168 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
         expect(result.success).toBe(false);
         expect(mockFetch).toHaveBeenCalledTimes(1); // GET only, no POST
     });
+
+    // ── removeKeys: symmetric clear of a stale row ───────────────────────────
+    // Flipping a project back to Universal Editor without an IMS org id leaves
+    // no editor.path to write — the stale Experience Workspace canvas row must
+    // be DELETED, not merged. writeMergedDataConfig can only merge keys, so
+    // applySiteConfig grew a 4th `removeKeys` param that deletes named keys from
+    // the data sheet before the POST.
+
+    it('deletes a key named in removeKeys from the POSTed data sheet while preserving other rows', async () => {
+        // GET returns a data sheet that carries BOTH a stale editor.path (the EW
+        // canvas) and an unrelated aem.repositoryId row that must survive.
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            status: 200,
+            json: jest.fn().mockResolvedValue({
+                ':version': 3,
+                ':names': ['data'],
+                ':type': 'multi-sheet',
+                data: {
+                    total: 2,
+                    offset: 0,
+                    limit: 2,
+                    data: [
+                        { key: 'editor.path', value: '/leahrayard/leah-b2b-demo=https://da.live/canvas#' },
+                        { key: 'aem.repositoryId', value: 'author-p158081-e1683323.adobeaemcloud.com' },
+                    ],
+                },
+            }),
+        });
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            status: 200,
+            json: jest.fn().mockResolvedValue({}),
+        });
+
+        const result = await service.applySiteConfig(
+            'leahrayard', 'leah-b2b-demo', {}, ['editor.path'],
+        );
+
+        expect(result.success).toBe(true);
+        expect(mockFetch).toHaveBeenCalledTimes(2); // GET then POST (removal changed the sheet)
+
+        const postCall = mockFetch.mock.calls[1];
+        const formData = postCall[1].body as FormData;
+        const configJson = JSON.parse(formData.get('config') as string);
+        const rows = configJson.data.data as Array<{ key: string; value: string }>;
+
+        // editor.path is gone; aem.repositoryId survives.
+        expect(rows.find(r => r.key === 'editor.path')).toBeUndefined();
+        expect(rows).toContainEqual({
+            key: 'aem.repositoryId',
+            value: 'author-p158081-e1683323.adobeaemcloud.com',
+        });
+    });
+
+    it('preserves non-data sheets when deleting a key via removeKeys', async () => {
+        const permissionsSheet = {
+            total: 1,
+            offset: 0,
+            limit: 1,
+            data: [{ path: '/**', groups: 'owner', actions: 'read,write' }],
+        };
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            status: 200,
+            json: jest.fn().mockResolvedValue({
+                ':version': 3,
+                ':names': ['data', 'permissions'],
+                ':type': 'multi-sheet',
+                data: {
+                    total: 1,
+                    offset: 0,
+                    limit: 1,
+                    data: [{ key: 'editor.path', value: '/leahrayard/leah-b2b-demo=https://da.live/canvas#' }],
+                },
+                permissions: permissionsSheet,
+            }),
+        });
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            status: 200,
+            json: jest.fn().mockResolvedValue({}),
+        });
+
+        const result = await service.applySiteConfig(
+            'leahrayard', 'leah-b2b-demo', {}, ['editor.path'],
+        );
+
+        expect(result.success).toBe(true);
+        const postCall = mockFetch.mock.calls[1];
+        const configJson = JSON.parse((postCall[1].body as FormData).get('config') as string);
+        expect(configJson.permissions).toEqual(permissionsSheet);
+        const rows = configJson.data.data as Array<{ key: string; value: string }>;
+        expect(rows.find(r => r.key === 'editor.path')).toBeUndefined();
+    });
+
+    it('no-ops (no POST) when updates is empty and the removeKey is absent from the existing sheet', async () => {
+        // UE project that never had editor.path: removal changes nothing, so the
+        // method must short-circuit BEFORE POSTing — no pointless write, no empty
+        // config doc created where none existed. GET still happens; POST does not.
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            status: 200,
+            json: jest.fn().mockResolvedValue({
+                ':version': 3,
+                ':names': ['data'],
+                ':type': 'multi-sheet',
+                data: {
+                    total: 1,
+                    offset: 0,
+                    limit: 1,
+                    data: [{ key: 'aem.repositoryId', value: 'author-x.adobeaemcloud.com' }],
+                },
+            }),
+        });
+
+        const result = await service.applySiteConfig(
+            'leahrayard', 'leah-b2b-demo', {}, ['editor.path'],
+        );
+
+        expect(result.success).toBe(true);
+        expect(mockFetch).toHaveBeenCalledTimes(1); // GET only, NO POST
+    });
+
+    it('applies updates AND removeKeys in a single POST', async () => {
+        // Combined call: write aem.repositoryId while clearing a stale editor.path.
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            status: 200,
+            json: jest.fn().mockResolvedValue({
+                ':version': 3,
+                ':names': ['data'],
+                ':type': 'multi-sheet',
+                data: {
+                    total: 1,
+                    offset: 0,
+                    limit: 1,
+                    data: [{ key: 'editor.path', value: '/leahrayard/leah-b2b-demo=https://da.live/canvas#' }],
+                },
+            }),
+        });
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            status: 200,
+            json: jest.fn().mockResolvedValue({}),
+        });
+
+        const result = await service.applySiteConfig(
+            'leahrayard', 'leah-b2b-demo',
+            { 'aem.repositoryId': 'author-p158081-e1683323.adobeaemcloud.com' },
+            ['editor.path'],
+        );
+
+        expect(result.success).toBe(true);
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+        const postCall = mockFetch.mock.calls[1];
+        const configJson = JSON.parse((postCall[1].body as FormData).get('config') as string);
+        const rows = configJson.data.data as Array<{ key: string; value: string }>;
+        expect(rows.find(r => r.key === 'editor.path')).toBeUndefined();
+        expect(rows).toContainEqual({
+            key: 'aem.repositoryId',
+            value: 'author-p158081-e1683323.adobeaemcloud.com',
+        });
+    });
 });

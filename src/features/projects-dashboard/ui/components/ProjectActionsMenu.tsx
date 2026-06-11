@@ -36,7 +36,6 @@ import Play from '@spectrum-icons/workflow/Play';
 import Rename from '@spectrum-icons/workflow/Rename';
 import Revert from '@spectrum-icons/workflow/Revert';
 import Stop from '@spectrum-icons/workflow/Stop';
-import Switch from '@spectrum-icons/workflow/Switch';
 import React, { useCallback, useMemo } from 'react';
 import type { AuthoringExperience, Project } from '@/types/base';
 import { isEdsProject } from '@/types/typeGuards';
@@ -80,11 +79,6 @@ export interface ProjectActions {
     onOpenBrowser?: (project: Project) => void;
     onOpenLiveSite?: (project: Project) => void;
     onOpenDaLive?: (project: Project) => void;
-    /**
-     * Flip the project's AEM authoring experience. The menu computes the target
-     * (the opposite of the project's resolved experience) and passes it through.
-     */
-    onSetAuthoringExperience?: (project: Project, experience: AuthoringExperience) => void;
     onResetProject?: (project: Project) => void;
     onRepublishContent?: (project: Project) => void;
     onEdit?: (project: Project) => void;
@@ -106,7 +100,6 @@ const ICON_MAP: Record<string, React.ReactElement> = {
     stop: <Stop size="S" />,
     globe: <Globe size="S" />,
     dalive: <Edit size="S" />,
-    switchExperience: <Switch size="S" />,
     edit: <Edit size="S" />,
     rename: <Rename size="S" />,
     copy: <Copy size="S" />,
@@ -153,7 +146,6 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         onOpenBrowser,
         onOpenLiveSite,
         onOpenDaLive,
-        onSetAuthoringExperience,
         onResetProject,
         onRepublishContent,
         onEdit,
@@ -168,9 +160,9 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     const isEds = isEdsProject(project);
 
     // Resolved authoring experience rides in the view model (computed backend-side).
+    // Drives the dynamic "Author in X" label only — the flip control was relocated
+    // to the Configure webview (setup-time preference with an explicit Save).
     const experience = project.resolvedAuthoringExperience ?? DEFAULT_AUTHORING_EXPERIENCE;
-    const otherExperience: AuthoringExperience =
-        experience === 'experience-workspace' ? 'universal-editor' : 'experience-workspace';
 
     // Action dispatch map - avoids a large switch statement. Each key maps to
     // the callback that handles it. The "more" submenu trigger has no entry
@@ -193,14 +185,8 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     }), [onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename, onCopyPath, onExport, onOpenAi, onPinToggle, onDelete]);
 
     const handleMenuAction = useCallback((key: React.Key) => {
-        // The flip is the one action that needs a second argument (the target
-        // experience), so it bypasses the single-arg dispatch map.
-        if (String(key) === 'setAuthoringExperience') {
-            onSetAuthoringExperience?.(project, otherExperience);
-            return;
-        }
         actionMap[String(key)]?.(project);
-    }, [project, actionMap, onSetAuthoringExperience, otherExperience]);
+    }, [project, actionMap]);
 
     // Stop click propagation to prevent triggering parent selection
     const handleMenuClick = useCallback((e: React.MouseEvent) => {
@@ -224,13 +210,6 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                     key: 'openDaLive',
                     label: `Author in ${EXPERIENCE_LABEL[experience]}`,
                     icon: 'dalive',
-                });
-            }
-            if (onSetAuthoringExperience) {
-                use.push({
-                    key: 'setAuthoringExperience',
-                    label: `Switch to ${EXPERIENCE_LABEL[otherExperience]}`,
-                    icon: 'switchExperience',
                 });
             }
         } else {
@@ -279,7 +258,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         }
 
         return { use, manage, more };
-    }, [isEds, isRunning, project.pinned, experience, otherExperience, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onSetAuthoringExperience, onResetProject, onRepublishContent, onEdit, onRename, onCopyPath, onExport, onOpenAi, onPinToggle]);
+    }, [isEds, isRunning, project.pinned, experience, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename, onCopyPath, onExport, onOpenAi, onPinToggle]);
 
     // Nothing to show — render no trigger at all.
     if (groups.use.length === 0 && groups.manage.length === 0 && groups.more.length === 0 && !onDelete) {

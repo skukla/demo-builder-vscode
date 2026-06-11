@@ -11,7 +11,6 @@ import { useCallback, Dispatch, SetStateAction } from 'react';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { AuthoringExperience } from '@/types/base';
 
 /**
  * Props for the useDashboardActions hook
@@ -29,10 +28,6 @@ export interface UseDashboardActionsProps {
     edsLiveUrl?: string;
     /** DA.live authoring URL for EDS projects */
     edsDaLiveUrl?: string;
-    /** Project path — required to flip the authoring experience */
-    projectPath?: string;
-    /** Resolved authoring experience (drives the Author label + flip target) */
-    authoringExperience?: AuthoringExperience;
 }
 
 /**
@@ -57,8 +52,6 @@ export interface UseDashboardActionsReturn {
     handleOpenLiveSite: () => void;
     /** Open DA.live for authoring (EDS projects) */
     handleOpenDaLive: () => void;
-    /** Flip the AEM authoring experience to the opposite (EDS projects) */
-    handleSetAuthoringExperience: () => void;
     /** Open configure screen */
     handleConfigure: () => void;
     /** Open Adobe Developer Console */
@@ -89,8 +82,6 @@ export function useDashboardActions({
     setIsLogsHoverSuppressed,
     edsLiveUrl,
     edsDaLiveUrl,
-    projectPath,
-    authoringExperience,
 }: UseDashboardActionsProps): UseDashboardActionsReturn {
     const handleStartDemo = useCallback(() => {
         setIsTransitioning(true);
@@ -148,13 +139,6 @@ export function useDashboardActions({
         setTimeout(() => setIsOpeningBrowser(false), FRONTEND_TIMEOUTS.DOUBLE_CLICK_PREVENTION);
     }, [isOpeningBrowser, setIsOpeningBrowser, edsDaLiveUrl]);
 
-    const handleSetAuthoringExperience = useCallback(() => {
-        if (!projectPath) return;
-        const next: AuthoringExperience =
-            authoringExperience === 'experience-workspace' ? 'universal-editor' : 'experience-workspace';
-        webviewClient.postMessage('setAuthoringExperience', { projectPath, experience: next });
-    }, [projectPath, authoringExperience]);
-
     const handleConfigure = useCallback(() => {
         webviewClient.postMessage('configure');
     }, []);
@@ -189,7 +173,6 @@ export function useDashboardActions({
         handleOpenBrowser,
         handleOpenLiveSite,
         handleOpenDaLive,
-        handleSetAuthoringExperience,
         handleConfigure,
         handleOpenDevConsole,
         handleDeleteProject,

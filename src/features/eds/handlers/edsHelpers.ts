@@ -707,11 +707,42 @@ export async function bulkPreviewAndPublish(
 }
 
 /**
+ * Build the site-scoped `editor.path` row value for the active experience.
+ *
+ * - Experience Workspace: the da.live-native canvas — a constant that needs no
+ *   settings, so it is always written when the project is set to EW.
+ * - Universal Editor: punches out to experience.adobe.com and embeds the IMS org
+ *   id, so it is only written when `demoBuilder.daLive.IMSOrgId` is configured.
+ *
+ * Returns undefined when there is no row to write (UE with no IMS org id).
+ */
+function buildEditorPathValue(
+    experience: AuthoringExperience,
+    imsOrgId: string | undefined,
+    daLiveOrg: string,
+    daLiveSite: string,
+): string | undefined {
+    if (experience === 'experience-workspace') {
+        return 'https://da.live/canvas#';
+    }
+    if (imsOrgId) {
+        return `https://experience.adobe.com/#/@${imsOrgId}`
+            + `/aem/editor/canvas/main--${daLiveSite}--${daLiveOrg}.ue.da.live`;
+    }
+    return undefined;
+}
+
+/**
  * Apply DA.live org config settings from extension settings.
  *
  * Reads the AEM Author URL and IMS Org ID from VS Code settings
  * (demoBuilder.daLive.aemAuthorUrl and demoBuilder.daLive.IMSOrgId)
  * and applies them to the DA.live site config sheet.
+ *
+ * Also clears a stale `editor.path` row symmetrically: flipping to Universal
+ * Editor with no IMS org id has no row to write, so the prior Experience
+ * Workspace canvas value is removed (via applySiteConfig's `removeKeys`) rather
+ * than left behind.
  *
  * This should be called from all EDS flows: creation, reset, edit, import, copy.
  * Non-fatal: logs warnings on failure but does not throw.
@@ -728,11 +759,6 @@ export async function applyDaLiveOrgConfigSettings(
         const aemAuthorUrl = edsSettings.get<string>('aemAuthorUrl');
         const imsOrgId = edsSettings.get<string>('IMSOrgId');
 
-        // Nothing configured - skip silently
-        if (!aemAuthorUrl && !imsOrgId) {
-            return;
-        }
-
         // Both keys land in the SAME per-site config (/config/<org>/<site>), so
         // collect them and write once — one GET-merge-POST round-trip, no window
         // for a concurrent writer to slip between two separate writes.
@@ -740,28 +766,40 @@ export async function applyDaLiveOrgConfigSettings(
         //     from the per-site config.
         //   - editor.path: site-scoped, keyed on /<org>/<site>, so flipping one
         //     project's authoring experience never clobbers a sibling site's row.
-        //     UE: punch-out to experience.adobe.com. EW: da.live-native canvas.
         const updates: Record<string, string> = {};
+        const removeKeys: string[] = [];
         if (aemAuthorUrl) {
             updates['aem.repositoryId'] = aemAuthorUrl;
         }
-        if (imsOrgId) {
-            const editorValue = experience === 'experience-workspace'
-                ? 'https://da.live/canvas#'
-                : `https://experience.adobe.com/#/@${imsOrgId}/aem/editor/canvas/main--${daLiveSite}--${daLiveOrg}.ue.da.live`;
+        const editorValue = buildEditorPathValue(experience, imsOrgId, daLiveOrg, daLiveSite);
+        if (editorValue) {
             updates['editor.path'] = `/${daLiveOrg}/${daLiveSite}=${editorValue}`;
+        } else {
+            // UE with no IMS org id → there is no row to write, but da.live may
+            // hold a stale Experience Workspace canvas row from a prior flip. The
+            // correct state is NO editor.path row, so clear it. (applySiteConfig's
+            // no-op optimization absorbs the case where no stale row exists.)
+            removeKeys.push('editor.path');
         }
 
         const appliedKeys = Object.keys(updates);
-        if (appliedKeys.length === 0) {
+        if (appliedKeys.length === 0 && removeKeys.length === 0) {
+            // Truly nothing to do. Logged (not silent) so a no-op flip is diagnosable.
+            logger.debug(
+                '[EDS Config] No DA.live config to apply or clear; skipping.',
+            );
             return;
         }
 
-        const result = await daLiveContentOps.applySiteConfig(daLiveOrg, daLiveSite, updates);
+        const result = await daLiveContentOps.applySiteConfig(daLiveOrg, daLiveSite, updates, removeKeys);
+        const summary = [
+            appliedKeys.length ? `Applied: ${appliedKeys.join(', ')}` : '',
+            removeKeys.length ? `Cleared: ${removeKeys.join(', ')}` : '',
+        ].filter(Boolean).join('; ');
         if (result.success) {
-            logger.info(`[EDS Config] Applied: ${appliedKeys.join(', ')}`);
+            logger.info(`[EDS Config] ${summary}`);
         } else {
-            logger.warn(`[EDS Config] Failed to apply settings (${appliedKeys.join(', ')}): ${result.error}`);
+            logger.warn(`[EDS Config] Failed to apply settings (${summary}): ${result.error}`);
         }
     } catch (error) {
         logger.warn(`[EDS Config] Error: ${(error as Error).message}`);
