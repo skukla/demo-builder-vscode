@@ -73,6 +73,14 @@ export interface Project {
     flow?: 'commerce' | 'content';
     /** Neutral upstream/master this fork was created from and syncs against. */
     upstream?: { owner: string; repo: string };
+    /**
+     * Content source backing the storefront (Slice 2). Absent ⇒ 'da-live'
+     * (legacy/DA.live projects). 'aem-sites' = the joiner points at their own
+     * authored AEM Sites instance.
+     */
+    contentSourceType?: 'da-live' | 'aem-sites';
+    /** AEM-Sites content source config (present when contentSourceType === 'aem-sites'). */
+    aemContentSource?: { authorUrl: string; contentPath: string };
     /** Optional addons selected during project creation (e.g., ['adobe-commerce-aco']) */
     selectedAddons?: string[];
     /** Block library IDs selected during project creation (e.g., ['isle5', 'demo-team-blocks']) */

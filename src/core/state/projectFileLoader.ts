@@ -31,6 +31,8 @@ export interface ProjectManifest {
     selectedStack?: string;
     flow?: Project['flow'];
     upstream?: Project['upstream'];
+    contentSourceType?: Project['contentSourceType'];
+    aemContentSource?: Project['aemContentSource'];
     selectedAddons?: string[];
     selectedBlockLibraries?: string[];
     customBlockLibraries?: CustomBlockLibrary[];
@@ -95,6 +97,8 @@ export class ProjectFileLoader {
                 selectedStack: manifest.selectedStack,
                 flow: manifest.flow,
                 upstream: manifest.upstream,
+                contentSourceType: manifest.contentSourceType,
+                aemContentSource: manifest.aemContentSource,
                 selectedAddons: manifest.selectedAddons,
                 selectedBlockLibraries: manifest.selectedBlockLibraries,
                 customBlockLibraries: manifest.customBlockLibraries,

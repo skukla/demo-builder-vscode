@@ -409,6 +409,13 @@ export interface EDSConfig {
         site: string;
         indexPath?: string;
     };
+    /**
+     * Content source backing the storefront (Slice 2). Absent ⇒ 'da-live'.
+     * 'aem-sites' = the joiner points at their own authored AEM Sites instance.
+     */
+    contentSourceType?: 'da-live' | 'aem-sites';
+    /** AEM-Sites content source config (present when contentSourceType === 'aem-sites'). No auth field — read is AEM-owned, write reuses the existing IMS login. */
+    aemContentSource?: { authorUrl: string; contentPath: string };
     /** Optional BYOM content overlay URL (from demo-packages.json storefronts) */
     byomOverlayUrl?: string;
     /** Patch IDs to apply during reset (from demo-packages.json storefronts) */

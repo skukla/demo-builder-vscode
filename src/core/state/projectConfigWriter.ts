@@ -110,6 +110,12 @@ export class ProjectConfigWriter {
             if (project.upstream !== undefined) {
                 manifest.upstream = project.upstream;
             }
+            if (project.contentSourceType !== undefined) {
+                manifest.contentSourceType = project.contentSourceType;
+            }
+            if (project.aemContentSource !== undefined) {
+                manifest.aemContentSource = project.aemContentSource;
+            }
             if (project.selectedAddons?.length) {
                 manifest.selectedAddons = project.selectedAddons;
             }

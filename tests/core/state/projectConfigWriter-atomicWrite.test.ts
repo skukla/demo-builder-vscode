@@ -183,6 +183,44 @@ describe('ProjectConfigWriter atomic writes', () => {
             expect(parsed.selectedAddons).toEqual(['adobe-commerce-aco', 'adobe-commerce-aco']);
         });
 
+        it('should include contentSourceType + aemContentSource in manifest (Slice 2)', async () => {
+            const project = createTestProject({
+                name: 'aem-sourced-satellite',
+                contentSourceType: 'aem-sites',
+                aemContentSource: {
+                    authorUrl: 'https://author-p57319-e1619941.adobeaemcloud.com',
+                    contentPath: '/content/citisignal',
+                },
+            });
+
+            await writer.saveProjectConfig(project, project.path);
+
+            const writeCall = mockFs.writeFile.mock.calls.find(
+                (call) => call[0].toString().endsWith('.tmp'),
+            );
+            const parsed = JSON.parse(writeCall![1] as string);
+
+            expect(parsed.contentSourceType).toBe('aem-sites');
+            expect(parsed.aemContentSource).toEqual({
+                authorUrl: 'https://author-p57319-e1619941.adobeaemcloud.com',
+                contentPath: '/content/citisignal',
+            });
+        });
+
+        it('omits contentSourceType + aemContentSource for a DA.live/legacy project', async () => {
+            const project = createTestProject({ name: 'da-live-project' });
+
+            await writer.saveProjectConfig(project, project.path);
+
+            const writeCall = mockFs.writeFile.mock.calls.find(
+                (call) => call[0].toString().endsWith('.tmp'),
+            );
+            const parsed = JSON.parse(writeCall![1] as string);
+
+            expect(parsed.contentSourceType).toBeUndefined();
+            expect(parsed.aemContentSource).toBeUndefined();
+        });
+
         it('should include customBlockLibraries in manifest', async () => {
             // Given: A project with custom block libraries
             const project = createTestProject({

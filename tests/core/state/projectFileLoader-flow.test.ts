@@ -51,4 +51,35 @@ describe('ProjectFileLoader — flow/upstream', () => {
         expect(project!.flow).toBeUndefined();
         expect(project!.upstream).toBeUndefined();
     });
+
+    it('loads contentSourceType + aemContentSource for an AEM-sourced satellite (Slice 2)', async () => {
+        mockManifest({
+            name: 'aem-satellite',
+            flow: 'content',
+            contentSourceType: 'aem-sites',
+            aemContentSource: {
+                authorUrl: 'https://author-p57319-e1619941.adobeaemcloud.com',
+                contentPath: '/content/citisignal',
+            },
+        });
+
+        const project = await loader.loadProject('/test/aem-satellite', () => []);
+
+        expect(project).not.toBeNull();
+        expect(project!.contentSourceType).toBe('aem-sites');
+        expect(project!.aemContentSource).toEqual({
+            authorUrl: 'https://author-p57319-e1619941.adobeaemcloud.com',
+            contentPath: '/content/citisignal',
+        });
+    });
+
+    it('leaves contentSourceType + aemContentSource undefined for a DA.live/legacy manifest', async () => {
+        mockManifest({ name: 'da-live-project' });
+
+        const project = await loader.loadProject('/test/da-live', () => []);
+
+        expect(project).not.toBeNull();
+        expect(project!.contentSourceType).toBeUndefined();
+        expect(project!.aemContentSource).toBeUndefined();
+    });
 });

@@ -47,6 +47,20 @@ export interface DaLiveContentSource {
 }
 
 /**
+ * AemContentSourceConfig — AEM-Sites content source configuration (Slice 2)
+ *
+ * Lets a package storefront declare an AEM Sites instance as its content
+ * source (point-at, no copy). No auth field: the EDS content read is
+ * authorized inside AEM, and config-as-content writes reuse the IMS login.
+ */
+export interface AemContentSourceConfig {
+    /** AEM-as-Cloud-Service author host, e.g. https://author-pXXXX-eYYYY.adobeaemcloud.com */
+    authorUrl: string;
+    /** Authored content tree root, e.g. /content/<site> */
+    contentPath: string;
+}
+
+/**
  * ContentPatchSource - External repository for content patches
  *
  * Allows content patches to be fetched from an external GitHub repository
@@ -83,6 +97,8 @@ export interface Storefront {
     source: GitSource;
     /** DA.live content source for EDS storefronts (required for EDS stacks) */
     contentSource?: DaLiveContentSource;
+    /** AEM-Sites content source (Slice 2) — when set, the storefront points at an authored AEM instance instead of DA.live. */
+    aemContentSource?: AemContentSourceConfig;
     /** Optional BYOM content overlay URL. When set, Config Service registers a
      *  `content.overlay` alongside the DA.live content source so a backend
      *  service can serve dynamic markup (e.g., per-SKU PDP HTML).
