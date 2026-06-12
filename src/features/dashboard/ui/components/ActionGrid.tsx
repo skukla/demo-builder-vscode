@@ -271,13 +271,12 @@ export function ActionGrid({
                 )}
             </div>
 
-            {/* Build zone — deploy/configure/logs plus an overflow menu. */}
+            {/* Build zone — deploy/configure plus an overflow menu. Tiles pack
+                left so Configure and More stay grouped (the row holds only a few
+                tiles after Deploy Mesh gates out and Logs/Components moved away). */}
             <div className="dashboard-zone-section" data-zone="build">
                 <span className="dashboard-zone-label">Build</span>
-                {/* On EDS, row 1 is two clusters (Primary | Storefront) on a
-                    fixed column grid. Build uses the same aligned column grid
-                    so its tiles line up under the clusters above. */}
-                <div className={`dashboard-zone-grid${isEds ? ' dashboard-zone-grid--aligned' : ''}`}>
+                <div className="dashboard-zone-grid">
                     {hasMesh && (
                         <ActionButton
                             onPress={handleDeployMesh}

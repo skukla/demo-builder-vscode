@@ -2,12 +2,16 @@
  * DashboardRenameDialog Component
  *
  * Thin wrapper around the projects-list RenameProjectDialog for the dashboard
- * detail view. Renders nothing when closed. Extracted so the rename conditional
- * does not add to ProjectDashboardScreen's cyclomatic complexity.
+ * detail view. Hosts it in a Spectrum DialogContainer — the projects-list
+ * RenameProjectDialog renders a bare `Dialog` (via the shared Modal), which
+ * only presents as a modal when wrapped in a DialogContainer (mirrors the
+ * projects-dashboard's own usage). Extracted so the rename conditional does not
+ * add to ProjectDashboardScreen's cyclomatic complexity.
  *
  * @module features/dashboard/ui/components/DashboardRenameDialog
  */
 
+import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
 import { RenameProjectDialog } from '@/features/projects-dashboard/ui/components/RenameProjectDialog';
 import type { Project } from '@/types/base';
@@ -29,7 +33,11 @@ export interface DashboardRenameDialogProps {
 }
 
 /**
- * Renders the rename dialog when open, nothing otherwise.
+ * Hosts the rename dialog in a DialogContainer; presents it when open.
+ *
+ * The DialogContainer is always mounted (it is the modal overlay host); the
+ * RenameProjectDialog child is rendered only while `isOpen`. `onDismiss` covers
+ * the escape/click-outside path in addition to the dialog's own Close button.
  */
 export function DashboardRenameDialog({
     isOpen,
@@ -37,17 +45,17 @@ export function DashboardRenameDialog({
     projectPath = '',
     onRename,
     onClose,
-}: DashboardRenameDialogProps): React.ReactElement | null {
-    if (!isOpen) {
-        return null;
-    }
-
+}: DashboardRenameDialogProps): React.ReactElement {
     return (
-        <RenameProjectDialog
-            project={{ name: projectName, path: projectPath } as Project}
-            existingProjectNames={[]}
-            onRename={onRename}
-            onClose={onClose}
-        />
+        <DialogContainer onDismiss={onClose}>
+            {isOpen && (
+                <RenameProjectDialog
+                    project={{ name: projectName, path: projectPath } as Project}
+                    existingProjectNames={[]}
+                    onRename={onRename}
+                    onClose={onClose}
+                />
+            )}
+        </DialogContainer>
     );
 }

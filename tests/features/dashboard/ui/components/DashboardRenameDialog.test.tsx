@@ -19,6 +19,12 @@ jest.mock('@/features/projects-dashboard/ui/components/RenameProjectDialog', () 
     ),
 }));
 
+// The DialogContainer is the modal overlay host the dialog needs to present.
+// Mock it to a passthrough so the wrapper's open/closed gating is observable.
+jest.mock('@adobe/react-spectrum', () => ({
+    DialogContainer: ({ children }: any) => <div data-testid="dialog-container">{children}</div>,
+}));
+
 import { DashboardRenameDialog } from '@/features/dashboard/ui/components/DashboardRenameDialog';
 
 describe('DashboardRenameDialog', () => {
@@ -31,15 +37,18 @@ describe('DashboardRenameDialog', () => {
 
     beforeEach(() => jest.clearAllMocks());
 
-    it('should render nothing when closed', () => {
-        const { container } = render(<DashboardRenameDialog {...baseProps} isOpen={false} />);
+    it('hosts a DialogContainer but renders no dialog when closed', () => {
+        render(<DashboardRenameDialog {...baseProps} isOpen={false} />);
 
-        expect(container).toBeEmptyDOMElement();
+        // The DialogContainer (overlay host) is always mounted; the dialog is not.
+        expect(screen.getByTestId('dialog-container')).toBeInTheDocument();
+        expect(screen.queryByTestId('rename-dialog')).not.toBeInTheDocument();
     });
 
-    it('should render the dialog when open', () => {
+    it('should render the dialog inside the DialogContainer when open', () => {
         render(<DashboardRenameDialog {...baseProps} isOpen />);
 
+        expect(screen.getByTestId('dialog-container')).toBeInTheDocument();
         expect(screen.getByTestId('rename-dialog')).toBeInTheDocument();
         expect(screen.getByTestId('rename-dialog-name')).toHaveTextContent('My Project');
         expect(screen.getByTestId('rename-dialog-path')).toHaveTextContent('/p/my-project');

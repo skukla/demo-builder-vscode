@@ -1930,15 +1930,6 @@ button[class*="spectrum-Button"][disabled],
     gap: var(--dashboard-tile-gap);
 }
 
-/* Subsequent rows (Build, and any future full-width row) spread their tiles
-   evenly across the full content width: a single consistent gap between every
-   tile, the first tile flush left and the last flush right — so the row's
-   edges line up with row 1's edges. No cluster gap; the gaps simply widen to
-   fill the row. */
-.dashboard-zone-grid--aligned {
-    justify-content: space-between;
-}
-
 /* Delete footer — separated from the action zones with a divider + spacing */
 .dashboard-zone-footer {
     display: flex;
