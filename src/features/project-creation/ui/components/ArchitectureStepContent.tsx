@@ -2,7 +2,7 @@
  * ArchitectureStepContent Component
  *
  * Renders the architecture step content within the ArchitectureModal:
- * stack radio group, optional services (addons), feature packs, and API mesh toggle.
+ * stack radio group, optional services (addons), and API mesh toggle.
  *
  * Pure presentational component -- all state and handlers live in ArchitectureModal.
  */
@@ -10,7 +10,6 @@
 import { Text, Checkbox, Divider } from '@adobe/react-spectrum';
 import React from 'react';
 import { cn } from '@/core/ui/utils/classNames';
-import type { FeaturePack } from '@/types/featurePacks';
 import type { OptionalAddon } from '@/types/stacks';
 
 interface StackSelectionProps {
@@ -33,14 +32,6 @@ interface AddonSelectionProps {
     requiredAddonIds?: string[];
 }
 
-interface FeaturePackSelectionProps {
-    hasFeaturePacks: boolean;
-    nativeFeaturePacks: FeaturePack[];
-    availableFeaturePacks: FeaturePack[];
-    selectedFeaturePacks: string[];
-    onFeaturePackToggle: (packId: string, isSelected: boolean) => void;
-}
-
 interface MeshSelectionProps {
     showMeshToggle: boolean;
     isMeshAutoIncluded: boolean;
@@ -51,14 +42,12 @@ interface MeshSelectionProps {
 export interface ArchitectureStepContentProps {
     stackSelection: StackSelectionProps;
     addonSelection: AddonSelectionProps;
-    featurePacks: FeaturePackSelectionProps;
     mesh: MeshSelectionProps;
 }
 
 export const ArchitectureStepContent: React.FC<ArchitectureStepContentProps> = ({
     stackSelection,
     addonSelection,
-    featurePacks,
     mesh,
 }) => {
     const { filteredStacks, selectedStackId, getItemProps, onStackClick } = stackSelection;
@@ -70,13 +59,6 @@ export const ArchitectureStepContent: React.FC<ArchitectureStepContentProps> = (
         addonMetadata,
         requiredAddonIds = [],
     } = addonSelection;
-    const {
-        hasFeaturePacks,
-        nativeFeaturePacks,
-        availableFeaturePacks,
-        selectedFeaturePacks,
-        onFeaturePackToggle,
-    } = featurePacks;
     const { showMeshToggle, isMeshAutoIncluded, isMeshSelected, onMeshToggle } = mesh;
 
     return (
@@ -147,43 +129,6 @@ export const ArchitectureStepContent: React.FC<ArchitectureStepContentProps> = (
                 })}
             </div>
         </div>
-
-        {/* Feature Packs Section */}
-        {hasFeaturePacks && (
-            <div className="addons-section addons-visible">
-                <Divider size="S" marginTop="size-300" marginBottom="size-200" />
-                <Text UNSAFE_className="description-block-sm">
-                    Feature Packs
-                </Text>
-                <div className="architecture-addons">
-                    {nativeFeaturePacks.map((pack) => (
-                        <Checkbox
-                            key={pack.id}
-                            isSelected={true}
-                            isDisabled={true}
-                            onChange={() => {}}
-                        >
-                            <span className="addon-label">
-                                <span className="addon-name">{pack.name}</span>
-                                <span className="addon-description">{pack.description}</span>
-                            </span>
-                        </Checkbox>
-                    ))}
-                    {availableFeaturePacks.map((pack) => (
-                        <Checkbox
-                            key={pack.id}
-                            isSelected={selectedFeaturePacks.includes(pack.id)}
-                            onChange={(isSelected) => onFeaturePackToggle(pack.id, isSelected)}
-                        >
-                            <span className="addon-label">
-                                <span className="addon-name">{pack.name}</span>
-                                <span className="addon-description">{pack.description}</span>
-                            </span>
-                        </Checkbox>
-                    ))}
-                </div>
-            </div>
-        )}
 
         {/* API Mesh Section */}
         {(showMeshToggle || isMeshAutoIncluded) && (

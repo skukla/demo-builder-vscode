@@ -149,8 +149,6 @@ interface ProjectCreationConfig {
     selectedStack?: string;
     // Selected optional addons (e.g., ['adobe-commerce-aco'])
     selectedAddons?: string[];
-    // Selected feature pack IDs (e.g., ['b2b-commerce'])
-    selectedFeaturePacks?: string[];
     // Selected block library IDs (e.g., ['isle5', 'demo-team-blocks'])
     selectedBlockLibraries?: string[];
     // Custom block libraries added by URL
@@ -295,7 +293,6 @@ export async function executeProjectCreation(
         selectedPackage: typedConfig.selectedPackage,
         selectedStack: typedConfig.selectedStack,
         selectedAddons: typedConfig.selectedAddons,
-        selectedFeaturePacks: typedConfig.selectedFeaturePacks,
         selectedBlockLibraries: typedConfig.selectedBlockLibraries,
         customBlockLibraries: typedConfig.customBlockLibraries,
         // Note: componentVersions, meshState, etc. are NOT preserved during edit
