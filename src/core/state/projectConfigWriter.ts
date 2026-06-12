@@ -107,9 +107,6 @@ export class ProjectConfigWriter {
             if (project.selectedAddons?.length) {
                 manifest.selectedAddons = project.selectedAddons;
             }
-            if (project.selectedFeaturePacks?.length) {
-                manifest.selectedFeaturePacks = project.selectedFeaturePacks;
-            }
             if (project.selectedBlockLibraries?.length) {
                 manifest.selectedBlockLibraries = project.selectedBlockLibraries;
             }

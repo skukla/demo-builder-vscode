@@ -173,13 +173,6 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
         [updateState],
     );
 
-    // Handler for feature pack selection changes
-    const handleFeaturePacksChange = useCallback(
-        (packs: string[]) => {
-            updateState({ selectedFeaturePacks: packs });
-        },
-        [updateState],
-    );
 
     // Handler for block library selection changes
     const handleBlockLibrariesChange = useCallback(
@@ -308,11 +301,9 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
                 selectedPackage={state.selectedPackage}
                 selectedStack={state.selectedStack}
                 selectedAddons={state.selectedAddons}
-                selectedFeaturePacks={state.selectedFeaturePacks}
                 onPackageSelect={handlePackageSelect}
                 onStackSelect={handleStackSelect}
                 onAddonsChange={handleAddonsChange}
-                onFeaturePacksChange={handleFeaturePacksChange}
                 selectedBlockLibraries={state.selectedBlockLibraries}
                 onBlockLibrariesChange={handleBlockLibrariesChange}
                 blockLibraryDefaults={blockLibraryDefaults}

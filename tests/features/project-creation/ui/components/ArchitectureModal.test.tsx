@@ -29,11 +29,6 @@ jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
     getBlockLibraryName: jest.fn((id: string) => id),
 }));
 
-jest.mock('@/features/project-creation/services/featurePackLoader', () => ({
-    getAvailableFeaturePacks: jest.fn(() => []),
-    getNativeFeaturePacks: jest.fn(() => []),
-}));
-
 jest.mock('@/features/project-creation/services/demoPackageLoader', () => ({
     getResolvedMeshRequirement: jest.fn(() => false),
 }));
@@ -90,13 +85,11 @@ const defaultProps = {
     stacks: [edsStack, nonEdsStack],
     selectedStackId: undefined as string | undefined,
     selectedAddons: [] as string[],
-    selectedFeaturePacks: [] as string[],
     selectedBlockLibraries: [] as string[],
     customBlockLibraries: [],
     customBlockLibraryDefaults: [],
     onStackSelect: noop,
     onAddonsChange: noop,
-    onFeaturePacksChange: noop,
     onBlockLibrariesChange: noop,
     onCustomBlockLibrariesChange: noop,
     selectedOptionalDependencies: [] as string[],

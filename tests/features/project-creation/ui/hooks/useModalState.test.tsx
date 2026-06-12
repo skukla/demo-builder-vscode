@@ -82,9 +82,6 @@ const testPackage: DemoPackage = {
     addons: {
         'live-search': 'required',
     },
-    featurePacks: {
-        'core-pack': 'required',
-    },
 };
 
 const packageNoAddons: DemoPackage = {
@@ -108,7 +105,6 @@ describe('useModalState', () => {
         stacks: [edsStack, veniaStack],
         selectedStack: undefined as string | undefined,
         selectedAddons: [] as string[],
-        selectedFeaturePacks: [] as string[],
         selectedBlockLibraries: [] as string[],
         customBlockLibraries: [] as CustomBlockLibrary[],
         customBlockLibraryDefaults: [] as CustomBlockLibrary[],
@@ -117,7 +113,6 @@ describe('useModalState', () => {
         onPackageSelect: noop,
         onStackSelect: noop,
         onAddonsChange: noop,
-        onFeaturePacksChange: noop,
         onBlockLibrariesChange: noop,
         onCustomBlockLibrariesChange: noop,
         onOptionalDependenciesChange: noop,
@@ -183,16 +178,6 @@ describe('useModalState', () => {
             });
 
             expect(result.current.modalAddons).toContain('live-search');
-        });
-
-        it('should initialize modal feature packs with required packs from package', () => {
-            const { result } = renderHook(() => useModalState(defaultProps));
-
-            act(() => {
-                result.current.handleCardClick(testPackage);
-            });
-
-            expect(result.current.modalFeaturePacks).toContain('core-pack');
         });
 
         it('should initialize modal custom block libraries from defaults when parent is empty', () => {
@@ -294,19 +279,6 @@ describe('useModalState', () => {
             expect(result.current.modalAddons).toContain('live-search');
         });
 
-        it('should reset feature packs to required only when stack changes', () => {
-            const { result } = renderHook(() => useModalState(defaultProps));
-
-            act(() => {
-                result.current.handleCardClick(testPackage);
-            });
-            act(() => {
-                result.current.handleStackSelect('eds-paas');
-            });
-
-            expect(result.current.modalFeaturePacks).toContain('core-pack');
-        });
-
         it('should compute block libraries for EDS stacks', () => {
             (getDefaultBlockLibraryIds as jest.Mock).mockReturnValue(['default-lib']);
             (getNativeBlockLibraries as jest.Mock).mockReturnValue([{ id: 'native-lib' }]);
@@ -363,19 +335,6 @@ describe('useModalState', () => {
             });
 
             expect(result.current.modalAddons).toEqual(['addon-1', 'addon-2']);
-        });
-
-        it('should update modal feature packs via handleModalFeaturePacksChange', () => {
-            const { result } = renderHook(() => useModalState(defaultProps));
-
-            act(() => {
-                result.current.handleCardClick(testPackage);
-            });
-            act(() => {
-                result.current.handleModalFeaturePacksChange(['pack-1']);
-            });
-
-            expect(result.current.modalFeaturePacks).toEqual(['pack-1']);
         });
 
         it('should propagate block library changes to parent immediately', () => {
@@ -441,23 +400,6 @@ describe('useModalState', () => {
             const calledWith = onAddonsChange.mock.calls[onAddonsChange.mock.calls.length - 1][0];
             expect(calledWith).toContain('live-search'); // required
             expect(calledWith).toContain('catalog-service'); // user-selected
-        });
-
-        it('should sync feature packs to parent including required packs', () => {
-            const onFeaturePacksChange = jest.fn();
-            const { result } = renderHook(() =>
-                useModalState({ ...defaultProps, onFeaturePacksChange })
-            );
-
-            act(() => {
-                result.current.handleCardClick(testPackage);
-            });
-            act(() => {
-                result.current.handleModalDone();
-            });
-
-            const calledWith = onFeaturePacksChange.mock.calls[onFeaturePacksChange.mock.calls.length - 1][0];
-            expect(calledWith).toContain('core-pack');
         });
 
         it('should close modal after done', () => {
