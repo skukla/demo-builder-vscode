@@ -236,6 +236,69 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
         });
     });
 
+    it('renders the DA.live & authoring settings link inside the Authoring section', () => {
+        renderWithProvider(
+            <ConfigureScreen
+                project={mockProject as any}
+                componentsData={mockComponentsData}
+                isEds
+                authoringExperience="universal-editor"
+            />
+        );
+
+        const authoringSection = screen.getByRole('radiogroup', { name: 'Authoring Experience' })
+            .closest('#section-authoring-experience') as HTMLElement;
+        expect(authoringSection).toBeInTheDocument();
+        expect(
+            within(authoringSection).getByText(/DA\.live & authoring settings are configured in/i),
+        ).toBeInTheDocument();
+        expect(within(authoringSection).getByText('Extension Settings')).toBeInTheDocument();
+    });
+
+    it('posts open-eds-settings when the authoring settings link is clicked', async () => {
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+        const { webviewClient } = require('@/core/ui/utils/WebviewClient');
+
+        renderWithProvider(
+            <ConfigureScreen
+                project={mockProject as any}
+                componentsData={mockComponentsData}
+                isEds
+                authoringExperience="universal-editor"
+            />
+        );
+
+        await user.click(screen.getByText('Extension Settings'));
+
+        expect(webviewClient.postMessage).toHaveBeenCalledWith('open-eds-settings');
+    });
+
+    it('no longer renders the old "Universal Editor settings" footer text', () => {
+        renderWithProvider(
+            <ConfigureScreen
+                project={mockProject as any}
+                componentsData={mockComponentsData}
+                isEds
+                authoringExperience="universal-editor"
+            />
+        );
+
+        expect(screen.queryByText(/Universal Editor settings are configured in/i)).not.toBeInTheDocument();
+    });
+
+    it('does NOT render the authoring settings link for a non-EDS project', () => {
+        renderWithProvider(
+            <ConfigureScreen
+                project={mockProject as any}
+                componentsData={mockComponentsData}
+            />
+        );
+
+        expect(
+            screen.queryByText(/DA\.live & authoring settings are configured in/i),
+        ).not.toBeInTheDocument();
+    });
+
     it('does NOT include authoringExperience in the save payload for non-EDS', async () => {
         const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
 

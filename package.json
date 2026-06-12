@@ -263,8 +263,8 @@
           },
           "demoBuilder.daLive.ewCanvasBranch": {
             "type": "string",
-            "default": "exp-workspace",
-            "description": "da-nx branch the Experience Workspace canvas loads from (the `?nx=` override). Required while EW is in early access; clear this once EW reaches production to use the param-less canvas URL."
+            "default": "",
+            "description": "da-nx branch the Experience Workspace canvas loads from (the `?nx=` override). Leave empty to use the current param-less production canvas; set a branch only to pin a specific pre-release build."
           }
         }
       },

@@ -524,6 +524,19 @@ export function ConfigureScreen({
             id="authoring-experience"
             label="Authoring"
             showDivider={serviceGroups.length > 0}
+            footer={
+                <Flex marginTop="size-200">
+                    <Text UNSAFE_className="text-gray-600 text-sm">
+                        DA.live & authoring settings are configured in{' '}
+                        <Link
+                            onPress={() => webviewClient.postMessage('open-eds-settings')}
+                            UNSAFE_className="cursor-pointer"
+                        >
+                            Extension Settings
+                        </Link>
+                    </Text>
+                </Flex>
+            }
         >
             <AuthoringExperienceField
                 value={authoringExperience}
@@ -587,19 +600,6 @@ export function ConfigureScreen({
                                                 id={group.id}
                                                 label={group.label}
                                                 showDivider={index > 0}
-                                                footer={group.id === 'adobe-assets' ? (
-                                                    <Flex marginTop="size-200">
-                                                        <Text UNSAFE_className="text-gray-600 text-sm">
-                                                            Universal Editor settings are configured in{' '}
-                                                            <Link
-                                                                onPress={() => webviewClient.postMessage('open-eds-settings')}
-                                                                UNSAFE_className="cursor-pointer"
-                                                            >
-                                                                Extension Settings
-                                                            </Link>
-                                                        </Text>
-                                                    </Flex>
-                                                ) : undefined}
                                             >
                                                 {group.fields.map(field => (
                                                     <StoreConfigFieldRow

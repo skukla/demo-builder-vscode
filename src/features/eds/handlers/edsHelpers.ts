@@ -396,24 +396,24 @@ export function resolveProjectAuthoringExperience(
  * Read the da-nx branch the Experience Workspace canvas loads from (the `?nx=`
  * override) from the demoBuilder.daLive.ewCanvasBranch setting.
  *
- * Required while EW is in early access (the production da.live/canvas doesn't
- * render the Layout view yet); clearing the setting yields '' so the URL builder
- * drops the ?nx override entirely (the documented production form).
+ * Defaults to '' — the param-less production canvas now hosts the live EW alpha,
+ * so the URL builder drops the ?nx override entirely (the production form). Set a
+ * branch only to pin a specific pre-release da-nx build.
  *
  * Defends against a corrupted (non-string) settings.json value by falling back
- * to the 'exp-workspace' default. Returns the value trimmed; a whitespace-only
- * value collapses to ''.
+ * to the '' default. Returns the value trimmed; a whitespace-only value
+ * collapses to ''.
  *
  * @returns The trimmed EW canvas branch (may be empty string)
  */
 export function getEwCanvasBranch(): string {
     const raw = vscode.workspace
         .getConfiguration('demoBuilder.daLive')
-        .get<string>('ewCanvasBranch', 'exp-workspace');
+        .get<string>('ewCanvasBranch', '');
     // VS Code's typed get returns the default on type mismatch, but be defensive
     // about non-string values (corrupted user settings.json).
     if (typeof raw !== 'string') {
-        return 'exp-workspace';
+        return '';
     }
     return raw.trim();
 }

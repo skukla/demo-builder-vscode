@@ -370,27 +370,26 @@ export function getEdsPreviewUrl(project: Project | undefined | null): string | 
  * The resolved authoring experience selects the URL form (vscode stays OUT of
  * this file — the caller resolves and passes it in):
  *   - 'universal-editor' (default): https://da.live/#/<org>/<site>
- *   - 'experience-workspace':
- *     https://da.live/canvas?nx=<branch>#/<org>/<site>/index.html
- *     Two things are load-bearing while EW is in early access: the `?nx=<branch>`
- *     override pins the canvas to a pre-release da-nx branch (production
- *     da.live/canvas doesn't render the Layout view yet), and a concrete document
- *     path (index.html) — the bare site root renders blank. The branch comes from
- *     the demoBuilder.daLive.ewCanvasBranch setting via edsHelpers.getEwCanvasBranch;
- *     an EMPTY branch drops the ?nx override → the documented param-less production
- *     form `da.live/canvas#/<org>/<site>/index.html`. index.html stays hardcoded.
- *     The default param value keeps this webview-safe and back-compat.
+ *   - 'experience-workspace' (param-less production canvas, the default):
+ *     https://da.live/canvas#/<org>/<site>/index.html
+ *     The param-less production canvas now hosts the live EW alpha. Only the
+ *     concrete document path (index.html) is load-bearing — the bare site root
+ *     renders blank. A non-empty ewCanvasBranch (sourced from the
+ *     demoBuilder.daLive.ewCanvasBranch setting via edsHelpers.getEwCanvasBranch)
+ *     re-adds a `?nx=<branch>` override to pin a specific pre-release da-nx build:
+ *     `da.live/canvas?nx=<branch>#/<org>/<site>/index.html`. index.html stays
+ *     hardcoded. The default param value keeps this webview-safe and back-compat.
  *
  * @param project - The EDS project (can be undefined/null)
  * @param experience - The resolved authoring experience (default 'universal-editor')
  * @param ewCanvasBranch - The da-nx branch for the EW `?nx=` override (default
- *   'exp-workspace'); an empty string drops the override
+ *   '' → param-less production canvas); a non-empty value re-adds the override
  * @returns The DA.live authoring URL, or undefined if not available
  */
 export function getEdsDaLiveUrl(
     project: Project | undefined | null,
     experience: 'universal-editor' | 'experience-workspace' = 'universal-editor',
-    ewCanvasBranch: string = 'exp-workspace',
+    ewCanvasBranch: string = '',
 ): string | undefined {
     if (!isEdsProject(project)) return undefined;
     const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];

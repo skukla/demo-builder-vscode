@@ -4,17 +4,17 @@
  * getEdsDaLiveUrl builds the "Author" button target from the EDS storefront
  * component-instance metadata (daLiveOrg/daLiveSite). It branches on the
  * resolved authoring experience, passed in as a parameter (vscode stays OUT of
- * typeGuards.ts), plus an optional ewCanvasBranch param (default 'exp-workspace'):
+ * typeGuards.ts), plus an optional ewCanvasBranch param (default '' — param-less):
  *   - Universal Editor (default): https://da.live/#/<org>/<site>
- *   - Experience Workspace (default branch):
- *       https://da.live/canvas?nx=exp-workspace#/<org>/<site>/index.html
- *     `?nx=exp-workspace` pins the canvas to the pre-release da-nx branch while
- *     EW is in early access; `index.html` is the concrete doc (the bare root
- *     renders blank). Both are load-bearing today.
- *   - Experience Workspace (empty branch — documented production form):
+ *   - Experience Workspace (default — empty branch, param-less production canvas):
  *       https://da.live/canvas#/<org>/<site>/index.html
+ *     The param-less production canvas now hosts the live EW alpha; only the
+ *     concrete doc (`index.html`) is required (the bare root renders blank).
+ *   - Experience Workspace (pinned branch — pre-release build):
+ *       https://da.live/canvas?nx=<branch>#/<org>/<site>/index.html
+ *     `?nx=<branch>` pins the canvas to a specific pre-release da-nx branch.
  *     The branch is sourced from the demoBuilder.daLive.ewCanvasBranch setting
- *     (read by edsHelpers.getEwCanvasBranch); clearing it drops the ?nx override.
+ *     (read by edsHelpers.getEwCanvasBranch); empty (the default) drops the ?nx override.
  *
  * Non-EDS projects and projects missing org/site resolve to undefined.
  */
@@ -44,10 +44,10 @@ describe('getEdsDaLiveUrl - experience branch', () => {
         );
     });
 
-    it('returns the branch-pinned Experience Workspace canvas URL by default', () => {
-        // Default ewCanvasBranch arg is 'exp-workspace' → ?nx override + index.html.
+    it('returns the param-less production EW canvas URL by default', () => {
+        // Default ewCanvasBranch arg is '' → no ?nx override, doc still required.
         expect(getEdsDaLiveUrl(edsProject, 'experience-workspace')).toBe(
-            'https://da.live/canvas?nx=exp-workspace#/leahrayard/leah-b2b-demo/index.html',
+            'https://da.live/canvas#/leahrayard/leah-b2b-demo/index.html',
         );
     });
 
@@ -55,6 +55,12 @@ describe('getEdsDaLiveUrl - experience branch', () => {
         // An empty branch drops the ?nx override → the documented production form.
         expect(getEdsDaLiveUrl(edsProject, 'experience-workspace', '')).toBe(
             'https://da.live/canvas#/leahrayard/leah-b2b-demo/index.html',
+        );
+    });
+
+    it('pins the canvas to a pre-release branch via the ?nx override', () => {
+        expect(getEdsDaLiveUrl(edsProject, 'experience-workspace', 'exp-workspace')).toBe(
+            'https://da.live/canvas?nx=exp-workspace#/leahrayard/leah-b2b-demo/index.html',
         );
     });
 

@@ -47,7 +47,8 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getDaLiveAuthService: jest.fn(() => ({})),
     resolveProjectAuthoringExperience: jest.fn(() => 'universal-editor'),
     // The live-update push threads the EW canvas branch into getEdsDaLiveUrl.
-    getEwCanvasBranch: jest.fn(() => 'exp-workspace'),
+    // Default is '' (param-less production canvas).
+    getEwCanvasBranch: jest.fn(() => ''),
 }));
 
 jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
@@ -235,7 +236,7 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
         expect(mockSendAuthoringExperienceUpdate).toHaveBeenCalledTimes(1);
         expect(mockSendAuthoringExperienceUpdate).toHaveBeenCalledWith(
             'experience-workspace',
-            'https://da.live/canvas?nx=exp-workspace#/my-org/my-site/index.html',
+            'https://da.live/canvas#/my-org/my-site/index.html',
         );
     });
 

@@ -3,10 +3,10 @@
  *
  * getEwCanvasBranch reads the demoBuilder.daLive.ewCanvasBranch setting — the
  * da-nx branch the Experience Workspace canvas loads from (the `?nx=` override).
- * It defaults to 'exp-workspace' (EW early access) and returns the value
- * trimmed. An empty/whitespace-only setting returns '' so the URL builder can
- * drop the ?nx override entirely (the documented production form). A non-string
- * (corrupted settings.json) falls back to the 'exp-workspace' default.
+ * It defaults to '' (the param-less production canvas, now the live EW alpha)
+ * and returns the value trimmed. An empty/whitespace-only setting returns '' so
+ * the URL builder drops the ?nx override entirely (the production form). A
+ * non-string (corrupted settings.json) also falls back to the '' default.
  *
  * Mirrors the vscode getConfiguration mock pattern from
  * edsHelpers-authoringExperience.test.ts.
@@ -65,10 +65,10 @@ describe('getEwCanvasBranch', () => {
         mockEwCanvasBranchValue = undefined;  // honor the default
     });
 
-    it("defaults to 'exp-workspace' when the setting is unset", () => {
+    it("defaults to '' (param-less production canvas) when the setting is unset", () => {
         mockEwCanvasBranchValue = undefined;
 
-        expect(getEwCanvasBranch()).toBe('exp-workspace');
+        expect(getEwCanvasBranch()).toBe('');
     });
 
     it('returns a custom branch verbatim', () => {
@@ -95,10 +95,10 @@ describe('getEwCanvasBranch', () => {
         expect(getEwCanvasBranch()).toBe('');
     });
 
-    it("falls back to 'exp-workspace' when the setting is a non-string (corrupted settings)", () => {
+    it("falls back to '' when the setting is a non-string (corrupted settings)", () => {
         mockEwCanvasBranchValue = 3000;
 
-        expect(getEwCanvasBranch()).toBe('exp-workspace');
+        expect(getEwCanvasBranch()).toBe('');
     });
 
     it('reads from the demoBuilder.daLive configuration section', () => {
