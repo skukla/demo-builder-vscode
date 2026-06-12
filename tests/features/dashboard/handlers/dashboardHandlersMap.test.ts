@@ -50,7 +50,6 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'configure')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'openDevConsole')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'navigateBack')).toBe(true);
-            expect(hasHandler(dashboardHandlers, 'viewComponents')).toBe(true);
         });
 
         it('should include mesh handlers', () => {
@@ -81,18 +80,18 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'resetProject')).toBe(true);
         });
 
-        it('should have exactly 19 handlers', () => {
+        it('should have exactly 18 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers);
 
-            // Then: Exactly 19 handlers
-            // 2 init + 2 lifecycle + 9 navigation + 1 mesh + 1 syncStorefront +
-            // 1 refreshBlockLibrary + 1 auth + 1 project + 1 reset = 19
-            // (openAi removed with the dashboard AI tile — AI now lives globally
-            //  in the sidebar, not as a project-scoped tile; see dashboard
-            //  primary-zone consolidation)
-            expect(types).toHaveLength(19);
+            // Then: Exactly 18 handlers
+            // 2 init + 2 lifecycle + 8 navigation + 1 mesh + 1 syncStorefront +
+            // 1 refreshBlockLibrary + 1 auth + 1 project + 1 reset = 18
+            // (viewComponents removed with the dashboard Files/Components browser —
+            //  users browse via VS Code's native Explorer; openAi removed earlier
+            //  with the dashboard AI tile)
+            expect(types).toHaveLength(18);
         });
 
         it('should have handlers as functions', () => {

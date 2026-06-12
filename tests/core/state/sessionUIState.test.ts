@@ -14,41 +14,12 @@ describe('sessionUIState', () => {
     });
 
     describe('initial state', () => {
-        it('should default isComponentsViewShown to false', () => {
-            expect(sessionUIState.isComponentsViewShown).toBe(false);
-        });
-
         it('should default isLogsViewShown to false', () => {
             expect(sessionUIState.isLogsViewShown).toBe(false);
         });
 
         it('should default viewModeOverride to undefined', () => {
             expect(sessionUIState.viewModeOverride).toBeUndefined();
-        });
-    });
-
-    describe('panel visibility - isComponentsViewShown', () => {
-        it('should set isComponentsViewShown to true', () => {
-            sessionUIState.isComponentsViewShown = true;
-
-            expect(sessionUIState.isComponentsViewShown).toBe(true);
-        });
-
-        it('should set isComponentsViewShown to false', () => {
-            sessionUIState.isComponentsViewShown = true;
-            sessionUIState.isComponentsViewShown = false;
-
-            expect(sessionUIState.isComponentsViewShown).toBe(false);
-        });
-
-        it('should toggle isComponentsViewShown', () => {
-            expect(sessionUIState.isComponentsViewShown).toBe(false);
-
-            sessionUIState.isComponentsViewShown = !sessionUIState.isComponentsViewShown;
-            expect(sessionUIState.isComponentsViewShown).toBe(true);
-
-            sessionUIState.isComponentsViewShown = !sessionUIState.isComponentsViewShown;
-            expect(sessionUIState.isComponentsViewShown).toBe(false);
         });
     });
 
@@ -107,14 +78,6 @@ describe('sessionUIState', () => {
     });
 
     describe('reset() method', () => {
-        it('should reset isComponentsViewShown to false', () => {
-            sessionUIState.isComponentsViewShown = true;
-
-            sessionUIState.reset();
-
-            expect(sessionUIState.isComponentsViewShown).toBe(false);
-        });
-
         it('should reset isLogsViewShown to false', () => {
             sessionUIState.isLogsViewShown = true;
 
@@ -132,27 +95,17 @@ describe('sessionUIState', () => {
         });
 
         it('should reset all state at once', () => {
-            sessionUIState.isComponentsViewShown = true;
             sessionUIState.isLogsViewShown = true;
             sessionUIState.viewModeOverride = 'rows';
 
             sessionUIState.reset();
 
-            expect(sessionUIState.isComponentsViewShown).toBe(false);
             expect(sessionUIState.isLogsViewShown).toBe(false);
             expect(sessionUIState.viewModeOverride).toBeUndefined();
         });
     });
 
     describe('resetPanelState() method', () => {
-        it('should reset isComponentsViewShown to false', () => {
-            sessionUIState.isComponentsViewShown = true;
-
-            sessionUIState.resetPanelState();
-
-            expect(sessionUIState.isComponentsViewShown).toBe(false);
-        });
-
         it('should reset isLogsViewShown to false', () => {
             sessionUIState.isLogsViewShown = true;
 
@@ -163,7 +116,6 @@ describe('sessionUIState', () => {
 
         it('should preserve viewModeOverride', () => {
             sessionUIState.viewModeOverride = 'cards';
-            sessionUIState.isComponentsViewShown = true;
             sessionUIState.isLogsViewShown = true;
 
             sessionUIState.resetPanelState();
@@ -172,13 +124,11 @@ describe('sessionUIState', () => {
         });
 
         it('should reset panel state while preserving view mode', () => {
-            sessionUIState.isComponentsViewShown = true;
             sessionUIState.isLogsViewShown = true;
             sessionUIState.viewModeOverride = 'rows';
 
             sessionUIState.resetPanelState();
 
-            expect(sessionUIState.isComponentsViewShown).toBe(false);
             expect(sessionUIState.isLogsViewShown).toBe(false);
             expect(sessionUIState.viewModeOverride).toBe('rows');
         });
@@ -187,14 +137,14 @@ describe('sessionUIState', () => {
     describe('singleton behavior', () => {
         it('should return the same instance on multiple imports', () => {
             // Modify state
-            sessionUIState.isComponentsViewShown = true;
+            sessionUIState.isLogsViewShown = true;
             sessionUIState.viewModeOverride = 'rows';
 
             // Require the module again - should get same instance
-             
+
             const { sessionUIState: sameInstance } = require('@/core/state/sessionUIState');
 
-            expect(sameInstance.isComponentsViewShown).toBe(true);
+            expect(sameInstance.isLogsViewShown).toBe(true);
             expect(sameInstance.viewModeOverride).toBe('rows');
         });
     });

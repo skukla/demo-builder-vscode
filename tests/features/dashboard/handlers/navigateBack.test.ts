@@ -105,10 +105,9 @@ describe('handleNavigateBack', () => {
             // When: navigateBack is called
             await handleNavigateBack(context as any);
 
-            // Then: resetToggleStates (setContext) should run first,
-            // then clearProject, then showProjectsList
+            // Then: clearProject runs first, then showProjectsList
+            // (resetToggleStates only resets in-memory panel state now)
             expect(callOrder).toEqual([
-                'command:setContext',           // resetToggleStates() hides components
                 'clearProject',                 // Clear current project
                 'command:demoBuilder.showProjectsList', // Navigate to projects list
             ]);

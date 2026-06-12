@@ -48,7 +48,7 @@ import ViewList from '@spectrum-icons/workflow/ViewList';
 import React from 'react';
 
 /** Overflow menu item keys. */
-type OverflowKey = 'components' | 'refreshBlockLibrary' | 'devConsole';
+type OverflowKey = 'refreshBlockLibrary' | 'devConsole';
 
 /**
  * Props for the ActionGrid component
@@ -94,8 +94,6 @@ export interface ActionGridProps {
     handleRefreshBlockLibrary?: () => void;
     /** Handler for Configure button */
     handleConfigure: () => void;
-    /** Handler for Components button (overflow menu) */
-    handleViewComponents: () => void;
     /** Handler for Dev Console button (overflow menu) */
     handleOpenDevConsole: () => void;
     /** Handler for Delete button */
@@ -128,15 +126,11 @@ export function ActionGrid({
     handleSyncStorefront,
     handleRefreshBlockLibrary,
     handleConfigure,
-    handleViewComponents,
     handleOpenDevConsole,
     handleDeleteProject,
 }: ActionGridProps): React.ReactElement {
     const handleOverflowAction = (key: React.Key): void => {
         switch (key) {
-            case 'components' satisfies OverflowKey:
-                handleViewComponents();
-                return;
             case 'refreshBlockLibrary' satisfies OverflowKey:
                 handleRefreshBlockLibrary?.();
                 return;
@@ -291,7 +285,6 @@ export function ActionGrid({
                             <Text UNSAFE_className="icon-label">More</Text>
                         </ActionButton>
                         <Menu onAction={handleOverflowAction}>
-                            <Item key="components">Components</Item>
                             {isEds && handleRefreshBlockLibrary ? (
                                 <Item key="refreshBlockLibrary">Refresh Block Library</Item>
                             ) : null}

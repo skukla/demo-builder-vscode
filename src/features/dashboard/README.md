@@ -12,7 +12,6 @@ The dashboard is designed for at-a-glance status monitoring and one-click action
 - **Mesh Status Monitoring**: Async mesh status checking with auth-aware prompts
 - **Adobe Context Display**: Show organization, project, and workspace
 - **Quick Actions**: Start, Stop, Open Browser, Deploy Mesh (shown conditionally when project includes a mesh component), Configure, View Logs
-- **Component Browser**: Browse project files with .env hiding (via ComponentTreeProvider)
 - **Focus Retention**: Maintain webview focus for in-place actions (Logs toggle, Start/Stop)
 - **Smart Logs Toggle**: Remember last active channel (Logs vs Debug)
 - **Change Detection**: Detect frontend config changes requiring restart
@@ -466,7 +465,6 @@ if (!verification.exists) {
 - **[Lifecycle Feature](../lifecycle/README.md)** - Start/Stop commands
 - **[Mesh Feature](../mesh/README.md)** - Mesh status checking
 - **[Authentication Feature](../authentication/README.md)** - Auth checks and re-authentication
-- **[Component Tree Provider](../../providers/componentTreeProvider.ts)** - Component browser integration
 - **[Dashboard UI](../../webviews/components/dashboard/ProjectDashboard.tsx)** - React UI component
 
 ---

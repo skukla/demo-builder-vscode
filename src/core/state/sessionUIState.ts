@@ -27,7 +27,6 @@ export type ViewMode = 'cards' | 'rows';
  */
 class SessionUIState {
     // Panel visibility toggles
-    private _isComponentsViewShown = false;
     private _isLogsViewShown = false;
 
     // Session preference overrides (override VS Code settings for this session only)
@@ -36,14 +35,6 @@ class SessionUIState {
     // =====================================================
     // Panel visibility state
     // =====================================================
-
-    get isComponentsViewShown(): boolean {
-        return this._isComponentsViewShown;
-    }
-
-    set isComponentsViewShown(value: boolean) {
-        this._isComponentsViewShown = value;
-    }
 
     get isLogsViewShown(): boolean {
         return this._isLogsViewShown;
@@ -82,7 +73,6 @@ class SessionUIState {
      * Primarily used for testing
      */
     reset(): void {
-        this._isComponentsViewShown = false;
         this._isLogsViewShown = false;
         this._viewModeOverride = undefined;
     }
@@ -92,7 +82,6 @@ class SessionUIState {
      * Useful when closing all panels
      */
     resetPanelState(): void {
-        this._isComponentsViewShown = false;
         this._isLogsViewShown = false;
     }
 }

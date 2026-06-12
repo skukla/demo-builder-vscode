@@ -60,8 +60,6 @@ export interface UseDashboardActionsReturn {
     handleDeleteProject: () => void;
     /** Navigate back to projects list */
     handleNavigateBack: () => void;
-    /** View components in file browser */
-    handleViewComponents: () => void;
     /** Re-authenticate with Adobe (after session expired) */
     handleReAuthenticate: () => void;
 }
@@ -155,10 +153,6 @@ export function useDashboardActions({
         webviewClient.postMessage('navigateBack');
     }, []);
 
-    const handleViewComponents = useCallback(() => {
-        webviewClient.postMessage('viewComponents');
-    }, []);
-
     const handleReAuthenticate = useCallback(() => {
         webviewClient.postMessage('reAuthenticate');
     }, []);
@@ -177,7 +171,6 @@ export function useDashboardActions({
         handleOpenDevConsole,
         handleDeleteProject,
         handleNavigateBack,
-        handleViewComponents,
         handleReAuthenticate,
     };
 }

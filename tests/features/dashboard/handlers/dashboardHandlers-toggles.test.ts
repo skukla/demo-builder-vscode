@@ -2,14 +2,12 @@
  * Dashboard Handlers - Toggle Tests
  *
  * Tests for toggle handlers that manage UI state:
- * - handleViewComponents: toggles sidebar components view
  * - handleViewLogs: toggles logs output panel
  * - handleViewDebugLogs: toggles debug output panel
  */
 
 import * as vscode from 'vscode';
 import {
-    handleViewComponents,
     handleViewLogs,
     handleViewDebugLogs,
     resetToggleStates,
@@ -29,53 +27,6 @@ describe('Dashboard Toggle Handlers', () => {
         jest.clearAllMocks();
         // Reset internal toggle states before each test
         resetToggleStates();
-    });
-
-    describe('handleViewComponents', () => {
-        it('should set showComponents context to true on first call', async () => {
-            const result = await handleViewComponents({} as any);
-
-            expect(result).toEqual({ success: true });
-            expect(mockExecuteCommand).toHaveBeenCalledWith(
-                'setContext',
-                'demoBuilder.showComponents',
-                true
-            );
-        });
-
-        it('should toggle showComponents context to false on second call', async () => {
-            // First call - show components
-            await handleViewComponents({} as any);
-            mockExecuteCommand.mockClear();
-
-            // Second call - hide components
-            const result = await handleViewComponents({} as any);
-
-            expect(result).toEqual({ success: true });
-            expect(mockExecuteCommand).toHaveBeenCalledWith(
-                'setContext',
-                'demoBuilder.showComponents',
-                false
-            );
-        });
-
-        it('should toggle back to true on third call', async () => {
-            // First call - show
-            await handleViewComponents({} as any);
-            // Second call - hide
-            await handleViewComponents({} as any);
-            mockExecuteCommand.mockClear();
-
-            // Third call - show again
-            const result = await handleViewComponents({} as any);
-
-            expect(result).toEqual({ success: true });
-            expect(mockExecuteCommand).toHaveBeenCalledWith(
-                'setContext',
-                'demoBuilder.showComponents',
-                true
-            );
-        });
     });
 
     describe('handleViewLogs', () => {
@@ -135,30 +86,17 @@ describe('Dashboard Toggle Handlers', () => {
     });
 
     describe('resetToggleStates', () => {
-        it('should reset all toggle states and hide components', async () => {
-            // Set some toggle states
-            await handleViewComponents({} as any);
+        it('resets the logs panel state so the next View Logs shows again', async () => {
+            // Toggle logs on (isLogsViewShown = true)
             await handleViewLogs({} as any);
             mockExecuteCommand.mockClear();
 
-            // Reset states
+            // Reset clears the panel state
             resetToggleStates();
 
-            // Verify setContext was called to hide components
-            expect(mockExecuteCommand).toHaveBeenCalledWith(
-                'setContext',
-                'demoBuilder.showComponents',
-                false
-            );
-
-            // After reset, first call should show (not hide)
-            mockExecuteCommand.mockClear();
-            await handleViewComponents({} as any);
-            expect(mockExecuteCommand).toHaveBeenCalledWith(
-                'setContext',
-                'demoBuilder.showComponents',
-                true
-            );
+            // After reset, the next call shows logs (not close-panel)
+            await handleViewLogs({} as any);
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.showLogs');
         });
     });
 });

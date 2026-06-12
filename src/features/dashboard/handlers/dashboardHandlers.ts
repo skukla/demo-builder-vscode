@@ -384,29 +384,10 @@ export const handleDeleteProject: MessageHandler = async (context) => {
 };
 
 /**
- * Handle 'viewComponents' message - Toggle the components tree view in the sidebar
- * Switches between UtilityBar (default) and Components tree
- */
-export const handleViewComponents: MessageHandler = async () => {
-    if (sessionUIState.isComponentsViewShown) {
-        // Hide components, show UtilityBar
-        await vscode.commands.executeCommand('setContext', 'demoBuilder.showComponents', false);
-        sessionUIState.isComponentsViewShown = false;
-    } else {
-        // Show components, hide UtilityBar
-        await vscode.commands.executeCommand('setContext', 'demoBuilder.showComponents', true);
-        sessionUIState.isComponentsViewShown = true;
-    }
-    return { success: true };
-};
-
-/**
  * Reset toggle states (called when navigating away from dashboard)
  */
 export function resetToggleStates(): void {
     sessionUIState.resetPanelState();
-    // Also hide the components panel
-    vscode.commands.executeCommand('setContext', 'demoBuilder.showComponents', false);
 }
 
 /**
@@ -553,7 +534,6 @@ export const dashboardHandlers = defineHandlers({
     'configure': handleConfigure,
     'openDevConsole': handleOpenDevConsole,
     'navigateBack': handleNavigateBack,
-    'viewComponents': handleViewComponents,
 
     // Mesh handlers
     'deployMesh': handleDeployMesh,

@@ -345,14 +345,7 @@
         {
           "id": "demoBuilder.sidebar",
           "name": "Demo Builder",
-          "type": "webview",
-          "when": "!demoBuilder.showComponents"
-        },
-        {
-          "id": "demoBuilder.components",
-          "name": "Files",
-          "type": "tree",
-          "when": "demoBuilder.showComponents"
+          "type": "webview"
         }
       ]
     }

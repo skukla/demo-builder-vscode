@@ -95,7 +95,6 @@ describe('ActionGrid', () => {
         handleViewLogs: jest.fn(),
         handleDeployMesh: jest.fn(),
         handleConfigure: jest.fn(),
-        handleViewComponents: jest.fn(),
         handleOpenDevConsole: jest.fn(),
         handleDeleteProject: jest.fn(),
     };
@@ -299,40 +298,11 @@ describe('ActionGrid', () => {
             expect(screen.getByLabelText('More actions')).toBeInTheDocument();
         });
 
-        it('should expose Components inside the overflow menu', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(menu).toBeInTheDocument();
-            expect(within(menu).getByText('Components')).toBeInTheDocument();
-        });
-
         it('should expose Dev Console inside the overflow menu', () => {
             const { container } = render(<ActionGrid {...defaultProps} />);
 
             const menu = container.querySelector('[role="menu"]') as HTMLElement;
             expect(within(menu).getByText('Dev Console')).toBeInTheDocument();
-        });
-
-        it('should not render Components as a top-level tile', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
-
-            const build = getZone(container, 'build');
-            // Components lives only inside the overflow menu, not as a zone tile
-            const buildButtons = within(build).queryAllByText('Components');
-            // Any Components text present must be within the menu, not a tile button
-            buildButtons.forEach((node) => {
-                expect(node.closest('[role="menu"]')).toBeInTheDocument();
-            });
-        });
-
-        it('should call handleViewComponents when Components menu item clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} />);
-
-            await user.click(screen.getByText('Components'));
-
-            expect(defaultProps.handleViewComponents).toHaveBeenCalled();
         });
 
         it('should call handleOpenDevConsole when Dev Console menu item clicked', async () => {

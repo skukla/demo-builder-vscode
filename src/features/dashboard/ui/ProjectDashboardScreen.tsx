@@ -122,7 +122,6 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
         handleOpenDevConsole,
         handleDeleteProject,
         handleNavigateBack,
-        handleViewComponents,
         handleReAuthenticate,
     } = useDashboardActions({
         isOpeningBrowser,
@@ -286,7 +285,6 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
                             handleSyncStorefront={handleSyncStorefront}
                             handleRefreshBlockLibrary={isEdsStable ? handleRefreshBlockLibrary : undefined}
                             handleConfigure={handleConfigure}
-                            handleViewComponents={handleViewComponents}
                             handleOpenDevConsole={handleOpenDevConsole}
                             handleDeleteProject={handleDeleteProject}
                         />

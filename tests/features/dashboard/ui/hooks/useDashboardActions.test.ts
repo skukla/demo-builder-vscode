@@ -80,7 +80,6 @@ describe('useDashboardActions', () => {
             expect(result.current.handleOpenDevConsole).toBeDefined();
             expect(result.current.handleDeleteProject).toBeDefined();
             expect(result.current.handleNavigateBack).toBeDefined();
-            expect(result.current.handleViewComponents).toBeDefined();
             expect(result.current.handleReAuthenticate).toBeDefined();
         });
 
@@ -96,7 +95,6 @@ describe('useDashboardActions', () => {
             expect(typeof result.current.handleOpenDevConsole).toBe('function');
             expect(typeof result.current.handleDeleteProject).toBe('function');
             expect(typeof result.current.handleNavigateBack).toBe('function');
-            expect(typeof result.current.handleViewComponents).toBe('function');
             expect(typeof result.current.handleReAuthenticate).toBe('function');
         });
     });
@@ -257,16 +255,6 @@ describe('useDashboardActions', () => {
             expect(mockPostMessage).toHaveBeenCalledWith('navigateBack');
         });
 
-        it('should send viewComponents message', () => {
-            const { result } = renderActionsHook();
-
-            act(() => {
-                result.current.handleViewComponents();
-            });
-
-            expect(mockPostMessage).toHaveBeenCalledWith('viewComponents');
-        });
-
         it('should send reAuthenticate message', () => {
             const { result } = renderActionsHook();
 
@@ -294,7 +282,6 @@ describe('useDashboardActions', () => {
             expect(result.current.handleOpenDevConsole).toBe(initialHandlers.handleOpenDevConsole);
             expect(result.current.handleDeleteProject).toBe(initialHandlers.handleDeleteProject);
             expect(result.current.handleNavigateBack).toBe(initialHandlers.handleNavigateBack);
-            expect(result.current.handleViewComponents).toBe(initialHandlers.handleViewComponents);
             expect(result.current.handleReAuthenticate).toBe(initialHandlers.handleReAuthenticate);
         });
     });
