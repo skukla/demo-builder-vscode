@@ -179,7 +179,6 @@ export function ConnectStoreStepContent({
                             getWebsiteItems={getWebsiteItems}
                             getStoreGroupItems={getStoreGroupItems}
                             getStoreViewItems={getStoreViewItems}
-                            componentConfigs={liveConfigs ?? {}}
                             onRefresh={forceFetch}
                             descriptionContext={descriptionContext}
                         />
