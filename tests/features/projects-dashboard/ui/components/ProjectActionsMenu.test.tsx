@@ -34,6 +34,21 @@ const menuItemLabels = (): string[] =>
 const edsProject = (name = 'EDS Project') =>
     createMockProject({ name, selectedStack: 'eds-dalive' } as any);
 
+/**
+ * An EDS project carrying a resolved authoring experience in its view model.
+ * The backend stamps `resolvedAuthoringExperience` so the UI stays presentational
+ * (no resolver / vscode in the webview).
+ */
+const edsProjectWithExperience = (
+    experience: 'da-live-classic' | 'experience-workspace',
+    name = 'EDS Project',
+) =>
+    createMockProject({
+        name,
+        selectedStack: 'eds-dalive',
+        resolvedAuthoringExperience: experience,
+    } as any);
+
 describe('ProjectActionsMenu', () => {
     describe('rendering and gating', () => {
         it('renders the kebab trigger when at least one action is wired', () => {
@@ -227,20 +242,82 @@ describe('ProjectActionsMenu', () => {
     });
 
     describe('EDS vs non-EDS placement', () => {
-        it('hides Start/Stop and puts Open in Browser + Author in DA.live in USE for EDS', () => {
+        it('hides Start/Stop and puts Open in Browser + Author in USE for EDS', () => {
             const actions: ProjectActions = {
                 onStartDemo: jest.fn(),
                 onStopDemo: jest.fn(),
                 onOpenLiveSite: jest.fn(),
                 onOpenDaLive: jest.fn(),
             };
-            renderWithProvider(<ProjectActionsMenu project={edsProject()} actions={actions} />);
+            renderWithProvider(
+                <ProjectActionsMenu project={edsProjectWithExperience('da-live-classic')} actions={actions} />,
+            );
             openMenu();
 
             expect(screen.queryByText('Start Demo')).not.toBeInTheDocument();
             expect(screen.queryByText('Stop Demo')).not.toBeInTheDocument();
             expect(screen.getByText('Open in Browser')).toBeInTheDocument();
-            expect(screen.getByText('Author in DA.live')).toBeInTheDocument();
+            expect(screen.getByText('Author in DA.live Classic')).toBeInTheDocument();
+        });
+    });
+
+    describe('Authoring experience label', () => {
+        // The authoring-experience FLIP control was relocated to the Configure
+        // webview (setup-time preference with an explicit Save). The dynamic
+        // "Author in X" label STAYS here — it reflects the resolved experience.
+        it('labels Author with DA.live Classic when the resolved experience is UE', () => {
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={edsProjectWithExperience('da-live-classic')}
+                    actions={{ onOpenDaLive: jest.fn() }}
+                />,
+            );
+            openMenu();
+
+            expect(screen.getByText('Author in DA.live Classic')).toBeInTheDocument();
+            expect(screen.queryByText('Author in Experience Workspace')).not.toBeInTheDocument();
+        });
+
+        it('labels Author with Experience Workspace when the resolved experience is EW', () => {
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={edsProjectWithExperience('experience-workspace')}
+                    actions={{ onOpenDaLive: jest.fn() }}
+                />,
+            );
+            openMenu();
+
+            expect(screen.getByText('Author in Experience Workspace')).toBeInTheDocument();
+            expect(screen.queryByText('Author in DA.live Classic')).not.toBeInTheDocument();
+        });
+
+        it('shows no Author item for non-EDS projects', () => {
+            // Author is EDS-only. With a non-EDS project and another action wired
+            // (so the kebab still renders), it does not appear.
+            const actions: ProjectActions = {
+                onOpenDaLive: jest.fn(),
+                onRename: jest.fn(),
+            };
+            renderWithProvider(
+                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} actions={actions} />,
+            );
+            openMenu();
+
+            expect(screen.queryByText('Author in DA.live Classic')).not.toBeInTheDocument();
+            expect(screen.queryByText('Author in Experience Workspace')).not.toBeInTheDocument();
+        });
+
+        it('renders no flip/switch control (relocated to Configure)', () => {
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={edsProjectWithExperience('da-live-classic')}
+                    actions={{ onOpenDaLive: jest.fn() }}
+                />,
+            );
+            openMenu();
+
+            expect(screen.queryByText('Switch to Experience Workspace')).not.toBeInTheDocument();
+            expect(screen.queryByText('Switch to DA.live Classic')).not.toBeInTheDocument();
         });
     });
 

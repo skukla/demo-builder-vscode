@@ -13,7 +13,6 @@ import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { toggleLogsPanel } from '../services/lifecycleService';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { openUrl } from '@/core/utils/browserUtils';
 import { validateProjectPath, validateURL } from '@/core/validation';
@@ -260,26 +259,8 @@ export async function handleOpenAdobeConsole(
     }
 }
 
-// Re-export for backward compatibility (toggleLogsPanel imported at top for use in this file)
+// Re-export for the sidebar Logs utility, which toggles the panel via this function
 export { toggleLogsPanel } from '../services/lifecycleService';
-
-/**
- * show-logs - Toggle the VS Code output panel with Demo Builder logs
- *
- * Toggles the output panel: shows logs if hidden, closes panel if shown.
- * This is a non-critical action - we return success even if command fails.
- */
-export async function handleShowLogs(context: HandlerContext): Promise<SimpleResult> {
-    try {
-        const isNowShown = await toggleLogsPanel();
-        context.logger.debug(`[Logs] ${isNowShown ? 'Opening' : 'Closing'} output panel`);
-    } catch (error) {
-        // Non-critical action - log but don't fail
-        context.logger.warn('[Logs] Failed to toggle output panel', error as Error);
-    }
-
-    return { success: true };
-}
 
 /**
  * openExternal - Open a URL in the system browser
@@ -374,6 +355,5 @@ export const lifecycleHandlers = defineHandlers({
     // Utilities
     'log': handleLog,
     'open-adobe-console': handleOpenAdobeConsole,
-    'show-logs': handleShowLogs,
     'openExternal': handleOpenExternal,
 });

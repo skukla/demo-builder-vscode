@@ -53,6 +53,9 @@ export function probeInExtensionMcpTools(socketPath: string, timeoutMs = 5000): 
             resolve(result);
         };
 
+        // The "timed out" substring is load-bearing: mcpInspector's
+        // inspectInExtensionServer keys on it to map this failure to
+        // status 'timeout' (vs 'error'). Keep the wording if you reword.
         const timer = setTimeout(() => finish({ ok: false, error: `timed out after ${timeoutMs}ms` }), timeoutMs);
 
         const send = (obj: unknown): void => {

@@ -167,7 +167,6 @@ export function WizardContainer({
         goNext,
         goBack,
         handleCancel,
-        handleShowLogs,
         getCurrentStepIndex,
     } = useWizardNavigation({
         state,
@@ -442,15 +441,6 @@ export function WizardContainer({
                                     isDisabled={isConfirmingSelection}
                                 >
                                     Cancel
-                                </Button>
-                            }
-                            centerContent={
-                                <Button
-                                    variant="secondary"
-                                    onPress={handleShowLogs}
-                                    isQuiet
-                                >
-                                    Logs
                                 </Button>
                             }
                             rightContent={

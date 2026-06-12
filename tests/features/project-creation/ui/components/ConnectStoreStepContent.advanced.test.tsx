@@ -561,7 +561,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
     // -----------------------------------------------------------------------
 
     describe('refresh button', () => {
-        it('should show refresh button when hasStoreData is true and autoDetectKey is set', () => {
+        it('should show an enabled refresh button when hasStoreData is true and autoDetectKey is set', () => {
             mockUseStoreDiscovery.hasStoreData = true;
             mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
             configurePaasLookup();
@@ -580,17 +580,31 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
                 />,
             );
 
-            expect(screen.getByRole('button', { name: /re-detect/i })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /re-detect/i })).toBeEnabled();
         });
 
-        it('should not show refresh button when hasStoreData is false', () => {
+        it('reserves the refresh button slot (rendered disabled) while store data has not loaded', () => {
+            // No layout shift: the Re-detect slot is reserved from the start and
+            // rendered disabled until store discovery populates the structure.
             mockUseStoreDiscovery.hasStoreData = false;
             mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
             configurePaasLookup();
 
-            renderWithProvider(<ConnectStoreStepContent {...defaultProps} />);
+            renderWithProvider(
+                <ConnectStoreStepContent
+                    {...defaultProps}
+                    selectedStackId="headless-paas"
+                    componentConfigs={{
+                        'adobe-commerce': {
+                            [PAAS_URL]: 'https://example.com',
+                            [PAAS_ADMIN_USERNAME]: 'admin',
+                            [PAAS_ADMIN_PASSWORD]: 'pass123',
+                        },
+                    }}
+                />,
+            );
 
-            expect(screen.queryByRole('button', { name: /re-detect/i })).not.toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /re-detect/i })).toBeDisabled();
         });
 
         it('should call fetchStores when refresh button is clicked', async () => {

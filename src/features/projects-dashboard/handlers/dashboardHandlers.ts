@@ -9,8 +9,6 @@
  * - projectDeletionService: Project deletion with retry logic
  */
 
-import * as fsPromises from 'fs/promises';
-import * as path from 'path';
 import * as vscode from 'vscode';
 import {
     extractSettingsFromProject,
@@ -18,14 +16,16 @@ import {
     copySettingsFromProject,
     exportProjectSettings,
     deleteProject,
+    renameProjectCore,
 } from '../services';
 import { BaseWebviewCommand } from '@/core/base';
 import { COMPONENT_IDS } from '@/core/constants';
 import { executeCommandForProject } from '@/core/handlers';
 import { sessionUIState } from '@/core/state/sessionUIState';
 import { openInIncognito, TIMEOUTS } from '@/core/utils';
-import { validateProjectPath, validateProjectNameSecurity, validateURL } from '@/core/validation';
+import { validateProjectPath, validateURL } from '@/core/validation';
 import { hasMeshDeploymentRecord, determineMeshStatus } from '@/features/dashboard/handlers/meshStatusHelpers';
+import { getEwCanvasBranch, resolveProjectAuthoringExperience } from '@/features/eds/handlers/edsHelpers';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import type { Project } from '@/types/base';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -55,6 +55,13 @@ export const handleGetProjects: MessageHandler = async (
             if (project) {
                 projects.push(project);
             }
+        }
+
+        // Enrich projects with the resolved authoring experience so the card
+        // grid can render the Author label + flip control without importing the
+        // resolver or `vscode` into the webview (presentational UI).
+        for (const project of projects) {
+            project.resolvedAuthoringExperience = resolveProjectAuthoringExperience(project);
         }
 
         // Enrich projects with mesh staleness status (full fidelity check)
@@ -522,119 +529,37 @@ export const handleRenameProject: MessageHandler<{ projectPath: string; newName:
     context: HandlerContext,
     payload?: { projectPath: string; newName: string },
 ): Promise<HandlerResponse> => {
-    try {
-        if (!payload?.projectPath || !payload?.newName) {
-            return {
-                success: false,
-                error: 'Project path and new name are required',
-            };
-        }
-
-        const newName = payload.newName.trim();
-        if (!newName) {
-            return {
-                success: false,
-                error: 'Project name cannot be empty',
-            };
-        }
-
-        try {
-            validateProjectPath(payload.projectPath);
-        } catch {
-            return {
-                success: false,
-                error: 'Invalid project path',
-            };
-        }
-
-        // Load project (persist after load since we'll be saving changes)
-        const project = await context.stateManager.loadProjectFromPath(
-            payload.projectPath,
-            undefined,
-            { persistAfterLoad: true },
-        );
-        if (!project) {
-            return {
-                success: false,
-                error: 'Project not found',
-            };
-        }
-
-        // Check if demo is running - cannot rename while running
-        if (project.status === 'running') {
-            return {
-                success: false,
-                error: 'Cannot rename project while demo is running. Stop the demo first.',
-            };
-        }
-
-        // Validate new name (same rules as project creation)
-        try {
-            validateProjectNameSecurity(newName);
-        } catch (validationError) {
-            return {
-                success: false,
-                error: validationError instanceof Error ? validationError.message : 'Invalid project name',
-            };
-        }
-
-        const oldName = project.name;
-        const oldPath = project.path;
-
-        // Use name directly as folder (consistent with project creation)
-        const projectsRoot = path.dirname(oldPath);
-        const newPath = path.join(projectsRoot, newName);
-
-        // Rename folder if path changes
-        if (newPath !== oldPath) {
-            // Check if new folder already exists
-            try {
-                await fsPromises.access(newPath);
-                return {
-                    success: false,
-                    error: `A project folder named "${newName}" already exists`,
-                };
-            } catch {
-                // Folder doesn't exist, which is what we want
-            }
-
-            // Rename the folder on disk
-            await fsPromises.rename(oldPath, newPath);
-
-            // Update project.path and componentInstances paths
-            project.path = newPath;
-            if (project.componentInstances) {
-                for (const componentId of Object.keys(project.componentInstances)) {
-                    const component = project.componentInstances[componentId];
-                    if (component.path?.startsWith(oldPath)) {
-                        component.path = component.path.replace(oldPath, newPath);
-                    }
-                }
-            }
-
-            // Update recent projects list
-            await context.stateManager.removeFromRecentProjects(oldPath);
-        }
-
-        // Update the name
-        project.name = newName;
-
-        // Save the updated project (at the new location)
-        await context.stateManager.saveProject(project);
-
-        context.logger.info(`Renamed project: "${oldName}" → "${newName}"`);
-
-        return {
-            success: true,
-            data: { success: true, newName, newPath },
-        };
-    } catch (error) {
-        context.logger.error('Failed to rename project', error instanceof Error ? error : undefined);
+    if (!payload?.projectPath || !payload?.newName) {
         return {
             success: false,
-            error: 'Failed to rename project',
+            error: 'Project path and new name are required',
         };
     }
+
+    try {
+        validateProjectPath(payload.projectPath);
+    } catch {
+        return {
+            success: false,
+            error: 'Invalid project path',
+        };
+    }
+
+    // Load project (persist after load since we'll be saving changes)
+    const project = await context.stateManager.loadProjectFromPath(
+        payload.projectPath,
+        undefined,
+        { persistAfterLoad: true },
+    );
+    if (!project) {
+        return {
+            success: false,
+            error: 'Project not found',
+        };
+    }
+
+    // Shared rename core (folder rename + path updates + recent-projects + save)
+    return renameProjectCore(context, project, payload.newName);
 };
 
 // ============================================================================
@@ -785,7 +710,11 @@ export const handleOpenDaLive: MessageHandler<{ projectPath: string }> = async (
         return { success: false, error: 'Project not found' };
     }
 
-    const daLiveUrl = getEdsDaLiveUrl(project);
+    const daLiveUrl = getEdsDaLiveUrl(
+        project,
+        resolveProjectAuthoringExperience(project),
+        getEwCanvasBranch(),
+    );
 
     if (!daLiveUrl) {
         return { success: false, error: 'DA.live URL not available' };
@@ -1061,3 +990,9 @@ export const handleSetProjectPinned: MessageHandler<{ projectPath: string; pinne
         return { success: false, error: 'Failed to set project pinned state' };
     }
 };
+
+// The per-project authoring-experience control is a setup-time preference set
+// in the Configure webview (EDS-only radio group with an explicit Save), not an
+// on-the-fly action. The handler that flipped it from this surface was removed;
+// the dynamic "Author in X" label still reflects `resolvedAuthoringExperience`
+// (enriched in handleGetProjects).

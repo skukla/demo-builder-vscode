@@ -151,8 +151,8 @@ describe('MCP config content', () => {
         );
     });
 
-    it('anchors the Adobe App Builder MCP args to the storefront path so Claude Code (cwd=project.path) can spawn it', async () => {
-        const project = makeEdsProject();
+    it('anchors the Adobe App Builder MCP args to the isolated .demo-builder-mcp dir so Claude Code (cwd=project.path) can spawn it', async () => {
+        const project = makeEdsProject(); // project.path = '/projects/test-project'
         await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
         const config = captureWrittenConfig('.claude/mcp.json') as {
@@ -162,9 +162,12 @@ describe('MCP config content', () => {
 
         expect(entry).toBeDefined();
         expect(entry.command).toBe('node');
+        // MCP tools install into the per-project isolated dir, decoupled from the
+        // storefront manifest (whose `npm install` can fail on b2b dropins).
         expect(entry.args).toEqual([
-            `${EDS_STOREFRONT_PATH}/node_modules/@adobe-commerce/commerce-extensibility-tools/index.js`,
+            `${project.path}/.demo-builder-mcp/node_modules/@adobe-commerce/commerce-extensibility-tools/index.js`,
         ]);
+        expect(entry.args[0]).not.toContain(EDS_STOREFRONT_PATH);
     });
 
     it('omits ai-defaults MCP entries for headless projects (no storefront, package never installed)', async () => {

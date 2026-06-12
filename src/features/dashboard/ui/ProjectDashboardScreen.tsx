@@ -17,13 +17,17 @@ import {
 import React, { useState, useEffect, useRef } from 'react';
 import { ActionGrid } from './components/ActionGrid';
 import { AiCapabilitiesModal } from './components/AiCapabilitiesModal';
+import { DashboardRenameDialog } from './components/DashboardRenameDialog';
 import { isStartActionDisabled } from './dashboardPredicates';
 import { useDashboardActions } from './hooks/useDashboardActions';
 import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
+import { useRenameDialog } from './hooks/useRenameDialog';
 import { StatusCard } from '@/core/ui/components/feedback';
 import { PageLayout, PageHeader } from '@/core/ui/components/layout';
 import { useFocusTrap, useSingleTimer } from '@/core/ui/hooks';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { AuthoringExperience } from '@/types/base';
 
 /**
  * Props for the ProjectDashboardScreen component
@@ -44,6 +48,8 @@ interface ProjectDashboardScreenProps {
     edsLiveUrl?: string;
     /** DA.live authoring URL for EDS projects */
     edsDaLiveUrl?: string;
+    /** Resolved authoring experience (drives the Author label + flip target) */
+    authoringExperience?: AuthoringExperience;
     /** Initial mesh status from card grid computation (avoids loading flash) */
     initialMeshStatus?: string;
     /** Initial EDS storefront status (for dynamic status display) */
@@ -57,11 +63,11 @@ interface ProjectDashboardScreenProps {
  * - Project name header
  * - Demo status indicator
  * - API Mesh status indicator (if applicable)
- * - Action button grid (Start/Stop, Open, Logs, Deploy Mesh, etc.)
+ * - Action button grid (Start/Stop, Open, Deploy Mesh, etc.)
  *
  * @param props - Component props
  */
-export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName, isEds = false, edsLiveUrl, edsDaLiveUrl, initialMeshStatus, initialEdsStorefrontStatus }: ProjectDashboardScreenProps) {
+export function ProjectDashboardScreen({ project, hasMesh = false, brandName, stackName, isEds = false, edsLiveUrl, edsDaLiveUrl, authoringExperience, initialMeshStatus, initialEdsStorefrontStatus }: ProjectDashboardScreenProps) {
     // Capture isEds on first render and never change it (project type doesn't change)
     const isEdsRef = useRef(isEds);
     if (isEds && !isEdsRef.current) {
@@ -69,22 +75,24 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
     }
     const isEdsStable = isEdsRef.current;
     
-    // Capture EDS URLs on first render and preserve them (URLs don't change during dashboard session)
+    // Capture the EDS live (published) URL on first render and preserve it — the
+    // live site URL doesn't change during a dashboard session.
     const edsLiveUrlRef = useRef(edsLiveUrl);
-    const edsDaLiveUrlRef = useRef(edsDaLiveUrl);
     if (edsLiveUrl && !edsLiveUrlRef.current) {
         edsLiveUrlRef.current = edsLiveUrl;
     }
-    if (edsDaLiveUrl && !edsDaLiveUrlRef.current) {
-        edsDaLiveUrlRef.current = edsDaLiveUrl;
-    }
     const edsLiveUrlStable = edsLiveUrlRef.current;
-    const edsDaLiveUrlStable = edsDaLiveUrlRef.current;
-    
-    // State for browser opening and logs hover suppression (passed to actions hook)
+
+    // Authoring experience + DA.live URL are LIVE: a Configure save can flip the
+    // experience while the dashboard is open, so they're state (seeded from the
+    // open-time props) updated by the `authoringExperienceUpdate` message below.
+    const [liveAuthoringExperience, setLiveAuthoringExperience] = useState(authoringExperience);
+    const [liveEdsDaLiveUrl, setLiveEdsDaLiveUrl] = useState(edsDaLiveUrl);
+
+    // State for browser opening (passed to actions hook)
     const [isOpeningBrowser, setIsOpeningBrowser] = useState(false);
-    const [isLogsHoverSuppressed, setIsLogsHoverSuppressed] = useState(false);
     const [showCapabilities, setShowCapabilities] = useState(false);
+    const { showRenameDialog, openRenameDialog, closeRenameDialog, confirmRename } = useRenameDialog();
 
     // Status management via extracted hook
     const {
@@ -111,7 +119,6 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
     const {
         handleStartDemo,
         handleStopDemo,
-        handleViewLogs,
         handleDeployMesh,
         handleSyncStorefront,
         handleRefreshBlockLibrary,
@@ -121,16 +128,18 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
         handleConfigure,
         handleOpenDevConsole,
         handleDeleteProject,
+        handleCopyPath,
+        handleExportProject,
+        handleRepublishContent,
+        handleResetProject,
         handleNavigateBack,
-        handleViewComponents,
         handleReAuthenticate,
     } = useDashboardActions({
         isOpeningBrowser,
         setIsTransitioning,
         setIsOpeningBrowser,
-        setIsLogsHoverSuppressed,
         edsLiveUrl: edsLiveUrlStable,
-        edsDaLiveUrl: edsDaLiveUrlStable,
+        edsDaLiveUrl: liveEdsDaLiveUrl,
     });
 
     // Focus trap for accessibility
@@ -154,6 +163,23 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
             }, TIMEOUTS.UI_UPDATE_DELAY);
         }
     }, []); // eslint-disable-line react-hooks/exhaustive-deps -- mount-once effect for initial focus; focusTimer is stable, projectStatus read only on mount
+
+    // Subscribe to live authoring-experience updates pushed by the Configure save
+    // handler. Mirrors the meshStatusUpdate subscription in useDashboardStatus:
+    // onMessage returns an unsubscribe fn used for cleanup. Only ever moves the
+    // value to a new defined value (never clears it), preserving the prop seed.
+    useEffect(() => {
+        const unsubscribe = webviewClient.onMessage('authoringExperienceUpdate', (data: unknown) => {
+            const payload = data as { authoringExperience?: AuthoringExperience; edsDaLiveUrl?: string };
+            if (payload.authoringExperience) {
+                setLiveAuthoringExperience(payload.authoringExperience);
+            }
+            if (payload.edsDaLiveUrl) {
+                setLiveEdsDaLiveUrl(payload.edsDaLiveUrl);
+            }
+        });
+        return unsubscribe;
+    }, []);
 
     // Derived values
     const displayName = statusDisplayName || project?.name || 'Demo Project';
@@ -269,29 +295,44 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                     <div className="dashboard-grid-container">
                         <ActionGrid
                             isEds={isEdsStable}
+                            hasMesh={hasMesh}
                             isRunning={isRunning}
                             isStartDisabled={isStartDisabled}
                             isStopDisabled={isStopDisabled}
                             isMeshActionDisabled={isMeshActionDisabled}
                             isOpeningBrowser={isOpeningBrowser}
-                            isLogsHoverSuppressed={isLogsHoverSuppressed}
                             handleStartDemo={handleStartDemo}
                             handleStopDemo={handleStopDemo}
                             handleOpenBrowser={handleOpenBrowser}
                             handleOpenLiveSite={handleOpenLiveSite}
                             handleOpenDaLive={handleOpenDaLive}
-                            handleViewLogs={handleViewLogs}
+                            authoringExperience={liveAuthoringExperience}
                             handleDeployMesh={handleDeployMesh}
                             handleSyncStorefront={handleSyncStorefront}
                             handleRefreshBlockLibrary={isEdsStable ? handleRefreshBlockLibrary : undefined}
+                            handleRepublishContent={isEdsStable ? handleRepublishContent : undefined}
                             handleConfigure={handleConfigure}
-                            handleViewComponents={handleViewComponents}
                             handleOpenDevConsole={handleOpenDevConsole}
+                            handleRename={openRenameDialog}
+                            handleCopyPath={handleCopyPath}
+                            handleExportProject={handleExportProject}
+                            handleResetProject={handleResetProject}
                             handleDeleteProject={handleDeleteProject}
                         />
                     </div>
                 </div>
             </PageLayout>
+
+            {/* Rename dialog — opened from the More menu's Rename item. On confirm
+                we post renameProject; the backend re-sends init so the title
+                refreshes. The dialog reuses the projects-list component. */}
+            <DashboardRenameDialog
+                isOpen={showRenameDialog}
+                projectName={displayName}
+                projectPath={project?.path}
+                onRename={confirmRename}
+                onClose={closeRenameDialog}
+            />
 
             {/* Capability catalog — reached from the "View AI Capabilities" link,
                 NOT the health badge. Two sections (skills + MCP servers) plus a

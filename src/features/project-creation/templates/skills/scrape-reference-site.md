@@ -44,7 +44,7 @@ The Mod Agent handles its own refinement loop internally. The `refine-visual-mat
 
 Choose this when the user prefers to stay in the IDE, lacks Mod Agent access yet, or is OK with a lower visual fidelity ceiling.
 
-1. `@playwright/mcp` is installed automatically as part of the EDS Storefront component (in the storefront's `node_modules`). No prereq step needed. If somehow missing, run `npm install` in the storefront directory.
+1. `@playwright/mcp` is installed automatically into the project's isolated MCP tools dir (`<project>/.demo-builder-mcp/node_modules/`). No prereq step needed. If somehow missing, run **Regenerate AI Files** from the dashboard (it reinstalls the MCP tools) — not `npm install` in the storefront.
 2. **First Playwright use** triggers a ~150 MB Chromium binary download into the OS-global cache at `~/Library/Caches/ms-playwright/`. Tell the user this is expected. The cache is shared across all projects, so the download only happens once per machine.
 3. Use Playwright MCP to capture the reference:
    - `browser_navigate` to the URL.

@@ -17,7 +17,6 @@ import {
     ACCS_WEBSITE_CODE, ACCS_STORE_CODE, ACCS_STORE_VIEW_CODE,
 } from '../../config/envVarKeys';
 import { STORE_GROUP_IDS } from '../../config/storeFieldHelpers';
-import { lookupComponentConfigValue } from '../../services/envVarHelpers';
 import type { UniqueField, ServiceGroup } from '../hooks/useComponentConfig';
 import type { StoreListItem } from '../hooks/useStoreDiscovery';
 import { StoreStructureSelector } from './StoreStructureSelector';
@@ -33,7 +32,12 @@ interface StoreSelectionRowProps {
     getWebsiteItems: () => StoreListItem[];
     getStoreGroupItems: (websiteCode: string) => StoreListItem[];
     getStoreViewItems: (storeGroupCode: string) => StoreListItem[];
-    componentConfigs: Record<string, Record<string, string | boolean | number | undefined>>;
+    /**
+     * Whether store discovery is still running. When true the three pickers
+     * render disabled (occupying their footprint) and populate in place once
+     * data lands — so there is no layout shift. Defaults to false.
+     */
+    isLoading?: boolean;
 }
 
 // ==========================================================
@@ -60,7 +64,7 @@ export function StoreSelectionRow({
     getWebsiteItems,
     getStoreGroupItems,
     getStoreViewItems,
-    componentConfigs,
+    isLoading = false,
 }: StoreSelectionRowProps) {
     const keys = getFieldKeys(group.id);
 
@@ -71,8 +75,12 @@ export function StoreSelectionRow({
     const storeField = findField(keys.store);
     const storeViewField = findField(keys.storeView);
 
-    const selectedWebsite = lookupComponentConfigValue(componentConfigs, keys.website) || '';
-    const selectedStore = lookupComponentConfigValue(componentConfigs, keys.store) || '';
+    // Cascade filters must read the SAME accessor the Website/Store pickers use
+    // (getFieldValue, scoped to the field). Reading via an all-component lookup
+    // diverged from the picker: selecting a new website left the store filter on a
+    // stale value, so the Store/Store View dropdowns kept the old website's children.
+    const selectedWebsite = websiteField ? String(getFieldValue(websiteField) || '') : '';
+    const selectedStore = storeField ? String(getFieldValue(storeField) || '') : '';
 
     const handleWebsiteSelect = (code: string) => {
         if (!websiteField) return;
@@ -105,6 +113,7 @@ export function StoreSelectionRow({
                     selectedCode={String(getFieldValue(websiteField) || '')}
                     onSelect={handleWebsiteSelect}
                     isRequired={websiteField.required}
+                    isDisabled={isLoading}
                 />
             )}
             {storeField && (
@@ -114,6 +123,7 @@ export function StoreSelectionRow({
                     selectedCode={String(getFieldValue(storeField) || '')}
                     onSelect={handleStoreSelect}
                     isRequired={storeField.required}
+                    isDisabled={isLoading}
                 />
             )}
             {storeViewField && (
@@ -123,6 +133,7 @@ export function StoreSelectionRow({
                     selectedCode={String(getFieldValue(storeViewField) || '')}
                     onSelect={(code) => updateField(storeViewField, code)}
                     isRequired={storeViewField.required}
+                    isDisabled={isLoading}
                 />
             )}
         </Flex>

@@ -23,8 +23,10 @@ import { GitHubRepoOperations } from '../services/githubRepoOperations';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { HelixService } from '../services/helixService';
 import { getLogger } from '@/core/logging';
+import { COMPONENT_IDS } from '@/core/constants';
 import { showOneTimeTip } from '@/core/utils/oneTimeTip';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { AuthoringExperience, Project } from '@/types';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 
@@ -338,6 +340,82 @@ export function resolveByomOverlayConfig(
         return undefined;
     }
     return appendOverlayParams(baseUrl, org, site);
+}
+
+const AUTHORING_EXPERIENCES: ReadonlySet<string> = new Set<AuthoringExperience>([
+    'da-live-classic',
+    'experience-workspace',
+]);
+
+/**
+ * Resolve the AEM authoring experience for a project.
+ *
+ * Precedence (mirrors resolveByomOverlayConfig):
+ * 1. Per-project metadata value — if it is a recognized union member, it wins.
+ * 2. Global setting demoBuilder.daLive.authoringExperience (default
+ *    'da-live-classic').
+ * Any unrecognized result coerces to 'da-live-classic' (fail-safe), so a
+ * corrupted setting or stray metadata can never break the Author button.
+ *
+ * @param metadataValue - The per-project `authoringExperience` metadata value
+ * @returns The resolved authoring experience
+ */
+export function resolveAuthoringExperience(
+    metadataValue: string | undefined,
+): AuthoringExperience {
+    if (metadataValue && AUTHORING_EXPERIENCES.has(metadataValue)) {
+        return metadataValue as AuthoringExperience;
+    }
+
+    const globalValue = vscode.workspace
+        .getConfiguration('demoBuilder.daLive')
+        .get<string>('authoringExperience', 'da-live-classic');
+
+    return AUTHORING_EXPERIENCES.has(globalValue)
+        ? (globalValue as AuthoringExperience)
+        : 'da-live-classic';
+}
+
+/**
+ * Resolve the authoring experience for a project by reading its EDS
+ * component-instance `authoringExperience` metadata, then applying the
+ * resolveAuthoringExperience precedence (per-project → global → UE).
+ *
+ * @param project - The project (any project; non-EDS yields the global default)
+ * @returns The resolved authoring experience
+ */
+export function resolveProjectAuthoringExperience(
+    project: Project | undefined | null,
+): AuthoringExperience {
+    const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+    const metadataValue = edsInstance?.metadata?.authoringExperience as string | undefined;
+    return resolveAuthoringExperience(metadataValue);
+}
+
+/**
+ * Read the da-nx branch the Experience Workspace canvas loads from (the `?nx=`
+ * override) from the demoBuilder.daLive.ewCanvasBranch setting.
+ *
+ * Defaults to '' — the param-less production canvas now hosts the live EW alpha,
+ * so the URL builder drops the ?nx override entirely (the production form). Set a
+ * branch only to pin a specific pre-release da-nx build.
+ *
+ * Defends against a corrupted (non-string) settings.json value by falling back
+ * to the '' default. Returns the value trimmed; a whitespace-only value
+ * collapses to ''.
+ *
+ * @returns The trimmed EW canvas branch (may be empty string)
+ */
+export function getEwCanvasBranch(): string {
+    const raw = vscode.workspace
+        .getConfiguration('demoBuilder.daLive')
+        .get<string>('ewCanvasBranch', '');
+    // VS Code's typed get returns the default on type mismatch, but be defensive
+    // about non-string values (corrupted user settings.json).
+    if (typeof raw !== 'string') {
+        return '';
+    }
+    return raw.trim();
 }
 
 function isAcceptedOverlayUrl(value: string): boolean {
@@ -655,11 +733,48 @@ export async function bulkPreviewAndPublish(
 }
 
 /**
+ * Build the site-scoped `editor.path` row value for the active experience.
+ *
+ * - Experience Workspace: the da.live-native canvas, pinned to the supplied
+ *   ewCanvasBranch (the `?nx=` override); the row is always written when the
+ *   project is set to EW. An empty branch drops the override.
+ * - Universal Editor: punches out to experience.adobe.com and embeds the IMS org
+ *   id, so it is only written when `demoBuilder.daLive.IMSOrgId` is configured.
+ *
+ * Returns undefined when there is no row to write (UE with no IMS org id).
+ */
+function buildEditorPathValue(
+    experience: AuthoringExperience,
+    imsOrgId: string | undefined,
+    daLiveOrg: string,
+    daLiveSite: string,
+    ewCanvasBranch: string,
+): string | undefined {
+    if (experience === 'experience-workspace') {
+        // `?nx=<branch>` pins the canvas to a pre-release da-nx branch while EW is
+        // in early access; an empty branch drops to `https://da.live/canvas#`
+        // (the documented production form). Mirrors getEdsDaLiveUrl's EW form.
+        const nxParam = ewCanvasBranch ? `?nx=${ewCanvasBranch}` : '';
+        return `https://da.live/canvas${nxParam}#`;
+    }
+    if (imsOrgId) {
+        return `https://experience.adobe.com/#/@${imsOrgId}`
+            + `/aem/editor/canvas/main--${daLiveSite}--${daLiveOrg}.ue.da.live`;
+    }
+    return undefined;
+}
+
+/**
  * Apply DA.live org config settings from extension settings.
  *
  * Reads the AEM Author URL and IMS Org ID from VS Code settings
  * (demoBuilder.daLive.aemAuthorUrl and demoBuilder.daLive.IMSOrgId)
  * and applies them to the DA.live site config sheet.
+ *
+ * Also clears a stale `editor.path` row symmetrically: flipping to Universal
+ * Editor with no IMS org id has no row to write, so the prior Experience
+ * Workspace canvas value is removed (via applySiteConfig's `removeKeys`) rather
+ * than left behind.
  *
  * This should be called from all EDS flows: creation, reset, edit, import, copy.
  * Non-fatal: logs warnings on failure but does not throw.
@@ -669,54 +784,55 @@ export async function applyDaLiveOrgConfigSettings(
     daLiveOrg: string,
     daLiveSite: string,
     logger: Logger,
+    experience: AuthoringExperience = 'da-live-classic',
 ): Promise<void> {
     try {
         const edsSettings = vscode.workspace.getConfiguration('demoBuilder.daLive');
         const aemAuthorUrl = edsSettings.get<string>('aemAuthorUrl');
         const imsOrgId = edsSettings.get<string>('IMSOrgId');
-        const editorPathPrefix = edsSettings.get<string>('editorPathPrefix') || 'site/to/path/content';
 
-        // Nothing configured - skip silently
-        if (!aemAuthorUrl && !imsOrgId) {
+        // Both keys land in the SAME per-site config (/config/<org>/<site>), so
+        // collect them and write once — one GET-merge-POST round-trip, no window
+        // for a concurrent writer to slip between two separate writes.
+        //   - aem.repositoryId: da.live's Library reads the AEM Assets binding
+        //     from the per-site config.
+        //   - editor.path: site-scoped, keyed on /<org>/<site>, so flipping one
+        //     project's authoring experience never clobbers a sibling site's row.
+        const updates: Record<string, string> = {};
+        const removeKeys: string[] = [];
+        if (aemAuthorUrl) {
+            updates['aem.repositoryId'] = aemAuthorUrl;
+        }
+        const ewCanvasBranch = getEwCanvasBranch();
+        const editorValue = buildEditorPathValue(experience, imsOrgId, daLiveOrg, daLiveSite, ewCanvasBranch);
+        if (editorValue) {
+            updates['editor.path'] = `/${daLiveOrg}/${daLiveSite}=${editorValue}`;
+        } else {
+            // UE with no IMS org id → there is no row to write, but da.live may
+            // hold a stale Experience Workspace canvas row from a prior flip. The
+            // correct state is NO editor.path row, so clear it. (applySiteConfig's
+            // no-op optimization absorbs the case where no stale row exists.)
+            removeKeys.push('editor.path');
+        }
+
+        const appliedKeys = Object.keys(updates);
+        if (appliedKeys.length === 0 && removeKeys.length === 0) {
+            // Truly nothing to do. Logged (not silent) so a no-op flip is diagnosable.
+            logger.debug(
+                '[EDS Config] No DA.live config to apply or clear; skipping.',
+            );
             return;
         }
 
-        const appliedKeys: string[] = [];
-        const failures: string[] = [];
-
-        // aem.repositoryId → SITE config. da.live's Library reads the AEM Assets
-        // binding from the per-site config, so it must be written site-scoped.
-        if (aemAuthorUrl) {
-            const result = await daLiveContentOps.applySiteConfig(daLiveOrg, daLiveSite, {
-                'aem.repositoryId': aemAuthorUrl,
-            });
-            if (result.success) {
-                appliedKeys.push('aem.repositoryId');
-            } else {
-                failures.push(`aem.repositoryId: ${result.error}`);
-            }
-        }
-
-        // editor.path → ORG config (Universal Editor path mapping stays org-scoped).
-        if (imsOrgId) {
-            // Dummy path prefix prevents auto-redirect to UE (no real content matches it)
-            // Full UE URL enables punch-out option from doc-based editing
-            const editorPath = `${editorPathPrefix}=https://experience.adobe.com/#/@${imsOrgId}/aem/editor/canvas/main--${daLiveSite}--${daLiveOrg}.ue.da.live`;
-            const result = await daLiveContentOps.applyOrgConfig(daLiveOrg, {
-                'editor.path': editorPath,
-            });
-            if (result.success) {
-                appliedKeys.push('editor.path');
-            } else {
-                failures.push(`editor.path: ${result.error}`);
-            }
-        }
-
-        if (appliedKeys.length > 0) {
-            logger.info(`[EDS Config] Applied: ${appliedKeys.join(', ')}`);
-        }
-        if (failures.length > 0) {
-            logger.warn(`[EDS Config] Failed to apply settings: ${failures.join('; ')}`);
+        const result = await daLiveContentOps.applySiteConfig(daLiveOrg, daLiveSite, updates, removeKeys);
+        const summary = [
+            appliedKeys.length ? `Applied: ${appliedKeys.join(', ')}` : '',
+            removeKeys.length ? `Cleared: ${removeKeys.join(', ')}` : '',
+        ].filter(Boolean).join('; ');
+        if (result.success) {
+            logger.info(`[EDS Config] ${summary}`);
+        } else {
+            logger.warn(`[EDS Config] Failed to apply settings (${summary}): ${result.error}`);
         }
     } catch (error) {
         logger.warn(`[EDS Config] Error: ${(error as Error).message}`);

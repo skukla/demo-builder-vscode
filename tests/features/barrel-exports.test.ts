@@ -160,13 +160,6 @@ describe('Feature Barrel Exports', () => {
             expect(typeof exports.ComponentManager).toBe('function');
         });
 
-        it('should export ComponentTreeProvider', async () => {
-            const exports = await import('@/features/components');
-
-            expect(exports.ComponentTreeProvider).toBeDefined();
-            expect(typeof exports.ComponentTreeProvider).toBe('function');
-        });
-
         it('should export service group transforms', async () => {
             const exports = await import('@/features/components');
 

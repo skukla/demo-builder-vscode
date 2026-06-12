@@ -31,6 +31,7 @@ export {
 export { ensureEdsContent } from './edsContentSetup';
 
 export {
-    installAiDefaultsInStorefront,
+    resolveMcpToolsDir,
+    installAiDefaultsMcpTools,
     type InstallAiDefaultsResult,
 } from './aiDefaultsInstaller';

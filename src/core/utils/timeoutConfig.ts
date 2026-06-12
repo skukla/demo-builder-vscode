@@ -163,9 +163,6 @@ export const TIMEOUTS = {
     /** Dashboard open delay (500ms) */
     DASHBOARD_OPEN_DELAY: 500,
 
-    /** Hover suppression delay for layout stabilization (500ms) */
-    HOVER_SUPPRESSION_DELAY: 500,
-
     /** Webview initialization delay (50ms) */
     WEBVIEW_INIT_DELAY: 50,
 

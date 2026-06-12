@@ -2424,36 +2424,51 @@ export class DaLiveContentOperations {
      * 401 ownership is governed by the ORG (org ownership grants site writes),
      * so the write-access probe is keyed on the org, not the site.
      *
+     * `removeKeys` deletes named keys from the data sheet (a merge cannot remove
+     * a key) — used to clear a stale row, e.g. reverting editor.path to the
+     * da.live default when a project flips back to Universal Editor with no IMS
+     * org id. When updates is empty and no removeKey is present, no POST is made.
+     *
      * @param org - DA.live organization name
      * @param site - DA.live site name
      * @param configUpdates - Key-value pairs to update in the config
+     * @param removeKeys - Keys to delete from the data sheet (default none)
      * @returns Success status with optional error message
      */
     async applySiteConfig(
         org: string,
         site: string,
         configUpdates: Record<string, string>,
+        removeKeys: string[] = [],
     ): Promise<{ success: boolean; error?: string }> {
-        return this.writeMergedDataConfig(`${DA_LIVE_BASE_URL}/config/${org}/${site}`, org, configUpdates);
+        return this.writeMergedDataConfig(`${DA_LIVE_BASE_URL}/config/${org}/${site}`, org, configUpdates, removeKeys);
     }
 
     /**
      * Read the config at configUrl, merge configUpdates into its data sheet
-     * (preserving ALL other sheets), and POST it back.
+     * (preserving ALL other sheets), delete any `removeKeys`, and POST it back.
      *
      * Shared by applyOrgConfig (/config/{org}) and applySiteConfig
      * (/config/{org}/{site}). The 401 ownership probe uses `org` because
      * org ownership governs both org and site config writes.
      *
+     * `removeKeys` deletes named keys from the data sheet — a merge alone cannot
+     * remove a key, so removal is the only way to revert a key to the da.live
+     * default. When configUpdates is empty AND no removeKey was actually present
+     * in the existing sheet, the method short-circuits WITHOUT a POST (no
+     * pointless round-trip, and no empty config doc created where none existed).
+     *
      * @param configUrl - Full DA.live config endpoint URL
      * @param org - DA.live organization name (used for the 401 ownership probe)
      * @param configUpdates - Key-value pairs to merge into the data sheet
+     * @param removeKeys - Keys to delete from the data sheet (default none)
      * @returns Success status with optional error message
      */
     private async writeMergedDataConfig(
         configUrl: string,
         org: string,
         configUpdates: Record<string, string>,
+        removeKeys: string[] = [],
     ): Promise<{ success: boolean; error?: string }> {
         const token = await this.getImsToken();
 
@@ -2527,9 +2542,28 @@ export class DaLiveContentOperations {
             }
         }
 
+        // Determine which removeKeys actually exist before mutating the map.
+        // Used by the no-op short-circuit below.
+        const removedAnything = removeKeys.some(key => configMap.has(key));
+
         // Apply updates
         for (const [key, value] of Object.entries(configUpdates)) {
             configMap.set(key, value);
+        }
+
+        // Apply removals (e.g. clearing a stale editor.path row). writeMergedDataConfig
+        // can only merge keys, so explicit removal is the only way to revert a key to
+        // the da.live default.
+        for (const key of removeKeys) {
+            configMap.delete(key);
+        }
+
+        // No-op optimization: when there are no updates AND no removeKey was actually
+        // present, the POST would rewrite the sheet to its current state — or worse,
+        // create an empty config doc where none existed (UE projects that never had
+        // editor.path). Skip the round-trip and report success.
+        if (Object.keys(configUpdates).length === 0 && !removedAnything) {
+            return { success: true };
         }
 
         // Convert back to rows format (key/value columns)

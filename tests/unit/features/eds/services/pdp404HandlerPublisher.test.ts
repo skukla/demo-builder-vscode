@@ -94,6 +94,19 @@ describe('buildSmart404Snippet', () => {
         expect(snippet).toContain('/products/');
     });
 
+    it('keeps a permissive SKU matcher so _HH-encoded paths still match (ADR-007)', () => {
+        // The SKU segment is reversibly encoded into [a-z0-9_-] (encodeSkuForUrl);
+        // an underscore-encoded SKU like yale_20unoplus must match. The matcher
+        // must stay `([^/]+)` — narrowing it (e.g. to [a-z0-9-]+) would drop the
+        // `_` and silently break the cold-path redirect for prose SKUs.
+        const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
+        expect(snippet).toContain('([^/]+)');
+        const m = '/products/cmlodestar/yale_20unoplus-series_20a'.match(
+            /^\/products\/([^/]+)\/([^/]+)$/,
+        );
+        expect(m?.[2]).toBe('yale_20unoplus-series_20a');
+    });
+
     it('embeds the infinite-loop guard using the pdpRetry sentinel', () => {
         const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
         expect(snippet).toContain('pdpRetry');

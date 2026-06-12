@@ -36,6 +36,7 @@
 import { extractConfigParams, generateHeaders, type ConfigGeneratorParams } from './configGenerator';
 import type { EdsPipelineProgressCallback } from './edsPipeline';
 import { derivePrepublishUrl } from './pdp404HandlerPublisher';
+import { encodeSkuForUrl, sanitizeUrlKey } from './pdpUrlEncoding';
 import { runInBatches } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Project } from '@/types/base';
@@ -295,9 +296,13 @@ async function enumerateAccsCatalog(
 }
 
 /**
- * POST to prepublish-pdp for one (urlKey, sku). Lowercases both
- * path segments before sending — Helix content-bus stores paths
- * lowercase, so this is the canonical form the action expects.
+ * POST to prepublish-pdp for one (urlKey, sku). Builds the path with the
+ * SAME transforms the storefront's `getProductLink` applies — `sanitizeUrlKey`
+ * for the urlKey and `encodeSkuForUrl` (reversible `_HH` escaping) for the
+ * sku — so the prewarmed/published path is byte-identical to the link the
+ * browser later requests. Both produce lowercase, Helix-safe `[a-z0-9_-]`
+ * output (raw spaces/percent-encoding would be CDN-rejected by aem.live; see
+ * ADR-007). For clean SKUs this is identical to the old `.toLowerCase()` form.
  *
  * Returns true on 2xx, false on non-2xx or thrown error. Errors
  * are swallowed because per-SKU failures are non-fatal — the
@@ -309,7 +314,7 @@ async function prewarmOne(
     site: string,
     skuPath: SkuPath,
 ): Promise<boolean> {
-    const path = `/products/${skuPath.urlKey.toLowerCase()}/${skuPath.sku.toLowerCase()}`;
+    const path = `/products/${sanitizeUrlKey(skuPath.urlKey)}/${encodeSkuForUrl(skuPath.sku)}`;
     const url = `${prepublishUrl}?org=${encodeURIComponent(org)}&site=${encodeURIComponent(site)}&path=${encodeURIComponent(path)}`;
     try {
         const response = await fetch(url, {

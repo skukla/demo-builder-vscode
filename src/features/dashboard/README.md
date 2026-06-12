@@ -4,17 +4,16 @@
 
 The Dashboard feature provides a centralized project control panel within VS Code. It displays real-time project status, mesh deployment state, Adobe context, and provides quick actions for common operations like starting/stopping the demo, deploying mesh, and opening configuration.
 
-The dashboard is designed for at-a-glance status monitoring and one-click actions, with intelligent mesh status checking, focus retention for in-place actions, and smart Logs toggle behavior.
+The dashboard is designed for at-a-glance status monitoring and one-click actions, with intelligent mesh status checking and focus retention for in-place actions.
 
 ## Responsibilities
 
 - **Real-Time Status Display**: Show demo status (ready, starting, running, stopping)
 - **Mesh Status Monitoring**: Async mesh status checking with auth-aware prompts
 - **Adobe Context Display**: Show organization, project, and workspace
-- **Quick Actions**: Start, Stop, Open Browser, Deploy Mesh (shown conditionally when project includes a mesh component), Configure, View Logs
-- **Component Browser**: Browse project files with .env hiding (via ComponentTreeProvider)
-- **Focus Retention**: Maintain webview focus for in-place actions (Logs toggle, Start/Stop)
-- **Smart Logs Toggle**: Remember last active channel (Logs vs Debug)
+- **Quick Actions**: Start, Stop, Open Browser, Deploy Mesh (shown conditionally when project includes a mesh component), Configure
+- **More Menu (overflow)**: Rename (non-EDS: stopped only), Copy Path, Export, Refresh Block Library (EDS), Republish Content (EDS), Dev Console, Reset
+- **Focus Retention**: Maintain webview focus for in-place actions (Start/Stop)
 - **Change Detection**: Detect frontend config changes requiring restart
 - **Re-Authentication**: Handle lost Adobe access with browser auth flow
 - **Developer Console Link**: Direct link to Adobe Developer Console workspace
@@ -63,14 +62,6 @@ The dashboard is designed for at-a-glance status monitoring and one-click action
 1. Get frontend port
 2. Open http://localhost:{port} in external browser
 
-### handleViewLogs
-
-**Purpose**: Show logs output channel
-
-**Operations**:
-1. Execute demoBuilder.showLogs command
-2. Smart toggle: Remember last active channel (Logs vs Debug)
-
 ### handleConfigure
 
 **Purpose**: Open configuration UI
@@ -114,6 +105,21 @@ The dashboard is designed for at-a-glance status monitoring and one-click action
 **Operations**:
 1. Execute demoBuilder.deleteProject command
 2. Close dashboard after deletion
+
+### More-menu handlers (overflow)
+
+These back the dashboard "More" overflow items. All resolve the project via
+`getCurrentProject()` and reuse the same services as the projects-list kebab.
+
+- **handleRenameProject** — validates `{newName}`, delegates to the shared
+  `renameProjectCore` (folder rename + path updates + recent-projects + save),
+  then re-sends `init` so the dashboard title refreshes.
+- **handleCopyPath** — copy the current project's folder path to the clipboard.
+- **handleExportProject** — export project settings to a file (reuses
+  `exportProjectSettings`).
+- **handleRepublishContent** — republish DA.live content to the CDN (EDS-only).
+- Reset reuses the existing `handleResetProject` (`resetProject`), now surfaced
+  in the More menu.
 
 ### handleNavigateBack
 
@@ -314,10 +320,14 @@ if (meshComponent && meshComponent.status !== 'deploying' && meshComponent.statu
 - `startDemo` - Start demo server
 - `stopDemo` - Stop demo server
 - `openBrowser` - Open demo in browser
-- `viewLogs` - Show logs output channel
 - `configure` - Open configuration UI
 - `deployMesh` - Deploy API mesh
 - `openDevConsole` - Open Adobe Developer Console
+- `renameProject` - Rename current project (delegates to shared `renameProjectCore`)
+- `copyPath` - Copy project folder path to clipboard
+- `exportProject` - Export project settings to a file
+- `republishContent` - Republish DA.live content to the CDN (EDS-only)
+- `resetProject` - Reset project state
 - `deleteProject` - Delete current project
 - `re-authenticate` - Trigger browser authentication
 - `navigateBack` - Navigate back to projects list
@@ -336,12 +346,8 @@ if (meshComponent && meshComponent.status !== 'deploying' && meshComponent.statu
 - **Background verification**: Verify mesh exists in Adobe I/O without blocking status display
 
 ### Focus Retention
-- **In-place actions**: Logs toggle, Start/Stop don't reload panel (maintain focus)
+- **In-place actions**: Start/Stop don't reload panel (maintain focus)
 - **No re-render**: Send targeted updates instead of full status refresh
-
-### Smart Logs Toggle
-- **Remember last channel**: Toggle between Logs and Debug, not always Logs
-- **Persistent preference**: Last channel remembered across toggle operations
 
 ### Best Practices
 1. **Use async mesh checking**: Don't block UI on slow auth/API calls
@@ -442,9 +448,12 @@ if (!verification.exists) {
 - [ ] Open Browser works
 - [ ] Deploy Mesh button works
 - [ ] Configure button works
-- [ ] View Logs toggles correctly
-- [ ] Logs toggle remembers last channel
 - [ ] Developer Console link works
+- [ ] More menu: Rename works (folder renamed, title updates; hidden while a non-EDS demo runs)
+- [ ] More menu: Copy Path copies the project path to the clipboard
+- [ ] More menu: Export writes project settings to a file
+- [ ] More menu: Republish Content works (EDS projects only)
+- [ ] More menu: Reset works
 - [ ] Re-authenticate flow works
 - [ ] Focus retained for in-place actions
 - [ ] Delete Project works
@@ -459,14 +468,12 @@ if (!verification.exists) {
 - Test with mesh deleted externally
 - Test with org access lost
 - Test focus retention for Start/Stop
-- Test Logs toggle state persistence
 
 ## See Also
 
 - **[Lifecycle Feature](../lifecycle/README.md)** - Start/Stop commands
 - **[Mesh Feature](../mesh/README.md)** - Mesh status checking
 - **[Authentication Feature](../authentication/README.md)** - Auth checks and re-authentication
-- **[Component Tree Provider](../../providers/componentTreeProvider.ts)** - Component browser integration
 - **[Dashboard UI](../../webviews/components/dashboard/ProjectDashboard.tsx)** - React UI component
 
 ---

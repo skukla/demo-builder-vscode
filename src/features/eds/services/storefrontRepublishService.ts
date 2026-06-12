@@ -10,7 +10,11 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import type * as vscode from 'vscode';
-import { applyDaLiveOrgConfigSettings, configureDaLivePermissions } from '../handlers/edsHelpers';
+import {
+    applyDaLiveOrgConfigSettings,
+    configureDaLivePermissions,
+    resolveProjectAuthoringExperience,
+} from '../handlers/edsHelpers';
 import { generateConfigJson, extractConfigParams } from './configGenerator';
 import { syncConfigToRemote, verifyConfigOnCdn } from './configSyncService';
 import type { DaLiveAuthService } from './daLiveAuthService';
@@ -318,9 +322,12 @@ export async function republishStorefrontContent(
         const helixService = new HelixService(logger, githubTokenService, daLiveTokenProvider);
         const daLiveContentOps = new DaLiveContentOperations(daLiveTokenProvider, logger);
 
-        // Step 1: Apply EDS org config (AEM Assets, Universal Editor).
+        // Step 1: Apply EDS site config (AEM Assets, authoring experience).
         report('Applying EDS configuration...');
-        await applyDaLiveOrgConfigSettings(daLiveContentOps, daLiveOrg, daLiveSite, logger);
+        const experience = resolveProjectAuthoringExperience(project);
+        await applyDaLiveOrgConfigSettings(
+            daLiveContentOps, daLiveOrg, daLiveSite, logger, experience,
+        );
 
         // Step 2: Regenerate + sync config.json (picks up env var changes).
         report('Regenerating storefront configuration...');

@@ -2,7 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { ConfigureScreen, ComponentsData } from './ConfigureScreen';
 import { WebviewApp, WebviewInitData } from '@/core/ui/components/WebviewApp';
-import { Project } from '@/types/base';
+import { AuthoringExperience, Project } from '@/types/base';
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/wizard.css';
@@ -13,6 +13,8 @@ interface ConfigureInitData extends WebviewInitData {
     componentsData?: ComponentsData;
     existingEnvValues?: Record<string, Record<string, string>>;
     existingProjectNames?: string[];
+    isEds?: boolean;
+    authoringExperience?: AuthoringExperience;
 }
 
 // Get root element
@@ -34,6 +36,8 @@ root.render(
                     componentsData={data.componentsData}
                     existingEnvValues={data.existingEnvValues}
                     existingProjectNames={data.existingProjectNames}
+                    isEds={data.isEds}
+                    authoringExperience={data.authoringExperience}
                 />
             ) : null;
         }}

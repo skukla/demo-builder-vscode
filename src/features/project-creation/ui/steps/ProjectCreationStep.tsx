@@ -270,13 +270,12 @@ function StepFooterArea(props: {
     hasError: boolean;
     onBack: () => void;
     onCancel: () => void;
-    onShowLogs: () => void;
     onOpenProject: () => void;
 }) {
     const {
         isCheckingMesh, isActive, isGitHubAppInstall, isCompleted,
         isOpeningProject, showGenericError, isCancelling, hasError,
-        onBack, onCancel, onShowLogs, onOpenProject,
+        onBack, onCancel, onOpenProject,
     } = props;
 
     if (isCheckingMesh || isActive || isGitHubAppInstall) {
@@ -287,7 +286,6 @@ function StepFooterArea(props: {
                         {getCancelButtonText(isCheckingMesh, isCancelling)}
                     </Button>
                 }
-                centerContent={<Button variant="secondary" onPress={onShowLogs} isQuiet>Logs</Button>}
                 constrainWidth={true}
             />
         );
@@ -296,7 +294,6 @@ function StepFooterArea(props: {
     if (isCompleted && !hasError) {
         return (
             <PageFooter
-                centerContent={!isOpeningProject && <Button variant="secondary" onPress={onShowLogs} isQuiet>Logs</Button>}
                 rightContent={!isOpeningProject && <Button variant="cta" onPress={onOpenProject}>View Projects</Button>}
                 constrainWidth={true}
             />
@@ -307,7 +304,6 @@ function StepFooterArea(props: {
         return (
             <PageFooter
                 leftContent={<Button variant="secondary" onPress={onBack} isQuiet>Back</Button>}
-                centerContent={<Button variant="secondary" onPress={onShowLogs} isQuiet>Logs</Button>}
                 constrainWidth={true}
             />
         );
@@ -496,10 +492,6 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
         }, TIMEOUTS.PROJECT_OPEN_TRANSITION);
     };
 
-    const handleShowLogs = () => {
-        vscode.postMessage('show-logs');
-    };
-
     const handleOpenConsole = useCallback(() => {
         webviewClient.postMessage('open-adobe-console', {
             orgId: state.adobeProject?.org_id,
@@ -556,7 +548,6 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
                 hasError={!!progress?.error}
                 onBack={onBack}
                 onCancel={handleCancel}
-                onShowLogs={handleShowLogs}
                 onOpenProject={handleOpenProject}
             />
         </div>
