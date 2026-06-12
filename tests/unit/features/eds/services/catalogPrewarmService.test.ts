@@ -157,6 +157,32 @@ describe('prewarmCatalog — happy path', () => {
         expect(url).toContain('path=%2Fproducts%2Forchard-2%2Forchard2');
     });
 
+    it('underscore-escapes SKUs with spaces/special chars so the path matches getProductLink (ADR-007)', async () => {
+        // A prose SKU (spaces) must be encoded with the same _HH scheme the
+        // storefront's getProductLink uses, or the prewarmed/published path
+        // won't match the link the browser requests. Raw spaces would also be
+        // CDN-rejected by aem.live. urlKey is sanitized like sanitizeName.
+        (global.fetch as jest.Mock)
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    data: {
+                        productSearch: {
+                            items: [{ productView: { sku: 'Yale UNOplus-Series A', urlKey: 'CMLodestar' } }],
+                            page_info: { total_pages: 1, current_page: 1 },
+                        },
+                    },
+                }),
+            })
+            .mockResolvedValue({ ok: true });
+
+        await prewarmCatalog(makeAccsProject(), ACCS_OVERLAY, DA_ORG, DA_SITE, mockLogger as never);
+
+        const url = (global.fetch as jest.Mock).mock.calls[1][0] as string;
+        const expectedPath = '/products/cmlodestar/yale_20unoplus-series_20a';
+        expect(url).toContain(`path=${encodeURIComponent(expectedPath)}`);
+    });
+
     it('paginates through multiple pages of catalog results', async () => {
         // Page 1: 2 products, total_pages: 2
         // Page 2: 2 products, total_pages: 2

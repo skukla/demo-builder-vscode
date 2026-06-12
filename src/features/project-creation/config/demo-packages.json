@@ -361,6 +361,7 @@
             "aem-assets-sku-sanitization",
             "commerce-account-sidebar-selector-race",
             "product-teaser-sku-encoding",
+            "product-teaser-getproductlink-import",
             "product-teaser-image-url-handling"
           ],
           "codePatchSource": {
@@ -410,6 +411,7 @@
             "aem-assets-sku-sanitization",
             "commerce-account-sidebar-selector-race",
             "product-teaser-sku-encoding",
+            "product-teaser-getproductlink-import",
             "product-teaser-image-url-handling"
           ],
           "codePatchSource": {
