@@ -85,6 +85,7 @@ describe('ActionGrid', () => {
         isRunning: false,
         isStartDisabled: false,
         isStopDisabled: false,
+        hasMesh: true,
         isMeshActionDisabled: false,
         isOpeningBrowser: false,
         isLogsHoverSuppressed: false,

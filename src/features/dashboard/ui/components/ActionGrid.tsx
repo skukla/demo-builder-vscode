@@ -62,8 +62,12 @@ export interface ActionGridProps {
     isStartDisabled: boolean;
     /** Whether Stop button should be disabled (ignored for EDS projects) */
     isStopDisabled: boolean;
-    /** Whether the project includes an API Mesh component */
-    hasMesh?: boolean;
+    /**
+     * Whether the project includes an API Mesh to deploy. Required (no default)
+     * so every caller must decide explicitly — a forgotten prop should not
+     * silently show the Deploy Mesh tile (the original bug).
+     */
+    hasMesh: boolean;
     /** Whether mesh-related actions should be disabled */
     isMeshActionDisabled: boolean;
     /** Whether browser is currently opening */
@@ -110,7 +114,7 @@ export function ActionGrid({
     isRunning,
     isStartDisabled,
     isStopDisabled,
-    hasMesh = true,
+    hasMesh,
     isMeshActionDisabled,
     isOpeningBrowser,
     isLogsHoverSuppressed,

@@ -119,7 +119,7 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
 
         it('should send deployMesh message when Deploy Mesh clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            renderDashboard();
+            renderDashboard({ hasMesh: true });
 
             const deployButton = screen.getByText('Deploy Mesh');
             await user.click(deployButton);

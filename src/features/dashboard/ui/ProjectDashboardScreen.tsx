@@ -61,7 +61,7 @@ interface ProjectDashboardScreenProps {
  *
  * @param props - Component props
  */
-export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName, isEds = false, edsLiveUrl, edsDaLiveUrl, initialMeshStatus, initialEdsStorefrontStatus }: ProjectDashboardScreenProps) {
+export function ProjectDashboardScreen({ project, hasMesh = false, brandName, stackName, isEds = false, edsLiveUrl, edsDaLiveUrl, initialMeshStatus, initialEdsStorefrontStatus }: ProjectDashboardScreenProps) {
     // Capture isEds on first render and never change it (project type doesn't change)
     const isEdsRef = useRef(isEds);
     if (isEds && !isEdsRef.current) {
@@ -269,6 +269,7 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                     <div className="dashboard-grid-container">
                         <ActionGrid
                             isEds={isEdsStable}
+                            hasMesh={hasMesh}
                             isRunning={isRunning}
                             isStartDisabled={isStartDisabled}
                             isStopDisabled={isStopDisabled}
