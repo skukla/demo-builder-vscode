@@ -625,6 +625,14 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                         // Save updated project state
                         await this.stateManager.saveProject(project);
                         await ProjectDashboardWebviewCommand.refreshStatus();
+                        // Reset the once-per-session storefront notification flag so the
+                        // NEXT storefront config change re-prompts to republish. Mirrors
+                        // the mesh flow (deployMesh -> meshActionTaken) and restart flow
+                        // (startDemo -> restartActionTaken). Without this, the flag stays
+                        // latched after the first republish and later changes (e.g.
+                        // switching store views back) silently show "Configuration saved"
+                        // while the live storefront stays stale.
+                        await vscode.commands.executeCommand('demoBuilder._internal.storefrontActionTaken');
                         this.showSuccessMessage('Storefront configuration republished successfully');
                     } else {
                         vscode.window.showErrorMessage(`Failed to republish storefront: ${result.error}`);
