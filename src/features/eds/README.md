@@ -159,14 +159,16 @@ If the DA.live token expires during content pipeline execution (phases 4-5), the
 Phase 1 of the BYOM workstream that makes `/products/{urlKey}/{sku}` URLs work for every storefront without per-product authoring.
 
 - **pdp404HandlerPublisher** - Generates and publishes a smart `/404.html` page at create/reset time. The page's embedded JS detects PDP-shape URLs, redirects mixed-case requests to their lowercase variant, and POSTs to a sibling `prepublish-pdp` action that triggers Helix admin preview/publish on the visitor's behalf. Gated by `params.byomOverlayUrl` — when BYOM is off, the step is skipped.
+- **pdpUrlEncoding** - Reversible, lowercase-stable, Helix-safe SKU encoding (`encodeSkuForUrl`/`decodeSkuFromUrl`/`sanitizeUrlKey`). The storefront reads the SKU back from the `/products/{urlKey}/{sku}` URL; canonical's lossy slugify breaks SKUs with spaces/punctuation/mixed case. The encoder keeps `[a-z0-9-]` literal and escapes other bytes as `_HH`. Kept byte-identical to the `eds-demo-patches` commerce.js patches (see [ADR-007](../../../docs/architecture/adr/007-pdp-sku-url-encoding.md)).
+- **catalogPrewarmService** - Enumerates the catalog and pre-publishes each SKU's PDP URL; builds the path with `pdpUrlEncoding` so prewarmed paths match the storefront's generated links.
 
-The full architecture (request flows, dependencies on Helix/Catalog Service case handling, Phase 2 evolution path, cross-repo seam with `accs-discovery-service`) lives in [`docs/architecture/eds-byom-pdp-routing.md`](../../../docs/architecture/eds-byom-pdp-routing.md). The decision rationale lives in [ADR-005](../../../docs/architecture/adr/005-byom-pdp-routing.md).
+The full architecture (request flows, dependencies on Helix/Catalog Service case handling, the reversible SKU encoding, Phase 2 evolution path, cross-repo seam with `accs-discovery-service`) lives in [`docs/architecture/eds-byom-pdp-routing.md`](../../../docs/architecture/eds-byom-pdp-routing.md). Decision rationale: [ADR-005](../../../docs/architecture/adr/005-byom-pdp-routing.md) (routing) and [ADR-007](../../../docs/architecture/adr/007-pdp-sku-url-encoding.md) (SKU encoding).
 
 ### Code Patches — Thin-Layer Storefront (ADR-006)
 
 A generic patch engine that lets demo packages ship targeted file edits against a canonical storefront template, retiring the practice of maintaining storefront-shaped forks for small customizations. **Live on develop.** Three demo packages now drive the thin-layer pipeline:
 
-- **CitiSignal (PaaS + ACCS)** — 7 patches against `hlxsites/aem-boilerplate-commerce`; replaces the retired `skukla/citisignal-eds-boilerplate` fork.
+- **CitiSignal (PaaS + ACCS)** — 8 patches against `hlxsites/aem-boilerplate-commerce`; replaces the retired `skukla/citisignal-eds-boilerplate` fork.
 - **custom (PaaS + ACCS)** — 2 universal patches (header + sidebar) against the same canonical.
 - **b2b (PaaS + ACCS)** — 5 patches (2 universal + 3 SKU/slash) against `adobe-commerce/boilerplate-b2b-template` — a different upstream from citisignal+custom; supported via the multi-canonical `lkgFile` field on `CodePatchSource`.
 

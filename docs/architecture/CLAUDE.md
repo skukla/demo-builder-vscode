@@ -121,21 +121,21 @@
 **Purpose**: How PDP URLs (`/products/{urlKey}/{sku}`) work for every storefront
 
 **When to Read**:
-- Touching anything in `src/features/eds/services/pdp404HandlerPublisher.ts` or the smart-404 step in `executeEdsPipeline`
-- Debugging PDP 404s in a live storefront
-- Planning Phase 2 (server-side render against the SC's authored template)
+- Touching anything in `src/features/eds/services/pdp404HandlerPublisher.ts`, `pdpUrlEncoding.ts`, `catalogPrewarmService.ts`, or the smart-404 step in `executeEdsPipeline`
+- Debugging PDP 404s or blank PDPs in a live storefront
+- Changing how SKUs are encoded into `/products/{urlKey}/{sku}` URLs
 - Understanding the two-repo seam with `accs-discovery-service`
 
 **Topics Covered**:
-- The shared `render-pdp` overlay + browser-side smart 404 + admin-trigger architecture
+- The shared `render-pdp` overlay + browser-side smart 404 + admin-trigger architecture (Phase 2 LIVE — overlay serves the SC's authored template)
 - Cold-path and warm-path request flows
-- Phase 1 scope (what ships) vs Phase 2 (deferred)
-- Load-bearing dependencies: Helix path-lowercasing, Catalog Service case-insensitivity, open Helix admin POST
+- Reversible, lowercase-stable SKU URL encoding (ADR-007)
+- Load-bearing dependencies: Helix path-lowercasing, Catalog Service case-insensitivity, open Helix admin POST, reversible SKU encoding
 - Verification probes for the live system
 
 **Reading Time**: 10 minutes
 
-**Related**: [ADR-005](adr/005-byom-pdp-routing.md) for decision rationale; `.rptc/research/multitenant-prerender-evaluation/` for empirical research
+**Related**: [ADR-005](adr/005-byom-pdp-routing.md) (routing) and [ADR-007](adr/007-pdp-sku-url-encoding.md) (SKU encoding) for decision rationale; `.rptc/research/multitenant-prerender-evaluation/` and `.rptc/research/pdp-sku-encoding-gap/` for empirical research
 
 ---
 

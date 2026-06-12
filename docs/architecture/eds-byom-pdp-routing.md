@@ -146,7 +146,7 @@ The cold path runs once per SKU across all visitors to a storefront. Every subse
 
 ## Load-bearing dependencies
 
-Two empirical facts make Phase 1 work. If either ever changes upstream, Phase 1 breaks silently.
+These empirical facts make the routing work. If any changes upstream, it breaks silently.
 
 ### 1. Helix normalizes paths to lowercase before storing in content-bus
 
@@ -171,6 +171,16 @@ Verified by the `accs-discovery-service` team (research doc at `accs-discovery-s
 **Why it matters**: `prepublish-pdp` has no credentials yet. It can call Helix admin freely because Helix doesn't gate those endpoints. `DELETE` (unpublish) is gated, but Phase 1 doesn't need DELETE — the extension owns cleanup via the SC's local tokens.
 
 **If this ever changes** (Helix locks down admin POST): `prepublish-pdp` would need to authenticate. The shape of that authentication is the question we'd revisit. The shared-secret pattern is rejected (see commit `facaec19` rationale); the most likely path is a GitHub App that SCs install on their account. That's significant new infrastructure — at minimum, a multi-day project on the `accs-discovery-service` side. Worth flagging early so it's not a surprise.
+
+### 4. The SKU URL segment is reversibly encoded (not slugified)
+
+The PDP URL is `/products/{urlKey}/{sku}`, and the drop-in reads the SKU back from the URL to query Commerce. Adobe canonical slugifies the SKU lossily (`sanitizeName`), which breaks any SKU with spaces/punctuation/mixed case (blank PDP). Demo Builder patches `getProductLink`/`getSkuFromUrl` to use a **reversible, lowercase-stable, Helix-safe** encoding (`encodeSkuForUrl`/`decodeSkuFromUrl` — keep `[a-z0-9-]` literal, escape every other UTF-8 byte as `_HH`). Clean SKUs encode unchanged; only messy SKUs gain `_HH` markers.
+
+**Why it matters**: builds on #1 and #2 — the encoding stays lowercase (so the redirect is a no-op on it) and decodes modulo case (so the case-insensitive Catalog lookup still resolves the product). `encodeURIComponent` is unusable here: aem.live's CDN rejects `%`-encoded paths with a bare 404 before the storefront renders. The same encoder lives in `catalogPrewarmService.ts` (extension) and the `eds-demo-patches` commerce.js patches — they must stay byte-identical so published paths match generated links.
+
+**SC guidance**: for the cleanest demo URLs, give products clean alphanumeric SKUs (avoid spaces/special characters); the product *name* is unconstrained. Custom blocks that link to PDPs should build the href with `getProductLink(urlKey, sku)`. Full rationale, alternatives, and the producer audit are in [ADR-007](adr/007-pdp-sku-url-encoding.md).
+
+**If this ever changes** (canonical adopts reversible encoding, or Catalog Service becomes case-sensitive): see ADR-007 — the former retires the patch, the latter is the same silent-rot risk as #2.
 
 ---
 
