@@ -63,9 +63,17 @@ jest.mock('@modelcontextprotocol/sdk/client/stdio.js', () => ({
     getDefaultEnvironment: jest.fn(() => ({ PATH: '/usr/bin:/bin', HOME: '/home/test' })),
 }));
 
+// The in-extension server is probed directly over its socket — not spawned as a
+// proxy child. Mock the probe so tests can script its result.
+jest.mock('@/features/ai/server/mcpToolProbe', () => ({
+    probeInExtensionMcpTools: jest.fn(),
+}));
+
+import { probeInExtensionMcpTools } from '@/features/ai/server/mcpToolProbe';
 import { inspectAllServers, clearMcpCache, MCP_INSPECT_TIMEOUT_MS } from '@/features/ai/mcpInspector';
 
 const readFileMock = fsPromises.readFile as jest.Mock;
+const probeMock = probeInExtensionMcpTools as jest.Mock;
 
 const PROJECT_PATH = '/projects/demo';
 const MCP_JSON_PATH = `${PROJECT_PATH}/.claude/mcp.json`;
@@ -123,6 +131,103 @@ describe('inspectAllServers', () => {
             const result = await inspectAllServers(PROJECT_PATH);
 
             expect(result).toEqual([]);
+        });
+    });
+
+    // Regression: Leah's first AI-verify showed "mcp demo-builder: timeout —
+    // Exceeded 15000ms budget". The inspector spawned the stdio→UDS proxy and
+    // ran a full SDK handshake that loops back into the same extension host;
+    // under first-run contention (playwright + commerce-extensibility spawning
+    // in parallel) that loopback starved past the 15s budget. The in-extension
+    // server is the extension's OWN server — inspect it via the direct socket
+    // probe (the same ground truth Diagnostics uses), not a spawned proxy.
+    describe('in-extension server (direct socket probe)', () => {
+        const DB_SOCKET = '/tmp/demo-builder.sock';
+
+        function setDemoBuilderMcpJson(): void {
+            setMcpJson({
+                mcpServers: {
+                    'demo-builder': {
+                        command: 'node',
+                        args: ['/ext/dist/mcp-proxy.js'],
+                        env: { DEMO_BUILDER_MCP_SOCKET: DB_SOCKET },
+                    },
+                },
+            });
+        }
+
+        it('probes the socket directly and never spawns the proxy', async () => {
+            setDemoBuilderMcpJson();
+            probeMock.mockResolvedValue({ ok: true, tools: ['get_projects', 'sign_in'] });
+
+            const result = await inspectAllServers(PROJECT_PATH);
+
+            expect(probeMock).toHaveBeenCalledWith(DB_SOCKET, MCP_INSPECT_TIMEOUT_MS);
+            // The proxy child is never spawned for the extension's own server.
+            expect(transportInstances).toHaveLength(0);
+            expect(result[0]).toMatchObject({
+                id: 'demo-builder',
+                status: 'ok',
+                tools: [
+                    { name: 'get_projects', description: '' },
+                    { name: 'sign_in', description: '' },
+                ],
+            });
+        });
+
+        it('maps a probe timeout to status "timeout"', async () => {
+            setDemoBuilderMcpJson();
+            probeMock.mockResolvedValue({ ok: false, error: 'timed out after 15000ms' });
+
+            const result = await inspectAllServers(PROJECT_PATH);
+
+            expect(result[0]).toMatchObject({ id: 'demo-builder', status: 'timeout' });
+        });
+
+        it('maps a probe connection failure to status "error"', async () => {
+            setDemoBuilderMcpJson();
+            probeMock.mockResolvedValue({ ok: false, error: 'connect ENOENT /tmp/demo-builder.sock' });
+
+            const result = await inspectAllServers(PROJECT_PATH);
+
+            expect(result[0].status).toBe('error');
+            expect(result[0].error).toContain('ENOENT');
+        });
+
+        it('does not cache a failed probe — retries on the next call', async () => {
+            // The reported bug was a transient first-run timeout. A failed probe
+            // must NOT be cached, so the next verify re-probes and recovers.
+            setDemoBuilderMcpJson();
+            probeMock
+                .mockResolvedValueOnce({ ok: false, error: 'timed out after 15000ms' })
+                .mockResolvedValueOnce({ ok: true, tools: ['get_projects'] });
+
+            const first = await inspectAllServers(PROJECT_PATH);
+            const second = await inspectAllServers(PROJECT_PATH);
+
+            expect(first[0].status).toBe('timeout');
+            expect(second[0].status).toBe('ok');
+            expect(probeMock).toHaveBeenCalledTimes(2);
+        });
+
+        it('still spawns the proxy for third-party servers (no socket env)', async () => {
+            setMcpJson({
+                mcpServers: {
+                    'demo-builder': {
+                        command: 'node',
+                        args: ['/ext/dist/mcp-proxy.js'],
+                        env: { DEMO_BUILDER_MCP_SOCKET: DB_SOCKET },
+                    },
+                    'playwright': { command: 'npx', args: ['@playwright/mcp'] },
+                },
+            });
+            probeMock.mockResolvedValue({ ok: true, tools: [] });
+
+            await inspectAllServers(PROJECT_PATH);
+
+            // Only the third-party server is spawned via the SDK transport.
+            expect(transportInstances).toHaveLength(1);
+            expect(transportInstances[0].command).toBe('npx');
         });
     });
 

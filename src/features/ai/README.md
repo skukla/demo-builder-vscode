@@ -16,7 +16,7 @@ The harness is **Claude Code (CLI)** — users open a generated project with `cl
 |------|---------|
 | `aiSetupVerifier.ts` | File-presence checks + `gatherInventory` orchestrator; returns `AiVerificationResult` |
 | `skillInspector.ts` | Walks `.claude/skills/`, parses YAML frontmatter, classifies skills (`demo-builder` / `adobe` / `unknown`) |
-| `mcpInspector.ts` | Spawns each declared MCP server via `@modelcontextprotocol/sdk` stdio client, returns tool inventory with TTL cache |
+| `mcpInspector.ts` | Inspects each `.claude/mcp.json` server (third-party via `@modelcontextprotocol/sdk` stdio client; the in-extension `demo-builder` server via a direct socket probe), returns tool inventory with TTL cache |
 | `sessionMcpDetector.ts` | Reads `~/.claude.json` + `~/.claude/mcp-needs-auth-cache.json` to enumerate session-level Adobe MCPs |
 | `index.ts` | Public API exports |
 
@@ -47,7 +47,7 @@ Walks `<project>/.claude/skills/` and returns one entry per `.md` file with `{ n
 
 ### `inspectAllServers(projectPath): Promise<McpInventoryEntry[]>` + `clearMcpCache(serverId?)`
 
-Reads `<project>/.claude/mcp.json`, spawns each declared server via the SDK's `Client` + `StdioClientTransport`, paginates through `tools/list`, returns per-server `{ id, status, tools?, error? }`. Module-level `Map` cache with 5-minute TTL (±10% jitter via `getCacheTTLWithJitter`). Per-server 15s overall budget (`MCP_INSPECT_TIMEOUT_MS`). Spawned children inherit only the SDK's safe env allowlist (PATH/HOME/USER/SHELL/TERM/LANG/TMPDIR) — extension host secrets do not leak. `clearMcpCache()` clears every entry; `clearMcpCache(id)` clears a single entry.
+Reads `<project>/.claude/mcp.json` and returns per-server `{ id, status, tools?, error? }`. Third-party servers are spawned via the SDK's `Client` + `StdioClientTransport`, paginating through `tools/list`; the in-extension `demo-builder` server (the entry whose `env` carries `DEMO_BUILDER_MCP_SOCKET`) is inspected via a direct Unix-socket probe instead — no subprocess, no SDK handshake — which avoids the spawn-and-loopback that starved past the 15s budget on first verify (the direct probe returns tool names only, with empty descriptions; the inventory UI shows the tool count). Module-level `Map` cache with 5-minute TTL (±10% jitter via `getCacheTTLWithJitter`). Per-server 15s overall budget (`MCP_INSPECT_TIMEOUT_MS`). Spawned children (the third-party path) inherit only the SDK's safe env allowlist (PATH/HOME/USER/SHELL/TERM/LANG/TMPDIR) — extension host secrets do not leak. `clearMcpCache()` clears every entry; `clearMcpCache(id)` clears a single entry.
 
 ### `detectSessionMcps(): Promise<SessionMcpEntry[]>`
 
