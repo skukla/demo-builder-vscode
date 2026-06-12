@@ -130,6 +130,76 @@ describe('storefrontSyncService.syncAndPublish', () => {
         });
     });
 
+    describe('pre-sync fast-forward', () => {
+        // The storefront's GitHub remote also receives commits the local clone
+        // never sees (config.json republish, fstab writes, asset vendoring all
+        // commit through the GitHub API). Those leave the clone behind and the
+        // next push is rejected. A fetch + ff-only merge up front closes the gap.
+
+        it('fast-forwards the clone before staging when a token is provided', async () => {
+            await syncAndPublish({
+                storefrontPath: STOREFRONT,
+                commitMessage: 'msg',
+                githubToken: 'gh-token-abc',
+            });
+
+            const calls = execFileMock.mock.calls;
+            const ffIdx = calls.findIndex(c => c[1].includes('pull') && c[1].includes('--ff-only'));
+            const addIdx = calls.findIndex(c => c[1].includes('add'));
+            expect(ffIdx).toBeGreaterThanOrEqual(0);
+            expect(addIdx).toBeGreaterThanOrEqual(0);
+            // Fast-forward must run BEFORE staging, or staged changes block the merge.
+            expect(ffIdx).toBeLessThan(addIdx);
+            // Pulls from a token-injected URL (same pattern as push).
+            expect(calls[ffIdx][1].some((a: string) => a.includes('gh-token-abc'))).toBe(true);
+        });
+
+        it('uses a plain git pull --ff-only when no token is provided', async () => {
+            await syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' });
+
+            const ffCall = execFileMock.mock.calls.find(
+                c => c[1].includes('pull') && c[1].includes('--ff-only'),
+            );
+            expect(ffCall?.[1]).toEqual(['-C', STOREFRONT, 'pull', '--ff-only']);
+        });
+
+        it('still commits and pushes when the fast-forward fails (best-effort)', async () => {
+            // Diverged history / dirty file: ff-only pull fails. Sync must continue.
+            execFileMock.mockImplementation((cmd: string, args: string[], cb: (err: Error | null, result?: { stdout: string; stderr: string }) => void) => {
+                if (args.includes('remote') && args.includes('get-url')) {
+                    cb(null, { stdout: 'https://github.com/owner/repo.git\n', stderr: '' });
+                    return;
+                }
+                if (args.includes('pull') && args.includes('--ff-only')) {
+                    const err = new Error('Command failed') as NodeJS.ErrnoException & { stderr?: string };
+                    err.stderr = 'fatal: Not possible to fast-forward, aborting.';
+                    cb(err);
+                    return;
+                }
+                cb(null, { stdout: '', stderr: '' });
+            });
+
+            const result = await syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' });
+
+            expect(result.pushed).toBe(true);
+            expect(execFileMock.mock.calls.some(c => c[1].includes('push'))).toBe(true);
+        });
+
+        it('skips the fast-forward on the rebase-recovery path (skipCommit=true)', async () => {
+            await syncAndPublish({
+                storefrontPath: STOREFRONT,
+                commitMessage: 'msg',
+                githubToken: 'gh-token-abc',
+                skipCommit: true,
+            });
+
+            const ranFastForward = execFileMock.mock.calls.some(
+                c => c[1].includes('pull') && c[1].includes('--ff-only'),
+            );
+            expect(ranFastForward).toBe(false);
+        });
+    });
+
     describe('token injection', () => {
         it('pushes with token-injected URL when githubToken is provided', async () => {
             await syncAndPublish({

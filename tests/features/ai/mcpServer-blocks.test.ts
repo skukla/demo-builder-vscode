@@ -41,26 +41,33 @@ describe('toolHandlers.syncStorefront', () => {
         ).rejects.toThrow(/escapes allowed directory/i);
     });
 
-    it('calls execFile for git add -A, git commit, git push in sequence', async () => {
+    // syncAndPublish now runs a best-effort `git pull --ff-only` BEFORE staging
+    // (pre-sync fast-forward, so the push fast-forwards instead of being
+    // rejected). With no token in the MCP path that adds one leading call, so
+    // the sequence is: pull → add → commit → push.
+    it('calls execFile for git pull --ff-only, add, commit, push in sequence', async () => {
         mockManifestWithStorefront();
         (childProcess.execFile as jest.Mock)
+            .mockImplementationOnce((_cmd: string, _args: string[], cb: (...args: unknown[]) => void) => cb(null, '', ''))
             .mockImplementationOnce((_cmd: string, _args: string[], cb: (...args: unknown[]) => void) => cb(null, '', ''))
             .mockImplementationOnce((_cmd: string, _args: string[], cb: (...args: unknown[]) => void) => cb(null, '', ''))
             .mockImplementationOnce((_cmd: string, _args: string[], cb: (...args: unknown[]) => void) => cb(null, '', ''));
 
         const result = await toolHandlers.syncStorefront(PROJECTS_DIR, PROJECT_NAME, 'AI: update config');
 
-        expect(childProcess.execFile as jest.Mock).toHaveBeenCalledTimes(3);
+        expect(childProcess.execFile as jest.Mock).toHaveBeenCalledTimes(4);
         const calls = (childProcess.execFile as jest.Mock).mock.calls;
-        expect(calls[0][1]).toContain('add');
-        expect(calls[1][1]).toContain('commit');
-        expect(calls[2][1]).toContain('push');
+        expect(calls[0][1]).toContain('pull');
+        expect(calls[1][1]).toContain('add');
+        expect(calls[2][1]).toContain('commit');
+        expect(calls[3][1]).toContain('push');
         expect(result).toContain('success');
     });
 
     it('strips newlines from commit message before passing to git', async () => {
         mockManifestWithStorefront();
         (childProcess.execFile as jest.Mock)
+            .mockImplementationOnce((_cmd: string, _args: string[], cb: (...args: unknown[]) => void) => cb(null, '', '')) // pull --ff-only
             .mockImplementationOnce((_cmd: string, _args: string[], cb: (...args: unknown[]) => void) => cb(null, '', ''))
             .mockImplementationOnce((_cmd: string, _args: string[], cb: (...args: unknown[]) => void) => cb(null, '', ''))
             .mockImplementationOnce((_cmd: string, _args: string[], cb: (...args: unknown[]) => void) => cb(null, '', ''));
@@ -68,7 +75,7 @@ describe('toolHandlers.syncStorefront', () => {
         await toolHandlers.syncStorefront(PROJECTS_DIR, PROJECT_NAME, 'AI: sync\nline2');
 
         const calls = (childProcess.execFile as jest.Mock).mock.calls;
-        const commitArgs: string[] = calls[1][1];
+        const commitArgs: string[] = calls[2][1];
         const messageIndex = commitArgs.indexOf('-m') + 1;
         expect(commitArgs[messageIndex]).not.toContain('\n');
         expect(commitArgs[messageIndex]).toBe('AI: sync line2');
@@ -81,6 +88,7 @@ describe('toolHandlers.syncStorefront', () => {
             { stderr: 'nothing to commit, working tree clean' },
         );
         (childProcess.execFile as jest.Mock)
+            .mockImplementationOnce((_cmd: string, _args: string[], cb: (...args: unknown[]) => void) => cb(null, '', '')) // pull --ff-only
             .mockImplementationOnce((_cmd: string, _args: string[], cb: (...args: unknown[]) => void) => cb(null, '', ''))
             .mockImplementationOnce((_cmd: string, _args: string[], cb: (...args: unknown[]) => void) =>
                 cb(nothingToCommitErr, '', ''),
@@ -94,6 +102,7 @@ describe('toolHandlers.syncStorefront', () => {
     it('uses the default commit message when commitMessage collapses to empty after trim', async () => {
         mockManifestWithStorefront();
         (childProcess.execFile as jest.Mock)
+            .mockImplementationOnce((_cmd: string, _args: string[], cb: (...args: unknown[]) => void) => cb(null, '', '')) // pull --ff-only
             .mockImplementationOnce((_cmd: string, _args: string[], cb: (...args: unknown[]) => void) => cb(null, '', ''))
             .mockImplementationOnce((_cmd: string, _args: string[], cb: (...args: unknown[]) => void) => cb(null, '', ''))
             .mockImplementationOnce((_cmd: string, _args: string[], cb: (...args: unknown[]) => void) => cb(null, '', ''));
@@ -101,7 +110,7 @@ describe('toolHandlers.syncStorefront', () => {
         await toolHandlers.syncStorefront(PROJECTS_DIR, PROJECT_NAME, '  \n\r  ');
 
         const calls = (childProcess.execFile as jest.Mock).mock.calls;
-        const commitArgs: string[] = calls[1][1];
+        const commitArgs: string[] = calls[2][1];
         const messageIndex = commitArgs.indexOf('-m') + 1;
         expect(commitArgs[messageIndex]).toBe('AI: sync files');
     });
@@ -121,8 +130,9 @@ describe('toolHandlers.syncStorefront', () => {
     it('throws when git push fails with a real error', async () => {
         mockManifestWithStorefront();
         (childProcess.execFile as jest.Mock)
-            .mockImplementationOnce((_cmd: string, _args: string[], cb: (...args: unknown[]) => void) => cb(null, '', ''))
-            .mockImplementationOnce((_cmd: string, _args: string[], cb: (...args: unknown[]) => void) => cb(null, '', ''))
+            .mockImplementationOnce((_cmd: string, _args: string[], cb: (...args: unknown[]) => void) => cb(null, '', '')) // pull --ff-only
+            .mockImplementationOnce((_cmd: string, _args: string[], cb: (...args: unknown[]) => void) => cb(null, '', '')) // add
+            .mockImplementationOnce((_cmd: string, _args: string[], cb: (...args: unknown[]) => void) => cb(null, '', '')) // commit
             .mockImplementationOnce((_cmd: string, _args: string[], cb: (...args: unknown[]) => void) =>
                 cb(new Error('rejected: remote rejected push'), '', ''),
             );
