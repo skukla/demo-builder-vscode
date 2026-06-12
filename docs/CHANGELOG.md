@@ -7,15 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.117] - 2026-06-12
+
 ### Added
 
 - **Per-project authoring experience — DA.live Classic or Experience Workspace.** SCs choose, per project, which AEM authoring experience a storefront uses. A new global setting `demoBuilder.daLive.authoringExperience` (default `da-live-classic`, preserving current behavior) sets the default for new projects; a per-project override on the EDS component metadata wins over it (resolver mirrors the BYOM-overlay precedence: per-project → global → DA.live Classic). The per-project choice is set in the project's **Configure** screen (an "Authoring Experience" radio group, EDS projects only); the "Author" button on the dashboard and projects list relabels to match ("Author in DA.live Classic" / "Author in Experience Workspace") and updates live after a save. Saving the choice persists it and re-applies the site-scoped DA `editor.path` row — the experience.adobe.com Universal Editor punch-out for DA.live Classic, the da.live canvas for Experience Workspace, or **clearing** the row when there is no punch-out to write (no `IMSOrgId`) so it can never go stale. DA.live Classic opens `https://da.live/#/<org>/<site>`; Experience Workspace opens the da.live-native canvas at `https://da.live/canvas#/<org>/<site>/index.html` (the `?nx=` branch is configurable via `demoBuilder.daLive.ewCanvasBranch`, default empty = production). Existing projects resolve to DA.live Classic, so their behavior is unchanged.
 
 - **Quick Edit wiring for every EDS storefront.** A new brand-agnostic vendoring step (modeled on the PDP 404 handler) adds the Experience Workspace WYSIWYG dependency to every EDS project at create, reset, and on a Configure flip to Experience Workspace: in `scripts/scripts.js` it exports `loadPage`, adds the Sidekick `custom:quick-edit` listener + a `?quick-edit` dynamic-import branch, and guards the first-paint `waitForFirstImage` wait; it writes `tools/quick-edit/quick-edit.js` and adds the `quick-edit` Sidekick plugin to the generated `config.json`. Inert under DA.live Classic; powers the Experience Workspace Layout (WYSIWYG) view. Idempotent and non-fatal; an extension-side anchor-match test pins the `scripts.js` anchors to the canonical boilerplate.
 
+- **Dashboard More menu with kebab actions.** Routine dashboard actions consolidate under a **More** tile grouped with Configure: Rename (dedicated dialog), Reset, Copy Path, Export, and Republish (EDS).
+
+- **Logs toggle moved into the sidebar.** The Logs affordance — previously duplicated across the dashboard and wizard footers — is now a single Logs utility in the sidebar UtilityBar.
+
+- **Reversible, lowercase-stable SKU encoding for PDP URLs.** Replaces the slash-only SKU patches with `encodeURIComponent`/`decodeURIComponent` across link producers, the consumer, and the two extension-side path builders, so prose-like SKUs (spaces, case, punctuation) survive the round-trip and the smart-404 lowercase redirect. See ADR 007.
+
+### Fixed
+
+- **Store-discovery cascade dropdowns follow the selected website.** Changing the Website now repopulates the Store and Store View dropdowns (and auto-selects when a website or store has a single child) instead of showing the previous website's children. The filters read the field value via the same accessor the pickers use.
+
+- **Storefront re-prompts republish after every config change.** The republish prompt was suppressed after the first change; it now reappears whenever configuration changes leave the storefront stale.
+
+- **Storefront sync surfaces merge conflicts and detects ACCS store-config drift.** Rebase conflicts now appear in Source Control, a pre-sync fast-forward makes them rare, and ACCS store-config changes are detected so the storefront republishes.
+
+- **Deploy Mesh tile only shows when the project has a mesh.**
+
+- **AI verification probes the in-extension MCP server directly.**
+
+- **Experience Workspace canvas fixes.** Correct canvas URL (with the `ewCanvasBranch` setting), param-less default with a reserved store-detect layout, first-paint paint-before-wait in quick-edit mode, the Sidekick quick-edit listener wiring, and double-toast suppression on an authoring flip.
+
 ### Changed
 
 - **DA `editor.path` now writes site-scoped.** The authoring punch-out path mapping moved from the org config (`/config/<org>`, via `applyOrgConfig`) to the per-site config (`/config/<org>/<site>`, via `applySiteConfig`) with a `/<org>/<site>` row key. Projects that share a DA org are now isolated: flipping one project's authoring experience no longer clobbers another site's `editor.path` row. Supersedes the beta.116 statement that `editor.path` stays org-scoped.
+
+- **MCP tools install into a per-project isolated dir**, not the storefront.
+
+- **Authoring-experience value renamed** `universal-editor` → `da-live-classic`; VS Code settings show friendly labels.
+
+- **Removed the Components file browser** from the dashboard.
 
 ### Removed
 
