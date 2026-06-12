@@ -146,11 +146,6 @@ Multi-step React-based wizard for guided project setup:
 - Dependency resolution
 - `.env` file generation and merging
 
-**Component Tree Provider**:
-- VS Code tree view for browsing component files
-- Hides `.env` files (managed via Configure UI)
-- Quick access to component source code
-
 ### 4. Adobe Integration
 
 **Authentication**:
@@ -382,7 +377,6 @@ demo-builder-vscode/
 │   ├── utils/                    # Legacy utilities (being phased out — prefer src/features/ or src/core/)
 │   ├── providers/                # VS Code providers
 │   │   ├── projectTreeProvider.ts   # Project tree view
-│   │   ├── componentTreeProvider.ts # Component browser
 │   │   └── statusBar.ts             # Status bar
 │   ├── features/project-creation/ui/ # Wizard React app (entry point)
 │   └── types/                    # TypeScript definitions

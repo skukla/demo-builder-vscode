@@ -27,4 +27,5 @@ export type SidebarMessageType =
     | 'getContext'
     | 'setContext'
     | 'openAiChat'
-    | 'showPrompts';
+    | 'showPrompts'
+    | 'openLogs';

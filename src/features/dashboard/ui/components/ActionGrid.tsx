@@ -9,9 +9,9 @@
  *  - Storefront zone (EDS only): Sync Storefront. Sits on row 1 next to
  *    Primary so storefront ops are visually adjacent to the storefront
  *    authoring surface.
- *  - Build zone: Deploy Mesh (when hasMesh), Configure, Logs, and a "More"
+ *  - Build zone: Deploy Mesh (when hasMesh), Configure, and a "More"
  *    overflow menu holding Components, Refresh Block Library (EDS only),
- *    and Dev Console.
+ *    and Dev Console. (Logs moved to the sidebar Logs utility.)
  *  - Delete footer: isolated below the zones, destructive styling.
  *
  * Gating is behavioral, not displayed: Author in DA.live and Sync Storefront
@@ -44,11 +44,17 @@ import PublishCheck from '@spectrum-icons/workflow/PublishCheck';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import Settings from '@spectrum-icons/workflow/Settings';
 import StopCircle from '@spectrum-icons/workflow/StopCircle';
-import ViewList from '@spectrum-icons/workflow/ViewList';
 import React from 'react';
 
 /** Overflow menu item keys. */
-type OverflowKey = 'components' | 'refreshBlockLibrary' | 'devConsole';
+type OverflowKey =
+    | 'rename'
+    | 'copyPath'
+    | 'export'
+    | 'refreshBlockLibrary'
+    | 'republishContent'
+    | 'devConsole'
+    | 'reset';
 
 /**
  * Props for the ActionGrid component
@@ -62,14 +68,16 @@ export interface ActionGridProps {
     isStartDisabled: boolean;
     /** Whether Stop button should be disabled (ignored for EDS projects) */
     isStopDisabled: boolean;
-    /** Whether the project includes an API Mesh component */
-    hasMesh?: boolean;
+    /**
+     * Whether the project includes an API Mesh to deploy. Required (no default)
+     * so every caller must decide explicitly — a forgotten prop should not
+     * silently show the Deploy Mesh tile (the original bug).
+     */
+    hasMesh: boolean;
     /** Whether mesh-related actions should be disabled */
     isMeshActionDisabled: boolean;
     /** Whether browser is currently opening */
     isOpeningBrowser: boolean;
-    /** Whether to suppress hover on Logs button */
-    isLogsHoverSuppressed: boolean;
     /** Handler for Start button (non-EDS only) */
     handleStartDemo: () => void;
     /** Handler for Stop button (non-EDS only) */
@@ -80,20 +88,29 @@ export interface ActionGridProps {
     handleOpenLiveSite?: () => void;
     /** Handler for Open DA.live button (EDS only) */
     handleOpenDaLive?: () => void;
-    /** Handler for Logs button */
-    handleViewLogs: () => void;
     /** Handler for Deploy Mesh button */
     handleDeployMesh: () => void;
     /** Handler for Sync Storefront button (EDS projects only) */
     handleSyncStorefront?: () => void;
     /** Handler for Refresh Block Library overflow item (EDS projects only) */
     handleRefreshBlockLibrary?: () => void;
+    /** Handler for Republish Content overflow item (EDS projects only) */
+    handleRepublishContent?: () => void;
     /** Handler for Configure button */
     handleConfigure: () => void;
-    /** Handler for Components button (overflow menu) */
-    handleViewComponents: () => void;
     /** Handler for Dev Console button (overflow menu) */
     handleOpenDevConsole: () => void;
+    /**
+     * Handler for the Rename overflow item. Opens the rename dialog (owned by
+     * ProjectDashboardScreen). Optional — gated like the kebab's Edit action.
+     */
+    handleRename?: () => void;
+    /** Handler for the Copy Path overflow item */
+    handleCopyPath: () => void;
+    /** Handler for the Export overflow item */
+    handleExportProject: () => void;
+    /** Handler for the Reset overflow item (always shown, last in the menu) */
+    handleResetProject: () => void;
     /** Handler for Delete button */
     handleDeleteProject: () => void;
 }
@@ -110,34 +127,51 @@ export function ActionGrid({
     isRunning,
     isStartDisabled,
     isStopDisabled,
-    hasMesh = true,
+    hasMesh,
     isMeshActionDisabled,
     isOpeningBrowser,
-    isLogsHoverSuppressed,
     handleStartDemo,
     handleStopDemo,
     handleOpenBrowser,
     handleOpenLiveSite,
     handleOpenDaLive,
-    handleViewLogs,
     handleDeployMesh,
     handleSyncStorefront,
     handleRefreshBlockLibrary,
+    handleRepublishContent,
     handleConfigure,
-    handleViewComponents,
     handleOpenDevConsole,
+    handleRename,
+    handleCopyPath,
+    handleExportProject,
+    handleResetProject,
     handleDeleteProject,
 }: ActionGridProps): React.ReactElement {
+    // Rename gating mirrors the kebab's Edit: non-EDS only while stopped, EDS always.
+    const canRename = Boolean(handleRename) && (isEds || !isRunning);
+
     const handleOverflowAction = (key: React.Key): void => {
         switch (key) {
-            case 'components' satisfies OverflowKey:
-                handleViewComponents();
+            case 'rename' satisfies OverflowKey:
+                handleRename?.();
+                return;
+            case 'copyPath' satisfies OverflowKey:
+                handleCopyPath();
+                return;
+            case 'export' satisfies OverflowKey:
+                handleExportProject();
                 return;
             case 'refreshBlockLibrary' satisfies OverflowKey:
                 handleRefreshBlockLibrary?.();
                 return;
+            case 'republishContent' satisfies OverflowKey:
+                handleRepublishContent?.();
+                return;
             case 'devConsole' satisfies OverflowKey:
                 handleOpenDevConsole();
+                return;
+            case 'reset' satisfies OverflowKey:
+                handleResetProject();
                 return;
         }
     };
@@ -237,13 +271,12 @@ export function ActionGrid({
                 )}
             </div>
 
-            {/* Build zone — deploy/configure/logs plus an overflow menu. */}
+            {/* Build zone — deploy/configure plus an overflow menu. Tiles pack
+                left so Configure and More stay grouped (the row holds only a few
+                tiles after Deploy Mesh gates out and Logs/Components moved away). */}
             <div className="dashboard-zone-section" data-zone="build">
                 <span className="dashboard-zone-label">Build</span>
-                {/* On EDS, row 1 is two clusters (Primary | Storefront) on a
-                    fixed column grid. Build uses the same aligned column grid
-                    so its tiles line up under the clusters above. */}
-                <div className={`dashboard-zone-grid${isEds ? ' dashboard-zone-grid--aligned' : ''}`}>
+                <div className="dashboard-zone-grid">
                     {hasMesh && (
                         <ActionButton
                             onPress={handleDeployMesh}
@@ -267,15 +300,6 @@ export function ActionGrid({
                         <Text UNSAFE_className="icon-label">Configure</Text>
                     </ActionButton>
 
-                    <ActionButton
-                        onPress={handleViewLogs}
-                        isQuiet
-                        UNSAFE_className={`dashboard-action-button ${isLogsHoverSuppressed ? 'hover-suppressed' : ''}`}
-                    >
-                        <ViewList size="L" />
-                        <Text UNSAFE_className="icon-label">Logs</Text>
-                    </ActionButton>
-
                     {/* Overflow — rarely used actions tucked into a menu */}
                     <MenuTrigger>
                         <ActionButton
@@ -287,11 +311,17 @@ export function ActionGrid({
                             <Text UNSAFE_className="icon-label">More</Text>
                         </ActionButton>
                         <Menu onAction={handleOverflowAction}>
-                            <Item key="components">Components</Item>
+                            {canRename ? <Item key="rename">Rename</Item> : null}
+                            <Item key="copyPath">Copy Path</Item>
+                            <Item key="export">Export</Item>
                             {isEds && handleRefreshBlockLibrary ? (
                                 <Item key="refreshBlockLibrary">Refresh Block Library</Item>
                             ) : null}
+                            {isEds && handleRepublishContent ? (
+                                <Item key="republishContent">Republish Content</Item>
+                            ) : null}
                             <Item key="devConsole">Dev Console</Item>
+                            <Item key="reset">Reset</Item>
                         </Menu>
                     </MenuTrigger>
                 </div>

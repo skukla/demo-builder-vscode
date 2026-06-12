@@ -19,6 +19,5 @@ export {
     handleBrowseFiles,
     handleLog,
     handleOpenAdobeConsole,
-    handleShowLogs,
     handleOpenExternal,
 } from './lifecycleHandlers';

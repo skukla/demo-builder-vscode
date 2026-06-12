@@ -17,9 +17,11 @@ import {
 import React, { useState, useEffect, useRef } from 'react';
 import { ActionGrid } from './components/ActionGrid';
 import { AiCapabilitiesModal } from './components/AiCapabilitiesModal';
+import { DashboardRenameDialog } from './components/DashboardRenameDialog';
 import { isStartActionDisabled } from './dashboardPredicates';
 import { useDashboardActions } from './hooks/useDashboardActions';
 import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
+import { useRenameDialog } from './hooks/useRenameDialog';
 import { StatusCard } from '@/core/ui/components/feedback';
 import { PageLayout, PageHeader } from '@/core/ui/components/layout';
 import { useFocusTrap, useSingleTimer } from '@/core/ui/hooks';
@@ -57,11 +59,11 @@ interface ProjectDashboardScreenProps {
  * - Project name header
  * - Demo status indicator
  * - API Mesh status indicator (if applicable)
- * - Action button grid (Start/Stop, Open, Logs, Deploy Mesh, etc.)
+ * - Action button grid (Start/Stop, Open, Deploy Mesh, etc.)
  *
  * @param props - Component props
  */
-export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName, isEds = false, edsLiveUrl, edsDaLiveUrl, initialMeshStatus, initialEdsStorefrontStatus }: ProjectDashboardScreenProps) {
+export function ProjectDashboardScreen({ project, hasMesh = false, brandName, stackName, isEds = false, edsLiveUrl, edsDaLiveUrl, initialMeshStatus, initialEdsStorefrontStatus }: ProjectDashboardScreenProps) {
     // Capture isEds on first render and never change it (project type doesn't change)
     const isEdsRef = useRef(isEds);
     if (isEds && !isEdsRef.current) {
@@ -81,10 +83,10 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
     const edsLiveUrlStable = edsLiveUrlRef.current;
     const edsDaLiveUrlStable = edsDaLiveUrlRef.current;
     
-    // State for browser opening and logs hover suppression (passed to actions hook)
+    // State for browser opening (passed to actions hook)
     const [isOpeningBrowser, setIsOpeningBrowser] = useState(false);
-    const [isLogsHoverSuppressed, setIsLogsHoverSuppressed] = useState(false);
     const [showCapabilities, setShowCapabilities] = useState(false);
+    const { showRenameDialog, openRenameDialog, closeRenameDialog, confirmRename } = useRenameDialog();
 
     // Status management via extracted hook
     const {
@@ -111,7 +113,6 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
     const {
         handleStartDemo,
         handleStopDemo,
-        handleViewLogs,
         handleDeployMesh,
         handleSyncStorefront,
         handleRefreshBlockLibrary,
@@ -121,14 +122,16 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
         handleConfigure,
         handleOpenDevConsole,
         handleDeleteProject,
+        handleCopyPath,
+        handleExportProject,
+        handleRepublishContent,
+        handleResetProject,
         handleNavigateBack,
-        handleViewComponents,
         handleReAuthenticate,
     } = useDashboardActions({
         isOpeningBrowser,
         setIsTransitioning,
         setIsOpeningBrowser,
-        setIsLogsHoverSuppressed,
         edsLiveUrl: edsLiveUrlStable,
         edsDaLiveUrl: edsDaLiveUrlStable,
     });
@@ -269,29 +272,43 @@ export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName,
                     <div className="dashboard-grid-container">
                         <ActionGrid
                             isEds={isEdsStable}
+                            hasMesh={hasMesh}
                             isRunning={isRunning}
                             isStartDisabled={isStartDisabled}
                             isStopDisabled={isStopDisabled}
                             isMeshActionDisabled={isMeshActionDisabled}
                             isOpeningBrowser={isOpeningBrowser}
-                            isLogsHoverSuppressed={isLogsHoverSuppressed}
                             handleStartDemo={handleStartDemo}
                             handleStopDemo={handleStopDemo}
                             handleOpenBrowser={handleOpenBrowser}
                             handleOpenLiveSite={handleOpenLiveSite}
                             handleOpenDaLive={handleOpenDaLive}
-                            handleViewLogs={handleViewLogs}
                             handleDeployMesh={handleDeployMesh}
                             handleSyncStorefront={handleSyncStorefront}
                             handleRefreshBlockLibrary={isEdsStable ? handleRefreshBlockLibrary : undefined}
+                            handleRepublishContent={isEdsStable ? handleRepublishContent : undefined}
                             handleConfigure={handleConfigure}
-                            handleViewComponents={handleViewComponents}
                             handleOpenDevConsole={handleOpenDevConsole}
+                            handleRename={openRenameDialog}
+                            handleCopyPath={handleCopyPath}
+                            handleExportProject={handleExportProject}
+                            handleResetProject={handleResetProject}
                             handleDeleteProject={handleDeleteProject}
                         />
                     </div>
                 </div>
             </PageLayout>
+
+            {/* Rename dialog — opened from the More menu's Rename item. On confirm
+                we post renameProject; the backend re-sends init so the title
+                refreshes. The dialog reuses the projects-list component. */}
+            <DashboardRenameDialog
+                isOpen={showRenameDialog}
+                projectName={displayName}
+                projectPath={project?.path}
+                onRename={confirmRename}
+                onClose={closeRenameDialog}
+            />
 
             {/* Capability catalog — reached from the "View AI Capabilities" link,
                 NOT the health badge. Two sections (skills + MCP servers) plus a

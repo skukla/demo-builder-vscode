@@ -133,6 +133,21 @@ describe('ProjectDashboardScreen - Mesh Status Display', () => {
         });
     });
 
+    describe('Deploy Mesh tile gating', () => {
+        // Regression: the dashboard rendered ActionGrid without forwarding
+        // hasMesh, so ActionGrid's `hasMesh = true` default always showed the
+        // Deploy Mesh tile — even for projects with no mesh component.
+        it('does not render the Deploy Mesh tile when the project has no mesh', () => {
+            renderDashboard({ hasMesh: false });
+            expect(screen.queryByText('Deploy Mesh')).not.toBeInTheDocument();
+        });
+
+        it('renders the Deploy Mesh tile when the project has a mesh', () => {
+            renderDashboard({ hasMesh: true });
+            expect(screen.getByText('Deploy Mesh')).toBeInTheDocument();
+        });
+    });
+
     describe('Authentication Required', () => {
         it('should display "Session expired" status for needs-auth', async () => {
             renderDashboard();

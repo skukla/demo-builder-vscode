@@ -15,18 +15,26 @@ const renderWithProvider = (ui: React.ReactElement) =>
     );
 
 describe('UtilityBar', () => {
-    it('renders Tools, Help, and Settings when all callbacks provided', () => {
+    it('renders Tools, Help, Settings, and Logs when all callbacks provided', () => {
         renderWithProvider(
             <UtilityBar
                 onOpenTools={jest.fn()}
                 onOpenHelp={jest.fn()}
                 onOpenSettings={jest.fn()}
+                onOpenLogs={jest.fn()}
             />,
         );
 
         expect(screen.getByRole('button', { name: /tools/i })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /get help/i })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /settings/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /view logs/i })).toBeInTheDocument();
+    });
+
+    it('omits the Logs button when onOpenLogs is absent', () => {
+        renderWithProvider(<UtilityBar onOpenTools={jest.fn()} />);
+
+        expect(screen.queryByRole('button', { name: /view logs/i })).not.toBeInTheDocument();
     });
 
     it('omits a button when its callback prop is absent', () => {
@@ -53,20 +61,24 @@ describe('UtilityBar', () => {
         const onOpenTools = jest.fn();
         const onOpenHelp = jest.fn();
         const onOpenSettings = jest.fn();
+        const onOpenLogs = jest.fn();
         renderWithProvider(
             <UtilityBar
                 onOpenTools={onOpenTools}
                 onOpenHelp={onOpenHelp}
                 onOpenSettings={onOpenSettings}
+                onOpenLogs={onOpenLogs}
             />,
         );
 
         fireEvent.click(screen.getByRole('button', { name: /tools/i }));
         fireEvent.click(screen.getByRole('button', { name: /get help/i }));
         fireEvent.click(screen.getByRole('button', { name: /settings/i }));
+        fireEvent.click(screen.getByRole('button', { name: /view logs/i }));
 
         expect(onOpenTools).toHaveBeenCalled();
         expect(onOpenHelp).toHaveBeenCalled();
         expect(onOpenSettings).toHaveBeenCalled();
+        expect(onOpenLogs).toHaveBeenCalled();
     });
 });

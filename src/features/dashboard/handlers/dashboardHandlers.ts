@@ -15,12 +15,11 @@ import {
     verifyMeshDeployment,
 } from './meshStatusHelpers';
 import { BaseWebviewCommand } from '@/core/base';
+import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
-import { sessionUIState } from '@/core/state/sessionUIState';
 import { openInIncognito } from '@/core/utils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateURL } from '@/core/validation';
-import { toggleLogsPanel } from '@/features/lifecycle/handlers/lifecycleHandlers';
 import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
 import { ErrorCode } from '@/types/errorCodes';
@@ -245,22 +244,6 @@ export const handleOpenDaLive: MessageHandler = async (context, data) => {
 };
 
 /**
- * Handle 'viewLogs' message - Toggle the logs output panel
- */
-export const handleViewLogs: MessageHandler = async () => {
-    await toggleLogsPanel();
-    return { success: true };
-};
-
-/**
- * Handle 'viewDebugLogs' message - Show Debug output channel (technical diagnostics)
- */
-export const handleViewDebugLogs: MessageHandler = async () => {
-    await vscode.commands.executeCommand('demoBuilder.showDebugLogs');
-    return { success: true };
-};
-
-/**
  * Handle 'configure' message - Open configuration UI
  */
 export const handleConfigure: MessageHandler = async () => {
@@ -384,32 +367,6 @@ export const handleDeleteProject: MessageHandler = async (context) => {
 };
 
 /**
- * Handle 'viewComponents' message - Toggle the components tree view in the sidebar
- * Switches between UtilityBar (default) and Components tree
- */
-export const handleViewComponents: MessageHandler = async () => {
-    if (sessionUIState.isComponentsViewShown) {
-        // Hide components, show UtilityBar
-        await vscode.commands.executeCommand('setContext', 'demoBuilder.showComponents', false);
-        sessionUIState.isComponentsViewShown = false;
-    } else {
-        // Show components, hide UtilityBar
-        await vscode.commands.executeCommand('setContext', 'demoBuilder.showComponents', true);
-        sessionUIState.isComponentsViewShown = true;
-    }
-    return { success: true };
-};
-
-/**
- * Reset toggle states (called when navigating away from dashboard)
- */
-export function resetToggleStates(): void {
-    sessionUIState.resetPanelState();
-    // Also hide the components panel
-    vscode.commands.executeCommand('setContext', 'demoBuilder.showComponents', false);
-}
-
-/**
  * Handle 'navigateBack' message - Navigate back to projects list
  *
  * Clears the current project and shows the projects list view.
@@ -418,9 +375,6 @@ export function resetToggleStates(): void {
 export const handleNavigateBack: MessageHandler = async (context) => {
     try {
         context.logger.info('Navigating back to projects list');
-
-        // Reset toggle states (components, logs)
-        resetToggleStates();
 
         // Clear current project from state
         await context.stateManager.clearProject();
@@ -490,6 +444,163 @@ export const handleResetProject: MessageHandler = async (context) => {
 };
 
 /**
+ * Handle 'copyPath' message - Copy the current project's folder path to clipboard
+ */
+export const handleCopyPath: MessageHandler = async (context) => {
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
+    }
+
+    try {
+        await vscode.env.clipboard.writeText(project.path);
+        vscode.window.showInformationMessage('Project path copied to clipboard');
+        return { success: true };
+    } catch (error) {
+        context.logger.error('[Dashboard] Failed to copy project path', error as Error);
+        return { success: false, error: 'Failed to copy project path' };
+    }
+};
+
+/**
+ * Handle 'exportProject' message - Export the current project's settings to a file
+ *
+ * Reuses the shared exportProjectSettings service (same one the kebab uses).
+ */
+export const handleExportProject: MessageHandler = async (context) => {
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
+    }
+
+    const { exportProjectSettings } = await import('@/features/projects-dashboard/services');
+    return exportProjectSettings(context, project);
+};
+
+/**
+ * Handle 'republishContent' message - Republish DA.live content to CDN (EDS only)
+ *
+ * Mirrors the kebab's handleRepublishContent but resolves the project via
+ * getCurrentProject(). Reuses republishStorefrontContent and the same EDS
+ * metadata reads + DA.live auth + progress notification.
+ */
+export const handleRepublishContent: MessageHandler = async (context) => {
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
+    }
+
+    // Read EDS metadata from the storefront component instance
+    const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+    const repoFullName = edsInstance?.metadata?.githubRepo as string | undefined;
+    const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
+    const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
+
+    if (!repoFullName) {
+        vscode.window.showErrorMessage('Repository information not found. Republish is only available for EDS projects.');
+        return { success: false, error: 'Repository information not found. Republish is only available for EDS projects.' };
+    }
+
+    const [repoOwner, repoName] = repoFullName.split('/');
+    if (!repoOwner || !repoName) {
+        vscode.window.showErrorMessage('Invalid repository format');
+        return { success: false, error: 'Invalid repository format' };
+    }
+
+    const effectiveDaLiveOrg = daLiveOrg || repoOwner;
+    const effectiveDaLiveSite = daLiveSite || repoName;
+
+    return vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Notification,
+            title: `Republishing ${project.name}`,
+            cancellable: false,
+        },
+        async (progress) => {
+            try {
+                context.logger.info(`[Dashboard] Republishing content for ${repoFullName}`);
+
+                progress.report({ message: 'Checking authentication...' });
+                const { ensureDaLiveAuth, getDaLiveAuthService, getGitHubServices } =
+                    await import('@/features/eds/handlers/edsHelpers');
+                const daLiveAuthResult = await ensureDaLiveAuth(context, '[Dashboard]');
+
+                if (!daLiveAuthResult.authenticated) {
+                    return {
+                        success: false,
+                        error: daLiveAuthResult.error || 'DA.live authentication required',
+                        errorType: 'DALIVE_AUTH_REQUIRED',
+                        cancelled: daLiveAuthResult.cancelled,
+                    };
+                }
+
+                const daLiveAuthService = getDaLiveAuthService(context.context);
+                const { tokenService: githubTokenService } = getGitHubServices(context);
+
+                progress.report({ message: 'Republishing content...' });
+                const { republishStorefrontContent } = await import('@/features/eds/services/storefrontRepublishService');
+                const contentResult = await republishStorefrontContent({
+                    project,
+                    repoOwner,
+                    repoName,
+                    daLiveOrg: effectiveDaLiveOrg,
+                    daLiveSite: effectiveDaLiveSite,
+                    secrets: context.context.secrets,
+                    logger: context.logger,
+                    daLiveAuthService,
+                    githubTokenService,
+                    onProgress: (message: string) => progress.report({ message }),
+                });
+
+                if (!contentResult.success) {
+                    return { success: false, error: contentResult.error };
+                }
+                if (!contentResult.cdnVerified) {
+                    context.logger.warn('[Dashboard] CDN verification timed out - content may still be propagating');
+                }
+
+                context.logger.info(`[Dashboard] Content republished for ${repoFullName}`);
+                return { success: true };
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                context.logger.error('[Dashboard] Republish failed', error as Error);
+                vscode.window.showErrorMessage(`Failed to republish content: ${errorMessage}`);
+                return { success: false, error: errorMessage };
+            }
+        },
+    );
+};
+
+/**
+ * Handle 'renameProject' message - Rename the current project
+ *
+ * Resolves the project via getCurrentProject() (the {newName} payload is the
+ * only data the dashboard sends), reuses the shared renameProjectCore, then
+ * re-sends the init payload so the dashboard title reflects the new name.
+ */
+export const handleRenameProject: MessageHandler<{ newName: string }> = async (context, data) => {
+    const newName = data?.newName;
+    if (!newName) {
+        return { success: false, error: 'New name is required', code: ErrorCode.CONFIG_INVALID };
+    }
+
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
+    }
+
+    const { renameProjectCore } = await import('@/features/projects-dashboard/services');
+    const result = await renameProjectCore(context, project, newName);
+
+    // Refresh the dashboard title after a successful rename (folder/name changed)
+    if (result.success && context.panel) {
+        await handleReady(context);
+    }
+
+    return result;
+};
+
+/**
  * Handle 'reAuthenticate' message - Re-authenticate with Adobe
  *
  * Called when user clicks "Sign in" link after session expired (needs-auth status).
@@ -548,12 +659,9 @@ export const dashboardHandlers = defineHandlers({
     'openBrowser': handleOpenBrowser,
     'openLiveSite': handleOpenLiveSite,
     'openDaLive': handleOpenDaLive,
-    'viewLogs': handleViewLogs,
-    'viewDebugLogs': handleViewDebugLogs,
     'configure': handleConfigure,
     'openDevConsole': handleOpenDevConsole,
     'navigateBack': handleNavigateBack,
-    'viewComponents': handleViewComponents,
 
     // Mesh handlers
     'deployMesh': handleDeployMesh,
@@ -569,6 +677,12 @@ export const dashboardHandlers = defineHandlers({
 
     // Project management handlers
     'deleteProject': handleDeleteProject,
+    'renameProject': handleRenameProject,
+    'copyPath': handleCopyPath,
+    'exportProject': handleExportProject,
+
+    // EDS content republish (re-push DA.live content to CDN)
+    'republishContent': handleRepublishContent,
 
     // Project reset handler
     'resetProject': handleResetProject,

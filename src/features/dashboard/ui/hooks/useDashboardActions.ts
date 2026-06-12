@@ -10,7 +10,6 @@
 import { useCallback, Dispatch, SetStateAction } from 'react';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
  * Props for the useDashboardActions hook
@@ -22,8 +21,6 @@ export interface UseDashboardActionsProps {
     setIsTransitioning: Dispatch<SetStateAction<boolean>>;
     /** Setter for opening browser state */
     setIsOpeningBrowser: Dispatch<SetStateAction<boolean>>;
-    /** Setter for logs hover suppression state */
-    setIsLogsHoverSuppressed: Dispatch<SetStateAction<boolean>>;
     /** Live URL for EDS projects (opens in browser) */
     edsLiveUrl?: string;
     /** DA.live authoring URL for EDS projects */
@@ -38,8 +35,6 @@ export interface UseDashboardActionsReturn {
     handleStartDemo: () => void;
     /** Stop the demo server */
     handleStopDemo: () => void;
-    /** View logs in output channel */
-    handleViewLogs: () => void;
     /** Deploy API Mesh */
     handleDeployMesh: () => void;
     /** Sync storefront — git push + Helix preview/publish (EDS projects only) */
@@ -58,10 +53,16 @@ export interface UseDashboardActionsReturn {
     handleOpenDevConsole: () => void;
     /** Delete the project */
     handleDeleteProject: () => void;
+    /** Copy the project's folder path to the clipboard */
+    handleCopyPath: () => void;
+    /** Export the project's settings to a file */
+    handleExportProject: () => void;
+    /** Republish DA.live content to CDN (EDS projects only) */
+    handleRepublishContent: () => void;
+    /** Reset the project to its initial state */
+    handleResetProject: () => void;
     /** Navigate back to projects list */
     handleNavigateBack: () => void;
-    /** View components in file browser */
-    handleViewComponents: () => void;
     /** Re-authenticate with Adobe (after session expired) */
     handleReAuthenticate: () => void;
 }
@@ -79,7 +80,6 @@ export function useDashboardActions({
     isOpeningBrowser,
     setIsTransitioning,
     setIsOpeningBrowser,
-    setIsLogsHoverSuppressed,
     edsLiveUrl,
     edsDaLiveUrl,
 }: UseDashboardActionsProps): UseDashboardActionsReturn {
@@ -92,15 +92,6 @@ export function useDashboardActions({
         setIsTransitioning(true);
         webviewClient.postMessage('stopDemo');
     }, [setIsTransitioning]);
-
-    const handleViewLogs = useCallback(() => {
-        // Suppress hover styles during layout shift
-        setIsLogsHoverSuppressed(true);
-        (document.activeElement as HTMLElement)?.blur();
-        webviewClient.postMessage('viewLogs');
-        // Re-enable hover after layout stabilizes (SOP section 1: using TIMEOUTS constant)
-        setTimeout(() => setIsLogsHoverSuppressed(false), TIMEOUTS.HOVER_SUPPRESSION_DELAY);
-    }, [setIsLogsHoverSuppressed]);
 
     const handleDeployMesh = useCallback(() => {
         setIsTransitioning(true);
@@ -151,12 +142,24 @@ export function useDashboardActions({
         webviewClient.postMessage('deleteProject');
     }, []);
 
-    const handleNavigateBack = useCallback(() => {
-        webviewClient.postMessage('navigateBack');
+    const handleCopyPath = useCallback(() => {
+        webviewClient.postMessage('copyPath');
     }, []);
 
-    const handleViewComponents = useCallback(() => {
-        webviewClient.postMessage('viewComponents');
+    const handleExportProject = useCallback(() => {
+        webviewClient.postMessage('exportProject');
+    }, []);
+
+    const handleRepublishContent = useCallback(() => {
+        webviewClient.postMessage('republishContent');
+    }, []);
+
+    const handleResetProject = useCallback(() => {
+        webviewClient.postMessage('resetProject');
+    }, []);
+
+    const handleNavigateBack = useCallback(() => {
+        webviewClient.postMessage('navigateBack');
     }, []);
 
     const handleReAuthenticate = useCallback(() => {
@@ -166,7 +169,6 @@ export function useDashboardActions({
     return {
         handleStartDemo,
         handleStopDemo,
-        handleViewLogs,
         handleDeployMesh,
         handleSyncStorefront,
         handleRefreshBlockLibrary,
@@ -176,8 +178,11 @@ export function useDashboardActions({
         handleConfigure,
         handleOpenDevConsole,
         handleDeleteProject,
+        handleCopyPath,
+        handleExportProject,
+        handleRepublishContent,
+        handleResetProject,
         handleNavigateBack,
-        handleViewComponents,
         handleReAuthenticate,
     };
 }

@@ -6,6 +6,13 @@
 
 import * as vscode from 'vscode';
 import { SidebarProvider } from '@/features/sidebar/providers/sidebarProvider';
+import { toggleLogsPanel } from '@/features/lifecycle/handlers/lifecycleHandlers';
+
+// Mock the lifecycle toggle chokepoint so the sidebar's openLogs handler can
+// be asserted without touching the real VS Code panel/session state.
+jest.mock('@/features/lifecycle/handlers/lifecycleHandlers', () => ({
+    toggleLogsPanel: jest.fn().mockResolvedValue(true),
+}));
 
 // Mock VS Code module
 jest.mock('vscode', () => ({
@@ -268,6 +275,12 @@ describe('SidebarProvider', () => {
             await messageHandler({ type: 'showPrompts' });
 
             expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.showPromptsPicker');
+        });
+
+        it('routes openLogs to the toggleLogsPanel chokepoint (toggle, not show)', async () => {
+            await messageHandler({ type: 'openLogs' });
+
+            expect(toggleLogsPanel).toHaveBeenCalled();
         });
     });
 

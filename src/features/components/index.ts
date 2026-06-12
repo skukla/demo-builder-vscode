@@ -8,7 +8,6 @@
  * - ComponentRegistryManager: Load and query component definitions
  * - DependencyResolver: Resolve component dependencies
  * - ComponentManager: Component installation and lifecycle
- * - ComponentTreeProvider: VS Code tree view for component browser
  * - Handler functions for wizard message handling
  * - Transforms for service group display
  */
@@ -29,9 +28,6 @@ export type {
     ServiceGroup,
     ServiceGroupResult,
 } from './services/serviceGroupTransforms';
-
-// Providers
-export { ComponentTreeProvider } from './providers/componentTreeProvider';
 
 // Handler functions for HandlerRegistry use
 export {

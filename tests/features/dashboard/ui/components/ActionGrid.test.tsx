@@ -79,24 +79,34 @@ jest.mock('@spectrum-icons/workflow/PublishCheck', () => ({
     __esModule: true,
     default: () => <span data-testid="publish-icon" />,
 }));
+jest.mock('@spectrum-icons/workflow/More', () => ({
+    __esModule: true,
+    default: () => <span data-testid="more-icon" />,
+}));
+jest.mock('@spectrum-icons/workflow/Edit', () => ({
+    __esModule: true,
+    default: () => <span data-testid="edit-icon" />,
+}));
 
 describe('ActionGrid', () => {
     const defaultProps = {
         isRunning: false,
         isStartDisabled: false,
         isStopDisabled: false,
+        hasMesh: true,
         isMeshActionDisabled: false,
         isOpeningBrowser: false,
-        isLogsHoverSuppressed: false,
         handleStartDemo: jest.fn(),
         handleStopDemo: jest.fn(),
         handleOpenBrowser: jest.fn(),
-        handleViewLogs: jest.fn(),
         handleDeployMesh: jest.fn(),
         handleConfigure: jest.fn(),
-        handleViewComponents: jest.fn(),
         handleOpenDevConsole: jest.fn(),
         handleDeleteProject: jest.fn(),
+        handleRename: jest.fn(),
+        handleCopyPath: jest.fn(),
+        handleExportProject: jest.fn(),
+        handleResetProject: jest.fn(),
     };
 
     const edsProps = {
@@ -105,6 +115,7 @@ describe('ActionGrid', () => {
         handleOpenLiveSite: jest.fn(),
         handleOpenDaLive: jest.fn(),
         handleSyncStorefront: jest.fn(),
+        handleRepublishContent: jest.fn(),
     };
 
     /** Resolve the zone container element for a given data-zone value. */
@@ -270,13 +281,6 @@ describe('ActionGrid', () => {
             expect(within(build).getByText('Configure')).toBeInTheDocument();
         });
 
-        it('should place Logs in the build zone', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
-
-            const build = getZone(container, 'build');
-            expect(within(build).getByText('Logs')).toBeInTheDocument();
-        });
-
         it('should place Deploy Mesh in the build zone when hasMesh', () => {
             const { container } = render(<ActionGrid {...defaultProps} hasMesh={true} />);
 
@@ -298,40 +302,11 @@ describe('ActionGrid', () => {
             expect(screen.getByLabelText('More actions')).toBeInTheDocument();
         });
 
-        it('should expose Components inside the overflow menu', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(menu).toBeInTheDocument();
-            expect(within(menu).getByText('Components')).toBeInTheDocument();
-        });
-
         it('should expose Dev Console inside the overflow menu', () => {
             const { container } = render(<ActionGrid {...defaultProps} />);
 
             const menu = container.querySelector('[role="menu"]') as HTMLElement;
             expect(within(menu).getByText('Dev Console')).toBeInTheDocument();
-        });
-
-        it('should not render Components as a top-level tile', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
-
-            const build = getZone(container, 'build');
-            // Components lives only inside the overflow menu, not as a zone tile
-            const buildButtons = within(build).queryAllByText('Components');
-            // Any Components text present must be within the menu, not a tile button
-            buildButtons.forEach((node) => {
-                expect(node.closest('[role="menu"]')).toBeInTheDocument();
-            });
-        });
-
-        it('should call handleViewComponents when Components menu item clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} />);
-
-            await user.click(screen.getByText('Components'));
-
-            expect(defaultProps.handleViewComponents).toHaveBeenCalled();
         });
 
         it('should call handleOpenDevConsole when Dev Console menu item clicked', async () => {
@@ -341,6 +316,128 @@ describe('ActionGrid', () => {
             await user.click(screen.getByText('Dev Console'));
 
             expect(defaultProps.handleOpenDevConsole).toHaveBeenCalled();
+        });
+
+        it('should expose Copy Path in the overflow menu', () => {
+            const { container } = render(<ActionGrid {...defaultProps} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).getByText('Copy Path')).toBeInTheDocument();
+        });
+
+        it('should expose Export in the overflow menu', () => {
+            const { container } = render(<ActionGrid {...defaultProps} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).getByText('Export')).toBeInTheDocument();
+        });
+
+        it('should expose Reset as the last overflow item', () => {
+            const { container } = render(<ActionGrid {...defaultProps} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            const items = within(menu).getAllByRole('menuitem');
+            expect(items[items.length - 1]).toHaveTextContent('Reset');
+        });
+
+        it('should call handleCopyPath when Copy Path clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(<ActionGrid {...defaultProps} />);
+
+            await user.click(screen.getByText('Copy Path'));
+
+            expect(defaultProps.handleCopyPath).toHaveBeenCalled();
+        });
+
+        it('should call handleExportProject when Export clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(<ActionGrid {...defaultProps} />);
+
+            await user.click(screen.getByText('Export'));
+
+            expect(defaultProps.handleExportProject).toHaveBeenCalled();
+        });
+
+        it('should call handleResetProject when Reset clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(<ActionGrid {...defaultProps} />);
+
+            await user.click(screen.getByText('Reset'));
+
+            expect(defaultProps.handleResetProject).toHaveBeenCalled();
+        });
+    });
+
+    describe('Overflow Menu - Rename Gating', () => {
+        it('should show Rename for a stopped non-EDS project', () => {
+            const { container } = render(<ActionGrid {...defaultProps} isRunning={false} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).getByText('Rename')).toBeInTheDocument();
+        });
+
+        it('should hide Rename for a running non-EDS project', () => {
+            const { container } = render(<ActionGrid {...defaultProps} isRunning={true} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).queryByText('Rename')).not.toBeInTheDocument();
+        });
+
+        it('should show Rename for an EDS project even when running', () => {
+            const { container } = render(<ActionGrid {...edsProps} isRunning={true} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).getByText('Rename')).toBeInTheDocument();
+        });
+
+        it('should hide Rename when no handleRename is provided', () => {
+            const { handleRename: _handleRename, ...noRename } = defaultProps;
+            const { container } = render(<ActionGrid {...noRename} isRunning={false} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).queryByText('Rename')).not.toBeInTheDocument();
+        });
+
+        it('should call handleRename when Rename clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(<ActionGrid {...defaultProps} isRunning={false} />);
+
+            await user.click(screen.getByText('Rename'));
+
+            expect(defaultProps.handleRename).toHaveBeenCalled();
+        });
+    });
+
+    describe('Overflow Menu - Republish Content Gating (EDS)', () => {
+        it('should show Republish Content for EDS projects', () => {
+            const { container } = render(<ActionGrid {...edsProps} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).getByText('Republish Content')).toBeInTheDocument();
+        });
+
+        it('should hide Republish Content for non-EDS projects', () => {
+            const { container } = render(<ActionGrid {...defaultProps} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).queryByText('Republish Content')).not.toBeInTheDocument();
+        });
+
+        it('should hide Republish Content when handleRepublishContent is absent (EDS)', () => {
+            const { handleRepublishContent: _rc, ...edsNoRepublish } = edsProps;
+            const { container } = render(<ActionGrid {...edsNoRepublish} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).queryByText('Republish Content')).not.toBeInTheDocument();
+        });
+
+        it('should call handleRepublishContent when Republish Content clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(<ActionGrid {...edsProps} />);
+
+            await user.click(screen.getByText('Republish Content'));
+
+            expect(edsProps.handleRepublishContent).toHaveBeenCalled();
         });
     });
 
@@ -440,22 +537,6 @@ describe('ActionGrid', () => {
         });
     });
 
-    describe('Logs Hover Suppression', () => {
-        it('should apply hover-suppressed class when isLogsHoverSuppressed is true', () => {
-            render(<ActionGrid {...defaultProps} isLogsHoverSuppressed={true} />);
-
-            const logsButton = screen.getByText('Logs').closest('button');
-            expect(logsButton?.getAttribute('unsafe_classname')).toContain('hover-suppressed');
-        });
-
-        it('should not apply hover-suppressed class when isLogsHoverSuppressed is false', () => {
-            render(<ActionGrid {...defaultProps} isLogsHoverSuppressed={false} />);
-
-            const logsButton = screen.getByText('Logs').closest('button');
-            expect(logsButton?.getAttribute('unsafe_classname')).not.toContain('hover-suppressed');
-        });
-    });
-
     describe('Button Interactions', () => {
         it('should call handleStartDemo when Start clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
@@ -482,15 +563,6 @@ describe('ActionGrid', () => {
             await user.click(screen.getByText('Open in Browser'));
 
             expect(defaultProps.handleOpenBrowser).toHaveBeenCalled();
-        });
-
-        it('should call handleViewLogs when Logs clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} />);
-
-            await user.click(screen.getByText('Logs'));
-
-            expect(defaultProps.handleViewLogs).toHaveBeenCalled();
         });
 
         it('should call handleDeployMesh when Deploy Mesh clicked', async () => {

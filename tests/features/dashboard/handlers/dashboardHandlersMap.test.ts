@@ -45,12 +45,9 @@ describe('dashboardHandlers', () => {
             // Then: Navigation handlers present
             expect(hasHandler(dashboardHandlers, 'openBrowser')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'openLiveSite')).toBe(true);
-            expect(hasHandler(dashboardHandlers, 'viewLogs')).toBe(true);
-            expect(hasHandler(dashboardHandlers, 'viewDebugLogs')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'configure')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'openDevConsole')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'navigateBack')).toBe(true);
-            expect(hasHandler(dashboardHandlers, 'viewComponents')).toBe(true);
         });
 
         it('should include mesh handlers', () => {
@@ -81,18 +78,27 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'resetProject')).toBe(true);
         });
 
-        it('should have exactly 19 handlers', () => {
+        it('should include the new More-menu action handlers', () => {
+            // Given: dashboardHandlers object
+            // When: Checking for the new More-menu message types
+            // Then: copyPath, exportProject, republishContent, renameProject present
+            expect(hasHandler(dashboardHandlers, 'copyPath')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'exportProject')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'republishContent')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'renameProject')).toBe(true);
+        });
+
+        it('should have exactly 20 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers);
 
-            // Then: Exactly 19 handlers
-            // 2 init + 2 lifecycle + 9 navigation + 1 mesh + 1 syncStorefront +
-            // 1 refreshBlockLibrary + 1 auth + 1 project + 1 reset = 19
-            // (openAi removed with the dashboard AI tile — AI now lives globally
-            //  in the sidebar, not as a project-scoped tile; see dashboard
-            //  primary-zone consolidation)
-            expect(types).toHaveLength(19);
+            // Then: Exactly 20 handlers
+            // 2 init + 2 lifecycle + 6 navigation + 1 mesh + 1 syncStorefront +
+            // 1 refreshBlockLibrary + 1 auth + 1 project + 1 reset = 16, plus the
+            // 4 new More-menu actions (copyPath, exportProject, republishContent,
+            // renameProject) = 20.
+            expect(types).toHaveLength(20);
         });
 
         it('should have handlers as functions', () => {
