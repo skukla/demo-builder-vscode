@@ -33,6 +33,7 @@ jest.mock('vscode', () => {
                 }),
             }),
         },
+        window: { showWarningMessage: jest.fn() },
     };
 }, { virtual: true });
 
@@ -63,8 +64,11 @@ import {
     appendOverlayParams,
     resolveByomOverlayConfig,
     resolveByomOverlayUrl,
+    surfaceOverlayRegistrationFailure,
+    BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE,
 } from '@/features/eds/handlers/edsHelpers';
 import * as vscode from 'vscode';
+import type { Logger } from '@/types/logger';
 
 describe('resolveByomOverlayUrl', () => {
     beforeEach(() => {
@@ -343,5 +347,34 @@ describe('resolveByomOverlayConfig', () => {
                 expect.stringContaining('demoBuilder.byom.overlayUrl is empty'),
             );
         });
+    });
+});
+
+describe('surfaceOverlayRegistrationFailure', () => {
+    function createLogger(): Logger {
+        return {
+            info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(), trace: jest.fn(),
+        } as unknown as Logger;
+    }
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('invokes the showWarning callback with the product-pages message when wired', () => {
+        const showWarning = jest.fn();
+
+        surfaceOverlayRegistrationFailure(createLogger(), showWarning);
+
+        expect(showWarning).toHaveBeenCalledWith(BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE);
+        expect(BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE).toContain('Product detail pages');
+    });
+
+    it('logs at error level even with no showWarning (headless safety)', () => {
+        const logger = createLogger();
+
+        // No showWarning callback — MCP / AI contexts must not toast, only log.
+        expect(() => surfaceOverlayRegistrationFailure(logger)).not.toThrow();
+        expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('BYOM'));
     });
 });

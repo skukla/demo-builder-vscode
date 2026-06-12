@@ -43,6 +43,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
         getAccessToken: jest.fn().mockResolvedValue('mock-token'),
         getUserEmail: jest.fn().mockResolvedValue('test@example.com'),
     }),
+    surfaceOverlayRegistrationFailure: jest.fn(),
 }));
 
 jest.mock('@/features/eds/services/edsPipeline', () => ({
@@ -129,9 +130,12 @@ global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 });
 // =============================================================================
 
 import { executeStorefrontSetupPhases } from '@/features/eds/handlers/storefrontSetupPhases';
-import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
+import { ensureDaLiveAuth, surfaceOverlayRegistrationFailure } from '@/features/eds/handlers/edsHelpers';
 
 const mockEnsureDaLiveAuth = ensureDaLiveAuth as jest.MockedFunction<typeof ensureDaLiveAuth>;
+const mockSurfaceOverlayFailure = surfaceOverlayRegistrationFailure as jest.MockedFunction<
+    typeof surfaceOverlayRegistrationFailure
+>;
 
 // =============================================================================
 // Helpers
@@ -397,5 +401,53 @@ describe('registerConfigurationService - BYOM overlay threading', () => {
 
         const callArgs = mockRegisterSite.mock.calls[0][0];
         expect(callArgs.contentOverlayUrl).toBeUndefined();
+    });
+});
+
+describe('registerConfigurationService - overlay registration failure is surfaced', () => {
+    let context: HandlerContext;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        context = createMockContext();
+    });
+
+    it('surfaces the overlay failure when overlay configured but registration fails', async () => {
+        const config = { ...createEdsConfig(), byomOverlayUrl: 'https://byom.example.com' };
+        // registerSite 409 → updateSiteConfig fails: the config (with the overlay) never lands
+        mockRegisterSite.mockResolvedValue({ success: false, statusCode: 409, error: 'Conflict' });
+        mockUpdateSiteConfig.mockResolvedValue({ success: false, error: 'API rejected' });
+
+        await executeStorefrontSetupPhases(context, config, new AbortController().signal);
+
+        expect(mockSurfaceOverlayFailure).toHaveBeenCalled();
+    });
+
+    it('does NOT surface the overlay failure when registration succeeds', async () => {
+        const config = { ...createEdsConfig(), byomOverlayUrl: 'https://byom.example.com' };
+        mockRegisterSite.mockResolvedValue({ success: true });
+
+        await executeStorefrontSetupPhases(context, config, new AbortController().signal);
+
+        expect(mockSurfaceOverlayFailure).not.toHaveBeenCalled();
+    });
+
+    it('does NOT surface the overlay failure when no overlay is configured', async () => {
+        mockRegisterSite.mockResolvedValue({ success: false, statusCode: 409, error: 'Conflict' });
+        mockUpdateSiteConfig.mockResolvedValue({ success: false, error: 'API rejected' });
+
+        await executeStorefrontSetupPhases(context, createEdsConfig(), new AbortController().signal);
+
+        expect(mockSurfaceOverlayFailure).not.toHaveBeenCalled();
+    });
+
+    it('surfaces the overlay failure when 403 retries are exhausted (new repo)', async () => {
+        const config = { ...createEdsConfig(), repoMode: 'new' as const, byomOverlayUrl: 'https://byom.example.com' };
+        // Continuous 403 — admin role never propagates; all retries exhaust → false
+        mockRegisterSite.mockResolvedValue({ success: false, statusCode: 403, error: 'Forbidden' });
+
+        await executeStorefrontSetupPhases(context, config, new AbortController().signal);
+
+        expect(mockSurfaceOverlayFailure).toHaveBeenCalled();
     });
 });
