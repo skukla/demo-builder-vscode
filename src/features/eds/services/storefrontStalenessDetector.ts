@@ -11,6 +11,8 @@ import { getLogger } from '@/core/logging';
 import {
     PAAS_ENVIRONMENT_ID, PAAS_STORE_VIEW_CODE, PAAS_STORE_CODE,
     PAAS_WEBSITE_CODE, PAAS_CUSTOMER_GROUP, CATALOG_API_KEY,
+    ACCS_GRAPHQL_ENDPOINT, ACCS_WEBSITE_CODE, ACCS_STORE_CODE,
+    ACCS_STORE_VIEW_CODE, ACCS_CUSTOMER_GROUP,
 } from '@/features/components/config/envVarKeys';
 import type { Project } from '@/types';
 import { isEdsProject } from '@/types/typeGuards';
@@ -42,14 +44,26 @@ export interface StorefrontChanges {
 /**
  * Environment variables that affect config.json generation.
  * Changes to these require republishing the storefront config.
+ *
+ * Both backend namespaces are tracked: PaaS projects store the codes under the
+ * ADOBE_COMMERCE_* keys, ACCS projects (the default Commerce demos) under the
+ * ACCS_* keys. configGenerator reads whichever set matches the backend, so a
+ * change to either must mark the storefront stale and prompt a republish.
  */
 const STOREFRONT_CONFIG_ENV_VARS = [
+    // PaaS backend config
     PAAS_ENVIRONMENT_ID,
     CATALOG_API_KEY,
     PAAS_STORE_VIEW_CODE,
     PAAS_STORE_CODE,
     PAAS_WEBSITE_CODE,
     PAAS_CUSTOMER_GROUP,
+    // ACCS backend config
+    ACCS_GRAPHQL_ENDPOINT,
+    ACCS_WEBSITE_CODE,
+    ACCS_STORE_CODE,
+    ACCS_STORE_VIEW_CODE,
+    ACCS_CUSTOMER_GROUP,
     'AEM_ASSETS_ENABLED',
 ];
 
