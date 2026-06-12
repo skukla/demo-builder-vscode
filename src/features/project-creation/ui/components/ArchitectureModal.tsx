@@ -13,10 +13,6 @@ import {
     getNativeBlockLibraries,
 } from '../../services/blockLibraryLoader';
 import { getResolvedMeshRequirement } from '../../services/demoPackageLoader';
-import {
-    getAvailableFeaturePacks,
-    getNativeFeaturePacks,
-} from '../../services/featurePackLoader';
 import { ArchitectureStepContent } from './ArchitectureStepContent';
 import { BlockLibrariesStepContent } from './BlockLibrariesStepContent';
 import { filterAddonsByPackage } from './brandGalleryHelpers';
@@ -42,13 +38,11 @@ export interface ArchitectureModalProps {
     stacks: Stack[];
     selectedStackId?: string;
     selectedAddons?: string[];
-    selectedFeaturePacks?: string[];
     selectedBlockLibraries?: string[];
     customBlockLibraries?: CustomBlockLibrary[];
     customBlockLibraryDefaults?: CustomBlockLibrary[];
     onStackSelect: (stackId: string) => void;
     onAddonsChange: (addons: string[]) => void;
-    onFeaturePacksChange: (packs: string[]) => void;
     onBlockLibrariesChange: (libraries: string[]) => void;
     onCustomBlockLibrariesChange: (libs: CustomBlockLibrary[]) => void;
     selectedOptionalDependencies?: string[];
@@ -62,13 +56,11 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
     stacks,
     selectedStackId,
     selectedAddons = [],
-    selectedFeaturePacks = [],
     selectedBlockLibraries = [],
     customBlockLibraries = [],
     customBlockLibraryDefaults = [],
     onStackSelect,
     onAddonsChange,
-    onFeaturePacksChange,
     onBlockLibrariesChange,
     onCustomBlockLibrariesChange,
     selectedOptionalDependencies = [],
@@ -107,17 +99,6 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
         [selectedAddons, onAddonsChange],
     );
 
-    const handleFeaturePackToggle = useCallback(
-        (packId: string, isSelected: boolean) => {
-            if (isSelected) {
-                onFeaturePacksChange([...selectedFeaturePacks, packId]);
-            } else {
-                onFeaturePacksChange(selectedFeaturePacks.filter(id => id !== packId));
-            }
-        },
-        [selectedFeaturePacks, onFeaturePacksChange],
-    );
-
     // Get the selected stack object
     const selectedStack = useMemo(() => {
         if (!selectedStackId) return null;
@@ -138,20 +119,6 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
         if (!selectedStack || !isEdsStack) return [];
         return getNativeBlockLibraries(selectedStack, pkg.id);
     }, [selectedStack, isEdsStack, pkg.id]);
-
-    // Get available feature packs (optional) for the current stack and package
-    const availableFeaturePacks = useMemo(() => {
-        if (!selectedStack) return [];
-        return getAvailableFeaturePacks(selectedStack, pkg.id);
-    }, [selectedStack, pkg.id]);
-
-    // Get feature packs that are required (shown as disabled/checked)
-    const nativeFeaturePacks = useMemo(() => {
-        if (!selectedStack) return [];
-        return getNativeFeaturePacks(selectedStack, pkg.id);
-    }, [selectedStack, pkg.id]);
-
-    const hasFeaturePacks = availableFeaturePacks.length > 0 || nativeFeaturePacks.length > 0;
 
     // Determine if mesh toggle should be shown
     // Show when stack has optional mesh dependencies AND package does NOT require mesh
@@ -327,13 +294,6 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
                             onAddonToggle: handleAddonToggle,
                             addonMetadata: ADDON_METADATA,
                             requiredAddonIds,
-                        }}
-                        featurePacks={{
-                            hasFeaturePacks,
-                            nativeFeaturePacks,
-                            availableFeaturePacks,
-                            selectedFeaturePacks,
-                            onFeaturePackToggle: handleFeaturePackToggle,
                         }}
                         mesh={{
                             showMeshToggle,

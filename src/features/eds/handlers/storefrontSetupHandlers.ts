@@ -60,8 +60,6 @@ export interface StorefrontSetupStartPayload {
     selectedAddons?: string[];
     /** Selected block library IDs (e.g., ['isle5', 'demo-team-blocks']) */
     selectedBlockLibraries?: string[];
-    /** Selected feature pack IDs (e.g., ['b2b-commerce']) */
-    selectedFeaturePacks?: string[];
     /** Custom block libraries added by URL */
     customBlockLibraries?: CustomBlockLibrary[];
     /** Selected package ID (e.g., 'citisignal') */
@@ -340,7 +338,6 @@ export async function handleStartStorefrontSetup(
                 selectedBlockLibraries: payload.selectedBlockLibraries,
                 customBlockLibraries: payload.customBlockLibraries,
                 packageId: payload.selectedPackage,
-                selectedFeaturePacks: payload.selectedFeaturePacks,
             },
         );
 

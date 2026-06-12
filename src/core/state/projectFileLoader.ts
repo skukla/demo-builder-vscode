@@ -30,7 +30,6 @@ export interface ProjectManifest {
     selectedPackage?: string;
     selectedStack?: string;
     selectedAddons?: string[];
-    selectedFeaturePacks?: string[];
     selectedBlockLibraries?: string[];
     customBlockLibraries?: CustomBlockLibrary[];
     aiPrompts?: AiPrompt[];
@@ -93,7 +92,6 @@ export class ProjectFileLoader {
                 selectedPackage: manifest.selectedPackage,
                 selectedStack: manifest.selectedStack,
                 selectedAddons: manifest.selectedAddons,
-                selectedFeaturePacks: manifest.selectedFeaturePacks,
                 selectedBlockLibraries: manifest.selectedBlockLibraries,
                 customBlockLibraries: manifest.customBlockLibraries,
                 aiPrompts: manifest.aiPrompts,

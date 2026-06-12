@@ -2,8 +2,8 @@
  * ArchitectureStepContent Component Tests
  *
  * Tests for the extracted architecture step sub-component that renders
- * stack radio options, optional services, feature packs, and API mesh sections.
- * Uses grouped prop interfaces (stackSelection, addonSelection, featurePacks, mesh).
+ * stack radio options, optional services, and API mesh sections.
+ * Uses grouped prop interfaces (stackSelection, addonSelection, mesh).
  *
  * @jest-environment jsdom
  */
@@ -12,7 +12,6 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ArchitectureStepContent } from '@/features/project-creation/ui/components/ArchitectureStepContent';
 import type { Stack, OptionalAddon } from '@/types/stacks';
-import type { FeaturePack } from '@/types/featurePacks';
 
 // Minimal stack fixtures
 const stackA: Stack = {
@@ -39,22 +38,6 @@ const stackB: Stack = {
 
 const mockAddon: OptionalAddon = { id: 'live-search', default: false };
 
-const mockFeaturePack: FeaturePack = {
-    id: 'b2b-commerce',
-    name: 'B2B Commerce',
-    description: 'B2B commerce features',
-    source: { owner: 'adobe', repo: 'b2b', branch: 'main' },
-    stackTypes: ['eds-storefront'],
-};
-
-const nativeFeaturePack: FeaturePack = {
-    id: 'core-pack',
-    name: 'Core Pack',
-    description: 'Core features included',
-    source: { owner: 'adobe', repo: 'core', branch: 'main' },
-    stackTypes: ['eds-storefront'],
-};
-
 // Default no-op handlers
 const noop = jest.fn();
 
@@ -77,13 +60,6 @@ describe('ArchitectureStepContent', () => {
             onAddonToggle: noop,
             addonMetadata: {} as Record<string, { name: string; description: string }>,
             requiredAddonIds: [] as string[],
-        },
-        featurePacks: {
-            hasFeaturePacks: false,
-            nativeFeaturePacks: [] as FeaturePack[],
-            availableFeaturePacks: [] as FeaturePack[],
-            selectedFeaturePacks: [] as string[],
-            onFeaturePackToggle: noop,
         },
         mesh: {
             showMeshToggle: false,
@@ -278,68 +254,6 @@ describe('ArchitectureStepContent', () => {
             );
 
             expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
-        });
-    });
-
-    // --- Feature Packs ---
-
-    describe('feature packs section', () => {
-        it('should render feature packs section when hasFeaturePacks is true', () => {
-            render(
-                <ArchitectureStepContent
-                    {...defaultProps}
-                    featurePacks={{
-                        ...defaultProps.featurePacks,
-                        hasFeaturePacks: true,
-                        availableFeaturePacks: [mockFeaturePack],
-                    }}
-                />
-            );
-
-            expect(screen.getByText('Feature Packs')).toBeInTheDocument();
-            expect(screen.getByText('B2B Commerce')).toBeInTheDocument();
-        });
-
-        it('should not render feature packs section when hasFeaturePacks is false', () => {
-            render(<ArchitectureStepContent {...defaultProps} />);
-
-            expect(screen.queryByText('Feature Packs')).not.toBeInTheDocument();
-        });
-
-        it('should render native feature packs as disabled checked checkboxes', () => {
-            render(
-                <ArchitectureStepContent
-                    {...defaultProps}
-                    featurePacks={{
-                        ...defaultProps.featurePacks,
-                        hasFeaturePacks: true,
-                        nativeFeaturePacks: [nativeFeaturePack],
-                    }}
-                />
-            );
-
-            const checkbox = screen.getByRole('checkbox', { name: /Core Pack/i });
-            expect(checkbox).toBeChecked();
-            expect(checkbox).toBeDisabled();
-        });
-
-        it('should call onFeaturePackToggle when a feature pack checkbox is toggled', () => {
-            const onFeaturePackToggle = jest.fn();
-            render(
-                <ArchitectureStepContent
-                    {...defaultProps}
-                    featurePacks={{
-                        ...defaultProps.featurePacks,
-                        hasFeaturePacks: true,
-                        availableFeaturePacks: [mockFeaturePack],
-                        onFeaturePackToggle,
-                    }}
-                />
-            );
-
-            const checkbox = screen.getByRole('checkbox', { name: /B2B Commerce/i });
-            fireEvent.click(checkbox);
-            expect(onFeaturePackToggle).toHaveBeenCalledWith('b2b-commerce', true);
         });
     });
 

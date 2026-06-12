@@ -110,11 +110,6 @@ jest.mock('@/features/eds/services/edsPipeline', () => ({
     }),
 }));
 
-jest.mock('@/features/eds/services/featurePackInstaller', () => ({
-    installFeaturePacks: jest.fn().mockResolvedValue({
-        success: true, blocksInstalled: 0, initializersInstalled: 0, dependenciesAdded: 0,
-    }),
-}));
 
 // Mock fetch for code sync verification
 global.fetch = jest.fn().mockResolvedValue({ ok: true }) as jest.Mock;
