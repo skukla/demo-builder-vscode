@@ -371,14 +371,19 @@ export function getEdsPreviewUrl(project: Project | undefined | null): string | 
  * this file — the caller resolves and passes it in):
  *   - 'da-live-classic' (default): https://da.live/#/<org>/<site>
  *   - 'experience-workspace' (param-less production canvas, the default):
- *     https://da.live/canvas#/<org>/<site>/index.html
- *     The param-less production canvas now hosts the live EW alpha. Only the
- *     concrete document path (index.html) is load-bearing — the bare site root
- *     renders blank. A non-empty ewCanvasBranch (sourced from the
- *     demoBuilder.daLive.ewCanvasBranch setting via edsHelpers.getEwCanvasBranch)
- *     re-adds a `?nx=<branch>` override to pin a specific pre-release da-nx build:
- *     `da.live/canvas?nx=<branch>#/<org>/<site>/index.html`. index.html stays
- *     hardcoded. The default param value keeps this webview-safe and back-compat.
+ *     https://da.live/canvas#/<org>/<site>/index
+ *     The doc segment is the EXTENSIONLESS da.live doc name (`index`): da.live
+ *     appends `.html` itself to resolve the source at
+ *     admin.da.live/source/<org>/<site>/index.html. A `.html` suffix here
+ *     double-appends to `index.html.html`, which 404s the editor doc session
+ *     (resolveEditorDocSession) and leaves the canvas Outline empty ("No blocks")
+ *     even though the page still renders. The bare site root (no doc) renders
+ *     blank, so the `index` segment stays required. A non-empty ewCanvasBranch
+ *     (sourced from the demoBuilder.daLive.ewCanvasBranch setting via
+ *     edsHelpers.getEwCanvasBranch) re-adds a `?nx=<branch>` override to pin a
+ *     specific pre-release da-nx build:
+ *     `da.live/canvas?nx=<branch>#/<org>/<site>/index`. The default param value
+ *     keeps this webview-safe and back-compat.
  *
  * @param project - The EDS project (can be undefined/null)
  * @param experience - The resolved authoring experience (default 'da-live-classic')
@@ -400,7 +405,7 @@ export function getEdsDaLiveUrl(
 
     if (experience === 'experience-workspace') {
         const nxParam = ewCanvasBranch ? `?nx=${ewCanvasBranch}` : '';
-        return `https://da.live/canvas${nxParam}#/${daLiveOrg}/${daLiveSite}/index.html`;
+        return `https://da.live/canvas${nxParam}#/${daLiveOrg}/${daLiveSite}/index`;
     }
     return `https://da.live/#/${daLiveOrg}/${daLiveSite}`;
 }

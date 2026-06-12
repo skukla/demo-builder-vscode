@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Experience Workspace canvas opened an empty Outline ("No blocks").** The EW canvas URL used the doc path `/index.html`, but da.live appends `.html` itself when resolving the source doc — so it double-appended to `index.html.html` → 404, failing the editor doc session while the page still rendered. The path is now the extensionless `/index`, letting da.live resolve `index.html` and load the document model.
+
 ## [1.0.0-beta.117] - 2026-06-12
 
 ### Added

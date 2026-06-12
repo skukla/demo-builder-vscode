@@ -160,7 +160,7 @@ describe('ProjectDashboardWebviewCommand - sendAuthoringExperienceUpdate', () =>
         // When: An authoring-experience update is sent
         await ProjectDashboardWebviewCommand.sendAuthoringExperienceUpdate(
             'experience-workspace',
-            'https://da.live/canvas#/my-org/my-site/index.html',
+            'https://da.live/canvas#/my-org/my-site/index',
         );
 
         // Then: The exact message shape is posted to the active panel
@@ -169,7 +169,7 @@ describe('ProjectDashboardWebviewCommand - sendAuthoringExperienceUpdate', () =>
             type: 'authoringExperienceUpdate',
             payload: {
                 authoringExperience: 'experience-workspace',
-                edsDaLiveUrl: 'https://da.live/canvas#/my-org/my-site/index.html',
+                edsDaLiveUrl: 'https://da.live/canvas#/my-org/my-site/index',
             },
         });
     });
