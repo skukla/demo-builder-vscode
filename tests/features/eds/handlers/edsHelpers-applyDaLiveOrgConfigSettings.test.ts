@@ -107,7 +107,7 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         mockAemAuthorUrl = AEM_AUTHOR_URL;
 
         await applyDaLiveOrgConfigSettings(
-            mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'universal-editor',
+            mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'da-live-classic',
         );
 
         // 4th arg is removeKeys. This case is UE (default experience) with no
@@ -124,7 +124,7 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         mockImsOrgId = IMS_ORG_ID;
 
         await applyDaLiveOrgConfigSettings(
-            mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'universal-editor',
+            mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'da-live-classic',
         );
 
         expect(mockApplySiteConfig).toHaveBeenCalledTimes(1);
@@ -166,7 +166,7 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         mockImsOrgId = IMS_ORG_ID;
 
         await applyDaLiveOrgConfigSettings(
-            mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'universal-editor',
+            mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'da-live-classic',
         );
 
         expect(mockApplyOrgConfig).not.toHaveBeenCalled();
@@ -177,7 +177,7 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         mockImsOrgId = IMS_ORG_ID;
 
         await applyDaLiveOrgConfigSettings(
-            mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'universal-editor',
+            mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'da-live-classic',
         );
 
         // One round-trip carrying both keys — not two separate writes to the
@@ -219,7 +219,7 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         // applySiteConfig no-op optimization absorbs the case where no stale row
         // exists, so this is cheap on a fresh UE project.)
         await applyDaLiveOrgConfigSettings(
-            mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'universal-editor',
+            mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'da-live-classic',
         );
 
         expect(mockApplySiteConfig).toHaveBeenCalledTimes(1);

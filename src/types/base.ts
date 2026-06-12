@@ -146,9 +146,9 @@ export interface CustomIconPaths {
  * Stored per-project on the EDS component-instance metadata as
  * `authoringExperience` (beside `daLiveOrg`/`daLiveSite`). Absence falls back
  * to the global `demoBuilder.daLive.authoringExperience` setting (default
- * 'universal-editor'). Resolved via resolveAuthoringExperience in edsHelpers.
+ * 'da-live-classic'). Resolved via resolveAuthoringExperience in edsHelpers.
  */
-export type AuthoringExperience = 'universal-editor' | 'experience-workspace';
+export type AuthoringExperience = 'da-live-classic' | 'experience-workspace';
 
 export interface ComponentInstance {
     id: string;              // Component ID (e.g., "headless")

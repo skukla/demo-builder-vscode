@@ -39,7 +39,7 @@ const edsProject = {
 
 describe('getEdsDaLiveUrl - experience branch', () => {
     it('returns the Universal Editor URL for a valid EDS project', () => {
-        expect(getEdsDaLiveUrl(edsProject, 'universal-editor')).toBe(
+        expect(getEdsDaLiveUrl(edsProject, 'da-live-classic')).toBe(
             'https://da.live/#/leahrayard/leah-b2b-demo',
         );
     });
@@ -97,7 +97,7 @@ describe('getEdsDaLiveUrl - experience branch', () => {
             },
         } as unknown as Project;
 
-        expect(getEdsDaLiveUrl(noOrg, 'universal-editor')).toBeUndefined();
+        expect(getEdsDaLiveUrl(noOrg, 'da-live-classic')).toBeUndefined();
     });
 
     it('returns undefined when daLiveSite is missing', () => {

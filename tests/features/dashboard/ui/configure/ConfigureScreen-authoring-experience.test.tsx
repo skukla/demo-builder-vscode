@@ -152,7 +152,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
                 project={mockProject as any}
                 componentsData={mockComponentsData}
                 isEds
-                authoringExperience="universal-editor"
+                authoringExperience="da-live-classic"
             />
         );
 
@@ -167,7 +167,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
                 project={mockProject as any}
                 componentsData={mockComponentsData}
                 isEds
-                authoringExperience="universal-editor"
+                authoringExperience="da-live-classic"
             />
         );
 
@@ -187,7 +187,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
 
         const radios = screen.getAllByRole('radio') as HTMLInputElement[];
         const ew = radios.find((r) => r.value === 'experience-workspace');
-        const ue = radios.find((r) => r.value === 'universal-editor');
+        const ue = radios.find((r) => r.value === 'da-live-classic');
         expect(ew?.checked).toBe(true);
         expect(ue?.checked).toBe(false);
     });
@@ -214,7 +214,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
                 componentsData={mockComponentsData}
                 existingEnvValues={validConfig}
                 isEds
-                authoringExperience="universal-editor"
+                authoringExperience="da-live-classic"
             />
         );
 
@@ -242,7 +242,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
                 project={mockProject as any}
                 componentsData={mockComponentsData}
                 isEds
-                authoringExperience="universal-editor"
+                authoringExperience="da-live-classic"
             />
         );
 
@@ -264,7 +264,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
                 project={mockProject as any}
                 componentsData={mockComponentsData}
                 isEds
-                authoringExperience="universal-editor"
+                authoringExperience="da-live-classic"
             />
         );
 
@@ -279,7 +279,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
                 project={mockProject as any}
                 componentsData={mockComponentsData}
                 isEds
-                authoringExperience="universal-editor"
+                authoringExperience="da-live-classic"
             />
         );
 

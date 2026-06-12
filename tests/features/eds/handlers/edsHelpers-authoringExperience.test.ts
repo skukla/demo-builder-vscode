@@ -5,8 +5,8 @@
  * with a two-tier precedence:
  *   1. Per-project metadata value (if it is a recognized union member).
  *   2. Global setting demoBuilder.daLive.authoringExperience (default
- *      'universal-editor').
- * Any unrecognized result coerces to 'universal-editor' (fail-safe), so a
+ *      'da-live-classic').
+ * Any unrecognized result coerces to 'da-live-classic' (fail-safe), so a
  * corrupted setting or stray metadata can never break the Author button.
  *
  * Mirrors the vscode getConfiguration mock pattern from
@@ -66,10 +66,10 @@ describe('resolveAuthoringExperience', () => {
         mockAuthoringExperienceValue = undefined;  // honor the default (UE)
     });
 
-    it('returns universal-editor when metadata is undefined and the global setting is unset (default)', () => {
+    it('returns da-live-classic when metadata is undefined and the global setting is unset (default)', () => {
         mockAuthoringExperienceValue = undefined;
 
-        expect(resolveAuthoringExperience(undefined)).toBe('universal-editor');
+        expect(resolveAuthoringExperience(undefined)).toBe('da-live-classic');
     });
 
     it('falls back to the global setting (experience-workspace) when metadata is undefined', () => {
@@ -78,22 +78,22 @@ describe('resolveAuthoringExperience', () => {
         expect(resolveAuthoringExperience(undefined)).toBe('experience-workspace');
     });
 
-    it('lets the per-project value (experience-workspace) win over a global universal-editor', () => {
-        mockAuthoringExperienceValue = 'universal-editor';
+    it('lets the per-project value (experience-workspace) win over a global da-live-classic', () => {
+        mockAuthoringExperienceValue = 'da-live-classic';
 
         expect(resolveAuthoringExperience('experience-workspace')).toBe('experience-workspace');
     });
 
-    it('lets the per-project value (universal-editor) win over a global experience-workspace', () => {
+    it('lets the per-project value (da-live-classic) win over a global experience-workspace', () => {
         mockAuthoringExperienceValue = 'experience-workspace';
 
-        expect(resolveAuthoringExperience('universal-editor')).toBe('universal-editor');
+        expect(resolveAuthoringExperience('da-live-classic')).toBe('da-live-classic');
     });
 
-    it('coerces an unrecognized metadata value to universal-editor (fail-safe)', () => {
+    it('coerces an unrecognized metadata value to da-live-classic (fail-safe)', () => {
         mockAuthoringExperienceValue = undefined;
 
-        expect(resolveAuthoringExperience('garbage')).toBe('universal-editor');
+        expect(resolveAuthoringExperience('garbage')).toBe('da-live-classic');
     });
 
     it('reads from the demoBuilder.daLive configuration section', () => {

@@ -180,7 +180,7 @@ describe('ProjectDashboardWebviewCommand - sendAuthoringExperienceUpdate', () =>
 
         // When/Then: Sending does not throw
         await expect(
-            ProjectDashboardWebviewCommand.sendAuthoringExperienceUpdate('universal-editor'),
+            ProjectDashboardWebviewCommand.sendAuthoringExperienceUpdate('da-live-classic'),
         ).resolves.toBeUndefined();
     });
 });

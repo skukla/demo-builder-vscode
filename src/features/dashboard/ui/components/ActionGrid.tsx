@@ -53,7 +53,7 @@ type OverflowKey = 'components' | 'refreshBlockLibrary' | 'devConsole';
 
 /** Human-readable label per authoring experience. */
 const EXPERIENCE_LABEL: Record<AuthoringExperience, string> = {
-    'universal-editor': 'DA.live Classic',
+    'da-live-classic': 'DA.live Classic',
     'experience-workspace': 'Experience Workspace',
 };
 
@@ -128,7 +128,7 @@ export function ActionGrid({
     handleOpenBrowser,
     handleOpenLiveSite,
     handleOpenDaLive,
-    authoringExperience = 'universal-editor',
+    authoringExperience = 'da-live-classic',
     handleViewLogs,
     handleDeployMesh,
     handleSyncStorefront,

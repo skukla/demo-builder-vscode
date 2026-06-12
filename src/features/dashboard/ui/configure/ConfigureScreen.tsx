@@ -152,7 +152,7 @@ function AuthoringExperienceField({ value, onChange }: AuthoringExperienceFieldP
             value={value}
             onChange={(next) => onChange(next as AuthoringExperience)}
         >
-            <Radio value="universal-editor">DA.live Classic</Radio>
+            <Radio value="da-live-classic">DA.live Classic</Radio>
             <Radio value="experience-workspace">Experience Workspace</Radio>
         </RadioGroup>
     );
@@ -168,7 +168,7 @@ export function ConfigureScreen({
 }: ConfigureScreenProps) {
     const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>({});
     const [authoringExperience, setAuthoringExperience] = useState<AuthoringExperience>(
-        initialAuthoringExperience ?? 'universal-editor',
+        initialAuthoringExperience ?? 'da-live-classic',
     );
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
     const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());

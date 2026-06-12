@@ -41,11 +41,11 @@ import type { AuthoringExperience, Project } from '@/types/base';
 import { isEdsProject } from '@/types/typeGuards';
 
 /** Default authoring experience when the backend view model omits it. */
-const DEFAULT_AUTHORING_EXPERIENCE: AuthoringExperience = 'universal-editor';
+const DEFAULT_AUTHORING_EXPERIENCE: AuthoringExperience = 'da-live-classic';
 
 /** Human-readable label per authoring experience (for the Author item). */
 const EXPERIENCE_LABEL: Record<AuthoringExperience, string> = {
-    'universal-editor': 'DA.live Classic',
+    'da-live-classic': 'DA.live Classic',
     'experience-workspace': 'Experience Workspace',
 };
 

@@ -343,7 +343,7 @@ export function resolveByomOverlayConfig(
 }
 
 const AUTHORING_EXPERIENCES: ReadonlySet<string> = new Set<AuthoringExperience>([
-    'universal-editor',
+    'da-live-classic',
     'experience-workspace',
 ]);
 
@@ -353,8 +353,8 @@ const AUTHORING_EXPERIENCES: ReadonlySet<string> = new Set<AuthoringExperience>(
  * Precedence (mirrors resolveByomOverlayConfig):
  * 1. Per-project metadata value — if it is a recognized union member, it wins.
  * 2. Global setting demoBuilder.daLive.authoringExperience (default
- *    'universal-editor').
- * Any unrecognized result coerces to 'universal-editor' (fail-safe), so a
+ *    'da-live-classic').
+ * Any unrecognized result coerces to 'da-live-classic' (fail-safe), so a
  * corrupted setting or stray metadata can never break the Author button.
  *
  * @param metadataValue - The per-project `authoringExperience` metadata value
@@ -369,11 +369,11 @@ export function resolveAuthoringExperience(
 
     const globalValue = vscode.workspace
         .getConfiguration('demoBuilder.daLive')
-        .get<string>('authoringExperience', 'universal-editor');
+        .get<string>('authoringExperience', 'da-live-classic');
 
     return AUTHORING_EXPERIENCES.has(globalValue)
         ? (globalValue as AuthoringExperience)
-        : 'universal-editor';
+        : 'da-live-classic';
 }
 
 /**
@@ -784,7 +784,7 @@ export async function applyDaLiveOrgConfigSettings(
     daLiveOrg: string,
     daLiveSite: string,
     logger: Logger,
-    experience: AuthoringExperience = 'universal-editor',
+    experience: AuthoringExperience = 'da-live-classic',
 ): Promise<void> {
     try {
         const edsSettings = vscode.workspace.getConfiguration('demoBuilder.daLive');

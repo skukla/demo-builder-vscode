@@ -102,7 +102,7 @@ describe('ActionGrid', () => {
     const edsProps = {
         ...defaultProps,
         isEds: true,
-        authoringExperience: 'universal-editor' as const,
+        authoringExperience: 'da-live-classic' as const,
         handleOpenLiveSite: jest.fn(),
         handleOpenDaLive: jest.fn(),
         handleSyncStorefront: jest.fn(),
@@ -552,7 +552,7 @@ describe('ActionGrid', () => {
 
         it('renders no authoring-experience flip/switch control (relocated to Configure)', () => {
             // The flip control moved to the Configure webview (setup-time preference).
-            render(<ActionGrid {...edsProps} authoringExperience="universal-editor" />);
+            render(<ActionGrid {...edsProps} authoringExperience="da-live-classic" />);
 
             expect(screen.queryByText('Switch to Experience Workspace')).not.toBeInTheDocument();
             expect(screen.queryByText('Switch to DA.live Classic')).not.toBeInTheDocument();

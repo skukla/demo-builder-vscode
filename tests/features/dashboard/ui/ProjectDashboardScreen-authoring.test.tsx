@@ -18,12 +18,12 @@ describe('ProjectDashboardScreen - Live Authoring Experience', () => {
     });
 
     it('renders the initial Author label from the authoringExperience prop', () => {
-        renderDashboard({ isEds: true, authoringExperience: 'universal-editor' });
+        renderDashboard({ isEds: true, authoringExperience: 'da-live-classic' });
         expect(screen.getByText(/Author in DA\.live Classic/i)).toBeInTheDocument();
     });
 
     it('updates the Author tile live when an authoringExperienceUpdate arrives', async () => {
-        renderDashboard({ isEds: true, authoringExperience: 'universal-editor' });
+        renderDashboard({ isEds: true, authoringExperience: 'da-live-classic' });
 
         expect(screen.getByText(/Author in DA\.live Classic/i)).toBeInTheDocument();
 

@@ -45,7 +45,7 @@ const mockApplyDaLiveOrgConfigSettings = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     applyDaLiveOrgConfigSettings: (...args: unknown[]) => mockApplyDaLiveOrgConfigSettings(...args),
     getDaLiveAuthService: jest.fn(() => ({})),
-    resolveProjectAuthoringExperience: jest.fn(() => 'universal-editor'),
+    resolveProjectAuthoringExperience: jest.fn(() => 'da-live-classic'),
     // The live-update push threads the EW canvas branch into getEdsDaLiveUrl.
     // Default is '' (param-less production canvas).
     getEwCanvasBranch: jest.fn(() => ''),
@@ -185,7 +185,7 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
     });
 
     it('persists the changed authoringExperience into EDS metadata', async () => {
-        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('universal-editor'));
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('da-live-classic'));
         const save = captureSaveHandler(command);
 
         const result = await save({
@@ -199,7 +199,7 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
     });
 
     it('re-applies editor.path with the new experience when it changed', async () => {
-        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('universal-editor'));
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('da-live-classic'));
         const save = captureSaveHandler(command);
 
         await save({ componentConfigs: {}, authoringExperience: 'experience-workspace' });
@@ -228,7 +228,7 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
     // flip, the save handler pushes the new values so the tile updates instantly.
 
     it('pushes the new authoring experience + DA URL to the dashboard when it changed', async () => {
-        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('universal-editor'));
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('da-live-classic'));
         const save = captureSaveHandler(command);
 
         await save({ componentConfigs: {}, authoringExperience: 'experience-workspace' });
@@ -251,7 +251,7 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
 
     it('is non-fatal: a DA failure still resolves the save successfully', async () => {
         mockApplyDaLiveOrgConfigSettings.mockRejectedValueOnce(new Error('DA down'));
-        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('universal-editor'));
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('da-live-classic'));
         const save = captureSaveHandler(command);
 
         const result = await save({
@@ -271,7 +271,7 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
     // vendors it on the spot (idempotent → no-op when already present).
 
     it('vendors Quick Edit (parsed owner/repo) when flipping TO experience-workspace', async () => {
-        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('universal-editor'));
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('da-live-classic'));
         const save = captureSaveHandler(command);
 
         await save({ componentConfigs: {}, authoringExperience: 'experience-workspace' });
@@ -287,7 +287,7 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
 
     it('is non-fatal: a code-preview failure still resolves the save and keeps the metadata', async () => {
         mockPreviewCode.mockRejectedValueOnce(new Error('Helix down'));
-        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('universal-editor'));
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('da-live-classic'));
         const save = captureSaveHandler(command);
 
         const result = await save({
@@ -300,17 +300,17 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
         expect(meta?.authoringExperience).toBe('experience-workspace');
     });
 
-    it('does NOT vendor Quick Edit when flipping TO universal-editor', async () => {
+    it('does NOT vendor Quick Edit when flipping TO da-live-classic', async () => {
         mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('experience-workspace'));
         const save = captureSaveHandler(command);
 
-        await save({ componentConfigs: {}, authoringExperience: 'universal-editor' });
+        await save({ componentConfigs: {}, authoringExperience: 'da-live-classic' });
 
         expect(mockInstallQuickEdit).not.toHaveBeenCalled();
     });
 
     it('skips Quick Edit vendoring when no githubRepo metadata is present', async () => {
-        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('universal-editor', NO_REPO));
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('da-live-classic', NO_REPO));
         const save = captureSaveHandler(command);
 
         await save({ componentConfigs: {}, authoringExperience: 'experience-workspace' });
@@ -320,7 +320,7 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
 
     it('is non-fatal: a Quick Edit vendoring failure still resolves the save and keeps the metadata', async () => {
         mockInstallQuickEdit.mockRejectedValueOnce(new Error('GitHub down'));
-        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('universal-editor'));
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('da-live-classic'));
         const save = captureSaveHandler(command);
 
         const result = await save({
@@ -340,7 +340,7 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
         const successSpy = jest
             .spyOn(command as unknown as { showSuccessMessage: (m: string) => void }, 'showSuccessMessage')
             .mockImplementation(() => {});
-        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('universal-editor'));
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('da-live-classic'));
         const save = captureSaveHandler(command);
 
         await save({ componentConfigs: {}, authoringExperience: 'experience-workspace' });
@@ -355,7 +355,7 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
     // (re-)registers the site config, mirroring how reset does it.
 
     it('regenerates config.json (adding the quick-edit plugin) when flipping TO experience-workspace', async () => {
-        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('universal-editor'));
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('da-live-classic'));
         const save = captureSaveHandler(command);
 
         await save({ componentConfigs: {}, authoringExperience: 'experience-workspace' });
@@ -366,18 +366,18 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
         );
     });
 
-    it('does NOT regenerate config.json when flipping TO universal-editor', async () => {
+    it('does NOT regenerate config.json when flipping TO da-live-classic', async () => {
         mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('experience-workspace'));
         const save = captureSaveHandler(command);
 
-        await save({ componentConfigs: {}, authoringExperience: 'universal-editor' });
+        await save({ componentConfigs: {}, authoringExperience: 'da-live-classic' });
 
         expect(mockRepublishStorefrontConfig).not.toHaveBeenCalled();
     });
 
     it('is non-fatal: a config.json regeneration failure still resolves the save and keeps the metadata', async () => {
         mockRepublishStorefrontConfig.mockRejectedValueOnce(new Error('Config sync down'));
-        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('universal-editor'));
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('da-live-classic'));
         const save = captureSaveHandler(command);
 
         const result = await save({

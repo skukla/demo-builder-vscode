@@ -40,7 +40,7 @@ const edsProject = (name = 'EDS Project') =>
  * (no resolver / vscode in the webview).
  */
 const edsProjectWithExperience = (
-    experience: 'universal-editor' | 'experience-workspace',
+    experience: 'da-live-classic' | 'experience-workspace',
     name = 'EDS Project',
 ) =>
     createMockProject({
@@ -250,7 +250,7 @@ describe('ProjectActionsMenu', () => {
                 onOpenDaLive: jest.fn(),
             };
             renderWithProvider(
-                <ProjectActionsMenu project={edsProjectWithExperience('universal-editor')} actions={actions} />,
+                <ProjectActionsMenu project={edsProjectWithExperience('da-live-classic')} actions={actions} />,
             );
             openMenu();
 
@@ -268,7 +268,7 @@ describe('ProjectActionsMenu', () => {
         it('labels Author with DA.live Classic when the resolved experience is UE', () => {
             renderWithProvider(
                 <ProjectActionsMenu
-                    project={edsProjectWithExperience('universal-editor')}
+                    project={edsProjectWithExperience('da-live-classic')}
                     actions={{ onOpenDaLive: jest.fn() }}
                 />,
             );
@@ -310,7 +310,7 @@ describe('ProjectActionsMenu', () => {
         it('renders no flip/switch control (relocated to Configure)', () => {
             renderWithProvider(
                 <ProjectActionsMenu
-                    project={edsProjectWithExperience('universal-editor')}
+                    project={edsProjectWithExperience('da-live-classic')}
                     actions={{ onOpenDaLive: jest.fn() }}
                 />,
             );

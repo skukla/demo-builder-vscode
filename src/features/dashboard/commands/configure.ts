@@ -35,7 +35,7 @@ import type { HandlerContext, SharedState } from '@/types/handlers';
 import { getComponentInstanceEntries, getEdsDaLiveUrl } from '@/types/typeGuards';
 
 const AUTHORING_EXPERIENCES: ReadonlySet<AuthoringExperience> = new Set<AuthoringExperience>([
-    'universal-editor',
+    'da-live-classic',
     'experience-workspace',
 ]);
 
