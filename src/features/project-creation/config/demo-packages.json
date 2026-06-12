@@ -423,6 +423,133 @@
       }
     },
     {
+      "id": "citisignal-b2b",
+      "name": "CitiSignal B2B",
+      "description": "CitiSignal-branded B2B commerce demo (company management, quotes, purchase orders, requisition lists)",
+      "icon": "citisignal",
+      "featured": true,
+      "requiresMesh": false,
+      "addons": {
+        "adobe-commerce-aco": "excluded"
+      },
+      "configDefaults": {
+        "ADOBE_COMMERCE_WEBSITE_CODE": "citisignal",
+        "ADOBE_COMMERCE_STORE_CODE": "citisignal_store",
+        "ADOBE_COMMERCE_STORE_VIEW_CODE": "citisignal_us",
+        "ACCS_WEBSITE_CODE": "citisignal",
+        "ACCS_STORE_CODE": "citisignal_store",
+        "ACCS_STORE_VIEW_CODE": "citisignal_us"
+      },
+      "storefronts": {
+        "eds-paas": {
+          "name": "CitiSignal B2B EDS + PaaS",
+          "description": "CitiSignal-branded B2B Edge Delivery storefront with Commerce PaaS backend",
+          "icon": "eds",
+          "featured": true,
+          "tags": [
+            "eds",
+            "citisignal",
+            "b2b",
+            "paas"
+          ],
+          "source": {
+            "type": "git",
+            "url": "https://github.com/adobe-commerce/boilerplate-b2b-template",
+            "branch": "main",
+            "gitOptions": {
+              "shallow": true
+            }
+          },
+          "templateOwner": "adobe-commerce",
+          "templateRepo": "boilerplate-b2b-template",
+          "contentSource": {
+            "org": "demo-system-stores",
+            "site": "accs-citisignal"
+          },
+          "contentPatches": [
+            "index-product-teaser-sku",
+            "phones-product-teaser-sku",
+            "phones-heading-reorder",
+            "smart-watches-category-id",
+            "smart-watches-url-path"
+          ],
+          "contentPatchSource": {
+            "owner": "skukla",
+            "repo": "eds-demo-patches",
+            "path": "citisignal"
+          },
+          "codePatches": [
+            "header-nav-tools-defensive",
+            "product-link-sku-encoding",
+            "product-link-sku-slash-encoding",
+            "aem-assets-sku-sanitization",
+            "commerce-account-sidebar-selector-race",
+            "product-teaser-sku-encoding",
+            "product-teaser-getproductlink-import",
+            "product-teaser-image-url-handling"
+          ],
+          "codePatchSource": {
+            "owner": "skukla",
+            "repo": "eds-demo-patches",
+            "path": "citisignal-b2b",
+            "lkgFile": "b2b/last-known-good"
+          }
+        },
+        "eds-accs": {
+          "name": "CitiSignal B2B EDS + ACCS",
+          "description": "CitiSignal-branded B2B Edge Delivery storefront with Commerce Cloud Service backend",
+          "icon": "eds",
+          "featured": false,
+          "tags": [
+            "eds",
+            "citisignal",
+            "b2b",
+            "accs"
+          ],
+          "source": {
+            "type": "git",
+            "url": "https://github.com/adobe-commerce/boilerplate-b2b-template",
+            "branch": "main",
+            "gitOptions": {
+              "shallow": true
+            }
+          },
+          "templateOwner": "adobe-commerce",
+          "templateRepo": "boilerplate-b2b-template",
+          "contentSource": {
+            "org": "demo-system-stores",
+            "site": "accs-citisignal"
+          },
+          "contentPatches": [
+            "index-product-teaser-sku-accs",
+            "phones-heading-reorder",
+            "smart-watches-category-id-accs"
+          ],
+          "contentPatchSource": {
+            "owner": "skukla",
+            "repo": "eds-demo-patches",
+            "path": "citisignal"
+          },
+          "codePatches": [
+            "header-nav-tools-defensive",
+            "product-link-sku-encoding",
+            "product-link-sku-slash-encoding",
+            "aem-assets-sku-sanitization",
+            "commerce-account-sidebar-selector-race",
+            "product-teaser-sku-encoding",
+            "product-teaser-getproductlink-import",
+            "product-teaser-image-url-handling"
+          ],
+          "codePatchSource": {
+            "owner": "skukla",
+            "repo": "eds-demo-patches",
+            "path": "citisignal-b2b",
+            "lkgFile": "b2b/last-known-good"
+          }
+        }
+      }
+    },
+    {
       "id": "buildright",
       "name": "BuildRight",
       "description": "Construction/hardware demo with BuildRight branding",
