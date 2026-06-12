@@ -16,6 +16,7 @@ import * as path from 'path';
 import semver from 'semver';
 import * as vscode from 'vscode';
 import { getLatestRelease } from './githubApiClient';
+import { resolveMcpToolsDir } from '@/features/project-creation/services';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
@@ -50,7 +51,10 @@ export class AdobeMcpUpdateChecker {
                 return null;
             }
 
-            const currentVersion = await this.readInstalledVersion(storefrontPath);
+            // MCP tools install into the per-project isolated dir (keyed to
+            // project.path), not the storefront's node_modules. The EDS gate
+            // above still applies — headless projects get no MCP tooling.
+            const currentVersion = await this.readInstalledVersion(project.path);
             if (!currentVersion) return null;
 
             const latest = await getLatestRelease(this.secrets, ADOBE_MCP_OWNER, ADOBE_MCP_REPO);
@@ -75,13 +79,15 @@ export class AdobeMcpUpdateChecker {
     }
 
     /**
-     * Read the version from `<storefrontPath>/node_modules/@adobe-commerce/commerce-extensibility-tools/package.json`.
+     * Read the version from
+     * `<project>/.demo-builder-mcp/node_modules/@adobe-commerce/commerce-extensibility-tools/package.json`.
      * Returns `null` when the file is missing (npm install not run), malformed,
      * lacks a version field, or carries a non-semver value.
      */
-    private async readInstalledVersion(storefrontPath: string): Promise<string | null> {
+    private async readInstalledVersion(projectPath: string): Promise<string | null> {
         const pkgPath = path.join(
-            storefrontPath, 'node_modules', '@adobe-commerce', 'commerce-extensibility-tools', 'package.json',
+            resolveMcpToolsDir(projectPath),
+            'node_modules', '@adobe-commerce', 'commerce-extensibility-tools', 'package.json',
         );
 
         let raw: string;

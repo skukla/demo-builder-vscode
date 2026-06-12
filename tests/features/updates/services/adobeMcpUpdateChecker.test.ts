@@ -56,7 +56,10 @@ function makeProject(overrides: Partial<Project> = {}): Project {
 }
 
 const ADOBE_MCP_PKG = '@adobe-commerce/commerce-extensibility-tools';
-const ADOBE_MCP_PKG_PATH = '/projects/demo/components/eds-storefront/node_modules/@adobe-commerce/commerce-extensibility-tools/package.json';
+// MCP tools install into the per-project isolated dir (decoupled from the
+// storefront manifest), so the version is read from there — keyed to
+// project.path, NOT the storefront component path.
+const ADOBE_MCP_PKG_PATH = '/projects/demo/.demo-builder-mcp/node_modules/@adobe-commerce/commerce-extensibility-tools/package.json';
 
 beforeEach(() => {
     jest.clearAllMocks();

@@ -23,6 +23,7 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { promisify } from 'util';
 import aiDefaultsConfig from '../config/ai-defaults.json';
+import { resolveMcpToolsDir } from './aiDefaultsInstaller';
 import { COMPONENT_IDS } from '@/core/constants';
 import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
 import type { AiDefaults } from '@/types/aiDefaults';
@@ -243,20 +244,22 @@ async function buildMcpConfig(
         ),
     };
 
-    // ai-defaults.json packages live under the storefront's node_modules
-    // (added as devDeps before `npm install`). Claude Code spawns each MCP
-    // with cwd = wherever it was launched (= project.path, not the storefront
-    // path), so relative `node_modules/...` refs would not resolve. Anchor
-    // each declared arg to the storefront path. Headless projects have no
-    // storefront — skip the entries entirely; the packages are not installed
-    // anywhere for those projects.
+    // ai-defaults.json packages install into the per-project ISOLATED MCP tools
+    // dir (`<project>/.demo-builder-mcp/node_modules/...`) — decoupled from the
+    // storefront manifest, whose own `npm install` can abort on b2b @dropins.
+    // Claude Code spawns each MCP with cwd = wherever it was launched
+    // (= project.path, not the tools dir), so relative `node_modules/...` refs
+    // would not resolve; anchor each declared arg to the isolated dir. The EDS
+    // gate stays — headless projects (no storefront) get no MCP tooling, so
+    // skip the entries entirely.
     const storefrontPath = resolveStorefrontPath(project);
     if (storefrontPath) {
+        const toolsDir = resolveMcpToolsDir(project.path);
         for (const entry of aiDefaults.mcpServers) {
             mcpServers[entry.id] = {
                 command: entry.command,
                 args: entry.args.map(arg =>
-                    path.isAbsolute(arg) ? arg : path.join(storefrontPath, arg),
+                    path.isAbsolute(arg) ? arg : path.join(toolsDir, arg),
                 ),
             };
         }

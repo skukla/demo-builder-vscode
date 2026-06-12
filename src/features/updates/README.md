@@ -128,16 +128,16 @@ try {
 
 ### AdobeMcpUpdateChecker
 
-**Purpose**: Detect available updates for `@adobe-commerce/commerce-extensibility-tools` (the Adobe-published skill bundle installed per EDS storefront).
+**Purpose**: Detect available updates for `@adobe-commerce/commerce-extensibility-tools` (the Adobe-published skill bundle installed per project in the isolated MCP tools dir `<project>/.demo-builder-mcp/`).
 
 **Why**: Cycle D Step 17 added this check to `Demo Builder: Check for Updates` so the Adobe skill bundle stays current alongside the existing fork / template / component / add-on sources.
 
 **Constructor**: `(secrets: vscode.SecretStorage, logger: Logger)` — mirrors `TemplateUpdateChecker`.
 
 **Key Method**:
-- `checkForUpdates(project)` — Reads the installed version from `<storefrontPath>/node_modules/@adobe-commerce/commerce-extensibility-tools/package.json::version`, fetches the latest GitHub release for `adobe-commerce/commerce-extensibility-tools`, returns `{ hasUpdate, currentVersion, latestVersion, packageName } | null` (null on skip — no storefront, no install, malformed package.json, or GitHub fetch failure).
+- `checkForUpdates(project)` — Reads the installed version from `<project>/.demo-builder-mcp/node_modules/@adobe-commerce/commerce-extensibility-tools/package.json::version`, fetches the latest GitHub release for `adobe-commerce/commerce-extensibility-tools`, returns `{ hasUpdate, currentVersion, latestVersion, packageName } | null` (null on skip — no storefront, no install, malformed package.json, or GitHub fetch failure).
 
-**Apply flow**: `CheckUpdatesCommand` surfaces a `AdobeMcpUpdateItem` in the QuickPick. Selecting it runs `performAdobeMcpUpdates` in `updateExecutor.ts`, which calls `commandManager.execute('npm update @adobe-commerce/commerce-extensibility-tools --no-fund')` in the storefront and then re-runs `generateAIContextFiles` so the skill bundle stays in sync.
+**Apply flow**: `CheckUpdatesCommand` surfaces a `AdobeMcpUpdateItem` in the QuickPick. Selecting it runs `performAdobeMcpUpdates` in `updateExecutor.ts`, which calls `commandManager.execute('npm update @adobe-commerce/commerce-extensibility-tools --no-fund')` in the project's isolated MCP tools dir (`<project>/.demo-builder-mcp/`) and then re-runs `generateAIContextFiles` so the skill bundle stays in sync.
 
 **Pattern alignment**: Matches `TemplateUpdateChecker` — same constructor shape, same `null` semantics for skip conditions, no cache (the user-initiated check expects fresh results).
 
