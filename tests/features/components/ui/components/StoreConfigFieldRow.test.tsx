@@ -72,7 +72,6 @@ function buildProps(overrides: Partial<Parameters<typeof StoreConfigFieldRow>[0]
         getWebsiteItems: jest.fn(() => []),
         getStoreGroupItems: jest.fn(() => []),
         getStoreViewItems: jest.fn(() => []),
-        componentConfigs: {},
         onRefresh: jest.fn(),
         ...overrides,
     } as Parameters<typeof StoreConfigFieldRow>[0];

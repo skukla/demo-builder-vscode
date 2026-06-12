@@ -22,7 +22,6 @@ import type { StoreListItem } from '../hooks/useStoreDiscovery';
 import { ConfigFieldRenderer } from './ConfigFieldRenderer';
 import { StoreSelectionRow } from './StoreSelectionRow';
 import type { DescriptionContext } from '@/core/ui/components/forms/descriptionRenderer';
-import type { ComponentConfigs } from '@/types/webview';
 
 export interface StoreConfigFieldRowProps {
     field: UniqueField;
@@ -40,7 +39,6 @@ export interface StoreConfigFieldRowProps {
     getWebsiteItems: () => StoreListItem[];
     getStoreGroupItems: (websiteCode: string) => StoreListItem[];
     getStoreViewItems: (storeGroupCode: string) => StoreListItem[];
-    componentConfigs: ComponentConfigs;
     /** Called when user clicks the Re-detect button to re-run store discovery */
     onRefresh?: () => void;
     /** Context for resolving {placeholder} tokens inside field-description URLs (e.g., {orgCode}) */
@@ -63,7 +61,6 @@ export function StoreConfigFieldRow({
     getWebsiteItems,
     getStoreGroupItems,
     getStoreViewItems,
-    componentConfigs,
     onRefresh,
     descriptionContext,
 }: StoreConfigFieldRowProps): React.ReactNode {
@@ -123,7 +120,6 @@ export function StoreConfigFieldRow({
                     getWebsiteItems={getWebsiteItems}
                     getStoreGroupItems={getStoreGroupItems}
                     getStoreViewItems={getStoreViewItems}
-                    componentConfigs={componentConfigs}
                     isLoading={!hasStoreData}
                 />
                 {onRefresh && (

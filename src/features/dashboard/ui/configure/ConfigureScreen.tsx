@@ -619,7 +619,6 @@ export function ConfigureScreen({
                                                         getWebsiteItems={getWebsiteItems}
                                                         getStoreGroupItems={getStoreGroupItems}
                                                         getStoreViewItems={getStoreViewItems}
-                                                        componentConfigs={componentConfigs}
                                                         onRefresh={forceFetch}
                                                     />
                                                 ))}
