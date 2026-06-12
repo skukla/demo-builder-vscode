@@ -21,7 +21,8 @@
  * @module features/eds/services/edsResetService
  */
 
-import { getGitHubServices, configureDaLivePermissions, getDaLiveAuthService, ensureDaLiveAuth } from '../handlers/edsHelpers';
+import { getGitHubServices, configureDaLivePermissions, getDaLiveAuthService, ensureDaLiveAuth, surfaceOverlayRegistrationFailure } from '../handlers/edsHelpers';
+import { retryConfigWriteOnPropagation } from './configServiceRetry';
 import { verifyCdnResources } from './configSyncService';
 import { buildSiteConfigParams, ConfigurationService } from './configurationService';
 import { DaLiveContentOperations } from './daLiveContentOperations';
@@ -141,17 +142,35 @@ async function publishConfigAndRegisterSite(
     report(7, 'Updating Configuration Service...');
     const configService = new ConfigurationService(tokenProvider, logger);
     try {
-        const configResult = await configService.updateSiteConfig(
-            buildSiteConfigParams(repoOwner, repoName, daLiveOrg, daLiveSite, byomOverlayUrl),
+        // Retry on 403 to ride out AEM Code Sync admin-role propagation, matching
+        // the create path. Without this, a transient propagation 403 on reset —
+        // the path used to REPAIR a broken storefront — silently drops the overlay.
+        const configResult = await retryConfigWriteOnPropagation(
+            () => configService.updateSiteConfig(
+                buildSiteConfigParams(repoOwner, repoName, daLiveOrg, daLiveSite, byomOverlayUrl),
+            ),
+            (attempt, total) => report(7, `Waiting for Configuration Service access (${attempt}/${total})...`),
         );
         if (configResult.success) {
             logger.info('[EdsReset] Configuration Service updated');
             report(7, 'Configuration Service updated');
+        } else if (byomOverlayUrl) {
+            // The overlay rides in this same config write. A failure here leaves
+            // PDPs resolving against da.live (404) — surface it so the user resets.
+            // Log-only helper (headless-safe); report() is the context-appropriate
+            // surface (UI progress or MCP tool output).
+            surfaceOverlayRegistrationFailure(logger);
+            report(7, '⚠️ Product pages not registered — reset again to enable product detail pages');
         } else {
             logger.warn(`[EdsReset] Configuration Service update warning: ${configResult.error}`);
         }
     } catch (configError) {
-        logger.warn(`[EdsReset] Configuration Service update skipped: ${(configError as Error).message}`);
+        if (byomOverlayUrl) {
+            surfaceOverlayRegistrationFailure(logger);
+            report(7, '⚠️ Product pages not registered — reset again to enable product detail pages');
+        } else {
+            logger.warn(`[EdsReset] Configuration Service update skipped: ${(configError as Error).message}`);
+        }
     }
 }
 
