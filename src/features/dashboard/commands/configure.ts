@@ -335,11 +335,10 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         project: Project,
         experience: AuthoringExperience,
     ): Promise<void> {
-        const label = experience === 'experience-workspace' ? 'Experience Workspace' : 'DA.live Classic';
         await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: `Switching authoring to ${label}…`,
+                title: 'Switching author mode',
                 cancellable: false,
             },
             async (progress) => {
