@@ -342,6 +342,38 @@ export function resolveByomOverlayConfig(
     return appendOverlayParams(baseUrl, org, site);
 }
 
+/**
+ * User-facing message shown when the BYOM content overlay fails to register
+ * with the Configuration Service. Without the overlay, Helix resolves
+ * `/products/{urlKey}/{sku}` against the da.live content source (where no such
+ * doc exists and which needs auth → 401), so product detail pages never load —
+ * even though the smart-404 client code is vendored into the storefront. The
+ * remedy is a storefront reset, which re-registers the overlay.
+ */
+export const BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE =
+    'Product detail pages will not load: the storefront\'s BYOM overlay was not '
+    + 'registered with the Configuration Service. Reset the storefront to register it.';
+
+/**
+ * Surface a failed BYOM overlay registration. Logs at error level always;
+ * shows a warning toast only when a `showWarning` callback is wired. Called from
+ * storefront create and reset when an overlay URL was configured but the
+ * Configuration Service write did not succeed — preventing a storefront from
+ * silently shipping with smart-404 client code but no overlay to back it (the
+ * state that makes every PDP show "Product not available").
+ *
+ * Headless safety mirrors `reportUnapplied` in `patchReportHelper`: MCP / AI
+ * contexts pass nothing and get logging only; UI-bound callers wire
+ * `vscode.window.showWarningMessage`.
+ */
+export function surfaceOverlayRegistrationFailure(
+    logger: Logger,
+    showWarning?: (message: string) => void,
+): void {
+    logger.error(`[BYOM] ${BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE}`);
+    showWarning?.(BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE);
+}
+
 const AUTHORING_EXPERIENCES: ReadonlySet<string> = new Set<AuthoringExperience>([
     'da-live-classic',
     'experience-workspace',

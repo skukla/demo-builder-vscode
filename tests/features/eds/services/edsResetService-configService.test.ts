@@ -43,7 +43,10 @@ jest.mock('vscode', () => ({
 }), { virtual: true });
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: { QUICK: 5000, NORMAL: 30000, PREREQUISITE_CHECK: 10000, UI: { MIN_LOADING: 200 } },
+    TIMEOUTS: {
+        QUICK: 5000, NORMAL: 30000, PREREQUISITE_CHECK: 10000, UI: { MIN_LOADING: 200 },
+        CONFIG_SERVICE_RETRY_DELAY: 0,
+    },
 }));
 
 jest.mock('@/core/constants', () => ({
@@ -102,6 +105,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
         getUserEmail: jest.fn().mockResolvedValue('test@example.com'),
     }),
     ensureDaLiveAuth: jest.fn().mockResolvedValue({ authenticated: true }),
+    surfaceOverlayRegistrationFailure: jest.fn(),
 }));
 
 jest.mock('@/features/eds/services/inspectorHelpers', () => ({
@@ -147,6 +151,11 @@ global.fetch = jest.fn().mockResolvedValue({ ok: false }) as jest.Mock;
 // =============================================================================
 
 import { executeEdsReset } from '@/features/eds/services/edsResetService';
+import { surfaceOverlayRegistrationFailure } from '@/features/eds/handlers/edsHelpers';
+
+const mockSurfaceOverlayFailure = surfaceOverlayRegistrationFailure as jest.MockedFunction<
+    typeof surfaceOverlayRegistrationFailure
+>;
 
 // =============================================================================
 // Helpers
@@ -267,5 +276,64 @@ describe('executeEdsReset - Configuration Service (Step 6)', () => {
 
         const callArgs = mockUpdateSiteConfig.mock.calls[0][0];
         expect(callArgs.contentOverlayUrl).toBeUndefined();
+    });
+
+    it('surfaces the overlay failure when overlay configured but update fails', async () => {
+        mockUpdateSiteConfig.mockResolvedValue({ success: false, error: 'API rejected' });
+        const params = { ...createParams(), byomOverlayUrl: 'https://byom.example.com' };
+
+        await executeEdsReset(params, context, mockTokenProvider);
+
+        expect(mockSurfaceOverlayFailure).toHaveBeenCalled();
+    });
+
+    it('does NOT surface the overlay failure when overlay update succeeds', async () => {
+        const params = { ...createParams(), byomOverlayUrl: 'https://byom.example.com' };
+
+        await executeEdsReset(params, context, mockTokenProvider);
+
+        expect(mockSurfaceOverlayFailure).not.toHaveBeenCalled();
+    });
+
+    it('does NOT surface the overlay failure when no overlay configured even if update fails', async () => {
+        mockUpdateSiteConfig.mockResolvedValue({ success: false, error: 'API rejected' });
+
+        await executeEdsReset(createParams(), context, mockTokenProvider);
+
+        expect(mockSurfaceOverlayFailure).not.toHaveBeenCalled();
+    });
+
+    it('retries the config write on a 403 (admin-role propagation) then succeeds', async () => {
+        mockUpdateSiteConfig
+            .mockResolvedValueOnce({ success: false, statusCode: 403, error: 'Forbidden' })
+            .mockResolvedValueOnce({ success: true });
+        const params = { ...createParams(), byomOverlayUrl: 'https://byom.example.com' };
+
+        await executeEdsReset(params, context, mockTokenProvider);
+
+        // initial 403 + one retry that succeeds
+        expect(mockUpdateSiteConfig).toHaveBeenCalledTimes(2);
+        expect(mockSurfaceOverlayFailure).not.toHaveBeenCalled();
+    });
+
+    it('surfaces the overlay failure after 403 retries are exhausted', async () => {
+        mockUpdateSiteConfig.mockResolvedValue({ success: false, statusCode: 403, error: 'Forbidden' });
+        const params = { ...createParams(), byomOverlayUrl: 'https://byom.example.com' };
+
+        await executeEdsReset(params, context, mockTokenProvider);
+
+        // initial + 3 propagation retries
+        expect(mockUpdateSiteConfig).toHaveBeenCalledTimes(4);
+        expect(mockSurfaceOverlayFailure).toHaveBeenCalled();
+    });
+
+    it('does NOT retry a non-403 config failure', async () => {
+        mockUpdateSiteConfig.mockResolvedValue({ success: false, statusCode: 500, error: 'Server error' });
+        const params = { ...createParams(), byomOverlayUrl: 'https://byom.example.com' };
+
+        await executeEdsReset(params, context, mockTokenProvider);
+
+        expect(mockUpdateSiteConfig).toHaveBeenCalledTimes(1);
+        expect(mockSurfaceOverlayFailure).toHaveBeenCalled();
     });
 });

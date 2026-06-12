@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.120] - 2026-06-12
+
+### Fixed
+
+- **Silent BYOM overlay registration failures now surface a warning.** When a storefront's BYOM `content.overlay` fails to register with the AEM Configuration Service during create or reset, the extension now logs an error and (in the UI) shows a warning telling the user to reset the storefront. Previously this failed silently, producing storefronts whose product detail pages showed "Product not available" — Helix fell back to the da.live content source (which 401s) with no indication of the cause. The reset path surfaces through its existing progress channel so the in-extension MCP reset tool stays toast-free.
+- **Storefront reset now retries the Configuration Service write on a 403** (AEM Code Sync admin-role propagation), matching the create path's backoff. Reset is the path used to repair a broken storefront, so a transient propagation 403 there previously dropped the overlay with no retry. The backoff is now a single shared constant across create and reset.
+
 ## [1.0.0-beta.119] - 2026-06-12
 
 ### Added
