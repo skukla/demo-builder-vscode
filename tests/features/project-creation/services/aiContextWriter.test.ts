@@ -141,8 +141,10 @@ describe('aiContextWriter', () => {
                 });
                 const result = generateAgentsMd(project, STACKS);
 
-                // Param-less canvas form, trailing slash = site root; # escaped at the boundary.
-                expect(result).toContain('https://da.live/canvas\\#/my-org/my-site/');
+                // Branch-pinned canvas form (default ewCanvasBranch 'exp-workspace')
+                // with the concrete index.html doc. escapeMarkdown escapes only `#`
+                // (not `?` or `=`), so ?nx=exp-workspace survives verbatim.
+                expect(result).toContain('https://da.live/canvas?nx=exp-workspace\\#/my-org/my-site/index.html');
                 expect(result).not.toContain('https://da.live/\\#/my-org/my-site');
             });
 

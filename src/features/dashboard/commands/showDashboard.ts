@@ -10,7 +10,7 @@ import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { dashboardHandlers } from '@/features/dashboard/handlers';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
-import { resolveProjectAuthoringExperience } from '@/features/eds/handlers/edsHelpers';
+import { getEwCanvasBranch, resolveProjectAuthoringExperience } from '@/features/eds/handlers/edsHelpers';
 import { loadDemoPackages } from '@/features/project-creation/services/demoPackageLoader';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { AuthoringExperience, Project, ComponentInstance } from '@/types';
@@ -147,7 +147,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         const isEds = isEdsProject(project);
         const edsLiveUrl = getEdsLiveUrl(project);
         const authoringExperience = resolveProjectAuthoringExperience(project);
-        const edsDaLiveUrl = getEdsDaLiveUrl(project, authoringExperience);
+        const edsDaLiveUrl = getEdsDaLiveUrl(project, authoringExperience, getEwCanvasBranch());
 
         // Get EDS storefront status for dynamic display
         const initialEdsStorefrontStatus = project?.edsStorefrontStatusSummary;

@@ -4,10 +4,17 @@
  * getEdsDaLiveUrl builds the "Author" button target from the EDS storefront
  * component-instance metadata (daLiveOrg/daLiveSite). It branches on the
  * resolved authoring experience, passed in as a parameter (vscode stays OUT of
- * typeGuards.ts):
+ * typeGuards.ts), plus an optional ewCanvasBranch param (default 'exp-workspace'):
  *   - Universal Editor (default): https://da.live/#/<org>/<site>
- *   - Experience Workspace:       https://da.live/canvas#/<org>/<site>/
- *     (param-less, trailing slash = site root; no ?nx/?nxver)
+ *   - Experience Workspace (default branch):
+ *       https://da.live/canvas?nx=exp-workspace#/<org>/<site>/index.html
+ *     `?nx=exp-workspace` pins the canvas to the pre-release da-nx branch while
+ *     EW is in early access; `index.html` is the concrete doc (the bare root
+ *     renders blank). Both are load-bearing today.
+ *   - Experience Workspace (empty branch — documented production form):
+ *       https://da.live/canvas#/<org>/<site>/index.html
+ *     The branch is sourced from the demoBuilder.daLive.ewCanvasBranch setting
+ *     (read by edsHelpers.getEwCanvasBranch); clearing it drops the ?nx override.
  *
  * Non-EDS projects and projects missing org/site resolve to undefined.
  */
@@ -37,9 +44,23 @@ describe('getEdsDaLiveUrl - experience branch', () => {
         );
     });
 
-    it('returns the param-less Experience Workspace canvas URL for a valid EDS project', () => {
+    it('returns the branch-pinned Experience Workspace canvas URL by default', () => {
+        // Default ewCanvasBranch arg is 'exp-workspace' → ?nx override + index.html.
         expect(getEdsDaLiveUrl(edsProject, 'experience-workspace')).toBe(
-            'https://da.live/canvas#/leahrayard/leah-b2b-demo/',
+            'https://da.live/canvas?nx=exp-workspace#/leahrayard/leah-b2b-demo/index.html',
+        );
+    });
+
+    it('returns the param-less production EW canvas URL when the branch is empty', () => {
+        // An empty branch drops the ?nx override → the documented production form.
+        expect(getEdsDaLiveUrl(edsProject, 'experience-workspace', '')).toBe(
+            'https://da.live/canvas#/leahrayard/leah-b2b-demo/index.html',
+        );
+    });
+
+    it('honors a custom ewCanvasBranch in the ?nx override', () => {
+        expect(getEdsDaLiveUrl(edsProject, 'experience-workspace', 'main')).toBe(
+            'https://da.live/canvas?nx=main#/leahrayard/leah-b2b-demo/index.html',
         );
     });
 

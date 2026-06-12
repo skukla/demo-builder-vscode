@@ -18,6 +18,7 @@ import { detectStorefrontChanges, isEdsProject, republishStorefrontConfig } from
 import {
     applyDaLiveOrgConfigSettings,
     getDaLiveAuthService,
+    getEwCanvasBranch,
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveContentOperations, createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
@@ -250,7 +251,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 // dashboard or a postMessage failure must never block the save.
                 if (authoringChanged && data.authoringExperience) {
                     try {
-                        const edsDaLiveUrl = getEdsDaLiveUrl(project, data.authoringExperience);
+                        const edsDaLiveUrl = getEdsDaLiveUrl(project, data.authoringExperience, getEwCanvasBranch());
                         await ProjectDashboardWebviewCommand.sendAuthoringExperienceUpdate(
                             data.authoringExperience,
                             edsDaLiveUrl,

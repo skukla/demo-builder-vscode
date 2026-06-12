@@ -392,6 +392,32 @@ export function resolveProjectAuthoringExperience(
     return resolveAuthoringExperience(metadataValue);
 }
 
+/**
+ * Read the da-nx branch the Experience Workspace canvas loads from (the `?nx=`
+ * override) from the demoBuilder.daLive.ewCanvasBranch setting.
+ *
+ * Required while EW is in early access (the production da.live/canvas doesn't
+ * render the Layout view yet); clearing the setting yields '' so the URL builder
+ * drops the ?nx override entirely (the documented production form).
+ *
+ * Defends against a corrupted (non-string) settings.json value by falling back
+ * to the 'exp-workspace' default. Returns the value trimmed; a whitespace-only
+ * value collapses to ''.
+ *
+ * @returns The trimmed EW canvas branch (may be empty string)
+ */
+export function getEwCanvasBranch(): string {
+    const raw = vscode.workspace
+        .getConfiguration('demoBuilder.daLive')
+        .get<string>('ewCanvasBranch', 'exp-workspace');
+    // VS Code's typed get returns the default on type mismatch, but be defensive
+    // about non-string values (corrupted user settings.json).
+    if (typeof raw !== 'string') {
+        return 'exp-workspace';
+    }
+    return raw.trim();
+}
+
 function isAcceptedOverlayUrl(value: string): boolean {
     let parsed: URL;
     try {
@@ -709,8 +735,9 @@ export async function bulkPreviewAndPublish(
 /**
  * Build the site-scoped `editor.path` row value for the active experience.
  *
- * - Experience Workspace: the da.live-native canvas — a constant that needs no
- *   settings, so it is always written when the project is set to EW.
+ * - Experience Workspace: the da.live-native canvas, pinned to the supplied
+ *   ewCanvasBranch (the `?nx=` override); the row is always written when the
+ *   project is set to EW. An empty branch drops the override.
  * - Universal Editor: punches out to experience.adobe.com and embeds the IMS org
  *   id, so it is only written when `demoBuilder.daLive.IMSOrgId` is configured.
  *
@@ -721,9 +748,14 @@ function buildEditorPathValue(
     imsOrgId: string | undefined,
     daLiveOrg: string,
     daLiveSite: string,
+    ewCanvasBranch: string,
 ): string | undefined {
     if (experience === 'experience-workspace') {
-        return 'https://da.live/canvas#';
+        // `?nx=<branch>` pins the canvas to a pre-release da-nx branch while EW is
+        // in early access; an empty branch drops to `https://da.live/canvas#`
+        // (the documented production form). Mirrors getEdsDaLiveUrl's EW form.
+        const nxParam = ewCanvasBranch ? `?nx=${ewCanvasBranch}` : '';
+        return `https://da.live/canvas${nxParam}#`;
     }
     if (imsOrgId) {
         return `https://experience.adobe.com/#/@${imsOrgId}`
@@ -771,7 +803,8 @@ export async function applyDaLiveOrgConfigSettings(
         if (aemAuthorUrl) {
             updates['aem.repositoryId'] = aemAuthorUrl;
         }
-        const editorValue = buildEditorPathValue(experience, imsOrgId, daLiveOrg, daLiveSite);
+        const ewCanvasBranch = getEwCanvasBranch();
+        const editorValue = buildEditorPathValue(experience, imsOrgId, daLiveOrg, daLiveSite, ewCanvasBranch);
         if (editorValue) {
             updates['editor.path'] = `/${daLiveOrg}/${daLiveSite}=${editorValue}`;
         } else {

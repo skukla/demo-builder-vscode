@@ -13,7 +13,11 @@
  *
  * editor.path also branches on the resolved authoring experience:
  *   - Universal Editor: row value punches out to experience.adobe.com.
- *   - Experience Workspace: row value is the da.live-native canvas.
+ *   - Experience Workspace: row value is the da.live-native canvas, pinned to the
+ *     demoBuilder.daLive.ewCanvasBranch setting (default 'exp-workspace' →
+ *     `?nx=exp-workspace`). The getConfiguration mock returns the supplied
+ *     default for unknown keys, so get('ewCanvasBranch','exp-workspace') yields
+ *     'exp-workspace' here without extra wiring.
  *
  * Both keys land in the same per-site config, so they are written in a SINGLE
  * merged applySiteConfig call when both are present (one round-trip, no window
@@ -150,7 +154,7 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         const [org, site, updates, removeKeys] = mockApplySiteConfig.mock.calls[0];
         expect(org).toBe(DA_LIVE_ORG);
         expect(site).toBe(DA_LIVE_SITE);
-        expect(updates['editor.path']).toBe(`${SITE_ROW_KEY}=https://da.live/canvas#`);
+        expect(updates['editor.path']).toBe(`${SITE_ROW_KEY}=https://da.live/canvas?nx=exp-workspace#`);
         // EW always writes the canvas row → nothing to clear.
         expect(removeKeys).toEqual([]);
 
@@ -201,7 +205,7 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         const [org, site, updates] = mockApplySiteConfig.mock.calls[0];
         expect(org).toBe(DA_LIVE_ORG);
         expect(site).toBe(DA_LIVE_SITE);
-        expect(updates['editor.path']).toBe(`${SITE_ROW_KEY}=https://da.live/canvas#`);
+        expect(updates['editor.path']).toBe(`${SITE_ROW_KEY}=https://da.live/canvas?nx=exp-workspace#`);
         expect(updates['aem.repositoryId']).toBeUndefined();
         expect(mockApplyOrgConfig).not.toHaveBeenCalled();
     });

@@ -260,6 +260,11 @@
             "enumItemLabels": ["DA.live Classic", "Experience Workspace"],
             "default": "universal-editor",
             "description": "Default AEM authoring experience for new EDS projects. DA.live Classic opens the da.live doc editor (with the Universal Editor punch-out for Sidekick Edit); Experience Workspace uses the da.live-native canvas. Override per project from the project's Configure screen."
+          },
+          "demoBuilder.daLive.ewCanvasBranch": {
+            "type": "string",
+            "default": "exp-workspace",
+            "description": "da-nx branch the Experience Workspace canvas loads from (the `?nx=` override). Required while EW is in early access; clear this once EW reaches production to use the param-less canvas URL."
           }
         }
       },

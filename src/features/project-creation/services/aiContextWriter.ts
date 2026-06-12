@@ -29,7 +29,7 @@ import {
     getEdsDaLiveUrl,
     getMeshEndpointUrl,
 } from '@/types/typeGuards';
-import { resolveProjectAuthoringExperience } from '@/features/eds/handlers/edsHelpers';
+import { getEwCanvasBranch, resolveProjectAuthoringExperience } from '@/features/eds/handlers/edsHelpers';
 
 const demoPackages = demoPackagesJson as unknown as DemoPackagesConfig;
 
@@ -142,7 +142,11 @@ function buildEndpoints(project: Project): string {
         endpoints.push(`- **Preview URL:** ${escapeMarkdown(sanitizeUrl(previewUrl))}`);
     }
 
-    const daLiveUrl = getEdsDaLiveUrl(project, resolveProjectAuthoringExperience(project));
+    const daLiveUrl = getEdsDaLiveUrl(
+        project,
+        resolveProjectAuthoringExperience(project),
+        getEwCanvasBranch(),
+    );
     if (daLiveUrl) {
         endpoints.push(`- **DA.live:** ${escapeMarkdown(sanitizeUrl(daLiveUrl))}`);
     }

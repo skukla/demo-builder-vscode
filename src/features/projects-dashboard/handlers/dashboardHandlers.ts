@@ -26,7 +26,7 @@ import { sessionUIState } from '@/core/state/sessionUIState';
 import { openInIncognito, TIMEOUTS } from '@/core/utils';
 import { validateProjectPath, validateProjectNameSecurity, validateURL } from '@/core/validation';
 import { hasMeshDeploymentRecord, determineMeshStatus } from '@/features/dashboard/handlers/meshStatusHelpers';
-import { resolveProjectAuthoringExperience } from '@/features/eds/handlers/edsHelpers';
+import { getEwCanvasBranch, resolveProjectAuthoringExperience } from '@/features/eds/handlers/edsHelpers';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import type { Project } from '@/types/base';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -793,7 +793,11 @@ export const handleOpenDaLive: MessageHandler<{ projectPath: string }> = async (
         return { success: false, error: 'Project not found' };
     }
 
-    const daLiveUrl = getEdsDaLiveUrl(project, resolveProjectAuthoringExperience(project));
+    const daLiveUrl = getEdsDaLiveUrl(
+        project,
+        resolveProjectAuthoringExperience(project),
+        getEwCanvasBranch(),
+    );
 
     if (!daLiveUrl) {
         return { success: false, error: 'DA.live URL not available' };
