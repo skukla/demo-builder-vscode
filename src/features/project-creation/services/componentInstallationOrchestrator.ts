@@ -9,7 +9,7 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { ProgressTracker } from '../handlers/shared';
-import { applyAiDefaultsToStorefrontPackageJson } from './aiDefaultsInstaller';
+import { installAiDefaultsMcpTools } from './aiDefaultsInstaller';
 import { COMPONENT_IDS } from '@/core/constants';
 import { ComponentManager } from '@/features/components/services/componentManager';
 import type { Project, TransformedComponentDefinition } from '@/types';
@@ -117,14 +117,6 @@ export async function installAllComponents(
             const componentPath = project.componentInstances?.[compId]?.path;
             if (!componentPath) return { compId, success: true };
 
-            // Before installing the EDS storefront, inject ai-defaults.json packages
-            // (currently the Adobe App Builder MCP) as devDeps so `npm install` resolves
-            // them into the storefront's node_modules.
-            if (compId === COMPONENT_IDS.EDS_STOREFRONT) {
-                logger.debug('[Project Creation] Applying AI defaults to storefront package.json');
-                await applyAiDefaultsToStorefrontPackageJson(componentPath);
-            }
-
             logger.debug(`[Project Creation] npm install: ${definition.name}`);
 
             const installResult = await componentManager.installNpmDependencies(componentPath, definition);
@@ -138,6 +130,20 @@ export async function installAllComponents(
     );
 
     await Promise.all(installPromises);
+
+    // EDS projects get the ai-defaults MCP tools installed into a per-project
+    // isolated dir (`<project>/.demo-builder-mcp/`), decoupled from the
+    // storefront manifest (whose `npm install` can abort on b2b @dropins).
+    // NON-FATAL: MCP tooling is optional — a failure here must never abort
+    // project creation, so log a warning and carry on.
+    if (project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.path) {
+        const mcpResult = await installAiDefaultsMcpTools(project.path);
+        if (!mcpResult.success) {
+            logger.warn(
+                `[Project Creation] AI MCP tools install failed (non-fatal): ${mcpResult.error ?? 'unknown error'}`,
+            );
+        }
+    }
 
     // Update all component statuses to ready
     for (const [compId] of componentDefinitions) {

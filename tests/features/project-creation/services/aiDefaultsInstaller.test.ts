@@ -1,23 +1,29 @@
 /**
  * AI Defaults Installer Tests
  *
- * Verifies that the helper which mutates a storefront's package.json to add
- * ai-defaults.json packages as devDeps before `npm install` runs:
- *   - Adds each declared package at its declared version
- *   - Preserves existing devDeps and other fields
- *   - Is idempotent (re-running is safe)
- *   - Bails cleanly when the storefront package.json is missing
+ * The MCP tool packages declared in `ai-defaults.json` install into a
+ * per-project isolated directory (`<project>/.demo-builder-mcp/`) — decoupled
+ * from the storefront's `package.json`. The storefront's own `npm install` can
+ * fail (b2b feature pack injects 404-on-public-npm dropins), so the public MCP
+ * tool packages must never ride on it.
+ *
+ * Verifies that `installAiDefaultsMcpTools(projectPath)`:
+ *   - Creates `<projectPath>/.demo-builder-mcp/` and writes a package.json whose
+ *     `dependencies` are exactly the ai-defaults packages (NOT storefront deps)
+ *   - Runs `npm install` with cwd = `<projectPath>/.demo-builder-mcp`
+ *   - Returns a structured failure when npm install exits non-zero / throws
+ * and that `resolveMcpToolsDir` points at the isolated dir.
  */
 
 import * as fsPromises from 'fs/promises';
 import {
-    applyAiDefaultsToStorefrontPackageJson,
-    installAiDefaultsInStorefront,
+    installAiDefaultsMcpTools,
+    resolveMcpToolsDir,
 } from '@/features/project-creation/services/aiDefaultsInstaller';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 
 jest.mock('fs/promises', () => ({
-    readFile: jest.fn(),
+    mkdir: jest.fn().mockResolvedValue(undefined),
     writeFile: jest.fn().mockResolvedValue(undefined),
 }));
 
@@ -28,153 +34,103 @@ jest.mock('@/core/di/serviceLocator', () => ({
     },
 }));
 
-const STOREFRONT_PATH = '/projects/test/components/eds-storefront';
-const PACKAGE_JSON_PATH = `${STOREFRONT_PATH}/package.json`;
+const PROJECT_PATH = '/projects/test';
+const TOOLS_DIR = `${PROJECT_PATH}/.demo-builder-mcp`;
+const TOOLS_PACKAGE_JSON_PATH = `${TOOLS_DIR}/package.json`;
 
-function mockPackageJson(contents: Record<string, unknown>): void {
-    (fsPromises.readFile as jest.Mock).mockResolvedValueOnce(JSON.stringify(contents, null, 2));
-}
-
-function capturePackageJsonWrite(): Record<string, unknown> | undefined {
+function captureToolsPackageJson(): Record<string, unknown> | undefined {
     const writeMock = fsPromises.writeFile as jest.Mock;
-    const call = writeMock.mock.calls.find(([p]: [string]) => p === PACKAGE_JSON_PATH);
+    const call = writeMock.mock.calls.find(([p]: [string]) => p === TOOLS_PACKAGE_JSON_PATH);
     if (!call) return undefined;
     return JSON.parse(call[1] as string) as Record<string, unknown>;
 }
 
-describe('applyAiDefaultsToStorefrontPackageJson', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
+describe('resolveMcpToolsDir', () => {
+    it('points at the per-project isolated .demo-builder-mcp directory', () => {
+        expect(resolveMcpToolsDir(PROJECT_PATH)).toBe(TOOLS_DIR);
     });
 
-    it('adds the Adobe App Builder MCP package as a devDependency', async () => {
-        mockPackageJson({ name: 'storefront', version: '1.0.0', devDependencies: {} });
-
-        await applyAiDefaultsToStorefrontPackageJson(STOREFRONT_PATH);
-
-        const written = capturePackageJsonWrite();
-        const devDeps = written?.devDependencies as Record<string, string> | undefined;
-        expect(devDeps?.['@adobe-commerce/commerce-extensibility-tools']).toBe('^3.4.0');
-    });
-
-    it('creates the devDependencies object when the package.json has none', async () => {
-        mockPackageJson({ name: 'storefront', version: '1.0.0' });
-
-        await applyAiDefaultsToStorefrontPackageJson(STOREFRONT_PATH);
-
-        const written = capturePackageJsonWrite();
-        expect(written?.devDependencies).toBeDefined();
-        expect((written?.devDependencies as Record<string, string>)['@adobe-commerce/commerce-extensibility-tools']).toBe(
-            '^3.4.0',
-        );
-    });
-
-    it('preserves existing devDependencies (does not overwrite unrelated entries)', async () => {
-        mockPackageJson({
-            name: 'storefront',
-            version: '1.0.0',
-            devDependencies: {
-                typescript: '^5.0.0',
-                eslint: '^9.0.0',
-            },
-        });
-
-        await applyAiDefaultsToStorefrontPackageJson(STOREFRONT_PATH);
-
-        const devDeps = (capturePackageJsonWrite()?.devDependencies as Record<string, string>) ?? {};
-        expect(devDeps.typescript).toBe('^5.0.0');
-        expect(devDeps.eslint).toBe('^9.0.0');
-        expect(devDeps['@adobe-commerce/commerce-extensibility-tools']).toBe('^3.4.0');
-    });
-
-    it('preserves top-level fields (name, version, scripts, etc.)', async () => {
-        mockPackageJson({
-            name: 'storefront',
-            version: '2.5.0',
-            scripts: { build: 'webpack' },
-            dependencies: { react: '^18.0.0' },
-        });
-
-        await applyAiDefaultsToStorefrontPackageJson(STOREFRONT_PATH);
-
-        const written = capturePackageJsonWrite();
-        expect(written?.name).toBe('storefront');
-        expect(written?.version).toBe('2.5.0');
-        expect(written?.scripts).toEqual({ build: 'webpack' });
-        expect(written?.dependencies).toEqual({ react: '^18.0.0' });
-    });
-
-    it('is idempotent — running twice produces the same package.json', async () => {
-        const initial = { name: 'storefront', version: '1.0.0', devDependencies: {} };
-        mockPackageJson(initial);
-        await applyAiDefaultsToStorefrontPackageJson(STOREFRONT_PATH);
-        const firstWrite = capturePackageJsonWrite();
-
-        (fsPromises.writeFile as jest.Mock).mockClear();
-        mockPackageJson(firstWrite as Record<string, unknown>);
-        await applyAiDefaultsToStorefrontPackageJson(STOREFRONT_PATH);
-        const secondWrite = capturePackageJsonWrite();
-
-        expect(secondWrite).toEqual(firstWrite);
-    });
-
-    it('overwrites an outdated version with the version declared in ai-defaults.json', async () => {
-        mockPackageJson({
-            name: 'storefront',
-            version: '1.0.0',
-            devDependencies: {
-                '@adobe-commerce/commerce-extensibility-tools': '^2.0.0',
-            },
-        });
-
-        await applyAiDefaultsToStorefrontPackageJson(STOREFRONT_PATH);
-
-        const devDeps = (capturePackageJsonWrite()?.devDependencies as Record<string, string>) ?? {};
-        expect(devDeps['@adobe-commerce/commerce-extensibility-tools']).toBe('^3.4.0');
-    });
-
-    it('throws a clear error when the storefront package.json is missing', async () => {
-        (fsPromises.readFile as jest.Mock).mockRejectedValueOnce(
-            Object.assign(new Error('ENOENT'), { code: 'ENOENT' }),
-        );
-
-        await expect(applyAiDefaultsToStorefrontPackageJson(STOREFRONT_PATH)).rejects.toThrow(
-            /package\.json/,
-        );
-    });
-
-    it('throws a clear error when the storefront package.json is malformed JSON', async () => {
-        (fsPromises.readFile as jest.Mock).mockResolvedValueOnce('{ not valid json');
-
-        await expect(applyAiDefaultsToStorefrontPackageJson(STOREFRONT_PATH)).rejects.toThrow();
+    it('anchors to the project root, not any storefront path', () => {
+        const dir = resolveMcpToolsDir('/some/other/project');
+        expect(dir).toBe('/some/other/project/.demo-builder-mcp');
+        expect(dir).not.toContain('components');
+        expect(dir).not.toContain('eds-storefront');
     });
 });
 
-describe('installAiDefaultsInStorefront', () => {
+describe('installAiDefaultsMcpTools', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         executeMock.mockReset();
-        // Default: package.json read returns a minimal valid storefront so the
-        // applyAiDefaults step succeeds; tests can override per-case.
-        (fsPromises.readFile as jest.Mock).mockResolvedValue(
-            JSON.stringify({ name: 'storefront', version: '1.0.0' }),
+    });
+
+    it('creates the isolated .demo-builder-mcp directory (recursive)', async () => {
+        executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+
+        await installAiDefaultsMcpTools(PROJECT_PATH);
+
+        expect(fsPromises.mkdir).toHaveBeenCalledWith(TOOLS_DIR, { recursive: true });
+    });
+
+    it('writes a package.json into the isolated dir (not the storefront)', async () => {
+        executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+
+        await installAiDefaultsMcpTools(PROJECT_PATH);
+
+        expect(fsPromises.writeFile).toHaveBeenCalledWith(
+            TOOLS_PACKAGE_JSON_PATH,
+            expect.any(String),
+            'utf-8',
         );
     });
 
-    it('reapplies devDeps to package.json and then runs npm install in the storefront', async () => {
+    it('declares dependencies equal to exactly the ai-defaults packages', async () => {
         executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
 
-        const result = await installAiDefaultsInStorefront(STOREFRONT_PATH);
+        await installAiDefaultsMcpTools(PROJECT_PATH);
 
-        expect(fsPromises.writeFile).toHaveBeenCalledWith(
-            PACKAGE_JSON_PATH,
-            expect.stringContaining('@adobe-commerce/commerce-extensibility-tools'),
-            'utf-8',
-        );
+        const pkg = captureToolsPackageJson();
+        const deps = pkg?.dependencies as Record<string, string> | undefined;
+        // ai-defaults.json ships the Adobe App Builder MCP and Playwright MCP.
+        expect(deps).toEqual({
+            '@adobe-commerce/commerce-extensibility-tools': '^3.4.0',
+            '@playwright/mcp': '^0.0.75',
+        });
+    });
+
+    it('marks the tools package.json private with a stable name', async () => {
+        executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+
+        await installAiDefaultsMcpTools(PROJECT_PATH);
+
+        const pkg = captureToolsPackageJson();
+        expect(pkg?.name).toBe('demo-builder-mcp-tools');
+        expect(pkg?.private).toBe(true);
+        expect(pkg?.version).toBe('1.0.0');
+    });
+
+    it('does NOT declare any storefront dependency (decoupled from the storefront manifest)', async () => {
+        executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+
+        await installAiDefaultsMcpTools(PROJECT_PATH);
+
+        const pkg = captureToolsPackageJson();
+        const deps = pkg?.dependencies as Record<string, string> | undefined;
+        // The b2b @dropins packages that break the storefront install must never
+        // appear here — only the public MCP tool packages.
+        expect(Object.keys(deps ?? {})).not.toContain('@dropins/storefront-pdp');
+        expect(pkg?.devDependencies).toBeUndefined();
+    });
+
+    it('runs npm install with cwd = the isolated dir (NOT the storefront)', async () => {
+        executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+
+        const result = await installAiDefaultsMcpTools(PROJECT_PATH);
+
         expect(ServiceLocator.getCommandExecutor).toHaveBeenCalledTimes(1);
         expect(executeMock).toHaveBeenCalledWith(
             'npm install',
-            expect.objectContaining({ cwd: STOREFRONT_PATH }),
+            expect.objectContaining({ cwd: TOOLS_DIR }),
         );
         expect(result).toEqual({ success: true });
     });
@@ -186,7 +142,7 @@ describe('installAiDefaultsInStorefront', () => {
             stderr: 'npm ERR! 404 Not Found - @some/package',
         });
 
-        const result = await installAiDefaultsInStorefront(STOREFRONT_PATH);
+        const result = await installAiDefaultsMcpTools(PROJECT_PATH);
 
         expect(result.success).toBe(false);
         expect(result.error).toMatch(/npm install/);
@@ -197,23 +153,22 @@ describe('installAiDefaultsInStorefront', () => {
     it('reports failure when the command executor throws', async () => {
         executeMock.mockRejectedValue(new Error('ENOENT: npm not found'));
 
-        const result = await installAiDefaultsInStorefront(STOREFRONT_PATH);
+        const result = await installAiDefaultsMcpTools(PROJECT_PATH);
 
         expect(result.success).toBe(false);
         expect(result.error).toMatch(/npm not found/);
     });
 
-    it('reports failure when the package.json mutation step throws', async () => {
-        (fsPromises.readFile as jest.Mock).mockReset();
-        (fsPromises.readFile as jest.Mock).mockRejectedValue(
-            Object.assign(new Error('ENOENT'), { code: 'ENOENT' }),
+    it('reports failure when writing the tools package.json throws', async () => {
+        (fsPromises.writeFile as jest.Mock).mockRejectedValueOnce(
+            new Error('EACCES: permission denied'),
         );
 
-        const result = await installAiDefaultsInStorefront(STOREFRONT_PATH);
+        const result = await installAiDefaultsMcpTools(PROJECT_PATH);
 
         expect(result.success).toBe(false);
-        expect(result.error).toMatch(/package\.json/);
-        // npm install should NOT run if the prep step failed.
+        expect(result.error).toMatch(/EACCES/);
+        // npm install must NOT run if the prep step failed.
         expect(executeMock).not.toHaveBeenCalled();
     });
 });

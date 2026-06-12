@@ -18,7 +18,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import { clearMcpCache, inspectAllServers, verifyAiSetup, type AiVerificationResult } from '@/features/ai';
 import {
     generateAIContextFiles,
-    installAiDefaultsInStorefront,
+    installAiDefaultsMcpTools,
 } from '@/features/project-creation/services';
 import type { AiPrompt, Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
@@ -202,7 +202,9 @@ export async function handleRegenerateAiFiles(
 
     if (storefrontPath) {
         emit('Installing storefront dependencies', 'This can take up to a minute');
-        const installResult = await installAiDefaultsInStorefront(storefrontPath);
+        // MCP tools install into the per-project isolated dir (keyed to
+        // project.path), decoupled from the storefront manifest.
+        const installResult = await installAiDefaultsMcpTools(project.path);
         if (!installResult.success) {
             return {
                 success: false,

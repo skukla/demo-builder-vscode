@@ -21,7 +21,7 @@ import {
     inspectAllServers,
     verifyAiSetup,
     generateAIContextFiles,
-    installAiDefaultsInStorefront,
+    installAiDefaultsMcpTools,
     createMockContext,
 } from './aiHandlers.testUtils';
 import type { HandlerContext } from './aiHandlers.testUtils';
@@ -375,9 +375,9 @@ describe('aiHandlers — setup & verification', () => {
             expect(result).toMatchObject({ success: false });
         });
 
-        it('reinstalls storefront AI-defaults dependencies before regenerating context files when EDS Storefront is present', async () => {
+        it('reinstalls AI-defaults MCP tools before regenerating context files when EDS Storefront is present', async () => {
             (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
-            (installAiDefaultsInStorefront as jest.Mock).mockResolvedValue({ success: true });
+            (installAiDefaultsMcpTools as jest.Mock).mockResolvedValue({ success: true });
 
             const context = createMockContext({
                 stateManager: {
@@ -387,10 +387,12 @@ describe('aiHandlers — setup & verification', () => {
 
             const result = await handleRegenerateAiFiles(context);
 
-            expect(installAiDefaultsInStorefront).toHaveBeenCalledWith(STOREFRONT_PATH);
+            // MCP tools install into the per-project isolated dir, keyed to
+            // project.path — decoupled from the storefront manifest.
+            expect(installAiDefaultsMcpTools).toHaveBeenCalledWith(PROJECT_WITH_STOREFRONT.path);
             // Order matters: the install must complete before context files are written
-            // (so .mcp.json's storefront-anchored paths resolve to real files).
-            const installCallOrder = (installAiDefaultsInStorefront as jest.Mock).mock.invocationCallOrder[0];
+            // (so .mcp.json's isolated-dir-anchored paths resolve to real files).
+            const installCallOrder = (installAiDefaultsMcpTools as jest.Mock).mock.invocationCallOrder[0];
             const generateCallOrder = (generateAIContextFiles as jest.Mock).mock.invocationCallOrder[0];
             expect(installCallOrder).toBeLessThan(generateCallOrder);
             expect(result).toEqual({ success: true });
@@ -407,12 +409,12 @@ describe('aiHandlers — setup & verification', () => {
 
             await handleRegenerateAiFiles(context);
 
-            expect(installAiDefaultsInStorefront).not.toHaveBeenCalled();
+            expect(installAiDefaultsMcpTools).not.toHaveBeenCalled();
             expect(generateAIContextFiles).toHaveBeenCalled();
         });
 
         it('returns the installer error and skips generateAIContextFiles when the storefront install fails', async () => {
-            (installAiDefaultsInStorefront as jest.Mock).mockResolvedValue({
+            (installAiDefaultsMcpTools as jest.Mock).mockResolvedValue({
                 success: false,
                 error: 'npm install exited with code 1: 404 Not Found',
             });
@@ -433,7 +435,7 @@ describe('aiHandlers — setup & verification', () => {
         it('clears the MCP inspector cache after a successful regenerate so the next verify re-spawns', async () => {
             // mockResolvedValue persists across jest.clearAllMocks(); the previous
             // failure-path test left it as { success: false }, so re-arm explicitly.
-            (installAiDefaultsInStorefront as jest.Mock).mockResolvedValue({ success: true });
+            (installAiDefaultsMcpTools as jest.Mock).mockResolvedValue({ success: true });
             (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
 
             const context = createMockContext({
@@ -454,7 +456,7 @@ describe('aiHandlers — setup & verification', () => {
         // generateAIContextFiles via an `onProgress` tracker the handler supplies.
         describe('progress reporting', () => {
             it('emits an install-deps creationProgress message before installing the storefront (EDS)', async () => {
-                (installAiDefaultsInStorefront as jest.Mock).mockResolvedValue({ success: true });
+                (installAiDefaultsMcpTools as jest.Mock).mockResolvedValue({ success: true });
                 (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
 
                 const context = createMockContext({
@@ -475,7 +477,7 @@ describe('aiHandlers — setup & verification', () => {
             });
 
             it('emits a finalize creationProgress message after the writers run', async () => {
-                (installAiDefaultsInStorefront as jest.Mock).mockResolvedValue({ success: true });
+                (installAiDefaultsMcpTools as jest.Mock).mockResolvedValue({ success: true });
                 (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
 
                 const context = createMockContext({
@@ -511,7 +513,7 @@ describe('aiHandlers — setup & verification', () => {
             });
 
             it('passes an onProgress tracker to generateAIContextFiles so the writer steps emit too', async () => {
-                (installAiDefaultsInStorefront as jest.Mock).mockResolvedValue({ success: true });
+                (installAiDefaultsMcpTools as jest.Mock).mockResolvedValue({ success: true });
                 (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
 
                 const context = createMockContext({
