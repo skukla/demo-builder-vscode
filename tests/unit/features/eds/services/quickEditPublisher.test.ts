@@ -25,6 +25,8 @@ import {
     QUICK_EDIT_BRANCH_MARKER,
     QUICK_EDIT_LOADLAZY_ANCHOR,
     QUICK_EDIT_SIDEKICK_MARKER,
+    QUICK_EDIT_FIRSTIMAGE_ANCHOR,
+    QUICK_EDIT_FIRSTIMAGE_MARKER,
     QUICK_EDIT_JS_PATH,
     SCRIPTS_JS_PATH,
     buildQuickEditScriptsJs,
@@ -44,6 +46,11 @@ const mockLogger = {
 // file is asserted by quickEditAnchorMatch.test.ts).
 const CANONICAL_SCRIPTS_JS = [
     '// ... eager/lazy/delayed helpers above ...',
+    '',
+    'async function loadEager(doc) {',
+    '    document.body.classList.add(\'appear\');',
+    `    ${QUICK_EDIT_FIRSTIMAGE_ANCHOR}`,
+    '  }',
     '',
     'async function loadLazy(doc) {',
     '  loadHeader(doc.querySelector(\'header\'));',
@@ -172,6 +179,79 @@ describe('buildQuickEditScriptsJs', () => {
         expect(repaired).toContain("addEventListener('custom:quick-edit'");
         // No duplicate IIFE branch was added.
         expect(repaired.split(QUICK_EDIT_BRANCH_MARKER).length - 1).toBe(1);
+    });
+
+    it('replaces the waitForFirstImage anchor with the quick-edit first-paint guard', () => {
+        const out = buildQuickEditScriptsJs(CANONICAL_SCRIPTS_JS);
+        // Guard marker present (idempotency anchor) ...
+        expect(out).toContain(QUICK_EDIT_FIRSTIMAGE_MARKER);
+        // ... it gates on quick-edit mode ...
+        expect(out).toContain("classList.contains('quick-edit')");
+        // ... and skips the wait by resolving immediately.
+        expect(out).toContain('return Promise.resolve();');
+        // The bare anchor is gone — it was rewritten into the guarded callback.
+        expect(out).not.toContain(QUICK_EDIT_FIRSTIMAGE_ANCHOR);
+    });
+
+    it('still calls waitForFirstImage in the guarded form (non-quick-edit path)', () => {
+        const out = buildQuickEditScriptsJs(CANONICAL_SCRIPTS_JS);
+        // The guard wraps, not removes, the original behavior.
+        expect(out).toContain('waitForFirstImage(section)');
+    });
+
+    it('only replaces the first-image anchor once (first-match-only)', () => {
+        const out = buildQuickEditScriptsJs(CANONICAL_SCRIPTS_JS);
+        const markerCount = out.split(QUICK_EDIT_FIRSTIMAGE_MARKER).length - 1;
+        expect(markerCount).toBe(1);
+    });
+
+    it('does not double-apply the first-paint guard when the marker is already present', () => {
+        const once = buildQuickEditScriptsJs(CANONICAL_SCRIPTS_JS);
+        const twice = buildQuickEditScriptsJs(once);
+        const markerCount = twice.split(QUICK_EDIT_FIRSTIMAGE_MARKER).length - 1;
+        expect(markerCount).toBe(1);
+    });
+
+    it('adds the first-paint guard to a partially-vendored file (export + IIFE + listener present, guard missing)', () => {
+        // Every repo wired before this change is in this state: export, IIFE
+        // branch and Sidekick listener present, but the first-paint guard
+        // missing. Simulate it: a file carrying all three earlier markers plus
+        // the bare waitForFirstImage anchor, with no firstimage marker yet.
+        const partial = [
+            'async function loadEager(doc) {',
+            '    document.body.classList.add(\'appear\');',
+            `    ${QUICK_EDIT_FIRSTIMAGE_ANCHOR}`,
+            '  }',
+            '',
+            QUICK_EDIT_LOADLAZY_ANCHOR,
+            `  ${QUICK_EDIT_SIDEKICK_MARKER}`,
+            "  document.querySelector('aem-sidekick');",
+            '}',
+            '',
+            QUICK_EDIT_LOAD_PAGE_EXPORTED,
+            '  await loadEager(document);',
+            '}',
+            '',
+            'loadPage();',
+            '',
+            QUICK_EDIT_BRANCH_MARKER,
+            '(() => {})();',
+            '// === end Quick Edit dynamic import ===',
+            '',
+        ].join('\n');
+        // Guard: the partial has the first three markers but NOT the firstimage one.
+        expect(partial).toContain(QUICK_EDIT_LOAD_PAGE_EXPORTED);
+        expect(partial).toContain(QUICK_EDIT_BRANCH_MARKER);
+        expect(partial).toContain(QUICK_EDIT_SIDEKICK_MARKER);
+        expect(partial).not.toContain(QUICK_EDIT_FIRSTIMAGE_MARKER);
+
+        const repaired = buildQuickEditScriptsJs(partial);
+        expect(repaired).toContain(QUICK_EDIT_FIRSTIMAGE_MARKER);
+        expect(repaired).toContain("classList.contains('quick-edit')");
+        expect(repaired).not.toContain(QUICK_EDIT_FIRSTIMAGE_ANCHOR);
+        // The earlier three edits were left untouched (not duplicated).
+        expect(repaired.split(QUICK_EDIT_BRANCH_MARKER).length - 1).toBe(1);
+        expect(repaired.split(QUICK_EDIT_SIDEKICK_MARKER).length - 1).toBe(1);
     });
 });
 
@@ -308,6 +388,58 @@ describe('installQuickEdit', () => {
         expect(writtenContent).toContain("addEventListener('custom:quick-edit'");
         // ... without duplicating the already-present IIFE branch.
         expect(writtenContent.split(QUICK_EDIT_BRANCH_MARKER).length - 1).toBe(1);
+    });
+
+    it('re-vendors a fully-wired-but-for-the-guard scripts.js (export + IIFE + listener present, first-paint guard missing)', async () => {
+        // Every repo wired before this change — including the user's: export,
+        // ?quick-edit IIFE branch and Sidekick listener all present, but the
+        // first-paint guard never applied. The "already installed" gate now
+        // requires the firstimage marker too, so this file is re-transformed.
+        const partial = [
+            'async function loadEager(doc) {',
+            '    document.body.classList.add(\'appear\');',
+            `    ${QUICK_EDIT_FIRSTIMAGE_ANCHOR}`,
+            '  }',
+            '',
+            'async function loadLazy(doc) {',
+            `  ${QUICK_EDIT_SIDEKICK_MARKER}`,
+            "  document.querySelector('aem-sidekick');",
+            '}',
+            '',
+            QUICK_EDIT_LOAD_PAGE_EXPORTED,
+            '  await loadEager(document);',
+            '}',
+            '',
+            'loadPage();',
+            '',
+            QUICK_EDIT_BRANCH_MARKER,
+            '(() => {})();',
+            '// === end Quick Edit dynamic import ===',
+            '',
+        ].join('\n');
+        mockGithub.getFileContent.mockImplementation((_o, _r, path) => {
+            if (path === SCRIPTS_JS_PATH) {
+                return Promise.resolve({ content: partial, sha: 'scripts-sha' });
+            }
+            return Promise.resolve(null);
+        });
+
+        const result = await installQuickEdit(
+            mockGithub as never, repoOwner, repoName, mockLogger as never,
+        );
+
+        // Not short-circuited as "already installed" — the guard gets added.
+        expect(result).toEqual({ installed: true });
+        const scriptsCall = mockGithub.createOrUpdateFile.mock.calls.find(c => c[2] === SCRIPTS_JS_PATH);
+        expect(scriptsCall).toBeDefined();
+        const writtenContent = scriptsCall![3] as string;
+        // The first-paint guard was added ...
+        expect(writtenContent).toContain(QUICK_EDIT_FIRSTIMAGE_MARKER);
+        expect(writtenContent).toContain("classList.contains('quick-edit')");
+        expect(writtenContent).not.toContain(QUICK_EDIT_FIRSTIMAGE_ANCHOR);
+        // ... without duplicating the three already-present edits.
+        expect(writtenContent.split(QUICK_EDIT_BRANCH_MARKER).length - 1).toBe(1);
+        expect(writtenContent.split(QUICK_EDIT_SIDEKICK_MARKER).length - 1).toBe(1);
     });
 
     it('is idempotent for quick-edit.js: skips the write when the module already exists', async () => {

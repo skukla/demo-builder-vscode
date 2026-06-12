@@ -2,7 +2,7 @@
  * Quick Edit vendoring step — Experience Workspace (EW) WYSIWYG wiring.
  *
  * Vendors da.live's Quick Edit dependency into every EDS storefront so the
- * EW "Layout" (WYSIWYG) view can invoke it. Three surgical edits to
+ * EW "Layout" (WYSIWYG) view can invoke it. Four surgical edits to
  * `scripts/scripts.js` plus one net-new module file. Inert under Universal
  * Editor (the Sidekick `quick-edit` plugin — registered separately in the
  * Config Service template — only fires under EW), so this runs for ALL EDS
@@ -24,6 +24,9 @@
  *   3. Insert a Sidekick `custom:quick-edit` event listener at the top of
  *      `loadLazy` — the path the EW canvas uses to enter Quick Edit. Without
  *      it the EW Layout (WYSIWYG) view renders blank.
+ *   4. Wrap `loadEager`'s `waitForFirstImage` call in a quick-edit guard that
+ *      skips the first-image wait under the EW canvas — without it the first
+ *      section (hero) doesn't paint until the user reloads.
  *
  * The Sidekick `quick-edit` plugin entry (the Config-Service half of the
  * wiring) lives in `config-template.json` — see Step 2.
@@ -89,6 +92,47 @@ export const QUICK_EDIT_LOADLAZY_ANCHOR = 'async function loadLazy(doc) {';
  * added on re-run, while a fully-vendored repo is left untouched.
  */
 export const QUICK_EDIT_SIDEKICK_MARKER = '// === Quick Edit Sidekick listener (Demo Builder) ===';
+
+/**
+ * Literal anchor for edit #4 — the canonical `loadEager` first-section load
+ * call that blocks on `waitForFirstImage`. In quick-edit mode the EW canvas
+ * stalls the first paint when this wait runs, so the guard skips it there.
+ *
+ * Verified byte-identical in BOTH the pinned canonical fixture
+ * (`aem-boilerplate-commerce-scripts.js:158`) and the live storefront. Pinned
+ * by `quickEditAnchorMatch.test.ts`. DO NOT edit without bumping the canonical
+ * fixture.
+ */
+export const QUICK_EDIT_FIRSTIMAGE_ANCHOR =
+    'await loadSection(main.querySelector(\'.section\'), waitForFirstImage);';
+
+/**
+ * Idempotency marker for edit #4. Lets `installQuickEdit` detect "first-paint
+ * guard already present" so a repo vendored before this edit shipped (the
+ * common case: export + IIFE + listener present, guard missing) gets the guard
+ * added on re-run, while a fully-vendored repo is left untouched. Also makes
+ * the transform re-entrant: once present, the bare anchor is gone so the
+ * replacement can't re-match.
+ */
+export const QUICK_EDIT_FIRSTIMAGE_MARKER =
+    '// === Quick Edit first-paint guard (Demo Builder) ===';
+
+/**
+ * Replacement for edit #4 — the `loadSection` call with `waitForFirstImage`
+ * wrapped in a quick-edit guard. Preserves LCP behaviour everywhere except the
+ * EW canvas, where it resolves immediately so the first section paints without
+ * waiting on the hero image. 4-space indented to sit inside `loadEager`.
+ *
+ * Verbatim shape from da.live's Quick Edit docs ("skip the first-image wait in
+ * quick-edit mode"). Leads with the idempotency marker.
+ */
+const QUICK_EDIT_FIRSTIMAGE_GUARD = `await loadSection(main.querySelector('.section'), (section) => {
+      ${QUICK_EDIT_FIRSTIMAGE_MARKER}
+      // The Experience Workspace canvas stalls the first paint if loadSection
+      // blocks on waitForFirstImage in quick-edit mode; skip the wait there.
+      if (document.body.classList.contains('quick-edit')) return Promise.resolve();
+      return waitForFirstImage(section);
+    });`;
 
 /**
  * The Sidekick `custom:quick-edit` listener block inserted at the top of
@@ -222,7 +266,7 @@ export interface QuickEditInstallResult {
 }
 
 /**
- * Apply all three `scripts/scripts.js` edits to the existing file content.
+ * Apply all four `scripts/scripts.js` edits to the existing file content.
  *
  * Pure transform (no I/O). First-match-only for each edit, like the patch
  * engine, and each edit is skipped when its marker is already present (so a
@@ -232,7 +276,9 @@ export interface QuickEditInstallResult {
  *   2. appends the `?quick-edit` dynamic-import branch after the standalone
  *      `loadPage();` call,
  *   3. inserts the Sidekick `custom:quick-edit` listener at the top of
- *      `loadLazy`'s body (the edit the EW canvas relies on).
+ *      `loadLazy`'s body (the edit the EW canvas relies on),
+ *   4. wraps `loadEager`'s `waitForFirstImage` call in a quick-edit guard so
+ *      the first section paints immediately under the EW canvas.
  */
 export function buildQuickEditScriptsJs(existing: string): string {
     const exported = existing.includes(QUICK_EDIT_LOAD_PAGE_EXPORTED)
@@ -246,12 +292,16 @@ export function buildQuickEditScriptsJs(existing: string): string {
             `${QUICK_EDIT_BRANCH_ANCHOR}${QUICK_EDIT_BRANCH}`,
         );
 
-    return withBranch.includes(QUICK_EDIT_SIDEKICK_MARKER)
+    const withSidekick = withBranch.includes(QUICK_EDIT_SIDEKICK_MARKER)
         ? withBranch
         : withBranch.replace(
             QUICK_EDIT_LOADLAZY_ANCHOR,
             `${QUICK_EDIT_LOADLAZY_ANCHOR}${QUICK_EDIT_SIDEKICK_BLOCK}`,
         );
+
+    return withSidekick.includes(QUICK_EDIT_FIRSTIMAGE_MARKER)
+        ? withSidekick
+        : withSidekick.replace(QUICK_EDIT_FIRSTIMAGE_ANCHOR, QUICK_EDIT_FIRSTIMAGE_GUARD);
 }
 
 /**
@@ -308,14 +358,16 @@ async function installQuickEditScripts(
         return { installed: false, reason: 'scripts.js missing' };
     }
 
-    // "Already installed" requires ALL THREE edits. A repo vendored before the
-    // Sidekick listener shipped has the export + IIFE branch but NOT the
-    // listener — re-running adds just the listener (buildQuickEditScriptsJs is
-    // per-edit idempotent), repairing the EW blank-canvas bug.
+    // "Already installed" requires ALL FOUR edits. A repo vendored before the
+    // first-paint guard shipped has the export + IIFE branch + Sidekick
+    // listener but NOT the guard — re-running adds just the guard
+    // (buildQuickEditScriptsJs is per-edit idempotent), repairing the EW
+    // first-paint stall. (Same shape as the earlier Sidekick-listener repair.)
     const hasExport = existing.content.includes(QUICK_EDIT_LOAD_PAGE_EXPORTED);
     const hasBranch = existing.content.includes(QUICK_EDIT_BRANCH_MARKER);
     const hasSidekick = existing.content.includes(QUICK_EDIT_SIDEKICK_MARKER);
-    if (hasExport && hasBranch && hasSidekick) {
+    const hasFirstImageGuard = existing.content.includes(QUICK_EDIT_FIRSTIMAGE_MARKER);
+    if (hasExport && hasBranch && hasSidekick && hasFirstImageGuard) {
         logger.info('[QuickEdit] scripts/scripts.js already wired — skipping');
         return { installed: false, reason: 'already installed' };
     }

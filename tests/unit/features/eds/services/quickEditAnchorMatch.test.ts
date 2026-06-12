@@ -31,6 +31,7 @@ import {
     QUICK_EDIT_LOAD_PAGE_ANCHOR,
     QUICK_EDIT_BRANCH_ANCHOR,
     QUICK_EDIT_LOADLAZY_ANCHOR,
+    QUICK_EDIT_FIRSTIMAGE_ANCHOR,
 } from '@/features/eds/services/quickEditPublisher';
 
 /** LKG SHA the canonical fixture is pinned to (see fixture README). */
@@ -85,6 +86,21 @@ describe('Quick Edit anchor-match against pinned-canonical boilerplate', () => {
 
     it('the loadLazy anchor matches exactly once (unambiguous first-match)', () => {
         const count = CANONICAL_SCRIPTS_JS.split(QUICK_EDIT_LOADLAZY_ANCHOR).length - 1;
+        expect(count).toBe(1);
+    });
+
+    // ── waitForFirstImage anchor (edit #4 — the first-paint guard) ──
+    // In quick-edit mode the EW canvas stalls the first paint if loadEager's
+    // loadSection call blocks on waitForFirstImage. Edit #4 wraps that callback
+    // in a guard that skips the wait under quick-edit. Its anchor is the literal
+    // `await loadSection(main.querySelector('.section'), waitForFirstImage);`.
+
+    it('the canonical scripts.js still contains the waitForFirstImage anchor', () => {
+        expect(CANONICAL_SCRIPTS_JS).toContain(QUICK_EDIT_FIRSTIMAGE_ANCHOR);
+    });
+
+    it('the waitForFirstImage anchor matches exactly once (unambiguous first-match)', () => {
+        const count = CANONICAL_SCRIPTS_JS.split(QUICK_EDIT_FIRSTIMAGE_ANCHOR).length - 1;
         expect(count).toBe(1);
     });
 });
