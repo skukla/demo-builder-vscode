@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.119] - 2026-06-12
+
+### Added
+
+- **CitiSignal-branded storefront with B2B features (`citisignal-b2b` package).** Delivers a CitiSignal-branded EDS storefront that includes the B2B drop-ins (company management, company switcher, purchase order, quick order, quote management, requisition list). It is built on the coherent `boilerplate-b2b-template` base with the CitiSignal block library and content applied as the brand overlay — so the whole `@dropins` set ships from one release line and the page renders correctly.
+
+### Removed
+
+- **The feature-pack mechanism.** The additive feature-pack overlay (only ever `b2b-commerce`) is gone. A spike proved `@dropins/*` ship as one coordinated release set sharing internal chunks, so overlaying B2B drop-ins onto a non-B2B base produced a blank page. B2B now comes from the coherent base via the `citisignal-b2b` package, and the feature-pack selection step has been removed from the wizard.
+
 ## [1.0.0-beta.118] - 2026-06-12
 
 ### Fixed
