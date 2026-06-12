@@ -91,6 +91,11 @@ function SidebarApp(): React.ReactElement {
         sendMessage('openSettings');
     }, []);
 
+    // Handle open logs
+    const handleOpenLogs = useCallback(() => {
+        sendMessage('openLogs');
+    }, []);
+
     // Handle open AI chat (Chat button in AiZone)
     const handleOpenAiChat = useCallback(() => {
         sendMessage('openAiChat');
@@ -155,6 +160,7 @@ function SidebarApp(): React.ReactElement {
                 onOpenTools={handleOpenTools}
                 onOpenHelp={handleOpenHelp}
                 onOpenSettings={handleOpenSettings}
+                onOpenLogs={handleOpenLogs}
                 onOpenAiChat={handleOpenAiChat}
                 onShowPrompts={handleShowPrompts}
                 onStartDemo={handleStartDemo}

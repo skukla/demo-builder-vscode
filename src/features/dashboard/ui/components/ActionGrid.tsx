@@ -9,9 +9,9 @@
  *  - Storefront zone (EDS only): Sync Storefront. Sits on row 1 next to
  *    Primary so storefront ops are visually adjacent to the storefront
  *    authoring surface.
- *  - Build zone: Deploy Mesh (when hasMesh), Configure, Logs, and a "More"
+ *  - Build zone: Deploy Mesh (when hasMesh), Configure, and a "More"
  *    overflow menu holding Components, Refresh Block Library (EDS only),
- *    and Dev Console.
+ *    and Dev Console. (Logs moved to the sidebar Logs utility.)
  *  - Delete footer: isolated below the zones, destructive styling.
  *
  * Gating is behavioral, not displayed: Author in DA.live and Sync Storefront
@@ -44,7 +44,6 @@ import PublishCheck from '@spectrum-icons/workflow/PublishCheck';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import Settings from '@spectrum-icons/workflow/Settings';
 import StopCircle from '@spectrum-icons/workflow/StopCircle';
-import ViewList from '@spectrum-icons/workflow/ViewList';
 import React from 'react';
 
 /** Overflow menu item keys. */
@@ -72,8 +71,6 @@ export interface ActionGridProps {
     isMeshActionDisabled: boolean;
     /** Whether browser is currently opening */
     isOpeningBrowser: boolean;
-    /** Whether to suppress hover on Logs button */
-    isLogsHoverSuppressed: boolean;
     /** Handler for Start button (non-EDS only) */
     handleStartDemo: () => void;
     /** Handler for Stop button (non-EDS only) */
@@ -84,8 +81,6 @@ export interface ActionGridProps {
     handleOpenLiveSite?: () => void;
     /** Handler for Open DA.live button (EDS only) */
     handleOpenDaLive?: () => void;
-    /** Handler for Logs button */
-    handleViewLogs: () => void;
     /** Handler for Deploy Mesh button */
     handleDeployMesh: () => void;
     /** Handler for Sync Storefront button (EDS projects only) */
@@ -115,13 +110,11 @@ export function ActionGrid({
     hasMesh,
     isMeshActionDisabled,
     isOpeningBrowser,
-    isLogsHoverSuppressed,
     handleStartDemo,
     handleStopDemo,
     handleOpenBrowser,
     handleOpenLiveSite,
     handleOpenDaLive,
-    handleViewLogs,
     handleDeployMesh,
     handleSyncStorefront,
     handleRefreshBlockLibrary,
@@ -263,15 +256,6 @@ export function ActionGrid({
                     >
                         <Settings size="L" />
                         <Text UNSAFE_className="icon-label">Configure</Text>
-                    </ActionButton>
-
-                    <ActionButton
-                        onPress={handleViewLogs}
-                        isQuiet
-                        UNSAFE_className={`dashboard-action-button ${isLogsHoverSuppressed ? 'hover-suppressed' : ''}`}
-                    >
-                        <ViewList size="L" />
-                        <Text UNSAFE_className="icon-label">Logs</Text>
                     </ActionButton>
 
                     {/* Overflow — rarely used actions tucked into a menu */}

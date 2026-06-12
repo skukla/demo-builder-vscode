@@ -106,7 +106,8 @@ describe('handleNavigateBack', () => {
             await handleNavigateBack(context as any);
 
             // Then: clearProject runs first, then showProjectsList
-            // (resetToggleStates only resets in-memory panel state now)
+            // (the logs toggle now lives in the always-present sidebar, so the
+            //  dashboard-navigate-away panel reset was dropped)
             expect(callOrder).toEqual([
                 'clearProject',                 // Clear current project
                 'command:demoBuilder.showProjectsList', // Navigate to projects list

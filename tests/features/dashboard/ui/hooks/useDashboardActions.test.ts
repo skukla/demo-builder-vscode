@@ -2,7 +2,7 @@
  * useDashboardActions Hook Tests
  *
  * Tests for the extracted dashboard action handlers hook.
- * Verifies all 11 action handlers work correctly.
+ * Verifies all action handlers work correctly.
  *
  * @jest-environment jsdom
  */
@@ -17,7 +17,6 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
             ANIMATION: 150,
             TRANSITION: 300,
         },
-        HOVER_SUPPRESSION_DELAY: 500, // Custom UI timing
     },
 }));
 
@@ -41,7 +40,6 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 describe('useDashboardActions', () => {
     let mockSetIsTransitioning: jest.Mock;
     let mockSetIsOpeningBrowser: jest.Mock;
-    let mockSetIsLogsHoverSuppressed: jest.Mock;
     const mockPostMessage = webviewClient.postMessage as jest.Mock;
 
     beforeEach(() => {
@@ -49,7 +47,6 @@ describe('useDashboardActions', () => {
         jest.useFakeTimers();
         mockSetIsTransitioning = jest.fn();
         mockSetIsOpeningBrowser = jest.fn();
-        mockSetIsLogsHoverSuppressed = jest.fn();
     });
 
     afterEach(() => {
@@ -62,7 +59,6 @@ describe('useDashboardActions', () => {
                 isOpeningBrowser,
                 setIsTransitioning: mockSetIsTransitioning,
                 setIsOpeningBrowser: mockSetIsOpeningBrowser,
-                setIsLogsHoverSuppressed: mockSetIsLogsHoverSuppressed,
             })
         );
     };
@@ -73,7 +69,6 @@ describe('useDashboardActions', () => {
 
             expect(result.current.handleStartDemo).toBeDefined();
             expect(result.current.handleStopDemo).toBeDefined();
-            expect(result.current.handleViewLogs).toBeDefined();
             expect(result.current.handleDeployMesh).toBeDefined();
             expect(result.current.handleOpenBrowser).toBeDefined();
             expect(result.current.handleConfigure).toBeDefined();
@@ -88,7 +83,6 @@ describe('useDashboardActions', () => {
 
             expect(typeof result.current.handleStartDemo).toBe('function');
             expect(typeof result.current.handleStopDemo).toBe('function');
-            expect(typeof result.current.handleViewLogs).toBe('function');
             expect(typeof result.current.handleDeployMesh).toBe('function');
             expect(typeof result.current.handleOpenBrowser).toBe('function');
             expect(typeof result.current.handleConfigure).toBe('function');
@@ -160,44 +154,6 @@ describe('useDashboardActions', () => {
             });
 
             expect(mockSetIsOpeningBrowser).toHaveBeenCalledWith(false);
-        });
-    });
-
-    describe('View Logs Action', () => {
-        it('should send viewLogs message', () => {
-            const { result } = renderActionsHook();
-
-            act(() => {
-                result.current.handleViewLogs();
-            });
-
-            expect(mockPostMessage).toHaveBeenCalledWith('viewLogs');
-        });
-
-        it('should suppress hover styles during layout shift', () => {
-            const { result } = renderActionsHook();
-
-            act(() => {
-                result.current.handleViewLogs();
-            });
-
-            expect(mockSetIsLogsHoverSuppressed).toHaveBeenCalledWith(true);
-        });
-
-        it('should re-enable hover styles after timeout', () => {
-            const { result } = renderActionsHook();
-
-            act(() => {
-                result.current.handleViewLogs();
-            });
-
-            expect(mockSetIsLogsHoverSuppressed).toHaveBeenCalledWith(true);
-
-            act(() => {
-                jest.advanceTimersByTime(500);
-            });
-
-            expect(mockSetIsLogsHoverSuppressed).toHaveBeenCalledWith(false);
         });
     });
 

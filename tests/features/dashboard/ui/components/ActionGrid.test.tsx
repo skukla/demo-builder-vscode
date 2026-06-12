@@ -88,11 +88,9 @@ describe('ActionGrid', () => {
         hasMesh: true,
         isMeshActionDisabled: false,
         isOpeningBrowser: false,
-        isLogsHoverSuppressed: false,
         handleStartDemo: jest.fn(),
         handleStopDemo: jest.fn(),
         handleOpenBrowser: jest.fn(),
-        handleViewLogs: jest.fn(),
         handleDeployMesh: jest.fn(),
         handleConfigure: jest.fn(),
         handleOpenDevConsole: jest.fn(),
@@ -270,13 +268,6 @@ describe('ActionGrid', () => {
             expect(within(build).getByText('Configure')).toBeInTheDocument();
         });
 
-        it('should place Logs in the build zone', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
-
-            const build = getZone(container, 'build');
-            expect(within(build).getByText('Logs')).toBeInTheDocument();
-        });
-
         it('should place Deploy Mesh in the build zone when hasMesh', () => {
             const { container } = render(<ActionGrid {...defaultProps} hasMesh={true} />);
 
@@ -411,22 +402,6 @@ describe('ActionGrid', () => {
         });
     });
 
-    describe('Logs Hover Suppression', () => {
-        it('should apply hover-suppressed class when isLogsHoverSuppressed is true', () => {
-            render(<ActionGrid {...defaultProps} isLogsHoverSuppressed={true} />);
-
-            const logsButton = screen.getByText('Logs').closest('button');
-            expect(logsButton?.getAttribute('unsafe_classname')).toContain('hover-suppressed');
-        });
-
-        it('should not apply hover-suppressed class when isLogsHoverSuppressed is false', () => {
-            render(<ActionGrid {...defaultProps} isLogsHoverSuppressed={false} />);
-
-            const logsButton = screen.getByText('Logs').closest('button');
-            expect(logsButton?.getAttribute('unsafe_classname')).not.toContain('hover-suppressed');
-        });
-    });
-
     describe('Button Interactions', () => {
         it('should call handleStartDemo when Start clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
@@ -453,15 +428,6 @@ describe('ActionGrid', () => {
             await user.click(screen.getByText('Open in Browser'));
 
             expect(defaultProps.handleOpenBrowser).toHaveBeenCalled();
-        });
-
-        it('should call handleViewLogs when Logs clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} />);
-
-            await user.click(screen.getByText('Logs'));
-
-            expect(defaultProps.handleViewLogs).toHaveBeenCalled();
         });
 
         it('should call handleDeployMesh when Deploy Mesh clicked', async () => {

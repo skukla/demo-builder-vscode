@@ -57,7 +57,7 @@ interface ProjectDashboardScreenProps {
  * - Project name header
  * - Demo status indicator
  * - API Mesh status indicator (if applicable)
- * - Action button grid (Start/Stop, Open, Logs, Deploy Mesh, etc.)
+ * - Action button grid (Start/Stop, Open, Deploy Mesh, etc.)
  *
  * @param props - Component props
  */
@@ -81,9 +81,8 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
     const edsLiveUrlStable = edsLiveUrlRef.current;
     const edsDaLiveUrlStable = edsDaLiveUrlRef.current;
     
-    // State for browser opening and logs hover suppression (passed to actions hook)
+    // State for browser opening (passed to actions hook)
     const [isOpeningBrowser, setIsOpeningBrowser] = useState(false);
-    const [isLogsHoverSuppressed, setIsLogsHoverSuppressed] = useState(false);
     const [showCapabilities, setShowCapabilities] = useState(false);
 
     // Status management via extracted hook
@@ -111,7 +110,6 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
     const {
         handleStartDemo,
         handleStopDemo,
-        handleViewLogs,
         handleDeployMesh,
         handleSyncStorefront,
         handleRefreshBlockLibrary,
@@ -127,7 +125,6 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
         isOpeningBrowser,
         setIsTransitioning,
         setIsOpeningBrowser,
-        setIsLogsHoverSuppressed,
         edsLiveUrl: edsLiveUrlStable,
         edsDaLiveUrl: edsDaLiveUrlStable,
     });
@@ -274,13 +271,11 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
                             isStopDisabled={isStopDisabled}
                             isMeshActionDisabled={isMeshActionDisabled}
                             isOpeningBrowser={isOpeningBrowser}
-                            isLogsHoverSuppressed={isLogsHoverSuppressed}
                             handleStartDemo={handleStartDemo}
                             handleStopDemo={handleStopDemo}
                             handleOpenBrowser={handleOpenBrowser}
                             handleOpenLiveSite={handleOpenLiveSite}
                             handleOpenDaLive={handleOpenDaLive}
-                            handleViewLogs={handleViewLogs}
                             handleDeployMesh={handleDeployMesh}
                             handleSyncStorefront={handleSyncStorefront}
                             handleRefreshBlockLibrary={isEdsStable ? handleRefreshBlockLibrary : undefined}

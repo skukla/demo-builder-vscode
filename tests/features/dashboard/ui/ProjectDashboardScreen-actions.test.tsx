@@ -107,16 +107,6 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
     });
 
     describe('Common Actions', () => {
-        it('should send viewLogs message when Logs clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            renderDashboard();
-
-            const logsButton = screen.getByText('Logs');
-            await user.click(logsButton);
-
-            expect(ctx.mockPostMessage).toHaveBeenCalledWith('viewLogs');
-        });
-
         it('should send deployMesh message when Deploy Mesh clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderDashboard({ hasMesh: true });

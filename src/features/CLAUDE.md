@@ -143,7 +143,6 @@ features/my-feature/
 **Responsibilities:**
 - Project control panel UI
 - Start/Stop demo controls
-- Logs/Debug channel toggle
 - Mesh deployment status
 - Project configuration editing (Configure screen)
 - AI health + capability (separate concerns): the passive "AI Ready" badge reflects AI-setup health (from `verify-ai-setup`); a distinct "View Skills" link opens the capability catalog (skills) and carries Regenerate AI files. A conditional Regenerate link appears beside the badge when health needs attention. MCP/session-MCP plumbing stays in the "Demo Builder: Diagnostics" command.
@@ -295,7 +294,7 @@ features/my-feature/
 - `SidebarProvider` - VS Code WebviewViewProvider implementation
 - `Sidebar` - Main sidebar component
 - `AiZone` - AI icon pair (Chat + Prompts), globally available
-- `UtilityBar` - Three-icon utility row (Tools, Help, Settings)
+- `UtilityBar` - Four-icon utility row (Tools, Help, Settings, Logs)
 
 **Responsibilities:**
 - Single rendered layout across all three context types (`projects`, `projectsList`, `project`): centered AiZone + UtilityBar group

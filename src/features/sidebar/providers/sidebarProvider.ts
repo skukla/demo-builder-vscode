@@ -11,6 +11,7 @@ import type { SidebarContext } from '../types';
 import { BaseWebviewCommand } from '@/core/base';
 import { LAST_UPDATE_CHECK } from '@/core/constants';
 import type { StateManager } from '@/core/state/stateManager';
+import { toggleLogsPanel } from '@/features/lifecycle/handlers/lifecycleHandlers';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -255,6 +256,10 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 await this.handleOpenSettings();
                 break;
 
+            case 'openLogs':
+                await this.handleOpenLogs();
+                break;
+
             case 'openAiChat':
                 await this.handleOpenAiChat();
                 break;
@@ -423,6 +428,25 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         } catch (error) {
             this.logger.error(
                 'Open settings failed',
+                error instanceof Error ? error : undefined,
+            );
+        }
+    }
+
+    /**
+     * Handle open logs request — toggles the logs output panel.
+     * Backs the Logs button in the sidebar's UtilityBar. Reuses the shared
+     * lifecycle toggle chokepoint so visibility state stays in sync with the
+     * dashboard's Logs toggle (open if hidden, close if shown).
+     */
+    private async handleOpenLogs(): Promise<void> {
+        this.logger.info('Sidebar: Toggle logs');
+
+        try {
+            await toggleLogsPanel();
+        } catch (error) {
+            this.logger.error(
+                'Toggle logs failed',
                 error instanceof Error ? error : undefined,
             );
         }

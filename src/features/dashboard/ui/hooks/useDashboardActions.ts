@@ -10,7 +10,6 @@
 import { useCallback, Dispatch, SetStateAction } from 'react';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
  * Props for the useDashboardActions hook
@@ -22,8 +21,6 @@ export interface UseDashboardActionsProps {
     setIsTransitioning: Dispatch<SetStateAction<boolean>>;
     /** Setter for opening browser state */
     setIsOpeningBrowser: Dispatch<SetStateAction<boolean>>;
-    /** Setter for logs hover suppression state */
-    setIsLogsHoverSuppressed: Dispatch<SetStateAction<boolean>>;
     /** Live URL for EDS projects (opens in browser) */
     edsLiveUrl?: string;
     /** DA.live authoring URL for EDS projects */
@@ -38,8 +35,6 @@ export interface UseDashboardActionsReturn {
     handleStartDemo: () => void;
     /** Stop the demo server */
     handleStopDemo: () => void;
-    /** View logs in output channel */
-    handleViewLogs: () => void;
     /** Deploy API Mesh */
     handleDeployMesh: () => void;
     /** Sync storefront — git push + Helix preview/publish (EDS projects only) */
@@ -77,7 +72,6 @@ export function useDashboardActions({
     isOpeningBrowser,
     setIsTransitioning,
     setIsOpeningBrowser,
-    setIsLogsHoverSuppressed,
     edsLiveUrl,
     edsDaLiveUrl,
 }: UseDashboardActionsProps): UseDashboardActionsReturn {
@@ -90,15 +84,6 @@ export function useDashboardActions({
         setIsTransitioning(true);
         webviewClient.postMessage('stopDemo');
     }, [setIsTransitioning]);
-
-    const handleViewLogs = useCallback(() => {
-        // Suppress hover styles during layout shift
-        setIsLogsHoverSuppressed(true);
-        (document.activeElement as HTMLElement)?.blur();
-        webviewClient.postMessage('viewLogs');
-        // Re-enable hover after layout stabilizes (SOP section 1: using TIMEOUTS constant)
-        setTimeout(() => setIsLogsHoverSuppressed(false), TIMEOUTS.HOVER_SUPPRESSION_DELAY);
-    }, [setIsLogsHoverSuppressed]);
 
     const handleDeployMesh = useCallback(() => {
         setIsTransitioning(true);
@@ -160,7 +145,6 @@ export function useDashboardActions({
     return {
         handleStartDemo,
         handleStopDemo,
-        handleViewLogs,
         handleDeployMesh,
         handleSyncStorefront,
         handleRefreshBlockLibrary,

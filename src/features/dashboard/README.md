@@ -4,16 +4,15 @@
 
 The Dashboard feature provides a centralized project control panel within VS Code. It displays real-time project status, mesh deployment state, Adobe context, and provides quick actions for common operations like starting/stopping the demo, deploying mesh, and opening configuration.
 
-The dashboard is designed for at-a-glance status monitoring and one-click actions, with intelligent mesh status checking, focus retention for in-place actions, and smart Logs toggle behavior.
+The dashboard is designed for at-a-glance status monitoring and one-click actions, with intelligent mesh status checking and focus retention for in-place actions.
 
 ## Responsibilities
 
 - **Real-Time Status Display**: Show demo status (ready, starting, running, stopping)
 - **Mesh Status Monitoring**: Async mesh status checking with auth-aware prompts
 - **Adobe Context Display**: Show organization, project, and workspace
-- **Quick Actions**: Start, Stop, Open Browser, Deploy Mesh (shown conditionally when project includes a mesh component), Configure, View Logs
-- **Focus Retention**: Maintain webview focus for in-place actions (Logs toggle, Start/Stop)
-- **Smart Logs Toggle**: Remember last active channel (Logs vs Debug)
+- **Quick Actions**: Start, Stop, Open Browser, Deploy Mesh (shown conditionally when project includes a mesh component), Configure
+- **Focus Retention**: Maintain webview focus for in-place actions (Start/Stop)
 - **Change Detection**: Detect frontend config changes requiring restart
 - **Re-Authentication**: Handle lost Adobe access with browser auth flow
 - **Developer Console Link**: Direct link to Adobe Developer Console workspace
@@ -61,14 +60,6 @@ The dashboard is designed for at-a-glance status monitoring and one-click action
 **Operations**:
 1. Get frontend port
 2. Open http://localhost:{port} in external browser
-
-### handleViewLogs
-
-**Purpose**: Show logs output channel
-
-**Operations**:
-1. Execute demoBuilder.showLogs command
-2. Smart toggle: Remember last active channel (Logs vs Debug)
 
 ### handleConfigure
 
@@ -313,7 +304,6 @@ if (meshComponent && meshComponent.status !== 'deploying' && meshComponent.statu
 - `startDemo` - Start demo server
 - `stopDemo` - Stop demo server
 - `openBrowser` - Open demo in browser
-- `viewLogs` - Show logs output channel
 - `configure` - Open configuration UI
 - `deployMesh` - Deploy API mesh
 - `openDevConsole` - Open Adobe Developer Console
@@ -335,12 +325,8 @@ if (meshComponent && meshComponent.status !== 'deploying' && meshComponent.statu
 - **Background verification**: Verify mesh exists in Adobe I/O without blocking status display
 
 ### Focus Retention
-- **In-place actions**: Logs toggle, Start/Stop don't reload panel (maintain focus)
+- **In-place actions**: Start/Stop don't reload panel (maintain focus)
 - **No re-render**: Send targeted updates instead of full status refresh
-
-### Smart Logs Toggle
-- **Remember last channel**: Toggle between Logs and Debug, not always Logs
-- **Persistent preference**: Last channel remembered across toggle operations
 
 ### Best Practices
 1. **Use async mesh checking**: Don't block UI on slow auth/API calls
@@ -441,8 +427,6 @@ if (!verification.exists) {
 - [ ] Open Browser works
 - [ ] Deploy Mesh button works
 - [ ] Configure button works
-- [ ] View Logs toggles correctly
-- [ ] Logs toggle remembers last channel
 - [ ] Developer Console link works
 - [ ] Re-authenticate flow works
 - [ ] Focus retained for in-place actions
@@ -458,7 +442,6 @@ if (!verification.exists) {
 - Test with mesh deleted externally
 - Test with org access lost
 - Test focus retention for Start/Stop
-- Test Logs toggle state persistence
 
 ## See Also
 

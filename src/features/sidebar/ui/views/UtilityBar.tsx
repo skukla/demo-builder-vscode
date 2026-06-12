@@ -9,6 +9,7 @@
 import { Flex, Text, ActionButton } from '@adobe/react-spectrum';
 import Help from '@spectrum-icons/workflow/Help';
 import Settings from '@spectrum-icons/workflow/Settings';
+import ViewList from '@spectrum-icons/workflow/ViewList';
 import Wrench from '@spectrum-icons/workflow/Wrench';
 import React from 'react';
 
@@ -19,6 +20,8 @@ export interface UtilityBarProps {
     onOpenHelp?: () => void;
     /** Callback when user clicks Settings */
     onOpenSettings?: () => void;
+    /** Callback when user clicks Logs */
+    onOpenLogs?: () => void;
     /** Reserved for footer-placement variants; currently no-op. */
     compact?: boolean;
 }
@@ -31,6 +34,7 @@ export const UtilityBar: React.FC<UtilityBarProps> = ({
     onOpenTools,
     onOpenHelp,
     onOpenSettings,
+    onOpenLogs,
     compact: _compact = false,
 }) => {
     return (
@@ -70,6 +74,18 @@ export const UtilityBar: React.FC<UtilityBarProps> = ({
                 >
                     <Settings />
                     <Text UNSAFE_className="icon-label">Settings</Text>
+                </ActionButton>
+            )}
+
+            {onOpenLogs && (
+                <ActionButton
+                    isQuiet
+                    onPress={onOpenLogs}
+                    aria-label="View Logs"
+                    UNSAFE_className="sidebar-action-tile"
+                >
+                    <ViewList />
+                    <Text UNSAFE_className="icon-label">Logs</Text>
                 </ActionButton>
             )}
         </Flex>

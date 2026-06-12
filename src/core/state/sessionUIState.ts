@@ -76,14 +76,6 @@ class SessionUIState {
         this._isLogsViewShown = false;
         this._viewModeOverride = undefined;
     }
-
-    /**
-     * Reset only panel visibility state
-     * Useful when closing all panels
-     */
-    resetPanelState(): void {
-        this._isLogsViewShown = false;
-    }
 }
 
 /**

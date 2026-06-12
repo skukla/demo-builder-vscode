@@ -24,7 +24,7 @@ sidebar/
 │   ├── index.tsx               # Webview entry point
 │   ├── Sidebar.tsx             # Main sidebar component
 │   ├── views/
-│   │   └── UtilityBar.tsx      # 3-icon footer row (Tools, Help, Settings)
+│   │   └── UtilityBar.tsx      # 4-icon footer row (Tools, Help, Settings, Logs)
 │   └── components/
 │       ├── index.ts            # Component exports
 │       └── AiZone.tsx          # AI icon pair (Chat + Prompts); appears in
@@ -35,7 +35,7 @@ sidebar/
 ## Layout
 
 The sidebar renders the **same layout in every context**: an `AiZone`
-(Chat + Prompts) above a `UtilityBar` (Tools + Help + Settings), vertically
+(Chat + Prompts) above a `UtilityBar` (Tools + Help + Settings + Logs), vertically
 centered as a single group.
 
 ```typescript
@@ -60,7 +60,7 @@ rendered layout. All three contexts render identically because:
 - `AiZone` with **Chat** and **Prompts** buttons (renders when both
   `onOpenAiChat` and `onShowPrompts` callbacks are provided — they are
   always provided in practice).
-- `UtilityBar` in compact mode — three icons: **Tools / Help / Settings**.
+- `UtilityBar` in compact mode — four icons: **Tools / Help / Settings / Logs**.
 - Both groups centered as a single vertical block (`justifyContent="center"`,
   `gap="size-400"`).
 - No dividers, no project name, no nav list. The dashboard, configure
@@ -83,7 +83,7 @@ Main container component that renders context-specific content.
 - `onBack?: () => void` - Back navigation callback
 - `onOpenAiChat?: () => void` - Backs the Chat button in `AiZone`
 - `onShowPrompts?: () => void` - Backs the Prompts button in `AiZone`
-- (utility callbacks: `onOpenTools`, `onOpenHelp`, `onOpenSettings`)
+- (utility callbacks: `onOpenTools`, `onOpenHelp`, `onOpenSettings`, `onOpenLogs`)
 
 ### AiZone
 
@@ -105,12 +105,13 @@ button is single-purpose — no state branching, no hidden second click.
 
 ### UtilityBar
 
-Three-icon horizontal utility row. AI is **not** here — it lives in `AiZone`.
+Four-icon horizontal utility row. AI is **not** here — it lives in `AiZone`.
 
 **Props:**
 - `onOpenTools?: () => void` — Tools icon (Wrench)
 - `onOpenHelp?: () => void` — Help icon
 - `onOpenSettings?: () => void` — Settings icon
+- `onOpenLogs?: () => void` — Logs icon (ViewList); reuses `toggleLogsPanel`
 - `compact?: boolean` — auto height instead of `100%` (for footer placement)
 
 Buttons render only when their callback prop is provided.
@@ -170,6 +171,7 @@ const result = await handleSetContext(context, { context: { type: 'projectsList'
 | `back` | UI → Extension | - | - |
 | `openAiChat` | UI → Extension | - | Routes to `demoBuilder.openAiExperience` |
 | `showPrompts` | UI → Extension | - | Routes to `demoBuilder.showPromptsPicker` |
+| `openLogs` | UI → Extension | - | Routes to `toggleLogsPanel` (lifecycle) |
 | `setContext` | UI → Extension | `{ context }` | - |
 
 ## Styling

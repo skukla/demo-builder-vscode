@@ -105,35 +105,6 @@ describe('sessionUIState', () => {
         });
     });
 
-    describe('resetPanelState() method', () => {
-        it('should reset isLogsViewShown to false', () => {
-            sessionUIState.isLogsViewShown = true;
-
-            sessionUIState.resetPanelState();
-
-            expect(sessionUIState.isLogsViewShown).toBe(false);
-        });
-
-        it('should preserve viewModeOverride', () => {
-            sessionUIState.viewModeOverride = 'cards';
-            sessionUIState.isLogsViewShown = true;
-
-            sessionUIState.resetPanelState();
-
-            expect(sessionUIState.viewModeOverride).toBe('cards');
-        });
-
-        it('should reset panel state while preserving view mode', () => {
-            sessionUIState.isLogsViewShown = true;
-            sessionUIState.viewModeOverride = 'rows';
-
-            sessionUIState.resetPanelState();
-
-            expect(sessionUIState.isLogsViewShown).toBe(false);
-            expect(sessionUIState.viewModeOverride).toBe('rows');
-        });
-    });
-
     describe('singleton behavior', () => {
         it('should return the same instance on multiple imports', () => {
             // Modify state

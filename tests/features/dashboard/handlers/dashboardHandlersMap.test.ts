@@ -45,8 +45,6 @@ describe('dashboardHandlers', () => {
             // Then: Navigation handlers present
             expect(hasHandler(dashboardHandlers, 'openBrowser')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'openLiveSite')).toBe(true);
-            expect(hasHandler(dashboardHandlers, 'viewLogs')).toBe(true);
-            expect(hasHandler(dashboardHandlers, 'viewDebugLogs')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'configure')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'openDevConsole')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'navigateBack')).toBe(true);
@@ -80,18 +78,18 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'resetProject')).toBe(true);
         });
 
-        it('should have exactly 18 handlers', () => {
+        it('should have exactly 16 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers);
 
-            // Then: Exactly 18 handlers
-            // 2 init + 2 lifecycle + 8 navigation + 1 mesh + 1 syncStorefront +
-            // 1 refreshBlockLibrary + 1 auth + 1 project + 1 reset = 18
-            // (viewComponents removed with the dashboard Files/Components browser —
-            //  users browse via VS Code's native Explorer; openAi removed earlier
-            //  with the dashboard AI tile)
-            expect(types).toHaveLength(18);
+            // Then: Exactly 16 handlers
+            // 2 init + 2 lifecycle + 6 navigation + 1 mesh + 1 syncStorefront +
+            // 1 refreshBlockLibrary + 1 auth + 1 project + 1 reset = 16
+            // (viewLogs + viewDebugLogs removed — the Logs toggle moved to the
+            //  sidebar utility; viewComponents removed with the dashboard
+            //  Files/Components browser; openAi removed with the dashboard AI tile)
+            expect(types).toHaveLength(16);
         });
 
         it('should have handlers as functions', () => {

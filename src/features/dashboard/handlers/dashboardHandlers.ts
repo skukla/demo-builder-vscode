@@ -16,11 +16,9 @@ import {
 } from './meshStatusHelpers';
 import { BaseWebviewCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
-import { sessionUIState } from '@/core/state/sessionUIState';
 import { openInIncognito } from '@/core/utils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateURL } from '@/core/validation';
-import { toggleLogsPanel } from '@/features/lifecycle/handlers/lifecycleHandlers';
 import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
 import { ErrorCode } from '@/types/errorCodes';
@@ -245,22 +243,6 @@ export const handleOpenDaLive: MessageHandler = async (context, data) => {
 };
 
 /**
- * Handle 'viewLogs' message - Toggle the logs output panel
- */
-export const handleViewLogs: MessageHandler = async () => {
-    await toggleLogsPanel();
-    return { success: true };
-};
-
-/**
- * Handle 'viewDebugLogs' message - Show Debug output channel (technical diagnostics)
- */
-export const handleViewDebugLogs: MessageHandler = async () => {
-    await vscode.commands.executeCommand('demoBuilder.showDebugLogs');
-    return { success: true };
-};
-
-/**
  * Handle 'configure' message - Open configuration UI
  */
 export const handleConfigure: MessageHandler = async () => {
@@ -384,13 +366,6 @@ export const handleDeleteProject: MessageHandler = async (context) => {
 };
 
 /**
- * Reset toggle states (called when navigating away from dashboard)
- */
-export function resetToggleStates(): void {
-    sessionUIState.resetPanelState();
-}
-
-/**
  * Handle 'navigateBack' message - Navigate back to projects list
  *
  * Clears the current project and shows the projects list view.
@@ -399,9 +374,6 @@ export function resetToggleStates(): void {
 export const handleNavigateBack: MessageHandler = async (context) => {
     try {
         context.logger.info('Navigating back to projects list');
-
-        // Reset toggle states (components, logs)
-        resetToggleStates();
 
         // Clear current project from state
         await context.stateManager.clearProject();
@@ -529,8 +501,6 @@ export const dashboardHandlers = defineHandlers({
     'openBrowser': handleOpenBrowser,
     'openLiveSite': handleOpenLiveSite,
     'openDaLive': handleOpenDaLive,
-    'viewLogs': handleViewLogs,
-    'viewDebugLogs': handleViewDebugLogs,
     'configure': handleConfigure,
     'openDevConsole': handleOpenDevConsole,
     'navigateBack': handleNavigateBack,
