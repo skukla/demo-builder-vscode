@@ -1,6 +1,24 @@
 # B2B feature pack — dropins never reach the browser (research → focused completion)
 
-**Filed:** 2026-06-12 · **Status:** designed (research complete 2026-06-12) — ready for `/rptc:feat` · **Priority:** HIGH — owner needs working B2B today
+**Filed:** 2026-06-12 · **Status:** RESOLVED 2026-06-12 — superseded by a different design · **Priority:** HIGH — owner needed working B2B today
+
+> ## Resolution (2026-06-12)
+>
+> **Shipped via the opposite design — the additive approach below was retired.** A spike
+> proved `@dropins/*` ship as one coordinated release set sharing internal chunks
+> (`tools/chunks/preact-vendor.js`); overlaying current-line b2b dropins onto the older
+> citisignal base produces a missing-chunk blank page. Dropins are a **base** concern, not an
+> overlay. So instead of vendoring b2b dropins onto a non-b2b base, we:
+>
+> 1. **Added a `citisignal-b2b` package** that brands the coherent `boilerplate-b2b-template`
+>    base with the CitiSignal block library + content overlay (commit `134e0003`). Validated
+>    live on `new-citisignal`: dropins load (`preact-vendor.js` 200, all 6 b2b dropins + import
+>    map present), b2b features work, CitiSignal branding renders.
+> 2. **Removed the feature-pack mechanism entirely** (commit `49b3d6d1`, −1552 lines) — it was
+>    the disproven additive path and `b2b-commerce` was its only pack.
+>
+> Patch ledger: `eds-demo-patches@citisignal-b2b` (`2c78fd9`). Merged to develop in `8d48c17f`.
+> The original additive design and research below are kept for the historical record.
 
 ## Provenance
 
