@@ -14,7 +14,7 @@ import type { Logger } from '@/core/logging';
 import type { Project } from '@/types';
 
 const mockInstallNpmDependencies = jest.fn();
-jest.mock('@/features/components/services/ComponentManager', () => ({
+jest.mock('@/features/components/services/componentManager', () => ({
     ComponentManager: jest.fn().mockImplementation(() => ({
         installNpmDependencies: (...args: unknown[]) => mockInstallNpmDependencies(...args),
     })),
