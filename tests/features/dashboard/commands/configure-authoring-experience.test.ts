@@ -30,21 +30,22 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
     detectMeshChanges: jest.fn().mockResolvedValue({ hasChanges: false }),
 }));
 
-// EDS feature index (isEdsProject + detectStorefrontChanges + republish).
+// EDS feature index. On an EW flip the handler regenerates config.json via
+// republishStorefrontConfig — that's what lands the quick-edit Sidekick plugin
+// (the EW canvas reads plugins from config.json).
+const mockRepublishStorefrontConfig = jest.fn().mockResolvedValue({ success: true });
 jest.mock('@/features/eds', () => ({
     isEdsProject: jest.fn(() => true),
     detectStorefrontChanges: jest.fn(() => ({ hasChanges: false })),
-    republishStorefrontConfig: jest.fn(),
+    republishStorefrontConfig: (...args: unknown[]) => mockRepublishStorefrontConfig(...args),
 }));
 
 // EDS helpers — applyDaLiveOrgConfigSettings is the re-apply we assert on.
 const mockApplyDaLiveOrgConfigSettings = jest.fn().mockResolvedValue(undefined);
-const mockResolveByomOverlayConfig = jest.fn(() => undefined as string | undefined);
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     applyDaLiveOrgConfigSettings: (...args: unknown[]) => mockApplyDaLiveOrgConfigSettings(...args),
     getDaLiveAuthService: jest.fn(() => ({})),
     resolveProjectAuthoringExperience: jest.fn(() => 'universal-editor'),
-    resolveByomOverlayConfig: (...args: unknown[]) => mockResolveByomOverlayConfig(...(args as [])),
 }));
 
 jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
@@ -64,22 +65,6 @@ jest.mock('@/features/eds/services/quickEditPublisher', () => ({
 const mockPreviewCode = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/eds/services/helixService', () => ({
     HelixService: jest.fn().mockImplementation(() => ({ previewCode: mockPreviewCode })),
-}));
-
-// ConfigurationService — the EW flip also (re-)registers the site config so the
-// quick-edit Sidekick plugin (from config-template.json) lands for an existing
-// flipped project. Mirrors how reset registers the site. Non-fatal.
-const mockUpdateSiteConfig = jest.fn().mockResolvedValue({ success: true });
-const mockBuildSiteConfigParams = jest.fn((...args: unknown[]) => ({ __params: args }));
-jest.mock('@/features/eds/services/configurationService', () => ({
-    ConfigurationService: jest.fn().mockImplementation(() => ({ updateSiteConfig: mockUpdateSiteConfig })),
-    buildSiteConfigParams: (...args: unknown[]) => mockBuildSiteConfigParams(...args),
-}));
-
-// Storefront config resolution — supplies the BYOM overlay base URL. Returned
-// empty so resolveByomOverlayConfig (mocked below) drives the value.
-jest.mock('@/features/eds/services/edsResetParams', () => ({
-    resolveStorefrontConfig: jest.fn(() => ({})),
 }));
 
 // GitHub services constructed by ensureQuickEditVendored. Constructors are
@@ -366,30 +351,29 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
     // project flipped to EW via Configure never got it — so the flip
     // (re-)registers the site config, mirroring how reset does it.
 
-    it('registers the Quick Edit plugin (updateSiteConfig) when flipping TO experience-workspace', async () => {
+    it('regenerates config.json (adding the quick-edit plugin) when flipping TO experience-workspace', async () => {
         mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('universal-editor'));
         const save = captureSaveHandler(command);
 
         await save({ componentConfigs: {}, authoringExperience: 'experience-workspace' });
 
-        expect(mockUpdateSiteConfig).toHaveBeenCalledTimes(1);
-        // Site params built from the parsed owner/repo + DA org/site.
-        expect(mockBuildSiteConfigParams).toHaveBeenCalledWith(
-            'acme-org', 'acme-storefront', 'my-org', 'my-site', undefined,
+        expect(mockRepublishStorefrontConfig).toHaveBeenCalledTimes(1);
+        expect(mockRepublishStorefrontConfig).toHaveBeenCalledWith(
+            expect.objectContaining({ project: expect.anything() }),
         );
     });
 
-    it('does NOT register the Quick Edit plugin when flipping TO universal-editor', async () => {
+    it('does NOT regenerate config.json when flipping TO universal-editor', async () => {
         mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('experience-workspace'));
         const save = captureSaveHandler(command);
 
         await save({ componentConfigs: {}, authoringExperience: 'universal-editor' });
 
-        expect(mockUpdateSiteConfig).not.toHaveBeenCalled();
+        expect(mockRepublishStorefrontConfig).not.toHaveBeenCalled();
     });
 
-    it('is non-fatal: a plugin-registration failure still resolves the save and keeps the metadata', async () => {
-        mockUpdateSiteConfig.mockRejectedValueOnce(new Error('Config Service down'));
+    it('is non-fatal: a config.json regeneration failure still resolves the save and keeps the metadata', async () => {
+        mockRepublishStorefrontConfig.mockRejectedValueOnce(new Error('Config sync down'));
         mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('universal-editor'));
         const save = captureSaveHandler(command);
 
