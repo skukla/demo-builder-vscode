@@ -26,20 +26,23 @@ jest.mock('@/features/components/ui/components/StoreStructureSelector', () => ({
         label,
         items,
         onSelect,
+        isDisabled,
     }: {
         label: string;
         items: Array<{ code: string; name: string }>;
         selectedCode: string;
         onSelect: (code: string) => void;
         isRequired?: boolean;
+        isDisabled?: boolean;
     }) => {
         const prefix = label.toLowerCase().replace(/\s+/g, '-');
         return (
-            <div data-testid={`picker-${prefix}`}>
+            <div data-testid={`picker-${prefix}`} data-disabled={isDisabled ? 'true' : 'false'}>
                 {items.map(item => (
                     <button
                         key={item.code}
                         data-testid={`${prefix}-${item.code}`}
+                        disabled={isDisabled}
                         onClick={() => onSelect(item.code)}
                     >
                         {item.name}
@@ -303,6 +306,33 @@ describe('StoreSelectionRow cascade auto-selection', () => {
                 'default',
             );
             expect(updateField).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('loading state (render-from-start, no layout shift)', () => {
+        it('renders all three pickers disabled while loading (occupies footprint)', () => {
+            const props = buildProps({});
+            render(<StoreSelectionRow {...props} isLoading />);
+
+            expect(screen.getByTestId('picker-website')).toHaveAttribute('data-disabled', 'true');
+            expect(screen.getByTestId('picker-store')).toHaveAttribute('data-disabled', 'true');
+            expect(screen.getByTestId('picker-store-view')).toHaveAttribute('data-disabled', 'true');
+        });
+
+        it('renders pickers enabled once loading completes', () => {
+            const props = buildProps({});
+            render(<StoreSelectionRow {...props} isLoading={false} />);
+
+            expect(screen.getByTestId('picker-website')).toHaveAttribute('data-disabled', 'false');
+            expect(screen.getByTestId('picker-store')).toHaveAttribute('data-disabled', 'false');
+            expect(screen.getByTestId('picker-store-view')).toHaveAttribute('data-disabled', 'false');
+        });
+
+        it('defaults to enabled when isLoading is omitted (back-compat)', () => {
+            const props = buildProps({});
+            render(<StoreSelectionRow {...props} />);
+
+            expect(screen.getByTestId('picker-website')).toHaveAttribute('data-disabled', 'false');
         });
     });
 });

@@ -104,6 +104,14 @@ export interface Project {
     };
     // EDS Storefront status summary for card grid display
     edsStorefrontStatusSummary?: 'published' | 'stale' | 'update-declined' | 'not-published';
+    /**
+     * Resolved AEM authoring experience for the projects-list card grid.
+     *
+     * UI-only enrichment computed backend-side (via resolveProjectAuthoringExperience)
+     * so the webview stays presentational — it never imports the resolver or
+     * `vscode`. Drives the "Author in …" label and the kebab flip control.
+     */
+    resolvedAuthoringExperience?: AuthoringExperience;
     // Frontend config state (tracks changes since demo started)
     frontendEnvState?: {
         envVars: Record<string, string>;
@@ -131,6 +139,16 @@ export interface CustomIconPaths {
     light: string;           // Path to icon for light theme
     dark: string;            // Path to icon for dark theme
 }
+
+/**
+ * AEM authoring experience for an EDS project.
+ *
+ * Stored per-project on the EDS component-instance metadata as
+ * `authoringExperience` (beside `daLiveOrg`/`daLiveSite`). Absence falls back
+ * to the global `demoBuilder.daLive.authoringExperience` setting (default
+ * 'da-live-classic'). Resolved via resolveAuthoringExperience in edsHelpers.
+ */
+export type AuthoringExperience = 'da-live-classic' | 'experience-workspace';
 
 export interface ComponentInstance {
     id: string;              // Component ID (e.g., "headless")

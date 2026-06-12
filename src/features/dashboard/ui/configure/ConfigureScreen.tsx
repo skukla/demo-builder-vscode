@@ -6,6 +6,8 @@ import {
     Link,
     Flex,
     TextField,
+    RadioGroup,
+    Radio,
 } from '@adobe/react-spectrum';
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useFieldFocusTracking } from './hooks/useFieldFocusTracking';
@@ -26,7 +28,7 @@ import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelp
 import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreConfigFieldRow';
 import { useAutoStoreDetect } from '@/features/components/ui/hooks/useAutoStoreDetect';
 import { useStoreDiscovery } from '@/features/components/ui/hooks/useStoreDiscovery';
-import type { Project } from '@/types/base';
+import type { AuthoringExperience, Project } from '@/types/base';
 import { hasEntries } from '@/types/typeGuards';
 import { ComponentEnvVar, ComponentConfigs } from '@/types/webview';
 
@@ -48,6 +50,10 @@ interface ConfigureScreenProps {
     componentsData: ComponentsData;
     existingEnvValues?: Record<string, Record<string, string>>;
     existingProjectNames?: string[];
+    /** Whether this is an EDS project — gates the Authoring Experience radio. */
+    isEds?: boolean;
+    /** Resolved authoring experience seeding the radio (EDS only). */
+    authoringExperience?: AuthoringExperience;
 }
 
 interface ComponentData {
@@ -127,13 +133,43 @@ function getSaveButtonLabel(isSaving: boolean, isDeploying: boolean): string {
     return 'Save Changes';
 }
 
+interface AuthoringExperienceFieldProps {
+    value: AuthoringExperience;
+    onChange: (value: AuthoringExperience) => void;
+}
+
+/**
+ * EDS-only authoring-experience preference. A setup-time choice (saved via the
+ * Configure footer's Save), not an on-the-fly action — so it lives here rather
+ * than on the dashboard/kebab action surfaces.
+ */
+function AuthoringExperienceField({ value, onChange }: AuthoringExperienceFieldProps): React.ReactElement {
+    // aria-label (not label): the "Authoring" section heading already names this,
+    // so a visible RadioGroup label would be a redundant subheading.
+    return (
+        <RadioGroup
+            aria-label="Authoring Experience"
+            value={value}
+            onChange={(next) => onChange(next as AuthoringExperience)}
+        >
+            <Radio value="da-live-classic">DA.live Classic</Radio>
+            <Radio value="experience-workspace">Experience Workspace</Radio>
+        </RadioGroup>
+    );
+}
+
 export function ConfigureScreen({
     project,
     componentsData,
     existingEnvValues,
     existingProjectNames = [],
+    isEds = false,
+    authoringExperience: initialAuthoringExperience,
 }: ConfigureScreenProps) {
     const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>({});
+    const [authoringExperience, setAuthoringExperience] = useState<AuthoringExperience>(
+        initialAuthoringExperience ?? 'da-live-classic',
+    );
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
     const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
     const [isSaving, setIsSaving] = useState(false);
@@ -403,8 +439,22 @@ export function ConfigureScreen({
 
     // Navigation sections for NavigationPanel
     const navigationSections = useMemo<NavigationSection[]>(() => {
-        return serviceGroups.map(group => toNavigationSection(group, isFieldComplete));
-    }, [serviceGroups, isFieldComplete]);
+        const sections = serviceGroups.map(group => toNavigationSection(group, isFieldComplete));
+        // Mirror the left-column "Authoring" section in the right-column nav (EDS
+        // only). It has no navigable fields — it's a single radio — so the field
+        // list is empty and it always reads complete.
+        if (isEds) {
+            sections.push({
+                id: 'authoring-experience',
+                label: 'Authoring',
+                fields: [],
+                isComplete: true,
+                completedCount: 0,
+                totalCount: 0,
+            });
+        }
+        return sections;
+    }, [serviceGroups, isFieldComplete, isEds]);
 
     const toggleNavSection = useCallback((sectionId: string) => {
         const wasExpanded = expandedNavSections.has(sectionId);
@@ -442,9 +492,12 @@ export function ConfigureScreen({
         try {
             // Include projectName if it changed
             const newProjectName = projectName.trim() !== project.name ? projectName.trim() : undefined;
+            // The authoring-experience preference is EDS-only; for non-EDS projects
+            // it is omitted entirely so the payload shape is unchanged.
             const result = await webviewClient.request<SaveConfigurationResponse>('save-configuration', {
                 componentConfigs,
                 newProjectName,
+                ...(isEds ? { authoringExperience } : {}),
             });
             if (!result.success) {
                 throw new Error(result.error || 'Failed to save configuration');
@@ -455,7 +508,7 @@ export function ConfigureScreen({
         } finally {
             setIsSaving(false);
         }
-    }, [componentConfigs, projectName, project.name]);
+    }, [componentConfigs, projectName, project.name, isEds, authoringExperience]);
 
     const handleCancel = useCallback(() => {
         webviewClient.postMessage('cancel');
@@ -463,6 +516,34 @@ export function ConfigureScreen({
 
     // Can save if no validation errors (env vars and project name)
     const canSave = !hasEntries(validationErrors) && !projectNameError;
+
+    // EDS-only authoring-experience preference. Rendered inside the form's
+    // section fragment (so a non-EDS null never reaches Form's child typing).
+    const authoringExperienceSection = isEds ? (
+        <ConfigSection
+            id="authoring-experience"
+            label="Authoring"
+            showDivider={serviceGroups.length > 0}
+            footer={
+                <Flex marginTop="size-200">
+                    <Text UNSAFE_className="text-gray-600 text-sm">
+                        DA.live & authoring settings are configured in{' '}
+                        <Link
+                            onPress={() => webviewClient.postMessage('open-eds-settings')}
+                            UNSAFE_className="cursor-pointer"
+                        >
+                            Extension Settings
+                        </Link>
+                    </Text>
+                </Flex>
+            }
+        >
+            <AuthoringExperienceField
+                value={authoringExperience}
+                onChange={setAuthoringExperience}
+            />
+        </ConfigSection>
+    ) : null;
 
     return (
         <div
@@ -505,9 +586,12 @@ export function ConfigureScreen({
                                 </ConfigSection>
 
                                 {serviceGroups.length === 0 ? (
-                                    <Text UNSAFE_className="text-gray-600">
-                                        No components requiring configuration were found.
-                                    </Text>
+                                    <>
+                                        <Text UNSAFE_className="text-gray-600">
+                                            No components requiring configuration were found.
+                                        </Text>
+                                        {authoringExperienceSection}
+                                    </>
                                 ) : (
                                     <>
                                         {serviceGroups.map((group, index) => (
@@ -516,19 +600,6 @@ export function ConfigureScreen({
                                                 id={group.id}
                                                 label={group.label}
                                                 showDivider={index > 0}
-                                                footer={group.id === 'adobe-assets' ? (
-                                                    <Flex marginTop="size-200">
-                                                        <Text UNSAFE_className="text-gray-600 text-sm">
-                                                            Universal Editor settings are configured in{' '}
-                                                            <Link
-                                                                onPress={() => webviewClient.postMessage('open-eds-settings')}
-                                                                UNSAFE_className="cursor-pointer"
-                                                            >
-                                                                Extension Settings
-                                                            </Link>
-                                                        </Text>
-                                                    </Flex>
-                                                ) : undefined}
                                             >
                                                 {group.fields.map(field => (
                                                     <StoreConfigFieldRow
@@ -554,6 +625,7 @@ export function ConfigureScreen({
                                                 ))}
                                             </ConfigSection>
                                         ))}
+                                        {authoringExperienceSection}
                                     </>
                                 )}
                             </Form>

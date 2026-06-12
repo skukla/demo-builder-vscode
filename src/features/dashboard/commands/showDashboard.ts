@@ -10,9 +10,10 @@ import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { dashboardHandlers } from '@/features/dashboard/handlers';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
+import { getEwCanvasBranch, resolveProjectAuthoringExperience } from '@/features/eds/handlers/edsHelpers';
 import { loadDemoPackages } from '@/features/project-creation/services/demoPackageLoader';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
-import { Project, ComponentInstance } from '@/types';
+import { AuthoringExperience, Project, ComponentInstance } from '@/types';
 import type { DemoPackage } from '@/types/demoPackages';
 import { HandlerContext, SharedState } from '@/types/handlers';
 import type { Stack, StacksConfig } from '@/types/stacks';
@@ -123,6 +124,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         isEds: boolean;
         edsLiveUrl?: string;
         edsDaLiveUrl?: string;
+        authoringExperience?: AuthoringExperience;
         initialEdsStorefrontStatus?: string;
     }> {
         const project = await this.stateManager.getCurrentProject();
@@ -144,7 +146,8 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         // Detect EDS projects and get URLs (using shared typeGuards functions)
         const isEds = isEdsProject(project);
         const edsLiveUrl = getEdsLiveUrl(project);
-        const edsDaLiveUrl = getEdsDaLiveUrl(project);
+        const authoringExperience = resolveProjectAuthoringExperience(project);
+        const edsDaLiveUrl = getEdsDaLiveUrl(project, authoringExperience, getEwCanvasBranch());
 
         // Get EDS storefront status for dynamic display
         const initialEdsStorefrontStatus = project?.edsStorefrontStatusSummary;
@@ -161,6 +164,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
             isEds,
             edsLiveUrl,
             edsDaLiveUrl,
+            authoringExperience,
             initialEdsStorefrontStatus,
         };
     }
@@ -276,6 +280,28 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
                     status,
                     message,
                     endpoint,
+                },
+            });
+        }
+    }
+
+    /**
+     * Public method to push a live authoring-experience update (called by the
+     * Configure save handler). Updates an already-open dashboard's Author tile
+     * label + DA URL instantly — no reopen required. No-op if no dashboard is
+     * open. Modeled on sendMeshStatusUpdate.
+     */
+    public static async sendAuthoringExperienceUpdate(
+        authoringExperience: AuthoringExperience,
+        edsDaLiveUrl?: string,
+    ): Promise<void> {
+        const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');
+        if (panel) {
+            await panel.webview.postMessage({
+                type: 'authoringExperienceUpdate',
+                payload: {
+                    authoringExperience,
+                    edsDaLiveUrl,
                 },
             });
         }

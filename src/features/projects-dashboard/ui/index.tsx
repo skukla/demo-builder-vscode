@@ -408,8 +408,8 @@ const ProjectsDashboardApp: React.FC = () => {
         onDelete: handleDeleteProject,
     }), [
         handleStartDemo, handleStopDemo, handleOpenBrowser, handleOpenLiveSite,
-        handleOpenDaLive, handleResetProject, handleRepublishContent, handleEditProject,
-        handleRenameProject, handleCopyPath, handleExportProject,
+        handleOpenDaLive, handleResetProject, handleRepublishContent,
+        handleEditProject, handleRenameProject, handleCopyPath, handleExportProject,
         handleOpenAiForProject, handlePinToggle, handleDeleteProject,
     ]);
 

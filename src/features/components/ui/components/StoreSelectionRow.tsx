@@ -34,6 +34,12 @@ interface StoreSelectionRowProps {
     getStoreGroupItems: (websiteCode: string) => StoreListItem[];
     getStoreViewItems: (storeGroupCode: string) => StoreListItem[];
     componentConfigs: Record<string, Record<string, string | boolean | number | undefined>>;
+    /**
+     * Whether store discovery is still running. When true the three pickers
+     * render disabled (occupying their footprint) and populate in place once
+     * data lands — so there is no layout shift. Defaults to false.
+     */
+    isLoading?: boolean;
 }
 
 // ==========================================================
@@ -61,6 +67,7 @@ export function StoreSelectionRow({
     getStoreGroupItems,
     getStoreViewItems,
     componentConfigs,
+    isLoading = false,
 }: StoreSelectionRowProps) {
     const keys = getFieldKeys(group.id);
 
@@ -105,6 +112,7 @@ export function StoreSelectionRow({
                     selectedCode={String(getFieldValue(websiteField) || '')}
                     onSelect={handleWebsiteSelect}
                     isRequired={websiteField.required}
+                    isDisabled={isLoading}
                 />
             )}
             {storeField && (
@@ -114,6 +122,7 @@ export function StoreSelectionRow({
                     selectedCode={String(getFieldValue(storeField) || '')}
                     onSelect={handleStoreSelect}
                     isRequired={storeField.required}
+                    isDisabled={isLoading}
                 />
             )}
             {storeViewField && (
@@ -123,6 +132,7 @@ export function StoreSelectionRow({
                     selectedCode={String(getFieldValue(storeViewField) || '')}
                     onSelect={(code) => updateField(storeViewField, code)}
                     isRequired={storeViewField.required}
+                    isDisabled={isLoading}
                 />
             )}
         </Flex>

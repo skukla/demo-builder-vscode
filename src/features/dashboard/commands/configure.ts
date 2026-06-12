@@ -13,13 +13,31 @@ import { parseEnvFile } from '@/core/utils/envParser';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { normalizeIfUrl } from '@/core/validation/Validator';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
+import { COMPONENT_IDS } from '@/core/constants';
 import { detectStorefrontChanges, isEdsProject, republishStorefrontConfig } from '@/features/eds';
+import {
+    applyDaLiveOrgConfigSettings,
+    getDaLiveAuthService,
+    getEwCanvasBranch,
+    resolveProjectAuthoringExperience,
+} from '@/features/eds/handlers/edsHelpers';
+import { DaLiveContentOperations, createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
+import { GitHubFileOperations } from '@/features/eds/services/githubFileOperations';
+import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
+import { HelixService } from '@/features/eds/services/helixService';
+import { installQuickEdit } from '@/features/eds/services/quickEditPublisher';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { handleRenameProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { Project } from '@/types';
+import type { AuthoringExperience } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, SharedState } from '@/types/handlers';
-import { getComponentInstanceEntries } from '@/types/typeGuards';
+import { getComponentInstanceEntries, getEdsDaLiveUrl } from '@/types/typeGuards';
+
+const AUTHORING_EXPERIENCES: ReadonlySet<AuthoringExperience> = new Set<AuthoringExperience>([
+    'da-live-classic',
+    'experience-workspace',
+]);
 
 // Component configuration type (key-value pairs for environment variables)
 type ComponentConfigs = Record<string, Record<string, string>>;
@@ -39,6 +57,10 @@ interface ConfigureInitialData {
     };
     existingEnvValues: Record<string, Record<string, string>>;
     existingProjectNames: string[];
+    /** Whether this is an EDS project — gates the Authoring Experience radio. */
+    isEds: boolean;
+    /** Resolved authoring experience seeding the radio (EDS only). */
+    authoringExperience: AuthoringExperience;
 }
 
 export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
@@ -154,6 +176,8 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             componentsData,
             existingEnvValues,
             existingProjectNames,
+            isEds: isEdsProject(project),
+            authoringExperience: resolveProjectAuthoringExperience(project),
         };
     }
 
@@ -170,7 +194,11 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 
         // save-configuration stays inline — depends on private notification/deployment
         // methods that need `this` binding (same mixed pattern as Wizard)
-        comm.onStreaming('save-configuration', async (data: { componentConfigs: ComponentConfigs; newProjectName?: string }) => {
+        comm.onStreaming('save-configuration', async (data: {
+            componentConfigs: ComponentConfigs;
+            newProjectName?: string;
+            authoringExperience?: AuthoringExperience;
+        }) => {
             try {
                 let project = await this.stateManager.getCurrentProject();
                 if (!project) {
@@ -209,7 +237,31 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 if (storefrontChanges.hasChanges) {
                     project.edsStorefrontStatusSummary = 'stale';
                 }
+
+                // Persist the EDS authoring-experience preference (setup-time choice).
+                // Capture whether it changed so we can re-apply the DA editor.path after save.
+                const authoringChanged = this.applyAuthoringExperienceMetadata(project, data.authoringExperience);
+
                 await this.stateManager.saveProject(project);
+
+                // Push the new Author label + DA URL to an already-open dashboard
+                // immediately (a fast, local postMessage — NOT a network call, so
+                // it stays in the synchronous save path; the deferred DA side-
+                // effects below are the slow network work). Non-fatal: a missing
+                // dashboard or a postMessage failure must never block the save.
+                if (authoringChanged && data.authoringExperience) {
+                    try {
+                        const edsDaLiveUrl = getEdsDaLiveUrl(project, data.authoringExperience, getEwCanvasBranch());
+                        await ProjectDashboardWebviewCommand.sendAuthoringExperienceUpdate(
+                            data.authoringExperience,
+                            edsDaLiveUrl,
+                        );
+                    } catch (error) {
+                        this.logger.warn(
+                            `[Configure] Failed to push authoring-experience update to dashboard: ${(error as Error).message}`,
+                        );
+                    }
+                }
 
                 // Register programmatic writes BEFORE writing files
                 await this.registerProgrammaticWrites(project, data.componentConfigs);
@@ -217,12 +269,27 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 // Regenerate .env files
                 await this.regenerateEnvFiles(project, data.componentConfigs);
 
-                // Return success immediately so UI can reset (don't block on notifications)
+                // Return success immediately so the Save button resets. The
+                // authoring-experience side-effects below are network-bound (DA
+                // editor.path, Quick Edit vendoring, Helix code preview), so they
+                // run AFTER the response behind a progress toast — the button never
+                // appears to hang. All side-effects are individually non-fatal.
                 const result = { success: true };
 
-                // Show success notification after returning (non-blocking)
+                if (authoringChanged && data.authoringExperience) {
+                    const experience = data.authoringExperience;
+                    const flippedProject = project;
+                    setImmediate(() => {
+                        void this.applyAuthoringSideEffects(flippedProject, experience);
+                    });
+                }
+
+                // Show success notification after returning (non-blocking). When the
+                // authoring experience changed, its own progress toast is the
+                // confirmation, so suppress the generic "saved" toast to avoid a
+                // double notification.
                 setImmediate(() => {
-                    this.showPostSaveNotifications(project, meshChanges, storefrontChanges);
+                    this.showPostSaveNotifications(project, meshChanges, storefrontChanges, authoringChanged);
                 });
 
                 return result;
@@ -232,6 +299,169 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 return { success: false, error: (error as Error).message, code: ErrorCode.CONFIG_INVALID };
             }
         });
+    }
+
+    /**
+     * Persist the EDS authoring-experience preference onto the project's EDS
+     * component-instance metadata. No-op for non-EDS projects or unrecognized
+     * values. Returns whether the stored value actually changed (so the caller
+     * can decide whether to re-apply the DA editor.path).
+     */
+    private applyAuthoringExperienceMetadata(
+        project: Project,
+        experience: AuthoringExperience | undefined,
+    ): boolean {
+        if (!experience || !AUTHORING_EXPERIENCES.has(experience) || !isEdsProject(project)) {
+            return false;
+        }
+        const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+        if (!edsInstance) {
+            return false;
+        }
+        const previous = edsInstance.metadata?.authoringExperience as AuthoringExperience | undefined;
+        if (previous === experience) {
+            return false;
+        }
+        edsInstance.metadata = { ...edsInstance.metadata, authoringExperience: experience };
+        return true;
+    }
+
+    /**
+     * Run the authoring-experience DA side-effects behind a progress toast, after
+     * the save response has returned. Both steps are network-bound and already
+     * non-fatal, so the toast gives the user immediate "this is working" feedback
+     * without ever blocking the Save button.
+     */
+    private async applyAuthoringSideEffects(
+        project: Project,
+        experience: AuthoringExperience,
+    ): Promise<void> {
+        await vscode.window.withProgress(
+            {
+                location: vscode.ProgressLocation.Notification,
+                title: 'Switching author mode',
+                cancellable: false,
+            },
+            async (progress) => {
+                progress.report({ message: 'Updating the DA.live editor link…' });
+                await this.reapplyEditorPath(project, experience);
+                if (experience === 'experience-workspace') {
+                    progress.report({ message: 'Wiring Quick Edit into the storefront…' });
+                    await this.ensureQuickEditVendored(project);
+                    progress.report({ message: 'Updating storefront config…' });
+                    await this.regenerateStorefrontConfig(project);
+                }
+            },
+        );
+    }
+
+    /**
+     * Re-apply the site-scoped DA.live editor.path so the punch-out matches the
+     * new authoring experience. Moved here from the projects-list flip handler.
+     * Non-fatal: logs a warning on failure and never throws (the metadata write
+     * already stands).
+     */
+    private async reapplyEditorPath(
+        project: Project,
+        experience: AuthoringExperience,
+    ): Promise<void> {
+        const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+        const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
+        const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
+        if (!daLiveOrg || !daLiveSite) {
+            return;
+        }
+
+        try {
+            const daLiveAuthService = getDaLiveAuthService(this.context);
+            const tokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
+            const daLiveContentOps = new DaLiveContentOperations(tokenProvider, this.logger);
+            await applyDaLiveOrgConfigSettings(daLiveContentOps, daLiveOrg, daLiveSite, this.logger, experience);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            this.logger.warn(`[Configure] editor.path re-apply failed (authoring experience still saved): ${message}`);
+        }
+    }
+
+    /**
+     * Vendor the Quick Edit wiring into the storefront repo so the Experience
+     * Workspace Layout/WYSIWYG view has its repo-side dependency. Mirrors the
+     * create/reset path's installQuickEdit call; idempotent (installQuickEdit
+     * no-ops without a commit when the anchors are already transformed).
+     *
+     * Scope: only the VENDORED FILES (scripts.js wiring + tools/quick-edit/) are
+     * handled here. The Sidekick `quick-edit` plugin (Config Service) is still
+     * delivered at create/reset via config-template.json — out of scope for the
+     * flip.
+     *
+     * Non-fatal: any failure is logged and swallowed. The save (and the
+     * authoring-experience metadata write) must never fail because of this.
+     */
+    private async ensureQuickEditVendored(project: Project): Promise<void> {
+        try {
+            const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+            const githubRepo = edsInstance?.metadata?.githubRepo as string | undefined;
+            if (!githubRepo) {
+                return;
+            }
+
+            // githubRepo is already "owner/repo" — a simple split is sufficient.
+            const [repoOwner, repoName] = githubRepo.split('/');
+            if (!repoOwner || !repoName) {
+                return;
+            }
+
+            const githubTokenService = new GitHubTokenService(this.context.secrets, this.logger);
+            const githubFileOps = new GitHubFileOperations(githubTokenService, this.logger);
+            await installQuickEdit(githubFileOps, repoOwner, repoName, this.logger);
+
+            // Push the committed Quick Edit code live so the Experience Workspace
+            // Layout (WYSIWYG) view works immediately, without a full reset. The
+            // create/reset/republish paths previewCode('/*') after vendoring via
+            // the surrounding pipeline; the flip has no such pipeline, so it
+            // previews here. Non-fatal — covered by the outer catch.
+            const daLiveTokenProvider = createDaLiveServiceTokenProvider(getDaLiveAuthService(this.context));
+            const helixService = new HelixService(this.logger, githubTokenService, daLiveTokenProvider);
+            await helixService.previewCode(repoOwner, repoName, '/*');
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            this.logger.warn(`[Configure] Quick Edit vendoring failed (authoring experience still saved): ${message}`);
+        }
+    }
+
+    /**
+     * Regenerate the storefront's config.json so it includes the `quick-edit`
+     * Sidekick plugin.
+     *
+     * The Experience Workspace canvas reads its plugins from the repo's
+     * config.json (NOT the Config Service site registration) — and it's the
+     * `quick-edit` plugin that dispatches the `custom:quick-edit` event the
+     * storefront listener handles. A project created before this feature has a
+     * config.json without that plugin, so the EW flip regenerates + syncs it.
+     * config.json is generated from config-template.json, which now carries the
+     * plugin, so a plain regenerate adds it.
+     *
+     * Non-fatal: logs a warning on failure and never throws (the metadata save
+     * already stands).
+     */
+    private async regenerateStorefrontConfig(project: Project): Promise<void> {
+        try {
+            const result = await republishStorefrontConfig({
+                project,
+                secrets: this.context.secrets,
+                logger: this.logger,
+            });
+            if (!result.success) {
+                this.logger.warn(
+                    `[Configure] config.json regeneration warning (authoring experience still saved): ${result.error}`,
+                );
+            }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            this.logger.warn(
+                `[Configure] config.json regeneration failed (authoring experience still saved): ${message}`,
+            );
+        }
     }
 
     /**
@@ -415,6 +645,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         project: Project,
         meshChanges: { hasChanges: boolean },
         storefrontChanges: { hasChanges: boolean },
+        authoringChanged = false,
     ): Promise<void> {
         await ProjectDashboardWebviewCommand.refreshStatus();
 
@@ -431,7 +662,9 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             contextualNotificationShown = await this.handleRestartNotification();
         }
 
-        if (!contextualNotificationShown) {
+        // An authoring-experience change shows its own progress toast (the
+        // confirmation), so skip the generic "saved" toast to avoid doubling up.
+        if (!contextualNotificationShown && !authoringChanged) {
             this.showSuccessMessage('Configuration saved successfully');
         }
     }

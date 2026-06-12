@@ -254,10 +254,17 @@
             "default": "demosystem",
             "description": "Adobe IMS organization ID for Universal Editor access. Used to generate editor.path for DA.live sites."
           },
-          "demoBuilder.daLive.editorPathPrefix": {
+          "demoBuilder.daLive.authoringExperience": {
             "type": "string",
-            "default": "site/to/path/content",
-            "description": "Dummy path prefix for editor.path that prevents Universal Editor from auto-opening. Uses a non-existent path so UE only opens via punch-out."
+            "enum": ["da-live-classic", "experience-workspace"],
+            "enumItemLabels": ["DA.live Classic", "Experience Workspace"],
+            "default": "da-live-classic",
+            "description": "Default AEM authoring experience for new EDS projects. DA.live Classic opens the da.live doc editor (with the Universal Editor punch-out for Sidekick Edit); Experience Workspace uses the da.live-native canvas. Override per project from the project's Configure screen."
+          },
+          "demoBuilder.daLive.ewCanvasBranch": {
+            "type": "string",
+            "default": "",
+            "description": "da-nx branch the Experience Workspace canvas loads from (the `?nx=` override). Leave empty to use the current param-less production canvas; set a branch only to pin a specific pre-release build."
           }
         }
       },
@@ -321,6 +328,9 @@
             "type": "string",
             "enum": [
               "claude-code"
+            ],
+            "enumItemLabels": [
+              "Claude Code"
             ],
             "enumDescriptions": [
               "Anthropic's Claude Code (CLI)."

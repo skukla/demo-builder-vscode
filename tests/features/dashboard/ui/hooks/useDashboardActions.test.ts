@@ -53,12 +53,16 @@ describe('useDashboardActions', () => {
         jest.useRealTimers();
     });
 
-    const renderActionsHook = (isOpeningBrowser = false) => {
+    const renderActionsHook = (
+        isOpeningBrowser = false,
+        extra: { edsLiveUrl?: string; edsDaLiveUrl?: string } = {},
+    ) => {
         return renderHook(() =>
             useDashboardActions({
                 isOpeningBrowser,
                 setIsTransitioning: mockSetIsTransitioning,
                 setIsOpeningBrowser: mockSetIsOpeningBrowser,
+                ...extra,
             })
         );
     };
@@ -263,6 +267,19 @@ describe('useDashboardActions', () => {
             });
 
             expect(mockPostMessage).toHaveBeenCalledWith('resetProject');
+        });
+    });
+
+    // The authoring-experience flip was relocated to the Configure webview
+    // (setup-time preference with an explicit Save), so the hook no longer
+    // exposes handleSetAuthoringExperience.
+    describe('Authoring Experience (flip removed)', () => {
+        it('does not expose a handleSetAuthoringExperience handler', () => {
+            const { result } = renderActionsHook();
+
+            expect(
+                (result.current as Record<string, unknown>).handleSetAuthoringExperience,
+            ).toBeUndefined();
         });
     });
 

@@ -88,6 +88,10 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'renameProject')).toBe(true);
         });
 
+        it('does not register a setAuthoringExperience handler (relocated to Configure)', () => {
+            expect(hasHandler(dashboardHandlers, 'setAuthoringExperience')).toBe(false);
+        });
+
         it('should have exactly 20 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
@@ -97,7 +101,8 @@ describe('dashboardHandlers', () => {
             // 2 init + 2 lifecycle + 6 navigation + 1 mesh + 1 syncStorefront +
             // 1 refreshBlockLibrary + 1 auth + 1 project + 1 reset = 16, plus the
             // 4 new More-menu actions (copyPath, exportProject, republishContent,
-            // renameProject) = 20.
+            // renameProject) = 20. setAuthoringExperience lives in the Configure
+            // webview, not this map; openAi was removed with the dashboard AI tile.
             expect(types).toHaveLength(20);
         });
 

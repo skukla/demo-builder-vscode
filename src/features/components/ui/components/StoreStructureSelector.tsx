@@ -36,6 +36,12 @@ interface StoreStructureSelectorProps {
     onSelect: (code: string) => void;
     /** Whether the field is required */
     isRequired?: boolean;
+    /**
+     * Whether the picker is disabled (e.g. while store discovery is running).
+     * When disabled, the picker still renders even with no items yet so it
+     * occupies its footprint and the layout does not shift once data lands.
+     */
+    isDisabled?: boolean;
 }
 
 // ==========================================================
@@ -48,8 +54,11 @@ export function StoreStructureSelector({
     selectedCode,
     onSelect,
     isRequired,
+    isDisabled,
 }: StoreStructureSelectorProps) {
-    if (items.length === 0) {
+    // While disabled (detecting), keep the footprint even before items arrive so
+    // populating the picker in place does not shift content below it.
+    if (items.length === 0 && !isDisabled) {
         return null;
     }
 
@@ -59,6 +68,7 @@ export function StoreStructureSelector({
             selectedKey={selectedCode || null}
             onSelectionChange={(key) => onSelect(String(key))}
             isRequired={isRequired}
+            isDisabled={isDisabled}
             flex={1}
             menuWidth="size-3000"
         >

@@ -45,6 +45,7 @@ import Refresh from '@spectrum-icons/workflow/Refresh';
 import Settings from '@spectrum-icons/workflow/Settings';
 import StopCircle from '@spectrum-icons/workflow/StopCircle';
 import React from 'react';
+import type { AuthoringExperience } from '@/types/base';
 
 /** Overflow menu item keys. */
 type OverflowKey =
@@ -55,6 +56,12 @@ type OverflowKey =
     | 'republishContent'
     | 'devConsole'
     | 'reset';
+
+/** Human-readable label per authoring experience. */
+const EXPERIENCE_LABEL: Record<AuthoringExperience, string> = {
+    'da-live-classic': 'DA.live Classic',
+    'experience-workspace': 'Experience Workspace',
+};
 
 /**
  * Props for the ActionGrid component
@@ -88,6 +95,8 @@ export interface ActionGridProps {
     handleOpenLiveSite?: () => void;
     /** Handler for Open DA.live button (EDS only) */
     handleOpenDaLive?: () => void;
+    /** Resolved authoring experience — drives the Author label (EDS only) */
+    authoringExperience?: AuthoringExperience;
     /** Handler for Deploy Mesh button */
     handleDeployMesh: () => void;
     /** Handler for Sync Storefront button (EDS projects only) */
@@ -135,6 +144,7 @@ export function ActionGrid({
     handleOpenBrowser,
     handleOpenLiveSite,
     handleOpenDaLive,
+    authoringExperience = 'da-live-classic',
     handleDeployMesh,
     handleSyncStorefront,
     handleRefreshBlockLibrary,
@@ -235,7 +245,8 @@ export function ActionGrid({
                             </ActionButton>
                         )}
 
-                        {/* Author in DA.live — EDS only, content authoring surface */}
+                        {/* Author — EDS only. Labeled from the resolved authoring
+                            experience (Universal Editor / Experience Workspace). */}
                         {isEds && (
                             <ActionButton
                                 onPress={handleOpenDaLive}
@@ -244,7 +255,9 @@ export function ActionGrid({
                                 UNSAFE_className="dashboard-action-button dashboard-action-button--hero"
                             >
                                 <Edit size="L" />
-                                <Text UNSAFE_className="icon-label">Author in DA.live</Text>
+                                <Text UNSAFE_className="icon-label">
+                                    Author in {EXPERIENCE_LABEL[authoringExperience]}
+                                </Text>
                             </ActionButton>
                         )}
                     </div>

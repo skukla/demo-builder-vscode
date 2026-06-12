@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Per-project authoring experience — DA.live Classic or Experience Workspace.** SCs choose, per project, which AEM authoring experience a storefront uses. A new global setting `demoBuilder.daLive.authoringExperience` (default `da-live-classic`, preserving current behavior) sets the default for new projects; a per-project override on the EDS component metadata wins over it (resolver mirrors the BYOM-overlay precedence: per-project → global → DA.live Classic). The per-project choice is set in the project's **Configure** screen (an "Authoring Experience" radio group, EDS projects only); the "Author" button on the dashboard and projects list relabels to match ("Author in DA.live Classic" / "Author in Experience Workspace") and updates live after a save. Saving the choice persists it and re-applies the site-scoped DA `editor.path` row — the experience.adobe.com Universal Editor punch-out for DA.live Classic, the da.live canvas for Experience Workspace, or **clearing** the row when there is no punch-out to write (no `IMSOrgId`) so it can never go stale. DA.live Classic opens `https://da.live/#/<org>/<site>`; Experience Workspace opens the da.live-native canvas at `https://da.live/canvas#/<org>/<site>/index.html` (the `?nx=` branch is configurable via `demoBuilder.daLive.ewCanvasBranch`, default empty = production). Existing projects resolve to DA.live Classic, so their behavior is unchanged.
+
+- **Quick Edit wiring for every EDS storefront.** A new brand-agnostic vendoring step (modeled on the PDP 404 handler) adds the Experience Workspace WYSIWYG dependency to every EDS project at create, reset, and on a Configure flip to Experience Workspace: in `scripts/scripts.js` it exports `loadPage`, adds the Sidekick `custom:quick-edit` listener + a `?quick-edit` dynamic-import branch, and guards the first-paint `waitForFirstImage` wait; it writes `tools/quick-edit/quick-edit.js` and adds the `quick-edit` Sidekick plugin to the generated `config.json`. Inert under DA.live Classic; powers the Experience Workspace Layout (WYSIWYG) view. Idempotent and non-fatal; an extension-side anchor-match test pins the `scripts.js` anchors to the canonical boilerplate.
+
+### Changed
+
+- **DA `editor.path` now writes site-scoped.** The authoring punch-out path mapping moved from the org config (`/config/<org>`, via `applyOrgConfig`) to the per-site config (`/config/<org>/<site>`, via `applySiteConfig`) with a `/<org>/<site>` row key. Projects that share a DA org are now isolated: flipping one project's authoring experience no longer clobbers another site's `editor.path` row. Supersedes the beta.116 statement that `editor.path` stays org-scoped.
+
+### Removed
+
+- **`demoBuilder.daLive.editorPathPrefix` setting.** The real per-site `/<org>/<site>` `editor.path` key replaces the dummy left-hand prefix this setting supplied, leaving it with no readers.
+
 ## [1.0.0-beta.116] - 2026-06-11
 
 ### Fixed

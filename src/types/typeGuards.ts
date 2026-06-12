@@ -367,10 +367,30 @@ export function getEdsPreviewUrl(project: Project | undefined | null): string | 
  *
  * Constructs the URL from DA.live org and site stored in COMPONENT_IDS.EDS_STOREFRONT component instance metadata.
  *
+ * The resolved authoring experience selects the URL form (vscode stays OUT of
+ * this file — the caller resolves and passes it in):
+ *   - 'da-live-classic' (default): https://da.live/#/<org>/<site>
+ *   - 'experience-workspace' (param-less production canvas, the default):
+ *     https://da.live/canvas#/<org>/<site>/index.html
+ *     The param-less production canvas now hosts the live EW alpha. Only the
+ *     concrete document path (index.html) is load-bearing — the bare site root
+ *     renders blank. A non-empty ewCanvasBranch (sourced from the
+ *     demoBuilder.daLive.ewCanvasBranch setting via edsHelpers.getEwCanvasBranch)
+ *     re-adds a `?nx=<branch>` override to pin a specific pre-release da-nx build:
+ *     `da.live/canvas?nx=<branch>#/<org>/<site>/index.html`. index.html stays
+ *     hardcoded. The default param value keeps this webview-safe and back-compat.
+ *
  * @param project - The EDS project (can be undefined/null)
- * @returns The DA.live authoring URL (e.g., https://da.live/#/org/site), or undefined if not available
+ * @param experience - The resolved authoring experience (default 'da-live-classic')
+ * @param ewCanvasBranch - The da-nx branch for the EW `?nx=` override (default
+ *   '' → param-less production canvas); a non-empty value re-adds the override
+ * @returns The DA.live authoring URL, or undefined if not available
  */
-export function getEdsDaLiveUrl(project: Project | undefined | null): string | undefined {
+export function getEdsDaLiveUrl(
+    project: Project | undefined | null,
+    experience: 'da-live-classic' | 'experience-workspace' = 'da-live-classic',
+    ewCanvasBranch: string = '',
+): string | undefined {
     if (!isEdsProject(project)) return undefined;
     const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
     const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
@@ -378,6 +398,10 @@ export function getEdsDaLiveUrl(project: Project | undefined | null): string | u
 
     if (!daLiveOrg || !daLiveSite) return undefined;
 
+    if (experience === 'experience-workspace') {
+        const nxParam = ewCanvasBranch ? `?nx=${ewCanvasBranch}` : '';
+        return `https://da.live/canvas${nxParam}#/${daLiveOrg}/${daLiveSite}/index.html`;
+    }
     return `https://da.live/#/${daLiveOrg}/${daLiveSite}`;
 }
 

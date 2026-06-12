@@ -25,6 +25,7 @@ import { sessionUIState } from '@/core/state/sessionUIState';
 import { openInIncognito, TIMEOUTS } from '@/core/utils';
 import { validateProjectPath, validateURL } from '@/core/validation';
 import { hasMeshDeploymentRecord, determineMeshStatus } from '@/features/dashboard/handlers/meshStatusHelpers';
+import { getEwCanvasBranch, resolveProjectAuthoringExperience } from '@/features/eds/handlers/edsHelpers';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import type { Project } from '@/types/base';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -54,6 +55,13 @@ export const handleGetProjects: MessageHandler = async (
             if (project) {
                 projects.push(project);
             }
+        }
+
+        // Enrich projects with the resolved authoring experience so the card
+        // grid can render the Author label + flip control without importing the
+        // resolver or `vscode` into the webview (presentational UI).
+        for (const project of projects) {
+            project.resolvedAuthoringExperience = resolveProjectAuthoringExperience(project);
         }
 
         // Enrich projects with mesh staleness status (full fidelity check)
@@ -702,7 +710,11 @@ export const handleOpenDaLive: MessageHandler<{ projectPath: string }> = async (
         return { success: false, error: 'Project not found' };
     }
 
-    const daLiveUrl = getEdsDaLiveUrl(project);
+    const daLiveUrl = getEdsDaLiveUrl(
+        project,
+        resolveProjectAuthoringExperience(project),
+        getEwCanvasBranch(),
+    );
 
     if (!daLiveUrl) {
         return { success: false, error: 'DA.live URL not available' };
@@ -978,3 +990,9 @@ export const handleSetProjectPinned: MessageHandler<{ projectPath: string; pinne
         return { success: false, error: 'Failed to set project pinned state' };
     }
 };
+
+// The per-project authoring-experience control is a setup-time preference set
+// in the Configure webview (EDS-only radio group with an explicit Save), not an
+// on-the-fly action. The handler that flipped it from this surface was removed;
+// the dynamic "Author in X" label still reflects `resolvedAuthoringExperience`
+// (enriched in handleGetProjects).

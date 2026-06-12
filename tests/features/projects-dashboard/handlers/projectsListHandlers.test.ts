@@ -105,6 +105,10 @@ describe('projectsListHandlers', () => {
             expect(hasHandler(projectsListHandlers, 'openAi')).toBe(true);
         });
 
+        it('does not register a setAuthoringExperience handler (relocated to Configure)', () => {
+            expect(hasHandler(projectsListHandlers, 'setAuthoringExperience')).toBe(false);
+        });
+
         it('should have exactly 22 handlers', () => {
             const types = getRegisteredTypes(projectsListHandlers);
             expect(types).toHaveLength(22);
