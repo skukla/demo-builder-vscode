@@ -236,7 +236,7 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
         expect(mockSendAuthoringExperienceUpdate).toHaveBeenCalledTimes(1);
         expect(mockSendAuthoringExperienceUpdate).toHaveBeenCalledWith(
             'experience-workspace',
-            'https://da.live/canvas#/my-org/my-site/index.html',
+            'https://da.live/canvas#/my-org/my-site/index',
         );
     });
 

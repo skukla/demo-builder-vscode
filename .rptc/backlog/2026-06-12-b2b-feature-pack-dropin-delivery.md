@@ -1,6 +1,6 @@
 # B2B feature pack — dropins never reach the browser (research → focused completion)
 
-**Filed:** 2026-06-12 · **Status:** ready (research-first) · **Priority:** HIGH — owner needs working B2B today
+**Filed:** 2026-06-12 · **Status:** designed (research complete 2026-06-12) — ready for `/rptc:feat` · **Priority:** HIGH — owner needs working B2B today
 
 ## Provenance
 
@@ -60,23 +60,59 @@ Make the b2b feature pack (and the feature-pack mechanism generally) deliver dro
 load: correct published deps → run the dropin build → commit the generated `__dropins__` + import map
 + all initializers to the storefront repo.
 
-## Research questions (the pass must answer before designing)
+## Research questions — ANSWERED (research pass 2026-06-12, all HIGH confidence unless noted)
 
-1. **Canonical delivery:** confirm `build.mjs`/`postinstall` is the intended/official Adobe mechanism
-   for adding dropins (vs any `aio`/`aem` CLI or manual vendoring). Does `build.mjs` also edit the
-   head.html import map, or only copy files? What else does `postinstall.js` do?
-2. **Commit path:** the generated `__dropins__` + head.html are produced LOCALLY by `npm install`.
-   What commits/pushes them to the storefront GitHub repo so Helix serves them? Does any current step
-   do this, or is it the missing piece?
-3. **Where should this run in the demo-builder pipeline** — during `installFeaturePacks` (Git Tree
-   commit of generated files), or as a post-`npm install` local-build-then-push step in the EDS
-   storefront setup? Reconcile with the MCP isolated-install change (storefront `npm install` may
-   still fail for other reasons — does dropin delivery need its own resilient install of just the
-   `@dropins/*` deps + build, like the MCP fix does for MCP tools?).
-4. **Schema/installer changes:** does `FeaturePack` need a `dropins`/`importMap` field, or is
-   "deps + build + commit" enough generically?
-5. **Stale storefronts:** how do existing b2b storefronts (wrong dep names, partial initializers,
-   no `__dropins__`) get repaired — reset/recreate, or a migration?
+1. **Canonical delivery:** Adobe's mechanism = npm + TWO committed edits. `postinstall.js` *copies*
+   `node_modules/@dropins/X` → `scripts/__dropins__/X/` (only if X is in `dependencies`); `build.mjs`
+   does GraphQL fragment patching ONLY (it does **not** write the import map); the `head.html`
+   import-map entry (`@dropins/storefront-X/` → `/scripts/__dropins__/storefront-X/`) is
+   **hand-maintained**. Proof: `main` and `b2b` branches have byte-identical build scripts, but
+   `b2b/head.html` carries 6 hand-added import-map entries. No `aio`/`aem` CLI for this.
+2. **Commit path:** our pipeline writes to the storefront GitHub repo via the **Git Tree API**
+   (`githubFileOperations` `createTree`→`createCommit`→`updateBranchRef`), never `git push`. The
+   local `npm install`'s `postinstall` build vendors `__dropins__` into the LOCAL clone, but that
+   output is **never pushed** during create/reset (only user-triggered Sync Storefront would). Base
+   dropins reach the edge only because the canonical template commits them upstream and `/generate`
+   (or the zipball reset) copies the whole tree.
+3. **Pipeline placement:** inside `installFeaturePacks` (`featurePackInstaller.ts`), folded into the
+   atomic Git-Tree commit it already builds (called from `storefrontSetupPhase2.ts:99`). Reuse the
+   `installBlockCollections` subtree-copy pattern (`listRepoFiles` + `getBlobContent` from
+   `source@b2b`). **The MCP isolated-install pattern does NOT transfer** (different destination —
+   committed GitHub repo, not local `node_modules`; the build is redundant since the b2b dropins are
+   pre-built + committed on the `b2b` branch). Keep the MCP fix as-is.
+4. **Schema/installer changes:** add one additive field — `dropins?: { install: boolean;
+   sourceDir?: string; names: string[] }`. Import-map keys derive mechanically from `names` (no
+   separate `importMap` field — YAGNI). Installer: (a) copy each `scripts/__dropins__/<name>/**`
+   subtree from `source@b2b`, dedup vs dest; (b) additively merge import-map keys into `head.html`
+   (parse `<script type="importmap">`, add missing keys, re-serialize — precedent:
+   `pdp404HandlerPublisher` already parses + commits `head.html`). Initializers + deps already done.
+5. **Stale storefronts (MEDIUM-HIGH):** vendoring is additive + idempotent (dedup vs dest), so
+   re-running setup repairs broken storefronts — BUT the EDS reset path (`edsResetRepoHelper`) does
+   NOT currently re-run feature packs, so the fix must wire dropin vendoring into reset (or make reset
+   re-run feature packs). No bespoke migration needed.
+
+## Scoping (clarified by research)
+
+Two distinct "b2b" paths: the standalone **`b2b` demo package** clones the complete
+`adobe-commerce/boilerplate-b2b-template` (no feature pack — already works); the **broken case is the
+additive `b2b-commerce` feature pack** layered onto a citisignal/non-b2b clone of
+`hlxsites/aem-boilerplate-commerce@main`. This fix targets the additive case.
+
+## Recommended design (for the focused completion / /rptc:feat)
+
+Additive subtree vendoring, mirroring blocks:
+1. `src/types/featurePacks.ts` — add `dropins?: { install; sourceDir?; names: string[] }`.
+2. `feature-packs.json` — add the 6 b2b dropin `names` (company-management, company-switcher,
+   purchase-order, quick-order, quote-management, requisition-list) to the `b2b-commerce` pack.
+3. `featurePackInstaller.ts` — new `installFeaturePackDropins`: list+copy `scripts/__dropins__/<name>/**`
+   subtrees from `pack.source` (dedup vs dest), and additively inject import-map keys into `head.html`;
+   push into the existing atomic commit.
+4. `edsResetRepoHelper.ts` — run feature-pack dropin vendoring on reset so stale storefronts self-heal.
+5. Tests: subtree copy, import-map additive merge, idempotency/dedup, reset repair.
+
+`package.json` `@dropins/*` deps are cosmetic at runtime (runtime uses the vendored files, not
+`node_modules`) but kept for the Adobe-MCP update checker / dev typecheck; current `feature-packs.json`
+names are all published.
 
 ## Constraints
 
@@ -87,19 +123,28 @@ load: correct published deps → run the dropin build → commit the generated `
 
 ## Immediate stopgap (owner needs B2B today — separate from the research pass)
 
-Manual recovery for the existing `citisignal-b2b` storefront, pending the real fix:
-1. In the storefront `package.json`, replace the stale b2b deps with the current published set from
-   `feature-packs.json` (company-management ~1.2.0, company-switcher ~1.1.1, purchase-order ~1.1.1,
-   quick-order ~1.0.1, quote-management ~1.1.2, requisition-list ~1.3.0).
-2. `npm install` in the storefront (postinstall runs `build.mjs` → vendors b2b `__dropins__` + import map).
-3. Copy the 6 b2b initializers from `hlxsites/aem-boilerplate-commerce@b2b` `scripts/initializers/`.
-4. Commit + push the generated `scripts/__dropins__/`, `head.html`, and initializers to the storefront
-   repo; republish. Verify a b2b block (e.g. company switcher) loads at the edge.
+Manual recovery for the existing `citisignal-b2b` storefront, pending the real fix. Simplest is to
+copy the already-built artifacts from `hlxsites/aem-boilerplate-commerce@b2b` (everything is pre-built
+and committed there):
+1. Copy the 6 b2b `scripts/__dropins__/<name>/` subtrees from `@b2b` into the storefront
+   (company-management, company-switcher, purchase-order, quick-order, quote-management, requisition-list).
+2. **Manually add the 6 import-map entries to `head.html`** — copy them from `@b2b/head.html`
+   (`"@dropins/storefront-<name>/": "/scripts/__dropins__/storefront-<name>/"`). Research confirmed
+   `npm install`/`postinstall` does NOT write the import map — it only copies `__dropins__` files — so
+   this step is manual and load-bearing.
+3. Copy the 6 b2b initializers from `@b2b/scripts/initializers/`.
+4. Set the 6 b2b deps in `package.json` to the current published versions (from `feature-packs.json`).
+5. Commit + push `scripts/__dropins__/`, `head.html`, `scripts/initializers/`, and `package.json` to the
+   storefront GitHub repo; republish. Verify a b2b block (e.g. company switcher) loads at the edge.
+
+(Equivalent path: run `npm install` locally to populate `__dropins__`, but you STILL must hand-add the
+head.html import-map entries and commit/push everything — the build never writes the import map.)
 
 ## Kickoff prompt
 
-> Run `/rptc:research` on "EDS dropin delivery mechanism + how the b2b feature pack should vendor and
-> commit dropins (`scripts/__dropins__/` + head.html import map) so they load at the edge." Answer the
-> 5 research questions in `.rptc/backlog/2026-06-12-b2b-feature-pack-dropin-delivery.md`, then design a
-> focused completion of `featurePackInstaller.ts` (+ `FeaturePack` schema if needed). Coordinate with
-> the shipped MCP isolated-install change.
+> Research is complete (answers + design above). Run `/rptc:feat "Complete b2b feature-pack dropin
+> delivery: additively vendor the 6 b2b `scripts/__dropins__/<name>/` subtrees from `source@b2b` and
+> inject the matching head.html import-map entries in `featurePackInstaller.ts` (new `dropins` field on
+> the FeaturePack schema), mirroring `installBlockCollections`; wire it into `edsResetRepoHelper` so
+> stale storefronts self-heal. Per the design in
+> `.rptc/backlog/2026-06-12-b2b-feature-pack-dropin-delivery.md`."

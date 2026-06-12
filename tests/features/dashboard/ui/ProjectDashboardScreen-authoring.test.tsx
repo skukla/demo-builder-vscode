@@ -29,7 +29,7 @@ describe('ProjectDashboardScreen - Live Authoring Experience', () => {
 
         ctx.triggerMessage('authoringExperienceUpdate', {
             authoringExperience: 'experience-workspace',
-            edsDaLiveUrl: 'https://da.live/canvas#/my-org/my-site/index.html',
+            edsDaLiveUrl: 'https://da.live/canvas#/my-org/my-site/index',
         });
 
         await waitFor(() => {
@@ -42,7 +42,7 @@ describe('ProjectDashboardScreen - Live Authoring Experience', () => {
         renderDashboard({ isEds: true, authoringExperience: 'experience-workspace' });
 
         ctx.triggerMessage('authoringExperienceUpdate', {
-            edsDaLiveUrl: 'https://da.live/canvas#/my-org/my-site/index.html',
+            edsDaLiveUrl: 'https://da.live/canvas#/my-org/my-site/index',
         });
 
         await waitFor(() => {

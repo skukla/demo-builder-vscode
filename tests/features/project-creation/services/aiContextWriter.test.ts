@@ -142,8 +142,9 @@ describe('aiContextWriter', () => {
                 const result = generateAgentsMd(project, STACKS);
 
                 // Param-less production canvas form (default ewCanvasBranch '') with
-                // the concrete index.html doc. escapeMarkdown escapes only `#`.
-                expect(result).toContain('https://da.live/canvas\\#/my-org/my-site/index.html');
+                // the extensionless `index` doc (da.live appends `.html` itself; a
+                // `.html` suffix double-appends and 404s). escapeMarkdown escapes only `#`.
+                expect(result).toContain('https://da.live/canvas\\#/my-org/my-site/index');
                 expect(result).not.toContain('https://da.live/\\#/my-org/my-site');
             });
 
