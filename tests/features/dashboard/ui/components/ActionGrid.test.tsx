@@ -79,6 +79,14 @@ jest.mock('@spectrum-icons/workflow/PublishCheck', () => ({
     __esModule: true,
     default: () => <span data-testid="publish-icon" />,
 }));
+jest.mock('@spectrum-icons/workflow/More', () => ({
+    __esModule: true,
+    default: () => <span data-testid="more-icon" />,
+}));
+jest.mock('@spectrum-icons/workflow/Edit', () => ({
+    __esModule: true,
+    default: () => <span data-testid="edit-icon" />,
+}));
 
 describe('ActionGrid', () => {
     const defaultProps = {
@@ -95,6 +103,10 @@ describe('ActionGrid', () => {
         handleConfigure: jest.fn(),
         handleOpenDevConsole: jest.fn(),
         handleDeleteProject: jest.fn(),
+        handleRename: jest.fn(),
+        handleCopyPath: jest.fn(),
+        handleExportProject: jest.fn(),
+        handleResetProject: jest.fn(),
     };
 
     const edsProps = {
@@ -103,6 +115,7 @@ describe('ActionGrid', () => {
         handleOpenLiveSite: jest.fn(),
         handleOpenDaLive: jest.fn(),
         handleSyncStorefront: jest.fn(),
+        handleRepublishContent: jest.fn(),
     };
 
     /** Resolve the zone container element for a given data-zone value. */
@@ -303,6 +316,128 @@ describe('ActionGrid', () => {
             await user.click(screen.getByText('Dev Console'));
 
             expect(defaultProps.handleOpenDevConsole).toHaveBeenCalled();
+        });
+
+        it('should expose Copy Path in the overflow menu', () => {
+            const { container } = render(<ActionGrid {...defaultProps} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).getByText('Copy Path')).toBeInTheDocument();
+        });
+
+        it('should expose Export in the overflow menu', () => {
+            const { container } = render(<ActionGrid {...defaultProps} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).getByText('Export')).toBeInTheDocument();
+        });
+
+        it('should expose Reset as the last overflow item', () => {
+            const { container } = render(<ActionGrid {...defaultProps} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            const items = within(menu).getAllByRole('menuitem');
+            expect(items[items.length - 1]).toHaveTextContent('Reset');
+        });
+
+        it('should call handleCopyPath when Copy Path clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(<ActionGrid {...defaultProps} />);
+
+            await user.click(screen.getByText('Copy Path'));
+
+            expect(defaultProps.handleCopyPath).toHaveBeenCalled();
+        });
+
+        it('should call handleExportProject when Export clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(<ActionGrid {...defaultProps} />);
+
+            await user.click(screen.getByText('Export'));
+
+            expect(defaultProps.handleExportProject).toHaveBeenCalled();
+        });
+
+        it('should call handleResetProject when Reset clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(<ActionGrid {...defaultProps} />);
+
+            await user.click(screen.getByText('Reset'));
+
+            expect(defaultProps.handleResetProject).toHaveBeenCalled();
+        });
+    });
+
+    describe('Overflow Menu - Rename Gating', () => {
+        it('should show Rename for a stopped non-EDS project', () => {
+            const { container } = render(<ActionGrid {...defaultProps} isRunning={false} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).getByText('Rename')).toBeInTheDocument();
+        });
+
+        it('should hide Rename for a running non-EDS project', () => {
+            const { container } = render(<ActionGrid {...defaultProps} isRunning={true} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).queryByText('Rename')).not.toBeInTheDocument();
+        });
+
+        it('should show Rename for an EDS project even when running', () => {
+            const { container } = render(<ActionGrid {...edsProps} isRunning={true} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).getByText('Rename')).toBeInTheDocument();
+        });
+
+        it('should hide Rename when no handleRename is provided', () => {
+            const { handleRename: _handleRename, ...noRename } = defaultProps;
+            const { container } = render(<ActionGrid {...noRename} isRunning={false} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).queryByText('Rename')).not.toBeInTheDocument();
+        });
+
+        it('should call handleRename when Rename clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(<ActionGrid {...defaultProps} isRunning={false} />);
+
+            await user.click(screen.getByText('Rename'));
+
+            expect(defaultProps.handleRename).toHaveBeenCalled();
+        });
+    });
+
+    describe('Overflow Menu - Republish Content Gating (EDS)', () => {
+        it('should show Republish Content for EDS projects', () => {
+            const { container } = render(<ActionGrid {...edsProps} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).getByText('Republish Content')).toBeInTheDocument();
+        });
+
+        it('should hide Republish Content for non-EDS projects', () => {
+            const { container } = render(<ActionGrid {...defaultProps} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).queryByText('Republish Content')).not.toBeInTheDocument();
+        });
+
+        it('should hide Republish Content when handleRepublishContent is absent (EDS)', () => {
+            const { handleRepublishContent: _rc, ...edsNoRepublish } = edsProps;
+            const { container } = render(<ActionGrid {...edsNoRepublish} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).queryByText('Republish Content')).not.toBeInTheDocument();
+        });
+
+        it('should call handleRepublishContent when Republish Content clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(<ActionGrid {...edsProps} />);
+
+            await user.click(screen.getByText('Republish Content'));
+
+            expect(edsProps.handleRepublishContent).toHaveBeenCalled();
         });
     });
 

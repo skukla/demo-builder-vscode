@@ -78,18 +78,27 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'resetProject')).toBe(true);
         });
 
-        it('should have exactly 16 handlers', () => {
+        it('should include the new More-menu action handlers', () => {
+            // Given: dashboardHandlers object
+            // When: Checking for the new More-menu message types
+            // Then: copyPath, exportProject, republishContent, renameProject present
+            expect(hasHandler(dashboardHandlers, 'copyPath')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'exportProject')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'republishContent')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'renameProject')).toBe(true);
+        });
+
+        it('should have exactly 20 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers);
 
-            // Then: Exactly 16 handlers
+            // Then: Exactly 20 handlers
             // 2 init + 2 lifecycle + 6 navigation + 1 mesh + 1 syncStorefront +
-            // 1 refreshBlockLibrary + 1 auth + 1 project + 1 reset = 16
-            // (viewLogs + viewDebugLogs removed — the Logs toggle moved to the
-            //  sidebar utility; viewComponents removed with the dashboard
-            //  Files/Components browser; openAi removed with the dashboard AI tile)
-            expect(types).toHaveLength(16);
+            // 1 refreshBlockLibrary + 1 auth + 1 project + 1 reset = 16, plus the
+            // 4 new More-menu actions (copyPath, exportProject, republishContent,
+            // renameProject) = 20.
+            expect(types).toHaveLength(20);
         });
 
         it('should have handlers as functions', () => {

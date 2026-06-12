@@ -53,6 +53,14 @@ export interface UseDashboardActionsReturn {
     handleOpenDevConsole: () => void;
     /** Delete the project */
     handleDeleteProject: () => void;
+    /** Copy the project's folder path to the clipboard */
+    handleCopyPath: () => void;
+    /** Export the project's settings to a file */
+    handleExportProject: () => void;
+    /** Republish DA.live content to CDN (EDS projects only) */
+    handleRepublishContent: () => void;
+    /** Reset the project to its initial state */
+    handleResetProject: () => void;
     /** Navigate back to projects list */
     handleNavigateBack: () => void;
     /** Re-authenticate with Adobe (after session expired) */
@@ -134,6 +142,22 @@ export function useDashboardActions({
         webviewClient.postMessage('deleteProject');
     }, []);
 
+    const handleCopyPath = useCallback(() => {
+        webviewClient.postMessage('copyPath');
+    }, []);
+
+    const handleExportProject = useCallback(() => {
+        webviewClient.postMessage('exportProject');
+    }, []);
+
+    const handleRepublishContent = useCallback(() => {
+        webviewClient.postMessage('republishContent');
+    }, []);
+
+    const handleResetProject = useCallback(() => {
+        webviewClient.postMessage('resetProject');
+    }, []);
+
     const handleNavigateBack = useCallback(() => {
         webviewClient.postMessage('navigateBack');
     }, []);
@@ -154,6 +178,10 @@ export function useDashboardActions({
         handleConfigure,
         handleOpenDevConsole,
         handleDeleteProject,
+        handleCopyPath,
+        handleExportProject,
+        handleRepublishContent,
+        handleResetProject,
         handleNavigateBack,
         handleReAuthenticate,
     };

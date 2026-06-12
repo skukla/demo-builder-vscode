@@ -17,9 +17,11 @@ import {
 import React, { useState, useEffect, useRef } from 'react';
 import { ActionGrid } from './components/ActionGrid';
 import { AiCapabilitiesModal } from './components/AiCapabilitiesModal';
+import { DashboardRenameDialog } from './components/DashboardRenameDialog';
 import { isStartActionDisabled } from './dashboardPredicates';
 import { useDashboardActions } from './hooks/useDashboardActions';
 import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
+import { useRenameDialog } from './hooks/useRenameDialog';
 import { StatusCard } from '@/core/ui/components/feedback';
 import { PageLayout, PageHeader } from '@/core/ui/components/layout';
 import { useFocusTrap, useSingleTimer } from '@/core/ui/hooks';
@@ -84,6 +86,7 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
     // State for browser opening (passed to actions hook)
     const [isOpeningBrowser, setIsOpeningBrowser] = useState(false);
     const [showCapabilities, setShowCapabilities] = useState(false);
+    const { showRenameDialog, openRenameDialog, closeRenameDialog, confirmRename } = useRenameDialog();
 
     // Status management via extracted hook
     const {
@@ -119,6 +122,10 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
         handleConfigure,
         handleOpenDevConsole,
         handleDeleteProject,
+        handleCopyPath,
+        handleExportProject,
+        handleRepublishContent,
+        handleResetProject,
         handleNavigateBack,
         handleReAuthenticate,
     } = useDashboardActions({
@@ -279,13 +286,29 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
                             handleDeployMesh={handleDeployMesh}
                             handleSyncStorefront={handleSyncStorefront}
                             handleRefreshBlockLibrary={isEdsStable ? handleRefreshBlockLibrary : undefined}
+                            handleRepublishContent={isEdsStable ? handleRepublishContent : undefined}
                             handleConfigure={handleConfigure}
                             handleOpenDevConsole={handleOpenDevConsole}
+                            handleRename={openRenameDialog}
+                            handleCopyPath={handleCopyPath}
+                            handleExportProject={handleExportProject}
+                            handleResetProject={handleResetProject}
                             handleDeleteProject={handleDeleteProject}
                         />
                     </div>
                 </div>
             </PageLayout>
+
+            {/* Rename dialog — opened from the More menu's Rename item. On confirm
+                we post renameProject; the backend re-sends init so the title
+                refreshes. The dialog reuses the projects-list component. */}
+            <DashboardRenameDialog
+                isOpen={showRenameDialog}
+                projectName={displayName}
+                projectPath={project?.path}
+                onRename={confirmRename}
+                onClose={closeRenameDialog}
+            />
 
             {/* Capability catalog — reached from the "View AI Capabilities" link,
                 NOT the health badge. Two sections (skills + MCP servers) plus a

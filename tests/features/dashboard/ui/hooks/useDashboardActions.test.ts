@@ -76,6 +76,10 @@ describe('useDashboardActions', () => {
             expect(result.current.handleDeleteProject).toBeDefined();
             expect(result.current.handleNavigateBack).toBeDefined();
             expect(result.current.handleReAuthenticate).toBeDefined();
+            expect(result.current.handleCopyPath).toBeDefined();
+            expect(result.current.handleExportProject).toBeDefined();
+            expect(result.current.handleRepublishContent).toBeDefined();
+            expect(result.current.handleResetProject).toBeDefined();
         });
 
         it('should return functions for all handlers', () => {
@@ -219,6 +223,46 @@ describe('useDashboardActions', () => {
             });
 
             expect(mockPostMessage).toHaveBeenCalledWith('reAuthenticate');
+        });
+
+        it('should send copyPath message', () => {
+            const { result } = renderActionsHook();
+
+            act(() => {
+                result.current.handleCopyPath();
+            });
+
+            expect(mockPostMessage).toHaveBeenCalledWith('copyPath');
+        });
+
+        it('should send exportProject message', () => {
+            const { result } = renderActionsHook();
+
+            act(() => {
+                result.current.handleExportProject();
+            });
+
+            expect(mockPostMessage).toHaveBeenCalledWith('exportProject');
+        });
+
+        it('should send republishContent message', () => {
+            const { result } = renderActionsHook();
+
+            act(() => {
+                result.current.handleRepublishContent();
+            });
+
+            expect(mockPostMessage).toHaveBeenCalledWith('republishContent');
+        });
+
+        it('should send resetProject message', () => {
+            const { result } = renderActionsHook();
+
+            act(() => {
+                result.current.handleResetProject();
+            });
+
+            expect(mockPostMessage).toHaveBeenCalledWith('resetProject');
         });
     });
 

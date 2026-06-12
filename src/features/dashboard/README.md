@@ -12,6 +12,7 @@ The dashboard is designed for at-a-glance status monitoring and one-click action
 - **Mesh Status Monitoring**: Async mesh status checking with auth-aware prompts
 - **Adobe Context Display**: Show organization, project, and workspace
 - **Quick Actions**: Start, Stop, Open Browser, Deploy Mesh (shown conditionally when project includes a mesh component), Configure
+- **More Menu (overflow)**: Rename (non-EDS: stopped only), Copy Path, Export, Refresh Block Library (EDS), Republish Content (EDS), Dev Console, Reset
 - **Focus Retention**: Maintain webview focus for in-place actions (Start/Stop)
 - **Change Detection**: Detect frontend config changes requiring restart
 - **Re-Authentication**: Handle lost Adobe access with browser auth flow
@@ -104,6 +105,21 @@ The dashboard is designed for at-a-glance status monitoring and one-click action
 **Operations**:
 1. Execute demoBuilder.deleteProject command
 2. Close dashboard after deletion
+
+### More-menu handlers (overflow)
+
+These back the dashboard "More" overflow items. All resolve the project via
+`getCurrentProject()` and reuse the same services as the projects-list kebab.
+
+- **handleRenameProject** — validates `{newName}`, delegates to the shared
+  `renameProjectCore` (folder rename + path updates + recent-projects + save),
+  then re-sends `init` so the dashboard title refreshes.
+- **handleCopyPath** — copy the current project's folder path to the clipboard.
+- **handleExportProject** — export project settings to a file (reuses
+  `exportProjectSettings`).
+- **handleRepublishContent** — republish DA.live content to the CDN (EDS-only).
+- Reset reuses the existing `handleResetProject` (`resetProject`), now surfaced
+  in the More menu.
 
 ### handleNavigateBack
 
@@ -307,6 +323,11 @@ if (meshComponent && meshComponent.status !== 'deploying' && meshComponent.statu
 - `configure` - Open configuration UI
 - `deployMesh` - Deploy API mesh
 - `openDevConsole` - Open Adobe Developer Console
+- `renameProject` - Rename current project (delegates to shared `renameProjectCore`)
+- `copyPath` - Copy project folder path to clipboard
+- `exportProject` - Export project settings to a file
+- `republishContent` - Republish DA.live content to the CDN (EDS-only)
+- `resetProject` - Reset project state
 - `deleteProject` - Delete current project
 - `re-authenticate` - Trigger browser authentication
 - `navigateBack` - Navigate back to projects list
@@ -428,6 +449,11 @@ if (!verification.exists) {
 - [ ] Deploy Mesh button works
 - [ ] Configure button works
 - [ ] Developer Console link works
+- [ ] More menu: Rename works (folder renamed, title updates; hidden while a non-EDS demo runs)
+- [ ] More menu: Copy Path copies the project path to the clipboard
+- [ ] More menu: Export writes project settings to a file
+- [ ] More menu: Republish Content works (EDS projects only)
+- [ ] More menu: Reset works
 - [ ] Re-authenticate flow works
 - [ ] Focus retained for in-place actions
 - [ ] Delete Project works

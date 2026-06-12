@@ -47,7 +47,14 @@ import StopCircle from '@spectrum-icons/workflow/StopCircle';
 import React from 'react';
 
 /** Overflow menu item keys. */
-type OverflowKey = 'refreshBlockLibrary' | 'devConsole';
+type OverflowKey =
+    | 'rename'
+    | 'copyPath'
+    | 'export'
+    | 'refreshBlockLibrary'
+    | 'republishContent'
+    | 'devConsole'
+    | 'reset';
 
 /**
  * Props for the ActionGrid component
@@ -87,10 +94,23 @@ export interface ActionGridProps {
     handleSyncStorefront?: () => void;
     /** Handler for Refresh Block Library overflow item (EDS projects only) */
     handleRefreshBlockLibrary?: () => void;
+    /** Handler for Republish Content overflow item (EDS projects only) */
+    handleRepublishContent?: () => void;
     /** Handler for Configure button */
     handleConfigure: () => void;
     /** Handler for Dev Console button (overflow menu) */
     handleOpenDevConsole: () => void;
+    /**
+     * Handler for the Rename overflow item. Opens the rename dialog (owned by
+     * ProjectDashboardScreen). Optional — gated like the kebab's Edit action.
+     */
+    handleRename?: () => void;
+    /** Handler for the Copy Path overflow item */
+    handleCopyPath: () => void;
+    /** Handler for the Export overflow item */
+    handleExportProject: () => void;
+    /** Handler for the Reset overflow item (always shown, last in the menu) */
+    handleResetProject: () => void;
     /** Handler for Delete button */
     handleDeleteProject: () => void;
 }
@@ -118,17 +138,40 @@ export function ActionGrid({
     handleDeployMesh,
     handleSyncStorefront,
     handleRefreshBlockLibrary,
+    handleRepublishContent,
     handleConfigure,
     handleOpenDevConsole,
+    handleRename,
+    handleCopyPath,
+    handleExportProject,
+    handleResetProject,
     handleDeleteProject,
 }: ActionGridProps): React.ReactElement {
+    // Rename gating mirrors the kebab's Edit: non-EDS only while stopped, EDS always.
+    const canRename = Boolean(handleRename) && (isEds || !isRunning);
+
     const handleOverflowAction = (key: React.Key): void => {
         switch (key) {
+            case 'rename' satisfies OverflowKey:
+                handleRename?.();
+                return;
+            case 'copyPath' satisfies OverflowKey:
+                handleCopyPath();
+                return;
+            case 'export' satisfies OverflowKey:
+                handleExportProject();
+                return;
             case 'refreshBlockLibrary' satisfies OverflowKey:
                 handleRefreshBlockLibrary?.();
                 return;
+            case 'republishContent' satisfies OverflowKey:
+                handleRepublishContent?.();
+                return;
             case 'devConsole' satisfies OverflowKey:
                 handleOpenDevConsole();
+                return;
+            case 'reset' satisfies OverflowKey:
+                handleResetProject();
                 return;
         }
     };
@@ -269,10 +312,17 @@ export function ActionGrid({
                             <Text UNSAFE_className="icon-label">More</Text>
                         </ActionButton>
                         <Menu onAction={handleOverflowAction}>
+                            {canRename ? <Item key="rename">Rename</Item> : null}
+                            <Item key="copyPath">Copy Path</Item>
+                            <Item key="export">Export</Item>
                             {isEds && handleRefreshBlockLibrary ? (
                                 <Item key="refreshBlockLibrary">Refresh Block Library</Item>
                             ) : null}
+                            {isEds && handleRepublishContent ? (
+                                <Item key="republishContent">Republish Content</Item>
+                            ) : null}
                             <Item key="devConsole">Dev Console</Item>
+                            <Item key="reset">Reset</Item>
                         </Menu>
                     </MenuTrigger>
                 </div>
