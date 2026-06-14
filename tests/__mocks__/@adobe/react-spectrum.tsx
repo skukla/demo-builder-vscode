@@ -113,6 +113,7 @@ export const Picker: React.FC<any> = ({
     label,
     'aria-label': ariaLabel,
     UNSAFE_className,
+    isDisabled,
     ...props
 }) => {
     const items = React.Children.toArray(children);
@@ -131,6 +132,7 @@ export const Picker: React.FC<any> = ({
                 data-testid="spectrum-picker"
                 aria-label={ariaLabel || label}
                 aria-haspopup="listbox"
+                disabled={isDisabled}
                 {...filterSpectrumProps(props)}
             >
                 {selectedLabel}
@@ -140,6 +142,7 @@ export const Picker: React.FC<any> = ({
                 data-testid="spectrum-picker-select"
                 value={selectedKey || ''}
                 onChange={(e) => onSelectionChange?.(e.target.value)}
+                disabled={isDisabled}
                 style={{ display: 'none' }}
             >
                 {placeholder && <option value="">{placeholder}</option>}
@@ -287,11 +290,6 @@ export const Divider: React.FC<any> = (props) => (
 // StatusLight mock
 export const StatusLight: React.FC<any> = ({ children, variant, ...props }) => (
     <span data-testid="spectrum-statuslight" data-variant={variant} {...filterSpectrumProps(props)}>{children}</span>
-);
-
-// Badge mock
-export const Badge: React.FC<any> = ({ children, variant, ...props }) => (
-    <span data-testid="spectrum-badge" data-variant={variant} {...filterSpectrumProps(props)}>{children}</span>
 );
 
 // Well mock
@@ -472,8 +470,14 @@ export const Switch: React.FC<any> = ({
 );
 
 // Radio and RadioGroup mocks
-export const RadioGroup: React.FC<any> = ({ children, value, onChange, ...props }) => (
-    <div data-testid="spectrum-radiogroup" role="radiogroup" {...filterSpectrumProps(props)}>
+export const RadioGroup: React.FC<any> = ({ children, value, onChange, label, ...props }) => (
+    <div
+        data-testid="spectrum-radiogroup"
+        role="radiogroup"
+        aria-label={typeof label === 'string' ? label : undefined}
+        {...filterSpectrumProps(props)}
+    >
+        {label ? <span>{label}</span> : null}
         {React.Children.map(children, (child: any) =>
             React.cloneElement(child, { selectedValue: value, onSelect: onChange })
         )}

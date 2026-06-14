@@ -5,7 +5,9 @@
  * content copy, permissions, block library, EDS settings, cache purge, CDN publish.
  */
 
+import * as vscode from 'vscode';
 import { ensureEdsContent } from '@/features/project-creation/services/edsContentSetup';
+import type { PatchReport } from '@/features/eds/services/patchReportHelper';
 
 const mockCopyContentFromSource = jest.fn();
 const mockCreateBlockLibraryFromTemplate = jest.fn();
@@ -133,6 +135,53 @@ describe('ensureEdsContent', () => {
         expect(result).toBe(false);
         expect(mockCopyContentFromSource).not.toHaveBeenCalled();
         expect(mockConfigureDaLivePermissions).not.toHaveBeenCalled();
+    });
+
+    // ADR-006 D1: the import/recovery path threads a PatchReport through the
+    // content copy so unapplied content patches surface in the same toast as
+    // unapplied code patches do on create/reset.
+
+    it('threads a PatchReport into copyContentFromSource (7th arg)', async () => {
+        await ensureEdsContent(makeConfig(), makeDeps());
+
+        const args = mockCopyContentFromSource.mock.calls[0];
+        // 7th positional arg = patchReport. Empty report shape: { results: [] }
+        expect(args[6]).toEqual(expect.objectContaining({ results: expect.any(Array) }));
+    });
+
+    it('does NOT fire the warning toast when no content patches failed', async () => {
+        await ensureEdsContent(makeConfig(), makeDeps());
+
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+    });
+
+    it('fires the warning toast when an unapplied content patch lands in the report', async () => {
+        // Simulate copyContentFromSource recording an unapplied content-patch
+        // result by mutating the patchReport arg before resolving.
+        mockCopyContentFromSource.mockImplementation(async (
+            _src: unknown,
+            _destOrg: unknown,
+            _destSite: unknown,
+            _progress: unknown,
+            _ids: unknown,
+            _source: unknown,
+            patchReport: PatchReport | undefined,
+        ) => {
+            patchReport?.results.push({
+                kind: 'content',
+                patchId: 'index-product-teaser-sku',
+                target: '/',
+                applied: false,
+                reason: 'Search pattern not found in content',
+            });
+            return { success: true, totalFiles: 5, failedFiles: [] };
+        });
+
+        await ensureEdsContent(makeConfig(), makeDeps());
+
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
+        const msg = (vscode.window.showWarningMessage as jest.Mock).mock.calls[0][0] as string;
+        expect(msg).toContain('index-product-teaser-sku');
     });
 
     it('copies content and runs all operations when content is missing', async () => {

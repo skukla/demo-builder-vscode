@@ -15,7 +15,7 @@ Use this skill when the user needs to scrape pages behind an authentication wall
 
 ## Prerequisites
 
-- `@playwright/mcp` installed in the storefront's `node_modules` (Demo Builder auto-installs it via the EDS Storefront component).
+- `@playwright/mcp` installed in the project's isolated MCP tools dir (`<project>/.demo-builder-mcp/node_modules/`; Demo Builder auto-installs it, decoupled from the storefront's `node_modules`).
 - Chromium binary downloaded on first Playwright use (~150 MB, one-time, shared via `~/Library/Caches/ms-playwright/`).
 - The user has valid credentials for the target site.
 

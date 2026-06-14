@@ -31,7 +31,6 @@ export interface WizardState {
     upstream?: { owner: string; repo: string };
     selectedAddons?: string[];  // Selected addon IDs (e.g., ['adobe-commerce-aco'])
     selectedBlockLibraries?: string[];  // Selected block library IDs (e.g., ['isle5', 'demo-team-blocks'])
-    selectedFeaturePacks?: string[];  // Selected feature pack IDs (e.g., ['b2b-commerce'])
     selectedOptionalDependencies?: string[];  // Selected optional dependency IDs (e.g., mesh component IDs from stack.optionalDependencies)
     customBlockLibraries?: CustomBlockLibrary[];  // Custom block libraries added by URL
     packageConfigDefaults?: Record<string, string>;  // Package-specific config defaults (e.g., store codes)
@@ -393,11 +392,6 @@ export interface EDSConfig {
         error?: string;
     };
 
-    // Repoless satellite: the existing upstream repo this site references as its code
-    // source (set by the content-SC Join flow). Drives the satellite short path
-    // (no fork, cross-org registration). See step-04.
-    upstream?: { owner: string; repo: string };
-
     // Template source configuration (from package storefront)
     /** Template repository owner (e.g., 'demo-system-stores') - for GitHub reset operations */
     templateOwner?: string;
@@ -424,6 +418,19 @@ export interface EDSConfig {
     contentPatches?: string[];
     /** External source for content patches (from demo-packages.json storefronts) */
     contentPatchSource?: {
+        owner: string;
+        repo: string;
+        path: string;
+    };
+    /** Code patch IDs to apply during create/reset (ADR-006 Step 5). Sibling of
+     *  contentPatches but operates on repo files. Empty / undefined for legacy
+     *  / non-thin-layer storefronts. */
+    codePatches?: string[];
+    /** External code-patch source. When set, the storefront is "thin-layer" per
+     *  ADR-006 — lastSyncedCommit records the LKG SHA read from this repo's
+     *  `last-known-good` file, and reset pins to LKG. Canonical home:
+     *  skukla/eds-demo-patches. */
+    codePatchSource?: {
         owner: string;
         repo: string;
         path: string;

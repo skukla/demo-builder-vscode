@@ -272,37 +272,6 @@ The component system generates a configuration object that includes:
 4. **Clear Dependencies**: Explicit required/optional relationships
 5. **Type Safety**: Full TypeScript support
 
-## Component Tree Provider
-
-The Component Tree Provider offers a VS Code tree view for browsing component source files within the Demo Builder sidebar.
-
-### Features
-
-- **File Browser**: Navigate component source code directly from VS Code
-- **Smart Filtering**: Hides `.env` files (managed via Configure UI)
-- **Quick Access**: Click to open component files in editor
-- **Status Indicators**: Visual indicators for component state
-
-### Implementation
-
-Located in `src/providers/componentTreeProvider.ts`:
-
-```typescript
-class ComponentTreeProvider implements vscode.TreeDataProvider<FileSystemItem> {
-  // Provides tree structure for all project components
-  // Filters out .env files and build artifacts
-  // Updates automatically when components change
-}
-```
-
-### Usage
-
-Available in the Demo Builder sidebar view:
-- **Demo Builder: Components** tree view
-- Shows all installed components
-- Expandable file tree for each component
-- Click to open files in editor
-
 ## Component Version Tracking
 
 The extension tracks component versions to support the auto-update system.

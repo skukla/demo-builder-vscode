@@ -21,7 +21,8 @@
  * @module features/eds/services/edsResetService
  */
 
-import { getGitHubServices, configureDaLivePermissions, getDaLiveAuthService, ensureDaLiveAuth } from '../handlers/edsHelpers';
+import { getGitHubServices, configureDaLivePermissions, getDaLiveAuthService, ensureDaLiveAuth, surfaceOverlayRegistrationFailure } from '../handlers/edsHelpers';
+import { retryConfigWriteOnPropagation } from './configServiceRetry';
 import { verifyCdnResources } from './configSyncService';
 import { buildSiteConfigParams, ConfigurationService } from './configurationService';
 import { DaLiveContentOperations } from './daLiveContentOperations';
@@ -33,6 +34,7 @@ import { resetRepoToTemplate } from './edsResetRepoHelper';
 import type { GitHubFileOperations } from './githubFileOperations';
 import type { GitHubTokenService } from './githubTokenService';
 import { HelixService } from './helixService';
+import { createPatchReport, addCodeResult, reportUnapplied } from './patchReportHelper';
 import { migrateStorefrontNamingIfNeeded } from './storefrontNameMigration';
 import { updateStorefrontState } from './storefrontStalenessDetector';
 import { DaLiveAuthError, GitHubAppNotInstalledError } from './types';
@@ -60,6 +62,7 @@ const MAX_REAUTH_ATTEMPTS = 2;
 const PIPELINE_STEP_MAP: Record<string, number> = {
     'content-clear': 8, 'content-copy': 8, 'block-library': 9,
     'eds-settings': 10, 'cache-purge': 11, 'content-publish': 11, 'library-publish': 11,
+    'catalog-prewarm': 11,
 };
 
 // ==========================================================
@@ -139,17 +142,35 @@ async function publishConfigAndRegisterSite(
     report(7, 'Updating Configuration Service...');
     const configService = new ConfigurationService(tokenProvider, logger);
     try {
-        const configResult = await configService.updateSiteConfig(
-            buildSiteConfigParams(repoOwner, repoName, daLiveOrg, daLiveSite, byomOverlayUrl),
+        // Retry on 403 to ride out AEM Code Sync admin-role propagation, matching
+        // the create path. Without this, a transient propagation 403 on reset —
+        // the path used to REPAIR a broken storefront — silently drops the overlay.
+        const configResult = await retryConfigWriteOnPropagation(
+            () => configService.updateSiteConfig(
+                buildSiteConfigParams(repoOwner, repoName, daLiveOrg, daLiveSite, byomOverlayUrl),
+            ),
+            (attempt, total) => report(7, `Waiting for Configuration Service access (${attempt}/${total})...`),
         );
         if (configResult.success) {
             logger.info('[EdsReset] Configuration Service updated');
             report(7, 'Configuration Service updated');
+        } else if (byomOverlayUrl) {
+            // The overlay rides in this same config write. A failure here leaves
+            // PDPs resolving against da.live (404) — surface it so the user resets.
+            // Log-only helper (headless-safe); report() is the context-appropriate
+            // surface (UI progress or MCP tool output).
+            surfaceOverlayRegistrationFailure(logger);
+            report(7, '⚠️ Product pages not registered — reset again to enable product detail pages');
         } else {
             logger.warn(`[EdsReset] Configuration Service update warning: ${configResult.error}`);
         }
     } catch (configError) {
-        logger.warn(`[EdsReset] Configuration Service update skipped: ${(configError as Error).message}`);
+        if (byomOverlayUrl) {
+            surfaceOverlayRegistrationFailure(logger);
+            report(7, '⚠️ Product pages not registered — reset again to enable product detail pages');
+        } else {
+            logger.warn(`[EdsReset] Configuration Service update skipped: ${(configError as Error).message}`);
+        }
     }
 }
 
@@ -196,7 +217,11 @@ function mapPipelineProgress(
  */
 async function runContentPipeline(
     params: EdsResetParams,
-    repoResetResult: { blockCollectionIds?: string[]; libraryContentSources: Array<{ org: string; site: string }> },
+    repoResetResult: {
+        blockCollectionIds?: string[];
+        libraryContentSources: Array<{ org: string; site: string }>;
+        canonicalCodePatchResults?: import('./codePatchRegistry').CodePatchResult[];
+    },
     daLiveContentOps: DaLiveContentOperations,
     githubFileOps: GitHubFileOperations,
     githubTokenService: GitHubTokenService,
@@ -206,9 +231,20 @@ async function runContentPipeline(
 ): Promise<number> {
     const {
         repoOwner, repoName, daLiveOrg, daLiveSite, templateOwner, templateRepo,
-        contentSource: contentSourceConfig, includeBlockLibrary = false, contentPatches,
-        byomOverlayUrl,
+        contentSource: contentSourceConfig, includeBlockLibrary = false,
+        contentPatches, contentPatchSource,
+        codePatches, codePatchSource,
+        byomOverlayUrl, project,
     } = params;
+
+    // Seed the pipeline's patch report with the canonical-phase code-patch
+    // results from `resetRepoToTemplate`. The pipeline appends block-phase
+    // results and (eventually) content-patch results to the same report so
+    // the final aggregate carries everything the UI surface needs.
+    const patchReport = createPatchReport();
+    for (const r of repoResetResult.canonicalCodePatchResults ?? []) {
+        addCodeResult(patchReport, r);
+    }
 
     // tokenProvider required: DA.live content operations (copy, publish) need IMS token
     const helixService = new HelixService(context.logger, githubTokenService, tokenProvider);
@@ -220,11 +256,13 @@ async function runContentPipeline(
                 {
                     repoOwner, repoName, daLiveOrg, daLiveSite, templateOwner, templateRepo,
                     clearExistingContent: true, skipContent: !contentSourceConfig,
-                    contentSource: contentSourceConfig, contentPatches, includeBlockLibrary,
+                    contentSource: contentSourceConfig, contentPatches, contentPatchSource, includeBlockLibrary,
+                    codePatches, codePatchSource, patchReport,
                     blockCollectionIds: repoResetResult.blockCollectionIds,
                     libraryContentSources: repoResetResult.libraryContentSources,
                     purgeCache: true, skipPublish: false,
                     byomOverlayUrl,
+                    project,
                 },
                 { daLiveContentOps, githubFileOps, helixService, logger: context.logger },
                 (info) => mapPipelineProgress(info, report),
@@ -233,6 +271,11 @@ async function runContentPipeline(
             if (!pipelineResult.success) {
                 throw new Error(pipelineResult.error || 'Content pipeline failed');
             }
+
+            // Surface unapplied patches (if any) via the unified toast helper.
+            // Headless callers (MCP/AI reset) get warn-level logging only; UI
+            // callers can wrap this function and inject `showWarning` later.
+            reportUnapplied(patchReport, context.logger);
 
             context.logger.info('[EdsReset] Content pipeline completed successfully');
             return pipelineResult.contentFilesCopied;

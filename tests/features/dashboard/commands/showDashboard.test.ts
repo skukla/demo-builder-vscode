@@ -8,6 +8,7 @@
 
 import * as vscode from 'vscode';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
+import { BaseWebviewCommand } from '@/core/base';
 import { StateManager } from '@/core/state';
 import { Logger } from '@/core/logging';
 
@@ -140,5 +141,46 @@ describe('ProjectDashboardWebviewCommand - Bundle Loading', () => {
         const match = noncePattern.exec(scriptMatches![0]);
         expect(match).toBeDefined();
         expect(match![1].length).toBeGreaterThan(16);
+    });
+});
+
+describe('ProjectDashboardWebviewCommand - sendAuthoringExperienceUpdate', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.restoreAllMocks();
+    });
+
+    it('posts an authoringExperienceUpdate message to the active panel', async () => {
+        // Given: An active dashboard panel
+        const mockPostMessage = jest.fn().mockResolvedValue(true);
+        jest.spyOn(BaseWebviewCommand, 'getActivePanel').mockReturnValue({
+            webview: { postMessage: mockPostMessage },
+        } as unknown as vscode.WebviewPanel);
+
+        // When: An authoring-experience update is sent
+        await ProjectDashboardWebviewCommand.sendAuthoringExperienceUpdate(
+            'experience-workspace',
+            'https://da.live/canvas#/my-org/my-site/index',
+        );
+
+        // Then: The exact message shape is posted to the active panel
+        expect(BaseWebviewCommand.getActivePanel).toHaveBeenCalledWith('demoBuilder.projectDashboard');
+        expect(mockPostMessage).toHaveBeenCalledWith({
+            type: 'authoringExperienceUpdate',
+            payload: {
+                authoringExperience: 'experience-workspace',
+                edsDaLiveUrl: 'https://da.live/canvas#/my-org/my-site/index',
+            },
+        });
+    });
+
+    it('does nothing when there is no active panel', async () => {
+        // Given: No active dashboard panel
+        jest.spyOn(BaseWebviewCommand, 'getActivePanel').mockReturnValue(undefined);
+
+        // When/Then: Sending does not throw
+        await expect(
+            ProjectDashboardWebviewCommand.sendAuthoringExperienceUpdate('da-live-classic'),
+        ).resolves.toBeUndefined();
     });
 });

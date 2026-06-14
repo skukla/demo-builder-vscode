@@ -48,8 +48,6 @@ export interface WizardStepConfigWithRequirements {
     name: string;
     description?: string;
     enabled: boolean;
-    /** Optional: storefront flow this step belongs to (absent ⇒ all flows). */
-    flow?: 'commerce' | 'content';
     /** Optional: Component IDs that must ALL be selected for this step to appear (AND logic) */
     requiredComponents?: string[];
     /** Optional: Component IDs where ANY selection makes this step appear (OR logic) */
@@ -632,6 +630,8 @@ function buildProjectEdsConfig(wizardState: WizardState) {
         patches: eds.patches,
         contentPatches: eds.contentPatches,
         contentPatchSource: eds.contentPatchSource,
+        codePatches: eds.codePatches,
+        codePatchSource: eds.codePatchSource,
         repoUrl: eds.repoUrl,
         preflightComplete: eds.preflightComplete,
     };

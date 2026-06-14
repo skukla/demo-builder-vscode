@@ -53,17 +53,17 @@ describe('lifecycleHandlers', () => {
             // Then: Utility handlers present
             expect(hasHandler(lifecycleHandlers, 'log')).toBe(true);
             expect(hasHandler(lifecycleHandlers, 'open-adobe-console')).toBe(true);
-            expect(hasHandler(lifecycleHandlers, 'show-logs')).toBe(true);
             expect(hasHandler(lifecycleHandlers, 'openExternal')).toBe(true);
         });
 
-        it('should have exactly 11 handlers', () => {
+        it('should have exactly 10 handlers', () => {
             // Given: lifecycleHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(lifecycleHandlers);
 
-            // Then: Exactly 11 handlers
-            expect(types).toHaveLength(11);
+            // Then: Exactly 10 handlers
+            // (show-logs removed — the Logs toggle moved to the sidebar utility)
+            expect(types).toHaveLength(10);
         });
 
         it('should have handlers as functions', () => {

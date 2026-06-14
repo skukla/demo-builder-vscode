@@ -153,7 +153,7 @@ export class SyncStorefrontCommand extends BaseCommand {
         }
 
         progress.report({ message: 'Waiting for conflict resolution in Source Control…' });
-        await vscode.commands.executeCommand('workbench.view.scm');
+        await this.revealStorefrontConflicts(storefrontPath);
 
         try {
             const polling = new PollingService();
@@ -258,30 +258,80 @@ export class SyncStorefrontCommand extends BaseCommand {
         }
     }
 
-    private async areAllConflictsResolved(storefrontPath: string): Promise<boolean> {
-        // `git diff --name-only --diff-filter=U` lists files still containing
-        // unresolved merge conflicts. When the list is empty, the rebase can
-        // continue. Belt-and-braces: also scan the listed files for marker
-        // text in case `git status` lags behind on-disk edits.
+    /**
+     * Surface the storefront's merge conflicts in VS Code's UI.
+     *
+     * The storefront is an independent git repo nested several levels inside the
+     * workspace folder (`<project>/components/eds-storefront`). VS Code's Source
+     * Control panel does not auto-discover it, so the conflict prompt used to
+     * send users to a panel that showed nothing. Register the repo with the
+     * built-in Git extension, reveal the SCM view, and open each conflicted file
+     * so the inline merge controls are right in front of the user.
+     */
+    private async revealStorefrontConflicts(storefrontPath: string): Promise<void> {
         try {
-            const { stdout } = await execFile('git', ['-C', storefrontPath, 'diff', '--name-only', '--diff-filter=U']);
-            const files = stdout.split('\n').map(s => s.trim()).filter(Boolean);
-            if (files.length === 0) return true;
+            await vscode.commands.executeCommand('git.openRepository', storefrontPath);
+        } catch (err) {
+            this.logger.warn(
+                '[SyncStorefront] Could not register the storefront repo with Source Control; conflicts may not be visible there',
+                err instanceof Error ? err : undefined,
+            );
+        }
 
-            for (const rel of files) {
-                const abs = path.resolve(storefrontPath, rel);
-                try {
-                    const content = await fsPromises.readFile(abs, 'utf-8');
-                    if (CONFLICT_MARKER_RE.test(content)) return false;
-                } catch {
-                    // File deleted or unreadable; treat as unresolved.
-                    return false;
-                }
+        await vscode.commands.executeCommand('workbench.view.scm');
+
+        let conflicted: string[] = [];
+        try {
+            conflicted = await this.listConflictedFiles(storefrontPath);
+        } catch {
+            conflicted = [];
+        }
+        for (const file of conflicted) {
+            try {
+                const doc = await vscode.workspace.openTextDocument(file);
+                await vscode.window.showTextDocument(doc, { preview: false });
+            } catch {
+                // Best-effort: the SCM view still lists the file even if it won't open here.
             }
-            return true;
+        }
+    }
+
+    /**
+     * Absolute paths of files with unresolved merge conflicts in the storefront.
+     * `git diff --name-only --diff-filter=U` lists exactly those files. Throws
+     * on git failure so callers can decide how to interpret the error.
+     */
+    private async listConflictedFiles(storefrontPath: string): Promise<string[]> {
+        const { stdout } = await execFile('git', ['-C', storefrontPath, 'diff', '--name-only', '--diff-filter=U']);
+        return stdout
+            .split('\n')
+            .map(s => s.trim())
+            .filter(Boolean)
+            .map(rel => path.resolve(storefrontPath, rel));
+    }
+
+    private async areAllConflictsResolved(storefrontPath: string): Promise<boolean> {
+        // When no files carry unresolved conflicts, the rebase can continue.
+        // Belt-and-braces: also scan the listed files for marker text in case
+        // `git status` lags behind on-disk edits.
+        let files: string[];
+        try {
+            files = await this.listConflictedFiles(storefrontPath);
         } catch {
             return false;
         }
+        if (files.length === 0) return true;
+
+        for (const abs of files) {
+            try {
+                const content = await fsPromises.readFile(abs, 'utf-8');
+                if (CONFLICT_MARKER_RE.test(content)) return false;
+            } catch {
+                // File deleted or unreadable; treat as unresolved.
+                return false;
+            }
+        }
+        return true;
     }
 
     private async safeAbortRebase(storefrontPath: string): Promise<void> {

@@ -81,7 +81,6 @@ interface InitialWizardData {
     existingProjectNames: string[];
     importedSettings: SettingsFile | null;
     editProject: EditProjectConfig | null;
-    joinDescriptor: import('../services/resolveJoinLink').JoinDescriptor | null;
     projectsViewMode: 'cards' | 'rows';
     blockLibraryDefaults: string[];
     customBlockLibraryDefaults: import('@/types/blockLibraries').CustomBlockLibrary[];
@@ -103,7 +102,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     private templatesPath: string;
     private importedSettings: SettingsFile | null = null;  // Settings imported from file or copied from project
     private editProject: EditProjectConfig | null = null;  // Configuration for editing existing project
-    private joinDescriptor: import('../services/resolveJoinLink').JoinDescriptor | null = null;  // Seeds the content-SC (satellite) Join flow
 
     // Shared state object (passed by reference to handlers for automatic synchronization)
     private sharedState: SharedState;
@@ -285,7 +283,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         const projectsViewMode = config.get<'cards' | 'rows'>('projectsViewMode', 'cards');
 
         // Get block library default settings (single array setting)
-        const blockLibraryDefaults = config.get<string[]>('blockLibraries.defaults', ['isle5']);
+        const blockLibraryDefaults = config.get<string[]>('blockLibraries.defaults', []);
 
         // Get custom block library defaults from settings
         const customBlockLibraryDefaults = parseCustomBlockLibrarySettings(
@@ -312,7 +310,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             existingProjectNames,
             importedSettings: this.importedSettings,
             editProject: this.editProject,
-            joinDescriptor: this.joinDescriptor,
             projectsViewMode,
             blockLibraryDefaults,
             customBlockLibraryDefaults,
@@ -440,7 +437,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             }
             if (e.affectsConfiguration('demoBuilder.blockLibraries.defaults')) {
                 const config = vscode.workspace.getConfiguration('demoBuilder');
-                const blockLibraryDefaults = config.get<string[]>('blockLibraries.defaults', ['isle5']);
+                const blockLibraryDefaults = config.get<string[]>('blockLibraries.defaults', []);
                 this.sendMessage('blockLibraryDefaultsUpdated', { blockLibraryDefaults });
             }
         });
@@ -466,12 +463,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         importedSettings?: SettingsFile;
         sourceDescription?: string;
         editProject?: EditProjectConfig;
-        joinDescriptor?: import('../services/resolveJoinLink').JoinDescriptor;
     }): Promise<void> {
         try {
-
-            // Store the Join descriptor for use in getInitialData (seeds the content-SC flow)
-            this.joinDescriptor = options?.joinDescriptor ?? null;
 
             // Store imported settings for use in getInitialData
             this.importedSettings = options?.importedSettings ?? null;

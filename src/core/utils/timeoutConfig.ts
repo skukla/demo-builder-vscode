@@ -119,6 +119,14 @@ export const TIMEOUTS = {
     /** Token validation cache TTL (5 minutes) - see CACHE_TTL */
     TOKEN_VALIDATION_TTL: 300000,
 
+    /** Token validation command timeout — `aio config get ims.contexts.cli.access_token --json`
+     *  (10 seconds). Higher than QUICK (5s) because the Adobe CLI's config-load path can be slow
+     *  on degraded networks / low-power systems; the 3-attempt retry loop with exponential
+     *  backoff already bounds worst-case to ~33s, which is acceptable for an auth flow that
+     *  routinely has 30+ second browser round-trips. Field cases on v1.0.0-beta.113 hit the
+     *  prior 5s budget repeatedly and looped through unnecessary re-logins. */
+    TOKEN_VALIDATION: 10000,
+
     /** Initial wait before first mesh verification poll (20 seconds) */
     MESH_VERIFY_INITIAL_WAIT: 20000,
 
@@ -154,9 +162,6 @@ export const TIMEOUTS = {
 
     /** Dashboard open delay (500ms) */
     DASHBOARD_OPEN_DELAY: 500,
-
-    /** Hover suppression delay for layout stabilization (500ms) */
-    HOVER_SUPPRESSION_DELAY: 500,
 
     /** Webview initialization delay (50ms) */
     WEBVIEW_INIT_DELAY: 50,

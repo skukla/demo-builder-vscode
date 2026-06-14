@@ -40,7 +40,6 @@ describe('projectsListHandlers', () => {
             // When: Checking for creation message types
             // Then: Creation handler present
             expect(hasHandler(projectsListHandlers, 'createProject')).toBe(true);
-            expect(hasHandler(projectsListHandlers, 'joinStorefront')).toBe(true);
         });
 
         it('should include settings import/export handlers', () => {
@@ -106,9 +105,13 @@ describe('projectsListHandlers', () => {
             expect(hasHandler(projectsListHandlers, 'openAi')).toBe(true);
         });
 
-        it('should have exactly 23 handlers', () => {
+        it('does not register a setAuthoringExperience handler (relocated to Configure)', () => {
+            expect(hasHandler(projectsListHandlers, 'setAuthoringExperience')).toBe(false);
+        });
+
+        it('should have exactly 22 handlers', () => {
             const types = getRegisteredTypes(projectsListHandlers);
-            expect(types).toHaveLength(23);
+            expect(types).toHaveLength(22);
         });
 
         it('should have handlers as functions', () => {

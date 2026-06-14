@@ -162,6 +162,18 @@ jest.mock('@spectrum-icons/workflow/Login', () => ({
     __esModule: true,
     default: () => <span data-testid="login-icon" />,
 }));
+jest.mock('@spectrum-icons/workflow/More', () => ({
+    __esModule: true,
+    default: () => <span data-testid="more-icon" />,
+}));
+jest.mock('@spectrum-icons/workflow/Edit', () => ({
+    __esModule: true,
+    default: () => <span data-testid="edit-icon" />,
+}));
+jest.mock('@spectrum-icons/workflow/PublishCheck', () => ({
+    __esModule: true,
+    default: () => <span data-testid="publish-icon" />,
+}));
 
 export interface TestContext {
     mockPostMessage: jest.Mock;

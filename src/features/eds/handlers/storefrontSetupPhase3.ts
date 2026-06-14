@@ -7,10 +7,12 @@
  * @module features/eds/handlers/storefrontSetupPhase3
  */
 
+import * as vscode from 'vscode';
+import { CONFIG_SERVICE_PROPAGATION_DELAYS_MS } from '../services/configServiceRetry';
 import { buildSiteConfigParams, ConfigurationService } from '../services/configurationService';
 import { createContentSource } from '../services/contentSource/contentSourceFactory';
 import { DaLiveAuthError } from '../services/types';
-import { configureDaLivePermissions } from './edsHelpers';
+import { configureDaLivePermissions, surfaceOverlayRegistrationFailure } from './edsHelpers';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -223,7 +225,15 @@ export async function registerConfigurationService(
             edsConfig.byomOverlayUrl,
             contentSource,
         );
-        await performSiteConfigRegistration(configurationService, siteParams, edsConfig, context, logger);
+        const registered = await performSiteConfigRegistration(
+            configurationService, siteParams, edsConfig, context, logger,
+        );
+        // When a BYOM overlay was configured but the registration did not land,
+        // the storefront ships with smart-404 client code but no overlay to back
+        // it — every PDP would 404. Surface it so the user knows to reset.
+        if (edsConfig.byomOverlayUrl && !registered) {
+            surfaceOverlayRegistrationFailure(logger, vscode.window.showWarningMessage);
+        }
     } catch (error) {
         if (error instanceof DaLiveAuthError) throw error;
         logger.error(`[Storefront Setup] Configuration Service failed: ${(error as Error).message}`);
@@ -232,6 +242,9 @@ export async function registerConfigurationService(
             message: '⚠️ Configuration Service setup incomplete — da.live preview may need manual configuration',
             progress: 49,
         });
+        if (edsConfig.byomOverlayUrl) {
+            surfaceOverlayRegistrationFailure(logger, vscode.window.showWarningMessage);
+        }
     }
 }
 
@@ -245,20 +258,19 @@ async function performSiteConfigRegistration(
     edsConfig: StorefrontSetupStartPayload['edsConfig'],
     context: HandlerContext,
     logger: Logger,
-): Promise<void> {
+): Promise<boolean> {
     const registerResult = await configurationService.registerSite(siteParams);
 
     if (registerResult.success) {
         logger.info('[Storefront Setup] Site registered with Configuration Service');
-        return;
+        return true;
     }
 
     const handled = await applyRegistrationResult(registerResult, configurationService, siteParams, logger);
-    if (handled !== null) return;
+    if (handled !== null) return handled;
 
     if (registerResult.statusCode === 403 && edsConfig.repoMode === 'new') {
-        await retryRegistrationAfterDelay(configurationService, siteParams, context, logger);
-        return;
+        return retryRegistrationAfterDelay(configurationService, siteParams, context, logger);
     }
 
     logger.warn(`[Storefront Setup] Config Service registration warning: ${registerResult.error}`);
@@ -267,6 +279,7 @@ async function performSiteConfigRegistration(
         message: '⚠️ Configuration Service registration failed — da.live preview may not work',
         progress: 47,
     });
+    return false;
 }
 
 /**
@@ -279,14 +292,14 @@ async function applyRegistrationResult(
     configurationService: ConfigurationService,
     siteParams: ReturnType<typeof buildSiteConfigParams>,
     logger: Logger,
-): Promise<void | null> {
+): Promise<boolean | null> {
     if (result.statusCode === 409) {
         logger.info('[Storefront Setup] Site config exists, updating...');
         const updateResult = await configurationService.updateSiteConfig(siteParams);
         if (!updateResult.success) {
             logger.warn(`[Storefront Setup] Site config update warning: ${updateResult.error}`);
         }
-        return;
+        return updateResult.success;
     }
     if (result.statusCode === 401) {
         throw new DaLiveAuthError(`Configuration Service authentication failed: ${result.error}`);
@@ -308,12 +321,11 @@ async function retryRegistrationAfterDelay(
     siteParams: ReturnType<typeof buildSiteConfigParams>,
     context: HandlerContext,
     logger: Logger,
-): Promise<void> {
-    const RETRY_DELAYS_MS = [
-        TIMEOUTS.CONFIG_SERVICE_RETRY_DELAY,         // 30s
-        TIMEOUTS.CONFIG_SERVICE_RETRY_DELAY * 1.5,   // 45s
-        TIMEOUTS.CONFIG_SERVICE_RETRY_DELAY * 2,     // 60s
-    ];
+): Promise<boolean> {
+    // Shared backoff with the reset path (configServiceRetry). This loop is
+    // separate from the helper because it also interleaves 409→update and
+    // 401→re-auth handling per attempt and is gated on a new repo.
+    const RETRY_DELAYS_MS = CONFIG_SERVICE_PROPAGATION_DELAYS_MS;
 
     for (let attempt = 0; attempt < RETRY_DELAYS_MS.length; attempt++) {
         const delayMs = RETRY_DELAYS_MS[attempt];
@@ -328,11 +340,11 @@ async function retryRegistrationAfterDelay(
         const retryResult = await configurationService.registerSite(siteParams);
         if (retryResult.success) {
             logger.info('[Storefront Setup] Site registered with Configuration Service');
-            return;
+            return true;
         }
 
         const handled = await applyRegistrationResult(retryResult, configurationService, siteParams, logger);
-        if (handled !== null) return;
+        if (handled !== null) return handled;
 
         // Only keep retrying on continued 403 (admin role still propagating).
         // Other errors will not improve with more waiting.
@@ -347,4 +359,5 @@ async function retryRegistrationAfterDelay(
         message: '⚠️ Configuration Service registration failed — da.live preview may not work',
         progress: 47,
     });
+    return false;
 }

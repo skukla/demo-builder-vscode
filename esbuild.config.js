@@ -145,7 +145,6 @@ async function runMcpProxyBuild() {
 // ---------------------------------------------------------------------------
 const WEBVIEW_ENTRIES = {
     wizard:       'src/features/project-creation/ui/wizard/index.tsx',
-    joinStorefront: 'src/features/project-creation/ui/join/index.tsx',
     dashboard:    'src/features/dashboard/ui/index.tsx',
     configure:    'src/features/dashboard/ui/configure/index.tsx',
     sidebar:      'src/features/sidebar/ui/index.tsx',

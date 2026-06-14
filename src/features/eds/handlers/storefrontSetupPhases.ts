@@ -13,6 +13,7 @@
  * @module features/eds/handlers/storefrontSetupPhases
  */
 
+import * as vscode from 'vscode';
 import { ConfigurationService } from '../services/configurationService';
 import { createDaLiveServiceTokenProvider, DaLiveContentOperations } from '../services/daLiveContentOperations';
 import { executeEdsPipeline } from '../services/edsPipeline';
@@ -21,6 +22,7 @@ import { GitHubFileOperations } from '../services/githubFileOperations';
 import { GitHubRepoOperations } from '../services/githubRepoOperations';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { HelixService } from '../services/helixService';
+import { createPatchReport, reportUnapplied, type PatchReport } from '../services/patchReportHelper';
 import { DaLiveAuthError } from '../services/types';
 import { configureDaLivePermissions, ensureDaLiveAuth, getDaLiveAuthService } from './edsHelpers';
 import { resolveSiteCodeSource, type SiteCodeSource } from './siteCodeSource';
@@ -96,6 +98,7 @@ function buildPipelineProgressCallback(context: HandlerContext): (info: Pipeline
             'cache-purge': { phase: 'publish', progress: PIPELINE_PROGRESS.CACHE_PURGE },
             'content-publish': { phase: 'publish', progress: PIPELINE_PROGRESS.CONTENT_PUBLISH_START },
             'library-publish': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
+            'catalog-prewarm': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
         };
         const m = mapping[info.operation] ?? { phase: info.operation, progress: PIPELINE_PROGRESS.CONTENT_COPY_START };
         let progress = m.progress;
@@ -206,7 +209,13 @@ async function runEdsPipelineWithRecovery(
     wantsToResetContent: boolean,
     skipContent: boolean,
     onProgress: (info: PipelineProgressInfo) => void,
+    patchReport?: PatchReport,
 ): Promise<{ libraryPaths: string[] }> {
+    // Fetch the project for catalog pre-warming (v1 ACCS only). Optional
+    // — pipeline skips pre-warming when project is undefined. We read it
+    // here so the pipeline call site stays declarative.
+    const project = await context.stateManager.getCurrentProject();
+
     return withDaLiveAuthRetry(
         context,
         async () => {
@@ -216,17 +225,18 @@ async function runEdsPipelineWithRecovery(
                     daLiveOrg: edsConfig.daLiveOrg, daLiveSite: edsConfig.daLiveSite,
                     templateOwner, templateRepo,
                     clearExistingContent: wantsToResetContent, skipContent,
-                    // Always publish: skipContent only means "don't re-copy" (content
-                    // is already authored in DA.live), but DA.live content is not LIVE
-                    // until published. Reusing an existing site without a reset must
-                    // still publish, or the live site renders 404. Mirrors
-                    // edsResetService / refreshBlockLibrary, which also pass false.
-                    skipPublish: false,
                     contentSource: edsConfig.contentSource,
                     contentPatches: edsConfig.contentPatches, contentPatchSource: edsConfig.contentPatchSource,
+                    codePatches: edsConfig.codePatches, codePatchSource: edsConfig.codePatchSource,
+                    // Thread the orchestrator's shared patch report through so canonical-phase
+                    // results (from Step 1 LKG-pinning) + block-phase + content-patch results
+                    // all aggregate into ONE report. The orchestrator owns reportUnapplied so
+                    // there's a single toast per setup, not one per source.
+                    patchReport,
                     includeBlockLibrary: true, blockCollectionIds, libraryContentSources,
                     purgeCache: Boolean(edsConfig.resetToTemplate || wantsToResetContent),
                     byomOverlayUrl: edsConfig.byomOverlayUrl,
+                    project: project ?? undefined,
                 },
                 {
                     daLiveContentOps: services.daLiveContentOps,
@@ -391,9 +401,15 @@ export async function executeStorefrontSetupPhases(
     const effectiveBlockLibraries = options?.selectedBlockLibraries ?? [];
     const phaseOptions: BlockLibraryOptions = { ...options, useExistingRepo };
 
+    // Shared patch report — canonical-phase results from Phase 1's LKG pin
+    // and block-phase + content-patch results from the pipeline both append
+    // here, so the single reportUnapplied call below covers everything in
+    // one toast (ADR-006 D1).
+    const patchReport = createPatchReport();
+
     try {
         const phase1Result = await executePhaseGitHubRepo(
-            context, edsConfig, services, repoInfo, signal, templateOwner, templateRepo,
+            context, edsConfig, services, repoInfo, signal, templateOwner, templateRepo, patchReport,
         );
         if (phase1Result) return phase1Result;
 
@@ -407,8 +423,12 @@ export async function executeStorefrontSetupPhases(
             context, logger, services, repoInfo, edsConfig, templateOwner, templateRepo,
             blockCollectionIds, buildLibraryContentSources(effectiveBlockLibraries),
             wantsToResetContent, skipContent, buildPipelineProgressCallback(context),
+            patchReport,
         );
         if (signal.aborted) throw new Error('Operation cancelled');
+
+        // Single toast covering canonical + block + content patches.
+        reportUnapplied(patchReport, logger, vscode.window.showWarningMessage);
 
         await context.sendMessage('storefront-setup-progress', {
             phase: 'complete',

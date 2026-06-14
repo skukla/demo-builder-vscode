@@ -52,10 +52,11 @@ jest.mock('@/features/eds/services/edsResetParams', () => ({
     })),
 }));
 
-// demo-packages.json is intentionally NOT mocked: resolveStorefrontConfig
-// (mocked above) is the only consumer of its `packages`, and the stub ignores
-// the argument — so the real bundled config loads harmlessly. Mocking the
-// config leaf would violate the no-config-leaf-mocks SOP for no behavioral gain.
+// Note: demo-packages.json is intentionally NOT mocked here.
+// The command imports it for the `packages` array, but the array is passed
+// straight into the mocked `resolveStorefrontConfig` above — so the real JSON
+// loads and is never read by the test path. Mocking the JSON directly would
+// violate the no-config-leaf-mocks SOP (tests/sop/no-config-leaf-mocks.test.ts).
 
 // ---------------------------------------------------------------------------
 // Imports.

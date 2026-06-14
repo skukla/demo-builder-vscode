@@ -219,7 +219,7 @@ demo-builder-vscode/
 
 ### Debugging Issues
 → Run "Demo Builder: Diagnostics" command
-→ Check "Demo Builder: Debug" output channel
+→ Check "Demo Builder: Debug Logs" output channel
 → See `docs/systems/debugging.md`
 
 ## Technology Stack
@@ -263,7 +263,7 @@ demo-builder-vscode/
 - **Mesh Deployment Enhancements**: Improved configuration detection and error handling
   - Fetches deployed mesh config from Adobe I/O for accurate comparison
   - Better staleness detection (compares local vs deployed state)
-  - Consolidated logging to single "Demo Builder: Logs" channel
+  - Consolidated logging to single "Demo Builder: User Logs" channel
   - Pre-flight authentication check before deployment
   - User-friendly error formatting for network/timeout/HTTP failures
 - **Dashboard Improvements**: Enhanced project control panel
@@ -314,7 +314,7 @@ demo-builder-vscode/
   - Automatic retry logic
 
 ### v1.3.0 (2025-01-10)
-- **Enhanced Debugging System**: Dual output channels ("Demo Builder: Logs" and "Demo Builder: Debug")
+- **Enhanced Debugging System**: Dual output channels ("Demo Builder: User Logs" and "Demo Builder: Debug Logs")
 - **Diagnostics Command**: Comprehensive system analysis for troubleshooting
 - **Unified Logging**: Consolidated from 4 channels to 2 clean channels
 - **Adobe Setup UX**: Consistent auto-advance, proper success display, eliminated double-loader

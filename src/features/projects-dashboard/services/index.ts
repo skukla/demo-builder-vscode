@@ -20,3 +20,5 @@ export {
 } from './settingsTransferService';
 
 export { deleteProject } from './projectDeletionService';
+
+export { renameProjectCore } from './projectRenameService';

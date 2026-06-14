@@ -203,6 +203,22 @@ interface ProjectCreationConfig {
             repo: string;
             path: string;
         };
+        // Code patch IDs to apply (canonical + block) — Step 5 populates these.
+        codePatches?: string[];
+        // External source for code patches (e.g., skukla/eds-demo-patches/citisignal).
+        // When set, the storefront is "thin-layer": `lastSyncedCommit` records the
+        // verified canonical LKG SHA (per ADR-006 D2) rather than the template
+        // repo's `main` HEAD, so "is there an update?" means "did the LKG pointer
+        // advance?" not "is canonical main ahead of where we created?".
+        codePatchSource?: {
+            owner: string;
+            repo: string;
+            path: string;
+            /** Per-ledger LKG file when the ledger tracks a non-default canonical
+             *  (e.g., b2b's B2B template). Omitted for ledgers sharing the
+             *  default root `last-known-good`. */
+            lkgFile?: string;
+        };
     };
 }
 
@@ -286,8 +302,6 @@ export async function executeProjectCreation(
         componentConfigs: (typedConfig.componentConfigs || {}) as Record<string, Record<string, string | number | boolean | undefined>>,
         selectedPackage: typedConfig.selectedPackage,
         selectedStack: typedConfig.selectedStack,
-        flow: typedConfig.flow,
-        upstream: typedConfig.upstream,
         selectedAddons: typedConfig.selectedAddons,
         selectedBlockLibraries: typedConfig.selectedBlockLibraries,
         customBlockLibraries: typedConfig.customBlockLibraries,
@@ -422,10 +436,6 @@ export async function executeProjectCreation(
 
     await setupEdsContent(context, typedConfig, isEdsStack, progressTracker);
 
-    // Phase 5c: Publish the storefront-share.json marker so a content SC can join
-    // this commerce storefront (write-side pair of resolveJoinLink).
-    await writeStorefrontShareMarker(context, project, typedConfig, isEdsStack);
-
     await finalizeProject(finalizationContext);
     await sendCompletionAndCleanup(finalizationContext);
 
@@ -532,11 +542,26 @@ async function populateEdsMetadata(
             ? `${typedConfig.edsConfig.githubOwner}/${typedConfig.edsConfig.repoName}`
             : undefined);
 
-    // Fetch template commit SHA for future update detection
+    // Fetch template commit SHA for future update detection. For thin-layer
+    // packages this reads the patches-repo LKG; for legacy/forked packages
+    // it falls through to template HEAD. The lkgSource — when set — is
+    // persisted alongside so the update checker can compare against the
+    // same LKG file the create flow consulted.
     const lastSyncedCommit = await fetchTemplateCommitSha(context, typedConfig.edsConfig);
 
     const templateOwner = typedConfig.edsConfig.templateOwner;
     const templateRepo = typedConfig.edsConfig.templateRepo;
+    const lkgSource = typedConfig.edsConfig.codePatchSource
+        ? {
+            owner: typedConfig.edsConfig.codePatchSource.owner,
+            repo: typedConfig.edsConfig.codePatchSource.repo,
+            // Carry lkgFile when present (b2b case) so update checks against
+            // multi-canonical patches repos read the right per-ledger file.
+            ...(typedConfig.edsConfig.codePatchSource.lkgFile
+                ? { lkgFile: typedConfig.edsConfig.codePatchSource.lkgFile }
+                : {}),
+        }
+        : undefined;
 
     edsInstance.metadata = {
         ...edsInstance.metadata,
@@ -547,59 +572,46 @@ async function populateEdsMetadata(
         templateOwner,
         templateRepo,
         lastSyncedCommit,
+        ...(lkgSource ? { lkgSource } : {}),
     };
     await context.stateManager.saveProject(project);
     context.logger.debug(`[Project Creation] Populated EDS metadata for ${COMPONENT_IDS.EDS_STOREFRONT}: githubRepo=${edsInstance.metadata?.githubRepo}`);
 }
 
 /**
- * Phase 5c: Write the `storefront-share.json` marker into a created commerce/EDS
- * storefront so a content SC can later join it (the write-side pair of
- * `resolveJoinLink`). Commerce-flow EDS creates only — the content (satellite)
- * flow joins an existing marker rather than publishing one. Non-fatal: a failure
- * logs a warning and does not abort project creation.
- */
-async function writeStorefrontShareMarker(
-    context: HandlerContext,
-    project: import('@/types').Project,
-    typedConfig: ProjectCreationConfig,
-    isEdsStack: boolean,
-): Promise<void> {
-    if (!isEdsStack || isContentFlow(typedConfig)) return;
-    const repoInfo = typedConfig.edsConfig?.repoUrl ? parseGitHubUrl(typedConfig.edsConfig.repoUrl) : null;
-    if (!repoInfo) return;
-
-    try {
-        const { publishMasterMarkerForProject } = await import('@/features/project-creation/services/resolveJoinLink');
-        const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
-        const { GitHubFileOperations } = await import('@/features/eds/services/githubFileOperations');
-        const githubFileOps = new GitHubFileOperations(
-            new GitHubTokenService(context.context.secrets, context.logger),
-            context.logger,
-        );
-        const published = await publishMasterMarkerForProject(
-            { owner: repoInfo.owner, repo: repoInfo.repo, project },
-            async (owner, repo, markerPath, content, message) => {
-                await githubFileOps.createOrUpdateFile(owner, repo, markerPath, content, message);
-            },
-        );
-        if (published) {
-            context.logger.info(`[Project Creation] Wrote storefront-share.json marker to ${repoInfo.owner}/${repoInfo.repo}`);
-        }
-    } catch (error) {
-        context.logger.warn(`[Project Creation] Could not write storefront-share.json marker: ${(error as Error).message}`);
-    }
-}
-
-/**
- * Fetch the template's current commit SHA for template sync feature.
+ * Fetch the canonical commit SHA to record as `lastSyncedCommit`.
+ *
+ * Thin-layer storefronts (package has `codePatchSource` configured per
+ * ADR-006): read the verified canonical SHA from the patches repo's
+ * `last-known-good` file (D2 — Chromium LKGR / Nix git-revision convention).
+ * If unreachable, fall back to template HEAD with a warn line (D1
+ * proceed-and-warn).
+ *
+ * Forked storefronts (no `codePatchSource`): unchanged — fetch the template
+ * repo's `main` HEAD as `lastSyncedCommit`. Mixed fleets coexist during
+ * migration.
  */
 async function fetchTemplateCommitSha(
     context: HandlerContext,
     edsConfig: NonNullable<ProjectCreationConfig['edsConfig']>,
 ): Promise<string | undefined> {
-    const { templateOwner, templateRepo } = edsConfig;
+    const { templateOwner, templateRepo, codePatchSource } = edsConfig;
     if (!templateOwner || !templateRepo) return undefined;
+
+    // Thin-layer path: read LKG from patches repo. Fall back to template
+    // HEAD on LKG fetch failure (warn already logged inside readLkgSha).
+    if (codePatchSource) {
+        const { readLkgSha } = await import('@/features/eds/services/lkgReader');
+        const lkg = await readLkgSha(
+            { owner: codePatchSource.owner, repo: codePatchSource.repo, lkgFile: codePatchSource.lkgFile },
+            context.logger,
+        );
+        if (lkg) {
+            context.logger.debug(`[Project Creation] Recorded LKG SHA: ${lkg.substring(0, 7)} (from ${codePatchSource.owner}/${codePatchSource.repo})`);
+            return lkg;
+        }
+        context.logger.warn(`[Project Creation] LKG unreachable for ${codePatchSource.owner}/${codePatchSource.repo} — falling back to template HEAD`);
+    }
 
     try {
         const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
@@ -628,6 +640,31 @@ async function executeMeshPhase(
     isEditMode: string | boolean | undefined,
     existingProject: import('@/types').Project | undefined,
 ): Promise<void> {
+    // App Builder permission gate. Mesh deployment is an App Builder operation:
+    // it creates a workspace credential and deploys an action package, both of
+    // which require the Developer/System-Admin role in the IMS org. Demos
+    // without App Builder components don't trigger this gate.
+    //
+    // See `projectAppBuilderPredicate.ts` for the source of truth on which
+    // components count as App Builder.
+    const { projectRequiresAppBuilder } = await import(
+        '@/features/components/services/projectAppBuilderPredicate'
+    );
+    if (projectRequiresAppBuilder(project, setupContext.registry)) {
+        const { ServiceLocator } = await import('@/core/di');
+        const authService = ServiceLocator.getAuthenticationService();
+        const permissionCheck = await authService.testDeveloperPermissions();
+        if (!permissionCheck.hasPermissions) {
+            const errorMessage = permissionCheck.error
+                || 'Your account lacks Developer or System Admin role for this organization. '
+                + 'API Mesh deployment requires App Builder access. '
+                + 'Please select a different organization or contact your administrator.';
+            context.logger.error(`[Mesh Setup] Developer permission gate failed: ${errorMessage}`);
+            throw new Error(errorMessage);
+        }
+        context.logger.debug('[Mesh Setup] Developer permission gate passed');
+    }
+
     const meshComponent = getMeshComponentInstance(project);
     const meshId = getMeshComponentId(project);
     const meshDefinition = meshId ? componentDefinitions.get(meshId)?.definition : undefined;
@@ -987,14 +1024,6 @@ async function setupEdsContent(
     progressTracker: ProgressTracker,
 ): Promise<void> {
     if (!isEdsStack || !typedConfig.edsConfig?.contentSource || !typedConfig.edsConfig?.repoUrl) {
-        return;
-    }
-
-    // Repoless satellite (content flow): content is already populated by the satellite
-    // setup branch, targeting the satellite's OWN site. Skip the executor's content
-    // step, which would (re)publish using the upstream repoUrl as the site identity.
-    if (isContentFlow(typedConfig)) {
-        context.logger.info('[Phase 5b] Skipped — content flow (satellite content handled in storefront setup)');
         return;
     }
 

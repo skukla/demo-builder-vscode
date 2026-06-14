@@ -34,7 +34,6 @@ import { AddonUpdateChecker } from '@/features/updates/services/addonUpdateCheck
 import { AdobeMcpUpdateChecker } from '@/features/updates/services/adobeMcpUpdateChecker';
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
-import { defaultSyncStrategyForProject } from '@/features/updates/services/syncStrategy';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import { TemplateUpdateChecker } from '@/features/updates/services/templateUpdateChecker';
 import { UpdateManager } from '@/features/updates/services/updateManager';
@@ -130,7 +129,7 @@ async function applyTemplate(
     for (const { project } of items) {
         onProgress?.(`Syncing template for ${project.name}...`);
         try {
-            const r = await svc.syncWithTemplate(project, { strategy: defaultSyncStrategyForProject(project) });
+            const r = await svc.syncWithTemplate(project, { strategy: 'merge' });
             if (r.success) {
                 await svc.updateLastSyncedCommit(project, r.syncedCommit, ctx.stateManager);
                 succeededPaths.add(project.path);

@@ -22,7 +22,6 @@ import type { StoreListItem } from '../hooks/useStoreDiscovery';
 import { ConfigFieldRenderer } from './ConfigFieldRenderer';
 import { StoreSelectionRow } from './StoreSelectionRow';
 import type { DescriptionContext } from '@/core/ui/components/forms/descriptionRenderer';
-import type { ComponentConfigs } from '@/types/webview';
 
 export interface StoreConfigFieldRowProps {
     field: UniqueField;
@@ -40,7 +39,6 @@ export interface StoreConfigFieldRowProps {
     getWebsiteItems: () => StoreListItem[];
     getStoreGroupItems: (websiteCode: string) => StoreListItem[];
     getStoreViewItems: (storeGroupCode: string) => StoreListItem[];
-    componentConfigs: ComponentConfigs;
     /** Called when user clicks the Re-detect button to re-run store discovery */
     onRefresh?: () => void;
     /** Context for resolving {placeholder} tokens inside field-description URLs (e.g., {orgCode}) */
@@ -63,7 +61,6 @@ export function StoreConfigFieldRow({
     getWebsiteItems,
     getStoreGroupItems,
     getStoreViewItems,
-    componentConfigs,
     onRefresh,
     descriptionContext,
 }: StoreConfigFieldRowProps): React.ReactNode {
@@ -93,40 +90,49 @@ export function StoreConfigFieldRow({
     }
 
     if (isWebsiteCodeField(field.key)) {
-        /* Store selection: spinner, Pickers, or fallback text inputs */
+        /*
+         * Store selection. To avoid a layout shift, render the store-selection
+         * fields and the Re-detect slot from the start in a disabled "detecting"
+         * state and populate them in place — never swap a short spinner for the
+         * tall populated layout. The fetchError branch keeps its fallback inputs.
+         */
+        if (fetchError) {
+            return (
+                <div>
+                    <Text UNSAFE_className="text-red-700" marginBottom="size-200">{fetchError}</Text>
+                    <ConfigFieldRenderer {...fieldProps} />
+                </div>
+            );
+        }
+
         return (
             <div>
                 {isFetching && (
-                    <Flex alignItems="center" gap="size-100" marginBottom="size-200">
+                    <Flex alignItems="center" gap="size-100" marginBottom="size-100">
                         <ProgressCircle size="S" isIndeterminate aria-label="Detecting" />
                         <Text UNSAFE_className="status-text">Detecting store structure...</Text>
                     </Flex>
                 )}
-                {hasStoreData && (
-                    <>
-                        <StoreSelectionRow
-                            group={group}
-                            getFieldValue={getFieldValue}
-                            updateField={updateField}
-                            getWebsiteItems={getWebsiteItems}
-                            getStoreGroupItems={getStoreGroupItems}
-                            getStoreViewItems={getStoreViewItems}
-                            componentConfigs={componentConfigs}
-                        />
-                        {onRefresh && (
-                            <Flex marginTop="size-100" marginStart="size-50">
-                                <Button variant="secondary" onPress={onRefresh} UNSAFE_className="btn-standard text-base">
-                                    Re-detect
-                                </Button>
-                            </Flex>
-                        )}
-                    </>
-                )}
-                {fetchError && (
-                    <>
-                        <Text UNSAFE_className="text-red-700" marginBottom="size-200">{fetchError}</Text>
-                        <ConfigFieldRenderer {...fieldProps} />
-                    </>
+                <StoreSelectionRow
+                    group={group}
+                    getFieldValue={getFieldValue}
+                    updateField={updateField}
+                    getWebsiteItems={getWebsiteItems}
+                    getStoreGroupItems={getStoreGroupItems}
+                    getStoreViewItems={getStoreViewItems}
+                    isLoading={!hasStoreData}
+                />
+                {onRefresh && (
+                    <Flex marginTop="size-100" marginStart="size-50">
+                        <Button
+                            variant="secondary"
+                            onPress={onRefresh}
+                            isDisabled={!hasStoreData}
+                            UNSAFE_className="btn-standard text-base"
+                        >
+                            Re-detect
+                        </Button>
+                    </Flex>
                 )}
             </div>
         );

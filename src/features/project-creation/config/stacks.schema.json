@@ -138,11 +138,6 @@
         "requiresDaLive": {
           "type": "boolean",
           "description": "Whether this stack requires DA.live access"
-        },
-        "supportedFlows": {
-          "type": "array",
-          "items": { "type": "string", "enum": ["commerce", "content"] },
-          "description": "Storefront flows this stack supports (config-driven content-flow gate)"
         }
       }
     }

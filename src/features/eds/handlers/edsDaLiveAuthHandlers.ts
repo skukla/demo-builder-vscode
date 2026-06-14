@@ -14,7 +14,7 @@
  */
 
 import * as vscode from 'vscode';
-import { hasWriteAccess } from './edsDaLiveOrgHandlers';
+import { hasWriteAccess } from '../services/daLiveOrgOperations';
 import {
     getDaLiveAuthService,
     validateDaLiveToken,

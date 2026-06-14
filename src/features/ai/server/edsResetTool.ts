@@ -112,9 +112,10 @@ export function registerEdsResetTool(
             const phases: Array<{ step: number; totalSteps: number; message: string }> = [];
             const tokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
             try {
-                // VS Code settings (`demoBuilder.byom.overlayUrl` + `.overlaySharedSecret`)
-                // win over demo-packages.json. The helper stamps `?org=&site=&key=` so
-                // the shared render-pdp action can identify the storefront and validate.
+                // VS Code setting `demoBuilder.byom.overlayUrl` wins over
+                // demo-packages.json. The helper stamps `?org=&site=` so the
+                // shared multi-tenant `render-pdp` action can identify which
+                // storefront's `/products/default` template to fetch.
                 const result = await executeEdsReset(
                     {
                         ...paramsResult.params,

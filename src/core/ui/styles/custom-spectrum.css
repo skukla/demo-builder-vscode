@@ -100,6 +100,7 @@
    Spacing Classes
    =========================================== */
 .p-0 { padding: 0 !important; }
+.p-badge { padding: 2px 6px !important; }
 .p-2 { padding: 8px !important; }
 .p-3 { padding: 12px !important; }
 .p-4 { padding: 16px !important; }
@@ -703,6 +704,131 @@ button[class*="spectrum-Button"][disabled],
     flex: 1 !important;
     height: 100% !important;
     min-width: 0 !important;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive layout: narrow-viewport adjustments for the wizard chrome and
+   the shared TwoColumnLayout primitive. On a 13-14" laptop at ideal zoom
+   (effective ~1280px logical width), the 280px progress rail leaves the
+   main column too narrow to fit the 800px left content + a 300px summary
+   side-by-side; the summary squeezes and its labels wrap to two and three
+   lines. Two breakpoints handle this:
+
+     <= 1280px viewport: collapse the SETUP PROGRESS rail to an icons-only
+       column (56px) and free up ~224px for content. Step names that were
+       inline are now provided on hover via a CSS-only `::after` tooltip
+       on each step — the data-step-name attribute is in TimelineNav.tsx
+       and the tooltip styles live ONLY inside this media query, so they
+       are structurally absent at wider viewports where the inline labels
+       are still visible.
+
+     <= 1180px viewport: stack TwoColumnLayout columns vertically so the
+       right column never falls below its rightMinWidth floor — even with
+       the rail collapsed, this viewport is too narrow for side-by-side.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 1280px) {
+    .wizard-timeline-column {
+        flex: 0 0 56px !important;
+        /* `overflow-y: auto` (the rail's default for vertical scrolling) makes
+           the browser compute `overflow-x: auto` too — per CSS spec, when one
+           axis is non-visible, the other can't stay `visible`. That clipped
+           the step-name tooltips (which need to overflow horizontally past
+           the 56px rail edge) on the right.
+           In collapsed mode the rail content is dots-only and fits in any
+           normal viewport, so dropping scroll here is safe and necessary for
+           the `::after` tooltips to escape the rail bounds. */
+        overflow: visible !important;
+    }
+    /* Hide the SETUP PROGRESS header label and individual step labels when
+       the rail collapses; the dots + their connector line still convey
+       position and status, and hover surfaces the name. */
+    .wizard-timeline-column .timeline-header-label,
+    .wizard-timeline-column .timeline-step-label {
+        display: none !important;
+    }
+
+    /* CSS-only step-name tooltip. Anchored to the per-step `<View>` wrapper
+       which is `position: relative`, so the `::after` floats to its right.
+       Three trigger conditions in this collapsed-rail mode:
+
+         1. `[aria-current="step"]` — the current step's tooltip is ALWAYS
+            visible. Without this, users would have to hover to know which
+            step they're on (the inline label is hidden). Persistent so
+            "where am I" is always answered.
+         2. `:hover` — every step's tooltip shows on pointer hover. Lets
+            users scan ahead/behind without changing steps.
+         3. `:focus-visible` — same trigger for keyboard users tabbing
+            through the rail.
+
+       100ms delay + 150ms fade-in feels snappy without being jumpy on a
+       casual pointer pass. Pointer-events disabled so the tooltip never
+       blocks click targets. */
+    .wizard-timeline-column .timeline-step {
+        position: relative;
+    }
+    .wizard-timeline-column .timeline-step[aria-current="step"]::after,
+    .wizard-timeline-column .timeline-step:hover::after,
+    .wizard-timeline-column .timeline-step:focus-visible::after {
+        content: attr(data-step-name);
+        position: absolute;
+        /* Offset from the .nav-item-row's right edge — the row's flex layout
+           makes `100%` equal to the dot's right edge plus the row's natural
+           padding (the label is `display: none` in collapsed mode, so it
+           contributes no width). A small size-50 (4px) offset lets the pill
+           sit just past the dot with breathing room. */
+        left: calc(100% + var(--spectrum-global-dimension-size-50));
+        top: 50%;
+        transform: translateY(-50%);
+        /* Spectrum tokens invert with theme — in the dark theme the wizard
+           runs in, gray-200 is a near-black surface and gray-800 is the
+           light-ink text. Subtle 1px border and gentle shadow keep the
+           overlay readable without feeling like a stacked card. The same
+           rule reads correctly in light theme (light surface, dark text). */
+        background: var(--spectrum-global-color-gray-200);
+        color: var(--spectrum-global-color-gray-800);
+        border: 1px solid var(--spectrum-global-color-gray-300);
+        padding: var(--spectrum-global-dimension-size-75) var(--spectrum-global-dimension-size-100); /* 6px 8px */
+        border-radius: var(--spectrum-global-dimension-size-50); /* 4px */
+        font-size: 12px;
+        font-weight: 400;
+        white-space: nowrap;
+        z-index: 1000;
+        pointer-events: none;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+        animation: timeline-step-tooltip-fade 150ms 100ms both;
+    }
+    /* The current step's persistent tooltip skips the entrance animation —
+       it should be there when the rail mounts, not fade in. Hover/focus
+       tooltips keep the fade for snap. */
+    .wizard-timeline-column .timeline-step[aria-current="step"]:not(:hover):not(:focus-visible)::after {
+        animation: none;
+    }
+}
+
+@keyframes timeline-step-tooltip-fade {
+    from { opacity: 0; transform: translateY(-50%) translateX(calc(-1 * var(--spectrum-global-dimension-size-50))); }
+    to { opacity: 1; transform: translateY(-50%) translateX(0); }
+}
+
+@media (max-width: 1180px) {
+    /* TwoColumnLayout stack mode: row → column. Each column becomes
+       full-width; the left max-width and right min-width are released so
+       neither one squeezes the other, and the divider moves from between
+       them to above the summary card. */
+    .two-column-layout {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+    .two-column-layout-left {
+        max-width: none !important;
+    }
+    .two-column-layout-right {
+        flex: 0 0 auto !important;
+        min-width: 0 !important;
+        border-left: none !important;
+        border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
+    }
 }
 
 /* Step main content area */
@@ -1334,6 +1460,19 @@ button[class*="spectrum-Button"][disabled],
     border-radius: 4px !important;
 }
 
+.architecture-addons .addon-required-badge {
+    display: inline-block !important;
+    margin-left: 8px !important;
+    padding: 1px 6px !important;
+    font-size: 10px !important;
+    font-weight: 500 !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    background: var(--spectrum-global-color-gray-200) !important;
+    border-radius: 4px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.3px !important;
+}
+
 .block-libraries-intro {
     margin-bottom: var(--spectrum-global-dimension-size-200);
 }
@@ -1791,15 +1930,6 @@ button[class*="spectrum-Button"][disabled],
     gap: var(--dashboard-tile-gap);
 }
 
-/* Subsequent rows (Build, and any future full-width row) spread their tiles
-   evenly across the full content width: a single consistent gap between every
-   tile, the first tile flush left and the last flush right — so the row's
-   edges line up with row 1's edges. No cluster gap; the gaps simply widen to
-   fill the row. */
-.dashboard-zone-grid--aligned {
-    justify-content: space-between;
-}
-
 /* Delete footer — separated from the action zones with a divider + spacing */
 .dashboard-zone-footer {
     display: flex;
@@ -1913,16 +2043,6 @@ button[class*="spectrum-Button"][disabled],
 .dashboard-action-button:focus * {
     background: transparent !important;
     background-color: transparent !important;
-}
-
-/* Temporarily suppress hover/focus after click to prevent stuck state during layout shift */
-.dashboard-action-button.hover-suppressed,
-.dashboard-action-button.hover-suppressed:hover,
-.dashboard-action-button.hover-suppressed:focus {
-    background: var(--spectrum-global-color-gray-50) !important;
-    border-color: var(--spectrum-global-color-gray-300) !important;
-    transform: none !important;
-    box-shadow: none !important;
 }
 
 /* Sidebar provider - use Spectrum gray-75 for consistency */
@@ -2640,6 +2760,7 @@ button[class*="spectrum-Button"][disabled],
     padding: 24px !important;
 }
 
+
 .container-dashboard {
     padding: var(--spectrum-global-dimension-size-400) !important;
     height: 100vh !important;
@@ -2658,7 +2779,20 @@ button[class*="spectrum-Button"][disabled],
 
 /* AI surface — drill-down row typography reuses the wizard's existing
    utility classes (.text-sm, .font-semibold, .text-gray-700) for
-   name/description. Only the unique piece left here is the row separator. */
+   name/description. Only the unique pieces live here: the source
+   classification badge pill and the row separator. */
+
+.ai-surface-source-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-radius: 10px;
+    background-color: var(--spectrum-global-color-gray-200);
+    color: var(--spectrum-global-color-gray-800) !important;
+}
 
 .ai-surface-row + .ai-surface-row {
     margin-top: 12px;
@@ -3446,6 +3580,11 @@ div[class*="spectrum"] input[type="search"] {
 .template-tag-filter-selected:hover,
 .template-tag-filter[aria-pressed="true"]:hover {
     background: var(--spectrum-global-color-blue-600) !important;
+}
+
+/* Template Featured Badge */
+.template-featured-badge {
+    font-size: 10px !important;
 }
 
 /* Template Gallery Container */

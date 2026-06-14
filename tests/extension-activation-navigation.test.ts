@@ -95,13 +95,6 @@ jest.mock('@/features/authentication', () => ({
     AuthenticationService: jest.fn().mockImplementation(() => ({})),
 }));
 
-// Mock component tree provider
-jest.mock('@/features/components/providers/componentTreeProvider', () => ({
-    ComponentTreeProvider: jest.fn().mockImplementation(() => ({
-        dispose: jest.fn(),
-    })),
-}));
-
 // Mock command manager
 jest.mock('@/commands/commandManager', () => ({
     CommandManager: jest.fn().mockImplementation(() => ({

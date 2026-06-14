@@ -86,6 +86,7 @@ export async function syncAndPublish(input: SyncAndPublishInput): Promise<SyncAn
     const result: SyncAndPublishResult = { committed: false, pushed: false, helixPublished: false, summary: '' };
 
     if (!input.skipCommit) {
+        await fetchAndFastForward(input.storefrontPath, input.githubToken);
         await stageAll(input.storefrontPath);
 
         const commitOutcome = await commit(input.storefrontPath, safeMessage);
@@ -119,6 +120,35 @@ export async function syncAndPublish(input: SyncAndPublishInput): Promise<SyncAn
 }
 
 // ─── git helpers ────────────────────────────────────────────────────────────
+
+/**
+ * Pull remote-only commits into the local clone via a fast-forward BEFORE
+ * committing, so the later push fast-forwards instead of being rejected.
+ *
+ * The storefront's GitHub remote also receives commits the local clone never
+ * sees — config.json republish, fstab writes, and asset vendoring all commit
+ * through the GitHub API. Those leave the clone behind, and the next sync's
+ * push is rejected as non-fast-forward. Fetching + `--ff-only` up front closes
+ * that gap for the common case (the user's edits and the API's edits touch
+ * different files).
+ *
+ * Best-effort: a diverged history (local has its own unpushed commits) or a
+ * dirty file the incoming commits also touched cannot fast-forward. Those fail,
+ * and we swallow the error — the existing push → rebase recovery handles them.
+ */
+async function fetchAndFastForward(storefrontPath: string, githubToken?: string): Promise<void> {
+    try {
+        if (githubToken) {
+            const { stdout: remoteRaw } = await execFile('git', ['-C', storefrontPath, 'remote', 'get-url', 'origin']);
+            const tokenizedUrl = injectTokenIntoUrl(remoteRaw.trim(), githubToken);
+            await execFile('git', ['-C', storefrontPath, 'pull', '--ff-only', tokenizedUrl, 'HEAD']);
+        } else {
+            await execFile('git', ['-C', storefrontPath, 'pull', '--ff-only']);
+        }
+    } catch {
+        // Diverged or dirty — let push → rebase handle it. Not fatal to the sync.
+    }
+}
 
 async function stageAll(storefrontPath: string): Promise<void> {
     try {

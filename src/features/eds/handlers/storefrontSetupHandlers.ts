@@ -60,8 +60,6 @@ export interface StorefrontSetupStartPayload {
     selectedAddons?: string[];
     /** Selected block library IDs (e.g., ['isle5', 'demo-team-blocks']) */
     selectedBlockLibraries?: string[];
-    /** Selected feature pack IDs (e.g., ['b2b-commerce']) */
-    selectedFeaturePacks?: string[];
     /** Custom block libraries added by URL */
     customBlockLibraries?: CustomBlockLibrary[];
     /** Selected package ID (e.g., 'citisignal') */
@@ -79,10 +77,6 @@ export interface StorefrontSetupStartPayload {
         // Template repository info (from stack/brand config) for GitHub reset operations
         templateOwner?: string;
         templateRepo?: string;
-        // Repoless satellite: when present, this site REFERENCES an existing upstream
-        // repo's code (cross-org or same-org) instead of forking. Drives
-        // resolveSiteCodeSource → no fork, no Code Sync App install, cross-org registration.
-        upstream?: { owner: string; repo: string };
         // DA.live content source (explicit config, not derived from GitHub URL)
         contentSource?: {
             org: string;
@@ -91,6 +85,9 @@ export interface StorefrontSetupStartPayload {
         };
         // Optional BYOM content overlay URL (from demo-packages.json storefronts)
         byomOverlayUrl?: string;
+        // Repoless satellite: the existing upstream repo this site references as
+        // its code source (drives the satellite short path; no fork). See step-04.
+        upstream?: { owner: string; repo: string };
         // Content source backing the satellite (Slice 2). Absent ⇒ 'da-live'.
         contentSourceType?: 'da-live' | 'aem-sites';
         // AEM-Sites content source config (present when contentSourceType === 'aem-sites').
@@ -125,6 +122,15 @@ export interface StorefrontSetupStartPayload {
         contentPatches?: string[];
         // External source for content patches (from demo-packages.json storefronts)
         contentPatchSource?: {
+            owner: string;
+            repo: string;
+            path: string;
+        };
+        // Code patch IDs to apply during create/reset (ADR-006 Step 5; sibling
+        // of contentPatches, operates on repo files).
+        codePatches?: string[];
+        // External code-patch source (thin-layer storefronts per ADR-006).
+        codePatchSource?: {
             owner: string;
             repo: string;
             path: string;
@@ -314,10 +320,10 @@ export async function handleStartStorefrontSetup(
     }
 
     // Compose the BYOM overlay URL the Configuration Service will register.
-    // VS Code settings (`demoBuilder.byom.overlayUrl` + `.overlaySharedSecret`)
-    // take precedence over any value baked into demo-packages.json. The helper
-    // stamps `?org=...&site=...&key=...` onto the URL so the shared render-pdp
-    // action can identify the storefront and validate the call (Helix does not
+    // VS Code setting `demoBuilder.byom.overlayUrl` takes precedence over any
+    // value baked into demo-packages.json. The helper stamps `?org=...&site=...`
+    // onto the URL so the shared multi-tenant `render-pdp` action can identify
+    // which storefront's `/products/default` template to fetch (Helix does not
     // forward `x-forwarded-host` or registration-set auth headers through the
     // overlay path; query string is the only confirmed transport).
     const effectiveEdsConfig = {
@@ -339,7 +345,6 @@ export async function handleStartStorefrontSetup(
                 selectedBlockLibraries: payload.selectedBlockLibraries,
                 customBlockLibraries: payload.customBlockLibraries,
                 packageId: payload.selectedPackage,
-                selectedFeaturePacks: payload.selectedFeaturePacks,
             },
         );
 

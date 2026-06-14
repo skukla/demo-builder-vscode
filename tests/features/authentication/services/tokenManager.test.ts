@@ -72,6 +72,25 @@ describe('TokenManager', () => {
             );
         });
 
+        it('passes a 10s timeout (TIMEOUTS.TOKEN_VALIDATION) to the command executor', async () => {
+            // Pins the contract that token-read uses TIMEOUTS.TOKEN_VALIDATION (10s)
+            // rather than the prior TIMEOUTS.QUICK (5s). The 5s budget was too tight
+            // for users on slow networks / low-power systems — field cases on
+            // v1.0.0-beta.113 hit the retry loop's exit repeatedly.
+            mockCommandExecutor.execute.mockResolvedValue({
+                code: 0,
+                stdout: JSON.stringify({ token: 'x'.repeat(150), expiry: Date.now() + 3600000 }),
+                stderr: '',
+            } as CommandResult);
+
+            await tokenManager.inspectToken();
+
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
+                'aio config get ims.contexts.cli.access_token --json',
+                expect.objectContaining({ timeout: 10000 }),
+            );
+        });
+
         it('should return invalid when no token found', async () => {
             mockCommandExecutor.execute.mockResolvedValue({
                 code: 1,

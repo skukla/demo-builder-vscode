@@ -10,13 +10,13 @@ The Demo Builder extension uses a unified logging system that provides clean sep
 
 The logging system uses two VS Code output channels:
 
-1. **Demo Builder: Logs** - User-facing messages
+1. **Demo Builder: User Logs** - User-facing messages
    - Info, warning, and error messages
    - High-level operation status  
    - User-friendly feedback
    - What end users need for getting help
 
-2. **Demo Builder: Debug** - Detailed diagnostic information
+2. **Demo Builder: Debug Logs** - Detailed diagnostic information
    - Command execution logs with stdout/stderr
    - Environment variables and PATH
    - Token parsing details
@@ -29,8 +29,8 @@ The logging system uses two VS Code output channels:
 ```typescript
 // Central debug logging system
 class DebugLogger {
-    private outputChannel: vscode.OutputChannel;  // "Demo Builder: Logs"
-    private debugChannel: vscode.OutputChannel;   // "Demo Builder: Debug"
+    private outputChannel: vscode.OutputChannel;  // "Demo Builder: User Logs"
+    private debugChannel: vscode.OutputChannel;   // "Demo Builder: Debug Logs"
     
     // User-facing logging
     info(message: string): void
@@ -60,20 +60,20 @@ class ErrorLogger {
 ## Logging Levels and Channels
 
 ### Info Level
-- **Channel**: Demo Builder: Logs
+- **Channel**: Demo Builder: User Logs
 - **Purpose**: General information for users
 - **Format**: `[HH:MM:SS] Message`
 - **Example**: `[14:30:45] Checking prerequisites...`
 
 ### Warning Level
-- **Channel**: Demo Builder: Logs
+- **Channel**: Demo Builder: User Logs
 - **Purpose**: Non-critical issues users should know about
 - **Format**: `[HH:MM:SS] ⚠️ Message`
 - **Example**: `[14:30:45] ⚠️ Optional tool Docker not installed`
 - **UI Integration**: Warning count in status bar
 
 ### Error Level
-- **Channel**: Demo Builder: Logs (message) + Debug (details)
+- **Channel**: Demo Builder: User Logs (message) + Debug (details)
 - **Purpose**: Problems that need attention
 - **Format**: `[HH:MM:SS] ❌ Message`
 - **Example**: `[14:30:45] ❌ Failed to install Node.js`
@@ -83,7 +83,7 @@ class ErrorLogger {
   - Optional notification for critical errors
 
 ### Debug Level
-- **Channel**: Demo Builder: Debug
+- **Channel**: Demo Builder: Debug Logs
 - **Purpose**: Detailed information for troubleshooting
 - **Format**: `[ISO-8601] DEBUG: Message + JSON data`
 - **Example**: 
@@ -194,8 +194,8 @@ errorLogger.addDiagnostic(
 - "Demo Builder - Debug" (debugLogger)
 
 ### After (2 channels)
-- "Demo Builder: Logs" - All user-facing messages
-- "Demo Builder: Debug" - All debug information
+- "Demo Builder: User Logs" - All user-facing messages
+- "Demo Builder: Debug Logs" - All debug information
 
 ### Code Changes
 - `Logger` class now wraps `DebugLogger`

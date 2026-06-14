@@ -32,7 +32,6 @@ export const projectCreationHandlers = defineHandlers({
     'cancel-mesh-creation': lifecycle.handleCancelMeshCreation,
     'cancel-auth-polling': lifecycle.handleCancelAuthPolling,
     'open-adobe-console': lifecycle.handleOpenAdobeConsole,
-    'show-logs': lifecycle.handleShowLogs,
     'openExternal': lifecycle.handleOpenExternal,
 
     // Prerequisite handlers

@@ -304,7 +304,6 @@ if (quickPick) {
   - `components` - Component instance state
 - **Providers**:
   - `ProjectTreeProvider` - Project explorer
-  - `ComponentTreeProvider` - Component browser
 
 ### Dependencies
 - VS Code API (`vscode`) - ExtensionContext, EventEmitter

@@ -318,7 +318,13 @@ async function buildAccsDiscoveryParams(
         return { success: false, error: 'Adobe authentication required' };
     }
 
-    const imsToken = (await context.authManager.getTokenManager().inspectToken()).token;
+    const inspection = await context.authManager.getTokenManager().inspectToken();
+    const imsToken = inspection.token;
+    // Observability only — never log the token value itself.
+    context.logger.info(
+        `[Store Discovery] IMS token: valid=${inspection.valid}, ` +
+        `expiresIn=${inspection.expiresIn}min, present=${!!imsToken}`,
+    );
     if (!imsToken) {
         await context.sendMessage('store-discovery-result', {
             success: false,
@@ -341,6 +347,7 @@ async function buildAccsDiscoveryParams(
         return { success: false, error: 'Invalid discovery service URL' };
     }
     params.discoveryServiceUrl = service.serviceUrl;
+    context.logger.info(`[Store Discovery] discovery service: ${service.serviceUrl}`);
 
     if (payload.accsGraphqlEndpoint) {
         try {

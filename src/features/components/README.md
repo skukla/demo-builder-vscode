@@ -17,7 +17,6 @@ This feature acts as the source of truth for all component information, enabling
 - **Service Registry**: Provide service definitions (Adobe Commerce, Catalog Service, etc.)
 - **Configuration Generation**: Generate project configuration from component selections
 - **Component Transformation**: Transform flat JSON structure to grouped structure for internal use
-- **Component Tree Provider**: File browser integration with .env hiding
 
 ## Key Services
 
@@ -142,8 +141,6 @@ features/components/
 │   └── types.ts                # Type definitions
 ├── handlers/
 │   └── componentHandlers.ts    # Message handlers
-├── providers/
-│   └── componentTreeProvider.ts # File browser with .env hiding
 └── README.md                   # This file
 ```
 
@@ -169,13 +166,11 @@ Available for querying
 - `@/types` - ComponentDefinition, ComponentRegistry, EnvVarDefinition, ServiceDefinition types
 - `@/types/typeGuards` - parseJSON for safe JSON parsing
 - `@/types/handlers` - ProjectConfig type
-- `vscode` - TreeDataProvider for component tree view
 
 ### Used By
 - `src/features/project-creation` - Component selection and dependency resolution
 - `src/features/prerequisites` - Component requirements mapping
 - `src/webviews/components/wizard/steps/ComponentStep.tsx` - Component selection UI
-- `src/providers/componentTreeProvider.ts` - File browser integration
 
 ## Usage Examples
 
@@ -496,8 +491,6 @@ if (validation.warnings.length > 0) {
 - [ ] Configuration generation works
 - [ ] EnvVars enrich components correctly
 - [ ] Services enrich components correctly
-- [ ] Component tree provider shows files correctly
-- [ ] .env files hidden in component tree
 
 ### Integration Testing
 - Test component selection in wizard
@@ -512,7 +505,6 @@ if (validation.warnings.length > 0) {
 - **[Project Creation Feature](../project-creation/README.md)** - Component installation
 - **[Components JSON](config/components.json)** - Component registry configuration
 - **[Component Types](../../types/index.ts)** - Type definitions
-- **[Component Tree Provider](../../providers/componentTreeProvider.ts)** - File browser integration
 
 ---
 

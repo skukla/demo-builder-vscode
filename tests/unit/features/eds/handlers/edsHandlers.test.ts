@@ -163,49 +163,103 @@ describe('EDS Handlers', () => {
     });
 
     describe('handleGitHubOAuth', () => {
-        it('should use VS Code authentication and send auth-complete on success', async () => {
-            // Given: VS Code auth session will be returned
+        it('happy path: cached/fresh session validates successfully, no re-auth', async () => {
             const vscode = await import('vscode');
             (vscode.authentication.getSession as jest.Mock).mockResolvedValue({
                 accessToken: 'new-token',
                 account: { label: 'testuser' },
             });
-            // validateToken returns { valid, user } structure
+            // Validation passes — no stale-session recovery needed.
             mockGitHubTokenService.validateToken.mockResolvedValue({
                 valid: true,
-                user: {
-                    login: 'newuser',
-                    email: 'new@example.com',
-                    avatarUrl: 'https://example.com/new-avatar',
-                },
+                user: { login: 'testuser', email: null, name: null, avatarUrl: null },
             });
 
             const { handleGitHubOAuth } = await import('@/features/eds/handlers/edsGitHubHandlers');
-
-            // When: Start OAuth flow (uses VS Code auth internally)
             const result = await handleGitHubOAuth(mockContext);
 
-            // Then: Should send auth-complete message
             expect(result.success).toBe(true);
-            expect(mockGitHubTokenService.storeToken).toHaveBeenCalled();
+            // VS Code session asked for exactly once — no force-reauth path.
+            expect((vscode.authentication.getSession as jest.Mock)).toHaveBeenCalledTimes(1);
+            expect((vscode.authentication.getSession as jest.Mock).mock.calls[0][2]).toEqual({ createIfNone: true });
+            expect(mockGitHubTokenService.storeToken).toHaveBeenCalledTimes(1);
+            expect(mockGitHubTokenService.validateToken).toHaveBeenCalledTimes(1);
+            // The reported login comes from session.account.label, not from
+            // validateToken's user object — we trust VS Code's session as the
+            // source of truth for identity.
             expect(mockContext.sendMessage).toHaveBeenCalledWith('github-auth-complete', expect.objectContaining({
                 isAuthenticated: true,
-                user: expect.objectContaining({ login: 'newuser' }),
+                user: expect.objectContaining({ login: 'testuser' }),
             }));
         });
 
-        it('should send error when VS Code auth cancelled', async () => {
-            // Given: VS Code auth session is cancelled (returns null)
+        it('stale-session recovery: validateToken 401 → force fresh OAuth → fresh token stored', async () => {
+            // The leahrayard scenario: VS Code returned a cached session whose
+            // token has been revoked since (user cleared the OAuth app in
+            // GitHub Settings, password reset, etc.). validateToken comes back
+            // invalid; the handler triggers `forceNewSession` to mint a new
+            // working token.
+            const vscode = await import('vscode');
+            const getSession = vscode.authentication.getSession as jest.Mock;
+            getSession
+                .mockResolvedValueOnce({ accessToken: 'stale-cached-token', account: { label: 'leahrayard' } })
+                .mockResolvedValueOnce({ accessToken: 'fresh-token', account: { label: 'leahrayard' } });
+            mockGitHubTokenService.validateToken.mockResolvedValue({ valid: false });
+
+            const { handleGitHubOAuth } = await import('@/features/eds/handlers/edsGitHubHandlers');
+            const result = await handleGitHubOAuth(mockContext);
+
+            expect(result.success).toBe(true);
+            // Two getSession calls: first cached, second forced.
+            expect(getSession).toHaveBeenCalledTimes(2);
+            expect(getSession.mock.calls[0][2]).toEqual({ createIfNone: true });
+            expect(getSession.mock.calls[1][2]).toMatchObject({
+                forceNewSession: { detail: expect.stringMatching(/no longer valid|Re-authorize/i) },
+            });
+            // Stale token cleared between attempts; fresh token stored.
+            expect(mockGitHubTokenService.clearToken).toHaveBeenCalled();
+            expect(mockGitHubTokenService.storeToken).toHaveBeenCalledTimes(2);
+            const secondStoreCall = mockGitHubTokenService.storeToken.mock.calls[1][0];
+            expect(secondStoreCall.token).toBe('fresh-token');
+            // validateToken NOT called again after the forced re-auth — the
+            // token was just minted, a transient 401 here would re-trigger
+            // the prompt forever.
+            expect(mockGitHubTokenService.validateToken).toHaveBeenCalledTimes(1);
+            // UI sees the post-reauth user (still leahrayard).
+            expect(mockContext.sendMessage).toHaveBeenCalledWith('github-auth-complete', expect.objectContaining({
+                isAuthenticated: true,
+                user: expect.objectContaining({ login: 'leahrayard' }),
+            }));
+        });
+
+        it('stale-session recovery: user cancels the forced re-auth → reports error', async () => {
+            const vscode = await import('vscode');
+            const getSession = vscode.authentication.getSession as jest.Mock;
+            getSession
+                .mockResolvedValueOnce({ accessToken: 'stale-cached-token', account: { label: 'leahrayard' } })
+                .mockResolvedValueOnce(null); // user cancelled the forced re-auth prompt
+            mockGitHubTokenService.validateToken.mockResolvedValue({ valid: false });
+
+            const { handleGitHubOAuth } = await import('@/features/eds/handlers/edsGitHubHandlers');
+            const result = await handleGitHubOAuth(mockContext);
+
+            expect(result.success).toBe(false);
+            expect(getSession).toHaveBeenCalledTimes(2);
+            expect(mockContext.sendMessage).toHaveBeenCalledWith('github-oauth-error', expect.objectContaining({
+                error: expect.stringMatching(/cancelled/i),
+            }));
+        });
+
+        it('sends error when initial VS Code auth is cancelled', async () => {
             const vscode = await import('vscode');
             (vscode.authentication.getSession as jest.Mock).mockResolvedValue(null);
 
             const { handleGitHubOAuth } = await import('@/features/eds/handlers/edsGitHubHandlers');
-
-            // When: Start OAuth flow
             const result = await handleGitHubOAuth(mockContext);
 
-            // Then: Should send error message
             expect(result.success).toBe(false);
+            // No store attempt when user never authorized.
+            expect(mockGitHubTokenService.storeToken).not.toHaveBeenCalled();
             expect(mockContext.sendMessage).toHaveBeenCalledWith('github-oauth-error', expect.objectContaining({
                 error: expect.stringContaining('cancelled'),
             }));

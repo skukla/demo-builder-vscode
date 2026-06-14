@@ -2,7 +2,7 @@
  * useDashboardActions Hook Tests
  *
  * Tests for the extracted dashboard action handlers hook.
- * Verifies all 11 action handlers work correctly.
+ * Verifies all action handlers work correctly.
  *
  * @jest-environment jsdom
  */
@@ -17,7 +17,6 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
             ANIMATION: 150,
             TRANSITION: 300,
         },
-        HOVER_SUPPRESSION_DELAY: 500, // Custom UI timing
     },
 }));
 
@@ -41,7 +40,6 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 describe('useDashboardActions', () => {
     let mockSetIsTransitioning: jest.Mock;
     let mockSetIsOpeningBrowser: jest.Mock;
-    let mockSetIsLogsHoverSuppressed: jest.Mock;
     const mockPostMessage = webviewClient.postMessage as jest.Mock;
 
     beforeEach(() => {
@@ -49,20 +47,22 @@ describe('useDashboardActions', () => {
         jest.useFakeTimers();
         mockSetIsTransitioning = jest.fn();
         mockSetIsOpeningBrowser = jest.fn();
-        mockSetIsLogsHoverSuppressed = jest.fn();
     });
 
     afterEach(() => {
         jest.useRealTimers();
     });
 
-    const renderActionsHook = (isOpeningBrowser = false) => {
+    const renderActionsHook = (
+        isOpeningBrowser = false,
+        extra: { edsLiveUrl?: string; edsDaLiveUrl?: string } = {},
+    ) => {
         return renderHook(() =>
             useDashboardActions({
                 isOpeningBrowser,
                 setIsTransitioning: mockSetIsTransitioning,
                 setIsOpeningBrowser: mockSetIsOpeningBrowser,
-                setIsLogsHoverSuppressed: mockSetIsLogsHoverSuppressed,
+                ...extra,
             })
         );
     };
@@ -73,15 +73,17 @@ describe('useDashboardActions', () => {
 
             expect(result.current.handleStartDemo).toBeDefined();
             expect(result.current.handleStopDemo).toBeDefined();
-            expect(result.current.handleViewLogs).toBeDefined();
             expect(result.current.handleDeployMesh).toBeDefined();
             expect(result.current.handleOpenBrowser).toBeDefined();
             expect(result.current.handleConfigure).toBeDefined();
             expect(result.current.handleOpenDevConsole).toBeDefined();
             expect(result.current.handleDeleteProject).toBeDefined();
             expect(result.current.handleNavigateBack).toBeDefined();
-            expect(result.current.handleViewComponents).toBeDefined();
             expect(result.current.handleReAuthenticate).toBeDefined();
+            expect(result.current.handleCopyPath).toBeDefined();
+            expect(result.current.handleExportProject).toBeDefined();
+            expect(result.current.handleRepublishContent).toBeDefined();
+            expect(result.current.handleResetProject).toBeDefined();
         });
 
         it('should return functions for all handlers', () => {
@@ -89,14 +91,12 @@ describe('useDashboardActions', () => {
 
             expect(typeof result.current.handleStartDemo).toBe('function');
             expect(typeof result.current.handleStopDemo).toBe('function');
-            expect(typeof result.current.handleViewLogs).toBe('function');
             expect(typeof result.current.handleDeployMesh).toBe('function');
             expect(typeof result.current.handleOpenBrowser).toBe('function');
             expect(typeof result.current.handleConfigure).toBe('function');
             expect(typeof result.current.handleOpenDevConsole).toBe('function');
             expect(typeof result.current.handleDeleteProject).toBe('function');
             expect(typeof result.current.handleNavigateBack).toBe('function');
-            expect(typeof result.current.handleViewComponents).toBe('function');
             expect(typeof result.current.handleReAuthenticate).toBe('function');
         });
     });
@@ -165,44 +165,6 @@ describe('useDashboardActions', () => {
         });
     });
 
-    describe('View Logs Action', () => {
-        it('should send viewLogs message', () => {
-            const { result } = renderActionsHook();
-
-            act(() => {
-                result.current.handleViewLogs();
-            });
-
-            expect(mockPostMessage).toHaveBeenCalledWith('viewLogs');
-        });
-
-        it('should suppress hover styles during layout shift', () => {
-            const { result } = renderActionsHook();
-
-            act(() => {
-                result.current.handleViewLogs();
-            });
-
-            expect(mockSetIsLogsHoverSuppressed).toHaveBeenCalledWith(true);
-        });
-
-        it('should re-enable hover styles after timeout', () => {
-            const { result } = renderActionsHook();
-
-            act(() => {
-                result.current.handleViewLogs();
-            });
-
-            expect(mockSetIsLogsHoverSuppressed).toHaveBeenCalledWith(true);
-
-            act(() => {
-                jest.advanceTimersByTime(500);
-            });
-
-            expect(mockSetIsLogsHoverSuppressed).toHaveBeenCalledWith(false);
-        });
-    });
-
     describe('Mesh Deploy Action', () => {
         it('should set transitioning state and send deployMesh message', () => {
             const { result } = renderActionsHook();
@@ -257,16 +219,6 @@ describe('useDashboardActions', () => {
             expect(mockPostMessage).toHaveBeenCalledWith('navigateBack');
         });
 
-        it('should send viewComponents message', () => {
-            const { result } = renderActionsHook();
-
-            act(() => {
-                result.current.handleViewComponents();
-            });
-
-            expect(mockPostMessage).toHaveBeenCalledWith('viewComponents');
-        });
-
         it('should send reAuthenticate message', () => {
             const { result } = renderActionsHook();
 
@@ -275,6 +227,59 @@ describe('useDashboardActions', () => {
             });
 
             expect(mockPostMessage).toHaveBeenCalledWith('reAuthenticate');
+        });
+
+        it('should send copyPath message', () => {
+            const { result } = renderActionsHook();
+
+            act(() => {
+                result.current.handleCopyPath();
+            });
+
+            expect(mockPostMessage).toHaveBeenCalledWith('copyPath');
+        });
+
+        it('should send exportProject message', () => {
+            const { result } = renderActionsHook();
+
+            act(() => {
+                result.current.handleExportProject();
+            });
+
+            expect(mockPostMessage).toHaveBeenCalledWith('exportProject');
+        });
+
+        it('should send republishContent message', () => {
+            const { result } = renderActionsHook();
+
+            act(() => {
+                result.current.handleRepublishContent();
+            });
+
+            expect(mockPostMessage).toHaveBeenCalledWith('republishContent');
+        });
+
+        it('should send resetProject message', () => {
+            const { result } = renderActionsHook();
+
+            act(() => {
+                result.current.handleResetProject();
+            });
+
+            expect(mockPostMessage).toHaveBeenCalledWith('resetProject');
+        });
+    });
+
+    // The authoring-experience flip was relocated to the Configure webview
+    // (setup-time preference with an explicit Save), so the hook no longer
+    // exposes handleSetAuthoringExperience.
+    describe('Authoring Experience (flip removed)', () => {
+        it('does not expose a handleSetAuthoringExperience handler', () => {
+            const { result } = renderActionsHook();
+
+            expect(
+                (result.current as Record<string, unknown>).handleSetAuthoringExperience,
+            ).toBeUndefined();
         });
     });
 
@@ -294,7 +299,6 @@ describe('useDashboardActions', () => {
             expect(result.current.handleOpenDevConsole).toBe(initialHandlers.handleOpenDevConsole);
             expect(result.current.handleDeleteProject).toBe(initialHandlers.handleDeleteProject);
             expect(result.current.handleNavigateBack).toBe(initialHandlers.handleNavigateBack);
-            expect(result.current.handleViewComponents).toBe(initialHandlers.handleViewComponents);
             expect(result.current.handleReAuthenticate).toBe(initialHandlers.handleReAuthenticate);
         });
     });

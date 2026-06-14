@@ -145,7 +145,7 @@ Commands orchestrate features and coordinate workflows. See `commands/CLAUDE.md`
 - **ai**: AI context verification + in-extension MCP server (full agent tool surface). Harness is Claude Code (CLI) — see `docs/systems/mcp-server.md`
 - **authentication**: Adobe authentication with Console SDK, token caching, org/project/workspace selection
 - **components**: Component registry, definitions, and lifecycle management
-- **dashboard**: Project dashboard UI, mesh status, component browser
+- **dashboard**: Project dashboard UI, mesh status
 - **lifecycle**: Project start/stop, process management, terminal integration
 - **mesh**: API Mesh deployment, verification, staleness detection, configuration fetching
 - **prerequisites**: Tool detection, installation, version checking, Node.js multi-version support
@@ -187,7 +187,6 @@ Remaining utilities are being migrated to `features/` or `core/`:
 
 ### Providers (`providers/`)
 - **ProjectTreeProvider**: Project explorer view
-- **ComponentTreeProvider**: Component file browser with .env hiding
 - **StatusBar**: Status bar integration for demo state
 
 ### Types (`types/`)

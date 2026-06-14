@@ -13,6 +13,11 @@
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 
 jest.mock('@/features/mesh/services/meshDeployment');
+// executeMeshPhase gates App Builder operations on projectRequiresAppBuilder
+// (added on develop); mock it so the executor doesn't read the full registry shape.
+jest.mock('@/features/components/services/projectAppBuilderPredicate', () => ({
+    projectRequiresAppBuilder: jest.fn(() => false),
+}));
 jest.mock('@/features/mesh/services/stalenessDetector', () => ({
     readMeshEnvVarsFromFile: jest.fn().mockResolvedValue({}),
     updateMeshState: jest.fn().mockResolvedValue(undefined),

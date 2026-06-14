@@ -27,7 +27,9 @@ import {
     normalizePath,
 } from './daLiveConstants';
 import { getMimeType } from './daLiveMimeTypes';
+import { hasWriteAccess } from './daLiveOrgOperations';
 import { convertSpreadsheetJsonToHtml } from './daLiveSpreadsheetUtils';
+import { addContentResult, type PatchReport } from './patchReportHelper';
 import {
     DaLiveError,
     DaLiveAuthError,
@@ -370,7 +372,14 @@ export class DaLiveContentOperations {
     }
 
     /**
-     * Process HTML content: apply patches and transform for DA.live
+     * Process HTML content: apply patches and transform for DA.live.
+     *
+     * When `patchReport` is supplied, each content-patch result (applied or
+     * not) is routed into the unified report via `addContentResult` so the
+     * pipeline's final `reportUnapplied` toast can name unapplied content
+     * patches alongside unapplied code patches. Without a report (e.g.
+     * one-off content copies outside the create/reset pipeline), the
+     * previous debug-log behavior is preserved.
      */
     private async processHtmlContent(
         sourceResponse: Response,
@@ -378,6 +387,7 @@ export class DaLiveContentOperations {
         sourceBaseUrl: string,
         contentPatchIds?: string[],
         contentPatchSource?: ContentPatchSource,
+        patchReport?: PatchReport,
     ): Promise<Blob> {
         let htmlText = await sourceResponse.text();
 
@@ -389,7 +399,9 @@ export class DaLiveContentOperations {
             htmlText = patchedHtml;
 
             for (const result of results) {
-                if (!result.applied && result.reason) {
+                if (patchReport) {
+                    addContentResult(patchReport, result);
+                } else if (!result.applied && result.reason) {
                     this.logger.debug(`[DA.live] Content patch '${result.patchId}' not applied to ${sourcePath}: ${result.reason}`);
                 }
             }
@@ -418,6 +430,7 @@ export class DaLiveContentOperations {
         destPath: string,
         contentPatchIds?: string[],
         contentPatchSource?: ContentPatchSource,
+        patchReport?: PatchReport,
     ): Promise<boolean> {
         const sourceBaseUrl = `https://main--${source.site}--${source.org}.aem.live`;
 
@@ -436,14 +449,9 @@ export class DaLiveContentOperations {
                 });
 
                 if (!sourceResponse.ok) {
-                    if (sourceResponse.status === 404) {
-                        // Not a failure: the source simply has no page here (e.g. a
-                        // block without a published doc page). The caller generates a
-                        // doc/stub page instead, so this is an expected branch.
-                        this.logger.debug(`[DA.live] No source page at ${sourcePath} — will generate instead`);
-                    } else {
-                        this.logger.warn(`[DA.live] Failed to fetch source ${sourcePath}: ${sourceResponse.status}`);
-                    }
+                    // 404 is expected for blocks without doc pages on the CDN — log at debug
+                    const logLevel = sourceResponse.status === 404 ? 'debug' : 'warn';
+                    this.logger[logLevel](`[DA.live] Failed to fetch source ${sourcePath}: ${sourceResponse.status}`);
                     return false;
                 }
 
@@ -452,7 +460,7 @@ export class DaLiveContentOperations {
                 const daPath = this.resolveDaPath(destPath, isHtml);
 
                 const contentBlob = isHtml
-                    ? await this.processHtmlContent(sourceResponse, sourcePath, sourceBaseUrl, contentPatchIds, contentPatchSource)
+                    ? await this.processHtmlContent(sourceResponse, sourcePath, sourceBaseUrl, contentPatchIds, contentPatchSource, patchReport)
                     : await sourceResponse.blob();
 
                 const destUrl = `${DA_LIVE_BASE_URL}/source/${destination.org}/${destination.site}/${daPath}`;
@@ -1795,6 +1803,13 @@ export class DaLiveContentOperations {
      * @param progressCallback - Optional progress callback
      * @param contentPatchIds - Optional content patch IDs to apply
      * @param contentPatchSource - Optional external source for content patches
+     * @param patchReport - Optional patch report. When supplied, per-page
+     *   content-patch results (applied or not) are routed into the report
+     *   via `addContentResult`, so the pipeline's final `reportUnapplied`
+     *   call surfaces unapplied content patches in the same toast as
+     *   unapplied code patches. Without a report, the old debug-log
+     *   behavior is preserved (for callers outside the create/reset
+     *   pipeline that don't aggregate patch results).
      * @returns Copy result
      */
     async copyContentFromSource(
@@ -1804,6 +1819,7 @@ export class DaLiveContentOperations {
         progressCallback?: DaLiveProgressCallback,
         contentPatchIds?: string[],
         contentPatchSource?: ContentPatchSource,
+        patchReport?: PatchReport,
     ): Promise<DaLiveCopyResult> {
         // Report initialization progress
         progressCallback?.({ processed: 0, total: 0, percentage: 0, message: 'Enumerating source content...' });
@@ -1910,6 +1926,7 @@ export class DaLiveContentOperations {
                         sourcePath,
                         contentPatchIds,
                         contentPatchSource,
+                        patchReport,
                     );
                     return { path: sourcePath, success };
                 }),
@@ -2389,8 +2406,71 @@ export class DaLiveContentOperations {
         org: string,
         configUpdates: Record<string, string>,
     ): Promise<{ success: boolean; error?: string }> {
+        return this.writeMergedDataConfig(`${DA_LIVE_BASE_URL}/config/${org}`, org, configUpdates);
+    }
+
+    /**
+     * Apply site-level configuration settings
+     *
+     * Writes to the per-SITE config (/config/{org}/{site}). da.live's Library
+     * reads the AEM Assets binding (aem.repositoryId) from the site config, so
+     * that binding must be written site-scoped for the AEM Assets panel to
+     * appear for first-time users.
+     *
+     * IMPORTANT: Preserves all existing sheets (library, permissions, etc.) —
+     * only updates the data sheet. The block library lives in the site config,
+     * so clobbering other sheets here would remove it.
+     *
+     * 401 ownership is governed by the ORG (org ownership grants site writes),
+     * so the write-access probe is keyed on the org, not the site.
+     *
+     * `removeKeys` deletes named keys from the data sheet (a merge cannot remove
+     * a key) — used to clear a stale row, e.g. reverting editor.path to the
+     * da.live default when a project flips back to Universal Editor with no IMS
+     * org id. When updates is empty and no removeKey is present, no POST is made.
+     *
+     * @param org - DA.live organization name
+     * @param site - DA.live site name
+     * @param configUpdates - Key-value pairs to update in the config
+     * @param removeKeys - Keys to delete from the data sheet (default none)
+     * @returns Success status with optional error message
+     */
+    async applySiteConfig(
+        org: string,
+        site: string,
+        configUpdates: Record<string, string>,
+        removeKeys: string[] = [],
+    ): Promise<{ success: boolean; error?: string }> {
+        return this.writeMergedDataConfig(`${DA_LIVE_BASE_URL}/config/${org}/${site}`, org, configUpdates, removeKeys);
+    }
+
+    /**
+     * Read the config at configUrl, merge configUpdates into its data sheet
+     * (preserving ALL other sheets), delete any `removeKeys`, and POST it back.
+     *
+     * Shared by applyOrgConfig (/config/{org}) and applySiteConfig
+     * (/config/{org}/{site}). The 401 ownership probe uses `org` because
+     * org ownership governs both org and site config writes.
+     *
+     * `removeKeys` deletes named keys from the data sheet — a merge alone cannot
+     * remove a key, so removal is the only way to revert a key to the da.live
+     * default. When configUpdates is empty AND no removeKey was actually present
+     * in the existing sheet, the method short-circuits WITHOUT a POST (no
+     * pointless round-trip, and no empty config doc created where none existed).
+     *
+     * @param configUrl - Full DA.live config endpoint URL
+     * @param org - DA.live organization name (used for the 401 ownership probe)
+     * @param configUpdates - Key-value pairs to merge into the data sheet
+     * @param removeKeys - Keys to delete from the data sheet (default none)
+     * @returns Success status with optional error message
+     */
+    private async writeMergedDataConfig(
+        configUrl: string,
+        org: string,
+        configUpdates: Record<string, string>,
+        removeKeys: string[] = [],
+    ): Promise<{ success: boolean; error?: string }> {
         const token = await this.getImsToken();
-        const configUrl = `${DA_LIVE_BASE_URL}/config/${org}`;
 
         // First, get existing config to preserve ALL sheets (data, permissions, etc.)
         // CRITICAL: If the GET fails, we must NOT write a skeleton config that
@@ -2415,17 +2495,42 @@ export class DaLiveContentOperations {
                     ':names': ['data'],
                     ':type': 'multi-sheet',
                 };
+            } else if (getResponse.status === 401) {
+                // DA.live returns 401 (not 404) when the config has never been
+                // written. We can't safely treat 401 as "create fresh"
+                // unconditionally — the endpoint's owner-auth model means
+                // the same 401 can mean "you don't own this org," and
+                // writing skeleton config to someone else's org would erase
+                // their permissions sheet.
+                //
+                // The disambiguation is a separate write-access probe via
+                // HEAD /list/<org>/, which returns the user's permissions
+                // in the x-da-actions header. If write access is present,
+                // the user is the legitimate owner (just first-time on
+                // /config/) and creating fresh is safe. If not, we refuse.
+                const canWrite = await hasWriteAccess(org, token);
+                if (!canWrite) {
+                    return {
+                        success: false,
+                        error: `Cannot read or write to org config (401): verify DA.live ownership of "${org}".`,
+                    };
+                }
+                existingConfig = {
+                    ':version': 3,
+                    ':names': ['data'],
+                    ':type': 'multi-sheet',
+                };
             } else {
                 return {
                     success: false,
-                    error: `Failed to read existing org config: ${getResponse.status} ${getResponse.statusText}`,
+                    error: `Failed to read existing config: ${getResponse.status} ${getResponse.statusText}`,
                 };
             }
         } catch (error) {
             // Network/timeout error — cannot safely write without reading first
             return {
                 success: false,
-                error: `Cannot read existing org config: ${(error as Error).message}`,
+                error: `Cannot read existing config: ${(error as Error).message}`,
             };
         }
 
@@ -2437,9 +2542,28 @@ export class DaLiveContentOperations {
             }
         }
 
+        // Determine which removeKeys actually exist before mutating the map.
+        // Used by the no-op short-circuit below.
+        const removedAnything = removeKeys.some(key => configMap.has(key));
+
         // Apply updates
         for (const [key, value] of Object.entries(configUpdates)) {
             configMap.set(key, value);
+        }
+
+        // Apply removals (e.g. clearing a stale editor.path row). writeMergedDataConfig
+        // can only merge keys, so explicit removal is the only way to revert a key to
+        // the da.live default.
+        for (const key of removeKeys) {
+            configMap.delete(key);
+        }
+
+        // No-op optimization: when there are no updates AND no removeKey was actually
+        // present, the POST would rewrite the sheet to its current state — or worse,
+        // create an empty config doc where none existed (UE projects that never had
+        // editor.path). Skip the round-trip and report success.
+        if (Object.keys(configUpdates).length === 0 && !removedAnything) {
+            return { success: true };
         }
 
         // Convert back to rows format (key/value columns)
@@ -2456,7 +2580,7 @@ export class DaLiveContentOperations {
             },
         };
 
-        // POST to /config/{org} API endpoint using FormData
+        // POST to the config API endpoint using FormData
         const formData = new FormData();
         formData.append('config', JSON.stringify(configData));
 
@@ -2471,14 +2595,14 @@ export class DaLiveContentOperations {
             });
 
             if (response.ok) {
-                this.logger.info(`[DA.live] Org config applied for ${org}: ${Object.keys(configUpdates).join(', ')}`);
+                this.logger.info(`[DA.live] Config applied at ${configUrl}: ${Object.keys(configUpdates).join(', ')}`);
                 return { success: true };
             }
 
             const errorText = await response.text().catch(() => '');
             return {
                 success: false,
-                error: `Failed to apply org config: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`,
+                error: `Failed to apply config: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`,
             };
         } catch (error) {
             return { success: false, error: `Config API error: ${(error as Error).message}` };

@@ -121,7 +121,6 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                             getWebsiteItems={getWebsiteItems}
                             getStoreGroupItems={getStoreGroupItems}
                             getStoreViewItems={getStoreViewItems}
-                            componentConfigs={state.componentConfigs ?? {}}
                         />
                     )}
                 />

@@ -19,7 +19,7 @@
  *   3. Show a confirmation listing the affected projects.
  *   4. For each confirmed project: build the migration context, run
  *      `migrateStorefrontNamingIfNeeded`, persist the project manifest.
- *   5. Surface per-project results in the "Demo Builder: Logs" channel
+ *   5. Surface per-project results in the "Demo Builder: User Logs" channel
  *      and as a final summary toast.
  *
  * @module commands/migrateStorefrontNames
@@ -309,7 +309,7 @@ export class MigrateStorefrontNamesCommand extends BaseCommand {
 
         await this.showWarning(
             `Migrated ${succeeded.length} of ${outcomes.length} storefronts. ` +
-            `${failed.length} failed — check "Demo Builder: Logs" for details.`,
+            `${failed.length} failed — check "Demo Builder: User Logs" for details.`,
         );
     }
 }

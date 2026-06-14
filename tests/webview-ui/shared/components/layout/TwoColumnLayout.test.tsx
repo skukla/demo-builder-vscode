@@ -203,5 +203,68 @@ describe('TwoColumnLayout', () => {
       const leftColumn = container.firstChild?.childNodes[0] as HTMLDivElement;
       expect(leftColumn.style.maxWidth).toBe('800px');
     });
+
+    it('should tag container and columns with responsive class hooks', () => {
+      // These class names are the targets for the narrow-viewport media
+      // queries in custom-spectrum.css. If they change, the stacking and
+      // rail-collapse styles no longer fire.
+      const { container } = render(
+        <TwoColumnLayout
+          leftContent={<div>Left</div>}
+          rightContent={<div>Right</div>}
+        />
+      );
+      const flexContainer = container.firstChild as HTMLDivElement;
+      const leftColumn = flexContainer.childNodes[0] as HTMLDivElement;
+      const rightColumn = flexContainer.childNodes[1] as HTMLDivElement;
+
+      expect(flexContainer).toHaveClass('two-column-layout');
+      expect(leftColumn).toHaveClass('two-column-layout-left');
+      expect(rightColumn).toHaveClass('two-column-layout-right');
+    });
+  });
+
+  describe('Right Column Min-Width', () => {
+    it('defaults right column min-width to 300px', () => {
+      // Floors the summary panel so the left column gives up space first
+      // (max-width: 800px). Without this, the right column would shrink
+      // past readability before the left would.
+      const { container } = render(
+        <TwoColumnLayout
+          leftContent={<div>Left</div>}
+          rightContent={<div>Right</div>}
+        />
+      );
+      const rightColumn = container.firstChild?.childNodes[1] as HTMLDivElement;
+      expect(rightColumn.style.minWidth).toBe('300px');
+    });
+
+    it('honors a pixel rightMinWidth override', () => {
+      const { container } = render(
+        <TwoColumnLayout
+          rightMinWidth="400px"
+          leftContent={<div>Left</div>}
+          rightContent={<div>Right</div>}
+        />
+      );
+      const rightColumn = container.firstChild?.childNodes[1] as HTMLDivElement;
+      expect(rightColumn.style.minWidth).toBe('400px');
+    });
+
+    it('translates a Spectrum-token rightMinWidth', () => {
+      // size-600 -> 48px via spectrumTokens translation. Verifies that
+      // rightMinWidth participates in the same token pipeline as gap /
+      // padding / leftMaxWidth.
+      const rightMinWidth: DimensionValue = 'size-600';
+      const { container } = render(
+        <TwoColumnLayout
+          rightMinWidth={rightMinWidth}
+          leftContent={<div>Left</div>}
+          rightContent={<div>Right</div>}
+        />
+      );
+      const rightColumn = container.firstChild?.childNodes[1] as HTMLDivElement;
+      expect(rightColumn.style.minWidth).toBe('48px');
+    });
   });
 });

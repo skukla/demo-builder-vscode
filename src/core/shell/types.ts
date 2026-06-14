@@ -62,9 +62,6 @@ export interface ExecuteOptions extends Omit<ExecOptions, 'shell'> {
 
     // Output handling
     onOutput?: (data: string) => void;         // Callback for streaming output
-
-    // Logging
-    expectNonZeroExit?: boolean;               // Probe commands (e.g. `git describe`) where a non-zero exit is an expected branch, not a failure — suppresses the "exited with code N" debug log
 }
 
 /**

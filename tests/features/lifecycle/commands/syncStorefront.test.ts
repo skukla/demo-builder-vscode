@@ -23,6 +23,20 @@ import * as vscode from 'vscode';
     (vscode.commands as { executeCommand?: jest.Mock }).executeCommand ?? jest.fn();
 (vscode.env as { openExternal?: jest.Mock }).openExternal =
     (vscode.env as { openExternal?: jest.Mock }).openExternal ?? jest.fn();
+(vscode.window as { showTextDocument?: jest.Mock }).showTextDocument =
+    (vscode.window as { showTextDocument?: jest.Mock }).showTextDocument ?? jest.fn();
+(vscode.workspace as { openTextDocument?: jest.Mock }).openTextDocument =
+    (vscode.workspace as { openTextDocument?: jest.Mock }).openTextDocument ?? jest.fn();
+
+// Make the conflict-resolution poll resolve immediately — the condition is
+// driven by git state we mock per-test, not by real timers.
+jest.mock('@/core/shell/pollingService', () => ({
+    PollingService: jest.fn().mockImplementation(() => ({
+        pollUntilCondition: jest.fn(async (checkFn: () => Promise<boolean>) => {
+            await checkFn();
+        }),
+    })),
+}));
 
 import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
 import {
@@ -255,6 +269,49 @@ describe('SyncStorefrontCommand', () => {
         expect(abortCalled).toBe(true);
         // No success message — sync was canceled, not completed
         expect(vscode.window.setStatusBarMessage).not.toHaveBeenCalled();
+    });
+
+    it('on PushRejectedError + "Continue", registers the nested storefront repo and opens the conflicts', async () => {
+        // First sync push is rejected; after conflict resolution the re-push succeeds.
+        syncAndPublishMock
+            .mockRejectedValueOnce(new PushRejectedError('push rejected'))
+            .mockResolvedValueOnce({ committed: false, pushed: true, helixPublished: false, summary: '' });
+
+        execFileMock.mockImplementation((_cmd: string, args: string[], cb: (err: Error | null, result?: { stdout: string; stderr: string }) => void) => {
+            if (args.includes('pull') && args.includes('--rebase')) {
+                const err = new Error('Command failed') as NodeJS.ErrnoException & { stderr?: string };
+                err.stderr = 'CONFLICT (content): Merge conflict in blocks/hero/hero.js';
+                cb(err);
+                return;
+            }
+            if (args.includes('diff') && args.includes('--diff-filter=U')) {
+                cb(null, { stdout: 'blocks/hero/hero.js\n', stderr: '' });
+                return;
+            }
+            cb(null, { stdout: '', stderr: '' });
+        });
+        // The conflicted file has been resolved (no markers) so the poll passes at once.
+        (fsPromises.readFile as jest.Mock).mockResolvedValue('resolved content, no markers');
+        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValueOnce('Continue');
+
+        const command = new SyncStorefrontCommand(
+            makeContext(),
+            makeStateManager(makeEdsProject()) as never,
+            makeLogger() as never,
+        );
+
+        await command.execute();
+
+        // Registers the nested storefront repo with VS Code's Git extension so its
+        // conflicts actually surface in Source Control (the reported bug).
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+            'git.openRepository',
+            '/projects/demo/components/eds-storefront',
+        );
+        // Reveals the SCM view and opens the conflicted file so the merge controls
+        // are right in front of the user.
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith('workbench.view.scm');
+        expect(vscode.window.showTextDocument).toHaveBeenCalled();
     });
 
     it('does not import vscode from the service module (service stays vscode-free)', () => {

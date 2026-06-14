@@ -24,7 +24,6 @@ export interface UseModalStateProps {
     stacks: Stack[];
     selectedStack?: string;
     selectedAddons: string[];
-    selectedFeaturePacks: string[];
     selectedBlockLibraries: string[];
     customBlockLibraries: CustomBlockLibrary[];
     customBlockLibraryDefaults: CustomBlockLibrary[];
@@ -33,7 +32,6 @@ export interface UseModalStateProps {
     onPackageSelect: (packageId: string) => void;
     onStackSelect: (stackId: string) => void;
     onAddonsChange?: (addons: string[]) => void;
-    onFeaturePacksChange?: (packs: string[]) => void;
     onBlockLibrariesChange?: (libraries: string[]) => void;
     onCustomBlockLibrariesChange?: (libs: CustomBlockLibrary[]) => void;
     onOptionalDependenciesChange?: (deps: string[]) => void;
@@ -43,14 +41,12 @@ export interface UseModalStateReturn {
     modalPackageId: string | null;
     modalPackage: DemoPackage | null;
     modalAddons: string[];
-    modalFeaturePacks: string[];
     modalBlockLibraries: string[];
     modalCustomBlockLibraries: CustomBlockLibrary[];
     modalOptionalDeps: string[];
     handleCardClick: (pkg: DemoPackage) => void;
     handleStackSelect: (stackId: string) => void;
     handleModalAddonsChange: (addons: string[]) => void;
-    handleModalFeaturePacksChange: (packs: string[]) => void;
     handleModalBlockLibrariesChange: (libraries: string[]) => void;
     handleModalCustomBlockLibrariesChange: (libs: CustomBlockLibrary[]) => void;
     handleModalOptionalDepsChange: (deps: string[]) => void;
@@ -62,14 +58,6 @@ export interface UseModalStateReturn {
 function getRequiredAddons(pkg: DemoPackage): string[] {
     if (!pkg.addons) return [];
     return Object.entries(pkg.addons)
-        .filter(([, config]) => config === 'required')
-        .map(([id]) => id);
-}
-
-/** Get required feature pack IDs from a package's featurePacks config */
-function getRequiredFeaturePacks(pkg: DemoPackage): string[] {
-    if (!pkg.featurePacks) return [];
-    return Object.entries(pkg.featurePacks)
         .filter(([, config]) => config === 'required')
         .map(([id]) => id);
 }
@@ -94,7 +82,6 @@ export function useModalState(props: UseModalStateProps): UseModalStateReturn {
     const {
         packages,
         selectedAddons,
-        selectedFeaturePacks,
         selectedBlockLibraries,
         customBlockLibraries,
         customBlockLibraryDefaults,
@@ -111,7 +98,6 @@ export function useModalState(props: UseModalStateProps): UseModalStateReturn {
 
     const [modalPackageId, setModalPackageId] = useState<string | null>(null);
     const [modalAddons, setModalAddons] = useState<string[]>(selectedAddons);
-    const [modalFeaturePacks, setModalFeaturePacks] = useState<string[]>(selectedFeaturePacks);
     const [modalBlockLibraries, setModalBlockLibraries] = useState<string[]>(selectedBlockLibraries);
     const [modalCustomBlockLibraries, setModalCustomBlockLibraries] = useState<CustomBlockLibrary[]>(customBlockLibraries);
     const [modalOptionalDeps, setModalOptionalDeps] = useState<string[]>(selectedOptionalDependencies);
@@ -141,7 +127,6 @@ export function useModalState(props: UseModalStateProps): UseModalStateReturn {
         const {
             onPackageSelect,
             selectedAddons,
-            selectedFeaturePacks,
             selectedBlockLibraries,
             customBlockLibraries,
             customBlockLibraryDefaults,
@@ -155,10 +140,6 @@ export function useModalState(props: UseModalStateProps): UseModalStateReturn {
         const requiredAddons = getRequiredAddons(pkg);
         const initialAddons = [...new Set([...selectedAddons, ...requiredAddons])];
         setModalAddons(initialAddons);
-        // Initialize modal feature packs with current state + package's required packs
-        const requiredPacks = getRequiredFeaturePacks(pkg);
-        const initialPacks = [...new Set([...selectedFeaturePacks, ...requiredPacks])];
-        setModalFeaturePacks(initialPacks);
         // Initialize modal block libraries from parent state
         setModalBlockLibraries(selectedBlockLibraries);
         // Initialize modal custom block libraries from parent state, falling back to defaults
@@ -168,14 +149,20 @@ export function useModalState(props: UseModalStateProps): UseModalStateReturn {
         setModalCustomBlockLibraries(initialCustomLibs);
         // Save pre-modal state for cancel/revert
         preModalOptionalDepsRef.current = selectedOptionalDependencies;
-        // Initialize modal optional deps: auto-select mesh only when resolved requirement is true
+        // Initialize modal optional deps based on the resolved mesh requirement
+        // for the newly-clicked package. Mirrors handleStackSelect's logic to
+        // avoid the cross-package leak that happens when a user picks Custom
+        // (mesh auto-added), backs out, and picks CitiSignal — without this,
+        // the previously-added mesh would survive in selectedOptionalDependencies
+        // for a package that doesn't even offer it.
         const currentStack = selectedStack ? stacks.find(s => s.id === selectedStack) : undefined;
         const meshDeps = resolveMeshOptionalDeps(pkg, selectedStack ?? '', currentStack);
         if (meshDeps !== null) {
             setModalOptionalDeps(meshDeps);
             onOptionalDependenciesChange?.(meshDeps);
         } else {
-            setModalOptionalDeps(selectedOptionalDependencies);
+            setModalOptionalDeps([]);
+            onOptionalDependenciesChange?.([]);
         }
         setModalPackageId(pkg.id);
     }, []);
@@ -212,10 +199,6 @@ export function useModalState(props: UseModalStateProps): UseModalStateReturn {
                 .map(addon => addon.id);
             return [...new Set([...requiredAddons, ...defaultAddons])];
         });
-        // When stack changes, reset feature packs to required only
-        setModalFeaturePacks(() => {
-            return currentPkg ? getRequiredFeaturePacks(currentPkg) : [];
-        });
         // When stack changes, compute default block libraries for EDS stacks
         if (selectedStackObj?.frontend === 'eds-storefront' && modalPackageId) {
             const defaults = getDefaultBlockLibraryIds(selectedStackObj, modalPackageId, blockLibraryDefaults);
@@ -241,10 +224,6 @@ export function useModalState(props: UseModalStateProps): UseModalStateReturn {
         setModalAddons(addons);
     }, []);
 
-    const handleModalFeaturePacksChange = useCallback((packs: string[]) => {
-        setModalFeaturePacks(packs);
-    }, []);
-
     const handleModalBlockLibrariesChange = useCallback((libraries: string[]) => {
         setModalBlockLibraries(libraries);
         onBlockLibrariesChange?.(libraries);
@@ -263,7 +242,6 @@ export function useModalState(props: UseModalStateProps): UseModalStateReturn {
     const handleModalDone = useCallback(() => {
         const {
             onAddonsChange,
-            onFeaturePacksChange,
             onBlockLibrariesChange,
             onCustomBlockLibrariesChange,
             onOptionalDependenciesChange,
@@ -275,9 +253,6 @@ export function useModalState(props: UseModalStateProps): UseModalStateReturn {
         const requiredAddons = currentPackage ? getRequiredAddons(currentPackage) : [];
         const finalAddons = [...new Set([...modalAddons, ...requiredAddons])];
         onAddonsChange?.(finalAddons);
-        const requiredPacks = currentPackage ? getRequiredFeaturePacks(currentPackage) : [];
-        const finalFeaturePacks = [...new Set([...modalFeaturePacks, ...requiredPacks])];
-        onFeaturePacksChange?.(finalFeaturePacks);
         const stackObj = stacks.find(s => s.id === selectedStack);
         const nativeIds = stackObj && currentPackage
             ? getNativeBlockLibraries(stackObj, currentPackage.id).map(l => l.id)
@@ -292,7 +267,7 @@ export function useModalState(props: UseModalStateProps): UseModalStateReturn {
             });
         }
         setModalPackageId(null);
-    }, [modalAddons, modalFeaturePacks, modalBlockLibraries, modalCustomBlockLibraries, modalOptionalDeps, modalPackageId]);
+    }, [modalAddons, modalBlockLibraries, modalCustomBlockLibraries, modalOptionalDeps, modalPackageId]);
 
     const handleModalClose = useCallback(() => {
         onOptionalDependenciesChange?.(preModalOptionalDepsRef.current);
@@ -303,14 +278,12 @@ export function useModalState(props: UseModalStateProps): UseModalStateReturn {
         modalPackageId,
         modalPackage,
         modalAddons,
-        modalFeaturePacks,
         modalBlockLibraries,
         modalCustomBlockLibraries,
         modalOptionalDeps,
         handleCardClick,
         handleStackSelect,
         handleModalAddonsChange,
-        handleModalFeaturePacksChange,
         handleModalBlockLibrariesChange,
         handleModalCustomBlockLibrariesChange,
         handleModalOptionalDepsChange,

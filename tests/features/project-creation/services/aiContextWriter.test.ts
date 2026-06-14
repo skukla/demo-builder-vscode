@@ -129,6 +129,25 @@ describe('aiContextWriter', () => {
                 expect(result).toContain('https://da.live/\\#/my-org/my-site');
             });
 
+            it('uses the Experience Workspace canvas URL when the project is set to EW', () => {
+                // Per-project authoringExperience wins over the global default (UE),
+                // so the resolver returns EW without reading vscode config.
+                const project = makeEdsProject({
+                    componentInstances: {
+                        'eds-storefront': makeEdsStorefrontInstance({
+                            authoringExperience: 'experience-workspace',
+                        }),
+                    },
+                });
+                const result = generateAgentsMd(project, STACKS);
+
+                // Param-less production canvas form (default ewCanvasBranch '') with
+                // the extensionless `index` doc (da.live appends `.html` itself; a
+                // `.html` suffix double-appends and 404s). escapeMarkdown escapes only `#`.
+                expect(result).toContain('https://da.live/canvas\\#/my-org/my-site/index');
+                expect(result).not.toContain('https://da.live/\\#/my-org/my-site');
+            });
+
             it('includes the local storefront path', () => {
                 const project = makeEdsProject();
                 const result = generateAgentsMd(project, STACKS);
@@ -137,8 +156,43 @@ describe('aiContextWriter', () => {
             });
         });
 
-        // PDP routing section tests live in aiContextWriter-pdpRouting.test.ts
-        // to keep this file under the ESLint max-lines threshold.
+        describe('PDP routing section', () => {
+            it('includes the PDP Routing section for EDS projects', () => {
+                const result = generateAgentsMd(makeEdsProject(), STACKS);
+                expect(result).toContain('## PDP Routing');
+            });
+
+            it('warns against per-product DA pages and folder mapping', () => {
+                const result = generateAgentsMd(makeEdsProject(), STACKS);
+                expect(result).toContain('do not');
+                expect(result).toContain('per-product DA pages');
+                expect(result).toContain('folder mapping');
+            });
+
+            it('documents the canonical BYOM overlay routing and SC template handoff', () => {
+                const result = generateAgentsMd(makeEdsProject(), STACKS);
+                expect(result).toContain('/products/default');
+                expect(result).toContain('Phase 2 LIVE');
+                expect(result).toContain('content.overlay');
+            });
+
+            it('provides a debugging checklist for 404s', () => {
+                const result = generateAgentsMd(makeEdsProject(), STACKS);
+                expect(result).toContain('demoBuilder.byom.overlayUrl');
+                expect(result).toContain('render-pdp');
+                expect(result).toContain('404.html');
+            });
+
+            it('links to the architecture doc', () => {
+                const result = generateAgentsMd(makeEdsProject(), STACKS);
+                expect(result).toContain('docs/architecture/eds-byom-pdp-routing.md');
+            });
+
+            it('omits the PDP Routing section for headless projects', () => {
+                const result = generateAgentsMd(makeHeadlessProject(), STACKS);
+                expect(result).not.toContain('## PDP Routing');
+            });
+        });
 
         describe('headless projects', () => {
             it('includes the Commerce endpoint URL', () => {

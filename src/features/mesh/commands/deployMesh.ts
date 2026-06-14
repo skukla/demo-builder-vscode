@@ -86,6 +86,35 @@ export class DeployMeshCommand extends BaseCommand {
                 }
             }
 
+            // App Builder permission gate. Defensive — by the time the user
+            // reaches the dashboard, the create-time gate has already passed.
+            // But IMS role membership can change in between; re-verifying here
+            // surfaces the friendly error instead of an opaque CLI failure
+            // mid-deploy.
+            const { projectRequiresAppBuilder } = await import(
+                '@/features/components/services/projectAppBuilderPredicate'
+            );
+            const { ComponentRegistryManager } = await import(
+                '@/features/components/services/ComponentRegistryManager'
+            );
+            const registry = await new ComponentRegistryManager(
+                this.context.extensionPath,
+            ).loadRegistry();
+            if (projectRequiresAppBuilder(project, registry)) {
+                const permissionCheck = await authManager.testDeveloperPermissions();
+                if (!permissionCheck.hasPermissions) {
+                    await ProjectDashboardWebviewCommand.sendMeshStatusUpdate('error', 'Developer access required');
+                    await ProjectDashboardWebviewCommand.refreshStatus();
+                    vscode.window.showErrorMessage(
+                        permissionCheck.error
+                        || 'Your account lacks Developer or System Admin role for this organization. '
+                        + 'API Mesh deployment requires App Builder access. '
+                        + 'Contact your administrator to restore access.',
+                    );
+                    return;
+                }
+            }
+
             // Find mesh component (uses subType detection, supports both EDS and Headless mesh)
             const meshComponent = getMeshComponentInstance(project);
             if (!meshComponent?.path) {

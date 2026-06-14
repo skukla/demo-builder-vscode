@@ -80,6 +80,7 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
         expect(mockPostMessage).toHaveBeenCalledWith('check-prerequisites', {
             isRecheck: false,
             selectedStack: undefined,
+            selectedOptionalDependencies: [],
         });
     });
 
@@ -97,10 +98,12 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
             </Provider>
         );
 
-        // Handler derives componentSelection from selectedStack via stacks.json
+        // Handler derives componentSelection from selectedStack via stacks.json,
+        // and honors the user's optional-dependency picks (mesh, etc.)
         expect(mockPostMessage).toHaveBeenCalledWith('check-prerequisites', {
             isRecheck: false,
             selectedStack: 'headless-paas',
+            selectedOptionalDependencies: [],
         });
     });
 

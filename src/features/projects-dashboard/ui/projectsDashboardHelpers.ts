@@ -18,7 +18,6 @@ export interface MenuItem {
  * Callback options for building menu items.
  */
 export interface MenuCallbacks {
-    onJoinStorefront?: (() => void) | null;
     onCopyFromExisting?: (() => void) | null;
     onImportFromFile?: (() => void) | null;
 }
@@ -36,10 +35,6 @@ export function buildMenuItems(callbacks: MenuCallbacks): MenuItem[] {
     const items: MenuItem[] = [
         { key: 'new', label: 'New Project', icon: 'add' },
     ];
-
-    if (callbacks.onJoinStorefront) {
-        items.push({ key: 'join', label: 'Join a Shared Storefront...', icon: 'join' });
-    }
 
     if (callbacks.onCopyFromExisting) {
         items.push({ key: 'copy', label: 'Copy from Existing...', icon: 'copy' });

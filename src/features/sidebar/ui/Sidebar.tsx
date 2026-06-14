@@ -34,6 +34,8 @@ export interface SidebarProps {
     onOpenHelp?: () => void;
     /** Callback for opening settings */
     onOpenSettings?: () => void;
+    /** Callback for opening logs */
+    onOpenLogs?: () => void;
     /** Callback to open Claude chat — Chat button in AiZone. */
     onOpenAiChat?: () => void;
     /** Callback to show the prompt picker — Prompts button in AiZone. */
@@ -61,6 +63,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onOpenTools,
     onOpenHelp,
     onOpenSettings,
+    onOpenLogs,
     onOpenAiChat,
     onShowPrompts,
     onStartDemo: _onStartDemo,
@@ -90,6 +93,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onOpenTools={onOpenTools}
                 onOpenHelp={onOpenHelp}
                 onOpenSettings={onOpenSettings}
+                onOpenLogs={onOpenLogs}
                 compact
             />
         </Flex>

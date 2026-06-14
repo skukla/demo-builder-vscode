@@ -29,6 +29,7 @@ root.render(
                 contentSourceType={data?.contentSourceType}
                 edsLiveUrl={data?.edsLiveUrl}
                 edsDaLiveUrl={data?.edsDaLiveUrl}
+                authoringExperience={data?.authoringExperience}
                 initialMeshStatus={data?.initialMeshStatus}
                 initialEdsStorefrontStatus={data?.initialEdsStorefrontStatus}
             />

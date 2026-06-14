@@ -23,10 +23,9 @@ import { sanitizeErrorForLogging } from '@/core/validation';
 import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
 import { GitHubFileOperations } from '@/features/eds/services/githubFileOperations';
 import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
-import { generateAIContextFiles } from '@/features/project-creation/services';
+import { generateAIContextFiles, resolveMcpToolsDir } from '@/features/project-creation/services';
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
-import { defaultSyncStrategyForProject } from '@/features/updates/services/syncStrategy';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
@@ -167,7 +166,7 @@ export async function performTemplateUpdates(
 
                 try {
                     const result = await templateSyncService.syncWithTemplate(project, {
-                        strategy: defaultSyncStrategyForProject(project),
+                        strategy: 'merge',
                     });
 
                     if (result.success) {
@@ -307,8 +306,10 @@ export async function performComponentUpdates(
 
 /**
  * Apply `npm update @adobe-commerce/commerce-extensibility-tools` in each
- * selected project's storefront, then regenerate AI context files so the
- * skill bundles re-namespace against the new version.
+ * selected project's isolated MCP tools dir (`<project>/.demo-builder-mcp/`),
+ * then regenerate AI context files so the skill bundles re-namespace against
+ * the new version. The MCP packages live there, not in the storefront's
+ * node_modules (see resolveMcpToolsDir / installAiDefaultsMcpTools).
  *
  * Mirrors `performComponentUpdates` shape — running-demo guard per project,
  * `vscode.window.withProgress`, per-project error isolation.
@@ -353,6 +354,10 @@ export async function performAdobeMcpUpdates(
                     continue;
                 }
 
+                // The MCP packages live in the per-project isolated tools dir, not
+                // the storefront's node_modules — run the update there.
+                const toolsDir = resolveMcpToolsDir(project.path);
+
                 progress.report({
                     message: `${packageName} → ${latestVersion} in ${project.name}...`,
                     increment: 100 / total,
@@ -362,7 +367,7 @@ export async function performAdobeMcpUpdates(
                     const result = await commandManager.execute(
                         `npm update ${packageName} --no-fund`,
                         {
-                            cwd: storefrontPath,
+                            cwd: toolsDir,
                             timeout: TIMEOUTS.VERY_LONG,
                             shell: DEFAULT_SHELL,
                             enhancePath: true,

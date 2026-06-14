@@ -40,8 +40,6 @@ interface UseWizardNavigationReturn {
     goBack: () => void;
     /** Cancel the wizard */
     handleCancel: () => void;
-    /** Show the logs panel */
-    handleShowLogs: () => void;
     /** Cancel mesh deployment and cleanup */
     handleMeshDeploymentCancel: () => void;
     /** Get the current step index */
@@ -165,10 +163,6 @@ export function useWizardNavigation({
         vscode.postMessage('cancel');
     }, []);
 
-    const handleShowLogs = useCallback(() => {
-        vscode.postMessage('show-logs');
-    }, []);
-
     const handleMeshDeploymentCancel = useCallback(() => {
         vscode.postMessage('cancel-project-creation');
         handleCancel();
@@ -234,7 +228,6 @@ export function useWizardNavigation({
         goNext,
         goBack,
         handleCancel,
-        handleShowLogs,
         handleMeshDeploymentCancel,
         getCurrentStepIndex,
     };

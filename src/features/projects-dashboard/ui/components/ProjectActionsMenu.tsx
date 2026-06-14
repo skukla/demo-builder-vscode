@@ -37,8 +37,17 @@ import Rename from '@spectrum-icons/workflow/Rename';
 import Revert from '@spectrum-icons/workflow/Revert';
 import Stop from '@spectrum-icons/workflow/Stop';
 import React, { useCallback, useMemo } from 'react';
-import type { Project } from '@/types/base';
+import type { AuthoringExperience, Project } from '@/types/base';
 import { isEdsProject } from '@/types/typeGuards';
+
+/** Default authoring experience when the backend view model omits it. */
+const DEFAULT_AUTHORING_EXPERIENCE: AuthoringExperience = 'da-live-classic';
+
+/** Human-readable label per authoring experience (for the Author item). */
+const EXPERIENCE_LABEL: Record<AuthoringExperience, string> = {
+    'da-live-classic': 'DA.live Classic',
+    'experience-workspace': 'Experience Workspace',
+};
 
 /** Menu item configuration */
 interface MenuItem {
@@ -150,6 +159,11 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
 
     const isEds = isEdsProject(project);
 
+    // Resolved authoring experience rides in the view model (computed backend-side).
+    // Drives the dynamic "Author in X" label only — the flip control was relocated
+    // to the Configure webview (setup-time preference with an explicit Save).
+    const experience = project.resolvedAuthoringExperience ?? DEFAULT_AUTHORING_EXPERIENCE;
+
     // Action dispatch map - avoids a large switch statement. Each key maps to
     // the callback that handles it. The "more" submenu trigger has no entry
     // (it only opens the submenu), so dispatching it is a harmless no-op.
@@ -192,7 +206,11 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                 use.push({ key: 'openLive', label: 'Open in Browser', icon: 'globe' });
             }
             if (onOpenDaLive) {
-                use.push({ key: 'openDaLive', label: 'Author in DA.live', icon: 'dalive' });
+                use.push({
+                    key: 'openDaLive',
+                    label: `Author in ${EXPERIENCE_LABEL[experience]}`,
+                    icon: 'dalive',
+                });
             }
         } else {
             if (isRunning && onStopDemo) {
@@ -240,7 +258,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         }
 
         return { use, manage, more };
-    }, [isEds, isRunning, project.pinned, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename, onCopyPath, onExport, onOpenAi, onPinToggle]);
+    }, [isEds, isRunning, project.pinned, experience, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename, onCopyPath, onExport, onOpenAi, onPinToggle]);
 
     // Nothing to show — render no trigger at all.
     if (groups.use.length === 0 && groups.manage.length === 0 && groups.more.length === 0 && !onDelete) {

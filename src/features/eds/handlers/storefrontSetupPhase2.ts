@@ -12,10 +12,11 @@
  */
 
 import { installBlockCollections, type BlockLibraryEntry } from '../services/blockCollectionHelpers';
-import { installFeaturePacks } from '../services/featurePackInstaller';
 import { generateFstabContent } from '../services/fstabGenerator';
 import { GitHubFileOperations } from '../services/githubFileOperations';
 import { generateInspectorTreeEntries, installInspectorTagging } from '../services/inspectorHelpers';
+import { installSmart404Handler } from '../services/pdp404HandlerPublisher';
+import { installQuickEdit } from '../services/quickEditPublisher';
 import { type GitHubTreeInput } from '../services/types';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { checkGitHubAppForExistingRepo } from './storefrontSetupPhaseHelpers';
@@ -41,7 +42,6 @@ export interface BlockLibraryOptions {
     selectedBlockLibraries?: string[];
     customBlockLibraries?: CustomBlockLibrary[];
     packageId?: string;
-    selectedFeaturePacks?: string[];
     /**
      * Whether the user selected an existing repo (vs. creating a new one).
      * Set by the orchestrator (`executeStorefrontSetupPhases`) from `edsConfig.repoMode`.
@@ -87,22 +87,32 @@ export async function executePhaseHelixConfig(
         githubFileOps, repoInfo, allLibraries, context, options?.packageId, logger,
     );
 
-    const selectedFeaturePacks = options?.selectedFeaturePacks;
-    if (selectedFeaturePacks && selectedFeaturePacks.length > 0) {
-        await context.sendMessage('storefront-setup-progress', {
-            phase: 'storefront-code',
-            message: `Installing ${selectedFeaturePacks.length} feature ${selectedFeaturePacks.length === 1 ? 'pack' : 'packs'}...`,
-            progress: 32,
-        });
-        const fpResult = await installFeaturePacks(
-            githubFileOps, repoInfo.repoOwner, repoInfo.repoName, selectedFeaturePacks, logger,
-        );
-        if (fpResult.success) {
-            logger.info(`[Storefront Setup] Feature packs installed: ${fpResult.blocksInstalled} blocks, ${fpResult.initializersInstalled} initializers, ${fpResult.dependenciesAdded} dependencies`);
-        } else {
-            logger.warn(`[Storefront Setup] Feature pack installation warning: ${fpResult.error}`);
-        }
-    }
+    // Install the smart 404 PDP handler into the storefront's
+    // scripts/delayed.js. Same shape as inspector tagging — vendors a
+    // small JS snippet into storefront code. The surrounding pipeline's
+    // bulk Helix code preview picks up the committed change. Non-fatal:
+    // skipped silently when BYOM overlay is unset and on every other
+    // failure mode (see installSmart404Handler).
+    await installSmart404Handler(
+        githubFileOps,
+        repoInfo.repoOwner,
+        repoInfo.repoName,
+        edsConfig.byomOverlayUrl,
+        logger,
+        edsConfig.daLiveOrg,
+        edsConfig.daLiveSite,
+    );
+
+    // Wire Quick Edit (Experience Workspace WYSIWYG dependency) into the
+    // storefront's scripts/scripts.js + tools/quick-edit/quick-edit.js.
+    // Brand-agnostic, idempotent, non-fatal — inert under Universal Editor,
+    // active under Experience Workspace. See installQuickEdit.
+    await installQuickEdit(
+        githubFileOps,
+        repoInfo.repoOwner,
+        repoInfo.repoName,
+        logger,
+    );
 
     if (useExistingRepo) {
         const earlyReturn = await checkGitHubAppForExistingRepo(context, services, repoInfo);

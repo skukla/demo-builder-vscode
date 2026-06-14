@@ -8,7 +8,6 @@ import {
     handleGetProjects,
     handleSelectProject,
     handleCreateProject,
-    handleJoinStorefront,
     handleCopyProjectPath,
     handleOpenAiForProject,
 } from '@/features/projects-dashboard/handlers/dashboardHandlers';
@@ -368,18 +367,6 @@ describe('dashboardHandlers', () => {
             expect(result).toEqual({
                 success: true,
             });
-        });
-
-        it('routes the Join entry to the joinStorefront command', async () => {
-            const context = createMockHandlerContext([]);
-            const vscode = require('vscode');
-
-            const result = await handleJoinStorefront(context as any);
-
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-                'demoBuilder.joinStorefront'
-            );
-            expect(result).toEqual({ success: true });
         });
 
         it('should log create event', async () => {

@@ -32,8 +32,6 @@ export interface BrandGalleryProps {
     onPackageSelect: (packageId: string) => void;
     onStackSelect: (stackId: string) => void;
     onAddonsChange?: (addons: string[]) => void;
-    selectedFeaturePacks?: string[];
-    onFeaturePacksChange?: (packs: string[]) => void;
     selectedBlockLibraries?: string[];
     onBlockLibrariesChange?: (libraries: string[]) => void;
     /** User's saved block library default preferences (from settings) */
@@ -179,11 +177,9 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
     selectedPackage,
     selectedStack,
     selectedAddons = [],
-    selectedFeaturePacks = [],
     onPackageSelect,
     onStackSelect,
     onAddonsChange,
-    onFeaturePacksChange,
     selectedBlockLibraries = [],
     onBlockLibrariesChange,
     blockLibraryDefaults,
@@ -199,14 +195,12 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
     const {
         modalPackage,
         modalAddons,
-        modalFeaturePacks,
         modalBlockLibraries,
         modalCustomBlockLibraries,
         modalOptionalDeps,
         handleCardClick,
         handleStackSelect,
         handleModalAddonsChange,
-        handleModalFeaturePacksChange,
         handleModalBlockLibrariesChange,
         handleModalCustomBlockLibrariesChange,
         handleModalOptionalDepsChange,
@@ -217,7 +211,6 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
         stacks,
         selectedStack,
         selectedAddons,
-        selectedFeaturePacks,
         selectedBlockLibraries,
         customBlockLibraries,
         customBlockLibraryDefaults: customBlockLibraryDefaults ?? [],
@@ -226,7 +219,6 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
         onPackageSelect,
         onStackSelect,
         onAddonsChange,
-        onFeaturePacksChange,
         onBlockLibrariesChange,
         onCustomBlockLibrariesChange,
         onOptionalDependenciesChange,
@@ -332,13 +324,11 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
                         stacks={stacks}
                         selectedStackId={selectedPackage === modalPackage.id ? selectedStack : undefined}
                         selectedAddons={modalAddons}
-                        selectedFeaturePacks={modalFeaturePacks}
                         selectedBlockLibraries={modalBlockLibraries}
                         customBlockLibraries={modalCustomBlockLibraries}
                         customBlockLibraryDefaults={customBlockLibraryDefaults}
                         onStackSelect={handleStackSelect}
                         onAddonsChange={handleModalAddonsChange}
-                        onFeaturePacksChange={handleModalFeaturePacksChange}
                         onBlockLibrariesChange={handleModalBlockLibrariesChange}
                         onCustomBlockLibrariesChange={handleModalCustomBlockLibrariesChange}
                         selectedOptionalDependencies={modalOptionalDeps}

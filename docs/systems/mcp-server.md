@@ -193,8 +193,8 @@ Take `delete_mesh` as a representative action tool:
 1. Claude Code → proxy → socket → the per-connection `McpServer` receives a
    `tools/call` for `delete_mesh` with `{ confirm: true }`.
 2. The SDK validates the arguments against the tool's Zod `inputSchema`.
-3. `withToolLogging` logs `[MCP] tool: delete_mesh` to the "Demo Builder: Logs"
-   channel and the **argument keys** (never values) to "Demo Builder: Debug",
+3. `withToolLogging` logs `[MCP] tool: delete_mesh` to the "Demo Builder: User Logs"
+   channel and the **argument keys** (never values) to "Demo Builder: Debug Logs",
    then calls the handler.
 4. The handler builds a **headless `HandlerContext`** via the injected
    `ctxFactory` (see §8) and dispatches to the *same* mesh-deletion service/
@@ -368,8 +368,10 @@ config when a project is created (and on "Regenerate AI files"):
   ```
   The `node` path is resolved robustly (`which node` → `realpath`, handling
   fnm/nvm shims) because VS Code's `process.execPath` is the Electron binary, not
-  a usable Node. Adobe-hosted MCPs (Commerce, DA.live) are appended for storefront
-  projects, anchored to the storefront's `node_modules`.
+  a usable Node. The ai-defaults MCPs (Adobe App Builder + Playwright) are appended
+  for EDS storefront projects, anchored to the per-project isolated MCP tools dir
+  (`<project>/.demo-builder-mcp/node_modules/`) — decoupled from the storefront's
+  own `node_modules` so they install even when the storefront's `npm install` can't.
 - **`.claude/settings.json`** — a `PostToolUse` git-sync hook for EDS projects
   (commit/push storefront edits the agent makes). Skipped if the path contains
   shell metacharacters.

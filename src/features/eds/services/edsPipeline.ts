@@ -17,12 +17,19 @@
  * @module features/eds/services/edsPipeline
  */
 
+import { prewarmCatalog } from './catalogPrewarmService';
+import { applyBlockCodePatches } from './codePatchPipelineHelpers';
 import type { DaLiveContentOperations } from './daLiveContentOperations';
 import type { GitHubFileOperations } from './githubFileOperations';
 import type { HelixService } from './helixService';
-import { publishSmart404Handler } from './pdp404HandlerPublisher';
+import {
+    createPatchReport,
+    addCodeResult,
+    type PatchReport,
+} from './patchReportHelper';
 import { DaLiveAuthError, DaLiveError } from './types';
-import type { ContentPatchSource } from '@/types/demoPackages';
+import type { Project } from '@/types/base';
+import type { ContentPatchSource, CodePatchSource } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
 
 // ==========================================================
@@ -66,6 +73,18 @@ export interface EdsPipelineParams {
     contentPatches?: string[];
     contentPatchSource?: ContentPatchSource;
 
+    /** Code patch IDs to apply post-block-install (block-targeting subset of the ledger).
+     *  Canonical-file patches are applied earlier by `resetRepoToTemplate` against the
+     *  same ledger. Both phases route results into the pipeline's patchReport. */
+    codePatches?: string[];
+    /** External code-patch source. Sibling of `contentPatchSource`. */
+    codePatchSource?: CodePatchSource;
+
+    /** Optional preexisting patch report. When provided, the pipeline appends to it
+     *  (so canonical-phase results from `resetRepoToTemplate` survive into the final
+     *  pipeline result). When absent, the pipeline creates a fresh report. */
+    patchReport?: PatchReport;
+
     // Block library
     includeBlockLibrary?: boolean;
     blockCollectionIds?: string[];
@@ -83,6 +102,17 @@ export interface EdsPipelineParams {
      * See `pdp404HandlerPublisher.ts` and `docs/architecture/eds-byom-pdp-routing.md`.
      */
     byomOverlayUrl?: string;
+
+    /**
+     * Project reference used by the catalog pre-warming step (v1 ACCS only).
+     * When provided AND `byomOverlayUrl` is set AND `skipPublish` is false,
+     * the pipeline enumerates the storefront's Commerce catalog and
+     * pre-publishes every product's PDP path so first-visit cold paths
+     * never fire during demos. When absent, pre-warming is skipped silently
+     * (the smart-404 fallback still handles cold paths at runtime).
+     * See `catalogPrewarmService.ts`.
+     */
+    project?: Project;
 }
 
 /** Service dependencies — callers construct and pass these in */
@@ -99,11 +129,40 @@ export interface EdsPipelineResult {
     contentFilesCopied: number;
     libraryPaths: string[];
     error?: string;
+    /** Aggregated patch report (content + code). Callers pass it to
+     *  `reportUnapplied(report, logger, vscode.window.showWarningMessage)`
+     *  to surface unapplied patches via a single toast (one per create/reset,
+     *  not one per patch domain). Always present even when the report is empty. */
+    patchReport?: PatchReport;
 }
 
 // ==========================================================
 // Pipeline Helpers
 // ==========================================================
+
+/**
+ * Block-phase code-patch application slot. No-op when there are no patches
+ * configured. `applyBlockCodePatches` is internally non-fatal except for
+ * `critical: true` patches, where the engine throws `CodePatchCriticalError`
+ * — that propagates naturally to the pipeline's outer try/catch so callers
+ * see the failed result on `error.result` rather than a partially-applied
+ * state.
+ */
+async function pipelineApplyBlockCodePatches(
+    githubFileOps: GitHubFileOperations,
+    repoOwner: string,
+    repoName: string,
+    codePatches: string[] | undefined,
+    codePatchSource: CodePatchSource | undefined,
+    patchReport: PatchReport,
+    logger: Logger,
+): Promise<void> {
+    if (!codePatches || codePatches.length === 0 || !codePatchSource) return;
+    const blockResults = await applyBlockCodePatches(
+        githubFileOps, repoOwner, repoName, codePatches, codePatchSource, logger,
+    );
+    for (const r of blockResults) addCodeResult(patchReport, r);
+}
 
 /**
  * Convert DA.live paths to web paths for Admin API.
@@ -135,6 +194,7 @@ async function pipelineClearContent(
     context: {
         daLiveOrg: string;
         daLiveSite: string;
+        /** aem.live SITE identity for CDN unpublish (satellite-aware; defaults to code repo). */
         siteOrg: string;
         siteName: string;
     },
@@ -193,6 +253,7 @@ async function pipelineCopyContent(
     daLiveSite: string,
     contentPatches: string[] | undefined,
     contentPatchSource: ContentPatchSource | undefined,
+    patchReport: PatchReport,
     logger: Logger,
     onProgress?: EdsPipelineProgressCallback,
 ): Promise<number> {
@@ -227,6 +288,7 @@ async function pipelineCopyContent(
         },
         contentPatches,
         contentPatchSource,
+        patchReport,
     );
 
     if (!contentResult.success) {
@@ -249,8 +311,8 @@ async function pipelineCopyContent(
  */
 async function pipelinePublishContent(
     helixService: HelixService,
-    repoOwner: string,
-    repoName: string,
+    siteOrg: string,
+    siteName: string,
     daLiveOrg: string,
     daLiveSite: string,
     logger: Logger,
@@ -261,11 +323,11 @@ async function pipelinePublishContent(
         message: 'Publishing content to CDN...',
     });
 
-    logger.info(`[EdsPipeline] Publishing content to CDN for ${repoOwner}/${repoName}`);
+    logger.info(`[EdsPipeline] Publishing content to CDN for ${siteOrg}/${siteName}`);
 
     try {
         await helixService.publishAllSiteContent(
-            `${repoOwner}/${repoName}`,
+            `${siteOrg}/${siteName}`,
             'main',
             daLiveOrg,
             daLiveSite,
@@ -413,7 +475,7 @@ export async function executeEdsPipeline(
     services: EdsPipelineServices,
     onProgress?: EdsPipelineProgressCallback,
 ): Promise<EdsPipelineResult> {
-    const { daLiveContentOps, helixService, logger } = services;
+    const { daLiveContentOps, githubFileOps, helixService, logger } = services;
     const {
         repoOwner,
         repoName,
@@ -425,14 +487,25 @@ export async function executeEdsPipeline(
         contentSource,
         contentPatches,
         contentPatchSource,
+        codePatches,
+        codePatchSource,
         includeBlockLibrary = false,
         purgeCache = false,
     } = params;
 
-    // Helix targets the aem.live SITE; code reads target repoOwner/repoName.
-    // Canonical: site == code (defaults). Satellite: site = own daLiveOrg/daLiveSite.
+    // aem.live SITE identity for Helix preview/publish/purge/unpublish, decoupled
+    // from the code source. Canonical case: site == code (defaults to repoOwner/
+    // repoName). A repoless satellite passes its own daLiveOrg/daLiveSite here while
+    // repoOwner/repoName point at the upstream code. See ADR-003 + step-04.
     const siteOrg = params.siteOrg ?? repoOwner;
     const siteName = params.siteName ?? repoName;
+
+    // Patch report: reuse caller's report when threaded through (so canonical-
+    // phase results from `resetRepoToTemplate` survive into the final result),
+    // else start fresh. Both `addContentResult` and `addCodeResult` mutate
+    // through the same reference, so the final pipeline result always carries
+    // the full report.
+    const patchReport = params.patchReport ?? createPatchReport();
 
     let contentFilesCopied = 0;
     let libraryPaths: string[] = [];
@@ -454,7 +527,7 @@ export async function executeEdsPipeline(
             }
             contentFilesCopied = await pipelineCopyContent(
                 daLiveContentOps, contentSource, daLiveOrg, daLiveSite,
-                contentPatches, contentPatchSource, logger, onProgress,
+                contentPatches, contentPatchSource, patchReport, logger, onProgress,
             );
         } else {
             logger.info('[EdsPipeline] Skipping content copy (skipContent=true)');
@@ -464,6 +537,18 @@ export async function executeEdsPipeline(
         if (includeBlockLibrary) {
             libraryPaths = await pipelineConfigureBlockLibrary(services, params, onProgress);
         }
+
+        // Step 2.5: Block-targeting code patches (post-install).
+        // Canonical-file patches were applied earlier in `resetRepoToTemplate`
+        // via `applyCanonicalCodePatches`. The block-targeting subset of the
+        // same ledger runs here, AFTER block install, so installed library
+        // blocks are present in the repo to be patched. Phase routing is by
+        // target prefix (`blocks/...` → here; everything else → canonical).
+        // Non-fatal per ADR-006 D1: results go to `patchReport`; the caller
+        // surfaces unapplied patches via the one-toast helper.
+        await pipelineApplyBlockCodePatches(
+            githubFileOps, repoOwner, repoName, codePatches, codePatchSource, patchReport, logger,
+        );
 
         // Step 3: EDS Settings
         onProgress?.({
@@ -511,40 +596,51 @@ export async function executeEdsPipeline(
             }
         }
 
-        // Step 7: Smart 404 page for BYOM PDP routing. Phase 1 of the PDP routing
-        // workstream — see docs/architecture/eds-byom-pdp-routing.md.
-        //
-        // Gated by:
-        //  - !skipPublish — narrow paths like Refresh Block Library bypass the
-        //    full publish cycle and don't need to republish the 404.
-        //  - params.byomOverlayUrl — when BYOM is disabled (no overlay URL),
-        //    PDPs aren't being routed through the action, so the smart 404
-        //    has nothing useful to do.
-        // Every failure inside publishSmart404Handler is logged and skipped;
-        // the storefront still works without it (visitors hitting cold PDPs
-        // just get the default Helix 404).
-        if (!skipPublish && params.byomOverlayUrl) {
-            onProgress?.({
-                operation: 'pdp-404-handler',
-                message: 'Publishing PDP routing handler...',
-            });
+        // (Smart 404 plumbing lives entirely in storefront code now:
+        //  - scripts/delayed.js — cold-path action call + Loading state
+        //  - head.html — eager mixed-case → lowercase redirect on 200s
+        //  - 404.html — same eager redirect for Helix-served 404s
+        //  All three are installed by installSmart404Handler from
+        //  storefrontSetupPhase2 (create/edit) and edsResetRepoHelper
+        //  (reset). The DA.live /404 page publish path that briefly
+        //  lived here didn't help — Helix uses the static 404.html
+        //  file, not authored content, on 404 responses.)
 
-            await publishSmart404Handler(
-                helixService,
-                daLiveContentOps,
-                daLiveOrg,
-                daLiveSite,
-                repoOwner,
-                repoName,
-                params.byomOverlayUrl,
-                logger,
-            );
+        // Step 8: Catalog pre-warming (v1 ACCS only). Enumerate the
+        // storefront's Commerce catalog and pre-publish every product
+        // path so first-visit cold paths never fire during demos.
+        // Non-fatal: failures fall through to the smart-404 fallback,
+        // which still handles unknown SKUs at runtime. Gated on:
+        //  - params.project — caller opts in by passing the project
+        //  - params.byomOverlayUrl — same gate as smart-404 install
+        //  - !skipPublish — refresh-block-library and similar narrow
+        //    paths skip pre-warming
+        if (!skipPublish && params.byomOverlayUrl && params.project) {
+            try {
+                const result = await prewarmCatalog(
+                    params.project,
+                    params.byomOverlayUrl,
+                    daLiveOrg,
+                    daLiveSite,
+                    logger,
+                    onProgress,
+                );
+                if (!result.skipped) {
+                    logger.info(`[EdsPipeline] Catalog pre-warming: ${result.succeeded}/${result.attempted} SKUs pre-published`);
+                }
+            } catch (prewarmError) {
+                // Defense in depth — prewarmCatalog is already non-fatal
+                // internally, but a thrown exception here must not abort
+                // the pipeline. Smart-404 fallback handles uncovered SKUs.
+                logger.warn(`[EdsPipeline] Catalog pre-warming threw unexpectedly: ${(prewarmError as Error).message}`);
+            }
         }
 
         return {
             success: true,
             contentFilesCopied,
             libraryPaths,
+            patchReport,
         };
     } catch (error) {
         // Re-throw auth errors so callers can offer re-authentication
@@ -556,6 +652,7 @@ export async function executeEdsPipeline(
             success: false,
             contentFilesCopied,
             libraryPaths,
+            patchReport,
             error: errorMessage,
         };
     }

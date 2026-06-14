@@ -7,9 +7,124 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.120] - 2026-06-12
+
+### Fixed
+
+- **Silent BYOM overlay registration failures now surface a warning.** When a storefront's BYOM `content.overlay` fails to register with the AEM Configuration Service during create or reset, the extension now logs an error and (in the UI) shows a warning telling the user to reset the storefront. Previously this failed silently, producing storefronts whose product detail pages showed "Product not available" — Helix fell back to the da.live content source (which 401s) with no indication of the cause. The reset path surfaces through its existing progress channel so the in-extension MCP reset tool stays toast-free.
+- **Storefront reset now retries the Configuration Service write on a 403** (AEM Code Sync admin-role propagation), matching the create path's backoff. Reset is the path used to repair a broken storefront, so a transient propagation 403 there previously dropped the overlay with no retry. The backoff is now a single shared constant across create and reset.
+
+## [1.0.0-beta.119] - 2026-06-12
+
 ### Added
 
+- **CitiSignal-branded storefront with B2B features (`citisignal-b2b` package).** Delivers a CitiSignal-branded EDS storefront that includes the B2B drop-ins (company management, company switcher, purchase order, quick order, quote management, requisition list). It is built on the coherent `boilerplate-b2b-template` base with the CitiSignal block library and content applied as the brand overlay — so the whole `@dropins` set ships from one release line and the page renders correctly.
+
+### Removed
+
+- **The feature-pack mechanism.** The additive feature-pack overlay (only ever `b2b-commerce`) is gone. A spike proved `@dropins/*` ship as one coordinated release set sharing internal chunks, so overlaying B2B drop-ins onto a non-B2B base produced a blank page. B2B now comes from the coherent base via the `citisignal-b2b` package, and the feature-pack selection step has been removed from the wizard.
+
+## [1.0.0-beta.118] - 2026-06-12
+
+### Fixed
+
+- **Experience Workspace canvas opened an empty Outline ("No blocks").** The EW canvas URL used the doc path `/index.html`, but da.live appends `.html` itself when resolving the source doc — so it double-appended to `index.html.html` → 404, failing the editor doc session while the page still rendered. The path is now the extensionless `/index`, letting da.live resolve `index.html` and load the document model.
+
+## [1.0.0-beta.117] - 2026-06-12
+
+### Added
+
+- **Per-project authoring experience — DA.live Classic or Experience Workspace.** SCs choose, per project, which AEM authoring experience a storefront uses. A new global setting `demoBuilder.daLive.authoringExperience` (default `da-live-classic`, preserving current behavior) sets the default for new projects; a per-project override on the EDS component metadata wins over it (resolver mirrors the BYOM-overlay precedence: per-project → global → DA.live Classic). The per-project choice is set in the project's **Configure** screen (an "Authoring Experience" radio group, EDS projects only); the "Author" button on the dashboard and projects list relabels to match ("Author in DA.live Classic" / "Author in Experience Workspace") and updates live after a save. Saving the choice persists it and re-applies the site-scoped DA `editor.path` row — the experience.adobe.com Universal Editor punch-out for DA.live Classic, the da.live canvas for Experience Workspace, or **clearing** the row when there is no punch-out to write (no `IMSOrgId`) so it can never go stale. DA.live Classic opens `https://da.live/#/<org>/<site>`; Experience Workspace opens the da.live-native canvas at `https://da.live/canvas#/<org>/<site>/index.html` (the `?nx=` branch is configurable via `demoBuilder.daLive.ewCanvasBranch`, default empty = production). Existing projects resolve to DA.live Classic, so their behavior is unchanged.
+
+- **Quick Edit wiring for every EDS storefront.** A new brand-agnostic vendoring step (modeled on the PDP 404 handler) adds the Experience Workspace WYSIWYG dependency to every EDS project at create, reset, and on a Configure flip to Experience Workspace: in `scripts/scripts.js` it exports `loadPage`, adds the Sidekick `custom:quick-edit` listener + a `?quick-edit` dynamic-import branch, and guards the first-paint `waitForFirstImage` wait; it writes `tools/quick-edit/quick-edit.js` and adds the `quick-edit` Sidekick plugin to the generated `config.json`. Inert under DA.live Classic; powers the Experience Workspace Layout (WYSIWYG) view. Idempotent and non-fatal; an extension-side anchor-match test pins the `scripts.js` anchors to the canonical boilerplate.
+
+- **Dashboard More menu with kebab actions.** Routine dashboard actions consolidate under a **More** tile grouped with Configure: Rename (dedicated dialog), Reset, Copy Path, Export, and Republish (EDS).
+
+- **Logs toggle moved into the sidebar.** The Logs affordance — previously duplicated across the dashboard and wizard footers — is now a single Logs utility in the sidebar UtilityBar.
+
+- **Reversible, lowercase-stable SKU encoding for PDP URLs.** Replaces the slash-only SKU patches with `encodeURIComponent`/`decodeURIComponent` across link producers, the consumer, and the two extension-side path builders, so prose-like SKUs (spaces, case, punctuation) survive the round-trip and the smart-404 lowercase redirect. See ADR 007.
+
+### Fixed
+
+- **Store-discovery cascade dropdowns follow the selected website.** Changing the Website now repopulates the Store and Store View dropdowns (and auto-selects when a website or store has a single child) instead of showing the previous website's children. The filters read the field value via the same accessor the pickers use.
+
+- **Storefront re-prompts republish after every config change.** The republish prompt was suppressed after the first change; it now reappears whenever configuration changes leave the storefront stale.
+
+- **Storefront sync surfaces merge conflicts and detects ACCS store-config drift.** Rebase conflicts now appear in Source Control, a pre-sync fast-forward makes them rare, and ACCS store-config changes are detected so the storefront republishes.
+
+- **Deploy Mesh tile only shows when the project has a mesh.**
+
+- **AI verification probes the in-extension MCP server directly.**
+
+- **Experience Workspace canvas fixes.** Correct canvas URL (with the `ewCanvasBranch` setting), param-less default with a reserved store-detect layout, first-paint paint-before-wait in quick-edit mode, the Sidekick quick-edit listener wiring, and double-toast suppression on an authoring flip.
+
+### Changed
+
+- **DA `editor.path` now writes site-scoped.** The authoring punch-out path mapping moved from the org config (`/config/<org>`, via `applyOrgConfig`) to the per-site config (`/config/<org>/<site>`, via `applySiteConfig`) with a `/<org>/<site>` row key. Projects that share a DA org are now isolated: flipping one project's authoring experience no longer clobbers another site's `editor.path` row. Supersedes the beta.116 statement that `editor.path` stays org-scoped.
+
+- **MCP tools install into a per-project isolated dir**, not the storefront.
+
+- **Authoring-experience value renamed** `universal-editor` → `da-live-classic`; VS Code settings show friendly labels.
+
+- **Removed the Components file browser** from the dashboard.
+
+### Removed
+
+- **`demoBuilder.daLive.editorPathPrefix` setting.** The real per-site `/<org>/<site>` `editor.path` key replaces the dummy left-hand prefix this setting supplied, leaving it with no readers.
+
+## [1.0.0-beta.116] - 2026-06-11
+
+### Fixed
+
+- **AEM Assets binding now writes to the per-site DA.live config.** The `aem.repositoryId` binding that surfaces the AEM Assets panel in the DA.live Library was written to the org config (`/config/<org>`), but DA.live reads it from the per-site config (`/config/<org>/<site>`) — so first-time SCs got their block library (written site-scoped) but no AEM Assets panel (the binding landed org-scoped, where the per-site Library never reads it). The beta.115 401 fix made the org write *succeed*, which unmasked this scope mismatch. `applyDaLiveOrgConfigSettings` now writes `aem.repositoryId` site-scoped via the new `DaLiveContentOperations.applySiteConfig`; `editor.path` stays org-scoped (the Universal Editor punch-out path mapping). Both methods delegate to an extracted `writeMergedDataConfig` helper that preserves all existing config sheets (`library`, `permissions`) and keeps the first-time-user 401 write-access ownership probe (keyed on the org). Supersedes the beta.115 org-scoped behavior for `aem.repositoryId`; the beta.115 401 handling remains valid for `editor.path`, which still uses `applyOrgConfig`.
+
+- **AI verification and store discovery now log to the established channels.** Both flows ran silently: the AI verification modal (verify → skills → MCP inspect) emitted nothing, and store discovery surfaced a `401` with no local trace of the token state. Added `[AI Verify]` logging (start, checks, skills, per-MCP status with the proxy stderr tail on timeout, plus the proxy target socket vs the server's bound socket for socket-mismatch diagnosis) and `[Store Discovery]` logging (IMS token validity/expiry — never the token value — and the resolved discovery service URL before the call). `writeSkillFiles`/`generateAIContextFiles` now report which files they wrote so "Regenerate AI files" logs its output. Also corrected stale references to the renamed log channels (`Demo Builder: Logs`/`Demo Builder: Debug` → `Demo Builder: User Logs`/`Demo Builder: Debug Logs`) across docs and one user-facing toast. Observability only — no flow behavior changed.
+
+## [1.0.0-beta.115] - 2026-06-11
+
+### Fixed
+
+- **AEM Assets binding for first-time DA.live users.** DA.live returns HTTP `401` (not `404`) when `/config/<org>/` has never been written for a user — the existing 404-only handling branch in `applyOrgConfig` missed this, bailed out, and the AEM Assets binding (`aem.repositoryId`) never got written into the DA.live org config. Storefronts created by first-time DA.live SCs shipped without an AEM Assets entry in their DA.live Library, while SCs with prior DA.live presence saw it working (their GET returned 200, the read-modify-write succeeded). Adds a new branch in `daLiveContentOperations.applyOrgConfig`: when GET returns 401, probe write access via `HEAD /list/<org>/` first. If write access is confirmed, treat the 401 as first-time-owner and create the config sheet fresh. If write access is denied, refuse — protecting the existing "don't write skeleton config to an org someone else owns" safety property. The same `hasWriteAccess` helper used by the list-orgs handler moved from `handlers/edsDaLiveOrgHandlers.ts` to `services/daLiveOrgOperations.ts` so the cross-service call doesn't invert the layering. Field-verified by Leah's browser hitting `401` at the same endpoint; new SCs joining the team get AEM Assets in their DA.live Library on first storefront create going forward.
+
+- **Discovery service errors preserve HTTP status code + response body.** Store discovery failures previously surfaced the service's `error` field verbatim — but that field reads "Token is invalid or expired" for many distinct underlying causes (token rejection, email-domain allowlist rejection, service-side bugs masquerading as auth). `fetchViaDiscoveryService` now captures status code, statusText, and the parsed-or-raw body into the surfaced error, formatted as `<status> <statusText> — <body>`. Field-confirmed by Leah whose local token check reported "valid for 21h 32m" milliseconds before the discovery service rejection — the contradiction was the diagnostic key; the new format makes the underlying cause selectable at log-read time (401 = token; 403 = allowlist; 5xx = service-side). Next field retry will tell us exactly which path is failing.
+
+- **Discovery service error classifier uses structural checks instead of substring matches.** `discoverStoreStructure`'s catch block was classifying errors via `message.includes('abort'|'timeout'|'fetch failed'|'ECONNREFUSED')` — which collided with service-response error bodies that happened to contain those words and swallowed the HTTP status code the previous fix went out of its way to preserve. Now keys on `error.name === 'AbortError'` for abort/timeout and `error instanceof TypeError && error.message === 'fetch failed'` for network failures. The friendly-message paths (`"Connection timed out."`, `"Cannot reach the Commerce instance."`) still fire for real timeouts and network errors; service-response errors with sloppy bodies no longer get misclassified.
+
+- **MCP server dual-listen — AI Verification works in both workspace modes.** Switching projects via the home grid reloads VS Code's workspace folder to the project folder, and the in-extension MCP server's socket path follows the workspace. A previous fix (beta.114's per-project `.mcp.json` writes `DEMO_BUILDER_MCP_SOCKET` keyed to `path.dirname(project.path)` — the projects-root socket) closed the case where the workspace was the projects root, but introduced a mismatch when the workspace is the project folder (which is exactly what `vscode.openFolder` produces during a home-grid project switch). The proxy targets the projects-root socket while the server listens on the project-folder socket; the proxy hits `ENOENT`, retries through its ~23s window, and the inspector's 15s budget fires first — surfacing as `demo-builder · timed out` in AI Verification. The in-extension server now listens on **both** the workspace-folder socket and the projects-root socket when they differ (single-binds when they match). Both sockets route into the same per-connection handler; the bound path is purely a discovery mechanism for the proxy. Tactical workaround for the workspace-reload model; the long-term fix (decouple project from workspace folder) is tracked in backlog with the dual-listen shim's cleanup obligation written into its acceptance criteria. Field-confirmed via Leah's AI Verification showing `demo-builder · timed out` alongside `commerce-extensibility · 11 tools` and `playwright · 23 tools` (which both succeeded — isolating the issue to demo-builder's socket routing).
+
+## [1.0.0-beta.114] - 2026-06-10
+
+### Fixed
+
+- **Prerequisite check honors the user's optional-dependency picks.** `checkHandler.initializePrerequisiteCheck` previously built the project's component selection from `stack.dependencies + stack.optionalDependencies`, slamming all of the stack's optional deps (notably `eds-accs-mesh` for the `eds-accs` stack) into the selection regardless of what the user actually configured in the Architecture Modal. A stale comment ("prerequisites run before the Architecture Modal") was load-bearing for the original implementation, but the modal moved into WelcomeStep — by the time prerequisites runs, the user has already made a real opt-in choice. The handler now consumes a new `selectedOptionalDependencies` field on the `check-prerequisites` payload (forwarded from `usePrerequisiteState`) and uses it directly. A CitiSignal + EDS+ACCS demo without mesh no longer triggers the api-mesh prereq or surfaces App-Builder gating downstream. The `wizardHelpers.buildProjectConfig` path already used the user's actual selection; this aligns the prereq handler with the same source of truth.
+
+- **Architecture Modal — cross-package optional-deps leak.** The modal-open handler (`useModalState.handleCardClick`) carried the existing `selectedOptionalDependencies` into modal state for the newly clicked package, even when the new package didn't require or offer the deps. Repro: pick Custom (mesh auto-added) → back out → pick CitiSignal → mesh quietly survives in the wizard state for a package that doesn't offer it. The handler now mirrors `handleStackSelect`'s clear-on-no-mesh behavior — sets modal optional deps to `[]` and propagates the cleared value to the parent via `onOptionalDependenciesChange`. Eliminates the silent inheritance.
+
+- **Token validation timeout (`TIMEOUTS.QUICK` → new `TIMEOUTS.TOKEN_VALIDATION`).** The Adobe IMS token-read in `tokenManager.inspectToken` (`aio config get ims.contexts.cli.access_token --json`) was capped at 5s, which routinely failed on slow networks — the 3-attempt retry loop's exponential backoff exited cleanly but the timeout itself was too tight, producing a "token expired, please re-authenticate" cascade where the underlying token was valid the whole time. Bumped to 10s (matching the precedent set by the v1.5.0 `CONFIG_WRITE` bump). The retry loop is unchanged; worst-case bounded auth wall-clock now sits at ~33s, well inside the legitimate auth flow's wall-clock budget.
+
+## [1.0.0-beta.113] - 2026-06-10
+
+### Added
+
+- **Thin-layer storefront cutover (ADR-006 — live for CitiSignal, custom, and b2b).** Reinstates the v1 template-patch system as a generic `codePatchRegistry` with definitions externalized to a `skukla/eds-demo-patches` repo (matching the precedent `contentPatchRegistry` set for content patches). Pipeline integration spans canonical-phase patches (pre-reset, via `fileOverrides` so they land in the same atomic Git Tree commit) and block-phase patches (post-install, via per-file commits with idempotent SHA threading). A unified `patchReportHelper` surfaces unapplied content + code patches in a single warning toast (`reportUnapplied`), replacing the silent debug-log path content patches used previously — CREATE, RESET, and IMPORT flows all surface the toast via `vscode.window.showWarningMessage`. The `EdsStorefrontMetadata.lkgSource` field marks a storefront as thin-layer; when present, the update checker reads the verified canonical SHA from the patches repo's `last-known-good` file (`lkgReader`) instead of comparing against the template's `main`. Storefronts pin to the LKG SHA at **both create and reset** via the new `lkgPinHelper.ts` (create path) and `buildArchiveUrl` SHA-vs-branch helper exported from `githubFileOperations` (reset path) — create and reset produce byte-identical thin-layer repos. **Multi-canonical support** via an optional `lkgFile` field on `CodePatchSource`: most ledgers share the patches-repo root `last-known-good` (citisignal and custom both track `hlxsites/aem-boilerplate-commerce`), while `b2b` tracks `adobe-commerce/boilerplate-b2b-template` and points at `b2b/last-known-good`. The drift gate in `skukla/eds-demo-patches` clones each unique canonical once per run and advances each LKG pointer independently. Three demo packages drive the pipeline today: CitiSignal (PaaS + ACCS), `custom` (PaaS + ACCS), and `b2b` (PaaS + ACCS).
+
 - **`demoBuilder.byom.overlayUrl` setting — universal BYOM overlay registration.** Adds a workspace-level setting that, when populated, gets registered with the AEM Configuration Service as `content.overlay` whenever an EDS storefront is created or reset. The setting takes precedence over any `byomOverlayUrl` baked into `demo-packages.json`; storefronts without the setting configured behave as before. URL validation requires `https://` (or `http://` on a loopback host for local dev) and a 2048-character cap; rejected values log a fingerprint, never the raw URL, so a paste with a query-string secret doesn't leak. Wired into storefront create (`storefrontSetupHandlers`), reset (`edsResetUI`), and the AI reset tool (`edsResetTool`). Block library refresh is intentionally not wired — it runs the EDS content pipeline only, not the Configuration Service path. Companion work tracks separately as a `render-pdp` action in the shared `accs-discovery-service` App Builder app.
+
+- **Wizard step-name tooltips in the collapsed timeline rail.** At narrow viewports (<=1280px) where the SETUP PROGRESS rail collapses to an icons-only column, each step now surfaces its name via a CSS-only `::after` tooltip. The current step's tooltip is persistent so "where am I in the wizard" is always answered without hover; other steps show their tooltip on pointer hover or keyboard focus. Tooltip styling uses Spectrum gray tokens (`gray-200` background / `gray-800` foreground / `gray-300` border) that invert correctly in both light and dark themes; offset, padding, and border-radius use Spectrum dimension tokens (`size-50` / `size-75` / `size-100`).
+
+### Changed
+
+- **Wizard `TwoColumnLayout` has a `rightMinWidth` floor and a vertical stacking breakpoint.** The primitive's right (summary) column gains a default 300px `min-width` so it stays legible while the left column gives up space first (the left's existing 800px `max-width`). At viewports <= 1180px the two columns stack vertically — summary slides under the active column — so the right column never falls below its floor. Affects `AdobeProjectStep`, `AdobeWorkspaceStep`, `ComponentConfigStep`, `GitHubRepoSelectionStep`, and the post-create `ConfigureScreen` uniformly (they all consume the same primitive).
+- **Wizard SETUP PROGRESS rail collapses to icons at <=1280px viewport.** Frees ~224px for the main content column. Step labels move into the new tooltips. The rail's `overflow-y` is set to `visible` in collapsed mode so the tooltips escape the 56px column (otherwise the CSS-spec'd `overflow-x: auto` cascade would clip them at the rail's right edge).
+- **Prerequisites step: tightened outer margins on the prereqs box** (`margin-top` 20px → 12px, `margin-bottom` 30px → 16px, both via Spectrum dimension tokens). Recovers 22px of vertical space so the Recheck button sits with visible breathing room above the wizard footer at common laptop window heights without falling below the scroll fold.
+
+### Fixed
+
+- **Wizard "Create Repository" button now pins to LKG on the create path** (ADR-006 Step 4b gap fix). The wizard's pre-create-repo button path (`usePreCreatedRepo` branch in `storefrontSetupPhase1.executePhaseGitHubRepo`) was the third of three Phase 1 branches and didn't call the LKG pin step — only the in-Phase-1 `executePhaseNewRepo` and the explicit-reset branch did. As a result, freshly-created b2b storefronts had only the 2 block-phase patches applied; the 3 canonical-phase SKU/slash patches (`product-link-sku-encoding`, `product-link-sku-slash-encoding`, `aem-assets-sku-sanitization`) silently no-op'd. The same gap also affected CitiSignal create flows (its canonical-phase patches were skipped too — masked by the larger block-phase coverage). The fix adds `pinIfThinLayer` to the pre-created branch and extracts an `announcePinAndComplete` helper so the two fresh-create branches share one pin + progress sequence. Regression coverage in `tests/features/eds/handlers/storefrontSetupPhase1-pin.test.ts`.
+
+### Removed
+
+- **Reverted: commerce-connect Slice 1 (PR #44).** The "Join shared storefront" / repoless satellite work merged on develop on 2026-06-09 was reverted on 2026-06-10 ahead of this release so a release build wouldn't carry an unfinished feature. The branch is preserved on origin as `claude/commerce-connect-slice-1-plan-bgVlb` (tip `bddc3aec`); restoring requires either `git checkout` the branch or `git revert` the revert commit (`6985e09b`). Net effect: 116 files reverted, including all `JoinStorefrontScreen`, `resolveJoinLink`, `storefront-share.json` marker, satellite phase machinery, and `JoinDescriptor` plumbing. No user impact (feature never reached a release).
 
 ## [1.0.0-beta.112] - 2026-06-07
 
@@ -295,7 +410,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Enhanced Debugging System**: 
   - New diagnostics command (`Demo Builder: Diagnostics`) for comprehensive system analysis
-  - Dual output channel architecture: "Demo Builder: Logs" for user messages, "Demo Builder: Debug" for detailed diagnostics
+  - Dual output channel architecture: "Demo Builder: User Logs" for user messages, "Demo Builder: Debug Logs" for detailed diagnostics
   - Command execution logging with stdout, stderr, exit codes, and timing information
   - Environment variable and PATH logging for troubleshooting platform-specific issues
   - Export debug log capability for sharing diagnostic reports

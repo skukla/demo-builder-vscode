@@ -154,9 +154,30 @@ async function fetchViaDiscoveryService(
     });
 
     if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        const errorMsg = (body as { error?: string }).error || `Service returned ${response.status}`;
-        throw new Error(errorMsg);
+        // Capture status + body so the caller can distinguish 401 (token rejected),
+        // 403 (caller not authorized — e.g. email-domain allowlist), 5xx (service
+        // bug) at log-read time. Without this, the service's own `error` field is
+        // surfaced verbatim — which today often reads "Token is invalid or expired"
+        // for many distinct underlying causes, making field diagnosis impossible
+        // without access to the service's own logs.
+        //
+        // Format: "<HTTP status> <statusText> — <body.error or stringified body>".
+        // The previous behavior is preserved as a substring when body.error is set
+        // (callers grepping for the old message keep working).
+        const rawBody = await response.text().catch(() => '');
+        let parsedError = '';
+        try {
+            const parsed = JSON.parse(rawBody);
+            if (parsed && typeof parsed === 'object') {
+                parsedError = (parsed as { error?: string }).error ?? '';
+            }
+        } catch {
+            // Body wasn't JSON — fall through to using rawBody directly
+        }
+        const detail = parsedError || rawBody || '(empty body)';
+        throw new Error(
+            `${response.status} ${response.statusText} — ${detail}`,
+        );
     }
 
     const body = await response.json() as { success: boolean; data?: CommerceStoreStructure; error?: string };
@@ -222,18 +243,26 @@ export async function discoverStoreStructure(
         );
         return { success: true, data };
     } catch (error) {
-        const message = (error as Error).message;
+        // Structural checks (error.name, instanceof) instead of substring
+        // matches. The substring approach used to collide with service-response
+        // error messages that happen to contain "timeout" or "fetch failed" in
+        // the body text — those collisions swallowed the HTTP status code we
+        // now go out of our way to preserve in fetchViaDiscoveryService.
+        //
+        // AbortSignal.timeout() throws AbortError reliably. Node's fetch
+        // surfaces network failures (DNS, connect, ECONNREFUSED) as TypeError
+        // with the literal message "fetch failed" — the underlying cause sits
+        // on err.cause but the type + message pair is sufficient to classify.
+        const err = error as Error;
 
-        // Friendly message for timeout
-        if (message.includes('abort') || message.includes('timeout')) {
+        if (err.name === 'AbortError') {
             return { success: false, error: 'Connection timed out. Check the Commerce URL and try again.' };
         }
 
-        // Friendly message for network errors
-        if (message.includes('fetch failed') || message.includes('ECONNREFUSED')) {
+        if (err instanceof TypeError && err.message === 'fetch failed') {
             return { success: false, error: 'Cannot reach the Commerce instance. Check the URL and ensure the server is running.' };
         }
 
-        return { success: false, error: message };
+        return { success: false, error: err.message };
     }
 }

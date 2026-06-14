@@ -77,6 +77,33 @@ export interface ContentPatchSource {
 }
 
 /**
+ * CodePatchSource - External repository for code patches.
+ *
+ * Sibling of {@link ContentPatchSource}. Code patches are file-level
+ * edits applied to a cloned storefront repo during create/reset, after
+ * reset-to-template and after block install. The engine knows no canonical
+ * file by name; everything comes from the external ledger fetched here.
+ *
+ * Per ADR-006 D3 the canonical home is `skukla/eds-demo-patches` (the
+ * generalized successor to `eds-demo-content-patches`); a path of e.g.
+ * `citisignal` selects the patch family for a storefront.
+ */
+export interface CodePatchSource {
+    /** GitHub owner/organization of the patch repository */
+    owner: string;
+    /** GitHub repository name */
+    repo: string;
+    /** Path within repo to the patch family directory (contains code-patches.json) */
+    path: string;
+    /** Repo-relative path to the LKG file when this ledger tracks a non-default
+     *  canonical (multi-canonical patches repos). Omitted when the ledger
+     *  shares the default root `last-known-good` — e.g., citisignal + custom
+     *  both track hlxsites/aem-boilerplate-commerce and share root LKG; b2b
+     *  tracks the B2B template and sets `lkgFile: "b2b/last-known-good"`. */
+    lkgFile?: string;
+}
+
+/**
  * Storefront - A storefront variant within a package
  *
  * Storefronts are keyed by stack ID (e.g., 'headless-paas', 'eds-paas')
@@ -114,6 +141,15 @@ export interface Storefront {
     contentPatches?: string[];
     /** External repository for content patches (if not using bundled patches) */
     contentPatchSource?: ContentPatchSource;
+    /** Code patch IDs to apply during create/reset (canonical files + installed blocks).
+     *  Sibling of contentPatches but operates on repo files. Step 5 of ADR-006 wires
+     *  the CitiSignal storefront entries with these IDs pointing at the ledger in
+     *  the eds-demo-patches repo. Empty / undefined for non-thin-layer storefronts. */
+    codePatches?: string[];
+    /** External repository for code patches. When set, the storefront is "thin-layer"
+     *  (per ADR-006) — `lastSyncedCommit` records the LKG SHA read from this repo's
+     *  `last-known-good` file rather than canonical main HEAD, and reset pins to LKG. */
+    codePatchSource?: CodePatchSource;
     /** API Mesh requirement for this storefront (overrides package-level requiresMesh).
      *  - true: mesh auto-included, no user choice
      *  - false: no mesh, no user choice
@@ -188,9 +224,6 @@ export interface DemoPackage {
 
     /** Addons configuration for this package */
     addons?: Addons;
-
-    /** Feature packs configuration for this package (required/optional/excluded per pack ID) */
-    featurePacks?: Record<string, AddonConfig>;
 
     /** Default configuration values (env var name to value) - embedded brand data */
     configDefaults: Record<string, string>;

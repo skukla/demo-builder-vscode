@@ -32,7 +32,7 @@ const SERVER_VERSION = '1.0.0';
  *
  * Logs the tool NAME and arg KEYS only — never arg values — because args can
  * carry secrets (e.g. `update_project_config.content` holds `.env` contents).
- * `info` → "Demo Builder: Logs"; `debug` → "Demo Builder: Debug"; errors → both.
+ * `info` → "Demo Builder: User Logs"; `debug` → "Demo Builder: Debug Logs"; errors → both.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function withToolLogging(server: any, logger: Logger): any {
@@ -62,7 +62,8 @@ function withToolLogging(server: any, logger: Logger): any {
 }
 
 export class InExtensionMcpServer {
-    private netServer?: net.Server;
+    private netServers: net.Server[] = [];
+    private boundPaths: string[] = [];
     private connCounter = 0;
 
     /**
@@ -76,6 +77,16 @@ export class InExtensionMcpServer {
      * @param credentials Optional DA.live / GitHub token resolver injected by the
      *   extension so the credential-needing project tools (`sync_storefront`,
      *   `promote_block_to_library`) use the live sign-in session.
+     * @param secondarySocketPath Optional second UDS path. When VS Code's
+     *   workspace is a project folder (not the projects root), proxies spawned
+     *   from per-project `.mcp.json` files target the projects-root socket
+     *   (per mcpConfigWriter's resolveMcpSocketPath(path.dirname(project.path))
+     *   contract). Listening on both sockets lets the server accept connections
+     *   regardless of which socket the proxy is wired to. Pass `undefined` to
+     *   disable; pass the same value as `socketPath` and dedup happens (single
+     *   bind). Goes away when the decouple-project-from-workspace backlog
+     *   lands; until then this prevents `demo-builder · timed out` in
+     *   AI Verification.
      */
     constructor(
         private readonly socketPath: string,
@@ -84,71 +95,103 @@ export class InExtensionMcpServer {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         private readonly registerExtraTools?: (server: any) => void,
         private readonly credentials?: McpCredentialProvider,
+        private readonly secondarySocketPath?: string,
     ) {}
 
     async start(): Promise<void> {
         await fsPromises.mkdir(mcpSocketDir(), { recursive: true, mode: 0o700 });
+
+        // Bind the primary socket (workspace folder). Always required.
+        await this.bindSocket(this.socketPath);
+
+        // Bind the secondary socket only if it's set AND distinct from primary.
+        // The common single-bind case (workspace = projects root, where primary
+        // and secondary collapse to the same path) skips this cleanly.
+        if (this.secondarySocketPath && this.secondarySocketPath !== this.socketPath) {
+            await this.bindSocket(this.secondarySocketPath);
+        }
+    }
+
+    /**
+     * Bind a single UDS path. Cleans up stale socket file, creates the listener,
+     * sets owner-only permissions. Connections are routed through the shared
+     * `handleConnection` method regardless of which path accepted them.
+     */
+    private async bindSocket(socketPath: string): Promise<void> {
         // Remove any stale socket left by a previous run or another window
         // (last-writer-wins for the rare two-windows-same-workspace case).
-        await fsPromises.rm(this.socketPath, { force: true });
+        await fsPromises.rm(socketPath, { force: true });
 
-        const netServer = net.createServer((socket) => {
-            const connId = ++this.connCounter;
-            const startedAt = Date.now();
-            this.logger.debug(`[MCP] client connected (conn=${connId})`);
-            // Typed `any` to avoid TS2589 (see registerProjectTools docstring).
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const server: any = new McpServer({ name: SERVER_NAME, version: SERVER_VERSION });
-            // Wrap so every tool logs to the extension channels; registerProjectTools
-            // stays vscode-free and logging-agnostic. Extra (handler-backed) tools
-            // are registered through the same wrapper.
-            const logged = withToolLogging(server, this.logger);
-            registerProjectTools(logged, this.projectsDir, this.credentials);
-            this.registerExtraTools?.(logged);
-
-            const transport = new StdioServerTransport(socket, socket);
-            server.connect(transport)
-                .then(() => {
-                    this.logger.debug(`[MCP] connect resolved (conn=${connId})`);
-                })
-                .catch((err: unknown) => {
-                    this.logger.error(
-                        `[MCP] connection failed (conn=${connId}): ${err instanceof Error ? err.message : String(err)}`,
-                    );
-                    socket.destroy();
-                });
-
-            socket.on('error', (err) =>
-                this.logger.debug(`[MCP] socket error (conn=${connId}): ${err.message}`),
-            );
-            socket.on('close', (hadError) => {
-                const ms = Date.now() - startedAt;
-                this.logger.debug(
-                    `[MCP] client disconnected (conn=${connId}, hadError=${hadError}, ${ms}ms)`,
-                );
-            });
-        });
+        const netServer = net.createServer((socket) => this.handleConnection(socket));
 
         await new Promise<void>((resolve, reject) => {
             netServer.once('error', reject);
-            netServer.listen(this.socketPath, () => {
+            netServer.listen(socketPath, () => {
                 netServer.off('error', reject);
                 resolve();
             });
         });
         // Owner-only: the socket file permissions are the access control.
-        await fsPromises.chmod(this.socketPath, 0o600);
+        await fsPromises.chmod(socketPath, 0o600);
 
-        netServer.on('error', (err) => this.logger.error(`[MCP] server error: ${err.message}`));
-        this.netServer = netServer;
-        this.logger.info(`[MCP] in-extension server listening on ${this.socketPath}`);
+        netServer.on('error', (err) => this.logger.error(`[MCP] server error on ${socketPath}: ${err.message}`));
+        this.netServers.push(netServer);
+        this.boundPaths.push(socketPath);
+        this.logger.info(`[MCP] in-extension server listening on ${socketPath}`);
+    }
+
+    /**
+     * Per-connection handler. Shared across all bound sockets — connections
+     * coming in on either listener are treated identically; the bound path
+     * is purely a discovery mechanism for the proxy.
+     */
+    private handleConnection(socket: net.Socket): void {
+        const connId = ++this.connCounter;
+        const startedAt = Date.now();
+        this.logger.debug(`[MCP] client connected (conn=${connId})`);
+        // Typed `any` to avoid TS2589 (see registerProjectTools docstring).
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const server: any = new McpServer({ name: SERVER_NAME, version: SERVER_VERSION });
+        // Wrap so every tool logs to the extension channels; registerProjectTools
+        // stays vscode-free and logging-agnostic. Extra (handler-backed) tools
+        // are registered through the same wrapper.
+        const logged = withToolLogging(server, this.logger);
+        registerProjectTools(logged, this.projectsDir, this.credentials);
+        this.registerExtraTools?.(logged);
+
+        const transport = new StdioServerTransport(socket, socket);
+        server.connect(transport)
+            .then(() => {
+                this.logger.debug(`[MCP] connect resolved (conn=${connId})`);
+            })
+            .catch((err: unknown) => {
+                this.logger.error(
+                    `[MCP] connection failed (conn=${connId}): ${err instanceof Error ? err.message : String(err)}`,
+                );
+                socket.destroy();
+            });
+
+        socket.on('error', (err) =>
+            this.logger.debug(`[MCP] socket error (conn=${connId}): ${err.message}`),
+        );
+        socket.on('close', (hadError) => {
+            const ms = Date.now() - startedAt;
+            this.logger.debug(
+                `[MCP] client disconnected (conn=${connId}, hadError=${hadError}, ${ms}ms)`,
+            );
+        });
     }
 
     dispose(): void {
-        this.netServer?.close();
-        this.netServer = undefined;
-        void fsPromises.rm(this.socketPath, { force: true }).catch(() => {
-            /* best-effort cleanup */
-        });
+        for (const server of this.netServers) {
+            server.close();
+        }
+        for (const path of this.boundPaths) {
+            void fsPromises.rm(path, { force: true }).catch(() => {
+                /* best-effort cleanup */
+            });
+        }
+        this.netServers = [];
+        this.boundPaths = [];
     }
 }

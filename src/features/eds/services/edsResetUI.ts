@@ -303,9 +303,10 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
 
                 // Execute reset
                 const tokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
-                // VS Code settings (`demoBuilder.byom.overlayUrl` + `.overlaySharedSecret`)
-                // win over demo-packages.json. The helper stamps `?org=&site=&key=` so
-                // the shared render-pdp action can identify the storefront and validate.
+                // VS Code setting `demoBuilder.byom.overlayUrl` wins over
+                // demo-packages.json. The helper stamps `?org=&site=` so the
+                // shared multi-tenant `render-pdp` action can identify which
+                // storefront's `/products/default` template to fetch.
                 const resetParams: EdsResetParams = {
                     ...paramsResult.params,
                     byomOverlayUrl: resolveByomOverlayConfig(

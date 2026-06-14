@@ -155,19 +155,22 @@ describe('ConfigurationService', () => {
             expect(result.error).toBe('Network timeout');
         });
 
-        it('surfaces a missing IMS token as a 401 auth failure (so callers can re-auth + retry)', async () => {
+        it('should throw when IMS token is missing', async () => {
             mockTokenProvider.getAccessToken.mockResolvedValueOnce(null);
 
             const result = await service.registerSite(params);
 
             expect(result.success).toBe(false);
             expect(result.error).toContain('DA.live authentication required');
-            // A missing/expired token is an auth failure, not a generic error: tag it 401
-            // so the registration retry wrapper re-authenticates instead of swallowing it.
-            expect(result.statusCode).toBe(401);
         });
 
-        it('should include content.overlay block when contentOverlayUrl is provided', async () => {
+        it('should include content.overlay block with suffix:".html" when contentOverlayUrl is provided', async () => {
+            // The `suffix: '.html'` matches the canonical
+            // `aem-commerce-prerender` registration shape. Without it,
+            // Helix's live tier 404s for unmatched `/products/*` paths
+            // even though the overlay action returns 200 with the default
+            // template. See .rptc/research/eds-pdp-routing-validation/
+            // findings.md for the empirical reproduction.
             await service.registerSite({
                 ...params,
                 contentOverlayUrl: 'https://byom.example.com',
@@ -183,6 +186,7 @@ describe('ConfigurationService', () => {
                 overlay: {
                     url: 'https://byom.example.com',
                     type: 'markup',
+                    suffix: '.html',
                 },
             });
         });

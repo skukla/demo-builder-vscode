@@ -13,6 +13,7 @@
 import { COMPONENT_IDS } from '@/core/constants';
 import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
 import type { Project } from '@/types/base';
+import type { CodePatchSource } from '@/types/demoPackages';
 import type { HandlerResponse } from '@/types/handlers';
 
 // ==========================================================
@@ -54,6 +55,16 @@ export interface EdsResetParams {
     redeployMesh?: boolean;
     /** Content patches to apply during content copy */
     contentPatches?: string[];
+    /** External source for content patches (sibling of codePatchSource). */
+    contentPatchSource?: { owner: string; repo: string; path: string };
+    /** Code patch IDs to apply during reset (canonical files + installed blocks) */
+    codePatches?: string[];
+    /**
+     * External repository for code patches. When set, `codePatches` IDs are
+     * fetched from this source. Distinct from `contentPatchSource` so a
+     * storefront can pin code and content ledgers independently.
+     */
+    codePatchSource?: CodePatchSource;
 }
 
 /**
@@ -143,6 +154,9 @@ interface StorefrontConfig {
     templateRepo?: string;
     contentSource?: { org: string; site: string; indexPath?: string };
     contentPatches?: string[];
+    contentPatchSource?: { owner: string; repo: string; path: string };
+    codePatches?: string[];
+    codePatchSource?: CodePatchSource;
     byomOverlayUrl?: string;
 }
 
@@ -191,6 +205,9 @@ export function extractResetParams(
         templateRepo,
         contentSource: contentSourceConfig,
         contentPatches,
+        contentPatchSource,
+        codePatches,
+        codePatchSource,
         byomOverlayUrl,
     } = resolveStorefrontConfig(project, packages);
 
@@ -256,6 +273,9 @@ export function extractResetParams(
             ...(byomOverlayUrl && { byomOverlayUrl }),
             project,
             contentPatches,
+            ...(contentPatchSource && { contentPatchSource }),
+            codePatches,
+            ...(codePatchSource && { codePatchSource }),
         },
     };
 }

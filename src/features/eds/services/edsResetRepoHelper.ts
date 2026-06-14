@@ -10,11 +10,16 @@
  */
 
 import { installBlockCollections } from './blockCollectionHelpers';
+import { applyCanonicalCodePatches } from './codePatchPipelineHelpers';
+import type { CodePatchResult } from './codePatchRegistry';
 import { generateConfigJson, extractConfigParams } from './configGenerator';
 import { assertValidGitHubSlug, type EdsResetParams } from './edsResetParams';
 import { generateFstabContent } from './fstabGenerator';
 import type { GitHubFileOperations } from './githubFileOperations';
 import { generateInspectorTreeEntries, installInspectorTagging } from './inspectorHelpers';
+import { readLkgSha } from './lkgReader';
+import { installSmart404Handler } from './pdp404HandlerPublisher';
+import { installQuickEdit } from './quickEditPublisher';
 import type { GitHubTreeInput } from './types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
@@ -210,8 +215,17 @@ export async function resetRepoToTemplate(
     context: HandlerContext,
     githubFileOps: GitHubFileOperations,
     report: (step: number, message: string) => void,
-): Promise<{ filesReset: number; blockCollectionIds?: string[]; libraryContentSources: Array<{ org: string; site: string }> }> {
-    const { repoOwner, repoName, daLiveOrg, daLiveSite, templateOwner, templateRepo, project, includeBlockLibrary = false } = params;
+): Promise<{
+    filesReset: number;
+    blockCollectionIds?: string[];
+    libraryContentSources: Array<{ org: string; site: string }>;
+    canonicalCodePatchResults?: CodePatchResult[];
+}> {
+    const {
+        repoOwner, repoName, daLiveOrg, daLiveSite, templateOwner, templateRepo,
+        project, includeBlockLibrary = false,
+        codePatches, codePatchSource,
+    } = params;
 
     report(1, 'Resetting repository to template...');
     context.logger.info(`[EdsReset] Resetting repo using bulk tree operations`);
@@ -238,8 +252,40 @@ export async function resetRepoToTemplate(
         await fetchPlaceholderFiles(fileOverrides, templateOwner, templateRepo, context.logger);
     }
 
+    // Determine the template ref to reset against. Thin-layer storefronts
+    // (codePatchSource configured) pin to the verified canonical LKG SHA;
+    // legacy / forked packages continue to use `main` HEAD. LKG fetch
+    // failure falls back to `main` with a warn (ADR-006 D1 proceed-and-warn)
+    // so a transient patches-repo outage doesn't block reset entirely.
+    let templateRef = 'main';
+    if (codePatchSource) {
+        const lkg = await readLkgSha(
+            { owner: codePatchSource.owner, repo: codePatchSource.repo, lkgFile: codePatchSource.lkgFile },
+            context.logger,
+        );
+        if (lkg) {
+            templateRef = lkg;
+            context.logger.info(`[EdsReset] Pinning reset to LKG ${lkg.substring(0, 7)} (from ${codePatchSource.owner}/${codePatchSource.repo})`);
+        } else {
+            context.logger.warn(`[EdsReset] LKG unreachable for ${codePatchSource.owner}/${codePatchSource.repo} — falling back to template main HEAD`);
+        }
+    }
+
+    // Canonical-phase code patches: apply BEFORE the bulk reset so patched
+    // canonical files (`head.html`, `scripts/*.js`, etc.) land in the same
+    // atomic Git Tree commit as `fileOverrides`. Block-targeting patches
+    // run later in `executeEdsPipeline` after the block library install.
+    // Non-fatal per ADR-006 D1; results are surfaced via the pipeline's
+    // patchReport (callers pass it forward into `executeEdsPipeline`).
+    let canonicalCodePatchResults: CodePatchResult[] | undefined;
+    if (codePatches && codePatches.length > 0 && codePatchSource) {
+        canonicalCodePatchResults = await applyCanonicalCodePatches(
+            fileOverrides, templateOwner, templateRepo, codePatches, codePatchSource, context.logger,
+        );
+    }
+
     const resetResult = await githubFileOps.resetRepoToTemplate(
-        templateOwner, templateRepo, repoOwner, repoName, fileOverrides, 'main',
+        templateOwner, templateRepo, repoOwner, repoName, fileOverrides, templateRef,
     );
 
     context.logger.info(`[EdsReset] Repository reset complete: ${resetResult.fileCount} files, commit ${resetResult.commitSha.substring(0, 7)}`);
@@ -249,5 +295,37 @@ export async function resetRepoToTemplate(
         project, repoOwner, repoName, githubFileOps, context.logger, report,
     );
 
-    return { filesReset: resetResult.fileCount, blockCollectionIds, libraryContentSources };
+    // Install the smart 404 PDP handler into the storefront's
+    // scripts/delayed.js. Same shape as inspector tagging — vendors a
+    // small JS snippet into storefront code. The pipeline's subsequent
+    // bulk Helix code preview picks up the committed change. Non-fatal:
+    // skipped silently when BYOM overlay is unset and on every other
+    // failure mode (see installSmart404Handler).
+    await installSmart404Handler(
+        githubFileOps,
+        repoOwner,
+        repoName,
+        params.byomOverlayUrl,
+        context.logger,
+        daLiveOrg,
+        daLiveSite,
+    );
+
+    // Wire Quick Edit (Experience Workspace WYSIWYG dependency) into the
+    // storefront's scripts/scripts.js + tools/quick-edit/quick-edit.js.
+    // Brand-agnostic, idempotent, non-fatal. Mirrors the create path so a
+    // reset reconciles Quick Edit wiring just like every other vendored file.
+    await installQuickEdit(
+        githubFileOps,
+        repoOwner,
+        repoName,
+        context.logger,
+    );
+
+    return {
+        filesReset: resetResult.fileCount,
+        blockCollectionIds,
+        libraryContentSources,
+        canonicalCodePatchResults,
+    };
 }

@@ -1,9 +1,13 @@
 /**
  * MCP Inspector
  *
- * Reads `<project>/.claude/mcp.json`, spawns each declared server as a stdio
- * subprocess via the @modelcontextprotocol/sdk client, calls `tools/list`
- * with pagination, and returns one `McpInventoryEntry` per server.
+ * Reads `<project>/.claude/mcp.json` and returns one `McpInventoryEntry` per
+ * server. Third-party servers are spawned as stdio subprocesses via the
+ * @modelcontextprotocol/sdk client (`tools/list` with pagination). The
+ * extension's own in-extension server (the entry whose `env` carries
+ * `DEMO_BUILDER_MCP_SOCKET`) is inspected via a direct Unix-socket probe
+ * instead — no subprocess, no SDK handshake — because spawning the proxy to
+ * loop back into this same process starved past the 15s budget on first verify.
  *
  * Per-server timeout (15s overall budget). Module-level TTL cache so the
  * Configure tab can refresh inventory cheaply on tab re-open without
@@ -23,6 +27,7 @@ import * as path from 'path';
 import type { Readable } from 'stream';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport, getDefaultEnvironment } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { probeInExtensionMcpTools } from './server/mcpToolProbe';
 import {
     createCacheEntry,
     getCacheTTLWithJitter,
@@ -147,6 +152,19 @@ async function inspectOneServer(
     serverConfig: McpServerConfig,
     projectPath: string,
 ): Promise<McpInventoryEntry> {
+    // The Demo Builder server is the extension's OWN in-extension server,
+    // reachable directly on the Unix socket its mcp.json entry carries in
+    // DEMO_BUILDER_MCP_SOCKET. Inspect it via a direct socket probe — the same
+    // ground truth Diagnostics uses — instead of spawning `dist/mcp-proxy.js`
+    // and running a full SDK handshake that loops back into this same process.
+    // The spawn-and-loopback path starved past the 15s budget on first verify,
+    // when the third-party servers (playwright, commerce-extensibility) were
+    // cold-starting in parallel ("mcp demo-builder: timeout").
+    const inExtensionSocket = serverConfig.env?.DEMO_BUILDER_MCP_SOCKET;
+    if (inExtensionSocket) {
+        return inspectInExtensionServer(id, inExtensionSocket);
+    }
+
     // Env: layer the extra credential-free allowlist on top of the SDK default,
     // then let `serverConfig.env` override last. See EXTRA_ALLOWED_ENV_VARS
     // for the security rationale.
@@ -178,6 +196,25 @@ async function inspectOneServer(
             // best-effort cleanup
         }
     }
+}
+
+/**
+ * Inspect the in-extension MCP server by connecting straight to its Unix
+ * socket — no child process, no SDK. Returns the same `McpInventoryEntry`
+ * shape as the spawned path; tool descriptions come back empty because the
+ * direct probe lists names only (the inventory UI shows the tool *count*, not
+ * descriptions). A missing or unreachable socket maps to `error`; a probe
+ * timeout maps to `timeout`, matching the spawned path's failure states.
+ */
+async function inspectInExtensionServer(id: string, socketPath: string): Promise<McpInventoryEntry> {
+    const result = await probeInExtensionMcpTools(socketPath, MCP_INSPECT_TIMEOUT_MS);
+    if (result.ok) {
+        const tools: McpToolEntry[] = (result.tools ?? []).map(name => ({ name, description: '' }));
+        return { id, status: 'ok', tools };
+    }
+    const error = result.error ?? 'in-extension MCP probe failed';
+    const status: 'timeout' | 'error' = /timed out/i.test(error) ? 'timeout' : 'error';
+    return { id, status, error };
 }
 
 /**

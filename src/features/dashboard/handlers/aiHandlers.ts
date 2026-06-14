@@ -15,10 +15,10 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
-import { clearMcpCache, inspectAllServers, verifyAiSetup } from '@/features/ai';
+import { clearMcpCache, inspectAllServers, verifyAiSetup, type AiVerificationResult } from '@/features/ai';
 import {
     generateAIContextFiles,
-    installAiDefaultsInStorefront,
+    installAiDefaultsMcpTools,
 } from '@/features/project-creation/services';
 import type { AiPrompt, Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
@@ -43,12 +43,60 @@ export async function handleVerifyAiSetup(
     }
     // extensionDistPath is always server-side (prevent webview-supplied path traversal)
     const extensionDistPath = path.join(context.context.extensionPath, 'dist');
+
+    context.logger.info(`[AI Verify] Verifying AI setup: ${project.path}`);
     const result = await verifyAiSetup(project.path, extensionDistPath);
+    logAiVerification(context, result);
 
     return {
         success: true,
         ...result,
     };
+}
+
+/**
+ * Surface the verification result on the established log channels. Observability
+ * only — never throws, never alters the result. The per-MCP failure branch logs
+ * the captured proxy stderr tail (`entry.error`), which is the decisive detail
+ * when an MCP server fails to spawn.
+ */
+function logAiVerification(context: HandlerContext, result: AiVerificationResult): void {
+    const checksSummary = result.checks
+        .map(c => `${c.name}=${c.status}`)
+        .join(', ');
+    context.debugLogger.debug(`[AI Verify] checks: ${checksSummary}`);
+
+    // verifyAiSetup always populates inventory; guard anyway so this
+    // observability-only helper can never throw and mask the real result.
+    const inventory = result.inventory;
+    if (!inventory) return;
+    if (inventory.skillsError) {
+        context.logger.warn(`[AI Verify] skills: inspection error: ${inventory.skillsError}`);
+    } else {
+        context.logger.info(`[AI Verify] skills: ${inventory.skills.length} found`);
+    }
+
+    for (const entry of inventory.mcps) {
+        if (entry.status === 'ok') {
+            context.debugLogger.debug(
+                `[AI Verify] mcp ${entry.id}: ok (${entry.tools?.length ?? 0} tools)`,
+            );
+        } else {
+            context.logger.warn(
+                `[AI Verify] mcp ${entry.id}: ${entry.status}\n${entry.error ?? ''}`,
+            );
+        }
+    }
+    if (inventory.mcpsError) {
+        context.logger.warn(`[AI Verify] mcp inspection error: ${inventory.mcpsError}`);
+    }
+
+    const sessionSuffix = inventory.sessionMcpsError
+        ? ` (error: ${inventory.sessionMcpsError})`
+        : '';
+    context.debugLogger.debug(
+        `[AI Verify] session MCPs: ${inventory.sessionMcps.length}${sessionSuffix}`,
+    );
 }
 
 /**
@@ -129,6 +177,8 @@ export async function handleRegenerateAiFiles(
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
+    context.logger.info('[AI Verify] Regenerating AI files…');
+
     // Reuse the wizard's `creationProgress` channel so the AI Capabilities modal
     // can render per-step LoadingDisplay instead of a static spinner. Steps:
     //   1. Installing storefront dependencies  (EDS only — the long pole)
@@ -152,7 +202,9 @@ export async function handleRegenerateAiFiles(
 
     if (storefrontPath) {
         emit('Installing storefront dependencies', 'This can take up to a minute');
-        const installResult = await installAiDefaultsInStorefront(storefrontPath);
+        // MCP tools install into the per-project isolated dir (keyed to
+        // project.path), decoupled from the storefront manifest.
+        const installResult = await installAiDefaultsMcpTools(project.path);
         if (!installResult.success) {
             return {
                 success: false,
@@ -164,12 +216,15 @@ export async function handleRegenerateAiFiles(
     // Use server-side project.path — do not accept a webview-supplied path override.
     // Pass an onProgress tracker so the three writer steps surface in the same
     // creationProgress channel.
-    await generateAIContextFiles(
+    const generated = await generateAIContextFiles(
         project.path,
         project,
         context.context.extensionPath,
         (currentOperation: string, _progress: number, message?: string) => emit(currentOperation, message),
     );
+
+    const skills = generated?.skills ?? [];
+    context.logger.info(`[AI Verify] Regenerated ${skills.length} skill files: ${skills.join(', ')}`);
 
     emit('Finalizing', 'Refreshing AI capability inventory');
     // The .mcp.json may now point at newly-installed binaries (or the same

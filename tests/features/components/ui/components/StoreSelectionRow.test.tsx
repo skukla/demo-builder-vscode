@@ -26,20 +26,23 @@ jest.mock('@/features/components/ui/components/StoreStructureSelector', () => ({
         label,
         items,
         onSelect,
+        isDisabled,
     }: {
         label: string;
         items: Array<{ code: string; name: string }>;
         selectedCode: string;
         onSelect: (code: string) => void;
         isRequired?: boolean;
+        isDisabled?: boolean;
     }) => {
         const prefix = label.toLowerCase().replace(/\s+/g, '-');
         return (
-            <div data-testid={`picker-${prefix}`}>
+            <div data-testid={`picker-${prefix}`} data-disabled={isDisabled ? 'true' : 'false'}>
                 {items.map(item => (
                     <button
                         key={item.code}
                         data-testid={`${prefix}-${item.code}`}
+                        disabled={isDisabled}
                         onClick={() => onSelect(item.code)}
                     >
                         {item.name}
@@ -107,7 +110,6 @@ function buildProps(overrides?: {
         getWebsiteItems: jest.fn(() => [{ code: 'base', name: 'Base', numericId: 1 }]),
         getStoreGroupItems: overrides?.getStoreGroupItems ?? jest.fn(() => []),
         getStoreViewItems: overrides?.getStoreViewItems ?? jest.fn(() => []),
-        componentConfigs: {},
     };
 }
 
@@ -303,6 +305,97 @@ describe('StoreSelectionRow cascade auto-selection', () => {
                 'default',
             );
             expect(updateField).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('loading state (render-from-start, no layout shift)', () => {
+        it('renders all three pickers disabled while loading (occupies footprint)', () => {
+            const props = buildProps({});
+            render(<StoreSelectionRow {...props} isLoading />);
+
+            expect(screen.getByTestId('picker-website')).toHaveAttribute('data-disabled', 'true');
+            expect(screen.getByTestId('picker-store')).toHaveAttribute('data-disabled', 'true');
+            expect(screen.getByTestId('picker-store-view')).toHaveAttribute('data-disabled', 'true');
+        });
+
+        it('renders pickers enabled once loading completes', () => {
+            const props = buildProps({});
+            render(<StoreSelectionRow {...props} isLoading={false} />);
+
+            expect(screen.getByTestId('picker-website')).toHaveAttribute('data-disabled', 'false');
+            expect(screen.getByTestId('picker-store')).toHaveAttribute('data-disabled', 'false');
+            expect(screen.getByTestId('picker-store-view')).toHaveAttribute('data-disabled', 'false');
+        });
+
+        it('defaults to enabled when isLoading is omitted (back-compat)', () => {
+            const props = buildProps({});
+            render(<StoreSelectionRow {...props} />);
+
+            expect(screen.getByTestId('picker-website')).toHaveAttribute('data-disabled', 'false');
+        });
+    });
+
+    // -----------------------------------------------------------------------
+    // Regression: cascade dropdown options must follow the field value
+    //
+    // Bug (citisignal-b2b): after picking Main Website, the Store and Store View
+    // dropdowns kept showing the previous website's children. The option filters
+    // read the selected website/store via lookupComponentConfigValue — which
+    // scans ALL components and returns the first non-empty value, picking up a
+    // stale ACCS_WEBSITE_CODE default from a sibling component. The Website picker
+    // reads getFieldValue (scoped to the field), so the two accessors diverged.
+    // The fix routes both filters through getFieldValue.
+    // -----------------------------------------------------------------------
+    describe('cascade dropdown filtering (field value, not stale lookup)', () => {
+        const lookup = jest.requireMock(
+            '@/features/components/services/envVarHelpers',
+        ).lookupComponentConfigValue as jest.Mock;
+
+        afterEach(() => {
+            lookup.mockReturnValue('');
+        });
+
+        it('filters the store dropdown by the website field value, not a stale all-component lookup', () => {
+            // Stale value a sibling component would surface via the all-component scan.
+            lookup.mockReturnValue('citisignal');
+
+            const getFieldValue = jest.fn((field: UniqueField) =>
+                field.key === ACCS_WEBSITE_KEY ? 'base' : '',
+            );
+            const getStoreGroupItems = jest.fn((code: string) =>
+                code === 'base'
+                    ? [{ code: 'main_website_store', name: 'Main Website Store', numericId: 2 }]
+                    : [{ code: 'citisignal_store', name: 'Citisignal Store', numericId: 1 }],
+            );
+
+            const props = { ...buildProps({ getStoreGroupItems }), getFieldValue };
+            render(<StoreSelectionRow {...props} />);
+
+            // Website field = 'base' → Store dropdown must list Main Website Store,
+            // NOT the stale 'citisignal' website's store.
+            expect(screen.getByTestId('store-main_website_store')).toBeInTheDocument();
+            expect(screen.queryByTestId('store-citisignal_store')).not.toBeInTheDocument();
+        });
+
+        it('filters the store-view dropdown by the store field value, not a stale all-component lookup', () => {
+            lookup.mockReturnValue('citisignal_store');
+
+            const getFieldValue = jest.fn((field: UniqueField) =>
+                field.key === ACCS_STORE_KEY ? 'main_website_store' : '',
+            );
+            const getStoreViewItems = jest.fn((code: string) =>
+                code === 'main_website_store'
+                    ? [{ code: 'default', name: 'Default', numericId: 2 }]
+                    : [{ code: 'citisignal_us', name: 'Citisignal US', numericId: 1 }],
+            );
+
+            const props = { ...buildProps({ getStoreViewItems }), getFieldValue };
+            render(<StoreSelectionRow {...props} />);
+
+            // Store field = 'main_website_store' → Store View dropdown must list
+            // Default, NOT the stale 'citisignal_store' store's view.
+            expect(screen.getByTestId('store-view-default')).toBeInTheDocument();
+            expect(screen.queryByTestId('store-view-citisignal_us')).not.toBeInTheDocument();
         });
     });
 });

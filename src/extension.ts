@@ -28,7 +28,6 @@ import { registerStorefrontTools } from '@/features/ai/server/storefrontTools';
 import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
 import { registerViewTools } from '@/features/ai/server/viewTools';
 import { AuthenticationService } from '@/features/authentication';
-import { ComponentTreeProvider } from '@/features/components/providers/componentTreeProvider';
 import { shouldAutoReopenProjectsList } from '@/features/dashboard/commands/showDashboard';
 import { seedDefaultAiPrompts } from '@/features/dashboard/services/defaultPromptsSeeder';
 import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLiveSites';
@@ -41,31 +40,6 @@ import type { McpCredentialProvider } from '@/mcp-server';
 import type { Logger } from '@/types/logger';
 import { getProjectFrontendPort } from '@/types/typeGuards';
 import { AutoUpdater } from '@/utils/autoUpdater';
-
-/**
- * Check if projects list should auto-open when activity bar icon is clicked
- *
- * SOP §10: Extracted 4-condition validation chain to named type guard
- * Auto-opens when:
- * 1. Tree view just became visible
- * 2. No webview panels are currently open
- * 3. Not already in the process of opening projects list
- * 4. Not in a webview transition (prevents duplicate panels)
- *
- * @param visible - Whether the tree view is visible
- * @param isOpeningProjectsList - Whether we're already opening the projects list
- * @returns true if projects list should auto-open
- */
-function shouldAutoOpenProjectsList(
-    visible: boolean,
-    isOpeningProjectsList: boolean,
-): boolean {
-    if (!visible) return false;
-    if (BaseWebviewCommand.getActivePanelCount() !== 0) return false;
-    if (isOpeningProjectsList) return false;
-    if (BaseWebviewCommand.isWebviewTransitionInProgress()) return false;
-    return true;
-}
 
 /**
  * Whether this window should re-home to the projects root on activation.
@@ -87,8 +61,6 @@ let stateManager: StateManager;
 let autoUpdater: AutoUpdater;
 let externalCommandManager: CommandExecutor;
 let authenticationService: AuthenticationService;
-let componentTreeProvider: ComponentTreeProvider;
-let componentTreeView: vscode.TreeView<unknown>;
 let daLiveAuthService: DaLiveAuthService;
 let inExtensionMcpServer: InExtensionMcpServer | undefined;
 
@@ -158,39 +130,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Register SidebarProvider with ServiceLocator (for wizard/command access)
         ServiceLocator.setSidebarProvider(sidebarProvider);
-
-        // Register Component TreeView
-        // This displays the component file browser when a project is loaded
-        componentTreeProvider = new ComponentTreeProvider(stateManager, context.extensionPath);
-        componentTreeView = vscode.window.createTreeView('demoBuilder.components', {
-            treeDataProvider: componentTreeProvider,
-            showCollapseAll: true,
-        });
-
-        // Listen for project changes (for potential future use)
-        const projectChangeSubscription = stateManager.onProjectChanged(() => {
-            // TreeView title is set via package.json "name" field
-            // Visibility is controlled by "when" clause: demoBuilder.showComponents
-        });
-
-        // When user clicks the activity bar icon and no main webview is open,
-        // auto-open the projects list as the home screen
-        let isOpeningProjectsList = false;
-        const treeViewVisibilitySubscription = componentTreeView.onDidChangeVisibility(async (e) => {
-            // SOP §10: Using shouldAutoOpenProjectsList predicate instead of inline chain
-            // Guard against opening during webview transitions (prevents duplicate panels)
-            if (shouldAutoOpenProjectsList(e.visible, isOpeningProjectsList)) {
-                isOpeningProjectsList = true;
-                await vscode.commands.executeCommand('demoBuilder.showProjectsList');
-                isOpeningProjectsList = false;
-            }
-        });
-
-        // Add to subscriptions for proper disposal
-        context.subscriptions.push(componentTreeView);
-        context.subscriptions.push(componentTreeProvider);
-        context.subscriptions.push(projectChangeSubscription);
-        context.subscriptions.push(treeViewVisibilitySubscription);
 
         // Set up disposal callback to auto-reopen the Projects List when the
         // Dashboard closes — the safety net so a user inside a project workspace
@@ -358,8 +297,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Cold start always lands on the projects list as the home screen. For a
         // root-anchored (or non-project) workspace, focus the Demo Builder
-        // Activity Bar so the tree-view visibility subscription auto-opens the
-        // projects list (guarded by shouldAutoOpenProjectsList).
+        // Activity Bar so the sidebar webview resolves; its visibility handler
+        // (SidebarProvider.resolveWebviewView) then opens the projects list.
         if (shouldAutoReopenProjectsList(ws, false)) {
             await vscode.commands.executeCommand('workbench.view.extension.demoBuilder');
         }
@@ -379,8 +318,6 @@ export function deactivate() {
 
     // Clean up resources
     autoUpdater?.dispose();
-    componentTreeView?.dispose();
-    componentTreeProvider?.dispose();
     inExtensionMcpServer?.dispose();
     stateManager?.dispose();
     externalCommandManager?.dispose();
@@ -422,6 +359,16 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
             getDaLiveToken: () => getDaLiveAuthService(context).getAccessToken(),
             getGitHubToken: async () => (await getGitHubServices(ctxFactory()).tokenService.getToken())?.token ?? null,
         };
+        // Workspace mode mismatch protection: when the workspace is a project
+        // folder (set by `vscode.openFolder` during project-switch from the
+        // home grid), the server binds the project-folder socket, but proxies
+        // spawned from per-project `.mcp.json` files target the projects-root
+        // socket (per mcpConfigWriter's resolveMcpSocketPath(path.dirname(
+        // project.path)) contract). Listening on both sockets bridges the
+        // mismatch. When workspace IS the projects root, the secondary path
+        // collapses to the primary and the server transparently single-binds.
+        // Goes away when the decouple-project-from-workspace backlog ships.
+        const projectsRootSocketPath = resolveMcpSocketPath(projectsDir);
         const server = new InExtensionMcpServer(
             resolveMcpSocketPath(workspacePath),
             projectsDir,
@@ -441,6 +388,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerViewTools(mcpServer, (commandId) => Promise.resolve(vscode.commands.executeCommand(commandId)));
             },
             credentials,
+            projectsRootSocketPath,
         );
         await server.start();
         inExtensionMcpServer = server;

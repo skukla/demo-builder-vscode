@@ -297,20 +297,6 @@ describe('configGenerator', () => {
             environmentType: 'paas',
         };
 
-        it('should inject B2B config flags when B2B feature pack is selected', () => {
-            const params: ConfigGeneratorParams = {
-                ...baseParams,
-                selectedFeaturePacks: ['b2b-commerce'],
-            };
-
-            const result = generateConfigJson(params, mockLogger);
-
-            expect(result.success).toBe(true);
-            const config = JSON.parse(result.content!);
-            expect(config.public.default['commerce-b2b-enabled']).toBe(true);
-            expect(config.public.default['commerce-companies-enabled']).toBe(true);
-        });
-
         it('should not inject B2B flags when no addons selected', () => {
             const result = generateConfigJson(baseParams, mockLogger);
 
@@ -346,22 +332,6 @@ describe('configGenerator', () => {
             const config = JSON.parse(result.content!);
             // ACO addon has no configFlags in its configuration
             expect(config.public.default['commerce-b2b-enabled']).toBeUndefined();
-        });
-
-        it('should handle feature packs alongside addons', () => {
-            const params: ConfigGeneratorParams = {
-                ...baseParams,
-                selectedAddons: ['adobe-commerce-aco'],
-                selectedFeaturePacks: ['b2b-commerce'],
-            };
-
-            const result = generateConfigJson(params, mockLogger);
-
-            expect(result.success).toBe(true);
-            const config = JSON.parse(result.content!);
-            // B2B flags from feature pack should be present
-            expect(config.public.default['commerce-b2b-enabled']).toBe(true);
-            expect(config.public.default['commerce-companies-enabled']).toBe(true);
         });
 
         it('should gracefully handle unknown addon ID', () => {
@@ -529,6 +499,49 @@ describe('configGenerator', () => {
             expect(headers.cs['Magento-Store-Code']).toBe('citisignal_store');
             expect(headers.cs['Magento-Website-Code']).toBe('citisignal');
             expect(headers.cs['Magento-Customer-Group']).toBe('b6589fc6ab0dc82cf12099d1c2d40ab994e8410c');
+        });
+    });
+
+    describe('sidekick plugins', () => {
+        const baseParams: ConfigGeneratorParams = {
+            githubOwner: 'test-owner',
+            repoName: 'test-repo',
+            daLiveOrg: 'test-org',
+            daLiveSite: 'test-site',
+            commerceEndpoint: 'https://commerce.example.com/graphql',
+        };
+
+        it('includes the quick-edit Sidekick plugin (Experience Workspace WYSIWYG entry point)', () => {
+            // The Config-Service half of the Quick Edit wiring. The GitHub
+            // files half is the quickEditPublisher vendoring step; this
+            // plugin lets the EW Layout view invoke Quick Edit. Inert under
+            // Universal Editor, active under Experience Workspace.
+            const result = generateConfigJson(baseParams, mockLogger);
+
+            expect(result.success).toBe(true);
+            const config = JSON.parse(result.content!);
+            const plugins = config.sidekick.plugins as Array<Record<string, unknown>>;
+            const quickEdit = plugins.find((p) => p.id === 'quick-edit');
+
+            expect(quickEdit).toBeDefined();
+            expect(quickEdit!.title).toBe('Quick Edit');
+            expect(quickEdit!.environments).toEqual(['dev', 'preview']);
+            expect(quickEdit!.event).toBe('quick-edit');
+            // Event plugin, not a palette — no url/isPalette.
+            expect(quickEdit!.url).toBeUndefined();
+            expect(quickEdit!.isPalette).toBeUndefined();
+        });
+
+        it('preserves the existing cif and personalisation plugins (additive regression guard)', () => {
+            const result = generateConfigJson(baseParams, mockLogger);
+
+            const config = JSON.parse(result.content!);
+            const plugins = config.sidekick.plugins as Array<Record<string, unknown>>;
+            const ids = plugins.map((p) => p.id);
+
+            expect(ids).toContain('cif');
+            expect(ids).toContain('personalisation');
+            expect(ids).toContain('quick-edit');
         });
     });
 });

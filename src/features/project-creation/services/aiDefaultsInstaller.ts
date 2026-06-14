@@ -1,18 +1,25 @@
 /**
  * AI Defaults Installer
  *
- * Mutates the storefront's `package.json` to add each MCP package declared in
- * `ai-defaults.json` as a devDependency. Must run AFTER the storefront repo is
- * cloned but BEFORE `npm install` runs — so the storefront's `node_modules`
- * contains every Adobe-supplied MCP after installation.
+ * Installs the MCP tool packages declared in `ai-defaults.json` into a
+ * per-project ISOLATED directory — `<project>/.demo-builder-mcp/` — decoupled
+ * from the storefront's `package.json`.
  *
- * Idempotent: re-running upserts the declared version, leaving other devDeps
- * (and the rest of the package.json) untouched.
+ * Why isolated: the storefront's own `npm install` can abort (the b2b feature
+ * pack injects `@dropins` B2B dropins that are 404 on public npm), which used
+ * to take the public MCP tool packages down with it — leaving the generated
+ * `.mcp.json` pointing at a `node_modules` that never materialized. Installing
+ * the (public, always-resolvable) MCP tools in their own throwaway manifest
+ * sidesteps the storefront entirely.
  *
- * Also exposes `installAiDefaultsInStorefront(path)` — the two-step recovery
- * pipeline (re-apply devDeps + run npm install) used by the dashboard's
- * "Regenerate AI files" action so projects created before a new MCP entry
- * was added can catch up without a manual terminal session.
+ * `resolveMcpToolsDir(projectPath)` is the single source of truth for the
+ * isolated location; the MCP config writer and the Adobe MCP update checker
+ * anchor to it too.
+ *
+ * Idempotent: re-running rewrites the tools `package.json` (the declared
+ * versions) and re-runs `npm install`, which is a fast no-op when nothing is
+ * missing. Used both at project creation and by the dashboard's
+ * "Regenerate AI files" action.
  */
 
 import * as fsPromises from 'fs/promises';
@@ -25,11 +32,14 @@ import { DEFAULT_SHELL } from '@/types/shell';
 
 const aiDefaults: AiDefaults = aiDefaultsConfig as AiDefaults;
 
+/** Isolated MCP tools directory name, at the project root (outside any git repo). */
+const MCP_TOOLS_DIRNAME = '.demo-builder-mcp';
+
 /** Bytes of npm stderr to surface in the failure message — enough for the
  *  npm ERR! tail without flooding the modal. */
 const NPM_STDERR_TAIL_BYTES = 500;
 
-/** Result of running the recovery pipeline. */
+/** Result of running the install pipeline. */
 export interface InstallAiDefaultsResult {
     success: boolean;
     /** Diagnostic when `success` is false; safe to surface in the UI. */
@@ -37,67 +47,53 @@ export interface InstallAiDefaultsResult {
 }
 
 /**
- * Add ai-defaults.json packages as devDependencies on the storefront's package.json.
+ * Resolve the per-project isolated MCP tools directory.
  *
- * @param storefrontPath - absolute path to the cloned storefront directory
- * @throws if `<storefrontPath>/package.json` is missing or malformed
+ * @param projectPath - absolute path to the project root
+ * @returns `<projectPath>/.demo-builder-mcp`
  */
-export async function applyAiDefaultsToStorefrontPackageJson(
-    storefrontPath: string,
-): Promise<void> {
-    const packageJsonPath = path.join(storefrontPath, 'package.json');
-
-    let raw: string;
-    try {
-        raw = await fsPromises.readFile(packageJsonPath, 'utf-8');
-    } catch (err) {
-        const code = (err as NodeJS.ErrnoException).code;
-        if (code === 'ENOENT') {
-            throw new Error(
-                `Cannot apply AI defaults: storefront package.json not found at ${packageJsonPath}`,
-            );
-        }
-        throw err;
-    }
-
-    let pkg: Record<string, unknown>;
-    try {
-        pkg = JSON.parse(raw) as Record<string, unknown>;
-    } catch (err) {
-        throw new Error(
-            `Cannot apply AI defaults: storefront package.json is not valid JSON ` +
-            `(${packageJsonPath}): ${err instanceof Error ? err.message : String(err)}`,
-        );
-    }
-
-    const devDeps: Record<string, string> = (pkg.devDependencies as Record<string, string>) ?? {};
-    for (const entry of aiDefaults.mcpServers) {
-        devDeps[entry.package] = entry.version;
-    }
-    pkg.devDependencies = devDeps;
-
-    await fsPromises.writeFile(packageJsonPath, JSON.stringify(pkg, null, 2) + '\n', 'utf-8');
+export function resolveMcpToolsDir(projectPath: string): string {
+    return path.join(projectPath, MCP_TOOLS_DIRNAME);
 }
 
 /**
- * Recovery pipeline: ensure the storefront's `package.json` declares the
- * ai-defaults packages, then run `npm install` to materialize them into
- * `<storefrontPath>/node_modules/`.
+ * Install the ai-defaults MCP tool packages into the project's isolated
+ * `.demo-builder-mcp/` directory.
  *
- * Idempotent for projects already in sync (declaration upsert is a no-op,
- * npm install is fast when nothing's missing). For projects predating a
- * given MCP entry, this is the path that puts the missing package on disk
- * without the user dropping to a terminal.
+ * Writes a throwaway `package.json` whose `dependencies` are exactly the
+ * ai-defaults packages, then runs `npm install` with cwd set to that dir — so
+ * the tools land in `<project>/.demo-builder-mcp/node_modules/`, never touching
+ * the storefront manifest.
  *
- * Failures are returned as a structured result so the caller (typically the
- * `regenerate-ai-files` handler) can surface a clean message to the modal
- * rather than letting an exception bubble all the way out.
+ * Failures are returned as a structured result so callers (project creation and
+ * the `regenerate-ai-files` handler) can surface a clean message rather than
+ * letting an exception bubble out.
+ *
+ * @param projectPath - absolute path to the project root
  */
-export async function installAiDefaultsInStorefront(
-    storefrontPath: string,
+export async function installAiDefaultsMcpTools(
+    projectPath: string,
 ): Promise<InstallAiDefaultsResult> {
+    const toolsDir = resolveMcpToolsDir(projectPath);
+
     try {
-        await applyAiDefaultsToStorefrontPackageJson(storefrontPath);
+        await fsPromises.mkdir(toolsDir, { recursive: true });
+
+        const dependencies: Record<string, string> = {};
+        for (const entry of aiDefaults.mcpServers) {
+            dependencies[entry.package] = entry.version;
+        }
+        const pkg = {
+            name: 'demo-builder-mcp-tools',
+            private: true,
+            version: '1.0.0',
+            dependencies,
+        };
+        await fsPromises.writeFile(
+            path.join(toolsDir, 'package.json'),
+            JSON.stringify(pkg, null, 2) + '\n',
+            'utf-8',
+        );
     } catch (err) {
         return { success: false, error: describeInstallerError(err) };
     }
@@ -105,7 +101,7 @@ export async function installAiDefaultsInStorefront(
     const executor = ServiceLocator.getCommandExecutor();
     try {
         const result = await executor.execute('npm install', {
-            cwd: storefrontPath,
+            cwd: toolsDir,
             timeout: TIMEOUTS.VERY_LONG,
             enhancePath: true,
             shell: DEFAULT_SHELL,
