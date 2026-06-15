@@ -70,44 +70,76 @@ projects to any project. That plumbing is exactly the multi-select scaffolding t
 Removing it now and rebuilding it in weeks is pure churn. So **do not run 1b** — repurpose the
 plumbing instead (see the feature seed below). If the feature is shelved, 1b can be reinstated.
 
-## Feature seed — Attach App Builder project(s) to any project
+## Feature seed — Add one or more App Builder apps to a demo project (Model A)
 
 **Provenance:** anticipated fast-follow (raised 2026-06-15) after the `integration-service` /
-`appBuilderApps` removal (Effort 1). Effort 1 cleared the *dormant, curated, single-entry*
-catalog (`appBuilderApps` registry section + hardcoded `integration-service` + `getAppBuilder` +
-the `appBuilder` registry category + the executor `app-builder` install branch + predicate
-appBuilder gating). This feature is a fresh, GENERAL build, not a revival of that mechanism.
+`appBuilderApps` removal (Effort 1). Researched 2026-06-15 (3 codebase agents + ExL/dev-docs on
+App Builder structure). Effort 1 cleared the dormant single-entry catalog; this is a fresh,
+general build, not a revival.
 
-**Goal:** let a user attach 1+ App Builder projects to any demo project (the prior model was a
-curated catalog with one dormant entry; the new model is user-supplied/multi-select).
+**Decided model — A (add apps to the demo's ONE project/workspace):** each attached app is a
+separate git repo, cloned + built + deployed via `aio app deploy` into the demo's EXISTING Adobe
+workspace namespace (the one chosen during the wizard's Adobe setup). This mirrors the Mesh deploy
+lifecycle, multiplied N times. NOT separate Console projects (Model C) — that's a different,
+narrower feature reserved for entitlement-boundary / attach-pre-existing cases.
 
-**Reuse vs. rebuild:**
-- REUSE (the residual 1b plumbing): `ComponentSelection.appBuilder` multi-select set threaded
-  through wizard → review → configure → state/settings. This is most of the UI/state scaffolding.
-- REBUILD (removed in Effort 1, in a more general form): an `appBuilder` registry/category OR a
-  user-supplied "attached app-builder projects" concept; a `getAppBuilder`-style accessor;
-  re-include app-builder in `projectAppBuilderPredicate` so the IMS Developer/System-Admin role
-  check fires when a project is attached; an executor install/deploy path for the attached
-  project(s).
+Why A: App Builder = Console **project → workspaces → one app (many actions/packages) → one
+runtime namespace**. Mesh is provisioned per workspace; Firefly Services are just APIs subscribed
+on a workspace (OAuth S2S) and called from actions. So Commerce + API Mesh + a Firefly image
+pipeline all fit ONE project/workspace — the multi-PROJECT framing was over-general. Separate
+projects are only warranted by entitlement boundaries, reuse/independent lifecycle, attaching a
+pre-existing deployed project, or governance/quota isolation.
 
-**Key design decision to settle first:** where do available App Builder projects come from?
-(a) a curated registry list (like the old catalog), (b) the user points at their own Console
-project / git repo, or (c) both. This drives whether any catalog concept returns or it's purely
-user-supplied. The user's "attach your own 1+" framing leans toward (b).
+**Mesh is the reusable template** (`src/features/mesh/services/meshDeployment.ts`): build
+(`npm install`+build) → `selectWorkspace(project.adobe.workspace, projectId)` to set ambient
+`aio console` state → deploy → poll → persist status/endpoints. Workspace targeting, command
+execution (`CommandExecutor` + `fnm exec` node isolation + `enhancePath`), and the create-time +
+dashboard-redeploy surfaces all transfer.
 
-**Watch-outs:**
-- `projectAppBuilderPredicate` is currently mesh-only — re-add the app-builder path (Developer-role
-  gating). Both call sites (`deployMesh`, `executor`) already fail-closed via
-  `testDeveloperPermissions()`.
-- The `'app-builder'` type label in `executor`/`projectResetService` `buildComponentList` currently
-  tags ADDONS, not app-builder apps — disambiguate when wiring real app-builder install/deploy.
-- Deployment: attached App Builder projects need `aio app deploy` against the right workspace;
-  reconcile with the existing mesh/app-builder Developer-role + workspace gating.
+**Reuse as-is:**
+- Generic git clone/install pipeline (`componentInstallation` → `componentManager` →
+  `componentInstallationOrchestrator` two-phase clone/npm). An app repo is just a git component.
+- Workspace targeting via `authManager.selectWorkspace(...)` (ambient console state from `project.adobe`).
+- Manifest persistence: `componentSelections.appBuilder: string[]` already round-trips
+  (`projectConfigWriter.ts`); settings export/import already carries `appBuilder`.
+- Multi-select UI primitive `useSetToggle`; the **block-library "add-list" UX**
+  (`customBlockLibraries`) is the closest rendered analog for "add 1+ user-supplied entries".
+- Developer-role gate: extend the ONE predicate `projectAppBuilderPredicate` to include the
+  app-builder set; both gate sites (`deployMesh`, `executor`) then fire automatically.
+
+**Build new (the real gaps):**
+1. **`aio app deploy` does not exist anywhere** — only mesh deploys today. Build: build → `aio app
+   deploy` (mirror `meshDeployment.ts:169-189` cwd/useNodeVersion/streaming/TIMEOUTS.LONG) → parse
+   deployed action URLs → persist.
+2. **Per-app state must be an ARRAY**, not mesh's singleton `project.meshState`. Add a
+   `project.appBuilderApps[]` record `{appId/url, status, deployedUrls, lastDeployed, sourceHash}`
+   + a subType lookup helper (mesh's `getMeshComponentInstance` returns `[0]` — won't scale to N).
+3. **Wire the dead selection feed**: `wizardHelpers.ts:~688` hardcodes `appBuilder: []`; pass the
+   real selection through. Today's `executor.ts`/`projectResetService` derive `type:'app-builder'`
+   install from `selectedAddons` and the label actually tags ADDONS — disambiguate before wiring.
+4. **Namespace coexistence**: N apps deploy into ONE workspace namespace — guard against
+   package-name collisions across attached apps.
+5. **Per-app `.env`/config**: registry-driven `generateComponentConfigFiles` writes each app's env
+   from its `requiredEnvVars` (ToolManager's clone+env is reusable shape but ACO-hardcoded — don't reuse the class).
+
+**Decisions still open (settle in /rptc:feat Phase 2):**
+- App source per entry: user-supplied git URL (+ optional curated starters) vs curated catalog vs
+  both. Lean: user-supplied URL + optional starters (mirrors block libraries). Each app =
+  git repo deployed into the workspace.
+- Placement: creation wizard, dashboard (add to existing projects), or both. Lean: both, with the
+  **dashboard add/redeploy as the must-have** ("add to any project" emphasizes existing projects);
+  Mesh already does create-time + dashboard redeploy.
+- Credential model interaction: attached apps that call Commerce admin APIs may need
+  `ADOBE_COMMERCE_ADMIN_USERNAME/PASSWORD` — this is the input to whether Effort 2 (token swap)
+  can later treat discovery as the sole admin-cred consumer.
 
 **Kickoff prompt:**
-`/rptc:research "Design a feature to attach one or more user-supplied App Builder projects to any
-demo project — selection (reuse ComponentSelection.appBuilder plumbing), registry-vs-user-supplied
-source decision, Developer-role gating via projectAppBuilderPredicate, and install/deploy. See
+`/rptc:feat "Add one or more App Builder apps to a demo project (Model A): each app is a git repo
+cloned + built + deployed via aio app deploy into the demo's existing Adobe workspace (mirror the
+Mesh deploy lifecycle). Multi-select add-list UX (model on customBlockLibraries), per-app state
+array (not the mesh singleton), build the missing aio app deploy step, extend
+projectAppBuilderPredicate for Developer-role gating. Settle app-source (user URL vs catalog) and
+placement (wizard/dashboard) in planning. See
 .rptc/backlog/2026-06-15-integration-service-cleanup-and-discovery-token.md (Feature seed)."`
 
 ## Effort 2 — Store-discovery least-privilege token (GATED: after the App Builder attach feature)
