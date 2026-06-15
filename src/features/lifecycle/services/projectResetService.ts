@@ -59,7 +59,7 @@ interface LoadResult {
 
 /** Look up a component definition by type from the registry manager */
 async function findComponentByType(
-    registryManager: { getFrontends: () => Promise<TransformedComponentDefinition[]>; getDependencies: () => Promise<TransformedComponentDefinition[]>; getAppBuilder: () => Promise<TransformedComponentDefinition[]>; getComponentById: (id: string) => Promise<TransformedComponentDefinition | undefined> },
+    registryManager: { getFrontends: () => Promise<TransformedComponentDefinition[]>; getDependencies: () => Promise<TransformedComponentDefinition[]>; getComponentById: (id: string) => Promise<TransformedComponentDefinition | undefined> },
     comp: { id: string; type: string },
 ): Promise<TransformedComponentDefinition | undefined> {
     if (comp.type === 'frontend') {
@@ -69,10 +69,6 @@ async function findComponentByType(
     if (comp.type === 'dependency') {
         const deps = await registryManager.getDependencies();
         return deps.find((d: { id: string }) => d.id === comp.id);
-    }
-    if (comp.type === 'app-builder') {
-        const apps = await registryManager.getAppBuilder();
-        return apps.find((a: { id: string }) => a.id === comp.id);
     }
     return undefined;
 }

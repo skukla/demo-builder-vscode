@@ -663,7 +663,7 @@ setSelectedItems(new Set());
 - Memoized toggle function
 
 **Used By:**
-- `useComponentSelection` - Manages 4 multi-select Sets (dependencies, services, integrations, appBuilder)
+- `useComponentSelection` - Manages 3 multi-select Sets (dependencies, services, integrations)
 
 ## Future Enhancements
 

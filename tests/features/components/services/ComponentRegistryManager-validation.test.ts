@@ -47,17 +47,12 @@ describe('ComponentRegistryManager - Node Version Security Validation', () => {
 
             // When: getRequiredNodeVersions() is called with components that have nodeVersion
             const versions = await manager.getRequiredNodeVersions(
-                'headless',               // Node 24
-                undefined,
-                undefined,
-                undefined,
-                ['integration-service']   // Node 22
+                'headless'                // Node 24
             );
 
-            // Then: Versions from frontend and app builder returned
-            expect(versions.size).toBe(2);
+            // Then: Versions from frontend returned
+            expect(versions.size).toBe(1);
             expect(versions.has('24')).toBe(true);  // headless
-            expect(versions.has('22')).toBe(true);  // integration-service
         });
 
         it('should accept valid semantic versions', async () => {
@@ -175,16 +170,6 @@ describe('ComponentRegistryManager - Node Version Security Validation', () => {
             ).rejects.toThrow(/Invalid Node/);
         });
 
-        it('should validate nodeVersion in app builder components', async () => {
-            // Given: App Builder with malicious version
-            const maliciousRegistry = createMaliciousRegistry('appBuilderApps.integration-service', '20; rm -rf /');
-            mockLoader.load.mockResolvedValue(maliciousRegistry);
-
-            // When & Then: Validation error thrown
-            await expect(
-                manager.getRequiredNodeVersions(undefined, undefined, undefined, undefined, ['integration-service'])
-            ).rejects.toThrow(/Invalid Node/);
-        });
     });
 
     describe('getNodeVersionToComponentMapping - security validation', () => {
@@ -243,34 +228,18 @@ describe('ComponentRegistryManager - Node Version Security Validation', () => {
             ).rejects.toThrow(/Invalid Node/);
         });
 
-        it('should validate versions in app builder mapping', async () => {
-            // Given: App Builder with malicious version
-            const maliciousRegistry = createMaliciousRegistry('appBuilderApps.integration-service', '20; rm -rf /');
-            mockLoader.load.mockResolvedValue(maliciousRegistry);
-
-            // When & Then: Validation error thrown
-            await expect(
-                manager.getNodeVersionToComponentMapping(undefined, undefined, undefined, undefined, ['integration-service'])
-            ).rejects.toThrow(/Invalid Node/);
-        });
-
         it('should accept valid versions in mapping', async () => {
             // Given: Registry with valid versions
             mockLoader.load.mockResolvedValue(mockRawRegistry);
 
             // When: getNodeVersionToComponentMapping() is called
             const mapping = await manager.getNodeVersionToComponentMapping(
-                'headless',               // Node 24
-                undefined,
-                undefined,
-                undefined,
-                ['integration-service']   // Node 22
+                'headless'                // Node 24
             );
 
             // Then: Mapping returned without errors
-            expect(Object.keys(mapping).length).toBe(2);
+            expect(Object.keys(mapping).length).toBe(1);
             expect(mapping['24']).toBeDefined();  // headless
-            expect(mapping['22']).toBeDefined();  // integration-service
         });
     });
 });

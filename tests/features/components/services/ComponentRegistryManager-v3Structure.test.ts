@@ -3,7 +3,7 @@
  *
  * These tests validate that ComponentRegistryManager correctly handles the
  * current components.json structure where components are in separate sections
- * (frontends, backends, mesh, dependencies, appBuilderApps) rather than a
+ * (frontends, backends, mesh, dependencies) rather than a
  * unified 'components' map.
  *
  * This test suite was added after a bug where the 'eds' frontend wasn't
@@ -64,15 +64,6 @@ describe('ComponentRegistryManager - Section-Based Structure', () => {
             expect(registry.components.dependencies[0].id).toBe('test-tool');
         });
 
-        it('should load app builder apps from separate "appBuilderApps" section', async () => {
-            mockLoader.load.mockResolvedValue(mockRawRegistry);
-
-            const registry = await manager.loadRegistry();
-
-            expect(registry.components.appBuilder).toHaveLength(1);
-            expect(registry.components.appBuilder[0].id).toBe('integration-service');
-        });
-
         it('should load mesh components from separate "mesh" section', async () => {
             mockLoader.load.mockResolvedValue(mockRawRegistry);
 
@@ -127,16 +118,6 @@ describe('ComponentRegistryManager - Section-Based Structure', () => {
             expect(component?.name).toBe('Test Tool');
         });
 
-        it('should find app builder app by id (integration-service)', async () => {
-            mockLoader.load.mockResolvedValue(mockRawRegistry);
-
-            const component = await manager.getComponentById('integration-service');
-
-            expect(component).toBeDefined();
-            expect(component?.name).toBe('Kukla Integration Service');
-            expect(component?.configuration?.nodeVersion).toBe('22');
-        });
-
         it('should find mesh component by id (commerce-mesh)', async () => {
             mockLoader.load.mockResolvedValue(mockRawRegistry);
 
@@ -167,20 +148,6 @@ describe('ComponentRegistryManager - Section-Based Structure', () => {
             expect(mapping['24']).toBe('Headless Storefront');
         });
 
-        it('should include app builder node versions', async () => {
-            mockLoader.load.mockResolvedValue(mockRawRegistry);
-
-            const mapping = await manager.getNodeVersionToComponentMapping(
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                ['integration-service']
-            );
-
-            // integration-service requires Node 22
-            expect(mapping['22']).toBe('Kukla Integration Service');
-        });
     });
 
     describe('getRequiredNodeVersions', () => {
@@ -192,20 +159,13 @@ describe('ComponentRegistryManager - Section-Based Structure', () => {
             expect(versions.size).toBe(0);
         });
 
-        it('should return node versions for headless + app builder', async () => {
+        it('should return node versions for headless frontend', async () => {
             mockLoader.load.mockResolvedValue(mockRawRegistry);
 
-            const versions = await manager.getRequiredNodeVersions(
-                'headless',
-                undefined,
-                undefined,
-                undefined,
-                ['integration-service']
-            );
+            const versions = await manager.getRequiredNodeVersions('headless');
 
             expect(versions.has('24')).toBe(true); // headless
-            expect(versions.has('22')).toBe(true); // integration-service
-            expect(versions.size).toBe(2);
+            expect(versions.size).toBe(1);
         });
     });
 

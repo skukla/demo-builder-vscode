@@ -1037,9 +1037,6 @@ async function lookupComponentDef(
     } else if (compType === 'dependency') {
         const deps = await registryManager.getDependencies();
         componentDef = deps.find((d: { id: string }) => d.id === compId);
-    } else if (compType === 'app-builder') {
-        const ab = await registryManager.getAppBuilder();
-        componentDef = ab.find((a: { id: string }) => a.id === compId);
     }
 
     // Fallback: search all sections (e.g., mesh components in "mesh" section)

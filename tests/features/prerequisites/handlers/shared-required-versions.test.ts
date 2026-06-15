@@ -97,7 +97,6 @@ describe('Prerequisites Handlers - getRequiredNodeVersions', () => {
                     backend: 'nodejs-api',
                     dependencies: ['dep1'],
                     integrations: ['mesh'],
-                    appBuilder: ['action'],
                 }),
             },
         });
@@ -108,8 +107,7 @@ describe('Prerequisites Handlers - getRequiredNodeVersions', () => {
             'react-spa',
             'nodejs-api',
             ['dep1'],
-            ['mesh'],
-            ['action']
+            ['mesh']
         );
     });
 });

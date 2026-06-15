@@ -15,7 +15,6 @@ All skukla-controlled component repositories use a floating `stable` tag instead
 | skukla/commerce-eds-mesh | `stable` | EDS PaaS API Mesh |
 | skukla/eds-accs-mesh | `stable` | EDS ACCS API Mesh |
 | skukla/headless-commerce-mesh | `stable` | Headless API Mesh |
-| skukla/kukla-integration-service | `stable` | App Builder integration |
 
 Third-party repositories (PMET-public) retain versioned tags since they're not under direct control.
 

@@ -34,7 +34,6 @@ describe('ComponentRepositoryResolver', () => {
 
             // Verify expected components are present
             expect(repositories.has('headless-commerce-mesh')).toBe(true);
-            expect(repositories.has('integration-service')).toBe(true);
         });
 
         it('should extract repository in owner/repo format', async () => {
@@ -105,11 +104,6 @@ describe('ComponentRepositoryResolver', () => {
     describe('Component categories', () => {
         it('should extract from mesh category', async () => {
             const info = await resolver.getRepositoryInfo('headless-commerce-mesh');
-            expect(info).toBeDefined();
-        });
-
-        it('should extract from appBuilderApps category', async () => {
-            const info = await resolver.getRepositoryInfo('integration-service');
             expect(info).toBeDefined();
         });
 

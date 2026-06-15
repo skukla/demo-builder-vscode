@@ -236,14 +236,11 @@ export async function handleDiscoverStoreStructure(
             // Credentials arrive in the discovery payload (self-contained request).
             // The service rejects empty credentials with a user-facing message.
             //
-            // NOTE (least-privilege, deferred): discovery is the only LIVE consumer of
-            // the admin username/password today, so a scoped Commerce integration token
-            // could replace them here. We kept username/password because the dormant
-            // `integration-service` App Builder app (kukla-integration-service) still
-            // hard-requires them (lib/commerce/auth.js), and its registry/config remain.
-            // A token swap is safe only after that component is removed or migrated to
-            // token auth. See .rptc/backlog for the integration-service/appBuilderApps
-            // cleanup + token follow-ups.
+            // NOTE (least-privilege, deferred): store discovery is now the only consumer
+            // of the admin username/password (the integration-service component that also
+            // required them has been removed). A scoped Commerce integration token could
+            // replace username/password here — see the token follow-up (Effort 2) in
+            // .rptc/backlog/2026-06-15-integration-service-cleanup-and-discovery-token.md.
             params.username = payload.username || undefined;
             params.password = payload.password || undefined;
         } else {

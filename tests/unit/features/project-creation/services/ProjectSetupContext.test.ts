@@ -61,7 +61,6 @@ describe('ProjectSetupContext', () => {
                 dependencies: [],
                 mesh: [],
                 integrations: [],
-                appBuilder: [],
             },
             services: {},
         };

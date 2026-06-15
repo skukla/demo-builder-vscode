@@ -112,7 +112,6 @@ describe('SERVICE_GROUP_DEFINITIONS', () => {
         expect(ids).toContain('mesh');
         expect(ids).toContain('adobe-assets');
         expect(ids).toContain('adobe-commerce-aco');
-        expect(ids).toContain('integration-service');
         expect(ids).toContain('experience-platform');
         expect(ids).toContain('other');
     });

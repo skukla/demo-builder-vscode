@@ -87,7 +87,6 @@ export const handleLoadComponents: MessageHandler = async (context: HandlerConte
         const frontends = await registryManager.getFrontends();
         const backends = await registryManager.getBackends();
         const integrations = await registryManager.getIntegrations();
-        const appBuilder = await registryManager.getAppBuilder();
         const dependencies = await registryManager.getDependencies();
         const presets = await registryManager.getPresets();
 
@@ -95,7 +94,6 @@ export const handleLoadComponents: MessageHandler = async (context: HandlerConte
             frontends: toComponentDataArray(frontends, { recommendedId: 'headless', includeFeatures: true }),
             backends: toComponentDataArray(backends),
             integrations: toComponentDataArray(integrations),
-            appBuilder: toComponentDataArray(appBuilder),
             dependencies: toComponentDataArray(dependencies),
             presets,
         };
@@ -130,7 +128,6 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
         const frontends = await registryManager.getFrontends();
         const backends = await registryManager.getBackends();
         const integrations = await registryManager.getIntegrations();
-        const appBuilder = await registryManager.getAppBuilder();
         const dependencies = await registryManager.getDependencies();
         const mesh = await registryManager.getMesh();
         const registry = await registryManager.loadRegistry();
@@ -139,7 +136,6 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
             frontends: toComponentDataArray(frontends, { includeDependencies: true }),
             backends: toComponentDataArray(backends, { includeDependencies: true }),
             integrations: toComponentDataArray(integrations, { includeDependencies: true }),
-            appBuilder: toComponentDataArray(appBuilder, { includeDependencies: true }),
             dependencies: toComponentDataArray(dependencies, { includeDependencies: true }),
             mesh: toComponentDataArray(mesh, { includeDependencies: true }),
             envVars: registry.envVars || {},

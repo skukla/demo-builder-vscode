@@ -73,7 +73,6 @@ export function createMockSetupContext(
             dependencies: [],
             mesh: [],
             integrations: [],
-            appBuilder: [],
         },
         services: {},
     };

@@ -68,7 +68,6 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
             dependencies: [],
             mesh: [],
             integrations: [],
-            appBuilder: [],
         },
     });
 

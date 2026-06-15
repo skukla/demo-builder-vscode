@@ -46,7 +46,6 @@ describe('Prerequisites Handlers - getNodeVersionMapping', () => {
             'react-app',
             'commerce-paas',
             [],
-            [],
             []
         );
     });
@@ -91,7 +90,6 @@ describe('Prerequisites Handlers - getNodeVersionMapping', () => {
                     backend: 'nodejs-api',
                     dependencies: ['dep1', 'dep2'],
                     integrations: ['commerce-mesh'],
-                    appBuilder: ['app-builder-action'],
                 }),
             },
         });
@@ -102,8 +100,7 @@ describe('Prerequisites Handlers - getNodeVersionMapping', () => {
             'react-spa',
             'nodejs-api',
             ['dep1', 'dep2'],
-            ['commerce-mesh'],
-            ['app-builder-action']
+            ['commerce-mesh']
         );
     });
 

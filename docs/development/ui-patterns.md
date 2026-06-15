@@ -125,10 +125,10 @@ Standardized font sizes across all interactive elements:
 
 ## Data Population
 
-### External Systems and App Builder Apps
+### External Systems
 
 #### Problem
-These sections were showing "Coming soon" placeholders instead of actual options from the component registry.
+This section was showing "Coming soon" placeholders instead of actual options from the component registry.
 
 #### Solution
 Implemented complete data flow from `components.json` to UI:
@@ -141,32 +141,22 @@ Implemented complete data flow from `components.json` to UI:
         "name": "Experience Platform",
         "description": "Adobe Experience Platform integration"
     }
-],
-"appBuilder": [
-    {
-        "id": "integration-service",
-        "name": "Kukla Integration Service",
-        "description": "Custom integration service"
-    }
 ]
 ```
 
 2. **Updated ComponentRegistry:**
 ```typescript
 async getExternalSystems(): Promise<ComponentDefinition[]>
-async getAppBuilder(): Promise<ComponentDefinition[]>
 ```
 
 3. **Message passing through ComponentHandler:**
 ```typescript
 const externalSystems = await this.registryManager.getExternalSystems();
-const appBuilder = await this.registryManager.getAppBuilder();
 ```
 
 4. **UI receives data via props:**
 ```tsx
 const externalSystemsOptions = componentsData?.externalSystems || [];
-const appBuilderOptions = componentsData?.appBuilder || [];
 ```
 
 ## Visual Styling Patterns

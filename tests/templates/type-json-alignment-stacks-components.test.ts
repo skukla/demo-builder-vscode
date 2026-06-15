@@ -20,7 +20,7 @@ const STACK_FIELDS = new Set([
 
 const COMPONENTS_ROOT_FIELDS = new Set([
     '$schema', 'version', 'infrastructure', 'frontends', 'backends', 'mesh',
-    'brands', 'stacks', 'dependencies', 'appBuilderApps', 'integrations',
+    'brands', 'stacks', 'dependencies', 'integrations',
     'addons', 'tools', 'services', 'envVars', 'selectionGroups',
 ]);
 
@@ -59,7 +59,7 @@ const ENV_VAR_DEFINITION_FIELDS = new Set([
 
 const SELECTION_GROUPS_FIELDS = new Set([
     'frontends', 'backends', 'stacks', 'brands', 'dependencies',
-    'appBuilderApps', 'integrations', 'addons', 'tools',
+    'integrations', 'addons', 'tools',
 ]);
 
 const SERVICE_DEFINITION_FIELDS = new Set([
@@ -164,7 +164,6 @@ describe('Type/JSON Alignment - Stacks & Components', () => {
             ['backends', 'Backend component'],
             ['mesh', 'Mesh component'],
             ['dependencies', 'Dependency component'],
-            ['appBuilderApps', 'App Builder app'],
             ['integrations', 'Integration'],
             ['addons', 'Addon'],
             ['tools', 'Tool'],
@@ -182,7 +181,7 @@ describe('Type/JSON Alignment - Stacks & Components', () => {
 
         it('should have no unknown fields in component configuration blocks', () => {
             const sectionsWithConfig = [
-                'frontends', 'backends', 'mesh', 'appBuilderApps',
+                'frontends', 'backends', 'mesh',
                 'integrations', 'addons', 'tools'
             ] as const;
 
@@ -203,7 +202,7 @@ describe('Type/JSON Alignment - Stacks & Components', () => {
         });
 
         it('should have no unknown fields in component source blocks', () => {
-            const sectionsWithSource = ['frontends', 'backends', 'mesh', 'appBuilderApps', 'tools'] as const;
+            const sectionsWithSource = ['frontends', 'backends', 'mesh', 'tools'] as const;
 
             sectionsWithSource.forEach(section => {
                 const components = componentsConfig[section] as Record<string, Record<string, unknown>> | undefined;
@@ -222,7 +221,7 @@ describe('Type/JSON Alignment - Stacks & Components', () => {
         });
 
         it('should have no unknown fields in source.gitOptions blocks', () => {
-            const sectionsWithSource = ['frontends', 'backends', 'mesh', 'appBuilderApps', 'tools'] as const;
+            const sectionsWithSource = ['frontends', 'backends', 'mesh', 'tools'] as const;
 
             sectionsWithSource.forEach(section => {
                 const components = componentsConfig[section] as Record<string, Record<string, unknown>> | undefined;
