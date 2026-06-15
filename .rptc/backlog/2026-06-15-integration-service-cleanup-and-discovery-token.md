@@ -110,9 +110,17 @@ demo project — selection (reuse ComponentSelection.appBuilder plumbing), regis
 source decision, Developer-role gating via projectAppBuilderPredicate, and install/deploy. See
 .rptc/backlog/2026-06-15-integration-service-cleanup-and-discovery-token.md (Feature seed)."`
 
-## Effort 2 — Store-discovery least-privilege token (after Effort 1)
+## Effort 2 — Store-discovery least-privilege token (GATED: after the App Builder attach feature)
 
-Once integration-service is gone, store discovery is the sole admin-cred consumer, so a scoped
+**Sequencing (decided 2026-06-15):** do the App Builder attach feature FIRST, then Effort 2.
+Effort 2's clean case depends on store discovery being the *sole* admin-credential consumer. The
+attach feature likely re-introduces admin-cred consumers (attached App Builder projects that call
+Commerce admin APIs, as the old integration-service did via `lib/commerce/auth.js`). Settle that
+feature's credential model before swapping discovery to a token — otherwise this is churn (swap to
+token, then need admin user/pass back) or a half-measure (token + user/pass coexisting). Revisit
+the "sole consumer" premise once the attach feature lands.
+
+Once store discovery is confirmed the sole admin-cred consumer, a scoped
 **Commerce integration access token** (Bearer) can cleanly replace admin username/password:
 - Replace the backend's `ADOBE_COMMERCE_ADMIN_USERNAME/PASSWORD` with e.g.
   `ADOBE_COMMERCE_API_TOKEN` (components.json, envVarKeys, serviceGroupTransforms, wizard fields)

@@ -42,7 +42,7 @@ Downstream of the structural baseline — the baseline will probably surface hig
 
 ### App Builder attach feature (supersedes 1b) + discovery least-privilege token ([`2026-06-15-integration-service-cleanup-and-discovery-token.md`](2026-06-15-integration-service-cleanup-and-discovery-token.md))
 
-Effort 1 (remove dormant `integration-service` + the `appBuilderApps` mechanism) **shipped** on `develop`. Remaining: **(seed)** a fast-follow feature to attach 1+ user-supplied App Builder projects to any project — this **supersedes the old Effort 1b cleanup**, which would have removed the very `appBuilder` selection plumbing the feature needs (repurpose, don't delete). **(Effort 2)** replace PaaS store discovery's admin username/password with a scoped Commerce integration token (full admin-cred consumer map + `edsHandlers.ts` code note included).
+Effort 1 (remove dormant `integration-service` + the `appBuilderApps` mechanism) **shipped** on `develop`. Remaining: **(seed)** a fast-follow feature to attach 1+ user-supplied App Builder projects to any project — this **supersedes the old Effort 1b cleanup**, which would have removed the very `appBuilder` selection plumbing the feature needs (repurpose, don't delete). **(Effort 2, gated)** replace PaaS store discovery's admin username/password with a scoped Commerce integration token — **sequenced AFTER the attach feature** (which may re-introduce admin-cred consumers and undo Effort 2's "sole consumer" premise). Full admin-cred consumer map + `edsHandlers.ts` code note included.
 
 ### Helix `previewCode` race ([`2026-05-21-helix-previewcode-race.md`](2026-05-21-helix-previewcode-race.md))
 
