@@ -42,11 +42,6 @@ import {
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateURL } from '@/core/validation';
-import {
-    PAAS_ADMIN_USERNAME,
-    PAAS_ADMIN_PASSWORD,
-} from '@/features/components/config/envVarKeys';
-import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
 import type { StoreDiscoveryParams } from '@/types/commerceStore';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
@@ -179,15 +174,18 @@ function getDiscoveryServices(): AccsDiscoveryService[] {
 
 /**
  * Payload for handleDiscoverStoreStructure.
- * PaaS credentials are NOT included — the handler reads them from
- * sharedState.currentComponentConfigs (wizard) or the current project
- * (configure screen) to avoid transmitting credentials over postMessage.
+ * PaaS admin credentials travel in the payload so the request is self-contained —
+ * the discovery handler needs no out-of-band credential cache.
  */
 interface DiscoverStoreStructurePayload {
     /** Commerce backend type */
     backendType: 'paas' | 'accs';
     /** Commerce base URL (PaaS) or ACCS API base URL */
     baseUrl: string;
+    /** PaaS only: admin username for token authentication */
+    username?: string;
+    /** PaaS only: admin password for token authentication */
+    password?: string;
     /** ACCS only: IMS org ID (from wizard state adobeOrg.id) */
     orgId?: string;
     /** ACCS only: ACCS GraphQL endpoint URL (to extract tenant ID) */
@@ -198,8 +196,7 @@ interface DiscoverStoreStructurePayload {
  * Handle store structure discovery request.
  *
  * Fetches websites, store groups, and store views from the Commerce REST API.
- * For PaaS: reads admin credentials from sharedState.currentComponentConfigs (synced
- *   by WizardContainer) or the saved project — never from the payload.
+ * For PaaS: reads admin credentials from the payload (self-contained request).
  * For ACCS: uses IMS token from authManager + org ID and tenant ID from payload.
  *
  * Sends result via 'store-discovery-result' message.
@@ -236,13 +233,19 @@ export async function handleDiscoverStoreStructure(
         };
 
         if (payload.backendType === 'paas') {
-            // Read PaaS credentials from extension-side state (never from postMessage payload).
-            // Priority: wizard sync (sharedState.currentComponentConfigs) → saved project.
-            const componentConfigs =
-                context.sharedState.currentComponentConfigs ??
-                (await context.stateManager.getCurrentProject())?.componentConfigs;
-            params.username = lookupComponentConfigValue(componentConfigs ?? {}, PAAS_ADMIN_USERNAME) || undefined;
-            params.password = lookupComponentConfigValue(componentConfigs ?? {}, PAAS_ADMIN_PASSWORD) || undefined;
+            // Credentials arrive in the discovery payload (self-contained request).
+            // The service rejects empty credentials with a user-facing message.
+            //
+            // NOTE (least-privilege, deferred): discovery is the only LIVE consumer of
+            // the admin username/password today, so a scoped Commerce integration token
+            // could replace them here. We kept username/password because the dormant
+            // `integration-service` App Builder app (kukla-integration-service) still
+            // hard-requires them (lib/commerce/auth.js), and its registry/config remain.
+            // A token swap is safe only after that component is removed or migrated to
+            // token auth. See .rptc/backlog for the integration-service/appBuilderApps
+            // cleanup + token follow-ups.
+            params.username = payload.username || undefined;
+            params.password = payload.password || undefined;
         } else {
             const earlyReturn = await buildAccsDiscoveryParams(context, payload, params);
             if (earlyReturn !== null) return earlyReturn;

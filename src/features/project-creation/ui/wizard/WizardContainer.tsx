@@ -156,12 +156,6 @@ export function WizardContainer({
         }
     }, [customBlockLibraryDefaults, state.customBlockLibraries, updateState]);
 
-    // Sync component configs to extension host so handlers can read credentials
-    // without requiring the webview to include them in postMessage payloads.
-    useEffect(() => {
-        vscode.postMessage('sync-component-configs', state.componentConfigs ?? {});
-    }, [state.componentConfigs]);
-
     // Navigation hook
     const {
         goNext,

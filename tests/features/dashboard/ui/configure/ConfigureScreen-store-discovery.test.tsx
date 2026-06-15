@@ -3,13 +3,11 @@
  *
  * Verifies the Configure screen wires the wizard's auto-detect stack:
  * - useStoreDiscovery + useAutoStoreDetect hooks receive the correct inputs.
- * - sync-component-configs is posted whenever componentConfigs state changes,
- *   so the backend handler can read fresh credentials for store discovery.
  * - Each field inside a service group renders via StoreConfigFieldRow
  *   (which internally branches to plain FormField for non-store fields).
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ConfigureScreen } from '@/features/dashboard/ui/configure/ConfigureScreen';
@@ -27,7 +25,7 @@ jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
     useSelectableDefault: jest.fn(() => ({})),
 }));
 
-// Track sync-component-configs posts
+// WebviewClient mock (postMessage spy for any outbound messages)
 const postMessageMock = jest.fn();
 jest.mock('@/core/ui/utils/WebviewClient', () => ({
     webviewClient: {
@@ -108,22 +106,6 @@ describe('ConfigureScreen - Store Discovery Integration', () => {
         postMessageMock.mockClear();
         useAutoStoreDetectMock.mockClear();
         useStoreDiscoveryMock.mockClear();
-    });
-
-    it('posts sync-component-configs whenever componentConfigs state changes', async () => {
-        // The Configure screen hydrates componentConfigs from existingEnvValues in a useEffect —
-        // the effect triggers an additional sync after the initial render.
-        renderWithProvider(
-            <ConfigureScreen
-                project={mockProject as never}
-                componentsData={mockComponentsData}
-                existingEnvValues={{ headless: { ADOBE_COMMERCE_URL: 'https://example.com' } }}
-            />
-        );
-
-        await waitFor(() => {
-            expect(postMessageMock).toHaveBeenCalledWith('sync-component-configs', expect.any(Object));
-        });
     });
 
     it('invokes useAutoStoreDetect with orgId from project.adobe.organization', () => {

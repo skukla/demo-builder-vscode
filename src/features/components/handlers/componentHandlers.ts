@@ -21,7 +21,6 @@ import { ComponentSelection, type ComponentConfigs as ComponentConfigsData } fro
 import { toAppError } from '@/types/errors';
 import { HandlerContext, MessageHandler } from '@/types/handlers';
 import { getEntryCount } from '@/types/typeGuards';
-import type { ComponentConfigs } from '@/types/webview';
 
 /**
  * Create a ComponentRegistryManager for the current extension context
@@ -73,26 +72,6 @@ export const handleUpdateComponentsData: MessageHandler = async (
     const componentsData = payload as ComponentConfigsData;
     context.sharedState.componentsData = componentsData;
     context.logger.debug('Updated components data');
-    return { success: true };
-};
-
-/**
- * sync-component-configs - Store current user-entered component config values
- *
- * Keeps a server-side copy so handlers can read credentials without
- * requiring the webview to include them in subsequent postMessage payloads.
- */
-export const handleSyncComponentConfigs: MessageHandler = async (
-    context: HandlerContext,
-    payload?: unknown,
-) => {
-    // Trust boundary: payload originates from the extension's own webview (same process),
-    // not from untrusted external input. Shape validation is omitted intentionally.
-    if (!payload || typeof payload !== 'object') {
-        context.logger.warn('sync-component-configs: invalid payload');
-        return { success: true };
-    }
-    context.sharedState.currentComponentConfigs = payload as ComponentConfigs;
     return { success: true };
 };
 
