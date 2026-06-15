@@ -26,6 +26,10 @@ draft  →  ready  →  active  →  shipped/dropped
 
 ## Active backlog
 
+### Adobe org-context self-heal consolidation ([`2026-06-15-adobe-org-context-self-heal-consolidation.md`](2026-06-15-adobe-org-context-self-heal-consolidation.md))
+
+The "real fix" for the org-mismatch dead-end ("configured for a different organization … run `aio console org select` in your terminal"). Org-context correction is implemented ~5 different ways across the app and the projects-fetch path got none — that omission is the bug. Consolidate to ONE canonical `ensureOrgContext` helper (silent `aio console org select` + retry → escalate to in-app re-login → "pick a different org"), route all entity fetches through it, and delete the bespoke variants. Includes the research verdict (IMS token is identity-scoped, not org-scoped → org-select with the existing token is the proper fix; re-login is the fallback). **Next-priority backlog item.**
+
 ### Multi-locale storefront — Phase 1 ([`2026-05-19-multisite-multilocale.md`](2026-05-19-multisite-multilocale.md))
 
 Phase 1 implementation plan for serving multiple locales (and eventually multiple brands) from a single Demo Builder project. Repurposes the wizard `settings` step as **Business Structure** with progressive sections for Connection, Primary Store, Regions & Locales, and (Phase 2, reserved) Additional Brands. Covers PaaS, ACCS, and the ACO addon. Research base: [`docs/research/2026-05-19-multisite-multillocale-research.md`](../../docs/research/2026-05-19-multisite-multillocale-research.md). Architecture seam: [ADR-003](../../docs/architecture/adr/003-multisite-architecture-seam.md). Phase 2 (repoless multi-brand) deferred.
