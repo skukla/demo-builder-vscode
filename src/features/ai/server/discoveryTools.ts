@@ -15,7 +15,7 @@ import { loadDemoPackages } from '@/features/project-creation/services/demoPacka
 import { loadStacks } from '@/features/project-creation/ui/helpers/brandStackLoader';
 
 /** Component sections worth surfacing to an agent (selectable building blocks). */
-const COMPONENT_SECTIONS = ['frontends', 'backends', 'mesh', 'integrations', 'appBuilderApps', 'addons'] as const;
+const COMPONENT_SECTIONS = ['frontends', 'backends', 'mesh', 'integrations', 'addons'] as const;
 
 function listComponentSection(section: string): Array<{ id: string; name: string }> {
     const entries = (componentsConfig as Record<string, unknown>)[section];

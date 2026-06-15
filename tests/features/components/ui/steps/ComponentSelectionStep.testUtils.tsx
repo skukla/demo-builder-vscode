@@ -51,9 +51,6 @@ export const mockComponentsData = {
     },
     integrations: [
         { id: 'experience-platform', name: 'Experience Platform', description: 'Adobe Experience Platform' }
-    ],
-    appBuilder: [
-        { id: 'integration-service', name: 'Integration Service', description: 'Custom service' }
     ]
 };
 
@@ -68,8 +65,7 @@ export const createStateWithFrontend = () => ({
         backend: '',
         dependencies: ['eds-commerce-mesh'],
         services: [],
-        integrations: [],
-        appBuilder: []
+        integrations: []
     }
 });
 
@@ -84,8 +80,7 @@ export const createStateWithBackend = () => ({
         backend: 'adobe-commerce-paas',
         dependencies: [],
         services: ['catalog-service', 'live-search'],
-        integrations: [],
-        appBuilder: []
+        integrations: []
     }
 });
 
@@ -100,8 +95,7 @@ export const createStateWithSelections = () => ({
         backend: 'adobe-commerce-paas',
         dependencies: ['eds-commerce-mesh'],
         services: ['catalog-service', 'live-search'],
-        integrations: [],
-        appBuilder: []
+        integrations: []
     }
 });
 
@@ -116,8 +110,7 @@ export const createStateNoFrontend = () => ({
         backend: 'adobe-commerce-paas',
         dependencies: [],
         services: ['catalog-service', 'live-search'],
-        integrations: [],
-        appBuilder: []
+        integrations: []
     }
 });
 
@@ -132,8 +125,7 @@ export const createStateNoBackend = () => ({
         backend: '',
         dependencies: ['eds-commerce-mesh'],
         services: [],
-        integrations: [],
-        appBuilder: []
+        integrations: []
     }
 });
 
@@ -148,8 +140,7 @@ export const createStateWithDefaults = () => ({
         backend: 'adobe-commerce-paas',
         dependencies: ['eds-commerce-mesh'],
         services: ['catalog-service', 'live-search'],
-        integrations: ['experience-platform'],
-        appBuilder: ['integration-service']
+        integrations: ['experience-platform']
     }
 });
 
@@ -164,8 +155,7 @@ export const createStateInitial = () => ({
         backend: '',
         dependencies: [],
         services: [],
-        integrations: [],
-        appBuilder: []
+        integrations: []
     }
 });
 

@@ -42,7 +42,7 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
     ComponentRegistryManager: jest.fn().mockImplementation(() => ({
         loadRegistry: jest.fn().mockResolvedValue({
             version: 'test',
-            components: { frontends: [], backends: [], dependencies: [], mesh: [], appBuilder: [] },
+            components: { frontends: [], backends: [], dependencies: [], mesh: [] },
         }),
     })),
 }));

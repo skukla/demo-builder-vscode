@@ -54,6 +54,22 @@ whole mechanism dead (same shape as the retired b2b feature-pack).
 
 (Decide separately whether to also archive/retire the `kukla-integration-service` repo.)
 
+## Effort 1b — Remove residual `appBuilder` selection-field plumbing (follow-up to 1)
+
+Effort 1 removed the appBuilderApps *registry mechanism* (config section, `appBuilder`
+registry category, `getAppBuilder`, the registry helpers' `appBuilder?` param,
+`integration-service`, predicate→mesh-only). It deliberately left the now-dead `appBuilder`
+*selection/componentData* field, which threads through far more of the UI/state layer than the
+mechanism (~50 files): `ComponentSelection.appBuilder` (webview.ts/base.ts/messages.ts/handlers.ts
+ProjectConfig), `componentDataHelpers.findComponentById`, the wizard (`wizardHelpers`,
+`useWizardState`), review (`reviewStepHelpers`, `ReviewStep`), configure
+(`configureTypes`/`configureHelpers`/`useSelectedComponents`), `executor` (the
+addons-typed-as-`app-builder` mapping + loadComponentDefinitions), `projectResetService`
+(`buildComponentList` labels addons `'app-builder'`), and `settingsFile.ts`, plus ~12 test files.
+With no appBuilder components definable, this field is always empty — safe to remove, but it's
+its own focused cleanup. Note the `'app-builder'` *type label* in reset/executor actually tags
+ADDONS, so check whether it should become `'addon'` rather than just deleted.
+
 ## Effort 2 — Store-discovery least-privilege token (after Effort 1)
 
 Once integration-service is gone, store discovery is the sole admin-cred consumer, so a scoped

@@ -116,7 +116,6 @@ for (const componentId of componentIds) {
 - Extracts Git sources from all component categories:
   - `frontends` (e.g., headless)
   - `mesh` (e.g., commerce-mesh)
-  - `appBuilderApps` (e.g., integration-service)
   - `tools` (e.g., commerce-demo-ingestion)
 - Parses GitHub URLs to extract `owner/repo` format
 - Caches results for performance

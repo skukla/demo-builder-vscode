@@ -29,11 +29,6 @@
                     "items": { "type": "string" },
                     "description": "Component IDs for dependencies (components pulled in via relationships, not directly selected)"
                 },
-                "appBuilderApps": {
-                    "type": "array",
-                    "items": { "type": "string" },
-                    "description": "Component IDs for App Builder Apps section (YOUR custom apps)"
-                },
                 "integrations": {
                     "type": "array",
                     "items": { "type": "string" },

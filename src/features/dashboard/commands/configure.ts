@@ -156,7 +156,6 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             dependencies: registry.components.dependencies,
             mesh: registry.components.mesh,
             integrations: registry.components.integrations,
-            appBuilder: registry.components.appBuilder,
             envVars: registry.envVars || {},
         };
 

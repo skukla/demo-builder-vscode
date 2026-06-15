@@ -211,7 +211,6 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             ]);
             mockRegistryManager.getBackends.mockResolvedValue([]);
             mockRegistryManager.getIntegrations.mockResolvedValue([]);
-            mockRegistryManager.getAppBuilder.mockResolvedValue([]);
             mockRegistryManager.getDependencies.mockResolvedValue([]);
             mockRegistryManager.getPresets.mockResolvedValue([]);
 
@@ -224,7 +223,6 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             expect(data).toHaveProperty('frontends');
             expect(data).toHaveProperty('backends');
             expect(data).toHaveProperty('integrations');
-            expect(data).toHaveProperty('appBuilder');
             expect(data).toHaveProperty('dependencies');
             expect(data).toHaveProperty('presets');
             expect(mockContext.sendMessage).not.toHaveBeenCalled();

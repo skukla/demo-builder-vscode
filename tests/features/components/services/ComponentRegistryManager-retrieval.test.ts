@@ -53,13 +53,6 @@ describe('Component Registry Manager - Component Retrieval', () => {
             expect(integrations[0].id).toBe('experience-platform');
         });
 
-        it('should return app builder components', async () => {
-            const appBuilder = await manager.getAppBuilder();
-
-            expect(appBuilder).toHaveLength(1);
-            expect(appBuilder[0].id).toBe('integration-service');
-        });
-
         it('should return empty array for missing integrations', async () => {
             mockLoader.load.mockResolvedValue({
                 ...mockRawRegistry,

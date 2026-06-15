@@ -179,14 +179,12 @@ export class ComponentRegistryManager {
             dependencies: TransformedComponentDefinition[];
             mesh: TransformedComponentDefinition[];
             integrations: TransformedComponentDefinition[];
-            appBuilder: TransformedComponentDefinition[];
         } = {
             frontends: [],
             backends: [],
             dependencies: [],
             mesh: [],
             integrations: [],
-            appBuilder: [],
         };
 
         const groups = raw.selectionGroups || {};
@@ -197,7 +195,6 @@ export class ComponentRegistryManager {
             ...(raw.backends || {}),        // v3.0.0: backends section
             ...(raw.mesh || {}),            // v3.0.0: mesh section (contains commerce-mesh)
             ...(raw.dependencies || {}),    // v3.0.0: dependencies section
-            ...(raw.appBuilderApps || {}),  // v3.0.0: appBuilderApps section
             ...(raw.integrations || {}),    // v3.0.0: integrations section
         };
 
@@ -221,7 +218,6 @@ export class ComponentRegistryManager {
 
         addComponents(groups.frontends, components.frontends);
         addComponents(groups.backends, components.backends);
-        addComponents(groups.appBuilderApps, components.appBuilder);
         addComponents(groups.integrations, components.integrations);
         addComponents(groups.dependencies, components.dependencies);
 
@@ -307,11 +303,6 @@ export class ComponentRegistryManager {
         return registry.components.integrations || [];
     }
 
-    async getAppBuilder(): Promise<TransformedComponentDefinition[]> {
-        const registry = await this.loadRegistry();
-        return registry.components.appBuilder || [];
-    }
-
     async getMesh(): Promise<TransformedComponentDefinition[]> {
         const registry = await this.loadRegistry();
         return registry.components.mesh || [];
@@ -335,7 +326,6 @@ export class ComponentRegistryManager {
             ...registry.components.dependencies,
             ...(registry.components.mesh || []),
             ...(registry.components.integrations || []),
-            ...(registry.components.appBuilder || []),
         ];
         return allComponents.find(c => c.id === id);
     }
@@ -363,7 +353,6 @@ export class ComponentRegistryManager {
      * @param backendId - Backend component ID (optional)
      * @param dependencies - Array of dependency component IDs (optional)
      * @param integrations - Array of integration component IDs (optional)
-     * @param appBuilder - Array of App Builder component IDs (optional)
      * @returns Set of Node.js version strings required by all components
      * @throws Error if any component has an invalid nodeVersion format
      */
@@ -372,7 +361,6 @@ export class ComponentRegistryManager {
         backendId?: string,
         dependencies?: string[],
         _integrations?: string[],
-        appBuilder?: string[],
     ): Promise<Set<string>> {
         const nodeVersions = new Set<string>();
 
@@ -414,20 +402,6 @@ export class ComponentRegistryManager {
             }
         }
 
-        // Check app builder node versions (typically Node 22)
-        if (appBuilder) {
-            for (const appId of appBuilder) {
-                const app = await this.getComponentById(appId);
-                if (app?.configuration?.nodeVersion) {
-                    this.validateAndAddNodeVersion(
-                        app.configuration.nodeVersion,
-                        nodeVersions,
-                        app.name,
-                    );
-                }
-            }
-        }
-
         return nodeVersions;
     }
 
@@ -442,7 +416,6 @@ export class ComponentRegistryManager {
      * @param backendId - Backend component ID (optional)
      * @param dependencies - Array of dependency component IDs (optional)
      * @param integrations - Array of integration component IDs (optional)
-     * @param appBuilder - Array of App Builder component IDs (optional)
      * @returns Record mapping Node.js versions to component names (e.g., {"20": "Frontend", "22": "App Builder"})
      * @throws Error if any component has an invalid nodeVersion format
      */
@@ -451,7 +424,6 @@ export class ComponentRegistryManager {
         backendId?: string,
         dependencies?: string[],
         _integrations?: string[],
-        appBuilder?: string[],
     ): Promise<Record<string, string>> {
         const mapping: Record<string, string> = {};
 
@@ -508,20 +480,6 @@ export class ComponentRegistryManager {
             }
         }
 
-        // Check app builder node versions
-        if (appBuilder) {
-            for (const appId of appBuilder) {
-                const app = await this.getComponentById(appId);
-                if (app?.configuration?.nodeVersion) {
-                    this.validateAndMapNodeVersion(
-                        app.configuration.nodeVersion,
-                        app.name,
-                        mapping,
-                    );
-                }
-            }
-        }
-
         return mapping;
     }
 
@@ -540,7 +498,6 @@ export class ComponentRegistryManager {
      * @param backendId - Backend component ID (optional)
      * @param dependencies - Array of dependency component IDs (optional)
      * @param integrations - Array of integration component IDs (optional)
-     * @param appBuilder - Array of App Builder component IDs (optional)
      * @returns Record mapping Node.js versions to component IDs (e.g., {"20": "commerce-mesh", "24": "headless"})
      * @throws Error if any component has an invalid nodeVersion format
      */
@@ -549,7 +506,6 @@ export class ComponentRegistryManager {
         backendId?: string,
         dependencies?: string[],
         _integrations?: string[],
-        appBuilder?: string[],
     ): Promise<Record<string, string>> {
         const mapping: Record<string, string> = {};
 
@@ -603,16 +559,6 @@ export class ComponentRegistryManager {
                 const dep = await this.getComponentById(depId);
                 if (dep?.configuration?.nodeVersion) {
                     addIdMapping(dep.configuration.nodeVersion, depId);
-                }
-            }
-        }
-
-        // Check app builder node versions
-        if (appBuilder) {
-            for (const appId of appBuilder) {
-                const app = await this.getComponentById(appId);
-                if (app?.configuration?.nodeVersion) {
-                    addIdMapping(app.configuration.nodeVersion, appId);
                 }
             }
         }

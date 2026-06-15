@@ -31,7 +31,6 @@ export const mockRawRegistry: RawComponentRegistry = {
         backends: ['adobe-commerce-paas'],
         dependencies: ['test-tool'],
         integrations: ['experience-platform'],
-        appBuilderApps: ['integration-service'],
     },
     frontends: {
         eds: {
@@ -94,17 +93,6 @@ export const mockRawRegistry: RawComponentRegistry = {
             // No nodeVersion - test-tool is a browser overlay, not a Node.js tool
         },
     },
-    appBuilderApps: {
-        'integration-service': {
-            id: 'integration-service',
-            name: 'Kukla Integration Service',
-            description: 'Custom integration service',
-            type: 'app-builder',
-            configuration: {
-                nodeVersion: '22',
-            },
-        },
-    },
     integrations: {
         'experience-platform': {
             id: 'experience-platform',
@@ -133,7 +121,6 @@ export const COMPONENT_SECTIONS = [
     'backends',
     'mesh',
     'dependencies',
-    'appBuilderApps',
 ] as const;
 
 export type ComponentSection = (typeof COMPONENT_SECTIONS)[number];

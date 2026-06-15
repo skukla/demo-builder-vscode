@@ -6,7 +6,7 @@
  *
  * Root Cause:
  * - commerce-mesh is stored in templates/components.json under "mesh" section
- * - loadComponentDefinitions() only loads: frontends, dependencies, appBuilder
+ * - loadComponentDefinitions() only loads: frontends, dependencies, mesh
  * - meshDefinition lookup returns undefined, causing Phase 3 to be skipped
  *
  * Expected Fix:
@@ -94,7 +94,6 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
                 },
             },
         ]),
-        getAppBuilder: jest.fn().mockResolvedValue([]),
         getMesh: jest.fn().mockResolvedValue([{
             id: 'headless-commerce-mesh',
             name: 'Headless Commerce API Mesh',

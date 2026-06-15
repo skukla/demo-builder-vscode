@@ -179,7 +179,6 @@ export interface RawComponentRegistry {
         backends?: string[];
         dependencies?: string[];
         integrations?: string[];
-        appBuilderApps?: string[];
     };
     /** v3.0.0: Frontend components (e.g., eds, headless) */
     frontends?: Record<string, RawComponentDefinition>;
@@ -189,8 +188,6 @@ export interface RawComponentRegistry {
     mesh?: Record<string, RawComponentDefinition>;
     /** v3.0.0: Dependencies */
     dependencies?: Record<string, RawComponentDefinition>;
-    /** v3.0.0: App Builder apps (e.g., integration-service) */
-    appBuilderApps?: Record<string, RawComponentDefinition>;
     /** v3.0.0: Integrations (e.g., experience-platform) */
     integrations?: Record<string, RawComponentDefinition>;
     infrastructure?: Record<string, RawComponentDefinition>;
@@ -213,7 +210,6 @@ export interface PresetDefinition {
         backend: string;
         dependencies: string[];
         integrations?: string[];
-        appBuilder?: string[];
     };
 }
 
@@ -238,7 +234,6 @@ export interface ComponentRegistry {
         dependencies: TransformedComponentDefinition[];
         mesh?: TransformedComponentDefinition[];
         integrations?: TransformedComponentDefinition[];
-        appBuilder?: TransformedComponentDefinition[];
     };
     services?: Record<string, ServiceDefinition>;
     envVars?: Record<string, Omit<EnvVarDefinition, 'key'>>;
@@ -253,7 +248,6 @@ export interface ComponentSelection {
     backend?: string;
     dependencies?: string[];
     integrations?: string[];
-    appBuilder?: string[];
     services?: ServiceDefinition[];
     preset?: string;
 }
