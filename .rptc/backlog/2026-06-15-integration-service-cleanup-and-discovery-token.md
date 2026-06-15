@@ -54,21 +54,61 @@ whole mechanism dead (same shape as the retired b2b feature-pack).
 
 (Decide separately whether to also archive/retire the `kukla-integration-service` repo.)
 
-## Effort 1b — Remove residual `appBuilder` selection-field plumbing (follow-up to 1)
+## Effort 1b — SUPERSEDED (do not execute as a standalone cleanup)
 
-Effort 1 removed the appBuilderApps *registry mechanism* (config section, `appBuilder`
-registry category, `getAppBuilder`, the registry helpers' `appBuilder?` param,
-`integration-service`, predicate→mesh-only). It deliberately left the now-dead `appBuilder`
-*selection/componentData* field, which threads through far more of the UI/state layer than the
-mechanism (~50 files): `ComponentSelection.appBuilder` (webview.ts/base.ts/messages.ts/handlers.ts
-ProjectConfig), `componentDataHelpers.findComponentById`, the wizard (`wizardHelpers`,
-`useWizardState`), review (`reviewStepHelpers`, `ReviewStep`), configure
-(`configureTypes`/`configureHelpers`/`useSelectedComponents`), `executor` (the
-addons-typed-as-`app-builder` mapping + loadComponentDefinitions), `projectResetService`
-(`buildComponentList` labels addons `'app-builder'`), and `settingsFile.ts`, plus ~12 test files.
-With no appBuilder components definable, this field is always empty — safe to remove, but it's
-its own focused cleanup. Note the `'app-builder'` *type label* in reset/executor actually tags
-ADDONS, so check whether it should become `'addon'` rather than just deleted.
+**Status: superseded 2026-06-15 by the "Attach App Builder projects" feature below.**
+
+1b was going to remove the residual `appBuilder` *selection-field* plumbing that Effort 1
+deliberately left behind: `ComponentSelection.appBuilder` (webview.ts/base.ts/messages.ts/
+handlers.ts ProjectConfig), `componentDataHelpers.findComponentById`, the wizard
+(`wizardHelpers`, `useWizardState`), review (`reviewStepHelpers`, `ReviewStep`), configure
+(`configureTypes`/`configureHelpers`/`useSelectedComponents`), `executor`, `projectResetService`,
+`settingsFile.ts`, plus ~12 test files (~50 files total). It is always-empty/harmless today.
+
+**Why superseded:** the owner expects a fast-follow feature to attach one or more App Builder
+projects to any project. That plumbing is exactly the multi-select scaffolding the feature needs.
+Removing it now and rebuilding it in weeks is pure churn. So **do not run 1b** — repurpose the
+plumbing instead (see the feature seed below). If the feature is shelved, 1b can be reinstated.
+
+## Feature seed — Attach App Builder project(s) to any project
+
+**Provenance:** anticipated fast-follow (raised 2026-06-15) after the `integration-service` /
+`appBuilderApps` removal (Effort 1). Effort 1 cleared the *dormant, curated, single-entry*
+catalog (`appBuilderApps` registry section + hardcoded `integration-service` + `getAppBuilder` +
+the `appBuilder` registry category + the executor `app-builder` install branch + predicate
+appBuilder gating). This feature is a fresh, GENERAL build, not a revival of that mechanism.
+
+**Goal:** let a user attach 1+ App Builder projects to any demo project (the prior model was a
+curated catalog with one dormant entry; the new model is user-supplied/multi-select).
+
+**Reuse vs. rebuild:**
+- REUSE (the residual 1b plumbing): `ComponentSelection.appBuilder` multi-select set threaded
+  through wizard → review → configure → state/settings. This is most of the UI/state scaffolding.
+- REBUILD (removed in Effort 1, in a more general form): an `appBuilder` registry/category OR a
+  user-supplied "attached app-builder projects" concept; a `getAppBuilder`-style accessor;
+  re-include app-builder in `projectAppBuilderPredicate` so the IMS Developer/System-Admin role
+  check fires when a project is attached; an executor install/deploy path for the attached
+  project(s).
+
+**Key design decision to settle first:** where do available App Builder projects come from?
+(a) a curated registry list (like the old catalog), (b) the user points at their own Console
+project / git repo, or (c) both. This drives whether any catalog concept returns or it's purely
+user-supplied. The user's "attach your own 1+" framing leans toward (b).
+
+**Watch-outs:**
+- `projectAppBuilderPredicate` is currently mesh-only — re-add the app-builder path (Developer-role
+  gating). Both call sites (`deployMesh`, `executor`) already fail-closed via
+  `testDeveloperPermissions()`.
+- The `'app-builder'` type label in `executor`/`projectResetService` `buildComponentList` currently
+  tags ADDONS, not app-builder apps — disambiguate when wiring real app-builder install/deploy.
+- Deployment: attached App Builder projects need `aio app deploy` against the right workspace;
+  reconcile with the existing mesh/app-builder Developer-role + workspace gating.
+
+**Kickoff prompt:**
+`/rptc:research "Design a feature to attach one or more user-supplied App Builder projects to any
+demo project — selection (reuse ComponentSelection.appBuilder plumbing), registry-vs-user-supplied
+source decision, Developer-role gating via projectAppBuilderPredicate, and install/deploy. See
+.rptc/backlog/2026-06-15-integration-service-cleanup-and-discovery-token.md (Feature seed)."`
 
 ## Effort 2 — Store-discovery least-privilege token (after Effort 1)
 

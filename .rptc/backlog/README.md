@@ -40,9 +40,9 @@ Numbers-first measurement pass to map the codebase's actual size, complexity, an
 
 Downstream of the structural baseline — the baseline will probably surface higher-leverage trim targets, and the legacy items may rank lower than they appear today.
 
-### integration-service cleanup + discovery least-privilege token ([`2026-06-15-integration-service-cleanup-and-discovery-token.md`](2026-06-15-integration-service-cleanup-and-discovery-token.md))
+### App Builder attach feature (supersedes 1b) + discovery least-privilege token ([`2026-06-15-integration-service-cleanup-and-discovery-token.md`](2026-06-15-integration-service-cleanup-and-discovery-token.md))
 
-Two sequenced follow-ups from the store-discovery race fix. **(1)** Remove the dormant `integration-service` component and the now-single-member `appBuilderApps` mechanism (no soft deprecation, ~25 files); keep the admin-cred env-var defs and the mesh-serving `projectAppBuilderPredicate`. **(2)** Then replace PaaS store discovery's admin username/password with a scoped Commerce integration token. Includes the full admin-credential consumer map. Referenced by a code note in `edsHandlers.ts`.
+Effort 1 (remove dormant `integration-service` + the `appBuilderApps` mechanism) **shipped** on `develop`. Remaining: **(seed)** a fast-follow feature to attach 1+ user-supplied App Builder projects to any project — this **supersedes the old Effort 1b cleanup**, which would have removed the very `appBuilder` selection plumbing the feature needs (repurpose, don't delete). **(Effort 2)** replace PaaS store discovery's admin username/password with a scoped Commerce integration token (full admin-cred consumer map + `edsHandlers.ts` code note included).
 
 ### Helix `previewCode` race ([`2026-05-21-helix-previewcode-race.md`](2026-05-21-helix-previewcode-race.md))
 
