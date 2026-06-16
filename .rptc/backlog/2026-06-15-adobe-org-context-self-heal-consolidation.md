@@ -34,6 +34,43 @@ path) through it.
 to in-app re-login (`login(force)` → `loginAndRestoreProjectContext`) only if that still 403s;
 (3) keep 401/AUTH_EXPIRED → re-login as-is.
 
+**Real-world confirmation (2026-06-15):** the re-login branch is NOT a rare edge case. Live repro —
+the target org (*Adobe Commerce Solution Led*, which the user owns) did **not appear** in
+`aio console org select` at all, because the CLI's picker is App-Builder-scoped to the *currently
+logged-in identity/session*, and that session's selectable list only contained a different org
+(*Adobe Demo System*). `org select` with the existing token therefore CANNOT reach the target org;
+only re-login (with the correct account) surfaces it. So the canonical helper must treat re-login
+as a **first-class branch**, triggered when the target org is absent from the selectable list —
+not merely "if org-select still 403s."
+
+**The re-login MUST be a FORCE login** (`login(force=true)` → `aio auth login --force`). A plain
+`aio auth logout` + `aio auth login` silently reuses the cached IMS token / browser SSO session and
+re-authenticates the SAME (wrong) account without prompting for account selection. Only `--force`
+bypasses the cached credential and triggers a fresh flow where the user can pick the correct
+account. The extension already exposes this via `authenticationService.login(force)` /
+`authenticationHandlers` (the "Starting fresh login" path) — the escalation branch must pass
+`force=true`, never a plain login.
+
+**Additional facet — the auth cache makes external auth changes invisible:** `AuthCacheManager`
+holds `cachedOrganization` / `console.where` / org list in memory and only clears on in-app
+login/logout (`authenticationService.clearAll()`, `:213/296`) or a window reload. A user who fixes
+auth in a terminal (`aio auth login --force` + `aio console org select`) still hits the stale cached
+org until they reload the window — confirmed live 2026-06-15 (terminal force-login + org-select did
+NOT take effect until "Developer: Reload Window"). The in-app remedy must perform force-login +
+org-select + cache clear ITSELF so the user never needs the terminal-then-reload dance. (Also note:
+force-login refreshes the token but does NOT set `console.org` — the helper must org-select after.)
+
+**Additional facet — the extension can surface orgs the CLI can't use:** the extension's org list
+(SDK `client.getOrganizations`, `adobeEntityFetcher.ts:215`) and the CLI's App-Builder-scoped
+`aio console org list` can DIVERGE (different filters / identity). The wizard can show/let the user
+pick an org that the CLI then can't select or operate on → dead-end. The consolidation should
+reconcile these: only offer orgs that are actually usable (or detect the divergence and prompt
+re-login / a different org) rather than letting the picker and the CLI disagree silently.
+
+**Open product question (separate):** should headless + PaaS *without* mesh require an
+App-Builder-entitled org at all? If the App-Builder-scoped org list blocks an otherwise-valid
+Commerce demo, the Adobe-setup gating may be over-broad for non-App-Builder demos.
+
 ## The ~5 existing variants to consolidate
 
 | Variant | Location | Behavior |
