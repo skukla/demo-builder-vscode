@@ -17,17 +17,11 @@ jest.setTimeout(5000);
 // Mocks — defined before imports
 // =============================================================================
 
-const mockSelectOrganization = jest.fn().mockResolvedValue(true);
-const mockSelectProject = jest.fn().mockResolvedValue(true);
-const mockSelectWorkspace = jest.fn().mockResolvedValue(true);
 const mockGetCachedOrganization = jest.fn().mockReturnValue(undefined);
 
 jest.mock('@/core/di', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({
-            selectOrganization: mockSelectOrganization,
-            selectProject: mockSelectProject,
-            selectWorkspace: mockSelectWorkspace,
             getCachedOrganization: mockGetCachedOrganization,
         })),
         getCommandExecutor: jest.fn(() => ({})),
@@ -117,7 +111,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
         mockGetCachedOrganization.mockReturnValue(undefined);
     });
 
-    it('should wrap the mesh redeploy in withOrgContext and never mutate the aio global', async () => {
+    it('should wrap the mesh redeploy in withOrgContext', async () => {
         const project = createProject();
         const context = createContext();
 
@@ -125,9 +119,6 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
 
         expect(mockWithOrgContext).toHaveBeenCalledTimes(1);
         expect(mockDeployMeshComponent).toHaveBeenCalledTimes(1);
-        expect(mockSelectOrganization).not.toHaveBeenCalled();
-        expect(mockSelectProject).not.toHaveBeenCalled();
-        expect(mockSelectWorkspace).not.toHaveBeenCalled();
     });
 
     it('should target the project org/project/workspace via withOrgContext', async () => {

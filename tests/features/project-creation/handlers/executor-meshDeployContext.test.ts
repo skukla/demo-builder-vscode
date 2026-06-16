@@ -45,9 +45,6 @@ function createContext(authOverrides: Record<string, unknown> = {}) {
         authManager: {
             isAuthenticated: jest.fn().mockResolvedValue(true),
             loginAndRestoreProjectContext: jest.fn().mockResolvedValue(true),
-            selectWorkspace: jest.fn().mockResolvedValue(true),
-            selectOrganization: jest.fn().mockResolvedValue(true),
-            selectProject: jest.fn().mockResolvedValue(true),
             getCachedOrganization: jest.fn().mockReturnValue(undefined),
             ...authOverrides,
         },
@@ -69,15 +66,12 @@ describe('Executor - Mesh Deploy Org-Context (Phase 4a)', () => {
         mockWithOrgContext.mockImplementation((_t, fn) => fn());
     });
 
-    it('should wrap deployNewMesh in withOrgContext and never call selectWorkspace', async () => {
+    it('should wrap deployNewMesh in withOrgContext', async () => {
         const context = createContext();
         await deployFreshMesh(context, createConfig(), meshContext);
 
         expect(mockWithOrgContext).toHaveBeenCalledTimes(1);
         expect(mockDeployNewMesh).toHaveBeenCalledTimes(1);
-        expect(context.authManager.selectWorkspace).not.toHaveBeenCalled();
-        expect(context.authManager.selectOrganization).not.toHaveBeenCalled();
-        expect(context.authManager.selectProject).not.toHaveBeenCalled();
     });
 
     it('should target the project org/project/workspace via withOrgContext', async () => {

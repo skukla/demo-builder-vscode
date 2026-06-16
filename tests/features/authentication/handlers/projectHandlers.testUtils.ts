@@ -29,8 +29,7 @@ export const createMockAuthManager = () => ({
     getCurrentOrganization: jest.fn(),
     getCurrentProject: jest.fn(),
     getOrganizations: jest.fn().mockResolvedValue([]),
-    getProjects: jest.fn(),
-    selectProject: jest.fn()
+    getProjects: jest.fn()
 });
 
 /**

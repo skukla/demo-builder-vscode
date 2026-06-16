@@ -32,10 +32,12 @@ AdobeSetupStep
 │   └── Message Handlers (vscode.onMessage)
 ├── Left Column (Active Step)
 │   ├── Authentication Step
+│   ├── Organization Selection Step
 │   ├── Project Selection Step
 │   └── Workspace Selection Step
 └── Right Column (Summary Panel)
     ├── Authentication Status
+    ├── Organization Selection
     ├── Project Selection
     └── Workspace Selection
 ```
@@ -69,17 +71,19 @@ graph TD
 
 ### Incoming Messages
 - `auth-status`: Authentication state updates
+- `organizations`: List of selectable Adobe organizations
 - `projects`: List of available projects
 - `workspaces`: List of available workspaces
 
 ### Outgoing Messages
 - `check-auth`: Request authentication status
-- `authenticate`: Initiate login (with force flag for switching)
-- `get-projects`: Request projects for organization
-- `get-workspaces`: Request workspaces for project
-- `select-organization`: Persist org selection
-- `select-project`: Persist project selection
-- `select-workspace`: Persist workspace selection
+- `authenticate`: Initiate login (with force flag for switching accounts)
+- `get-organizations`: Request the in-app organization list
+- `get-projects`: Request projects for the selected organization
+- `get-workspaces`: Request workspaces for the selected project
+- `select-org`: Establish org-context targeting for the chosen org (per-invocation env; no global `aio console` mutation, no re-login)
+- `select-project`: Validate the project is reachable and ack the selection (targeted per operation; no global mutation)
+- `select-workspace`: Validate and ack the workspace selection (no global mutation)
 
 ## Key Features
 

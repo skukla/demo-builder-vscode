@@ -116,16 +116,12 @@ export async function handleCheckApiMesh(
     // it WITHOUT clobbering other processes. The explicit --workspaceId flag is
     // kept on the download command.
     //
-    // Try to get org/projectId from:
-    // 1. Payload (provided by wizard in edit/create mode)
-    // 2. Current project (for dashboard/other contexts)
-    let effectiveProjectId = projectId;
-    let effectiveOrgId: string | undefined;
-    if (!effectiveProjectId || !effectiveOrgId) {
-        const project = await context.stateManager.getCurrentProject();
-        effectiveProjectId = effectiveProjectId ?? project?.adobe?.projectId;
-        effectiveOrgId = project?.adobe?.organization;
-    }
+    // Resolve targeting context. projectId may come from the payload (wizard
+    // edit/create mode); the org is only known from the current project, so we
+    // always read it from there (falling back to the project for projectId too).
+    const project = await context.stateManager.getCurrentProject();
+    const effectiveProjectId = projectId ?? project?.adobe?.projectId;
+    const effectiveOrgId = project?.adobe?.organization;
 
     if (!effectiveProjectId) {
         context.logger.warn('[Mesh Setup] Missing projectId - cannot target workspace context, check may fail');

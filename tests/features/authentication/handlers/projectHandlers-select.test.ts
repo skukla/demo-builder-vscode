@@ -61,9 +61,8 @@ describe('projectHandlers - Selection', () => {
 
             expect(result.success).toBe(true);
             // Phase 4a: selection is webview state threaded per-op; the handler
-            // validates org reachability via ensureOrgContext but MUST NOT mutate
-            // the shared `aio` global via selectProject.
-            expect(mockContext.authManager.selectProject).not.toHaveBeenCalled();
+            // validates org reachability via ensureOrgContext but does not mutate
+            // the shared `aio` global.
             expect(mockContext.sendMessage).toHaveBeenCalledWith('projectSelected', { projectId });
         });
 
@@ -82,7 +81,6 @@ describe('projectHandlers - Selection', () => {
             await expect(handleSelectProject(mockContext, { projectId })).rejects.toThrow(
                 'No organization selected'
             );
-            expect(mockContext.authManager.selectProject).not.toHaveBeenCalled();
         });
 
         it('should reject invalid project ID', async () => {
@@ -96,7 +94,6 @@ describe('projectHandlers - Selection', () => {
                 'Invalid project ID'
             );
 
-            expect(mockContext.authManager.selectProject).not.toHaveBeenCalled();
             expect(mockContext.logger.error).toHaveBeenCalledWith(
                 '[Project] Invalid project ID',
                 validationError
@@ -110,12 +107,9 @@ describe('projectHandlers - Selection', () => {
             mockContext.authManager.getOrganizations.mockResolvedValue([
                 { id: 'different-org', code: 'D', name: 'Different' },
             ]);
-            mockContext.authManager.selectProject.mockResolvedValue(true);
 
             await expect(handleSelectProject(mockContext, { projectId })).rejects.toThrow();
 
-            // Must NOT proceed to select the project under a wrong-org context.
-            expect(mockContext.authManager.selectProject).not.toHaveBeenCalled();
             const errorCall = mockContext.sendMessage.mock.calls.find(
                 (c: unknown[]) => c[0] === 'error',
             );
@@ -134,7 +128,6 @@ describe('projectHandlers - Selection', () => {
             const result = await handleSelectProject(mockContext, { projectId });
 
             expect(result.success).toBe(true);
-            expect(mockContext.authManager.selectProject).not.toHaveBeenCalled();
             expect(mockContext.sendMessage).toHaveBeenCalledWith('projectSelected', { projectId });
         });
 

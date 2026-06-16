@@ -94,7 +94,9 @@ The dashboard is designed for at-a-glance status monitoring and one-click action
 **Operations**:
 1. Update UI to 'authenticating' state
 2. Trigger browser authentication
-3. Auto-select project's organization
+3. Restore project context (login only; org/project/workspace are NOT re-pinned
+   to the aio global — each subsequent op targets them per-invocation via
+   `withOrgContext`)
 4. Re-check mesh status with fresh auth
 5. Update dashboard with new status
 

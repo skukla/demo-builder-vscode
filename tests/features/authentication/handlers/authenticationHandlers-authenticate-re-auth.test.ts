@@ -80,7 +80,6 @@ describe('authenticationHandlers - handleAuthenticate - Re-authentication', () =
 			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
 			(mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
 			(mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-			(mockContext.authManager!.selectOrganization as jest.Mock).mockResolvedValue(true);
 			(mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
 			const result = await handleAuthenticate(mockContext, { force: true });
@@ -92,7 +91,6 @@ describe('authenticationHandlers - handleAuthenticate - Re-authentication', () =
 		it('should send "opening browser" message with force flag text', async () => {
 			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
 			(mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
-			(mockContext.authManager!.validateAndClearInvalidOrgContext as jest.Mock).mockResolvedValue(undefined);
 			(mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
 			(mockContext.authManager!.testDeveloperPermissions as jest.Mock).mockResolvedValue({
 				hasPermissions: true,

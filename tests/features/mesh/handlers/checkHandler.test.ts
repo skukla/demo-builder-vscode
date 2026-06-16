@@ -87,9 +87,7 @@ describe('checkHandler - Security Tests (Step 2)', () => {
                     },
                 }),
             } as any,
-            authManager: {
-                selectWorkspace: jest.fn().mockResolvedValue(true),
-            } as any,
+            authManager: {} as any,
             sharedState: {
                 apiServicesConfig: {
                     services: {
@@ -255,15 +253,13 @@ describe('checkHandler - Security Tests (Step 2)', () => {
     });
 
     describe('Org-Context Targeting (Phase 4a)', () => {
-        it('should wrap the aio operations in withOrgContext and never call selectWorkspace', async () => {
+        it('should wrap the aio operations in withOrgContext', async () => {
             await handleCheckApiMesh(mockContext, {
                 workspaceId: 'workspace-123',
                 projectId: 'proj-456',
             });
 
             expect(mockWithOrgContext).toHaveBeenCalled();
-            // The shared `aio` global is never mutated via the ambient workspace set.
-            expect((mockContext.authManager as any).selectWorkspace).not.toHaveBeenCalled();
         });
 
         it('should target the workspace via withOrgContext using payload projectId', async () => {

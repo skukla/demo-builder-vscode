@@ -542,8 +542,10 @@ await authManager.ensureSDKInitialized();
 const orgs = await sdk.getOrganizations(); // SDK call
 const projects = await sdk.getProjects(orgId); // SDK call
 
-// CLI for configuration writes (SDK doesn't support)
-await execCommand('aio console org select', [orgId]);
+// Org/project/workspace targeting is per-invocation, not a global CLI mutation.
+// The extension sets AIO_CONSOLE_* env for the duration of each operation via
+// withOrgContext; it does NOT run `aio console org select`.
+await withOrgContext({ orgId, projectId, workspaceId }, () => runMeshCheck());
 ```
 
 **Performance Comparison**:

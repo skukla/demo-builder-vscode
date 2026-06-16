@@ -42,9 +42,9 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     'get-projects': TIMEOUTS.NORMAL,                 // 30s - fetch project list from Adobe
     'get-workspaces': TIMEOUTS.NORMAL,               // 30s - fetch workspace list from Adobe
 
-    // Project/workspace selection (write operations)
-    'select-project': TIMEOUTS.NORMAL,               // 30s - write selected project to config
-    'select-workspace': TIMEOUTS.NORMAL,             // 30s - write selected workspace to config
+    // Project/workspace selection (validate reachability + ack; no global aio mutation)
+    'select-project': TIMEOUTS.NORMAL,               // 30s - validate project reachable, then ack
+    'select-workspace': TIMEOUTS.NORMAL,             // 30s - validate workspace, then ack
 
     // API Mesh operations
     'check-api-mesh': TIMEOUTS.AUTH.BROWSER,         // 60s - workspace download + mesh describe

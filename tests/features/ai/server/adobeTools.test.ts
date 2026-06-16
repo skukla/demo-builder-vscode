@@ -45,9 +45,6 @@ function makeAuth(overrides: Record<string, unknown> = {}) {
         getWorkspaces: jest.fn(async () => [{ id: 'ws-1', name: 'Stage' }]),
         getCurrentOrganization: jest.fn(async () => ({ id: 'org-1', name: 'Org One' })),
         getCurrentProject: jest.fn(async () => ({ id: 'proj-1', name: 'Proj One' })),
-        selectOrganization: jest.fn(async () => true),
-        selectProject: jest.fn(async () => true),
-        selectWorkspace: jest.fn(async () => true),
         ...overrides,
     };
 }
@@ -83,9 +80,7 @@ describe('registerAdobeTools', () => {
         const server = fakeServer();
         registerAdobeTools(server, ctxFactoryWith(auth));
         const res = await server.call('select_org', { orgId: 'org-2' });
-        // INVARIANT: no global mutation
-        expect(auth.selectOrganization).not.toHaveBeenCalled();
-        // persists the full {id, code, name} to the session store
+        // persists the full {id, code, name} to the session store (no global mutation)
         expect(getAdobeTarget()).toEqual({ orgId: 'org-2', orgCode: 'C2@AdobeOrg', orgName: 'Org Two' });
         expect(res).toMatchObject({ selected: { org: 'org-2' } });
     });
@@ -95,7 +90,6 @@ describe('registerAdobeTools', () => {
         const server = fakeServer();
         registerAdobeTools(server, ctxFactoryWith(auth));
         const res = await server.call('select_org', { orgId: 'nope' });
-        expect(auth.selectOrganization).not.toHaveBeenCalled();
         expect(getAdobeTarget()).toBeUndefined();
         expect(res.error).toMatch(/Unknown orgId/);
         expect(res.validOptions.map((o: { id: string }) => o.id)).toEqual(['org-1', 'org-2']);
@@ -120,8 +114,7 @@ describe('registerAdobeTools', () => {
         // a prior select_org persisted the org target
         setAdobeTarget({ orgId: 'org-1', orgCode: 'C1@AdobeOrg', orgName: 'Org One' });
         const res = await server.call('select_project', { projectId: 'proj-1' });
-        expect(auth.selectProject).not.toHaveBeenCalled();
-        // the org context carries forward; project subkeys are merged in
+        // the org context carries forward; project subkeys are merged in (no global mutation)
         expect(getAdobeTarget()).toMatchObject({
             orgId: 'org-1',
             projectId: 'proj-1',
@@ -147,7 +140,6 @@ describe('registerAdobeTools', () => {
         registerAdobeTools(server, ctxFactoryWith(auth));
         setAdobeTarget({ orgId: 'org-1', projectId: 'proj-1', projectName: 'Proj One' });
         const res = await server.call('select_workspace', { workspaceId: 'ws-1' });
-        expect(auth.selectWorkspace).not.toHaveBeenCalled();
         expect(getAdobeTarget()).toMatchObject({
             orgId: 'org-1',
             projectId: 'proj-1',
@@ -163,7 +155,6 @@ describe('registerAdobeTools', () => {
         registerAdobeTools(server, ctxFactoryWith(auth));
         const res = await server.call('select_project', { projectId: 'proj-1' });
         expect(res.error).toMatch(/select_org first/);
-        expect(auth.selectProject).not.toHaveBeenCalled();
         expect(getAdobeTarget()).toBeUndefined();
     });
 
@@ -174,7 +165,6 @@ describe('registerAdobeTools', () => {
         setAdobeTarget({ orgId: 'org-1' });
         const res = await server.call('select_workspace', { workspaceId: 'ws-1' });
         expect(res.error).toMatch(/select_project first/);
-        expect(auth.selectWorkspace).not.toHaveBeenCalled();
     });
 
     it('list_adobe_projects passes the stored org to getProjects when a target is set', async () => {

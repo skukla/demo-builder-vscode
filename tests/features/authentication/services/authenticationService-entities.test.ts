@@ -75,12 +75,9 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
             getCurrentWorkspace: jest.fn().mockResolvedValue(mockWorkspace),
             getCurrentContext: jest.fn().mockResolvedValue({ org: mockOrg, project: mockProject, workspace: mockWorkspace }),
         };
-        mockSelector = {
-            selectOrganization: jest.fn().mockResolvedValue(true),
-            selectProject: jest.fn().mockResolvedValue(true),
-            selectWorkspace: jest.fn().mockResolvedValue(true),
-            autoSelectOrganizationIfNeeded: jest.fn().mockResolvedValue(undefined),
-        };
+        // Selector retains only non-mutating helpers post org-context refactor;
+        // the global-mutating select* wrappers were removed.
+        mockSelector = {};
 
         // Mock constructors
         (AdobeSDKClient as jest.MockedClass<typeof AdobeSDKClient>).mockImplementation(() => mockSDKClient);
@@ -155,21 +152,18 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
             } as any);
         });
 
-        it('should NOT re-pin org/project/workspace via select* after login', async () => {
+        it('should succeed after login when restoring project context', async () => {
             const result = await authService.loginAndRestoreProjectContext({
                 organization: 'org123',
                 projectId: 'proj123',
                 workspace: 'ws123',
             });
 
-            expect(result).toBe(true);
             // Phase 4a: per-op env targeting handles context; no global mutation.
-            expect(mockSelector.selectOrganization).not.toHaveBeenCalled();
-            expect(mockSelector.selectProject).not.toHaveBeenCalled();
-            expect(mockSelector.selectWorkspace).not.toHaveBeenCalled();
+            expect(result).toBe(true);
         });
 
-        it('should return false when login fails (no select* attempted)', async () => {
+        it('should return false when login fails', async () => {
             mockCommandExecutor.execute.mockResolvedValue({
                 code: 1, stdout: '', stderr: 'login failed', duration: 0,
             } as any);
@@ -179,7 +173,6 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
             });
 
             expect(result).toBe(false);
-            expect(mockSelector.selectOrganization).not.toHaveBeenCalled();
         });
     });
 });

@@ -36,9 +36,6 @@ jest.mock('@/core/shell', () => ({
         mockWithOrgContext(target, fn),
 }));
 
-const mockSelectOrganization = jest.fn().mockResolvedValue(undefined);
-const mockSelectProject = jest.fn().mockResolvedValue(undefined);
-const mockSelectWorkspace = jest.fn().mockResolvedValue(undefined);
 
 jest.mock('vscode', () => ({
     window: { showWarningMessage: jest.fn(), showInformationMessage: jest.fn() },
@@ -58,9 +55,6 @@ jest.mock('@/core/di', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({
             isAuthenticated: jest.fn().mockResolvedValue(true),
-            selectOrganization: mockSelectOrganization,
-            selectProject: mockSelectProject,
-            selectWorkspace: mockSelectWorkspace,
             loginAndRestoreProjectContext: jest.fn().mockResolvedValue(true),
             getCachedOrganization: jest.fn().mockReturnValue(undefined),
         })),
@@ -284,11 +278,6 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
         expect(mockEnsureAdobeIOAuth).toHaveBeenCalledTimes(1);
         const authIdx = callOrder.indexOf('ensureAdobeIOAuth');
         expect(authIdx).toBeLessThan(callOrder.indexOf('withOrgContext'));
-
-        // And: the shared `aio` global is NEVER mutated via select*
-        expect(mockSelectOrganization).not.toHaveBeenCalled();
-        expect(mockSelectProject).not.toHaveBeenCalled();
-        expect(mockSelectWorkspace).not.toHaveBeenCalled();
     });
 
     it('should target the project org/project/workspace via withOrgContext', async () => {
@@ -374,9 +363,6 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
         expect(result.meshRedeployed).toBe(false);
         expect(result.error).toContain('authentication');
         expect(result.errorType).toBe('MESH_REDEPLOY_FAILED');
-
-        // And: Should NOT call selectOrganization (auth failed before it)
-        expect(mockSelectOrganization).not.toHaveBeenCalled();
     });
 
     it('should not call ensureAdobeIOAuth when redeployMesh is false', async () => {

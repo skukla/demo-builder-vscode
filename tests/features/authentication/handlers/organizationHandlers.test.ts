@@ -51,7 +51,6 @@ const createMockContext = (cacheManager: MockCacheManager) => {
         getCacheManager: jest.fn().mockReturnValue(cacheManager),
         // GUARD: must never be called by these handlers
         login: jest.fn(),
-        selectOrganization: jest.fn(),
     };
     return {
         authManager,
@@ -155,7 +154,6 @@ describe('organizationHandlers', () => {
 
             expect(result.success).toBe(true);
             expect(context.authManager.login).not.toHaveBeenCalled();
-            expect(context.authManager.selectOrganization).not.toHaveBeenCalled();
             const sent = context.sendMessage.mock.calls.find((c: unknown[]) => c[0] === 'select-org');
             expect(sent).toBeDefined();
             expect((sent![1] as { status?: string }).status).toBe('ok');
@@ -172,7 +170,6 @@ describe('organizationHandlers', () => {
             expect(result.code).toBe(ErrorCode.ORG_MISMATCH);
             // The handler must NEVER force re-login itself; the UI decides.
             expect(context.authManager.login).not.toHaveBeenCalled();
-            expect(context.authManager.selectOrganization).not.toHaveBeenCalled();
             const sent = context.sendMessage.mock.calls.find((c: unknown[]) => c[0] === 'select-org');
             const payload = sent![1] as { status?: string; code?: string; targetOrg?: { id: string } };
             expect(payload.status).toBe('needs_relogin');
@@ -180,15 +177,6 @@ describe('organizationHandlers', () => {
             expect(payload.targetOrg).toEqual({ id: 'missing' });
         });
 
-        it('never runs `aio console org select` regardless of outcome', async () => {
-            context.authManager.getOrganizations.mockResolvedValue([
-                { id: 'o1', code: 'C1', name: 'E', type: 'entp' },
-            ]);
-
-            await handleSelectOrg(context, { orgId: 'o1' });
-
-            expect(context.authManager.selectOrganization).not.toHaveBeenCalled();
-        });
     });
 
     describe('handleReDetectContext', () => {

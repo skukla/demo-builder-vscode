@@ -34,8 +34,7 @@ describe('workspaceHandlers', () => {
         // Mock authentication manager
         mockAuthManager = {
             getCurrentProject: jest.fn(),
-            getWorkspaces: jest.fn(),
-            selectWorkspace: jest.fn()
+            getWorkspaces: jest.fn()
         };
 
         // Create mock context
@@ -216,8 +215,7 @@ describe('workspaceHandlers', () => {
 
             expect(result.success).toBe(true);
             // Phase 4a: the selection lives in webview state and is threaded
-            // per-op; the handler MUST NOT mutate the shared `aio` global.
-            expect(mockAuthManager.selectWorkspace).not.toHaveBeenCalled();
+            // per-op; the handler does not mutate the shared `aio` global.
             expect(mockContext.sendMessage).toHaveBeenCalledWith('workspaceSelected', {
                 workspaceId
             });
@@ -242,7 +240,6 @@ describe('workspaceHandlers', () => {
                 'Invalid workspace ID'
             );
 
-            expect(mockAuthManager.selectWorkspace).not.toHaveBeenCalled();
             expect(mockContext.logger.error).toHaveBeenCalledWith(
                 '[Workspace] Invalid workspace ID',
                 validationError
@@ -264,7 +261,6 @@ describe('workspaceHandlers', () => {
             const result = await handleSelectWorkspace(mockContext, { workspaceId });
 
             expect(result.success).toBe(true);
-            expect(mockAuthManager.selectWorkspace).not.toHaveBeenCalled();
         });
 
         it('should fail if no project is selected (drift guard)', async () => {
@@ -274,7 +270,6 @@ describe('workspaceHandlers', () => {
             await expect(handleSelectWorkspace(mockContext, { workspaceId })).rejects.toThrow(
                 'No project selected'
             );
-            expect(mockAuthManager.selectWorkspace).not.toHaveBeenCalled();
         });
     });
 
@@ -302,7 +297,6 @@ describe('workspaceHandlers', () => {
 
             const selectResult = await handleSelectWorkspace(mockContext, { workspaceId: 'ws-1' });
             expect(selectResult.success).toBe(true);
-            expect(mockAuthManager.selectWorkspace).not.toHaveBeenCalled();
         });
 
         it('should handle project change invalidating workspace cache', async () => {
@@ -435,7 +429,7 @@ describe('workspaceHandlers', () => {
     });
 
     describe('No Global Mutation', () => {
-        it('should accept the selection without calling selectWorkspace', async () => {
+        it('should accept the selection and ack via sendMessage', async () => {
             const workspaceId = 'ws-123';
             (securityValidation.validateWorkspaceId as jest.Mock).mockImplementation(() => {});
             mockAuthManager.getCurrentProject.mockResolvedValue({
@@ -448,7 +442,9 @@ describe('workspaceHandlers', () => {
 
             // Phase 4a: selection is webview state; no shared `aio` global mutation.
             expect(result.success).toBe(true);
-            expect(mockAuthManager.selectWorkspace).not.toHaveBeenCalled();
+            expect(mockContext.sendMessage).toHaveBeenCalledWith('workspaceSelected', {
+                workspaceId
+            });
         });
     });
 });
