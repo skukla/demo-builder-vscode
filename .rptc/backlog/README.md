@@ -26,9 +26,9 @@ draft  →  ready  →  active  →  shipped/dropped
 
 ## Active backlog
 
-### Adobe org-context self-heal consolidation ([`2026-06-15-adobe-org-context-self-heal-consolidation.md`](2026-06-15-adobe-org-context-self-heal-consolidation.md))
+### Adobe org-context: canonical self-heal + concurrency safety + agentic signaling ([`2026-06-15-adobe-org-context-self-heal-consolidation.md`](2026-06-15-adobe-org-context-self-heal-consolidation.md))
 
-The "real fix" for the org-mismatch dead-end ("configured for a different organization … run `aio console org select` in your terminal"). Org-context correction is implemented ~5 different ways across the app and the projects-fetch path got none — that omission is the bug. Consolidate to ONE canonical `ensureOrgContext` helper (silent `aio console org select` + retry → escalate to in-app re-login → "pick a different org"), route all entity fetches through it, and delete the bespoke variants. Includes the research verdict (IMS token is identity-scoped, not org-scoped → org-select with the existing token is the proper fix; re-login is the fallback). **Next-priority backlog item.**
+The "real fix" for the org-mismatch dead-end ("configured for a different organization … run `aio console org select` in your terminal"), **broadened 2026-06-16** to the multi-agent/multi-org root cause. `aio`'s org context is a process-global + a single identity-scoped token; the builder steers through it with ~5 bespoke correction variants, no serialization across select→command, and no typed error when the global is wrong. Three workstreams: (A) ONE canonical `ensureOrgContext(orgId)` returning a typed result (self-heal `aio console org select` + retry → FORCE re-login incl. when the target org is absent from the selectable list → "pick a different org"), routed through all entity fetches + every MCP tool; (B) concurrency safety — re-pin under an exclusive lock spanning select→command, and/or per-project `aio` config isolation; (C) human org-picker (real `get-organizations`/`select-org`, not force-login-only) + typed non-retryable `ORG_MISMATCH` for agents + AGENTS.md/skills guidance. Live-reproduced via two agents in two orgs clobbering each other. **FIX-FIRST: must land on `develop` before the App-Builder-deployable + workspace work (`.rptc/research/adobe-io-deployable-workspace/`) continues.**
 
 ### Multi-locale storefront — Phase 1 ([`2026-05-19-multisite-multilocale.md`](2026-05-19-multisite-multilocale.md))
 
@@ -44,9 +44,9 @@ Numbers-first measurement pass to map the codebase's actual size, complexity, an
 
 Downstream of the structural baseline — the baseline will probably surface higher-leverage trim targets, and the legacy items may rank lower than they appear today.
 
-### App Builder attach feature (supersedes 1b) + discovery least-privilege token ([`2026-06-15-integration-service-cleanup-and-discovery-token.md`](2026-06-15-integration-service-cleanup-and-discovery-token.md))
+### App Builder attach feature (supersedes 1b) ([`2026-06-15-integration-service-cleanup-and-discovery-token.md`](2026-06-15-integration-service-cleanup-and-discovery-token.md))
 
-Effort 1 (remove dormant `integration-service` + the `appBuilderApps` mechanism) **shipped** on `develop`. Remaining: **(seed)** a fast-follow feature to attach 1+ user-supplied App Builder projects to any project — this **supersedes the old Effort 1b cleanup**, which would have removed the very `appBuilder` selection plumbing the feature needs (repurpose, don't delete). **(Effort 2, gated)** replace PaaS store discovery's admin username/password with a scoped Commerce integration token — **sequenced AFTER the attach feature** (which may re-introduce admin-cred consumers and undo Effort 2's "sole consumer" premise). Full admin-cred consumer map + `edsHandlers.ts` code note included.
+Effort 1 (remove dormant `integration-service` + the `appBuilderApps` mechanism) **shipped** on `develop`. **Active seed:** a feature to add 1+ App Builder apps to a demo project (**Model A** — user-supplied git repos deployed via `aio app deploy` into the demo's existing workspace; the Mesh lifecycle, multiplied). Supersedes the old Effort 1b cleanup (repurpose the `appBuilder` selection plumbing, don't delete). **Effort 2 (discovery least-privilege token): DECLINED 2026-06-15** — no attacker exposure it would close; the residual is at-rest plaintext a token shares and doesn't fix; not worth the per-demo setup friction. (If at-rest ever matters, the cheap fix is VS Code Secret Storage, not a token.)
 
 ### Helix `previewCode` race ([`2026-05-21-helix-previewcode-race.md`](2026-05-21-helix-previewcode-race.md))
 

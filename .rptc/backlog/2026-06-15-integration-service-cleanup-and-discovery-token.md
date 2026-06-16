@@ -142,27 +142,24 @@ projectAppBuilderPredicate for Developer-role gating. Settle app-source (user UR
 placement (wizard/dashboard) in planning. See
 .rptc/backlog/2026-06-15-integration-service-cleanup-and-discovery-token.md (Feature seed)."`
 
-## Effort 2 — Store-discovery least-privilege token (GATED: after the App Builder attach feature)
+## Effort 2 — Store-discovery least-privilege token — DECLINED (2026-06-15)
 
-**Sequencing (decided 2026-06-15):** do the App Builder attach feature FIRST, then Effort 2.
-Effort 2's clean case depends on store discovery being the *sole* admin-credential consumer. The
-attach feature likely re-introduces admin-cred consumers (attached App Builder projects that call
-Commerce admin APIs, as the old integration-service did via `lib/commerce/auth.js`). Settle that
-feature's credential model before swapping discovery to a token — otherwise this is churn (swap to
-token, then need admin user/pass back) or a half-measure (token + user/pass coexisting). Revisit
-the "sole consumer" premise once the attach feature lands.
+**Decision: declined.** Evaluated and dropped. Keep PaaS admin username/password for store discovery.
 
-Once store discovery is confirmed the sole admin-cred consumer, a scoped
-**Commerce integration access token** (Bearer) can cleanly replace admin username/password:
-- Replace the backend's `ADOBE_COMMERCE_ADMIN_USERNAME/PASSWORD` with e.g.
-  `ADOBE_COMMERCE_API_TOKEN` (components.json, envVarKeys, serviceGroupTransforms, wizard fields)
-- `StoreDiscoveryParams` / `DiscoverStoreStructurePayload` / `FetchStoresParams`: carry the token
-- `commerceStoreDiscovery.ts`: use the token directly as Bearer; delete `getAdminToken` (no minting)
-- `useAutoStoreDetect`: gate `autoDetectKey` on URL + token; pass the token
-- The deferred-token NOTE in `edsHandlers.ts handleDiscoverStoreStructure` points here
+Rationale: there is **no attacker exposure a token would close**. The shipped fix's security review
+returned 0 findings; creds are gitignored (never in the public repo), cross webview↔extension via
+in-process IPC (not network), reach Commerce over HTTPS only, and are never logged. The only
+residual is **plaintext-at-rest in `.env`** — which a Bearer token *shares* (also at rest) and does
+NOT fix; a token only reduces blast radius on an already-compromised machine. Against that marginal
+gain, a token forces every demo creator to manually create a Commerce Integration (System →
+Integrations) — real, recurring friction for a fast-setup demo tool. Not worth it. ACCS is
+unaffected (already IMS OAuth, no admin password). Decision recorded in the `edsHandlers.ts`
+`handleDiscoverStoreStructure` PaaS branch comment.
 
-Trade-off: least-privilege + no admin password at rest, at the cost of user setup (create an
-integration in Commerce admin). Confirm no other future consumer needs admin user/pass first.
+**Cheaper future hardening if at-rest plaintext ever matters (NOT a token):** move admin
+username/password to **VS Code Secret Storage** (OS keychain, encrypted, zero extra user steps).
+Store discovery is the only consumer, so the creds may not need to live in `.env` at all. Capture
+as a separate item only if the at-rest residual becomes a real concern.
 
 ## Constraints
 

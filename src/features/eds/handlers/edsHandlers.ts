@@ -236,11 +236,11 @@ export async function handleDiscoverStoreStructure(
             // Credentials arrive in the discovery payload (self-contained request).
             // The service rejects empty credentials with a user-facing message.
             //
-            // NOTE (least-privilege, deferred): store discovery is now the only consumer
-            // of the admin username/password (the integration-service component that also
-            // required them has been removed). A scoped Commerce integration token could
-            // replace username/password here — see the token follow-up (Effort 2) in
-            // .rptc/backlog/2026-06-15-integration-service-cleanup-and-discovery-token.md.
+            // NOTE: admin username/password is the deliberate model for PaaS discovery.
+            // A scoped Commerce integration token was evaluated and DECLINED (2026-06-15):
+            // no attacker exposure it would close (creds are gitignored, in-process IPC,
+            // HTTPS-only, never logged), and it adds real per-demo setup friction. The only
+            // residual is plaintext-at-rest in .env, which a token shares and does not fix.
             params.username = payload.username || undefined;
             params.password = payload.password || undefined;
         } else {
