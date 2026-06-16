@@ -136,3 +136,31 @@ describe('StoreConfigFieldRow — website-code branch (no layout shift)', () => 
         expect(screen.queryByTestId('store-selection-row')).not.toBeInTheDocument();
     });
 });
+
+describe('StoreConfigFieldRow — GraphQL endpoint is a connection field (no reveal-on-paste jump)', () => {
+    const PAAS_GRAPHQL_ENDPOINT = 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT';
+    const paasGroup: ServiceGroup = {
+        id: 'adobe-commerce',
+        label: 'Adobe Commerce',
+        fields: [makeField(PAAS_GRAPHQL_ENDPOINT)],
+    };
+
+    // Regression: the PaaS GraphQL endpoint lives in the 'adobe-commerce' store group
+    // and is auto-derived from the URL. It must render from the start (like the URL and
+    // admin credentials), not pop in once credentials complete autoDetectKey — that
+    // mid-form insertion caused a layout jump.
+    it('renders the PaaS GraphQL endpoint immediately, before autoDetectKey is set', () => {
+        render(
+            <StoreConfigFieldRow
+                {...buildProps({
+                    field: makeField(PAAS_GRAPHQL_ENDPOINT),
+                    group: paasGroup,
+                    autoDetectKey: undefined,
+                    isStoreGroup: (id: string) => id === 'adobe-commerce',
+                })}
+            />,
+        );
+
+        expect(screen.getByTestId(`config-field-${PAAS_GRAPHQL_ENDPOINT}`)).toBeInTheDocument();
+    });
+});
