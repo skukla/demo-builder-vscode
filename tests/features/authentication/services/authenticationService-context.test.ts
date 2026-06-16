@@ -6,7 +6,6 @@ import {
     createMockLogger,
     createMockStepLogger,
     createSuccessResult,
-    createFailureResult,
     createOrgContextResult,
     createValidTokenResult,
     createProjectListResult,
@@ -88,21 +87,9 @@ describe('AuthenticationService - Context Validation and SDK', () => {
     });
 
     describe('org context validation', () => {
-        it('should validate and clear invalid org when app list fails', async () => {
-            // Given: Valid context but app list will fail
-            mockCommandExecutor.execute
-                .mockResolvedValueOnce(createOrgContextResult())
-                .mockResolvedValueOnce(createFailureResult('Error: Cannot list apps'));
-
-            // When: validating org context
-            await authService.validateAndClearInvalidOrgContext();
-
-            // Then: should have attempted validation
-            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
-                'aio console where --json',
-                expect.any(Object)
-            );
-        });
+        // Phase 4a: the ambient `validateAndClearInvalidOrgContext` wrapper was
+        // removed (org context is no longer a mutated global to validate/clear).
+        // Org reachability is now resolved per-op via ensureOrgContext.
 
         it('should test developer permissions via app list', async () => {
             // Given: Valid org with apps

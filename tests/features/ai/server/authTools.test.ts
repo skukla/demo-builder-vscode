@@ -21,6 +21,7 @@ jest.mock('@/features/eds/handlers/edsHandlers', () => ({
 }));
 
 import { registerAuthTools } from '@/features/ai/server/authTools';
+import { clearAdobeTarget, getAdobeTarget, setAdobeTarget } from '@/features/ai/server/adobeTargetStore';
 import { getGitHubServices, showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -57,7 +58,10 @@ function makeCtxFactory(adobeAuthed = true): () => HandlerContext {
 }
 
 describe('registerAuthTools', () => {
-    beforeEach(() => jest.clearAllMocks());
+    beforeEach(() => {
+        jest.clearAllMocks();
+        clearAdobeTarget();
+    });
 
     it('get_auth_status reports adobe/github/dalive without side effects', async () => {
         const server = fakeServer();
@@ -98,6 +102,28 @@ describe('registerAuthTools', () => {
         const res = await server.call('sign_in', { provider: 'adobe', confirm: true });
         expect(login).toHaveBeenCalledTimes(1);
         expect(res).toEqual({ provider: 'adobe', success: true });
+    });
+
+    it('sign_in adobe clears the stored MCP target (drops the prior identity)', async () => {
+        // A re-auth may be a switch to a different account, so the previous
+        // identity's org/project/workspace selection must not survive it.
+        setAdobeTarget({ orgId: 'org-old', projectId: 'proj-old', workspaceId: 'ws-old' });
+        const server = fakeServer();
+        registerAuthTools(server, makeCtxFactory(false));
+
+        await server.call('sign_in', { provider: 'adobe', confirm: true });
+
+        expect(getAdobeTarget()).toBeUndefined();
+    });
+
+    it('sign_in github does NOT clear the Adobe target (unrelated provider)', async () => {
+        setAdobeTarget({ orgId: 'org-keep' });
+        const server = fakeServer();
+        registerAuthTools(server, makeCtxFactory(false));
+
+        await server.call('sign_in', { provider: 'github', confirm: true });
+
+        expect(getAdobeTarget()).toEqual({ orgId: 'org-keep' });
     });
 
     it('sign_in github with confirm dispatches the github-oauth handler', async () => {

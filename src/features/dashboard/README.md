@@ -259,10 +259,9 @@ vscode.postMessage({ type: 're-authenticate' });
 const authManager = new AuthenticationService(/*...*/);
 await authManager.login(); // Opens browser
 
-if (project.adobe?.organization) {
-    // Auto-select project's org
-    await authManager.selectOrganization(project.adobe.organization);
-}
+// No manual org selection: the project's org/project/workspace is targeted
+// per operation (from project.adobe) via the internal withOrgContext mechanism,
+// so the extension never mutates the global `aio console` selection.
 
 // Re-check mesh status with fresh auth
 await handleRequestStatus(context);

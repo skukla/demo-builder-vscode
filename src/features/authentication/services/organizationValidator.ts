@@ -1,11 +1,8 @@
 import { getLogger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
-import { toAppError, isTimeout } from '@/types/errors';
 import type { Logger } from '@/types/logger';
-import { parseJSON, toError } from '@/types/typeGuards';
+import { toError } from '@/types/typeGuards';
 
 /**
  * Check if message indicates a permission-related error (SOP §10 compliance)
@@ -21,141 +18,20 @@ function isPermissionError(message: string): boolean {
 }
 
 /**
- * Validates organization access and manages invalid organization contexts
- * Ensures users only work with organizations they have App Builder access to
+ * Validates organization-level capabilities (App Builder developer permissions).
+ *
+ * Phase 4a removed the ambient `validateAndClearInvalidOrgContext` /
+ * `validateOrganizationAccess` flow: org context is no longer a mutated global
+ * to police. Reachability is resolved per-op via `ensureOrgContext` +
+ * `withOrgContext` targeting. Only the developer-permission probe remains.
  */
 export class OrganizationValidator {
     private debugLogger = getLogger();
 
     constructor(
         private commandManager: CommandExecutor,
-        private cacheManager: AuthCacheManager,
         private logger: Logger,
     ) {}
-
-    /**
-     * Validate if the current organization context is accessible
-     * Returns true if org is valid, false otherwise
-     */
-    async validateOrganizationAccess(): Promise<boolean> {
-        try {
-            this.debugLogger.debug('[Org Validator] Validating organization access...');
-
-            // Try to list projects - this will fail with 403 if org is invalid
-            const result = await this.commandManager.execute(
-                'aio console project list --json',
-                { encoding: 'utf8', timeout: TIMEOUTS.NORMAL },
-            );
-
-            // If we get here without error, check the result
-            if (result.code === 0) {
-                this.debugLogger.debug('[Org Validator] Organization access validated (success)');
-                return true;
-            }
-
-            // Check if it's just "no projects" vs access denied
-            if (result.stderr && result.stderr.includes('no Project')) {
-                this.debugLogger.debug('[Org Validator] Organization access validated (no projects)');
-                return true; // Valid org, just no projects
-            }
-
-            // 403 Forbidden or other access errors indicate invalid org
-            this.debugLogger.debug('[Org Validator] Organization access validation failed:', result.stderr);
-            return false;
-        } catch (error) {
-            // Use typed error detection
-            const appError = toAppError(error);
-
-            if (isTimeout(appError)) {
-                this.debugLogger.warn('[Org Validator] Validation timed out - assuming valid (network delay)');
-                return true; // Fail-open: assume org is valid on timeout
-            }
-
-            this.debugLogger.debug('[Org Validator] Validation error:', appError);
-            return false;
-        }
-    }
-
-    /**
-     * Check if we have an org context and validate it, clearing if invalid
-     */
-    async validateAndClearInvalidOrgContext(forceValidation = false): Promise<void> {
-        try {
-            // Check if we have an organization context
-            const result = await this.commandManager.execute(
-                'aio console where --json',
-                { encoding: 'utf8', timeout: TIMEOUTS.NORMAL },
-            );
-
-            if (result.code === 0 && result.stdout) {
-                const context = parseJSON<{ org?: string }>(result.stdout);
-                if (!context) {
-                    this.debugLogger.debug('[Org Validator] Failed to parse console.where response');
-                    return;
-                }
-
-                // Cache the console.where result
-                this.cacheManager.setCachedConsoleWhere(context);
-                this.debugLogger.debug('[Org Validator] Cached console.where result during validation');
-
-                if (context.org) {
-                    // Check if we've validated this org recently
-                    const cachedValidation = this.cacheManager.getValidationCache();
-                    if (!forceValidation && cachedValidation && cachedValidation.org === context.org) {
-                        this.debugLogger.debug(`[Org Validator] Using cached validation for ${context.org}: ${cachedValidation.isValid ? 'valid' : 'invalid'}`);
-
-                        if (!cachedValidation.isValid) {
-                            // Previously determined invalid, clear it
-                            await this.clearConsoleContext();
-                            this.cacheManager.clearAll();
-                        }
-                        return;
-                    }
-
-                    // Log user-friendly message only if actually validating
-                    this.logger.info(`Verifying access to ${context.org}...`);
-                    this.debugLogger.debug(`[Org Validator] Found organization context: ${context.org}, validating access...`);
-
-                    // Validate with retry
-                    let isValid = await this.validateOrganizationAccess();
-                    this.debugLogger.debug(`[Org Validator] First validation result for ${context.org}: ${isValid}`);
-
-                    // If validation failed, retry once
-                    if (!isValid) {
-                        this.logger.info('Retrying organization access validation...');
-                        this.debugLogger.debug('[Org Validator] First validation failed, retrying once...');
-                        isValid = await this.validateOrganizationAccess();
-                        this.debugLogger.debug(`[Org Validator] Second validation result for ${context.org}: ${isValid}`);
-                    }
-
-                    // Cache the validation result
-                    this.cacheManager.setValidationCache(context.org, isValid);
-
-                    if (!isValid) {
-                        // Failed twice - now we clear
-                        this.logger.info('Previous organization no longer accessible. Clearing selection...');
-                        this.debugLogger.warn('[Org Validator] Organization context is invalid - clearing');
-
-                        await this.clearConsoleContext();
-                        this.cacheManager.clearAll();
-
-                        // Set flag to indicate org was cleared due to validation failure
-                        this.cacheManager.setOrgClearedDueToValidation(true);
-                        this.debugLogger.debug(`[Org Validator] Set orgClearedDueToValidation flag for ${context.org}`);
-
-                        this.logger.info('Organization cleared. You will need to select a new organization.');
-                    } else {
-                        this.logger.info(`Successfully verified access to ${context.org}`);
-                        this.debugLogger.debug('[Org Validator] Organization context is valid');
-                    }
-                } else {
-                    this.debugLogger.debug('[Org Validator] No organization context found');
-                }
-            }
-        } catch (error) {
-            this.debugLogger.debug('[Org Validator] Failed to validate organization context:', error);
-        }
-    }
 
     /**
      * Test if the current user has Developer or System Admin permissions
@@ -205,27 +81,6 @@ export class OrganizationValidator {
 
             // If we can't test due to other errors, assume permissions are OK to avoid false negatives
             return { hasPermissions: true };
-        }
-    }
-
-    /**
-     * Clear Adobe CLI console context (org/project/workspace selections)
-     */
-    private async clearConsoleContext(): Promise<void> {
-        try {
-            // Run all three operations in parallel
-            await Promise.all([
-                this.commandManager.execute('aio config delete console.org', { encoding: 'utf8', useNodeVersion: getMeshNodeVersion() }),
-                this.commandManager.execute('aio config delete console.project', { encoding: 'utf8', useNodeVersion: getMeshNodeVersion() }),
-                this.commandManager.execute('aio config delete console.workspace', { encoding: 'utf8', useNodeVersion: getMeshNodeVersion() }),
-            ]);
-
-            // Clear console.where cache since context was cleared
-            this.cacheManager.clearConsoleWhereCache();
-
-            this.debugLogger.debug('[Org Validator] Cleared Adobe CLI console context');
-        } catch (error) {
-            this.debugLogger.debug('[Org Validator] Failed to clear console context:', error);
         }
     }
 }

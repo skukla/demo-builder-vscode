@@ -29,6 +29,11 @@ export type MessageType =
     | 'authenticate'
     | 'ensure-org-selected'
 
+    // Organization messages (in-app org-picker)
+    | 'get-organizations'
+    | 'select-org'
+    | 're-detect-context'
+
     // Project messages
     | 'get-projects'
     | 'select-project'

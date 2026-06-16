@@ -53,6 +53,11 @@ export const projectCreationHandlers = defineHandlers({
     'check-auth': authentication.handleCheckAuth,
     'authenticate': authentication.handleAuthenticate,
 
+    // Organization handlers (in-app org-picker; no forced re-login)
+    'get-organizations': authentication.handleGetOrganizations,
+    'select-org': authentication.handleSelectOrg,
+    're-detect-context': authentication.handleReDetectContext,
+
     // Project handlers
     'ensure-org-selected': authentication.handleEnsureOrgSelected,
     'get-projects': authentication.handleGetProjects,

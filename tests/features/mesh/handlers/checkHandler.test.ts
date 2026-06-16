@@ -9,6 +9,17 @@ import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
 import * as _vscode from 'vscode';
 
+// withOrgContext records the target then runs the callback (no global mutation).
+// buildOrgTargetFromProjectAdobe is pure — use the real implementation.
+const mockWithOrgContext = jest.fn(
+    (_target: unknown, fn: () => Promise<unknown>) => fn(),
+);
+jest.mock('@/core/shell', () => ({
+    ...jest.requireActual('@/core/shell'),
+    withOrgContext: (target: unknown, fn: () => Promise<unknown>) =>
+        mockWithOrgContext(target, fn),
+}));
+
 // Mock dependencies
 jest.mock('@/core/di');
 jest.mock('vscode');
@@ -33,6 +44,8 @@ describe('checkHandler - Security Tests (Step 2)', () => {
         // Mock authentication service
         mockAuthService = {
             isAuthenticated: jest.fn().mockResolvedValue(true),
+            // Org-context targeting reads the cached org to enrich code/name.
+            getCachedOrganization: jest.fn().mockReturnValue(undefined),
         };
 
         // Mock command executor
@@ -68,10 +81,14 @@ describe('checkHandler - Security Tests (Step 2)', () => {
             stateManager: {
                 getCurrentProject: jest.fn().mockResolvedValue({
                     adobe: {
+                        organization: 'test-org-id',
                         projectId: 'test-project-id',
                         workspaceId: 'test-workspace-id',
                     },
                 }),
+            } as any,
+            authManager: {
+                selectWorkspace: jest.fn().mockResolvedValue(true),
             } as any,
             sharedState: {
                 apiServicesConfig: {
@@ -234,6 +251,94 @@ describe('checkHandler - Security Tests (Step 2)', () => {
 
             // Should NOT call execute() if validation fails
             expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('Org-Context Targeting (Phase 4a)', () => {
+        it('should wrap the aio operations in withOrgContext and never call selectWorkspace', async () => {
+            await handleCheckApiMesh(mockContext, {
+                workspaceId: 'workspace-123',
+                projectId: 'proj-456',
+            });
+
+            expect(mockWithOrgContext).toHaveBeenCalled();
+            // The shared `aio` global is never mutated via the ambient workspace set.
+            expect((mockContext.authManager as any).selectWorkspace).not.toHaveBeenCalled();
+        });
+
+        it('should target the workspace via withOrgContext using payload projectId', async () => {
+            await handleCheckApiMesh(mockContext, {
+                workspaceId: 'workspace-123',
+                projectId: 'proj-456',
+            });
+
+            expect(mockWithOrgContext).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    projectId: 'proj-456',
+                    workspaceId: 'workspace-123',
+                }),
+                expect.any(Function),
+            );
+        });
+
+        it('should still pass --workspaceId on the workspace download command', async () => {
+            await handleCheckApiMesh(mockContext, {
+                workspaceId: 'workspace-123',
+                projectId: 'proj-456',
+            });
+
+            const downloadCall = mockCommandExecutor.execute.mock.calls.find(
+                (c: unknown[]) => typeof c[0] === 'string' && (c[0] as string).includes('workspace download'),
+            );
+            expect(downloadCall).toBeDefined();
+            expect(downloadCall[0]).toContain('--workspaceId workspace-123');
+        });
+
+        it('should fall back to current project org/projectId when payload omits projectId', async () => {
+            await handleCheckApiMesh(mockContext, {
+                workspaceId: 'workspace-123',
+            });
+
+            expect(mockWithOrgContext).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    orgId: 'test-org-id',
+                    projectId: 'test-project-id',
+                    workspaceId: 'workspace-123',
+                }),
+                expect.any(Function),
+            );
+        });
+
+        it('should enrich org code/name from the cached org when its id matches', async () => {
+            mockAuthService.getCachedOrganization = jest.fn().mockReturnValue({
+                id: 'test-org-id',
+                code: 'CODE@AdobeOrg',
+                name: 'Acme Inc',
+            });
+
+            await handleCheckApiMesh(mockContext, { workspaceId: 'workspace-123' });
+
+            expect(mockWithOrgContext).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    orgId: 'test-org-id',
+                    orgCode: 'CODE@AdobeOrg',
+                    orgName: 'Acme Inc',
+                }),
+                expect.any(Function),
+            );
+        });
+
+        it('should NOT borrow cached org code/name when the cached org id differs', async () => {
+            mockAuthService.getCachedOrganization = jest.fn().mockReturnValue({
+                id: 'other-org', code: 'OTHER@AdobeOrg', name: 'Other',
+            });
+
+            await handleCheckApiMesh(mockContext, { workspaceId: 'workspace-123' });
+
+            const target = mockWithOrgContext.mock.calls[0][0] as Record<string, unknown>;
+            expect(target.orgId).toBe('test-org-id');
+            expect(target.orgCode).toBeUndefined();
+            expect(target.orgName).toBeUndefined();
         });
     });
 });

@@ -29,6 +29,11 @@ export { withTiming } from './services/performanceTracker';
 // Handlers - Explicit named exports (no wildcards)
 export { handleCheckAuth, handleAuthenticate } from './handlers/authenticationHandlers';
 export {
+    handleGetOrganizations,
+    handleSelectOrg,
+    handleReDetectContext,
+} from './handlers/organizationHandlers';
+export {
     handleEnsureOrgSelected,
     handleGetProjects,
     handleSelectProject,

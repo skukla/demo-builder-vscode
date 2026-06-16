@@ -102,6 +102,33 @@ describe('AdobeAuthStep - Error Handling', () => {
             expect(screen.getByText(/You need Developer or System Admin role/)).toBeInTheDocument();
         });
 
+        it('labels the insufficient-privileges action as an account switch (force-login)', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            const state = {
+                ...baseState,
+                adobeAuth: {
+                    isAuthenticated: false,
+                    isChecking: false,
+                    error: 'no_app_builder_access',
+                    code: ErrorCode.AUTH_NO_APP_BUILDER,
+                },
+            };
+
+            render(
+                <AdobeAuthStep
+                    state={state as WizardState}
+                    updateState={mockUpdateState}
+                    setCanProceed={mockSetCanProceed}
+                />
+            );
+
+            // The genuine account-switch case keeps force-login, clearly labeled.
+            const accountSwitch = screen.getByText('Sign in with a different account');
+            expect(accountSwitch).toBeInTheDocument();
+            await user.click(accountSwitch);
+            expect(mockRequestAuth).toHaveBeenCalledWith(true);
+        });
+
         it('should allow retry on error', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const state = {

@@ -194,6 +194,7 @@ export function filterCompletedStepsForBackwardNav(
 export interface AdobeStepIndices {
     workspaceIndex: number;
     projectIndex: number;
+    orgIndex: number;
 }
 
 /**
@@ -203,6 +204,7 @@ export function getAdobeStepIndices(wizardSteps: WizardStepConfig[]): AdobeStepI
     return {
         workspaceIndex: wizardSteps.findIndex(s => s.id === 'adobe-workspace'),
         projectIndex: wizardSteps.findIndex(s => s.id === 'adobe-project'),
+        orgIndex: wizardSteps.findIndex(s => s.id === 'adobe-org'),
     };
 }
 
@@ -240,6 +242,17 @@ export function computeStateUpdatesForBackwardNav(
         updates.adobeProject = undefined;
         updates.projectsCache = undefined;
         // Also clear workspace since workspaces are project-specific
+        updates.adobeWorkspace = undefined;
+        updates.workspacesCache = undefined;
+    }
+
+    // Clear org and its cache (plus everything downstream) when going before the
+    // org step. Org owns projects → workspaces, so this cascades.
+    if (indices.orgIndex !== -1 && targetIndex < indices.orgIndex) {
+        updates.adobeOrg = undefined;
+        updates.organizationsCache = undefined;
+        updates.adobeProject = undefined;
+        updates.projectsCache = undefined;
         updates.adobeWorkspace = undefined;
         updates.workspacesCache = undefined;
     }

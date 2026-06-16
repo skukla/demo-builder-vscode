@@ -87,18 +87,18 @@ describe('wizardHelpers - navigation', () => {
                 { id: 'adobe-workspace', name: 'Workspace' },
             ];
             const result = getAdobeStepIndices(wizardSteps);
-            expect(result).toEqual({ projectIndex: 1, workspaceIndex: 2 });
+            expect(result).toEqual({ projectIndex: 1, workspaceIndex: 2, orgIndex: -1 });
         });
 
         it('should return -1 for missing steps', () => {
             const wizardSteps: WizardStepConfig[] = [{ id: 'adobe-auth', name: 'Auth' }];
             const result = getAdobeStepIndices(wizardSteps);
-            expect(result).toEqual({ projectIndex: -1, workspaceIndex: -1 });
+            expect(result).toEqual({ projectIndex: -1, workspaceIndex: -1, orgIndex: -1 });
         });
     });
 
     describe('computeStateUpdatesForBackwardNav', () => {
-        const indices = { projectIndex: 1, workspaceIndex: 2 };
+        const indices = { projectIndex: 1, workspaceIndex: 2, orgIndex: -1 };
 
         const createState = (): WizardState => ({
             currentStep: 'review',
@@ -143,7 +143,7 @@ describe('wizardHelpers - navigation', () => {
 
         it('should handle missing step indices', () => {
             const state = createState();
-            const noIndices = { projectIndex: -1, workspaceIndex: -1 };
+            const noIndices = { projectIndex: -1, workspaceIndex: -1, orgIndex: -1 };
             const result = computeStateUpdatesForBackwardNav(state, 'adobe-auth', 0, noIndices);
             expect(Object.keys(result)).toEqual(['currentStep']);
         });

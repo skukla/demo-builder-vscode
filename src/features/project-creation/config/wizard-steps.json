@@ -32,6 +32,15 @@
       }
     },
     {
+      "id": "adobe-org",
+      "name": "Organization Selection",
+      "description": "Select the Adobe organization for your demo.",
+      "enabled": true,
+      "condition": {
+        "requiresAdobeIO": true
+      }
+    },
+    {
       "id": "adobe-project",
       "name": "I/O Project Selection",
       "description": "Select the Adobe I/O project for your demo.",

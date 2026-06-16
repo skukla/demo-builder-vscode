@@ -22,6 +22,11 @@ export function mapOrganizations(data: RawAdobeOrg[]): AdobeOrg[] {
         id: org.id,
         code: org.code,
         name: org.name,
+        // Preserve selectability inputs so the org-picker can reapply the
+        // CLI's filterToSelectableOrgs rule (enterprise ∪ developer-with-RUNTIME)
+        // without an extra fetch. Backward compatible: both are optional.
+        type: org.type,
+        runtime: org.runtime,
     }));
 }
 

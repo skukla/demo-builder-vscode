@@ -5,6 +5,7 @@ import { CommandResultCache } from './commandResultCache';
 import { CommandSequencer } from './commandSequencer';
 import { EnvironmentSetup } from './environmentSetup';
 import { FileWatcher } from './fileWatcher';
+import { buildAioConsoleEnv, getActiveOrgContext } from './orgContextEnv';
 import { PollingService } from './pollingService';
 import { isPortAvailable } from './portChecker';
 import { ResourceLocker } from './resourceLocker';
@@ -93,6 +94,18 @@ export class CommandExecutor {
         if (!finalOptions.shell) {
             finalOptions.shell = DEFAULT_SHELL;
         }
+
+        // Inject per-invocation org-context targeting (AIO_CONSOLE_* env) for the
+        // active org context, if any. This drives `aio` to the target org without
+        // mutating the shared global store. Merged onto finalOptions.env so it
+        // survives applyEnhancedPath's spread. No active context → no targeting
+        // (safe: today's behavior).
+        const activeOrgContext = getActiveOrgContext();
+        if (activeOrgContext) {
+            const orgEnv = buildAioConsoleEnv(activeOrgContext);
+            finalOptions.env = { ...finalOptions.env, ...orgEnv };
+        }
+
         if (options.configureTelemetry === undefined) {
             options.configureTelemetry = false;
         }

@@ -152,33 +152,33 @@ describe('authenticationHandlers - handleAuthenticate - New Authentication', () 
 			expect(mockContext.authManager!.getOrganizations).toHaveBeenCalled();
 		});
 
-		it('should fetch and auto-select single org after login', async () => {
+		it('should fetch and auto-select single org after login (no global mutation)', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
 			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
 			(mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
 			(mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-			(mockContext.authManager!.selectOrganization as jest.Mock).mockResolvedValue(true);
 			(mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
 			const result = await handleAuthenticate(mockContext);
 
 			expect(result.success).toBe(true);
 			expect(mockContext.authManager!.getOrganizations).toHaveBeenCalled();
-			expect(mockContext.authManager!.selectOrganization).toHaveBeenCalledWith(mockOrg.id);
+			// Phase 4a: the auto-selected org is carried in the returned state/cache;
+			// the shared `aio` global is NOT mutated via selectOrganization.
+			expect(mockContext.authManager!.selectOrganization).not.toHaveBeenCalled();
 		});
 
-		it('should auto-select when single organization available', async () => {
+		it('should auto-select when single organization available (cached, not selected)', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
 			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
 			(mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
 			(mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-			(mockContext.authManager!.selectOrganization as jest.Mock).mockResolvedValue(true);
 			(mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
 			await handleAuthenticate(mockContext);
 
-			// Single org is auto-selected
-			expect(mockContext.authManager!.selectOrganization).toHaveBeenCalledWith(mockOrg.id);
+			// Single org is auto-selected: cached + carried in state, never selected.
+			expect(mockContext.authManager!.selectOrganization).not.toHaveBeenCalled();
 			expect(mockContext.authManager!.setCachedOrganization).toHaveBeenCalledWith(mockOrg);
 		});
 

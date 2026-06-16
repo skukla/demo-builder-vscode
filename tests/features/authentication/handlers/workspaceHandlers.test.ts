@@ -209,24 +209,22 @@ describe('workspaceHandlers', () => {
             });
         });
 
-        it('should select workspace successfully', async () => {
+        it('should accept the workspace selection without mutating the aio global', async () => {
             const workspaceId = 'ws-123';
-            mockAuthManager.selectWorkspace.mockResolvedValue(true);
 
             const result = await handleSelectWorkspace(mockContext, { workspaceId });
 
             expect(result.success).toBe(true);
-            // selectWorkspace requires projectId for context guard
-            expect(mockAuthManager.selectWorkspace).toHaveBeenCalledWith(workspaceId, 'proj-123');
+            // Phase 4a: the selection lives in webview state and is threaded
+            // per-op; the handler MUST NOT mutate the shared `aio` global.
+            expect(mockAuthManager.selectWorkspace).not.toHaveBeenCalled();
             expect(mockContext.sendMessage).toHaveBeenCalledWith('workspaceSelected', {
                 workspaceId
             });
-            // Note: Selection logging moved to adobeEntityService (logs with workspace name)
         });
 
-        it('should validate workspace ID before selection', async () => {
+        it('should validate workspace ID before accepting', async () => {
             const workspaceId = 'ws-123';
-            mockAuthManager.selectWorkspace.mockResolvedValue(true);
 
             await handleSelectWorkspace(mockContext, { workspaceId });
 
@@ -251,45 +249,8 @@ describe('workspaceHandlers', () => {
             );
         });
 
-        it('should handle selection failure', async () => {
-            const workspaceId = 'ws-123';
-            mockAuthManager.selectWorkspace.mockResolvedValue(false);
-
-            await expect(handleSelectWorkspace(mockContext, { workspaceId })).rejects.toThrow(
-                `Failed to select workspace ${workspaceId}`
-            );
-
-            expect(mockContext.logger.error).toHaveBeenCalledWith(
-                `[Workspace] Failed to select workspace ${workspaceId}`
-            );
-            expect(mockContext.sendMessage).toHaveBeenCalledWith('error', {
-                message: 'Failed to select workspace',
-                details: expect.stringContaining('unsuccessful')
-            });
-        });
-
-        it('should handle authManager error', async () => {
-            const workspaceId = 'ws-123';
-            const error = new Error('Network timeout');
-            mockAuthManager.selectWorkspace.mockRejectedValue(error);
-
-            await expect(handleSelectWorkspace(mockContext, { workspaceId })).rejects.toThrow(
-                'Network timeout'
-            );
-
-            expect(mockContext.logger.error).toHaveBeenCalledWith(
-                '[Workspace] Failed to select workspace:',
-                error
-            );
-            expect(mockContext.sendMessage).toHaveBeenCalledWith('error', {
-                message: 'Failed to select workspace',
-                details: 'Network timeout'
-            });
-        });
-
         it('should handle special characters in workspace ID', async () => {
             const workspaceId = 'ws-123-prod';
-            mockAuthManager.selectWorkspace.mockResolvedValue(true);
 
             const result = await handleSelectWorkspace(mockContext, { workspaceId });
 
@@ -299,16 +260,14 @@ describe('workspaceHandlers', () => {
 
         it('should handle very long workspace IDs', async () => {
             const workspaceId = 'ws-' + 'a'.repeat(100);
-            mockAuthManager.selectWorkspace.mockResolvedValue(true);
 
             const result = await handleSelectWorkspace(mockContext, { workspaceId });
 
             expect(result.success).toBe(true);
-            // selectWorkspace requires projectId for context guard
-            expect(mockAuthManager.selectWorkspace).toHaveBeenCalledWith(workspaceId, 'proj-123');
+            expect(mockAuthManager.selectWorkspace).not.toHaveBeenCalled();
         });
 
-        it('should fail if no project is selected', async () => {
+        it('should fail if no project is selected (drift guard)', async () => {
             const workspaceId = 'ws-123';
             mockAuthManager.getCurrentProject.mockResolvedValue(null);
 
@@ -338,12 +297,12 @@ describe('workspaceHandlers', () => {
             expect(getResult.success).toBe(true);
             expect(getResult.data).toEqual(mockWorkspaces);
 
-            // Select workspace
+            // Select workspace (accepted without mutating the global)
             (securityValidation.validateWorkspaceId as jest.Mock).mockImplementation(() => {});
-            mockAuthManager.selectWorkspace.mockResolvedValue(true);
 
             const selectResult = await handleSelectWorkspace(mockContext, { workspaceId: 'ws-1' });
             expect(selectResult.success).toBe(true);
+            expect(mockAuthManager.selectWorkspace).not.toHaveBeenCalled();
         });
 
         it('should handle project change invalidating workspace cache', async () => {
@@ -475,8 +434,8 @@ describe('workspaceHandlers', () => {
         });
     });
 
-    describe('Cache Invalidation', () => {
-        it('should note that cache invalidation is handled in authManager', async () => {
+    describe('No Global Mutation', () => {
+        it('should accept the selection without calling selectWorkspace', async () => {
             const workspaceId = 'ws-123';
             (securityValidation.validateWorkspaceId as jest.Mock).mockImplementation(() => {});
             mockAuthManager.getCurrentProject.mockResolvedValue({
@@ -484,14 +443,12 @@ describe('workspaceHandlers', () => {
                 name: 'Test Project',
                 title: 'Test Project'
             });
-            mockAuthManager.selectWorkspace.mockResolvedValue(true);
 
-            await handleSelectWorkspace(mockContext, { workspaceId });
+            const result = await handleSelectWorkspace(mockContext, { workspaceId });
 
-            // Cache invalidation happens in authManager.selectWorkspace
-            // This handler doesn't need to do it explicitly
-            // selectWorkspace requires projectId for context guard
-            expect(mockAuthManager.selectWorkspace).toHaveBeenCalledWith(workspaceId, 'proj-123');
+            // Phase 4a: selection is webview state; no shared `aio` global mutation.
+            expect(result.success).toBe(true);
+            expect(mockAuthManager.selectWorkspace).not.toHaveBeenCalled();
         });
     });
 });

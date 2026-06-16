@@ -16,6 +16,8 @@
  * BOTH GitHub and DA.live auth with a structured `needsAuth` handoff.
  */
 
+import { runWithAdobeTarget } from './adobeTargetStore';
+import { isOrgMismatchError, orgMismatchResult } from './adobeTools';
 import { COMPONENT_IDS } from '@/core/constants';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import {
@@ -91,18 +93,27 @@ export function registerStorefrontTools(
                 });
             }
 
-            const result = await republishStorefrontConfig({
-                project,
-                secrets: ctx.context.secrets,
-                logger: ctx.logger,
-            });
-            return asText({
-                success: result.success,
-                githubPushed: result.githubPushed,
-                cdnPublished: result.cdnPublished,
-                cdnVerified: result.cdnVerified,
-                error: result.error,
-            });
+            try {
+                // Run under the stored session org context so any `aio` work
+                // targets the selected org via env (no global mutation).
+                const result = await runWithAdobeTarget(() =>
+                    republishStorefrontConfig({
+                        project,
+                        secrets: ctx.context.secrets,
+                        logger: ctx.logger,
+                    }),
+                );
+                return asText({
+                    success: result.success,
+                    githubPushed: result.githubPushed,
+                    cdnPublished: result.cdnPublished,
+                    cdnVerified: result.cdnVerified,
+                    error: result.error,
+                });
+            } catch (err) {
+                if (isOrgMismatchError(err)) return orgMismatchResult();
+                throw err;
+            }
         },
     );
 
@@ -150,18 +161,25 @@ export function registerStorefrontTools(
             }
 
             const { tokenService: githubTokenService } = getGitHubServices(ctx);
-            const result = await republishStorefrontContent({
-                project,
-                repoOwner: targets.repoOwner,
-                repoName: targets.repoName,
-                daLiveOrg: targets.daLiveOrg,
-                daLiveSite: targets.daLiveSite,
-                secrets: ctx.context.secrets,
-                logger: ctx.logger,
-                daLiveAuthService,
-                githubTokenService,
-            });
-            return asText({ success: result.success, cdnVerified: result.cdnVerified, error: result.error });
+            try {
+                const result = await runWithAdobeTarget(() =>
+                    republishStorefrontContent({
+                        project,
+                        repoOwner: targets.repoOwner,
+                        repoName: targets.repoName,
+                        daLiveOrg: targets.daLiveOrg,
+                        daLiveSite: targets.daLiveSite,
+                        secrets: ctx.context.secrets,
+                        logger: ctx.logger,
+                        daLiveAuthService,
+                        githubTokenService,
+                    }),
+                );
+                return asText({ success: result.success, cdnVerified: result.cdnVerified, error: result.error });
+            } catch (err) {
+                if (isOrgMismatchError(err)) return orgMismatchResult();
+                throw err;
+            }
         },
     );
 }

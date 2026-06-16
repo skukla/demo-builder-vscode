@@ -73,8 +73,9 @@ describe('AdobeAuthStep - Messaging and Edge Cases', () => {
             expect(screen.queryByTestId('loading-display')).not.toBeInTheDocument();
         });
 
-        it('should prevent race conditions during org switching', async () => {
+        it('forward-navigates to the org picker on Switch Organizations (no force-login)', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            const onNext = jest.fn();
             const state = {
                 ...baseState,
                 adobeAuth: { isAuthenticated: true, isChecking: false },
@@ -86,20 +87,19 @@ describe('AdobeAuthStep - Messaging and Edge Cases', () => {
                     state={state as WizardState}
                     updateState={mockUpdateState}
                     setCanProceed={mockSetCanProceed}
+                    onNext={onNext}
                 />
             );
 
             const switchButton = screen.getByText('Switch Organizations');
 
-            // Click switch button multiple times rapidly
-            await user.click(switchButton);
+            // Org switching is a normal pick-from-list step now: forward-nav,
+            // not a forced re-login. Repeated clicks just re-issue navigation.
             await user.click(switchButton);
             await user.click(switchButton);
 
-            // Should only trigger auth once (first call) if ref protection works
-            // However, the component doesn't prevent multiple clicks in the current implementation
-            // So we expect multiple calls here, but the ref should prevent check-auth calls
-            expect(mockRequestAuth).toHaveBeenCalled();
+            expect(onNext).toHaveBeenCalled();
+            expect(mockRequestAuth).not.toHaveBeenCalled();
         });
     });
 });

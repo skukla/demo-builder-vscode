@@ -127,10 +127,7 @@ export const createMockEntityServices = (): {
     } as any;
 
     const selector = {
-        selectOrganization: jest.fn().mockResolvedValue(true),
-        selectProject: jest.fn().mockResolvedValue(true),
-        selectWorkspace: jest.fn().mockResolvedValue(true),
-        autoSelectOrganizationIfNeeded: jest.fn().mockResolvedValue(undefined),
+        clearConsoleContext: jest.fn().mockResolvedValue(undefined),
     } as any;
 
     return {

@@ -32,8 +32,10 @@ import type {
     WorkspaceCredential,
 } from './types';
 import { getLogger, StepLogger } from '@/core/logging';
-import type { CommandExecutor } from '@/core/shell';
+import { withOrgContext, type CommandExecutor } from '@/core/shell';
 import { formatDuration } from '@/core/utils';
+import { ErrorCode } from '@/types/errorCodes';
+import { AuthError } from '@/types/errors';
 import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
 
@@ -162,9 +164,16 @@ export class AdobeEntityFetcher {
                 throw new Error('AUTH_EXPIRED: Your Adobe I/O session has expired. Please sign in again.');
             }
             if (stderr.includes('403') || stderr.toLowerCase().includes('forbidden')) {
-                throw new Error(
-                    'Your Adobe CLI is configured for a different organization than you are signed into. '
-                    + 'Run "aio console org select" in your terminal to switch to the correct organization.',
+                // Typed, in-app-recoverable error. NO terminal instruction — the UI
+                // routes ORG_MISMATCH through ensureOrgContext (org picker / re-login)
+                // and agents treat it as non-retryable.
+                throw new AuthError(
+                    ErrorCode.ORG_MISMATCH,
+                    'Adobe CLI is targeting a different organization than this operation needs.',
+                    {
+                        userMessage: 'This operation needs a different Adobe organization. '
+                            + 'Select the correct organization to continue.',
+                    },
                 );
             }
         }
@@ -265,10 +274,28 @@ export class AdobeEntityFetcher {
     }
 
     /**
-     * Get list of projects for current org (SDK with CLI fallback)
+     * Get list of projects (SDK with CLI fallback).
+     *
      * @param options.silent - If true, suppress user-facing log messages (used for internal ID resolution)
+     * @param options.orgId  - If supplied, run the fetch under org-context targeting
+     *   (AIO_CONSOLE_* env) so the CLI/SDK target that org WITHOUT mutating the
+     *   shared global store. Omitting it preserves the prior ambient-context behavior.
      */
-    async getProjects(options?: { silent?: boolean }): Promise<AdobeProject[]> {
+    async getProjects(options?: { silent?: boolean; orgId?: string }): Promise<AdobeProject[]> {
+        if (options?.orgId) {
+            return withOrgContext(
+                { orgId: options.orgId },
+                () => this.fetchProjects(options),
+            );
+        }
+        return this.fetchProjects(options);
+    }
+
+    /**
+     * Core project-fetch logic (SDK-first with CLI fallback).
+     * Wrapped by getProjects, which optionally applies org-context targeting.
+     */
+    private async fetchProjects(options?: { silent?: boolean; orgId?: string }): Promise<AdobeProject[]> {
         const startTime = Date.now();
         const silent = options?.silent ?? false;
 

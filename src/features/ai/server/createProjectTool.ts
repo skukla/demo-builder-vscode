@@ -29,6 +29,8 @@
 import * as os from 'os';
 import * as path from 'path';
 import { z } from 'zod';
+import { runWithAdobeTarget } from './adobeTargetStore';
+import { isOrgMismatchError, orgMismatchResult } from './adobeTools';
 import {
     lastCompleteData,
     toPhaseTimeline,
@@ -53,6 +55,11 @@ import type { WizardState } from '@/types/webview';
 
 function asText(value: unknown) {
     return { content: [{ type: 'text' as const, text: JSON.stringify(value) }] };
+}
+
+/** Project a possibly-undefined org down to the lean `{ id, name }` surfaced on a mismatch. */
+function leanOrg(org: WizardState['adobeOrg'] | undefined): { id: string; name?: string } | undefined {
+    return org?.id ? { id: org.id, name: org.name } : undefined;
 }
 
 function projectsDir(): string {
@@ -144,8 +151,11 @@ async function createHeadless(
 
     const config = buildProjectConfig(wizardState, null, packages) as unknown as Record<string, unknown>;
     try {
-        await executeProjectCreation(ctx, config);
+        // Run creation under the stored session org context so any `aio` work
+        // targets the selected org/workspace via env (no global mutation).
+        await runWithAdobeTarget(() => executeProjectCreation(ctx, config));
     } catch (err) {
+        if (isOrgMismatchError(err)) return orgMismatchResult(leanOrg(adobe?.org));
         return asText({ created: false, error: err instanceof Error ? err.message : String(err) });
     }
     return asText({
@@ -193,13 +203,18 @@ async function createEds(
     };
 
     // Phase 1: storefront setup (repo + DA.live content + Helix), reusing the
-    // wizard's orchestration; progress is captured into `events`.
-    const setupRes = await dispatchHandler(edsHandlers, capturing, 'storefront-setup-start', {
-        projectName: args.projectName,
-        selectedPackage: args.pkgId,
-        dependencies: await getAutoSelectedOptionalDependencies(args.pkgId, args.stackId),
-        edsConfig: edsConfigInput,
-    });
+    // wizard's orchestration; progress is captured into `events`. Run under the
+    // stored session org context so any `aio` work (mesh) targets the selected
+    // org/workspace via env (no global mutation).
+    const setupDeps = await getAutoSelectedOptionalDependencies(args.pkgId, args.stackId);
+    const setupRes = await runWithAdobeTarget(() =>
+        dispatchHandler(edsHandlers, capturing, 'storefront-setup-start', {
+            projectName: args.projectName,
+            selectedPackage: args.pkgId,
+            dependencies: setupDeps,
+            edsConfig: edsConfigInput,
+        }),
+    );
     if (!setupRes.success) {
         return asText({
             created: false,
@@ -236,8 +251,9 @@ async function createEds(
 
     const config = buildProjectConfig(wizardState, null, packages) as unknown as Record<string, unknown>;
     try {
-        await executeProjectCreation(capturing, config);
+        await runWithAdobeTarget(() => executeProjectCreation(capturing, config));
     } catch (err) {
+        if (isOrgMismatchError(err)) return orgMismatchResult(leanOrg(adobe.org));
         return asText({
             created: false,
             stage: 'project-creation',

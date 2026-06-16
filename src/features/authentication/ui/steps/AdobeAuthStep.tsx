@@ -18,9 +18,9 @@ import { AuthLoadingState } from './components/AuthLoadingState';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { ErrorCode } from '@/types/errorCodes';
-import { BaseStepProps } from '@/types/wizard';
+import { NavigableStepProps } from '@/types/wizard';
 
-export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepProps) {
+export function AdobeAuthStep({ state, updateState, setCanProceed, onNext }: NavigableStepProps) {
     const {
         authStatus,
         authSubMessage,
@@ -31,6 +31,11 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepPro
     } = useAuthStatus({ state, updateState, setCanProceed });
 
     const { adobeAuth, adobeOrg } = state;
+
+    // Org switching is now a normal pick-from-list step: forward-nav to the
+    // in-app org-picker (adobe-org) instead of forcing a re-login. Force-login is
+    // reserved for the genuine account-switch case below.
+    const goToOrgPicker = () => onNext?.();
 
     return (
         <SingleColumnLayout>
@@ -65,7 +70,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepPro
                     title="Connected"
                     message={adobeOrg.name}
                     actions={[
-                        { label: 'Switch Organizations', variant: 'secondary', onPress: () => handleLogin(true) },
+                        { label: 'Switch Organizations', variant: 'secondary', onPress: goToOrgPicker },
                     ]}
                 />
             )}
@@ -80,7 +85,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepPro
                     centerMessage
                     maxWidth="450px"
                     actions={[
-                        { label: 'Select Organization', icon: <Key size="S" />, variant: 'accent', onPress: () => handleLogin(true) },
+                        { label: 'Select Organization', icon: <Key size="S" />, variant: 'accent', onPress: goToOrgPicker },
                     ]}
                 />
             )}
@@ -115,7 +120,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepPro
                     centerMessage
                     maxWidth="450px"
                     actions={adobeAuth.code === ErrorCode.AUTH_NO_APP_BUILDER
-                        ? [{ label: 'Sign In Again', icon: <Login size="S" />, variant: 'accent', onPress: () => handleLogin(true) }]
+                        ? [{ label: 'Sign in with a different account', icon: <Login size="S" />, variant: 'accent', onPress: () => handleLogin(true) }]
                         : [
                             { label: 'Try Again', icon: <Refresh size="S" />, variant: 'secondary', onPress: () => checkAuthentication() },
                             { label: 'Sign In Again', icon: <Login size="S" />, variant: 'accent', onPress: () => handleLogin(false) },

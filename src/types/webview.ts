@@ -11,6 +11,7 @@ export type WizardStep =
     | 'component-selection'
     | 'prerequisites'
     | 'adobe-auth'  // Adobe authentication step
+    | 'adobe-org'  // Adobe organization selection step (in-app org-picker)
     | 'adobe-project'  // Adobe project selection step
     | 'adobe-workspace'  // Adobe workspace selection step
     | 'eds-connect-services'  // EDS: Combined GitHub + DA.live authentication (conditional: requiresGitHub OR requiresDaLive stack)
@@ -39,6 +40,7 @@ export interface WizardState {
     commerceConfig?: WizardCommerceConfig;  // Wizard-specific commerce config (simplified)
     creationProgress?: CreationProgress;
     projectSearchFilter?: string;  // Filter persistence for project selection
+    orgSearchFilter?: string;  // Filter persistence for organization selection
     edsConfig?: EDSConfig;  // EDS (Edge Delivery Services) configuration
 
     // Persistent caches to prevent re-fetching on backward navigation
@@ -105,6 +107,10 @@ export interface Organization {
     id: string;
     code: string;
     name: string;
+    /** Org type from Adobe ('entp' | 'developer'); used to compute selectability. */
+    type?: string;
+    /** True when a developer org has the App Builder RUNTIME feature. */
+    runtime?: boolean;
 }
 
 export interface AdobeProject {

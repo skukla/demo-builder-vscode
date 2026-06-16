@@ -11,15 +11,16 @@ import {
 } from './authenticationService.testUtils';
 
 /**
- * AuthenticationService - Entity Retrieval and Selection Test Suite
+ * AuthenticationService - Entity Retrieval Test Suite
  *
  * Tests entity management methods:
  * - getOrganizations/getProjects/getWorkspaces
  * - getCurrentOrganization/getCurrentProject/getCurrentWorkspace/getCurrentContext
- * - selectOrganization/selectProject/selectWorkspace
- * - autoSelectOrganizationIfNeeded
  *
- * Total tests: 11
+ * Note: org/project/workspace *selection* wrappers were removed in the
+ * org-context refactor (dependent ops now target context per-invocation via
+ * `withOrgContext`). `loginAndRestoreProjectContext` is verified to never call
+ * the (now removed) global-mutating selectors.
  */
 
 // Only mock external dependencies
@@ -143,35 +144,42 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
         });
     });
 
-    describe('selection methods', () => {
-        it('should select organization', async () => {
-            const result = await authService.selectOrganization('org123');
-
-            expect(result).toBe(true);
-            expect(mockSelector.selectOrganization).toHaveBeenCalledWith('org123');
+    describe('loginAndRestoreProjectContext (Phase 4a)', () => {
+        beforeEach(() => {
+            // login() succeeds: aio auth login returns a valid token in stdout.
+            mockCommandExecutor.execute.mockResolvedValue({
+                code: 0,
+                stdout: 'x'.repeat(150),
+                stderr: '',
+                duration: 0,
+            } as any);
         });
 
-        it('should select project with org context guard', async () => {
-            const result = await authService.selectProject('proj123', 'org123');
+        it('should NOT re-pin org/project/workspace via select* after login', async () => {
+            const result = await authService.loginAndRestoreProjectContext({
+                organization: 'org123',
+                projectId: 'proj123',
+                workspace: 'ws123',
+            });
 
             expect(result).toBe(true);
-            expect(mockSelector.selectProject).toHaveBeenCalledWith('proj123', 'org123');
+            // Phase 4a: per-op env targeting handles context; no global mutation.
+            expect(mockSelector.selectOrganization).not.toHaveBeenCalled();
+            expect(mockSelector.selectProject).not.toHaveBeenCalled();
+            expect(mockSelector.selectWorkspace).not.toHaveBeenCalled();
         });
 
-        it('should select workspace with project context guard', async () => {
-            const result = await authService.selectWorkspace('ws123', 'proj123');
+        it('should return false when login fails (no select* attempted)', async () => {
+            mockCommandExecutor.execute.mockResolvedValue({
+                code: 1, stdout: '', stderr: 'login failed', duration: 0,
+            } as any);
 
-            expect(result).toBe(true);
-            expect(mockSelector.selectWorkspace).toHaveBeenCalledWith('ws123', 'proj123');
-        });
+            const result = await authService.loginAndRestoreProjectContext({
+                organization: 'org123',
+            });
 
-        it('should auto-select organization if needed', async () => {
-            mockSelector.autoSelectOrganizationIfNeeded.mockResolvedValue(mockOrg);
-
-            const result = await authService.autoSelectOrganizationIfNeeded();
-
-            expect(result).toEqual(mockOrg);
-            expect(mockSelector.autoSelectOrganizationIfNeeded).toHaveBeenCalledWith(false);
+            expect(result).toBe(false);
+            expect(mockSelector.selectOrganization).not.toHaveBeenCalled();
         });
     });
 });

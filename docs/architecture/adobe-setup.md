@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Adobe Setup step is a comprehensive authentication and configuration component that guides users through selecting their Adobe organization, project, and workspace. It replaces the previous multi-step approach (separate auth, org selection, and project selection steps) with a unified, efficient interface.
+The Adobe Setup flow guides users through authentication and through selecting their Adobe organization, project, and workspace. It is rendered as discrete wizard steps — `adobe-auth`, `adobe-org`, `adobe-project`, `adobe-workspace` — that share the two-column layout below. The `adobe-org` step is an in-app organization picker: switching orgs targets the new org per operation (no forced browser re-login, and no mutation of the global `aio console` selection), reserving re-login for switching Adobe accounts.
 
 ## Design Philosophy
 
@@ -16,8 +16,9 @@ This design ensures users always see their current configuration while making se
 ### Progressive Disclosure
 The interface reveals complexity gradually:
 1. First, handle authentication
-2. Then, select from available projects
-3. Finally, choose a workspace
+2. Then, select the Adobe organization
+3. Then, select from available projects
+4. Finally, choose a workspace
 
 Each step builds on the previous, with automatic advancement when appropriate.
 
