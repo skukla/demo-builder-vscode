@@ -133,6 +133,9 @@
 }
 
 .service-input {
+    /* border-box so width:100% includes the padding + border and the field stays
+       within the card's content box (otherwise it overflows the right edge). */
+    box-sizing: border-box;
     width: 100%;
     padding: 8px 12px;
     border: 1px solid var(--spectrum-global-color-gray-300);
