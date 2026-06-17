@@ -26,9 +26,27 @@ draft  →  ready  →  active  →  shipped/dropped
 
 ## Active backlog
 
-### Adobe org-context: canonical self-heal + concurrency safety + agentic signaling ([`2026-06-15-adobe-org-context-self-heal-consolidation.md`](2026-06-15-adobe-org-context-self-heal-consolidation.md))
+### App Builder app — feature family (5 slices, slice 1 ready)
 
-The "real fix" for the org-mismatch dead-end ("configured for a different organization … run `aio console org select` in your terminal"), **broadened 2026-06-16** to the multi-agent/multi-org root cause. `aio`'s org context is a process-global + a single identity-scoped token; the builder steers through it with ~5 bespoke correction variants, no serialization across select→command, and no typed error when the global is wrong. Three workstreams: (A) ONE canonical `ensureOrgContext(orgId)` returning a typed result (self-heal `aio console org select` + retry → FORCE re-login incl. when the target org is absent from the selectable list → "pick a different org"), routed through all entity fetches + every MCP tool; (B) concurrency safety — re-pin under an exclusive lock spanning select→command, and/or per-project `aio` config isolation; (C) human org-picker (real `get-organizations`/`select-org`, not force-login-only) + typed non-retryable `ORG_MISMATCH` for agents + AGENTS.md/skills guidance. Live-reproduced via two agents in two orgs clobbering each other. **FIX-FIRST: must land on `develop` before the App-Builder-deployable + workspace work (`.rptc/research/adobe-io-deployable-workspace/`) continues.**
+Add App Builder app(s) to a demo project. Designed 2026-06-17 from
+[`../research/app-builder-app-structure/research.md`](../research/app-builder-app-structure/research.md)
+(+ companion [`../research/adobe-io-deployable-workspace/research.md`](../research/adobe-io-deployable-workspace/research.md)).
+**Decided model:** one workspace per demo = the mesh (separate artifact) + **one** custom App Builder
+app, with multiple integration domains as **packages inside that one app** — so the existing singleton
+`meshState` shape fits and no keyed app array is needed. Five sequenced slices; **slice 1 gates the
+rest.** Supersedes the "attach apps (Model A)" seed in
+[`2026-06-15-integration-service-cleanup-and-discovery-token.md`](2026-06-15-integration-service-cleanup-and-discovery-token.md).
+**Build principle across the family:** reuse existing primitives (org targeting, command plumbing,
+clone/install, the block-library additive pattern), refactor-for-reuse where duplication is real
+(share the mesh deploy scaffold), and **hold off on a generalized deployable framework until a 3rd
+deployable type appears** (Rule of Three). Each slice file carries a UX/interaction section; slices 2
+and 4 are flagged as needing a design pass before their plans lock.
+
+1. **Deploy spine — READY** ([`2026-06-17-appbuilder-app-deploy-spine.md`](2026-06-17-appbuilder-app-deploy-spine.md)). Import public git URL, dashboard-first. `app-builder` registry category + `deployAppComponent` (sibling of mesh, idempotent `aio app deploy`) + singular `appState` + wire the dead `appBuilder` field + block-library-style additive add/remove + role-gate extension. Defers multi-workspace/API-subscription (build only when forced).
+2. **Curated catalog — blocked on 1** ([`2026-06-17-appbuilder-app-curated-catalog.md`](2026-06-17-appbuilder-app-curated-catalog.md)). Pick a vetted baseline (e.g. `commerce-paas-mesh`) instead of typing a URL; same deploy engine.
+3. **Package-bound — blocked on 1+2** ([`2026-06-17-appbuilder-app-package-bound.md`](2026-06-17-appbuilder-app-package-bound.md)). Auto-attach an app to a demo template via a `nativeForPackages`-style association.
+4. **Scaffold-and-author — blocked on 1** ([`2026-06-17-appbuilder-app-scaffold-author.md`](2026-06-17-appbuilder-app-scaffold-author.md)). `aio app init` + AI authoring via project skills; the only slice with real new surface (code home + repo-creation decision deferred).
+5. **App-only / no-storefront project — partial on 1, parallel** ([`2026-06-17-appbuilder-app-only-project.md`](2026-06-17-appbuilder-app-only-project.md)). Frontend-optional stack schema work; heaviest, least-coupled slice.
 
 ### Multi-locale storefront — Phase 1 ([`2026-05-19-multisite-multilocale.md`](2026-05-19-multisite-multilocale.md))
 
@@ -125,6 +143,10 @@ Audit of `prerequisites.json` shows the "project prerequisites" framing is wrong
 ### Sync Storefront — auto-resolve managed-file conflicts ([`2026-06-11-sync-storefront-auto-resolve-managed-conflicts.md`](2026-06-11-sync-storefront-auto-resolve-managed-conflicts.md))
 
 Follow-up to the shipped Sync Storefront conflict-visibility fix (Layer 1 makes a rebase conflict appear in Source Control via `git.openRepository`; Layer 2's pre-sync `git pull --ff-only` makes conflicts rare). For the non-technical "just want it to work" user: when ALL conflicting files are Demo-Builder-managed (`config.json`, `fstab.yaml`, etc.) — where the remote copy is authoritative and the user never hand-edits — auto-resolve by taking the remote side, stage, `rebase --continue`, no prompt. Only surface the manual merge editor when the user's own **content** genuinely conflicts (the one case a human must judge). Explicitly NOT a generic "fix any conflict" button (unsafe). **Highest-risk line: rebase inverts ours/theirs** — taking the remote authoritative copy mid-rebase is `git checkout --ours`, not `--theirs`; prove with a test + real F5 repro. Safe default for unknown-class files = treat as content → manual. Rare edge; pick up only if real users hit content conflicts.
+
+### Adobe org-context: canonical self-heal + concurrency safety + agentic signaling — ✅ SHIPPED 2026-06-17 ([`../complete/2026-06-15-adobe-org-context-self-heal-consolidation.md`](../complete/2026-06-15-adobe-org-context-self-heal-consolidation.md))
+
+The fix-first multi-agent/multi-org item. All three workstreams landed on `develop` (`493aef17`), with two design divergences: Facet B shipped as per-invocation `AIO_CONSOLE_*` env targeting (`withOrgContext`, no global mutation) + `ResourceLocker.executeExclusive`, **not** `AIO_CONFIG_FILE` isolation; and the in-app org picker was built then deliberately removed in favor of sign-in-driven resolution + forced-switch recovery + a dashboard org-context badge/banner. Typed non-retryable `ORG_MISMATCH` + AGENTS.md/skills guidance shipped as planned. **Unblocks the App-Builder-deployable + workspace work** (`.rptc/research/adobe-io-deployable-workspace/`). Open product question (does headless+PaaS-without-mesh need an App-Builder org at all?) carried forward in the doc.
 
 ### B2B feature pack — dropins never reach the browser — ✅ RESOLVED 2026-06-12 ([`../complete/2026-06-12-b2b-feature-pack-dropin-delivery.md`](../complete/2026-06-12-b2b-feature-pack-dropin-delivery.md))
 
