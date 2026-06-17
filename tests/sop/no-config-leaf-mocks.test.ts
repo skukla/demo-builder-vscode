@@ -51,7 +51,15 @@ const ALLOWLIST: readonly string[] = [];
 
 function collectTestFiles(dir: string): string[] {
     const files: string[] = [];
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    let entries: fs.Dirent[];
+    try {
+        entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+        // Directory removed mid-walk (e.g. a concurrent suite's temp dir). Skip it
+        // rather than crash the scan — this is a static check of committed files.
+        return files;
+    }
+    for (const entry of entries) {
         const full = path.join(dir, entry.name);
         if (entry.isDirectory()) {
             if (entry.name === 'node_modules') continue;
@@ -85,7 +93,18 @@ describe('SOP: no config-leaf mocks', () => {
         const offenders = collectTestFiles(testsDir)
             .map(full => ({ rel: path.relative(repoRoot, full).replace(/\\/g, '/'), full }))
             .filter(({ rel }) => rel !== SELF)
-            .filter(({ full }) => findConfigLeafMocks(fs.readFileSync(full, 'utf-8')).length > 0)
+            .filter(({ full }) => {
+                // Skip files that vanish between enumeration and read — a concurrently
+                // running suite may create then delete temp *.test.ts files under tests/,
+                // and a stale path would otherwise crash the scan (ENOENT) at collect time.
+                let src: string;
+                try {
+                    src = fs.readFileSync(full, 'utf-8');
+                } catch {
+                    return false;
+                }
+                return findConfigLeafMocks(src).length > 0;
+            })
             .map(({ rel }) => rel);
 
         it('has no NEW config-leaf mocks outside the allowlist', () => {
