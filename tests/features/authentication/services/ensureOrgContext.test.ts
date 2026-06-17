@@ -2,18 +2,15 @@
  * Tests for ensureOrgContext — the canonical org-targeting helper.
  *
  * Contract (Phase 1):
- * - Resolve the SELECTABLE org list (enterprise ∪ developer-with-RUNTIME).
- * - If the target org is absent from the selectable list → needs_relogin
+ * - Resolve the token's reachable org list.
+ * - If the target org is absent from that list → needs_relogin
  *   (the account must change; force-login is the account-switch lever).
  * - Otherwise establish env targeting for the target and return ok, so callers
  *   can run their dependent op under that targeting (via withOrgContext).
  * - If a probe still 403s with targeting set → access_revoked.
  * - It MUST NEVER call the store-mutating `aio console * select`.
  */
-import {
-    ensureOrgContext,
-    filterToSelectableOrgs,
-} from '@/features/authentication/services/ensureOrgContext';
+import { ensureOrgContext } from '@/features/authentication/services/ensureOrgContext';
 
 const enterpriseOrg = { id: 'org-entp', code: 'ENTP@AdobeOrg', name: 'Enterprise Org', type: 'entp' };
 const developerRuntimeOrg = {
@@ -23,28 +20,6 @@ const developerRuntimeOrg = {
     type: 'developer',
     runtime: true,
 };
-
-describe('filterToSelectableOrgs', () => {
-    it('keeps enterprise orgs', () => {
-        const result = filterToSelectableOrgs([enterpriseOrg]);
-        expect(result.map(o => o.id)).toEqual(['org-entp']);
-    });
-
-    it('keeps developer orgs that have the RUNTIME feature', () => {
-        const result = filterToSelectableOrgs([developerRuntimeOrg]);
-        expect(result.map(o => o.id)).toEqual(['org-dev']);
-    });
-
-    it('drops developer orgs without the RUNTIME feature', () => {
-        const devNoRuntime = { id: 'org-x', code: 'X@AdobeOrg', name: 'X', type: 'developer', runtime: false };
-        expect(filterToSelectableOrgs([devNoRuntime])).toEqual([]);
-    });
-
-    it('drops orgs of unknown/other types', () => {
-        const other = { id: 'org-y', code: 'Y@AdobeOrg', name: 'Y', type: 'something_else' };
-        expect(filterToSelectableOrgs([other])).toEqual([]);
-    });
-});
 
 describe('ensureOrgContext', () => {
     let listSelectableOrgs: jest.Mock;

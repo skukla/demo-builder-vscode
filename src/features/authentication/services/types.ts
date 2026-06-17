@@ -17,9 +17,6 @@ export interface RawAdobeOrg {
     id: string;
     code: string;
     name: string;
-    type?: string;
-    /** True when a developer org has the App Builder RUNTIME feature. */
-    runtime?: boolean;
 }
 
 export interface RawAdobeProject {

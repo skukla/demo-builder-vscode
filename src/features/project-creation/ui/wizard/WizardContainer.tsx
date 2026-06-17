@@ -36,7 +36,6 @@ import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
-import { AdobeOrgStep } from '@/features/authentication/ui/steps/AdobeOrgStep';
 import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjectStep';
 import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
 import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
@@ -299,8 +298,6 @@ export function WizardContainer({
                 return <PrerequisitesStep {...props} componentsData={componentsData?.data as Record<string, unknown>} currentStep={state.currentStep} />;
             case 'adobe-auth':
                 return <AdobeAuthStep {...props} />;
-            case 'adobe-org':
-                return <AdobeOrgStep {...props} completedSteps={completedSteps} />;
             case 'adobe-project':
                 return <AdobeProjectStep {...props} completedSteps={completedSteps} />;
             case 'adobe-workspace':

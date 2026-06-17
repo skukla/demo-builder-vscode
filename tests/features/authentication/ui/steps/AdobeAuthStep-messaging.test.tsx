@@ -73,9 +73,8 @@ describe('AdobeAuthStep - Messaging and Edge Cases', () => {
             expect(screen.queryByTestId('loading-display')).not.toBeInTheDocument();
         });
 
-        it('forward-navigates to the org picker on Switch Organizations (no force-login)', async () => {
+        it('forces a re-login (account switch) on Switch Adobe Account', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            const onNext = jest.fn();
             const state = {
                 ...baseState,
                 adobeAuth: { isAuthenticated: true, isChecking: false },
@@ -87,19 +86,15 @@ describe('AdobeAuthStep - Messaging and Edge Cases', () => {
                     state={state as WizardState}
                     updateState={mockUpdateState}
                     setCanProceed={mockSetCanProceed}
-                    onNext={onNext}
                 />
             );
 
-            const switchButton = screen.getByText('Switch Organizations');
-
-            // Org switching is a normal pick-from-list step now: forward-nav,
-            // not a forced re-login. Repeated clicks just re-issue navigation.
-            await user.click(switchButton);
+            const switchButton = screen.getByText('Switch Adobe Account');
             await user.click(switchButton);
 
-            expect(onNext).toHaveBeenCalled();
-            expect(mockRequestAuth).not.toHaveBeenCalled();
+            // IMS tokens are org-bound — switching orgs requires a forced re-login
+            // (the browser presents the account/org chooser).
+            expect(mockRequestAuth).toHaveBeenCalledWith(true);
         });
     });
 });

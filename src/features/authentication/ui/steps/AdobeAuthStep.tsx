@@ -20,7 +20,7 @@ import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayo
 import { ErrorCode } from '@/types/errorCodes';
 import { NavigableStepProps } from '@/types/wizard';
 
-export function AdobeAuthStep({ state, updateState, setCanProceed, onNext }: NavigableStepProps) {
+export function AdobeAuthStep({ state, updateState, setCanProceed }: NavigableStepProps) {
     const {
         authStatus,
         authSubMessage,
@@ -32,10 +32,11 @@ export function AdobeAuthStep({ state, updateState, setCanProceed, onNext }: Nav
 
     const { adobeAuth, adobeOrg } = state;
 
-    // Org switching is now a normal pick-from-list step: forward-nav to the
-    // in-app org-picker (adobe-org) instead of forcing a re-login. Force-login is
-    // reserved for the genuine account-switch case below.
-    const goToOrgPicker = () => onNext?.();
+    // Switching orgs requires re-authentication: IMS tokens are org-bound, so the
+    // only way to reach a different org is a forced sign-in, where the browser
+    // presents the account/org chooser. The wizard then reflects whichever org you
+    // land on. See .rptc/plans/adobe-org-context-self-heal/overview.md.
+    const switchAccount = () => handleLogin(true);
 
     return (
         <SingleColumnLayout>
@@ -70,7 +71,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed, onNext }: Nav
                     title="Connected"
                     message={adobeOrg.name}
                     actions={[
-                        { label: 'Switch Organizations', variant: 'secondary', onPress: goToOrgPicker },
+                        { label: 'Switch Adobe Account', icon: <Login size="S" />, variant: 'secondary', onPress: switchAccount },
                     ]}
                 />
             )}
@@ -85,7 +86,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed, onNext }: Nav
                     centerMessage
                     maxWidth="450px"
                     actions={[
-                        { label: 'Select Organization', icon: <Key size="S" />, variant: 'accent', onPress: goToOrgPicker },
+                        { label: 'Switch Adobe Account', icon: <Login size="S" />, variant: 'accent', onPress: switchAccount },
                     ]}
                 />
             )}

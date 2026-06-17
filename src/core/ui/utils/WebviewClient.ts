@@ -299,14 +299,6 @@ class WebviewClient {
         this.postMessage('get-projects', { orgId });
     }
 
-    public requestOrganizations(): void {
-        this.postMessage('get-organizations');
-    }
-
-    public selectOrg(orgId: string): void {
-        this.postMessage('select-org', { orgId });
-    }
-
     public reDetectContext(): void {
         this.postMessage('re-detect-context');
     }

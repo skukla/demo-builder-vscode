@@ -73,7 +73,7 @@ describe('AdobeAuthStep - Organization Selection', () => {
             );
 
             expect(screen.getByText('Select Your Organization')).toBeInTheDocument();
-            expect(screen.getByText('Select Organization')).toBeInTheDocument();
+            expect(screen.getByText('Switch Adobe Account')).toBeInTheDocument();
         });
 
         it('should display specific message when org lacks access', () => {
@@ -120,9 +120,8 @@ describe('AdobeAuthStep - Organization Selection', () => {
             expect(screen.getByText(/Your previous organization is no longer accessible/)).toBeInTheDocument();
         });
 
-        it('forward-navigates to the org picker (no force-login) when Select Organization is clicked', async () => {
+        it('forces a re-login (account switch) when Switch Adobe Account is clicked without an org', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            const onNext = jest.fn();
             const state = {
                 ...baseState,
                 adobeAuth: {
@@ -137,21 +136,18 @@ describe('AdobeAuthStep - Organization Selection', () => {
                     state={state as WizardState}
                     updateState={jest.fn()}
                     setCanProceed={mockSetCanProceed}
-                    onNext={onNext}
                 />
             );
 
-            const selectOrgButton = screen.getByText('Select Organization');
-            await user.click(selectOrgButton);
+            const switchButton = screen.getByText('Switch Adobe Account');
+            await user.click(switchButton);
 
-            // Org switching is a normal step now — forward-nav, NOT a forced re-login.
-            expect(onNext).toHaveBeenCalled();
-            expect(mockRequestAuth).not.toHaveBeenCalled();
+            // No in-app picker: reaching another org requires a forced re-login.
+            expect(mockRequestAuth).toHaveBeenCalledWith(true);
         });
 
-        it('forward-navigates (no force-login) when Switch Organizations is clicked', async () => {
+        it('forces a re-login (account switch) when Switch Adobe Account is clicked with an org', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            const onNext = jest.fn();
             const state = {
                 ...baseState,
                 adobeAuth: { isAuthenticated: true, isChecking: false },
@@ -163,15 +159,13 @@ describe('AdobeAuthStep - Organization Selection', () => {
                     state={state as WizardState}
                     updateState={jest.fn()}
                     setCanProceed={mockSetCanProceed}
-                    onNext={onNext}
                 />
             );
 
-            const switchButton = screen.getByText('Switch Organizations');
+            const switchButton = screen.getByText('Switch Adobe Account');
             await user.click(switchButton);
 
-            expect(onNext).toHaveBeenCalled();
-            expect(mockRequestAuth).not.toHaveBeenCalled();
+            expect(mockRequestAuth).toHaveBeenCalledWith(true);
         });
 
         it('should clear dependent state when org changes after re-auth (message-driven cascade)', async () => {

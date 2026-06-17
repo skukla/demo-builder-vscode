@@ -29,9 +29,7 @@ export type MessageType =
     | 'authenticate'
     | 'ensure-org-selected'
 
-    // Organization messages (in-app org-picker)
-    | 'get-organizations'
-    | 'select-org'
+    // Re-detect Adobe context after an external auth/org change
     | 're-detect-context'
 
     // Project messages

@@ -335,42 +335,6 @@ describe('stepFiltering', () => {
             expect(stepIds).not.toContain('adobe-auth');
         });
 
-        it('should include adobe-org as a requiresAdobeIO step when hasAdobeIO is true', () => {
-            const steps: WizardStepWithCondition[] = [
-                { id: 'adobe-auth', name: 'Adobe Auth', condition: { requiresAdobeAuth: true } },
-                { id: 'adobe-org', name: 'Organization', condition: { requiresAdobeIO: true } },
-                { id: 'adobe-project', name: 'Project', condition: { requiresAdobeIO: true } },
-            ];
-
-            const result = filterStepsForStack(steps, edgeDeliveryStack, { hasAdobeAuth: true, hasAdobeIO: true });
-            const stepIds = result.map(s => s.id);
-            expect(stepIds).toContain('adobe-org');
-        });
-
-        it('should hide adobe-org when hasAdobeIO is false', () => {
-            const steps: WizardStepWithCondition[] = [
-                { id: 'adobe-auth', name: 'Adobe Auth', condition: { requiresAdobeAuth: true } },
-                { id: 'adobe-org', name: 'Organization', condition: { requiresAdobeIO: true } },
-            ];
-
-            const result = filterStepsForStack(steps, headlessStack, { hasAdobeAuth: true, hasAdobeIO: false });
-            const stepIds = result.map(s => s.id);
-            expect(stepIds).not.toContain('adobe-org');
-        });
-
-        it('positions adobe-org between adobe-auth and adobe-project in wizard-steps.json', () => {
-            const wizardStepsConfig = require('@/features/project-creation/config/wizard-steps.json');
-            const steps: WizardStepWithCondition[] = wizardStepsConfig.steps;
-            const stepIds = steps.map((s: WizardStepWithCondition) => s.id);
-
-            const authIndex = stepIds.indexOf('adobe-auth');
-            const orgIndex = stepIds.indexOf('adobe-org');
-            const projectIndex = stepIds.indexOf('adobe-project');
-
-            expect(orgIndex).toBeGreaterThan(authIndex);
-            expect(orgIndex).toBeLessThan(projectIndex);
-        });
-
         it('should show auth step but hide project/workspace steps for ACCS without mesh', () => {
             const steps: WizardStepWithCondition[] = [
                 { id: 'welcome', name: 'Welcome' },

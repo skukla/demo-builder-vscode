@@ -1,30 +1,11 @@
 /**
- * Organization Handlers Tests
+ * Org-context re-detection handler tests.
  *
- * Covers the in-app org-picker backend:
- * - handleGetOrganizations: returns org list with selectable flags (no re-login)
- * - handleSelectOrg: routes through ensureOrgContext (ok / needs_relogin),
- *   NEVER forces re-login and NEVER runs `aio console org select`
- * - handleReDetectContext: clears the relevant caches + re-reads console where,
- *   without forcing re-login
+ * - handleReDetectContext: clears the relevant caches + re-reads `console where`,
+ *   without forcing re-login (and never via the cache-nuking clearAll).
  */
 
-import {
-    handleGetOrganizations,
-    handleSelectOrg,
-    handleReDetectContext,
-} from '@/features/authentication/handlers/organizationHandlers';
-import { ErrorCode } from '@/types/errorCodes';
-
-// withOrgContext / ensureOrgContext use the env helper; keep it inert in tests.
-jest.mock('@/features/authentication/services/orgContextEnv', () => {
-    const actual = jest.requireActual('@/features/authentication/services/orgContextEnv');
-    return {
-        ...actual,
-        withOrgContext: jest.fn(async (_target: unknown, fn: () => unknown) => fn()),
-        getActiveOrgContext: jest.fn(() => undefined),
-    };
-});
+import { handleReDetectContext } from '@/features/authentication/handlers/organizationHandlers';
 
 interface MockCacheManager {
     clearSessionCaches: jest.Mock;
@@ -46,10 +27,9 @@ const createMockCacheManager = (): MockCacheManager => ({
 
 const createMockContext = (cacheManager: MockCacheManager) => {
     const authManager = {
-        getOrganizations: jest.fn().mockResolvedValue([]),
         getCurrentContext: jest.fn().mockResolvedValue({}),
         getCacheManager: jest.fn().mockReturnValue(cacheManager),
-        // GUARD: must never be called by these handlers
+        // GUARD: must never be called by this handler
         login: jest.fn(),
     };
     return {
@@ -69,114 +49,6 @@ describe('organizationHandlers', () => {
         jest.clearAllMocks();
         cacheManager = createMockCacheManager();
         context = createMockContext(cacheManager);
-    });
-
-    describe('handleGetOrganizations', () => {
-        it('returns the org list with selectable=true for an enterprise org', async () => {
-            context.authManager.getOrganizations.mockResolvedValue([
-                { id: 'o1', code: 'C1', name: 'Enterprise', type: 'entp' },
-            ]);
-
-            const result = await handleGetOrganizations(context);
-
-            expect(result.success).toBe(true);
-            const sent = context.sendMessage.mock.calls.find((c: unknown[]) => c[0] === 'get-organizations');
-            expect(sent).toBeDefined();
-            const items = sent![1] as Array<{ id: string; selectable: boolean }>;
-            expect(items).toHaveLength(1);
-            expect(items[0]).toMatchObject({ id: 'o1', code: 'C1', name: 'Enterprise', selectable: true });
-        });
-
-        it('marks a developer org WITHOUT runtime as not selectable with a reason', async () => {
-            context.authManager.getOrganizations.mockResolvedValue([
-                { id: 'o2', code: 'C2', name: 'DevNoRuntime', type: 'developer', runtime: false },
-            ]);
-
-            await handleGetOrganizations(context);
-
-            const sent = context.sendMessage.mock.calls.find((c: unknown[]) => c[0] === 'get-organizations');
-            const items = sent![1] as Array<{ id: string; selectable: boolean; reason?: string }>;
-            expect(items[0].selectable).toBe(false);
-            expect(items[0].reason).toBeTruthy();
-        });
-
-        it('marks a developer org WITH runtime as selectable', async () => {
-            context.authManager.getOrganizations.mockResolvedValue([
-                { id: 'o3', code: 'C3', name: 'DevRuntime', type: 'developer', runtime: true },
-            ]);
-
-            await handleGetOrganizations(context);
-
-            const sent = context.sendMessage.mock.calls.find((c: unknown[]) => c[0] === 'get-organizations');
-            const items = sent![1] as Array<{ id: string; selectable: boolean }>;
-            expect(items[0].selectable).toBe(true);
-        });
-
-        it('returns the raw (unfiltered) list — non-selectable orgs are present, not dropped', async () => {
-            context.authManager.getOrganizations.mockResolvedValue([
-                { id: 'o1', code: 'C1', name: 'Enterprise', type: 'entp' },
-                { id: 'o2', code: 'C2', name: 'DevNoRuntime', type: 'developer', runtime: false },
-            ]);
-
-            const result = await handleGetOrganizations(context);
-
-            expect((result.data as unknown[]).length).toBe(2);
-        });
-
-        it('does NOT force a re-login when listing organizations', async () => {
-            context.authManager.getOrganizations.mockResolvedValue([
-                { id: 'o1', code: 'C1', name: 'E', type: 'entp' },
-            ]);
-
-            await handleGetOrganizations(context);
-
-            expect(context.authManager.login).not.toHaveBeenCalled();
-        });
-
-        it('sends a structured error when the org list fetch fails', async () => {
-            context.authManager.getOrganizations.mockRejectedValue(new Error('boom'));
-
-            const result = await handleGetOrganizations(context);
-
-            expect(result.success).toBe(false);
-            const sent = context.sendMessage.mock.calls.find((c: unknown[]) => c[0] === 'get-organizations');
-            expect((sent![1] as { error?: string }).error).toBeTruthy();
-        });
-    });
-
-    describe('handleSelectOrg', () => {
-        it('sends success when ensureOrgContext resolves ok (no re-login, no console select)', async () => {
-            context.authManager.getOrganizations.mockResolvedValue([
-                { id: 'o1', code: 'C1', name: 'E', type: 'entp' },
-            ]);
-
-            const result = await handleSelectOrg(context, { orgId: 'o1' });
-
-            expect(result.success).toBe(true);
-            expect(context.authManager.login).not.toHaveBeenCalled();
-            const sent = context.sendMessage.mock.calls.find((c: unknown[]) => c[0] === 'select-org');
-            expect(sent).toBeDefined();
-            expect((sent![1] as { status?: string }).status).toBe('ok');
-        });
-
-        it('sends a structured account-switch signal when target needs re-login (still no force-login here)', async () => {
-            context.authManager.getOrganizations.mockResolvedValue([
-                { id: 'other', code: 'O', name: 'Other', type: 'entp' },
-            ]);
-
-            const result = await handleSelectOrg(context, { orgId: 'missing' });
-
-            expect(result.success).toBe(false);
-            expect(result.code).toBe(ErrorCode.ORG_MISMATCH);
-            // The handler must NEVER force re-login itself; the UI decides.
-            expect(context.authManager.login).not.toHaveBeenCalled();
-            const sent = context.sendMessage.mock.calls.find((c: unknown[]) => c[0] === 'select-org');
-            const payload = sent![1] as { status?: string; code?: string; targetOrg?: { id: string } };
-            expect(payload.status).toBe('needs_relogin');
-            expect(payload.code).toBe(ErrorCode.ORG_MISMATCH);
-            expect(payload.targetOrg).toEqual({ id: 'missing' });
-        });
-
     });
 
     describe('handleReDetectContext', () => {

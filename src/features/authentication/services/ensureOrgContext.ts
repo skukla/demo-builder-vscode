@@ -21,17 +21,13 @@
 import { getActiveOrgContext, withOrgContext, type OrgContextTarget } from './orgContextEnv';
 
 /**
- * Minimal org shape needed to decide selectability and build a full env target.
- * Mirrors the raw `aio console org list` / SDK org record: enterprise orgs and
- * developer orgs carry a `type`; developer orgs expose a RUNTIME feature flag.
+ * Minimal org shape: the fields needed to identify a target org and build an
+ * env target. Mirrors the raw `aio console org list` / SDK org record.
  */
 export interface SelectableOrgCandidate {
     id: string;
     code?: string;
     name?: string;
-    type?: string;
-    /** True when a developer org has the App Builder RUNTIME feature. */
-    runtime?: boolean;
 }
 
 export type EnsureOrgContextStatus =
@@ -68,44 +64,6 @@ export interface EnsureOrgContextOptions {
      * leaves it undefined.
      */
     runSelect?: (orgId: string) => Promise<unknown>;
-}
-
-/** Whether an org can be selected by the CLI, plus a reason when it can't. */
-export interface OrgSelectability {
-    selectable: boolean;
-    reason?: string;
-}
-
-/**
- * The ONE selectability rule, mirroring `aio-cli-lib-console`'s
- * `filterToSelectableOrgs`: keep enterprise orgs, plus developer orgs that have
- * the RUNTIME feature. Everything else is non-selectable by the CLI. Returned as
- * a typed verdict so the picker can disable rows AND explain why (the
- * account-switch hint) without duplicating the rule.
- */
-export function getOrgSelectability(org: SelectableOrgCandidate): OrgSelectability {
-    if (org.type === 'entp') return { selectable: true };
-    if (org.type === 'developer') {
-        return org.runtime === true
-            ? { selectable: true }
-            : {
-                selectable: false,
-                reason: 'This developer organization does not have App Builder runtime access.',
-            };
-    }
-    return {
-        selectable: false,
-        reason: 'This organization is not available on your current Adobe account. '
-            + 'Sign in with a different account to use it.',
-    };
-}
-
-/**
- * Reimplements `aio-cli-lib-console`'s `filterToSelectableOrgs` on top of the
- * single {@link getOrgSelectability} rule.
- */
-export function filterToSelectableOrgs<T extends SelectableOrgCandidate>(orgs: T[]): T[] {
-    return orgs.filter((org) => getOrgSelectability(org).selectable);
 }
 
 /**
