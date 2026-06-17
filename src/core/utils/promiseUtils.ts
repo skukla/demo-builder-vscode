@@ -51,8 +51,12 @@ export async function withTimeout<T>(
 
     // Create timeout promise - use TimeoutError for typed detection
     // Note: TimeoutError generates its own userMessage, but callers can provide custom via timeoutMessage
+    // Track the timer so it can be cleared once the race settles — otherwise a fast-resolving
+    // `promise` leaves the timeout pending for the full timeoutMs, leaking a timer that keeps
+    // the event loop alive (and trips Jest's "failed to exit gracefully" teardown warning).
+    let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
     const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => {
+        timeoutTimer = setTimeout(() => {
             const error = new TimeoutError(
                 timeoutMessage || 'Operation',
                 timeoutMs,
@@ -78,7 +82,13 @@ export async function withTimeout<T>(
         promises.push(cancellationPromise);
     }
 
-    return Promise.race(promises);
+    try {
+        return await Promise.race(promises);
+    } finally {
+        // Clear the pending timeout once the race settles (success, error, timeout,
+        // or cancellation). Harmless if it already fired.
+        if (timeoutTimer) clearTimeout(timeoutTimer);
+    }
 }
 
 /**

@@ -33,7 +33,8 @@ import type {
 } from './types';
 import { getLogger, StepLogger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
-import { formatDuration } from '@/core/utils';
+import { formatDuration, TIMEOUTS } from '@/core/utils';
+import { tryWithTimeout } from '@/core/utils/promiseUtils';
 import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
 
@@ -86,20 +87,38 @@ export class AdobeEntityFetcher {
     ): Promise<TMapped[]> {
         if (!this.sdkClient.isInitialized()) return [];
 
-        try {
-            const sdkResult = await sdkCall();
-            if (!sdkResult.body || !Array.isArray(sdkResult.body)) {
-                throw new Error('Invalid SDK response format');
-            }
-            const mapped = mapper(sdkResult.body);
-            const duration = Date.now() - startTime;
-            this.debugLogger.debug(`[Entity Fetcher] Retrieved ${mapped.length} ${entityName} via SDK in ${formatDuration(duration)}`);
-            return mapped;
-        } catch (sdkError) {
-            this.debugLogger.trace(`[Entity Fetcher] SDK failed for ${entityName}, falling back to CLI:`, sdkError);
+        // Bound the SDK attempt. SDK-first is justified only by "faster than the CLI, or
+        // fail fast": without a deadline a stalled Adobe endpoint (observed: the org-list
+        // gateway timing out ~60s) makes the "fast path" far slower than the ~3s CLI
+        // fallback. Cap the call and fall back instead of riding the remote ceiling.
+        const outcome = await tryWithTimeout(sdkCall(), {
+            timeoutMs: TIMEOUTS.SDK_ENTITY_FETCH,
+            timeoutMessage: `SDK ${entityName} fetch`,
+        });
+
+        if (outcome.timedOut) {
+            this.debugLogger.warn(
+                `[Entity Fetcher] SDK ${entityName} fetch exceeded `
+                + `${formatDuration(TIMEOUTS.SDK_ENTITY_FETCH)}, falling back to CLI`,
+            );
+            return [];
+        }
+
+        if (outcome.error || !outcome.result) {
+            this.debugLogger.trace(`[Entity Fetcher] SDK failed for ${entityName}, falling back to CLI:`, outcome.error);
             this.debugLogger.warn(`[Entity Fetcher] SDK unavailable, using slower CLI fallback for ${entityName}`);
             return [];
         }
+
+        const sdkResult = outcome.result;
+        if (!sdkResult.body || !Array.isArray(sdkResult.body)) {
+            this.debugLogger.warn(`[Entity Fetcher] SDK returned an invalid ${entityName} response, falling back to CLI`);
+            return [];
+        }
+
+        const mapped = mapper(sdkResult.body);
+        this.debugLogger.debug(`[Entity Fetcher] Retrieved ${mapped.length} ${entityName} via SDK in ${formatDuration(Date.now() - startTime)}`);
+        return mapped;
     }
 
     /**
