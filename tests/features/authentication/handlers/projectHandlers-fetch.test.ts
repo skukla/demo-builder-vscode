@@ -102,6 +102,9 @@ describe('projectHandlers - Fetch', () => {
         });
 
         it('should handle payload with orgId', async () => {
+            mockContext.authManager.getOrganizations.mockResolvedValue([
+                { id: 'org-123', code: 'C', name: 'Test Org' },
+            ]);
             mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
             mockContext.authManager.getProjects.mockResolvedValue(mockProjects);
 
@@ -109,6 +112,56 @@ describe('projectHandlers - Fetch', () => {
 
             expect(result.success).toBe(true);
             expect(mockContext.authManager.getProjects).toHaveBeenCalled();
+        });
+
+        it('threads the payload orgId through to getProjects', async () => {
+            // The named bug: handler used to IGNORE _payload.orgId. It must now
+            // pass it to getProjects so the fetch targets that org.
+            mockContext.authManager.getOrganizations.mockResolvedValue([
+                { id: 'org-123', code: 'C', name: 'Test Org' },
+            ]);
+            mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+            mockContext.authManager.getProjects.mockResolvedValue(mockProjects);
+
+            await handleGetProjects(mockContext, { orgId: 'org-123' });
+
+            expect(mockContext.authManager.getProjects).toHaveBeenCalledWith({ orgId: 'org-123' });
+        });
+
+        it('sends a structured ORG_MISMATCH message (no terminal string) when org needs re-login', async () => {
+            // Target org absent from the selectable list -> needs_relogin.
+            mockContext.authManager.getOrganizations.mockResolvedValue([
+                { id: 'other-org', code: 'O', name: 'Other' },
+            ]);
+            mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+
+            const result = await handleGetProjects(mockContext, { orgId: 'org-missing' });
+
+            expect(result.success).toBe(false);
+            expect(result.code).toBe('ORG_MISMATCH');
+            // getProjects must NOT be called when targeting can't be established.
+            expect(mockContext.authManager.getProjects).not.toHaveBeenCalled();
+            // The structured message must carry the code + targetOrg, never the terminal instruction.
+            const errorCall = mockContext.sendMessage.mock.calls.find(
+                (c: unknown[]) => c[0] === 'get-projects' && (c[1] as { error?: string })?.error,
+            );
+            expect(errorCall).toBeDefined();
+            const payload = errorCall![1] as { error: string; code: string; targetOrg?: { id: string } };
+            expect(payload.code).toBe('ORG_MISMATCH');
+            expect(payload.targetOrg).toEqual({ id: 'org-missing' });
+            expect(payload.error).not.toContain('aio console org select');
+            expect(payload.error.toLowerCase()).not.toContain('terminal');
+        });
+
+        it('fetches normally when no orgId is in the payload (back-compat)', async () => {
+            mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+            mockContext.authManager.getProjects.mockResolvedValue(mockProjects);
+
+            const result = await handleGetProjects(mockContext);
+
+            expect(result.success).toBe(true);
+            expect(mockContext.authManager.getProjects).toHaveBeenCalledWith();
+            expect(mockContext.authManager.getOrganizations).not.toHaveBeenCalled();
         });
     });
 });

@@ -55,11 +55,8 @@ export function createMockHandlerContext(overrides?: Partial<HandlerContext>): j
             login: jest.fn(),
             clearCache: jest.fn(),
             getOrganizations: jest.fn(),
-            selectOrganization: jest.fn(),
             setCachedOrganization: jest.fn(),
-            autoSelectOrganizationIfNeeded: jest.fn(),
             setOrgRejectedFlag: jest.fn(),
-            validateAndClearInvalidOrgContext: jest.fn(),
             testDeveloperPermissions: jest.fn(),
         } as any, // Simplified mock - full AuthenticationService interface not needed for tests
         errorLogger: {} as ErrorLogger,

@@ -11,6 +11,7 @@
 import type { EdsResetResult } from './edsResetParams';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { ServiceLocator } from '@/core/di';
+import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
 import { updateMeshState } from '@/features/mesh/services/stalenessDetector';
 import type { Project } from '@/types/base';
@@ -118,16 +119,16 @@ export async function redeployApiMesh(
         };
     }
 
-    report(12, 'Setting Adobe context...');
-    if (project.adobe?.organization) {
-        await authService.selectOrganization(project.adobe.organization);
-    }
-    if (project.adobe?.projectId && project.adobe?.organization) {
-        await authService.selectProject(project.adobe.projectId, project.adobe.organization);
-    }
-    if (project.adobe?.workspace && project.adobe?.projectId) {
-        await authService.selectWorkspace(project.adobe.workspace, project.adobe.projectId);
-    }
+    // Target the project's KNOWN org/project/workspace via per-invocation
+    // AIO_CONSOLE_* env instead of mutating the shared `aio` global with
+    // select* (which races concurrent processes). The shared builder enriches
+    // org code/name from the cached org on an id match (less leaky than ID-only).
+    const target: OrgContextTarget = buildOrgTargetFromProjectAdobe(
+        project.adobe,
+        authService.getCachedOrganization(),
+    );
 
-    return deployMeshAndPersist(meshComponent, project, repoOwner, repoName, context, report, filesReset, contentCopied);
+    return withOrgContext(target, () =>
+        deployMeshAndPersist(meshComponent, project, repoOwner, repoName, context, report, filesReset, contentCopied),
+    );
 }

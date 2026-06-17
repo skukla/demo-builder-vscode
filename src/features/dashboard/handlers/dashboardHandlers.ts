@@ -20,42 +20,22 @@ import { ServiceLocator } from '@/core/di';
 import { openInIncognito } from '@/core/utils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateURL } from '@/core/validation';
+import type { OrgMismatchInfo } from '@/features/authentication/services/detectProjectOrgMismatch';
 import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
+import type { Project } from '@/types';
 import { ErrorCode } from '@/types/errorCodes';
-import { MessageHandler , defineHandlers } from '@/types/handlers';
+import { MessageHandler , defineHandlers, HandlerContext } from '@/types/handlers';
 import { getMeshComponentInstance, getProjectFrontendPort } from '@/types/typeGuards';
 
 /**
- * Handle 'ready' message - Send initialization data
- */
-export const handleReady: MessageHandler = async (context) => {
-    const project = await context.stateManager.getCurrentProject();
-    if (!project || !context.panel) {
-        return { success: false, error: 'No project or panel available', code: ErrorCode.PROJECT_NOT_FOUND };
-    }
-
-    const themeKind = vscode.window.activeColorTheme.kind;
-    const theme = themeKind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
-
-    await context.panel.webview.postMessage({
-        type: 'init',
-        payload: {
-            theme,
-            project: {
-                name: project.name,
-                path: project.path,
-            },
-            initialMeshStatus: project.meshStatusSummary,
-            initialEdsStorefrontStatus: project.edsStorefrontStatusSummary,
-        },
-    });
-
-    return { success: true };
-};
-
-/**
  * Handle 'requestStatus' message - Send current project status
+ *
+ * Note: the dashboard's initial `init` payload (theme, project, hasMesh, isEds,
+ * hasAdobeContext, …) is delivered once by BaseWebviewCommand via getInitialData
+ * after the handshake. There is intentionally no `'ready'` handler that re-sends
+ * a partial `init` — doing so previously clobbered rich fields (hasAdobeContext,
+ * hasMesh, brand/stack names) that aren't ref-captured in the UI.
  */
 export const handleRequestStatus: MessageHandler = async (context) => {
     context.logger.debug('[Dashboard] handleRequestStatus called');
@@ -137,8 +117,80 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         payload: statusData,
     });
 
+    // Org-context check runs SEPARATELY (async) so the slow getOrganizations call
+    // never blocks the status above. It telegraphs "checking" then delivers the
+    // result via the `orgContextResult` message — see runOrgContextCheck.
+    void runOrgContextCheck(context, project);
+
     return { success: true, data: statusData };
 };
+
+/**
+ * Run the proactive Adobe org-context check and deliver its result to the
+ * dashboard via the async `orgContextResult` message — decoupled from the main
+ * status so the (potentially slow) getOrganizations call never blocks it.
+ *
+ * Sends `{ pending: true }` first (UI telegraphs "Checking Adobe organization…"),
+ * then `{ pending: false, orgMismatch }` once resolved (banner fades in on
+ * mismatch, or clears). No-op for projects without an Adobe org.
+ *
+ * Exported (not in the handler map) so callers — handleRequestStatus and the
+ * forced-switch recovery — can trigger a (re)check.
+ */
+export async function runOrgContextCheck(context: HandlerContext, project: Project): Promise<void> {
+    if (!context.panel || !project.adobe?.organization) {
+        return;
+    }
+    const post = (payload: { pending: boolean; orgMismatch?: OrgMismatchInfo; currentOrg?: string }) =>
+        context.panel?.webview.postMessage({ type: 'orgContextResult', payload });
+
+    post({ pending: true });
+
+    const authManager = ServiceLocator.getAuthenticationService();
+    const { detectProjectOrgMismatch } = await import('@/features/authentication/services/detectProjectOrgMismatch');
+    const result = await detectProjectOrgMismatch(authManager, project, context.logger);
+
+    // Self-heal the project's org data when reachable (we can only resolve the
+    // canonical id/name for an org the token can reach): persist the org NAME (so
+    // a later mismatch banner can name it) and migrate a legacy name-stored
+    // `organization` to the canonical id (so detection matches by id next time).
+    // One-time, manifest-only write.
+    if (result?.reachable && project.adobe) {
+        let healed = false;
+        if (result.currentOrg && project.adobe.organizationName !== result.currentOrg) {
+            project.adobe.organizationName = result.currentOrg;
+            healed = true;
+        }
+        if (result.currentOrgId && project.adobe.organization !== result.currentOrgId) {
+            project.adobe.organization = result.currentOrgId;
+            healed = true;
+        }
+        if (healed) {
+            try {
+                await context.stateManager.saveProjectConfigOnly(project);
+            } catch (error) {
+                context.logger.debug('[Dashboard] Could not self-heal org data (non-fatal)', error);
+            }
+        }
+    }
+
+    // currentOrg (the token's actual org) drives the "IMS Org" badge in both
+    // states; orgMismatch (the UI shape) is set only when unreachable, for the
+    // banner — including the project's expected org name when known.
+    const orgMismatch: OrgMismatchInfo | undefined = result && !result.reachable
+        ? {
+            expectedOrg: result.expectedOrg,
+            // Prefer the persisted name; else fall back to the stored org field
+            // when it's already a human name (legacy projects stored the org name
+            // rather than the id — a name has whitespace; an id/code never does).
+            expectedOrgName: project.adobe?.organizationName
+                ?? (/\s/.test(result.expectedOrg) ? result.expectedOrg : undefined),
+            currentOrg: result.currentOrg,
+        }
+        : undefined;
+
+    post({ pending: false, orgMismatch, currentOrg: result?.currentOrg });
+}
 
 /**
  * Handle 'startDemo' message - Start demo server
@@ -576,7 +628,8 @@ export const handleRepublishContent: MessageHandler = async (context) => {
  *
  * Resolves the project via getCurrentProject() (the {newName} payload is the
  * only data the dashboard sends), reuses the shared renameProjectCore, then
- * re-sends the init payload so the dashboard title reflects the new name.
+ * refreshes status so the dashboard title (driven by the status payload's name)
+ * reflects the new name.
  */
 export const handleRenameProject: MessageHandler<{ newName: string }> = async (context, data) => {
     const newName = data?.newName;
@@ -592,9 +645,10 @@ export const handleRenameProject: MessageHandler<{ newName: string }> = async (c
     const { renameProjectCore } = await import('@/features/projects-dashboard/services');
     const result = await renameProjectCore(context, project, newName);
 
-    // Refresh the dashboard title after a successful rename (folder/name changed)
+    // Refresh the dashboard title after a successful rename (folder/name changed).
+    // The title is driven by the status payload's name, so re-run status.
     if (result.success && context.panel) {
-        await handleReady(context);
+        await handleRequestStatus(context);
     }
 
     return result;
@@ -635,6 +689,52 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
     return handleRequestStatus(context);
 };
 
+/**
+ * Handle 'switchOrg' message - Forced Adobe account/org switch recovery.
+ *
+ * Called when the dashboard detects an org mismatch (the project's Adobe org is
+ * not reachable by the current token). Unlike the session-expiry re-auth path,
+ * this performs a FORCED sign-in (`aio auth login -f`) so the browser presents
+ * the IMS account/org chooser — a non-forced login would silently reuse the
+ * browser's existing SSO session and could loop back to the wrong org.
+ *
+ * After the forced sign-in it re-runs the status check (verify): the refreshed
+ * payload re-runs the proactive org-mismatch detection, so if the user is still
+ * in the wrong org (e.g. another browser tab reasserted it) the banner persists
+ * with a no-loop hint instead of silently failing.
+ */
+export const handleSwitchOrg: MessageHandler = async (context) => {
+    context.logger.debug('[Dashboard] handleSwitchOrg called');
+
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return { success: false, error: 'No project available', code: ErrorCode.PROJECT_NOT_FOUND };
+    }
+
+    const authManager = ServiceLocator.getAuthenticationService();
+
+    context.logger.info('[Dashboard] Starting FORCED Adobe sign-in to switch organization');
+    const loginSuccess = await authManager.loginAndRestoreProjectContext(
+        {
+            organization: project.adobe?.organization,
+            projectId: project.adobe?.projectId,
+            workspace: project.adobe?.workspace,
+        },
+        true, // force — present the browser org chooser; never silently reuse the SSO tab
+    );
+
+    if (!loginSuccess) {
+        context.logger.warn('[Dashboard] Forced sign-in failed or cancelled');
+        return { success: false, error: 'Sign-in failed or cancelled' };
+    }
+
+    // Verify the landed org by re-running the status check. If the token still
+    // can't reach the project's org, handleRequestStatus re-surfaces orgMismatch
+    // and the banner persists — no silent loop.
+    context.logger.info('[Dashboard] Forced sign-in complete, verifying organization');
+    return handleRequestStatus(context);
+};
+
 // ============================================================================
 // Handler Map Export (Step 3: Handler Registry Simplification)
 // ============================================================================
@@ -647,8 +747,8 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
  * Replaces DashboardHandlerRegistry class with simple object literal.
  */
 export const dashboardHandlers = defineHandlers({
-    // Initialization handlers
-    'ready': handleReady,
+    // Initialization handlers (init is delivered by BaseWebviewCommand on handshake;
+    // no 'ready' handler — see note on handleRequestStatus)
     'requestStatus': handleRequestStatus,
 
     // Demo lifecycle handlers
@@ -674,6 +774,7 @@ export const dashboardHandlers = defineHandlers({
 
     // Authentication handlers
     'reAuthenticate': handleReAuthenticate,
+    'switchOrg': handleSwitchOrg,
 
     // Project management handlers
     'deleteProject': handleDeleteProject,

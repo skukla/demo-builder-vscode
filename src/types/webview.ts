@@ -45,7 +45,6 @@ export interface WizardState {
     storeDiscoveryData?: CommerceStoreStructure;  // Store structure from discovery (avoids re-fetch on back navigation)
     projectsCache?: AdobeProject[];
     workspacesCache?: Workspace[];
-    organizationsCache?: Organization[];
     githubReposCache?: GitHubRepoItem[];  // GitHub repos with write access
     githubRepoSearchFilter?: string;  // Search filter for repo selection
     daLiveSitesCache?: DaLiveSiteItem[];  // DA.live sites in current org

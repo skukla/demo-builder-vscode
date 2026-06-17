@@ -73,7 +73,7 @@ describe('AdobeAuthStep - Organization Selection', () => {
             );
 
             expect(screen.getByText('Select Your Organization')).toBeInTheDocument();
-            expect(screen.getByText('Select Organization')).toBeInTheDocument();
+            expect(screen.getByText('Switch IMS Org')).toBeInTheDocument();
         });
 
         it('should display specific message when org lacks access', () => {
@@ -120,7 +120,7 @@ describe('AdobeAuthStep - Organization Selection', () => {
             expect(screen.getByText(/Your previous organization is no longer accessible/)).toBeInTheDocument();
         });
 
-        it('should trigger org selection when Select Organization is clicked', async () => {
+        it('forces a re-login (account switch) when Switch IMS Org is clicked without an org', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const state = {
                 ...baseState,
@@ -139,16 +139,39 @@ describe('AdobeAuthStep - Organization Selection', () => {
                 />
             );
 
-            const selectOrgButton = screen.getByText('Select Organization');
-            await user.click(selectOrgButton);
+            const switchButton = screen.getByText('Switch IMS Org');
+            await user.click(switchButton);
 
-            expect(mockRequestAuth).toHaveBeenCalledWith(true); // force = true
+            // No in-app picker: reaching another org requires a forced re-login.
+            expect(mockRequestAuth).toHaveBeenCalledWith(true);
         });
 
-        it('should clear dependent state when org changes after re-auth', async () => {
-            // Setup: User is authenticated with org1, has project/workspace selected
-            const messageCallback = setupAuthStatusMock();
+        it('forces a re-login (account switch) when Switch IMS Org is clicked with an org', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            const state = {
+                ...baseState,
+                adobeAuth: { isAuthenticated: true, isChecking: false },
+                adobeOrg: { id: 'org1', code: 'ORG1', name: 'Test Organization' },
+            };
+
+            render(
+                <AdobeAuthStep
+                    state={state as WizardState}
+                    updateState={jest.fn()}
+                    setCanProceed={mockSetCanProceed}
+                />
+            );
+
+            const switchButton = screen.getByText('Switch IMS Org');
+            await user.click(switchButton);
+
+            expect(mockRequestAuth).toHaveBeenCalledWith(true);
+        });
+
+        it('should clear dependent state when org changes after re-auth (message-driven cascade)', async () => {
+            // The org-change cascade is driven by the auth message, independent of
+            // which control initiated it (force-login still exists for account switch).
+            const messageCallback = setupAuthStatusMock();
             const mockUpdate = jest.fn();
             const state = {
                 ...baseState,
@@ -165,13 +188,6 @@ describe('AdobeAuthStep - Organization Selection', () => {
                     setCanProceed={mockSetCanProceed}
                 />
             );
-
-            // Action: Click Switch Organizations
-            const switchButton = screen.getByText('Switch Organizations');
-            await user.click(switchButton);
-
-            // Verify: requestAuth is called with force=true
-            expect(mockRequestAuth).toHaveBeenCalledWith(true);
 
             // Simulate: Auth completes with a DIFFERENT org
             messageCallback({
@@ -194,7 +210,6 @@ describe('AdobeAuthStep - Organization Selection', () => {
         it('should preserve dependent state when re-authenticating with same org', async () => {
             // Setup: User is authenticated with org1, has project/workspace selected
             const messageCallback = setupAuthStatusMock();
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const mockUpdate = jest.fn();
             const state = {
                 ...baseState,
@@ -211,10 +226,6 @@ describe('AdobeAuthStep - Organization Selection', () => {
                     setCanProceed={mockSetCanProceed}
                 />
             );
-
-            // Action: Click Switch Organizations (but will re-auth with same org)
-            const switchButton = screen.getByText('Switch Organizations');
-            await user.click(switchButton);
 
             // Simulate: Auth completes with SAME org
             messageCallback({

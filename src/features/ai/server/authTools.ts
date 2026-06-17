@@ -12,6 +12,7 @@
  */
 
 import { z } from 'zod';
+import { clearAdobeTarget } from './adobeTargetStore';
 import { dispatchHandler } from '@/core/handlers';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { getDaLiveAuthService, getGitHubServices, showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
@@ -92,6 +93,10 @@ export function registerAuthTools(server: any, ctxFactory: () => HandlerContext)
             const provider = args.provider as 'adobe' | 'github' | 'dalive';
 
             if (provider === 'adobe') {
+                // A re-auth may switch to a different account, so drop the prior
+                // identity's MCP target — otherwise list/select tools would keep
+                // targeting the previous account's org/project/workspace.
+                clearAdobeTarget();
                 const ok = (await ctx.authManager?.login()) ?? false;
                 return { content: [{ type: 'text' as const, text: JSON.stringify({ provider, success: ok }) }] };
             }

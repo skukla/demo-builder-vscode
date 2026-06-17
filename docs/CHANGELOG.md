@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Adobe org context is now targeted per operation instead of through a shared global.** Every `aio` call (project/workspace listing, mesh deploy, project reset) targets its org/project/workspace via per-invocation environment variables, so the extension no longer mutates `aio console`'s process-global selection. Concurrent demos, the user's own terminal, and AI agents working in different orgs no longer clobber one another's CLI context. A single `ensureOrgContext` helper resolves the target and returns a typed result; a wrong org surfaces to MCP agents as a typed, non-retryable `ORG_MISMATCH` (so agents stop and ask instead of retrying into the same 403) rather than an opaque error string.
+
+### Added
+
+- **In-app organization picker in the creation wizard.** A new Organization step lets you switch Adobe orgs with a click on the existing token — no forced browser re-login (re-login is reserved for switching Adobe accounts, and is offered only when the target org isn't available to the current account). This replaces the previous "configured for a different organization — run `aio console org select` in your terminal" dead-end with in-app resolution.
+
+### Removed
+
+- **The bespoke org-context correction variants** — `selectOrganization` / `selectProject` / `selectWorkspace`, `autoSelectOrganizationIfNeeded`, and `validateAndClearInvalidOrgContext` — replaced by the single per-invocation targeting model (no soft deprecation).
+
 ## [1.0.0-beta.120] - 2026-06-12
 
 ### Fixed

@@ -53,6 +53,9 @@ export const projectCreationHandlers = defineHandlers({
     'check-auth': authentication.handleCheckAuth,
     'authenticate': authentication.handleAuthenticate,
 
+    // Re-detect Adobe context after an external auth/org change
+    're-detect-context': authentication.handleReDetectContext,
+
     // Project handlers
     'ensure-org-selected': authentication.handleEnsureOrgSelected,
     'get-projects': authentication.handleGetProjects,

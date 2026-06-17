@@ -22,14 +22,9 @@ import * as _vscode from 'vscode';
 // Mock dependencies
 jest.mock('@/core/di');
 jest.mock('vscode');
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        LONG: 180000, // Complex operations (replaces API_MESH_CREATE)
-        NORMAL: 30000, // Standard operations (replaces API_CALL, MESH_DESCRIBE)
-        MESH_VERIFY_POLL_INTERVAL: 10000, // Kept for mesh-specific polling
-        MESH_VERIFY_INITIAL_WAIT: 20000, // Kept for mesh-specific polling
-    },
-}));
+// Uses the real @/core/utils/timeoutConfig (pure constants) — a partial config-leaf
+// mock here would omit keys (e.g. UI.MIN_LOADING) that the @/core/shell import graph
+// reads at module load, and violates the no-config-leaf-mocks SOP.
 jest.mock('@/features/mesh/services/meshConfig', () => ({
     getMeshNodeVersion: () => '20',
 }));
@@ -64,6 +59,8 @@ describe('Mesh Handlers - DI Pattern (Step 9)', () => {
         // Mock authentication service
         mockAuthService = {
             isAuthenticated: jest.fn().mockResolvedValue(true),
+            // Org-context targeting reads the cached org to enrich code/name.
+            getCachedOrganization: jest.fn().mockReturnValue(undefined),
         };
 
         // Mock command executor

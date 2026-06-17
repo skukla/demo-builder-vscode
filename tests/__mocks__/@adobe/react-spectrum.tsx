@@ -521,9 +521,10 @@ export const ListView: React.FC<any> = ({
     children,
     items,
     onSelectionChange,
-    _selectedKeys,
-    _defaultSelectedKeys,
-    _selectionMode,
+    selectedKeys: _selectedKeys,
+    defaultSelectedKeys: _defaultSelectedKeys,
+    disabledKeys: _disabledKeys,
+    selectionMode: _selectionMode,
     'aria-label': ariaLabel,
     UNSAFE_className,
     ...props

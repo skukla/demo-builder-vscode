@@ -66,13 +66,14 @@ export async function handleGetWorkspaces(
 }
 
 /**
- * select-workspace - Select an Adobe workspace
+ * select-workspace - Accept an Adobe workspace selection
  *
- * Sets the specified workspace as the current workspace context
- * in Adobe CLI configuration.
- *
- * Requires project ID to protect against context drift
- * (e.g., when another process changes the global Adobe CLI context).
+ * Phase 4a: the chosen workspace lives in webview state and is threaded
+ * per-op (e.g. mesh check/deploy pass it explicitly and run under
+ * `withOrgContext`). This handler therefore ACCEPTS the selection and acks it
+ * to the UI WITHOUT mutating the shared `aio` global via `selectWorkspace`
+ * (which races concurrent processes). A current project must still exist as a
+ * drift guard.
  */
 export async function handleSelectWorkspace(
     context: HandlerContext,
@@ -89,29 +90,14 @@ export async function handleSelectWorkspace(
     }
 
     try {
-        // Get project ID for context guard (required for drift protection)
+        // Drift guard: a project must be selected before a workspace is chosen.
         const currentProject = await context.authManager?.getCurrentProject();
         if (!currentProject?.id) {
             throw new Error('No project selected - cannot select workspace without project context');
         }
 
-        // Select workspace with project context guard to protect against context drift
-        const success = await context.authManager?.selectWorkspace(workspaceId, currentProject.id);
-        if (success) {
-            // Note: Selection already logged by adobeEntityService with workspace name
-
-            // Cache invalidation is handled in authManager.selectWorkspace
-
-            await context.sendMessage('workspaceSelected', { workspaceId });
-            return { success: true };
-        } else {
-            context.logger.error(`[Workspace] Failed to select workspace ${workspaceId}`);
-            await context.sendMessage('error', {
-                message: 'Failed to select workspace',
-                details: `Workspace selection for ${workspaceId} was unsuccessful`,
-            });
-            throw new Error(`Failed to select workspace ${workspaceId}`);
-        }
+        await context.sendMessage('workspaceSelected', { workspaceId });
+        return { success: true };
     } catch (error) {
         context.logger.error('[Workspace] Failed to select workspace:', error as Error);
         await context.sendMessage('error', {

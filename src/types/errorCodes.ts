@@ -42,6 +42,13 @@ export enum ErrorCode {
     AUTH_NO_APP_BUILDER = 'AUTH_NO_APP_BUILDER',
     /** Organization validation failed */
     AUTH_ORG_INVALID = 'AUTH_ORG_INVALID',
+    /**
+     * Adobe CLI is targeting a different organization than the operation needs.
+     * User-recoverable in the UI (pick a different org / re-login), but
+     * deliberately NON-retryable for agents — a blind retry hits the same
+     * wrong-org 403. Kept OUT of isRecoverableError's auto-retry set.
+     */
+    ORG_MISMATCH = 'ORG_MISMATCH',
 
     // ===== Prerequisite Errors =====
     /** Required tool not installed */
@@ -120,6 +127,7 @@ export type ErrorCategory =
  * Get the category for an error code
  */
 export function getErrorCategory(code: ErrorCode): ErrorCategory {
+    if (code === ErrorCode.ORG_MISMATCH) return 'auth';
     if (code.startsWith('AUTH_')) return 'auth';
     if (code.startsWith('PREREQ_')) return 'prereq';
     if (code.startsWith('MESH_')) return 'mesh';
@@ -167,6 +175,7 @@ export function getErrorTitle(code: ErrorCode): string {
         [ErrorCode.AUTH_FORBIDDEN]: 'Access denied',
         [ErrorCode.AUTH_NO_APP_BUILDER]: 'App Builder access required',
         [ErrorCode.AUTH_ORG_INVALID]: 'Organization unavailable',
+        [ErrorCode.ORG_MISMATCH]: 'Wrong organization',
 
         // Prereq
         [ErrorCode.PREREQ_NOT_INSTALLED]: 'Required tool not installed',

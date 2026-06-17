@@ -267,15 +267,13 @@ async function autoSelectSingleOrg(
         isAuthenticated: true,
     });
 
-    const selected = await context.authManager?.selectOrganization(org.id);
-    if (selected) {
-        context.authManager?.setCachedOrganization(org);
-        context.logger.debug(`[Auth] Successfully auto-selected and cached organization: ${org.name}`);
-        return { currentOrg: org, requiresOrgSelection: false, orgLacksAccess: false };
-    }
-
-    context.logger.warn(`[Auth] Failed to auto-select organization: ${org.name}`);
-    return { requiresOrgSelection: true, orgLacksAccess: false };
+    // Phase 4a: carry the auto-selected org in the returned state and cache it
+    // (so per-op env targeting can resolve its code/name) WITHOUT mutating the
+    // shared `aio` global via selectOrganization (which races concurrent
+    // processes). Each `aio` operation targets the org via withOrgContext.
+    context.authManager?.setCachedOrganization(org);
+    context.logger.debug(`[Auth] Auto-selected and cached organization: ${org.name}`);
+    return { currentOrg: org, requiresOrgSelection: false, orgLacksAccess: false };
 }
 
 /**

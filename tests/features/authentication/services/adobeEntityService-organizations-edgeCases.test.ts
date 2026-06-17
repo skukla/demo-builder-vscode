@@ -4,7 +4,7 @@
  * Tests for auto-selection, CLI context clearing, and edge case scenarios.
  */
 
-import { setupMocks, mockOrgs, type TestMocks } from './adobeEntityService.testUtils';
+import { setupMocks, type TestMocks } from './adobeEntityService.testUtils';
 
 // Mock external dependencies only
 jest.mock('@/core/logging');
@@ -41,125 +41,6 @@ describe('AdobeEntityService - Organizations - Edge Cases', () => {
         });
 
         testMocks = setupMocks();
-    });
-
-    describe('autoSelectOrganizationIfNeeded()', () => {
-        it('should return current org if already selected', async () => {
-            const { service, mockCacheManager, mockCommandExecutor } = testMocks;
-            mockCacheManager.getCachedOrganization.mockReturnValue(mockOrgs[0]);
-
-            const result = await service.autoSelectOrganizationIfNeeded();
-
-            expect(result).toEqual(mockOrgs[0]);
-            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
-        });
-
-        it('should auto-select if only one org exists', async () => {
-            const { service, mockCacheManager, mockSDKClient, mockCommandExecutor } = testMocks;
-            const singleOrg = mockOrgs.slice(0, 1);
-            mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
-            mockCacheManager.getCachedOrgList.mockReturnValue(singleOrg);
-            mockCacheManager.getCachedConsoleWhere.mockReturnValue(undefined);
-            mockSDKClient.isInitialized.mockReturnValue(false);
-
-            // Mock CLI calls:
-            // 1st call: getCurrentOrganization() -> returns invalid JSON so it returns undefined
-            // 2nd call: selectOrganization() -> returns success
-            mockCommandExecutor.execute
-                .mockResolvedValueOnce({
-                    stdout: '{}', // Empty console.where response
-                    stderr: '',
-                    code: 0,
-                    duration: 100
-                })
-                .mockResolvedValueOnce({
-                    stdout: 'Org selected',
-                    stderr: '',
-                    code: 0,
-                    duration: 100
-                });
-
-            const result = await service.autoSelectOrganizationIfNeeded();
-
-            expect(result).toEqual(mockOrgs[0]);
-            expect(mockCommandExecutor.execute).toHaveBeenCalled();
-        });
-
-        it('should return undefined if multiple orgs exist', async () => {
-            const { service, mockCacheManager } = testMocks;
-            mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
-            mockCacheManager.getCachedOrgList.mockReturnValue(mockOrgs);
-
-            const result = await service.autoSelectOrganizationIfNeeded();
-
-            expect(result).toBeUndefined();
-        });
-
-        it('should skip current check if requested', async () => {
-            const { service, mockCacheManager, mockSDKClient, mockCommandExecutor } = testMocks;
-            const singleOrg = mockOrgs.slice(0, 1);
-            mockCacheManager.getCachedOrgList.mockReturnValue(singleOrg);
-            mockSDKClient.isInitialized.mockReturnValue(false);
-
-            // Only one CLI call needed: selectOrganization()
-            mockCommandExecutor.execute.mockResolvedValue({
-                stdout: 'Org selected',
-                stderr: '',
-                code: 0,
-                duration: 100
-            });
-
-            const result = await service.autoSelectOrganizationIfNeeded(true);
-
-            expect(result).toEqual(mockOrgs[0]);
-            expect(mockCacheManager.getCachedOrganization).not.toHaveBeenCalled();
-        });
-
-        it('should fetch org list if not cached', async () => {
-            const { service, mockCacheManager, mockSDKClient, mockCommandExecutor } = testMocks;
-            const singleOrg = mockOrgs.slice(0, 1);
-            mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
-            mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
-            mockCacheManager.getCachedConsoleWhere.mockReturnValue(undefined);
-            mockSDKClient.isInitialized.mockReturnValue(false);
-
-            // Mock CLI calls:
-            // 1st: getCurrentOrganization() calls console.where
-            // 2nd: getOrganizations() fetches org list
-            // 3rd: selectOrganization() selects the org
-            // 4th: selectOrganization() calls getOrganizations() again to cache (since getCachedOrgList still returns undefined)
-            mockCommandExecutor.execute
-                .mockResolvedValueOnce({
-                    stdout: '{}', // Empty console.where response
-                    stderr: '',
-                    code: 0,
-                    duration: 100
-                })
-                .mockResolvedValueOnce({
-                    stdout: JSON.stringify(singleOrg),
-                    stderr: '',
-                    code: 0,
-                    duration: 100
-                })
-                .mockResolvedValueOnce({
-                    stdout: 'Org selected',
-                    stderr: '',
-                    code: 0,
-                    duration: 100
-                })
-                .mockResolvedValueOnce({
-                    stdout: JSON.stringify(singleOrg),
-                    stderr: '',
-                    code: 0,
-                    duration: 100
-                });
-
-            const result = await service.autoSelectOrganizationIfNeeded();
-
-            expect(result).toBeDefined();
-            expect(result).toEqual(mockOrgs[0]);
-            expect(mockCommandExecutor.execute).toHaveBeenCalled();
-        });
     });
 
     describe('CLI context clearing when no orgs', () => {

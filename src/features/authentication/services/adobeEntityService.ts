@@ -19,7 +19,6 @@ import { AdobeEntityFetcher } from './adobeEntityFetcher';
 import { AdobeEntitySelector } from './adobeEntitySelector';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';
-import type { OrganizationValidator } from './organizationValidator';
 import type { StepLogger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
 import type { Logger } from '@/types/logger';
@@ -42,7 +41,6 @@ export function createEntityServices(
     commandManager: CommandExecutor,
     sdkClient: AdobeSDKClient,
     cacheManager: AuthCacheManager,
-    organizationValidator: OrganizationValidator,
     logger: Logger,
     stepLogger: StepLogger,
 ): EntityServices {
@@ -73,11 +71,6 @@ export function createEntityServices(
     const selector = new AdobeEntitySelector(
         commandManager,
         cacheManager,
-        organizationValidator,
-        fetcher,
-        resolver,
-        logger,
-        stepLogger,
     );
 
     selectorContainer.ref = selector;

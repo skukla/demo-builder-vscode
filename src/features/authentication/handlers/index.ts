@@ -5,5 +5,6 @@
  */
 
 export * from './authenticationHandlers';
+export * from './organizationHandlers';
 export * from './projectHandlers';
 export * from './workspaceHandlers';

@@ -125,7 +125,8 @@ describe('Feature-Specific Handler Map Tests', () => {
         it('should register dashboard-specific handlers', () => {
             const types = getRegisteredTypes(dashboardHandlers);
 
-            expect(types).toContain('ready');
+            // No 'ready' — dashboard init comes from BaseWebviewCommand on handshake.
+            expect(types).not.toContain('ready');
             expect(types).toContain('requestStatus');
             expect(types).toContain('startDemo');
             expect(types).toContain('stopDemo');

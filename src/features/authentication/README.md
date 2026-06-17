@@ -11,9 +11,9 @@ The feature leverages the Adobe Console SDK to achieve 30x faster operations com
 - **Adobe I/O Authentication**: Browser-based login flow with token management
 - **Token Validation**: Quick authentication checks (<1s) vs full validation (3-10s)
 - **Adobe Console SDK Integration**: High-performance API operations with automatic fallback to CLI
-- **Organization Management**: Listing, selecting, and validating Adobe organizations
-- **Project Management**: Fetching and selecting Adobe Developer Console projects
-- **Workspace Management**: Workspace selection and context switching
+- **Organization Targeting**: Listing organizations and targeting one per invocation via env-scoped context (no global `aio console` mutation)
+- **Project Management**: Fetching Adobe Developer Console projects
+- **Workspace Management**: Fetching workspaces
 - **Caching Strategy**: Multi-layer caching with TTL and security jitter for optimal performance
 - **Pre-flight Checks**: Authentication verification before expensive Adobe I/O operations
 - **Performance Tracking**: Operation timing and optimization metrics
@@ -32,13 +32,9 @@ The feature leverages the Adobe Console SDK to achieve 30x faster operations com
 - `getOrganizations()` - Fetch available Adobe organizations
 - `getProjects()` - Fetch projects in current organization
 - `getWorkspaces()` - Fetch workspaces in current project
-- `selectOrganization(orgId)` - Set active organization context
-- `selectProject(projectId)` - Set active project context
-- `selectWorkspace(workspaceId)` - Set active workspace context
-- `getCurrentOrganization()` - Get currently selected organization
-- `getCurrentProject()` - Get currently selected project
-- `getCurrentWorkspace()` - Get currently selected workspace
-- `autoSelectOrganizationIfNeeded()` - Auto-select if only one org available
+- `getCurrentOrganization()` - Get currently targeted organization
+- `getCurrentProject()` - Get currently targeted project
+- `getCurrentWorkspace()` - Get currently targeted workspace
 - `getTokenManager()` - Get TokenManager instance for token inspection operations
 - `getWorkspaceCredential()` - Get existing OAuth S2S credential from current workspace
 - `createWorkspaceCredential(name, description)` - Create OAuth S2S credential on current workspace
@@ -62,9 +58,8 @@ const isFullyAuth = await authService.isFullyAuthenticated();
 // Login flow
 await authService.login();
 
-// Get organizations and select one
+// List organizations (selection is targeted per-invocation, not stored globally)
 const orgs = await authService.getOrganizations();
-await authService.selectOrganization(orgs[0].id);
 ```
 
 ### AdobeSDKClient
@@ -169,7 +164,7 @@ cacheManager.setCachedAuthStatus(false, 30000); // 30 seconds
 **Sub-services**:
 - `fetcher` (AdobeEntityFetcher) — `getOrganizations()`, `getProjects()`, `getWorkspaces()`, `getWorkspaceCredential()`, `createWorkspaceCredential()`
 - `resolver` (AdobeContextResolver) — `getCurrentOrganization()`, `getCurrentProject()`, `getCurrentWorkspace()`, `getCurrentContext()`
-- `selector` (AdobeEntitySelector) — `selectOrganization()`, `selectProject()`, `selectWorkspace()`, `autoSelectOrganizationIfNeeded()`
+- `selector` (AdobeEntitySelector) — `clearConsoleContext()` plus read helpers for the current org/project/workspace. It never mutates the global `aio` selection; ops are targeted per-invocation via `ensureOrgContext`/`withOrgContext`.
 
 **Zero-Organization Behavior**:
 When `getOrganizations()` returns an empty array (user has no accessible organizations), the service automatically clears stale Adobe CLI console context (org/project/workspace selections) while preserving the authentication token. This prevents showing outdated organization selections from previous sessions.
@@ -186,36 +181,50 @@ const { fetcher, resolver, selector } = createEntityServices(
 // Get organizations (SDK-accelerated if available, falls back to CLI)
 const orgs = await fetcher.getOrganizations();
 
-// Select organization
-await selector.selectOrganization(orgId);
-
-// Get projects in selected org
+// Get projects (each fetch targets the org per-invocation via withOrgContext)
 const projects = await fetcher.getProjects();
 ```
 
-### OrganizationValidator
+### Per-Invocation Org Targeting
 
-**Purpose**: Validates user access to selected organizations
+**Purpose**: Target a specific Adobe org/project/workspace for each operation without mutating the global `aio console` selection.
 
-**Key Methods**:
-- `validateAndClearInvalidOrgContext(forceValidation?)` - Check if user still has access to selected org, clear if not
+Adobe ops are scoped per invocation through an internal `withOrgContext`/`buildAioConsoleEnv` mechanism: the target is passed as env to that single `aio` call. The extension never runs `aio console org select`, so it cannot clobber the user's terminal or other processes.
+
+`ensureOrgContext(orgId, options)` is the one canonical entry point. It resolves the target and returns a typed result:
+
+- `ok` - the org is reachable; the operation may proceed targeted at it
+- `org_mismatch` - the active context targets a different org (surfaced to callers as a non-retryable `ORG_MISMATCH`)
+- `needs_relogin` - the org isn't reachable by the current token; because IMS tokens are org-bound, only a **forced** sign-in (`aio auth login -f`, which swaps the token via the browser account/org chooser) can surface it
+- `access_revoked` - a targeted probe still 403'd; the user lost access to the org
+
+A wrong org produces a typed `ORG_MISMATCH` that the UI resolves with a **forced sign-in + verify** recovery (e.g. the dashboard's "Switch IMS Org" banner) — never the old "run `aio console org select` in your terminal" message, and never a non-forced re-login (which silently reuses the browser SSO session and can loop back to the wrong org).
 
 **Example Usage**:
 ```typescript
-import { OrganizationValidator } from '@/features/authentication';
+import { ensureOrgContext } from '@/features/authentication/services/ensureOrgContext';
 
-const validator = new OrganizationValidator(
-    commandManager,
-    cacheManager,
-    logger
-);
+const result = await ensureOrgContext(orgId, {
+    listSelectableOrgs: () => fetcher.getOrganizations(),
+});
 
-// Validate current org context (cached for 30 minutes)
-await validator.validateAndClearInvalidOrgContext();
-
-// Force validation (bypass cache)
-await validator.validateAndClearInvalidOrgContext(true);
+switch (result.status) {
+    case 'ok':
+        // Proceed; the operation runs targeted at result.targetOrg via withOrgContext
+        break;
+    case 'org_mismatch':
+        // Surface ORG_MISMATCH (non-retryable); resolve via a forced sign-in + verify
+        break;
+    case 'needs_relogin':
+        // Token is org-bound to a different org → forced sign-in (login(true)) to swap it
+        break;
+    case 'access_revoked':
+        // User lost access to the org
+        break;
+}
 ```
+
+`OrganizationValidator` is constructed as `new OrganizationValidator(commandManager, logger)`.
 
 ### withTiming
 
@@ -357,16 +366,11 @@ if (!isAuth) {
     const success = await authService.login();
 
     if (success) {
-        // Auto-select org if only one available
-        const org = await authService.autoSelectOrganizationIfNeeded();
-
-        if (org) {
-            logger.info(`Auto-selected organization: ${org.name}`);
-        } else {
-            // Show org selection UI
-            const orgs = await authService.getOrganizations();
-            // ... present to user
-        }
+        // IMS tokens are org-bound: getOrganizations() returns the single org the
+        // token reaches (whichever the user signed into). There is no org picker —
+        // sign-in owns org selection. Ops target that org per-invocation; reachability
+        // for an existing project's org is verified via ensureOrgContext.
+        const orgs = await authService.getOrganizations();
     }
 }
 ```
@@ -384,14 +388,8 @@ const authService = new AuthenticationService(
 // Get projects in current org
 const projects = await authService.getProjects();
 
-// Select a project
-await authService.selectProject(projects[0].id);
-
-// Get workspaces in selected project
+// Get workspaces in the chosen project (fetches are targeted per-invocation)
 const workspaces = await authService.getWorkspaces();
-
-// Select a workspace
-await authService.selectWorkspace(workspaces[0].id);
 
 // Verify current context
 const context = await authService.getCurrentContext();
@@ -493,7 +491,7 @@ cacheManager.setCachedAuthStatus(isAuth);
 
 ### Common Errors
 - **Token Expired**: Automatically triggers re-authentication
-- **Org Access Lost**: Clears invalid org context and prompts user
+- **Org Mismatch / Access Lost**: `ensureOrgContext` returns a typed status; a wrong org surfaces as a non-retryable `ORG_MISMATCH` resolved via a forced sign-in + verify (e.g. the dashboard "Switch IMS Org" recovery)
 - **Network Timeout**: Provides helpful error messages with retry guidance
 - **Browser Auth Cancelled**: Detects timeout and suggests retry
 - **SDK Initialization Failed**: Falls back to CLI operations automatically

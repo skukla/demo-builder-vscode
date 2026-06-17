@@ -16,6 +16,8 @@
  */
 
 import { z } from 'zod';
+import { runWithAdobeTarget } from './adobeTargetStore';
+import { isOrgMismatchError, orgMismatchResult } from './adobeTools';
 import { ServiceLocator } from '@/core/di';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveContentOperations } from '@/features/eds/services/daLiveContentOperations';
@@ -177,14 +179,20 @@ export function registerCloudResourceTools(
             if (!ops) {
                 return asText(NEEDS_ADOBE);
             }
-            const sites = await ops.org.listOrgSites(org);
-            const offset = Math.max(0, Math.trunc(args?.offset ?? 0));
-            const limit = Math.min(100, Math.max(1, Math.trunc(args?.limit ?? 30)));
-            const page = sites.slice(offset, offset + limit).map((entry) => ({
-                name: entry.name,
-                lastModified: entry.lastModified,
-            }));
-            return asText({ org, total: sites.length, offset, limit, sites: page });
+            try {
+                // Run under the stored session org context (no global mutation).
+                const sites = await runWithAdobeTarget(() => ops.org.listOrgSites(org));
+                const offset = Math.max(0, Math.trunc(args?.offset ?? 0));
+                const limit = Math.min(100, Math.max(1, Math.trunc(args?.limit ?? 30)));
+                const page = sites.slice(offset, offset + limit).map((entry) => ({
+                    name: entry.name,
+                    lastModified: entry.lastModified,
+                }));
+                return asText({ org, total: sites.length, offset, limit, sites: page });
+            } catch (err) {
+                if (isOrgMismatchError(err)) return orgMismatchResult();
+                throw err;
+            }
         },
     );
 
@@ -221,13 +229,18 @@ export function registerCloudResourceTools(
             if (!ops) {
                 return asText(NEEDS_ADOBE);
             }
-            const result = await ops.content.deleteAllSiteContent(org, site);
-            return asText({
-                deleted: result.success,
-                site: fullName,
-                deletedCount: result.deletedCount,
-                error: result.error,
-            });
+            try {
+                const result = await runWithAdobeTarget(() => ops.content.deleteAllSiteContent(org, site));
+                return asText({
+                    deleted: result.success,
+                    site: fullName,
+                    deletedCount: result.deletedCount,
+                    error: result.error,
+                });
+            } catch (err) {
+                if (isOrgMismatchError(err)) return orgMismatchResult();
+                throw err;
+            }
         },
     );
 }

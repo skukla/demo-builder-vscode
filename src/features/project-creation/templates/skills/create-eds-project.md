@@ -56,6 +56,16 @@ An EDS run returns a `phases` timeline; each entry is `{ phase, status, message?
 (e.g. `repo` → `dalive` → `config`, then `complete`). Relay these to the user in plain
 language as the work proceeds — do not dump raw JSON.
 
+## 4a. Set your Adobe org target — never retry `ORG_MISMATCH`
+
+Demo Builder targets the Adobe org **per operation** — it does not clobber a shared global
+setting, so concurrent windows and agents stay isolated. Establish your target before any
+Adobe-touching call: `select_org` → `select_project` → `select_workspace`. If `create_project`
+(or any Adobe-touching tool) returns `{ error_type: "ORG_MISMATCH", non_retryable: true }`,
+**do not retry** — a blind retry hits the same wrong-org 403 and wastes tokens. Surface it:
+tell the user to select the correct Adobe organization (or re-login to switch account), then
+re-run the call once they have.
+
 ## 5. Handle failure (`rerunSafe`)
 
 A failure returns `{ created: false, stage, error, phases, rerunSafe: true }`. The pipeline

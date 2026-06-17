@@ -65,6 +65,15 @@ export const FRONTEND_TIMEOUTS = {
     DOUBLE_CLICK_PREVENTION: 1000,
 
     /**
+     * Minimum time the dashboard's "Checking Adobe organization…" indicator stays
+     * visible before resolving to the banner / clearing. The proactive org check
+     * often resolves in a few ms (warm cache), which would flash the indicator
+     * imperceptibly and make the banner appear "out of nowhere"; this guarantees
+     * the check is seen before its result shows.
+     */
+    ORG_CHECK_MIN_DISPLAY: 700,
+
+    /**
      * Debounce delay for component selection changes.
      * Used by useComponentSelection hook to batch rapid selection changes
      * before updating state and sending to backend.

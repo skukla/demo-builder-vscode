@@ -1887,6 +1887,64 @@ button[class*="spectrum-Button"][disabled],
     padding: 8px; /* Shadow overflow padding */
 }
 
+/* Org-mismatch banner — a dark, accent-bordered warning card that matches the
+   dashboard's bordered-tile attention idiom (cf. the Delete tile's accent
+   border) while calling attention. Aligned to the action-zone column, below the
+   status header. */
+/* Fade + slight rise so the notice eases in after the org check resolves,
+   instead of popping in. Disabled under prefers-reduced-motion (reset.css). */
+@keyframes org-context-fade-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.dashboard-org-banner {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background-color: var(--spectrum-global-color-gray-75);
+    border: 1px solid var(--spectrum-global-color-orange-500);
+    border-left-width: 3px;
+    border-radius: 8px;
+    animation: org-context-fade-in 200ms ease-out;
+}
+
+.dashboard-org-banner-icon {
+    color: var(--spectrum-global-color-orange-600);
+    flex-shrink: 0;
+    align-self: flex-start;
+    margin-top: 2px;
+}
+
+/* Text block takes the available width; min-width:0 lets it wrap instead of
+   forcing the banner wider than its max. */
+.dashboard-org-banner-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.dashboard-org-banner-title {
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-900);
+}
+
+.dashboard-org-banner-hint {
+    font-size: 13px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+/* Action stays on the right, full-size, never shrinks. */
+.dashboard-org-banner-actions {
+    flex-shrink: 0;
+}
+
 /* Stacked, labeled rows + isolated delete footer. Fixed to the derived content
    width so the status header (same width) aligns badge-left / button-right. */
 .dashboard-zones {

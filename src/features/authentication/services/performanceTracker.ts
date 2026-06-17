@@ -11,7 +11,6 @@ import { formatDuration } from '@/core/utils';
  * Values based on observed production performance (2025-11):
  * - Token validation: ~2.5s (network round-trip to Adobe)
  * - SDK operations: <500ms (fast, cached)
- * - CLI selection: 10-12s (Adobe CLI writes config files)
  */
 const EXPECTED_TIMES: Record<string, number> = {
     'isAuthenticated': 3000,
@@ -19,9 +18,6 @@ const EXPECTED_TIMES: Record<string, number> = {
     'getOrganizations': 5000,
     'getProjects': 5000,
     'getWorkspaces': 5000,
-    'selectOrganization': 8000,
-    'selectProject': 15000,
-    'selectWorkspace': 15000,
     'getCurrentOrganization': 5000,
     'getCurrentProject': 5000,
     'getCurrentWorkspace': 5000,

@@ -42,3 +42,17 @@ export function isRetryableConnectError(code: string | undefined): boolean {
     if (!code) return false;
     return RETRYABLE_CODES.has(code);
 }
+
+/**
+ * Returns false when a parsed MCP TOOL RESULT is explicitly non-retryable.
+ *
+ * Distinct from `isRetryableConnectError` (which classifies socket-connect
+ * failures): this guards the adobe-cli retry path from silently re-running a
+ * tool whose result carries `non_retryable: true` — notably an ORG_MISMATCH
+ * result, which would re-403 against the unchanged shared org global and burn
+ * tokens. Anything without the marker stays retryable (default behavior).
+ */
+export function isRetryableToolResult(result: unknown): boolean {
+    if (result === null || typeof result !== 'object') return true;
+    return (result as { non_retryable?: unknown }).non_retryable !== true;
+}

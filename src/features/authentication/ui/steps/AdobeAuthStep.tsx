@@ -18,9 +18,9 @@ import { AuthLoadingState } from './components/AuthLoadingState';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { ErrorCode } from '@/types/errorCodes';
-import { BaseStepProps } from '@/types/wizard';
+import { NavigableStepProps } from '@/types/wizard';
 
-export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepProps) {
+export function AdobeAuthStep({ state, updateState, setCanProceed }: NavigableStepProps) {
     const {
         authStatus,
         authSubMessage,
@@ -31,6 +31,12 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepPro
     } = useAuthStatus({ state, updateState, setCanProceed });
 
     const { adobeAuth, adobeOrg } = state;
+
+    // Switching orgs requires re-authentication: IMS tokens are org-bound, so the
+    // only way to reach a different org is a forced sign-in, where the browser
+    // presents the account/org chooser. The wizard then reflects whichever org you
+    // land on. See .rptc/plans/adobe-org-context-self-heal/overview.md.
+    const switchAccount = () => handleLogin(true);
 
     return (
         <SingleColumnLayout>
@@ -65,7 +71,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepPro
                     title="Connected"
                     message={adobeOrg.name}
                     actions={[
-                        { label: 'Switch Organizations', variant: 'secondary', onPress: () => handleLogin(true) },
+                        { label: 'Switch IMS Org', icon: <Login size="S" />, variant: 'secondary', onPress: switchAccount },
                     ]}
                 />
             )}
@@ -80,7 +86,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepPro
                     centerMessage
                     maxWidth="450px"
                     actions={[
-                        { label: 'Select Organization', icon: <Key size="S" />, variant: 'accent', onPress: () => handleLogin(true) },
+                        { label: 'Switch IMS Org', icon: <Login size="S" />, variant: 'accent', onPress: switchAccount },
                     ]}
                 />
             )}
@@ -115,7 +121,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepPro
                     centerMessage
                     maxWidth="450px"
                     actions={adobeAuth.code === ErrorCode.AUTH_NO_APP_BUILDER
-                        ? [{ label: 'Sign In Again', icon: <Login size="S" />, variant: 'accent', onPress: () => handleLogin(true) }]
+                        ? [{ label: 'Sign in with a different account', icon: <Login size="S" />, variant: 'accent', onPress: () => handleLogin(true) }]
                         : [
                             { label: 'Try Again', icon: <Refresh size="S" />, variant: 'secondary', onPress: () => checkAuthentication() },
                             { label: 'Sign In Again', icon: <Login size="S" />, variant: 'accent', onPress: () => handleLogin(false) },

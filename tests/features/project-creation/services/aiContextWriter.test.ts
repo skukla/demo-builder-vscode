@@ -264,6 +264,41 @@ describe('aiContextWriter', () => {
             });
         });
 
+        describe('Adobe org-context guidance', () => {
+            it('explains per-operation org targeting and that ORG_MISMATCH must not be retried', () => {
+                const project = makeHeadlessProject({
+                    adobe: { organization: 'Acme Org', projectTitle: 'Proj', workspace: 'Stage' },
+                });
+                const result = generateAgentsMd(project, STACKS);
+
+                // Shipped behavior: the extension targets the org PER OPERATION
+                // (no shared global to clobber); concurrent windows stay isolated.
+                expect(result).toMatch(/per operation/i);
+                expect(result).toContain('ORG_MISMATCH');
+                expect(result).toMatch(/do not retry/i);
+            });
+
+            it('tells the agent to set its target before Adobe ops (select_org → … → select_workspace)', () => {
+                const project = makeHeadlessProject({
+                    adobe: { organization: 'Acme Org', projectTitle: 'Proj', workspace: 'Stage' },
+                });
+                const result = generateAgentsMd(project, STACKS);
+
+                expect(result).toContain('select_org');
+                expect(result).toContain('select_workspace');
+            });
+
+            it('no longer frames org context as a shared global setting', () => {
+                const project = makeHeadlessProject({
+                    adobe: { organization: 'Acme Org', projectTitle: 'Proj', workspace: 'Stage' },
+                });
+                const result = generateAgentsMd(project, STACKS);
+
+                expect(result).not.toMatch(/global and shared/i);
+                expect(result).not.toMatch(/process-wide setting shared/i);
+            });
+        });
+
         describe('package name', () => {
             it('includes the package display name for isle5', () => {
                 const project = makeEdsProject({ selectedPackage: 'isle5' });

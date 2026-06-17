@@ -244,6 +244,7 @@ export function computeStateUpdatesForBackwardNav(
         updates.workspacesCache = undefined;
     }
 
+
     return updates;
 }
 
@@ -670,6 +671,7 @@ export function buildProjectConfig(
         projectName: wizardState.projectName,
         adobe: {
             organization: wizardState.adobeOrg?.id,
+            organizationName: wizardState.adobeOrg?.name,
             projectId: wizardState.adobeProject?.id,
             projectName: wizardState.adobeProject?.name,
             projectTitle: wizardState.adobeProject?.title,

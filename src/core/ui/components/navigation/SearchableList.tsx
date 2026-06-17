@@ -19,6 +19,8 @@ export interface SearchableListProps<T extends SearchableListItem> {
     items: T[];
     /** Currently selected item IDs */
     selectedKeys?: string[];
+    /** Item IDs that cannot be selected (rendered greyed/disabled) */
+    disabledKeys?: string[];
     /** Selection change handler */
     onSelectionChange?: (keys: Set<React.Key>) => void;
     /** Search query */
@@ -87,6 +89,7 @@ export interface SearchableListProps<T extends SearchableListItem> {
 export function SearchableList<T extends SearchableListItem>({
     items,
     selectedKeys = [],
+    disabledKeys,
     onSelectionChange,
     searchQuery,
     onSearchQueryChange,
@@ -225,6 +228,7 @@ export function SearchableList<T extends SearchableListItem>({
                     items={filteredItems}
                     selectionMode="single"
                     selectedKeys={selectedKeys}
+                    disabledKeys={disabledKeys}
                     onSelectionChange={onSelectionChange as (keys: 'all' | Set<React.Key>) => void}
                     aria-label={ariaLabel}
                     height="100%"
