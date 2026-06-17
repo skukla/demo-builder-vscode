@@ -225,9 +225,10 @@ describe('handleRenameProject', () => {
 
         await handleRenameProject(context, { newName: 'renamed' });
 
-        // Re-sends init so the dashboard title refreshes (folder/name changed)
+        // Re-runs status so the dashboard title refreshes (title is driven by the
+        // status payload's name, not a separate init).
         expect((context.panel!.webview.postMessage as jest.Mock)).toHaveBeenCalledWith(
-            expect.objectContaining({ type: 'init' }),
+            expect.objectContaining({ type: 'statusUpdate' }),
         );
     });
 
@@ -239,7 +240,7 @@ describe('handleRenameProject', () => {
         await handleRenameProject(context, { newName: 'renamed' });
 
         expect((context.panel!.webview.postMessage as jest.Mock)).not.toHaveBeenCalledWith(
-            expect.objectContaining({ type: 'init' }),
+            expect.objectContaining({ type: 'statusUpdate' }),
         );
     });
 });

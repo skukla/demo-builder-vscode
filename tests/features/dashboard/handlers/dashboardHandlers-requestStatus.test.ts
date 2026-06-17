@@ -200,43 +200,19 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         );
     });
 
-    it('should surface orgMismatch when the token reaches a different org', async () => {
+    it('should NOT carry orgMismatch in the status payload (delivered separately)', async () => {
+        // The org check is decoupled — it's posted via the async `orgContextResult`
+        // message, never bundled into the status payload (which must stay fast).
         const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);
 
-        // Project org is 'org123' (from setupMocks); token reaches 'org999'.
         const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' } as any);
-
         const { ServiceLocator } = require('@/core/di');
         ServiceLocator.getAuthenticationService.mockReturnValue({
             isAuthenticated: jest.fn().mockResolvedValue(true),
             getOrganizations: jest.fn().mockResolvedValue([
                 { id: 'org999', code: 'OTHER@AdobeOrg', name: 'Other Org' },
             ]),
-            getCurrentOrganization: jest.fn().mockResolvedValue({ id: 'org999', name: 'Other Org' }),
-        });
-
-        const result = await handleRequestStatus(mockContext);
-
-        expect(result.success).toBe(true);
-        expect(result.data).toMatchObject({
-            orgMismatch: { expectedOrg: 'org123', currentOrg: 'Other Org' },
-        });
-    });
-
-    it('should NOT surface orgMismatch when the token reaches the project org', async () => {
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
-        detectFrontendChanges.mockReturnValue(false);
-
-        const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' } as any);
-
-        const { ServiceLocator } = require('@/core/di');
-        ServiceLocator.getAuthenticationService.mockReturnValue({
-            isAuthenticated: jest.fn().mockResolvedValue(true),
-            getOrganizations: jest.fn().mockResolvedValue([
-                { id: 'org123', code: 'ORG@AdobeOrg', name: 'Project Org' },
-            ]),
-            getCurrentOrganization: jest.fn().mockResolvedValue({ id: 'org123', name: 'Project Org' }),
         });
 
         const result = await handleRequestStatus(mockContext);

@@ -77,14 +77,14 @@ export class DeployMeshCommand extends BaseCommand {
             const { detectProjectOrgMismatch } = await import(
                 '@/features/authentication/services/detectProjectOrgMismatch'
             );
-            const orgMismatch = await detectProjectOrgMismatch(authManager, project, this.logger);
-            if (orgMismatch) {
+            const orgContext = await detectProjectOrgMismatch(authManager, project, this.logger);
+            if (orgContext && !orgContext.reachable) {
                 // Re-surface the dashboard's "Switch IMS Org" banner and abort.
                 await ProjectDashboardWebviewCommand.refreshStatus();
 
                 vscode.window.showWarningMessage(
                     `"${project.name}" uses a different Adobe organization than the account you're signed into`
-                    + (orgMismatch.currentOrg ? ` (${orgMismatch.currentOrg})` : '')
+                    + (orgContext.currentOrg ? ` (${orgContext.currentOrg})` : '')
                     + '. Use "Switch IMS Org" on the dashboard to continue.',
                 );
                 return;

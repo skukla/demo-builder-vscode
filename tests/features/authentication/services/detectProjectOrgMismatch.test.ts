@@ -3,12 +3,12 @@
  *
  * Contract:
  * - Compares the project's expected org (project.adobe.organization) against the
- *   org the current IMS token can actually reach (authManager.getOrganizations()).
- * - Returns undefined (no mismatch) when the project has no Adobe org, when the
- *   token reaches the expected org, or when the check can't run (treated as
- *   non-fatal — callers still proceed/render).
- * - Returns an OrgMismatchInfo naming the expected org (id) and the current
- *   token org (name) when they differ — so callers can name both.
+ *   org the current IMS token can reach (authManager.getOrganizations()).
+ * - Returns undefined when the project has no Adobe org, or the check can't run
+ *   (non-fatal — callers still proceed/render).
+ * - Otherwise returns an OrgContextResult { reachable, expectedOrg, currentOrg }.
+ *   currentOrg comes from getOrganizations()[0] (the token's reachable org) — NOT
+ *   getCurrentOrganization(), which reads the stale CLI console selection.
  * - It relies on ensureOrgContext, so it MUST NOT mutate the global aio selection.
  */
 
@@ -30,42 +30,45 @@ describe('detectProjectOrgMismatch', () => {
         expect(authManager.getOrganizations).not.toHaveBeenCalled();
     });
 
-    it('returns undefined when the token reaches the project org (match)', async () => {
+    it('reports reachable with the current org id + name when the token reaches the project org', async () => {
         const authManager = {
             getOrganizations: jest.fn().mockResolvedValue([
                 { id: 'org-A', code: 'A@AdobeOrg', name: 'Org A' },
             ]),
-            getCurrentOrganization: jest.fn().mockResolvedValue({ id: 'org-A', name: 'Org A' }),
         } as any;
 
         const result = await detectProjectOrgMismatch(authManager, makeProject('org-A'), mockLogger());
 
-        expect(result).toBeUndefined();
+        expect(result).toEqual({ reachable: true, expectedOrg: 'org-A', currentOrgId: 'org-A', currentOrg: 'Org A' });
     });
 
-    it('returns mismatch info naming both orgs when the token is in a different org', async () => {
+    it('reports reachable for a legacy project that stored the org NAME (matched by name)', async () => {
+        const authManager = {
+            getOrganizations: jest.fn().mockResolvedValue([
+                { id: 'org-A', code: 'A@AdobeOrg', name: 'Acme Org' },
+            ]),
+        } as any;
+
+        // Legacy project: organization holds the name, not the id.
+        const result = await detectProjectOrgMismatch(authManager, makeProject('Acme Org'), mockLogger());
+
+        expect(result).toEqual({ reachable: true, expectedOrg: 'Acme Org', currentOrgId: 'org-A', currentOrg: 'Acme Org' });
+    });
+
+    it('reports NOT reachable, naming the token org from getOrganizations (not the stale CLI org)', async () => {
         const authManager = {
             getOrganizations: jest.fn().mockResolvedValue([
                 { id: 'org-B', code: 'B@AdobeOrg', name: 'Org B' },
             ]),
-            getCurrentOrganization: jest.fn().mockResolvedValue({ id: 'org-B', name: 'Org B' }),
+            // Stale CLI console selection — MUST be ignored.
+            getCurrentOrganization: jest.fn().mockResolvedValue({ id: 'org-STALE', name: 'Stale Org' }),
         } as any;
 
         const result = await detectProjectOrgMismatch(authManager, makeProject('org-A'), mockLogger());
 
-        expect(result).toEqual({ expectedOrg: 'org-A', currentOrg: 'Org B' });
-    });
-
-    it('falls back to the reachable org name when getCurrentOrganization is unavailable', async () => {
-        const authManager = {
-            getOrganizations: jest.fn().mockResolvedValue([
-                { id: 'org-B', code: 'B@AdobeOrg', name: 'Org B' },
-            ]),
-        } as any;
-
-        const result = await detectProjectOrgMismatch(authManager, makeProject('org-A'), mockLogger());
-
-        expect(result).toEqual({ expectedOrg: 'org-A', currentOrg: 'Org B' });
+        expect(result).toEqual({ reachable: false, expectedOrg: 'org-A', currentOrgId: 'org-B', currentOrg: 'Org B' });
+        // The stale CLI selection is never consulted.
+        expect(authManager.getCurrentOrganization).not.toHaveBeenCalled();
     });
 
     it('returns undefined (non-fatal) when the org lookup throws', async () => {

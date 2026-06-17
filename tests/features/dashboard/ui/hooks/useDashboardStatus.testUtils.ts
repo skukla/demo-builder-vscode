@@ -19,6 +19,7 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 export interface HandlerRefs {
     statusHandler: ((data: unknown) => void) | null;
     meshStatusHandler: ((data: unknown) => void) | null;
+    orgHandler: ((data: unknown) => void) | null;
 }
 
 /** Mocks + handler refs returned from `setupMocks()`. */
@@ -41,6 +42,7 @@ export function setupMocks(): TestMocks {
     const state: HandlerRefs = {
         statusHandler: null,
         meshStatusHandler: null,
+        orgHandler: null,
     };
     const mockUnsubscribeStatus = jest.fn();
     const mockUnsubscribeMesh = jest.fn();
@@ -56,6 +58,10 @@ export function setupMocks(): TestMocks {
         if (type === 'meshStatusUpdate') {
             state.meshStatusHandler = handler;
             return mockUnsubscribeMesh;
+        }
+        if (type === 'orgContextResult') {
+            state.orgHandler = handler;
+            return jest.fn();
         }
         return jest.fn();
     });

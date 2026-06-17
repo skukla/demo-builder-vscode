@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect, useMemo, useRef, useCallback, Dispatch, SetStateAction } from 'react';
+import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { OrgMismatchInfo } from '@/features/authentication/services/detectProjectOrgMismatch';
@@ -45,11 +46,6 @@ export interface ProjectStatus {
         message?: string;
     };
     edsStorefrontStatus?: EdsStorefrontStatus;
-    /**
-     * Present when the project's Adobe org is NOT reachable by the current
-     * token (proactive entry check). Drives the "Switch IMS Org" banner.
-     */
-    orgMismatch?: OrgMismatchInfo;
 }
 
 /**
@@ -107,6 +103,41 @@ export interface UseDashboardStatusProps {
     initialMeshStatus?: string;
     /** Initial EDS storefront status from initial data */
     initialEdsStorefrontStatus?: EdsStorefrontStatus;
+    /**
+     * Whether the project has an Adobe org (from init). When true, a proactive
+     * org-context check runs on load; the UI telegraphs it as "checking" until
+     * the first status resolves it.
+     */
+    hasAdobeContext?: boolean;
+}
+
+/**
+ * Org-context check lifecycle for the dashboard notice:
+ * - `checking`: the proactive check is expected to run but hasn't resolved yet.
+ * - `mismatch`: the token reaches a different org than the project.
+ * - `ok`: resolved and the org is reachable (drives a transient success banner).
+ * - `none`: no check applies (project has no Adobe org).
+ */
+export type OrgCheckState = 'checking' | 'mismatch' | 'ok' | 'none';
+
+/**
+ * Derive the org-check lifecycle (avoids a nested ternary in the hook body).
+ *
+ * Telegraphs "checking" while the proactive check is expected (the project has
+ * an Adobe org) and not yet *perceptibly* resolved — i.e. until the async
+ * `orgContextResult` has arrived (orgChecked) AND a minimum display time has
+ * elapsed, so a fast (warm-cache) check doesn't flash the indicator and make
+ * the banner appear out of nowhere.
+ */
+function deriveOrgCheckState(
+    hasMismatch: boolean,
+    orgChecked: boolean,
+    hasAdobeContext: boolean,
+    minDisplayElapsed: boolean,
+): OrgCheckState {
+    if (!hasAdobeContext) return 'none';
+    if (!orgChecked || !minDisplayElapsed) return 'checking';
+    return hasMismatch ? 'mismatch' : 'ok';
 }
 
 /**
@@ -133,6 +164,10 @@ export interface UseDashboardStatusReturn {
     meshStatus: MeshStatus | undefined;
     /** Proactive org-context mismatch (drives the "Switch IMS Org" banner) */
     orgMismatch: OrgMismatchInfo | undefined;
+    /** Org-context check lifecycle — telegraphs checking → mismatch/ok/none */
+    orgCheckState: OrgCheckState;
+    /** "IMS Org" status badge display (color + org name), or null when N/A */
+    imsOrgDisplay: StatusDisplay | null;
     /** Derived AI Ready badge state */
     aiReady: AiReadyState;
     /** Task-framed capability list (skills) for the "View AI Capabilities" surface */
@@ -177,7 +212,7 @@ export const isMeshBusy = (status: MeshStatus | undefined): boolean =>
  * @returns Object containing status state and computed displays
  */
 export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = false): UseDashboardStatusReturn {
-    const { hasMesh, initialMeshStatus, initialEdsStorefrontStatus } = props;
+    const { hasMesh, initialMeshStatus, initialEdsStorefrontStatus, hasAdobeContext } = props;
 
     const [projectStatus, setProjectStatus] = useState<ProjectStatus | null>(null);
     const [isRunning, setIsRunning] = useState(false);
@@ -186,6 +221,15 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
     const [verifyFailed, setVerifyFailed] = useState(false);
     const [aiBusy, setAiBusy] = useState(false);
     const [aiRegenProgress, setAiRegenProgress] = useState<AiRegenerateProgress | null>(null);
+    // Gate the "Checking Adobe organization…" indicator to a minimum visible
+    // duration so a fast check is still perceived before the banner shows.
+    const [orgCheckMinElapsed, setOrgCheckMinElapsed] = useState(false);
+    // Org-context check result, delivered asynchronously (decoupled from status)
+    // via the `orgContextResult` message. orgChecked flips true once resolved.
+    const [orgMismatch, setOrgMismatch] = useState<OrgMismatchInfo | undefined>(undefined);
+    const [orgChecked, setOrgChecked] = useState(false);
+    // Name of the org the token currently reaches — shown in the "IMS Org" badge.
+    const [orgCurrentName, setOrgCurrentName] = useState<string | undefined>(undefined);
     // Track whether status was requested (prevent StrictMode double-request)
     const statusRequestedRef = useRef(false);
     const verifyRequestedRef = useRef(false);
@@ -234,6 +278,23 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
             }
         });
 
+        // Org-context check result (decoupled from statusUpdate so the slow
+        // getOrganizations call never blocks the dashboard). `pending: true`
+        // telegraphs the check; the resolved message carries the mismatch (or
+        // none). Re-checks (after a forced switch) emit pending → resolved again.
+        const unsubscribeOrg = webviewClient.onMessage('orgContextResult', (data: unknown) => {
+            const payload = data as { pending?: boolean; orgMismatch?: OrgMismatchInfo; currentOrg?: string };
+            if (payload.pending) {
+                setOrgChecked(false);
+                setOrgMismatch(undefined);
+                setOrgCurrentName(undefined);
+            } else {
+                setOrgChecked(true);
+                setOrgMismatch(payload.orgMismatch);
+                setOrgCurrentName(payload.currentOrg);
+            }
+        });
+
         // Subscribe to the wizard's `creationProgress` channel — the regenerate
         // handler reuses it so each step (install → AGENTS.md → MCP → skills →
         // finalize) is reported in the same payload shape. The AI Capabilities
@@ -252,9 +313,21 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
         return () => {
             unsubscribeStatus();
             unsubscribeMesh();
+            unsubscribeOrg();
             unsubscribeProgress();
         };
     }, []);
+
+    // Hold the org-check "checking" indicator on screen for a minimum duration so
+    // a fast (warm-cache) check is still perceived before the banner/clear.
+    useEffect(() => {
+        if (!hasAdobeContext) return;
+        const timer = setTimeout(
+            () => setOrgCheckMinElapsed(true),
+            FRONTEND_TIMEOUTS.ORG_CHECK_MIN_DISPLAY,
+        );
+        return () => clearTimeout(timer);
+    }, [hasAdobeContext]);
 
     // Run the AI setup verification. Reused on mount and after Regenerate to
     // refresh both the badge and the skills list.
@@ -301,8 +374,30 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
     const frontendConfigChanged = projectStatus?.frontendConfigChanged || false;
     const meshStatus = projectStatus?.mesh?.status;
     const meshMessage = projectStatus?.mesh?.message;
-    const orgMismatch = projectStatus?.orgMismatch;
+    const orgCheckState = deriveOrgCheckState(
+        Boolean(orgMismatch),
+        orgChecked,
+        Boolean(hasAdobeContext),
+        orgCheckMinElapsed,
+    );
     const displayName = projectStatus?.name || '';
+
+    // "IMS Org" status badge — ambient org-context health: blue while checking,
+    // green with the org name when reachable, red with the (wrong) org name on
+    // mismatch. Null for non-Adobe projects (no badge). The mismatch BANNER is
+    // separate (it carries the attention + Switch IMS Org action).
+    const imsOrgDisplay = useMemo((): StatusDisplay | null => {
+        switch (orgCheckState) {
+            case 'checking':
+                return { color: 'blue', text: 'Checking…' };
+            case 'ok':
+                return { color: 'green', text: orgCurrentName || 'Connected' };
+            case 'mismatch':
+                return { color: 'red', text: orgCurrentName || 'Wrong org' };
+            default:
+                return null;
+        }
+    }, [orgCheckState, orgCurrentName]);
 
     // Memoize status displays for performance
     const demoStatusDisplay = useMemo((): StatusDisplay => {
@@ -437,6 +532,8 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
         status,
         meshStatus,
         orgMismatch,
+        orgCheckState,
+        imsOrgDisplay,
         aiReady,
         aiSkills,
         aiSkillsError,

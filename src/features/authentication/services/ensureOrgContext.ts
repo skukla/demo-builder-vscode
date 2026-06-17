@@ -76,7 +76,12 @@ export async function ensureOrgContext(
     options: EnsureOrgContextOptions,
 ): Promise<EnsureOrgContextResult> {
     const selectable = await options.listSelectableOrgs();
-    const target = selectable.find((org) => org.id === orgId);
+    // Match by id primarily, but also by name/code: legacy projects persisted the
+    // org NAME (or code) in place of the id, and the reachable list keys on id.
+    // Tolerating name/code lets those projects resolve (callers self-heal to the id).
+    const target = selectable.find(
+        (org) => org.id === orgId || org.name === orgId || org.code === orgId,
+    );
 
     if (!target) {
         // Target org isn't selectable on this account → only a (force) re-login

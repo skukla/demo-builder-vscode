@@ -49,6 +49,22 @@ describe('ensureOrgContext', () => {
         expect(runSelect).not.toHaveBeenCalled();
     });
 
+    it('matches a legacy org stored by NAME (not id), resolving the canonical org', async () => {
+        // Legacy projects persisted the org name in place of the id.
+        const result = await ensureOrgContext('Enterprise Org', { listSelectableOrgs, runSelect });
+
+        expect(result.status).toBe('ok');
+        expect(result.targetOrg).toEqual(enterpriseOrg);
+        expect(runSelect).not.toHaveBeenCalled();
+    });
+
+    it('matches a legacy org stored by CODE (not id)', async () => {
+        const result = await ensureOrgContext('ENTP@AdobeOrg', { listSelectableOrgs, runSelect });
+
+        expect(result.status).toBe('ok');
+        expect(result.targetOrg).toEqual(enterpriseOrg);
+    });
+
     it('returns access_revoked when a probe still 403s with targeting set', async () => {
         const probe = jest.fn().mockResolvedValue({ forbidden: true });
 
