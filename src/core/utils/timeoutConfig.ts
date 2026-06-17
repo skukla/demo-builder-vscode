@@ -127,6 +127,14 @@ export const TIMEOUTS = {
      *  prior 5s budget repeatedly and looped through unnecessary re-logins. */
     TOKEN_VALIDATION: 10000,
 
+    /** Per-call deadline for an Adobe Console SDK entity fetch (orgs/projects/workspaces)
+     *  before falling back to the CLI (10 seconds). The SDK-first strategy is justified only
+     *  by "faster than the CLI, or fail fast"; without a deadline a stalled Adobe endpoint
+     *  (observed: the org-list gateway timing out ~60s) makes the "fast path" far slower than
+     *  the ~3s CLI fallback. Healthy SDK fetches return in ~0.5–2.5s, so 10s is ~4x headroom
+     *  with no false bailouts, while capping worst case at ~10s + CLI instead of ~60s. */
+    SDK_ENTITY_FETCH: 10000,
+
     /** Initial wait before first mesh verification poll (20 seconds) */
     MESH_VERIFY_INITIAL_WAIT: 20000,
 
