@@ -509,6 +509,12 @@ export class AuthenticationService {
      * automatically after sign-in (e.g., Deploy Mesh, Apply Configuration).
      *
      * @param adobeContext - The Adobe context to restore after login
+     * @param force - When true, perform a FORCED sign-in (`aio auth login -f`)
+     *   so the browser presents the IMS account/org chooser. Required for org
+     *   switching: IMS tokens are org-bound, and a non-forced login silently
+     *   reuses the browser's existing SSO session — which can loop back to the
+     *   wrong org if another tab is signed into it. Defaults to false (session
+     *   restore / re-auth, which should keep the current account).
      * @returns true if login and context restoration succeeded, false otherwise
      *
      * @example
@@ -527,13 +533,15 @@ export class AuthenticationService {
         organization?: string;
         projectId?: string;
         workspace?: string;
-    }): Promise<boolean> {
+    }, force = false): Promise<boolean> {
         return withTiming('loginAndRestoreProjectContext', async () => {
             const debugLogger = getLogger();
 
             try {
-                debugLogger.debug('[Auth] Starting login and context restoration');
-                const loginSuccess = await this.login();
+                debugLogger.debug(
+                    `[Auth] Starting login and context restoration (force=${force})`,
+                );
+                const loginSuccess = await this.login(force);
                 if (!loginSuccess) {
                     debugLogger.warn('[Auth] Login failed or was cancelled');
                     return false;

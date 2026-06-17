@@ -1887,6 +1887,12 @@ button[class*="spectrum-Button"][disabled],
     padding: 8px; /* Shadow overflow padding */
 }
 
+/* Org-mismatch banner — force readable dark text on the static-yellow warning
+   background regardless of the active (light/dark) Spectrum theme. */
+.org-mismatch-banner-text {
+    color: var(--spectrum-global-color-static-black);
+}
+
 /* Stacked, labeled rows + isolated delete footer. Fixed to the derived content
    width so the status header (same width) aligns badge-left / button-right. */
 .dashboard-zones {

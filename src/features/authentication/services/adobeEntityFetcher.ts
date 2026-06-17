@@ -184,8 +184,8 @@ export class AdobeEntityFetcher {
             }
             if (stderr.includes('403') || stderr.toLowerCase().includes('forbidden')) {
                 // Typed, in-app-recoverable error. NO terminal instruction — the UI
-                // routes ORG_MISMATCH through ensureOrgContext (org picker / re-login)
-                // and agents treat it as non-retryable.
+                // routes ORG_MISMATCH through ensureOrgContext + a forced sign-in
+                // recovery, and agents treat it as non-retryable.
                 throw new AuthError(
                     ErrorCode.ORG_MISMATCH,
                     'Adobe CLI is targeting a different organization than this operation needs.',

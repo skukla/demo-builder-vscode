@@ -73,7 +73,7 @@ describe('AdobeAuthStep - Organization Selection', () => {
             );
 
             expect(screen.getByText('Select Your Organization')).toBeInTheDocument();
-            expect(screen.getByText('Switch Adobe Account')).toBeInTheDocument();
+            expect(screen.getByText('Switch IMS Org')).toBeInTheDocument();
         });
 
         it('should display specific message when org lacks access', () => {
@@ -120,7 +120,7 @@ describe('AdobeAuthStep - Organization Selection', () => {
             expect(screen.getByText(/Your previous organization is no longer accessible/)).toBeInTheDocument();
         });
 
-        it('forces a re-login (account switch) when Switch Adobe Account is clicked without an org', async () => {
+        it('forces a re-login (account switch) when Switch IMS Org is clicked without an org', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const state = {
                 ...baseState,
@@ -139,14 +139,14 @@ describe('AdobeAuthStep - Organization Selection', () => {
                 />
             );
 
-            const switchButton = screen.getByText('Switch Adobe Account');
+            const switchButton = screen.getByText('Switch IMS Org');
             await user.click(switchButton);
 
             // No in-app picker: reaching another org requires a forced re-login.
             expect(mockRequestAuth).toHaveBeenCalledWith(true);
         });
 
-        it('forces a re-login (account switch) when Switch Adobe Account is clicked with an org', async () => {
+        it('forces a re-login (account switch) when Switch IMS Org is clicked with an org', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const state = {
                 ...baseState,
@@ -162,7 +162,7 @@ describe('AdobeAuthStep - Organization Selection', () => {
                 />
             );
 
-            const switchButton = screen.getByText('Switch Adobe Account');
+            const switchButton = screen.getByText('Switch IMS Org');
             await user.click(switchButton);
 
             expect(mockRequestAuth).toHaveBeenCalledWith(true);

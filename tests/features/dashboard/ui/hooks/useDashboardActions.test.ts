@@ -229,6 +229,16 @@ describe('useDashboardActions', () => {
             expect(mockPostMessage).toHaveBeenCalledWith('reAuthenticate');
         });
 
+        it('should send switchOrg message', () => {
+            const { result } = renderActionsHook();
+
+            act(() => {
+                result.current.handleSwitchOrg();
+            });
+
+            expect(mockPostMessage).toHaveBeenCalledWith('switchOrg');
+        });
+
         it('should send copyPath message', () => {
             const { result } = renderActionsHook();
 

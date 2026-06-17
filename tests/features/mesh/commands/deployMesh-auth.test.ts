@@ -102,7 +102,11 @@ describe('DeployMeshCommand - Auth Refactor (ensureAdobeIOAuth)', () => {
     let mockContext: vscode.ExtensionContext;
     let mockStateManager: jest.Mocked<StateManager>;
     let mockLogger: jest.Mocked<Logger>;
-    let mockAuthManager: { isAuthenticated: jest.Mock; getCurrentOrganization: jest.Mock };
+    let mockAuthManager: {
+        isAuthenticated: jest.Mock;
+        getOrganizations: jest.Mock;
+        getCurrentOrganization: jest.Mock;
+    };
     let mockCommandExecutor: { execute: jest.Mock };
 
     beforeEach(() => {
@@ -128,7 +132,12 @@ describe('DeployMeshCommand - Auth Refactor (ensureAdobeIOAuth)', () => {
 
         mockAuthManager = {
             isAuthenticated: jest.fn().mockResolvedValue(true),
-            getCurrentOrganization: jest.fn().mockResolvedValue({ id: 'org-123' }),
+            // Canonical org-reachability check (detectProjectOrgMismatch) lists the
+            // token's reachable orgs; org-123 matches the project → no mismatch.
+            getOrganizations: jest.fn().mockResolvedValue([
+                { id: 'org-123', code: 'ORG123@AdobeOrg', name: 'Org 123' },
+            ]),
+            getCurrentOrganization: jest.fn().mockResolvedValue({ id: 'org-123', name: 'Org 123' }),
         };
 
         mockCommandExecutor = {
@@ -188,8 +197,8 @@ describe('DeployMeshCommand - Auth Refactor (ensureAdobeIOAuth)', () => {
             }),
         );
 
-        // And: org check should have been called (means we proceeded past auth)
-        expect(mockAuthManager.getCurrentOrganization).toHaveBeenCalled();
+        // And: org reachability check should have run (means we proceeded past auth)
+        expect(mockAuthManager.getOrganizations).toHaveBeenCalled();
     });
 
     // =========================================================================
@@ -206,8 +215,8 @@ describe('DeployMeshCommand - Auth Refactor (ensureAdobeIOAuth)', () => {
         const command = new DeployMeshCommand(mockContext, mockStateManager, mockLogger);
         await command.execute();
 
-        // Then: Should proceed to org check (deployment continues)
-        expect(mockAuthManager.getCurrentOrganization).toHaveBeenCalled();
+        // Then: Should proceed to org reachability check (deployment continues)
+        expect(mockAuthManager.getOrganizations).toHaveBeenCalled();
         // And: refreshStatus should NOT have been called (no early return)
         expect(mockRefreshStatus).not.toHaveBeenCalled();
     });
@@ -235,8 +244,8 @@ describe('DeployMeshCommand - Auth Refactor (ensureAdobeIOAuth)', () => {
             expect.anything(),
         );
 
-        // And: Should NOT proceed to org check
-        expect(mockAuthManager.getCurrentOrganization).not.toHaveBeenCalled();
+        // And: Should NOT proceed to org reachability check
+        expect(mockAuthManager.getOrganizations).not.toHaveBeenCalled();
     });
 
     // =========================================================================
@@ -261,8 +270,8 @@ describe('DeployMeshCommand - Auth Refactor (ensureAdobeIOAuth)', () => {
             'Sign-in failed or was cancelled. Please try again.',
         );
 
-        // And: Should NOT proceed to org check
-        expect(mockAuthManager.getCurrentOrganization).not.toHaveBeenCalled();
+        // And: Should NOT proceed to org reachability check
+        expect(mockAuthManager.getOrganizations).not.toHaveBeenCalled();
     });
 
     // =========================================================================

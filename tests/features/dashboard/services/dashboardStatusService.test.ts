@@ -77,6 +77,34 @@ describe('dashboardStatusService', () => {
             expect(result.frontendConfigChanged).toBe(true);
         });
 
+        it('should include org-mismatch info when provided', () => {
+            // Given: A project with a proactively detected org mismatch
+            const project: Project = {
+                name: 'test-project',
+                path: '/path/to/project',
+                status: 'running',
+            };
+            const orgMismatch = { expectedOrg: 'org-A', currentOrg: 'Org B' };
+
+            // When: Building the status payload with org-mismatch info
+            const result = buildStatusPayload(project, false, undefined, orgMismatch);
+
+            // Then: The mismatch is surfaced for the dashboard banner
+            expect(result.orgMismatch).toEqual(orgMismatch);
+        });
+
+        it('should omit org-mismatch when not provided', () => {
+            const project: Project = {
+                name: 'test-project',
+                path: '/path/to/project',
+                status: 'running',
+            };
+
+            const result = buildStatusPayload(project, false);
+
+            expect(result.orgMismatch).toBeUndefined();
+        });
+
         it('should default status to "ready" when not specified', () => {
             // Given: A project without status
             const project: Project = {

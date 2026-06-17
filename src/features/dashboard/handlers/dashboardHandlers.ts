@@ -69,6 +69,17 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         return { success: false, error: 'No project available', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
+    // Proactive org-context check — independent of mesh. If the project's Adobe
+    // org isn't reachable by the current token (e.g. a stale browser tab signed
+    // the user into a different org), surface it up front so the dashboard can
+    // offer a forced "Switch IMS Org" recovery before any work fails.
+    const { detectProjectOrgMismatch } = await import('@/features/authentication/services/detectProjectOrgMismatch');
+    const orgMismatch = await detectProjectOrgMismatch(
+        ServiceLocator.getAuthenticationService(),
+        project,
+        context.logger,
+    );
+
     const meshComponent = getMeshComponentInstance(project);
     const frontendConfigChanged = project.status === 'running' ? detectFrontendChanges(project) : false;
 
@@ -130,6 +141,7 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         project,
         frontendConfigChanged,
         meshComponent ? { status: meshStatus, endpoint: meshEndpoint } : undefined,
+        orgMismatch,
     );
 
     context.panel.webview.postMessage({
@@ -635,6 +647,52 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
     return handleRequestStatus(context);
 };
 
+/**
+ * Handle 'switchOrg' message - Forced Adobe account/org switch recovery.
+ *
+ * Called when the dashboard detects an org mismatch (the project's Adobe org is
+ * not reachable by the current token). Unlike the session-expiry re-auth path,
+ * this performs a FORCED sign-in (`aio auth login -f`) so the browser presents
+ * the IMS account/org chooser — a non-forced login would silently reuse the
+ * browser's existing SSO session and could loop back to the wrong org.
+ *
+ * After the forced sign-in it re-runs the status check (verify): the refreshed
+ * payload re-runs the proactive org-mismatch detection, so if the user is still
+ * in the wrong org (e.g. another browser tab reasserted it) the banner persists
+ * with a no-loop hint instead of silently failing.
+ */
+export const handleSwitchOrg: MessageHandler = async (context) => {
+    context.logger.debug('[Dashboard] handleSwitchOrg called');
+
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return { success: false, error: 'No project available', code: ErrorCode.PROJECT_NOT_FOUND };
+    }
+
+    const authManager = ServiceLocator.getAuthenticationService();
+
+    context.logger.info('[Dashboard] Starting FORCED Adobe sign-in to switch organization');
+    const loginSuccess = await authManager.loginAndRestoreProjectContext(
+        {
+            organization: project.adobe?.organization,
+            projectId: project.adobe?.projectId,
+            workspace: project.adobe?.workspace,
+        },
+        true, // force — present the browser org chooser; never silently reuse the SSO tab
+    );
+
+    if (!loginSuccess) {
+        context.logger.warn('[Dashboard] Forced sign-in failed or cancelled');
+        return { success: false, error: 'Sign-in failed or cancelled' };
+    }
+
+    // Verify the landed org by re-running the status check. If the token still
+    // can't reach the project's org, handleRequestStatus re-surfaces orgMismatch
+    // and the banner persists — no silent loop.
+    context.logger.info('[Dashboard] Forced sign-in complete, verifying organization');
+    return handleRequestStatus(context);
+};
+
 // ============================================================================
 // Handler Map Export (Step 3: Handler Registry Simplification)
 // ============================================================================
@@ -674,6 +732,7 @@ export const dashboardHandlers = defineHandlers({
 
     // Authentication handlers
     'reAuthenticate': handleReAuthenticate,
+    'switchOrg': handleSwitchOrg,
 
     // Project management handlers
     'deleteProject': handleDeleteProject,

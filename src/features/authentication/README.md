@@ -195,10 +195,10 @@ Adobe ops are scoped per invocation through an internal `withOrgContext`/`buildA
 
 - `ok` - the org is reachable; the operation may proceed targeted at it
 - `org_mismatch` - the active context targets a different org (surfaced to callers as a non-retryable `ORG_MISMATCH`)
-- `needs_relogin` - the org isn't selectable on the current account; only a deliberate account switch (re-login) can surface it
+- `needs_relogin` - the org isn't reachable by the current token; because IMS tokens are org-bound, only a **forced** sign-in (`aio auth login -f`, which swaps the token via the browser account/org chooser) can surface it
 - `access_revoked` - a targeted probe still 403'd; the user lost access to the org
 
-A wrong org produces a typed `ORG_MISMATCH` that the UI resolves via the in-app org picker — never the old "run `aio console org select` in your terminal" message.
+A wrong org produces a typed `ORG_MISMATCH` that the UI resolves with a **forced sign-in + verify** recovery (e.g. the dashboard's "Switch IMS Org" banner) — never the old "run `aio console org select` in your terminal" message, and never a non-forced re-login (which silently reuses the browser SSO session and can loop back to the wrong org).
 
 **Example Usage**:
 ```typescript
@@ -213,10 +213,10 @@ switch (result.status) {
         // Proceed; the operation runs targeted at result.targetOrg via withOrgContext
         break;
     case 'org_mismatch':
-        // Surface ORG_MISMATCH (non-retryable); resolve via the in-app picker
+        // Surface ORG_MISMATCH (non-retryable); resolve via a forced sign-in + verify
         break;
     case 'needs_relogin':
-        // Prompt a deliberate account switch (force re-login)
+        // Token is org-bound to a different org → forced sign-in (login(true)) to swap it
         break;
     case 'access_revoked':
         // User lost access to the org
@@ -366,9 +366,11 @@ if (!isAuth) {
     const success = await authService.login();
 
     if (success) {
-        // Present the in-app org picker; the chosen org is targeted per-invocation
+        // IMS tokens are org-bound: getOrganizations() returns the single org the
+        // token reaches (whichever the user signed into). There is no org picker —
+        // sign-in owns org selection. Ops target that org per-invocation; reachability
+        // for an existing project's org is verified via ensureOrgContext.
         const orgs = await authService.getOrganizations();
-        // ... present to user, then target the choice via ensureOrgContext
     }
 }
 ```
@@ -489,7 +491,7 @@ cacheManager.setCachedAuthStatus(isAuth);
 
 ### Common Errors
 - **Token Expired**: Automatically triggers re-authentication
-- **Org Mismatch / Access Lost**: `ensureOrgContext` returns a typed status; a wrong org surfaces as a non-retryable `ORG_MISMATCH` resolved via the in-app org picker
+- **Org Mismatch / Access Lost**: `ensureOrgContext` returns a typed status; a wrong org surfaces as a non-retryable `ORG_MISMATCH` resolved via a forced sign-in + verify (e.g. the dashboard "Switch IMS Org" recovery)
 - **Network Timeout**: Provides helpful error messages with retry guidance
 - **Browser Auth Cancelled**: Detects timeout and suggests retry
 - **SDK Initialization Failed**: Falls back to CLI operations automatically

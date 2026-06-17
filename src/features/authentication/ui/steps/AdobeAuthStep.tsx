@@ -71,7 +71,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: NavigableSt
                     title="Connected"
                     message={adobeOrg.name}
                     actions={[
-                        { label: 'Switch Adobe Account', icon: <Login size="S" />, variant: 'secondary', onPress: switchAccount },
+                        { label: 'Switch IMS Org', icon: <Login size="S" />, variant: 'secondary', onPress: switchAccount },
                     ]}
                 />
             )}
@@ -86,7 +86,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: NavigableSt
                     centerMessage
                     maxWidth="450px"
                     actions={[
-                        { label: 'Switch Adobe Account', icon: <Login size="S" />, variant: 'accent', onPress: switchAccount },
+                        { label: 'Switch IMS Org', icon: <Login size="S" />, variant: 'accent', onPress: switchAccount },
                     ]}
                 />
             )}

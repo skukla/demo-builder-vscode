@@ -18,6 +18,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ActionGrid } from './components/ActionGrid';
 import { AiCapabilitiesModal } from './components/AiCapabilitiesModal';
 import { DashboardRenameDialog } from './components/DashboardRenameDialog';
+import { OrgMismatchBanner } from './components/OrgMismatchBanner';
 import { isStartActionDisabled } from './dashboardPredicates';
 import { useDashboardActions } from './hooks/useDashboardActions';
 import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
@@ -89,6 +90,11 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
     const [liveAuthoringExperience, setLiveAuthoringExperience] = useState(authoringExperience);
     const [liveEdsDaLiveUrl, setLiveEdsDaLiveUrl] = useState(edsDaLiveUrl);
 
+    // Tracks whether the user has attempted a forced org switch this session.
+    // After an attempt that still leaves them mismatched, the banner adds a
+    // no-loop hint (another browser tab may be holding the wrong org).
+    const [switchAttempted, setSwitchAttempted] = useState(false);
+
     // State for browser opening (passed to actions hook)
     const [isOpeningBrowser, setIsOpeningBrowser] = useState(false);
     const [showCapabilities, setShowCapabilities] = useState(false);
@@ -105,6 +111,7 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
         displayName: statusDisplayName,
         status,
         meshStatus,
+        orgMismatch,
         aiReady,
         aiSkills,
         aiSkillsError,
@@ -134,6 +141,7 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
         handleResetProject,
         handleNavigateBack,
         handleReAuthenticate,
+        handleSwitchOrg,
     } = useDashboardActions({
         isOpeningBrowser,
         setIsTransitioning,
@@ -180,6 +188,21 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
         });
         return unsubscribe;
     }, []);
+
+    // Reset the switch-attempt flag once the mismatch clears, so a future,
+    // unrelated mismatch starts without a stale "another tab" hint.
+    useEffect(() => {
+        if (!orgMismatch) {
+            setSwitchAttempted(false);
+        }
+    }, [orgMismatch]);
+
+    // Forced account/org switch: mark the attempt so a persistent mismatch
+    // surfaces the no-loop hint, then trigger the forced sign-in.
+    const onSwitchOrg = () => {
+        setSwitchAttempted(true);
+        handleSwitchOrg();
+    };
 
     // Derived values
     const displayName = statusDisplayName || project?.name || 'Demo Project';
@@ -288,6 +311,18 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
                         </div>
                     </div>
                 </div>
+
+                {/* Org-mismatch banner — the project's Adobe org isn't reachable
+                    by the current token. Forced "Switch IMS Org" recovery;
+                    after a failed attempt, a no-loop hint about another browser
+                    tab holding the wrong org. */}
+                {orgMismatch && (
+                    <OrgMismatchBanner
+                        orgMismatch={orgMismatch}
+                        switchAttempted={switchAttempted}
+                        onSwitchOrg={onSwitchOrg}
+                    />
+                )}
 
                 <div className="page-container-padded pb-4">
 

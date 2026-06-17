@@ -60,8 +60,9 @@ describe('dashboardHandlers', () => {
         it('should include authentication handlers', () => {
             // Given: dashboardHandlers object
             // When: Checking for auth message types
-            // Then: Authentication handlers present
+            // Then: Authentication handlers present (session re-auth + forced org switch)
             expect(hasHandler(dashboardHandlers, 'reAuthenticate')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'switchOrg')).toBe(true);
         });
 
         it('should include project management handlers', () => {
@@ -92,18 +93,19 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'setAuthoringExperience')).toBe(false);
         });
 
-        it('should have exactly 20 handlers', () => {
+        it('should have exactly 21 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers);
 
-            // Then: Exactly 20 handlers
+            // Then: Exactly 21 handlers
             // 2 init + 2 lifecycle + 6 navigation + 1 mesh + 1 syncStorefront +
-            // 1 refreshBlockLibrary + 1 auth + 1 project + 1 reset = 16, plus the
-            // 4 new More-menu actions (copyPath, exportProject, republishContent,
-            // renameProject) = 20. setAuthoringExperience lives in the Configure
-            // webview, not this map; openAi was removed with the dashboard AI tile.
-            expect(types).toHaveLength(20);
+            // 1 refreshBlockLibrary + 2 auth (reAuthenticate + switchOrg) +
+            // 1 project + 1 reset = 17, plus the 4 new More-menu actions
+            // (copyPath, exportProject, republishContent, renameProject) = 21.
+            // setAuthoringExperience lives in the Configure webview, not this map;
+            // openAi was removed with the dashboard AI tile.
+            expect(types).toHaveLength(21);
         });
 
         it('should have handlers as functions', () => {

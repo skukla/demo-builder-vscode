@@ -10,6 +10,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback, Dispatch, SetStateAction } from 'react';
 import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import type { OrgMismatchInfo } from '@/features/authentication/services/detectProjectOrgMismatch';
 import type { AiRegenerateProgress } from '@/features/dashboard/ui/components/AiCapabilitiesModal';
 import type { McpInventoryEntry, SkillInventoryEntry } from '@/types/ai';
 
@@ -44,6 +45,11 @@ export interface ProjectStatus {
         message?: string;
     };
     edsStorefrontStatus?: EdsStorefrontStatus;
+    /**
+     * Present when the project's Adobe org is NOT reachable by the current
+     * token (proactive entry check). Drives the "Switch IMS Org" banner.
+     */
+    orgMismatch?: OrgMismatchInfo;
 }
 
 /**
@@ -125,6 +131,8 @@ export interface UseDashboardStatusReturn {
     status: ProjectStatus['status'] | undefined;
     /** Current mesh status value */
     meshStatus: MeshStatus | undefined;
+    /** Proactive org-context mismatch (drives the "Switch IMS Org" banner) */
+    orgMismatch: OrgMismatchInfo | undefined;
     /** Derived AI Ready badge state */
     aiReady: AiReadyState;
     /** Task-framed capability list (skills) for the "View AI Capabilities" surface */
@@ -293,6 +301,7 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
     const frontendConfigChanged = projectStatus?.frontendConfigChanged || false;
     const meshStatus = projectStatus?.mesh?.status;
     const meshMessage = projectStatus?.mesh?.message;
+    const orgMismatch = projectStatus?.orgMismatch;
     const displayName = projectStatus?.name || '';
 
     // Memoize status displays for performance
@@ -411,10 +420,11 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
     }, [verifyResult, verifyFailed]);
 
     // Capability lists for the "View AI Capabilities" surface.
-    const aiSkills = verifyResult?.inventory?.skills ?? EMPTY_SKILLS;
-    const aiSkillsError = Boolean(verifyResult?.inventory?.skillsError);
-    const aiMcps = verifyResult?.inventory?.mcps ?? EMPTY_MCPS;
-    const aiMcpsError = Boolean(verifyResult?.inventory?.mcpsError);
+    const inventory = verifyResult?.inventory;
+    const aiSkills = inventory?.skills ?? EMPTY_SKILLS;
+    const aiSkillsError = Boolean(inventory?.skillsError);
+    const aiMcps = inventory?.mcps ?? EMPTY_MCPS;
+    const aiMcpsError = Boolean(inventory?.mcpsError);
 
     return {
         projectStatus,
@@ -426,6 +436,7 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
         displayName,
         status,
         meshStatus,
+        orgMismatch,
         aiReady,
         aiSkills,
         aiSkillsError,

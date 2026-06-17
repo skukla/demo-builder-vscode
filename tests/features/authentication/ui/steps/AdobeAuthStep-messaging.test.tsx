@@ -73,7 +73,7 @@ describe('AdobeAuthStep - Messaging and Edge Cases', () => {
             expect(screen.queryByTestId('loading-display')).not.toBeInTheDocument();
         });
 
-        it('forces a re-login (account switch) on Switch Adobe Account', async () => {
+        it('forces a re-login (account switch) on Switch IMS Org', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const state = {
                 ...baseState,
@@ -89,7 +89,7 @@ describe('AdobeAuthStep - Messaging and Edge Cases', () => {
                 />
             );
 
-            const switchButton = screen.getByText('Switch Adobe Account');
+            const switchButton = screen.getByText('Switch IMS Org');
             await user.click(switchButton);
 
             // IMS tokens are org-bound — switching orgs requires a forced re-login

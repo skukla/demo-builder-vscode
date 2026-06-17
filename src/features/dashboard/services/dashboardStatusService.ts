@@ -10,6 +10,7 @@
  * - Extracting mesh endpoint from configurations
  */
 
+import type { OrgMismatchInfo } from '@/features/authentication/services/detectProjectOrgMismatch';
 import { Project } from '@/types';
 import { hasEntries, getProjectFrontendPort } from '@/types/typeGuards';
 
@@ -35,6 +36,12 @@ export interface StatusPayload {
     frontendConfigChanged: boolean;
     mesh?: MeshStatusInfo;
     edsStorefrontStatus?: 'published' | 'stale' | 'update-declined' | 'not-published';
+    /**
+     * Present when the project's Adobe org is NOT reachable by the current
+     * token (proactive entry check). Drives the dashboard "Switch Adobe
+     * Account" banner. Absent when there's no mismatch.
+     */
+    orgMismatch?: OrgMismatchInfo;
 }
 
 /**
@@ -43,12 +50,14 @@ export interface StatusPayload {
  * @param project - The project to build status for
  * @param frontendConfigChanged - Whether frontend config has changed
  * @param mesh - Optional mesh status info
+ * @param orgMismatch - Optional proactive org-context mismatch info
  * @returns Status payload for UI
  */
 export function buildStatusPayload(
     project: Project,
     frontendConfigChanged: boolean,
     mesh?: MeshStatusInfo,
+    orgMismatch?: OrgMismatchInfo,
 ): StatusPayload {
     return {
         name: project.name,
@@ -60,6 +69,7 @@ export function buildStatusPayload(
         frontendConfigChanged,
         mesh,
         edsStorefrontStatus: project.edsStorefrontStatusSummary,
+        orgMismatch,
     };
 }
 

@@ -70,20 +70,24 @@ export class DeployMeshCommand extends BaseCommand {
                 return;
             }
 
-            // Check org access (degraded mode detection)
-            if (project.adobe?.organization) {
-                const currentOrg = await authManager.getCurrentOrganization();
-                if (!currentOrg || currentOrg.id !== project.adobe.organization) {
-                    // Refresh status to show correct state
-                    await ProjectDashboardWebviewCommand.refreshStatus();
+            // Org-context guard — reuse the canonical reachability check rather than
+            // hand-rolling an org-id comparison. IMS tokens are org-bound, so a
+            // mismatch means the current token is signed into a different org; the
+            // fix is the forced "Switch IMS Org" recovery, not an admin ticket.
+            const { detectProjectOrgMismatch } = await import(
+                '@/features/authentication/services/detectProjectOrgMismatch'
+            );
+            const orgMismatch = await detectProjectOrgMismatch(authManager, project, this.logger);
+            if (orgMismatch) {
+                // Re-surface the dashboard's "Switch IMS Org" banner and abort.
+                await ProjectDashboardWebviewCommand.refreshStatus();
 
-                    vscode.window.showWarningMessage(
-                        `You no longer have access to the organization for "${project.name}". ` +
-                        'Local demo will continue working, but mesh deployment is unavailable.\n\n' +
-                        'Contact your administrator to restore access.',
-                    );
-                    return;
-                }
+                vscode.window.showWarningMessage(
+                    `"${project.name}" uses a different Adobe organization than the account you're signed into`
+                    + (orgMismatch.currentOrg ? ` (${orgMismatch.currentOrg})` : '')
+                    + '. Use "Switch IMS Org" on the dashboard to continue.',
+                );
+                return;
             }
 
             // App Builder permission gate. Defensive — by the time the user
