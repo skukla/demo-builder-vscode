@@ -76,9 +76,21 @@ silently dropped.
   hybrid convergence (B2B base + brand overlay), so it's the default rather than a special case. See
   `.rptc/plans/hybrid-storefront-model/`. Tier 1's generic discovery+audit still apply to
   citisignal-b2b and presume no B2B intent.
-- ⏳ **Steps 04–05 (remaining Tier 1):** inventory consolidation (refactor) and per-package smoke
-  harness (wants live-captured fixtures). Pure hardening — the reported bug + guardrail + reset
-  self-heal are done.
+- ✅ **Step 04 (consolidated inventory)** — landed. New `runtimeSurfaceInventory.ts` (`RUNTIME_SURFACES`)
+  is the single source of truth for non-indexed surfaces (spreadsheets, fragments, auth pages,
+  reset placeholder sheets); `daLiveContentOperations` backfill + `edsResetRepoHelper` placeholder
+  fetch both consume it (behavior-preserving). Coverage test added.
+- 🟡 **Step 05 (per-package smoke harness)** — scaffolded with SYNTHETIC fixtures
+  (`contentCompleteness.smoke.test.ts`, data-driven `PROFILES`): healthy b2b profile asserts
+  `/customer/nav` copied + audit clean; broken profile asserts the audit flags the missing
+  fragment. TODO: replace synthetic HTML with real `.plain.html` captures + add a PROFILE row per
+  package once live captures are available.
+- ✅ Full eds service suite green (781 tests); eslint + tsc clean.
+
+**Tier 1 is functionally complete:** the reported bug is fixed, it fails loudly on regression, reset
+self-heals, lists are consolidated, and a regression net is scaffolded. Outstanding: real smoke
+fixtures (live-data), and the selector-race patch decision (live repro) — both need the live access
+being arranged. citisignal-b2b account chrome → Tier 2 (Option D).
 
 ## Steps
 

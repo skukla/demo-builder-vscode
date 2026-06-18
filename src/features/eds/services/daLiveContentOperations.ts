@@ -30,6 +30,7 @@ import { getMimeType } from './daLiveMimeTypes';
 import { hasWriteAccess } from './daLiveOrgOperations';
 import { convertSpreadsheetJsonToHtml } from './daLiveSpreadsheetUtils';
 import { addContentResult, addReferenceResult, type PatchReport } from './patchReportHelper';
+import { RUNTIME_SURFACES } from './runtimeSurfaceInventory';
 import {
     DaLiveError,
     DaLiveAuthError,
@@ -1906,12 +1907,12 @@ export class DaLiveContentOperations {
         };
 
         // Spreadsheets: served as .json on CDN, stored as .xlsx on DA.live.
-        for (const configPath of ['/placeholders', '/redirects', '/metadata', '/sitemap']) {
+        for (const configPath of RUNTIME_SURFACES.spreadsheets) {
             await probeAndAdd(configPath, `${baseUrl}${configPath}.json`);
         }
 
         // HTML fragment documents (nav, footer): not indexed but loaded at runtime.
-        for (const fragmentPath of ['/nav', '/footer']) {
+        for (const fragmentPath of RUNTIME_SURFACES.fragments) {
             await probeAndAdd(fragmentPath, `${baseUrl}${fragmentPath}`);
         }
 
@@ -1920,12 +1921,7 @@ export class DaLiveContentOperations {
         // pages like /customer/account gate to a login at the bare path, so a bare
         // probe can mis-stub a page whose authored content really exists). Pages
         // absent from source get destination stubs with the correct block markup.
-        const essentialAuthPages: Array<{ path: string; blockClass: string }> = [
-            { path: '/customer/login', blockClass: 'commerce-login' },
-            { path: '/customer/account', blockClass: 'commerce-account' },
-            { path: '/customer/create-account', blockClass: 'commerce-create-account' },
-        ];
-        for (const authPage of essentialAuthPages) {
+        for (const authPage of RUNTIME_SURFACES.authPages) {
             if (contentPaths.includes(authPage.path)) continue;
             const found = await probeAndAdd(authPage.path, `${baseUrl}${authPage.path}.plain.html`);
             if (!found) missingAuthPages.push(authPage);

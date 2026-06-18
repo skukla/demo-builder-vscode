@@ -20,6 +20,7 @@ import { generateInspectorTreeEntries, installInspectorTagging } from './inspect
 import { readLkgSha } from './lkgReader';
 import { installSmart404Handler } from './pdp404HandlerPublisher';
 import { installQuickEdit } from './quickEditPublisher';
+import { RUNTIME_SURFACES } from './runtimeSurfaceInventory';
 import type { GitHubTreeInput } from './types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
@@ -45,11 +46,7 @@ async function fetchPlaceholderFiles(
     assertValidGitHubSlug(templateOwner, 'templateOwner');
     assertValidGitHubSlug(templateRepo, 'templateRepo');
 
-    const placeholderPaths = [
-        'placeholders/global', 'placeholders/auth', 'placeholders/cart',
-        'placeholders/checkout', 'placeholders/order', 'placeholders/account',
-        'placeholders/payment-services', 'placeholders/recommendations', 'placeholders/wishlist',
-    ];
+    const placeholderPaths = RUNTIME_SURFACES.placeholderSheets;
 
     await Promise.allSettled(
         placeholderPaths.map(async (placeholderPath) => {
