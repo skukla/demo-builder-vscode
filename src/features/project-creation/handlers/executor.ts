@@ -34,6 +34,8 @@ import { COMPONENT_IDS } from '@/core/constants';
 import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell';
 import { parseGitHubUrl } from '@/core/utils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { detectB2bReadiness } from '@/features/eds/services/b2bReadinessDetection';
+import { extractConfigParamsFromConfigs } from '@/features/eds/services/configGenerator';
 import { syncConfigToRemote } from '@/features/eds/services/configSyncService';
 import { TransformedComponentDefinition } from '@/types';
 import { AdobeConfig } from '@/types/base';
@@ -959,6 +961,29 @@ async function setupEdsContent(
 ): Promise<void> {
     if (!isEdsStack || !typedConfig.edsConfig?.contentSource || !typedConfig.edsConfig?.repoUrl) {
         return;
+    }
+
+    // B2B-readiness advisory (proceed-and-warn): a B2B-code storefront against a
+    // backend without B2B enabled renders an empty B2B account experience. The
+    // builder cannot enable B2B (no API — it's a backend prerequisite), so warn
+    // only on a definitive negative; 'unknown' (older/SaaS schema) stays silent.
+    if (typedConfig.edsConfig.templateRepo === 'boilerplate-b2b-template') {
+        // Reuse the canonical config reader (same one envFileGenerator /
+        // catalogPrewarmService use) — the GraphQL endpoint is already collected
+        // as a project config setting; don't re-derive it. meshEndpoint omitted so
+        // we probe the raw Commerce GraphQL the backend exposes.
+        const { commerceEndpoint } = extractConfigParamsFromConfigs(
+            typedConfig.componentConfigs as Record<string, Record<string, string | number | boolean | undefined>> | undefined,
+            undefined,
+            typedConfig.components?.backend,
+        );
+        if (commerceEndpoint && (await detectB2bReadiness(commerceEndpoint)) === 'disabled') {
+            const msg = 'This B2B storefront is connected to a Commerce backend that does not have B2B enabled. '
+                + 'The B2B account features (company, quotes, purchase orders, requisition lists) will not appear until '
+                + 'B2B is enabled on the backend (Admin → Stores → Configuration → General → B2B Features → Enable Company).';
+            context.logger.warn(`[Phase 5b] ${msg}`);
+            void vscode.window.showWarningMessage(msg);
+        }
     }
 
     try {

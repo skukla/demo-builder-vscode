@@ -21,9 +21,16 @@ custom-base storefronts out. Backend B2B is a **user prerequisite** (no enable-A
   the B2B base + `accountContentSource: { adobe-commerce, boilerplate-b2b }` + the `citisignal-b2b`
   ledger; **`citisignal-b2b` package removed**; `block-libraries.json` + count tests updated
   (5 packages / 10 storefronts). 2296 eds+project-creation tests green; tsc + lint clean.
-- ⏳ **Remaining:** wire the B2B-readiness **detection** (warn when a B2B package hits a non-B2B
-  backend) + the prerequisite note. The detection function is built+tested; only its call-site
-  (needs the project's Commerce GraphQL endpoint) is pending.
+- ✅ **B2B-readiness detection wired.** In the create flow (`executor.setupEdsContent`), for
+  B2B-base storefronts (`templateRepo === 'boilerplate-b2b-template'`), the Commerce GraphQL
+  endpoint is read via the **existing** `extractConfigParamsFromConfigs(...).commerceEndpoint`
+  (no new derivation — same reader envFileGenerator/catalogPrewarmService use), then
+  `detectB2bReadiness` runs; on a definitive `disabled` it warns (log + `showWarningMessage`) with
+  the Admin enablement path. True-negative-only; never blocks create. 2184 project-creation+eds
+  tests green; tsc + lint clean.
+
+**Tier 2 is functionally complete** (hybrid CitiSignal + account overlay + detection). Remaining is
+the gated live verification (individual-vs-company login) you can now run on your B2B backend.
 
 ## Relationship to Tier 1
 
