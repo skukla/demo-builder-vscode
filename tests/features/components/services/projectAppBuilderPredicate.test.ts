@@ -17,6 +17,7 @@ function makeDefinition(id: string): TransformedComponentDefinition {
 
 function makeRegistry(opts: {
     mesh?: string[];
+    appBuilder?: string[];
 } = {}): ComponentRegistry {
     return {
         version: 'test',
@@ -25,6 +26,7 @@ function makeRegistry(opts: {
             backends: [makeDefinition('adobe-commerce-paas')],
             dependencies: [],
             mesh: (opts.mesh ?? ['eds-commerce-mesh', 'eds-accs-mesh', 'headless-commerce-mesh']).map(makeDefinition),
+            appBuilder: (opts.appBuilder ?? []).map(makeDefinition),
             integrations: [],
         },
     };
@@ -82,6 +84,39 @@ describe('projectRequiresAppBuilder', () => {
         // components named "mesh-config" or similar that aren't App Builder.
         const project = makeProject(['eds-storefront', 'mesh-config-display']);
         expect(projectRequiresAppBuilder(project, makeRegistry())).toBe(false);
+    });
+
+    it('returns true when project includes an app-builder component (appBuilder set)', () => {
+        const project = makeProject(['eds-storefront', 'custom-app']);
+        const registry = makeRegistry({ appBuilder: ['custom-app'] });
+        expect(projectRequiresAppBuilder(project, registry)).toBe(true);
+    });
+
+    it('returns true for a mesh-only project even when appBuilder set is non-empty', () => {
+        const project = makeProject(['eds-storefront', 'eds-commerce-mesh']);
+        const registry = makeRegistry({ appBuilder: ['custom-app'] });
+        expect(projectRequiresAppBuilder(project, registry)).toBe(true);
+    });
+
+    it('returns false for a storefront-only project even when appBuilder set is non-empty', () => {
+        const project = makeProject(['eds-storefront', 'adobe-commerce-paas']);
+        const registry = makeRegistry({ appBuilder: ['custom-app'] });
+        expect(projectRequiresAppBuilder(project, registry)).toBe(false);
+    });
+
+    it('handles a registry where appBuilder is undefined', () => {
+        const project = makeProject(['eds-storefront', 'eds-commerce-mesh']);
+        const registry: ComponentRegistry = {
+            version: 'test',
+            components: {
+                frontends: [],
+                backends: [],
+                dependencies: [],
+                mesh: [makeDefinition('eds-commerce-mesh')],
+                // appBuilder intentionally omitted
+            },
+        };
+        expect(projectRequiresAppBuilder(project, registry)).toBe(true);
     });
 
     it('returns false when registry has empty mesh section', () => {

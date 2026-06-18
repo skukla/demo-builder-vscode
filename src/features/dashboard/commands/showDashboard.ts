@@ -17,7 +17,7 @@ import { AuthoringExperience, Project, ComponentInstance } from '@/types';
 import type { DemoPackage } from '@/types/demoPackages';
 import { HandlerContext, SharedState } from '@/types/handlers';
 import type { Stack, StacksConfig } from '@/types/stacks';
-import { getComponentInstanceValues, isEdsProject, getEdsLiveUrl, getEdsDaLiveUrl } from '@/types/typeGuards';
+import { getAppBuilderInstance, getComponentInstanceValues, isEdsProject, getEdsLiveUrl, getEdsDaLiveUrl } from '@/types/typeGuards';
 
 /** Absolute path to the Demo Builder projects directory (`~/.demo-builder/projects`). */
 const DEMO_BUILDER_PROJECTS_BASE = path.join(os.homedir(), '.demo-builder', 'projects');
@@ -127,6 +127,11 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         authoringExperience?: AuthoringExperience;
         initialEdsStorefrontStatus?: string;
         hasAdobeContext: boolean;
+        initialApp?: {
+            status: 'not-deployed' | 'deploying' | 'deployed' | 'error';
+            url?: string;
+            deployedUrls?: Record<string, string>;
+        };
     }> {
         const project = await this.stateManager.getCurrentProject();
         const themeKind = vscode.window.activeColorTheme.kind;
@@ -158,6 +163,18 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         // "Checking Adobe organization…" state before the result arrives.
         const hasAdobeContext = Boolean(project?.adobe?.organization);
 
+        // App Builder app card seed: present only when the project has an app
+        // instance. Status comes from appState (authoritative); a present-but-
+        // never-deployed app reads 'not-deployed' so the card offers Deploy.
+        const appInstance = getAppBuilderInstance(project);
+        const initialApp = appInstance
+            ? {
+                status: project?.appState?.status ?? 'not-deployed',
+                url: project?.appState?.url,
+                deployedUrls: project?.appState?.deployedUrls,
+            }
+            : undefined;
+
         return {
             theme,
             project: project ? {
@@ -173,6 +190,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
             authoringExperience,
             initialEdsStorefrontStatus,
             hasAdobeContext,
+            initialApp,
         };
     }
 
@@ -287,6 +305,29 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
                     status,
                     message,
                     endpoint,
+                },
+            });
+        }
+    }
+
+    /**
+     * Public method to send App Builder app status updates (called by the
+     * deployApp command). Modeled on sendMeshStatusUpdate. No-op if no dashboard
+     * is open.
+     */
+    public static async sendAppStatusUpdate(
+        status: 'deploying' | 'deployed' | 'error' | 'not-deployed',
+        message?: string,
+        url?: string,
+    ): Promise<void> {
+        const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');
+        if (panel) {
+            await panel.webview.postMessage({
+                type: 'appStatusUpdate',
+                payload: {
+                    status,
+                    message,
+                    url,
                 },
             });
         }

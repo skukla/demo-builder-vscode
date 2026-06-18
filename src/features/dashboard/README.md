@@ -76,6 +76,21 @@ The dashboard is designed for at-a-glance status monitoring and one-click action
 **Operations**:
 1. Execute demoBuilder.deployMesh command
 
+### App Builder app handlers (handleAddApp / handleDeployApp / handleRedeployApp / handleRemoveApp)
+
+**Purpose**: Manage the project's single App Builder app from the `AppBuilderCard` (sibling of
+the mesh deploy surface). See `@/features/app-builder` for the underlying services.
+
+**Operations**:
+- `addApp` (`handleAddApp`, payload `{ gitUrl }`) — validate + clone+install a public-GitHub app
+  via `addAppComponent`, then on success dispatch the `demoBuilder.deployApp` command. Add
+  failures surface directly (no deploy).
+- `deployApp` (`handleDeployApp`) — execute the `demoBuilder.deployApp` command (guards + deploy).
+- `redeployApp` (`handleRedeployApp`) — alias of `handleDeployApp` (`aio app deploy` is idempotent,
+  so deploy and redeploy are the same operation).
+- `removeApp` (`handleRemoveApp`) — `removeAppComponent`: remote undeploy (best-effort) + local
+  file/state cleanup.
+
 ### handleOpenDevConsole
 
 **Purpose**: Open Adobe Developer Console for current project
@@ -323,6 +338,7 @@ if (meshComponent && meshComponent.status !== 'deploying' && meshComponent.statu
 - `openBrowser` - Open demo in browser
 - `configure` - Open configuration UI
 - `deployMesh` - Deploy API mesh
+- `addApp` / `deployApp` / `redeployApp` / `removeApp` - Manage the project's App Builder app
 - `openDevConsole` - Open Adobe Developer Console
 - `renameProject` - Rename current project (delegates to shared `renameProjectCore`)
 - `copyPath` - Copy project folder path to clipboard
@@ -337,6 +353,7 @@ if (meshComponent && meshComponent.status !== 'deploying' && meshComponent.statu
 - `init` - Initial dashboard data (theme, project)
 - `statusUpdate` - Complete project status update
 - `meshStatusUpdate` - Mesh-only status update (during async checking)
+- `appStatusUpdate` - App Builder app status update (deploying/deployed/error + URL)
 
 ## Performance Considerations
 

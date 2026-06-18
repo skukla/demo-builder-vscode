@@ -4,7 +4,8 @@
 
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
-import { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell';
+import { buildComponent } from '@/core/shell/buildComponent';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 import type { MeshDeploymentResult } from '@/features/mesh/services/types';
@@ -22,6 +23,10 @@ export type { MeshDeploymentResult };
  * - Generates the final mesh.json from mesh.config.js
  *
  * Without this step, mesh.json references files in build/ that don't exist.
+ *
+ * Thin wrapper over the shared {@link buildComponent} step. The '-- --force'
+ * buildArgs makes this issue the BYTE-IDENTICAL `npm run build -- --force`
+ * command it has always used.
  */
 async function buildMeshComponent(
     componentPath: string,
@@ -29,58 +34,13 @@ async function buildMeshComponent(
     logger: Logger,
     onProgress?: (message: string, subMessage?: string) => void,
 ): Promise<void> {
-    const packageJsonPath = path.join(componentPath, 'package.json');
-
-    try {
-        await fsPromises.access(packageJsonPath);
-    } catch {
-        return; // No package.json — nothing to build
-    }
-
-    const packageJson = parseJSON<{ scripts?: Record<string, string> }>(
-        await fsPromises.readFile(packageJsonPath, 'utf-8'),
+    await buildComponent(
+        componentPath,
+        commandManager,
+        { nodeVersion: getMeshNodeVersion(), buildArgs: '-- --force', logPrefix: '[Mesh Deployment]' },
+        logger,
+        onProgress,
     );
-    if (!packageJson?.scripts?.build) {
-        return; // No build script defined
-    }
-
-    logger.debug('[Mesh Deployment] Building mesh component...');
-    onProgress?.('Building mesh configuration...', 'Installing dependencies');
-
-    const installResult = await commandManager.execute(
-        'npm install --production --no-fund --ignore-scripts',
-        {
-            cwd: componentPath,
-            timeout: TIMEOUTS.LONG,
-            shell: true,
-            useNodeVersion: getMeshNodeVersion(),
-            enhancePath: true,
-        },
-    );
-
-    if (installResult.code !== 0) {
-        logger.warn('[Mesh Deployment] npm install had warnings:', installResult.stderr?.substring(0, 300));
-    }
-
-    onProgress?.('Building mesh configuration...', 'Generating mesh.json');
-
-    const buildResult = await commandManager.execute(
-        'npm run build -- --force',
-        {
-            cwd: componentPath,
-            timeout: TIMEOUTS.LONG,
-            shell: true,
-            useNodeVersion: getMeshNodeVersion(),
-            enhancePath: true,
-        },
-    );
-
-    if (buildResult.code !== 0) {
-        const errorMsg = buildResult.stderr?.trim() || buildResult.stdout?.trim() || 'Build failed';
-        throw new Error(`Mesh build failed: ${errorMsg}`);
-    }
-
-    logger.debug('[Mesh Deployment] Mesh component built successfully');
 }
 
 /**

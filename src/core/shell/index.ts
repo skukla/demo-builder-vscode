@@ -14,6 +14,10 @@ export { PollingService } from './pollingService';
 export { FileWatcher } from './fileWatcher';
 export { CommandSequencer } from './commandSequencer';
 
+// Shared component build step (mesh + app deploy)
+export { buildComponent } from './buildComponent';
+export type { BuildComponentOptions } from './buildComponent';
+
 // Org-context targeting (per-invocation AIO_CONSOLE_* env)
 export {
     buildAioConsoleEnv,
@@ -31,4 +35,4 @@ export type {
     CommandRequest,
     CommandConfig,
 } from './types';
-export type { OrgContextTarget } from './orgContextEnv';
+export type { OrgContextTarget, CachedOrgRef, ProjectAdobeRef } from './orgContextEnv';

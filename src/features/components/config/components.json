@@ -221,6 +221,8 @@
         }
     },
 
+    "appBuilder": {},
+
     "brands": {
         "citisignal": {
             "name": "CitiSignal",

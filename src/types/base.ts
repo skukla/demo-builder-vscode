@@ -93,6 +93,18 @@ export interface Project {
         userDeclinedUpdate?: boolean; // User clicked "Later" on redeploy prompt
         declinedAt?: string; // ISO date string when user declined
     };
+    // App Builder app status summary for card grid display
+    appStatusSummary?: 'deployed' | 'stale' | 'not-deployed' | 'error' | 'unknown';
+    // App Builder app deployment state (singular — one custom app per demo workspace)
+    // AUTHORITATIVE location for the deployed app URL(s)
+    appState?: {
+        appId?: string;
+        url?: string; // Primary deployed app URL
+        status: 'deployed' | 'error' | 'not-deployed';
+        deployedUrls?: Record<string, string>; // Per-action/runtime URLs
+        lastDeployed?: string; // ISO date string
+        sourceHash?: string | null;
+    };
     // EDS Storefront config.json state (tracks changes that require republishing)
     edsStorefrontState?: {
         envVars: Record<string, string>; // Env vars at last publish
@@ -152,7 +164,7 @@ export interface ComponentInstance {
     id: string;              // Component ID (e.g., "headless")
     name: string;            // Human-readable name
     type?: 'frontend' | 'backend' | 'dependency' | 'external-system' | 'app-builder'; // Legacy field, not used with selectionGroups
-    subType?: 'mesh' | 'utility' | 'service';
+    subType?: 'mesh' | 'app' | 'utility' | 'service';
     icon?: string | CustomIconPaths;  // VSCode ThemeIcon name OR custom icon paths
     path?: string;           // Full path to cloned repo (if applicable)
     repoUrl?: string;        // Git repository URL
@@ -234,7 +246,7 @@ export interface ComponentDefinition {
     id: string;
     name: string;
     type?: 'frontend' | 'backend' | 'dependency' | 'external-system' | 'app-builder'; // Legacy field, not used with selectionGroups
-    subType?: 'mesh' | 'utility' | 'service';
+    subType?: 'mesh' | 'app' | 'utility' | 'service';
     icon?: string | CustomIconPaths;  // VSCode ThemeIcon name OR custom icon paths
     description?: string;
     source?: ComponentSource;

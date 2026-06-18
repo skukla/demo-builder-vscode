@@ -74,22 +74,51 @@ async function findComponentByType(
     return undefined;
 }
 
-/** Build the flat component list from stack + saved addons */
-function buildComponentList(
+/** Build the flat component list from stack + saved selections */
+export function buildComponentList(
     stack: Stack,
     project: Project,
 ): { id: string; type: string }[] {
     const frontend = stack.frontend;
     // Use project's saved dependencies (includes user-selected optional deps like mesh) or fall back to stack defaults
     const dependencies = project.componentSelections?.dependencies ?? stack.dependencies ?? [];
-    const appBuilder = (project.selectedAddons || []).filter(
-        addon => !stack.optionalAddons?.some(opt => opt.id === addon),
-    );
+    // App Builder apps come from the explicit saved selection (mirrors executor
+    // Step-4), NOT from selectedAddons — so reset re-clones a dashboard-added app
+    // instead of dropping it.
+    const appBuilder = project.componentSelections?.appBuilder ?? [];
     return [
         ...(frontend ? [{ id: frontend, type: 'frontend' }] : []),
         ...dependencies.map((id: string) => ({ id, type: 'dependency' })),
         ...appBuilder.map((id: string) => ({ id, type: 'app-builder' })),
     ];
+}
+
+/**
+ * Reconstruct a git component definition for a dashboard-added App Builder app
+ * from its saved componentInstance.
+ *
+ * App Builder apps are added at runtime from a public git URL, so they have NO
+ * entry in the static registry. Reset must rebuild the definition (with its git
+ * source) from the saved instance — otherwise the app is dropped from the
+ * re-clone and silently lost. Returns undefined when there is nothing to clone
+ * (no saved instance, or a saved instance without a repo URL). Mirrors the
+ * git-source shape produced by appComponentManager's buildAppDefinition.
+ */
+export function buildAppBuilderDefinitionFromInstance(
+    project: Project,
+    appId: string,
+): TransformedComponentDefinition | undefined {
+    const instance = project.componentInstances?.[appId];
+    if (!instance?.repoUrl) {
+        return undefined;
+    }
+    return {
+        id: appId,
+        name: instance.name || appId,
+        type: 'app-builder',
+        subType: 'app',
+        source: { type: 'git', url: instance.repoUrl, branch: instance.branch || 'main' },
+    } as TransformedComponentDefinition;
 }
 
 /**
@@ -126,6 +155,12 @@ async function loadComponentDefinitionsFromProject(
 
     for (const comp of allComponents) {
         let componentDef = await findComponentByType(registryManager, comp);
+
+        // App Builder apps are added at runtime (not in the static registry), so
+        // rebuild their definition from the saved instance instead of dropping them.
+        if (!componentDef && comp.type === 'app-builder') {
+            componentDef = buildAppBuilderDefinitionFromInstance(project, comp.id);
+        }
 
         // Fallback: search all sections (e.g., mesh in "mesh" section)
         if (!componentDef) {
