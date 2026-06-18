@@ -5,6 +5,14 @@
 `.rptc/research/b2b-account-features-missing/research.md` +
 `.rptc/research/b2b-pdp-404-gap/findings.md`.
 
+## Strategic frame (PM)
+
+This fix is **Tier 1 of a larger "hybrid storefront" vision** — one site serving B2B to company
+customers and B2C to individuals, gated at login. The B2B boilerplate's account nav is already
+permission-gated (evidence in `.rptc/research/hybrid-storefront-model/research.md`), so pulling the
+canonical `/customer/nav` is exactly what makes a site hybrid-capable. This plan delivers that
+foundation for the b2b-based packages; the universal-hybrid rollout is tracked in that research.
+
 ## Goal
 
 Ship the B2B account-menu fix **as the first consumer of a structural fix** that ends the
