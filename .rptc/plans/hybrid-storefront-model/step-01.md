@@ -1,5 +1,11 @@
 # Step 01 — B2B-ready prerequisite doc + read-only `storeConfig` detection
 
+> **STATUS (2026-06-18): detection core landed.** `b2bReadinessDetection.ts`
+> (`detectB2bReadiness`) implements the true-negative-only `storeConfig` probe with 7 tests
+> (enabled / disabled / unknown for missing-field, GraphQL-errors, non-OK, network-failure; POST,
+> no-auth). **Pending:** wiring it into the create flow for B2B-code packages (emit the advisory
+> warning when `disabled`) + the user-facing prerequisite note.
+
 **Goal:** For hybrid (B2B-code) packages, (a) surface a clear "backend must be B2B-ready"
 prerequisite, and (b) reliably **detect** B2B enablement read-only so we can warn — never
 silently ship a half-working B2B demo. The builder cannot *enable* B2B (no API; see research), so
