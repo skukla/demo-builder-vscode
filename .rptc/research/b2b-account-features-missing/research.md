@@ -61,6 +61,29 @@ authored `<li>`, no menu item — regardless of which dropins the code layer loa
 feature dropins only render *inside* a page you can navigate to; if the nav never lists them
 and the sub-pages aren't authored, the features are invisible.
 
+## Live findings (2026-06-18, partial — confirmed in browser)
+
+Probed the canonical B2B CDN (`https://main--boilerplate-b2b--adobe-commerce.aem.live`):
+
+- `/customer/account` (rendered) **loads but gates to a login** — expected; the account dropin
+  requires sign-in. The published document shell still exists and is copyable.
+- `/customer/account.plain.html` **loads** and is a **two-column layout**:
+  - **left column (30%)** references a fragment: **`/customer/nav`**
+  - **right column (70%)**: "My account" (the account dropin)
+- **Key:** the account **menu is not inline on the account page** — it's embedded from a separate
+  fragment **`/customer/nav`**. This matches the `commerce-account-sidebar.js` code, which reads
+  its `<ol><li>` items from a loaded *fragment*.
+
+**This sharpens the root cause to a specific missing document:** `/customer/nav` is a fragment, so
+it is (a) **not in `full-index.json`** and (b) **not in the `essentialFragments` probe list**,
+which only covers `/nav` and `/footer` — **not `/customer/nav`**. So even if `/customer/account`
+is copied, its left column loads `/customer/nav`, which was never copied → empty menu → no B2B
+features. The menu's `<ol><li>` links (still to capture from `/customer/nav.plain.html`) are the
+authoritative list of B2B account sub-pages.
+
+> Outstanding live checks: `/customer/nav.plain.html` (menu items + sub-page hrefs); which
+> sub-pages 404 vs load; whether `query-index.json`/`sitemap.xml` list `/customer/*`.
+
 ## Root cause
 
 ### Primary (HIGH confidence) — `b2b`: the B2B account content is never enumerated, so it's never copied
