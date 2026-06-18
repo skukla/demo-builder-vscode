@@ -1,5 +1,11 @@
 # Step 06 — Reset self-heal wiring + revisit the selector-race patch
 
+> **STATUS (2026-06-18): reset self-heal is already satisfied — no new wiring needed.** Both create
+> and reset run the content pipeline via `executeEdsPipeline` → `copyContentFromSource`
+> (`edsPipeline.ts:263`), so reference-following discovery + the audit already run on reset; an
+> existing content-bearing storefront re-pulls `/customer/nav` when reset. The only open item is the
+> **selector-race patch decision below**, which is gated on a live repro (can't run in this env).
+
 **Goal:** Ensure existing/stale storefronts repair on **reset** (not just fresh create), and
 re-evaluate whether the `commerce-account-sidebar-selector-race` code patch is still needed once
 `/customer/nav` is actually copied.

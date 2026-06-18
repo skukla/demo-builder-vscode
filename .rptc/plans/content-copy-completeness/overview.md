@@ -66,9 +66,19 @@ silently dropped.
 - ✅ **Step 03 (post-copy completeness audit)** — landed. `addReferenceResult` on `PatchReport`;
   `copyContentFromSource` reports any referenced-but-not-copied internal doc (proceed-and-warn,
   never fatal); toast/log wording made reference-aware. New audit tests + 63 related eds tests green.
-- ⏳ **Remaining in Step 01:** the `accountContentSource` per-package override for `citisignal-b2b`
-  (source the account chrome from the canonical B2B content site). Next increment.
-- ⏳ **Steps 04–06:** inventory consolidation, smoke harness, reset wiring — not started.
+- ✅ **Step 06 (reset self-heal)** — already inherited, no new code: both create and **reset** run
+  the content pipeline via `executeEdsPipeline` → `copyContentFromSource` (`edsPipeline.ts:263`), so
+  resetting an existing content-bearing storefront re-pulls `/customer/nav` (self-heals). The only
+  remaining Step 06 item is the **selector-race patch decision**, which is gated on a live repro
+  (can't run here) — left open.
+- 🔀 **`accountContentSource` override (was Step 01 remainder) — REMOVED from Tier 1.** PM chose
+  **Option D**: fold citisignal-b2b's "account chrome from the B2B content site" into the **Tier 2**
+  hybrid convergence (B2B base + brand overlay), so it's the default rather than a special case. See
+  `.rptc/plans/hybrid-storefront-model/`. Tier 1's generic discovery+audit still apply to
+  citisignal-b2b and presume no B2B intent.
+- ⏳ **Steps 04–05 (remaining Tier 1):** inventory consolidation (refactor) and per-package smoke
+  harness (wants live-captured fixtures). Pure hardening — the reported bug + guardrail + reset
+  self-heal are done.
 
 ## Steps
 

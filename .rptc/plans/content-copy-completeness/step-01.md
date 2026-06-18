@@ -58,6 +58,12 @@ In `daLiveContentOperations.ts`:
 - Unit tests green; no double-fetch of the same source path.
 - Live: a freshly created `b2b` project's DA.live site now contains `/customer/nav`, and the
   account page renders the full B2B menu (verify in browser per pre-work).
+> **DECISION (PM, Option D):** the tactical `accountContentSource` override below is **NOT built in
+> Tier 1**. citisignal-b2b's account chrome is folded into the **Tier 2** hybrid convergence (B2B
+> base + brand overlay), where account-chrome-from-B2B becomes the default. Tier 1's generic
+> discovery+audit still apply to citisignal-b2b without presuming B2B intent. The notes below are
+> retained as the design rationale that moved to Tier 2 (`.rptc/plans/hybrid-storefront-model/`).
+
 - **`citisignal-b2b` — intent established from history; inclusion is a PM scope call.** Intent is
   evidenced (not name-based): commit `134e000` ("Deliver a CitiSignal-branded EDS storefront **with
   B2B features**"), the package description enumerates account-based features (company/quotes/POs/

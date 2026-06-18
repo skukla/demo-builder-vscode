@@ -17,6 +17,19 @@ From the research verification plan (egress-blocked here; needs a live B2B store
 If any of 1–3 fail, pause and revisit (may need an upstream fix or a content/permission adjustment)
 before rebasing.
 
+## Folded in (PM Option D): citisignal-b2b account chrome
+
+This step now also owns getting the **B2B account chrome into `citisignal-b2b`** (and any
+canonical-boilerplate brand on the B2B base). Rather than a tactical per-package
+`accountContentSource` override in Tier 1, the convergence content model is: **a hybrid package's
+account pages (`/customer/account`, `/customer/nav`, login, create-account) are sourced from the
+canonical B2B content site (`adobe-commerce/boilerplate-b2b`), while brand/catalog content comes
+from the brand site.** Implement as a small overlay pass (copy `/customer/*` from the B2B content
+site after the brand-content copy; reference-following then pulls `/customer/nav` for free) — same
+mechanism, applied uniformly to every hybrid package instead of special-casing one. So
+`citisignal-b2b`'s missing B2B account menu is fixed as a side effect of the convergence, not a
+bespoke patch.
+
 ## Approach (once gate passes)
 
 Mirror `citisignal-b2b` exactly — it already proves "b2b base + CitiSignal overlay" works:
