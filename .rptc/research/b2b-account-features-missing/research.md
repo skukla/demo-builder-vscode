@@ -1,6 +1,17 @@
 # B2B account page shows no B2B features — research
 
-**Filed:** 2026-06-18 · **Status:** RESEARCH — root cause identified (HIGH confidence). PM confirmed the report is the **`b2b` "B2B Boilerplate"** package. · **Priority:** HIGH — owner-facing demo defect
+**Filed:** 2026-06-18 · **Status:** RESEARCH COMPLETE — root cause confirmed live; ready for `/rptc:plan`. PM confirmed the report is the **`b2b` "B2B Boilerplate"** package. · **Priority:** HIGH — owner-facing demo defect
+
+> **Confirmed conclusion (2026-06-18, browser-verified).** The B2B account menu is a single
+> canonical fragment, **`/customer/nav`**, embedded by `/customer/account` (a 2-column layout).
+> The copy pipeline never copies it — its fragment list is only `/nav` + `/footer` — so the
+> account left-nav is empty and no B2B features show. There are **no per-feature sub-pages**
+> (`/customer/account/company` 404s; the menu rows have no hrefs — sections are dropin-rendered),
+> and **no clean index** to enumerate from (`query-index.json` is blank). **Fix (no fork): pull
+> `/customer/nav` (+ the account shell) live from the public CDN** by following the fragment
+> reference on the copied account page — or, minimally, by adding `/customer/nav` to the fragment
+> probe list. Also wire into reset; revisit whether the `commerce-account-sidebar-selector-race`
+> patch is still needed once the fragment is actually copied.
 
 > **TL;DR.** The B2B *dropin delivery* problem was genuinely fixed on 2026-06-12 (the
 > code layer loads the b2b dropins). But the customer **account page is driven by
@@ -112,9 +123,18 @@ left nav on freshly-published storefronts") may have been treating a *symptom* o
 never-copied-`/customer/nav` bug as a selector timing race. Worth revisiting whether that patch is
 still needed once the fragment is actually copied.
 
-> Outstanding (optional) live checks: confirm a candidate sub-page (e.g. `/customer/account/company`)
-> **404s** (validates "no separate sub-pages"); whether `query-index.json`/`sitemap.xml` list
-> `/customer/*` (decides enumerate-from-index vs follow-fragment-references).
+### Live checks resolved (2026-06-18)
+
+- `/customer/account/company` → **404**. Confirms **no separate per-feature sub-pages** — the B2B
+  sections are dropin-rendered. The only missing content is the `/customer/nav` fragment (+ the
+  `/customer/account` shell).
+- `query-index.json` → **loads blank/empty**. No usable clean index that lists `/customer/*`, so
+  **Approach C (enumerate from a canonical index) is not available**. Use **Approach B
+  (follow fragment references)**, which doesn't depend on an index.
+
+**Verification complete.** Confirmed end-to-end: the bug is the un-copied `/customer/nav` fragment;
+the canonical content is publicly fetchable; there are no sub-pages; and there's no clean index, so
+the fix follows references from the copied account page (or adds the known fragment path).
 
 ## Root cause
 
