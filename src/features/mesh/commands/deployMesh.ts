@@ -1,7 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { BaseCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
 import { StateManager } from '@/core/state';
@@ -49,44 +48,31 @@ export class DeployMeshCommand extends BaseCommand {
             // This ensures the dashboard shows "Deploying..." while pre-flight checks run
             await ProjectDashboardWebviewCommand.sendMeshStatusUpdate('deploying', 'Checking requirements...');
 
-            // PRE-FLIGHT: Check authentication (inline sign-in if needed)
+            // PRE-FLIGHT: ensure auth AND the correct org context in one shared gate
+            // (the same pre-flight the reset flows use). Auth-expiry → Sign In/Cancel;
+            // wrong org → Switch IMS Org/Cancel; both recover inline rather than
+            // dead-ending in a warning that points back at the dashboard banner.
             const authManager = ServiceLocator.getAuthenticationService();
-            const authResult = await ensureAdobeIOAuth({
+            const { ensureProjectAdobeContext } = await import(
+                '@/features/authentication/services/ensureProjectAdobeContext'
+            );
+            const preflight = await ensureProjectAdobeContext({
                 authManager,
+                project,
                 logger: this.logger,
                 logPrefix: '[Mesh Deployment]',
-                projectContext: {
-                    organization: project.adobe?.organization,
-                    projectId: project.adobe?.projectId,
-                    workspace: project.adobe?.workspace,
-                },
                 warningMessage: 'Adobe sign-in required to deploy mesh.',
             });
-            if (!authResult.authenticated) {
+            if (!preflight.ready) {
                 await ProjectDashboardWebviewCommand.refreshStatus();
-                if (!authResult.cancelled) {
-                    vscode.window.showErrorMessage('Sign-in failed or was cancelled. Please try again.');
+                if (!preflight.cancelled) {
+                    vscode.window.showErrorMessage(
+                        preflight.blockedBy === 'org'
+                            ? 'Still signed into the wrong Adobe organization. '
+                              + 'Close any other Adobe browser tab, then try again.'
+                            : 'Sign-in failed or was cancelled. Please try again.',
+                    );
                 }
-                return;
-            }
-
-            // Org-context guard — reuse the canonical reachability check rather than
-            // hand-rolling an org-id comparison. IMS tokens are org-bound, so a
-            // mismatch means the current token is signed into a different org; the
-            // fix is the forced "Switch IMS Org" recovery, not an admin ticket.
-            const { detectProjectOrgMismatch } = await import(
-                '@/features/authentication/services/detectProjectOrgMismatch'
-            );
-            const orgContext = await detectProjectOrgMismatch(authManager, project, this.logger);
-            if (orgContext && !orgContext.reachable) {
-                // Re-surface the dashboard's "Switch IMS Org" banner and abort.
-                await ProjectDashboardWebviewCommand.refreshStatus();
-
-                vscode.window.showWarningMessage(
-                    `"${project.name}" uses a different Adobe organization than the account you're signed into`
-                    + (orgContext.currentOrg ? ` (${orgContext.currentOrg})` : '')
-                    + '. Use "Switch IMS Org" on the dashboard to continue.',
-                );
                 return;
             }
 

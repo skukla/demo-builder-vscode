@@ -13,7 +13,7 @@
  * @module features/dashboard/ui/components/OrgContextNotice
  */
 
-import { Text, Button } from '@adobe/react-spectrum';
+import { Text, Button, ProgressCircle } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import React from 'react';
 import type { OrgMismatchInfo } from '@/features/authentication/services/detectProjectOrgMismatch';
@@ -26,6 +26,8 @@ export interface OrgContextNoticeProps {
     orgMismatch?: OrgMismatchInfo;
     /** True once a forced switch has been attempted this session. */
     switchAttempted: boolean;
+    /** True while the forced switch round-trip is in flight (disables the button). */
+    isSwitching?: boolean;
     /** Trigger the forced account/org switch. */
     onSwitchOrg: () => void;
 }
@@ -54,6 +56,7 @@ export function OrgContextNotice({
     state,
     orgMismatch,
     switchAttempted,
+    isSwitching = false,
     onSwitchOrg,
 }: OrgContextNoticeProps) {
     if (state !== 'mismatch' || !orgMismatch) {
@@ -73,8 +76,20 @@ export function OrgContextNotice({
                     )}
                 </div>
                 <div className="dashboard-org-banner-actions">
-                    <Button variant="accent" onPress={onSwitchOrg}>
-                        Switch IMS Org
+                    <Button variant="accent" onPress={onSwitchOrg} isDisabled={isSwitching}>
+                        {isSwitching ? (
+                            <>
+                                <ProgressCircle
+                                    size="S"
+                                    isIndeterminate
+                                    aria-label="Switching organization"
+                                    UNSAFE_className="dashboard-org-banner-spinner"
+                                />
+                                <Text>Switching…</Text>
+                            </>
+                        ) : (
+                            <Text>Switch IMS Org</Text>
+                        )}
                     </Button>
                 </div>
             </div>

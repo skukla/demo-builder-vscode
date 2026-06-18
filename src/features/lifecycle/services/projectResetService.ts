@@ -222,8 +222,12 @@ async function regenerateEnvFiles(
 // Mesh Redeployment
 // ==========================================================
 
-/** Ensure Adobe I/O authentication, prompting sign-in if expired */
-async function ensureAdobeAuth(
+/**
+ * Ensure Adobe auth AND the correct org context before redeploying the mesh.
+ * Uses the shared existing-project pre-flight so this flow can't drift from the
+ * dashboard deploy command (auth-expiry → Sign In; wrong org → Switch IMS Org).
+ */
+async function ensureAdobeContext(
     project: Project,
     context: HandlerContext,
     logPrefix: string,
@@ -231,20 +235,18 @@ async function ensureAdobeAuth(
     const { ServiceLocator } = await import('@/core/di');
     const authService = ServiceLocator.getAuthenticationService();
 
-    const { ensureAdobeIOAuth } = await import('@/core/auth/adobeAuthGuard');
-    const authResult = await ensureAdobeIOAuth({
+    const { ensureProjectAdobeContext } = await import(
+        '@/features/authentication/services/ensureProjectAdobeContext'
+    );
+    const result = await ensureProjectAdobeContext({
         authManager: authService,
+        project,
         logger: context.logger,
         logPrefix,
-        projectContext: {
-            organization: project.adobe?.organization,
-            projectId: project.adobe?.projectId,
-            workspace: project.adobe?.workspace,
-        },
         warningMessage: 'Your Adobe I/O session has expired. Sign in to redeploy the API Mesh, or skip to finish without redeploying.',
     });
 
-    return authResult.authenticated;
+    return result.ready;
 }
 
 /**
@@ -323,11 +325,11 @@ export async function handleMeshRedeployment(
 
     if (!meshComponent?.path) return null;
 
-    progress.report({ message: 'Checking Adobe I/O authentication...' });
-    const isAuthenticated = await ensureAdobeAuth(project, context, logPrefix);
+    progress.report({ message: 'Checking Adobe organization access...' });
+    const ready = await ensureAdobeContext(project, context, logPrefix);
 
-    if (!isAuthenticated) {
-        context.logger.info(`${logPrefix} Not authenticated, skipping mesh redeploy`);
+    if (!ready) {
+        context.logger.info(`${logPrefix} Adobe context unavailable, skipping mesh redeploy`);
         return { redeployed: false };
     }
 
