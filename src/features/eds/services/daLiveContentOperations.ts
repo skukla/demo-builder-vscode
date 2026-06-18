@@ -150,6 +150,60 @@ export function createDaLiveServiceTokenProvider(
 }
 
 /**
+ * Extract internal document references from a page's authored HTML.
+ *
+ * EDS pages can embed other authored documents (fragments) and link to other
+ * pages. Some of those targets — notably the account left-nav fragment
+ * `/customer/nav` — are NOT in the content index and NOT in any hardcoded
+ * backfill list, so the copy pipeline never pulls them and the feature renders
+ * empty (see `.rptc/research/content-copy-completeness`). Following these
+ * references lets the pipeline copy them from canonical, no fork.
+ *
+ * Returns extension-free, site-relative paths (matching the enumerated path
+ * shape, so callers can dedup against already-copied paths). Excludes external
+ * hosts, anchors/mailto/relative links, media/asset/icon URLs, and
+ * `/products/*` catalog overlays (handled elsewhere).
+ *
+ * @param html - The source page HTML (e.g. from `.plain.html`)
+ * @param sourceBaseUrl - The source CDN base (e.g. `https://main--site--org.aem.live`)
+ */
+export function extractReferencedPaths(html: string, sourceBaseUrl: string): string[] {
+    const refs = new Set<string>();
+    const hrefPattern = /href\s*=\s*["']([^"']+)["']/gi;
+    let match: RegExpExecArray | null;
+
+    while ((match = hrefPattern.exec(html)) !== null) {
+        let href = match[1].trim();
+        if (!href) continue;
+
+        // Normalize an absolute same-site URL to a site-relative path; skip any
+        // other absolute/protocol-relative URL (external host).
+        if (href.startsWith(sourceBaseUrl)) {
+            href = href.slice(sourceBaseUrl.length) || '/';
+        } else if (/^[a-z]+:/i.test(href) || href.startsWith('//')) {
+            continue;
+        }
+
+        // Internal site-relative paths only (drops #anchors, ./relatives, mailto:).
+        if (!href.startsWith('/')) continue;
+
+        href = href.split('#')[0].split('?')[0];
+        if (!href || href === '/') continue;
+
+        // Skip media, static assets, icons, and catalog product overlays.
+        if (/\.(png|jpe?g|gif|svg|webp|ico|css|js|json|pdf|mp4|woff2?|ttf)$/i.test(href)) continue;
+        if (href.includes('/media_') || href.startsWith('/icons/') || href.startsWith('/styles/')) continue;
+        if (href.startsWith('/products/')) continue;
+
+        // Match the enumerated path shape (extension-free).
+        href = href.replace(/\.html$/i, '');
+        if (href && href !== '/') refs.add(href);
+    }
+
+    return [...refs];
+}
+
+/**
  * DA.live Content Operations
  */
 export class DaLiveContentOperations {
@@ -388,8 +442,18 @@ export class DaLiveContentOperations {
         contentPatchIds?: string[],
         contentPatchSource?: ContentPatchSource,
         patchReport?: PatchReport,
+        discoveredPaths?: Set<string>,
     ): Promise<Blob> {
         let htmlText = await sourceResponse.text();
+
+        // Collect internal document references (e.g. the /customer/nav fragment
+        // embedded by the account page) so the copy loop can pull them from
+        // canonical — they are often absent from the index and backfill lists.
+        if (discoveredPaths) {
+            for (const ref of extractReferencedPaths(htmlText, sourceBaseUrl)) {
+                discoveredPaths.add(ref);
+            }
+        }
 
         if (contentPatchIds && contentPatchIds.length > 0) {
             const { applyContentPatches } = await import('./contentPatchRegistry');
@@ -431,6 +495,7 @@ export class DaLiveContentOperations {
         contentPatchIds?: string[],
         contentPatchSource?: ContentPatchSource,
         patchReport?: PatchReport,
+        discoveredPaths?: Set<string>,
     ): Promise<boolean> {
         const sourceBaseUrl = `https://main--${source.site}--${source.org}.aem.live`;
 
@@ -460,7 +525,7 @@ export class DaLiveContentOperations {
                 const daPath = this.resolveDaPath(destPath, isHtml);
 
                 const contentBlob = isHtml
-                    ? await this.processHtmlContent(sourceResponse, sourcePath, sourceBaseUrl, contentPatchIds, contentPatchSource, patchReport)
+                    ? await this.processHtmlContent(sourceResponse, sourcePath, sourceBaseUrl, contentPatchIds, contentPatchSource, patchReport, discoveredPaths)
                     : await sourceResponse.blob();
 
                 const destUrl = `${DA_LIVE_BASE_URL}/source/${destination.org}/${destination.site}/${daPath}`;
@@ -1812,6 +1877,114 @@ export class DaLiveContentOperations {
      *   pipeline that don't aggregate patch results).
      * @returns Copy result
      */
+    /**
+     * Backfill essential content that the CDN content index omits (only needed
+     * on the index-fallback path; the DA.live list API already returns it all):
+     * config spreadsheets, the nav/footer fragments, and the customer auth pages.
+     * Mutates `contentPaths` (prepends found paths) and `missingAuthPages`
+     * (auth pages absent from source, which get destination stubs later).
+     */
+    private async backfillEssentialPaths(
+        source: { org: string; site: string },
+        contentPaths: string[],
+        missingAuthPages: Array<{ path: string; blockClass: string }>,
+    ): Promise<void> {
+        const baseUrl = `https://main--${source.site}--${source.org}.aem.live`;
+
+        const probeAndAdd = async (path: string, probeUrl: string): Promise<boolean> => {
+            if (contentPaths.includes(path)) return true;
+            try {
+                const response = await fetch(probeUrl, { method: 'HEAD' });
+                if (response.ok) {
+                    contentPaths.unshift(path);
+                    return true;
+                }
+            } catch {
+                // Doesn't exist / unreachable — skip.
+            }
+            return false;
+        };
+
+        // Spreadsheets: served as .json on CDN, stored as .xlsx on DA.live.
+        for (const configPath of ['/placeholders', '/redirects', '/metadata', '/sitemap']) {
+            await probeAndAdd(configPath, `${baseUrl}${configPath}.json`);
+        }
+
+        // HTML fragment documents (nav, footer): not indexed but loaded at runtime.
+        for (const fragmentPath of ['/nav', '/footer']) {
+            await probeAndAdd(fragmentPath, `${baseUrl}${fragmentPath}`);
+        }
+
+        // Customer auth pages: dropin-rendered, not indexed. Probe the
+        // `.plain.html` we actually copy (not the bare rendered URL — dropin auth
+        // pages like /customer/account gate to a login at the bare path, so a bare
+        // probe can mis-stub a page whose authored content really exists). Pages
+        // absent from source get destination stubs with the correct block markup.
+        const essentialAuthPages: Array<{ path: string; blockClass: string }> = [
+            { path: '/customer/login', blockClass: 'commerce-login' },
+            { path: '/customer/account', blockClass: 'commerce-account' },
+            { path: '/customer/create-account', blockClass: 'commerce-create-account' },
+        ];
+        for (const authPage of essentialAuthPages) {
+            if (contentPaths.includes(authPage.path)) continue;
+            const found = await probeAndAdd(authPage.path, `${baseUrl}${authPage.path}.plain.html`);
+            if (!found) missingAuthPages.push(authPage);
+        }
+    }
+
+    /**
+     * Follow internal references discovered while copying and pull them from
+     * canonical. Transitive (depth-capped) and deduped against everything already
+     * enumerated/copied. Best-effort: a referenced doc that 404s is skipped, not
+     * fatal — the completeness audit surfaces genuine dangling refs separately.
+     *
+     * @returns the discovered paths that were successfully copied
+     */
+    private async discoverAndCopyReferences(
+        source: { org: string; site: string },
+        dest: { org: string; site: string },
+        enumeratedPaths: string[],
+        discoveredPaths: Set<string>,
+        contentPatchIds?: string[],
+        contentPatchSource?: ContentPatchSource,
+        patchReport?: PatchReport,
+    ): Promise<string[]> {
+        const copied: string[] = [];
+        const visited = new Set<string>(enumeratedPaths);
+        const MAX_DISCOVERY_DEPTH = 3;
+
+        for (let depth = 0; depth < MAX_DISCOVERY_DEPTH; depth++) {
+            const newPaths = [...discoveredPaths].filter((p) => !visited.has(p));
+            if (newPaths.length === 0) break;
+            for (const p of newPaths) visited.add(p);
+
+            this.logger.info(`[DA.live] Discovered ${newPaths.length} referenced document(s) not in the index (depth ${depth + 1}): ${newPaths.join(', ')}`);
+
+            for (let i = 0; i < newPaths.length; i += CONTENT_COPY_BATCH_SIZE) {
+                const batch = newPaths.slice(i, i + CONTENT_COPY_BATCH_SIZE);
+                const token = await this.getImsToken();
+                const results = await Promise.all(
+                    batch.map(async (sourcePath) => {
+                        const success = await this.copySingleFile(
+                            token, source, sourcePath, dest, sourcePath,
+                            contentPatchIds, contentPatchSource, patchReport, discoveredPaths,
+                        );
+                        return { path: sourcePath, success };
+                    }),
+                );
+                for (const result of results) {
+                    if (result.success) {
+                        copied.push(result.path);
+                    } else {
+                        this.logger.debug(`[DA.live] Discovered reference not copyable (skipped): ${result.path}`);
+                    }
+                }
+            }
+        }
+
+        return copied;
+    }
+
     async copyContentFromSource(
         source: DaLiveContentSource,
         destOrg: string,
@@ -1837,65 +2010,17 @@ export class DaLiveContentOperations {
         // be in the content index. The DA.live list API already returns
         // everything, so this is only needed for the fallback path.
         if (!usedDaLiveList) {
-            const baseUrl = `https://main--${source.site}--${source.org}.aem.live`;
-
-            // Spreadsheets: served as .json on CDN, stored as .xlsx on DA.live
-            const essentialSpreadsheets = ['/placeholders', '/redirects', '/metadata', '/sitemap'];
-            for (const configPath of essentialSpreadsheets) {
-                if (!contentPaths.includes(configPath)) {
-                    try {
-                        const response = await fetch(`${baseUrl}${configPath}.json`, { method: 'HEAD' });
-                        if (response.ok) {
-                            contentPaths.unshift(configPath);
-                        }
-                    } catch {
-                        // Doesn't exist, skip
-                    }
-                }
-            }
-
-            // HTML fragment documents (nav, footer): not indexed but loaded at runtime
-            const essentialFragments = ['/nav', '/footer'];
-            for (const fragmentPath of essentialFragments) {
-                if (!contentPaths.includes(fragmentPath)) {
-                    try {
-                        const response = await fetch(`${baseUrl}${fragmentPath}`, { method: 'HEAD' });
-                        if (response.ok) {
-                            contentPaths.unshift(fragmentPath);
-                        }
-                    } catch {
-                        // Doesn't exist, skip
-                    }
-                }
-            }
-
-            // Customer auth pages: dropin-rendered pages not in content index but
-            // needed for login/account flows. Probe source CDN and copy if they exist.
-            // Pages not on source get stubs with correct block markup in the destination.
-            const essentialAuthPages: Array<{ path: string; blockClass: string }> = [
-                { path: '/customer/login', blockClass: 'commerce-login' },
-                { path: '/customer/account', blockClass: 'commerce-account' },
-                { path: '/customer/create-account', blockClass: 'commerce-create-account' },
-            ];
-            for (const authPage of essentialAuthPages) {
-                if (!contentPaths.includes(authPage.path)) {
-                    try {
-                        const response = await fetch(`${baseUrl}${authPage.path}`, { method: 'HEAD' });
-                        if (response.ok) {
-                            contentPaths.unshift(authPage.path);
-                        } else {
-                            missingAuthPages.push(authPage);
-                        }
-                    } catch {
-                        missingAuthPages.push(authPage);
-                    }
-                }
-            }
+            await this.backfillEssentialPaths(source, contentPaths, missingAuthPages);
         }
 
         const copiedFiles: string[] = [];
         const failedFiles: { path: string; error: string }[] = [];
         let totalFiles = contentPaths.length;
+
+        // Internal document references discovered while copying (e.g. the
+        // /customer/nav fragment embedded by the account page). Drained after the
+        // main loop so referenced-but-unindexed docs get pulled from canonical.
+        const discoveredPaths = new Set<string>();
 
         // Copy files in parallel batches for improved performance (~5x faster)
         const contentStart = Date.now();
@@ -1927,6 +2052,7 @@ export class DaLiveContentOperations {
                         contentPatchIds,
                         contentPatchSource,
                         patchReport,
+                        discoveredPaths,
                     );
                     return { path: sourcePath, success };
                 }),
@@ -1944,6 +2070,24 @@ export class DaLiveContentOperations {
             }
         }
         this.logger.debug(`[DA.live] Content copy total: ${totalFiles} files in ${formatDuration(Date.now() - contentStart)}`);
+
+        // Reference-following discovery: copy internal documents referenced by
+        // already-copied pages but absent from the index + backfill lists (e.g.
+        // the /customer/nav account-menu fragment). Closes the "silently-dropped
+        // content" bug class without hardcoding paths or forking content.
+        const discoveredCopied = await this.discoverAndCopyReferences(
+            { org: source.org, site: source.site },
+            { org: destOrg, site: destSite },
+            contentPaths,
+            discoveredPaths,
+            contentPatchIds,
+            contentPatchSource,
+            patchReport,
+        );
+        for (const path of discoveredCopied) {
+            copiedFiles.push(path);
+            totalFiles++;
+        }
 
         // Create stub pages for auth pages that don't exist on source.
         // Each stub uses the correct block class so the dropin renders properly.

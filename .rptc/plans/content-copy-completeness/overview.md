@@ -54,6 +54,19 @@ silently dropped.
 - `src/features/eds/services/edsPipeline.ts` — `indexUrl` construction (`:254`), copy invocation.
 - `src/features/project-creation/config/demo-packages.json` — packages for the smoke harness.
 
+## Implementation status (2026-06-18)
+
+- ✅ **Step 01 (reference-following discovery)** — landed. `extractReferencedPaths` +
+  `discoverAndCopyReferences` in `daLiveContentOperations.ts`; copies `/customer/nav` (and any
+  referenced-but-unindexed doc) from canonical, transitive/depth-capped/deduped, best-effort
+  (a 404 ref doesn't fail the copy). 10 new tests; 170 eds tests green; lint+typecheck clean.
+- ✅ **Step 02 (auth-page probe)** — landed alongside 01: the auth-page existence probe now targets
+  `.plain.html` (not the login-gated bare URL), so `/customer/account` is reliably copied; backfill
+  refactored into `backfillEssentialPaths`.
+- ⏳ **Remaining in Step 01:** the `accountContentSource` per-package override for `citisignal-b2b`
+  (source the account chrome from the canonical B2B content site). Next increment.
+- ⏳ **Steps 03–06:** audit, inventory consolidation, smoke harness, reset wiring — not started.
+
 ## Steps
 
 | Step | Layer | Title | Ships |
