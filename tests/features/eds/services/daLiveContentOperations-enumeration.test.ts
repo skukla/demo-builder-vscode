@@ -368,8 +368,9 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
                 'dest-site',
             );
 
-            // 2 from index + 4 spreadsheets + 2 fragments + 3 auth pages = 11
-            expect(result.totalFiles).toBe(11);
+            // 2 from index + 4 spreadsheets + 3 fragments (nav, footer,
+            // /customer/sidebar-fragment) + 3 auth pages = 12
+            expect(result.totalFiles).toBe(12);
 
             // Verify HEAD requests were made for nav and footer
             const headCalls = mockFetch.mock.calls
@@ -417,9 +418,10 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
                 'dest-site',
             );
 
-            // 2 from index + 4 spreadsheets + 2 fragments + 2 auth (login + create-account) = 10 copied
-            // + 1 stub (account returned 404) = 11 total
-            expect(result.totalFiles).toBe(11);
+            // 2 from index + 4 spreadsheets + 3 fragments (nav, footer,
+            // /customer/sidebar-fragment HEADs 200) + 2 auth (login + create-account)
+            // = 11 copied + 1 stub (account returned 404) = 12 total
+            expect(result.totalFiles).toBe(12);
 
             // Verify HEAD requests were made for customer auth pages
             const headCalls = mockFetch.mock.calls

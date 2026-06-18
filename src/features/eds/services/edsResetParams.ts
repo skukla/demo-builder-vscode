@@ -40,6 +40,12 @@ export interface EdsResetParams {
         site: string;
         indexPath?: string;
     };
+    /** Optional second content source for the customer account chrome (hybrid
+     *  packages: B2B base + brand overlay). Overlaid after the main copy. */
+    accountContentSource?: {
+        org: string;
+        site: string;
+    };
     /** Optional BYOM content overlay URL (from storefront template). */
     byomOverlayUrl?: string;
 
@@ -153,6 +159,7 @@ interface StorefrontConfig {
     templateOwner?: string;
     templateRepo?: string;
     contentSource?: { org: string; site: string; indexPath?: string };
+    accountContentSource?: { org: string; site: string };
     contentPatches?: string[];
     contentPatchSource?: { owner: string; repo: string; path: string };
     codePatches?: string[];
@@ -204,6 +211,7 @@ export function extractResetParams(
         templateOwner,
         templateRepo,
         contentSource: contentSourceConfig,
+        accountContentSource: accountContentSourceConfig,
         contentPatches,
         contentPatchSource,
         codePatches,
@@ -270,6 +278,7 @@ export function extractResetParams(
             templateOwner,
             templateRepo,
             ...(contentSourceConfig && { contentSource: contentSourceConfig }),
+            ...(accountContentSourceConfig && { accountContentSource: accountContentSourceConfig }),
             ...(byomOverlayUrl && { byomOverlayUrl }),
             project,
             contentPatches,

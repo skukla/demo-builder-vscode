@@ -395,5 +395,32 @@ The `test`, `test:fast`, `test:safe`, and `test:force` scripts in `package.json`
 
 ---
 
+## Credentials in tests (don't trip the secret scanner)
+
+Test fixtures must **never** contain realistic-looking credentials. Secret
+scanners (GitGuardian's GitHub App, `ggshield`, etc.) flag a hardcoded
+`password:` assigned a real-looking value as an incident — which then
+**block CI** and have to be triaged by hand, even though they're fake.
+
+Rules:
+
+- Use **obvious non-secrets** for credential fields: `'test-user'`,
+  `'fake-test-pw-not-a-secret'`, `'test-only-…'`. Never anything that could pass
+  for a real password/token/key.
+- Prefer the shared **`tests/helpers/testCredentials.ts`** (`FAKE_CREDENTIALS`)
+  over inventing new literals.
+- The repo's `.gitguardian.yaml` already excludes test paths for the `ggshield`
+  CLI, and the GitGuardian App is configured (dashboard) to exclude them too —
+  but the convention above is the real safeguard: don't create the noise.
+
+Two layers back this up:
+
+- **`.pre-commit-config.yaml`** — an opt-in `ggshield` hook that catches *real*
+  secrets locally before they're committed (it honors `.gitguardian.yaml`, so it
+  skips test fixtures). Set up once: `pip install pre-commit && pre-commit install`.
+- The CI **GitGuardian** check is the backstop for anything that slips through.
+
+---
+
 **For Development Guidelines:** See `CLAUDE.md` and `src/CLAUDE.md`
 **For Architecture Overview:** See `docs/architecture/overview.md`

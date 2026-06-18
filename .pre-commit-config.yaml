@@ -1,0 +1,17 @@
+# Local pre-commit hooks. Defense-in-depth for secret leaks: catches REAL secrets
+# before they're ever committed, so they never reach a PR (where the GitGuardian
+# App check would block the merge).
+#
+# One-time setup per clone:
+#   pip install pre-commit && pre-commit install
+#   pre-commit autoupdate   # optional: bump the pinned hook revs
+#
+# ggshield honors `.gitguardian.yaml`, so files under its `paths-ignore`
+# (test fixtures, etc.) are skipped here — this guards source code, not mocks.
+repos:
+  - repo: https://github.com/gitguardian/ggshield
+    rev: v1.32.0
+    hooks:
+      - id: ggshield
+        language_version: python3
+        stages: [pre-commit]

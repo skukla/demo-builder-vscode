@@ -83,6 +83,11 @@ export interface StorefrontSetupStartPayload {
             site: string;
             indexPath?: string;
         };
+        // Second content source for the account chrome (hybrid packages).
+        accountContentSource?: {
+            org: string;
+            site: string;
+        };
         // Optional BYOM content overlay URL (from demo-packages.json storefronts)
         byomOverlayUrl?: string;
         // Selected existing repository (from searchable list)
