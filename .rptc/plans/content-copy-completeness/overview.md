@@ -63,9 +63,12 @@ silently dropped.
 - ✅ **Step 02 (auth-page probe)** — landed alongside 01: the auth-page existence probe now targets
   `.plain.html` (not the login-gated bare URL), so `/customer/account` is reliably copied; backfill
   refactored into `backfillEssentialPaths`.
+- ✅ **Step 03 (post-copy completeness audit)** — landed. `addReferenceResult` on `PatchReport`;
+  `copyContentFromSource` reports any referenced-but-not-copied internal doc (proceed-and-warn,
+  never fatal); toast/log wording made reference-aware. New audit tests + 63 related eds tests green.
 - ⏳ **Remaining in Step 01:** the `accountContentSource` per-package override for `citisignal-b2b`
   (source the account chrome from the canonical B2B content site). Next increment.
-- ⏳ **Steps 03–06:** audit, inventory consolidation, smoke harness, reset wiring — not started.
+- ⏳ **Steps 04–06:** inventory consolidation, smoke harness, reset wiring — not started.
 
 ## Steps
 

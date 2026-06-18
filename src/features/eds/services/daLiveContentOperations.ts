@@ -29,7 +29,7 @@ import {
 import { getMimeType } from './daLiveMimeTypes';
 import { hasWriteAccess } from './daLiveOrgOperations';
 import { convertSpreadsheetJsonToHtml } from './daLiveSpreadsheetUtils';
-import { addContentResult, type PatchReport } from './patchReportHelper';
+import { addContentResult, addReferenceResult, type PatchReport } from './patchReportHelper';
 import {
     DaLiveError,
     DaLiveAuthError,
@@ -2087,6 +2087,21 @@ export class DaLiveContentOperations {
         for (const path of discoveredCopied) {
             copiedFiles.push(path);
             totalFiles++;
+        }
+
+        // Completeness audit: any internal document referenced by copied content
+        // but not itself copied (e.g. a fragment that 404s on source) is surfaced
+        // via the proceed-and-warn report — the loud signal for the
+        // "silently-dropped content" class even if discovery missed a shape. The
+        // demo still proceeds; this never fails the copy.
+        const copiedSet = new Set(copiedFiles);
+        for (const ref of discoveredPaths) {
+            if (!copiedSet.has(ref)) {
+                this.logger.warn(`[DA.live] Completeness audit — referenced document not copied: ${ref}`);
+                if (patchReport) {
+                    addReferenceResult(patchReport, ref, 'referenced by copied content but not found on source');
+                }
+            }
         }
 
         // Create stub pages for auth pages that don't exist on source.

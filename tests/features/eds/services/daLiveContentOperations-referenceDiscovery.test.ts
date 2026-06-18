@@ -215,4 +215,26 @@ describe('copyContentFromSource — reference-following discovery', () => {
         expect(result.copiedFiles).toContain('/customer/nav');
         expect(result.copiedFiles).not.toContain('/dead-link');
     });
+
+    it('completeness audit reports a referenced doc that could not be copied', async () => {
+        mockFetch.mockImplementation(async (url: string, options?: RequestInit) => {
+            const method = options?.method ?? 'GET';
+            if (url.includes('/list/')) return status(404);
+            if (url.includes('full-index.json')) return jsonResponse({ data: [] });
+            if (method === 'HEAD') return url.includes('/customer/account.plain.html') ? status(200) : status(404);
+            if (method === 'POST' && url.includes('/source/')) return status(200);
+            if (url === `${sourceBase}/customer/account.plain.html`) {
+                return htmlResponse('<body><main><div><a href="/customer/nav">n</a></div></main></body>');
+            }
+            return status(404); // /customer/nav.plain.html → 404 (genuinely missing)
+        });
+
+        const { createPatchReport, getUnapplied } = await import('@/features/eds/services/patchReportHelper');
+        const report = createPatchReport();
+        await service.copyContentFromSource(source(), destOrg, destSite, undefined, undefined, undefined, report);
+
+        const unapplied = getUnapplied(report);
+        expect(unapplied.some((u) => u.kind === 'reference' && u.target === '/customer/nav')).toBe(true);
+        expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('referenced document not copied: /customer/nav'));
+    });
 });
