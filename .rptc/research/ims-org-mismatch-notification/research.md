@@ -97,3 +97,57 @@ component, so the next persistent-alert need (session expiry, mesh needs-auth) c
 **Net:** the banner is the right call; the gap worth closing is (a) missing progress feedback
 on the *action* and (b) the bespoke-vs-reusable nature of the component — not the banner-vs-
 notification choice.
+
+---
+
+## 6. Addendum — "the existing blocking re-login flow" (PM clarification)
+
+PM clarified "blocking progress notification" meant the **existing blocking re-auth
+flow**, not `vscode.withProgress`. That flow is `ensureAdobeIOAuth`
+(`src/core/auth/adobeAuthGuard.ts`): the shared *pause-and-prompt* gate —
+`check → showWarningMessage('… sign-in required', 'Sign In', 'Cancel') → forced
+login → verify` — reused by mesh deploy, configure, EDS reset/storefront setup,
+project reset (9 call sites).
+
+**The codebase already models TWO distinct conditions, separately:**
+
+| Condition | Meaning | Current surface | Moment |
+|---|---|---|---|
+| **Auth expired / missing** | No valid token | `ensureAdobeIOAuth` blocking gate (Sign In/Cancel) | **Reactive** — at the moment a gated action runs |
+| **Org mismatch** | Token *valid* but reaches the *wrong* org | IMS Org badge + `OrgContextNotice` banner | **Proactive** — on dashboard load |
+
+These fire at *different moments*, which is why it's **not either/or**:
+
+- The blocking gate only triggers **when the user initiates a gated action**. A user
+  who just opens the dashboard to look around would get **no signal** that anything is
+  wrong until they click Deploy/Configure. The mismatch is knowable at *load* time, and
+  the banner is what telegraphs it non-surprisingly (the stated design goal in `67cb402`).
+- A modal that auto-pops on load (before any action) would be the *surprising* behavior
+  the team explicitly designed against.
+
+**The real gap this surfaces — the action-time path is a dead end.** When a gated action
+hits a mismatch today, `deployMesh.ts:85` (and peers) show a **button-less**
+`showWarningMessage("… uses a different org … Use 'Switch IMS Org' on the dashboard")`.
+It detects the problem but offers **no inline recovery** — it bounces the user back to the
+banner. That is exactly where the `ensureAdobeIOAuth` blocking pattern *should* be adopted:
+make it a real **"Switch IMS Org / Cancel"** gate that performs the forced switch inline,
+consistent with how expired-token is handled.
+
+### Revised recommendation — three coordinated layers (not either/or)
+
+1. **Ambient — IMS Org badge.** Always-on at-a-glance truth. *(exists, keep)*
+2. **Proactive — `OrgContextNotice` banner.** On-load heads-up + Switch action; makes the
+   condition knowable before the user clicks anything. *(exists, keep — the blocking gate
+   cannot replace this; it can't fire proactively without being intrusive)*
+3. **Reactive — blocking org-context gate at action time.** Generalize `ensureAdobeIOAuth`
+   (or add a sibling `ensureProjectOrgContext`) so deployMesh/configure/reset/etc. turn the
+   current dead-end warning into a real blocking **"Switch IMS Org / Cancel"** prompt with
+   inline forced switch. This is the consistency win the PM is pointing at — it harmonizes
+   the *action paths* with the established auth-expiry pattern and gives the banner a proper
+   backend twin (one shared remediation primitive).
+
+**Answer to "blocking flow + status indicator, or stick with the notice?":** keep the badge
+**and** the notice (they own the *ambient* + *proactive* moments the gate can't), **and**
+additionally adopt the blocking gate for the *reactive/action-time* moment where today there's
+only a dead-end warning. The notice is not replaced — the blocking flow fills a different,
+currently weak, slot.
