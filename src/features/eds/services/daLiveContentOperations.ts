@@ -206,13 +206,13 @@ export function extractReferencedPaths(html: string, sourceBaseUrl: string): str
     const hrefPattern = /href\s*=\s*["']([^"']+)["']/gi;
     while ((match = hrefPattern.exec(html)) !== null) consider(match[1]);
 
-    // 2. EDS fragment-block convention: the fragment path is authored as the bare
-    //    TEXT content of a leaf element, e.g. the account page's
-    //    `<div class="fragment"><div><div>/customer/nav</div></div></div>`. Match an
-    //    internal path that is the entire text of a leaf div/p/li/td/span (not an
-    //    href), so embedded fragments that aren't in the index get pulled too.
-    const textPathPattern = />\s*(\/[a-z0-9][^<>\s"']*)\s*<\/(?:div|p|li|td|span)>/gi;
-    while ((match = textPathPattern.exec(html)) !== null) consider(match[1]);
+    // 2. EDS fragment-block convention: a `<div class="fragment">` whose cell text
+    //    IS the path (no <a>), e.g. the account page's
+    //    `<div class="fragment"><div><div>/customer/nav</div></div></div>`. Scope the
+    //    match to fragment blocks (not any bare-path leaf) so it stays precise to the
+    //    convention and doesn't over-discover stray paths elsewhere in content.
+    const fragmentPattern = /class=["'][^"']*\bfragment\b[^"']*["'][\s\S]*?>\s*(\/[a-z0-9][^<>\s"']*)\s*</gi;
+    while ((match = fragmentPattern.exec(html)) !== null) consider(match[1]);
 
     return [...refs];
 }

@@ -82,8 +82,13 @@ describe('extractReferencedPaths', () => {
         expect(extractReferencedPaths(html, base).sort()).toEqual(['/customer/nav', '/fr/']);
     });
 
-    it('does not match a path embedded mid-text (only whole-cell paths)', () => {
+    it('does not match a path embedded mid-text (only fragment-block paths)', () => {
         expect(extractReferencedPaths('<div>See /customer/nav for details</div>', base)).toEqual([]);
+    });
+
+    it('does NOT match a bare-path leaf outside a fragment block (precision)', () => {
+        // A bare path in ordinary content is not a fragment reference — don't over-discover it.
+        expect(extractReferencedPaths('<div><div>/some/stray/path</div></div>', base)).toEqual([]);
     });
 
     it('does not match closing tags or non-path cell text', () => {
