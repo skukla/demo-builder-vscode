@@ -291,7 +291,7 @@ describe('handleDiscoverStoreStructure', () => {
             backendType: 'paas',
             baseUrl: 'https://magento.test',
             username: 'admin',
-            password: 'fake-test-pw-2',
+            password: 'fake-test-pw-not-a-secret',
         });
 
         expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
@@ -308,7 +308,7 @@ describe('handleDiscoverStoreStructure', () => {
             backendType: 'paas',
             baseUrl: 'https://magento.test',
             username: 'admin',
-            password: 'fake-test-pw-2',
+            password: 'fake-test-pw-not-a-secret',
         });
 
         expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
@@ -331,7 +331,7 @@ describe('handleDiscoverStoreStructure', () => {
             backendType: 'paas',
             baseUrl: 'https://magento.test',
             username: 'admin',
-            password: 'fake-test-pw-2',
+            password: 'fake-test-pw-not-a-secret',
         });
 
         expect(context.logger.info).toHaveBeenCalledWith(
