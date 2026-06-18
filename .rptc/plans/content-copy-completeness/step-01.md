@@ -58,10 +58,19 @@ In `daLiveContentOperations.ts`:
 - Unit tests green; no double-fetch of the same source path.
 - Live: a freshly created `b2b` project's DA.live site now contains `/customer/nav`, and the
   account page renders the full B2B menu (verify in browser per pre-work).
-- **`citisignal-b2b` caveat:** its source (`accs-citisignal`) is non-B2B — discovery will copy
-  whatever nav it references, which may *not* contain B2B items. Record the live result; if so,
-  citisignal-b2b needs its account page/nav sourced from the B2B site or a content patch — capture
-  as a follow-on (do not silently mark fixed).
+- **`citisignal-b2b` — resolved from config (no live check needed):** it shares the **exact**
+  content source with the non-B2B `citisignal` package (`demo-system-stores/accs-citisignal`, both
+  storefronts), and no content patch touches the account page. So that site's nav has base items
+  only — discovery from it will **not** yield B2B account features. **Decision:** for B2B-code
+  packages, source the account chrome (`/customer/account` + `/customer/nav`) from the **canonical
+  B2B content site** (`adobe-commerce/boilerplate-b2b`) — the same site the B2B *code* and the
+  `b2b` package's nav come from — while keeping CitiSignal branding/catalog from `accs-citisignal`.
+  Still pulled live from the public CDN → **no fork**.
+  - Implement as a small per-package override in `demo-packages.json` (e.g. `accountContentSource`
+    pointing at `{ org: adobe-commerce, site: boilerplate-b2b }`), consumed by `copyContentFromSource`
+    so the `/customer/*` auth pages + their referenced fragments are fetched from that source while
+    the rest of the content comes from the package's primary `contentSource`.
+  - The `b2b` package needs no override (its `contentSource` already *is* `boilerplate-b2b`).
 
 ## Notes / risks
 

@@ -195,6 +195,14 @@ has **no B2B account nav** to copy. Different trigger, same symptom — fix it i
 both b2b packages behave. (My initial read centered this package; the PM clarified the report is
 `b2b`, but this one is broken too.)
 
+**Determinable from config (no live check):** `citisignal-b2b` shares the **exact** content source
+with the non-B2B `citisignal` package (`demo-system-stores/accs-citisignal`, both storefronts) and
+no content patch touches the account page — so reference-following from that site won't yield B2B
+features. **Fix (no fork):** for B2B-code packages, source the account chrome (`/customer/account`
++ `/customer/nav`) from the canonical B2B content site (`adobe-commerce/boilerplate-b2b`) via a
+per-package `accountContentSource` override, still pulled live from the public CDN. See plan
+`step-01.md`.
+
 ## Could not verify here (verification steps for the plan)
 
 Network egress to `*.aem.live` is blocked in this environment and the upstream B2B template repo

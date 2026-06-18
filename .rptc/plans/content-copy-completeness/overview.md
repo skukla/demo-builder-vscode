@@ -62,13 +62,16 @@ independently shippable if we need the fix out first.
 
 ## Pre-work — live verification (egress-blocked in this env; do before/within Step 01)
 
-Browser-probe each affected package's source site (we did this for `b2b`):
-1. Confirm `/customer/account.plain.html` references `/customer/nav` (✅ done for `b2b`); repeat for
-   `citisignal-b2b`'s source (`accs-citisignal`) — does its account page reference a nav fragment,
-   and does that fragment carry the B2B items? (citisignal-b2b uses non-B2B content — may need its
-   account page sourced/patched too; see account-features research.)
-2. Scan a few copied pages for other fragment references / dropin pages to seed Step 03's test
-   fixtures with real shapes.
+Browser-probe the affected source sites (we did this for `b2b`):
+1. ✅ `b2b`: `/customer/account.plain.html` references `/customer/nav`; that fragment carries the
+   B2B items. **Done.**
+2. ✅ `citisignal-b2b`: **resolved from builder config, no live check needed** — it shares the
+   non-B2B `citisignal` content source (`demo-system-stores/accs-citisignal`) and no content patch
+   touches the account page, so its nav has base items only. Decision recorded in Step 01: source
+   the account chrome from the canonical B2B content site via a per-package `accountContentSource`
+   override (still canonical/no-fork).
+3. Scan a few copied pages for other fragment references / dropin pages to seed Step 03/05 test
+   fixtures with real shapes (still useful; the only remaining live task).
 
 ## Risks & mitigations
 
