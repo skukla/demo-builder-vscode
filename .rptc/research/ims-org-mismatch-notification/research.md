@@ -254,3 +254,51 @@ exists today (**exists**) vs. what's proposed (**proposed**).
 
 Throughline: **the surface matches the moment** — passive check → quiet badge; standing
 condition → banner; user-initiated/awaited → progress + blocking prompt.
+
+---
+
+## 9. Where else should the action-time gate (`ensureProjectOrgContext`) live?
+
+After landing the gate in `deployMesh`, the question is which other create/edit/lifecycle
+steps need it. Mapped every org-bound Adobe I/O entry point (all 9 `ensureAdobeIOAuth`
+call sites + the create/edit flows).
+
+### The decision rule
+Add the gate only where **all** hold:
+1. It's a **user-initiated action** (not a passive/background check).
+2. It runs an **org-bound Adobe I/O op** (in practice: mesh deploy/redeploy — the only
+   runtime Adobe op; storefront sync/republish are GitHub/Helix/DA.live, not Adobe I/O).
+3. It operates on an **existing project's stored org** (so a token/stored-org mismatch is
+   possible) — i.e. not the creation flow, where the org is *derived from the current
+   sign-in*.
+4. It **doesn't already inherit the gate** by delegating to the `deployMesh` command.
+
+### Findings
+
+| Site | Mesh op via | Gated today | Verdict |
+|---|---|---|---|
+| `mesh/commands/deployMesh.ts` | command (self) | ✅ gate | **done** |
+| `dashboard/commands/configure.ts` (save → redeploy) | `executeCommand('demoBuilder.deployMesh')` (configure.ts:778) | ✅ **inherits** the command's gate | **no change** — adding one would double-prompt |
+| `lifecycle/services/projectResetService.ts` (headless reset) | `deployMeshComponent` **service, direct** (line 274) | ❌ only `ensureAdobeIOAuth` (line 235) | **ADD** — genuine gap |
+| `eds/services/edsResetMeshHelper.ts` (EDS reset) | `deployMeshComponent` **service, direct** (line 47) | ❌ only `ensureAdobeIOAuth` | **ADD** — genuine gap |
+| `dashboard/handlers/dashboardHandlers.ts` (status check) | verification only; auth degrades to `needs-auth` badge | passive | **no** — background check; org mismatch is already surfaced *proactively* by the banner. A blocking prompt on auto-load would be the "surprising" behavior the design avoids |
+| `eds/.../storefrontSetupHandlers.ts`, `eds/handlers/edsHandlers.ts` (store discovery) | creation-time | n/a | **no** — org is being chosen now (sign-in-driven); nothing to mismatch against |
+| Project **creation** (wizard → executor) | n/a | n/a | **no** — `project.adobe.organization` is *derived from* the wizard's signed-in token (`buildProjectConfig` ← `wizardState.adobeOrg`); the creating token reaches that org by construction |
+| republish / sync storefront / refresh block library | DA.live / GitHub / Helix | n/a | **no** — not org-bound Adobe I/O |
+
+### Conclusion
+**Two genuine additions: the headless reset (`projectResetService.ts`) and the EDS reset
+(`edsResetMeshHelper.ts`).** Both redeploy mesh by calling `deployMeshComponent` *directly*
+(bypassing the command's gate) and already do a blocking `ensureAdobeIOAuth` mid-pipeline —
+so dropping `ensureProjectOrgContext` right after it is the natural, consistent insertion
+(same user-initiated, mid-pipeline blocking slot). Insert it in each flow's existing
+"can we redeploy?" auth pre-flight (e.g. `projectResetService.ts:235-247`), returning the
+not-reachable/cancelled outcome the same way the auth check does.
+
+**Configure save needs nothing** — its redeploy delegates to the already-gated `deployMesh`
+command (a second gate would prompt twice). The corollary: keep routing mesh work through the
+command where possible; the two reset flows are the exception because they call the service
+directly to fit their pipeline + org-context targeting.
+
+**Nothing in the creation flow** — the org there is established from the current sign-in, so a
+mismatch gate is meaningless (and would fire spuriously).
