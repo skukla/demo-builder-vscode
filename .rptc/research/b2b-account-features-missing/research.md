@@ -136,6 +136,11 @@ still needed once the fragment is actually copied.
 the canonical content is publicly fetchable; there are no sub-pages; and there's no clean index, so
 the fix follows references from the copied account page (or adds the known fragment path).
 
+> **Bigger picture:** `/customer/nav` is one instance of a broader "silently-dropped content" bug
+> class (the per-product PDP 404 is another). The recommended implementation is to fix it via
+> **reference-following discovery** so the class is addressed, not just this path. See
+> `.rptc/research/content-copy-completeness/research.md`.
+
 ## Root cause
 
 ### Primary (HIGH confidence) — `b2b`: the B2B account content is never enumerated, so it's never copied
