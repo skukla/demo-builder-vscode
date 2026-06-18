@@ -195,13 +195,27 @@ has **no B2B account nav** to copy. Different trigger, same symptom — fix it i
 both b2b packages behave. (My initial read centered this package; the PM clarified the report is
 `b2b`, but this one is broken too.)
 
-**Determinable from config (no live check):** `citisignal-b2b` shares the **exact** content source
-with the non-B2B `citisignal` package (`demo-system-stores/accs-citisignal`, both storefronts) and
-no content patch touches the account page — so reference-following from that site won't yield B2B
-features. **Fix (no fork):** for B2B-code packages, source the account chrome (`/customer/account`
-+ `/customer/nav`) from the canonical B2B content site (`adobe-commerce/boilerplate-b2b`) via a
-per-package `accountContentSource` override, still pulled live from the public CDN. See plan
-`step-01.md`.
+**Intent — established from history, not the name.** The package name alone proves nothing; the
+*evidence* of intent is: commit `134e000` ("add citisignal-b2b package") states the goal is to
+*"Deliver a CitiSignal-branded EDS storefront **with B2B features** … applying the CitiSignal block
+library + content as the overlay"*; the package **description** enumerates the **account-based**
+features ("company management, quotes, purchase orders, requisition lists"); tags include `b2b`;
+base is `boilerplate-b2b-template`. So `citisignal-b2b` was deliberately meant to be a B2B demo —
+the missing account menu is a real defect for it, **on the evidence**, not the label.
+
+**Why it's missing:** the package shares the **exact** content source with the non-B2B `citisignal`
+package (`demo-system-stores/accs-citisignal`, both storefronts) and no content patch touches the
+account page. The commit's mental model was "B2B features come from the b2b **base**" — but the
+account menu is the one B2B surface that comes from **content**, so the CitiSignal content overlay
+silently drops it.
+
+**Caveats / limits:** (1) this establishes intent for the *package definition*; the reported
+complaint is the **`b2b`** package (PM-confirmed) — `citisignal-b2b` is a related case. (2) Could
+not read `accs-citisignal`'s live account content, but that doesn't change the intent finding or
+the fix shape. **Whether to include `citisignal-b2b` in this fix is a PM scope call** (see plan
+`step-01.md`). Proposed no-fork fix if in scope: source the account chrome (`/customer/account` +
+`/customer/nav`) from the canonical B2B content site (`adobe-commerce/boilerplate-b2b`) via a
+per-package `accountContentSource` override, still pulled live from the public CDN.
 
 ## Could not verify here (verification steps for the plan)
 

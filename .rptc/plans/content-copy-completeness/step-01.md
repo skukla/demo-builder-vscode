@@ -58,19 +58,24 @@ In `daLiveContentOperations.ts`:
 - Unit tests green; no double-fetch of the same source path.
 - Live: a freshly created `b2b` project's DA.live site now contains `/customer/nav`, and the
   account page renders the full B2B menu (verify in browser per pre-work).
-- **`citisignal-b2b` — resolved from config (no live check needed):** it shares the **exact**
-  content source with the non-B2B `citisignal` package (`demo-system-stores/accs-citisignal`, both
-  storefronts), and no content patch touches the account page. So that site's nav has base items
-  only — discovery from it will **not** yield B2B account features. **Decision:** for B2B-code
-  packages, source the account chrome (`/customer/account` + `/customer/nav`) from the **canonical
-  B2B content site** (`adobe-commerce/boilerplate-b2b`) — the same site the B2B *code* and the
-  `b2b` package's nav come from — while keeping CitiSignal branding/catalog from `accs-citisignal`.
-  Still pulled live from the public CDN → **no fork**.
-  - Implement as a small per-package override in `demo-packages.json` (e.g. `accountContentSource`
-    pointing at `{ org: adobe-commerce, site: boilerplate-b2b }`), consumed by `copyContentFromSource`
-    so the `/customer/*` auth pages + their referenced fragments are fetched from that source while
-    the rest of the content comes from the package's primary `contentSource`.
-  - The `b2b` package needs no override (its `contentSource` already *is* `boilerplate-b2b`).
+- **`citisignal-b2b` — intent established from history; inclusion is a PM scope call.** Intent is
+  evidenced (not name-based): commit `134e000` ("Deliver a CitiSignal-branded EDS storefront **with
+  B2B features**"), the package description enumerates account-based features (company/quotes/POs/
+  requisition lists), tags include `b2b`, base is `boilerplate-b2b-template`. It shares the **exact**
+  content source with the non-B2B `citisignal` package (`accs-citisignal`) and no content patch
+  touches the account page, so discovery from that site yields **base nav only** — the account menu
+  is genuinely missing. **But the reported complaint is `b2b`, not `citisignal-b2b`; whether to fix
+  citisignal-b2b in this pass is a PM decision** (intent says yes; scope/priority is the PM's).
+  - **If in scope** (no-fork fix): add a per-package `accountContentSource` override in
+    `demo-packages.json` (`{ org: adobe-commerce, site: boilerplate-b2b }`), consumed by
+    `copyContentFromSource` so the `/customer/*` auth pages + their referenced fragments come from
+    the canonical B2B content site while the rest of the content stays CitiSignal. Still pulled live
+    from the public CDN → no fork.
+  - The `b2b` package needs **no** override (its `contentSource` already *is* `boilerplate-b2b`).
+  - The generic Steps 01/03 (discovery + audit) apply to citisignal-b2b regardless — they
+    faithfully reproduce whatever its source references **without presuming B2B intent**; only the
+    `accountContentSource` override encodes the "should be B2B" decision, so it's the one piece
+    gated on the PM call.
 
 ## Notes / risks
 
