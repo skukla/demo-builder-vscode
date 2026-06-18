@@ -98,9 +98,15 @@ there is no public API to enable B2B; it's a backend prerequisite.** Evidence fr
 
 **Implication (matches the PM):** treat **"backend is B2B-ready"** (B2B enabled + ≥1 company + ≥1
 individual customer) as a **user prerequisite**. The builder should **not** try to flip it.
-- *Optional, low-effort refinement:* the builder **could read-only *detect*** readiness (e.g. call
-  the B2B `company` REST/GraphQL endpoint; if B2B is off it errors/returns nothing) and warn the
-  user — detection, not enablement. Offer as a nice-to-have; PM leaned "pure prerequisite."
+- *Optional, low-effort refinement — **reliable**, so include it (PM):* the builder can read-only
+  **detect** B2B via the GraphQL **`storeConfig`** query, which exposes B2B feature flags
+  (`is_requisition_list_active`, and negotiable-quote config). This is an **unauthenticated
+  storefront-token query** — no admin auth, no logged-in customer. **Reliable for PaaS.** Design it
+  **defensively**: warn only on a definitive negative (`is_requisition_list_active === false`);
+  treat field-absent / query-unsupported (older schema, or ACCS variance) as *unknown → stay
+  silent* (never false-alarm). On **ACCS/SaaS**, confirm the field exists; if not, degrade to the
+  prerequisite doc only. This meets the reliability bar because it can only produce a true-negative
+  warning, never a false positive.
 
 ## Scope decision (PM, 2026-06-18)
 
@@ -129,11 +135,12 @@ individual customer) as a **user prerequisite**. The builder should **not** try 
    (`b2b`, `citisignal-b2b`, `citisignal` EDS); custom bases out.
 2. ~~Builder-managed backend B2B?~~ **Resolved: user prerequisite** (no enable-API; see API
    research). Optional read-only readiness detection TBD.
-3. **Still open:** add a `b2b-ready` **prerequisite doc/checklist** (and maybe the optional
-   read-only detection) to the builder's flow for hybrid packages? (Enable Company in Admin; create
-   a company + assign a buyer; have an individual customer.)
+3. ~~Prerequisite doc + detection?~~ **Resolved: yes — fold into the plan.** `storeConfig`
+   detection is reliable (true-negative-only), so **include it** plus a B2B-ready checklist. Planned
+   in `.rptc/plans/hybrid-storefront-model/step-01.md`.
 4. **Still open (Tier 2 trigger):** proceed to rebase EDS `citisignal` onto the b2b base (branded
-   overlay, like `citisignal-b2b`) once the live login-UX verification (checks 1–3) passes?
+   overlay, like `citisignal-b2b`) once the live login-UX verification (checks 1–3) passes? Planned
+   (gated) in `step-02.md`.
 
 ## Cross-refs
 
