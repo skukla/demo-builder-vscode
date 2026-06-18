@@ -197,3 +197,60 @@ progress toast (unprompted-on-every-load noise, inconsistent with sibling badges
 no-op, and auto-dismisses while the real result is persistent). The update-check toast is the
 right model for the *user-initiated* moments — the forced "Switch IMS Org" re-verify and the
 action-time gate — i.e. layer 3, not the telegraph of the automatic check.
+
+---
+
+## 8. User journey — how the surfacing is shown
+
+Setup: a project created in **Org A**, but the user's IMS token currently reaches
+**Org B** (e.g., a stale browser SSO tab signed them into Org B). Tags mark what
+exists today (**exists**) vs. what's proposed (**proposed**).
+
+### Scene 0 — Open the dashboard (proactive check begins) · *exists*
+- Dashboard renders **immediately** — the status payload isn't blocked by the org check.
+- Status row badges: `Frontend` · `API Mesh` · `AI` · **`IMS Org: Checking…`** (blue).
+- `handleRequestStatus` fires `runOrgContextCheck` async (cold `getOrganizations` ≈ 3–4s);
+  the `ORG_CHECK_MIN_DISPLAY` gate keeps "Checking…" perceptible so the result doesn't flash.
+- Non-Adobe / EDS-only projects: no IMS Org badge, no banner — the flow doesn't apply.
+
+### Scene 1a — Check resolves OK (common case) · *exists*
+- `IMS Org` badge flips blue → **`Org A`** (green). No banner. User works normally.
+
+### Scene 1b — Check resolves to a mismatch · *exists*
+- `IMS Org` badge turns **`Org B`** (red) — the wrong org, named.
+- Notice banner slides in below the status row: orange AlertCircle, **"Wrong Adobe
+  organization"**, "You're signed into **Org B**, but this project was created in **Org A**.",
+  and a **[Switch IMS Org]** button. Not modal — the deliberately non-surprising heads-up.
+
+### Scene 2 — User clicks Switch IMS Org (proactive recovery)
+- Button enters an in-flight state: **`Switching…`**, disabled, no double-submit. · *proposed*
+- Forced `aio auth login -f` opens the browser with the IMS account/org chooser (a
+  non-forced login could silently reuse the wrong SSO session). · *exists*
+- User picks **Org A** → re-verify: badge → blue `Checking…` → green **`Org A`**, banner
+  disappears. Recovered. · *exists*
+
+### Scene 3 — The switch didn't take (no-loop guard) · *exists*
+- If the token still reaches Org B after the forced switch (another tab reasserted the SSO),
+  the banner persists and adds: "Another browser tab may be holding **Org B** — close it, or
+  pick this project's organization in the sign-in window." Button re-enables; no silent loop.
+
+### Scene 4 — User ignores the banner and clicks a gated action (reactive gate)
+- User skips the banner and clicks **Deploy Mesh** (or Configure save / Reset) while mismatched.
+- **Today:** a button-less warning bounces them back to the dashboard banner — a dead end. · *exists*
+- **Proposed (layer 3):** the action's pre-flight hits a shared org-context gate showing a
+  blocking **"Switch IMS Org / Cancel"** prompt (same shape as the expired-token sign-in gate),
+  telegraphed with progress while the forced switch + re-verify runs:
+  - **Switch** → inline forced login → clean → the original action **continues**; still wrong →
+    aborts with the same no-loop guidance.
+  - **Cancel** → action aborts cleanly; banner still standing.
+
+### Surface ↔ moment mapping
+
+| Moment | Surface | Weight |
+|---|---|---|
+| Automatic load-time check | `IMS Org` badge: `Checking… → Org A / Org B` | ambient, passive |
+| Standing mismatch, before any action | notice banner + Switch | persistent, visible-not-modal |
+| User-initiated switch / gated action | `Switching…` feedback + blocking gate | progress telegraph + modal stop |
+
+Throughline: **the surface matches the moment** — passive check → quiet badge; standing
+condition → banner; user-initiated/awaited → progress + blocking prompt.
