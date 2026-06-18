@@ -142,13 +142,11 @@ describe('authenticationHandlers - handleAuthenticate - Edge Cases', () => {
 			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
 			(mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
 			(mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-			(mockContext.authManager!.selectOrganization as jest.Mock).mockResolvedValue(true);
 			(mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
 			await handleAuthenticate(mockContext);
 
 			// Validation is NOT done during login
-			expect(mockContext.authManager!.validateAndClearInvalidOrgContext).not.toHaveBeenCalled();
 		});
 
 		it('should NOT check permissions during login (cache unchanged)', async () => {

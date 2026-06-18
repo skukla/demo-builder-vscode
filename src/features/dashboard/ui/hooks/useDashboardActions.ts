@@ -65,6 +65,8 @@ export interface UseDashboardActionsReturn {
     handleNavigateBack: () => void;
     /** Re-authenticate with Adobe (after session expired) */
     handleReAuthenticate: () => void;
+    /** Forced Adobe account/org switch (after an org mismatch) */
+    handleSwitchOrg: () => void;
 }
 
 /**
@@ -166,6 +168,10 @@ export function useDashboardActions({
         webviewClient.postMessage('reAuthenticate');
     }, []);
 
+    const handleSwitchOrg = useCallback(() => {
+        webviewClient.postMessage('switchOrg');
+    }, []);
+
     return {
         handleStartDemo,
         handleStopDemo,
@@ -184,5 +190,6 @@ export function useDashboardActions({
         handleResetProject,
         handleNavigateBack,
         handleReAuthenticate,
+        handleSwitchOrg,
     };
 }

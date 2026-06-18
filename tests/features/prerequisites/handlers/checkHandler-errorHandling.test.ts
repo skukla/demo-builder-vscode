@@ -272,7 +272,6 @@ describe('Prerequisites Check Handler - Error Handling & Edge Cases', () => {
                 backend: 'adobe-commerce-paas',
                 dependencies: ['headless-commerce-mesh'],
                 integrations: [],
-                appBuilder: [],
             });
         });
 

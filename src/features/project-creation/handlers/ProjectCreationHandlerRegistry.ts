@@ -42,7 +42,6 @@ export const projectCreationHandlers = defineHandlers({
     // Component handlers
     'update-component-selection': components.handleUpdateComponentSelection,
     'update-components-data': components.handleUpdateComponentsData,
-    'sync-component-configs': components.handleSyncComponentConfigs,
     'loadComponents': components.handleLoadComponents,
     'get-components-data': components.handleGetComponentsData,
     'checkCompatibility': components.handleCheckCompatibility,
@@ -53,6 +52,9 @@ export const projectCreationHandlers = defineHandlers({
     // Authentication handlers
     'check-auth': authentication.handleCheckAuth,
     'authenticate': authentication.handleAuthenticate,
+
+    // Re-detect Adobe context after an external auth/org change
+    're-detect-context': authentication.handleReDetectContext,
 
     // Project handlers
     'ensure-org-selected': authentication.handleEnsureOrgSelected,

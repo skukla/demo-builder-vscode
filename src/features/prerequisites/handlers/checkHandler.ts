@@ -283,7 +283,6 @@ async function initializePrerequisiteCheck(
                 backend: stack.backend,
                 dependencies: [...(stack.dependencies || []), ...userOptionalDeps],
                 integrations: [],
-                appBuilder: [],
             };
             context.logger.debug(
                 `[Prerequisites] Built component selection from stack: ${payload.selectedStack} `

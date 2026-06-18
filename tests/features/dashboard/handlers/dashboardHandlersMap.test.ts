@@ -25,7 +25,9 @@ describe('dashboardHandlers', () => {
             // Given: dashboardHandlers object
             // When: Checking for initialization message types
             // Then: Initialization handlers present
-            expect(hasHandler(dashboardHandlers, 'ready')).toBe(true);
+            // No 'ready' handler — initial init is delivered by BaseWebviewCommand
+            // on handshake; a competing 'ready' init clobbered rich init fields.
+            expect(hasHandler(dashboardHandlers, 'ready')).toBe(false);
             expect(hasHandler(dashboardHandlers, 'requestStatus')).toBe(true);
         });
 
@@ -60,8 +62,9 @@ describe('dashboardHandlers', () => {
         it('should include authentication handlers', () => {
             // Given: dashboardHandlers object
             // When: Checking for auth message types
-            // Then: Authentication handlers present
+            // Then: Authentication handlers present (session re-auth + forced org switch)
             expect(hasHandler(dashboardHandlers, 'reAuthenticate')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'switchOrg')).toBe(true);
         });
 
         it('should include project management handlers', () => {
@@ -98,9 +101,10 @@ describe('dashboardHandlers', () => {
             const types = getRegisteredTypes(dashboardHandlers);
 
             // Then: Exactly 20 handlers
-            // 2 init + 2 lifecycle + 6 navigation + 1 mesh + 1 syncStorefront +
-            // 1 refreshBlockLibrary + 1 auth + 1 project + 1 reset = 16, plus the
-            // 4 new More-menu actions (copyPath, exportProject, republishContent,
+            // 1 init (requestStatus only; no 'ready') + 2 lifecycle + 6 navigation +
+            // 1 mesh + 1 syncStorefront + 1 refreshBlockLibrary + 2 auth
+            // (reAuthenticate + switchOrg) + 1 project + 1 reset = 16, plus the 4
+            // More-menu actions (copyPath, exportProject, republishContent,
             // renameProject) = 20. setAuthoringExperience lives in the Configure
             // webview, not this map; openAi was removed with the dashboard AI tile.
             expect(types).toHaveLength(20);

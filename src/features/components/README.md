@@ -2,14 +2,14 @@
 
 ## Purpose
 
-The Components feature manages the component registry, definitions, and lifecycle for the extension. It provides a centralized catalog of available components (frontends, backends, dependencies, external systems, App Builder apps) with their metadata, dependencies, configuration requirements, and environment variables.
+The Components feature manages the component registry, definitions, and lifecycle for the extension. It provides a centralized catalog of available components (frontends, backends, dependencies, external systems) with their metadata, dependencies, configuration requirements, and environment variables.
 
 This feature acts as the source of truth for all component information, enabling the wizard to present component options, validate selections, resolve dependencies, and generate project configurations.
 
 ## Responsibilities
 
 - **Component Registry Loading**: Load and parse components.json configuration
-- **Component Catalog**: Provide lists of frontends, backends, dependencies, external systems, App Builder apps
+- **Component Catalog**: Provide lists of frontends, backends, dependencies, external systems
 - **Dependency Resolution**: Calculate required and optional dependencies for selected components
 - **Compatibility Checking**: Verify frontend/backend compatibility
 - **Node Version Management**: Determine required Node versions for selected components
@@ -30,12 +30,11 @@ This feature acts as the source of truth for all component information, enabling
 - `getBackends()` - Get available backend components
 - `getDependencies()` - Get available dependency components
 - `getExternalSystems()` - Get available external system components
-- `getAppBuilder()` - Get available App Builder app components
 - `getServices()` - Get service definitions
 - `getServiceById(id)` - Get specific service definition
 - `getComponentById(id)` - Get specific component by ID
 - `checkCompatibility(frontendId, backendId)` - Check if frontend/backend are compatible
-- `getRequiredNodeVersions(frontend, backend, dependencies, externalSystems, appBuilder)` - Get required Node versions
+- `getRequiredNodeVersions(frontend, backend, dependencies, integrations)` - Get required Node versions
 - `getNodeVersionToComponentMapping(...)` - Map Node versions to component names
 
 **Example Usage**:
@@ -151,7 +150,7 @@ components.json (v2.0 flat structure)
 ComponentRegistryManager.loadRegistry()
     ↓
 transformToGroupedStructure()
-    ├─→ Group by selectionGroups (frontend, backend, appBuilder, externalSystems, dependencies)
+    ├─→ Group by selectionGroups (frontend, backend, externalSystems, dependencies)
     ├─→ Build envVars arrays from shared envVars registry
     └─→ Build services arrays from services registry
     ↓
@@ -256,8 +255,7 @@ const nodeVersions = await registry.getRequiredNodeVersions(
     'citisignal-nextjs',
     'commerce-cloud',
     ['headless-commerce-mesh'],
-    [],
-    ['cif-actions-app']
+    []
 );
 
 console.log('Required Node versions:');
@@ -428,8 +426,7 @@ if (validation.warnings.length > 0) {
         "frontend": ["citisignal-nextjs"],
         "backend": ["commerce-cloud"],
         "dependencies": [],  // Mesh components are now optional via stacks.json optionalDependencies
-        "externalSystems": [],
-        "appBuilder": ["cif-actions-app"]
+        "externalSystems": []
     },
     "envVars": {
         "NEXT_PUBLIC_API_ENDPOINT": {
@@ -483,7 +480,7 @@ if (validation.warnings.length > 0) {
 
 ### Manual Testing Checklist
 - [ ] Registry loads successfully from components.json
-- [ ] All component types load correctly (frontends, backends, dependencies, external systems, App Builder)
+- [ ] All component types load correctly (frontends, backends, dependencies, external systems)
 - [ ] Compatibility checking works
 - [ ] Dependency resolution works (required + optional)
 - [ ] Node version detection works

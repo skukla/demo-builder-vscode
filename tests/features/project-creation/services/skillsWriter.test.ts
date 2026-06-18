@@ -287,6 +287,34 @@ describe('skillsWriter', () => {
         });
     });
 
+    describe('create-eds-project.md org-context guidance', () => {
+        it('explains per-operation org targeting and that ORG_MISMATCH is non-retryable', async () => {
+            await writeSkillFiles('/projects/test', makeEdsProject());
+
+            const content = writtenContent('create-eds-project.md');
+            // Shipped behavior: per-operation targeting, no shared global clobber.
+            expect(content).toMatch(/per operation/i);
+            expect(content).toContain('ORG_MISMATCH');
+            expect(content).toMatch(/do not retry/i);
+        });
+
+        it('tells the agent to set its target before Adobe ops and to surface ORG_MISMATCH', async () => {
+            await writeSkillFiles('/projects/test', makeEdsProject());
+
+            const content = writtenContent('create-eds-project.md');
+            expect(content).toContain('select_org');
+            expect(content).toContain('select_workspace');
+        });
+
+        it('no longer frames org context as a shared, process-wide setting', async () => {
+            await writeSkillFiles('/projects/test', makeEdsProject());
+
+            const content = writtenContent('create-eds-project.md');
+            expect(content).not.toMatch(/single, process-wide setting/i);
+            expect(content).not.toMatch(/global and shared/i);
+        });
+    });
+
     describe('removed skills', () => {
         it('does not write add-block.md (Adobe extensibility tools provide this)', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());

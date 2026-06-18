@@ -75,15 +75,6 @@ describe('componentHandlers - Pattern B (request-response)', () => {
                     configuration: {},
                 },
             ];
-            const mockAppBuilder = [
-                {
-                    id: 'integration-service',
-                    name: 'Integration Service',
-                    description: 'Custom integration',
-                    dependencies: { required: [], optional: [] },
-                    configuration: {},
-                },
-            ];
             const mockDependencies = [
                 {
                     id: 'commerce-mesh',
@@ -121,7 +112,6 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             mockRegistryManager.getFrontends.mockResolvedValue(mockFrontends);
             mockRegistryManager.getBackends.mockResolvedValue(mockBackends);
             mockRegistryManager.getIntegrations.mockResolvedValue(mockIntegrations);
-            mockRegistryManager.getAppBuilder.mockResolvedValue(mockAppBuilder);
             mockRegistryManager.getDependencies.mockResolvedValue(mockDependencies);
             mockRegistryManager.getMesh.mockResolvedValue(mockMesh);
             mockRegistryManager.loadRegistry.mockResolvedValue(mockRegistry);
@@ -157,15 +147,6 @@ describe('componentHandlers - Pattern B (request-response)', () => {
                             id: 'target',
                             name: 'Adobe Target',
                             description: 'Personalization',
-                            dependencies: { required: [], optional: [] },
-                            configuration: {},
-                        },
-                    ],
-                    appBuilder: [
-                        {
-                            id: 'integration-service',
-                            name: 'Integration Service',
-                            description: 'Custom integration',
                             dependencies: { required: [], optional: [] },
                             configuration: {},
                         },
@@ -234,7 +215,6 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             mockRegistryManager.getFrontends.mockResolvedValue([]);
             mockRegistryManager.getBackends.mockResolvedValue([]);
             mockRegistryManager.getIntegrations.mockResolvedValue([]);
-            mockRegistryManager.getAppBuilder.mockResolvedValue([]);
             mockRegistryManager.getDependencies.mockResolvedValue([]);
             mockRegistryManager.getMesh.mockResolvedValue([]);
             mockRegistryManager.loadRegistry.mockResolvedValue({
@@ -258,7 +238,6 @@ describe('componentHandlers - Pattern B (request-response)', () => {
                     frontends: [],
                     backends: [],
                     integrations: [],
-                    appBuilder: [],
                     dependencies: [],
                     mesh: [],
                     envVars: {},
@@ -280,9 +259,6 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             ]);
             mockRegistryManager.getIntegrations.mockResolvedValue([
                 { id: 'e1', name: 'External', description: 'desc', dependencies: { required: [], optional: [] }, configuration: {} },
-            ]);
-            mockRegistryManager.getAppBuilder.mockResolvedValue([
-                { id: 'a1', name: 'AppBuilder', description: 'desc', dependencies: { required: [], optional: [] }, configuration: {} },
             ]);
             mockRegistryManager.getDependencies.mockResolvedValue([
                 { id: 'd1', name: 'Dependency', description: 'desc', dependencies: { required: [], optional: [] }, configuration: {} },
@@ -318,7 +294,6 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             expect(data).toHaveProperty('frontends');
             expect(data).toHaveProperty('backends');
             expect(data).toHaveProperty('integrations');
-            expect(data).toHaveProperty('appBuilder');
             expect(data).toHaveProperty('dependencies');
             expect(data).toHaveProperty('mesh');
             expect(data).toHaveProperty('envVars');

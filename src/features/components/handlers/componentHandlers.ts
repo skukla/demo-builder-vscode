@@ -21,7 +21,6 @@ import { ComponentSelection, type ComponentConfigs as ComponentConfigsData } fro
 import { toAppError } from '@/types/errors';
 import { HandlerContext, MessageHandler } from '@/types/handlers';
 import { getEntryCount } from '@/types/typeGuards';
-import type { ComponentConfigs } from '@/types/webview';
 
 /**
  * Create a ComponentRegistryManager for the current extension context
@@ -77,26 +76,6 @@ export const handleUpdateComponentsData: MessageHandler = async (
 };
 
 /**
- * sync-component-configs - Store current user-entered component config values
- *
- * Keeps a server-side copy so handlers can read credentials without
- * requiring the webview to include them in subsequent postMessage payloads.
- */
-export const handleSyncComponentConfigs: MessageHandler = async (
-    context: HandlerContext,
-    payload?: unknown,
-) => {
-    // Trust boundary: payload originates from the extension's own webview (same process),
-    // not from untrusted external input. Shape validation is omitted intentionally.
-    if (!payload || typeof payload !== 'object') {
-        context.logger.warn('sync-component-configs: invalid payload');
-        return { success: true };
-    }
-    context.sharedState.currentComponentConfigs = payload as ComponentConfigs;
-    return { success: true };
-};
-
-/**
  * loadComponents - Load component definitions
  *
  * Loads component definitions from the component registry and returns them.
@@ -108,7 +87,6 @@ export const handleLoadComponents: MessageHandler = async (context: HandlerConte
         const frontends = await registryManager.getFrontends();
         const backends = await registryManager.getBackends();
         const integrations = await registryManager.getIntegrations();
-        const appBuilder = await registryManager.getAppBuilder();
         const dependencies = await registryManager.getDependencies();
         const presets = await registryManager.getPresets();
 
@@ -116,7 +94,6 @@ export const handleLoadComponents: MessageHandler = async (context: HandlerConte
             frontends: toComponentDataArray(frontends, { recommendedId: 'headless', includeFeatures: true }),
             backends: toComponentDataArray(backends),
             integrations: toComponentDataArray(integrations),
-            appBuilder: toComponentDataArray(appBuilder),
             dependencies: toComponentDataArray(dependencies),
             presets,
         };
@@ -151,7 +128,6 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
         const frontends = await registryManager.getFrontends();
         const backends = await registryManager.getBackends();
         const integrations = await registryManager.getIntegrations();
-        const appBuilder = await registryManager.getAppBuilder();
         const dependencies = await registryManager.getDependencies();
         const mesh = await registryManager.getMesh();
         const registry = await registryManager.loadRegistry();
@@ -160,7 +136,6 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
             frontends: toComponentDataArray(frontends, { includeDependencies: true }),
             backends: toComponentDataArray(backends, { includeDependencies: true }),
             integrations: toComponentDataArray(integrations, { includeDependencies: true }),
-            appBuilder: toComponentDataArray(appBuilder, { includeDependencies: true }),
             dependencies: toComponentDataArray(dependencies, { includeDependencies: true }),
             mesh: toComponentDataArray(mesh, { includeDependencies: true }),
             envVars: registry.envVars || {},

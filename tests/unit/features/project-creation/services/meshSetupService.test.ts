@@ -96,7 +96,7 @@ describe('meshSetupService', () => {
 
         const mockRegistry = {
             envVars: {},
-            components: { frontends: [], backends: [], dependencies: [], mesh: [], integrations: [], appBuilder: [] },
+            components: { frontends: [], backends: [], dependencies: [], mesh: [], integrations: [] },
             services: {},
         };
 

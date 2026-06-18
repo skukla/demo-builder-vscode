@@ -78,7 +78,6 @@ export const SERVICE_GROUP_DEFINITIONS: ServiceGroupDef[] = [
     { id: 'mesh', label: 'API Mesh', order: 4 },
     { id: 'adobe-assets', label: 'Adobe Assets', order: 5 },
     { id: 'adobe-commerce-aco', label: 'Adobe Commerce Optimizer', order: 6, fieldOrder: ['ACO_API_URL', 'ACO_API_KEY', 'ACO_TENANT_ID', 'ACO_ENVIRONMENT_ID'] },
-    { id: 'integration-service', label: 'Kukla Integration Service', order: 7 },
     { id: 'experience-platform', label: 'Experience Platform', order: 8 },
     { id: 'other', label: 'Additional Settings', order: 99 },
 ];

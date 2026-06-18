@@ -110,7 +110,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
 
             expect(screen.getByText('Connected')).toBeInTheDocument();
             expect(screen.getByText('Test Organization')).toBeInTheDocument();
-            expect(screen.getByText('Switch Organizations')).toBeInTheDocument();
+            expect(screen.getByText('Switch IMS Org')).toBeInTheDocument();
         });
 
         it('should update canProceed when authenticated with org', () => {

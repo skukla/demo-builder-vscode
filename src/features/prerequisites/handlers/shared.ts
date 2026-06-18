@@ -237,13 +237,12 @@ export function getPrerequisiteDisplayMessage(
  */
 function getComponentSelectionParams(
     selection: ComponentSelection,
-): [string | undefined, string | undefined, string[] | undefined, string[] | undefined, string[] | undefined] {
+): [string | undefined, string | undefined, string[] | undefined, string[] | undefined] {
     return [
         selection.frontend,
         selection.backend,
         selection.dependencies,
         selection.integrations,
-        selection.appBuilder,
     ];
 }
 
@@ -353,7 +352,6 @@ export async function getRequiredNodeVersions(context: HandlerContext): Promise<
             backend: context.sharedState.currentComponentSelection.backend,
             dependencies: context.sharedState.currentComponentSelection.dependencies,
             integrations: context.sharedState.currentComponentSelection.integrations,
-            appBuilder: context.sharedState.currentComponentSelection.appBuilder,
             totalVersions: sortedVersions.length,
             versions: sortedVersions,
         });

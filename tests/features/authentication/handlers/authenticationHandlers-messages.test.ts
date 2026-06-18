@@ -69,7 +69,6 @@ describe('authenticationHandlers - Message Patterns', () => {
                 (mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
                 (mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
                 (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-                (mockContext.authManager!.selectOrganization as jest.Mock).mockResolvedValue(true);
 
                 await handleAuthenticate(mockContext, { force: true });
 
@@ -87,7 +86,6 @@ describe('authenticationHandlers - Message Patterns', () => {
                 (mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
                 (mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
                 (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-                (mockContext.authManager!.selectOrganization as jest.Mock).mockResolvedValue(true);
 
                 await handleAuthenticate(mockContext, { force: true });
 
@@ -148,7 +146,6 @@ describe('authenticationHandlers - Message Patterns', () => {
                 (mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
                 (mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
                 (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-                (mockContext.authManager!.selectOrganization as jest.Mock).mockResolvedValue(true);
                 (mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
                 await handleAuthenticate(mockContext);

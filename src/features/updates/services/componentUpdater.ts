@@ -147,7 +147,6 @@ export class ComponentUpdater {
                             ...(registry.components.dependencies || []),
                             ...(registry.components.mesh || []),
                             ...(registry.components.integrations || []),
-                            ...(registry.components.appBuilder || []),
                         ];
                         const componentDef = allComponents.find(c => c.id === componentId);
                         nodeVersion = componentDef?.configuration?.nodeVersion || null;

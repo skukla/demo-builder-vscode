@@ -176,8 +176,8 @@ describe('configureHelpers accessor functions', () => {
             it('should handle backend service with authentication vars', () => {
                 // Given: A backend service with auth configuration
                 const componentDef: ComponentData = {
-                    id: 'integration-service',
-                    name: 'Kukla Integration Service',
+                    id: 'adobe-commerce-paas',
+                    name: 'Adobe Commerce PaaS',
                     configuration: {
                         requiredEnvVars: ['SERVICE_CLIENT_ID', 'SERVICE_CLIENT_SECRET'],
                     },

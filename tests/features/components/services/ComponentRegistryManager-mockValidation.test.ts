@@ -48,7 +48,7 @@ describe('Mock Structure Validation', () => {
         });
 
         it('should have selectionGroups with all component types', () => {
-            const expectedGroups = ['frontends', 'backends', 'dependencies', 'appBuilderApps'];
+            const expectedGroups = ['frontends', 'backends', 'dependencies'];
             expectedGroups.forEach(group => {
                 expect(mockRawRegistry.selectionGroups?.[group as keyof typeof mockRawRegistry.selectionGroups]).toBeDefined();
             });
@@ -89,8 +89,6 @@ describe('Mock Structure Validation', () => {
         it('should have nodeVersion for components that require local Node.js', () => {
             // headless (Next.js) requires Node for local development
             expect(mockRawRegistry.frontends?.headless?.configuration?.nodeVersion).toBe('24');
-            // integration-service requires Node
-            expect(mockRawRegistry.appBuilderApps?.['integration-service']?.configuration?.nodeVersion).toBe('22');
             // commerce-mesh requires Node
             expect(mockRawRegistry.mesh?.['commerce-mesh']?.configuration?.nodeVersion).toBe('20');
         });
@@ -128,12 +126,6 @@ describe('Mock Structure Validation', () => {
             expect(malicious.mesh?.['commerce-mesh'].configuration?.nodeVersion).toBe('20`whoami`');
         });
 
-        it('should create malicious registry for appBuilderApps section', () => {
-            const malicious = createMaliciousRegistry('appBuilderApps.integration-service', '22$(id)');
-
-            expect(malicious.appBuilderApps?.['integration-service'].configuration?.nodeVersion).toBe('22$(id)');
-        });
-
         it('should handle infrastructure section', () => {
             const malicious = createMaliciousRegistry('infrastructure.adobe-cli', '20; evil');
 
@@ -149,7 +141,6 @@ describe('Mock Structure Validation', () => {
                 'backends',
                 'mesh',
                 'dependencies',
-                'appBuilderApps',
                 'infrastructure',
                 'services',
                 'envVars',

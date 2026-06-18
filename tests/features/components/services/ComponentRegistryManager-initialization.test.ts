@@ -73,7 +73,6 @@ describe('ComponentRegistryManager - Initialization', () => {
             expect(registry.components.backends).toHaveLength(1);
             expect(registry.components.dependencies).toHaveLength(1);
             expect(registry.components.integrations).toHaveLength(1);
-            expect(registry.components.appBuilder).toHaveLength(1);
         });
 
         it('should include infrastructure components', async () => {

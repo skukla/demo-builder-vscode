@@ -103,7 +103,6 @@ export class ProjectSetupContext {
             ...(this.registry.components.dependencies || []),
             ...(this.registry.components.mesh || []),
             ...(this.registry.components.integrations || []),
-            ...(this.registry.components.appBuilder || []),
         ];
         return allComponents.find(c => c.id === componentId) as TransformedComponentDefinition | undefined;
     }

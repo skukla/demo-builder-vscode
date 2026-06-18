@@ -38,7 +38,6 @@ export function createMockRegistryManager(): jest.Mocked<ComponentRegistryManage
         getFrontends: jest.fn(),
         getBackends: jest.fn(),
         getIntegrations: jest.fn(),
-        getAppBuilder: jest.fn(),
         getDependencies: jest.fn(),
         getMesh: jest.fn(),
         loadRegistry: jest.fn(),

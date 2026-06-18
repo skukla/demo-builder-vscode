@@ -196,6 +196,52 @@ describe('AuthenticationService - Login/Logout Operations', () => {
         });
     });
 
+    describe('loginAndRestoreProjectContext', () => {
+        it('should perform a non-forced login by default', async () => {
+            // Given: CLI returns a valid token
+            const token = 'x'.repeat(150);
+            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult(token));
+
+            // When: restoring context without requesting a forced login
+            const result = await authService.loginAndRestoreProjectContext({
+                organization: 'org123',
+                projectId: 'project123',
+                workspace: 'workspace123',
+            });
+
+            // Then: a non-forced login is performed (no -f flag)
+            expect(result).toBe(true);
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
+                'aio auth login',
+                expect.objectContaining({ encoding: 'utf8' })
+            );
+        });
+
+        it('should perform a FORCED login when force=true (org switch)', async () => {
+            // Given: CLI returns a valid token after forced login
+            const token = 'x'.repeat(150);
+            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult(token));
+
+            // When: restoring context with a forced login (browser org chooser)
+            const result = await authService.loginAndRestoreProjectContext(
+                {
+                    organization: 'org123',
+                    projectId: 'project123',
+                    workspace: 'workspace123',
+                },
+                true,
+            );
+
+            // Then: the forced (-f) login command is used so a stale browser
+            // SSO tab cannot silently reassert the wrong org.
+            expect(result).toBe(true);
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
+                'aio auth login -f',
+                expect.objectContaining({ encoding: 'utf8' })
+            );
+        });
+    });
+
     describe('cache clearing after login', () => {
         let clearAuthStatusCacheSpy: jest.SpyInstance;
         let clearValidationCacheSpy: jest.SpyInstance;

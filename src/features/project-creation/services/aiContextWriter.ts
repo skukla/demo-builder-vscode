@@ -19,6 +19,7 @@ import * as path from 'path';
 import demoPackagesJson from '../config/demo-packages.json';
 import { sanitizeTemplateValue, sanitizeGithubSlug, sanitizeUrl, sanitizeBlockId, escapeMarkdown } from './sanitization';
 import { COMPONENT_IDS } from '@/core/constants';
+import { getEwCanvasBranch, resolveProjectAuthoringExperience } from '@/features/eds/handlers/edsHelpers';
 import type { Project } from '@/types/base';
 import type { DemoPackagesConfig } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
@@ -29,7 +30,6 @@ import {
     getEdsDaLiveUrl,
     getMeshEndpointUrl,
 } from '@/types/typeGuards';
-import { getEwCanvasBranch, resolveProjectAuthoringExperience } from '@/features/eds/handlers/edsHelpers';
 
 const demoPackages = demoPackagesJson as unknown as DemoPackagesConfig;
 
@@ -332,8 +332,20 @@ function buildAdobeIo(project: Project): string {
         lines.push(`- **Workspace:** ${escapeMarkdown(sanitizeTemplateValue(project.adobe.workspaceTitle ?? project.adobe.workspace ?? ''))}`);
     }
 
-    // length > 1 means at least one field was populated beyond the section header
-    return lines.length > 1 ? lines.join('\n') : '';
+    // length > 1 means at least one field was populated beyond the section header.
+    // Append the org-context warning only when the section is non-empty.
+    if (lines.length <= 1) return '';
+
+    lines.push('');
+    lines.push('> **Set your Adobe org target before any Adobe operation.** Demo Builder targets the Adobe');
+    lines.push('> org *per operation* — it does not clobber a shared global, so concurrent windows and');
+    lines.push('> agents stay isolated. Establish your target first with `select_org` → `select_project` →');
+    lines.push('> `select_workspace`. If an Adobe tool returns');
+    lines.push('> `{ error_type: "ORG_MISMATCH", non_retryable: true }`, **do not retry** — a blind retry hits');
+    lines.push('> the same wrong-org 403. Surface it: ask the user to select the correct organization (or');
+    lines.push('> re-login to switch account), then proceed.');
+
+    return lines.join('\n');
 }
 
 function buildTryAskingClaude(project: Project): string {

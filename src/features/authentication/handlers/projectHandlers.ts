@@ -12,12 +12,67 @@ import { ServiceLocator } from '@/core/di';
 import { withTimeout } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateProjectId } from '@/core/validation';
+import {
+    ensureOrgContext,
+    type EnsureOrgContextResult,
+} from '@/features/authentication/services/ensureOrgContext';
 import type { AdobeProject } from '@/features/authentication/services/types';
 import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
+import { ErrorCode } from '@/types/errorCodes';
 import { toAppError, isTimeout } from '@/types/errors';
 import { HandlerContext } from '@/types/handlers';
 import { DataResult, SimpleResult } from '@/types/results';
 import { parseJSON, toError } from '@/types/typeGuards';
+
+/**
+ * Route a target org through the canonical ensureOrgContext helper, using the
+ * authenticated org list as the selectable source. Returns the typed result so
+ * handlers can branch (ok vs org_mismatch/needs_relogin/access_revoked) WITHOUT
+ * ever running the store-mutating `aio console * select`.
+ */
+async function resolveOrgContext(
+    context: HandlerContext,
+    orgId: string,
+): Promise<EnsureOrgContextResult> {
+    return ensureOrgContext(orgId, {
+        listSelectableOrgs: async () => {
+            const orgs = await context.authManager?.getOrganizations() ?? [];
+            return orgs.map(org => ({ id: org.id, code: org.code, name: org.name }));
+        },
+    });
+}
+
+/** User-facing copy for each non-ok org-context status (NO terminal instruction). */
+function orgMismatchMessage(status: EnsureOrgContextResult['status']): string {
+    if (status === 'needs_relogin') {
+        return 'This organization is not available on your current Adobe account. '
+            + 'Sign in with the correct account to continue.';
+    }
+    if (status === 'access_revoked') {
+        return 'Your access to this organization has changed. Choose a different organization.';
+    }
+    return 'This operation needs a different Adobe organization. '
+        + 'Select the correct organization to continue.';
+}
+
+/**
+ * Send a structured ORG_MISMATCH message and return a failed DataResult.
+ * Carries the ErrorCode + targetOrg so the UI can offer an in-app remedy.
+ */
+async function sendOrgMismatch<T>(
+    context: HandlerContext,
+    channel: string,
+    ctxResult: EnsureOrgContextResult,
+): Promise<DataResult<T>> {
+    const message = orgMismatchMessage(ctxResult.status);
+    await context.sendMessage(channel, {
+        error: message,
+        code: ErrorCode.ORG_MISMATCH,
+        targetOrg: ctxResult.targetOrg,
+        status: ctxResult.status,
+    });
+    return { success: false, error: message, code: ErrorCode.ORG_MISMATCH };
+}
 
 /**
  * ensure-org-selected - Check if organization is selected
@@ -49,8 +104,21 @@ export async function handleEnsureOrgSelected(context: HandlerContext): Promise<
  */
 export async function handleGetProjects(
     context: HandlerContext,
-    _payload?: { orgId?: string },
+    payload?: { orgId?: string },
 ): Promise<DataResult<AdobeProject[]>> {
+    const orgId = payload?.orgId;
+
+    // When the caller names a target org, establish targeting through the
+    // canonical helper before fetching. A mismatch yields a structured,
+    // in-app-actionable message (ORG_MISMATCH + targetOrg) — never the old
+    // "run aio console org select in your terminal" dead-end.
+    if (orgId) {
+        const ctxResult = await resolveOrgContext(context, orgId);
+        if (ctxResult.status !== 'ok') {
+            return sendOrgMismatch(context, 'get-projects', ctxResult);
+        }
+    }
+
     try {
         // Send loading status with sub-message
         const currentOrg = await context.authManager?.getCurrentOrganization();
@@ -62,8 +130,11 @@ export async function handleGetProjects(
             });
         }
 
-        // Wrap getProjects with timeout (30 seconds)
-        const projectsPromise = context.authManager?.getProjects();
+        // Wrap getProjects with timeout (30 seconds). Thread orgId so the fetch
+        // runs under org-context targeting (AIO_CONSOLE_* env, no global mutation).
+        const projectsPromise = orgId
+            ? context.authManager?.getProjects({ orgId })
+            : context.authManager?.getProjects();
         if (!projectsPromise) {
             throw new Error('Auth manager not available');
         }
@@ -126,33 +197,34 @@ export async function handleSelectProject(
             throw new Error('No organization selected - cannot select project without org context');
         }
 
-        // Select project with org context guard to protect against context drift
-        const success = await context.authManager?.selectProject(projectId, currentOrg.id);
-
-        if (success) {
-            // Note: Selection already logged by adobeEntityService with project name
-
-            // Ensure fresh workspace data after project change
-            // (selectProject already clears workspace cache)
-
-            try {
-                await context.sendMessage('projectSelected', { projectId });
-            } catch (sendError) {
-                context.debugLogger.debug('[Project] Failed to send projectSelected message:', sendError);
-                throw new Error(`Failed to send project selection response: ${toError(sendError).message}`);
-            }
-
-            return { success: true };
-        } else {
-            // Log error but don't throw - let caller handle response
-            context.logger.error(`Failed to select project ${projectId}`);
-            context.debugLogger.debug('[Project] Project selection failed, sending error message');
+        // Route through the canonical helper so we never accept a project under a
+        // wrong-org context. A mismatch surfaces a structured ORG_MISMATCH message
+        // (no terminal instruction) and aborts the selection.
+        const ctxResult = await resolveOrgContext(context, currentOrg.id);
+        if (ctxResult.status !== 'ok') {
             await context.sendMessage('error', {
                 message: 'Failed to select project',
-                details: `Project selection for ${projectId} was unsuccessful`,
+                details: orgMismatchMessage(ctxResult.status),
+                code: ErrorCode.ORG_MISMATCH,
+                targetOrg: ctxResult.targetOrg,
+                status: ctxResult.status,
             });
-            throw new Error(`Failed to select project ${projectId}`);
+            throw new Error(`ORG_MISMATCH: cannot select project in org ${currentOrg.id}`);
         }
+
+        // Phase 4a: the chosen project lives in webview state and is threaded
+        // per-op (each `aio` operation runs under `withOrgContext` with the
+        // project target). Accept the selection and ack it WITHOUT mutating the
+        // shared `aio` global via selectProject (which races concurrent
+        // processes). ensureOrgContext above already validated reachability.
+        try {
+            await context.sendMessage('projectSelected', { projectId });
+        } catch (sendError) {
+            context.debugLogger.debug('[Project] Failed to send projectSelected message:', sendError);
+            throw new Error(`Failed to send project selection response: ${toError(sendError).message}`);
+        }
+
+        return { success: true };
     } catch (error) {
         context.debugLogger.debug('[Project] Exception caught in handleSelectProject:', error);
         context.logger.error('Failed to select project:', error as Error);

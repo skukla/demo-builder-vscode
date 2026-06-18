@@ -96,6 +96,10 @@ export interface SelectionStepContentProps<T extends SelectableItem> {
     renderDescription?: (item: T) => React.ReactNode;
     /** Optional action element to show in header (e.g., "+ New" button) */
     headerAction?: React.ReactNode;
+    /** Item IDs that cannot be selected (rendered greyed/disabled) */
+    disabledIds?: string[];
+    /** Reason text shown under each disabled item, keyed by item ID */
+    disabledReasons?: Record<string, string>;
 }
 
 /**
@@ -125,6 +129,8 @@ export function SelectionStepContent<T extends SelectableItem>({
     renderItem,
     renderDescription,
     headerAction,
+    disabledIds,
+    disabledReasons,
 }: SelectionStepContentProps<T>) {
     // Header with heading (headerAction is now passed to SearchableList for inline display)
     const header = labels.heading ? (
@@ -189,15 +195,26 @@ export function SelectionStepContent<T extends SelectableItem>({
         }
     };
 
-    // Adapter: Create combined renderItem that wraps content in Item with description support
-    const combinedRenderItem = (item: T) => (
-        <Item key={item.id} textValue={item.title || item.name}>
-            {renderItem ? renderItem(item) : (
-                <Text>{item.title || item.name}</Text>
-            )}
-            {renderDescription && renderDescription(item)}
-        </Item>
-    );
+    // Adapter: Create combined renderItem that wraps content in Item with description support.
+    // For non-selectable items, surface the reason as the item description so it reads
+    // as a greyed-out row with an inline "why" (e.g. the account-switch hint).
+    const combinedRenderItem = (item: T) => {
+        const disabledReason = disabledReasons?.[item.id];
+        return (
+            <Item key={item.id} textValue={item.title || item.name}>
+                {renderItem ? renderItem(item) : (
+                    <Text>{item.title || item.name}</Text>
+                )}
+                {disabledReason ? (
+                    <Text slot="description" UNSAFE_className="text-sm text-gray-600">
+                        {disabledReason}
+                    </Text>
+                ) : (
+                    renderDescription && renderDescription(item)
+                )}
+            </Item>
+        );
+    };
 
     return (
         <div className="selection-step-content">
@@ -205,6 +222,7 @@ export function SelectionStepContent<T extends SelectableItem>({
             <SearchableList
                 items={items}
                 selectedKeys={selectedId ? [selectedId] : []}
+                disabledKeys={disabledIds}
                 onSelectionChange={handleSelectionChange}
                 searchQuery={searchQuery}
                 onSearchQueryChange={onSearchChange}

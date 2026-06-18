@@ -208,9 +208,6 @@
     },
     "headless": {
       "prerequisites": ["node", "git"]
-    },
-    "integration-service": {
-      "prerequisites": ["aio-cli"]
     }
   }
 }

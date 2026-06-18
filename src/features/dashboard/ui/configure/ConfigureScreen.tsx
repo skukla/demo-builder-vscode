@@ -247,13 +247,6 @@ export function ConfigureScreen({
         isFetching,
     });
 
-    // Keep extension-side sharedState.currentComponentConfigs in sync with unsaved edits.
-    // The `discover-store-structure` handler reads credentials from this cache, so fresh
-    // URL / username / password edits must propagate before auto-detect fires.
-    useEffect(() => {
-        webviewClient.postMessage('sync-component-configs', componentConfigs);
-    }, [componentConfigs]);
-
     // Delegate field focus tracking and auto-scrolling to extracted hook
     useFieldFocusTracking({
         serviceGroups,

@@ -203,6 +203,8 @@ export interface AdobeConfig {
     /** Human-readable project title (preferred for display) */
     projectTitle?: string;
     organization: string;
+    /** Human-readable org name (for display; the token can't resolve it when wrong) */
+    organizationName?: string;
     workspace: string;
     /** Human-readable workspace title (preferred for display) */
     workspaceTitle?: string;

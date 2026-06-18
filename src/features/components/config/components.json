@@ -276,7 +276,7 @@
             "frontend": "eds-storefront",
             "backend": "adobe-commerce-paas",
             "requiredComponents": [],
-            "optionalComponents": ["integration-service"]
+            "optionalComponents": []
         },
         "eds-accs": {
             "name": "EDS + Commerce Cloud Service",
@@ -292,46 +292,11 @@
             "frontend": "headless",
             "backend": "adobe-commerce-paas",
             "requiredComponents": [],
-            "optionalComponents": ["integration-service"]
+            "optionalComponents": []
         }
     },
 
     "dependencies": {},
-
-    "appBuilderApps": {
-        "integration-service": {
-            "name": "Kukla Integration Service",
-            "description": "Custom integration service for Target Product Recommendations, AEM Assets, and more",
-            "icon": {
-                "light": "adobe-file-icon-light.svg",
-                "dark": "adobe-file-icon-dark.svg"
-            },
-            "source": {
-                "type": "git",
-                "url": "https://github.com/skukla/kukla-integration-service",
-                "gitOptions": {
-                    "shallow": true,
-                    "tag": "stable"
-                }
-            },
-            "requiresDeployment": true,
-            "configuration": {
-                "runtime": "nodejs:22",
-                "nodeVersion": "22",
-                "actions": ["browse-files", "get-products", "download-file", "delete-file"],
-                "requiredEnvVars": [
-                    "ADOBE_COMMERCE_URL",
-                    "ADOBE_COMMERCE_ADMIN_USERNAME",
-                    "ADOBE_COMMERCE_ADMIN_PASSWORD",
-                    "ADOBE_COMMERCE_ENVIRONMENT_ID",
-                    "ADOBE_COMMERCE_STORE_VIEW_CODE",
-                    "ADOBE_COMMERCE_WEBSITE_CODE",
-                    "ADOBE_COMMERCE_STORE_CODE"
-                ],
-                "optionalEnvVars": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]
-            }
-        }
-    },
 
     "integrations": {
         "experience-platform": {
@@ -645,22 +610,6 @@
             "description": "Typically 'base' for single-website installations",
             "group": "adobe-commerce"
         },
-        "AWS_ACCESS_KEY_ID": {
-            "label": "AWS Access Key ID",
-            "type": "text",
-            "required": false,
-            "placeholder": "your_aws_access_key_id",
-            "description": "Only needed if your integration uses AWS S3 for asset storage",
-            "group": "integration-service"
-        },
-        "AWS_SECRET_ACCESS_KEY": {
-            "label": "AWS Secret Access Key",
-            "type": "password",
-            "required": false,
-            "placeholder": "your_aws_secret_access_key",
-            "description": "Pair this with your AWS Access Key ID for S3 access",
-            "group": "integration-service"
-        },
         "EXPERIENCE_PLATFORM_API_KEY": {
             "label": "Platform API Key",
             "type": "text",
@@ -717,7 +666,6 @@
         "stacks": ["headless-paas"],
         "brands": ["citisignal", "buildright"],
         "dependencies": [],
-        "appBuilderApps": ["integration-service"],
         "integrations": ["experience-platform"],
         "addons": ["adobe-commerce-aco"],
         "tools": ["commerce-demo-ingestion"]

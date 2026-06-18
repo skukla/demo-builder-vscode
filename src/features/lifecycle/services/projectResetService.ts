@@ -16,6 +16,7 @@
 
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
+import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import stacksConfig from '@/features/project-creation/config/stacks.json';
 import type { ComponentDefinitionEntry } from '@/features/project-creation/services/componentInstallationOrchestrator';
@@ -59,7 +60,7 @@ interface LoadResult {
 
 /** Look up a component definition by type from the registry manager */
 async function findComponentByType(
-    registryManager: { getFrontends: () => Promise<TransformedComponentDefinition[]>; getDependencies: () => Promise<TransformedComponentDefinition[]>; getAppBuilder: () => Promise<TransformedComponentDefinition[]>; getComponentById: (id: string) => Promise<TransformedComponentDefinition | undefined> },
+    registryManager: { getFrontends: () => Promise<TransformedComponentDefinition[]>; getDependencies: () => Promise<TransformedComponentDefinition[]>; getComponentById: (id: string) => Promise<TransformedComponentDefinition | undefined> },
     comp: { id: string; type: string },
 ): Promise<TransformedComponentDefinition | undefined> {
     if (comp.type === 'frontend') {
@@ -69,10 +70,6 @@ async function findComponentByType(
     if (comp.type === 'dependency') {
         const deps = await registryManager.getDependencies();
         return deps.find((d: { id: string }) => d.id === comp.id);
-    }
-    if (comp.type === 'app-builder') {
-        const apps = await registryManager.getAppBuilder();
-        return apps.find((a: { id: string }) => a.id === comp.id);
     }
     return undefined;
 }
@@ -250,49 +247,26 @@ async function ensureAdobeAuth(
     return authResult.authenticated;
 }
 
-/** Set Adobe org/project/workspace context for mesh deployment */
-async function restoreAdobeContext(
-    project: Project,
-    progress: { report: (value: { message: string }) => void },
-): Promise<void> {
+/**
+ * Build the org-context target for the project's KNOWN org/project/workspace via
+ * the shared builder (enriches org code/name from the cached org only on an id
+ * match). Targets per-invocation env instead of mutating the global.
+ */
+async function buildProjectOrgTarget(project: Project): Promise<OrgContextTarget> {
     const { ServiceLocator } = await import('@/core/di');
-    const authService = ServiceLocator.getAuthenticationService();
-
-    progress.report({ message: 'Setting Adobe context...' });
-    if (project.adobe?.organization) {
-        await authService.selectOrganization(project.adobe.organization);
-    }
-    if (project.adobe?.projectId && project.adobe?.organization) {
-        await authService.selectProject(project.adobe.projectId, project.adobe.organization);
-    }
-    if (project.adobe?.workspace && project.adobe?.projectId) {
-        await authService.selectWorkspace(project.adobe.workspace, project.adobe.projectId);
-    }
+    const cachedOrg = ServiceLocator.getAuthenticationService().getCachedOrganization();
+    return buildOrgTargetFromProjectAdobe(project.adobe, cachedOrg);
 }
 
-/** Handle mesh redeployment during project reset */
-async function handleMeshRedeployment(
+/** Deploy the mesh under org-context targeting and persist the endpoint. */
+async function runTargetedMeshDeploy(
     project: Project,
+    meshPath: string,
     context: HandlerContext,
     logPrefix: string,
     progress: { report: (value: { message: string }) => void },
     vscode: typeof import('vscode'),
-): Promise<{ redeployed: boolean; earlyReturn?: HandlerResponse } | null> {
-    const { getMeshComponentInstance } = await import('@/types/typeGuards');
-    const meshComponent = getMeshComponentInstance(project);
-
-    if (!meshComponent?.path) return null;
-
-    progress.report({ message: 'Checking Adobe I/O authentication...' });
-    const isAuthenticated = await ensureAdobeAuth(project, context, logPrefix);
-
-    if (!isAuthenticated) {
-        context.logger.info(`${logPrefix} Not authenticated, skipping mesh redeploy`);
-        return { redeployed: false };
-    }
-
-    await restoreAdobeContext(project, progress);
-
+): Promise<{ redeployed: boolean; earlyReturn?: HandlerResponse }> {
     progress.report({ message: 'Redeploying API Mesh...' });
     context.logger.info(`${logPrefix} Redeploying mesh`);
 
@@ -306,7 +280,7 @@ async function handleMeshRedeployment(
         const existingMeshId = meshInfo?.meshId || '';
 
         const meshResult = await deployMeshComponent(
-            meshComponent.path,
+            meshPath,
             commandManager,
             context.logger,
             (_msg, sub) => progress.report({ message: sub || _msg }),
@@ -334,6 +308,35 @@ async function handleMeshRedeployment(
             earlyReturn: { success: true, error: `Reset completed but mesh redeployment failed: ${(meshError as Error).message}` },
         };
     }
+}
+
+/** Handle mesh redeployment during project reset */
+export async function handleMeshRedeployment(
+    project: Project,
+    context: HandlerContext,
+    logPrefix: string,
+    progress: { report: (value: { message: string }) => void },
+    vscode: typeof import('vscode'),
+): Promise<{ redeployed: boolean; earlyReturn?: HandlerResponse } | null> {
+    const { getMeshComponentInstance } = await import('@/types/typeGuards');
+    const meshComponent = getMeshComponentInstance(project);
+
+    if (!meshComponent?.path) return null;
+
+    progress.report({ message: 'Checking Adobe I/O authentication...' });
+    const isAuthenticated = await ensureAdobeAuth(project, context, logPrefix);
+
+    if (!isAuthenticated) {
+        context.logger.info(`${logPrefix} Not authenticated, skipping mesh redeploy`);
+        return { redeployed: false };
+    }
+
+    // Target the project's KNOWN org/project/workspace via per-invocation env
+    // instead of mutating the shared `aio` global with select* (racey).
+    const target = await buildProjectOrgTarget(project);
+    return withOrgContext(target, () =>
+        runTargetedMeshDeploy(project, meshComponent.path as string, context, logPrefix, progress, vscode),
+    );
 }
 
 // ==========================================================

@@ -12,7 +12,6 @@ The Demo Builder VSCode Extension uses a flexible component-based architecture t
 2. **Backend Components**: Commerce platforms and data sources
 3. **Dependencies**: Supporting tools and services (required or optional)
 4. **External Systems**: Third-party integrations (e.g., Target, Experience Platform)
-5. **App Builder Apps**: Custom Adobe App Builder applications
 
 ### Component Registry
 
@@ -127,30 +126,6 @@ External systems provide optional integrations with Adobe Experience Cloud servi
 }
 ```
 
-## App Builder Applications
-
-App Builder apps extend functionality with custom serverless applications:
-
-### Kukla Integration Service
-```json
-{
-  "id": "integration-service",
-  "name": "Kukla Integration Service",
-  "description": "Custom integration service for Target Product Recommendations, AEM Assets, and more",
-  "source": {
-    "type": "git",
-    "url": "https://github.com/skukla/kukla-integration-service"
-  },
-  "requiresDeployment": true,
-  "configuration": {
-    "runtime": "nodejs:18",
-    "actions": ["browse-files", "get-products", "download-file", "delete-file"]
-  }
-}
-```
-
-These apps are deployed to Adobe I/O Runtime and provide custom business logic and integrations.
-
 ## Adding New Components
 
 ### Step 1: Define Component in Registry
@@ -208,7 +183,6 @@ class ComponentRegistryManager {
   getBackends(): Promise<ComponentDefinition[]>
   getDependencies(): Promise<ComponentDefinition[]>
   getExternalSystems(): Promise<ComponentDefinition[]>
-  getAppBuilder(): Promise<ComponentDefinition[]>
   getComponentById(id: string): Promise<ComponentDefinition>
   checkCompatibility(frontend: string, backend: string): Promise<boolean>
 }

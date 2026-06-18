@@ -4,9 +4,9 @@
  * Manages Commerce store structure discovery: fetches websites/stores/store views
  * from the REST API and provides cascading dropdown options.
  *
- * Triggers discovery via postMessage ('discover-store-structure'). Credentials are NOT
- * included in the payload — the extension handler reads them from server-side state
- * (sharedState.currentComponentConfigs). Listens for 'store-discovery-result' responses.
+ * Triggers discovery via postMessage ('discover-store-structure'). For PaaS, admin
+ * credentials are included in the request payload (self-contained — no server-side
+ * credential cache). Listens for 'store-discovery-result' responses.
  *
  * @module features/components/ui/hooks/useStoreDiscovery
  */
@@ -65,6 +65,10 @@ export interface FetchStoresParams {
     baseUrl: string;
     orgId?: string;
     accsGraphqlEndpoint?: string;
+    /** PaaS only: admin username, sent in the discovery payload (ACCS uses an IMS token instead) */
+    username?: string;
+    /** PaaS only: admin password, sent in the discovery payload */
+    password?: string;
 }
 
 // ==========================================================

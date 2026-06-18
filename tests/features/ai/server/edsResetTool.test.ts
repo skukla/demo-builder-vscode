@@ -32,8 +32,13 @@ jest.mock('@/core/di', () => ({
         })),
     },
 }));
+jest.mock('@/features/ai/server/adobeTargetStore', () => ({
+    getAdobeTarget: jest.fn(() => ({ orgId: 'org-stored' })),
+    runWithAdobeTarget: jest.fn(async (fn: () => Promise<unknown>) => fn()),
+}));
 
 import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
+import { runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
 import { executeEdsReset, extractResetParams } from '@/features/eds/services/edsResetService';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { isEdsProject, getMeshComponentInstance } from '@/types/typeGuards';
@@ -153,6 +158,13 @@ describe('reset_eds_project', () => {
             expect.anything(),
             expect.any(Function),
         );
+    });
+
+    it('runs the reset under the stored session org context', async () => {
+        const s = fakeServer();
+        registerEdsResetTool(s, ctxFactory);
+        await s.call({ confirm: true });
+        expect(runWithAdobeTarget).toHaveBeenCalled();
     });
 
     it('returns a re-runnable failure when the reset reports failure', async () => {

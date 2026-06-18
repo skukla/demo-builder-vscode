@@ -64,8 +64,8 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
         setSelectedBackend,
         selectedServices,
         servicesToShow,
-        // Note: selectedIntegrations, selectedAppBuilder, handleIntegrationToggle, handleAppBuilderToggle
-        // are still available from the hook but not destructured since sections were removed
+        // Note: selectedIntegrations / handleIntegrationToggle are available from the hook
+        // but not destructured here since those sections aren't rendered in this step.
         handleServiceToggle,
     } = useComponentSelection({
         state,

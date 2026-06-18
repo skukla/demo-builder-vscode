@@ -197,7 +197,7 @@ Fetches store hierarchy (websites, store groups, store views) from the Commerce 
 - **fetchStoreStructureAccs** — ACCS store hierarchy (IMS OAuth + x-api-key auth)
 - **extractTenantId** — Extract tenant ID from ACCS GraphQL endpoint URL
 
-**PaaS credential sourcing**: Admin username and password are never passed in the postMessage payload. The handler (`handleDiscoverStoreStructure` in `edsHandlers.ts`) reads them from `sharedState.currentComponentConfigs` (synced by `WizardContainer`) or the saved project's `componentConfigs`.
+**PaaS credential sourcing**: Admin username and password travel in the `discover-store-structure` payload, so the request is self-contained. The webview trigger (`useAutoStoreDetect`) reads them from the live component configs and includes them in the discovery request; `handleDiscoverStoreStructure` forwards them to the service. This removed an earlier out-of-band `sync-component-configs` cache that raced the discovery dispatch.
 
 ### Error Formatters
 

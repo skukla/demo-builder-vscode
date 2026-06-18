@@ -64,10 +64,8 @@ interface UseComponentSelectionReturn {
     setSelectedBackend: (value: string) => void;
     selectedServices: Set<string>;
     selectedIntegrations: Set<string>;
-    selectedAppBuilder: Set<string>;
     handleServiceToggle: (id: string, selected: boolean) => void;
     handleIntegrationToggle: (id: string, selected: boolean) => void;
-    handleAppBuilderToggle: (id: string, selected: boolean) => void;
     /** Services that need to be shown in the UI (missing services that need to be added) */
     servicesToShow: ComponentOption[];
 }
@@ -98,9 +96,6 @@ export function useComponentSelection({
     );
     const [selectedIntegrations, handleIntegrationToggle] = useSetToggle<string>(
         state.components?.integrations || [],
-    );
-    const [selectedAppBuilder, handleAppBuilderToggle] = useSetToggle<string>(
-        state.components?.appBuilder || [],
     );
 
     // Dynamically resolve which services need to be shown based on backend and addons
@@ -139,7 +134,6 @@ export function useComponentSelection({
     const debouncedDependencies = useDebouncedValue(selectedDependencies, FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE);
     const debouncedServices = useDebouncedValue(selectedServices, FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE);
     const debouncedIntegrations = useDebouncedValue(selectedIntegrations, FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE);
-    const debouncedAppBuilder = useDebouncedValue(selectedAppBuilder, FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE);
 
     // Initialize required services when backend changes or addons change
     // Services are now dynamically determined based on what's missing
@@ -178,7 +172,6 @@ export function useComponentSelection({
             dependencies: Array.from(debouncedDependencies),
             services: Array.from(debouncedServices),
             integrations: Array.from(debouncedIntegrations),
-            appBuilder: Array.from(debouncedAppBuilder),
         };
 
         updateState({ components });
@@ -189,7 +182,7 @@ export function useComponentSelection({
             lastSentSelectionRef.current = selectionKey;
             webviewClient.postMessage('update-component-selection', components);
         }
-    }, [debouncedFrontend, debouncedBackend, debouncedDependencies, debouncedServices, debouncedIntegrations, debouncedAppBuilder, setCanProceed, updateState]);
+    }, [debouncedFrontend, debouncedBackend, debouncedDependencies, debouncedServices, debouncedIntegrations, setCanProceed, updateState]);
 
     // Toggle handlers are now provided by useSetToggle above
 
@@ -200,10 +193,8 @@ export function useComponentSelection({
         setSelectedBackend,
         selectedServices,
         selectedIntegrations,
-        selectedAppBuilder,
         handleServiceToggle,
         handleIntegrationToggle,
-        handleAppBuilderToggle,
         servicesToShow,
     };
 }

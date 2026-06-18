@@ -79,7 +79,6 @@ describe('withTiming', () => {
         const operations = [
             { name: 'isFullyAuthenticated', threshold: 4000, actual: 5000, expectedFormatted: '4.0s' },
             { name: 'getOrganizations', threshold: 5000, actual: 6000, expectedFormatted: '5.0s' },
-            { name: 'selectProject', threshold: 15000, actual: 16000, expectedFormatted: '15.0s' },
             { name: 'login', threshold: 30000, actual: 31000, expectedFormatted: '30.0s' },
         ];
 

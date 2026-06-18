@@ -200,6 +200,27 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         );
     });
 
+    it('should NOT carry orgMismatch in the status payload (delivered separately)', async () => {
+        // The org check is decoupled — it's posted via the async `orgContextResult`
+        // message, never bundled into the status payload (which must stay fast).
+        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        detectFrontendChanges.mockReturnValue(false);
+
+        const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' } as any);
+        const { ServiceLocator } = require('@/core/di');
+        ServiceLocator.getAuthenticationService.mockReturnValue({
+            isAuthenticated: jest.fn().mockResolvedValue(true),
+            getOrganizations: jest.fn().mockResolvedValue([
+                { id: 'org999', code: 'OTHER@AdobeOrg', name: 'Other Org' },
+            ]),
+        });
+
+        const result = await handleRequestStatus(mockContext);
+
+        expect(result.success).toBe(true);
+        expect((result.data as { orgMismatch?: unknown }).orgMismatch).toBeUndefined();
+    });
+
     it('should check mesh status after successful sign-in', async () => {
         const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);

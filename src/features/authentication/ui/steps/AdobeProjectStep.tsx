@@ -42,6 +42,9 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
         searchFilterKey: 'projectSearchFilter',
         autoSelectSingle: true,
         searchFields: ['title', 'name', 'description'],
+        // Thread the wizard-selected org into get-projects so the handler can
+        // establish org-context targeting (the handler now consumes payload.orgId).
+        messagePayload: { orgId: state.adobeOrg?.id },
         onSelect: (project) => {
             // BACKEND CALL ON CONTINUE PATTERN - UI PHASE:
             // This function provides immediate visual feedback to user selection

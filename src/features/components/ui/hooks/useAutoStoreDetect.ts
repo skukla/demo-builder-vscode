@@ -76,9 +76,11 @@ export function useAutoStoreDetect({
                 return;
             }
 
-            // Credentials are NOT included — the extension handler reads them from
-            // sharedState.currentComponentConfigs (synced via WizardContainer effect).
-            fetchStores({ backendType: 'paas', baseUrl });
+            // Credentials travel in the discovery request itself (single source of truth,
+            // no out-of-band sync cache). autoDetectKey already gates on both being present.
+            const username = lookupComponentConfigValue(configs, PAAS_ADMIN_USERNAME);
+            const password = lookupComponentConfigValue(configs, PAAS_ADMIN_PASSWORD);
+            fetchStores({ backendType: 'paas', baseUrl, username, password });
         } else {
             const accsEndpoint = lookupComponentConfigValue(configs, ACCS_ENDPOINT_KEY);
             if (!accsEndpoint) return;

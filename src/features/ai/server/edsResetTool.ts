@@ -12,6 +12,7 @@
  */
 
 import { z } from 'zod';
+import { runWithAdobeTarget } from './adobeTargetStore';
 import { ServiceLocator } from '@/core/di';
 import { getDaLiveAuthService, getGitHubServices, resolveByomOverlayConfig } from '@/features/eds/handlers/edsHelpers';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
@@ -116,21 +117,25 @@ export function registerEdsResetTool(
                 // demo-packages.json. The helper stamps `?org=&site=` so the
                 // shared multi-tenant `render-pdp` action can identify which
                 // storefront's `/products/default` template to fetch.
-                const result = await executeEdsReset(
-                    {
-                        ...paramsResult.params,
-                        byomOverlayUrl: resolveByomOverlayConfig(
-                            paramsResult.params.byomOverlayUrl,
-                            paramsResult.params.daLiveOrg,
-                            paramsResult.params.daLiveSite,
-                        ),
-                        includeBlockLibrary: args?.includeBlockLibrary ?? false,
-                        verifyCdn: args?.verifyCdn ?? false,
-                        redeployMesh: hasMesh,
-                    },
-                    ctx,
-                    tokenProvider,
-                    (p) => phases.push({ step: p.step, totalSteps: p.totalSteps, message: p.message }),
+                // Run under the stored session org context so the mesh redeploy
+                // targets the selected org/workspace via env (no global mutation).
+                const result = await runWithAdobeTarget(() =>
+                    executeEdsReset(
+                        {
+                            ...paramsResult.params,
+                            byomOverlayUrl: resolveByomOverlayConfig(
+                                paramsResult.params.byomOverlayUrl,
+                                paramsResult.params.daLiveOrg,
+                                paramsResult.params.daLiveSite,
+                            ),
+                            includeBlockLibrary: args?.includeBlockLibrary ?? false,
+                            verifyCdn: args?.verifyCdn ?? false,
+                            redeployMesh: hasMesh,
+                        },
+                        ctx,
+                        tokenProvider,
+                        (p) => phases.push({ step: p.step, totalSteps: p.totalSteps, message: p.message }),
+                    ),
                 );
                 if (!result.success) {
                     return asText({

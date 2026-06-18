@@ -486,7 +486,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                         backend: selections.backend,
                         dependencies: selections.dependencies ?? [],
                         integrations: selections.integrations ?? [],
-                        appBuilder: selections.appBuilder ?? [],
                     };
                     this.logger.debug(`[Project Creation] Loaded component selection for edit mode: frontend=${selections.frontend}, backend=${selections.backend}`);
                 }

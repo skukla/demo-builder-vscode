@@ -30,6 +30,7 @@ root.render(
                 authoringExperience={data?.authoringExperience}
                 initialMeshStatus={data?.initialMeshStatus}
                 initialEdsStorefrontStatus={data?.initialEdsStorefrontStatus}
+                hasAdobeContext={data?.hasAdobeContext}
             />
         )}
     </WebviewApp>,

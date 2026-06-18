@@ -275,7 +275,6 @@ describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
             backend: 'commerce-paas',
             dependencies: [],
             integrations: [],
-            appBuilder: [],
         };
 
         (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(perNodeVersionConfig);
@@ -365,7 +364,6 @@ describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
             backend: undefined,
             dependencies: [],
             integrations: [],
-            appBuilder: [],
         };
 
         (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(perNodeVersionConfig);
@@ -444,7 +442,6 @@ describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
             backend: 'commerce-paas',
             dependencies: ['commerce-mesh'], // Dependency on mesh
             integrations: [],
-            appBuilder: [],
         };
 
         (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(perNodeVersionConfig);
@@ -519,7 +516,6 @@ describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
             backend: 'commerce-paas',
             dependencies: [],
             integrations: [],
-            appBuilder: [],
         };
 
         (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(perNodeVersionConfig);
