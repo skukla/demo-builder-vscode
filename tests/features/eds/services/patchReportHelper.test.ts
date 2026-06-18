@@ -23,6 +23,7 @@ import {
     createPatchReport,
     addContentResult,
     addCodeResult,
+    addReferenceResult,
     getUnapplied,
     formatUnappliedToast,
     logUnapplied,
@@ -147,6 +148,34 @@ describe('getUnapplied', () => {
 // ==========================================================================
 // Toast formatting
 // ==========================================================================
+
+describe('addReferenceResult (completeness audit)', () => {
+    it('records an unapplied reference entry naming the missing document', () => {
+        const r = createPatchReport();
+        addReferenceResult(r, '/customer/nav', 'not found on source');
+        expect(getUnapplied(r)).toEqual([
+            { kind: 'reference', patchId: '/customer/nav', target: '/customer/nav', applied: false, reason: 'not found on source' },
+        ]);
+    });
+
+    it('reads as a dangling-reference warning, not a patch failure, in logs', () => {
+        const r = createPatchReport();
+        addReferenceResult(r, '/customer/nav', 'not found on source');
+        logUnapplied(r, mockLogger);
+        expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('referenced document not copied: /customer/nav'));
+    });
+
+    it('names missing documents in the toast alongside patches, distinctly', () => {
+        const r = createPatchReport();
+        addCodeResult(r, { patchId: 'p1', target: 'a.js', applied: false, reason: 'X' });
+        addReferenceResult(r, '/customer/nav', 'missing');
+        const msg = formatUnappliedToast(getUnapplied(r));
+        expect(msg).toContain('p1');
+        expect(msg).toContain('/customer/nav');
+        expect(msg.toLowerCase()).toContain('referenced document');
+        expect(msg.toLowerCase()).toMatch(/continue|omit/);
+    });
+});
 
 describe('formatUnappliedToast', () => {
     it('returns empty string when no unapplied entries', () => {

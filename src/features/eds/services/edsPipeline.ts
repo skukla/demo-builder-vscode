@@ -60,6 +60,10 @@ export interface EdsPipelineParams {
     clearExistingContent?: boolean;
     skipContent?: boolean;
     contentSource?: { org: string; site: string; indexPath?: string };
+    /** Optional second content source for the customer account chrome
+     *  (`/customer/*` + the `/customer/nav` fragment), overlaid after the main
+     *  copy. Used by hybrid packages (B2B base + brand overlay). */
+    accountContentSource?: { org: string; site: string };
     contentPatches?: string[];
     contentPatchSource?: ContentPatchSource;
 
@@ -245,6 +249,8 @@ async function pipelineCopyContent(
     patchReport: PatchReport,
     logger: Logger,
     onProgress?: EdsPipelineProgressCallback,
+    accountContentSource?: { org: string; site: string },
+    runtimeSurfaceSource?: CodePatchSource,
 ): Promise<number> {
     onProgress?.({
         operation: 'content-copy',
@@ -278,6 +284,7 @@ async function pipelineCopyContent(
         contentPatches,
         contentPatchSource,
         patchReport,
+        runtimeSurfaceSource,
     );
 
     if (!contentResult.success) {
@@ -286,12 +293,21 @@ async function pipelineCopyContent(
 
     logger.info(`[EdsPipeline] Content populated: ${contentResult.totalFiles} files`);
 
+    // Hybrid packages: overlay the B2B account chrome (/customer/* + /customer/nav)
+    // from the canonical B2B content site on top of the brand content.
+    let overlaidFiles = 0;
+    if (accountContentSource) {
+        const overlay = await daLiveContentOps.overlayAccountChrome(accountContentSource, daLiveOrg, daLiveSite, patchReport);
+        overlaidFiles = overlay.totalFiles;
+        logger.info(`[EdsPipeline] Account-chrome overlay: ${overlaidFiles} file(s) from ${accountContentSource.org}/${accountContentSource.site}`);
+    }
+
     onProgress?.({
         operation: 'content-copy',
         message: 'Content populated',
     });
 
-    return contentResult.totalFiles;
+    return contentResult.totalFiles + overlaidFiles;
 }
 
 /**
@@ -474,6 +490,7 @@ export async function executeEdsPipeline(
         skipContent = false,
         skipPublish = skipContent,
         contentSource,
+        accountContentSource,
         contentPatches,
         contentPatchSource,
         codePatches,
@@ -510,6 +527,10 @@ export async function executeEdsPipeline(
             contentFilesCopied = await pipelineCopyContent(
                 daLiveContentOps, contentSource, daLiveOrg, daLiveSite,
                 contentPatches, contentPatchSource, patchReport, logger, onProgress,
+                accountContentSource,
+                // ADR-008 consumer: locate this ledger's generated runtime-surfaces.json
+                // (codePatchSource carries owner/repo/path = the patches-repo ledger).
+                codePatchSource,
             );
         } else {
             logger.info('[EdsPipeline] Skipping content copy (skipContent=true)');
