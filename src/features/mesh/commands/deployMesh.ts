@@ -1,7 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { BaseCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
 import { StateManager } from '@/core/state';
@@ -49,48 +48,29 @@ export class DeployMeshCommand extends BaseCommand {
             // This ensures the dashboard shows "Deploying..." while pre-flight checks run
             await ProjectDashboardWebviewCommand.sendMeshStatusUpdate('deploying', 'Checking requirements...');
 
-            // PRE-FLIGHT: Check authentication (inline sign-in if needed)
+            // PRE-FLIGHT: ensure auth AND the correct org context in one shared gate
+            // (the same pre-flight the reset flows use). Auth-expiry → Sign In/Cancel;
+            // wrong org → Switch IMS Org/Cancel; both recover inline rather than
+            // dead-ending in a warning that points back at the dashboard banner.
             const authManager = ServiceLocator.getAuthenticationService();
-            const authResult = await ensureAdobeIOAuth({
-                authManager,
-                logger: this.logger,
-                logPrefix: '[Mesh Deployment]',
-                projectContext: {
-                    organization: project.adobe?.organization,
-                    projectId: project.adobe?.projectId,
-                    workspace: project.adobe?.workspace,
-                },
-                warningMessage: 'Adobe sign-in required to deploy mesh.',
-            });
-            if (!authResult.authenticated) {
-                await ProjectDashboardWebviewCommand.refreshStatus();
-                if (!authResult.cancelled) {
-                    vscode.window.showErrorMessage('Sign-in failed or was cancelled. Please try again.');
-                }
-                return;
-            }
-
-            // Org-context gate — IMS tokens are org-bound, so a valid token can still
-            // reach the wrong org. Mirror the auth guard above: prompt a blocking
-            // "Switch IMS Org" / Cancel recovery that performs the forced switch +
-            // re-verify inline, instead of dead-ending in a warning that points back
-            // at the dashboard banner.
-            const { ensureProjectOrgContext } = await import(
-                '@/features/authentication/services/ensureProjectOrgContext'
+            const { ensureProjectAdobeContext } = await import(
+                '@/features/authentication/services/ensureProjectAdobeContext'
             );
-            const orgResult = await ensureProjectOrgContext({
+            const preflight = await ensureProjectAdobeContext({
                 authManager,
                 project,
                 logger: this.logger,
                 logPrefix: '[Mesh Deployment]',
+                warningMessage: 'Adobe sign-in required to deploy mesh.',
             });
-            if (!orgResult.reachable) {
-                // Re-surface the dashboard's org-context state and abort.
+            if (!preflight.ready) {
                 await ProjectDashboardWebviewCommand.refreshStatus();
-                if (!orgResult.cancelled) {
+                if (!preflight.cancelled) {
                     vscode.window.showErrorMessage(
-                        'Still signed into the wrong Adobe organization. '
-                        + 'Close any other Adobe browser tab, then try again.',
+                        preflight.blockedBy === 'org'
+                            ? 'Still signed into the wrong Adobe organization. '
+                              + 'Close any other Adobe browser tab, then try again.'
+                            : 'Sign-in failed or was cancelled. Please try again.',
                     );
                 }
                 return;

@@ -302,3 +302,26 @@ directly to fit their pipeline + org-context targeting.
 
 **Nothing in the creation flow** — the org there is established from the current sign-in, so a
 mismatch gate is meaningless (and would fire spuriously).
+
+### Refinement after PM review — consolidate, don't sprinkle (implemented)
+
+The PM noted that adding the org call to two reset files is a refactor smell: the gate
+divergence is a *symptom* of duplicated pre-flight. Verified the deeper picture:
+
+- The dashboard **command inlines its own deploy** (`aio api-mesh:update`, `deployMesh.ts`)
+  with pre-flight `{auth, org, App Builder}`; the **`deployMeshComponent` service** is a
+  *separate* deploy primitive used by **creation** (`meshSetupService`, `createProject`) and
+  **both resets**, each re-implementing pre-flight (resets had `auth` but not `org`).
+- The gate **cannot** live in `deployMeshComponent` — creation calls it, and at creation the
+  org is sign-in-derived (a mismatch prompt would fire spuriously). So the primitive stays
+  dumb; the gate belongs in the pre-flight layer.
+
+**Done:** extracted `ensureProjectAdobeContext` (auth → org, one result with `blockedBy`) and
+adopted it at the three existing-project entry points — `deployMesh` (replacing its two
+hand-wired guards) and both reset flows (`projectResetService`, `edsResetMeshHelper`). The
+gate is now structurally impossible to forget. Creation keeps its own sign-in-derived path;
+the primitive is untouched.
+
+**Backlog (next):** the two divergent deploy code paths (command-inline `aio api-mesh:update`
+vs the `deployMeshComponent` service) are the deeper duplication — unify them so the command
+also routes through the service. Tracked in `.rptc/backlog/unify-mesh-deploy-pipeline.md`.
