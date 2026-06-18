@@ -39,7 +39,7 @@ edges (below).
 | **Account nav / dropin** | B2B nav is permission-gated (evidence above) | ✅ Yes (verify the `all`-marked B2B rows actually hide for individuals — see risks) |
 | **Frontend code base** | b2b packages use `adobe-commerce/boilerplate-b2b-template`; B2C packages use **other** bases (`hlxsites/aem-boilerplate-commerce`, and custom: `isle5`, `buildright-eds`, `citisignal-nextjs`) | ⚠️ Partial — needs consolidation onto the b2b base |
 | **Branding/content overlay** | `citisignal-b2b` already brands the b2b base (commit `134e000`) | ✅ Proven possible |
-| **Backend** | Builder configures PaaS/ACCS connection + catalog `Magento-Customer-Group` (pricing only — *not* B2B gating; the company concept was never a builder config) | ⚠️ Requires the **B2B module enabled + companies configured** on the connected backend |
+| **Backend** | Builder configures PaaS/ACCS connection + catalog `Magento-Customer-Group` (pricing only — *not* B2B gating; the company concept was never a builder config) | ⚠️ **User prerequisite** — B2B enabled (Admin/CLI; module installed on PaaS; provisioned on SaaS) + companies + both customer types. **No public enable-API** (see API research). |
 | **Demo data** | n/a | ⚠️ Needs **both** a company customer and an individual customer to show the switch |
 
 Key distinction: the builder's `customerGroup` is a **Catalog Service pricing** header
@@ -76,6 +76,39 @@ Mostly live checks (egress-blocked here):
 5. **Header/global B2B chrome** (company switcher, quick order, request-quote on cart/PDP): confirm
    these also gate by customer type, not just the account nav.
 
+## Backend B2B enablement — API research (2026-06-18) · PM assumption CONFIRMED
+
+**Question:** can the builder programmatically flip B2B on (PaaS or SaaS/ACCS)? **Answer: no —
+there is no public API to enable B2B; it's a backend prerequisite.** Evidence from Adobe docs:
+
+- **B2B is "initially disabled"; a store admin enables it** in **Admin → Stores → Settings →
+  Configuration → General → B2B Features** (`Enable Company = Yes` cascades Shared Catalog, B2B
+  Quote, B2B payment/shipping; plus `Enable Quick Order`, `Enable Requisition List`, `Enable
+  Purchase Orders`). Source: *Enable B2B features* / *General > B2B Features*.
+- **Programmatic config is CLI, not a web API:** `bin/magento config:set` /
+  `config:sensitive:set` (requires server/SSH access). There is **no generic public REST/GraphQL
+  endpoint to set arbitrary store-config / feature flags**.
+- **The B2B REST/GraphQL endpoints *operate* B2B, they don't *enable* it** — `company`,
+  `negotiableQuote`, `purchaseOrder` manage data once B2B is on. (Adobe *Integrate with B2B using
+  REST*.)
+- **PaaS** additionally requires the **B2B module installed** (composer) before any of this.
+- **SaaS/ACCS** is fully managed and "supports B2B and B2C from a single instance" (good for the
+  hybrid vision), but enablement/availability is via Adobe's managed admin/provisioning — **no
+  customer CLI, no documented public enable-API.**
+
+**Implication (matches the PM):** treat **"backend is B2B-ready"** (B2B enabled + ≥1 company + ≥1
+individual customer) as a **user prerequisite**. The builder should **not** try to flip it.
+- *Optional, low-effort refinement:* the builder **could read-only *detect*** readiness (e.g. call
+  the B2B `company` REST/GraphQL endpoint; if B2B is off it errors/returns nothing) and warn the
+  user — detection, not enablement. Offer as a nice-to-have; PM leaned "pure prerequisite."
+
+## Scope decision (PM, 2026-06-18)
+
+- **Hybrid reach = canonical-boilerplate packages only** (`b2b`, `citisignal-b2b`, and the EDS
+  `citisignal` on `hlxsites/aem-boilerplate-commerce`). **Custom-base storefronts**
+  (`buildright-eds`, `isle5`, `citisignal-nextjs`) are **out of scope** — not re-based here.
+- **Backend B2B = user prerequisite**, not builder-managed (per the API research above).
+
 ## Recommendation — incremental, not big-bang
 
 - **Tier 1 (now — already planned):** fix `/customer/nav` acquisition for the b2b-based packages
@@ -92,12 +125,15 @@ Mostly live checks (egress-blocked here):
 
 ## Open questions for the PM
 
-1. Is the goal **every** package hybrid, or "every package that's on the canonical boilerplate"?
-   (Custom bases change the cost dramatically.)
-2. Should the builder take on **backend B2B enablement / company seeding**, or assume the connected
-   backend is already B2B-ready?
-3. Is the near-term win "**`b2b`/`citisignal-b2b` correctly hybrid**" (Tier 1–2), with universal
-   hybrid as a roadmap item — or do you want a full design for universal hybrid now?
+1. ~~Every package vs canonical-only?~~ **Resolved: canonical-boilerplate packages only**
+   (`b2b`, `citisignal-b2b`, `citisignal` EDS); custom bases out.
+2. ~~Builder-managed backend B2B?~~ **Resolved: user prerequisite** (no enable-API; see API
+   research). Optional read-only readiness detection TBD.
+3. **Still open:** add a `b2b-ready` **prerequisite doc/checklist** (and maybe the optional
+   read-only detection) to the builder's flow for hybrid packages? (Enable Company in Admin; create
+   a company + assign a buyer; have an individual customer.)
+4. **Still open (Tier 2 trigger):** proceed to rebase EDS `citisignal` onto the b2b base (branded
+   overlay, like `citisignal-b2b`) once the live login-UX verification (checks 1–3) passes?
 
 ## Cross-refs
 
