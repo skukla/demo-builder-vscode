@@ -71,6 +71,17 @@ jest.mock('@/features/mesh/services/meshDeploymentVerifier', () => ({
         endpoint: 'https://test-mesh.adobe.io/graphql',
     }),
 }));
+// The command delegates build+deploy+verify to deployMeshComponent; mock it so the
+// command's persistence (the subject of these tests) runs on a successful result.
+jest.mock('@/features/mesh/services/meshDeployment', () => ({
+    deployMeshComponent: jest.fn().mockResolvedValue({
+        success: true,
+        data: { meshId: 'mesh-test-123', endpoint: 'https://test-mesh.adobe.io/graphql' },
+    }),
+}));
+jest.mock('@/features/mesh/services/meshVerifier', () => ({
+    fetchMeshInfoFromAdobeIO: jest.fn().mockResolvedValue(null),
+}));
 
 describe('DeployMeshCommand - Storage Behavior', () => {
     // Mocks
