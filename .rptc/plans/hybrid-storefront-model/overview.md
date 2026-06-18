@@ -4,6 +4,24 @@
 **Scope (PM):** canonical-boilerplate packages only (`b2b`, `citisignal-b2b`, `citisignal` EDS);
 custom-base storefronts out. Backend B2B is a **user prerequisite** (no enable-API).
 
+## Status & decisions (2026-06-18)
+
+- **Branch rebased onto `develop`** (the intended base; was off master). Clean 18-commit diff.
+- **PM decision — merge into ONE hybrid CitiSignal:** plain `citisignal` becomes the single hybrid
+  package (B2B base + CitiSignal brand + B2B account chrome; serves B2C and B2B by login).
+  **`citisignal-b2b` is retired as redundant.**
+- ✅ **Detection core** (`b2bReadinessDetection`) — done, 7 tests. Wiring pending.
+- ✅ **Account-chrome overlay core** (`overlayAccountChrome`) — done, 3 tests. Wiring pending.
+- ⏳ **Remaining (the final chunk):**
+  1. Thread `accountContentSource` through orchestration (executor / storefrontSetupPhases /
+     edsResetService / edsPipeline / edsContentSetup) + the storefront config type, and call
+     `overlayAccountChrome` after `copyContentFromSource` when set.
+  2. **demo-packages.json merge:** repoint `citisignal` EDS storefronts to the B2B base
+     (`adobe-commerce/boilerplate-b2b-template` + the `citisignal-b2b` ledger) + add
+     `accountContentSource: { adobe-commerce, boilerplate-b2b }`; **remove the `citisignal-b2b`
+     package**; update `block-libraries.json` (`nativeForPackages`) + package/storefront count tests.
+  3. Wire the detection (warn when a B2B package hits a non-B2B backend) + prerequisite note.
+
 ## Relationship to Tier 1
 
 Tier 1 = `.rptc/plans/content-copy-completeness/` (the `/customer/nav` fix + discovery + audit) —

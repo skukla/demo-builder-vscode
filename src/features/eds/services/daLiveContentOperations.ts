@@ -1981,6 +1981,68 @@ export class DaLiveContentOperations {
         return copied;
     }
 
+    /**
+     * Overlay pass: copy the customer account chrome (the auth pages + the
+     * fragments they reference, e.g. `/customer/nav`) from a SECOND content
+     * source, on top of already-copied brand content.
+     *
+     * Used by hybrid packages whose brand/catalog content lives on one site but
+     * whose B2B account experience must come from the canonical B2B content site
+     * (B2B base + brand overlay). Additive; pulls live from the public CDN (no
+     * fork); copies only what exists on the account source (no stubs — the brand
+     * copy already created any base stubs). Reference-following then pulls
+     * `/customer/nav` automatically.
+     *
+     * @param accountSource - The content site to source `/customer/*` chrome from.
+     * @returns Copy result for the overlaid files (best-effort; never throws).
+     */
+    async overlayAccountChrome(
+        accountSource: { org: string; site: string },
+        destOrg: string,
+        destSite: string,
+        patchReport?: PatchReport,
+    ): Promise<DaLiveCopyResult> {
+        const baseUrl = `https://main--${accountSource.site}--${accountSource.org}.aem.live`;
+        const dest = { org: destOrg, site: destSite };
+        const discoveredPaths = new Set<string>();
+        const copiedFiles: string[] = [];
+        const failedFiles: { path: string; error: string }[] = [];
+
+        // Entry points: the auth pages that actually exist on the account source.
+        const entryPaths: string[] = [];
+        for (const authPage of RUNTIME_SURFACES.authPages) {
+            try {
+                const probe = await fetch(`${baseUrl}${authPage.path}.plain.html`, { method: 'HEAD' });
+                if (probe.ok) entryPaths.push(authPage.path);
+            } catch {
+                // Unreachable on the account source — skip.
+            }
+        }
+
+        if (entryPaths.length === 0) {
+            this.logger.warn(`[DA.live] Account-chrome overlay: no auth pages found on ${accountSource.org}/${accountSource.site}`);
+            return { success: true, copiedFiles, failedFiles, totalFiles: 0 };
+        }
+
+        const token = await this.getImsToken();
+        for (const path of entryPaths) {
+            const ok = await this.copySingleFile(
+                token, accountSource, path, dest, path, undefined, undefined, patchReport, discoveredPaths,
+            );
+            if (ok) copiedFiles.push(path);
+            else failedFiles.push({ path, error: 'Copy failed' });
+        }
+
+        // Follow references (pulls /customer/nav + any sub-fragments) from the account source.
+        const discovered = await this.discoverAndCopyReferences(
+            accountSource, dest, entryPaths, discoveredPaths, undefined, undefined, patchReport,
+        );
+        copiedFiles.push(...discovered);
+
+        this.logger.info(`[DA.live] Account-chrome overlay from ${accountSource.org}/${accountSource.site}: ${copiedFiles.join(', ') || '(none)'}`);
+        return { success: failedFiles.length === 0, copiedFiles, failedFiles, totalFiles: copiedFiles.length + failedFiles.length };
+    }
+
     async copyContentFromSource(
         source: DaLiveContentSource,
         destOrg: string,
