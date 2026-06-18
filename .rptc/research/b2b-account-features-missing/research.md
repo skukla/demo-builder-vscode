@@ -81,8 +81,40 @@ is copied, its left column loads `/customer/nav`, which was never copied → emp
 features. The menu's `<ol><li>` links (still to capture from `/customer/nav.plain.html`) are the
 authoritative list of B2B account sub-pages.
 
-> Outstanding live checks: `/customer/nav.plain.html` (menu items + sub-page hrefs); which
-> sub-pages 404 vs load; whether `query-index.json`/`sitemap.xml` list `/customer/*`.
+### `/customer/nav.plain.html` contents (confirmed in browser, 2026-06-18)
+
+The fragment is a permission-aware nav block with `label / icon / permission` rows (**no `href`
+column**). Items, in order:
+
+- **Base:** My account (`User`), Orders (`Order`), Addresses (`AddressBook`), Returns (`EmptyBox`)
+- **B2B:** Requisition Lists (`List`), Company Profile (`Business`), Company Structure
+  (`Structure`), Company Users (`Team`), Roles and Permissions (`Locker`,
+  `Magento_Company::roles_view`), Company Credit (`Wallet`), Quotes (`Quote`), Quote Templates
+  (`Bulk`), Purchase Orders (`Purchase`, `Magento_PurchaseOrder::view_purchase_orders`), Approval
+  Rules (`CheckWithCircle`, `Magento_PurchaseOrderRule::view_approval_rules`), Seller Assisted
+  Purchasing (`Placeholder`), Company Hierarchy (`Structure`).
+
+**Decisive implication — the menu rows have no links.** The account sections are rendered by the
+account **dropin** (driven by this config + the user's permissions), not as separate authored EDS
+documents. So the missing content is almost certainly **just the `/customer/nav` fragment** (plus
+the `/customer/account` shell) — there are likely **no per-feature sub-pages to copy**. That makes
+the fix small and fully no-fork: copy `/customer/nav` from canonical and the entire B2B menu
+appears; the dropin handles the rest.
+
+**Refined fix:** the cleanest discovery is **follow fragment references from the copied pages** —
+`/customer/account.plain.html` literally embeds `/customer/nav`, so copying that fragment falls out
+of "copy the page, then copy the fragments it references." Minimal alternative: add `/customer/nav`
+to the `essentialFragments` probe list (currently only `/nav`, `/footer`). Either way the content
+is pulled live from the public CDN — no fork.
+
+**Side note / hypothesis:** the existing `commerce-account-sidebar-selector-race` code patch ("empty
+left nav on freshly-published storefronts") may have been treating a *symptom* of this same
+never-copied-`/customer/nav` bug as a selector timing race. Worth revisiting whether that patch is
+still needed once the fragment is actually copied.
+
+> Outstanding (optional) live checks: confirm a candidate sub-page (e.g. `/customer/account/company`)
+> **404s** (validates "no separate sub-pages"); whether `query-index.json`/`sitemap.xml` list
+> `/customer/*` (decides enumerate-from-index vs follow-fragment-references).
 
 ## Root cause
 
