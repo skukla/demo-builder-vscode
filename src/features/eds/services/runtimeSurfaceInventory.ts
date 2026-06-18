@@ -14,8 +14,14 @@
  * copied pages* (fragments embedded by the account page, etc.) are handled by
  * reference-following discovery in `copyContentFromSource` — NOT listed here.
  * This inventory is only the deterministic backstop for surfaces that nothing
- * links to (standalone config sheets, the header/footer fragments, the auth
- * page entry points) and therefore can't be reached by crawling.
+ * links to (standalone config sheets, the header/footer fragments, *code-loaded*
+ * fragments like `/customer/sidebar-fragment`, the auth page entry points) and
+ * therefore can't be reached by crawling. Contrast with `/customer/nav`, which
+ * the account page embeds and discovery owns — see the coverage test.
+ *
+ * Several entries below were derived from the boilerplate code rather than added
+ * from memory (ADR-008 prototype, `scripts/runtime-surfaces/`) — the derivation
+ * surfaced surfaces this hand list had been missing.
  */
 
 /** An auth page entry point + the block class its destination stub should carry. */
@@ -36,13 +42,22 @@ export interface RuntimeSurfaceInventory {
 }
 
 /**
- * The single declared inventory. Values are intentionally identical to the
- * previously-inlined lists (content-copy backfill + reset placeholder overrides)
- * so consolidation is behavior-preserving.
+ * The single declared inventory. The base set mirrors the previously-inlined
+ * lists (content-copy backfill + reset placeholder overrides); entries marked
+ * "derived (ADR-008)" were added from a static scan of the boilerplate code,
+ * which surfaced orphan surfaces the hand list had been missing.
  */
 export const RUNTIME_SURFACES: RuntimeSurfaceInventory = {
     spreadsheets: ['/placeholders', '/redirects', '/metadata', '/sitemap'],
-    fragments: ['/nav', '/footer'],
+    fragments: [
+        '/nav', '/footer',
+        // Code-loaded fragment: `commerce-account-sidebar.js` calls
+        // `loadFragment('/customer/sidebar-fragment')`. Nothing in content links to
+        // it, so discovery can't reach it (unlike `/customer/nav`, embedded by the
+        // account page) — it must be declared. Derived (ADR-008). Probed via
+        // `.plain.html` in backfillEssentialPaths (the bare URL gates to login).
+        '/customer/sidebar-fragment',
+    ],
     authPages: [
         { path: '/customer/login', blockClass: 'commerce-login' },
         { path: '/customer/account', blockClass: 'commerce-account' },
@@ -52,5 +67,9 @@ export const RUNTIME_SURFACES: RuntimeSurfaceInventory = {
         'placeholders/global', 'placeholders/auth', 'placeholders/cart',
         'placeholders/checkout', 'placeholders/order', 'placeholders/account',
         'placeholders/payment-services', 'placeholders/recommendations', 'placeholders/wishlist',
+        // B2B sheets fetched by dropin code, never linked from content. Derived (ADR-008).
+        'placeholders/company', 'placeholders/pdp', 'placeholders/purchase-order',
+        'placeholders/quick-order', 'placeholders/quote-management',
+        'placeholders/requisition-list', 'placeholders/search',
     ],
 };

@@ -1925,8 +1925,14 @@ export class DaLiveContentOperations {
         }
 
         // HTML fragment documents (nav, footer): not indexed but loaded at runtime.
+        // `/customer/*` fragments (e.g. the code-loaded /customer/sidebar-fragment)
+        // gate to a login at the bare URL, so probe the `.plain.html` we actually
+        // copy — same lesson as the auth pages below. Others resolve bare.
         for (const fragmentPath of RUNTIME_SURFACES.fragments) {
-            await probeAndAdd(fragmentPath, `${baseUrl}${fragmentPath}`);
+            const probeUrl = fragmentPath.startsWith('/customer/')
+                ? `${baseUrl}${fragmentPath}.plain.html`
+                : `${baseUrl}${fragmentPath}`;
+            await probeAndAdd(fragmentPath, probeUrl);
         }
 
         // Customer auth pages: dropin-rendered, not indexed. Probe the
