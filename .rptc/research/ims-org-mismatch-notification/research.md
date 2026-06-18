@@ -151,3 +151,49 @@ consistent with how expired-token is handled.
 additionally adopt the blocking gate for the *reactive/action-time* moment where today there's
 only a dead-end warning. The notice is not replaced — the blocking flow fills a different,
 currently weak, slot.
+
+---
+
+## 7. Addendum — telegraphing the check via the update-check toast? (PM challenge)
+
+PM asked: the "Check for Updates" flow telegraphs itself with a progress toast
+(`vscode.window.withProgress({ location: Notification, title: 'Demo Builder Updates' })`
+reporting `'Checking for updates...'` — `checkUpdates.ts:55`). Would taking *that*
+approach be the more reasonable way to telegraph the org-context check?
+
+**Deciding factor: user-initiated vs. automatic.** The update toast works because the
+user *ran the command* — the toast is feedback for an action they just took and are
+actively awaiting. That's the correct home for `withProgress`: a **user-initiated,
+awaited, discrete operation**. The proactive org check is the opposite on every axis:
+
+- **Not user-initiated.** It fires automatically on every dashboard load
+  (`handleRequestStatus → runOrgContextCheck`). An unprompted toast on *every* dashboard
+  open, for a background check, is notification noise — the update toast avoids this
+  precisely because it only appears on demand.
+- **Already has a consistent home.** The "IMS Org" badge is a peer of the Frontend /
+  API Mesh / AI badges, and all of them telegraph in-flight state *inline*
+  ("Loading status…", "Starting…", "Verifying"). A toast for IMS Org but inline badges
+  for its three siblings would be the inconsistency. The deliberate
+  `FRONTEND_TIMEOUTS.ORG_CHECK_MIN_DISPLAY` gate shows telegraphing was already a design
+  goal — they chose the ambient surface on purpose.
+- **Usually a no-op.** The check normally resolves to "ok"; a toast for a check that
+  typically finds nothing wrong is mostly wasted attention. A quiet badge is the right weight.
+- **Auto-dismiss vs. persistent result.** A "Checking…" toast vanishes on resolve, but a
+  mismatch is persistent and still needs the banner — so the toast adds a second surface
+  for one event without replacing anything.
+
+**Where the toast pattern DOES fit — the user-initiated moments.** The update-check toast
+is the right telegraph for awaited operations, which maps onto layer 3 (reactive), not the
+passive load check:
+
+| Moment | Nature | Right telegraph |
+|---|---|---|
+| Proactive load check | automatic, passive, usually no-op | **inline "Checking…" badge** (not a toast) |
+| Switch / action re-verify | user-initiated, awaited | **`withProgress`-style toast** (the update-check pattern fits here) |
+| Persistent result (mismatch) | standing condition | **notice banner** |
+
+**Answer:** for the *passive load-time* check, the inline badge is more reasonable than a
+progress toast (unprompted-on-every-load noise, inconsistent with sibling badges, usually a
+no-op, and auto-dismisses while the real result is persistent). The update-check toast is the
+right model for the *user-initiated* moments — the forced "Switch IMS Org" re-verify and the
+action-time gate — i.e. layer 3, not the telegraph of the automatic check.
