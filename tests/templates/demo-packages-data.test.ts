@@ -93,9 +93,9 @@ describe('demo-packages.json', () => {
     });
 
     describe('structure validation - packages', () => {
-        it('should have packages array with exactly 6 packages', () => {
+        it('should have packages array with exactly 5 packages', () => {
             expect(Array.isArray(packagesConfig.packages)).toBe(true);
-            expect(packagesConfig.packages.length).toBe(6);
+            expect(packagesConfig.packages.length).toBe(5);
         });
 
         it('should have unique package IDs', () => {
@@ -104,24 +104,25 @@ describe('demo-packages.json', () => {
             expect(uniqueIds.size).toBe(ids.length);
         });
 
-        it('should have citisignal, citisignal-b2b, isle5, buildright, custom, and b2b packages', () => {
+        it('should have citisignal, isle5, buildright, custom, and b2b packages', () => {
             const ids = packagesConfig.packages.map(p => p.id);
             expect(ids).toContain('citisignal');
-            expect(ids).toContain('citisignal-b2b');
             expect(ids).toContain('isle5');
             expect(ids).toContain('buildright');
             expect(ids).toContain('custom');
             expect(ids).toContain('b2b');
+            // citisignal-b2b retired — merged into the hybrid `citisignal` package.
+            expect(ids).not.toContain('citisignal-b2b');
         });
     });
 
     describe('structure validation - storefronts', () => {
-        it('should have 12 storefronts total across all packages', () => {
+        it('should have 10 storefronts total across all packages', () => {
             let totalStorefronts = 0;
             packagesConfig.packages.forEach(pkg => {
                 totalStorefronts += Object.keys(pkg.storefronts).length;
             });
-            expect(totalStorefronts).toBe(12);
+            expect(totalStorefronts).toBe(10);
         });
 
         it('should have isle5 with 2 storefronts', () => {

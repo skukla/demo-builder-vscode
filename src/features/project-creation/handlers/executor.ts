@@ -180,6 +180,11 @@ interface ProjectCreationConfig {
             site: string;
             indexPath?: string;
         };
+        // Second content source for the account chrome (hybrid packages).
+        accountContentSource?: {
+            org: string;
+            site: string;
+        };
         // Preflight completion fields (set by StorefrontSetupStep)
         preflightComplete?: boolean;
         repoUrl?: string;
@@ -963,6 +968,7 @@ async function setupEdsContent(
                 daLiveOrg: typedConfig.edsConfig.daLiveOrg,
                 daLiveSite: typedConfig.edsConfig.daLiveSite,
                 contentSource: typedConfig.edsConfig.contentSource,
+                accountContentSource: typedConfig.edsConfig.accountContentSource,
                 contentPatches: typedConfig.edsConfig.contentPatches,
                 contentPatchSource: typedConfig.edsConfig.contentPatchSource,
                 templateOwner: typedConfig.edsConfig.templateOwner,

@@ -12,15 +12,18 @@ custom-base storefronts out. Backend B2B is a **user prerequisite** (no enable-A
   **`citisignal-b2b` is retired as redundant.**
 - ✅ **Detection core** (`b2bReadinessDetection`) — done, 7 tests. Wiring pending.
 - ✅ **Account-chrome overlay core** (`overlayAccountChrome`) — done, 3 tests. Wiring pending.
-- ⏳ **Remaining (the final chunk):**
-  1. Thread `accountContentSource` through orchestration (executor / storefrontSetupPhases /
-     edsResetService / edsPipeline / edsContentSetup) + the storefront config type, and call
-     `overlayAccountChrome` after `copyContentFromSource` when set.
-  2. **demo-packages.json merge:** repoint `citisignal` EDS storefronts to the B2B base
-     (`adobe-commerce/boilerplate-b2b-template` + the `citisignal-b2b` ledger) + add
-     `accountContentSource: { adobe-commerce, boilerplate-b2b }`; **remove the `citisignal-b2b`
-     package**; update `block-libraries.json` (`nativeForPackages`) + package/storefront count tests.
-  3. Wire the detection (warn when a B2B package hits a non-B2B backend) + prerequisite note.
+- ✅ **`accountContentSource` threaded end-to-end** (create + reset): storefront config →
+  `WelcomeStep` → `EDSConfig`/`wizardHelpers` → `executor`→`ensureEdsContent` and
+  `storefrontSetupPhases`/`edsResetParams`/`edsResetService` → `edsPipeline`; `overlayAccountChrome`
+  now runs after `copyContentFromSource` at both copy sites when set. Types added to `EDSConfig`,
+  `EdsResetParams`, `StorefrontSetupStartPayload`, the storefront type + schema.
+- ✅ **demo-packages.json merge (one hybrid CitiSignal):** `citisignal` EDS storefronts repointed to
+  the B2B base + `accountContentSource: { adobe-commerce, boilerplate-b2b }` + the `citisignal-b2b`
+  ledger; **`citisignal-b2b` package removed**; `block-libraries.json` + count tests updated
+  (5 packages / 10 storefronts). 2296 eds+project-creation tests green; tsc + lint clean.
+- ⏳ **Remaining:** wire the B2B-readiness **detection** (warn when a B2B package hits a non-B2B
+  backend) + the prerequisite note. The detection function is built+tested; only its call-site
+  (needs the project's Commerce GraphQL endpoint) is pending.
 
 ## Relationship to Tier 1
 

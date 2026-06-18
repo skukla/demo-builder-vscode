@@ -398,6 +398,12 @@ export interface EDSConfig {
         site: string;
         indexPath?: string;
     };
+    /** Optional second content source for the customer account chrome (hybrid
+     *  packages: B2B base + brand overlay). From demo-packages.json storefronts. */
+    accountContentSource?: {
+        org: string;
+        site: string;
+    };
     /** Optional BYOM content overlay URL (from demo-packages.json storefronts) */
     byomOverlayUrl?: string;
     /** Patch IDs to apply during reset (from demo-packages.json storefronts) */
