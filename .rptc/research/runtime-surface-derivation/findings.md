@@ -79,3 +79,18 @@ residual for platform conventions, and reconcile the two with a drift check.
 The natural production home is the **ADR-006 last-known-good gate**
 (`skukla/eds-demo-patches`), which already clones canonical daily — the same job
 can regenerate the derived set and open a PR when it diverges from what's committed.
+
+## Outcome (2026-06-18)
+
+- **All 8 derived-only surfaces added to the inventory were confirmed live** on
+  `main--boilerplate-b2b--adobe-commerce.aem.live` (HTTP `200` for
+  `/customer/sidebar-fragment.plain.html` + the 7 `placeholders/*.json`). They were
+  real documents being **silently dropped** before the fix — the hand list's
+  missing-direction inaccuracy, made concrete.
+- **Stop-gap shipped**: the 8 surfaces were added to `runtimeSurfaceInventory.ts`
+  (with a `.plain.html` probe fix for `/customer/*` fragments) so demos are correct
+  now, ahead of the generated-file flip.
+- **Producer built**: the derivation + drift check is in `skukla/eds-demo-patches#1`
+  (`derive-surfaces.mjs`, per-ledger check in `lkg-gate.sh`, `b2b/runtime-surfaces.json`,
+  `lkg/surface-drift` PR step). Re-deriving from the pinned B2B template now starts
+  green; a simulated new orphan produces a `SURFACE_DRIFT` PR with provenance.

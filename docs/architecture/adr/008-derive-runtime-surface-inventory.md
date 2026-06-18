@@ -1,9 +1,9 @@
 # ADR-008: Derive the Runtime-Surface Inventory from the Boilerplate, Not by Hand
 
-**Status**: Proposed (prototype-validated 2026-06-18; pending owner acceptance + productionization)
+**Status**: Accepted (2026-06-18) — producer half built and in review; consumer wiring pending
 **Date**: 2026-06-18
-**Decision Maker**: Project Owner (pending)
-**Implementer**: Feasibility prototype landed (`scripts/runtime-surfaces/`); production work not yet scheduled.
+**Decision Maker**: Project Owner (confirmed 2026-06-18)
+**Implementer**: Feasibility prototype landed (`scripts/runtime-surfaces/`); producer (drift gate) built in `skukla/eds-demo-patches#1` (B2B ledger); consumer wiring pending.
 
 Related: [ADR-006](006-thin-layer-storefront-customization.md) — the last-known-good (LKG) gate this ADR proposes to extend. Originating bug: the 2026-06 `/customer/nav` silently-dropped-fragment incident.
 
@@ -194,9 +194,11 @@ This does not replace either existing mechanism — it strengthens the backstop:
 |---|---|---|
 | Feasibility prototype + unit tests | **Landed** | `scripts/runtime-surfaces/deriveRuntimeSurfaces.mjs` (+ `.test.mjs`, 7 tests, `node:test`); README documents run/scope |
 | Empirical validation against real B2B boilerplate | **Done** | `.rptc/research/runtime-surface-derivation/findings.md` — 14/18 re-derived, 9 hand-list gaps found |
-| Owner acceptance | **Pending** | This ADR |
-| Port generator into the ADR-006 LKG gate (multi-boilerplate) | **Not started** | `skukla/eds-demo-patches` |
-| Wire `runtimeSurfaceInventory.ts` to consume derived + residual | **Not started** | format TBD |
+| Live-source verification of the 9 derived-only surfaces | **Done** | all 8 added to the inventory (`/customer/sidebar-fragment` + 7 B2B sheets) confirmed `200` on `main--boilerplate-b2b--adobe-commerce.aem.live` — previously silently dropped |
+| Stop-gap: add the missing orphans to the hand list | **Landed** | `runtimeSurfaceInventory.ts` (+ `.plain.html` probe fix for `/customer/*`) — keeps demos correct until the consumer half flips to the generated file |
+| Owner acceptance | **Confirmed** | 2026-06-18 |
+| Producer: surface drift gate in the ADR-006 LKG gate | **In review** | `skukla/eds-demo-patches#1` — `derive-surfaces.mjs` + per-ledger check + `lkg/surface-drift` PR flow; B2B ledger seeded (`b2b/runtime-surfaces.json`). Other ledgers (citisignal/custom) pending their own seed |
+| Consumer: wire `runtimeSurfaceInventory.ts` to fetch derived + residual | **Not started** | extension fetches `runtime-surfaces.json` like patches + LKG; merge `derived ∪ residual`, retire the hand-maintained bulk |
 | Optional: runtime-observation pass to shrink the static residual | **Not started** | future enhancement |
 
 ---
@@ -205,6 +207,7 @@ This does not replace either existing mechanism — it strengthens the backstop:
 
 - **Empirical basis**: `.rptc/research/runtime-surface-derivation/findings.md` (+ `prototype-run-b2b.txt`)
 - **Prototype**: `scripts/runtime-surfaces/` (`deriveRuntimeSurfaces.mjs`, `deriveRuntimeSurfaces.test.mjs`, `README.md`)
+- **Producer (drift gate)**: `skukla/eds-demo-patches#1` — `scripts/derive-surfaces.mjs`, the per-ledger check in `scripts/lkg-gate.sh`, `b2b/runtime-surfaces.json`, and the `lkg/surface-drift` PR step in `.github/workflows/lkg-gate.yml`
 - **Current hand list**: `src/features/eds/services/runtimeSurfaceInventory.ts`
 - **Discovery + orphan seeding**: `src/features/eds/services/daLiveContentOperations.ts` (`copyContentFromSource`, reference-following)
 - **Production home for the gate**: `skukla/eds-demo-patches` (`scripts/lkg-gate.sh`) per ADR-006

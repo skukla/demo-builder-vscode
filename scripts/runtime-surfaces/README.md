@@ -9,6 +9,11 @@ This is **not extension runtime code** and is not wired into the build. It exist
 to measure the idea. The production home (per ADR-006) is the daily last-known-good
 gate in `skukla/eds-demo-patches`, which already clones canonical every day.
 
+> **Status:** productionized. The extractor is ported into the gate as
+> `scripts/derive-surfaces.mjs` with a per-ledger drift check + `lkg/surface-drift`
+> PR flow — see `skukla/eds-demo-patches#1` and ADR-008. This prototype is kept as
+> the original feasibility artifact / reference.
+
 ## What it does
 
 Statically scans a cloned EDS storefront boilerplate for the content paths the

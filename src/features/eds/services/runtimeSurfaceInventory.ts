@@ -22,6 +22,13 @@
  * Several entries below were derived from the boilerplate code rather than added
  * from memory (ADR-008 prototype, `scripts/runtime-surfaces/`) — the derivation
  * surfaced surfaces this hand list had been missing.
+ *
+ * Keeping-it-accurate (ADR-008): a drift gate in `skukla/eds-demo-patches`
+ * (`scripts/derive-surfaces.mjs`, PR #1) re-derives these surfaces from the pinned
+ * boilerplate daily and opens a PR when the code references one this list lacks.
+ * The consumer flip — fetching the generated `runtime-surfaces.json` instead of
+ * hand-maintaining the bulk here — is the pending ADR-008 step; until then this
+ * file is the source of truth and should stay in sync with that ledger.
  */
 
 /** An auth page entry point + the block class its destination stub should carry. */
