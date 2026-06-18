@@ -97,6 +97,10 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
     // no-loop hint (another browser tab may be holding the wrong org).
     const [switchAttempted, setSwitchAttempted] = useState(false);
 
+    // True while the forced switch round-trip (browser login + re-verify) is in
+    // flight — drives the banner's disabled "Switching…" button.
+    const [isSwitchingOrg, setIsSwitchingOrg] = useState(false);
+
     // State for browser opening (passed to actions hook)
     const [isOpeningBrowser, setIsOpeningBrowser] = useState(false);
     const [showCapabilities, setShowCapabilities] = useState(false);
@@ -203,10 +207,23 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
     }, [orgCheckState]);
 
     // Forced account/org switch: mark the attempt so a persistent mismatch
-    // surfaces the no-loop hint, then trigger the forced sign-in.
-    const onSwitchOrg = () => {
+    // surfaces the no-loop hint, show the in-flight "Switching…" state, then
+    // trigger the forced sign-in. Cleared on completion regardless of outcome
+    // (success, still-mismatched, cancelled) so the button never strands. A ref
+    // guards re-entry synchronously (state lags a render, so a fast double-press
+    // could otherwise fire the round-trip twice).
+    const switchInFlightRef = useRef(false);
+    const onSwitchOrg = async () => {
+        if (switchInFlightRef.current) return;
+        switchInFlightRef.current = true;
         setSwitchAttempted(true);
-        handleSwitchOrg();
+        setIsSwitchingOrg(true);
+        try {
+            await handleSwitchOrg();
+        } finally {
+            switchInFlightRef.current = false;
+            setIsSwitchingOrg(false);
+        }
     };
 
     // Derived values
@@ -337,6 +354,7 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
                     state={orgCheckState}
                     orgMismatch={orgMismatch}
                     switchAttempted={switchAttempted}
+                    isSwitching={isSwitchingOrg}
                     onSwitchOrg={onSwitchOrg}
                 />
 

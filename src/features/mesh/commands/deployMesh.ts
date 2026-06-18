@@ -70,23 +70,29 @@ export class DeployMeshCommand extends BaseCommand {
                 return;
             }
 
-            // Org-context guard — reuse the canonical reachability check rather than
-            // hand-rolling an org-id comparison. IMS tokens are org-bound, so a
-            // mismatch means the current token is signed into a different org; the
-            // fix is the forced "Switch IMS Org" recovery, not an admin ticket.
-            const { detectProjectOrgMismatch } = await import(
-                '@/features/authentication/services/detectProjectOrgMismatch'
+            // Org-context gate — IMS tokens are org-bound, so a valid token can still
+            // reach the wrong org. Mirror the auth guard above: prompt a blocking
+            // "Switch IMS Org" / Cancel recovery that performs the forced switch +
+            // re-verify inline, instead of dead-ending in a warning that points back
+            // at the dashboard banner.
+            const { ensureProjectOrgContext } = await import(
+                '@/features/authentication/services/ensureProjectOrgContext'
             );
-            const orgContext = await detectProjectOrgMismatch(authManager, project, this.logger);
-            if (orgContext && !orgContext.reachable) {
-                // Re-surface the dashboard's "Switch IMS Org" banner and abort.
+            const orgResult = await ensureProjectOrgContext({
+                authManager,
+                project,
+                logger: this.logger,
+                logPrefix: '[Mesh Deployment]',
+            });
+            if (!orgResult.reachable) {
+                // Re-surface the dashboard's org-context state and abort.
                 await ProjectDashboardWebviewCommand.refreshStatus();
-
-                vscode.window.showWarningMessage(
-                    `"${project.name}" uses a different Adobe organization than the account you're signed into`
-                    + (orgContext.currentOrg ? ` (${orgContext.currentOrg})` : '')
-                    + '. Use "Switch IMS Org" on the dashboard to continue.',
-                );
+                if (!orgResult.cancelled) {
+                    vscode.window.showErrorMessage(
+                        'Still signed into the wrong Adobe organization. '
+                        + 'Close any other Adobe browser tab, then try again.',
+                    );
+                }
                 return;
             }
 

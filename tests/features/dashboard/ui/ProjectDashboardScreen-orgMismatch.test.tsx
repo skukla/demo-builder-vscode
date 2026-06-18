@@ -105,12 +105,61 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
         expect(screen.queryByText(/another browser tab/i)).not.toBeInTheDocument();
     });
 
-    it('posts switchOrg when the switch action is clicked', async () => {
+    it('requests switchOrg when the switch action is clicked', async () => {
+        const { webviewClient } = require('@/core/ui/utils/WebviewClient');
         await showMismatchBanner();
 
         fireEvent.click(screen.getByText(/Switch IMS Org/i));
 
-        expect(ctx.mockPostMessage).toHaveBeenCalledWith('switchOrg');
+        expect(webviewClient.request).toHaveBeenCalledWith('switchOrg');
+    });
+
+    it('shows a disabled "Switching…" button while the forced switch is in flight', async () => {
+        const { webviewClient } = require('@/core/ui/utils/WebviewClient');
+        // Default request mock never resolves — the switch stays in flight.
+        webviewClient.request.mockReturnValue(new Promise(() => {}));
+        await showMismatchBanner();
+
+        fireEvent.click(screen.getByText(/Switch IMS Org/i));
+
+        const switching = await screen.findByText(/Switching/i);
+        expect(switching).toBeInTheDocument();
+        expect(switching.closest('button')).toBeDisabled();
+        // The standing "Switch IMS Org" label is gone while busy.
+        expect(screen.queryByText(/^Switch IMS Org$/i)).not.toBeInTheDocument();
+    });
+
+    it('ignores repeated presses while a switch is already in flight', async () => {
+        const { webviewClient } = require('@/core/ui/utils/WebviewClient');
+        webviewClient.request.mockReturnValue(new Promise(() => {}));
+        await showMismatchBanner();
+
+        // Re-query each time: after the first press the button flips to a disabled
+        // "Switching…" state — a second press must not fire the round-trip again.
+        const liveSwitchButton = () => screen.getByText(/Switch IMS Org|Switching/i).closest('button')!;
+        fireEvent.click(liveSwitchButton());
+        fireEvent.click(liveSwitchButton());
+
+        // `request` is also used for verify-ai-setup on mount, so scope to switchOrg.
+        const switchCalls = (webviewClient.request as jest.Mock).mock.calls.filter(c => c[0] === 'switchOrg');
+        expect(switchCalls).toHaveLength(1);
+    });
+
+    it('re-enables the switch button once the switch completes (still mismatched)', async () => {
+        const { webviewClient } = require('@/core/ui/utils/WebviewClient');
+        webviewClient.request.mockResolvedValue({ success: true });
+        await showMismatchBanner();
+
+        await act(async () => {
+            fireEvent.click(screen.getByText(/Switch IMS Org/i));
+        });
+        // Backend re-check came back still mismatched.
+        emitOrgMismatch();
+
+        await waitFor(() => {
+            const button = screen.getByText(/Switch IMS Org/i).closest('button');
+            expect(button).not.toBeDisabled();
+        });
     });
 
     it('shows the no-loop tab hint when still mismatched after a switch attempt', async () => {

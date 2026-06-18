@@ -1945,6 +1945,11 @@ button[class*="spectrum-Button"][disabled],
     flex-shrink: 0;
 }
 
+/* In-flight spinner inside the "Switching…" button — small gap before the label. */
+.dashboard-org-banner-spinner {
+    margin-right: 6px;
+}
+
 /* Stacked, labeled rows + isolated delete footer. Fixed to the derived content
    width so the status header (same width) aligns badge-left / button-right. */
 .dashboard-zones {

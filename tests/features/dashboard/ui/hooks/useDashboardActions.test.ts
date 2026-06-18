@@ -31,6 +31,7 @@ jest.mock('@/core/ui/utils/frontendTimeouts', () => ({
 jest.mock('@/core/ui/utils/WebviewClient', () => ({
     webviewClient: {
         postMessage: jest.fn(),
+        request: jest.fn().mockResolvedValue({ success: true }),
     },
 }));
 
@@ -229,14 +230,15 @@ describe('useDashboardActions', () => {
             expect(mockPostMessage).toHaveBeenCalledWith('reAuthenticate');
         });
 
-        it('should send switchOrg message', () => {
+        it('should request switchOrg (round-trip for in-flight feedback)', async () => {
+            const mockRequest = webviewClient.request as jest.Mock;
             const { result } = renderActionsHook();
 
-            act(() => {
-                result.current.handleSwitchOrg();
+            await act(async () => {
+                await result.current.handleSwitchOrg();
             });
 
-            expect(mockPostMessage).toHaveBeenCalledWith('switchOrg');
+            expect(mockRequest).toHaveBeenCalledWith('switchOrg');
         });
 
         it('should send copyPath message', () => {
