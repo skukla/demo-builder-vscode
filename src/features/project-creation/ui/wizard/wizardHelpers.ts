@@ -628,6 +628,7 @@ function buildProjectEdsConfig(wizardState: WizardState) {
         templateOwner: eds.templateOwner,
         templateRepo: eds.templateRepo,
         contentSource: eds.contentSource,
+        accountContentSource: eds.accountContentSource,
         patches: eds.patches,
         contentPatches: eds.contentPatches,
         contentPatchSource: eds.contentPatchSource,

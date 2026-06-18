@@ -114,6 +114,10 @@
           "$ref": "#/definitions/daLiveContentSource",
           "description": "DA.live content source for EDS storefronts (required for EDS stacks)"
         },
+        "accountContentSource": {
+          "$ref": "#/definitions/daLiveContentSource",
+          "description": "Optional second content source for the customer account chrome (/customer/* auth pages + the /customer/nav fragment). Used by hybrid packages whose brand content comes from one site but whose B2B account experience must come from the canonical B2B content site. Overlaid after the main content copy."
+        },
         "templateOwner": {
           "type": "string",
           "minLength": 1,

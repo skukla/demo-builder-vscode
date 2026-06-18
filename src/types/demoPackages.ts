@@ -110,6 +110,12 @@ export interface Storefront {
     source: GitSource;
     /** DA.live content source for EDS storefronts (required for EDS stacks) */
     contentSource?: DaLiveContentSource;
+    /** Optional second content source for the customer account chrome
+     *  (`/customer/*` auth pages + the `/customer/nav` fragment). Used by hybrid
+     *  packages whose brand/catalog content comes from one site but whose B2B
+     *  account experience must come from the canonical B2B content site
+     *  (B2B base + brand overlay). Overlaid after the main content copy. */
+    accountContentSource?: DaLiveContentSource;
     /** Optional BYOM content overlay URL. When set, Config Service registers a
      *  `content.overlay` alongside the DA.live content source so a backend
      *  service can serve dynamic markup (e.g., per-SKU PDP HTML).

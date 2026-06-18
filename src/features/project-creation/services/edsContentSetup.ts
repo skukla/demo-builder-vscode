@@ -29,6 +29,13 @@ interface EdsContentConfig {
         site: string;
         indexPath?: string;
     };
+    /** Optional second content source for the customer account chrome
+     *  (`/customer/*` + the `/customer/nav` fragment), overlaid after the main
+     *  content copy. Used by hybrid packages (B2B base + brand overlay). */
+    accountContentSource?: {
+        org: string;
+        site: string;
+    };
     contentPatches?: string[];
     contentPatchSource?: {
         owner: string;
@@ -134,6 +141,16 @@ export async function ensureEdsContent(
         logger.warn(`[EDS Content] Content copy had failures: ${contentResult.failedFiles.length} files failed`);
     } else {
         logger.info(`[EDS Content] Content copied: ${contentResult.totalFiles} files`);
+    }
+
+    // Hybrid packages: overlay the B2B account chrome (/customer/* + /customer/nav)
+    // from the canonical B2B content site on top of the brand content.
+    if (config.accountContentSource) {
+        onProgress?.('Setting up storefront content...', 'Adding B2B account experience');
+        const overlay = await daLiveContentOps.overlayAccountChrome(
+            config.accountContentSource, config.daLiveOrg, config.daLiveSite, patchReport,
+        );
+        logger.info(`[EDS Content] Account-chrome overlay: ${overlay.totalFiles} file(s) from ${config.accountContentSource.org}/${config.accountContentSource.site}`);
     }
 
     // Service dependencies for remaining operations (daLiveAuthService + daLiveTokenProvider created above)

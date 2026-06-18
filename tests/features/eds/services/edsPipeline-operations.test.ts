@@ -126,6 +126,8 @@ describe('executeEdsPipeline - operations', () => {
                 // patchReport — pipeline always passes one (the unified
                 // content + code patch report; ADR-006 Step 2c).
                 expect.objectContaining({ results: expect.any(Array) }),
+                // runtimeSurfaceSource (ADR-008 consumer) — codePatchSource, here undefined.
+                undefined,
             );
         });
 
@@ -147,6 +149,7 @@ describe('executeEdsPipeline - operations', () => {
                 undefined,
                 undefined,
                 expect.objectContaining({ results: expect.any(Array) }),
+                undefined,
             );
         });
 
@@ -168,6 +171,7 @@ describe('executeEdsPipeline - operations', () => {
                 contentPatches,
                 contentPatchSource,
                 expect.objectContaining({ results: expect.any(Array) }),
+                undefined,
             );
         });
 

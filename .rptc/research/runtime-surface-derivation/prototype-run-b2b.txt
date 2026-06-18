@@ -1,0 +1,59 @@
+
+Derived runtime surfaces from 350 scanned files
+==========================================================
+
+fragments (1):
+  /customer/sidebar-fragment         blocks/commerce-account-sidebar/commerce-account-sidebar.js:7 code-loaded fragment (unreachable by content crawl)
+
+navFooter (2):
+  /footer                            blocks/footer/footer.js:33                     metadata-overridable: real path is <meta name="footer"> if the page sets it
+  /nav                               blocks/header/header.js:174                    metadata-overridable: real path is <meta name="nav"> if the page sets it
+
+placeholderSheets (17):
+  /placeholders                      blocks/carousel/carousel.js:118                default sheet (bare fetchPlaceholders())
+  placeholders/account               scripts/initializers/account.js:11             explicit placeholder sheet
+  placeholders/auth                  scripts/commerce.js:426                        explicit placeholder sheet
+  placeholders/cart                  scripts/initializers/cart.js:11                explicit placeholder sheet
+  placeholders/checkout              blocks/commerce-b2b-quote-checkout/containers.js:393 explicit placeholder sheet
+  placeholders/company               scripts/initializers/company.js:27             explicit placeholder sheet
+  placeholders/global                scripts/initializers/index.js:103              explicit placeholder sheet
+  placeholders/order                 scripts/initializers/order.js:38               explicit placeholder sheet
+  placeholders/payment-services      scripts/initializers/payment-services.js:9     explicit placeholder sheet
+  placeholders/pdp                   scripts/initializers/pdp.js:85                 explicit placeholder sheet
+  placeholders/purchase-order        scripts/initializers/purchase-order.js:20      explicit placeholder sheet
+  placeholders/quick-order           scripts/initializers/quick-order.js:11         explicit placeholder sheet
+  placeholders/quote-management      scripts/initializers/quote-management.js:11    explicit placeholder sheet
+  placeholders/recommendations       scripts/initializers/recommendations.js:11     explicit placeholder sheet
+  placeholders/requisition-list      scripts/initializers/requisition-list.js:122   explicit placeholder sheet
+  placeholders/search                scripts/initializers/search.js:11              explicit placeholder sheet
+  placeholders/wishlist              scripts/initializers/wishlist.js:13            explicit placeholder sheet
+
+customerPages (4):
+  /customer/account                  blocks/header/renderAuthDropdown.js:43         referenced by storefront code
+  /customer/login                    blocks/header/renderAuthDropdown.js:88         referenced by storefront code
+  /customer/orders                   scripts/__dropins__/storefront-order/api.js:241 referenced by storefront code
+  /customer/sidebar-fragment         blocks/commerce-account-sidebar/commerce-account-sidebar.js:7 referenced by storefront code
+
+Diagnostics: 15 bare fetchPlaceholders() (default sheet); metadata-overridable: /footer, /nav
+
+Drift vs hand-maintained inventory
+----------------------------------------------------------
+  agree (in both):           14  /customer/account, /customer/login, /footer, /nav, /placeholders, placeholders/account, placeholders/auth, placeholders/cart, placeholders/checkout, placeholders/global, placeholders/order, placeholders/payment-services, placeholders/recommendations, placeholders/wishlist
+  DERIVED-ONLY (hand list misses): 9
+      + /customer/orders
+      + /customer/sidebar-fragment
+      + placeholders/company
+      + placeholders/pdp
+      + placeholders/purchase-order
+      + placeholders/quick-order
+      + placeholders/quote-management
+      + placeholders/requisition-list
+      + placeholders/search
+  HAND-ONLY (scan missed; content-only or stale): 4
+      - /customer/create-account
+      - /metadata
+      - /redirects
+      - /sitemap
+
+Totals: 23 derived, 18 declared by hand, 1 code-loaded fragments
+

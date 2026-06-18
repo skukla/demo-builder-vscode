@@ -32,7 +32,7 @@ const PAAS_CONFIGS: ComponentConfigs = {
     'adobe-commerce': {
         [PAAS_URL]: 'https://store.example.com',
         [PAAS_ADMIN_USERNAME]: 'admin',
-        [PAAS_ADMIN_PASSWORD]: 'pass123',
+        [PAAS_ADMIN_PASSWORD]: 'fake-test-pw-not-a-secret',
     },
 };
 
@@ -75,7 +75,7 @@ describe('useAutoStoreDetect — PaaS credentials in the discovery request', () 
                 backendType: 'paas',
                 baseUrl: 'https://store.example.com',
                 username: 'admin',
-                password: 'pass123',
+                password: 'fake-test-pw-not-a-secret',
             }),
         );
     });
@@ -87,7 +87,7 @@ describe('useAutoStoreDetect — PaaS credentials in the discovery request', () 
         result.current.forceFetch();
 
         expect(fetchStores).toHaveBeenCalledWith(
-            expect.objectContaining({ username: 'admin', password: 'pass123' }),
+            expect.objectContaining({ username: 'admin', password: 'fake-test-pw-not-a-secret' }),
         );
     });
 });

@@ -12,7 +12,7 @@
         "repo": "accs-citisignal",
         "branch": "main"
       },
-      "nativeForPackages": ["citisignal", "citisignal-b2b"],
+      "nativeForPackages": ["citisignal"],
       "stackTypes": ["eds-storefront"],
       "contentSource": {
         "org": "demo-system-stores",
