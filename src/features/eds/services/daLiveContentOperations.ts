@@ -31,6 +31,7 @@ import { hasWriteAccess } from './daLiveOrgOperations';
 import { convertSpreadsheetJsonToHtml } from './daLiveSpreadsheetUtils';
 import { addContentResult, addReferenceResult, type PatchReport } from './patchReportHelper';
 import { RUNTIME_SURFACES } from './runtimeSurfaceInventory';
+import { getRuntimeSurfaces, type RuntimeSurfaceSource } from './runtimeSurfaceResolver';
 import {
     DaLiveError,
     DaLiveAuthError,
@@ -1902,8 +1903,13 @@ export class DaLiveContentOperations {
         source: { org: string; site: string },
         contentPaths: string[],
         missingAuthPages: Array<{ path: string; blockClass: string }>,
+        surfaceSource?: RuntimeSurfaceSource,
     ): Promise<void> {
         const baseUrl = `https://main--${source.site}--${source.org}.aem.live`;
+        // Static hand list, with the ledger's generated `runtime-surfaces.json`
+        // merged in when available (ADR-008 consumer). Best-effort: falls back to
+        // the static inventory when no source / unreachable.
+        const inventory = await getRuntimeSurfaces(surfaceSource, this.logger);
 
         const probeAndAdd = async (path: string, probeUrl: string): Promise<boolean> => {
             if (contentPaths.includes(path)) return true;
@@ -1920,7 +1926,7 @@ export class DaLiveContentOperations {
         };
 
         // Spreadsheets: served as .json on CDN, stored as .xlsx on DA.live.
-        for (const configPath of RUNTIME_SURFACES.spreadsheets) {
+        for (const configPath of inventory.spreadsheets) {
             await probeAndAdd(configPath, `${baseUrl}${configPath}.json`);
         }
 
@@ -1928,7 +1934,7 @@ export class DaLiveContentOperations {
         // `/customer/*` fragments (e.g. the code-loaded /customer/sidebar-fragment)
         // gate to a login at the bare URL, so probe the `.plain.html` we actually
         // copy — same lesson as the auth pages below. Others resolve bare.
-        for (const fragmentPath of RUNTIME_SURFACES.fragments) {
+        for (const fragmentPath of inventory.fragments) {
             const probeUrl = fragmentPath.startsWith('/customer/')
                 ? `${baseUrl}${fragmentPath}.plain.html`
                 : `${baseUrl}${fragmentPath}`;
@@ -1940,7 +1946,7 @@ export class DaLiveContentOperations {
         // pages like /customer/account gate to a login at the bare path, so a bare
         // probe can mis-stub a page whose authored content really exists). Pages
         // absent from source get destination stubs with the correct block markup.
-        for (const authPage of RUNTIME_SURFACES.authPages) {
+        for (const authPage of inventory.authPages) {
             if (contentPaths.includes(authPage.path)) continue;
             const found = await probeAndAdd(authPage.path, `${baseUrl}${authPage.path}.plain.html`);
             if (!found) missingAuthPages.push(authPage);
@@ -2070,6 +2076,7 @@ export class DaLiveContentOperations {
         contentPatchIds?: string[],
         contentPatchSource?: ContentPatchSource,
         patchReport?: PatchReport,
+        runtimeSurfaceSource?: RuntimeSurfaceSource,
     ): Promise<DaLiveCopyResult> {
         // Report initialization progress
         progressCallback?.({ processed: 0, total: 0, percentage: 0, message: 'Enumerating source content...' });
@@ -2087,7 +2094,7 @@ export class DaLiveContentOperations {
         // be in the content index. The DA.live list API already returns
         // everything, so this is only needed for the fallback path.
         if (!usedDaLiveList) {
-            await this.backfillEssentialPaths(source, contentPaths, missingAuthPages);
+            await this.backfillEssentialPaths(source, contentPaths, missingAuthPages, runtimeSurfaceSource);
         }
 
         const copiedFiles: string[] = [];

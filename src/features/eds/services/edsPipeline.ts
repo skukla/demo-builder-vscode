@@ -250,6 +250,7 @@ async function pipelineCopyContent(
     logger: Logger,
     onProgress?: EdsPipelineProgressCallback,
     accountContentSource?: { org: string; site: string },
+    runtimeSurfaceSource?: CodePatchSource,
 ): Promise<number> {
     onProgress?.({
         operation: 'content-copy',
@@ -283,6 +284,7 @@ async function pipelineCopyContent(
         contentPatches,
         contentPatchSource,
         patchReport,
+        runtimeSurfaceSource,
     );
 
     if (!contentResult.success) {
@@ -526,6 +528,9 @@ export async function executeEdsPipeline(
                 daLiveContentOps, contentSource, daLiveOrg, daLiveSite,
                 contentPatches, contentPatchSource, patchReport, logger, onProgress,
                 accountContentSource,
+                // ADR-008 consumer: locate this ledger's generated runtime-surfaces.json
+                // (codePatchSource carries owner/repo/path = the patches-repo ledger).
+                codePatchSource,
             );
         } else {
             logger.info('[EdsPipeline] Skipping content copy (skipContent=true)');

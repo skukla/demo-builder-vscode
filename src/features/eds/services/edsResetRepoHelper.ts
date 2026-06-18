@@ -20,7 +20,7 @@ import { generateInspectorTreeEntries, installInspectorTagging } from './inspect
 import { readLkgSha } from './lkgReader';
 import { installSmart404Handler } from './pdp404HandlerPublisher';
 import { installQuickEdit } from './quickEditPublisher';
-import { RUNTIME_SURFACES } from './runtimeSurfaceInventory';
+import { getRuntimeSurfaces, type RuntimeSurfaceSource } from './runtimeSurfaceResolver';
 import type { GitHubTreeInput } from './types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
@@ -42,11 +42,15 @@ async function fetchPlaceholderFiles(
     templateOwner: string,
     templateRepo: string,
     logger: Logger,
+    surfaceSource?: RuntimeSurfaceSource,
 ): Promise<void> {
     assertValidGitHubSlug(templateOwner, 'templateOwner');
     assertValidGitHubSlug(templateRepo, 'templateRepo');
 
-    const placeholderPaths = RUNTIME_SURFACES.placeholderSheets;
+    // Static hand list, with the ledger's generated runtime-surfaces.json merged in
+    // when reachable (ADR-008 consumer). Best-effort; falls back to the static list.
+    const inventory = await getRuntimeSurfaces(surfaceSource, logger);
+    const placeholderPaths = inventory.placeholderSheets;
 
     await Promise.allSettled(
         placeholderPaths.map(async (placeholderPath) => {
@@ -246,7 +250,7 @@ export async function resetRepoToTemplate(
     }
 
     if (includeBlockLibrary) {
-        await fetchPlaceholderFiles(fileOverrides, templateOwner, templateRepo, context.logger);
+        await fetchPlaceholderFiles(fileOverrides, templateOwner, templateRepo, context.logger, codePatchSource);
     }
 
     // Determine the template ref to reset against. Thin-layer storefronts

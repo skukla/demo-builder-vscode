@@ -26,9 +26,12 @@
  * Keeping-it-accurate (ADR-008): a drift gate in `skukla/eds-demo-patches`
  * (`scripts/derive-surfaces.mjs`, PR #1) re-derives these surfaces from the pinned
  * boilerplate daily and opens a PR when the code references one this list lacks.
- * The consumer flip — fetching the generated `runtime-surfaces.json` instead of
- * hand-maintaining the bulk here — is the pending ADR-008 step; until then this
- * file is the source of truth and should stay in sync with that ledger.
+ * The consumer (`runtimeSurfaceResolver.ts`) fetches that ledger's generated
+ * `runtime-surfaces.json` at create/reset and merges `derived ∪ residual` ONTO
+ * this list — so this stays the **safety floor** (never removed from; used as-is
+ * when the fetch is unavailable), while merged surface-drift PRs flow in
+ * automatically. Don't remove entries here to "let the gate own them"; the merge
+ * only adds.
  */
 
 /** An auth page entry point + the block class its destination stub should carry. */

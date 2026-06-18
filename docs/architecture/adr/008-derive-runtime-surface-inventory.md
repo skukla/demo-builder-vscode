@@ -198,7 +198,9 @@ This does not replace either existing mechanism — it strengthens the backstop:
 | Stop-gap: add the missing orphans to the hand list | **Landed** | `runtimeSurfaceInventory.ts` (+ `.plain.html` probe fix for `/customer/*`) — keeps demos correct until the consumer half flips to the generated file |
 | Owner acceptance | **Confirmed** | 2026-06-18 |
 | Producer: surface drift gate in the ADR-006 LKG gate | **In review** | `skukla/eds-demo-patches#1` — `derive-surfaces.mjs` + per-ledger check + `lkg/surface-drift` PR flow; B2B ledger seeded (`b2b/runtime-surfaces.json`). Other ledgers (citisignal/custom) pending their own seed |
-| Consumer: wire `runtimeSurfaceInventory.ts` to fetch derived + residual | **Not started** | extension fetches `runtime-surfaces.json` like patches + LKG; merge `derived ∪ residual`, retire the hand-maintained bulk |
+| Consumer: extension fetches + merges the generated inventory | **Landed** | `runtimeSurfaceResolver.ts` fetches `<ledger>/runtime-surfaces.json` (best-effort, cached) and merges `derived ∪ residual` **onto the static hand list as a floor**; wired into `backfillEssentialPaths` (content copy) + `fetchPlaceholderFiles` (reset), sourced from `codePatchSource`. A merged surface-drift PR now reaches storefronts on next create/reset. 1170 EDS tests green |
+| Retire the hand-maintained bulk in `runtimeSurfaceInventory.ts` | **Deferred** | the static list stays the safety floor (zero-regression). Trimming it to just the residual waits until all ledgers are seeded + the gate has soaked |
+| `authPages` drift auto-consumed (needs a `blockClass`) | **Out of scope** | a new `/customer/*` page surfaces via the gate PR for a human to add with its block class; the merge never auto-stubs auth pages |
 | Optional: runtime-observation pass to shrink the static residual | **Not started** | future enhancement |
 
 ---
@@ -208,7 +210,8 @@ This does not replace either existing mechanism — it strengthens the backstop:
 - **Empirical basis**: `.rptc/research/runtime-surface-derivation/findings.md` (+ `prototype-run-b2b.txt`)
 - **Prototype**: `scripts/runtime-surfaces/` (`deriveRuntimeSurfaces.mjs`, `deriveRuntimeSurfaces.test.mjs`, `README.md`)
 - **Producer (drift gate)**: `skukla/eds-demo-patches#1` — `scripts/derive-surfaces.mjs`, the per-ledger check in `scripts/lkg-gate.sh`, `b2b/runtime-surfaces.json`, and the `lkg/surface-drift` PR step in `.github/workflows/lkg-gate.yml`
-- **Current hand list**: `src/features/eds/services/runtimeSurfaceInventory.ts`
+- **Consumer (fetch + merge)**: `src/features/eds/services/runtimeSurfaceResolver.ts` (`getRuntimeSurfaces` / `mergeRuntimeSurfaces`), wired into `daLiveContentOperations.backfillEssentialPaths` + `edsResetRepoHelper.fetchPlaceholderFiles`
+- **Static hand list (floor)**: `src/features/eds/services/runtimeSurfaceInventory.ts`
 - **Discovery + orphan seeding**: `src/features/eds/services/daLiveContentOperations.ts` (`copyContentFromSource`, reference-following)
 - **Production home for the gate**: `skukla/eds-demo-patches` (`scripts/lkg-gate.sh`) per ADR-006
 - **Subject boilerplate**: `adobe-commerce/boilerplate-b2b-template` @ `160b453e`
