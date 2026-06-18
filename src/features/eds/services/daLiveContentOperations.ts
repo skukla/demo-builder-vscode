@@ -170,36 +170,49 @@ export function createDaLiveServiceTokenProvider(
  */
 export function extractReferencedPaths(html: string, sourceBaseUrl: string): string[] {
     const refs = new Set<string>();
-    const hrefPattern = /href\s*=\s*["']([^"']+)["']/gi;
-    let match: RegExpExecArray | null;
 
-    while ((match = hrefPattern.exec(html)) !== null) {
-        let href = match[1].trim();
-        if (!href) continue;
+    // Normalize one candidate reference and add it if it's a copyable internal path.
+    const consider = (raw: string): void => {
+        let href = raw.trim();
+        if (!href) return;
 
         // Normalize an absolute same-site URL to a site-relative path; skip any
         // other absolute/protocol-relative URL (external host).
         if (href.startsWith(sourceBaseUrl)) {
             href = href.slice(sourceBaseUrl.length) || '/';
         } else if (/^[a-z]+:/i.test(href) || href.startsWith('//')) {
-            continue;
+            return;
         }
 
         // Internal site-relative paths only (drops #anchors, ./relatives, mailto:).
-        if (!href.startsWith('/')) continue;
+        if (!href.startsWith('/')) return;
 
         href = href.split('#')[0].split('?')[0];
-        if (!href || href === '/') continue;
+        if (!href || href === '/') return;
 
         // Skip media, static assets, icons, and catalog product overlays.
-        if (/\.(png|jpe?g|gif|svg|webp|ico|css|js|json|pdf|mp4|woff2?|ttf)$/i.test(href)) continue;
-        if (href.includes('/media_') || href.startsWith('/icons/') || href.startsWith('/styles/')) continue;
-        if (href.startsWith('/products/')) continue;
+        if (/\.(png|jpe?g|gif|svg|webp|ico|css|js|json|pdf|mp4|woff2?|ttf)$/i.test(href)) return;
+        if (href.includes('/media_') || href.startsWith('/icons/') || href.startsWith('/styles/')) return;
+        if (href.startsWith('/products/')) return;
 
         // Match the enumerated path shape (extension-free).
         href = href.replace(/\.html$/i, '');
         if (href && href !== '/') refs.add(href);
-    }
+    };
+
+    let match: RegExpExecArray | null;
+
+    // 1. Anchor hrefs — links, and link-style fragment references.
+    const hrefPattern = /href\s*=\s*["']([^"']+)["']/gi;
+    while ((match = hrefPattern.exec(html)) !== null) consider(match[1]);
+
+    // 2. EDS fragment-block convention: the fragment path is authored as the bare
+    //    TEXT content of a leaf element, e.g. the account page's
+    //    `<div class="fragment"><div><div>/customer/nav</div></div></div>`. Match an
+    //    internal path that is the entire text of a leaf div/p/li/td/span (not an
+    //    href), so embedded fragments that aren't in the index get pulled too.
+    const textPathPattern = />\s*(\/[a-z0-9][^<>\s"']*)\s*<\/(?:div|p|li|td|span)>/gi;
+    while ((match = textPathPattern.exec(html)) !== null) consider(match[1]);
 
     return [...refs];
 }

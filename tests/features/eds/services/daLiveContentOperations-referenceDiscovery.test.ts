@@ -68,6 +68,28 @@ describe('extractReferencedPaths', () => {
         expect(extractReferencedPaths(html, base)).toEqual(['/customer/nav']);
     });
 
+    it('extracts a fragment-block path authored as bare text (the real /customer/nav case)', () => {
+        // Verbatim from boilerplate-b2b /customer/account.plain.html: the nav is
+        // referenced by an EDS fragment block whose cell text IS the path (no <a>).
+        const html = '<div class="fragment"><div><div>/customer/nav</div></div></div>';
+        expect(extractReferencedPaths(html, base)).toEqual(['/customer/nav']);
+    });
+
+    it('finds BOTH a fragment-text ref and an anchor link on the same page', () => {
+        const html =
+            '<div class="fragment"><div><div>/customer/nav</div></div></div>' +
+            '<a href="/fr/">Français</a>';
+        expect(extractReferencedPaths(html, base).sort()).toEqual(['/customer/nav', '/fr/']);
+    });
+
+    it('does not match a path embedded mid-text (only whole-cell paths)', () => {
+        expect(extractReferencedPaths('<div>See /customer/nav for details</div>', base)).toEqual([]);
+    });
+
+    it('does not match closing tags or non-path cell text', () => {
+        expect(extractReferencedPaths('<div>My account</div><div></div>', base)).toEqual([]);
+    });
+
     it('returns an empty array when there are no links', () => {
         expect(extractReferencedPaths('<body><main>no links</main></body>', base)).toEqual([]);
     });
