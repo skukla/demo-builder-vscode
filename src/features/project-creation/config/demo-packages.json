@@ -289,6 +289,10 @@
         "ACCS_STORE_CODE": "citisignal_store",
         "ACCS_STORE_VIEW_CODE": "citisignal_us"
       },
+      "configFlags": {
+        "commerce-b2b-enabled": true,
+        "commerce-companies-enabled": true
+      },
       "storefronts": {
         "headless-paas": {
           "name": "CitiSignal Headless",

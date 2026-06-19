@@ -435,10 +435,28 @@ describe('configGenerator', () => {
             expect(config.public.default['commerce-companies-enabled']).toBe(true);
         });
 
-        it('should not inject B2B flags for a non-b2b package', () => {
+        it('should inject B2B config flags for the citisignal hybrid package', () => {
+            // CitiSignal is a B2B+B2C hybrid on the b2b boilerplate template, so it
+            // needs the same flags: the flag enables the B2B machinery
+            // (auth/permissions queries roles); B2C customers still get the standard
+            // view, B2B customers get the company nav.
             const params: ConfigGeneratorParams = {
                 ...baseParams,
                 selectedPackage: 'citisignal',
+            };
+
+            const result = generateConfigJson(params, mockLogger);
+
+            expect(result.success).toBe(true);
+            const config = JSON.parse(result.content!);
+            expect(config.public.default['commerce-b2b-enabled']).toBe(true);
+            expect(config.public.default['commerce-companies-enabled']).toBe(true);
+        });
+
+        it('should not inject B2B flags for a package without configFlags', () => {
+            const params: ConfigGeneratorParams = {
+                ...baseParams,
+                selectedPackage: 'isle5',
             };
 
             const result = generateConfigJson(params, mockLogger);
