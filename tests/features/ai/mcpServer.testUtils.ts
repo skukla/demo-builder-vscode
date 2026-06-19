@@ -27,6 +27,11 @@ import * as path from 'path';
 jest.mock('fs/promises', () => ({
     readFile: jest.fn(),
     writeFile: jest.fn(),
+    // rename + unlink back the shared writeFileAtomic helper (temp write → atomic rename);
+    // appendFile backs the .gitignore updater. Resolve by default.
+    rename: jest.fn().mockResolvedValue(undefined),
+    unlink: jest.fn().mockResolvedValue(undefined),
+    appendFile: jest.fn().mockResolvedValue(undefined),
     readdir: jest.fn(),
     mkdir: jest.fn(),
     stat: jest.fn().mockResolvedValue({ size: 0 }), // default: .git exists, size 0 (below MAX_FILE_BYTES)

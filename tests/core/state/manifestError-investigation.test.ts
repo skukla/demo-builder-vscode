@@ -119,18 +119,14 @@ describe('Manifest Error Investigation', () => {
 
     describe('ISSUE 2: Race condition - temp file missing before rename', () => {
         it('should detect when temp file disappears after write but before rename', async () => {
-            // Given: A project and temp file that "disappears" between write and verify
+            // Given: writeFile succeeds, but the temp file is gone by the time rename runs.
+            // The atomic helper (writeFileAtomic) surfaces this as an ENOENT from rename(2) —
+            // there is no separate temp-file access check to intercept it.
             const project = createTestProject();
-            const tempPath = path.join(project.path, '.demo-builder.json.tmp');
-
-            // Simulate: writeFile succeeds, but access fails (temp file gone)
             mockFs.writeFile.mockResolvedValue(undefined);
-            mockFs.access.mockImplementation(async (filePath) => {
-                if (filePath === tempPath) {
-                    throw new Error('ENOENT: no such file or directory');
-                }
-                return undefined;
-            });
+            const enoentError = new Error('ENOENT: no such file or directory, rename');
+            (enoentError as Error & { code: string }).code = 'ENOENT';
+            mockFs.rename.mockRejectedValue(enoentError);
 
             // When: Attempting to save
             await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow('ENOENT');

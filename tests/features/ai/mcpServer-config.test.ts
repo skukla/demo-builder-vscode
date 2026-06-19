@@ -33,11 +33,13 @@ describe('toolHandlers.updateProjectConfig', () => {
             '{"name":"test"}',
         );
 
+        // Atomic write: content goes to a sibling .tmp, then rename(2) swaps it in.
+        const manifestPath = path.resolve(PROJECT_PATH, '.demo-builder.json');
         expect(fsProm.writeFile as jest.Mock).toHaveBeenCalledWith(
-            path.resolve(PROJECT_PATH, '.demo-builder.json'),
+            `${manifestPath}.tmp`,
             '{"name":"test"}',
-            'utf-8',
         );
+        expect(fsProm.rename as jest.Mock).toHaveBeenCalledWith(`${manifestPath}.tmp`, manifestPath);
         expect(result).toContain('.demo-builder.json');
     });
 
