@@ -93,9 +93,9 @@ describe('demo-packages.json', () => {
     });
 
     describe('structure validation - packages', () => {
-        it('should have packages array with exactly 5 packages', () => {
+        it('should have packages array with exactly 4 packages', () => {
             expect(Array.isArray(packagesConfig.packages)).toBe(true);
-            expect(packagesConfig.packages.length).toBe(5);
+            expect(packagesConfig.packages.length).toBe(4);
         });
 
         it('should have unique package IDs', () => {
@@ -104,25 +104,26 @@ describe('demo-packages.json', () => {
             expect(uniqueIds.size).toBe(ids.length);
         });
 
-        it('should have citisignal, isle5, buildright, custom, and b2b packages', () => {
+        it('should have citisignal, isle5, buildright, and custom packages', () => {
             const ids = packagesConfig.packages.map(p => p.id);
             expect(ids).toContain('citisignal');
             expect(ids).toContain('isle5');
             expect(ids).toContain('buildright');
             expect(ids).toContain('custom');
-            expect(ids).toContain('b2b');
             // citisignal-b2b retired — merged into the hybrid `citisignal` package.
             expect(ids).not.toContain('citisignal-b2b');
+            // `b2b` id retired — the unbranded hybrid is now `custom` ("Custom (B2B + B2C)").
+            expect(ids).not.toContain('b2b');
         });
     });
 
     describe('structure validation - storefronts', () => {
-        it('should have 10 storefronts total across all packages', () => {
+        it('should have 8 storefronts total across all packages', () => {
             let totalStorefronts = 0;
             packagesConfig.packages.forEach(pkg => {
                 totalStorefronts += Object.keys(pkg.storefronts).length;
             });
-            expect(totalStorefronts).toBe(10);
+            expect(totalStorefronts).toBe(8);
         });
 
         it('should have isle5 with 2 storefronts', () => {
@@ -179,7 +180,6 @@ describe('demo-packages.json', () => {
         it('should have contentSource for branded EDS storefronts', () => {
             packagesConfig.packages.forEach(pkg => {
                 if ((pkg as Record<string, unknown>).status === 'coming-soon') return;
-                if (pkg.id === 'custom') return;
                 Object.entries(pkg.storefronts).forEach(([stackId, storefront]) => {
                     if (stackId.startsWith('eds-')) {
                         expect((storefront as Record<string, unknown>).contentSource).toBeDefined();
@@ -188,18 +188,6 @@ describe('demo-packages.json', () => {
                         expect(contentSource.site).toBeDefined();
                     }
                 });
-            });
-        });
-
-        it('should have contentSource for Custom package storefronts (boilerplate content)', () => {
-            const custom = packagesConfig.packages.find(p => p.id === 'custom');
-            expect(custom).toBeDefined();
-            Object.values(custom!.storefronts).forEach(storefront => {
-                const sf = storefront as Record<string, unknown>;
-                expect(sf.contentSource).toBeDefined();
-                const contentSource = sf.contentSource as { org: string; site: string };
-                expect(contentSource.org).toBe('hlxsites');
-                expect(contentSource.site).toBe('aem-boilerplate-commerce');
             });
         });
     });

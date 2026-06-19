@@ -14,6 +14,29 @@ import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
 import { getComponentInstancesByType, parseJSON } from '@/types/typeGuards';
 
+/**
+ * Backward-compat normalization for demo-package ids that have been renamed.
+ *
+ * Projects are local `.demo-builder.json` files of arbitrary age, and users can
+ * skip extension versions on upgrade — so there is no point at which every
+ * on-disk manifest is provably migrated. This map is therefore **permanent**
+ * (not a temporary shim): it normalizes a persisted id to its current value at
+ * the load boundary, and the current id is rewritten on the next save. Add a
+ * line whenever a package id is retired/renamed; never remove lines.
+ *
+ * - `b2b` → `custom`        : the B2B boilerplate became the unbranded hybrid
+ * - `citisignal-b2b` → `citisignal` : merged into the hybrid citisignal package
+ */
+const RENAMED_PACKAGE_IDS: Readonly<Record<string, string>> = {
+    b2b: 'custom',
+    'citisignal-b2b': 'citisignal',
+};
+
+/** Normalize a persisted (possibly renamed) package id to its current value. */
+export function normalizePackageId(id: string | undefined): string | undefined {
+    return id ? (RENAMED_PACKAGE_IDS[id] ?? id) : id;
+}
+
 export interface ProjectManifest {
     name?: string;
     created?: string;
@@ -89,7 +112,7 @@ export class ProjectFileLoader {
                 meshState: manifest.meshState,
                 edsStorefrontState: manifest.edsStorefrontState,
                 edsStorefrontStatusSummary: manifest.edsStorefrontStatusSummary,
-                selectedPackage: manifest.selectedPackage,
+                selectedPackage: normalizePackageId(manifest.selectedPackage),
                 selectedStack: manifest.selectedStack,
                 selectedAddons: manifest.selectedAddons,
                 selectedBlockLibraries: manifest.selectedBlockLibraries,

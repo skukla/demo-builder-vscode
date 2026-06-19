@@ -173,16 +173,18 @@ describe('demoPackageLoader (logic, injected fixture)', () => {
 });
 
 describe('shipped demo-packages.json (config integrity)', () => {
-    it('ships exactly 5 packages (citisignal, isle5, buildright, custom, b2b)', async () => {
+    it('ships exactly 4 packages (citisignal, isle5, buildright, custom)', async () => {
         const packages = await loadDemoPackages();
 
-        expect(packages.length).toBe(5);
+        expect(packages.length).toBe(4);
         const ids = packages.map(p => p.id);
         expect(ids).toEqual(
-            expect.arrayContaining(['citisignal', 'isle5', 'buildright', 'custom', 'b2b'])
+            expect.arrayContaining(['citisignal', 'isle5', 'buildright', 'custom'])
         );
         // citisignal-b2b retired — merged into the hybrid `citisignal` package.
         expect(ids).not.toContain('citisignal-b2b');
+        // `b2b` id retired — the unbranded hybrid is now `custom` ("Custom (B2B + B2C)").
+        expect(ids).not.toContain('b2b');
     });
 
     it('every package has the required structural properties', async () => {

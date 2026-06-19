@@ -417,14 +417,14 @@ describe('configGenerator', () => {
             environmentType: 'paas',
         };
 
-        it('should inject B2B config flags for the b2b package', () => {
+        it('should inject B2B config flags for the custom (unbranded hybrid) package', () => {
             // The commerce-account-nav block only builds links inside an
             // auth/permissions callback, which fires only when
-            // commerce-b2b-enabled === true. The b2b package declares these
-            // flags in demo-packages.json (configFlags).
+            // commerce-b2b-enabled === true. The custom package (the unbranded
+            // B2B+B2C hybrid) declares these flags in demo-packages.json (configFlags).
             const params: ConfigGeneratorParams = {
                 ...baseParams,
-                selectedPackage: 'b2b',
+                selectedPackage: 'custom',
             };
 
             const result = generateConfigJson(params, mockLogger);
@@ -491,21 +491,21 @@ describe('configGenerator', () => {
 
         it('extractConfigParams threads selectedPackage from the project (reset path)', () => {
             const project = {
-                selectedPackage: 'b2b',
+                selectedPackage: 'custom',
                 componentConfigs: {},
                 componentSelections: { backend: 'adobe-commerce-paas' },
             } as unknown as Project;
 
             const params = extractConfigParams(project);
 
-            expect(params.selectedPackage).toBe('b2b');
+            expect(params.selectedPackage).toBe('custom');
         });
     });
 
     describe('buildConfigGeneratorParams', () => {
         function projectWithEdsMetadata(overrides: Record<string, unknown> = {}): Project {
             return {
-                selectedPackage: 'b2b',
+                selectedPackage: 'custom',
                 componentConfigs: {},
                 componentSelections: { backend: 'adobe-commerce-paas' },
                 componentInstances: {
@@ -530,7 +530,7 @@ describe('configGenerator', () => {
             expect(params.daLiveOrg).toBe('acme-da-org');
             expect(params.daLiveSite).toBe('acme-da-site');
             // Threaded from extractConfigParams (proves the spread happened)
-            expect(params.selectedPackage).toBe('b2b');
+            expect(params.selectedPackage).toBe('custom');
             expect(params.environmentType).toBe('paas');
         });
 

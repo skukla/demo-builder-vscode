@@ -291,7 +291,7 @@ describe('ProjectSetupContext', () => {
 
     describe('getSelectedPackage()', () => {
         it('should return selectedPackage from config', () => {
-            const configWithPackage = { ...mockConfig, selectedPackage: 'b2b' };
+            const configWithPackage = { ...mockConfig, selectedPackage: 'custom' };
             const context = new ProjectSetupContext(
                 mockHandlerContext,
                 mockRegistry,
@@ -299,7 +299,7 @@ describe('ProjectSetupContext', () => {
                 configWithPackage,
             );
 
-            expect(context.getSelectedPackage()).toBe('b2b');
+            expect(context.getSelectedPackage()).toBe('custom');
         });
 
         it('should return undefined when selectedPackage is missing', () => {
