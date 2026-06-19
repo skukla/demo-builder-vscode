@@ -118,6 +118,51 @@ async function checkAdobeAuth(
 }
 
 /**
+ * Ensure the current token reaches the project's Adobe org before the
+ * (destructive) reset, recovering INLINE on mismatch. Uses the canonical
+ * action-time gate ensureProjectOrgContext — it shows a "Switch IMS Org" / Cancel
+ * prompt right here, does the forced sign-in, re-verifies, and lets the reset
+ * continue once the right org is active (no dependency on the passive dashboard
+ * banner, which hides when the token can't be checked). Self-skips when the
+ * project has no Adobe org.
+ *
+ * @returns null when the org is reachable (proceed), or an EdsResetResult when the
+ *   user cancelled or the switch didn't land in the right org (status restored).
+ */
+async function checkOrgContext(
+    project: Project,
+    context: HandlerContext,
+    originalStatus: ProjectStatus,
+    logPrefix: string,
+): Promise<EdsResetResult | null> {
+    const { ensureProjectOrgContext } = await import(
+        '@/features/authentication/services/ensureProjectOrgContext'
+    );
+    const { ServiceLocator } = await import('@/core/di');
+    const authService = ServiceLocator.getAuthenticationService();
+
+    const result = await ensureProjectOrgContext({
+        authManager: authService,
+        project,
+        logger: context.logger,
+        logPrefix,
+    });
+    if (result.reachable) return null;
+
+    context.logger.warn(
+        `${logPrefix} resetEds: aborted — project org not reachable (cancelled=${result.cancelled})`,
+    );
+    project.status = originalStatus;
+    await context.stateManager.saveProject(project);
+    return {
+        success: false,
+        error: 'Adobe organization mismatch',
+        errorType: 'ORG_MISMATCH',
+        cancelled: result.cancelled,
+    };
+}
+
+/**
  * Check GitHub App installation and prompt user if not installed.
  * @returns null if installed or user chose to continue, or an EdsResetResult if cancelled.
  */
@@ -289,10 +334,19 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
                 const meshComponent = getMeshComponentInstance(project);
                 const hasMesh = !!meshComponent?.path;
 
-                if (hasMesh) {
+                // Adobe auth + org-mismatch pre-flight runs for any project carrying
+                // an Adobe org — that covers mesh (a mesh IS an Adobe I/O project, so
+                // it always has `project.adobe`) AND non-mesh ACCS. This ensures a
+                // reset never runs against the wrong org; the gate aborts with a
+                // "Switch IMS Org" prompt, mirroring DeployMeshCommand.
+                if (project.adobe?.organization) {
                     progress.report({ message: 'Checking Adobe I/O authentication...' });
                     const adobeResult = await checkAdobeAuth(project, context, originalStatus, logPrefix);
                     if (adobeResult) return adobeResult;
+
+                    progress.report({ message: 'Checking Adobe organization...' });
+                    const orgResult = await checkOrgContext(project, context, originalStatus, logPrefix);
+                    if (orgResult) return orgResult;
                 }
 
                 progress.report({ message: 'Checking GitHub App...' });

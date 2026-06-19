@@ -50,6 +50,13 @@ jest.mock('@/core/di', () => ({
     },
 }));
 
+// Mock ensureProjectOrgContext — the inline action-time org gate used by
+// checkOrgContext (it owns the "Switch IMS Org" prompt + forced login internally).
+const mockEnsureProjectOrgContext = jest.fn();
+jest.mock('@/features/authentication/services/ensureProjectOrgContext', () => ({
+    ensureProjectOrgContext: (...args: unknown[]) => mockEnsureProjectOrgContext(...args),
+}));
+
 jest.mock('vscode', () => ({
     window: {
         showWarningMessage: jest.fn(),
@@ -212,6 +219,10 @@ describe('edsResetUI - checkDaLiveAuth (refactored to use ensureDaLiveAuth)', ()
 
         // User confirms reset by default
         (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reset Project');
+        // Adobe auth + org gate now run for any Adobe-context project (the fixture
+        // has an org), so default them to passing for the DA.live-focused cases.
+        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
+        mockEnsureProjectOrgContext.mockResolvedValue({ reachable: true });
     });
 
     it('should return null (continue) when DA.live auth is valid', async () => {
@@ -295,6 +306,8 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
         (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reset Project');
         // DA.live auth succeeds by default
         mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
+        // Org gate reachable by default (mismatch cases override per-test)
+        mockEnsureProjectOrgContext.mockResolvedValue({ reachable: true });
     });
 
     it('should return null (continue) when Adobe I/O auth is valid', async () => {
@@ -366,18 +379,67 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
         expect(result.errorType).toBe('ADOBE_AUTH_REQUIRED');
     });
 
-    it('should skip Adobe I/O auth check when project has no mesh', async () => {
-        // Given: Project without mesh component
-        const project = createProject(false); // no mesh
+    it('runs Adobe I/O auth for an Adobe-context project even without a mesh (ACCS)', async () => {
+        // Given: a non-mesh project that still has an Adobe org (e.g. ACCS)
+        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
+        const project = createProject(false); // no mesh, but createProject sets adobe org
         const context = createMockContext();
 
         // When
         const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
 
-        // Then: ensureAdobeIOAuth should NOT have been called
-        expect(mockEnsureAdobeIOAuth).not.toHaveBeenCalled();
+        // Then: Adobe auth IS checked (org-scoped resources exist), and reset proceeds
+        expect(mockEnsureAdobeIOAuth).toHaveBeenCalled();
+        expect(result.success).toBe(true);
+    });
 
-        // And: Reset should proceed with just DA.live auth
+    it('skips Adobe auth + org checks when the project has no Adobe org', async () => {
+        // Given: a project with no Adobe context at all
+        const project = createProject(false);
+        delete (project as unknown as { adobe?: unknown }).adobe;
+        const context = createMockContext();
+
+        // When
+        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
+
+        // Then: neither Adobe auth nor the org gate run
+        expect(mockEnsureAdobeIOAuth).not.toHaveBeenCalled();
+        expect(mockEnsureProjectOrgContext).not.toHaveBeenCalled();
+        expect(result.success).toBe(true);
+    });
+
+    it('aborts the reset with ORG_MISMATCH when the org gate is not satisfied', async () => {
+        // Given: signed in, but the user cancelled / switch didn't reach the org.
+        // ensureProjectOrgContext owns the inline "Switch IMS Org" prompt + forced
+        // login; here it reports the org still unreachable.
+        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
+        mockEnsureProjectOrgContext.mockResolvedValue({ reachable: false, cancelled: true });
+        const { executeEdsReset } = jest.requireMock('@/features/eds/services/edsResetService');
+        const project = createProject(false); // ACCS, no mesh
+        const context = createMockContext();
+
+        // When
+        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
+
+        // Then: aborted before any destructive work
+        expect(result.success).toBe(false);
+        expect(result.errorType).toBe('ORG_MISMATCH');
+        expect(result.cancelled).toBe(true);
+        expect(executeEdsReset).not.toHaveBeenCalled();
+    });
+
+    it('proceeds with the reset when the org gate is satisfied (reachable / switched)', async () => {
+        // Given: signed in and the org gate reports reachable (incl. after a switch)
+        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
+        mockEnsureProjectOrgContext.mockResolvedValue({ reachable: true });
+        const project = createProject(false);
+        const context = createMockContext();
+
+        // When
+        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
+
+        // Then: org gate passes, reset proceeds
+        expect(mockEnsureProjectOrgContext).toHaveBeenCalled();
         expect(result.success).toBe(true);
     });
 
