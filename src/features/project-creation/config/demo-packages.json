@@ -188,6 +188,10 @@
         "ACCS_STORE_CODE": "main_website_store",
         "ACCS_STORE_VIEW_CODE": "default"
       },
+      "configFlags": {
+        "commerce-b2b-enabled": true,
+        "commerce-companies-enabled": true
+      },
       "storefronts": {
         "eds-paas": {
           "name": "B2B EDS + PaaS",

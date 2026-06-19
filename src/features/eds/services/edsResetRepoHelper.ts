@@ -12,7 +12,7 @@
 import { installBlockCollections } from './blockCollectionHelpers';
 import { applyCanonicalCodePatches } from './codePatchPipelineHelpers';
 import type { CodePatchResult } from './codePatchRegistry';
-import { generateConfigJson, extractConfigParams } from './configGenerator';
+import { generateConfigJson, buildConfigGeneratorParams } from './configGenerator';
 import { assertValidGitHubSlug, type EdsResetParams } from './edsResetParams';
 import { generateFstabContent } from './fstabGenerator';
 import type { GitHubFileOperations } from './githubFileOperations';
@@ -236,11 +236,7 @@ export async function resetRepoToTemplate(
     fileOverrides.set('fstab.yaml', fstabContent);
 
     // Generate config.json with Commerce configuration
-    const configParams = {
-        githubOwner: repoOwner, repoName, daLiveOrg, daLiveSite,
-        ...extractConfigParams(project),
-    };
-    const configResult = generateConfigJson(configParams, context.logger);
+    const configResult = generateConfigJson(buildConfigGeneratorParams(project), context.logger);
     if (configResult.success && configResult.content) {
         fileOverrides.set('config.json', configResult.content);
         fileOverrides.set('demo-config.json', configResult.content);

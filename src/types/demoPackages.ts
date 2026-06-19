@@ -218,6 +218,13 @@ export interface DemoPackage {
     /** Default configuration values (env var name to value) - embedded brand data */
     configDefaults: Record<string, string>;
 
+    /**
+     * Storefront config.json public flags injected for this package
+     * (e.g., commerce-b2b-enabled). Merged into config.public.default by the
+     * config generator — data-driven, mirrors addon configFlags.
+     */
+    configFlags?: Record<string, boolean>;
+
     /** Storefronts keyed by stack ID (e.g., 'headless-paas', 'eds-paas', 'eds-accs') */
     storefronts: Record<string, Storefront>;
 }

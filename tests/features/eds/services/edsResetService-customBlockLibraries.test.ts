@@ -44,6 +44,7 @@ jest.mock('@/features/eds/services/fstabGenerator', () => ({
 jest.mock('@/features/eds/services/configGenerator', () => ({
     generateConfigJson: jest.fn().mockReturnValue({ success: true, content: '{}' }),
     extractConfigParams: jest.fn().mockReturnValue({}),
+    buildConfigGeneratorParams: jest.fn().mockReturnValue({}),
 }));
 
 jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({

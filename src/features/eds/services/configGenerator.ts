@@ -20,7 +20,7 @@
  */
 
 import configTemplate from '../config/config-template.json';
-import { isMeshComponentId } from '@/core/constants';
+import { isMeshComponentId, COMPONENT_IDS } from '@/core/constants';
 import componentsConfig from '@/features/components/config/components.json';
 import {
     PAAS_GRAPHQL_ENDPOINT, PAAS_ENVIRONMENT_ID, PAAS_STORE_VIEW_CODE,
@@ -29,6 +29,7 @@ import {
     ACCS_GRAPHQL_ENDPOINT, ACCS_STORE_VIEW_CODE, ACCS_STORE_CODE,
     ACCS_WEBSITE_CODE, ACCS_CUSTOMER_GROUP,
 } from '@/features/components/config/envVarKeys';
+import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
 import type { Logger , Project } from '@/types';
 
 // Bundled template - single source of truth
@@ -81,6 +82,8 @@ export interface ConfigGeneratorParams {
     aemAssetsEnabled?: boolean;
     /** Selected addon IDs (e.g., ['adobe-commerce-aco']) */
     selectedAddons?: string[];
+    /** Selected demo package ID (e.g., 'b2b') - drives package-level configFlags */
+    selectedPackage?: string;
 }
 
 /**
@@ -288,6 +291,36 @@ export function extractConfigParams(project: Project): Partial<ConfigGeneratorPa
             project.componentSelections?.backend,
         ),
         selectedAddons: project.selectedAddons,
+        selectedPackage: project.selectedPackage,
+    };
+}
+
+/**
+ * Build a complete {@link ConfigGeneratorParams} for an existing project.
+ *
+ * Resolves the GitHub/DA.live repo coordinates from the EDS storefront component's
+ * saved metadata and spreads in {@link extractConfigParams}. This is the single
+ * assembly point shared by EDS Reset and storefront republish — both previously
+ * hand-rolled the identical `{ githubOwner, repoName, daLiveOrg, daLiveSite,
+ * ...extractConfigParams(project) }` object from the same metadata source.
+ *
+ * Coordinates are validated upstream (extractResetParams / extractRepublishParams)
+ * before reaching config generation; missing metadata falls back to empty strings.
+ *
+ * @param project - The project to build generation params from
+ * @returns Full ConfigGeneratorParams ready for generateConfigJson
+ */
+export function buildConfigGeneratorParams(project: Project): ConfigGeneratorParams {
+    const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+    const metadata = edsInstance?.metadata as Record<string, unknown> | undefined;
+    const [githubOwner = '', repoName = ''] = String(metadata?.githubRepo ?? '').split('/');
+
+    return {
+        githubOwner,
+        repoName,
+        daLiveOrg: String(metadata?.daLiveOrg ?? ''),
+        daLiveSite: String(metadata?.daLiveSite ?? ''),
+        ...extractConfigParams(project),
     };
 }
 
@@ -315,6 +348,30 @@ function injectAddonConfigFlags(
             Object.assign(config.public.default, flags);
             logger.debug(`[ConfigGenerator] Injected config flags for addon: ${addonId}`);
         }
+    }
+}
+
+/**
+ * Inject demo-package-specific config flags into the config object.
+ *
+ * Reads configFlags from the selected package definition in demo-packages.json
+ * and merges them into config.public.default. This is data-driven — any package
+ * with a `configFlags` object will have its flags injected. The B2B package uses
+ * this to set commerce-b2b-enabled / commerce-companies-enabled, which gate the
+ * auth/permissions event the commerce-account-nav block depends on.
+ */
+function injectPackageConfigFlags(
+    config: Record<string, Record<string, Record<string, unknown>>>,
+    selectedPackage: string,
+    logger: Logger,
+): void {
+    const packages = (demoPackagesConfig as { packages?: Array<{ id: string; configFlags?: Record<string, boolean> }> }).packages;
+    const pkg = packages?.find((p) => p.id === selectedPackage);
+    const flags = pkg?.configFlags;
+
+    if (flags && config.public?.default) {
+        Object.assign(config.public.default, flags);
+        logger.debug(`[ConfigGenerator] Injected config flags for package: ${selectedPackage}`);
     }
 }
 
@@ -369,10 +426,16 @@ export function generateConfigJson(
             '{AEM_ASSETS_ENABLED}': params.aemAssetsEnabled ? 'true' : 'false',
         };
 
-        // Convert to string, replace all placeholders, parse back
+        // Convert to string, replace all placeholders, parse back.
+        // Placeholders sit INSIDE JSON string literals, so each value must be
+        // JSON-string-escaped before substitution — otherwise a value containing
+        // a quote, backslash, or newline would corrupt the JSON and fail the parse
+        // below. JSON.stringify(value).slice(1, -1) yields the escaped inner text
+        // without the surrounding quotes.
         let configStr = JSON.stringify(config, null, 2);
         for (const [placeholder, value] of Object.entries(replacements)) {
-            configStr = configStr.split(placeholder).join(value);
+            const escaped = JSON.stringify(value).slice(1, -1);
+            configStr = configStr.split(placeholder).join(escaped);
         }
 
         // Parse back to object to handle special conversions
@@ -402,6 +465,11 @@ export function generateConfigJson(
         // Inject addon-specific config flags
         if (params.selectedAddons?.length) {
             injectAddonConfigFlags(finalConfig, params.selectedAddons, logger);
+        }
+
+        // Inject demo-package-specific config flags (e.g., B2B flags)
+        if (params.selectedPackage) {
+            injectPackageConfigFlags(finalConfig, params.selectedPackage, logger);
         }
 
         // Serialize with proper formatting
