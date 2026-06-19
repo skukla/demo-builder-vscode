@@ -19,6 +19,8 @@ The `features/` directory contains self-contained feature modules organized by b
 ```
 features/
 ├── ai/                  # AI context verification + in-extension MCP server
+├── ai/                  # AI context verification + in-extension MCP server
+├── app-builder/         # App Builder app attach/deploy (→ README.md)
 ├── authentication/       # Adobe authentication & SDK
 │   ├── index.ts         # Public API exports
 │   ├── services/        # Authentication services
@@ -90,6 +92,46 @@ features/my-feature/
 - In-extension MCP server for AI agent tool access via Claude Code (CLI), reached through the per-project `.mcp.json` (which points at the `dist/mcp-proxy.js` stdio↔socket forwarder); the former standalone process and global `~/.claude.json` registration are retired
 
 **Path Alias**: `@/features/ai`
+
+---
+
+### app-builder
+
+**Purpose**: Attach and deploy ONE custom Adobe App Builder app to an existing demo project,
+dashboard-first. Sibling of the mesh deploy path (not a fork): a demo workspace holds the API
+Mesh (separate artifact) **+ at most one** custom app, so app state is **singular**
+(`project.appState`, mirroring `meshState`) — no keyed array. Multiple integration domains
+live as multiple packages *inside* that one app.
+
+**Key Services:**
+- `deployAppComponent(path, cmdMgr, logger, onProgress?)` (`services/appDeployment.ts`) -
+  org-agnostic deploy helper: shared `buildComponent` → `aio app deploy` (idempotent, issued
+  once) → defensive parse of `aio app get-url --json` into `{ url, deployedUrls }`. Callers
+  wrap it in `withOrgContext`, exactly like `deployMeshComponent`.
+- `addAppComponent` / `removeAppComponent` (`services/appComponentManager.ts`) - additive
+  add/remove on a LIVE project. Add validates a **public GitHub URL** (canonicalized to
+  `https://github.com/owner/repo.git`; owner/repo charset-validated to reject shell
+  metacharacters), enforces the singular guard, and clones+installs via
+  `componentManager.installComponent` (leaving siblings untouched). Remove undeploys remotely
+  (`aio app undeploy`, best-effort, org-context targeted) then cleans up local files + state.
+- `DeployAppCommand` (`commands/deployApp.ts`) - dashboard command mirroring `DeployMeshCommand`'s
+  guard order (lock → `ensureAdobeIOAuth` → `detectProjectOrgMismatch` →
+  `projectRequiresAppBuilder` + `testDeveloperPermissions` → `withOrgContext(deployAppComponent)`
+  → persist `appState` + `appStatusSummary`).
+
+**Responsibilities:**
+- First-class `appBuilder` registry category + `componentSelections.appBuilder` round-trip
+- Singular app deploy/redeploy/remove from the dashboard `AppBuilderCard`
+  (No-app / Deploying / Deployed / Error states)
+- Reuses (no fork): `withOrgContext` + `buildOrgTargetFromProjectAdobe`, `CommandExecutor`,
+  `componentManager.installComponent`/`removeComponent`, `ensureAdobeIOAuth`,
+  `detectProjectOrgMismatch`, the dashboard status channel. Only new abstraction is the shared
+  `buildComponent` step (two callers, byte-identical).
+
+**Scope (slice 1 of 5):** deploy spine only. Deferred to later slices: curated catalog,
+package-binding, scaffolding, app-only projects, multi-workspace + API-subscription.
+
+**Path Alias**: `@/features/app-builder`
 
 ---
 

@@ -31,6 +31,7 @@ root.render(
                 initialMeshStatus={data?.initialMeshStatus}
                 initialEdsStorefrontStatus={data?.initialEdsStorefrontStatus}
                 hasAdobeContext={data?.hasAdobeContext}
+                initialApp={data?.initialApp}
             />
         )}
     </WebviewApp>,

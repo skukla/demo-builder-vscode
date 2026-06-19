@@ -12,9 +12,10 @@
  * uses the same predicate before invoking `testDeveloperPermissions()`.
  *
  * What counts as "an App Builder component" is defined by the component
- * registry — specifically, anything in the `mesh` section of `components.json`
- * (API Mesh is App-Builder-hosted). Adding a new App Builder component
- * category to the registry extends this predicate.
+ * registry — anything in the `mesh` section (API Mesh is App-Builder-hosted)
+ * or the `appBuilder` section (custom App Builder apps) of `components.json`.
+ * Adding a new App Builder component category to the registry extends this
+ * predicate.
  *
  * @module features/components/services/projectAppBuilderPredicate
  */
@@ -40,7 +41,10 @@ export function projectRequiresAppBuilder(
     if (!project?.componentInstances) return false;
 
     const appBuilderIds = new Set<string>(
-        (registry.components.mesh ?? []).map((c) => c.id),
+        [
+            ...(registry.components.mesh ?? []),
+            ...(registry.components.appBuilder ?? []),
+        ].map((c) => c.id),
     );
 
     return Object.values(project.componentInstances).some(

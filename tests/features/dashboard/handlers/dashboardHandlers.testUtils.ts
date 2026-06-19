@@ -11,6 +11,7 @@ jest.mock('@/features/authentication');
 jest.mock('@/core/di', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
+        getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })),
     },
 }));
 jest.mock('@/core/validation', () => ({
@@ -108,6 +109,7 @@ export function setupMocks(projectOverrides?: Partial<Project>): TestMocks {
     ServiceLocator.getAuthenticationService.mockReturnValue({
         isAuthenticated: jest.fn().mockResolvedValue(true),
         getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 60 }),
+        getCachedOrganization: jest.fn().mockReturnValue(undefined),
     });
 
     const mockContext = {

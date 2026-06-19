@@ -17,6 +17,7 @@ import {
 import React, { useState, useEffect, useRef } from 'react';
 import { ActionGrid } from './components/ActionGrid';
 import { AiCapabilitiesModal } from './components/AiCapabilitiesModal';
+import { AppBuilderCard, type AppCardState } from './components/AppBuilderCard';
 import { DashboardRenameDialog } from './components/DashboardRenameDialog';
 import { OrgContextNotice } from './components/OrgContextNotice';
 import { isStartActionDisabled } from './dashboardPredicates';
@@ -57,6 +58,18 @@ interface ProjectDashboardScreenProps {
     initialEdsStorefrontStatus?: 'published' | 'stale' | 'update-declined' | 'not-published';
     /** Whether the project has an Adobe org (drives the "Checking organization…" telegraph) */
     hasAdobeContext?: boolean;
+    /** Initial App Builder app state (from project.appState/appStatusSummary). Absent = no app. */
+    initialApp?: AppCardState;
+}
+
+/**
+ * Whether to render the App Builder card: shown when the project has an Adobe
+ * workspace to deploy into (so the "Add an App Builder app" affordance is
+ * reachable) or already carries an app. Extracted to keep the screen component's
+ * cyclomatic complexity in check.
+ */
+function shouldShowAppCard(hasAdobeContext: boolean | undefined, app: AppCardState | undefined): boolean {
+    return Boolean(hasAdobeContext) || Boolean(app);
 }
 
 /**
@@ -70,7 +83,7 @@ interface ProjectDashboardScreenProps {
  *
  * @param props - Component props
  */
-export function ProjectDashboardScreen({ project, hasMesh = false, brandName, stackName, isEds = false, edsLiveUrl, edsDaLiveUrl, authoringExperience, initialMeshStatus, initialEdsStorefrontStatus, hasAdobeContext }: ProjectDashboardScreenProps) {
+export function ProjectDashboardScreen({ project, hasMesh = false, brandName, stackName, isEds = false, edsLiveUrl, edsDaLiveUrl, authoringExperience, initialMeshStatus, initialEdsStorefrontStatus, hasAdobeContext, initialApp }: ProjectDashboardScreenProps) {
     // Capture isEds on first render and never change it (project type doesn't change)
     const isEdsRef = useRef(isEds);
     if (isEds && !isEdsRef.current) {
@@ -91,6 +104,13 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
     // open-time props) updated by the `authoringExperienceUpdate` message below.
     const [liveAuthoringExperience, setLiveAuthoringExperience] = useState(authoringExperience);
     const [liveEdsDaLiveUrl, setLiveEdsDaLiveUrl] = useState(edsDaLiveUrl);
+
+    // App Builder app state — seeded from initialApp (project.appState) and
+    // updated live by the `appStatusUpdate` channel (mirrors the mesh card). When
+    // initialApp is absent the project has no app yet; the card still renders its
+    // No-app ("Add an App Builder app") state as long as the project has Adobe
+    // context (see the render gate below).
+    const [appState, setAppState] = useState<AppCardState | undefined>(initialApp);
 
     // Tracks whether the user has attempted a forced org switch this session.
     // After an attempt that still leaves them mismatched, the banner adds a
@@ -193,6 +213,23 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
             if (payload.edsDaLiveUrl) {
                 setLiveEdsDaLiveUrl(payload.edsDaLiveUrl);
             }
+        });
+        return unsubscribe;
+    }, []);
+
+    // Subscribe to App Builder app status pushed by the deployApp command. Mirrors
+    // the meshStatusUpdate subscription: the payload's {status, message, url} maps
+    // straight onto the card's AppCardState.
+    useEffect(() => {
+        const unsubscribe = webviewClient.onMessage('appStatusUpdate', (data: unknown) => {
+            const payload = data as { status?: AppCardState['status']; message?: string; url?: string };
+            if (!payload.status) return;
+            setAppState(prev => ({
+                status: payload.status as AppCardState['status'],
+                message: payload.message,
+                url: payload.url ?? prev?.url,
+                deployedUrls: prev?.deployedUrls,
+            }));
         });
         return unsubscribe;
     }, []);
@@ -389,6 +426,17 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
                             handleDeleteProject={handleDeleteProject}
                         />
                     </div>
+
+                    {/* App Builder app card — sibling of the mesh surface. Shown
+                        whenever the project has an Adobe workspace to deploy into
+                        (so the "Add an App Builder app" affordance is reachable) or
+                        already carries an app. `appState` is undefined for a no-app
+                        project → the card renders its No-app state. */}
+                    {shouldShowAppCard(hasAdobeContext, appState) && (
+                        <div className="dashboard-grid-container">
+                            <AppBuilderCard app={appState} />
+                        </div>
+                    )}
                 </div>
             </PageLayout>
 

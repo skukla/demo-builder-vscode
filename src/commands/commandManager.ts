@@ -14,6 +14,7 @@ import { ResetAllCommand } from '@/core/commands/ResetAllCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { StateManager } from '@/core/state';
 import { openUrl } from '@/core/utils/browserUtils';
+import { DeployAppCommand } from '@/features/app-builder/commands/deployApp';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
 import { ShowAiCommand } from '@/features/dashboard/commands/openAi';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
@@ -200,6 +201,14 @@ export class CommandManager {
             this.logger,
         );
         this.registerCommand('demoBuilder.deployMesh', () => deployMesh.execute());
+
+        // Deploy App Builder app (sibling of deployMesh; dashboard-driven)
+        const deployApp = new DeployAppCommand(
+            this.context,
+            this.stateManager,
+            this.logger,
+        );
+        this.registerCommand('demoBuilder.deployApp', () => deployApp.execute());
 
         // Sync Storefront (EDS projects only — runs the same flow as the MCP
         // sync_storefront tool, with VS Code-native conflict resolution UX)

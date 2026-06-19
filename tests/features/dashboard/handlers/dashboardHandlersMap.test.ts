@@ -59,6 +59,16 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'deployMesh')).toBe(true);
         });
 
+        it('should include App Builder app handlers', () => {
+            // Given: dashboardHandlers object
+            // When: Checking for App Builder message types
+            // Then: add/deploy/redeploy/remove app handlers present
+            expect(hasHandler(dashboardHandlers, 'addApp')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'deployApp')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'redeployApp')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'removeApp')).toBe(true);
+        });
+
         it('should include authentication handlers', () => {
             // Given: dashboardHandlers object
             // When: Checking for auth message types
@@ -95,19 +105,20 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'setAuthoringExperience')).toBe(false);
         });
 
-        it('should have exactly 20 handlers', () => {
+        it('should have exactly 24 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers);
 
-            // Then: Exactly 20 handlers
+            // Then: Exactly 24 handlers
             // 1 init (requestStatus only; no 'ready') + 2 lifecycle + 6 navigation +
             // 1 mesh + 1 syncStorefront + 1 refreshBlockLibrary + 2 auth
             // (reAuthenticate + switchOrg) + 1 project + 1 reset = 16, plus the 4
             // More-menu actions (copyPath, exportProject, republishContent,
-            // renameProject) = 20. setAuthoringExperience lives in the Configure
-            // webview, not this map; openAi was removed with the dashboard AI tile.
-            expect(types).toHaveLength(20);
+            // renameProject) = 20, plus the 4 App Builder actions (addApp,
+            // deployApp, redeployApp, removeApp) = 24. setAuthoringExperience
+            // lives in the Configure webview, not this map.
+            expect(types).toHaveLength(24);
         });
 
         it('should have handlers as functions', () => {

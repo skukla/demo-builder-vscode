@@ -91,6 +91,11 @@ jest.mock('@adobe/react-spectrum', () => ({
         <a onClick={onPress} data-testid="sign-in-link" {...props}>{children}</a>
     ),
     DialogContainer: ({ children }: any) => <div data-testid="dialog-container">{children}</div>,
+    TextField: ({ label, value, onChange, ...props }: any) => (
+        <input aria-label={label} value={value ?? ''} onChange={(e) => onChange?.(e.target.value)} {...props} />
+    ),
+    ProgressCircle: ({ ...props }: any) => <div data-testid="progress-circle" {...props} />,
+    Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
 }));
 
 // Stub the capabilities modal — its real implementation renders the shared

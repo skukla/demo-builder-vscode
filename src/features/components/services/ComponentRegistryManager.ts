@@ -178,12 +178,14 @@ export class ComponentRegistryManager {
             backends: TransformedComponentDefinition[];
             dependencies: TransformedComponentDefinition[];
             mesh: TransformedComponentDefinition[];
+            appBuilder: TransformedComponentDefinition[];
             integrations: TransformedComponentDefinition[];
         } = {
             frontends: [],
             backends: [],
             dependencies: [],
             mesh: [],
+            appBuilder: [],
             integrations: [],
         };
 
@@ -194,6 +196,7 @@ export class ComponentRegistryManager {
             ...(raw.frontends || {}),       // v3.0.0: frontends section
             ...(raw.backends || {}),        // v3.0.0: backends section
             ...(raw.mesh || {}),            // v3.0.0: mesh section (contains commerce-mesh)
+            ...(raw.appBuilder || {}),      // App Builder app components
             ...(raw.dependencies || {}),    // v3.0.0: dependencies section
             ...(raw.integrations || {}),    // v3.0.0: integrations section
         };
@@ -226,6 +229,14 @@ export class ComponentRegistryManager {
             for (const id of Object.keys(raw.mesh)) {
                 const enhanced = enhanceComponent(id);
                 if (enhanced) components.mesh.push(enhanced);
+            }
+        }
+
+        // App Builder components load directly from the appBuilder section (mirrors mesh)
+        if (raw.appBuilder) {
+            for (const id of Object.keys(raw.appBuilder)) {
+                const enhanced = enhanceComponent(id);
+                if (enhanced) components.appBuilder.push(enhanced);
             }
         }
 
@@ -308,6 +319,11 @@ export class ComponentRegistryManager {
         return registry.components.mesh || [];
     }
 
+    async getAppBuilder(): Promise<TransformedComponentDefinition[]> {
+        const registry = await this.loadRegistry();
+        return registry.components.appBuilder || [];
+    }
+
     async getServices(): Promise<Record<string, ServiceDefinition>> {
         const registry = await this.loadRegistry();
         return registry.services || {};
@@ -325,6 +341,7 @@ export class ComponentRegistryManager {
             ...registry.components.backends,
             ...registry.components.dependencies,
             ...(registry.components.mesh || []),
+            ...(registry.components.appBuilder || []),
             ...(registry.components.integrations || []),
         ];
         return allComponents.find(c => c.id === id);

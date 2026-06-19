@@ -1078,11 +1078,20 @@ async function lookupComponentDef(
     } else if (compType === 'dependency') {
         const deps = await registryManager.getDependencies();
         componentDef = deps.find((d: { id: string }) => d.id === compId);
+    } else if (compType === 'app-builder') {
+        const apps = await registryManager.getAppBuilder();
+        componentDef = apps.find((a: { id: string }) => a.id === compId);
     }
 
     // Fallback: search all sections (e.g., mesh components in "mesh" section)
     if (!componentDef) {
         componentDef = await registryManager.getComponentById(compId);
+    }
+
+    // Tag app components so installed instances are distinguishable by
+    // getAppBuilderInstance (subType: 'app').
+    if (componentDef && compType === 'app-builder') {
+        componentDef = { ...componentDef, subType: 'app' };
     }
 
     return componentDef;
@@ -1137,9 +1146,9 @@ async function loadComponentDefinitions(
     const frontend = stack.frontend;
     // Use config dependencies (includes user-selected optional deps like mesh) or fall back to stack defaults
     const dependencies = typedConfig.components?.dependencies ?? stack.dependencies ?? [];
-    const appBuilder = typedConfig.selectedAddons?.filter(addon =>
-        !stack.optionalAddons?.some(opt => opt.id === addon),
-    ) || [];
+    // App Builder components come from the explicit user selection, NOT from
+    // selectedAddons (addons feed the ADDONS path, not app components).
+    const appBuilder = typedConfig.components?.appBuilder ?? [];
 
     context.logger.info(`[Project Creation] Stack "${stack.id}" components: frontend=${frontend}, dependencies=[${dependencies.join(', ')}]`);
 

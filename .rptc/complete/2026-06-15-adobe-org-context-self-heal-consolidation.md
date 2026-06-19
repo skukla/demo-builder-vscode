@@ -1,5 +1,17 @@
 # Adobe org-context: canonical self-heal + concurrency safety + agentic signaling
 
+> **✅ SHIPPED 2026-06-17** (merged to `develop`, `493aef17`). All three workstreams landed, with two
+> design divergences from the plan below: (1) **Facet B** used per-invocation `AIO_CONSOLE_*` env
+> targeting (the open-fork's approach 2 — `withOrgContext` / `orgContextEnv.ts`, no global mutation)
+> plus `ResourceLocker.executeExclusive` wired into `commandExecutor`, **not** the `AIO_CONFIG_FILE`
+> per-project store. (2) **Facet A** — the in-app org picker was built (`e552f503`) then
+> **deliberately removed** (`66f2888e`) in favor of sign-in-driven org resolution + forced-switch
+> recovery + dashboard org-context badge/banner. Facet C (typed non-retryable `ORG_MISMATCH` +
+> AGENTS.md/skills guidance) shipped as planned. Key commits: `66f2888e`, `fbf4aef2`, `67cb402f`,
+> `e552f503`, `ca426038`. Canonical approach captured in the `reference_canonical_org_context` memory.
+> Possible follow-up not in scope: the "open product question" (does headless+PaaS without mesh need
+> an App-Builder-entitled org at all?) remains open.
+
 > **PRIORITY: fix-first.** As of 2026-06-16 this blocks the multi-agent / multi-org workflow the
 > owner runs in practice (two agents, or a browser tab in org X + a CLI demo in org Y, competing for
 > `aio`'s single global context). It must be **definitively fixed and merged to `develop` before**

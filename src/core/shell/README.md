@@ -228,6 +228,34 @@ const commands: CommandConfig[] = [
 const results = await executor.executeSequence(commands, true);
 ```
 
+### buildComponent
+
+**Purpose**: Shared "npm install (+ optional `npm run build`)" step for a deployable
+component directory. Extracted so the API Mesh and App Builder deploy paths share one
+byte-identical build step instead of duplicating it (Rule of Three — two callers today;
+no generalized "deployable framework" until a third deployable type appears).
+
+**Signature**:
+```typescript
+buildComponent(
+    componentPath: string,
+    commandManager: CommandExecutor,
+    options: BuildComponentOptions,   // { nodeVersion: string | 'auto', logPrefix: string }
+    logger: Logger,
+    onProgress?: (message: string, subMessage?: string) => void,
+): Promise<void>
+```
+
+**Behavior**: runs `npm install` then, only if the component's `package.json` declares a
+`build` script, `npm run build` — both under the requested Node version (`'auto'` resolves
+to the Adobe CLI's Node version), with `enhancePath` and streaming. Throws on a non-zero
+exit so the caller's deploy tail can surface the failure.
+
+**Callers**:
+- `mesh/services/meshDeployment.ts` → `buildMeshComponent` (thin wrapper; its existing
+  tests are the regression gate for the extraction).
+- `app-builder/services/appDeployment.ts` → `deployAppComponent`.
+
 ## Types
 
 ### CommandResult
@@ -272,6 +300,17 @@ interface RetryStrategy {
     maxDelay: number;
     backoffFactor: number;
     shouldRetry?: (error: Error, attempt: number) => boolean;
+}
+```
+
+### BuildComponentOptions
+
+```typescript
+interface BuildComponentOptions {
+    /** Node version for install/build; 'auto' resolves to the Adobe CLI's version. */
+    nodeVersion: string | 'auto';
+    /** Log prefix, e.g. '[App Builder]' or '[Mesh]'. */
+    logPrefix: string;
 }
 ```
 

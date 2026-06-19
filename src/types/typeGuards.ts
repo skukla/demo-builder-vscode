@@ -491,3 +491,27 @@ export function getMeshEndpointUrl(
 ): string | undefined {
     return project?.meshState?.endpoint;
 }
+
+// =====================================================================
+// App Builder app accessors (subType === 'app')
+//
+// DISTINCT from the mesh accessors above: a demo workspace can hold BOTH a
+// mesh instance (subType 'mesh') and one custom App Builder app instance
+// (subType 'app'). These getters isolate the app instance — they do not
+// reuse or modify the mesh getters.
+// =====================================================================
+
+/**
+ * Get the App Builder app component instance from a project
+ *
+ * Finds the custom app using subType === 'app'. Singular: a demo workspace
+ * holds at most one custom App Builder app.
+ *
+ * @param project - The project to search (can be undefined/null)
+ * @returns The app ComponentInstance, or undefined if not found
+ */
+export function getAppBuilderInstance(
+    project: Project | undefined | null,
+): ComponentInstance | undefined {
+    return getComponentInstancesBySubType(project, 'app')[0];
+}

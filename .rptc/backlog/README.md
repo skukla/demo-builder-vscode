@@ -46,14 +46,17 @@ Also resolved since last index (were listed as pending): **jest worker force-exi
 
 ### A. In flight (active front)
 
-#### App Builder app family — attach via Model A ([`2026-06-15-integration-service-cleanup-and-discovery-token.md`](2026-06-15-integration-service-cleanup-and-discovery-token.md))
+#### App Builder app family — attach a deployable app to a demo ([`2026-06-17-appbuilder-app-deploy-spine.md`](2026-06-17-appbuilder-app-deploy-spine.md))
 
-Effort 1 (remove the dormant `integration-service` + the `appBuilderApps` mechanism) **shipped on `develop`** (`c98e5125`). Effort 2 (discovery least-privilege token): **DECLINED 2026-06-15** — no attacker exposure it closes; if at-rest plaintext ever matters, the cheap fix is VS Code Secret Storage, not a token.
+Add a custom Adobe App Builder app to a demo project as a first-class, deployable component — the App Builder analog of the component-first direction. **Decided model** (from [`../research/app-builder-app-structure/research.md`](../research/app-builder-app-structure/research.md)): one workspace per demo = the API Mesh (separate artifact) + **one** custom app, with multiple integration domains as **packages inside that one app** — so the singleton `meshState` shape fits and no keyed app array is needed. **Build principle:** reuse existing primitives (org targeting, command plumbing, clone/install, the block-library additive pattern), share the mesh deploy scaffold where duplication is real, and hold off on a generalized deployable framework until a 3rd deployable type appears (Rule of Three). Effort 1 (remove the dormant `integration-service` + `appBuilderApps` mechanism) shipped earlier (`c98e5125`); Effort 2 (discovery least-privilege token) **DECLINED 2026-06-15** (no attacker exposure it closes; VS Code Secret Storage is the cheap fix if at-rest plaintext ever matters).
 
-The actual feature — add 1+ App Builder apps to a demo project (**Model A**: user-supplied git repos deployed via `aio app deploy` into the demo's existing workspace; the Mesh lifecycle, multiplied) — is **live work on unmerged branches**, scoped as a **5-slice family**:
-- `feature/appbuilder-app-deploy-spine` — **slice 1/5** (deploy spine, `20fae62f`)
-- `feature/appbuilder-app-curated-catalog` — **slice 2**, stacked on slice 1
-- Slices 3–5 (package-binding, scaffolding, app-only projects / multi-workspace) + the per-slice backlog files (`2026-06-17-appbuilder-app-*.md`) live **only on those branches**, not on `develop`. Promote/merge them before treating the family breakdown as canonical here.
+Five sequenced slices; **slice 1 gates the rest**:
+
+1. **Deploy spine — ✅ LANDED on `develop`** ([`2026-06-17-appbuilder-app-deploy-spine.md`](2026-06-17-appbuilder-app-deploy-spine.md), `20fae62f`). `app-builder` registry category + `deployAppComponent` (sibling of mesh, idempotent `aio app deploy`) + singular `appState` + the dead `appBuilder` field wired through install/persist + block-library-style additive add/remove + role-gate extension + dashboard `AppBuilderCard`. Public git URL only. **Caveat:** Step-7 live `aio` probes (deploy-prune default, `app delete action` undeploy, trigger/rule orphan-on-rename) deferred to a live workspace.
+2. **Curated catalog — NEXT** ([`2026-06-17-appbuilder-app-curated-catalog.md`](2026-06-17-appbuilder-app-curated-catalog.md)). Pick a vetted baseline instead of typing a URL; same deploy engine, pure addition. `feature/appbuilder-app-curated-catalog` is stacked on slice 1 (no work yet) — rebase onto the post-merge `develop` to continue.
+3. **Package-bound — blocked on 1+2** ([`2026-06-17-appbuilder-app-package-bound.md`](2026-06-17-appbuilder-app-package-bound.md)). Auto-attach an app to a demo template via a `nativeForPackages`-style association; mostly config.
+4. **Scaffold-and-author — blocked on 1** ([`2026-06-17-appbuilder-app-scaffold-author.md`](2026-06-17-appbuilder-app-scaffold-author.md)). `aio app init` + AI authoring; the only slice with real new surface (code home + repo-creation decision). Needs a design pass before its plan locks.
+5. **App-only / no-storefront project — partial on 1, parallel** ([`2026-06-17-appbuilder-app-only-project.md`](2026-06-17-appbuilder-app-only-project.md)). Frontend-optional stack schema work; heaviest, least-coupled slice.
 
 #### Hybrid storefront — Tier 2 (B2B+B2C in one site) ([`hybrid-storefront-model/`](../plans/hybrid-storefront-model/overview.md) — still in `.rptc/plans/`)
 
