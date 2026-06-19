@@ -14,6 +14,14 @@ export { PollingService } from './pollingService';
 export { FileWatcher } from './fileWatcher';
 export { CommandSequencer } from './commandSequencer';
 
+// Org-context targeting (per-invocation AIO_CONSOLE_* env)
+export {
+    buildAioConsoleEnv,
+    buildOrgTargetFromProjectAdobe,
+    withOrgContext,
+    getActiveOrgContext,
+} from './orgContextEnv';
+
 // Types
 export type {
     CommandResult,
@@ -23,3 +31,4 @@ export type {
     CommandRequest,
     CommandConfig,
 } from './types';
+export type { OrgContextTarget } from './orgContextEnv';

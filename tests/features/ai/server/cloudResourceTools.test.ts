@@ -26,9 +26,16 @@ jest.mock('@/features/eds/services/daLiveOrgOperations', () => ({
 jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn(() => ({ deleteAllSiteContent: mockDeleteAllSiteContent })),
 }));
+jest.mock('@/features/ai/server/adobeTargetStore', () => ({
+    getAdobeTarget: jest.fn(() => ({ orgId: 'org-stored' })),
+    runWithAdobeTarget: jest.fn(async (fn: () => Promise<unknown>) => fn()),
+}));
 
 import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
+import { runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
+import { ErrorCode } from '@/types/errorCodes';
+import { AuthError } from '@/types/errors';
 import type { HandlerContext } from '@/types/handlers';
 
 const getGitHubServicesMock = getGitHubServices as jest.Mock;
@@ -219,6 +226,24 @@ describe('cloud-resource tools (DA.live)', () => {
                 sites: [{ name: 'b', lastModified: 2 }],
             });
         });
+
+        it('maps an ORG_MISMATCH error to a typed non-retryable result', async () => {
+            mockListOrgSites.mockRejectedValueOnce(new AuthError(ErrorCode.ORG_MISMATCH, 'wrong org'));
+            const s = fakeServer();
+            registerCloudResourceTools(s, ctxFactory);
+            expect(await s.call('list_dalive_sites', { org: 'acme' })).toMatchObject({
+                error_type: 'ORG_MISMATCH',
+                non_retryable: true,
+            });
+        });
+
+        it('runs the DA.live listing under the stored session org context', async () => {
+            mockListOrgSites.mockResolvedValueOnce([]);
+            const s = fakeServer();
+            registerCloudResourceTools(s, ctxFactory);
+            await s.call('list_dalive_sites', { org: 'acme' });
+            expect(runWithAdobeTarget).toHaveBeenCalled();
+        });
     });
 
     describe('cleanup_dalive_site', () => {
@@ -263,6 +288,22 @@ describe('cloud-resource tools (DA.live)', () => {
             const res = await s.call('cleanup_dalive_site', { org: 'acme', site: 'shop', confirm: true, confirmName: 'acme/shop' });
             expect(res).toEqual({ deleted: true, site: 'acme/shop', deletedCount: 7 });
             expect(mockDeleteAllSiteContent).toHaveBeenCalledWith('acme', 'shop');
+        });
+
+        it('maps an ORG_MISMATCH error to a typed non-retryable result', async () => {
+            mockDeleteAllSiteContent.mockRejectedValueOnce(new AuthError(ErrorCode.ORG_MISMATCH, 'wrong org'));
+            const s = fakeServer();
+            registerCloudResourceTools(s, ctxFactory);
+            const res = await s.call('cleanup_dalive_site', { org: 'acme', site: 'shop', confirm: true, confirmName: 'acme/shop' });
+            expect(res).toMatchObject({ error_type: 'ORG_MISMATCH', non_retryable: true });
+        });
+
+        it('runs the DA.live cleanup under the stored session org context', async () => {
+            mockDeleteAllSiteContent.mockResolvedValueOnce({ success: true, deletedCount: 0 });
+            const s = fakeServer();
+            registerCloudResourceTools(s, ctxFactory);
+            await s.call('cleanup_dalive_site', { org: 'acme', site: 'shop', confirm: true, confirmName: 'acme/shop' });
+            expect(runWithAdobeTarget).toHaveBeenCalled();
         });
     });
 });

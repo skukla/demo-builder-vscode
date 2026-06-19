@@ -64,13 +64,11 @@ export function createComponentSelection(overrides?: {
     backend?: string;
     dependencies?: string[];
     integrations?: string[];
-    appBuilder?: string[];
 }) {
     return {
         frontend: overrides?.frontend ?? 'react-app',
         backend: overrides?.backend ?? 'commerce-paas',
         dependencies: overrides?.dependencies ?? [],
         integrations: overrides?.integrations ?? [],
-        appBuilder: overrides?.appBuilder ?? [],
     };
 }

@@ -18,13 +18,11 @@ jest.mock('@/types/typeGuards');
 
 import { OrganizationValidator } from '@/features/authentication/services/organizationValidator';
 import type { CommandExecutor } from '@/core/shell';
-import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { Logger } from '@/core/logging';
 import { getLogger } from '@/core/logging';
 import { parseJSON, toError } from '@/types/typeGuards';
 import {
     createMockCommandExecutor,
-    createMockCacheManager,
     createMockLogger,
     createSuccessResult,
     createErrorResult
@@ -33,7 +31,6 @@ import {
 describe('OrganizationValidator - Permissions', () => {
     let validator: OrganizationValidator;
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;
-    let mockCacheManager: jest.Mocked<AuthCacheManager>;
     let mockLogger: jest.Mocked<Logger>;
 
     beforeEach(() => {
@@ -59,12 +56,10 @@ describe('OrganizationValidator - Permissions', () => {
         });
 
         mockCommandExecutor = createMockCommandExecutor();
-        mockCacheManager = createMockCacheManager();
         mockLogger = createMockLogger();
 
         validator = new OrganizationValidator(
             mockCommandExecutor,
-            mockCacheManager,
             mockLogger
         );
     });

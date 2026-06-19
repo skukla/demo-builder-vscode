@@ -45,7 +45,6 @@ export interface WizardState {
     storeDiscoveryData?: CommerceStoreStructure;  // Store structure from discovery (avoids re-fetch on back navigation)
     projectsCache?: AdobeProject[];
     workspacesCache?: Workspace[];
-    organizationsCache?: Organization[];
     githubReposCache?: GitHubRepoItem[];  // GitHub repos with write access
     githubRepoSearchFilter?: string;  // Search filter for repo selection
     daLiveSitesCache?: DaLiveSiteItem[];  // DA.live sites in current org
@@ -398,6 +397,12 @@ export interface EDSConfig {
         org: string;
         site: string;
         indexPath?: string;
+    };
+    /** Optional second content source for the customer account chrome (hybrid
+     *  packages: B2B base + brand overlay). From demo-packages.json storefronts. */
+    accountContentSource?: {
+        org: string;
+        site: string;
     };
     /** Optional BYOM content overlay URL (from demo-packages.json storefronts) */
     byomOverlayUrl?: string;

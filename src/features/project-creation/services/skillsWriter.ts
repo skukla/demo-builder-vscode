@@ -56,7 +56,6 @@ const COMPONENT_CATEGORIES = [
     'backends',
     'mesh',
     'dependencies',
-    'appBuilderApps',
     'integrations',
     'infrastructure',
     'tools',

@@ -73,7 +73,7 @@ describe('AdobeAuthStep - Messaging and Edge Cases', () => {
             expect(screen.queryByTestId('loading-display')).not.toBeInTheDocument();
         });
 
-        it('should prevent race conditions during org switching', async () => {
+        it('forces a re-login (account switch) on Switch IMS Org', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const state = {
                 ...baseState,
@@ -89,17 +89,12 @@ describe('AdobeAuthStep - Messaging and Edge Cases', () => {
                 />
             );
 
-            const switchButton = screen.getByText('Switch Organizations');
-
-            // Click switch button multiple times rapidly
-            await user.click(switchButton);
-            await user.click(switchButton);
+            const switchButton = screen.getByText('Switch IMS Org');
             await user.click(switchButton);
 
-            // Should only trigger auth once (first call) if ref protection works
-            // However, the component doesn't prevent multiple clicks in the current implementation
-            // So we expect multiple calls here, but the ref should prevent check-auth calls
-            expect(mockRequestAuth).toHaveBeenCalled();
+            // IMS tokens are org-bound — switching orgs requires a forced re-login
+            // (the browser presents the account/org chooser).
+            expect(mockRequestAuth).toHaveBeenCalledWith(true);
         });
     });
 });

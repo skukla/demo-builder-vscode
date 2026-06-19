@@ -44,6 +44,10 @@ export interface StatusPayload {
  * @param frontendConfigChanged - Whether frontend config has changed
  * @param mesh - Optional mesh status info
  * @returns Status payload for UI
+ *
+ * Note: org-context mismatch is NOT part of this payload — it's delivered
+ * separately via the async `orgContextResult` message so the (slow) org check
+ * never blocks the rest of the dashboard status.
  */
 export function buildStatusPayload(
     project: Project,

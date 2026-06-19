@@ -32,8 +32,11 @@ import type {
     WorkspaceCredential,
 } from './types';
 import { getLogger, StepLogger } from '@/core/logging';
-import type { CommandExecutor } from '@/core/shell';
-import { formatDuration } from '@/core/utils';
+import { withOrgContext, type CommandExecutor } from '@/core/shell';
+import { formatDuration, TIMEOUTS } from '@/core/utils';
+import { tryWithTimeout } from '@/core/utils/promiseUtils';
+import { ErrorCode } from '@/types/errorCodes';
+import { AuthError } from '@/types/errors';
 import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
 
@@ -86,20 +89,38 @@ export class AdobeEntityFetcher {
     ): Promise<TMapped[]> {
         if (!this.sdkClient.isInitialized()) return [];
 
-        try {
-            const sdkResult = await sdkCall();
-            if (!sdkResult.body || !Array.isArray(sdkResult.body)) {
-                throw new Error('Invalid SDK response format');
-            }
-            const mapped = mapper(sdkResult.body);
-            const duration = Date.now() - startTime;
-            this.debugLogger.debug(`[Entity Fetcher] Retrieved ${mapped.length} ${entityName} via SDK in ${formatDuration(duration)}`);
-            return mapped;
-        } catch (sdkError) {
-            this.debugLogger.trace(`[Entity Fetcher] SDK failed for ${entityName}, falling back to CLI:`, sdkError);
+        // Bound the SDK attempt. SDK-first is justified only by "faster than the CLI, or
+        // fail fast": without a deadline a stalled Adobe endpoint (observed: the org-list
+        // gateway timing out ~60s) makes the "fast path" far slower than the ~3s CLI
+        // fallback. Cap the call and fall back instead of riding the remote ceiling.
+        const outcome = await tryWithTimeout(sdkCall(), {
+            timeoutMs: TIMEOUTS.SDK_ENTITY_FETCH,
+            timeoutMessage: `SDK ${entityName} fetch`,
+        });
+
+        if (outcome.timedOut) {
+            this.debugLogger.warn(
+                `[Entity Fetcher] SDK ${entityName} fetch exceeded `
+                + `${formatDuration(TIMEOUTS.SDK_ENTITY_FETCH)}, falling back to CLI`,
+            );
+            return [];
+        }
+
+        if (outcome.error || !outcome.result) {
+            this.debugLogger.trace(`[Entity Fetcher] SDK failed for ${entityName}, falling back to CLI:`, outcome.error);
             this.debugLogger.warn(`[Entity Fetcher] SDK unavailable, using slower CLI fallback for ${entityName}`);
             return [];
         }
+
+        const sdkResult = outcome.result;
+        if (!sdkResult.body || !Array.isArray(sdkResult.body)) {
+            this.debugLogger.warn(`[Entity Fetcher] SDK returned an invalid ${entityName} response, falling back to CLI`);
+            return [];
+        }
+
+        const mapped = mapper(sdkResult.body);
+        this.debugLogger.debug(`[Entity Fetcher] Retrieved ${mapped.length} ${entityName} via SDK in ${formatDuration(Date.now() - startTime)}`);
+        return mapped;
     }
 
     /**
@@ -162,9 +183,16 @@ export class AdobeEntityFetcher {
                 throw new Error('AUTH_EXPIRED: Your Adobe I/O session has expired. Please sign in again.');
             }
             if (stderr.includes('403') || stderr.toLowerCase().includes('forbidden')) {
-                throw new Error(
-                    'Your Adobe CLI is configured for a different organization than you are signed into. '
-                    + 'Run "aio console org select" in your terminal to switch to the correct organization.',
+                // Typed, in-app-recoverable error. NO terminal instruction — the UI
+                // routes ORG_MISMATCH through ensureOrgContext + a forced sign-in
+                // recovery, and agents treat it as non-retryable.
+                throw new AuthError(
+                    ErrorCode.ORG_MISMATCH,
+                    'Adobe CLI is targeting a different organization than this operation needs.',
+                    {
+                        userMessage: 'This operation needs a different Adobe organization. '
+                            + 'Select the correct organization to continue.',
+                    },
                 );
             }
         }
@@ -265,10 +293,28 @@ export class AdobeEntityFetcher {
     }
 
     /**
-     * Get list of projects for current org (SDK with CLI fallback)
+     * Get list of projects (SDK with CLI fallback).
+     *
      * @param options.silent - If true, suppress user-facing log messages (used for internal ID resolution)
+     * @param options.orgId  - If supplied, run the fetch under org-context targeting
+     *   (AIO_CONSOLE_* env) so the CLI/SDK target that org WITHOUT mutating the
+     *   shared global store. Omitting it preserves the prior ambient-context behavior.
      */
-    async getProjects(options?: { silent?: boolean }): Promise<AdobeProject[]> {
+    async getProjects(options?: { silent?: boolean; orgId?: string }): Promise<AdobeProject[]> {
+        if (options?.orgId) {
+            return withOrgContext(
+                { orgId: options.orgId },
+                () => this.fetchProjects(options),
+            );
+        }
+        return this.fetchProjects(options);
+    }
+
+    /**
+     * Core project-fetch logic (SDK-first with CLI fallback).
+     * Wrapped by getProjects, which optionally applies org-context targeting.
+     */
+    private async fetchProjects(options?: { silent?: boolean; orgId?: string }): Promise<AdobeProject[]> {
         const startTime = Date.now();
         const silent = options?.silent ?? false;
 

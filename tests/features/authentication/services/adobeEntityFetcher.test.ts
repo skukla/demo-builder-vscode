@@ -6,6 +6,9 @@
  */
 
 import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
+import { ErrorCode } from '@/types/errorCodes';
+import { AppError } from '@/types/errors';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { CommandExecutor } from '@/core/shell';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
@@ -144,6 +147,41 @@ describe('AdobeEntityFetcher', () => {
                 'aio console org list --json',
                 expect.any(Object),
             );
+        });
+
+        it('should fall back to CLI when the SDK call exceeds the deadline', async () => {
+            // A stalled Adobe endpoint must not hang the wizard: cap the SDK attempt
+            // and fall back to the (fast) CLI instead of riding the ~60s remote ceiling.
+            jest.useFakeTimers();
+            try {
+                mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
+                mockSDKClient.isInitialized.mockReturnValue(true);
+                mockSDKClient.getClient.mockReturnValue({
+                    // Never resolves — simulates the stalled org-list endpoint.
+                    getOrganizations: jest.fn().mockReturnValue(new Promise(() => {})),
+                } as ReturnType<typeof mockSDKClient.getClient>);
+
+                mockCommandExecutor.execute.mockResolvedValue({
+                    stdout: JSON.stringify([
+                        { id: 'org1', code: 'ORG1@AdobeOrg', name: 'CLI Org' },
+                    ]),
+                    stderr: '',
+                    code: 0,
+                });
+
+                const resultPromise = fetcher.getOrganizations();
+                await jest.advanceTimersByTimeAsync(TIMEOUTS.SDK_ENTITY_FETCH + 1);
+                const result = await resultPromise;
+
+                expect(result).toHaveLength(1);
+                expect(result[0].name).toBe('CLI Org');
+                expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
+                    'aio console org list --json',
+                    expect.any(Object),
+                );
+            } finally {
+                jest.useRealTimers();
+            }
         });
 
         it('should fallback to CLI when SDK not initialized', async () => {
@@ -315,6 +353,94 @@ describe('AdobeEntityFetcher', () => {
 
             expect(result).toHaveLength(1);
             expect(result[0].name).toBe('Org 1');
+        });
+    });
+
+    describe('getProjects() - org targeting & typed 403', () => {
+        it('throws an ORG_MISMATCH-coded error (no terminal instruction) on a 403', async () => {
+            mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(false);
+
+            mockCommandExecutor.execute.mockResolvedValue({
+                stdout: 'not-json',
+                stderr: '403 Forbidden',
+                code: 2,
+            });
+
+            await expect(fetcher.getProjects()).rejects.toMatchObject({
+                code: ErrorCode.ORG_MISMATCH,
+            });
+        });
+
+        it('does NOT include the "aio console org select" terminal instruction on a 403', async () => {
+            mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(false);
+
+            mockCommandExecutor.execute.mockResolvedValue({
+                stdout: 'not-json',
+                stderr: 'Error: 403 forbidden',
+                code: 2,
+            });
+
+            let caught: unknown;
+            try {
+                await fetcher.getProjects();
+            } catch (err) {
+                caught = err;
+            }
+            expect(caught).toBeInstanceOf(AppError);
+            expect((caught as Error).message).not.toContain('aio console org select');
+            expect((caught as Error).message.toLowerCase()).not.toContain('terminal');
+        });
+
+        it('keeps the 401 -> AUTH_EXPIRED branch intact', async () => {
+            mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(false);
+
+            mockCommandExecutor.execute.mockResolvedValue({
+                stdout: 'not-json',
+                stderr: '401 Unauthorized',
+                code: 2,
+            });
+
+            await expect(fetcher.getProjects()).rejects.toThrow('AUTH_EXPIRED');
+        });
+
+        it('runs the project fetch under org-context targeting when orgId is supplied', async () => {
+            // With an orgId, the CLI fallback must execute inside a withOrgContext
+            // scope so the command executor targets that org. We assert targeting by
+            // observing the active org context at execute() time.
+            const seenOrgIds: (string | undefined)[] = [];
+            mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(false);
+
+             
+            const { getActiveOrgContext } = require('@/core/shell/orgContextEnv');
+            mockCommandExecutor.execute.mockImplementation(async () => {
+                seenOrgIds.push(getActiveOrgContext()?.orgId);
+                return { stdout: JSON.stringify([]), stderr: '', code: 0 };
+            });
+
+            await fetcher.getProjects({ orgId: 'org-target' });
+
+            expect(seenOrgIds).toContain('org-target');
+        });
+
+        it('does not establish targeting when no orgId is supplied (back-compat)', async () => {
+            const seenOrgIds: (string | undefined)[] = [];
+            mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(false);
+
+             
+            const { getActiveOrgContext } = require('@/core/shell/orgContextEnv');
+            mockCommandExecutor.execute.mockImplementation(async () => {
+                seenOrgIds.push(getActiveOrgContext()?.orgId);
+                return { stdout: JSON.stringify([]), stderr: '', code: 0 };
+            });
+
+            await fetcher.getProjects();
+
+            expect(seenOrgIds).toEqual([undefined]);
         });
     });
 

@@ -244,6 +244,7 @@ export function computeStateUpdatesForBackwardNav(
         updates.workspacesCache = undefined;
     }
 
+
     return updates;
 }
 
@@ -627,6 +628,7 @@ function buildProjectEdsConfig(wizardState: WizardState) {
         templateOwner: eds.templateOwner,
         templateRepo: eds.templateRepo,
         contentSource: eds.contentSource,
+        accountContentSource: eds.accountContentSource,
         patches: eds.patches,
         contentPatches: eds.contentPatches,
         contentPatchSource: eds.contentPatchSource,
@@ -670,6 +672,7 @@ export function buildProjectConfig(
         projectName: wizardState.projectName,
         adobe: {
             organization: wizardState.adobeOrg?.id,
+            organizationName: wizardState.adobeOrg?.name,
             projectId: wizardState.adobeProject?.id,
             projectName: wizardState.adobeProject?.name,
             projectTitle: wizardState.adobeProject?.title,

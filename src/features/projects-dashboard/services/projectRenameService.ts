@@ -98,6 +98,28 @@ export async function renameProjectCore(
         // Save the updated project (at the new location)
         await context.stateManager.saveProject(project);
 
+        // Regenerate AI context files when the folder moved. The MCP configs
+        // (.mcp.json / .claude/mcp.json) bake the ABSOLUTE project path into the
+        // server args, so a rename leaves them pointing at the old path (→ MCP
+        // "MODULE_NOT_FOUND" on the renamed project). Re-running the same writers
+        // project creation uses rewrites them for the new path. Non-fatal —
+        // mirrors the project-creation + dashboard "Regenerate AI files" callers;
+        // a failure just means the user must run "Regenerate AI files" manually.
+        if (newPath !== oldPath) {
+            try {
+                const { generateAIContextFiles } = await import(
+                    '@/features/project-creation/services/projectFinalizationService'
+                );
+                await generateAIContextFiles(project.path, project, context.context.extensionPath);
+            } catch (regenError) {
+                context.logger.warn(
+                    `[Rename] AI context regeneration failed for "${newName}" — MCP/AI configs `
+                    + 'may reference the old path until "Regenerate AI files" is run. '
+                    + (regenError instanceof Error ? regenError.message : String(regenError)),
+                );
+            }
+        }
+
         context.logger.info(`Renamed project: "${oldName}" → "${newName}"`);
 
         return {

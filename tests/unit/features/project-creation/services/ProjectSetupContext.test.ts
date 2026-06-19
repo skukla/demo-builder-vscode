@@ -61,7 +61,6 @@ describe('ProjectSetupContext', () => {
                 dependencies: [],
                 mesh: [],
                 integrations: [],
-                appBuilder: [],
             },
             services: {},
         };
@@ -287,6 +286,31 @@ describe('ProjectSetupContext', () => {
             );
 
             expect(context.getSelectedAddons()).toBeUndefined();
+        });
+    });
+
+    describe('getSelectedPackage()', () => {
+        it('should return selectedPackage from config', () => {
+            const configWithPackage = { ...mockConfig, selectedPackage: 'custom' };
+            const context = new ProjectSetupContext(
+                mockHandlerContext,
+                mockRegistry,
+                mockProject,
+                configWithPackage,
+            );
+
+            expect(context.getSelectedPackage()).toBe('custom');
+        });
+
+        it('should return undefined when selectedPackage is missing', () => {
+            const context = new ProjectSetupContext(
+                mockHandlerContext,
+                mockRegistry,
+                mockProject,
+                mockConfig,
+            );
+
+            expect(context.getSelectedPackage()).toBeUndefined();
         });
     });
 

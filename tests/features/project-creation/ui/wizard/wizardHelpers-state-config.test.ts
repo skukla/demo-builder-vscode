@@ -255,6 +255,7 @@ describe('wizardHelpers - state & config', () => {
             const config = buildProjectConfig(state);
 
             expect(config.adobe?.organization).toBe('org-123');
+            expect(config.adobe?.organizationName).toBe('Test Org');
             expect(config.adobe?.projectId).toBe('proj-456');
             expect(config.adobe?.workspace).toBe('ws-789');
         });

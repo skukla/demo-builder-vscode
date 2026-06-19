@@ -174,6 +174,10 @@ jest.mock('@spectrum-icons/workflow/PublishCheck', () => ({
     __esModule: true,
     default: () => <span data-testid="publish-icon" />,
 }));
+jest.mock('@spectrum-icons/workflow/AlertCircle', () => ({
+    __esModule: true,
+    default: () => <span data-testid="alert-circle-icon" />,
+}));
 
 export interface TestContext {
     mockPostMessage: jest.Mock;

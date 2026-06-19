@@ -10,7 +10,6 @@ import {
     handleValidateSelection,
     handleUpdateComponentSelection,
     handleUpdateComponentsData,
-    handleSyncComponentConfigs,
     handleLoadComponents,
     handleCheckCompatibility,
     handleLoadPreset,
@@ -205,25 +204,6 @@ describe('componentHandlers - Pattern B (request-response)', () => {
         });
     });
 
-    describe('handleSyncComponentConfigs', () => {
-        it('should store component configs in sharedState and return success:true', async () => {
-            const configs = { 'headless': { 'SOME_KEY': 'someValue' } };
-
-            const result = await handleSyncComponentConfigs(mockContext, configs);
-
-            expect(result).toEqual({ success: true });
-            expect((mockContext.sharedState as any).currentComponentConfigs).toEqual(configs);
-        });
-
-        it('should silently succeed (not fail) for invalid payload', async () => {
-            // Security note: sync-component-configs intentionally returns success:true
-            // for invalid payloads to avoid exposing internal state to callers.
-            const result = await handleSyncComponentConfigs(mockContext, null);
-
-            expect(result).toEqual({ success: true });
-        });
-    });
-
     describe('handleLoadComponents', () => {
         it('should return componentsLoaded with success:true', async () => {
             mockRegistryManager.getFrontends.mockResolvedValue([
@@ -231,7 +211,6 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             ]);
             mockRegistryManager.getBackends.mockResolvedValue([]);
             mockRegistryManager.getIntegrations.mockResolvedValue([]);
-            mockRegistryManager.getAppBuilder.mockResolvedValue([]);
             mockRegistryManager.getDependencies.mockResolvedValue([]);
             mockRegistryManager.getPresets.mockResolvedValue([]);
 
@@ -244,7 +223,6 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             expect(data).toHaveProperty('frontends');
             expect(data).toHaveProperty('backends');
             expect(data).toHaveProperty('integrations');
-            expect(data).toHaveProperty('appBuilder');
             expect(data).toHaveProperty('dependencies');
             expect(data).toHaveProperty('presets');
             expect(mockContext.sendMessage).not.toHaveBeenCalled();

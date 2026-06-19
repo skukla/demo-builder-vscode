@@ -134,13 +134,9 @@ The wizard-side `WizardState` (React, not persisted to disk) contains caches tha
 
 ## SharedState Runtime Fields
 
-`SharedState` (the `context.sharedState` bag on `HandlerContext`) holds transient runtime fields that are never persisted to disk. These fields are set and read by different handlers to avoid passing sensitive values through postMessage payloads.
+`SharedState` (the `context.sharedState` bag on `HandlerContext`) holds transient runtime fields that are never persisted to disk.
 
-| Field | Purpose | Write Authority | Read By |
-|-------|---------|-----------------|---------|
-| `currentComponentConfigs` | User-entered component config values (including Commerce admin credentials) synced from the wizard webview | `handleSyncComponentConfigs` in `componentHandlers.ts` | `handleDiscoverStoreStructure` in `edsHandlers.ts` |
-
-`currentComponentConfigs` is cleared when the webview disconnects. Credentials are read server-side to avoid re-transmitting them in each subsequent postMessage payload.
+`SharedState` holds **no credential-bearing fields**. Store discovery carries PaaS admin credentials in the `discover-store-structure` payload itself (a self-contained request), so no server-side credential cache exists. An earlier `currentComponentConfigs` field plus a `sync-component-configs` message were removed because the separate sync raced the discovery dispatch — see `src/features/eds/handlers/edsHandlers.ts` (`handleDiscoverStoreStructure`).
 
 ---
 

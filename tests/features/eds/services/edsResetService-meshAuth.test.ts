@@ -1,10 +1,15 @@
 /**
  * EDS Reset Service - Mesh Redeployment Auth Tests
  *
- * Regression: redeployApiMesh must call ensureAdobeIOAuth BEFORE setting
- * Adobe CLI context (selectOrganization/selectProject/selectWorkspace).
- * Without this, a token that expires during the ~2-minute reset pipeline
- * causes the Adobe CLI to open a browser window for re-authentication.
+ * Regression: redeployApiMesh must call ensureAdobeIOAuth BEFORE the mesh
+ * redeploy. Without this, a token that expires during the ~2-minute reset
+ * pipeline causes the Adobe CLI to open a browser window for re-auth.
+ *
+ * Phase 4a migration: redeployApiMesh no longer mutates the shared `aio`
+ * global via selectOrganization/selectProject/selectWorkspace. Instead it
+ * wraps the mesh redeploy in `withOrgContext(projectTarget, ...)` so the
+ * deploy targets the project's org/project/workspace via per-invocation
+ * AIO_CONSOLE_* env — without clobbering concurrent processes.
  */
 
 import type { Project } from '@/types/base';
@@ -21,9 +26,16 @@ jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: (...args: unknown[]) => mockEnsureAdobeIOAuth(...args),
 }));
 
-const mockSelectOrganization = jest.fn().mockResolvedValue(undefined);
-const mockSelectProject = jest.fn().mockResolvedValue(undefined);
-const mockSelectWorkspace = jest.fn().mockResolvedValue(undefined);
+// withOrgContext records the target then runs the callback (no global mutation).
+const mockWithOrgContext = jest.fn(
+    (_target: unknown, fn: () => Promise<unknown>) => fn(),
+);
+jest.mock('@/core/shell', () => ({
+    ...jest.requireActual('@/core/shell'),
+    withOrgContext: (target: unknown, fn: () => Promise<unknown>) =>
+        mockWithOrgContext(target, fn),
+}));
+
 
 jest.mock('vscode', () => ({
     window: { showWarningMessage: jest.fn(), showInformationMessage: jest.fn() },
@@ -43,10 +55,8 @@ jest.mock('@/core/di', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({
             isAuthenticated: jest.fn().mockResolvedValue(true),
-            selectOrganization: mockSelectOrganization,
-            selectProject: mockSelectProject,
-            selectWorkspace: mockSelectWorkspace,
             loginAndRestoreProjectContext: jest.fn().mockResolvedValue(true),
+            getCachedOrganization: jest.fn().mockReturnValue(undefined),
         })),
         getCommandExecutor: jest.fn(() => ({})),
     },
@@ -76,6 +86,7 @@ jest.mock('@/features/eds/services/fstabGenerator', () => ({
 jest.mock('@/features/eds/services/configGenerator', () => ({
     generateConfigJson: jest.fn().mockReturnValue({ success: true, content: '{}' }),
     extractConfigParams: jest.fn().mockReturnValue({}),
+    buildConfigGeneratorParams: jest.fn().mockReturnValue({}),
 }));
 
 jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
@@ -238,7 +249,7 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
         mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
     });
 
-    it('should call ensureAdobeIOAuth before setting Adobe context for mesh redeployment', async () => {
+    it('should call ensureAdobeIOAuth before wrapping the mesh redeploy in withOrgContext', async () => {
         // Given: Project with mesh component and redeployMesh enabled
         const project = createProjectWithMesh();
         const context = createMockContext();
@@ -248,14 +259,9 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
             callOrder.push('ensureAdobeIOAuth');
             return { authenticated: true };
         });
-        mockSelectOrganization.mockImplementation(async () => {
-            callOrder.push('selectOrganization');
-        });
-        mockSelectProject.mockImplementation(async () => {
-            callOrder.push('selectProject');
-        });
-        mockSelectWorkspace.mockImplementation(async () => {
-            callOrder.push('selectWorkspace');
+        mockWithOrgContext.mockImplementation((_target, fn) => {
+            callOrder.push('withOrgContext');
+            return fn();
         });
 
         // When: Executing reset with mesh redeployment
@@ -269,12 +275,39 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
             context, mockTokenProvider,
         );
 
-        // Then: ensureAdobeIOAuth should be called BEFORE all three Adobe context calls
+        // Then: auth runs BEFORE the targeted redeploy
         expect(mockEnsureAdobeIOAuth).toHaveBeenCalledTimes(1);
         const authIdx = callOrder.indexOf('ensureAdobeIOAuth');
-        expect(authIdx).toBeLessThan(callOrder.indexOf('selectOrganization'));
-        expect(authIdx).toBeLessThan(callOrder.indexOf('selectProject'));
-        expect(authIdx).toBeLessThan(callOrder.indexOf('selectWorkspace'));
+        expect(authIdx).toBeLessThan(callOrder.indexOf('withOrgContext'));
+    });
+
+    it('should target the project org/project/workspace via withOrgContext', async () => {
+        // Given: Project with Adobe org/project/workspace
+        const project = createProjectWithMesh();
+        const context = createMockContext();
+
+        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
+
+        // When
+        await executeEdsReset(
+            {
+                repoOwner: 'test-owner', repoName: 'test-repo',
+                daLiveOrg: 'test-org', daLiveSite: 'test-repo',
+                templateOwner: 'template-owner', templateRepo: 'template-repo',
+                project, redeployMesh: true,
+            },
+            context, mockTokenProvider,
+        );
+
+        // Then: the redeploy is targeted at the project's known org/project/workspace
+        expect(mockWithOrgContext).toHaveBeenCalledWith(
+            expect.objectContaining({
+                orgId: 'org-123',
+                projectId: 'proj-456',
+                workspaceId: 'ws-789',
+            }),
+            expect.any(Function),
+        );
     });
 
     it('should pass project adobe context to ensureAdobeIOAuth', async () => {
@@ -331,9 +364,6 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
         expect(result.meshRedeployed).toBe(false);
         expect(result.error).toContain('authentication');
         expect(result.errorType).toBe('MESH_REDEPLOY_FAILED');
-
-        // And: Should NOT call selectOrganization (auth failed before it)
-        expect(mockSelectOrganization).not.toHaveBeenCalled();
     });
 
     it('should not call ensureAdobeIOAuth when redeployMesh is false', async () => {

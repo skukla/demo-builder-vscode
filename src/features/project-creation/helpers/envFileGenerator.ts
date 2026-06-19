@@ -11,6 +11,7 @@ import { normalizeIfUrl } from '@/core/validation/Validator';
 import { PAAS_CATALOG_SERVICE_ENDPOINT, CATALOG_SERVICE_ENDPOINT, ACCS_CATALOG_SERVICE_ENDPOINT } from '@/features/components/config/envVarKeys';
 import { generateConfigJson, extractConfigParamsFromConfigs, type ConfigGeneratorParams } from '@/features/eds/services/configGenerator';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
+import type { Logger, Project } from '@/types';
 import { TransformedComponentDefinition, EnvVarDefinition, ConfigFileDefinition, ComponentRegistry } from '@/types/components';
 
 /**
@@ -78,6 +79,8 @@ export interface EnvGenerationContext {
     getEnvVarDefinitions(): Record<string, Omit<EnvVarDefinition, 'key'>>;
     /** Get mesh endpoint if available */
     getMeshEndpoint(): string | undefined;
+    /** Get the selected demo package ID (drives package-level config flags) */
+    getSelectedPackage(): string | undefined;
 }
 
 /**
@@ -249,6 +252,67 @@ export async function generateComponentEnvFile(
     await fsPromises.writeFile(envFilePath, lines.join('\n'));
 
     context.logger.debug(`[Project Creation] Created ${envFileName} for ${componentDef.name}`);
+}
+
+/**
+ * Regenerate .env files for every installed component of an EXISTING project.
+ *
+ * Builds an {@link EnvGenerationContext} from the saved project state and delegates
+ * to {@link generateComponentEnvFile} per component — the same canonical, registry-
+ * driven path used at creation (env-var resolution + `derivedFrom` + grouping). This
+ * is the single regeneration entry point shared by EDS Reset and the Configure screen,
+ * so both produce identical .env files instead of a hand-rolled flat dump.
+ *
+ * The project root `.env` is intentionally NOT written here: `ProjectConfigWriter`
+ * writes it on `saveProject`, and the Configure UI repopulates non-installed-component
+ * values from the manifest (`componentConfigs`), not the root `.env`.
+ *
+ * @param project - Saved project (source of componentConfigs / meshState / selections)
+ * @param registry - Loaded component registry (definitions + shared env vars + services)
+ * @param logger - Logger for debug/warn output
+ */
+export async function regenerateProjectEnvFiles(
+    project: Project,
+    registry: ComponentRegistry,
+    logger: Logger,
+): Promise<void> {
+    const backendId = project.componentSelections?.backend;
+
+    const context: EnvGenerationContext = {
+        registry,
+        logger,
+        getBackendId: () => backendId,
+        getComponentConfigs: () =>
+            project.componentConfigs as Record<
+                string,
+                Record<string, string | number | boolean | undefined>
+            > | undefined,
+        getEnvVarDefinitions: () => registry.envVars || {},
+        getMeshEndpoint: () => project.meshState?.endpoint,
+        getSelectedPackage: () => project.selectedPackage,
+    };
+
+    const allDefinitions: TransformedComponentDefinition[] = [
+        ...(registry.components.frontends || []),
+        ...(registry.components.backends || []),
+        ...(registry.components.dependencies || []),
+        ...(registry.components.mesh || []),
+        ...(registry.components.integrations || []),
+    ];
+
+    for (const [componentId, instance] of Object.entries(project.componentInstances || {})) {
+        if (!instance?.path) { continue; }
+
+        const definition = allDefinitions.find((def) => def.id === componentId);
+        if (!definition) {
+            logger.warn(
+                `[Env Regen] No registry definition for installed component '${componentId}', skipping .env`,
+            );
+            continue;
+        }
+
+        await generateComponentEnvFile(instance.path, componentId, definition, context);
+    }
 }
 
 /**
@@ -465,6 +529,7 @@ async function generateEdsConfigJson(
         daLiveSite,
         ...configParams,
         selectedAddons: context.getSelectedAddons(),
+        selectedPackage: context.getSelectedPackage(),
     };
 
     // Validate required params

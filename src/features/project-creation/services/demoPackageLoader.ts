@@ -55,6 +55,22 @@ export async function loadDemoPackages(
 }
 
 /**
+ * Load the demo packages a user may SELECT when creating a new project — i.e.
+ * `loadDemoPackages()` minus any marked `hidden`. Use this for the wizard picker
+ * and the AI create/discovery tools. NOT for resolving an existing project's
+ * package (use loadDemoPackages / getPackageById there): a hidden package must
+ * still resolve by id so existing projects keep working.
+ *
+ * @param config - Injectable packages config; defaults to the bundled JSON.
+ * @returns Promise resolving to the selectable (non-hidden) packages.
+ */
+export async function getSelectablePackages(
+    config?: DemoPackagesConfig,
+): Promise<DemoPackage[]> {
+    return (await loadDemoPackages(config)).filter(pkg => !pkg.hidden);
+}
+
+/**
  * Get a demo package by its ID
  *
  * @param packageId - The unique identifier of the package (e.g., "citisignal", "buildright")

@@ -100,7 +100,10 @@ class CreateProjectWebviewCommand extends BaseWebviewCommand {
         });
 
         comm.on('select-project', async (payload) => {
-            return await this.adobeAuth.selectProject(payload.projectId);
+            // handleSelectProject validates the target org is reachable via
+            // ensureOrgContext and acks the selection; it does NOT mutate the
+            // aio global. Project/workspace context is targeted per operation.
+            return await handleSelectProject(this.context, { projectId: payload.projectId });
         });
     }
 }
@@ -126,8 +129,12 @@ comm.on('project-selected', (payload) => {
 // Backend calls during Continue action
 comm.on('continue-step', async (payload) => {
     if (payload.step === 'adobe-project' && payload.selectedProject) {
-        // Now make the actual backend call
-        const result = await this.adobeAuth.selectProject(payload.selectedProject.id);
+        // Validate the selection's org is reachable (no aio global mutation).
+        // The project/workspace are targeted per-operation via withOrgContext
+        // when a dependent op (e.g. mesh deploy) actually runs.
+        const result = await handleSelectProject(this.context, {
+            projectId: payload.selectedProject.id,
+        });
         if (!result.success) {
             throw new Error(result.error || 'Failed to select project');
         }
@@ -607,22 +614,29 @@ try {
 **Critical Issue**: Adobe CLI commands often succeed but timeout due to restrictive timeout values.
 
 **Solution Pattern**:
+Note: project/workspace selection no longer runs an `aio` CLI mutation, so it
+no longer carries a CLI timeout. The pattern below applies to the Adobe CLI
+operations that DO run (e.g. workspace download, api-mesh get/deploy), which are
+targeted per-invocation via `withOrgContext`.
+
 ```typescript
 import { TIMEOUT_CONFIG } from '../utils/timeoutConfig';
 
 class CreateProjectWebviewCommand extends BaseWebviewCommand {
     protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
-        comm.on('select-project', async (payload) => {
+        comm.on('check-mesh', async (payload) => {
             try {
-                // Use appropriate timeout for operation
-                const result = await this.adobeAuth.selectProject(payload.projectId, {
-                    timeout: TIMEOUT_CONFIG.CONFIG_WRITE  // 10 seconds
-                });
-                return { success: true, data: result };
+                // Run the CLI op under the per-invocation org/project/workspace
+                // target; use an appropriate timeout for the slow CLI call.
+                return await withOrgContext(target, () =>
+                    this.commandExecutor.execute('aio api-mesh get', {
+                        timeout: TIMEOUT_CONFIG.CONFIG_WRITE  // 10 seconds
+                    }),
+                );
             } catch (error) {
-                // Check for success despite timeout
-                if (error.stdout && error.stdout.includes('Project selected :')) {
-                    return { success: true, message: 'Project selected successfully' };
+                // Check for success despite timeout (CLI is slow, not failing).
+                if (error.stdout && error.stdout.includes('Successfully')) {
+                    return { success: true, message: 'Completed despite timeout' };
                 }
                 throw error;
             }

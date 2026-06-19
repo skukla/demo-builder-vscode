@@ -5,9 +5,10 @@
     {
       "id": "isle5",
       "name": "Isle5",
-      "description": "Commerce demo with Isle5 branding and custom EDS blocks",
+      "description": "Isle5-branded commerce demo with custom EDS blocks",
       "icon": "isle5",
       "featured": true,
+      "hidden": true,
       "requiresMesh": false,
       "addons": {
         "adobe-commerce-aco": "excluded"
@@ -83,97 +84,8 @@
     },
     {
       "id": "custom",
-      "name": "Custom",
-      "description": "Unbranded Commerce storefront for custom demos",
-      "icon": "custom",
-      "featured": false,
-      "requiresMesh": "optional",
-      "addons": {
-        "adobe-commerce-aco": "excluded"
-      },
-      "configDefaults": {
-        "ADOBE_COMMERCE_WEBSITE_CODE": "website",
-        "ADOBE_COMMERCE_STORE_CODE": "main_website_store",
-        "ADOBE_COMMERCE_STORE_VIEW_CODE": "default",
-        "ACCS_WEBSITE_CODE": "website",
-        "ACCS_STORE_CODE": "main_website_store",
-        "ACCS_STORE_VIEW_CODE": "default"
-      },
-      "storefronts": {
-        "eds-paas": {
-          "name": "Custom EDS + PaaS",
-          "description": "Unbranded EDS storefront with Commerce PaaS backend",
-          "icon": "eds",
-          "featured": true,
-          "tags": [
-            "eds",
-            "custom",
-            "paas"
-          ],
-          "source": {
-            "type": "git",
-            "url": "https://github.com/hlxsites/aem-boilerplate-commerce",
-            "branch": "main",
-            "gitOptions": {
-              "shallow": true
-            }
-          },
-          "templateOwner": "hlxsites",
-          "templateRepo": "aem-boilerplate-commerce",
-          "contentSource": {
-            "org": "hlxsites",
-            "site": "aem-boilerplate-commerce"
-          },
-          "codePatches": [
-            "header-nav-tools-defensive",
-            "commerce-account-sidebar-selector-race"
-          ],
-          "codePatchSource": {
-            "owner": "skukla",
-            "repo": "eds-demo-patches",
-            "path": "custom"
-          }
-        },
-        "eds-accs": {
-          "name": "Custom EDS + ACCS",
-          "description": "Unbranded EDS storefront with Commerce Cloud Service backend",
-          "icon": "eds",
-          "featured": true,
-          "tags": [
-            "eds",
-            "custom",
-            "accs"
-          ],
-          "source": {
-            "type": "git",
-            "url": "https://github.com/hlxsites/aem-boilerplate-commerce",
-            "branch": "main",
-            "gitOptions": {
-              "shallow": true
-            }
-          },
-          "templateOwner": "hlxsites",
-          "templateRepo": "aem-boilerplate-commerce",
-          "contentSource": {
-            "org": "hlxsites",
-            "site": "aem-boilerplate-commerce"
-          },
-          "codePatches": [
-            "header-nav-tools-defensive",
-            "commerce-account-sidebar-selector-race"
-          ],
-          "codePatchSource": {
-            "owner": "skukla",
-            "repo": "eds-demo-patches",
-            "path": "custom"
-          }
-        }
-      }
-    },
-    {
-      "id": "b2b",
-      "name": "B2B Boilerplate",
-      "description": "B2B Commerce storefront with company management, quotes, purchase orders, and requisition lists",
+      "name": "Custom (B2B + B2C)",
+      "description": "Unbranded commerce demo serving both B2C and B2B (company accounts, quotes, purchase orders)",
       "icon": "custom",
       "featured": false,
       "requiresMesh": false,
@@ -188,15 +100,19 @@
         "ACCS_STORE_CODE": "main_website_store",
         "ACCS_STORE_VIEW_CODE": "default"
       },
+      "configFlags": {
+        "commerce-b2b-enabled": true,
+        "commerce-companies-enabled": true
+      },
       "storefronts": {
         "eds-paas": {
-          "name": "B2B EDS + PaaS",
-          "description": "B2B Commerce storefront with Commerce PaaS backend",
+          "name": "EDS + PaaS",
+          "description": "Edge Delivery Services storefront with Commerce PaaS backend",
           "icon": "eds",
           "featured": true,
           "tags": [
             "eds",
-            "b2b",
+            "custom",
             "paas"
           ],
           "source": {
@@ -228,13 +144,13 @@
           }
         },
         "eds-accs": {
-          "name": "B2B EDS + ACCS",
-          "description": "B2B Commerce storefront with Commerce Cloud Service backend",
+          "name": "EDS + ACCS",
+          "description": "Edge Delivery Services storefront with Commerce Cloud Service backend",
           "icon": "eds",
           "featured": false,
           "tags": [
             "eds",
-            "b2b",
+            "custom",
             "accs"
           ],
           "source": {
@@ -270,7 +186,7 @@
     {
       "id": "citisignal",
       "name": "CitiSignal",
-      "description": "Telecommunications demo with CitiSignal branding",
+      "description": "Hybrid commerce demo serving both B2C and B2B customers from one storefront",
       "icon": "citisignal",
       "featured": true,
       "requiresMesh": false,
@@ -284,6 +200,10 @@
         "ACCS_WEBSITE_CODE": "citisignal",
         "ACCS_STORE_CODE": "citisignal_store",
         "ACCS_STORE_VIEW_CODE": "citisignal_us"
+      },
+      "configFlags": {
+        "commerce-b2b-enabled": true,
+        "commerce-companies-enabled": true
       },
       "storefronts": {
         "headless-paas": {
@@ -318,130 +238,6 @@
           ],
           "source": {
             "type": "git",
-            "url": "https://github.com/hlxsites/aem-boilerplate-commerce",
-            "branch": "main",
-            "gitOptions": {
-              "shallow": true
-            }
-          },
-          "templateOwner": "hlxsites",
-          "templateRepo": "aem-boilerplate-commerce",
-          "contentSource": {
-            "org": "demo-system-stores",
-            "site": "accs-citisignal"
-          },
-          "contentPatches": [
-            "index-product-teaser-sku",
-            "phones-product-teaser-sku",
-            "phones-heading-reorder",
-            "smart-watches-category-id",
-            "smart-watches-url-path"
-          ],
-          "contentPatchSource": {
-            "owner": "skukla",
-            "repo": "eds-demo-patches",
-            "path": "citisignal"
-          },
-          "codePatches": [
-            "header-nav-tools-defensive",
-            "product-link-sku-encoding",
-            "product-link-sku-slash-encoding",
-            "aem-assets-sku-sanitization",
-            "commerce-account-sidebar-selector-race",
-            "product-teaser-sku-encoding",
-            "product-teaser-getproductlink-import",
-            "product-teaser-image-url-handling"
-          ],
-          "codePatchSource": {
-            "owner": "skukla",
-            "repo": "eds-demo-patches",
-            "path": "citisignal"
-          }
-        },
-        "eds-accs": {
-          "name": "CitiSignal EDS + ACCS",
-          "description": "Edge Delivery Services storefront with Commerce Cloud Service backend",
-          "icon": "eds",
-          "featured": false,
-          "tags": [
-            "eds",
-            "citisignal",
-            "accs"
-          ],
-          "source": {
-            "type": "git",
-            "url": "https://github.com/hlxsites/aem-boilerplate-commerce",
-            "branch": "main",
-            "gitOptions": {
-              "shallow": true
-            }
-          },
-          "templateOwner": "hlxsites",
-          "templateRepo": "aem-boilerplate-commerce",
-          "contentSource": {
-            "org": "demo-system-stores",
-            "site": "accs-citisignal"
-          },
-          "contentPatches": [
-            "index-product-teaser-sku-accs",
-            "phones-heading-reorder",
-            "smart-watches-category-id-accs"
-          ],
-          "contentPatchSource": {
-            "owner": "skukla",
-            "repo": "eds-demo-patches",
-            "path": "citisignal"
-          },
-          "codePatches": [
-            "header-nav-tools-defensive",
-            "product-link-sku-encoding",
-            "product-link-sku-slash-encoding",
-            "aem-assets-sku-sanitization",
-            "commerce-account-sidebar-selector-race",
-            "product-teaser-sku-encoding",
-            "product-teaser-getproductlink-import",
-            "product-teaser-image-url-handling"
-          ],
-          "codePatchSource": {
-            "owner": "skukla",
-            "repo": "eds-demo-patches",
-            "path": "citisignal"
-          }
-        }
-      }
-    },
-    {
-      "id": "citisignal-b2b",
-      "name": "CitiSignal B2B",
-      "description": "CitiSignal-branded B2B commerce demo (company management, quotes, purchase orders, requisition lists)",
-      "icon": "citisignal",
-      "featured": true,
-      "requiresMesh": false,
-      "addons": {
-        "adobe-commerce-aco": "excluded"
-      },
-      "configDefaults": {
-        "ADOBE_COMMERCE_WEBSITE_CODE": "citisignal",
-        "ADOBE_COMMERCE_STORE_CODE": "citisignal_store",
-        "ADOBE_COMMERCE_STORE_VIEW_CODE": "citisignal_us",
-        "ACCS_WEBSITE_CODE": "citisignal",
-        "ACCS_STORE_CODE": "citisignal_store",
-        "ACCS_STORE_VIEW_CODE": "citisignal_us"
-      },
-      "storefronts": {
-        "eds-paas": {
-          "name": "CitiSignal B2B EDS + PaaS",
-          "description": "CitiSignal-branded B2B Edge Delivery storefront with Commerce PaaS backend",
-          "icon": "eds",
-          "featured": true,
-          "tags": [
-            "eds",
-            "citisignal",
-            "b2b",
-            "paas"
-          ],
-          "source": {
-            "type": "git",
             "url": "https://github.com/adobe-commerce/boilerplate-b2b-template",
             "branch": "main",
             "gitOptions": {
@@ -453,6 +249,10 @@
           "contentSource": {
             "org": "demo-system-stores",
             "site": "accs-citisignal"
+          },
+          "accountContentSource": {
+            "org": "adobe-commerce",
+            "site": "boilerplate-b2b"
           },
           "contentPatches": [
             "index-product-teaser-sku",
@@ -484,14 +284,13 @@
           }
         },
         "eds-accs": {
-          "name": "CitiSignal B2B EDS + ACCS",
-          "description": "CitiSignal-branded B2B Edge Delivery storefront with Commerce Cloud Service backend",
+          "name": "CitiSignal EDS + ACCS",
+          "description": "Edge Delivery Services storefront with Commerce Cloud Service backend",
           "icon": "eds",
           "featured": false,
           "tags": [
             "eds",
             "citisignal",
-            "b2b",
             "accs"
           ],
           "source": {
@@ -507,6 +306,10 @@
           "contentSource": {
             "org": "demo-system-stores",
             "site": "accs-citisignal"
+          },
+          "accountContentSource": {
+            "org": "adobe-commerce",
+            "site": "boilerplate-b2b"
           },
           "contentPatches": [
             "index-product-teaser-sku-accs",
@@ -540,9 +343,10 @@
     {
       "id": "buildright",
       "name": "BuildRight",
-      "description": "Construction/hardware demo with BuildRight branding",
+      "description": "BuildRight-branded commerce demo for construction and hardware",
       "icon": "buildright",
       "featured": false,
+      "hidden": true,
       "requiresMesh": true,
       "status": "coming-soon",
       "addons": {

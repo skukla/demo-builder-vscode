@@ -18,6 +18,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ActionGrid } from './components/ActionGrid';
 import { AiCapabilitiesModal } from './components/AiCapabilitiesModal';
 import { DashboardRenameDialog } from './components/DashboardRenameDialog';
+import { OrgContextNotice } from './components/OrgContextNotice';
 import { isStartActionDisabled } from './dashboardPredicates';
 import { useDashboardActions } from './hooks/useDashboardActions';
 import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
@@ -54,6 +55,8 @@ interface ProjectDashboardScreenProps {
     initialMeshStatus?: string;
     /** Initial EDS storefront status (for dynamic status display) */
     initialEdsStorefrontStatus?: 'published' | 'stale' | 'update-declined' | 'not-published';
+    /** Whether the project has an Adobe org (drives the "Checking organization…" telegraph) */
+    hasAdobeContext?: boolean;
 }
 
 /**
@@ -67,7 +70,7 @@ interface ProjectDashboardScreenProps {
  *
  * @param props - Component props
  */
-export function ProjectDashboardScreen({ project, hasMesh = false, brandName, stackName, isEds = false, edsLiveUrl, edsDaLiveUrl, authoringExperience, initialMeshStatus, initialEdsStorefrontStatus }: ProjectDashboardScreenProps) {
+export function ProjectDashboardScreen({ project, hasMesh = false, brandName, stackName, isEds = false, edsLiveUrl, edsDaLiveUrl, authoringExperience, initialMeshStatus, initialEdsStorefrontStatus, hasAdobeContext }: ProjectDashboardScreenProps) {
     // Capture isEds on first render and never change it (project type doesn't change)
     const isEdsRef = useRef(isEds);
     if (isEds && !isEdsRef.current) {
@@ -89,6 +92,15 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
     const [liveAuthoringExperience, setLiveAuthoringExperience] = useState(authoringExperience);
     const [liveEdsDaLiveUrl, setLiveEdsDaLiveUrl] = useState(edsDaLiveUrl);
 
+    // Tracks whether the user has attempted a forced org switch this session.
+    // After an attempt that still leaves them mismatched, the banner adds a
+    // no-loop hint (another browser tab may be holding the wrong org).
+    const [switchAttempted, setSwitchAttempted] = useState(false);
+
+    // True while the forced switch round-trip (browser login + re-verify) is in
+    // flight — drives the banner's disabled "Switching…" button.
+    const [isSwitchingOrg, setIsSwitchingOrg] = useState(false);
+
     // State for browser opening (passed to actions hook)
     const [isOpeningBrowser, setIsOpeningBrowser] = useState(false);
     const [showCapabilities, setShowCapabilities] = useState(false);
@@ -105,6 +117,9 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
         displayName: statusDisplayName,
         status,
         meshStatus,
+        orgMismatch,
+        orgCheckState,
+        imsOrgDisplay,
         aiReady,
         aiSkills,
         aiSkillsError,
@@ -113,7 +128,7 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
         aiBusy,
         aiRegenProgress,
         regenerateAiFiles,
-    } = useDashboardStatus({ hasMesh, initialMeshStatus, initialEdsStorefrontStatus }, isEdsStable);
+    } = useDashboardStatus({ hasMesh, initialMeshStatus, initialEdsStorefrontStatus, hasAdobeContext }, isEdsStable);
 
     // Action handlers via extracted hook
     const {
@@ -134,6 +149,7 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
         handleResetProject,
         handleNavigateBack,
         handleReAuthenticate,
+        handleSwitchOrg,
     } = useDashboardActions({
         isOpeningBrowser,
         setIsTransitioning,
@@ -180,6 +196,35 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
         });
         return unsubscribe;
     }, []);
+
+    // Reset the switch-attempt flag once the org check RESOLVES clean (not on the
+    // transient 'checking' a re-check passes through — that would drop the no-loop
+    // hint), so a future, unrelated mismatch starts without a stale hint.
+    useEffect(() => {
+        if (orgCheckState === 'none') {
+            setSwitchAttempted(false);
+        }
+    }, [orgCheckState]);
+
+    // Forced account/org switch: mark the attempt so a persistent mismatch
+    // surfaces the no-loop hint, show the in-flight "Switching…" state, then
+    // trigger the forced sign-in. Cleared on completion regardless of outcome
+    // (success, still-mismatched, cancelled) so the button never strands. A ref
+    // guards re-entry synchronously (state lags a render, so a fast double-press
+    // could otherwise fire the round-trip twice).
+    const switchInFlightRef = useRef(false);
+    const onSwitchOrg = async () => {
+        if (switchInFlightRef.current) return;
+        switchInFlightRef.current = true;
+        setSwitchAttempted(true);
+        setIsSwitchingOrg(true);
+        try {
+            await handleSwitchOrg();
+        } finally {
+            switchInFlightRef.current = false;
+            setIsSwitchingOrg(false);
+        }
+    };
 
     // Derived values
     const displayName = statusDisplayName || project?.name || 'Demo Project';
@@ -242,6 +287,19 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
                                     className="dashboard-status-badge"
                                 />
 
+                                {/* IMS Org status — ambient org-context health (blue checking →
+                                    green org name / red wrong org). Shown only for Adobe projects.
+                                    The actionable mismatch banner is separate (below). */}
+                                {imsOrgDisplay && (
+                                    <StatusCard
+                                        label="IMS Org"
+                                        status={imsOrgDisplay.text}
+                                        color={imsOrgDisplay.color}
+                                        size="S"
+                                        className="dashboard-status-badge"
+                                    />
+                                )}
+
                                 {/* AI links — capability discovery + a fix shortcut when health
                                     needs attention. Placed in the status grid starting at column 2
                                     so the link text is flush with the status labels above (not the
@@ -288,6 +346,17 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
                         </div>
                     </div>
                 </div>
+
+                {/* Org-mismatch banner — the actionable half of org-context
+                    surfacing (ambient checking/ok/wrong status lives in the "IMS
+                    Org" badge above). Shows only on mismatch, with Switch IMS Org. */}
+                <OrgContextNotice
+                    state={orgCheckState}
+                    orgMismatch={orgMismatch}
+                    switchAttempted={switchAttempted}
+                    isSwitching={isSwitchingOrg}
+                    onSwitchOrg={onSwitchOrg}
+                />
 
                 <div className="page-container-padded pb-4">
 

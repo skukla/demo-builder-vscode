@@ -299,6 +299,10 @@ class WebviewClient {
         this.postMessage('get-projects', { orgId });
     }
 
+    public reDetectContext(): void {
+        this.postMessage('re-detect-context');
+    }
+
     public createProject(config: unknown): void {
         this.postMessage('create-project', config);
     }

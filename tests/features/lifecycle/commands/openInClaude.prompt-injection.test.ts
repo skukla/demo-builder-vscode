@@ -7,7 +7,7 @@ jest.mock('@/commands/claudeSessionStore', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { OpenInClaudeCommand } from '@/commands/openInClaude';
+import { OpenInClaudeCommand, REHOME_PROMPT_PREFIX } from '@/commands/openInClaude';
 import type { Project } from '@/types/base';
 import {
     setupVscodeMocks, makeLogger, makeStateManager, makeGlobalState, makeContext, makeProject,
@@ -85,7 +85,10 @@ describe('OpenInClaudeCommand', () => {
 
             await command.execute({ project: makeProject() as Project, prompt: 'do the thing' });
 
-            expect(mocks.terminalSendTextMock).toHaveBeenCalledWith("claude --continue -- 'do the thing'");
+            // Continued conversation → carries the re-home preamble before the prompt.
+            expect(mocks.terminalSendTextMock).toHaveBeenCalledWith(
+                `claude --continue -- '${REHOME_PROMPT_PREFIX}do the thing'`,
+            );
         });
 
         it('omits `--continue` on cold start and submits the prompt to a fresh session', async () => {
@@ -98,7 +101,9 @@ describe('OpenInClaudeCommand', () => {
 
             await command.execute({ project: makeProject() as Project, prompt: 'do the thing' });
 
+            // Cold start self-homes from AGENTS.md → NO re-home preamble.
             expect(mocks.terminalSendTextMock).toHaveBeenCalledWith("claude -- 'do the thing'");
+            expect(mocks.terminalSendTextMock.mock.calls[0][0]).not.toContain(REHOME_PROMPT_PREFIX);
         });
 
         it('escapes single quotes in the prompt so the shell receives it intact', async () => {
@@ -111,8 +116,11 @@ describe('OpenInClaudeCommand', () => {
 
             await command.execute({ project: makeProject() as Project, prompt: "it's a test" });
 
-            // POSIX single-quote escaping: ' becomes '\'' (close, escaped quote, reopen)
-            expect(mocks.terminalSendTextMock).toHaveBeenCalledWith("claude --continue -- 'it'\\''s a test'");
+            // POSIX single-quote escaping: ' becomes '\'' (close, escaped quote, reopen).
+            // The re-home preamble (no quotes) precedes the prompt inside the same arg.
+            expect(mocks.terminalSendTextMock).toHaveBeenCalledWith(
+                `claude --continue -- '${REHOME_PROMPT_PREFIX}it'\\''s a test'`,
+            );
         });
 
         it('keeps a multi-line prompt inside the single-quoted argument', async () => {
@@ -126,7 +134,9 @@ describe('OpenInClaudeCommand', () => {
 
             await command.execute({ project: makeProject() as Project, prompt: multiLine });
 
-            expect(mocks.terminalSendTextMock).toHaveBeenCalledWith(`claude --continue -- '${multiLine}'`);
+            expect(mocks.terminalSendTextMock).toHaveBeenCalledWith(
+                `claude --continue -- '${REHOME_PROMPT_PREFIX}${multiLine}'`,
+            );
         });
 
         it('does NOT bracketed-paste inject on spawn (the prompt rides the launch arg)', async () => {
@@ -206,7 +216,8 @@ describe('OpenInClaudeCommand', () => {
             );
             expect(sendSequenceCall).toBeDefined();
             const payload = sendSequenceCall![1] as { text: string };
-            expect(payload.text).toBe(PASTE_START + 'hello world' + PASTE_END);
+            // Reuse = continued session → re-home preamble precedes the prompt.
+            expect(payload.text).toBe(PASTE_START + REHOME_PROMPT_PREFIX + 'hello world' + PASTE_END);
             // No spawn — createTerminal not called
             expect(mocks.createTerminalMock).not.toHaveBeenCalled();
         });
@@ -233,7 +244,7 @@ describe('OpenInClaudeCommand', () => {
             expect(sendSequenceCall).toBeDefined();
             const payload = sendSequenceCall![1] as { text: string };
             // Whole multi-line block is wrapped — newlines stay inside the brackets
-            expect(payload.text).toBe(PASTE_START + multiLine + PASTE_END);
+            expect(payload.text).toBe(PASTE_START + REHOME_PROMPT_PREFIX + multiLine + PASTE_END);
             // Verify newlines were preserved (not stripped)
             expect(payload.text).toContain('\n');
         });

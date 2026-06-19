@@ -94,7 +94,9 @@ The dashboard is designed for at-a-glance status monitoring and one-click action
 **Operations**:
 1. Update UI to 'authenticating' state
 2. Trigger browser authentication
-3. Auto-select project's organization
+3. Restore project context (login only; org/project/workspace are NOT re-pinned
+   to the aio global — each subsequent op targets them per-invocation via
+   `withOrgContext`)
 4. Re-check mesh status with fresh auth
 5. Update dashboard with new status
 
@@ -259,10 +261,9 @@ vscode.postMessage({ type: 're-authenticate' });
 const authManager = new AuthenticationService(/*...*/);
 await authManager.login(); // Opens browser
 
-if (project.adobe?.organization) {
-    // Auto-select project's org
-    await authManager.selectOrganization(project.adobe.organization);
-}
+// No manual org selection: the project's org/project/workspace is targeted
+// per operation (from project.adobe) via the internal withOrgContext mechanism,
+// so the extension never mutates the global `aio console` selection.
 
 // Re-check mesh status with fresh auth
 await handleRequestStatus(context);

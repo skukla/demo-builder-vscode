@@ -12,6 +12,7 @@ import * as path from 'path';
 import { checkApiMeshEnabled, checkMeshExistence, fallbackMeshCheck } from '../services/meshCheckHelpers';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
+import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell';
 import { validateWorkspaceId } from '@/core/validation';
 import { ensureAuthenticated, getSetupInstructions, getEndpoint } from '@/features/mesh/handlers/shared';
 import { ErrorCode } from '@/types/errorCodes';
@@ -62,10 +63,7 @@ function getWorkspaceServices(config: WorkspaceConfig | null): unknown[] {
  * @param payload - Request payload containing workspaceId (validated) and optional selectedComponents
  * @returns Result object with mesh availability status and details
  */
-export async function handleCheckApiMesh(
-    context: HandlerContext,
-    payload: { workspaceId: string; projectId?: string; selectedComponents?: string[] },
-): Promise<{
+type MeshCheckResult = {
     success: boolean;
     apiEnabled: boolean;
     meshExists: boolean;
@@ -75,7 +73,12 @@ export async function handleCheckApiMesh(
     error?: string;
     code?: ErrorCode;
     setupInstructions?: { step: string; details: string; important?: boolean }[];
-}> {
+};
+
+export async function handleCheckApiMesh(
+    context: HandlerContext,
+    payload: { workspaceId: string; projectId?: string; selectedComponents?: string[] },
+): Promise<MeshCheckResult> {
     const { workspaceId, projectId, selectedComponents = [] } = payload;
 
     // SECURITY: Validate workspaceId to prevent command injection
@@ -106,34 +109,47 @@ export async function handleCheckApiMesh(
         };
     }
 
-    // CRITICAL: Ensure workspace context is selected before mesh check
-    // The Adobe CLI commands (workspace download, api-mesh get) require a project/workspace
-    // to be selected in the CLI's global context. The --workspaceId flag alone is not sufficient.
-    // Without this, commands fail with "You have not selected a Project" even with --workspaceId.
+    // Target the project/workspace via per-invocation AIO_CONSOLE_* env instead
+    // of mutating the shared `aio` global with selectWorkspace (which races
+    // concurrent processes). The Adobe CLI commands (workspace download,
+    // api-mesh get) need the project/workspace context; env targeting supplies
+    // it WITHOUT clobbering other processes. The explicit --workspaceId flag is
+    // kept on the download command.
     //
-    // Try to get projectId from:
-    // 1. Payload (provided by wizard in edit/create mode)
-    // 2. Current project (for dashboard/other contexts)
-    let effectiveProjectId = projectId;
+    // Resolve targeting context. projectId may come from the payload (wizard
+    // edit/create mode); the org is only known from the current project, so we
+    // always read it from there (falling back to the project for projectId too).
+    const project = await context.stateManager.getCurrentProject();
+    const effectiveProjectId = projectId ?? project?.adobe?.projectId;
+    const effectiveOrgId = project?.adobe?.organization;
+
     if (!effectiveProjectId) {
-        const project = await context.stateManager.getCurrentProject();
-        effectiveProjectId = project?.adobe?.projectId;
+        context.logger.warn('[Mesh Setup] Missing projectId - cannot target workspace context, check may fail');
     }
 
-    if (context.authManager && workspaceId && effectiveProjectId) {
-        context.debugLogger.trace(`[Mesh Setup] Ensuring workspace context before check: ${workspaceId}`);
-        const contextOk = await context.authManager.selectWorkspace(
-            workspaceId,
-            effectiveProjectId,
-        );
-        if (!contextOk) {
-            context.logger.warn('[Mesh Setup] Failed to set workspace context - check may fail');
-            // Continue anyway - the mesh command may still work if context happens to be correct
-        }
-    } else {
-        context.logger.warn('[Mesh Setup] Missing projectId - cannot ensure workspace context, check may fail');
-    }
+    // Build the target via the shared builder so org code/name are enriched from
+    // the cached org on an id match (less leaky than ID-only). The workspace is
+    // the payload's, not project.adobe.workspace, so it's supplied explicitly.
+    const cachedOrg = ServiceLocator.getAuthenticationService().getCachedOrganization();
+    const target: OrgContextTarget = buildOrgTargetFromProjectAdobe(
+        { organization: effectiveOrgId, projectId: effectiveProjectId, workspace: workspaceId },
+        cachedOrg,
+    );
 
+    return withOrgContext(target, () =>
+        runMeshCheck(context, workspaceId, selectedComponents),
+    );
+}
+
+/**
+ * Run the multi-layer mesh check under the active org-context targeting.
+ * Extracted so {@link handleCheckApiMesh} can wrap it in withOrgContext.
+ */
+async function runMeshCheck(
+    context: HandlerContext,
+    workspaceId: string,
+    selectedComponents: string[],
+): Promise<MeshCheckResult> {
     const commandManager = ServiceLocator.getCommandExecutor();
 
     try {

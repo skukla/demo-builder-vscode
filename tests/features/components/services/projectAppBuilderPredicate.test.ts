@@ -17,7 +17,6 @@ function makeDefinition(id: string): TransformedComponentDefinition {
 
 function makeRegistry(opts: {
     mesh?: string[];
-    appBuilder?: string[];
 } = {}): ComponentRegistry {
     return {
         version: 'test',
@@ -26,7 +25,6 @@ function makeRegistry(opts: {
             backends: [makeDefinition('adobe-commerce-paas')],
             dependencies: [],
             mesh: (opts.mesh ?? ['eds-commerce-mesh', 'eds-accs-mesh', 'headless-commerce-mesh']).map(makeDefinition),
-            appBuilder: (opts.appBuilder ?? ['integration-service']).map(makeDefinition),
             integrations: [],
         },
     };
@@ -79,20 +77,6 @@ describe('projectRequiresAppBuilder', () => {
         expect(projectRequiresAppBuilder(project, makeRegistry())).toBe(true);
     });
 
-    it('returns true when project includes a non-mesh App Builder app (integration-service)', () => {
-        const project = makeProject(['eds-storefront', 'integration-service']);
-        expect(projectRequiresAppBuilder(project, makeRegistry())).toBe(true);
-    });
-
-    it('returns true when project includes a future App Builder component not present today', () => {
-        // The predicate is registry-driven. Adding new App Builder components
-        // to components.json automatically extends the predicate; this test
-        // pins that contract.
-        const project = makeProject(['eds-storefront', 'firefly-bridge']);
-        const registry = makeRegistry({ appBuilder: ['integration-service', 'firefly-bridge'] });
-        expect(projectRequiresAppBuilder(project, registry)).toBe(true);
-    });
-
     it('returns false when a non-App-Builder component happens to share a name fragment with one', () => {
         // The match is by exact ID, not by substring. Guards against future
         // components named "mesh-config" or similar that aren't App Builder.
@@ -100,13 +84,13 @@ describe('projectRequiresAppBuilder', () => {
         expect(projectRequiresAppBuilder(project, makeRegistry())).toBe(false);
     });
 
-    it('returns false when registry has empty mesh and appBuilder sections', () => {
+    it('returns false when registry has empty mesh section', () => {
         const project = makeProject(['eds-storefront', 'eds-commerce-mesh']);
-        const emptyRegistry = makeRegistry({ mesh: [], appBuilder: [] });
+        const emptyRegistry = makeRegistry({ mesh: [] });
         expect(projectRequiresAppBuilder(project, emptyRegistry)).toBe(false);
     });
 
-    it('handles a registry where mesh or appBuilder is undefined', () => {
+    it('handles a registry where mesh is undefined', () => {
         const project = makeProject(['eds-storefront']);
         const registry: ComponentRegistry = {
             version: 'test',
@@ -114,7 +98,7 @@ describe('projectRequiresAppBuilder', () => {
                 frontends: [],
                 backends: [],
                 dependencies: [],
-                // mesh and appBuilder intentionally omitted
+                // mesh intentionally omitted
             },
         };
         expect(projectRequiresAppBuilder(project, registry)).toBe(false);

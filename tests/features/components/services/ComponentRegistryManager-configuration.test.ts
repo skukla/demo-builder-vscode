@@ -59,20 +59,6 @@ describe('ComponentRegistryManager - Configuration', () => {
             expect(versions.size).toBe(0);
         });
 
-        it('should include app builder node versions', async () => {
-            // integration-service requires Node 22
-            const versions = await manager.getRequiredNodeVersions(
-                'eds',
-                'adobe-commerce-paas',
-                undefined,
-                undefined,
-                ['integration-service']
-            );
-
-            expect(versions.size).toBe(1);
-            expect(versions.has('22')).toBe(true);
-        });
-
         it('should return empty set when no components specified', async () => {
             const versions = await manager.getRequiredNodeVersions();
 

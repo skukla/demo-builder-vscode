@@ -1,18 +1,21 @@
-import * as fs from 'fs/promises';
-import * as path from 'path';
 import * as vscode from 'vscode';
-import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { BaseCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
 import { StateManager } from '@/core/state';
-import { ExecutionLock, TIMEOUTS } from '@/core/utils';
-import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
-import { formatAdobeCliError, extractMeshErrorSummary } from '@/features/mesh/utils/errorFormatter';
+import { ExecutionLock } from '@/core/utils';
 import type { Logger } from '@/types/logger';
-import { getMeshComponentInstance, parseJSON } from '@/types/typeGuards';
+import { getMeshComponentInstance } from '@/types/typeGuards';
 
 /**
- * Deploy (or redeploy) API Mesh using the mesh.json from the mesh component
+ * Deploy (or redeploy) API Mesh.
+ *
+ * The command owns orchestration + UX only — lock, pre-flight, dashboard status
+ * telegraphing, and persistence. The actual build + deploy + verify is delegated
+ * to the shared `deployMeshComponent` service (the single deploy core also used by
+ * project creation and the reset flows), so there is one place that issues
+ * `aio api-mesh:*`. Delegating also means the dashboard redeploy now rebuilds
+ * mesh.json from the current .env (a Configure change actually takes effect) and
+ * uses create-or-update instead of a hardcoded update.
  */
 export class DeployMeshCommand extends BaseCommand {
     /** Execution lock to prevent duplicate concurrent execution */
@@ -49,41 +52,32 @@ export class DeployMeshCommand extends BaseCommand {
             // This ensures the dashboard shows "Deploying..." while pre-flight checks run
             await ProjectDashboardWebviewCommand.sendMeshStatusUpdate('deploying', 'Checking requirements...');
 
-            // PRE-FLIGHT: Check authentication (inline sign-in if needed)
+            // PRE-FLIGHT: ensure auth AND the correct org context in one shared gate
+            // (the same pre-flight the reset flows use). Auth-expiry → Sign In/Cancel;
+            // wrong org → Switch IMS Org/Cancel; both recover inline rather than
+            // dead-ending in a warning that points back at the dashboard banner.
             const authManager = ServiceLocator.getAuthenticationService();
-            const authResult = await ensureAdobeIOAuth({
+            const { ensureProjectAdobeContext } = await import(
+                '@/features/authentication/services/ensureProjectAdobeContext'
+            );
+            const preflight = await ensureProjectAdobeContext({
                 authManager,
+                project,
                 logger: this.logger,
                 logPrefix: '[Mesh Deployment]',
-                projectContext: {
-                    organization: project.adobe?.organization,
-                    projectId: project.adobe?.projectId,
-                    workspace: project.adobe?.workspace,
-                },
                 warningMessage: 'Adobe sign-in required to deploy mesh.',
             });
-            if (!authResult.authenticated) {
+            if (!preflight.ready) {
                 await ProjectDashboardWebviewCommand.refreshStatus();
-                if (!authResult.cancelled) {
-                    vscode.window.showErrorMessage('Sign-in failed or was cancelled. Please try again.');
+                if (!preflight.cancelled) {
+                    vscode.window.showErrorMessage(
+                        preflight.blockedBy === 'org'
+                            ? 'Still signed into the wrong Adobe organization. '
+                              + 'Close any other Adobe browser tab, then try again.'
+                            : 'Sign-in failed or was cancelled. Please try again.',
+                    );
                 }
                 return;
-            }
-
-            // Check org access (degraded mode detection)
-            if (project.adobe?.organization) {
-                const currentOrg = await authManager.getCurrentOrganization();
-                if (!currentOrg || currentOrg.id !== project.adobe.organization) {
-                    // Refresh status to show correct state
-                    await ProjectDashboardWebviewCommand.refreshStatus();
-
-                    vscode.window.showWarningMessage(
-                        `You no longer have access to the organization for "${project.name}". ` +
-                        'Local demo will continue working, but mesh deployment is unavailable.\n\n' +
-                        'Contact your administrator to restore access.',
-                    );
-                    return;
-                }
             }
 
             // App Builder permission gate. Defensive — by the time the user
@@ -125,39 +119,24 @@ export class DeployMeshCommand extends BaseCommand {
                 return;
             }
 
-            // Check for mesh.json in the component directory
-            const meshConfigPath = path.join(meshComponent.path, 'mesh.json');
-            try {
-                await fs.access(meshConfigPath);
-            } catch {
-                // Refresh status to show correct state
-                await ProjectDashboardWebviewCommand.refreshStatus();
-
-                vscode.window.showErrorMessage(
-                    `mesh.json not found in ${meshComponent.path}. Please ensure the mesh configuration file exists.`,
-                );
-                return;
-            }
-
             // Log deployment start
             this.logger.info('='.repeat(60));
             this.logger.info('API Mesh Deployment Started');
             this.logger.info('='.repeat(60));
             this.logger.info(`Project: ${project.name}`);
-            this.logger.info(`Mesh Config: ${meshConfigPath}`);
+            this.logger.info(`Mesh Component: ${meshComponent.path}`);
             this.logger.info(`Time: ${new Date().toISOString()}`);
             this.logger.info('='.repeat(60));
-            
+
             try {
-            
                 // Send initial "deploying" status to Project Dashboard
                 await ProjectDashboardWebviewCommand.sendMeshStatusUpdate('deploying', 'Starting deployment...');
-            
+
                 // Update component state to deploying
                 meshComponent.status = 'deploying';
                 await this.stateManager.saveProject(project);
 
-                // Show progress notification
+                // Show progress notification while the shared deploy pipeline runs.
                 await vscode.window.withProgress(
                     {
                         location: vscode.ProgressLocation.Notification,
@@ -165,128 +144,41 @@ export class DeployMeshCommand extends BaseCommand {
                         cancellable: false,
                     },
                     async (progress) => {
-                        progress.report({ message: 'Reading mesh configuration...' });
-                        await ProjectDashboardWebviewCommand.sendMeshStatusUpdate('deploying', 'Reading configuration...');
-                        this.logger.info('[1/3] Reading mesh configuration...');
-                    
-                        // Validate mesh config exists and is valid JSON
-                        const meshConfigContent = await fs.readFile(meshConfigPath, 'utf-8');
-                        try {
-                            const config = parseJSON<Record<string, unknown>>(meshConfigContent);
-                            if (!config) {
-                                throw new Error('Invalid JSON');
-                            }
-                            this.logger.info('✓ Configuration validated');
-                        } catch (parseError) {
-                            this.logger.error(`✗ Invalid JSON: ${(parseError as Error).message}`);
-                            throw new Error('Invalid mesh.json file: ' + (parseError as Error).message);
-                        }
+                        // Bridge the shared service's progress callback to both the
+                        // progress notification and the dashboard status badge.
+                        const onProgress = (message: string, subMessage?: string) => {
+                            const text = subMessage || message;
+                            progress.report({ message: text });
+                            void ProjectDashboardWebviewCommand.sendMeshStatusUpdate('deploying', text);
+                        };
 
-                        // Use the original mesh.json path directly (not a temp copy)
-                        // This ensures relative paths in mesh.json (like build/resolvers/*.js) resolve correctly
-                        this.logger.debug(`[Mesh Deployment] Deploying mesh from: ${meshConfigPath}`);
-                    
-                        progress.report({ message: 'Deploying to Adobe I/O...' });
-                        await ProjectDashboardWebviewCommand.sendMeshStatusUpdate('deploying', 'Deploying to Adobe I/O...');
-                        this.logger.info('');
-                        this.logger.info('[2/3] Deploying to Adobe I/O...');
-                        this.logger.info('-'.repeat(60));
-                    
+                        // Create-or-update: source the existing mesh id from Adobe I/O
+                        // (remote truth) so a never-deployed mesh is created and an
+                        // existing one is updated — mirrors the reset flow.
+                        const { fetchMeshInfoFromAdobeIO } = await import('../services/meshVerifier');
+                        const meshInfo = await fetchMeshInfoFromAdobeIO(this.logger);
+                        const existingMeshId = meshInfo?.meshId || '';
+
+                        // Delegate build + deploy + verify to the shared deploy core.
+                        // The build step regenerates mesh.json from the current .env so a
+                        // Configure change actually takes effect on redeploy.
+                        const { deployMeshComponent } = await import('../services/meshDeployment');
                         const commandManager = ServiceLocator.getCommandExecutor();
-                        const updateResult = await commandManager.execute(
-                            `aio api-mesh:update "${meshConfigPath}" --autoConfirmAction`,
-                            {
-                                cwd: meshComponent.path, // Run from mesh component directory (where .env file is)
-                                streaming: true,
-                                shell: true, // Required for command string with arguments and quoted paths
-                                timeout: TIMEOUTS.LONG,
-                                onOutput: (data: string) => {
-                                    // Write detailed streaming output to main logs
-                                    // Filter out HTML error responses (Adobe CLI sometimes includes entire error pages)
-                                    const trimmedData = formatAdobeCliError(data).trim();
-                                    if (trimmedData) {
-                                        this.logger.info(`  ${trimmedData}`);
-                                    }
-                                    
-                                    const output = data.toLowerCase();
-                                    if (output.includes('validating')) {
-                                        progress.report({ message: 'Validating configuration...' });
-                                        ProjectDashboardWebviewCommand.sendMeshStatusUpdate('deploying', 'Validating configuration...');
-                                    } else if (output.includes('updating')) {
-                                        progress.report({ message: 'Updating mesh infrastructure...' });
-                                        ProjectDashboardWebviewCommand.sendMeshStatusUpdate('deploying', 'Updating infrastructure...');
-                                    } else if (output.includes('deploying')) {
-                                        progress.report({ message: 'Deploying mesh...' });
-                                        ProjectDashboardWebviewCommand.sendMeshStatusUpdate('deploying', 'Deploying...');
-                                    } else if (output.includes('success')) {
-                                        progress.report({ message: 'Finalizing deployment...' });
-                                        ProjectDashboardWebviewCommand.sendMeshStatusUpdate('deploying', 'Finalizing...');
-                                    }
-                                },
-                                configureTelemetry: false,
-                                useNodeVersion: getMeshNodeVersion(),
-                                enhancePath: true,
-                            },
+                        const result = await deployMeshComponent(
+                            meshComponent.path as string,
+                            commandManager,
+                            this.logger,
+                            onProgress,
+                            existingMeshId,
                         );
 
-                        if (updateResult.code !== 0) {
-                            // Don't re-log stderr/stdout here - they've already been streamed above
-                            // Just extract a clean error message for the exception
-                            const rawError = updateResult.stderr || updateResult.stdout || 'Mesh deployment failed';
-                            throw new Error(formatAdobeCliError(rawError));
+                        if (!result.success) {
+                            throw new Error(result.error || 'Mesh deployment failed');
                         }
-                        
-                        this.logger.debug('[Mesh Deployment] Update command completed, starting deployment verification...');
-                        this.logger.info('-'.repeat(60));
-                        this.logger.info('✓ Update command completed');
-                        this.logger.info('');
-                        this.logger.info('[3/3] Verifying deployment...');
-                        this.logger.info('-'.repeat(60));
-                        
-                        // Use shared verification utility
-                        progress.report({ message: 'Waiting for mesh deployment...' });
-                        await ProjectDashboardWebviewCommand.sendMeshStatusUpdate('deploying', 'Waiting for deployment to complete...');
-                        
-                        this.logger.info('Waiting 20 seconds for mesh provisioning...');
 
-                        const { waitForMeshDeployment } = await import('../services/meshDeploymentVerifier');
+                        const deployedMeshId = result.data?.meshId;
+                        const deployedEndpoint = result.data?.endpoint;
 
-                        const verificationResult = await waitForMeshDeployment({
-                            onProgress: (attempt, maxRetries, elapsedSeconds) => {
-                                progress.report({ message: 'Verifying deployment...' });
-                                ProjectDashboardWebviewCommand.sendMeshStatusUpdate(
-                                    'deploying',
-                                    `Verifying deployment (attempt ${attempt}/${maxRetries})...`,
-                                );
-                                this.logger.info(`Attempt ${attempt}/${maxRetries} (${elapsedSeconds}s elapsed)...`);
-                            },
-                            logger: this.logger,
-                        });
-                        
-                        if (!verificationResult.deployed) {
-                            // Extract user-friendly summary from verbose mesh error
-                            const errorSummary = verificationResult.error
-                                ? extractMeshErrorSummary(verificationResult.error)
-                                : 'Mesh deployment verification failed';
-
-                            this.logger.info(''); // Blank line before error (no ❌ prefix)
-                            this.logger.error('Mesh deployment failed:');
-                            this.logger.error(errorSummary);
-                            throw new Error(errorSummary);
-                        }
-                        
-                        const deployedMeshId = verificationResult.meshId;
-                        const deployedEndpoint = verificationResult.endpoint;
-                        
-                        this.logger.info('');
-                        this.logger.info('✓ Mesh successfully deployed!');
-                        if (deployedMeshId) {
-                            this.logger.info(`  Mesh ID: ${deployedMeshId}`);
-                        }
-                        if (deployedEndpoint) {
-                            this.logger.info(`  Endpoint: ${deployedEndpoint}`);
-                        }
-                        
                         // Update component instance with deployment info
                         // Note: endpoint is stored in meshState (authoritative), not componentInstance
                         meshComponent.status = 'deployed';
@@ -296,8 +188,8 @@ export class DeployMeshCommand extends BaseCommand {
                             meshStatus: 'deployed',
                         };
 
-                        // Update mesh state (env vars + source hash + endpoint) to match deployed configuration
-                        // This ensures the dashboard knows the config is in sync
+                        // Update mesh state (env vars + source hash + endpoint) to match deployed config
+                        // so the dashboard knows the config is in sync.
                         // See docs/architecture/state-ownership.md for single-source-of-truth
                         const { updateMeshState } = await import('../services/stalenessDetector');
                         await updateMeshState(project, deployedEndpoint);
@@ -306,31 +198,31 @@ export class DeployMeshCommand extends BaseCommand {
                         // Persist deployed status for card grid display
                         project.meshStatusSummary = 'deployed';
                         await this.stateManager.saveProject(project);
-                        
+
                         // Send final "deployed" status to Project Dashboard
                         await ProjectDashboardWebviewCommand.sendMeshStatusUpdate('deployed', undefined, deployedEndpoint);
-                        
+
                         this.logger.info('');
                         this.logger.info('='.repeat(60));
                         this.logger.info('Deployment Completed Successfully');
                         this.logger.info('='.repeat(60));
-                        
+
                         // Show auto-dismissing success message (no logs button - only show logs on error)
                         this.showSuccessMessage('API Mesh deployed successfully');
-                        
+
                         // Reset mesh notification flag (user has deployed)
                         await vscode.commands.executeCommand('demoBuilder._internal.meshActionTaken');
                     },
                 );
-            
+
             } catch {
-                // Error details already shown above
+                // Error details already shown above (streamed by the service)
                 this.logger.info(''); // Blank line (no ❌ prefix)
                 this.logger.error('Deployment failed. See error above.');
-                
+
                 // Send error status to Project Dashboard
                 await ProjectDashboardWebviewCommand.sendMeshStatusUpdate('error', 'Deployment failed');
-                
+
                 // Update component state to error
                 const project = await this.stateManager.getCurrentProject();
                 const meshComponent = getMeshComponentInstance(project);
@@ -338,7 +230,7 @@ export class DeployMeshCommand extends BaseCommand {
                     meshComponent.status = 'error';
                     await this.stateManager.saveProject(project);
                 }
-                
+
                 // Show simple error with View Logs button (details are in Demo Builder: User Logs channel)
                 const selection = await vscode.window.showErrorMessage(
                     'Mesh deployment failed. Check logs for details.',

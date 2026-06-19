@@ -122,13 +122,12 @@ describe('configureHandlers', () => {
             expect(hasHandler(configureHandlers, 'openExternal')).toBe(true);
             expect(hasHandler(configureHandlers, 'open-eds-settings')).toBe(true);
             expect(hasHandler(configureHandlers, 'discover-store-structure')).toBe(true);
-            expect(hasHandler(configureHandlers, 'sync-component-configs')).toBe(true);
             expect(hasHandler(configureHandlers, 'create-workspace-credential')).toBe(true);
         });
 
-        it('should have exactly 7 handlers', () => {
+        it('should have exactly 6 handlers', () => {
             const types = getRegisteredTypes(configureHandlers);
-            expect(types).toHaveLength(7);
+            expect(types).toHaveLength(6);
         });
 
         it('should NOT include AI handlers (they live in aiHandlers.ts)', () => {

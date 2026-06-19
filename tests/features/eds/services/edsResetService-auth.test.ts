@@ -237,12 +237,13 @@ describe('resetEdsProjectWithUI - Adobe I/O Auth', () => {
         expect(result.errorType).toBe('ADOBE_AUTH_REQUIRED');
     });
 
-    it('should pass undefined adobe fields gracefully when project lacks adobe context', async () => {
-        // Given: Project with mesh but no Adobe context
-        const project = createProjectWithMesh();
+    it('should pass partial adobe fields gracefully (org set, ids undefined)', async () => {
+        // Given: an Adobe-context project (a mesh IS an Adobe I/O project) whose
+        // projectId/workspace happen to be undefined. The org alone arms the gate.
+        const project = createProjectWithMesh({ organization: 'org-123' });
         const context = createMockContext(project);
 
-        // And: ensureAdobeIOAuth returns failed
+        // And: ensureAdobeIOAuth returns failed (early return, before any reset work)
         mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false });
 
         (vscode.window.showWarningMessage as jest.Mock)
@@ -251,11 +252,11 @@ describe('resetEdsProjectWithUI - Adobe I/O Auth', () => {
         // When
         await resetEdsProjectWithUI({ project, context, packages: testPackages });
 
-        // Then: Should call ensureAdobeIOAuth with undefined fields
+        // Then: ensureAdobeIOAuth is called with the org set and the ids undefined
         expect(mockEnsureAdobeIOAuth).toHaveBeenCalledWith(
             expect.objectContaining({
                 projectContext: expect.objectContaining({
-                    organization: undefined,
+                    organization: 'org-123',
                     projectId: undefined,
                     workspace: undefined,
                 }),

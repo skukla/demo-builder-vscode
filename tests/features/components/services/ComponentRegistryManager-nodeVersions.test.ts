@@ -58,37 +58,6 @@ describe('Component Registry Manager - Node Version Resolution', () => {
             expect(versions.has('20')).toBe(true);
         });
 
-        it('should include app builder node versions', async () => {
-            // Given: EDS + PaaS with integration-service (Node 22)
-            const versions = await manager.getRequiredNodeVersions(
-                'eds',
-                'adobe-commerce-paas',
-                undefined,
-                undefined,
-                ['integration-service']
-            );
-
-            // Then: Only integration-service's Node 22 is required
-            expect(versions.size).toBe(1);
-            expect(versions.has('22')).toBe(true);
-        });
-
-        it('should combine versions from multiple components', async () => {
-            // Given: Headless frontend (Node 24) + integration-service (Node 22)
-            const versions = await manager.getRequiredNodeVersions(
-                'headless',
-                undefined,
-                undefined,
-                undefined,
-                ['integration-service']
-            );
-
-            // Then: Both Node versions are required
-            expect(versions.size).toBe(2);
-            expect(versions.has('24')).toBe(true);
-            expect(versions.has('22')).toBe(true);
-        });
-
         it('should return empty set when no components specified', async () => {
             const versions = await manager.getRequiredNodeVersions();
 
@@ -139,22 +108,6 @@ describe('Component Registry Manager - Node Version Resolution', () => {
             expect(mapping['20']).toBe('Test Tool, Another Dependency');
         });
 
-        it('should keep separate versions distinct', async () => {
-            // Given: Different components require different Node versions
-            // headless (Node 24) + integration-service (Node 22)
-            const mapping = await manager.getNodeVersionToComponentMapping(
-                'headless',
-                undefined,
-                undefined,
-                undefined,
-                ['integration-service']
-            );
-
-            // Then: Each version should have its own component
-            expect(mapping['24']).toBe('Headless Storefront');
-            expect(mapping['22']).toBe('Kukla Integration Service');
-        });
-
         it('should show single component name when only one component uses a version', async () => {
             // Given: Headless frontend uses Node 24 alone
             const mapping = await manager.getNodeVersionToComponentMapping('headless');
@@ -164,17 +117,25 @@ describe('Component Registry Manager - Node Version Resolution', () => {
         });
 
         it('should not duplicate component names when same component referenced multiple times', async () => {
-            // Given: integration-service explicitly listed twice
+            // Given: test-tool (Node 20) explicitly listed twice
+            mockLoader.load.mockResolvedValue({
+                ...mockRawRegistry,
+                dependencies: {
+                    'test-tool': {
+                        ...mockRawRegistry.dependencies!['test-tool'],
+                        configuration: { nodeVersion: '20' },
+                    },
+                },
+            });
+
             const mapping = await manager.getNodeVersionToComponentMapping(
                 undefined,
                 undefined,
-                undefined,
-                undefined,
-                ['integration-service', 'integration-service'] // Duplicate in the array
+                ['test-tool', 'test-tool'] // Duplicate in the array
             );
 
             // Then: Should not have duplicates
-            expect(mapping['22']).toBe('Kukla Integration Service');
+            expect(mapping['20']).toBe('Test Tool');
         });
     });
 

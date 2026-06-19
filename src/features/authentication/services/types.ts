@@ -17,7 +17,6 @@ export interface RawAdobeOrg {
     id: string;
     code: string;
     name: string;
-    type?: string;
 }
 
 export interface RawAdobeProject {

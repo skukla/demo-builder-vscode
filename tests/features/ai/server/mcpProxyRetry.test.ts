@@ -14,7 +14,10 @@
  * shortly after) and previously fell through to a hard exit.
  */
 
-import { isRetryableConnectError } from '@/features/ai/server/mcpProxyRetry';
+import {
+    isRetryableConnectError,
+    isRetryableToolResult,
+} from '@/features/ai/server/mcpProxyRetry';
 
 describe('isRetryableConnectError', () => {
     it('returns true for ENOENT (server not listening yet)', () => {
@@ -48,5 +51,24 @@ describe('isRetryableConnectError', () => {
 
     it('returns false for an empty string error code', () => {
         expect(isRetryableConnectError('')).toBe(false);
+    });
+});
+
+describe('isRetryableToolResult', () => {
+    it('returns false for an ORG_MISMATCH tool result (do not retry into the same 403)', () => {
+        expect(isRetryableToolResult({ error_type: 'ORG_MISMATCH', non_retryable: true })).toBe(false);
+    });
+
+    it('returns false for any result explicitly marked non_retryable', () => {
+        expect(isRetryableToolResult({ error_type: 'SOMETHING', non_retryable: true })).toBe(false);
+    });
+
+    it('returns true for a result with no non-retryable marker (default retryable)', () => {
+        expect(isRetryableToolResult({ created: true })).toBe(true);
+    });
+
+    it('returns true for an undefined / non-object result', () => {
+        expect(isRetryableToolResult(undefined)).toBe(true);
+        expect(isRetryableToolResult('done')).toBe(true);
     });
 });

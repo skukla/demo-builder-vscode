@@ -15,8 +15,13 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 jest.mock('@/types/typeGuards', () => ({
     isEdsProject: jest.fn(),
 }));
+jest.mock('@/features/ai/server/adobeTargetStore', () => ({
+    getAdobeTarget: jest.fn(() => ({ orgId: 'org-stored' })),
+    runWithAdobeTarget: jest.fn(async (fn: () => Promise<unknown>) => fn()),
+}));
 
 import { registerStorefrontTools } from '@/features/ai/server/storefrontTools';
+import { runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
 import { COMPONENT_IDS } from '@/core/constants';
 import {
     republishStorefrontConfig,
@@ -24,6 +29,8 @@ import {
 } from '@/features/eds/services/storefrontRepublishService';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { isEdsProject } from '@/types/typeGuards';
+import { ErrorCode } from '@/types/errorCodes';
+import { AuthError } from '@/types/errors';
 import type { HandlerContext } from '@/types/handlers';
 
 const republishMock = republishStorefrontConfig as jest.Mock;
@@ -107,12 +114,27 @@ describe('republish', () => {
         );
     });
 
+    it('runs the republish under the stored session org context', async () => {
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        await s.call('republish');
+        expect(runWithAdobeTarget).toHaveBeenCalled();
+    });
+
     it('passes through a failure result with its error', async () => {
         republishMock.mockResolvedValueOnce({ success: false, githubPushed: false, error: 'CDN verify failed' });
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
         const res = await s.call('republish');
         expect(res).toMatchObject({ success: false, error: 'CDN verify failed' });
+    });
+
+    it('maps an ORG_MISMATCH error to a typed non-retryable result', async () => {
+        republishMock.mockRejectedValueOnce(new AuthError(ErrorCode.ORG_MISMATCH, 'wrong org'));
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        const res = await s.call('republish');
+        expect(res).toMatchObject({ error_type: 'ORG_MISMATCH', non_retryable: true });
     });
 });
 
@@ -178,10 +200,24 @@ describe('sync_content', () => {
         );
     });
 
+    it('runs the content publish under the stored session org context', async () => {
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        await s.call('sync_content');
+        expect(runWithAdobeTarget).toHaveBeenCalled();
+    });
+
     it('passes through a failure result with its error', async () => {
         republishContentMock.mockResolvedValueOnce({ success: false, error: 'publish failed' });
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
         expect(await s.call('sync_content')).toMatchObject({ success: false, error: 'publish failed' });
+    });
+
+    it('maps an ORG_MISMATCH error to a typed non-retryable result', async () => {
+        republishContentMock.mockRejectedValueOnce(new AuthError(ErrorCode.ORG_MISMATCH, 'wrong org'));
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        expect(await s.call('sync_content')).toMatchObject({ error_type: 'ORG_MISMATCH', non_retryable: true });
     });
 });

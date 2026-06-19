@@ -35,7 +35,7 @@ import type { Logger } from '@/types';
  * to change?" in a way the user recognises.
  */
 export interface UnifiedPatchResult {
-    kind: 'content' | 'code';
+    kind: 'content' | 'code' | 'reference';
     patchId: string;
     target: string;
     applied: boolean;
@@ -87,6 +87,22 @@ export function addCodeResult(report: PatchReport, result: CodePatchResult): voi
     });
 }
 
+/**
+ * Push a content-completeness audit result: a document referenced by copied
+ * content (e.g. the /customer/nav fragment) that could not be copied from
+ * source. Recorded as an unapplied `reference` entry so it rides the same
+ * proceed-and-warn surface as unapplied patches (D1) — visible, never fatal.
+ */
+export function addReferenceResult(report: PatchReport, target: string, reason?: string): void {
+    report.results.push({
+        kind: 'reference',
+        patchId: target,
+        target,
+        applied: false,
+        reason,
+    });
+}
+
 /** Filter to entries where `applied` is false. */
 export function getUnapplied(report: PatchReport): UnifiedPatchResult[] {
     return report.results.filter(r => !r.applied);
@@ -106,9 +122,21 @@ export function getUnapplied(report: PatchReport): UnifiedPatchResult[] {
  */
 export function formatUnappliedToast(unapplied: UnifiedPatchResult[]): string {
     if (unapplied.length === 0) return '';
-    const ids = unapplied.map(u => u.patchId).join(', ');
-    const noun = unapplied.length === 1 ? 'patch' : 'patches';
-    return `Demo Builder: ${unapplied.length} ${noun} didn't apply during create/reset (${ids}). The demo continues with these omitted; the drift-gate will surface any obsolete patches.`;
+
+    const patches = unapplied.filter(u => u.kind !== 'reference');
+    const references = unapplied.filter(u => u.kind === 'reference');
+    const clauses: string[] = [];
+
+    if (patches.length > 0) {
+        const noun = patches.length === 1 ? 'patch' : 'patches';
+        clauses.push(`${patches.length} ${noun} didn't apply (${patches.map(p => p.patchId).join(', ')})`);
+    }
+    if (references.length > 0) {
+        const noun = references.length === 1 ? 'referenced document' : 'referenced documents';
+        clauses.push(`${references.length} ${noun} couldn't be copied (${references.map(r => r.target).join(', ')})`);
+    }
+
+    return `Demo Builder: ${clauses.join('; ')} during create/reset. The demo continues with these omitted; the drift-gate will surface any obsolete patches.`;
 }
 
 /**
@@ -119,7 +147,11 @@ export function formatUnappliedToast(unapplied: UnifiedPatchResult[]): string {
 export function logUnapplied(report: PatchReport, logger: Logger): void {
     const unapplied = getUnapplied(report);
     for (const item of unapplied) {
-        logger.warn(`[Patch] ${item.kind} patch '${item.patchId}' not applied to ${item.target}: ${item.reason ?? 'unknown'}`);
+        if (item.kind === 'reference') {
+            logger.warn(`[Content] referenced document not copied: ${item.target}${item.reason ? ` (${item.reason})` : ''}`);
+        } else {
+            logger.warn(`[Patch] ${item.kind} patch '${item.patchId}' not applied to ${item.target}: ${item.reason ?? 'unknown'}`);
+        }
     }
 }
 

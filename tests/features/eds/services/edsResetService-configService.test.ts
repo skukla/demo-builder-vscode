@@ -57,9 +57,6 @@ jest.mock('@/core/di', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({
             isAuthenticated: jest.fn().mockResolvedValue(true),
-            selectOrganization: jest.fn().mockResolvedValue(undefined),
-            selectProject: jest.fn().mockResolvedValue(undefined),
-            selectWorkspace: jest.fn().mockResolvedValue(undefined),
         })),
         getCommandExecutor: jest.fn(() => ({})),
     },
@@ -84,6 +81,7 @@ jest.mock('@/features/eds/services/fstabGenerator', () => ({
 jest.mock('@/features/eds/services/configGenerator', () => ({
     generateConfigJson: jest.fn().mockReturnValue({ success: true, content: '{}' }),
     extractConfigParams: jest.fn().mockReturnValue({}),
+    buildConfigGeneratorParams: jest.fn().mockReturnValue({}),
 }));
 
 jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({

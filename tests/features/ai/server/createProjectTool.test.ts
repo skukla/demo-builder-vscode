@@ -11,7 +11,7 @@ jest.mock('@/features/project-creation/ui/wizard/wizardHelpers', () => ({
     buildProjectConfig: jest.fn(() => ({ projectName: 'assembled' })),
 }));
 jest.mock('@/features/project-creation/services/demoPackageLoader', () => ({
-    loadDemoPackages: jest.fn(async () => [
+    getSelectablePackages: jest.fn(async () => [
         { id: 'citisignal', storefronts: { 'headless-paas': {}, 'eds-paas': {} } },
     ]),
     getStorefrontForStack: jest.fn(async () => ({ templateOwner: 'o', templateRepo: 'r', contentSource: { org: 'co', site: 'cs' } })),
@@ -24,8 +24,13 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getDaLiveAuthService: jest.fn(() => ({ isAuthenticated: jest.fn(async () => true) })),
 }));
 jest.mock('@/features/eds/handlers/edsHandlers', () => ({ edsHandlers: { 'storefront-setup-start': jest.fn() } }));
+jest.mock('@/features/ai/server/adobeTargetStore', () => ({
+    getAdobeTarget: jest.fn(() => ({ orgId: 'org-stored' })),
+    runWithAdobeTarget: jest.fn(async (fn: () => Promise<unknown>) => fn()),
+}));
 
 import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
+import { runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
 import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import {
@@ -36,6 +41,8 @@ import {
     getResolvedMeshRequirement,
     getStorefrontForStack,
 } from '@/features/project-creation/services/demoPackageLoader';
+import { ErrorCode } from '@/types/errorCodes';
+import { AuthError } from '@/types/errors';
 import type { HandlerContext } from '@/types/handlers';
 
  
@@ -110,6 +117,14 @@ describe('create_project', () => {
             expect(res).toMatchObject({ created: true, name: 'my-proj' });
         });
 
+        it('runs project creation under the stored session org context', async () => {
+            const s = fakeServer();
+            registerCreateProjectTool(s, ctxFactory);
+            await s.call(HEADLESS);
+            // INVARIANT: aio-touching work runs inside withOrgContext(storedTarget, …)
+            expect(runWithAdobeTarget).toHaveBeenCalled();
+        });
+
         it('mesh project hands off when not signed in', async () => {
             (getResolvedMeshRequirement as jest.Mock).mockReturnValueOnce(true);
             authManager.isAuthenticated.mockResolvedValueOnce(false);
@@ -117,6 +132,17 @@ describe('create_project', () => {
             registerCreateProjectTool(s, ctxFactory);
             expect(await s.call(HEADLESS)).toMatchObject({ needsAuth: 'adobe' });
             expect(executeProjectCreation).not.toHaveBeenCalled();
+        });
+
+        it('maps an ORG_MISMATCH from creation to a typed non-retryable result', async () => {
+            (executeProjectCreation as jest.Mock).mockRejectedValueOnce(
+                new AuthError(ErrorCode.ORG_MISMATCH, 'wrong org'),
+            );
+            const s = fakeServer();
+            registerCreateProjectTool(s, ctxFactory);
+            const res = await s.call(HEADLESS);
+            expect(res).toMatchObject({ error_type: 'ORG_MISMATCH', non_retryable: true });
+            expect(res.created).toBeUndefined();
         });
     });
 
@@ -162,6 +188,17 @@ describe('create_project', () => {
                     expect.objectContaining({ status: 'complete' }),
                 ]),
             );
+        });
+
+        it('maps an ORG_MISMATCH during project finalization to a typed non-retryable result', async () => {
+            (executeProjectCreation as jest.Mock).mockRejectedValueOnce(
+                new AuthError(ErrorCode.ORG_MISMATCH, 'wrong org'),
+            );
+            const s = fakeServer();
+            registerCreateProjectTool(s, ctxFactory);
+            const res = await s.call(EDS);
+            expect(res).toMatchObject({ error_type: 'ORG_MISMATCH', non_retryable: true });
+            expect(res.created).toBeUndefined();
         });
 
         it('returns a re-runnable failure when storefront setup fails', async () => {

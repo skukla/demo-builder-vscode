@@ -65,6 +65,8 @@ export interface UseDashboardActionsReturn {
     handleNavigateBack: () => void;
     /** Re-authenticate with Adobe (after session expired) */
     handleReAuthenticate: () => void;
+    /** Forced Adobe account/org switch (after an org mismatch); resolves when the round-trip completes */
+    handleSwitchOrg: () => Promise<void>;
 }
 
 /**
@@ -166,6 +168,14 @@ export function useDashboardActions({
         webviewClient.postMessage('reAuthenticate');
     }, []);
 
+    // Request (not fire-and-forget) so the caller gets a definitive completion
+    // edge for the forced login + re-verify round-trip — used to drive the
+    // banner's in-flight "Switching…" state across every outcome (success,
+    // still-mismatched, cancelled, failed).
+    const handleSwitchOrg = useCallback(async () => {
+        await webviewClient.request('switchOrg');
+    }, []);
+
     return {
         handleStartDemo,
         handleStopDemo,
@@ -184,5 +194,6 @@ export function useDashboardActions({
         handleResetProject,
         handleNavigateBack,
         handleReAuthenticate,
+        handleSwitchOrg,
     };
 }

@@ -94,6 +94,13 @@ export class ProjectSetupContext {
     }
 
     /**
+     * Get selected demo package ID from wizard state
+     */
+    getSelectedPackage(): string | undefined {
+        return this.config.selectedPackage as string | undefined;
+    }
+
+    /**
      * Get specific component definition by ID
      */
     getComponentDefinition(componentId: string): TransformedComponentDefinition | undefined {
@@ -103,7 +110,6 @@ export class ProjectSetupContext {
             ...(this.registry.components.dependencies || []),
             ...(this.registry.components.mesh || []),
             ...(this.registry.components.integrations || []),
-            ...(this.registry.components.appBuilder || []),
         ];
         return allComponents.find(c => c.id === componentId) as TransformedComponentDefinition | undefined;
     }

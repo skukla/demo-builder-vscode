@@ -27,6 +27,14 @@ jest.mock('@/core/validation', () => ({
     validateProjectNameSecurity: (...args: unknown[]) => mockValidateName(...args),
 }));
 
+// project finalization - AI context regeneration (dynamic import inside the service).
+// Rename must re-run this so the MCP configs (which bake the absolute project path)
+// point at the new path instead of the old one.
+const mockGenerateAIContextFiles = jest.fn().mockResolvedValue({ skills: [] });
+jest.mock('@/features/project-creation/services/projectFinalizationService', () => ({
+    generateAIContextFiles: (...args: unknown[]) => mockGenerateAIContextFiles(...args),
+}));
+
 import { renameProjectCore } from '@/features/projects-dashboard/services/projectRenameService';
 
 function createMockProject(overrides?: Partial<Project>): Project {
@@ -58,6 +66,7 @@ function createMockContext(): HandlerContext {
             error: jest.fn(),
             warn: jest.fn(),
         } as unknown as HandlerContext['logger'],
+        context: { extensionPath: '/ext' } as unknown as HandlerContext['context'],
     } as unknown as HandlerContext;
 }
 
@@ -67,6 +76,7 @@ describe('renameProjectCore', () => {
         // Default: new folder does NOT exist (access rejects)
         mockAccess.mockRejectedValue(new Error('ENOENT'));
         mockValidateName.mockImplementation(() => undefined);
+        mockGenerateAIContextFiles.mockReset().mockResolvedValue({ skills: [] });
     });
 
     it('should reject an empty name', async () => {
@@ -159,5 +169,35 @@ describe('renameProjectCore', () => {
         expect(result.data).toEqual(
             expect.objectContaining({ success: true, newName: 'new-name', newPath: '/projects/new-name' }),
         );
+    });
+
+    it('regenerates AI context files for the new path (fixes stale MCP paths)', async () => {
+        const project = createMockProject();
+        const context = createMockContext();
+
+        await renameProjectCore(context, project, 'new-name');
+
+        // Regenerated with the NEW path + the mutated project + the extension path.
+        expect(mockGenerateAIContextFiles).toHaveBeenCalledWith('/projects/new-name', project, '/ext');
+    });
+
+    it('does not regenerate AI context for a no-op rename (path unchanged)', async () => {
+        const project = createMockProject();
+        const context = createMockContext();
+
+        await renameProjectCore(context, project, 'old-name');
+
+        expect(mockGenerateAIContextFiles).not.toHaveBeenCalled();
+    });
+
+    it('treats AI context regeneration failure as non-fatal (rename still succeeds)', async () => {
+        const project = createMockProject();
+        const context = createMockContext();
+        mockGenerateAIContextFiles.mockRejectedValueOnce(new Error('regen boom'));
+
+        const result = await renameProjectCore(context, project, 'new-name');
+
+        expect(result.success).toBe(true);
+        expect((context.logger.warn as jest.Mock)).toHaveBeenCalled();
     });
 });

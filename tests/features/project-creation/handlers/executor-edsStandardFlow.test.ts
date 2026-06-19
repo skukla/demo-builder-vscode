@@ -91,7 +91,6 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
             subType: 'mesh',
             source: { type: 'git', url: 'https://github.com/test/eds-mesh' },
         }]),
-        getAppBuilder: jest.fn().mockResolvedValue([]),
         getComponentById: jest.fn().mockResolvedValue(undefined),
     })),
 }));

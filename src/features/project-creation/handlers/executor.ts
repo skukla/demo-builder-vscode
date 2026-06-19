@@ -31,8 +31,11 @@ import {
 import { ProgressTracker } from './shared';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { COMPONENT_IDS } from '@/core/constants';
+import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell';
 import { parseGitHubUrl } from '@/core/utils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { detectB2bReadiness } from '@/features/eds/services/b2bReadinessDetection';
+import { extractConfigParamsFromConfigs } from '@/features/eds/services/configGenerator';
 import { syncConfigToRemote } from '@/features/eds/services/configSyncService';
 import { TransformedComponentDefinition } from '@/types';
 import { AdobeConfig } from '@/types/base';
@@ -61,10 +64,10 @@ function getStackById(stackId: string): Stack | undefined {
 /**
  * Pre-flight authentication check before mesh CLI operations.
  *
- * Adobe CLI commands (`aio api-mesh:*`, `aio console workspace select`) each
- * independently open a browser window when the token is expired. This check
- * ensures the token is valid before any CLI calls run, preventing multiple
- * browser popups. Follows the pattern from DeployMeshCommand (deployMesh.ts:51-92).
+ * Adobe CLI commands (`aio api-mesh:*`) each independently open a browser
+ * window when the token is expired. This check ensures the token is valid
+ * before any CLI calls run, preventing multiple browser popups. Follows the
+ * pattern from DeployMeshCommand (deployMesh.ts:51-92).
  *
  * @param authManager - Authentication service (may be undefined)
  * @param logger - Logger for diagnostics
@@ -178,6 +181,11 @@ interface ProjectCreationConfig {
             org: string;
             site: string;
             indexPath?: string;
+        };
+        // Second content source for the account chrome (hybrid packages).
+        accountContentSource?: {
+            org: string;
+            site: string;
         };
         // Preflight completion fields (set by StorefrontSetupStep)
         preflightComplete?: boolean;
@@ -724,9 +732,28 @@ function logMeshDecisionContext(
 }
 
 /**
- * Deploy a fresh mesh after pre-flight auth and workspace context checks.
+ * Build the org-context target for the create-time mesh deploy via the shared
+ * builder (enriches org code/name from the cached org only on an id match).
  */
-async function deployFreshMesh(
+function buildDeployOrgTarget(
+    context: HandlerContext,
+    typedConfig: ProjectCreationConfig,
+): OrgContextTarget {
+    return buildOrgTargetFromProjectAdobe(
+        typedConfig.adobe,
+        context.authManager?.getCachedOrganization(),
+    );
+}
+
+/**
+ * Deploy a fresh mesh after pre-flight auth.
+ *
+ * Targets the project's KNOWN org/project/workspace via per-invocation
+ * AIO_CONSOLE_* env (withOrgContext) instead of mutating the shared `aio`
+ * global with selectWorkspace (which races concurrent processes). The deploy
+ * and all dependent `aio api-mesh` calls run inside the wrapper.
+ */
+export async function deployFreshMesh(
     context: HandlerContext,
     typedConfig: ProjectCreationConfig,
     meshContext: import('../services').MeshSetupContext,
@@ -748,18 +775,8 @@ async function deployFreshMesh(
         throw new Error('Adobe authentication expired and re-login failed. Please sign in again and retry.');
     }
 
-    if (context.authManager && typedConfig.adobe?.workspace && typedConfig.adobe?.projectId) {
-        context.logger.debug(`[Mesh Setup] Ensuring workspace context: ${typedConfig.adobe.workspace}`);
-        const contextOk = await context.authManager.selectWorkspace(
-            typedConfig.adobe.workspace,
-            typedConfig.adobe.projectId,
-        );
-        if (!contextOk) {
-            context.logger.error('[Mesh Setup] Failed to set workspace context - mesh may deploy to wrong workspace');
-        }
-    }
-
-    await deployNewMesh(meshContext, typedConfig.apiMesh);
+    const target = buildDeployOrgTarget(context, typedConfig);
+    await withOrgContext(target, () => deployNewMesh(meshContext, typedConfig.apiMesh));
 }
 
 /**
@@ -946,6 +963,29 @@ async function setupEdsContent(
         return;
     }
 
+    // B2B-readiness advisory (proceed-and-warn): a B2B-code storefront against a
+    // backend without B2B enabled renders an empty B2B account experience. The
+    // builder cannot enable B2B (no API — it's a backend prerequisite), so warn
+    // only on a definitive negative; 'unknown' (older/SaaS schema) stays silent.
+    if (typedConfig.edsConfig.templateRepo === 'boilerplate-b2b-template') {
+        // Reuse the canonical config reader (same one envFileGenerator /
+        // catalogPrewarmService use) — the GraphQL endpoint is already collected
+        // as a project config setting; don't re-derive it. meshEndpoint omitted so
+        // we probe the raw Commerce GraphQL the backend exposes.
+        const { commerceEndpoint } = extractConfigParamsFromConfigs(
+            typedConfig.componentConfigs as Record<string, Record<string, string | number | boolean | undefined>> | undefined,
+            undefined,
+            typedConfig.components?.backend,
+        );
+        if (commerceEndpoint && (await detectB2bReadiness(commerceEndpoint)) === 'disabled') {
+            const msg = 'This B2B storefront is connected to a Commerce backend that does not have B2B enabled. '
+                + 'The B2B account features (company, quotes, purchase orders, requisition lists) will not appear until '
+                + 'B2B is enabled on the backend (Admin → Stores → Configuration → General → B2B Features → Enable Company).';
+            context.logger.warn(`[Phase 5b] ${msg}`);
+            void vscode.window.showWarningMessage(msg);
+        }
+    }
+
     try {
         const contentCopied = await ensureEdsContent(
             {
@@ -953,6 +993,7 @@ async function setupEdsContent(
                 daLiveOrg: typedConfig.edsConfig.daLiveOrg,
                 daLiveSite: typedConfig.edsConfig.daLiveSite,
                 contentSource: typedConfig.edsConfig.contentSource,
+                accountContentSource: typedConfig.edsConfig.accountContentSource,
                 contentPatches: typedConfig.edsConfig.contentPatches,
                 contentPatchSource: typedConfig.edsConfig.contentPatchSource,
                 templateOwner: typedConfig.edsConfig.templateOwner,
@@ -1037,9 +1078,6 @@ async function lookupComponentDef(
     } else if (compType === 'dependency') {
         const deps = await registryManager.getDependencies();
         componentDef = deps.find((d: { id: string }) => d.id === compId);
-    } else if (compType === 'app-builder') {
-        const ab = await registryManager.getAppBuilder();
-        componentDef = ab.find((a: { id: string }) => a.id === compId);
     }
 
     // Fallback: search all sections (e.g., mesh components in "mesh" section)

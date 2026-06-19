@@ -42,7 +42,7 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
     ComponentRegistryManager: jest.fn().mockImplementation(() => ({
         loadRegistry: jest.fn().mockResolvedValue({
             version: 'test',
-            components: { frontends: [], backends: [], dependencies: [], mesh: [], appBuilder: [] },
+            components: { frontends: [], backends: [], dependencies: [], mesh: [] },
         }),
     })),
 }));
@@ -71,13 +71,28 @@ jest.mock('@/features/mesh/services/meshDeploymentVerifier', () => ({
         endpoint: 'https://test-mesh.adobe.io/graphql',
     }),
 }));
+// The command delegates build+deploy+verify to deployMeshComponent; mock it so the
+// command's persistence (the subject of these tests) runs on a successful result.
+jest.mock('@/features/mesh/services/meshDeployment', () => ({
+    deployMeshComponent: jest.fn().mockResolvedValue({
+        success: true,
+        data: { meshId: 'mesh-test-123', endpoint: 'https://test-mesh.adobe.io/graphql' },
+    }),
+}));
+jest.mock('@/features/mesh/services/meshVerifier', () => ({
+    fetchMeshInfoFromAdobeIO: jest.fn().mockResolvedValue(null),
+}));
 
 describe('DeployMeshCommand - Storage Behavior', () => {
     // Mocks
     let mockContext: vscode.ExtensionContext;
     let mockStateManager: jest.Mocked<StateManager>;
     let mockLogger: jest.Mocked<Logger>;
-    let mockAuthManager: { isAuthenticated: jest.Mock; getCurrentOrganization: jest.Mock };
+    let mockAuthManager: {
+        isAuthenticated: jest.Mock;
+        getOrganizations: jest.Mock;
+        getCurrentOrganization: jest.Mock;
+    };
     let mockCommandExecutor: { execute: jest.Mock };
 
     // Captured project state for assertions
@@ -149,10 +164,14 @@ describe('DeployMeshCommand - Storage Behavior', () => {
             trace: jest.fn(),
         };
 
-        // Setup mock AuthManager
+        // Setup mock AuthManager — org-123 is reachable, matching the project's
+        // org, so the canonical detectProjectOrgMismatch check passes.
         mockAuthManager = {
             isAuthenticated: jest.fn().mockResolvedValue(true),
-            getCurrentOrganization: jest.fn().mockResolvedValue({ id: 'org-123' }),
+            getOrganizations: jest.fn().mockResolvedValue([
+                { id: 'org-123', code: 'ORG123@AdobeOrg', name: 'Org 123' },
+            ]),
+            getCurrentOrganization: jest.fn().mockResolvedValue({ id: 'org-123', name: 'Org 123' }),
         };
 
         // Setup mock CommandExecutor

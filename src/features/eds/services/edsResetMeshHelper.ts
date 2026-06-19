@@ -9,8 +9,8 @@
  */
 
 import type { EdsResetResult } from './edsResetParams';
-import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { ServiceLocator } from '@/core/di';
+import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
 import { updateMeshState } from '@/features/mesh/services/stalenessDetector';
 import type { Project } from '@/types/base';
@@ -93,41 +93,43 @@ export async function redeployApiMesh(
 
     const authService = ServiceLocator.getAuthenticationService();
 
-    report(12, 'Checking Adobe I/O authentication...');
-    const authResult = await ensureAdobeIOAuth({
+    report(12, 'Checking Adobe organization access...');
+    const { ensureProjectAdobeContext } = await import(
+        '@/features/authentication/services/ensureProjectAdobeContext'
+    );
+    const preflight = await ensureProjectAdobeContext({
         authManager: authService,
+        project,
         logger: context.logger,
         logPrefix: '[EdsReset]',
-        projectContext: {
-            organization: project.adobe?.organization,
-            projectId: project.adobe?.projectId,
-            workspace: project.adobe?.workspace,
-        },
         warningMessage: 'Your Adobe I/O session has expired. Please sign in to continue the mesh redeployment.',
     });
 
-    if (!authResult.authenticated) {
-        context.logger.warn('[EdsReset] Adobe I/O auth failed before mesh redeployment');
+    if (!preflight.ready) {
+        const reason = preflight.blockedBy === 'org'
+            ? "the project's Adobe organization is not the one you're signed into"
+            : 'Adobe I/O authentication required';
+        context.logger.warn(`[EdsReset] Mesh redeployment skipped before deploy: ${reason}`);
         return {
             success: true,
             filesReset,
             contentCopied,
             meshRedeployed: false,
-            error: 'Reset completed but mesh redeployment skipped: Adobe I/O authentication required',
+            error: `Reset completed but mesh redeployment skipped: ${reason}`,
             errorType: 'MESH_REDEPLOY_FAILED',
         };
     }
 
-    report(12, 'Setting Adobe context...');
-    if (project.adobe?.organization) {
-        await authService.selectOrganization(project.adobe.organization);
-    }
-    if (project.adobe?.projectId && project.adobe?.organization) {
-        await authService.selectProject(project.adobe.projectId, project.adobe.organization);
-    }
-    if (project.adobe?.workspace && project.adobe?.projectId) {
-        await authService.selectWorkspace(project.adobe.workspace, project.adobe.projectId);
-    }
+    // Target the project's KNOWN org/project/workspace via per-invocation
+    // AIO_CONSOLE_* env instead of mutating the shared `aio` global with
+    // select* (which races concurrent processes). The shared builder enriches
+    // org code/name from the cached org on an id match (less leaky than ID-only).
+    const target: OrgContextTarget = buildOrgTargetFromProjectAdobe(
+        project.adobe,
+        authService.getCachedOrganization(),
+    );
 
-    return deployMeshAndPersist(meshComponent, project, repoOwner, repoName, context, report, filesReset, contentCopied);
+    return withOrgContext(target, () =>
+        deployMeshAndPersist(meshComponent, project, repoOwner, repoName, context, report, filesReset, contentCopied),
+    );
 }

@@ -126,6 +126,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         edsDaLiveUrl?: string;
         authoringExperience?: AuthoringExperience;
         initialEdsStorefrontStatus?: string;
+        hasAdobeContext: boolean;
     }> {
         const project = await this.stateManager.getCurrentProject();
         const themeKind = vscode.window.activeColorTheme.kind;
@@ -152,6 +153,11 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         // Get EDS storefront status for dynamic display
         const initialEdsStorefrontStatus = project?.edsStorefrontStatusSummary;
 
+        // Whether a proactive org-context check will run on this project (it only
+        // runs when the project has an Adobe org). Lets the UI telegraph the
+        // "Checking Adobe organization…" state before the result arrives.
+        const hasAdobeContext = Boolean(project?.adobe?.organization);
+
         return {
             theme,
             project: project ? {
@@ -166,6 +172,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
             edsDaLiveUrl,
             authoringExperience,
             initialEdsStorefrontStatus,
+            hasAdobeContext,
         };
     }
 

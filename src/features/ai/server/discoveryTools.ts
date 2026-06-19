@@ -11,11 +11,11 @@
  */
 
 import componentsConfig from '@/features/components/config/components.json';
-import { loadDemoPackages } from '@/features/project-creation/services/demoPackageLoader';
+import { getSelectablePackages } from '@/features/project-creation/services/demoPackageLoader';
 import { loadStacks } from '@/features/project-creation/ui/helpers/brandStackLoader';
 
 /** Component sections worth surfacing to an agent (selectable building blocks). */
-const COMPONENT_SECTIONS = ['frontends', 'backends', 'mesh', 'integrations', 'appBuilderApps', 'addons'] as const;
+const COMPONENT_SECTIONS = ['frontends', 'backends', 'mesh', 'integrations', 'addons'] as const;
 
 function listComponentSection(section: string): Array<{ id: string; name: string }> {
     const entries = (componentsConfig as Record<string, unknown>)[section];
@@ -61,7 +61,7 @@ export function registerDiscoveryTools(server: any): void {
             inputSchema: {},
         },
         async () => {
-            const packages = await loadDemoPackages();
+            const packages = await getSelectablePackages();
             const lean = packages.map((p) => ({
                 id: p.id,
                 name: p.name,

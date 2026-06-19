@@ -38,7 +38,6 @@ describe('Token Expiry Detection - handleAuthenticate()', () => {
             (mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
             mockTokenManager.inspectToken.mockResolvedValue({ valid: true, expiresIn: 120 });
             (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-            (mockContext.authManager!.selectOrganization as jest.Mock).mockResolvedValue(true);
             (mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
             // Act
@@ -129,14 +128,13 @@ describe('Token Expiry Detection - handleAuthenticate()', () => {
             (mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
             mockTokenManager.inspectToken.mockResolvedValue({ valid: true, expiresIn: 120 });
             (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-            (mockContext.authManager!.selectOrganization as jest.Mock).mockResolvedValue(true);
             (mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
             // Act
             await handleAuthenticate(mockContext);
 
-            // Assert - normal flow continues
-            expect(mockContext.authManager!.selectOrganization).toHaveBeenCalledWith('org123');
+            // Assert - normal flow continues; Phase 4a: org is cached/carried,
+            expect(mockContext.authManager!.setCachedOrganization).toHaveBeenCalledWith(mockOrg);
             expect(mockContext.sendMessage).toHaveBeenCalledWith('auth-status', expect.objectContaining({
                 authenticated: true,
                 isAuthenticated: true,
@@ -153,7 +151,6 @@ describe('Token Expiry Detection - handleAuthenticate()', () => {
             (mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
             mockTokenManager.inspectToken.mockRejectedValue(new Error('CLI timeout'));
             (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-            (mockContext.authManager!.selectOrganization as jest.Mock).mockResolvedValue(true);
             (mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
             // Act

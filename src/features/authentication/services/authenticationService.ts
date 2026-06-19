@@ -45,7 +45,6 @@ export class AuthenticationService {
         this.sdkClient = new AdobeSDKClient(logger);
         this.organizationValidator = new OrganizationValidator(
             commandManager,
-            this.cacheManager,
             logger,
         );
         // Note: entityService will be initialized lazily when first needed
@@ -80,7 +79,6 @@ export class AuthenticationService {
                     this.commandManager,
                     this.sdkClient,
                     this.cacheManager,
-                    this.organizationValidator,
                     this.logger,
                     stepLogger,
                 );
@@ -147,11 +145,11 @@ export class AuthenticationService {
     }
 
     /**
-     * Full authentication check - validates token AND organization access
-     * Includes org context validation via validateAndClearInvalidOrgContext()
-     * Typical duration: 3-10 seconds (includes org API calls)
+     * Full authentication check - validates the token.
+     * Phase 4a: no longer validates/clears an ambient org context (org context is
+     * resolved per-op via ensureOrgContext, not policed as a mutated global).
      *
-     * For token-only checks without org validation, use isAuthenticated()
+     * For token-only checks, use isAuthenticated()
      */
     async isFullyAuthenticated(): Promise<boolean> {
         return withTiming('isFullyAuthenticated', async () => {
@@ -169,7 +167,9 @@ export class AuthenticationService {
                 const isValid = await this.tokenManager.isTokenValid();
 
                 if (isValid) {
-                    await this.organizationValidator.validateAndClearInvalidOrgContext();
+                    // Phase 4a: no longer validate/clear an ambient org context here.
+                    // Org context is not a mutated global to police; reachability is
+                    // resolved per-op via ensureOrgContext + withOrgContext targeting.
                     stepLogger.logTemplate('adobe-auth', 'statuses.authentication-complete', {});
                     this.cacheManager.setCachedAuthStatus(true);
                     return true;
@@ -349,13 +349,6 @@ export class AuthenticationService {
     }
 
     /**
-     * Validate and clear invalid org context
-     */
-    async validateAndClearInvalidOrgContext(forceValidation = false): Promise<void> {
-        return this.organizationValidator.validateAndClearInvalidOrgContext(forceValidation);
-    }
-
-    /**
      * Test if the current user has Developer or System Admin permissions
      * These permissions are required to create and manage App Builder projects
      */
@@ -376,12 +369,16 @@ export class AuthenticationService {
     }
 
     /**
-     * Get projects
+     * Get projects.
+     *
+     * @param options.orgId - Optional target org. When supplied, the fetch runs
+     *   under org-context targeting (AIO_CONSOLE_* env) so the API targets that
+     *   org WITHOUT mutating the shared global store.
      */
-    async getProjects(): Promise<AdobeProject[]> {
+    async getProjects(options?: { orgId?: string }): Promise<AdobeProject[]> {
         return withTiming('getProjects', async () => {
             const { fetcher } = await this.ensureEntities();
-            return fetcher.getProjects();
+            return fetcher.getProjects(options);
         });
     }
 
@@ -502,41 +499,6 @@ export class AuthenticationService {
     }
 
     /**
-     * Select organization. Pure selection — no permission checking.
-     * See `AdobeEntitySelector.selectOrganization` for the rationale.
-     */
-    async selectOrganization(orgId: string): Promise<boolean> {
-        return withTiming('selectOrganization', async () => {
-            const { selector } = await this.ensureEntities();
-            return selector.selectOrganization(orgId);
-        });
-    }
-
-    /**
-     * Select project with org context guard.
-     * @param projectId - The project ID to select
-     * @param orgId - Org ID to ensure context (protects against context drift)
-     */
-    async selectProject(projectId: string, orgId: string): Promise<boolean> {
-        return withTiming('selectProject', async () => {
-            const { selector } = await this.ensureEntities();
-            return selector.selectProject(projectId, orgId);
-        });
-    }
-
-    /**
-     * Select workspace with project context guard.
-     * @param workspaceId - The workspace ID to select
-     * @param projectId - Project ID to ensure context (protects against context drift)
-     */
-    async selectWorkspace(workspaceId: string, projectId: string): Promise<boolean> {
-        return withTiming('selectWorkspace', async () => {
-            const { selector } = await this.ensureEntities();
-            return selector.selectWorkspace(workspaceId, projectId);
-        });
-    }
-
-    /**
      * Login and restore full Adobe project context (org/project/workspace).
      *
      * Canonical helper for inline authentication flows where we need to:
@@ -547,6 +509,12 @@ export class AuthenticationService {
      * automatically after sign-in (e.g., Deploy Mesh, Apply Configuration).
      *
      * @param adobeContext - The Adobe context to restore after login
+     * @param force - When true, perform a FORCED sign-in (`aio auth login -f`)
+     *   so the browser presents the IMS account/org chooser. Required for org
+     *   switching: IMS tokens are org-bound, and a non-forced login silently
+     *   reuses the browser's existing SSO session — which can loop back to the
+     *   wrong org if another tab is signed into it. Defaults to false (session
+     *   restore / re-auth, which should keep the current account).
      * @returns true if login and context restoration succeeded, false otherwise
      *
      * @example
@@ -565,49 +533,30 @@ export class AuthenticationService {
         organization?: string;
         projectId?: string;
         workspace?: string;
-    }): Promise<boolean> {
+    }, force = false): Promise<boolean> {
         return withTiming('loginAndRestoreProjectContext', async () => {
             const debugLogger = getLogger();
 
             try {
-                debugLogger.debug('[Auth] Starting login and context restoration');
-                const loginSuccess = await this.login();
+                debugLogger.debug(
+                    `[Auth] Starting login and context restoration (force=${force})`,
+                );
+                const loginSuccess = await this.login(force);
                 if (!loginSuccess) {
                     debugLogger.warn('[Auth] Login failed or was cancelled');
                     return false;
                 }
 
-                if (adobeContext.organization) {
-                    debugLogger.debug(`[Auth] Restoring org context: ${adobeContext.organization}`);
-                    const orgSuccess = await this.selectOrganization(adobeContext.organization);
-                    if (!orgSuccess) {
-                        debugLogger.warn('[Auth] Failed to restore organization context');
-                    }
-                }
-
-                if (adobeContext.projectId && adobeContext.organization) {
-                    debugLogger.debug(`[Auth] Restoring project context: ${adobeContext.projectId}`);
-                    const projectSuccess = await this.selectProject(
-                        adobeContext.projectId,
-                        adobeContext.organization,
-                    );
-                    if (!projectSuccess) {
-                        debugLogger.warn('[Auth] Failed to restore project context');
-                    }
-                }
-
-                if (adobeContext.workspace && adobeContext.projectId) {
-                    debugLogger.debug(`[Auth] Restoring workspace context: ${adobeContext.workspace}`);
-                    const workspaceSuccess = await this.selectWorkspace(
-                        adobeContext.workspace,
-                        adobeContext.projectId,
-                    );
-                    if (!workspaceSuccess) {
-                        debugLogger.warn('[Auth] Failed to restore workspace context');
-                    }
-                }
-
-                debugLogger.debug('[Auth] Login and context restoration completed');
+                // Phase 4a: do NOT re-pin org/project/workspace via select* (which
+                // mutates the shared `aio` global and races concurrent processes).
+                // Each downstream `aio` operation targets the known context per
+                // invocation via `withOrgContext` using `adobeContext`. The login
+                // itself is all this method needs to perform.
+                debugLogger.debug(
+                    `[Auth] Login complete; context (${adobeContext.organization ?? '-'}/`
+                    + `${adobeContext.projectId ?? '-'}/${adobeContext.workspace ?? '-'}) `
+                    + 'will be targeted per-op via env, not pinned to the global',
+                );
                 return true;
             } catch (error) {
                 debugLogger.error('[Auth] Login and context restoration failed', error as Error);
@@ -616,11 +565,4 @@ export class AuthenticationService {
         });
     }
 
-    /**
-     * Auto-select organization if only one available
-     */
-    async autoSelectOrganizationIfNeeded(skipCurrentCheck = false): Promise<AdobeOrg | undefined> {
-        const { selector } = await this.ensureEntities();
-        return selector.autoSelectOrganizationIfNeeded(skipCurrentCheck);
-    }
 }

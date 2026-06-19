@@ -42,10 +42,6 @@ export interface EntityServiceFacade {
     getCurrentProject: EntityServices['resolver']['getCurrentProject'];
     getCurrentWorkspace: EntityServices['resolver']['getCurrentWorkspace'];
     getCurrentContext: EntityServices['resolver']['getCurrentContext'];
-    selectOrganization: EntityServices['selector']['selectOrganization'];
-    selectProject: EntityServices['selector']['selectProject'];
-    selectWorkspace: EntityServices['selector']['selectWorkspace'];
-    autoSelectOrganizationIfNeeded: EntityServices['selector']['autoSelectOrganizationIfNeeded'];
 }
 
 export interface TestMocks {
@@ -109,7 +105,6 @@ export function setupMocks(): TestMocks {
         mockCommandExecutor,
         mockSDKClient,
         mockCacheManager,
-        mockOrgValidator,
         mockLogger,
         mockStepLogger,
     );
@@ -123,10 +118,6 @@ export function setupMocks(): TestMocks {
         getCurrentProject: (...args) => entities.resolver.getCurrentProject(...args),
         getCurrentWorkspace: (...args) => entities.resolver.getCurrentWorkspace(...args),
         getCurrentContext: (...args) => entities.resolver.getCurrentContext(...args),
-        selectOrganization: (...args) => entities.selector.selectOrganization(...args),
-        selectProject: (...args) => entities.selector.selectProject(...args),
-        selectWorkspace: (...args) => entities.selector.selectWorkspace(...args),
-        autoSelectOrganizationIfNeeded: (...args) => entities.selector.autoSelectOrganizationIfNeeded(...args),
     };
 
     return {

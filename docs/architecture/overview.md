@@ -138,7 +138,6 @@ Multi-step React-based wizard for guided project setup:
 **Git-Based Components**:
 - Frontend applications (e.g., citisignal-nextjs)
 - API Mesh configurations (commerce-mesh)
-- App Builder applications (custom integrations)
 
 **Component Management**:
 - Cloning from GitHub repositories

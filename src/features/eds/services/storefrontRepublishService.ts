@@ -15,7 +15,7 @@ import {
     configureDaLivePermissions,
     resolveProjectAuthoringExperience,
 } from '../handlers/edsHelpers';
-import { generateConfigJson, extractConfigParams } from './configGenerator';
+import { generateConfigJson, buildConfigGeneratorParams } from './configGenerator';
 import { syncConfigToRemote, verifyConfigOnCdn } from './configSyncService';
 import type { DaLiveAuthService } from './daLiveAuthService';
 import { DaLiveContentOperations, createDaLiveServiceTokenProvider } from './daLiveContentOperations';
@@ -163,21 +163,13 @@ export async function republishStorefrontConfig(
             };
         }
 
-        const { repoOwner, repoName, daLiveOrg, daLiveSite, componentPath } = extractResult;
+        const { repoOwner, repoName, componentPath } = extractResult;
 
         // Step 2: Generate config.json
         onProgress?.('Generating config.json...');
         logger.debug('[StorefrontRepublish] Generating config.json');
 
-        const configParams = {
-            githubOwner: repoOwner,
-            repoName,
-            daLiveOrg,
-            daLiveSite,
-            ...extractConfigParams(project),
-        };
-
-        const configResult = generateConfigJson(configParams, logger);
+        const configResult = generateConfigJson(buildConfigGeneratorParams(project), logger);
 
         if (!configResult.success || !configResult.content) {
             return {

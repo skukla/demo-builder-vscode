@@ -1,0 +1,140 @@
+# Plan — Content-copy completeness (fix `/customer/nav` + close the bug class)
+
+**Created:** 2026-06-18 · **Scope chosen by PM:** full comprehensive program (all four layers).
+**Research:** `.rptc/research/content-copy-completeness/research.md` +
+`.rptc/research/b2b-account-features-missing/research.md` +
+`.rptc/research/b2b-pdp-404-gap/findings.md`.
+
+## Strategic frame (PM)
+
+This fix is **Tier 1 of a larger "hybrid storefront" vision** — one site serving B2B to company
+customers and B2C to individuals, gated at login. The B2B boilerplate's account nav is already
+permission-gated (evidence in `.rptc/research/hybrid-storefront-model/research.md`), so pulling the
+canonical `/customer/nav` is exactly what makes a site hybrid-capable. This plan delivers that
+foundation for the b2b-based packages; the universal-hybrid rollout is tracked in that research.
+
+## Goal
+
+Ship the B2B account-menu fix **as the first consumer of a structural fix** that ends the
+"silently-dropped content" bug class: the content-copy pipeline reproduces a storefront via
+index + four scattered hardcoded backfill lists, with no reference-following and no post-copy
+completeness check, so runtime-referenced-but-unindexed documents (e.g. `/customer/nav`) are
+silently dropped.
+
+## Outcomes
+
+1. **B2B account page shows its B2B features** — `/customer/nav` (and any sibling fragment) is
+   copied from canonical for the `b2b` and `citisignal-b2b` packages.
+2. **The class is closed on the copy side** — referenced docs are discovered by following
+   references, not by hand-maintained lists.
+3. **Future regressions are loud, not silent** — a post-copy audit names anything referenced but
+   not copied.
+4. **One source of truth** for known runtime surfaces, shared by create + reset.
+5. **A per-package smoke** that would have caught both confirmed instances (`/customer/nav`, PDP).
+
+## Design principles (hold the line)
+
+- **No fork.** All content is pulled live from the public CDN (`.plain.html`); we store no page
+  HTML. Upholds ADR-006 thin-layer.
+- **Regex/string parsing, not a new HTML-parser dep.** Match the codebase (`transformHtmlForDaLive`,
+  `pdp404HandlerPublisher` parse with string ops). Keep heuristics narrow + well-tested.
+- **Additive + idempotent.** Discovery dedups against already-copied paths; safe to re-run on reset.
+- **TDD.** Every step: RED (tests first) → GREEN → REFACTOR. Mirror existing
+  `tests/features/eds/services/daLiveContentOperations-*.test.ts` patterns (mock `fetch`).
+
+## Key files (confirmed)
+
+- `src/features/eds/services/daLiveContentOperations.ts` — `copyContentFromSource`
+  (`:1815`), `copySingleFile` (`:425`), `enumerateAndFilterContentPaths` (`:1755`), the three
+  backfill lists (`:1843/1858/1875`), `processHtmlContent` (`:384`), `buildSourceUrl` (`:349`).
+- `src/features/eds/services/patchReportHelper.ts` — `createPatchReport`, `addContentResult`,
+  `reportUnapplied` (audit hangs here).
+- `src/features/eds/services/edsResetRepoHelper.ts` — `placeholderPaths` (`:48`); reset wiring.
+- `src/features/eds/services/edsResetService.ts` — reset orchestration + `reportUnapplied`.
+- `src/features/eds/services/edsPipeline.ts` — `indexUrl` construction (`:254`), copy invocation.
+- `src/features/project-creation/config/demo-packages.json` — packages for the smoke harness.
+
+## Implementation status (2026-06-18)
+
+- ✅ **Step 01 (reference-following discovery)** — landed. `extractReferencedPaths` +
+  `discoverAndCopyReferences` in `daLiveContentOperations.ts`; copies `/customer/nav` (and any
+  referenced-but-unindexed doc) from canonical, transitive/depth-capped/deduped, best-effort
+  (a 404 ref doesn't fail the copy). 10 new tests; 170 eds tests green; lint+typecheck clean.
+- ✅ **Step 02 (auth-page probe)** — landed alongside 01: the auth-page existence probe now targets
+  `.plain.html` (not the login-gated bare URL), so `/customer/account` is reliably copied; backfill
+  refactored into `backfillEssentialPaths`.
+- ✅ **Step 03 (post-copy completeness audit)** — landed. `addReferenceResult` on `PatchReport`;
+  `copyContentFromSource` reports any referenced-but-not-copied internal doc (proceed-and-warn,
+  never fatal); toast/log wording made reference-aware. New audit tests + 63 related eds tests green.
+- ✅ **Step 06 (reset self-heal)** — already inherited, no new code: both create and **reset** run
+  the content pipeline via `executeEdsPipeline` → `copyContentFromSource` (`edsPipeline.ts:263`), so
+  resetting an existing content-bearing storefront re-pulls `/customer/nav` (self-heals). The only
+  remaining Step 06 item is the **selector-race patch decision**, which is gated on a live repro
+  (can't run here) — left open.
+- 🔀 **`accountContentSource` override (was Step 01 remainder) — REMOVED from Tier 1.** PM chose
+  **Option D**: fold citisignal-b2b's "account chrome from the B2B content site" into the **Tier 2**
+  hybrid convergence (B2B base + brand overlay), so it's the default rather than a special case. See
+  `.rptc/plans/hybrid-storefront-model/`. Tier 1's generic discovery+audit still apply to
+  citisignal-b2b and presume no B2B intent.
+- ✅ **Step 04 (consolidated inventory)** — landed. New `runtimeSurfaceInventory.ts` (`RUNTIME_SURFACES`)
+  is the single source of truth for non-indexed surfaces (spreadsheets, fragments, auth pages,
+  reset placeholder sheets); `daLiveContentOperations` backfill + `edsResetRepoHelper` placeholder
+  fetch both consume it (behavior-preserving). Coverage test added.
+- 🟡 **Step 05 (per-package smoke harness)** — scaffolded with SYNTHETIC fixtures
+  (`contentCompleteness.smoke.test.ts`, data-driven `PROFILES`): healthy b2b profile asserts
+  `/customer/nav` copied + audit clean; broken profile asserts the audit flags the missing
+  fragment. TODO: replace synthetic HTML with real `.plain.html` captures + add a PROFILE row per
+  package once live captures are available.
+- ✅ Full eds service suite green (781 tests); eslint + tsc clean.
+
+**Tier 1 is functionally complete:** the reported bug is fixed, it fails loudly on regression, reset
+self-heals, lists are consolidated, and a regression net is scaffolded. Outstanding: real smoke
+fixtures (live-data), and the selector-race patch decision (live repro) — both need the live access
+being arranged. citisignal-b2b account chrome → Tier 2 (Option D).
+
+## Steps
+
+| Step | Layer | Title | Ships |
+|---|---|---|---|
+| 01 | 1 | Reference-following discovery in content copy | **`/customer/nav` fix** |
+| 02 | 1 | Robust auth-page acquisition (`.plain.html`, copy-then-stub) | account shell reliably copied |
+| 03 | 2 | Post-copy completeness audit (dangling-reference report) | loud failures |
+| 04 | 3 | Consolidate the four backfill lists into one inventory | create/reset parity |
+| 05 | 4 | Per-package create+audit smoke (incl. PDP coverage) | regression net |
+| 06 | — | Reset self-heal wiring + revisit selector-race patch | stale storefronts repair |
+
+Steps 01–02 deliver the user-visible fix; 03–06 close the class. Land in order; 01+02 are
+independently shippable if we need the fix out first.
+
+## Pre-work — live verification (egress-blocked in this env; do before/within Step 01)
+
+Browser-probe the affected source sites (we did this for `b2b`):
+1. ✅ `b2b`: `/customer/account.plain.html` references `/customer/nav`; that fragment carries the
+   B2B items. **Done.**
+2. ✅ `citisignal-b2b`: **resolved from builder config, no live check needed** — it shares the
+   non-B2B `citisignal` content source (`demo-system-stores/accs-citisignal`) and no content patch
+   touches the account page, so its nav has base items only. Decision recorded in Step 01: source
+   the account chrome from the canonical B2B content site via a per-package `accountContentSource`
+   override (still canonical/no-fork).
+3. Scan a few copied pages for other fragment references / dropin pages to seed Step 03/05 test
+   fixtures with real shapes (still useful; the only remaining live task).
+
+## Risks & mitigations
+
+- **Over-broad crawl** (following external/product links, infinite loops). Mitigate: only follow
+  **internal** paths, dedup against visited, cap depth (fragments are shallow), exclude
+  `/products/*` overlays (already filtered) and external hosts.
+- **Regex misses a fragment-embed shape.** Mitigate: Step 03 audit is the safety net — even if
+  discovery misses it, the audit names it; add the shape to tests when found.
+- **citisignal-b2b content mismatch** (non-B2B source) may not be fixed by discovery alone (the
+  source has no B2B nav to find). Track explicitly in Step 01 acceptance; may need its account
+  content sourced from the B2B site or a content patch (decide from pre-work probe).
+- **PDP class is catalog-derived**, not copyable — out of scope to *fix* here; Step 05 only
+  *asserts* coverage so it can't silently regress. Fix stays on `b2b-pdp-404-gap` (Option A).
+
+## Definition of done
+
+- New `b2b` + `citisignal-b2b` projects show the full B2B account menu (live-verified).
+- Discovery + audit covered by unit tests; `npm test` green; coverage ≥ 80% on changed files.
+- Create and reset share one runtime-surface inventory; smoke harness asserts no dangling refs
+  per package. CHANGELOG + ADR-006 note updated.

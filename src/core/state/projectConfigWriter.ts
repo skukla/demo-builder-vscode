@@ -7,6 +7,7 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 import { getComponentIds } from '@/types/typeGuards';
@@ -71,7 +72,6 @@ export class ProjectConfigWriter {
         }
 
         const manifestPath = path.join(project.path, '.demo-builder.json');
-        const tempPath = `${manifestPath}.tmp`;
 
         try {
             // Build the manifest from project object - no merging needed
@@ -120,20 +120,9 @@ export class ProjectConfigWriter {
                 manifest.pinned = true;
             }
 
-            // Atomic write: write to temp file first, then rename
-            await fs.writeFile(tempPath, JSON.stringify(manifest, null, 2));
-
-            // Verify temp file exists before rename
-            await fs.access(tempPath);
-
-            await fs.rename(tempPath, manifestPath);
+            // Atomic write (temp file + rename) via the shared helper.
+            await writeFileAtomic(manifestPath, JSON.stringify(manifest, null, 2));
         } catch (error) {
-            // Clean up temp file on error (ignore cleanup failures)
-            try {
-                await fs.unlink(tempPath);
-            } catch {
-                // Temp file may not exist if write failed early - ignore
-            }
             this.logger.error('Failed to update project manifest', error instanceof Error ? error : undefined);
             throw error;
         }

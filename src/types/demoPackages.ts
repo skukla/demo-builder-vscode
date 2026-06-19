@@ -110,6 +110,12 @@ export interface Storefront {
     source: GitSource;
     /** DA.live content source for EDS storefronts (required for EDS stacks) */
     contentSource?: DaLiveContentSource;
+    /** Optional second content source for the customer account chrome
+     *  (`/customer/*` auth pages + the `/customer/nav` fragment). Used by hybrid
+     *  packages whose brand/catalog content comes from one site but whose B2B
+     *  account experience must come from the canonical B2B content site
+     *  (B2B base + brand overlay). Overlaid after the main content copy. */
+    accountContentSource?: DaLiveContentSource;
     /** Optional BYOM content overlay URL. When set, Config Service registers a
      *  `content.overlay` alongside the DA.live content source so a backend
      *  service can serve dynamic markup (e.g., per-SKU PDP HTML).
@@ -206,11 +212,26 @@ export interface DemoPackage {
     /** Availability status (default: 'active') */
     status?: 'active' | 'coming-soon';
 
+    /**
+     * Hide this package from the new-project picker (wizard + AI create/discovery
+     * tools). Existing projects on a hidden package keep working — id lookups
+     * (reset, config flags, dashboard name resolution) are unaffected. Used to
+     * temporarily pull a package back without retiring it. Default: false.
+     */
+    hidden?: boolean;
+
     /** Addons configuration for this package */
     addons?: Addons;
 
     /** Default configuration values (env var name to value) - embedded brand data */
     configDefaults: Record<string, string>;
+
+    /**
+     * Storefront config.json public flags injected for this package
+     * (e.g., commerce-b2b-enabled). Merged into config.public.default by the
+     * config generator — data-driven, mirrors addon configFlags.
+     */
+    configFlags?: Record<string, boolean>;
 
     /** Storefronts keyed by stack ID (e.g., 'headless-paas', 'eds-paas', 'eds-accs') */
     storefronts: Record<string, Storefront>;

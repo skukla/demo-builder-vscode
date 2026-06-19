@@ -225,6 +225,7 @@ async function runEdsPipelineWithRecovery(
                     templateOwner, templateRepo,
                     clearExistingContent: wantsToResetContent, skipContent,
                     contentSource: edsConfig.contentSource,
+                    accountContentSource: edsConfig.accountContentSource,
                     contentPatches: edsConfig.contentPatches, contentPatchSource: edsConfig.contentPatchSource,
                     codePatches: edsConfig.codePatches, codePatchSource: edsConfig.codePatchSource,
                     // Thread the orchestrator's shared patch report through so canonical-phase

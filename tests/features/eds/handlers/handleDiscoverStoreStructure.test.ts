@@ -94,20 +94,6 @@ function createMockContext(overrides?: Partial<HandlerContext>): HandlerContext 
     } as unknown as HandlerContext;
 }
 
-/** Creates a context pre-loaded with PaaS credentials in sharedState. */
-function createPaasContext(username: string, password: string): HandlerContext {
-    return createMockContext({
-        sharedState: {
-            currentComponentConfigs: {
-                paas: {
-                    ADOBE_COMMERCE_ADMIN_USERNAME: username,
-                    ADOBE_COMMERCE_ADMIN_PASSWORD: password,
-                },
-            },
-        },
-    });
-}
-
 const MOCK_STORE_DATA = {
     websites: [{ id: 1, code: 'base', name: 'Main Website' }],
     storeGroups: [{ id: 1, code: 'main', name: 'Main Store', website_id: 1, root_category_id: 2 }],
@@ -160,21 +146,23 @@ describe('handleDiscoverStoreStructure', () => {
     // PaaS path
     // ----------------------------------------------------------
 
-    it('should delegate to discoverStoreStructure for PaaS path', async () => {
-        // Credentials are read from sharedState, not from the payload
-        const context = createPaasContext('admin', 'admin123');
+    it('should pass PaaS credentials from the payload to discoverStoreStructure', async () => {
+        // Credentials arrive in the discovery payload (no out-of-band cache)
+        const context = createMockContext();
         mockDiscoverStoreStructure.mockResolvedValue({ success: true, data: MOCK_STORE_DATA });
 
         await handleDiscoverStoreStructure(context, {
             backendType: 'paas',
             baseUrl: 'https://magento.test',
+            username: 'admin',
+            password: 'fake-test-pw-not-a-secret',
         });
 
         expect(mockDiscoverStoreStructure).toHaveBeenCalledWith(expect.objectContaining({
             backendType: 'paas',
             baseUrl: 'https://magento.test',
             username: 'admin',
-            password: 'admin123',
+            password: 'fake-test-pw-not-a-secret',
         }));
         expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
             success: true,
@@ -293,7 +281,7 @@ describe('handleDiscoverStoreStructure', () => {
     // ----------------------------------------------------------
 
     it('should send discovery error result on service failure', async () => {
-        const context = createPaasContext('admin', 'pass');
+        const context = createMockContext();
         mockDiscoverStoreStructure.mockResolvedValue({
             success: false,
             error: 'Connection timed out',
@@ -302,6 +290,8 @@ describe('handleDiscoverStoreStructure', () => {
         await handleDiscoverStoreStructure(context, {
             backendType: 'paas',
             baseUrl: 'https://magento.test',
+            username: 'admin',
+            password: 'fake-test-pw-not-a-secret',
         });
 
         expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
@@ -311,12 +301,14 @@ describe('handleDiscoverStoreStructure', () => {
     });
 
     it('should handle unexpected exceptions gracefully', async () => {
-        const context = createPaasContext('admin', 'pass');
+        const context = createMockContext();
         mockDiscoverStoreStructure.mockRejectedValue(new Error('Unexpected crash'));
 
         const result = await handleDiscoverStoreStructure(context, {
             backendType: 'paas',
             baseUrl: 'https://magento.test',
+            username: 'admin',
+            password: 'fake-test-pw-not-a-secret',
         });
 
         expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
@@ -332,12 +324,14 @@ describe('handleDiscoverStoreStructure', () => {
     // ----------------------------------------------------------
 
     it('should log success details', async () => {
-        const context = createPaasContext('admin', 'pass');
+        const context = createMockContext();
         mockDiscoverStoreStructure.mockResolvedValue({ success: true, data: MOCK_STORE_DATA });
 
         await handleDiscoverStoreStructure(context, {
             backendType: 'paas',
             baseUrl: 'https://magento.test',
+            username: 'admin',
+            password: 'fake-test-pw-not-a-secret',
         });
 
         expect(context.logger.info).toHaveBeenCalledWith(
