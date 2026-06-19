@@ -61,6 +61,20 @@ export function resolveProjectsRoot(): string {
 }
 
 /**
+ * Re-home preamble prepended to a prompt when it's delivered into a CONTINUED
+ * conversation (terminal reuse, or a spawn that resumes via `--continue`). A
+ * resumed conversation doesn't re-read the home `AGENTS.md`, so it can keep stale
+ * "current project" context. This makes the agent re-resolve the active project
+ * via the MCP tool before acting — preserving the always-root home model (the
+ * Chat never cd's into a project; the current-project pointer is the source of
+ * truth). A cold spawn reads `AGENTS.md` and self-homes, so it gets no preamble.
+ */
+export const REHOME_PROMPT_PREFIX =
+    'Before responding, call the get_current_project tool to re-confirm the active demo '
+    + 'project (it may have changed since this conversation started), then address the '
+    + 'request below.\n\n';
+
+/**
  * OpenInClaudeCommand — opens Claude Code (`claude --continue`) in a VS Code
  * integrated terminal placed as a tab in the active editor group (next to
  * Project Dashboard).
@@ -144,8 +158,9 @@ export class OpenInClaudeCommand extends BaseCommand {
             existing.show();
             this.logger.info('[Open in Claude] terminal reused');
             if (prompt) {
-                // Reuse case: claude is already at its REPL — inject immediately.
-                this.injectPromptViaBracketedPaste(prompt);
+                // Reuse case: claude is already at its REPL (a CONTINUED conversation)
+                // — re-home it to the active project, then inject the prompt.
+                this.injectPromptViaBracketedPaste(REHOME_PROMPT_PREFIX + prompt);
                 this.maybeShowClipboardFallbackTip();
             }
             return;
@@ -168,8 +183,11 @@ export class OpenInClaudeCommand extends BaseCommand {
         // `~/.claude/projects/<encoded-cwd>/` for any `.jsonl` transcript.
         const useContinue = hasClaudeConversation(cwd);
         const continueFlag = useContinue ? ' --continue' : '';
-        const launchCommand = prompt
-            ? `claude${continueFlag} -- ${this.quotePromptForShell(prompt)}`
+        // Resuming a conversation (`--continue`) won't re-read AGENTS.md, so carry
+        // the re-home preamble. A cold start self-homes from AGENTS.md → no preamble.
+        const effectivePrompt = prompt && useContinue ? REHOME_PROMPT_PREFIX + prompt : prompt;
+        const launchCommand = effectivePrompt
+            ? `claude${continueFlag} -- ${this.quotePromptForShell(effectivePrompt)}`
             : `claude${continueFlag}`;
         terminal.sendText(launchCommand);
         this.logger.info(
