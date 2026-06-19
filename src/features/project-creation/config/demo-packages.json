@@ -5,7 +5,7 @@
     {
       "id": "isle5",
       "name": "Isle5",
-      "description": "Commerce demo with Isle5 branding and custom EDS blocks",
+      "description": "Isle5-branded commerce demo with custom EDS blocks",
       "icon": "isle5",
       "featured": true,
       "requiresMesh": false,
@@ -84,7 +84,7 @@
     {
       "id": "custom",
       "name": "Custom",
-      "description": "Unbranded Commerce storefront for custom demos",
+      "description": "Unbranded commerce demo for custom builds",
       "icon": "custom",
       "featured": false,
       "requiresMesh": "optional",
@@ -173,7 +173,7 @@
     {
       "id": "b2b",
       "name": "B2B Boilerplate",
-      "description": "B2B Commerce storefront with company management, quotes, purchase orders, and requisition lists",
+      "description": "B2B commerce demo with company accounts, quotes, and purchase orders",
       "icon": "custom",
       "featured": false,
       "requiresMesh": false,
@@ -274,7 +274,7 @@
     {
       "id": "citisignal",
       "name": "CitiSignal",
-      "description": "CitiSignal hybrid commerce demo — serves B2C and B2B (company management, quotes, purchase orders, requisition lists) from one storefront, by customer type at login",
+      "description": "Hybrid commerce demo serving both B2C and B2B customers from one storefront",
       "icon": "citisignal",
       "featured": true,
       "requiresMesh": false,
@@ -431,7 +431,7 @@
     {
       "id": "buildright",
       "name": "BuildRight",
-      "description": "Construction/hardware demo with BuildRight branding",
+      "description": "BuildRight-branded commerce demo for construction and hardware",
       "icon": "buildright",
       "featured": false,
       "requiresMesh": true,
