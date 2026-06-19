@@ -143,6 +143,25 @@ describe('ensureProjectOrgContext', () => {
         expect(mockDetect).toHaveBeenCalledTimes(2);
     });
 
+    it('telegraphs the browser launch with a progress notification during the switch', async () => {
+        mockDetect
+            .mockResolvedValueOnce({ reachable: false, expectedOrg: 'org-expected', currentOrg: 'Wrong Org' })
+            .mockResolvedValueOnce({ reachable: true, expectedOrg: 'org-expected', currentOrg: 'Expected Org' });
+        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Switch IMS Org');
+        const authManager = createMockAuthManager();
+
+        await ensureProjectOrgContext({ authManager, project, logger });
+
+        // The forced login runs inside a notification progress (reused Open-in-Browser shape).
+        expect(vscode.window.withProgress).toHaveBeenCalledWith(
+            expect.objectContaining({
+                location: vscode.ProgressLocation.Notification,
+                title: expect.stringContaining('Opening browser'),
+            }),
+            expect.any(Function),
+        );
+    });
+
     it('returns not reachable (not cancelled) when still mismatched after the switch', async () => {
         mockDetect
             .mockResolvedValueOnce({ reachable: false, expectedOrg: 'org-expected', currentOrg: 'Wrong Org' })

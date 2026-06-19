@@ -89,13 +89,23 @@ export async function ensureProjectOrgContext(options: {
     }
 
     logger.info(`${logPrefix} Starting forced Adobe sign-in to switch organization`);
-    await authManager.loginAndRestoreProjectContext(
+    // Telegraph the browser-launch delay: the forced login spins up the system
+    // browser, which takes a moment with no other feedback. Reuse the same
+    // notification-progress shape the Open-in-Browser actions use.
+    await vscode.window.withProgress(
         {
-            organization: project.adobe?.organization,
-            projectId: project.adobe?.projectId,
-            workspace: project.adobe?.workspace,
+            location: vscode.ProgressLocation.Notification,
+            title: 'Opening browser to switch organization…',
+            cancellable: false,
         },
-        true, // force — present the IMS account/org chooser; never silently reuse the SSO tab
+        () => authManager.loginAndRestoreProjectContext(
+            {
+                organization: project.adobe?.organization,
+                projectId: project.adobe?.projectId,
+                workspace: project.adobe?.workspace,
+            },
+            true, // force — present the IMS account/org chooser; never silently reuse the SSO tab
+        ),
     );
 
     // Verify the landed org by re-running the canonical check.
