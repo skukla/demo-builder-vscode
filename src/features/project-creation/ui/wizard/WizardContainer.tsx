@@ -7,7 +7,7 @@ import {
 } from '@adobe/react-spectrum';
 import React, { useEffect, useRef, useState } from 'react';
 import { loadStacks } from '../helpers/brandStackLoader';
-import { loadDemoPackages } from '../helpers/demoPackageLoader';
+import { getSelectablePackages } from '../helpers/demoPackageLoader';
 import { filterComponentConfigsForStackChange } from '../helpers/stackHelpers';
 import {
     useWizardState,
@@ -109,7 +109,7 @@ export function WizardContainer({
     const [packages, setPackages] = useState<DemoPackage[]>([]);
     const [stacks, setStacks] = useState<Stack[]>([]);
     useEffect(() => {
-        loadDemoPackages().then(setPackages);
+        getSelectablePackages().then(setPackages);
         loadStacks().then(setStacks);
     }, []);
 

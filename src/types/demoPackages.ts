@@ -212,6 +212,14 @@ export interface DemoPackage {
     /** Availability status (default: 'active') */
     status?: 'active' | 'coming-soon';
 
+    /**
+     * Hide this package from the new-project picker (wizard + AI create/discovery
+     * tools). Existing projects on a hidden package keep working — id lookups
+     * (reset, config flags, dashboard name resolution) are unaffected. Used to
+     * temporarily pull a package back without retiring it. Default: false.
+     */
+    hidden?: boolean;
+
     /** Addons configuration for this package */
     addons?: Addons;
 

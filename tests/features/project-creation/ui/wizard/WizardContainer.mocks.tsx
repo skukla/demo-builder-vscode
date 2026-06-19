@@ -20,11 +20,10 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
     },
 }));
 
-// Mock demoPackageLoader to prevent JSON import issues in tests
-// WizardContainer calls loadDemoPackages() which loads from demo-packages.json
-jest.mock('@/features/project-creation/ui/helpers/demoPackageLoader', () => ({
-    __esModule: true,
-    loadDemoPackages: async () => [
+// Mock demoPackageLoader to prevent JSON import issues in tests.
+// WizardContainer calls getSelectablePackages() which loads from demo-packages.json.
+jest.mock('@/features/project-creation/ui/helpers/demoPackageLoader', () => {
+    const testPackages = [
         {
             id: 'test-package',
             name: 'Test Package',
@@ -38,8 +37,13 @@ jest.mock('@/features/project-creation/ui/helpers/demoPackageLoader', () => ({
                 },
             },
         },
-    ],
-}));
+    ];
+    return {
+        __esModule: true,
+        loadDemoPackages: async () => testPackages,
+        getSelectablePackages: async () => testPackages,
+    };
+});
 
 // Mock brandStackLoader for loadStacks() which access components.json
 jest.mock('@/features/project-creation/ui/helpers/brandStackLoader', () => ({

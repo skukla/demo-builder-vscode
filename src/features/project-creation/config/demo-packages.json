@@ -8,6 +8,7 @@
       "description": "Isle5-branded commerce demo with custom EDS blocks",
       "icon": "isle5",
       "featured": true,
+      "hidden": true,
       "requiresMesh": false,
       "addons": {
         "adobe-commerce-aco": "excluded"
@@ -345,6 +346,7 @@
       "description": "BuildRight-branded commerce demo for construction and hardware",
       "icon": "buildright",
       "featured": false,
+      "hidden": true,
       "requiresMesh": true,
       "status": "coming-soon",
       "addons": {

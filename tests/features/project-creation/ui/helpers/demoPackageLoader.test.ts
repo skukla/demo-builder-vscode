@@ -11,6 +11,7 @@
 
 import {
     loadDemoPackages,
+    getSelectablePackages,
     getStorefrontForStack,
     getPackageById,
     getAvailableStacksForPackage,
@@ -185,6 +186,20 @@ describe('shipped demo-packages.json (config integrity)', () => {
         expect(ids).not.toContain('citisignal-b2b');
         // `b2b` id retired — the unbranded hybrid is now `custom` ("Custom (B2B + B2C)").
         expect(ids).not.toContain('b2b');
+    });
+
+    it('getSelectablePackages hides packages marked hidden (isle5, buildright)', async () => {
+        const selectable = await getSelectablePackages();
+        const ids = selectable.map(p => p.id);
+
+        // The new-project picker shows only the non-hidden packages.
+        expect(ids).toEqual(expect.arrayContaining(['citisignal', 'custom']));
+        expect(ids).not.toContain('isle5');
+        expect(ids).not.toContain('buildright');
+        // None of the returned packages are hidden.
+        expect(selectable.every(p => !p.hidden)).toBe(true);
+        // loadDemoPackages still returns everything (existing projects resolve by id).
+        expect((await loadDemoPackages()).length).toBe(4);
     });
 
     it('every package has the required structural properties', async () => {

@@ -46,7 +46,7 @@ import {
     getAvailableStacksForPackage,
     getResolvedMeshRequirement,
     getStorefrontForStack,
-    loadDemoPackages,
+    getSelectablePackages,
 } from '@/features/project-creation/services/demoPackageLoader';
 import { buildProjectConfig } from '@/features/project-creation/ui/wizard/wizardHelpers';
 import type { DemoPackage, Storefront } from '@/types/demoPackages';
@@ -311,7 +311,7 @@ export function registerCreateProjectTool(server: any, ctxFactory: () => Handler
                 });
             }
 
-            const packages = await loadDemoPackages();
+            const packages = await getSelectablePackages();
             const pkg = packages.find((p) => p.id === pkgId);
             if (!pkg) {
                 return asText({ error: `Unknown package: ${pkgId}`, validPackages: packages.map((p) => p.id) });

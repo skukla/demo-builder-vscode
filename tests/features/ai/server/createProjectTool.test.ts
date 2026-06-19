@@ -11,7 +11,7 @@ jest.mock('@/features/project-creation/ui/wizard/wizardHelpers', () => ({
     buildProjectConfig: jest.fn(() => ({ projectName: 'assembled' })),
 }));
 jest.mock('@/features/project-creation/services/demoPackageLoader', () => ({
-    loadDemoPackages: jest.fn(async () => [
+    getSelectablePackages: jest.fn(async () => [
         { id: 'citisignal', storefronts: { 'headless-paas': {}, 'eds-paas': {} } },
     ]),
     getStorefrontForStack: jest.fn(async () => ({ templateOwner: 'o', templateRepo: 'r', contentSource: { org: 'co', site: 'cs' } })),

@@ -8,6 +8,7 @@
 
 export {
     loadDemoPackages,
+    getSelectablePackages,
     getPackageById,
     getStorefrontForStack,
     getAvailableStacksForPackage,
