@@ -94,6 +94,13 @@ export class ProjectSetupContext {
     }
 
     /**
+     * Get selected demo package ID from wizard state
+     */
+    getSelectedPackage(): string | undefined {
+        return this.config.selectedPackage as string | undefined;
+    }
+
+    /**
      * Get specific component definition by ID
      */
     getComponentDefinition(componentId: string): TransformedComponentDefinition | undefined {

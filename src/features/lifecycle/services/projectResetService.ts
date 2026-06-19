@@ -179,45 +179,6 @@ async function loadComponentDefinitionsFromProject(
 // Environment File Regeneration
 // ==========================================================
 
-/**
- * Regenerate .env files for all components using saved project configs.
- *
- * Creates a minimal EnvGenerationContext adapter from the saved project state
- * and delegates to generateComponentEnvFile for each component.
- *
- * @param registry - Reused from loadComponentDefinitionsFromProject (avoids duplicate I/O)
- * @param backendId - From stack.backend (single source of truth)
- */
-async function regenerateEnvFiles(
-    project: Project,
-    componentDefinitions: Map<string, ComponentDefinitionEntry>,
-    context: HandlerContext,
-    registry: ComponentRegistry,
-    backendId: string,
-): Promise<void> {
-    const { generateComponentEnvFile } = await import(
-        '@/features/project-creation/helpers/envFileGenerator'
-    );
-
-    // Build minimal EnvGenerationContext adapter from saved project state
-    const envContext = {
-        registry,
-        logger: context.logger,
-        getBackendId: () => backendId,
-        getComponentConfigs: () => project.componentConfigs,
-        getEnvVarDefinitions: () => registry.envVars || {},
-        getMeshEndpoint: () => project.meshState?.endpoint,
-    };
-
-    for (const [compId, { definition }] of componentDefinitions) {
-        const componentPath = project.componentInstances?.[compId]?.path;
-        if (!componentPath) continue;
-
-        await generateComponentEnvFile(componentPath, compId, definition, envContext);
-        context.logger.debug(`[ProjectReset] Regenerated .env for ${definition.name}`);
-    }
-}
-
 // ==========================================================
 // Mesh Redeployment
 // ==========================================================
@@ -406,7 +367,7 @@ export async function resetProjectWithUI(
 
                 // Step 1: Load component definitions from saved project state
                 progress.report({ message: 'Loading component definitions...' });
-                const { componentDefinitions, registry, stack } =
+                const { componentDefinitions, registry } =
                     await loadComponentDefinitionsFromProject(project, context);
 
                 if (componentDefinitions.size === 0) {
@@ -460,13 +421,10 @@ export async function resetProjectWithUI(
 
                 // Step 5: Regenerate .env files from saved config
                 progress.report({ message: 'Regenerating configuration files...' });
-                await regenerateEnvFiles(
-                    project,
-                    componentDefinitions,
-                    context,
-                    registry,
-                    stack.backend,
+                const { regenerateProjectEnvFiles } = await import(
+                    '@/features/project-creation/helpers/envFileGenerator'
                 );
+                await regenerateProjectEnvFiles(project, registry, context.logger);
 
                 // Step 6: Redeploy API Mesh (if project has mesh)
                 const meshRedeployResult = await handleMeshRedeployment(

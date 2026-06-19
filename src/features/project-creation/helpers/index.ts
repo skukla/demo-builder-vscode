@@ -4,7 +4,7 @@
  */
 
 export { formatGroupName } from './formatters';
-export { generateComponentEnvFile, generateComponentConfigFiles } from './envFileGenerator';
+export { generateComponentEnvFile, generateComponentConfigFiles, regenerateProjectEnvFiles } from './envFileGenerator';
 export type { EnvGenerationConfig } from './envFileGenerator';
 export { getSetupInstructions, SetupInstruction } from './setupInstructions';
 export { ProjectSetupContext } from '../services/ProjectSetupContext';
