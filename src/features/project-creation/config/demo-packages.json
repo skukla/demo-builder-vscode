@@ -134,7 +134,8 @@
             "product-link-sku-encoding",
             "product-link-sku-slash-encoding",
             "aem-assets-sku-sanitization",
-            "commerce-account-sidebar-selector-race"
+            "commerce-account-sidebar-selector-race",
+            "account-page-column-layout"
           ],
           "codePatchSource": {
             "owner": "skukla",
@@ -172,7 +173,8 @@
             "product-link-sku-encoding",
             "product-link-sku-slash-encoding",
             "aem-assets-sku-sanitization",
-            "commerce-account-sidebar-selector-race"
+            "commerce-account-sidebar-selector-race",
+            "account-page-column-layout"
           ],
           "codePatchSource": {
             "owner": "skukla",
@@ -272,6 +274,7 @@
             "product-link-sku-slash-encoding",
             "aem-assets-sku-sanitization",
             "commerce-account-sidebar-selector-race",
+            "account-page-column-layout",
             "product-teaser-sku-encoding",
             "product-teaser-getproductlink-import",
             "product-teaser-image-url-handling"
@@ -327,6 +330,7 @@
             "product-link-sku-slash-encoding",
             "aem-assets-sku-sanitization",
             "commerce-account-sidebar-selector-race",
+            "account-page-column-layout",
             "product-teaser-sku-encoding",
             "product-teaser-getproductlink-import",
             "product-teaser-image-url-handling"
