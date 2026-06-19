@@ -7,16 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- **Adobe org context is now targeted per operation instead of through a shared global.** Every `aio` call (project/workspace listing, mesh deploy, project reset) targets its org/project/workspace via per-invocation environment variables, so the extension no longer mutates `aio console`'s process-global selection. Concurrent demos, the user's own terminal, and AI agents working in different orgs no longer clobber one another's CLI context. A single `ensureOrgContext` helper resolves the target and returns a typed result; a wrong org surfaces to MCP agents as a typed, non-retryable `ORG_MISMATCH` (so agents stop and ask instead of retrying into the same 403) rather than an opaque error string.
+## [1.0.0-beta.121] - 2026-06-19
 
 ### Added
 
-- **In-app organization picker in the creation wizard.** A new Organization step lets you switch Adobe orgs with a click on the existing token — no forced browser re-login (re-login is reserved for switching Adobe accounts, and is offered only when the target org isn't available to the current account). This replaces the previous "configured for a different organization — run `aio console org select` in your terminal" dead-end with in-app resolution.
+- **B2B + B2C from one storefront.** The CitiSignal demo and the unbranded **Custom (B2B + B2C)** base now serve both B2C and B2B shoppers from a single storefront, by customer type at login — company accounts, quotes, purchase orders, and requisition lists appear for B2B (company) users while B2C shoppers get the standard experience. The generated storefront `config.json` now enables the B2B drop-ins (`commerce-b2b-enabled` / `commerce-companies-enabled`), and create/reset follow content references so the B2B account menu (e.g. the `/customer/nav` fragment) is copied rather than silently dropped.
+- **Proactive org-mismatch detection on the project dashboard** — a decoupled, self-healing status badge and banner with forced-switch recovery.
+- **AI chat re-homes to the active project** when you continue a previous Claude session, so it operates on the current project after you've switched.
+
+### Changed
+
+- **Adobe org context is now targeted per operation instead of through a shared global.** Every `aio` call (project/workspace listing, mesh deploy, project reset) targets its org/project/workspace via per-invocation environment variables, so the extension no longer mutates `aio console`'s process-global selection. Concurrent demos, your own terminal, and AI agents working in different orgs no longer clobber one another's CLI context. A single `ensureOrgContext` helper resolves the target; a wrong org surfaces as an actionable **Switch IMS Org** recovery (and to MCP agents as a typed, non-retryable `ORG_MISMATCH` they stop and ask on) instead of an opaque 403 or a "run `aio console org select` in your terminal" dead-end.
+- **Streamlined demo picker.** Consolidated to a single unbranded base — **Custom (B2B + B2C)** — and hid Isle5 and BuildRight for now (existing projects on those packages are unaffected). The separate `citisignal-b2b` package is gone; CitiSignal is now one hybrid storefront.
+- **Org switching is sign-in-driven** — switch Adobe orgs by clicking the existing token; a browser re-login is reserved for switching Adobe *accounts*.
+
+### Fixed
+
+- **B2B account navigation renders.** The "My Account" nav was empty on B2B storefronts because the generated config didn't enable B2B; it now does.
+- **Project rename keeps AI/MCP paths in sync** — renaming a project regenerates its AI context files so the MCP server paths follow the new project location.
+- **EDS reset gates on Adobe org context** with the same inline **Switch IMS Org** recovery used elsewhere, so a reset can't run against the wrong org.
+- **Store-discovery credentials** are passed in the request payload.
+- **The PaaS GraphQL endpoint renders as a connection field** (no layout jump).
+- **Adobe SDK entity fetch is bounded by a timeout with a CLI fallback**, so a slow SDK init can't hang organization loading.
 
 ### Removed
 
+- **The integration-service / `appBuilderApps` mechanism** — unused; superseded by the planned App Builder attach feature.
 - **The bespoke org-context correction variants** — `selectOrganization` / `selectProject` / `selectWorkspace`, `autoSelectOrganizationIfNeeded`, and `validateAndClearInvalidOrgContext` — replaced by the single per-invocation targeting model (no soft deprecation).
 
 ## [1.0.0-beta.120] - 2026-06-12
