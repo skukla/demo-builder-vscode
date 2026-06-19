@@ -24,6 +24,7 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import sanitizeHtml from 'sanitize-html';
 import { z } from 'zod';
+import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
 import { assertPathInside, assertPathInsideSync } from '@/core/validation';
 import {
     DaLiveContentOperations,
@@ -680,7 +681,10 @@ export const toolHandlers = {
             validateEnvContent(content);
         }
         await fsPromises.mkdir(path.dirname(resolved), { recursive: true });
-        await fsPromises.writeFile(resolved, content, 'utf-8');
+        // Atomic write (temp + rename): the manifest may be read/written
+        // concurrently by the extension's StateManager; a partial write would
+        // corrupt it. rename(2) makes the swap atomic.
+        await writeFileAtomic(resolved, content);
         return `Updated ${configRelPath}`;
     },
 
