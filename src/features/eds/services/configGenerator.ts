@@ -325,11 +325,35 @@ export function buildConfigGeneratorParams(project: Project): ConfigGeneratorPar
 }
 
 /**
+ * Merge a set of data-driven config flags into config.public.default.
+ *
+ * The single primitive behind both addon- and package-scoped flag injection:
+ * each source resolves its own `configFlags` object, then this applies it.
+ * No-op when there are no flags or the target object is absent.
+ *
+ * @param config - The config object being built
+ * @param flags - The flags to merge (from an addon or package definition)
+ * @param source - Human-readable origin for the debug log (e.g. "addon: x")
+ * @param logger - Logger instance
+ */
+function injectConfigFlags(
+    config: Record<string, Record<string, Record<string, unknown>>>,
+    flags: Record<string, boolean> | undefined,
+    source: string,
+    logger: Logger,
+): void {
+    if (flags && config.public?.default) {
+        Object.assign(config.public.default, flags);
+        logger.debug(`[ConfigGenerator] Injected config flags from ${source}`);
+    }
+}
+
+/**
  * Inject addon-specific config flags into the config object.
  *
- * Reads configFlags from components.json addon definitions and merges them
- * into config.public.default. This is data-driven — any addon with a
- * `configuration.configFlags` object will have its flags injected.
+ * Reads configFlags from components.json addon definitions. This is data-driven
+ * — any addon with a `configuration.configFlags` object will have its flags
+ * injected into config.public.default.
  */
 function injectAddonConfigFlags(
     config: Record<string, Record<string, Record<string, unknown>>>,
@@ -342,22 +366,22 @@ function injectAddonConfigFlags(
     if (!addonsConfig) { return; }
 
     for (const addonId of selectedAddons) {
-        const addon = addonsConfig[addonId];
-        const flags = addon?.configuration?.configFlags;
-        if (flags && config.public?.default) {
-            Object.assign(config.public.default, flags);
-            logger.debug(`[ConfigGenerator] Injected config flags for addon: ${addonId}`);
-        }
+        injectConfigFlags(
+            config,
+            addonsConfig[addonId]?.configuration?.configFlags,
+            `addon: ${addonId}`,
+            logger,
+        );
     }
 }
 
 /**
  * Inject demo-package-specific config flags into the config object.
  *
- * Reads configFlags from the selected package definition in demo-packages.json
- * and merges them into config.public.default. This is data-driven — any package
- * with a `configFlags` object will have its flags injected. The B2B package uses
- * this to set commerce-b2b-enabled / commerce-companies-enabled, which gate the
+ * Reads configFlags from the selected package definition in demo-packages.json.
+ * This is data-driven — any package with a `configFlags` object will have its
+ * flags injected into config.public.default. The B2B package uses this to set
+ * commerce-b2b-enabled / commerce-companies-enabled, which gate the
  * auth/permissions event the commerce-account-nav block depends on.
  */
 function injectPackageConfigFlags(
@@ -367,12 +391,8 @@ function injectPackageConfigFlags(
 ): void {
     const packages = (demoPackagesConfig as { packages?: Array<{ id: string; configFlags?: Record<string, boolean> }> }).packages;
     const pkg = packages?.find((p) => p.id === selectedPackage);
-    const flags = pkg?.configFlags;
 
-    if (flags && config.public?.default) {
-        Object.assign(config.public.default, flags);
-        logger.debug(`[ConfigGenerator] Injected config flags for package: ${selectedPackage}`);
-    }
+    injectConfigFlags(config, pkg?.configFlags, `package: ${selectedPackage}`, logger);
 }
 
 /**
