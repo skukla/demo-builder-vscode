@@ -3,6 +3,25 @@
 **Goal:** move the org-context check onto the orchestrator AND make it non-interactive, so opening the
 dashboard can never launch a browser or stall 14.5s. This step's migration *is* the P1 fix.
 
+## UX alignment (decided 2026-06-20): split into 2a + 2b
+
+PM decision: **standardize the per-status CTA presentation now** rather than bolt a bespoke affordance
+onto the new org `unknown` outcome. The dashboard surfaces actions four ways today — the persistent
+ActionGrid (primary verbs), an inline quiet Link beside a badge (mesh `needs-auth` "Sign in", AI
+"Regenerate"), a full-width attention banner (org mismatch "Switch IMS Org"), and a dedicated card
+(App Builder). The orchestrator gives every check one outcome shape, so the presentation should map
+to it consistently: `ok` → badge only; `unknown`/lightweight-`warning` → badge **+ `StatusCard.action`
+quiet Link**; blocking `warning` → banner (reserved for org mismatch); primary verbs → ActionGrid.
+
+- **Step 2a — `StatusCard.action` consolidation (pure UI refactor, no behavior change).** Add an
+  optional `action?: { label; onPress; testId?; isDisabled? }` to `StatusCard` (`src/core/ui/
+  components/feedback/StatusCard.tsx`) that renders a quiet Spectrum `Link` after the status text.
+  Migrate the two existing remediation CTAs onto it: mesh `needs-auth` "Sign in" and AI red/yellow
+  "Regenerate AI files". Keep "View AI Capabilities" as-is (always-on navigation, not a remediation).
+  Keep the org-mismatch banner as-is (the one blocking case). Tests-first; ship + gate independently.
+- **Step 2b — org-context orchestrator migration + P1 fix (below).** Org `unknown` →
+  `StatusCard action:"Sign in to check"` wired to `handleReAuthenticate` — trivial once 2a exists.
+
 ## Files
 
 - New `src/features/dashboard/services/onOpenChecks/orgContextCheck.ts` — an `OnOpenCheck` wrapping the

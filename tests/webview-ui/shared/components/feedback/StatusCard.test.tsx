@@ -1,5 +1,5 @@
 import React from 'react';
-import { renderWithProviders, screen } from "../../../../helpers/react-test-utils";
+import { renderWithProviders, screen, fireEvent } from "../../../../helpers/react-test-utils";
 import { StatusCard } from '@/core/ui/components/feedback/StatusCard';
 
 describe('StatusCard', () => {
@@ -247,6 +247,51 @@ describe('StatusCard', () => {
 
             rerender(<StatusCard status="Status" color="green" />);
             expect(screen.getByText('Status')).toBeInTheDocument();
+        });
+    });
+
+    describe('Action CTA', () => {
+        it('renders no action affordance when action prop is absent', () => {
+            renderWithProviders(<StatusCard label="API Mesh" status="Deployed" color="green" />);
+            expect(screen.queryByRole('link')).not.toBeInTheDocument();
+        });
+
+        it('renders the action label as a Link when action is provided', () => {
+            renderWithProviders(
+                <StatusCard
+                    label="API Mesh"
+                    status="Session expired"
+                    color="yellow"
+                    action={{ label: 'Sign in', onPress: jest.fn() }}
+                />,
+            );
+            expect(screen.getByText('Sign in')).toBeInTheDocument();
+        });
+
+        it('invokes action.onPress when the Link is clicked', () => {
+            const onPress = jest.fn();
+            renderWithProviders(
+                <StatusCard
+                    label="IMS Org"
+                    status="Unknown"
+                    color="gray"
+                    action={{ label: 'Sign in to check', onPress }}
+                />,
+            );
+            fireEvent.click(screen.getByText('Sign in to check'));
+            expect(onPress).toHaveBeenCalledTimes(1);
+        });
+
+        it('applies the provided testId to the action Link', () => {
+            renderWithProviders(
+                <StatusCard
+                    label="AI"
+                    status="Setup incomplete"
+                    color="yellow"
+                    action={{ label: 'Regenerate AI files', onPress: jest.fn(), testId: 'ai-regenerate-trigger' }}
+                />,
+            );
+            expect(screen.getByTestId('ai-regenerate-trigger')).toBeInTheDocument();
         });
     });
 
