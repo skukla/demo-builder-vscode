@@ -1,6 +1,11 @@
 # Step 5 — Migrate ai-verify (P2: which MCP/skill failed and why)
 
-**Status:** Outline — firms up after Steps 1–3 land.
+**Status:** ✅ DONE (2026-06-20). `createAiVerifyCheck` (injected `verifyAiSetup`) in
+`onOpenChecks/aiVerifyCheck.ts`; wired into `handleRequestStatus` (single on-open verify, servers spawn
+once); hook drops the mount pull and routes `checkResult{ai-verify}` → badge + skills/MCP modal; the
+on-demand re-verify after Regenerate keeps the `verify-ai-setup` request. Note: the per-MCP which/why is
+also already shown in the View AI Capabilities modal (`AiMcpsList`); this step adds the coordinated
+outcome + names the failure in the message. 5 check tests + migrated hook/screen aiReady suites.
 
 **Goal:** move the on-open `verify-ai-setup` (`aiHandlers.ts:37`, fired from the hook's own useEffect)
 onto the orchestrator as an `ai-verify` check, and surface *which* inspector failed and why — replacing

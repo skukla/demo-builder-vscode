@@ -60,7 +60,7 @@ export async function handleVerifyAiSetup(
  * the captured proxy stderr tail (`entry.error`), which is the decisive detail
  * when an MCP server fails to spawn.
  */
-function logAiVerification(context: HandlerContext, result: AiVerificationResult): void {
+export function logAiVerification(context: HandlerContext, result: AiVerificationResult): void {
     const checksSummary = result.checks
         .map(c => `${c.name}=${c.status}`)
         .join(', ');

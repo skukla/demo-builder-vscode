@@ -1,9 +1,14 @@
 /**
  * useDashboardStatus Hook Tests — AI Ready Badge State
  *
- * Covers the verify-ai-setup integration that drives the AI Ready badge:
+ * Covers the AI verification that drives the AI Ready badge:
  * blue Verifying → green Ready → yellow Setup incomplete → red Broken,
  * plus skills/MCPs inventory exposure and the regenerate-ai-files flow.
+ *
+ * On open the verification is delivered by the orchestrator's `ai-verify` check
+ * via `checkResult{ai-verify}` (see `deliverAiVerify`) — the hook no longer pulls
+ * it on mount. The on-demand re-verify after Regenerate still uses the
+ * `verify-ai-setup` request.
  *
  * Core hook behavior is in `useDashboardStatus.test.ts`; display string
  * computations are in `useDashboardStatus-statusDisplay.test.ts`.
@@ -25,7 +30,8 @@ import { useDashboardStatus } from '@/features/dashboard/ui/hooks/useDashboardSt
 import {
     setupMocks,
     buildVerifyResponse,
-    flushVerify,
+    deliverAiVerify,
+    deliverAiVerifyFailure,
     okCheck,
     failCheck,
     type TestMocks,
@@ -38,8 +44,7 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
         mocks = setupMocks();
     });
 
-    it('returns blue Verifying state before verify-ai-setup resolves', () => {
-        // Default mock: request never resolves
+    it('returns blue Verifying before the ai-verify outcome arrives', () => {
         const { result } = renderHook(() => useDashboardStatus());
         expect(result.current.aiReady).toEqual({
             label: 'AI',
@@ -48,9 +53,10 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
         });
     });
 
-    it('issues a verify-ai-setup request on mount', () => {
+    it('does NOT pull verify-ai-setup on mount (the orchestrator pushes it)', () => {
         renderHook(() => useDashboardStatus());
-        expect(mocks.mockRequest).toHaveBeenCalledWith('verify-ai-setup', expect.any(Object));
+        const requestedTypes = mocks.mockRequest.mock.calls.map(c => c[0]);
+        expect(requestedTypes).not.toContain('verify-ai-setup');
     });
 
     it('telegraphs the mcp-health self-heal on the AI badge (warning → ok)', () => {
@@ -73,10 +79,9 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
         expect(result.current.aiReady.text).not.toBe('Updating AI configuration…');
     });
 
-    it('returns green Ready when all 7 signals pass', async () => {
-        mocks.mockRequest.mockResolvedValue(buildVerifyResponse());
+    it('returns green Ready when all signals pass', () => {
         const { result } = renderHook(() => useDashboardStatus());
-        await flushVerify();
+        deliverAiVerify(mocks, buildVerifyResponse());
         expect(result.current.aiReady).toEqual({
             label: 'AI',
             color: 'green',
@@ -84,43 +89,25 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
         });
     });
 
-    it('returns yellow Setup incomplete when inventory mcpsError is set (files OK)', async () => {
-        mocks.mockRequest.mockResolvedValue(
-            buildVerifyResponse({
-                inventory: { mcpsError: 'mcp inspector failed' },
-            }),
-        );
+    it('returns yellow Setup incomplete when inventory mcpsError is set (files OK)', () => {
         const { result } = renderHook(() => useDashboardStatus());
-        await flushVerify();
+        deliverAiVerify(mocks, buildVerifyResponse({ inventory: { mcpsError: 'mcp inspector failed' } }));
         expect(result.current.aiReady.color).toBe('yellow');
         expect(result.current.aiReady.text).toBe('Setup incomplete');
     });
 
-    it('returns yellow Setup incomplete when inventory skillsError is set (files OK, registered)', async () => {
-        mocks.mockRequest.mockResolvedValue(
-            buildVerifyResponse({
-                inventory: { skillsError: 'skill inspector failed' },
-            }),
-        );
+    it('returns yellow Setup incomplete when inventory skillsError is set (files OK)', () => {
         const { result } = renderHook(() => useDashboardStatus());
-        await flushVerify();
+        deliverAiVerify(mocks, buildVerifyResponse({ inventory: { skillsError: 'skill inspector failed' } }));
         expect(result.current.aiReady.color).toBe('yellow');
         expect(result.current.aiReady.text).toBe('Setup incomplete');
     });
 
-    it('returns red Broken when AGENTS.md check fails', async () => {
-        mocks.mockRequest.mockResolvedValue(
-            buildVerifyResponse({
-                checks: [
-                    failCheck('AGENTS.md'),
-                    okCheck('.claude/mcp.json'),
-                    okCheck('mcp-binary'),
-                    okCheck('skill-files'),
-                ],
-            }),
-        );
+    it('returns red Broken when AGENTS.md check fails', () => {
         const { result } = renderHook(() => useDashboardStatus());
-        await flushVerify();
+        deliverAiVerify(mocks, buildVerifyResponse({
+            checks: [failCheck('AGENTS.md'), okCheck('.claude/mcp.json'), okCheck('mcp-binary'), okCheck('skill-files')],
+        }));
         expect(result.current.aiReady).toEqual({
             label: 'AI',
             color: 'red',
@@ -128,84 +115,62 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
         });
     });
 
-    it('returns red Broken when mcp.json check has error status', async () => {
-        mocks.mockRequest.mockResolvedValue(
-            buildVerifyResponse({
-                checks: [
-                    okCheck('AGENTS.md'),
-                    { name: '.claude/mcp.json', status: 'error', message: 'Invalid JSON' },
-                    okCheck('mcp-binary'),
-                    okCheck('skill-files'),
-                ],
-            }),
-        );
+    it('returns red Broken when mcp.json check has error status', () => {
         const { result } = renderHook(() => useDashboardStatus());
-        await flushVerify();
+        deliverAiVerify(mocks, buildVerifyResponse({
+            checks: [
+                okCheck('AGENTS.md'),
+                { name: '.claude/mcp.json', status: 'error', message: 'Invalid JSON' },
+                okCheck('mcp-binary'),
+                okCheck('skill-files'),
+            ],
+        }));
         expect(result.current.aiReady.color).toBe('red');
         expect(result.current.aiReady.text).toBe('Broken');
     });
 
-    it('returns red Broken when mcp-binary check fails', async () => {
-        mocks.mockRequest.mockResolvedValue(
-            buildVerifyResponse({
-                checks: [
-                    okCheck('AGENTS.md'),
-                    okCheck('.claude/mcp.json'),
-                    failCheck('mcp-binary'),
-                    okCheck('skill-files'),
-                ],
-            }),
-        );
+    it('returns red Broken when mcp-binary check fails', () => {
         const { result } = renderHook(() => useDashboardStatus());
-        await flushVerify();
+        deliverAiVerify(mocks, buildVerifyResponse({
+            checks: [okCheck('AGENTS.md'), okCheck('.claude/mcp.json'), failCheck('mcp-binary'), okCheck('skill-files')],
+        }));
         expect(result.current.aiReady.color).toBe('red');
     });
 
-    it('returns red Broken when skill-files check fails', async () => {
-        mocks.mockRequest.mockResolvedValue(
-            buildVerifyResponse({
-                checks: [
-                    okCheck('AGENTS.md'),
-                    okCheck('.claude/mcp.json'),
-                    okCheck('mcp-binary'),
-                    failCheck('skill-files'),
-                ],
-            }),
-        );
+    it('returns red Broken when skill-files check fails', () => {
         const { result } = renderHook(() => useDashboardStatus());
-        await flushVerify();
+        deliverAiVerify(mocks, buildVerifyResponse({
+            checks: [okCheck('AGENTS.md'), okCheck('.claude/mcp.json'), okCheck('mcp-binary'), failCheck('skill-files')],
+        }));
         expect(result.current.aiReady.color).toBe('red');
     });
 
-    it('returns yellow Setup incomplete when verify rejects (Verifying transitions to a defined state)', async () => {
-        mocks.mockRequest.mockRejectedValue(new Error('verification failed'));
+    it('returns yellow Setup incomplete when the ai-verify outcome has no data (verify threw)', () => {
         const { result } = renderHook(() => useDashboardStatus());
-        await flushVerify();
-        // When verify call rejects we cannot conclude files are broken; default to
-        // yellow (setup incomplete) so the badge does not get stuck on gray.
+        // The verify threw → orchestrator posts an error outcome with no data; the
+        // badge must leave 'Verifying' for a defined (yellow) state, not stay stuck.
+        deliverAiVerifyFailure(mocks);
         expect(result.current.aiReady.color).toBe('yellow');
     });
 
-    it('exposes the skills inventory via aiSkills', async () => {
+    it('exposes the skills inventory via aiSkills', () => {
         const skills = [
             { name: 'Add a component', description: 'Adds a component', path: '/p/add.md', source: 'demo-builder' },
         ];
-        mocks.mockRequest.mockResolvedValue(buildVerifyResponse({ inventory: { skills } }));
         const { result } = renderHook(() => useDashboardStatus());
-        await flushVerify();
+        deliverAiVerify(mocks, buildVerifyResponse({ inventory: { skills } }));
         expect(result.current.aiSkills).toHaveLength(1);
         expect(result.current.aiSkills[0].name).toBe('Add a component');
         expect(result.current.aiSkillsError).toBe(false);
     });
 
-    it('flags aiSkillsError when the skill inspector errored', async () => {
-        mocks.mockRequest.mockResolvedValue(buildVerifyResponse({ inventory: { skillsError: 'skill inspector failed' } }));
+    it('flags aiSkillsError when the skill inspector errored', () => {
         const { result } = renderHook(() => useDashboardStatus());
-        await flushVerify();
+        deliverAiVerify(mocks, buildVerifyResponse({ inventory: { skillsError: 'skill inspector failed' } }));
         expect(result.current.aiSkillsError).toBe(true);
     });
 
-    it('exposes the MCP inventory via aiMcps', async () => {
+    it('exposes the MCP inventory via aiMcps', () => {
         const mcps = [
             {
                 id: 'playwright',
@@ -216,45 +181,33 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
                 ],
             },
         ];
-        mocks.mockRequest.mockResolvedValue(buildVerifyResponse({ inventory: { mcps } }));
         const { result } = renderHook(() => useDashboardStatus());
-        await flushVerify();
+        deliverAiVerify(mocks, buildVerifyResponse({ inventory: { mcps } }));
         expect(result.current.aiMcps).toHaveLength(1);
         expect(result.current.aiMcps[0].id).toBe('playwright');
         expect(result.current.aiMcps[0].tools).toHaveLength(2);
         expect(result.current.aiMcpsError).toBe(false);
     });
 
-    it('flags aiMcpsError when the MCP inspector errored', async () => {
-        mocks.mockRequest.mockResolvedValue(buildVerifyResponse({ inventory: { mcpsError: 'mcp inspector failed' } }));
+    it('flags aiMcpsError when the MCP inspector errored', () => {
         const { result } = renderHook(() => useDashboardStatus());
-        await flushVerify();
+        deliverAiVerify(mocks, buildVerifyResponse({ inventory: { mcpsError: 'mcp inspector failed' } }));
         expect(result.current.aiMcpsError).toBe(true);
     });
 
-    it('returns a stable empty MCPs reference before verify resolves', () => {
-        // Default mock: request never resolves
+    it('returns a stable empty MCPs reference before the ai-verify outcome arrives', () => {
         const { result } = renderHook(() => useDashboardStatus());
         expect(result.current.aiMcps).toEqual([]);
         expect(result.current.aiMcpsError).toBe(false);
     });
 
-    it('clears aiBusy after the initial verify resolves', async () => {
-        mocks.mockRequest.mockResolvedValue(buildVerifyResponse());
-        const { result } = renderHook(() => useDashboardStatus());
-        await flushVerify();
-        expect(result.current.aiBusy).toBe(false);
-    });
-
-    it('regenerateAiFiles dispatches regenerate-ai-files then re-verifies', async () => {
+    it('regenerateAiFiles dispatches regenerate-ai-files then re-verifies (on demand)', async () => {
         mocks.mockRequest.mockImplementation((type: string) =>
             type === 'regenerate-ai-files'
                 ? Promise.resolve({ success: true })
                 : Promise.resolve(buildVerifyResponse()),
         );
         const { result } = renderHook(() => useDashboardStatus());
-        await flushVerify();
-        mocks.mockRequest.mockClear();
 
         await act(async () => {
             await result.current.regenerateAiFiles();

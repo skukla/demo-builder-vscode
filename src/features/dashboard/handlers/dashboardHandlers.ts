@@ -5,6 +5,7 @@
  * These handlers orchestrate dashboard operations by delegating to appropriate services.
  */
 
+import * as path from 'path';
 import * as vscode from 'vscode';
 import {
     buildStatusPayload,
@@ -19,9 +20,10 @@ import { ServiceLocator } from '@/core/di';
 import { openInIncognito } from '@/core/utils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateURL } from '@/core/validation';
+import { verifyAiSetup } from '@/features/ai';
 import { detectMcpDrift } from '@/features/ai/mcpDriftDetector';
-import { handleRegenerateAiFiles } from '@/features/dashboard/handlers/aiHandlers';
-import { runOnOpenChecks, orgContextCheck, createMcpHealthCheck, createMeshVerifyCheck } from '@/features/dashboard/services/onOpenChecks';
+import { handleRegenerateAiFiles, logAiVerification } from '@/features/dashboard/handlers/aiHandlers';
+import { runOnOpenChecks, orgContextCheck, createMcpHealthCheck, createMeshVerifyCheck, createAiVerifyCheck } from '@/features/dashboard/services/onOpenChecks';
 import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
 import type { Project } from '@/types';
@@ -129,11 +131,22 @@ export const handleRequestStatus: MessageHandler = async (context) => {
     //     (P2) via the regenerate pipeline, replacing the silent MODULE_NOT_FOUND.
     //   - mesh-verify (only when a deployed mesh is auth-reachable): always posts a
     //     typed outcome (ok / warning-gone / unknown-transient), never a silent flip.
+    //   - ai-verify: the single on-open AI verification (the hook no longer pulls it),
+    //     surfacing which MCP/skill failed and why (P2). Spawns servers once.
     const checks = [
         orgContextCheck,
         createMcpHealthCheck({
             detectDrift: detectMcpDrift,
             heal: () => handleRegenerateAiFiles(context),
+        }),
+        createAiVerifyCheck({
+            verify: async (p) => {
+                // dist path resolved lazily (inside the check) — server-side only.
+                const extensionDistPath = path.join(context.context.extensionPath, 'dist');
+                const result = await verifyAiSetup(p, extensionDistPath);
+                logAiVerification(context, result); // preserve the on-open observability
+                return result;
+            },
         }),
     ];
     if (shouldVerifyMesh) {

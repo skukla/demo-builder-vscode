@@ -12,8 +12,8 @@ import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { OrgMismatchInfo } from '@/features/authentication/services/detectProjectOrgMismatch';
-import type { AiRegenerateProgress } from '@/features/dashboard/ui/components/AiCapabilitiesModal';
 import type { CheckOutcome, CheckStatus, OrgContextCheckData, MeshVerifyCheckData } from '@/features/dashboard/services/onOpenChecks';
+import type { AiRegenerateProgress } from '@/features/dashboard/ui/components/AiCapabilitiesModal';
 import type { McpInventoryEntry, SkillInventoryEntry } from '@/types/ai';
 import { CHECK_RESULT_MESSAGE, CHECK_IDS } from '@/types/messages';
 
@@ -76,9 +76,13 @@ export interface AiReadyState {
     text: 'Verifying' | 'Ready' | 'Setup incomplete' | 'Broken' | 'Updating AI configuration…';
 }
 
-/** Shape we read from the verify-ai-setup handler response. */
+/**
+ * Shape we read from the AI verification — delivered on open via the
+ * `checkResult{ai-verify}` push (`data`) and on demand via the `verify-ai-setup`
+ * request (after Regenerate). `success` only appears on the request response.
+ */
 interface VerifyAiSetupResponse {
-    success: boolean;
+    success?: boolean;
     checks?: Array<{ name: string; status: 'ok' | 'warning' | 'error' }>;
     inventory?: {
         /** Task-framed capability list surfaced by the "View AI Capabilities" link. */
@@ -246,7 +250,6 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
     const [mcpHealing, setMcpHealing] = useState(false);
     // Track whether status was requested (prevent StrictMode double-request)
     const statusRequestedRef = useRef(false);
-    const verifyRequestedRef = useRef(false);
 
     useEffect(() => {
         // Guard against StrictMode double-request (only send message once)
@@ -335,6 +338,22 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
                         mesh: { status: 'not-deployed', message: meshOutcome.message, endpoint: prev.mesh?.endpoint },
                     } : prev);
                 }
+                return;
+            }
+
+            if (outcome.checkId === CHECK_IDS.AI_VERIFY) {
+                // The single on-open AI verification (the hook no longer pulls it).
+                // `data` carries {checks, inventory} → drives the AI badge + skills/
+                // MCP modal. A thrown verify arrives as an error outcome with no data
+                // → mark verify failed so the badge leaves 'Verifying'.
+                const aiData = (outcome as CheckOutcome<VerifyAiSetupResponse>).data;
+                if (aiData) {
+                    setVerifyResult(aiData);
+                    setVerifyFailed(false);
+                } else {
+                    setVerifyFailed(true);
+                }
+                setAiBusy(false);
             }
         });
 
@@ -372,8 +391,10 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
         return () => clearTimeout(timer);
     }, [hasAdobeContext]);
 
-    // Run the AI setup verification. Reused on mount and after Regenerate to
-    // refresh both the badge and the skills list.
+    // Run the AI setup verification on demand (after Regenerate). The ON-OPEN
+    // verification is delivered by the orchestrator's ai-verify check via
+    // `checkResult{ai-verify}` (see the listener above) — the hook no longer
+    // pulls it on mount, so the MCP servers spawn once on open, not twice.
     const runVerify = useCallback(async (): Promise<void> => {
         try {
             const result = await webviewClient.request<VerifyAiSetupResponse>('verify-ai-setup', {});
@@ -399,16 +420,6 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
             setAiBusy(false);
             setAiRegenProgress(null);
         }
-    }, [runVerify]);
-
-    // Fetch the AI setup verification once on mount. Guards against StrictMode
-    // double-fetch using a ref. The badge stays in 'Verifying' (blue) until
-    // this resolves.
-    useEffect(() => {
-        if (verifyRequestedRef.current) return;
-        verifyRequestedRef.current = true;
-        setAiBusy(true);
-        void runVerify().finally(() => setAiBusy(false));
     }, [runVerify]);
 
     // Derived values
