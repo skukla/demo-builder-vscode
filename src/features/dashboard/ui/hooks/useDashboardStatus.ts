@@ -73,7 +73,7 @@ export interface StatusDisplay {
 export interface AiReadyState {
     label: 'AI';
     color: 'blue' | 'gray' | 'green' | 'yellow' | 'red';
-    text: 'Verifying' | 'Ready' | 'Setup incomplete' | 'Broken';
+    text: 'Verifying' | 'Ready' | 'Setup incomplete' | 'Broken' | 'Updating AI configuration…';
 }
 
 /** Shape we read from the verify-ai-setup handler response. */
@@ -240,6 +240,10 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
     const [orgStatus, setOrgStatus] = useState<CheckStatus | undefined>(undefined);
     // Name of the org the token currently reaches — shown in the "IMS Org" badge.
     const [orgCurrentName, setOrgCurrentName] = useState<string | undefined>(undefined);
+    // True while the mcp-health check is visibly auto-healing stale MCP paths
+    // (checkResult{mcp-health, warning} → true; ok/error → false). Drives the AI
+    // badge's "Updating AI configuration…" telegraph (replaces the silent failure).
+    const [mcpHealing, setMcpHealing] = useState(false);
     // Track whether status was requested (prevent StrictMode double-request)
     const statusRequestedRef = useRef(false);
     const verifyRequestedRef = useRef(false);
@@ -288,25 +292,35 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
             }
         });
 
-        // On-open check results (decoupled from statusUpdate). The org-context
-        // check telegraphs `pending` then resolves to ok / warning (mismatch) /
-        // unknown ("sign in to check"). Re-checks (after a forced switch / re-auth)
-        // emit pending → resolved again. Other checkIds are handled in later steps.
+        // On-open check results (decoupled from statusUpdate), routed by checkId:
+        //   - org-context: `pending` telegraph → ok / warning (mismatch) / unknown
+        //     ("sign in to check"). Re-checks (after a switch / re-auth) repeat.
+        //   - mcp-health: `warning` telegraphs a visible self-heal of stale MCP
+        //     paths; ok/error ends it. (mesh-verify / ai-verify join in later steps.)
         const unsubscribeChecks = webviewClient.onMessage(CHECK_RESULT_MESSAGE, (data: unknown) => {
             const outcome = data as CheckOutcome<OrgContextCheckData>;
-            if (outcome.checkId !== CHECK_IDS.ORG_CONTEXT) return;
 
-            if (outcome.status === 'pending') {
-                setOrgChecked(false);
-                setOrgStatus('pending');
-                setOrgMismatch(undefined);
-                setOrgCurrentName(undefined);
+            if (outcome.checkId === CHECK_IDS.ORG_CONTEXT) {
+                if (outcome.status === 'pending') {
+                    setOrgChecked(false);
+                    setOrgStatus('pending');
+                    setOrgMismatch(undefined);
+                    setOrgCurrentName(undefined);
+                    return;
+                }
+                setOrgChecked(true);
+                setOrgStatus(outcome.status);
+                setOrgMismatch(outcome.data?.orgMismatch);
+                setOrgCurrentName(outcome.data?.currentOrg);
                 return;
             }
-            setOrgChecked(true);
-            setOrgStatus(outcome.status);
-            setOrgMismatch(outcome.data?.orgMismatch);
-            setOrgCurrentName(outcome.data?.currentOrg);
+
+            if (outcome.checkId === CHECK_IDS.MCP_HEALTH) {
+                // `warning` = heal in flight; `ok`/`error` end it. The AI badge
+                // reflects the in-flight state; a failed heal falls back to the
+                // verify-driven badge (whose "Regenerate AI files" is the retry).
+                setMcpHealing(outcome.status === 'warning');
+            }
         });
 
         // Subscribe to the wizard's `creationProgress` channel — the regenerate
@@ -508,6 +522,13 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
     // .mcp.json is written at creation and is sufficient. So it does NOT gate
     // this badge; the AI Configuration tab surfaces a Register button separately.
     const aiReady = useMemo<AiReadyState>(() => {
+        // The mcp-health check is visibly self-healing stale MCP paths — telegraph
+        // it on the badge (P2) so the work isn't silent. Overrides the verify state
+        // until the heal resolves (ok → verify-driven badge; error → falls back to
+        // the verify badge whose "Regenerate AI files" action is the retry).
+        if (mcpHealing) {
+            return { label: 'AI', color: 'blue', text: 'Updating AI configuration…' };
+        }
         if (!verifyResult) {
             // Verify failed — surface as 'Setup incomplete' rather than leaving
             // the badge stuck on gray indefinitely.
@@ -530,7 +551,7 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
         }
 
         return { label: 'AI', color: 'green', text: 'Ready' };
-    }, [verifyResult, verifyFailed]);
+    }, [verifyResult, verifyFailed, mcpHealing]);
 
     // Capability lists for the "View AI Capabilities" surface.
     const inventory = verifyResult?.inventory;

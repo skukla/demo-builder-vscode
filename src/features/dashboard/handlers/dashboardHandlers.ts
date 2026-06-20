@@ -20,7 +20,9 @@ import { ServiceLocator } from '@/core/di';
 import { openInIncognito } from '@/core/utils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateURL } from '@/core/validation';
-import { runOnOpenChecks, orgContextCheck } from '@/features/dashboard/services/onOpenChecks';
+import { detectMcpDrift } from '@/features/ai/mcpDriftDetector';
+import { handleRegenerateAiFiles } from '@/features/dashboard/handlers/aiHandlers';
+import { runOnOpenChecks, orgContextCheck, createMcpHealthCheck } from '@/features/dashboard/services/onOpenChecks';
 import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
 import type { Project } from '@/types';
@@ -118,9 +120,11 @@ export const handleRequestStatus: MessageHandler = async (context) => {
     });
 
     // On-open checks run through the orchestrator (fire-and-forget): each posts a
-    // typed outcome on the single `checkResult` channel. The org-context check is
-    // non-interactive (P1) — it can never launch a browser or stall on open; the
-    // slow/CLI path stays behind user-initiated actions (Switch IMS Org / Sign in).
+    // typed outcome on the single `checkResult` channel.
+    //   - org-context: non-interactive (P1) — never a browser/stall on open; the
+    //     slow/CLI path stays behind user actions (Switch IMS Org / Sign in).
+    //   - mcp-health (EDS only): detects stale .mcp.json paths and VISIBLY auto-heals
+    //     (P2) via the regenerate pipeline, replacing the silent MODULE_NOT_FOUND.
     void runOnOpenChecks(
         {
             project,
@@ -128,7 +132,13 @@ export const handleRequestStatus: MessageHandler = async (context) => {
             isEds: isEdsProject(project),
             postMessage: (type, payload) => context.panel?.webview.postMessage({ type, payload }),
         },
-        [orgContextCheck],
+        [
+            orgContextCheck,
+            createMcpHealthCheck({
+                detectDrift: detectMcpDrift,
+                heal: () => handleRegenerateAiFiles(context),
+            }),
+        ],
     );
 
     return { success: true, data: statusData };
