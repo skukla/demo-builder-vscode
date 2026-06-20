@@ -12,6 +12,12 @@ export {
     type McpHealthCheckDeps,
     type McpHealResult,
 } from './mcpHealthCheck';
+export {
+    createMeshVerifyCheck,
+    type MeshVerifyCheckData,
+    type MeshVerifyCheckDeps,
+    type MeshVerifyResultLike,
+} from './meshVerifyCheck';
 export type {
     CheckStatus,
     CheckOutcome,

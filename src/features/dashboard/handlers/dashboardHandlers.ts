@@ -12,7 +12,6 @@ import {
     hasAdobeWorkspaceContext,
     hasAdobeProjectContext,
     sendDemoStatusUpdate,
-    verifyMeshDeployment,
 } from './meshStatusHelpers';
 import { BaseWebviewCommand } from '@/core/base';
 import { COMPONENT_IDS } from '@/core/constants';
@@ -22,7 +21,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateURL } from '@/core/validation';
 import { detectMcpDrift } from '@/features/ai/mcpDriftDetector';
 import { handleRegenerateAiFiles } from '@/features/dashboard/handlers/aiHandlers';
-import { runOnOpenChecks, orgContextCheck, createMcpHealthCheck } from '@/features/dashboard/services/onOpenChecks';
+import { runOnOpenChecks, orgContextCheck, createMcpHealthCheck, createMeshVerifyCheck } from '@/features/dashboard/services/onOpenChecks';
 import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
 import type { Project } from '@/types';
@@ -58,6 +57,9 @@ export const handleRequestStatus: MessageHandler = async (context) => {
 
     // Determine mesh status from persisted state (no redundant re-checking)
     let meshStatus: string = 'not-deployed';
+    // Set when a deployed mesh should be background-verified on open (auth'd +
+    // has a deployment record). The verify runs as the mesh-verify OnOpenCheck.
+    let shouldVerifyMesh = false;
 
     if (meshComponent) {
         if (meshComponent.status === 'deploying') {
@@ -95,10 +97,10 @@ export const handleRequestStatus: MessageHandler = async (context) => {
                         meshStatus = summary;
                     }
 
-                    // Lightweight background verification (is the mesh still there?)
-                    verifyMeshDeployment(context, project).catch(err => {
-                        context.logger.debug('[Dashboard] Background mesh verification failed', err);
-                    });
+                    // Background verification (is the mesh still there?) runs as the
+                    // mesh-verify OnOpenCheck below — it ALWAYS posts a typed outcome
+                    // (ok / warning-gone / unknown-transient), never a silent flip.
+                    shouldVerifyMesh = true;
                 } else {
                     meshStatus = 'not-deployed';
                 }
@@ -125,6 +127,23 @@ export const handleRequestStatus: MessageHandler = async (context) => {
     //     slow/CLI path stays behind user actions (Switch IMS Org / Sign in).
     //   - mcp-health (EDS only): detects stale .mcp.json paths and VISIBLY auto-heals
     //     (P2) via the regenerate pipeline, replacing the silent MODULE_NOT_FOUND.
+    //   - mesh-verify (only when a deployed mesh is auth-reachable): always posts a
+    //     typed outcome (ok / warning-gone / unknown-transient), never a silent flip.
+    const checks = [
+        orgContextCheck,
+        createMcpHealthCheck({
+            detectDrift: detectMcpDrift,
+            heal: () => handleRegenerateAiFiles(context),
+        }),
+    ];
+    if (shouldVerifyMesh) {
+        checks.push(createMeshVerifyCheck({
+            verify: (p) => import('@/features/mesh/services/meshVerifier').then(m => m.verifyMeshDeployment(p)),
+            syncMeshStatus: (p, r) => import('@/features/mesh/services/meshVerifier').then(m => m.syncMeshStatus(p, r)),
+            markDirty: (key) => context.stateManager.markDirty(key),
+        }));
+    }
+
     void runOnOpenChecks(
         {
             project,
@@ -132,13 +151,7 @@ export const handleRequestStatus: MessageHandler = async (context) => {
             isEds: isEdsProject(project),
             postMessage: (type, payload) => context.panel?.webview.postMessage({ type, payload }),
         },
-        [
-            orgContextCheck,
-            createMcpHealthCheck({
-                detectDrift: detectMcpDrift,
-                heal: () => handleRegenerateAiFiles(context),
-            }),
-        ],
+        checks,
     );
 
     return { success: true, data: statusData };

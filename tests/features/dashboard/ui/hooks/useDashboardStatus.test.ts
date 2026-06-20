@@ -116,6 +116,44 @@ describe('useDashboardStatus', () => {
             expect(result.current.orgMismatch).toEqual({ expectedOrg: 'org-A', currentOrg: 'Org B' });
         });
 
+        it('flips the mesh badge to not-deployed on a mesh-verify warning (gone)', () => {
+            const { result } = renderHook(() => useDashboardStatus());
+
+            // Persisted status shows a deployed mesh…
+            act(() => {
+                mocks.state.statusHandler?.({
+                    name: 'p', path: '/p', status: 'ready', mesh: { status: 'deployed' },
+                });
+            });
+            expect(result.current.meshStatus).toBe('deployed');
+
+            // …then the background verify finds it gone → VISIBLE not-deployed (P2).
+            act(() => {
+                mocks.state.orgHandler?.({
+                    checkId: 'mesh-verify',
+                    status: 'warning',
+                    message: 'API Mesh is no longer deployed',
+                });
+            });
+            expect(result.current.meshStatus).toBe('not-deployed');
+        });
+
+        it('leaves the mesh badge unchanged on a mesh-verify unknown (transient)', () => {
+            const { result } = renderHook(() => useDashboardStatus());
+
+            act(() => {
+                mocks.state.statusHandler?.({
+                    name: 'p', path: '/p', status: 'ready', mesh: { status: 'deployed' },
+                });
+            });
+
+            // Transient verify error must NOT scare the user into not-deployed.
+            act(() => {
+                mocks.state.orgHandler?.({ checkId: 'mesh-verify', status: 'unknown', message: 'Cannot verify API Mesh right now' });
+            });
+            expect(result.current.meshStatus).toBe('deployed');
+        });
+
         it('should clear transitioning state on definitive status', () => {
             const { result } = renderHook(() => useDashboardStatus());
 

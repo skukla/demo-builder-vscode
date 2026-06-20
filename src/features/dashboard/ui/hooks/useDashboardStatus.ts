@@ -13,7 +13,7 @@ import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { OrgMismatchInfo } from '@/features/authentication/services/detectProjectOrgMismatch';
 import type { AiRegenerateProgress } from '@/features/dashboard/ui/components/AiCapabilitiesModal';
-import type { CheckOutcome, CheckStatus, OrgContextCheckData } from '@/features/dashboard/services/onOpenChecks';
+import type { CheckOutcome, CheckStatus, OrgContextCheckData, MeshVerifyCheckData } from '@/features/dashboard/services/onOpenChecks';
 import type { McpInventoryEntry, SkillInventoryEntry } from '@/types/ai';
 import { CHECK_RESULT_MESSAGE, CHECK_IDS } from '@/types/messages';
 
@@ -320,6 +320,21 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
                 // reflects the in-flight state; a failed heal falls back to the
                 // verify-driven badge (whose "Regenerate AI files" is the retry).
                 setMcpHealing(outcome.status === 'warning');
+                return;
+            }
+
+            if (outcome.checkId === CHECK_IDS.MESH_VERIFY) {
+                // The deployed mesh was background-verified. `warning` = it's gone
+                // → flip the badge to not-deployed (now VISIBLE, not a silent state
+                // mutation). `unknown` = transient verify error → leave the badge as
+                // persisted (don't scare). `ok` = still there → keep current badge.
+                const meshOutcome = outcome as CheckOutcome<MeshVerifyCheckData>;
+                if (meshOutcome.status === 'warning') {
+                    setProjectStatus(prev => prev ? {
+                        ...prev,
+                        mesh: { status: 'not-deployed', message: meshOutcome.message, endpoint: prev.mesh?.endpoint },
+                    } : prev);
+                }
             }
         });
 
