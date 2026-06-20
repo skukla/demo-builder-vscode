@@ -1,7 +1,36 @@
 # Project MCP servers fail MODULE_NOT_FOUND — `.mcp.json` points at storefront node_modules
 
-**Status:** Filed 2026-06-20 from a live AI-verify session. **Root cause CONFIRMED** (see below); fix
-direction is verify-the-existing-remedy + add a drift signal.
+**Status:** Filed 2026-06-20 from a live AI-verify session. **Root cause CONFIRMED + remedy verified.**
+Direction chosen: **open-time self-heal** (auto-regenerate when an MCP path doesn't resolve).
+
+## Verified 2026-06-20
+
+- **Regenerate AI files fixes it.** After clicking it on `b2b-tester`, `.mcp.json` now points at
+  `b2b-tester/.demo-builder-mcp/node_modules/...` and the isolated dir is populated. ✓
+- **`my-commerce-demo` was RENAMED to `b2b-tester`, not deleted.** The rename→regenerate fix
+  `eaaf44c8` (2026-06-18) already handles this correctly (calls `generateAIContextFiles(newPath, …)`
+  at the end of a path-changing rename). `b2b-tester` was created 2026-06-10 and renamed **before**
+  that fix existed (and before the tools-dir isolation) — a **pre-fix casualty**, not a live rename
+  bug. New renames are covered.
+- **Deeper gap the self-heal also covers:** `eaaf44c8` regenerates *non-fatally* during rename, so a
+  silently-failed inline regen (e.g. the b2b `@dropins` install abort) leaves the rename "successful"
+  but the config stale. Open-time self-heal is the backstop for that and for all pre-fix projects.
+
+## Design (open-time self-heal — cause-agnostic, honors rename automatically)
+
+- **Detect (cheap, no network):** on project open, `stat` each `.mcp.json` server arg path; drift =
+  any non-`demo-builder` server whose file doesn't resolve. Pure filesystem.
+- **Heal only when broken:** if drift, run the existing `generateAIContextFiles` (install →
+  `.demo-builder-mcp/node_modules`, then rewrite `.mcp.json` to this-project isolated paths). Healthy
+  projects do nothing.
+- **Visible, not silent:** reuse the shipped "Regenerate AI files" `creationProgress` UI so it reads
+  as "Updating AI configuration…", not a mystery stall on open (avoid the surprise-background-work
+  smell — cf. the dashboard org-check browser-launch).
+- Because detection is path-existence (not "was it renamed?"), it covers rename, tools-dir migration,
+  move, and silent inline-regen failure uniformly.
+
+---
+_The confirmed root-cause analysis below stands; only the "deleted" framing was corrected to "renamed"._
 
 ## CONFIRMED root cause (2026-06-20)
 
