@@ -1,6 +1,13 @@
 # Step 6 — Unify the webview side (one `checkResult` router)
 
-**Status:** Outline — firms up after Steps 2–5 land.
+**Status:** ✅ DONE (2026-06-20). Achieved incrementally across Steps 2–5: `useDashboardStatus` has a
+SINGLE `onMessage('checkResult')` router switching on `checkId` (org-context / mcp-health / mesh-verify
+/ ai-verify). The four ad-hoc on-open listeners were each removed as its check landed — `orgContextResult`
+(Step 2), the on-open `meshStatusUpdate` post (Step 4), and the standalone mount `verify-ai-setup` pull
+(Step 5). Retained (NOT on-open checks): `statusUpdate` (initial payload), `meshStatusUpdate`
+(deploy/redeploy action flow), `creationProgress` (heal/regenerate progress), `appStatusUpdate`,
+`authoringExperienceUpdate`. No dead MessageTypes remained in the union. Added a router-robustness test
+(unknown `checkId` ignored) alongside the existing unsubscribe-on-unmount test.
 
 **Goal:** collapse the four ad-hoc `onMessage(...)` listeners in `useDashboardStatus` into a single
 `checkResult` router keyed by `checkId`, and remove the now-dead per-check message types. The backend

@@ -85,8 +85,10 @@ four separate `onMessage('orgContextResult'|'meshStatusUpdate'|…)` listeners.
   longer pulls it on mount → servers spawn once), mapping to ok / error (files) / warning naming the
   failing MCP/skill + reason (P2). `data` carries {checks, inventory} so the badge + skills modal
   render unchanged; on-demand re-verify after Regenerate keeps the `verify-ai-setup` request.
-- **[Step 6](step-06.md)** — Unify the webview: one `checkResult` router replacing the four ad-hoc
-  listeners in `useDashboardStatus`. Remove the now-dead message types.
+- **[Step 6](step-06.md)** — ✅ DONE (2026-06-20). One `checkResult` router in `useDashboardStatus`
+  switching on `checkId`; the four ad-hoc on-open listeners removed as their checks landed (Steps 2/4/5).
+  Action-flow channels (`meshStatusUpdate` deploy/redeploy, `creationProgress`, `appStatusUpdate`,
+  `authoringExperienceUpdate`) retained; no dead message types remained. Router-robustness test added.
 
 ## Risks / constraints
 
@@ -106,3 +108,13 @@ four separate `onMessage('orgContextResult'|'meshStatusUpdate'|…)` listeners.
 All four chains run through `runOnOpenChecks`, every outcome is a typed `checkResult`, the webview has
 one router, no on-open check can launch a browser (P1) or fail silently (P2), and the full suite is
 green. The two bug fixes are observable after Steps 2 and 3 respectively.
+
+## Status: ✅ COMPLETE (2026-06-20)
+
+All six steps shipped on `feature/dashboard-open-orchestrator`. The four on-open chains (org-context,
+mcp-health, mesh-verify, ai-verify) run through `runOnOpenChecks`; every result is a typed `checkResult`
+routed by one webview switch. P1 holds (the org check is non-interactive — no browser/stall on open;
+browser only on user-initiated actions); P2 holds (mcp-health self-heals visibly, mesh-verify never
+flips silently, ai-verify names the failing MCP/skill). Bonus: `StatusCard.action` standardizes the
+per-status CTA. Full suite green (9000+ tests). Recommended before merge: a live F5 sweep (drifted EDS
+project, healthy project, mismatched org, externally-deleted mesh) to confirm parity + the bug fixes.

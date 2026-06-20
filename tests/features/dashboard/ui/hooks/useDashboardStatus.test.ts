@@ -292,6 +292,27 @@ describe('useDashboardStatus', () => {
         });
     });
 
+    describe('checkResult router', () => {
+        it('ignores an unknown checkId without throwing or changing state', () => {
+            const { result } = renderHook(() => useDashboardStatus());
+
+            // Seed a deployed mesh so we can prove the unknown checkId leaves it alone.
+            act(() => {
+                mocks.state.statusHandler?.({ name: 'p', path: '/p', status: 'ready', mesh: { status: 'deployed' } });
+            });
+            const aiBefore = result.current.aiReady;
+
+            act(() => {
+                mocks.state.orgHandler?.({ checkId: 'totally-unknown', status: 'warning', message: 'x' });
+            });
+
+            // No org / mesh / ai surface reacted to the unrecognized checkId.
+            expect(result.current.orgMismatch).toBeUndefined();
+            expect(result.current.meshStatus).toBe('deployed');
+            expect(result.current.aiReady).toEqual(aiBefore);
+        });
+    });
+
     describe('Cleanup', () => {
         it('should unsubscribe on unmount', () => {
             const { unmount } = renderHook(() => useDashboardStatus());
