@@ -66,6 +66,8 @@ export type MessageType =
     // Dashboard messages
     | 'toggle-logs'
     | 'open-component-file'
+    // Unified on-open check result channel (org-context, mesh-verify, mcp-health, ai-verify)
+    | 'checkResult'
 
     // Generic
     | 'continue-step'
@@ -193,6 +195,25 @@ export interface DashboardPayload {
  * GenericPayload - Generic payload for unknown messages
  */
 export type GenericPayload = Record<string, unknown>;
+
+/**
+ * The webview message type carrying a unified on-open {@link CheckOutcome}.
+ * One channel for every automatic on-open check; the webview routes by `checkId`.
+ */
+export const CHECK_RESULT_MESSAGE = 'checkResult';
+
+/**
+ * Stable ids for the automatic on-open checks (the `checkResult` routing keys).
+ * One typed place — no ad-hoc message-type strings scattered across features.
+ */
+export const CHECK_IDS = {
+    ORG_CONTEXT: 'org-context',
+    MESH_VERIFY: 'mesh-verify',
+    MCP_HEALTH: 'mcp-health',
+    AI_VERIFY: 'ai-verify',
+} as const;
+
+export type CheckId = (typeof CHECK_IDS)[keyof typeof CHECK_IDS];
 
 /**
  * Message - Complete message structure with ID and metadata
