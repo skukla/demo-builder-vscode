@@ -69,8 +69,11 @@ four separate `onMessage('orgContextResult'|'meshStatusUpdate'|…)` listeners.
   `orgContextCheck` OnOpenCheck (+ `reRunnable` guard opt-out), wired `handleRequestStatus` →
   `runOnOpenChecks`, routed `checkResult{org-context}` in the hook, and removed the old
   `runOrgContextCheck` + `orgContextResult` channel.
-- **[Step 3](step-03.md)** — Add **mcp-health** check (reuses `detectMcpDrift` from the folded
-  self-heal plan) that auto-heals visibly on drift. **= the silent-MCP fix (P2).**
+- **[Step 3](step-03.md)** — ✅ DONE (2026-06-20). Added **mcp-health** check (`detectMcpDrift` +
+  injectable `createMcpHealthCheck`, `edsOnly`, guarded): on stale-path drift it posts a visible
+  `warning` ("Updating AI configuration…"), heals via `handleRegenerateAiFiles`, then `ok`/`error`.
+  AI badge telegraphs the heal. Folded `mcp-open-time-self-heal` plan superseded. **= the silent-MCP
+  fix (P2).**
 - **[Step 4](step-04.md)** — Migrate **mesh-verify**; always post an outcome (fixes the silent
   mesh→not-deployed flip, P2).
 - **[Step 5](step-05.md)** — Migrate **ai-verify**; surface *which* MCP/skill failed and why (P2;

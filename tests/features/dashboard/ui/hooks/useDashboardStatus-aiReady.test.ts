@@ -53,6 +53,26 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
         expect(mocks.mockRequest).toHaveBeenCalledWith('verify-ai-setup', expect.any(Object));
     });
 
+    it('telegraphs the mcp-health self-heal on the AI badge (warning → ok)', () => {
+        const { result } = renderHook(() => useDashboardStatus());
+
+        // mcp-health drift → visible "Updating AI configuration…" (overrides verify).
+        act(() => {
+            mocks.state.orgHandler?.({ checkId: 'mcp-health', status: 'warning', message: 'Updating AI configuration…' });
+        });
+        expect(result.current.aiReady).toEqual({
+            label: 'AI',
+            color: 'blue',
+            text: 'Updating AI configuration…',
+        });
+
+        // Heal resolved → badge falls back to the verify-driven state.
+        act(() => {
+            mocks.state.orgHandler?.({ checkId: 'mcp-health', status: 'ok' });
+        });
+        expect(result.current.aiReady.text).not.toBe('Updating AI configuration…');
+    });
+
     it('returns green Ready when all 7 signals pass', async () => {
         mocks.mockRequest.mockResolvedValue(buildVerifyResponse());
         const { result } = renderHook(() => useDashboardStatus());

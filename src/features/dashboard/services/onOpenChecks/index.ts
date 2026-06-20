@@ -6,6 +6,12 @@
 
 export { runOnOpenChecks, _resetOnOpenChecksGuardForTests } from './orchestrator';
 export { orgContextCheck, type OrgContextCheckData } from './orgContextCheck';
+export {
+    createMcpHealthCheck,
+    type McpHealthCheckData,
+    type McpHealthCheckDeps,
+    type McpHealResult,
+} from './mcpHealthCheck';
 export type {
     CheckStatus,
     CheckOutcome,
