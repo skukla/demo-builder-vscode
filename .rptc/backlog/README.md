@@ -87,7 +87,7 @@ stalls 14.5s). Fix: the background check must use a quick non-interactive probe 
 browser un-prompted; separately, find why the SDK is unavailable. Subsumed by the org-context residual
 workstreams.
 
-#### Project MCP servers fail MODULE_NOT_FOUND — stale `.mcp.json` path ([`2026-06-20-mcp-stale-storefront-node-modules-path.md`](2026-06-20-mcp-stale-storefront-node-modules-path.md))
+#### Project MCP servers fail MODULE_NOT_FOUND — stale `.mcp.json` path ([`2026-06-20-mcp-stale-storefront-node-modules-path.md`](2026-06-20-mcp-stale-storefront-node-modules-path.md)) — **plan drafted: [`../plans/mcp-open-time-self-heal/`](../plans/mcp-open-time-self-heal/overview.md)**
 
 `commerce-extensibility` + `playwright` MCP servers die with MODULE_NOT_FOUND pointing at
 `components/eds-storefront/node_modules/...` — the **pre-isolation** path. `mcpConfigWriter` now anchors
