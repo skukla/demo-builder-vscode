@@ -45,8 +45,15 @@ jest.mock('@/core/ui/components/layout', () => ({
 
 // Mock feedback components
 jest.mock('@/core/ui/components/feedback', () => ({
-    StatusCard: ({ label, status, color }: any) => (
-        <div data-testid={`status-card-${label}`} data-color={color}>{label}: {status}</div>
+    StatusCard: ({ label, status, color, action }: any) => (
+        <div data-testid={`status-card-${label}`} data-color={color}>
+            {label}: {status}
+            {action && (
+                <a data-testid={action.testId} onClick={action.onPress}>
+                    {action.label}
+                </a>
+            )}
+        </div>
     ),
 }));
 

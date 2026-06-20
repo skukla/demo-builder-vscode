@@ -304,7 +304,9 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
                                     className="dashboard-status-badge"
                                 />
 
-                                {/* Mesh Status */}
+                                {/* Mesh Status — `needs-auth` surfaces a "Sign in"
+                                    remediation through the shared StatusCard.action
+                                    (user-initiated re-auth; allowed to open a browser). */}
                                 {meshStatusDisplay && (
                                     <StatusCard
                                         label="API Mesh"
@@ -312,16 +314,30 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
                                         color={meshStatusDisplay.color}
                                         size="S"
                                         className="dashboard-status-badge"
+                                        action={meshStatus === 'needs-auth'
+                                            ? { label: 'Sign in', onPress: handleReAuthenticate }
+                                            : undefined}
                                     />
                                 )}
 
-                                {/* AI Ready Status */}
+                                {/* AI Ready Status — a failing/incomplete badge
+                                    (red/yellow) surfaces the "Regenerate AI files"
+                                    fix through the shared StatusCard.action. The
+                                    always-on "View AI Capabilities" navigation stays
+                                    a separate link below (it's not a remediation). */}
                                 <StatusCard
                                     label={aiReady.label}
                                     status={aiReady.text}
                                     color={aiReady.color}
                                     size="S"
                                     className="dashboard-status-badge"
+                                    action={(aiReady.color === 'red' || aiReady.color === 'yellow')
+                                        ? {
+                                            label: 'Regenerate AI files',
+                                            onPress: () => { void regenerateAiFiles(); },
+                                            testId: 'ai-regenerate-trigger',
+                                        }
+                                        : undefined}
                                 />
 
                                 {/* IMS Org status — ambient org-context health (blue checking →
@@ -337,11 +353,11 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
                                     />
                                 )}
 
-                                {/* AI links — capability discovery + a fix shortcut when health
-                                    needs attention. Placed in the status grid starting at column 2
-                                    so the link text is flush with the status labels above (not the
-                                    dot column). Distinct from the passive badges — a badge doesn't
-                                    read as clickable. */}
+                                {/* AI capability discovery — always-on navigation to
+                                    the capability catalog (NOT a status remediation, so
+                                    it stays a standalone link, not a StatusCard.action).
+                                    Placed at column 2 so it's flush with the status
+                                    labels above, not the dot column. */}
                                 <Flex
                                     direction="row"
                                     gap="size-200"
@@ -356,24 +372,8 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
                                     >
                                         View AI Capabilities
                                     </Link>
-                                    {(aiReady.color === 'red' || aiReady.color === 'yellow') && (
-                                        <Link
-                                            data-testid="ai-regenerate-trigger"
-                                            onPress={() => { void regenerateAiFiles(); }}
-                                            isQuiet
-                                            UNSAFE_className="text-sm cursor-pointer"
-                                        >
-                                            Regenerate AI files
-                                        </Link>
-                                    )}
                                 </Flex>
                                 </div>
-                                {/* Sign in link - outside grid to avoid disrupting layout */}
-                                {meshStatus === 'needs-auth' && (
-                                    <Link onPress={handleReAuthenticate} isQuiet UNSAFE_style={{ marginLeft: '8px' }}>
-                                        Sign in
-                                    </Link>
-                                )}
                             </View>
                                 {/* All Projects button */}
                                 <Button variant="secondary" onPress={handleNavigateBack}>
