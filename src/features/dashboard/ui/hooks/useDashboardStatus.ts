@@ -13,7 +13,9 @@ import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { OrgMismatchInfo } from '@/features/authentication/services/detectProjectOrgMismatch';
 import type { AiRegenerateProgress } from '@/features/dashboard/ui/components/AiCapabilitiesModal';
+import type { CheckOutcome, CheckStatus, OrgContextCheckData } from '@/features/dashboard/services/onOpenChecks';
 import type { McpInventoryEntry, SkillInventoryEntry } from '@/types/ai';
+import { CHECK_RESULT_MESSAGE, CHECK_IDS } from '@/types/messages';
 
 /**
  * Mesh deployment status values
@@ -114,30 +116,35 @@ export interface UseDashboardStatusProps {
 /**
  * Org-context check lifecycle for the dashboard notice:
  * - `checking`: the proactive check is expected to run but hasn't resolved yet.
- * - `mismatch`: the token reaches a different org than the project.
+ * - `mismatch`: the token reaches a different org than the project (warning).
+ * - `unknown`: the check couldn't run non-interactively (no token / SDK cold) —
+ *   surfaces a quiet "Sign in to check" affordance instead of launching a browser.
  * - `ok`: resolved and the org is reachable (drives a transient success banner).
  * - `none`: no check applies (project has no Adobe org).
  */
-export type OrgCheckState = 'checking' | 'mismatch' | 'ok' | 'none';
+export type OrgCheckState = 'checking' | 'mismatch' | 'unknown' | 'ok' | 'none';
 
 /**
  * Derive the org-check lifecycle (avoids a nested ternary in the hook body).
  *
  * Telegraphs "checking" while the proactive check is expected (the project has
  * an Adobe org) and not yet *perceptibly* resolved — i.e. until the async
- * `orgContextResult` has arrived (orgChecked) AND a minimum display time has
- * elapsed, so a fast (warm-cache) check doesn't flash the indicator and make
- * the banner appear out of nowhere.
+ * `checkResult` has arrived (orgChecked) AND a minimum display time has elapsed,
+ * so a fast (warm-cache) check doesn't flash the indicator and make the banner
+ * appear out of nowhere. Once resolved, the typed outcome status drives the rest.
  */
 function deriveOrgCheckState(
-    hasMismatch: boolean,
+    orgStatus: CheckStatus | undefined,
     orgChecked: boolean,
     hasAdobeContext: boolean,
     minDisplayElapsed: boolean,
 ): OrgCheckState {
     if (!hasAdobeContext) return 'none';
     if (!orgChecked || !minDisplayElapsed) return 'checking';
-    return hasMismatch ? 'mismatch' : 'ok';
+    if (orgStatus === 'warning') return 'mismatch';
+    // unknown OR an unexpected error both degrade to the quiet "sign in" affordance.
+    if (orgStatus === 'unknown' || orgStatus === 'error') return 'unknown';
+    return 'ok';
 }
 
 /**
@@ -225,9 +232,12 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
     // duration so a fast check is still perceived before the banner shows.
     const [orgCheckMinElapsed, setOrgCheckMinElapsed] = useState(false);
     // Org-context check result, delivered asynchronously (decoupled from status)
-    // via the `orgContextResult` message. orgChecked flips true once resolved.
+    // via the on-open orchestrator's `checkResult` message (checkId `org-context`).
+    // orgChecked flips true once resolved; orgStatus carries the typed outcome so
+    // the badge can distinguish ok / mismatch / unknown ("sign in to check").
     const [orgMismatch, setOrgMismatch] = useState<OrgMismatchInfo | undefined>(undefined);
     const [orgChecked, setOrgChecked] = useState(false);
+    const [orgStatus, setOrgStatus] = useState<CheckStatus | undefined>(undefined);
     // Name of the org the token currently reaches — shown in the "IMS Org" badge.
     const [orgCurrentName, setOrgCurrentName] = useState<string | undefined>(undefined);
     // Track whether status was requested (prevent StrictMode double-request)
@@ -278,21 +288,25 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
             }
         });
 
-        // Org-context check result (decoupled from statusUpdate so the slow
-        // getOrganizations call never blocks the dashboard). `pending: true`
-        // telegraphs the check; the resolved message carries the mismatch (or
-        // none). Re-checks (after a forced switch) emit pending → resolved again.
-        const unsubscribeOrg = webviewClient.onMessage('orgContextResult', (data: unknown) => {
-            const payload = data as { pending?: boolean; orgMismatch?: OrgMismatchInfo; currentOrg?: string };
-            if (payload.pending) {
+        // On-open check results (decoupled from statusUpdate). The org-context
+        // check telegraphs `pending` then resolves to ok / warning (mismatch) /
+        // unknown ("sign in to check"). Re-checks (after a forced switch / re-auth)
+        // emit pending → resolved again. Other checkIds are handled in later steps.
+        const unsubscribeChecks = webviewClient.onMessage(CHECK_RESULT_MESSAGE, (data: unknown) => {
+            const outcome = data as CheckOutcome<OrgContextCheckData>;
+            if (outcome.checkId !== CHECK_IDS.ORG_CONTEXT) return;
+
+            if (outcome.status === 'pending') {
                 setOrgChecked(false);
+                setOrgStatus('pending');
                 setOrgMismatch(undefined);
                 setOrgCurrentName(undefined);
-            } else {
-                setOrgChecked(true);
-                setOrgMismatch(payload.orgMismatch);
-                setOrgCurrentName(payload.currentOrg);
+                return;
             }
+            setOrgChecked(true);
+            setOrgStatus(outcome.status);
+            setOrgMismatch(outcome.data?.orgMismatch);
+            setOrgCurrentName(outcome.data?.currentOrg);
         });
 
         // Subscribe to the wizard's `creationProgress` channel — the regenerate
@@ -313,7 +327,7 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
         return () => {
             unsubscribeStatus();
             unsubscribeMesh();
-            unsubscribeOrg();
+            unsubscribeChecks();
             unsubscribeProgress();
         };
     }, []);
@@ -375,7 +389,7 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
     const meshStatus = projectStatus?.mesh?.status;
     const meshMessage = projectStatus?.mesh?.message;
     const orgCheckState = deriveOrgCheckState(
-        Boolean(orgMismatch),
+        orgStatus,
         orgChecked,
         Boolean(hasAdobeContext),
         orgCheckMinElapsed,
@@ -394,6 +408,10 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
                 return { color: 'green', text: orgCurrentName || 'Connected' };
             case 'mismatch':
                 return { color: 'red', text: orgCurrentName || 'Wrong org' };
+            case 'unknown':
+                // Couldn't check non-interactively — neutral badge; the "Sign in to
+                // check" action (rendered on the badge) is the recovery affordance.
+                return { color: 'gray', text: 'Not checked' };
             default:
                 return null;
         }

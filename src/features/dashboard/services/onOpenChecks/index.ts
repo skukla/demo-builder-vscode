@@ -5,6 +5,7 @@
  */
 
 export { runOnOpenChecks, _resetOnOpenChecksGuardForTests } from './orchestrator';
+export { orgContextCheck, type OrgContextCheckData } from './orgContextCheck';
 export type {
     CheckStatus,
     CheckOutcome,

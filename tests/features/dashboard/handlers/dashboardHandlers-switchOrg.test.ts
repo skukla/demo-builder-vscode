@@ -12,6 +12,7 @@
 jest.mock('@/core/di', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
+        getStateManager: jest.fn(() => ({ saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined) })),
     },
 }));
 jest.mock('@/features/mesh/services/stalenessDetector');
@@ -37,11 +38,9 @@ jest.mock('vscode', () => ({
     Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
 }), { virtual: true });
 
-import { handleSwitchOrg, runOrgContextCheck } from '@/features/dashboard/handlers/dashboardHandlers';
+import { handleSwitchOrg } from '@/features/dashboard/handlers/dashboardHandlers';
+import { CHECK_RESULT_MESSAGE } from '@/types/messages';
 import { setupMocks } from './dashboardHandlers.testUtils';
-
-/** Flush pending microtasks so the async (awaited) org check completes. */
-const flushAsync = () => new Promise((resolve) => setImmediate(resolve));
 
 describe('dashboardHandlers - handleSwitchOrg', () => {
     beforeEach(() => {
@@ -58,10 +57,10 @@ describe('dashboardHandlers - handleSwitchOrg', () => {
         ServiceLocator.getAuthenticationService.mockReturnValue({
             isAuthenticated: jest.fn().mockResolvedValue(true),
             loginAndRestoreProjectContext,
-            getOrganizations: jest.fn().mockResolvedValue([
+            // SDK-only read (the non-interactive on-open probe).
+            getOrganizationsSdkOnly: jest.fn().mockResolvedValue([
                 { id: 'org123', code: 'ORG@AdobeOrg', name: 'Project Org' },
             ]),
-            getCurrentOrganization: jest.fn().mockResolvedValue({ id: 'org123', name: 'Project Org' }),
         });
 
         const result = await handleSwitchOrg(mockContext);
@@ -76,9 +75,14 @@ describe('dashboardHandlers - handleSwitchOrg', () => {
             true,
         );
         expect(result.success).toBe(true);
-        // The org re-check is triggered (decoupled, async) — it telegraphs first.
+        // The org re-check is triggered (decoupled, async) — it telegraphs first
+        // on the unified checkResult channel. reRunnable lets it re-run after the
+        // forced switch (the per-session guard would otherwise block it).
         expect(mockContext.panel!.webview.postMessage).toHaveBeenCalledWith(
-            expect.objectContaining({ type: 'orgContextResult', payload: { pending: true } }),
+            expect.objectContaining({
+                type: CHECK_RESULT_MESSAGE,
+                payload: expect.objectContaining({ checkId: 'org-context', status: 'pending' }),
+            }),
         );
     });
 
@@ -110,100 +114,7 @@ describe('dashboardHandlers - handleSwitchOrg', () => {
     });
 });
 
-describe('dashboardHandlers - runOrgContextCheck (decoupled org check)', () => {
-    beforeEach(() => jest.clearAllMocks());
-
-    it('posts pending, then the resolved mismatch naming both orgs', async () => {
-        // Project has a persisted org name → the banner can name the expected org.
-        const { mockContext, mockProject } = setupMocks({
-            adobe: { organization: 'org123', organizationName: 'CitiSignal Org' },
-        } as any);
-        const { ServiceLocator } = require('@/core/di');
-        ServiceLocator.getAuthenticationService.mockReturnValue({
-            getOrganizations: jest.fn().mockResolvedValue([
-                { id: 'org999', code: 'OTHER@AdobeOrg', name: 'Other Org' },
-            ]),
-        });
-
-        await runOrgContextCheck(mockContext, mockProject);
-        await flushAsync();
-
-        expect(mockContext.panel!.webview.postMessage).toHaveBeenCalledWith(
-            expect.objectContaining({ type: 'orgContextResult', payload: { pending: true } }),
-        );
-        expect(mockContext.panel!.webview.postMessage).toHaveBeenCalledWith(
-            expect.objectContaining({
-                type: 'orgContextResult',
-                payload: {
-                    pending: false,
-                    orgMismatch: { expectedOrg: 'org123', expectedOrgName: 'CitiSignal Org', currentOrg: 'Other Org' },
-                    currentOrg: 'Other Org',
-                },
-            }),
-        );
-    });
-
-    it('resolves with no mismatch and backfills the org name when reachable', async () => {
-        // mockProject org is org123 with NO persisted name → backfill on reachable.
-        const { mockContext, mockProject } = setupMocks();
-        const { ServiceLocator } = require('@/core/di');
-        ServiceLocator.getAuthenticationService.mockReturnValue({
-            getOrganizations: jest.fn().mockResolvedValue([
-                { id: 'org123', code: 'ORG@AdobeOrg', name: 'Project Org' },
-            ]),
-        });
-
-        await runOrgContextCheck(mockContext, mockProject);
-        await flushAsync();
-
-        expect(mockContext.panel!.webview.postMessage).toHaveBeenCalledWith(
-            expect.objectContaining({
-                type: 'orgContextResult',
-                payload: { pending: false, orgMismatch: undefined, currentOrg: 'Project Org' },
-            }),
-        );
-        // Backfilled the org name to the manifest (one-time, manifest-only write).
-        expect(mockProject.adobe?.organizationName).toBe('Project Org');
-        expect(mockContext.stateManager.saveProjectConfigOnly).toHaveBeenCalledWith(mockProject);
-    });
-
-    it('self-heals a legacy name-stored org to the canonical id when reachable', async () => {
-        // Legacy project: organization holds the NAME, not the id.
-        const { mockContext, mockProject } = setupMocks({
-            adobe: { organization: 'Acme Org' },
-        } as any);
-        const { ServiceLocator } = require('@/core/di');
-        ServiceLocator.getAuthenticationService.mockReturnValue({
-            getOrganizations: jest.fn().mockResolvedValue([
-                { id: 'org-real', code: 'ACME@AdobeOrg', name: 'Acme Org' },
-            ]),
-        });
-
-        await runOrgContextCheck(mockContext, mockProject);
-        await flushAsync();
-
-        // Reachable (matched by name) → no mismatch surfaced.
-        expect(mockContext.panel!.webview.postMessage).toHaveBeenCalledWith(
-            expect.objectContaining({
-                type: 'orgContextResult',
-                payload: { pending: false, orgMismatch: undefined, currentOrg: 'Acme Org' },
-            }),
-        );
-        // Healed: organization migrated to the canonical id, name persisted.
-        expect(mockProject.adobe?.organization).toBe('org-real');
-        expect(mockProject.adobe?.organizationName).toBe('Acme Org');
-        expect(mockContext.stateManager.saveProjectConfigOnly).toHaveBeenCalledWith(mockProject);
-    });
-
-    it('is a no-op for a project with no Adobe org', async () => {
-        const { mockContext } = setupMocks();
-        const projectNoAdobe = { name: 'p', path: '/p' } as any;
-
-        await runOrgContextCheck(mockContext, projectNoAdobe);
-        await flushAsync();
-
-        expect(mockContext.panel!.webview.postMessage).not.toHaveBeenCalledWith(
-            expect.objectContaining({ type: 'orgContextResult' }),
-        );
-    });
-});
+// The org-context check itself (pending → ok/warning/unknown, self-heal,
+// non-interactive P1 contract) is owned by the orchestrator and is covered in
+// onOpenChecks/orgContextCheck.test.ts + onOpenChecks/orchestrator.test.ts. This
+// file only asserts that handleSwitchOrg re-triggers it via the status refresh.

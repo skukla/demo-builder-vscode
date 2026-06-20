@@ -110,6 +110,9 @@ export function setupMocks(projectOverrides?: Partial<Project>): TestMocks {
         isAuthenticated: jest.fn().mockResolvedValue(true),
         getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 60 }),
         getCachedOrganization: jest.fn().mockReturnValue(undefined),
+        // On-open org-context check uses the SDK-only read (never the CLI fallback).
+        // Default to [] → the check resolves to 'unknown' without a browser/stall.
+        getOrganizationsSdkOnly: jest.fn().mockResolvedValue([]),
     });
 
     const mockContext = {

@@ -271,6 +271,39 @@ export class AdobeEntityFetcher {
     }
 
     /**
+     * Get organizations via the SDK ONLY — never the CLI fallback.
+     *
+     * For non-interactive on-open probes (P1): the CLI path
+     * (`aio console org list`) can stall ~14.5s and trigger interactive browser
+     * auth, which must never happen automatically when a dashboard opens. A
+     * failed/empty/timed-out SDK read returns `[]` (callers treat that as
+     * "unknown / sign in to check"), and we deliberately do NOT cache an empty
+     * result (that would poison the shared org-list cache for the real
+     * {@link getOrganizations}) or fire `onNoOrgsAccessible` (a state mutation).
+     */
+    async getOrganizationsSdkOnly(): Promise<AdobeOrg[]> {
+        const startTime = Date.now();
+
+        const cachedOrgs = this.cacheManager.getCachedOrgList();
+        if (cachedOrgs) return cachedOrgs;
+
+        await this.ensureSDKReady();
+        if (!this.sdkClient.isInitialized()) return [];
+
+        const client = this.sdkClient.getClient() as { getOrganizations: () => Promise<SDKResponse<RawAdobeOrg[]>> };
+        const mappedOrgs = await this.trySDKFetch(
+            () => client.getOrganizations(),
+            mapOrganizations, 'organizations', startTime,
+        );
+
+        // Cache only a real (non-empty) result — never the degraded empty case.
+        if (mappedOrgs.length > 0) {
+            this.cacheManager.setCachedOrgList(mappedOrgs);
+        }
+        return mappedOrgs;
+    }
+
+    /**
      * Try fetching projects via SDK (requires valid cached org ID)
      */
     private async tryFetchProjectsViaSDK(

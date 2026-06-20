@@ -100,15 +100,16 @@ describe('useDashboardStatus', () => {
             expect(result.current.isRunning).toBe(false);
         });
 
-        it('should expose orgMismatch from the async orgContextResult message', () => {
+        it('should expose orgMismatch from the org-context checkResult outcome', () => {
             const { result } = renderHook(() => useDashboardStatus());
 
             expect(result.current.orgMismatch).toBeUndefined();
 
             act(() => {
                 mocks.state.orgHandler?.({
-                    pending: false,
-                    orgMismatch: { expectedOrg: 'org-A', currentOrg: 'Org B' },
+                    checkId: 'org-context',
+                    status: 'warning',
+                    data: { orgMismatch: { expectedOrg: 'org-A', currentOrg: 'Org B' } },
                 });
             });
 

@@ -67,6 +67,14 @@ export interface OnOpenCheck {
     mode: 'background';
     /** Skip on non-EDS projects (no storefront / MCP tooling). */
     edsOnly?: boolean;
+    /**
+     * Opt OUT of the per-session re-entrancy guard. A `reRunnable` check runs on
+     * EVERY `requestStatus` instead of at most once per session — required for
+     * live checks whose result changes with auth state (org-context: a forced
+     * Switch IMS Org / re-auth re-invokes `requestStatus` precisely to re-check).
+     * Once-per-open checks (mcp-health, ai-verify) leave this falsy.
+     */
+    reRunnable?: boolean;
     run: (ctx: OnOpenCheckContext) => Promise<CheckOutcome>;
 }
 

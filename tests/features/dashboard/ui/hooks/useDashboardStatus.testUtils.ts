@@ -59,7 +59,7 @@ export function setupMocks(): TestMocks {
             state.meshStatusHandler = handler;
             return mockUnsubscribeMesh;
         }
-        if (type === 'orgContextResult') {
+        if (type === 'checkResult') {
             state.orgHandler = handler;
             return jest.fn();
         }

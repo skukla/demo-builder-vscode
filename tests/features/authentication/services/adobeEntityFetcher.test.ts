@@ -233,6 +233,77 @@ describe('AdobeEntityFetcher', () => {
         });
     });
 
+    describe('getOrganizationsSdkOnly()', () => {
+        it('returns the cached org list without touching SDK or CLI', async () => {
+            const cachedOrgs = [{ id: 'org1', code: 'ORG1@AdobeOrg', name: 'Organization 1' }];
+            mockCacheManager.getCachedOrgList.mockReturnValue(cachedOrgs);
+
+            const result = await fetcher.getOrganizationsSdkOnly();
+
+            expect(result).toEqual(cachedOrgs);
+            expect(mockSDKClient.isInitialized).not.toHaveBeenCalled();
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
+        });
+
+        it('fetches via SDK when initialized and caches the non-empty result', async () => {
+            mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.getClient.mockReturnValue({
+                getOrganizations: jest.fn().mockResolvedValue({
+                    body: [{ id: 'org1', code: 'ORG1@AdobeOrg', name: 'Org 1' }],
+                }),
+            } as ReturnType<typeof mockSDKClient.getClient>);
+
+            const result = await fetcher.getOrganizationsSdkOnly();
+
+            expect(result).toHaveLength(1);
+            expect(result[0].id).toBe('org1');
+            expect(mockCacheManager.setCachedOrgList).toHaveBeenCalledWith(result);
+            // P1: never the CLI fallback.
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
+        });
+
+        it('returns [] WITHOUT the CLI fallback when the SDK call fails', async () => {
+            // The whole point of the SDK-only path: a failed/empty SDK read must
+            // degrade to [] (→ "unknown") and must NEVER run `aio console org list`
+            // (which can stall ~14.5s and launch a browser on open). P1.
+            mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.getClient.mockReturnValue({
+                getOrganizations: jest.fn().mockRejectedValue(new Error('SDK error')),
+            } as ReturnType<typeof mockSDKClient.getClient>);
+
+            const result = await fetcher.getOrganizationsSdkOnly();
+
+            expect(result).toEqual([]);
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
+            // Must not poison the shared org-list cache with an empty result.
+            expect(mockCacheManager.setCachedOrgList).not.toHaveBeenCalled();
+        });
+
+        it('returns [] WITHOUT the CLI fallback when the SDK is not initialized', async () => {
+            mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(false);
+            mockSDKClient.ensureInitialized.mockResolvedValue(false);
+
+            const result = await fetcher.getOrganizationsSdkOnly();
+
+            expect(result).toEqual([]);
+            expect(mockSDKClient.ensureInitialized).toHaveBeenCalled();
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
+        });
+
+        it('does not call onNoOrgsAccessible on an empty SDK read', async () => {
+            mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(false);
+            mockSDKClient.ensureInitialized.mockResolvedValue(false);
+
+            await fetcher.getOrganizationsSdkOnly();
+
+            expect(onNoOrgsAccessible).not.toHaveBeenCalled();
+        });
+    });
+
     describe('getProjects()', () => {
         it('should fetch projects via SDK with valid org ID', async () => {
             mockCacheManager.getCachedOrganization.mockReturnValue({

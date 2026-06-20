@@ -62,9 +62,13 @@ four separate `onMessage('orgContextResult'|'meshStatusUpdate'|…)` listeners.
 - **[Step 1](step-01.md)** — Orchestrator core + types + registry. `runOnOpenChecks`, `CheckOutcome`,
   the non-throwing wrapper (P2), `checkResult` message type + `CHECK_IDS`. No behavior change yet
   (no checks registered). Pure, fully unit-tested.
-- **[Step 2](step-02.md)** — Migrate **org-context** as the first check + make it **P1-compliant**
-  (quick non-interactive auth/org probe; `unknown` instead of launching a browser / CLI interactive
-  path). **= the surprise-browser fix.**
+- **[Step 2](step-02.md)** — ✅ DONE (2026-06-20). Migrate **org-context** as the first check + make
+  it **P1-compliant** (quick non-interactive auth/org probe; `unknown` instead of launching a browser
+  / CLI interactive path). **= the surprise-browser fix.** Shipped in two commits: **2a** standardized
+  per-status CTAs via `StatusCard.action`; **2b** added SDK-only `getOrganizationsSdkOnly()`, the
+  `orgContextCheck` OnOpenCheck (+ `reRunnable` guard opt-out), wired `handleRequestStatus` →
+  `runOnOpenChecks`, routed `checkResult{org-context}` in the hook, and removed the old
+  `runOrgContextCheck` + `orgContextResult` channel.
 - **[Step 3](step-03.md)** — Add **mcp-health** check (reuses `detectMcpDrift` from the folded
   self-heal plan) that auto-heals visibly on drift. **= the silent-MCP fix (P2).**
 - **[Step 4](step-04.md)** — Migrate **mesh-verify**; always post an outcome (fixes the silent
