@@ -18,6 +18,11 @@ export {
     type MeshVerifyCheckDeps,
     type MeshVerifyResultLike,
 } from './meshVerifyCheck';
+export {
+    createAiVerifyCheck,
+    type AiVerifyCheckData,
+    type AiVerifyCheckDeps,
+} from './aiVerifyCheck';
 export type {
     CheckStatus,
     CheckOutcome,

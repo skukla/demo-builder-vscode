@@ -80,8 +80,11 @@ four separate `onMessage('orgContextResult'|'meshStatusUpdate'|…)` listeners.
   deployed", state still synced) / unknown (transient error — no scary flip). Removed the old
   `verifyMeshDeployment` helper + its on-open `meshStatusUpdate` post; the deploy/redeploy
   `meshStatusUpdate` flow is untouched. Hook routes `checkResult{mesh-verify}` to the mesh badge. **P2.**
-- **[Step 5](step-05.md)** — Migrate **ai-verify**; surface *which* MCP/skill failed and why (P2;
-  fixes the generic-yellow-badge-no-diagnostic gap).
+- **[Step 5](step-05.md)** — ✅ DONE (2026-06-20). Migrated **ai-verify** onto the orchestrator
+  (`createAiVerifyCheck`, injected `verifyAiSetup`): the single on-open AI verification (the hook no
+  longer pulls it on mount → servers spawn once), mapping to ok / error (files) / warning naming the
+  failing MCP/skill + reason (P2). `data` carries {checks, inventory} so the badge + skills modal
+  render unchanged; on-demand re-verify after Regenerate keeps the `verify-ai-setup` request.
 - **[Step 6](step-06.md)** — Unify the webview: one `checkResult` router replacing the four ad-hoc
   listeners in `useDashboardStatus`. Remove the now-dead message types.
 

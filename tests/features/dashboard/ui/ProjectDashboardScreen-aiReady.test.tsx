@@ -1,65 +1,70 @@
 /**
  * ProjectDashboardScreen - AI Ready Badge Tests
  *
- * Verifies the new third StatusCard badge "AI Ready" is rendered alongside
- * Frontend + API Mesh on the project dashboard header.
+ * Verifies the "AI Ready" StatusCard badge rendered alongside Frontend + API Mesh.
+ *
+ * On open the verification is delivered by the orchestrator's `ai-verify` check
+ * via `checkResult{ai-verify}` (see `deliverVerify`) — the dashboard no longer
+ * pulls verify-ai-setup on mount. The on-demand re-verify after Regenerate still
+ * uses the `verify-ai-setup` request.
  */
 
-import { screen, waitFor, fireEvent, act } from '@testing-library/react';
-import { setupTestContext, renderDashboard } from './ProjectDashboardScreen.testUtils';
+import { screen, fireEvent, act } from '@testing-library/react';
+import { setupTestContext, renderDashboard, type TestContext } from './ProjectDashboardScreen.testUtils';
 
 /** A passing verify response carrying the given skills inventory. */
 function verifyWithSkills(skills: Array<{ name: string; description: string | null; path: string; source: string }>) {
     return {
-        success: true,
         status: 'ok',
         checks: [{ name: 'skill-files', status: 'ok' }],
         inventory: { skills, mcps: [], sessionMcps: [] },
     };
 }
 
-/** Route verify-ai-setup to `response` and resolve regenerate-ai-files. */
-function mockAiRequests(response: unknown) {
-    const { webviewClient } = require('@/core/ui/utils/WebviewClient');
-    (webviewClient.request as jest.Mock).mockImplementation((type: string) => {
-        if (type === 'regenerate-ai-files') return Promise.resolve({ success: true });
-        return Promise.resolve(response);
-    });
-    return webviewClient;
-}
-
 describe('ProjectDashboardScreen - AI Ready Badge', () => {
+    let ctx: TestContext;
+
     beforeEach(() => {
         jest.clearAllMocks();
-        setupTestContext();
+        ctx = setupTestContext();
     });
+
+    /** Deliver an on-open AI verification via checkResult{ai-verify}. */
+    const deliverVerify = (response: unknown) =>
+        ctx.triggerMessage('checkResult', { checkId: 'ai-verify', status: 'ok', data: response });
+
+    /** Resolve the regenerate-ai-files + verify-ai-setup REQUESTS (regen re-verify path). */
+    function mockAiRequests(response: unknown) {
+        const { webviewClient } = require('@/core/ui/utils/WebviewClient');
+        (webviewClient.request as jest.Mock).mockImplementation((type: string) => {
+            if (type === 'regenerate-ai-files') return Promise.resolve({ success: true });
+            return Promise.resolve(response);
+        });
+        return webviewClient;
+    }
 
     describe('Badge Presence', () => {
         it('renders the AI Ready status badge alongside Frontend + API Mesh', () => {
             renderDashboard({ hasMesh: true });
-            // Frontend (mocked StatusCard renders as `status-card-${label}`)
             expect(screen.getByTestId('status-card-Frontend')).toBeInTheDocument();
-            // API Mesh
             expect(screen.getByTestId('status-card-API Mesh')).toBeInTheDocument();
-            // AI Ready (new in F1)
             expect(screen.getByTestId('status-card-AI')).toBeInTheDocument();
         });
 
         it('renders the AI Ready badge even when project has no mesh', () => {
             renderDashboard();
-            // AI Ready should still show
             expect(screen.getByTestId('status-card-AI')).toBeInTheDocument();
         });
     });
 
     describe('Badge Color (initial state)', () => {
-        it('shows blue color while verify is pending', () => {
+        it('shows blue color while the ai-verify outcome is pending', () => {
             renderDashboard();
             const badge = screen.getByTestId('status-card-AI');
             expect(badge.getAttribute('data-color')).toBe('blue');
         });
 
-        it('shows "Verifying" status text while verify is pending', () => {
+        it('shows "Verifying" status text while pending', () => {
             renderDashboard();
             const badge = screen.getByTestId('status-card-AI');
             expect(badge.textContent).toMatch(/Verifying/i);
@@ -67,10 +72,9 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
     });
 
     describe('Badge Color (resolved state)', () => {
-        it('shows green color when verify-ai-setup returns all OK', async () => {
-            const { webviewClient } = require('@/core/ui/utils/WebviewClient');
-            (webviewClient.request as jest.Mock).mockResolvedValue({
-                success: true,
+        it('shows green color when ai-verify returns all OK', () => {
+            renderDashboard();
+            deliverVerify({
                 status: 'ok',
                 checks: [
                     { name: 'AGENTS.md', status: 'ok' },
@@ -80,18 +84,14 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
                 ],
                 inventory: { skills: [], mcps: [], sessionMcps: [] },
             });
-            renderDashboard();
-            await waitFor(() => {
-                const badge = screen.getByTestId('status-card-AI');
-                expect(badge.getAttribute('data-color')).toBe('green');
-                expect(badge.textContent).toMatch(/Ready/i);
-            });
+            const badge = screen.getByTestId('status-card-AI');
+            expect(badge.getAttribute('data-color')).toBe('green');
+            expect(badge.textContent).toMatch(/Ready/i);
         });
 
-        it('shows red color when any file check fails', async () => {
-            const { webviewClient } = require('@/core/ui/utils/WebviewClient');
-            (webviewClient.request as jest.Mock).mockResolvedValue({
-                success: true,
+        it('shows red color when any file check fails', () => {
+            renderDashboard();
+            deliverVerify({
                 status: 'warning',
                 checks: [
                     { name: 'AGENTS.md', status: 'warning', message: 'Missing' },
@@ -101,12 +101,9 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
                 ],
                 inventory: { skills: [], mcps: [], sessionMcps: [] },
             });
-            renderDashboard();
-            await waitFor(() => {
-                const badge = screen.getByTestId('status-card-AI');
-                expect(badge.getAttribute('data-color')).toBe('red');
-                expect(badge.textContent).toMatch(/Broken/i);
-            });
+            const badge = screen.getByTestId('status-card-AI');
+            expect(badge.getAttribute('data-color')).toBe('red');
+            expect(badge.textContent).toMatch(/Broken/i);
         });
     });
 
@@ -114,9 +111,6 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
         it('does not have an onClick handler (display-only badge)', () => {
             renderDashboard();
             const badge = screen.getByTestId('status-card-AI');
-            // The mocked StatusCard component does not forward any onClick prop
-            // (it isn't part of the StatusCardProps interface). Confirm by
-            // ensuring the rendered node is not a button or link.
             expect(badge.tagName.toLowerCase()).not.toBe('button');
             expect(badge.tagName.toLowerCase()).not.toBe('a');
         });
@@ -133,7 +127,6 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
 
         function verifyWithSkillsAndMcps(skills: typeof SKILLS, mcps: typeof MCPS) {
             return {
-                success: true,
                 status: 'ok',
                 checks: [
                     { name: 'AGENTS.md', status: 'ok' as const },
@@ -145,19 +138,16 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
             };
         }
 
-        it('renders a clickable "View AI Capabilities" link', async () => {
-            mockAiRequests(verifyWithSkillsAndMcps(SKILLS, MCPS));
+        it('renders a clickable "View AI Capabilities" link', () => {
             renderDashboard();
-            await waitFor(() => {
-                expect(screen.getByTestId('ai-view-capabilities-trigger').textContent)
-                    .toMatch(/View AI Capabilities/);
-            });
+            deliverVerify(verifyWithSkillsAndMcps(SKILLS, MCPS));
+            expect(screen.getByTestId('ai-view-capabilities-trigger').textContent)
+                .toMatch(/View AI Capabilities/);
         });
 
         it('opens the capabilities modal showing both skills and MCPs when clicked', async () => {
-            mockAiRequests(verifyWithSkillsAndMcps(SKILLS, MCPS));
             renderDashboard();
-            await waitFor(() => screen.getByTestId('ai-view-capabilities-trigger'));
+            deliverVerify(verifyWithSkillsAndMcps(SKILLS, MCPS));
 
             await act(async () => {
                 fireEvent.click(screen.getByTestId('ai-view-capabilities-trigger'));
@@ -175,7 +165,7 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
         it('the modal Regenerate action dispatches regenerate-ai-files then re-verifies', async () => {
             const webviewClient = mockAiRequests(verifyWithSkillsAndMcps(SKILLS, MCPS));
             renderDashboard();
-            await waitFor(() => screen.getByTestId('ai-view-capabilities-trigger'));
+            deliverVerify(verifyWithSkillsAndMcps(SKILLS, MCPS));
 
             await act(async () => {
                 fireEvent.click(screen.getByTestId('ai-view-capabilities-trigger'));
@@ -194,37 +184,31 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
     });
 
     describe('Conditional Regenerate link (only when health needs attention)', () => {
-        it('shows a "Regenerate AI files" link next to the badge when a check fails (red)', async () => {
-            mockAiRequests({
-                success: true,
+        it('shows a "Regenerate AI files" link next to the badge when a check fails (red)', () => {
+            renderDashboard();
+            deliverVerify({
                 status: 'warning',
                 checks: [{ name: 'AGENTS.md', status: 'warning' }],
                 inventory: { skills: [], mcps: [], sessionMcps: [] },
             });
-            renderDashboard();
-            await waitFor(() => {
-                expect(screen.getByTestId('ai-regenerate-trigger')).toBeInTheDocument();
-            });
+            expect(screen.getByTestId('ai-regenerate-trigger')).toBeInTheDocument();
         });
 
-        it('does NOT show the Regenerate link when health is green', async () => {
-            mockAiRequests(verifyWithSkills([]));
+        it('does NOT show the Regenerate link when health is green', () => {
             renderDashboard();
-            await waitFor(() => {
-                expect(screen.getByTestId('status-card-AI').getAttribute('data-color')).toBe('green');
-            });
+            deliverVerify(verifyWithSkills([]));
+            expect(screen.getByTestId('status-card-AI').getAttribute('data-color')).toBe('green');
             expect(screen.queryByTestId('ai-regenerate-trigger')).not.toBeInTheDocument();
         });
 
         it('clicking the conditional Regenerate link dispatches regenerate-ai-files', async () => {
-            const webviewClient = mockAiRequests({
-                success: true,
+            const webviewClient = mockAiRequests({ status: 'ok', checks: [], inventory: { skills: [], mcps: [], sessionMcps: [] } });
+            renderDashboard();
+            deliverVerify({
                 status: 'warning',
                 checks: [{ name: 'AGENTS.md', status: 'warning' }],
                 inventory: { skills: [], mcps: [], sessionMcps: [] },
             });
-            renderDashboard();
-            await waitFor(() => screen.getByTestId('ai-regenerate-trigger'));
             (webviewClient.request as jest.Mock).mockClear();
             await act(async () => {
                 fireEvent.click(screen.getByTestId('ai-regenerate-trigger'));

@@ -138,3 +138,27 @@ export const flushVerify = async (): Promise<void> => {
         await Promise.resolve();
     });
 };
+
+/**
+ * Deliver an on-open AI verification via the orchestrator's `checkResult{ai-verify}`
+ * push — the path that drives the AI badge + skills/MCP inventory now that the
+ * hook no longer pulls verify on mount. `data` is the verify response shape.
+ */
+export const deliverAiVerify = (
+    mocks: TestMocks,
+    response: ReturnType<typeof buildVerifyResponse>,
+): void => {
+    act(() => {
+        mocks.state.orgHandler?.({ checkId: 'ai-verify', status: 'ok', data: response });
+    });
+};
+
+/**
+ * Deliver an ai-verify FAILURE outcome (the verify threw → orchestrator posts an
+ * error outcome with no data). Drives the badge out of 'Verifying' to yellow.
+ */
+export const deliverAiVerifyFailure = (mocks: TestMocks): void => {
+    act(() => {
+        mocks.state.orgHandler?.({ checkId: 'ai-verify', status: 'error' });
+    });
+};
