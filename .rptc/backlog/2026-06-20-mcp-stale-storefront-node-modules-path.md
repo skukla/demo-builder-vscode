@@ -1,6 +1,36 @@
 # Project MCP servers fail MODULE_NOT_FOUND — `.mcp.json` points at storefront node_modules
 
-**Status:** Filed 2026-06-20 from a live AI-verify session. Leading hypothesis identified; not started.
+**Status:** Filed 2026-06-20 from a live AI-verify session. **Root cause CONFIRMED** (see below); fix
+direction is verify-the-existing-remedy + add a drift signal.
+
+## CONFIRMED root cause (2026-06-20)
+
+Inspected `b2b-tester`'s live `.mcp.json` (the originally-reported `my-commerce-demo` was already
+deleted). Its MCP server args are:
+```
+commerce-extensibility → node  /Users/kukla/.demo-builder/projects/my-commerce-demo/components/eds-storefront/node_modules/@adobe-commerce/commerce-extensibility-tools/index.js
+playwright             → node  /Users/kukla/.demo-builder/projects/my-commerce-demo/components/eds-storefront/node_modules/@playwright/mcp/cli.js
+```
+This is **stale on two axes at once**: (1) it points at **a different project** (`my-commerce-demo`,
+now deleted) — hence MODULE_NOT_FOUND; and (2) it uses the **pre-isolation** location
+(`components/eds-storefront/node_modules/`).
+
+The **current** writer cannot produce this. `ai-defaults.json` args are **relative**
+(`node_modules/@adobe-commerce/...`); `mcpConfigWriter` (lines 257–265) joins them to
+`resolveMcpToolsDir(project.path)` = `<project>/.demo-builder-mcp` (`aiDefaultsInstaller.ts:55-57`), so
+a fresh write yields `<this-project>/.demo-builder-mcp/node_modules/...`. So `b2b-tester` (created
+2026-06-10) carries a `.mcp.json` written by an **older extension version**, before both the
+isolated-tools-dir migration and the rename-regenerate fix (`eaaf44c8`), and it was never regenerated.
+Confirmed on disk: `<project>/.demo-builder-mcp/node_modules` is **missing**; the packages exist only in
+the storefront tree.
+
+**So the immediate remedy already exists — "Regenerate AI files"** runs the current writer (install
+first → populates `.demo-builder-mcp/node_modules`, then rewrites `.mcp.json` to the isolated,
+this-project paths). The real gap is **prevention**: nothing detected the dead path until an agent
+failed, and pre-migration projects silently carry broken configs.
+
+---
+_Original hypothesis (now superseded by the confirmation above):_
 
 ## Symptom
 
