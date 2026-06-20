@@ -46,8 +46,8 @@ export interface StatusPayload {
  * @returns Status payload for UI
  *
  * Note: org-context mismatch is NOT part of this payload — it's delivered
- * separately via the async `orgContextResult` message so the (slow) org check
- * never blocks the rest of the dashboard status.
+ * separately via the on-open check orchestrator's `checkResult` message
+ * (checkId `org-context`) so the org check never blocks the dashboard status.
  */
 export function buildStatusPayload(
     project: Project,

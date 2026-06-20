@@ -369,6 +369,21 @@ export class AuthenticationService {
     }
 
     /**
+     * Get organizations via the SDK ONLY — never the CLI fallback.
+     *
+     * Non-interactive org read for on-open probes (P1): unlike
+     * {@link getOrganizations} it never runs `aio console org list` (which can
+     * stall ~14.5s and launch a browser), degrading to `[]` instead. Used by the
+     * dashboard org-context check so opening a project can't surprise the user.
+     */
+    async getOrganizationsSdkOnly(): Promise<AdobeOrg[]> {
+        return withTiming('getOrganizationsSdkOnly', async () => {
+            const { fetcher } = await this.ensureEntities();
+            return fetcher.getOrganizationsSdkOnly();
+        });
+    }
+
+    /**
      * Get projects.
      *
      * @param options.orgId - Optional target org. When supplied, the fetch runs

@@ -342,7 +342,10 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
 
                                 {/* IMS Org status — ambient org-context health (blue checking →
                                     green org name / red wrong org). Shown only for Adobe projects.
-                                    The actionable mismatch banner is separate (below). */}
+                                    The `unknown` case (couldn't check non-interactively on open)
+                                    surfaces a quiet "Sign in to check" via StatusCard.action — a
+                                    user-initiated sign-in (allowed to open a browser). The
+                                    actionable mismatch banner is separate (below). */}
                                 {imsOrgDisplay && (
                                     <StatusCard
                                         label="IMS Org"
@@ -350,6 +353,9 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
                                         color={imsOrgDisplay.color}
                                         size="S"
                                         className="dashboard-status-badge"
+                                        action={orgCheckState === 'unknown'
+                                            ? { label: 'Sign in to check', onPress: handleReAuthenticate }
+                                            : undefined}
                                     />
                                 )}
 

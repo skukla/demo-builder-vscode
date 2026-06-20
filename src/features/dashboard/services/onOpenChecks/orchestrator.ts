@@ -41,9 +41,14 @@ export async function runOnOpenChecks(
     const runOne = async (check: OnOpenCheck): Promise<void> => {
         if (check.edsOnly && !isEds) return; // gated out — no run, no post
 
-        const guardKey = `${project.path}::${check.id}`;
-        if (ranThisSession.has(guardKey)) return; // re-entrancy: at most once per session
-        ranThisSession.add(guardKey);
+        // Re-entrancy: run a check at most once per session, UNLESS it opts out via
+        // `reRunnable` (a live check that must re-run on every requestStatus — e.g.
+        // org-context after a forced Switch IMS Org / re-auth).
+        if (!check.reRunnable) {
+            const guardKey = `${project.path}::${check.id}`;
+            if (ranThisSession.has(guardKey)) return;
+            ranThisSession.add(guardKey);
+        }
 
         const post = (outcome: CheckOutcome): void => {
             postMessage(CHECK_RESULT_MESSAGE, { ...outcome, checkId: outcome.checkId || check.id });

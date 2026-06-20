@@ -9,6 +9,9 @@
 jest.mock('@/core/di', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
+        // The on-open org-context check self-heals via the state manager on the
+        // reachable path; default to a no-op writer.
+        getStateManager: jest.fn(() => ({ saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined) })),
     },
 }));
 jest.mock('@/features/mesh/services/stalenessDetector');
@@ -201,8 +204,8 @@ describe('dashboardHandlers - handleRequestStatus', () => {
     });
 
     it('should NOT carry orgMismatch in the status payload (delivered separately)', async () => {
-        // The org check is decoupled — it's posted via the async `orgContextResult`
-        // message, never bundled into the status payload (which must stay fast).
+        // The org check is decoupled — it's posted via the on-open orchestrator's
+        // `checkResult` message, never bundled into the status payload (kept fast).
         const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);
 
@@ -210,7 +213,8 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         const { ServiceLocator } = require('@/core/di');
         ServiceLocator.getAuthenticationService.mockReturnValue({
             isAuthenticated: jest.fn().mockResolvedValue(true),
-            getOrganizations: jest.fn().mockResolvedValue([
+            // SDK-only read (the non-interactive on-open probe), never the CLI fallback.
+            getOrganizationsSdkOnly: jest.fn().mockResolvedValue([
                 { id: 'org999', code: 'OTHER@AdobeOrg', name: 'Other Org' },
             ]),
         });

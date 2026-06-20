@@ -1,6 +1,12 @@
 # Dashboard IMS org-check launches a surprise browser (SDK-unavailable CLI fallback)
 
-**Status:** Filed 2026-06-20 from a live dashboard session. Root cause located; not started.
+**Status:** ✅ RESOLVED by `dashboard-open-orchestrator` Step 2 (2026-06-20). The org-context
+check now runs through the on-open orchestrator as a non-interactive `OnOpenCheck`
+(`src/features/dashboard/services/onOpenChecks/orgContextCheck.ts`): it probes with
+`isAuthenticated()` + a new SDK-only `getOrganizationsSdkOnly()` and degrades to `unknown`
+("Sign in to check") instead of hitting the `aio console org list` CLI fallback or an interactive
+login on open. The CLI/interactive path remains only behind user-initiated actions (Switch IMS
+Org / Sign in). Originally filed 2026-06-20 from a live dashboard session; root cause located.
 
 ## Symptom
 

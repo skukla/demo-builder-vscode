@@ -136,6 +136,20 @@ it('re-entrancy: a check runs at most once per session for the same project', as
     expect(outcomes(postMessage)).toHaveLength(1);
 });
 
+it('reRunnable: a check opts out of the per-session guard and runs every time', async () => {
+    // Org-context is a live check: a forced switch / re-auth re-invokes
+    // requestStatus precisely to re-check, so it must NOT be guarded.
+    const { deps, postMessage } = makeDeps();
+    const run = jest.fn(async () => ({ checkId: 'org-context', status: 'ok' as const }));
+    const check: OnOpenCheck = { id: 'org-context', mode: 'background', reRunnable: true, run };
+
+    await runOnOpenChecks(deps, [check]);
+    await runOnOpenChecks(deps, [check]); // re-check after a switch / re-auth
+
+    expect(run).toHaveBeenCalledTimes(2);
+    expect(outcomes(postMessage)).toHaveLength(2);
+});
+
 it('runs multiple checks concurrently and posts each', async () => {
     const { deps, postMessage } = makeDeps();
     const mk = (id: string): OnOpenCheck => ({
