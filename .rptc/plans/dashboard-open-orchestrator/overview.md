@@ -74,8 +74,12 @@ four separate `onMessage('orgContextResult'|'meshStatusUpdate'|…)` listeners.
   `warning` ("Updating AI configuration…"), heals via `handleRegenerateAiFiles`, then `ok`/`error`.
   AI badge telegraphs the heal. Folded `mcp-open-time-self-heal` plan superseded. **= the silent-MCP
   fix (P2).**
-- **[Step 4](step-04.md)** — Migrate **mesh-verify**; always post an outcome (fixes the silent
-  mesh→not-deployed flip, P2).
+- **[Step 4](step-04.md)** — ✅ DONE (2026-06-20). Migrated **mesh-verify** onto the orchestrator
+  (`createMeshVerifyCheck`, injected verify/sync/markDirty, reRunnable, conditionally added when a
+  deployed mesh is auth-reachable). Always posts a typed outcome: ok / warning ("API Mesh is no longer
+  deployed", state still synced) / unknown (transient error — no scary flip). Removed the old
+  `verifyMeshDeployment` helper + its on-open `meshStatusUpdate` post; the deploy/redeploy
+  `meshStatusUpdate` flow is untouched. Hook routes `checkResult{mesh-verify}` to the mesh badge. **P2.**
 - **[Step 5](step-05.md)** — Migrate **ai-verify**; surface *which* MCP/skill failed and why (P2;
   fixes the generic-yellow-badge-no-diagnostic gap).
 - **[Step 6](step-06.md)** — Unify the webview: one `checkResult` router replacing the four ad-hoc

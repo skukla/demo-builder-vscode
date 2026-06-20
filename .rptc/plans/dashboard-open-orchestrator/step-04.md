@@ -1,6 +1,9 @@
 # Step 4 — Migrate mesh-verify (P2: no more silent flip)
 
-**Status:** Outline — firms up after Step 1 lands (the check shape may refine).
+**Status:** ✅ DONE (2026-06-20). `createMeshVerifyCheck` (injectable verify/syncMeshStatus/markDirty,
+reRunnable) in `onOpenChecks/meshVerifyCheck.ts`; wired into `handleRequestStatus` (conditionally, when
+a deployed mesh is auth-reachable); old `verifyMeshDeployment` helper removed; hook routes
+`checkResult{mesh-verify}` (warning → not-deployed, unknown → unchanged). 4 check tests + 2 hook tests.
 
 **Goal:** move `verifyMeshDeployment` (`meshStatusHelpers.ts:249`) onto the orchestrator as a
 `mesh-verify` check that ALWAYS posts a typed outcome — fixing the silent flip where a background check
