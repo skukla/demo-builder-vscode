@@ -1,6 +1,9 @@
 # Plan: Open-time MCP self-heal — overview
 
-**Status:** Plan drafted 2026-06-20, TDD-ready. Awaiting PM go to start Step 1.
+**Status:** ⤵ FOLDED into [`../dashboard-open-orchestrator/`](../dashboard-open-orchestrator/overview.md)
+(2026-06-20, PM chose the unified-orchestrator scope). This plan's detection helper + heal become that
+plan's **Step 3** (`mcp-health` check); `detectMcpDrift` Step 1 here is reused verbatim. Kept for the
+detailed test cases; execute via the orchestrator plan, not standalone.
 **Backlog item:** [`../../backlog/2026-06-20-mcp-stale-storefront-node-modules-path.md`](../../backlog/2026-06-20-mcp-stale-storefront-node-modules-path.md)
 **Decision:** auto-regenerate on open (PM-chosen), built with transparency guardrails so it is not a
 silent background stall (cf. the dashboard org-check surprise-browser).
