@@ -191,6 +191,14 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
         [updateState],
     );
 
+    // Handler for selected deployable changes (catalog picker in the modal, D2 Track B)
+    const handleSelectedDeployablesChange = useCallback(
+        (deployables: string[]) => {
+            updateState({ selectedDeployables: deployables });
+        },
+        [updateState],
+    );
+
     // Handler for custom block library changes (from BrandGallery modal)
     const handleCustomBlockLibrariesChange = useCallback(
         (libs: CustomBlockLibrary[]) => {
@@ -314,6 +322,8 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
                 customBlockLibraryDefaults={customBlockLibraryDefaults}
                 selectedOptionalDependencies={state.selectedOptionalDependencies}
                 onOptionalDependenciesChange={handleOptionalDependenciesChange}
+                selectedDeployables={state.selectedDeployables}
+                onSelectedDeployablesChange={handleSelectedDeployablesChange}
                 headerContent={projectNameField}
             />
         );

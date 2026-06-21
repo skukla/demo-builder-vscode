@@ -19,6 +19,7 @@ import { ActionGrid } from './components/ActionGrid';
 import { AiCapabilitiesModal } from './components/AiCapabilitiesModal';
 import { AppBuilderCard, type AppCardState } from './components/AppBuilderCard';
 import { DashboardRenameDialog } from './components/DashboardRenameDialog';
+import { IntegrationsBlock } from './components/IntegrationsBlock';
 import { OrgContextNotice } from './components/OrgContextNotice';
 import { isStartActionDisabled } from './dashboardPredicates';
 import { useDashboardActions } from './hooks/useDashboardActions';
@@ -29,7 +30,8 @@ import { PageLayout, PageHeader } from '@/core/ui/components/layout';
 import { useFocusTrap, useSingleTimer } from '@/core/ui/hooks';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { AuthoringExperience } from '@/types/base';
+import type { AuthoringExperience, DeployableState } from '@/types/base';
+import type { DeployableCatalogEntry } from '@/types/deployables';
 
 /**
  * Props for the ProjectDashboardScreen component
@@ -60,7 +62,12 @@ interface ProjectDashboardScreenProps {
     hasAdobeContext?: boolean;
     /** Initial App Builder app state (from project.appState/appStatusSummary). Absent = no app. */
     initialApp?: AppCardState;
+    /** Keyed deployables map (drives the integrations list rows). */
+    deployables?: Record<string, DeployableState>;
+    /** Stack-filtered catalog for the add-a-deployable picker. */
+    deployableCatalog?: DeployableCatalogEntry[];
 }
+
 
 /**
  * Whether to render the App Builder card: shown when the project has an Adobe
@@ -83,7 +90,7 @@ function shouldShowAppCard(hasAdobeContext: boolean | undefined, app: AppCardSta
  *
  * @param props - Component props
  */
-export function ProjectDashboardScreen({ project, hasMesh = false, brandName, stackName, isEds = false, edsLiveUrl, edsDaLiveUrl, authoringExperience, initialMeshStatus, initialEdsStorefrontStatus, hasAdobeContext, initialApp }: ProjectDashboardScreenProps) {
+export function ProjectDashboardScreen({ project, hasMesh = false, brandName, stackName, isEds = false, edsLiveUrl, edsDaLiveUrl, authoringExperience, initialMeshStatus, initialEdsStorefrontStatus, hasAdobeContext, initialApp, deployables, deployableCatalog }: ProjectDashboardScreenProps) {
     // Capture isEds on first render and never change it (project type doesn't change)
     const isEdsRef = useRef(isEds);
     if (isEds && !isEdsRef.current) {
@@ -443,6 +450,13 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
                             <AppBuilderCard app={appState} />
                         </div>
                     )}
+
+                    {/* Integrations list (self-gates on Adobe context). */}
+                    <IntegrationsBlock
+                        hasAdobeContext={hasAdobeContext}
+                        deployables={deployables}
+                        catalog={deployableCatalog}
+                    />
                 </div>
             </PageLayout>
 

@@ -14,9 +14,9 @@
  * @module features/dashboard/ui/components/AppBuilderCard
  */
 
-import { View, Flex, Button, TextField, Link, ProgressCircle, Text } from '@adobe/react-spectrum';
+import { View, Flex, Button, TextField, Text } from '@adobe/react-spectrum';
 import React, { useState } from 'react';
-import { StatusCard } from '@/core/ui/components/feedback';
+import { DeployingState, DeployedState, ErrorState } from './deployableStates';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 /** App deployment status as surfaced to the dashboard card. */
@@ -65,69 +65,10 @@ function NoAppState() {
     );
 }
 
-/** "Deploying" state: spinner + the live status message. */
-function DeployingState({ message }: { message?: string }) {
-    return (
-        <Flex alignItems="center" gap="size-150">
-            <ProgressCircle aria-label="Deploying App Builder app" isIndeterminate size="S" />
-            <Text>{message || 'Deploying…'}</Text>
-        </Flex>
-    );
-}
-
-/** "Deployed" state: status badge + action URLs (quiet Links) + Redeploy + Remove. */
-function DeployedState({ app }: { app: AppCardState }) {
-    const urls = app.deployedUrls && Object.keys(app.deployedUrls).length > 0
-        ? app.deployedUrls
-        : (app.url ? { app: app.url } : {});
-
-    return (
-        <Flex direction="column" gap="size-150">
-            <StatusCard label="App Builder" status="Deployed" color="green" size="S" />
-            <Flex direction="column" gap="size-50">
-                {Object.entries(urls).map(([name, url]) => (
-                    <Link
-                        key={name}
-                        isQuiet
-                        href={url}
-                        // Reuse the validated openLiveSite handler so the URL is
-                        // sanitized + opened by the extension (Spectrum onPress
-                        // intercepts the click; href is kept for accessibility).
-                        onPress={() => webviewClient.postMessage('openLiveSite', { url })}
-                    >
-                        {name}
-                    </Link>
-                ))}
-            </Flex>
-            <Flex gap="size-150">
-                <Button variant="secondary" onPress={() => webviewClient.postMessage('redeployApp')}>
-                    Redeploy
-                </Button>
-                <Button variant="secondary" onPress={() => webviewClient.postMessage('removeApp')}>
-                    Remove
-                </Button>
-            </Flex>
-        </Flex>
-    );
-}
-
-/** "Error" state: inline message + Retry. */
-function ErrorState({ message }: { message?: string }) {
-    return (
-        <Flex direction="column" gap="size-150">
-            <StatusCard label="App Builder" status={message || 'Deployment failed'} color="red" size="S" />
-            <Flex>
-                <Button variant="primary" onPress={() => webviewClient.postMessage('deployApp')}>
-                    Retry
-                </Button>
-            </Flex>
-        </Flex>
-    );
-}
-
 /**
  * App Builder card. Switches on the app status; defaults to the "No app" state
- * when no app prop is provided.
+ * when no app prop is provided. Deploying/Deployed/Error reuse the shared
+ * deployable state pieces (id-less message dispatch for the singular app).
  */
 export function AppBuilderCard({ app }: AppBuilderCardProps) {
     const status = app?.status ?? 'not-deployed';
@@ -135,8 +76,20 @@ export function AppBuilderCard({ app }: AppBuilderCardProps) {
     return (
         <View>
             {status === 'deploying' && <DeployingState message={app?.message} />}
-            {status === 'deployed' && app && <DeployedState app={app} />}
-            {status === 'error' && <ErrorState message={app?.message} />}
+            {status === 'deployed' && app && (
+                <DeployedState
+                    view={{ label: 'App Builder', url: app.url, deployedUrls: app.deployedUrls }}
+                    onRedeploy={() => webviewClient.postMessage('redeployApp')}
+                    onRemove={() => webviewClient.postMessage('removeApp')}
+                />
+            )}
+            {status === 'error' && (
+                <ErrorState
+                    label="App Builder"
+                    message={app?.message}
+                    onRetry={() => webviewClient.postMessage('deployApp')}
+                />
+            )}
             {status === 'not-deployed' && <NoAppState />}
         </View>
     );

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { ConfigureScreen, ComponentsData } from './ConfigureScreen';
 import { WebviewApp, WebviewInitData } from '@/core/ui/components/WebviewApp';
 import { AuthoringExperience, Project } from '@/types/base';
+import type { DeployableCatalogEntry } from '@/types/deployables';
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/wizard.css';
@@ -15,6 +16,9 @@ interface ConfigureInitData extends WebviewInitData {
     existingProjectNames?: string[];
     isEds?: boolean;
     authoringExperience?: AuthoringExperience;
+    deployableCatalog?: DeployableCatalogEntry[];
+    providedEnvVars?: Record<string, string>;
+    deployableSecretFlags?: Record<string, Record<string, boolean>>;
 }
 
 // Get root element
@@ -38,6 +42,9 @@ root.render(
                     existingProjectNames={data.existingProjectNames}
                     isEds={data.isEds}
                     authoringExperience={data.authoringExperience}
+                    deployableCatalog={data.deployableCatalog}
+                    providedEnvVars={data.providedEnvVars}
+                    deployableSecretFlags={data.deployableSecretFlags}
                 />
             ) : null;
         }}

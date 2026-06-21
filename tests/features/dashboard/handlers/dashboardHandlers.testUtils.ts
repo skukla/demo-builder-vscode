@@ -121,6 +121,11 @@ export function setupMocks(projectOverrides?: Partial<Project>): TestMocks {
                 postMessage: jest.fn(),
             },
         } as any,
+        // The VS Code ExtensionContext seam (secrets used by the deployable runner deps).
+        context: {
+            extensionPath: '/ext',
+            secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn() },
+        } as any,
         stateManager: {
             getCurrentProject: jest.fn().mockResolvedValue(mockProject),
             saveProject: jest.fn().mockResolvedValue(undefined),

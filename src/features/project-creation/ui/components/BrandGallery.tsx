@@ -18,7 +18,7 @@ import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayo
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { cn } from '@/core/ui/utils/classNames';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
-import { DemoPackage } from '@/types/demoPackages';
+import { DemoPackage, type AddonSource } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 
 
@@ -46,6 +46,12 @@ export interface BrandGalleryProps {
     selectedOptionalDependencies?: string[];
     /** Callback when optional dependencies change */
     onOptionalDependenciesChange?: (deps: string[]) => void;
+    /** Selected catalog deployable IDs (D2 Track B) */
+    selectedDeployables?: string[];
+    /** Callback when selected deployables change */
+    onSelectedDeployablesChange?: (deployables: string[]) => void;
+    /** Callback when a custom deployable is added from a GitHub URL */
+    onAddCustomDeployable?: (source: AddonSource) => void;
     /** Optional content to render above the gallery (e.g., project name field) */
     headerContent?: React.ReactNode;
 }
@@ -188,6 +194,9 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
     customBlockLibraryDefaults,
     selectedOptionalDependencies = [],
     onOptionalDependenciesChange,
+    selectedDeployables = [],
+    onSelectedDeployablesChange,
+    onAddCustomDeployable,
     headerContent,
 }) => {
     const [searchQuery, setSearchQuery] = useState('');
@@ -198,12 +207,15 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
         modalBlockLibraries,
         modalCustomBlockLibraries,
         modalOptionalDeps,
+        modalDeployables,
         handleCardClick,
         handleStackSelect,
         handleModalAddonsChange,
         handleModalBlockLibrariesChange,
         handleModalCustomBlockLibrariesChange,
         handleModalOptionalDepsChange,
+        handleModalDeployablesChange,
+        handleAddCustomDeployable,
         handleModalDone,
         handleModalClose,
     } = useModalState({
@@ -216,12 +228,15 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
         customBlockLibraryDefaults: customBlockLibraryDefaults ?? [],
         blockLibraryDefaults,
         selectedOptionalDependencies,
+        selectedDeployables,
         onPackageSelect,
         onStackSelect,
         onAddonsChange,
         onBlockLibrariesChange,
         onCustomBlockLibrariesChange,
         onOptionalDependenciesChange,
+        onSelectedDeployablesChange,
+        onAddCustomDeployable,
     });
 
     const filteredPackages = useMemo(
@@ -333,6 +348,9 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
                         onCustomBlockLibrariesChange={handleModalCustomBlockLibrariesChange}
                         selectedOptionalDependencies={modalOptionalDeps}
                         onOptionalDependenciesChange={handleModalOptionalDepsChange}
+                        selectedDeployables={modalDeployables}
+                        onSelectedDeployablesChange={handleModalDeployablesChange}
+                        onAddCustomDeployable={handleAddCustomDeployable}
                         onDone={handleModalDone}
                         onClose={handleModalClose}
                     />

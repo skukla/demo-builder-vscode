@@ -12,9 +12,12 @@ import { dashboardHandlers } from '@/features/dashboard/handlers';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import { getEwCanvasBranch, resolveProjectAuthoringExperience } from '@/features/eds/handlers/edsHelpers';
 import { loadDemoPackages } from '@/features/project-creation/services/demoPackageLoader';
+import { getAvailableDeployables } from '@/features/project-creation/services/deployableCatalogLoader';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { AuthoringExperience, Project, ComponentInstance } from '@/types';
+import type { DeployableState } from '@/types/base';
 import type { DemoPackage } from '@/types/demoPackages';
+import type { DeployableCatalogEntry } from '@/types/deployables';
 import { HandlerContext, SharedState } from '@/types/handlers';
 import type { Stack, StacksConfig } from '@/types/stacks';
 import { getAppBuilderInstance, getComponentInstanceValues, isEdsProject, getEdsLiveUrl, getEdsDaLiveUrl } from '@/types/typeGuards';
@@ -132,6 +135,8 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
             url?: string;
             deployedUrls?: Record<string, string>;
         };
+        deployables?: Record<string, DeployableState>;
+        deployableCatalog: DeployableCatalogEntry[];
     }> {
         const project = await this.stateManager.getCurrentProject();
         const themeKind = vscode.window.activeColorTheme.kind;
@@ -175,6 +180,11 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
             }
             : undefined;
 
+        // Integrations list seed: the keyed deployables map + the stack-filtered
+        // catalog for the add-a-deployable picker (mesh is filtered to its own
+        // badge inside DeployablesList, not here).
+        const deployableCatalog = this.resolveDeployableCatalog(project ?? null);
+
         return {
             theme,
             project: project ? {
@@ -191,7 +201,17 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
             initialEdsStorefrontStatus,
             hasAdobeContext,
             initialApp,
+            deployables: project?.deployables,
+            deployableCatalog,
         };
+    }
+
+    /** Stack-filtered deployable catalog for the integrations add-a-deployable picker. */
+    private resolveDeployableCatalog(project: Project | null): DeployableCatalogEntry[] {
+        return getAvailableDeployables(
+            project?.componentSelections?.backend ?? '',
+            project?.componentSelections?.frontend ?? '',
+        );
     }
 
     /**
@@ -328,6 +348,30 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
                     status,
                     message,
                     url,
+                },
+            });
+        }
+    }
+
+    /**
+     * Public method to push a per-deployable row status update (called by the
+     * deployable handlers). Modeled on sendAppStatusUpdate but keyed by the
+     * deployable `id` so the integrations list flips ONLY that row. No-op if no
+     * dashboard is open.
+     */
+    public static async sendDeployableStatusUpdate(
+        id: string,
+        status: 'deploying' | 'deployed' | 'error' | 'not-deployed',
+        message?: string,
+    ): Promise<void> {
+        const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');
+        if (panel) {
+            await panel.webview.postMessage({
+                type: 'deployableStatusUpdate',
+                payload: {
+                    id,
+                    status,
+                    message,
                 },
             });
         }

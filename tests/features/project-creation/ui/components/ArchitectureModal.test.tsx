@@ -33,6 +33,10 @@ jest.mock('@/features/project-creation/services/demoPackageLoader', () => ({
     getResolvedMeshRequirement: jest.fn(() => false),
 }));
 
+jest.mock('@/features/project-creation/services/deployableSelection', () => ({
+    getSelectableDeployables: jest.fn(() => []),
+}));
+
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
@@ -369,5 +373,79 @@ describe('ArchitectureModal - Modal Size', () => {
         act(() => { jest.advanceTimersByTime(250); });
 
         expect(screen.getByRole('button', { name: 'Back' })).toBeTruthy();
+    });
+});
+
+// ===========================================================================
+// Deployables picker (D2 Track B — Step 03)
+// ===========================================================================
+
+import { getSelectableDeployables } from '@/features/project-creation/services/deployableSelection';
+import type { SelectableDeployable } from '@/features/project-creation/services/deployableSelection';
+
+const mockGetSelectable = getSelectableDeployables as jest.Mock;
+
+const meshRow: SelectableDeployable = {
+    id: 'commerce-paas-mesh',
+    name: 'Commerce PaaS API Mesh',
+    description: 'API Mesh for EDS + PaaS',
+    kind: 'mesh',
+    source: { owner: 'skukla', repo: 'commerce-paas-mesh', branch: 'main' },
+    requirement: 'optional',
+};
+
+describe('ArchitectureModal - Deployables picker', () => {
+    beforeEach(() => {
+        jest.useFakeTimers();
+        jest.clearAllMocks();
+        mockGetSelectable.mockReturnValue([meshRow]);
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('renders the deployables picker in place of the old mesh section', () => {
+        render(
+            <ArchitectureModal
+                {...defaultProps}
+                selectedStackId="eds-paas"
+            />,
+        );
+        // The mesh now appears as a catalog row from getSelectableDeployables,
+        // not the hardcoded "Include API Mesh" toggle.
+        expect(screen.getByText('Commerce PaaS API Mesh')).toBeInTheDocument();
+        expect(screen.queryByText('Include API Mesh')).not.toBeInTheDocument();
+    });
+
+    it('calls onSelectedDeployablesChange when a deployable row toggles', () => {
+        const onSelectedDeployablesChange = jest.fn();
+        render(
+            <ArchitectureModal
+                {...defaultProps}
+                selectedStackId="eds-paas"
+                onSelectedDeployablesChange={onSelectedDeployablesChange}
+            />,
+        );
+        fireEvent.click(screen.getByRole('checkbox', { name: /Commerce PaaS API Mesh/i }));
+        expect(onSelectedDeployablesChange).toHaveBeenCalledWith(['commerce-paas-mesh']);
+    });
+
+    it('propagates a mesh selection to onOptionalDependenciesChange (Adobe-I/O step-filter lock)', () => {
+        const onOptionalDependenciesChange = jest.fn();
+        render(
+            <ArchitectureModal
+                {...defaultProps}
+                selectedStackId="eds-paas"
+                onOptionalDependenciesChange={onOptionalDependenciesChange}
+            />,
+        );
+        // Selecting the mesh deployable must still flow the mesh COMPONENT id into
+        // selectedOptionalDependencies so hasMeshInDependencies keeps gating the
+        // Adobe I/O steps (the flagged HIGH risk).
+        fireEvent.click(screen.getByRole('checkbox', { name: /Commerce PaaS API Mesh/i }));
+        expect(onOptionalDependenciesChange).toHaveBeenCalledWith(
+            expect.arrayContaining(['eds-commerce-mesh']),
+        );
     });
 });

@@ -2,7 +2,9 @@
  * ArchitectureStepContent Component
  *
  * Renders the architecture step content within the ArchitectureModal:
- * stack radio group, optional services (addons), and API mesh toggle.
+ * stack radio group and optional services (addons). The API Mesh toggle was
+ * generalized into the catalog-driven DeployablesStepContent (D2 Track B),
+ * which the modal renders as a sibling section.
  *
  * Pure presentational component -- all state and handlers live in ArchitectureModal.
  */
@@ -32,23 +34,14 @@ interface AddonSelectionProps {
     requiredAddonIds?: string[];
 }
 
-interface MeshSelectionProps {
-    showMeshToggle: boolean;
-    isMeshAutoIncluded: boolean;
-    isMeshSelected: boolean;
-    onMeshToggle: (isSelected: boolean) => void;
-}
-
 export interface ArchitectureStepContentProps {
     stackSelection: StackSelectionProps;
     addonSelection: AddonSelectionProps;
-    mesh: MeshSelectionProps;
 }
 
 export const ArchitectureStepContent: React.FC<ArchitectureStepContentProps> = ({
     stackSelection,
     addonSelection,
-    mesh,
 }) => {
     const { filteredStacks, selectedStackId, getItemProps, onStackClick } = stackSelection;
     const {
@@ -59,7 +52,6 @@ export const ArchitectureStepContent: React.FC<ArchitectureStepContentProps> = (
         addonMetadata,
         requiredAddonIds = [],
     } = addonSelection;
-    const { showMeshToggle, isMeshAutoIncluded, isMeshSelected, onMeshToggle } = mesh;
 
     return (
     <>
@@ -129,30 +121,6 @@ export const ArchitectureStepContent: React.FC<ArchitectureStepContentProps> = (
                 })}
             </div>
         </div>
-
-        {/* API Mesh Section */}
-        {(showMeshToggle || isMeshAutoIncluded) && (
-            <div className="addons-section addons-visible">
-                <Divider size="S" marginTop="size-300" marginBottom="size-200" />
-                <Text UNSAFE_className="description-block-sm">
-                    API Mesh
-                </Text>
-                <div className="architecture-addons">
-                    <Checkbox
-                        isSelected={isMeshAutoIncluded || isMeshSelected}
-                        isDisabled={isMeshAutoIncluded}
-                        onChange={onMeshToggle}
-                    >
-                        <span className="addon-label">
-                            <span className="addon-name">Include API Mesh</span>
-                            <span className="addon-description">
-                                Deploy an API Mesh for GraphQL query routing. Not required for direct backend connections.
-                            </span>
-                        </span>
-                    </Checkbox>
-                </div>
-            </div>
-        )}
     </>
     );
 };

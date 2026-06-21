@@ -23,6 +23,13 @@ import { validateURL } from '@/core/validation';
 import { verifyAiSetup } from '@/features/ai';
 import { detectMcpDrift } from '@/features/ai/mcpDriftDetector';
 import { handleRegenerateAiFiles, logAiVerification } from '@/features/dashboard/handlers/aiHandlers';
+import {
+    handleAddDeployable,
+    handleDeployDeployable,
+    handleRedeployDeployable,
+    handleRemoveDeployable,
+    handleVerifyDeployable,
+} from '@/features/dashboard/handlers/deployableHandlers';
 import { runOnOpenChecks, orgContextCheck, createMcpHealthCheck, createMeshVerifyCheck, createAiVerifyCheck } from '@/features/dashboard/services/onOpenChecks';
 import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
@@ -825,6 +832,13 @@ export const dashboardHandlers = defineHandlers({
     'deployApp': handleDeployApp,
     'redeployApp': handleRedeployApp,
     'removeApp': handleRemoveApp,
+
+    // Deployable (integrations list) handlers — live D1 runner wiring
+    'addDeployable': handleAddDeployable,
+    'deployDeployable': handleDeployDeployable,
+    'redeployDeployable': handleRedeployDeployable,
+    'removeDeployable': handleRemoveDeployable,
+    'verifyDeployable': handleVerifyDeployable,
 
     // EDS storefront sync
     'syncStorefront': handleSyncStorefront,

@@ -42,6 +42,17 @@ export interface DeployableCatalogEntry {
     providesEnvVars?: string[];
     /** The deployable's own env-var schema (inputs it needs). */
     envSchema?: DeployableEnvVar[];
+    /**
+     * Packages this deployable is native to (auto-included + locked, like a
+     * package-native block library). Mirrors block-libraries' nativeForPackages.
+     */
+    nativeForPackages?: string[];
+    /**
+     * Packages this deployable is exclusive to. When set, the deployable is
+     * available ONLY for the listed packages. Mirrors block-libraries'
+     * onlyForPackages.
+     */
+    onlyForPackages?: string[];
 }
 
 /** The deployables.json catalog shape. */

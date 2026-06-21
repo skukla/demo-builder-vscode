@@ -16,7 +16,7 @@ import {
 import { getResolvedMeshRequirement } from '../../services/demoPackageLoader';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
-import type { DemoPackage } from '@/types/demoPackages';
+import type { AddonSource, DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 
 export interface UseModalStateProps {
@@ -29,12 +29,15 @@ export interface UseModalStateProps {
     customBlockLibraryDefaults: CustomBlockLibrary[];
     blockLibraryDefaults?: string[];
     selectedOptionalDependencies: string[];
+    selectedDeployables?: string[];
     onPackageSelect: (packageId: string) => void;
     onStackSelect: (stackId: string) => void;
     onAddonsChange?: (addons: string[]) => void;
     onBlockLibrariesChange?: (libraries: string[]) => void;
     onCustomBlockLibrariesChange?: (libs: CustomBlockLibrary[]) => void;
     onOptionalDependenciesChange?: (deps: string[]) => void;
+    onSelectedDeployablesChange?: (deployables: string[]) => void;
+    onAddCustomDeployable?: (source: AddonSource) => void;
 }
 
 export interface UseModalStateReturn {
@@ -44,12 +47,15 @@ export interface UseModalStateReturn {
     modalBlockLibraries: string[];
     modalCustomBlockLibraries: CustomBlockLibrary[];
     modalOptionalDeps: string[];
+    modalDeployables: string[];
     handleCardClick: (pkg: DemoPackage) => void;
     handleStackSelect: (stackId: string) => void;
     handleModalAddonsChange: (addons: string[]) => void;
     handleModalBlockLibrariesChange: (libraries: string[]) => void;
     handleModalCustomBlockLibrariesChange: (libs: CustomBlockLibrary[]) => void;
     handleModalOptionalDepsChange: (deps: string[]) => void;
+    handleModalDeployablesChange: (deployables: string[]) => void;
+    handleAddCustomDeployable: (source: AddonSource) => void;
     handleModalDone: () => void;
     handleModalClose: () => void;
 }
@@ -102,6 +108,7 @@ export function useModalState(props: UseModalStateProps): UseModalStateReturn {
     const [modalCustomBlockLibraries, setModalCustomBlockLibraries] = useState<CustomBlockLibrary[]>(customBlockLibraries);
     const [modalOptionalDeps, setModalOptionalDeps] = useState<string[]>(selectedOptionalDependencies);
     const preModalOptionalDepsRef = useRef<string[]>(selectedOptionalDependencies);
+    const [modalDeployables, setModalDeployables] = useState<string[]>(props.selectedDeployables ?? []);
 
     // Sync custom block libraries when VS Code settings change while modal is open.
     const prevCustomDefaultsRef = useRef(customBlockLibraryDefaults);
@@ -239,6 +246,15 @@ export function useModalState(props: UseModalStateProps): UseModalStateReturn {
         onOptionalDependenciesChange?.(deps);
     }, [onOptionalDependenciesChange]);
 
+    const handleModalDeployablesChange = useCallback((deployables: string[]) => {
+        setModalDeployables(deployables);
+        propsRef.current.onSelectedDeployablesChange?.(deployables);
+    }, []);
+
+    const handleAddCustomDeployable = useCallback((source: AddonSource) => {
+        propsRef.current.onAddCustomDeployable?.(source);
+    }, []);
+
     const handleModalDone = useCallback(() => {
         const {
             onAddonsChange,
@@ -281,12 +297,15 @@ export function useModalState(props: UseModalStateProps): UseModalStateReturn {
         modalBlockLibraries,
         modalCustomBlockLibraries,
         modalOptionalDeps,
+        modalDeployables,
         handleCardClick,
         handleStackSelect,
         handleModalAddonsChange,
         handleModalBlockLibrariesChange,
         handleModalCustomBlockLibrariesChange,
         handleModalOptionalDepsChange,
+        handleModalDeployablesChange,
+        handleAddCustomDeployable,
         handleModalDone,
         handleModalClose,
     };
