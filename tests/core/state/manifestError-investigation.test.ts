@@ -16,7 +16,6 @@
  */
 
 import * as fs from 'fs/promises';
-import * as path from 'path';
 import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
 import type { Project } from '@/types';
 
