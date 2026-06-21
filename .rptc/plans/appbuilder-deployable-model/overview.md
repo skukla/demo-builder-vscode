@@ -393,6 +393,46 @@ discarded (the deploy engine, URL validation, dashboard card, role gate all carr
 - **D6 — App-only / no-storefront project.** A demo that is deployables without a storefront
   (stack-schema work). *(old slice 5.)*
 
+## D2 Track A — wiring + step 09 (TDD-ready; PM review pending)
+
+D2 splits into **Track A (wiring + step 09)** and **Track B (selection UX)**; ship A first (research
+§E). Track A wires D1's built-but-unwired subscriber/runner into the live mesh deploy and retires the
+manual Console-UI remediation — removing real friction from today's mesh experience, independent of any
+UX. Track B then builds "add a deployable" on a proven engine. Step files:
+[`d2-track-a/`](./d2-track-a/) (`step-00.md`…`step-04.md`). Research base:
+[`../../research/appbuilder-deployable-model/d2-research.md`](../../research/appbuilder-deployable-model/d2-research.md).
+
+| Step | Title | One-line | Key risk |
+|---|---|---|---|
+| 00 | RPTC re-init | Re-invoke the originating command; confirm D2 worktree + `.claude/`; baseline GREEN | — |
+| 01 | `ensureOAuthCredentialId` + 5 auth passthroughs | List-first `getCredentials` → else `createOAuthServerToServerCredential`; return `id_integration`; EXPLICIT args (no cacheManager); expose all 5 subscriber methods on `AuthenticationService` | `create.body.id` ≠ `id_integration` (assert field path; fallback = re-read); arg-vs-cache regression |
+| 02 | `ApiSubscriberClient` adapter | ~30-line closure over the auth service forwarding the 5 methods; unwraps `OrgTarget`→3 args; throws on `undefined` for the non-optional `createAdobeIdCredential` | Interface↔service signature drift (caught by `tsc` + type-satisfaction test) |
+| 03 | Bounded subscribe in the live mesh deploy | Insert `subscribeRequiredApis(catalog, project)` BEFORE `deployMeshComponent` in `DeployMeshCommand` (+ `meshSetupService` create-time) under `withOrgContext`, after the auth/permission guards; reuse D1's subscriber/catalog/`deriveAllowedDomain` — NOT the full `addDeployable` | Guard-order break; reset flows left unsubscribed (A-1: intentional, flagged for PM); P1 — writes only on ACTIVE deploy paths, never on-open |
+| 04 | Retire manual API-Mesh setup (step 09) | Delete `setupInstructions` in `checkHandler.ts` (Layer 1 + Layer 2) + `api-services.json` block + schema + `MeshErrorDialog` modal + dead `getSetupInstructions`/types; keep `apiEnabled` verification | Removing remediation before automation proven (gated on 01-03 GREEN + absent-API RED test); MeshErrorDialog over-deletion (keep dialog + Retry/Back, strip only the modal) |
+
+**A-1 investigation (flagged, not silently skipped):** `deployMeshComponent` has 4 call sites — wire the
+subscribe into `DeployMeshCommand` + `meshSetupService` (first deploys where the API may be absent);
+`edsResetMeshHelper` + `projectResetService` redeploy an already-subscribed mesh and are intentionally
+left unsubscribed (idempotent insert is trivially addable if a fresh-workspace reset case ever appears).
+
+**PR #55 constraints honored:** non-interactive org reads via `getOrganizationsSdkOnly()` on passive
+paths (Track A adds writes ONLY inside user-initiated deploy commands, never on-open); the on-open
+`mesh-verify` check + `checkResult` orchestrator stay intact; always post typed outcomes;
+`StatusCard.action` reserved for Track B badge CTAs. Org targeting via `withOrgContext`/`AIO_CONSOLE_*` —
+never `aio console select`. The mesh→storefront `MESH_ENDPOINT`→`config.json` edge is untouched (no D3
+mesh-state migration; bounded subscribe only).
+
+**CI gate (note for TDD):** CI lints the WHOLE repo — `npm run lint` + `npx tsc --noEmit` + full
+`npx jest --no-coverage` must all pass before pushing. A scoped lint hides repo-wide errors (esp. the
+`setupInstructions`-field removal in step 04, which ripples through 2 type files + the wizard step).
+Secrets → VS Code SecretStorage (repo is PUBLIC); never log credential `apiKey`/tokens or commit
+credentials.
+
+**Constraints (Track A):** files <500 lines, functions <50; no nested ternaries; no magic numbers
+(`TIMEOUTS.*`); KISS/YAGNI — no new abstraction beyond the single adapter + one shared subscribe helper
+(Rule of Three). Reuse D1's `apiSubscriber`/catalog/accessors — no reimplementation. TDD-first (RED
+before GREEN each step); SDK/CLI MOCKED — no live Adobe calls in tests.
+
 ## Key risks / constraints
 
 - **API subscription is on the critical path (new).** "Add a mesh" requires the API Mesh API on the
