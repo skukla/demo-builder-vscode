@@ -1,6 +1,15 @@
 # Plan: App Builder deployable model (Model B) — overview
 
-**Status:** Design accepted (Model B) — implementation pending (D1 spike → D1–D3).
+**Status:** Design accepted (Model B). **D1 spike DONE** (all 5 questions answered live — see
+`../../research/appbuilder-deployable-model/d1-spike-findings.md`). **D1 IMPLEMENTED — steps 01–08
+shipped & green** (keyed state + accessors + migration + catalog + generalized `providesEnvVars`
+mesh-edge + `ow.package` generator + kind-aware build + two-path API subscriber + deploy-contract
+runner; full suite green). **Step 09 (retire manual mesh setup) DEFERRED → D2:** steps 07/08 BUILT
+the subscriber/runner but nothing WIRES them into a live command yet (`DeployMeshCommand`/`checkApiMesh`
+don't call them), so deleting the manual `setupInstructions`/`MeshErrorDialog` path now would leave the
+absent-API case with no remediation. Step 09's true prerequisite is the D2 live wiring (a concrete
+`ApiSubscriberClient` adapter incl. `ensureOAuthCredentialId` + a call site that invokes
+`addDeployable`/`subscribeRequiredApis`). D2–D6 pending.
 **Decision record:** [ADR-011 App Builder Deployables](../../../docs/architecture/adr/011-app-builder-deployables.md).
 **Research base:** [`../../research/appbuilder-deployable-model/research.md`](../../research/appbuilder-deployable-model/research.md)
 (+ [`../../research/app-builder-app-structure/research.md`](../../research/app-builder-app-structure/research.md)).
@@ -305,6 +314,65 @@ The deploy/build/structure mechanics are well-developed above; these are the und
 
 **Priority read:** the env-var/secrets story and the UI/UX layer are the most under-served relative to
 their importance; the build/deploy mechanics are further along.
+
+## D1 — TDD-ready step plan (planned 2026-06-20; awaiting PM review)
+
+D1 absorbs old slice-1-revision + slice-2. It ships the **deployable model + catalog +
+kind-dispatched add/deploy/remove + the spike's provisioning/build mechanics** to a GREEN baseline,
+**without** touching the load-bearing `MESH_ENDPOINT`→`config.json`→CDN edge (that edge is migrated
+behind accessors with tests; never big-bang). UX (D2) and full mesh-runtime retirement (D3) are out
+of scope but the seams are left clean.
+
+### Sequencing rationale (mesh edge stays green throughout)
+
+Model/state/accessors first (additive, mesh untouched) → catalog/config → provisioning + build
+mechanics (the spike work items) → unify add/deploy/remove by `kind` → automate the API-Mesh
+subscription and retire the manual Console-UI step LAST. Each step is RED-first.
+
+| Step | Title | One-line | Key risk |
+|---|---|---|---|
+| 00 | RPTC re-init | Re-invoke the originating `/rptc:feat` command; load context | — |
+| 01 | `deployables` state shape + accessors | Add `project.deployables` + `DeployableState` type + pure read/write accessors; **mesh/app still authoritative** (accessors read-through) | Accessor drift vs. existing `meshState` reads |
+| 02 | One-time read-migration | `meshState`/`appState` → `deployables` in `ProjectFileLoader.loadProject` (read-side only; on-disk untouched until written) | Silent data loss on malformed/partial legacy state |
+| 03 | Catalog config + schema + loader | 6th config `deployables.json` (mirror `block-libraries.json`) + `deployables.schema.json` + `DeployableCatalogEntry` type + loader (backend/frontend filter); seed 3 meshes with own env schema | Wrong backend/frontend compatibility seeds |
+| 04 | `providesEnvVars` generalization | Storefront config reads endpoints from "any deployable that provides them"; mesh is first, behind accessor — **byte-identical `config.json` output** | Breaking the live mesh→storefront edge |
+| 05 | Collision-free `ow.package` generator | Derive a distinct `ow.package` from deployable `id`; never `application`/`dx-excshell-1` | Non-deterministic / colliding names |
+| 06 | Kind-aware build (FIX shipped bug) | `buildComponent` integration path: full `npm install` incl. devDeps, **unconditional** (no `build`-script gate); mesh unchanged | Regressing mesh build behavior |
+| 07 | API subscriber (two-path, union reconcile) | `subscribeRequiredApis` over `getServicesForOrg` → branch by `platformList`: apiKey (API Mesh `GraphQLServiceSDK`, domain mandatory) vs OAuth-S2S; union + baseline; idempotent | Wrong credential type / missing `domain` / replace-vs-merge |
+| 08 | Deploy-contract runner + kind dispatch | One `addDeployable`/`deployDeployable`/`removeDeployable` path dispatching mesh→`deployMeshComponent`, integration→`deployAppComponent`; clone→subscribe→install(per-kind)→deploy under `withOrgContext`→read-back; persist `deployables[id]` | Ordering (provider before consumer); partial state |
+| 09 | Retire manual API-Mesh setup step | `checkApiMesh` no longer returns manual `setupInstructions`; automation (step 07) adds the API; remove `MeshErrorDialog` manual path | Removing remediation before automation is wired |
+
+**Out of D1 (deferred, not planned here):** D2 selection/config UX (seams left: catalog entries carry
+their own env schema; the "what the user must provide" classification rule is captured in the findings
+doc for D2); D3 full mesh-runtime/`meshState`/`appState` write-side retirement (D1 keeps both readable
+via migration + accessors); D4 AI shell; D5 package binding; D6 app-only project.
+
+### Test strategy summary (per architect-methodology Phase 2)
+
+- **Unit (majority):** accessors (read-through + write), migration mapping, catalog loader filtering,
+  `providesEnvVars` resolution, `ow.package` derivation, kind-aware build branching (mocked executor),
+  subscriber platform-branching + union/reconcile (mocked SDK), dispatch-by-kind routing.
+- **Integration:** `addDeployable` happy path with mocked `CommandExecutor` + SDK + fs (clone→subscribe→
+  build→deploy→persist); migration round-trip through `ProjectFileLoader`.
+- **Regression guard (load-bearing):** a golden `config.json` test proving step 04 produces
+  byte-identical output for an existing mesh project (the mesh edge cannot drift).
+- **Coverage:** 80%+ overall, 100% on the migration + `providesEnvVars` + subscriber-branching paths.
+
+### Implementation constraints (generated for this plan)
+
+- **File size:** <500 lines/file; **functions <50 lines**; cyclomatic <10. New catalog loader mirrors
+  `blockLibraryLoader.ts` (~150 lines). Subscriber + deploy-contract runner each get their own file.
+- **Complexity:** no nested ternaries; `TIMEOUTS.*` constants only (no magic timeouts); platform-branch
+  in the subscriber via explicit `if/else`, not a ternary chain.
+- **Dependencies:** no new npm deps — reuse `@adobe/aio-lib-console@5.4.2` (via `adobeSDKClient`),
+  `CommandExecutor`, `buildComponent`, `withOrgContext`/`buildAioConsoleEnv`, `deployMeshComponent`/
+  `deployAppComponent`, `createOAuthServerToServerCredential`/`getCredentials`. No new abstraction until
+  3+ use cases (Rule of Three) — `DeployableState`/dispatch is justified by mesh + integration = 2 kinds
+  but is a direct course-correction of an existing 2-singleton model, not speculative.
+- **Platform:** TypeScript + Jest (ts-jest node project + jsdom react project); tests mirror `src/`.
+- **Security:** integration secrets → VS Code SecretStorage (repo is PUBLIC); never log credential
+  `apiKey`/tokens; `ow.package`/`domain` derivation must reject shell metacharacters (reuse existing
+  owner/repo charset validation pattern from `appComponentManager`).
 
 ## Re-sequenced slices
 

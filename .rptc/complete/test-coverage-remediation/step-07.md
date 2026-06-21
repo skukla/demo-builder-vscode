@@ -582,7 +582,7 @@ describe('Installation Error Handling', () => {
 
 ### Modify: `tests/features/prerequisites/handlers/installHandler-fnmShell.test.ts`
 
-**Location:** `/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/tests/features/prerequisites/handlers/installHandler-fnmShell.test.ts`
+**Location:** `/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/tests/features/prerequisites/handlers/installHandler-fnmShell.test.ts`
 
 **Changes Required:**
 

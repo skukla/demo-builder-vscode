@@ -21,14 +21,17 @@ import { mapOrganizations, mapProjects, mapWorkspaces } from './adobeEntityMappe
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';
 import type {
+    AdobeIdCredentialInput,
     AdobeOrg,
     AdobeProject,
     AdobeWorkspace,
+    OrgServiceInfo,
     RawAdobeOrg,
     RawAdobeProject,
     RawAdobeWorkspace,
     RawWorkspaceCredential,
     SDKResponse,
+    ServiceSubscriptionInfo,
     WorkspaceCredential,
 } from './types';
 import { getLogger, StepLogger } from '@/core/logging';
@@ -592,5 +595,78 @@ export class AdobeEntityFetcher {
             this.debugLogger.error('[Entity Fetcher] Failed to create workspace credential', error as Error);
             return undefined;
         }
+    }
+
+    /**
+     * List the org's entitled services (the `getServicesForOrg` SDK call).
+     * Resolves a deployable's `requiredApis` names → sdkCodes + platformList.
+     * Each entry carries `{ code, platformList, domainMandatory?, ... }`.
+     */
+    async getServicesForOrg(orgId: string): Promise<OrgServiceInfo[]> {
+        await this.ensureSDKReady();
+        const client = this.sdkClient.getClient() as {
+            getServicesForOrg: (orgId: string) => Promise<SDKResponse<OrgServiceInfo[]>>;
+        };
+        const response = await client.getServicesForOrg(orgId);
+        return response?.body ?? [];
+    }
+
+    /**
+     * Create an AdobeID/apiKey credential for apiKey-platform services (e.g. API
+     * Mesh `GraphQLServiceSDK`). Returns the credential's `id_integration` (the
+     * subscribe id — NOT `.id`). `domain` is MANDATORY for API Mesh.
+     */
+    async createAdobeIdCredential(
+        orgId: string,
+        projectId: string,
+        workspaceId: string,
+        input: AdobeIdCredentialInput,
+    ): Promise<string | undefined> {
+        await this.ensureSDKReady();
+        const client = this.sdkClient.getClient() as {
+            createAdobeIdCredential: (
+                orgId: string, projectId: string, workspaceId: string, input: AdobeIdCredentialInput,
+            ) => Promise<SDKResponse<{ id_integration: string }>>;
+        };
+        const response = await client.createAdobeIdCredential(orgId, projectId, workspaceId, input);
+        return response?.body?.id_integration;
+    }
+
+    /**
+     * Subscribe apiKey/AdobeID services onto an AdobeID credential. `idIntegration`
+     * is the credential's `id_integration`. serviceInfo: `[{ sdkCode,
+     * licenseConfigs, roles }]`.
+     */
+    async subscribeAdobeIdIntegrationToServices(
+        orgId: string,
+        idIntegration: string,
+        serviceInfo: ServiceSubscriptionInfo[],
+    ): Promise<void> {
+        await this.ensureSDKReady();
+        const client = this.sdkClient.getClient() as {
+            subscribeAdobeIdIntegrationToServices: (
+                orgId: string, idIntegration: string, serviceInfo: ServiceSubscriptionInfo[],
+            ) => Promise<SDKResponse<unknown>>;
+        };
+        await client.subscribeAdobeIdIntegrationToServices(orgId, idIntegration, serviceInfo);
+    }
+
+    /**
+     * Subscribe OAuth-S2S services onto an S2S credential. `idIntegration` is the
+     * credential's `id_integration`. serviceInfo: `[{ sdkCode, licenseConfigs,
+     * roles }]`.
+     */
+    async subscribeOAuthServerToServerIntegrationToServices(
+        orgId: string,
+        idIntegration: string,
+        serviceInfo: ServiceSubscriptionInfo[],
+    ): Promise<void> {
+        await this.ensureSDKReady();
+        const client = this.sdkClient.getClient() as {
+            subscribeOAuthServerToServerIntegrationToServices: (
+                orgId: string, idIntegration: string, serviceInfo: ServiceSubscriptionInfo[],
+            ) => Promise<SDKResponse<unknown>>;
+        };
+        await client.subscribeOAuthServerToServerIntegrationToServices(orgId, idIntegration, serviceInfo);
     }
 }

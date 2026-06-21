@@ -30,7 +30,7 @@
 **Severity**: High
 
 **Location**: 
-- `/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/tests/webview-ui/shared/hooks/useVSCodeRequest.test.ts`
+- `/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/tests/webview-ui/shared/hooks/useVSCodeRequest.test.ts`
   - Lines 137-240: `describe.skip('failed request')` - 4 major test cases
   - Lines 296-320: `it.skip('resets error state')`
   - Lines 355-377: `describe.skip('typed responses')`

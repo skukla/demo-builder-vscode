@@ -481,7 +481,7 @@ Leverage storefront-tools' Cloudflare Worker endpoints:
 ## Sources
 
 ### Codebase Analysis
-- `/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/storefront-tools/` (full codebase exploration)
+- `/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/storefront-tools/` (full codebase exploration)
 
 ### Web Research
 - Adobe Experience League - Edge Delivery Services documentation

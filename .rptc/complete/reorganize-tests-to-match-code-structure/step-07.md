@@ -170,7 +170,7 @@ find . -name "CLAUDE.md" -type f | grep -v node_modules
 
 ### Phase 2: Update Root CLAUDE.md (Technology Stack Section)
 
-**File:** `/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/CLAUDE.md`
+**File:** `/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/CLAUDE.md`
 
 **Location to Update:** Line 199 (Technology Stack section)
 
@@ -190,7 +190,7 @@ find . -name "CLAUDE.md" -type f | grep -v node_modules
 
 ### Phase 3: Update src/CLAUDE.md (Testing Approach Section)
 
-**File:** `/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/CLAUDE.md`
+**File:** `/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/CLAUDE.md`
 
 **Location to Update:** Lines 242-248 (Testing Approach section)
 
@@ -271,7 +271,7 @@ npm test -- tests/core/         # Specific directory
 
 ### Phase 4: Create tests/README.md (Comprehensive Test Documentation)
 
-**File:** `/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/tests/README.md`
+**File:** `/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/tests/README.md`
 
 **Full Content:**
 
@@ -552,7 +552,7 @@ describe('Spinner', () => {
 
 ### Phase 5: Update docs/README.md (Add Testing Section)
 
-**File:** `/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/docs/README.md`
+**File:** `/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/docs/README.md`
 
 **Location to Update:** After line 63 (in "By Topic" section)
 

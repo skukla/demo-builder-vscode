@@ -237,6 +237,20 @@
         }
       },
       {
+        "title": "Deployables",
+        "properties": {
+          "demoBuilder.deployables.custom": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "GitHub repository URL (e.g., https://github.com/owner/repo)"
+            },
+            "default": [],
+            "description": "Custom deployables (meshes or App Builder integrations) to include in the deployable catalog. Each entry is a public GitHub repository URL."
+          }
+        }
+      },
+      {
         "title": "DA.live",
         "properties": {
           "demoBuilder.daLive.defaultOrg": {

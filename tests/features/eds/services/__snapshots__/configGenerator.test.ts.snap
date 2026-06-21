@@ -1,0 +1,74 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`configGenerator extractConfigParams — generalized endpoint provider (step 04) GOLDEN: legacy mesh project produces byte-identical config.json (snapshot guard): legacy-mesh-config-json 1`] = `
+"{
+  "public": {
+    "default": {
+      "commerce-core-endpoint": "https://mesh.example.com/graphql",
+      "commerce-endpoint": "https://mesh.example.com/graphql",
+      "commerce-assets-enabled": true,
+      "headers": {
+        "all": {
+          "Store": "en_us"
+        },
+        "cs": {
+          "Magento-Customer-Group": "b2c_group",
+          "Magento-Store-Code": "us_store",
+          "Magento-Store-View-Code": "en_us",
+          "Magento-Website-Code": "us_website",
+          "x-api-key": "api-key-123",
+          "Magento-Environment-Id": "env-id-456"
+        }
+      },
+      "analytics": {
+        "base-currency-code": "USD",
+        "environment": "Production",
+        "store-id": 1,
+        "store-name": "Main Website Store",
+        "store-url": "https://main--test-repo--test-owner.aem.live/",
+        "store-view-id": 1,
+        "store-view-name": "Default Store View",
+        "website-id": 1,
+        "website-name": "Main Website"
+      }
+    }
+  },
+  "robots": {
+    "txt": "User-agent: *\\nAllow: /\\nDisallow: /drafts/\\nDisallow: /enrichment/\\nDisallow: /tools/\\nDisallow: /plugins/experimentation/\\n\\nSitemap: https://main--test-repo--test-owner.aem.live/sitemap.xml"
+  },
+  "sidekick": {
+    "project": "Demo Builder Project",
+    "plugins": [
+      {
+        "id": "cif",
+        "title": "Commerce",
+        "environments": [
+          "edit"
+        ],
+        "url": "https://main--test-repo--test-owner.aem.live/tools/picker/dist/index.html",
+        "isPalette": true,
+        "paletteRect": "top: 54px; left: 5px; bottom: 5px; width: 300px; height: calc(100% - 59px); border-radius: var(--hlx-sk-button-border-radius); overflow: hidden; resize: horizontal;"
+      },
+      {
+        "id": "personalisation",
+        "title": "Personalisation",
+        "environments": [
+          "edit"
+        ],
+        "url": "https://main--test-repo--test-owner.aem.live/tools/segments/dist/index.html",
+        "isPalette": true,
+        "paletteRect": "top: 54px; left: 5px; bottom: 5px; width: 300px; height: calc(100% - 59px); border-radius: var(--hlx-sk-button-border-radius); overflow: hidden; resize: horizontal;"
+      },
+      {
+        "id": "quick-edit",
+        "title": "Quick Edit",
+        "environments": [
+          "dev",
+          "preview"
+        ],
+        "event": "quick-edit"
+      }
+    ]
+  }
+}"
+`;

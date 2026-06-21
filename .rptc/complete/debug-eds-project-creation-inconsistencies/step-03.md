@@ -10,7 +10,7 @@ Add detailed logging to track component lifecycle (mount/unmount), useEffect exe
 
 ## Implementation Details
 
-**File**: `/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/features/project-creation/ui/steps/ProjectCreationStep.tsx`
+**File**: `/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/features/project-creation/ui/steps/ProjectCreationStep.tsx`
 
 **Add unique instance ID** (after line 51, after `githubAppInstallData` state):
 

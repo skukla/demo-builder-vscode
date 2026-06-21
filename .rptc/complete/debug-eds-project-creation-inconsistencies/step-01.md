@@ -10,7 +10,7 @@ None (first step).
 
 ## Implementation Details
 
-**File**: `/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/features/eds/services/githubRepoOperations.ts`
+**File**: `/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/features/eds/services/githubRepoOperations.ts`
 
 Add logging at these locations in `listUserRepositories()` (lines 224-279):
 

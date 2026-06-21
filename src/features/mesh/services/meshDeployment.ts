@@ -37,7 +37,7 @@ async function buildMeshComponent(
     await buildComponent(
         componentPath,
         commandManager,
-        { nodeVersion: getMeshNodeVersion(), buildArgs: '-- --force', logPrefix: '[Mesh Deployment]' },
+        { nodeVersion: getMeshNodeVersion(), kind: 'mesh', buildArgs: '-- --force', logPrefix: '[Mesh Deployment]' },
         logger,
         onProgress,
     );

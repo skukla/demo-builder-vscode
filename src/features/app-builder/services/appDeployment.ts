@@ -96,7 +96,7 @@ export async function deployAppComponent(
         await buildComponent(
             componentPath,
             commandManager,
-            { nodeVersion: APP_NODE_VERSION, logPrefix: '[App Builder]' },
+            { nodeVersion: APP_NODE_VERSION, kind: 'integration', logPrefix: '[App Builder]' },
             logger,
             onProgress,
         );

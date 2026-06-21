@@ -40,7 +40,7 @@ Reviewed 6 components from `src/core/ui/components/` identified as canonical ver
 
 ### Complexity Analysis
 
-**File:** `/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/core/ui/components/Modal.tsx`
+**File:** `/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/core/ui/components/Modal.tsx`
 **Size:** 1467 bytes (53 lines)
 
 **Metrics:**
@@ -109,7 +109,7 @@ Reviewed 6 components from `src/core/ui/components/` identified as canonical ver
 
 ### Complexity Analysis
 
-**File:** `/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/core/ui/components/FadeTransition.tsx`
+**File:** `/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/core/ui/components/FadeTransition.tsx`
 **Size:** 1321 bytes (53 lines)
 
 **Metrics:**
@@ -182,7 +182,7 @@ Reviewed 6 components from `src/core/ui/components/` identified as canonical ver
 
 ### Complexity Analysis
 
-**File:** `/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/core/ui/components/LoadingDisplay.tsx`
+**File:** `/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/core/ui/components/LoadingDisplay.tsx`
 **Size:** 4641 bytes (126 lines) - **APPROACHING SIZE LIMIT**
 
 **Metrics:**
@@ -328,7 +328,7 @@ if (size === 'S' && !subMessage) {
 
 ### Complexity Analysis
 
-**File:** `/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/core/ui/components/FormField.tsx`
+**File:** `/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/core/ui/components/FormField.tsx`
 **Size:** 4904 bytes (163 lines) - **NEAR COMPLEXITY LIMIT**
 
 **Metrics:**
@@ -485,7 +485,7 @@ export interface FormFieldOption {
 
 ### Complexity Analysis
 
-**File:** `/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/core/ui/components/NumberedInstructions.tsx`
+**File:** `/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/core/ui/components/NumberedInstructions.tsx`
 **Size:** 3180 bytes (85 lines)
 
 **Metrics:**
@@ -544,7 +544,7 @@ export interface FormFieldOption {
 
 ### Complexity Analysis
 
-**File:** `/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/core/ui/components/StatusCard.tsx`
+**File:** `/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/core/ui/components/StatusCard.tsx`
 **Size:** 2699 bytes (104 lines)
 
 **Metrics:**
