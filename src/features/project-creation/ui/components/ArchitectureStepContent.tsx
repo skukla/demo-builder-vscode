@@ -1,12 +1,12 @@
 /**
  * ArchitectureStepContent Component
  *
- * Renders the architecture step content within the ArchitectureModal:
+ * Renders the architecture area content within the Project Builder step:
  * stack radio group and optional services (addons). The API Mesh toggle was
  * generalized into the catalog-driven AppBuilderComponentsStepContent (D2 Track B),
- * which the modal renders as a sibling section.
+ * which the Project Builder step renders as a sibling section.
  *
- * Pure presentational component -- all state and handlers live in ArchitectureModal.
+ * Pure presentational component -- all state and handlers live in the Project Builder step.
  */
 
 import { Text, Checkbox, Divider } from '@adobe/react-spectrum';

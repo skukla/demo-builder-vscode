@@ -8,6 +8,7 @@ export type ThemeMode = 'light' | 'dark';
 
 export type WizardStep =
     | 'welcome'
+    | 'project-builder'  // Two-column hub-and-spoke: stack + components + block libs (replaces ArchitectureModal)
     | 'component-selection'
     | 'prerequisites'
     | 'adobe-auth'  // Adobe authentication step

@@ -129,7 +129,7 @@ Add the repository URL to `demoBuilder.blockLibraries.custom` in VS Code setting
 - The `main` branch is always used
 - Display name is derived from the repo name (e.g., `custom-blocks` becomes `Custom Blocks`)
 - Duplicate detection uses the `owner/repo` pair
-- Custom libraries appear as checkboxes in the Architecture Modal under "Custom Libraries"
+- Custom libraries appear as checkboxes in the Project Builder step under "Custom Libraries"
 
 ## How Installation Works
 

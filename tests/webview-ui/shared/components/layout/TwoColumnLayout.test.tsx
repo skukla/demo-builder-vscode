@@ -224,6 +224,70 @@ describe('TwoColumnLayout', () => {
     });
   });
 
+  describe('Fixed-Width Left Rail (leftWidth)', () => {
+    it('gives the left pane an explicit fixed width when leftWidth is set', () => {
+      const { container } = render(
+        <TwoColumnLayout
+          leftWidth="280px"
+          leftContent={<div>Left</div>}
+          rightContent={<div>Right</div>}
+        />
+      );
+      const leftColumn = container.firstChild?.childNodes[0] as HTMLDivElement;
+      expect(leftColumn.style.width).toBe('280px');
+    });
+
+    it('pins the rail with flex: 0 0 <leftWidth> so it does not grow or shrink', () => {
+      const { container } = render(
+        <TwoColumnLayout
+          leftWidth="280px"
+          leftContent={<div>Left</div>}
+          rightContent={<div>Right</div>}
+        />
+      );
+      const leftColumn = container.firstChild?.childNodes[0] as HTMLDivElement;
+      expect(leftColumn.style.flex).toBe('0 0 280px');
+    });
+
+    it('translates a Spectrum-token leftWidth (size-1000 -> 80px)', () => {
+      const leftWidth: DimensionValue = 'size-1000';
+      const { container } = render(
+        <TwoColumnLayout
+          leftWidth={leftWidth}
+          leftContent={<div>Left</div>}
+          rightContent={<div>Right</div>}
+        />
+      );
+      const leftColumn = container.firstChild?.childNodes[0] as HTMLDivElement;
+      expect(leftColumn.style.width).toBe('80px');
+    });
+
+    it('drops leftMaxWidth when leftWidth is set (fixed rail, not capped-primary)', () => {
+      const { container } = render(
+        <TwoColumnLayout
+          leftWidth="280px"
+          leftContent={<div>Left</div>}
+          rightContent={<div>Right</div>}
+        />
+      );
+      const leftColumn = container.firstChild?.childNodes[0] as HTMLDivElement;
+      expect(leftColumn.style.maxWidth).toBe('');
+    });
+
+    it('keeps the default capped-primary behavior when leftWidth is omitted', () => {
+      const { container } = render(
+        <TwoColumnLayout
+          leftContent={<div>Left</div>}
+          rightContent={<div>Right</div>}
+        />
+      );
+      const leftColumn = container.firstChild?.childNodes[0] as HTMLDivElement;
+      expect(leftColumn.style.maxWidth).toBe('800px');
+      expect(leftColumn.style.width).toBe('');
+      expect(leftColumn.style.flex).toBe('');
+    });
+  });
+
   describe('Right Column Min-Width', () => {
     it('defaults right column min-width to 300px', () => {
       // Floors the summary panel so the left column gives up space first

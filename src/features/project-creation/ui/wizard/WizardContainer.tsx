@@ -43,6 +43,7 @@ import { ConnectServicesStep } from '@/features/eds/ui/steps/ConnectServicesStep
 import { GitHubRepoSelectionStep } from '@/features/eds/ui/steps/GitHubRepoSelectionStep';
 import { StorefrontSetupStep } from '@/features/eds/ui/steps/StorefrontSetupStep';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
+import { ProjectBuilderStep } from '@/features/project-creation/ui/builder/ProjectBuilderStep';
 import { ConnectStoreStepContent } from '@/features/project-creation/ui/components/ConnectStoreStepContent';
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
 import { ReviewStep } from '@/features/project-creation/ui/steps/ReviewStep';
@@ -84,24 +85,26 @@ export function WizardContainer({
     blockLibraryDefaults: initialBlockLibraryDefaults,
     customBlockLibraryDefaults: initialCustomBlockLibraryDefaults,
 }: WizardContainerProps) {
-    // Block library defaults — live state that updates when VS Code settings change
+    // Block-library defaults — live state, refreshed when VS Code settings change.
+    // The Project Builder step pre-selects built-in libs (`blockLibraryDefaults`)
+    // and seeds the custom block-library checkboxes (`customBlockLibraryDefaults`).
     const [blockLibraryDefaults, setBlockLibraryDefaults] = useState(initialBlockLibraryDefaults);
     const [customBlockLibraryDefaults, setCustomBlockLibraryDefaults] = useState(initialCustomBlockLibraryDefaults);
 
     useEffect(() => {
-        const unsubCustom = vscode.onMessage(
-            'customBlockLibraryDefaultsUpdated',
-            (data: { customBlockLibraryDefaults: CustomBlockLibrary[] }) => {
-                setCustomBlockLibraryDefaults(data.customBlockLibraryDefaults);
-            },
-        );
         const unsubDefaults = vscode.onMessage(
             'blockLibraryDefaultsUpdated',
             (data: { blockLibraryDefaults: string[] }) => {
                 setBlockLibraryDefaults(data.blockLibraryDefaults);
             },
         );
-        return () => { unsubCustom(); unsubDefaults(); };
+        const unsubCustom = vscode.onMessage(
+            'customBlockLibraryDefaultsUpdated',
+            (data: { customBlockLibraryDefaults: CustomBlockLibrary[] }) => {
+                setCustomBlockLibraryDefaults(data.customBlockLibraryDefaults);
+            },
+        );
+        return () => { unsubDefaults(); unsubCustom(); };
     }, []);
 
     // Packages and stacks - loaded once on mount
@@ -287,9 +290,17 @@ export function WizardContainer({
                         initialViewMode={projectsViewMode}
                         packages={packages}
                         stacks={stacks}
-                        onArchitectureChange={handleArchitectureChange}
+                    />
+                );
+            case 'project-builder':
+                return (
+                    <ProjectBuilderStep
+                        {...props}
+                        packages={packages}
+                        stacks={stacks}
                         blockLibraryDefaults={blockLibraryDefaults}
                         customBlockLibraryDefaults={customBlockLibraryDefaults}
+                        onArchitectureChange={handleArchitectureChange}
                     />
                 );
             case 'component-selection':

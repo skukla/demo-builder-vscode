@@ -142,6 +142,10 @@ Disposition decided 2026-06-10: **complete rebuild** — express BuildRight as a
 
 When an SC deletes a SKU, the cached PDP serves the template and the drop-in gets no data. Honest UX = redirect to the storefront's native `/404`. **Investigate first**: does `@dropins/storefront-pdp` expose an empty-state callback before building a DOM-polling wrapper. Ships as a Demo Builder code patch (ADR-006). Phase 0 investigation 15–30 min.
 
+#### App Builder component — first-class persistence & provisioning ([`2026-06-21-appbuilder-component-first-class-persistence.md`](2026-06-21-appbuilder-component-first-class-persistence.md))
+
+Deferred from Slice 2 (Project Builder step): make `selectedAppBuilderComponents` first-class — `buildProjectConfig` serialization, `buildEditModeState` rehydration, and custom-URL creation-side provisioning (the inert door is hidden via `showCustomDoor={false}` until then). Coupled to the **D3 dual-flow removal**; land together.
+
 ### E. Larger / untouched
 
 #### Multi-locale storefront — Phase 1 ([`2026-05-19-multisite-multilocale.md`](2026-05-19-multisite-multilocale.md))

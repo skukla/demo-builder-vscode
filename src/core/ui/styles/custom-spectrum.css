@@ -822,6 +822,10 @@ button[class*="spectrum-Button"][disabled],
     }
     .two-column-layout-left {
         max-width: none !important;
+        /* Release the fixed-rail width (leftWidth mode) so the left column goes
+           full-width and the columns stack instead of leaving a narrow rail. */
+        flex: 0 0 auto !important;
+        width: 100% !important;
     }
     .two-column-layout-right {
         flex: 0 0 auto !important;
@@ -829,6 +833,60 @@ button[class*="spectrum-Button"][disabled],
         border-left: none !important;
         border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
     }
+}
+
+/* Project Builder rail (Slice 2 — Step 4): single-select LEFT rail of the
+   two-column Project Builder step. Subtle, dashboard-style rows (StatusCard +
+   requirement tag). Box-sizing pinned so full-width buttons don't overflow the
+   fixed rail width. */
+.project-builder-rail {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    width: 100% !important;
+}
+
+.project-builder-rail-row {
+    box-sizing: border-box !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    width: 100% !important;
+    padding: 10px 12px !important;
+    border: 1px solid transparent !important;
+    border-radius: 6px !important;
+    background: transparent !important;
+    text-align: left !important;
+    cursor: pointer !important;
+    color: inherit !important;
+}
+
+.project-builder-rail-row:hover:not(:disabled) {
+    background-color: var(--spectrum-global-color-gray-75) !important;
+}
+
+.project-builder-rail-row.active {
+    background-color: var(--spectrum-global-color-gray-100) !important;
+    border-color: var(--spectrum-global-color-gray-300) !important;
+}
+
+.project-builder-rail-row:disabled,
+.project-builder-rail-row.disabled {
+    cursor: default !important;
+    opacity: 0.55 !important;
+}
+
+.project-builder-rail-tag {
+    flex: 0 0 auto !important;
+    font-size: 11px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+}
+
+.project-builder-rail-tag.required {
+    color: var(--spectrum-global-color-gray-700) !important;
 }
 
 /* Step main content area */

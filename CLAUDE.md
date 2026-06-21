@@ -206,9 +206,9 @@ demo-builder-vscode/
   - `src/features/prerequisites/ui/steps/` - Prerequisites step
   - `src/features/mesh/ui/steps/` - API Mesh step
   - `src/features/project-creation/ui/steps/` - WelcomeStep (with template selection), ReviewStep, ProjectCreationStep
-  - `src/features/project-creation/ui/components/ArchitectureModal.tsx` - Multi-step modal for architecture + block library selection (extracted from BrandGallery)
+  - `src/features/project-creation/ui/builder/` - Project Builder step (two-column hub-and-spoke: architecture, App Builder components, block libraries). `ProjectBuilderStep.tsx` + `useProjectBuilder.ts` + `ProjectBuilderRail.tsx`/`ProjectBuilderDetail.tsx` + `projectBuilderAreas.ts`. Registered as the `'project-builder'` step (right after `welcome`) in `src/features/project-creation/config/wizard-steps.json`.
   - `src/features/project-creation/ui/components/ConnectStoreStepContent.tsx` - Connect Commerce step (step ID: `'settings'`) — Commerce connection fields + store discovery with progressive disclosure
--> Note: WelcomeStep includes demo package selection. Architecture and block library selection happens via ArchitectureModal (multi-step modal in BrandGallery). Custom block libraries are configured in VS Code settings and selected via checkboxes. (see `src/features/project-creation/config/demo-packages.json`, `src/features/project-creation/config/block-libraries.json`, and `src/types/blockLibraries.ts`)
+-> Note: WelcomeStep's brand card selects a demo package; architecture, App Builder components, and block library selection happen in the two-column `project-builder` wizard step (not a modal). Custom block libraries are configured in VS Code settings and selected via checkboxes. (see `src/features/project-creation/config/demo-packages.json`, `src/features/project-creation/config/block-libraries.json`, and `src/types/blockLibraries.ts`)
 -> See feature documentation for wizard orchestration details
 
 ### Debugging Width Issues

@@ -7,6 +7,13 @@
       "enabled": true
     },
     {
+      "id": "project-builder",
+      "name": "Project Builder",
+      "description": "Choose your architecture, App Builder components, and block libraries.",
+      "enabled": true,
+      "_comment": "Two-column hub-and-spoke step (replaces ArchitectureModal). Owns stack selection, so it must precede every stack-gated step."
+    },
+    {
       "id": "component-selection",
       "name": "Component Selection",
       "description": "Select the components to include in your project.",

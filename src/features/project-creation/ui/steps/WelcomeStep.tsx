@@ -8,7 +8,6 @@ import {
     normalizeProjectName,
     getProjectNameError,
 } from '@/core/validation/normalizers';
-import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import { DemoPackage } from '@/types/demoPackages';
 import { Stack } from '@/types/stacks';
 import { BaseStepProps } from '@/types/wizard';
@@ -19,21 +18,11 @@ interface WelcomeStepProps extends BaseStepProps {
     initialViewMode?: 'cards' | 'rows';
     /** Available packages for selection (unified package + stack architecture) */
     packages?: DemoPackage[];
-    /** Available stacks/architectures for selection */
+    /** Available stacks/architectures for selection (display only — chosen on the next step) */
     stacks?: Stack[];
-    /**
-     * Called when architecture changes - allows wizard to filter dependent state.
-     * Passes old and new stack IDs so wizard can intelligently retain configs
-     * for components that exist in both stacks.
-     */
-    onArchitectureChange?: (oldStackId: string, newStackId: string) => void;
-    /** User's saved block library default preferences (from settings) */
-    blockLibraryDefaults?: string[];
-    /** Custom block libraries from VS Code settings */
-    customBlockLibraryDefaults?: CustomBlockLibrary[];
 }
 
-export function WelcomeStep({ state, updateState, setCanProceed, existingProjectNames = [], initialViewMode: _initialViewMode, packages, stacks, onArchitectureChange, blockLibraryDefaults, customBlockLibraryDefaults }: WelcomeStepProps) {
+export function WelcomeStep({ state, updateState, setCanProceed, existingProjectNames = [], initialViewMode: _initialViewMode, packages, stacks }: WelcomeStepProps) {
     const defaultProjectName = 'my-commerce-demo';
     const selectableDefaultProps = useSelectableDefault();
 
@@ -80,131 +69,27 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Only run on mount
 
-    // Handler for package selection
-    // When package changes, clears stack and triggers architecture change reset
+    // Handler for package selection (mark-and-Continue).
+    // Re-picking a brand clears the previously chosen stack so the Project Builder
+    // step re-resolves architecture for the new package.
     const handlePackageSelect = useCallback(
         (packageId: string) => {
-            // When package changes, clear any previously selected stack
-            // (user may have selected a stack that's not compatible with new package)
             if (packageId !== state.selectedPackage) {
-                // If there was a previous selection (package change, not initial), reset dependent state
-                // Note: When package changes, we clear stack - so we pass the old stack ID
-                // to allow config retention for any components that might remain
-                const isPackageChange = state.selectedPackage && state.selectedPackage !== packageId;
-                if (isPackageChange && state.selectedStack && onArchitectureChange) {
-                    // Package change clears stack, so there's no "new" stack yet
-                    // The next stack selection will trigger another onArchitectureChange
-                    // For now, we need to clear configs for components not in any stack
-                    // But since we're clearing selectedStack, this will be handled by the stack selection
-                }
-
                 // Find the package to get its configDefaults
                 const pkg = packages?.find(p => p.id === packageId);
                 updateState({
                     selectedPackage: packageId,
                     selectedStack: undefined,
+                    // Clear architecture-derived selections so a new package
+                    // never inherits the previous package's mesh deps/components
+                    // (the Project Builder re-seeds them on stack select).
+                    selectedOptionalDependencies: [],
+                    selectedAppBuilderComponents: [],
                     packageConfigDefaults: pkg?.configDefaults,
                 });
             }
         },
-        [updateState, state.selectedPackage, packages, state.selectedStack, onArchitectureChange],
-    );
-
-    // Handler for stack/architecture selection
-    // Derives components from the selected stack and updates wizard state
-    // When stack CHANGES (not initial selection), notifies wizard to filter dependent state
-    // Also populates edsConfig with template/content source for EDS stacks
-    const handleStackSelect = useCallback(
-        (stackId: string) => {
-            const stack = stacks?.find(s => s.id === stackId);
-            if (!stack) return;
-
-            // Detect if this is a CHANGE (different stack, not initial selection)
-            const isStackChange = state.selectedStack && state.selectedStack !== stackId;
-
-            // If changing architecture, notify wizard to filter dependent state
-            // Passes old/new stack IDs so wizard can retain configs for shared components
-            if (isStackChange && onArchitectureChange && state.selectedStack) {
-                onArchitectureChange(state.selectedStack, stackId);
-            }
-
-            // Get storefront config from the selected package for this stack
-            // This provides templateOwner/templateRepo/contentSource for EDS setup
-            const pkg = packages?.find(p => p.id === state.selectedPackage);
-            const storefront = pkg?.storefronts?.[stackId];
-
-            // Build edsConfig only for EDS stacks (requiresGitHub/requiresDaLive)
-            // Non-EDS stacks (headless) clear edsConfig to prevent stale data
-            const isEdsStack = stack.requiresGitHub || stack.requiresDaLive;
-            const edsConfigUpdate = isEdsStack && storefront ? {
-                ...state.edsConfig,
-                accsHost: state.edsConfig?.accsHost || '',
-                storeViewCode: state.edsConfig?.storeViewCode || '',
-                customerGroup: state.edsConfig?.customerGroup || '',
-                repoName: state.edsConfig?.repoName || '',
-                daLiveOrg: state.edsConfig?.daLiveOrg || '',
-                daLiveSite: state.edsConfig?.daLiveSite || '',
-                templateOwner: storefront.templateOwner,
-                templateRepo: storefront.templateRepo,
-                contentSource: storefront.contentSource,
-                accountContentSource: storefront.accountContentSource,
-                byomOverlayUrl: storefront.byomOverlayUrl,
-                patches: storefront.patches,
-                contentPatches: storefront.contentPatches,
-                contentPatchSource: storefront.contentPatchSource,
-                codePatches: storefront.codePatches,
-                codePatchSource: storefront.codePatchSource,
-            } : undefined;
-
-            // Only set selectedStack - stack config is the source of truth for components
-            // No need to derive and store components separately
-            updateState({
-                selectedStack: stackId,
-                edsConfig: edsConfigUpdate,
-            });
-        },
-        [updateState, stacks, state.selectedStack, onArchitectureChange, packages, state.selectedPackage, state.edsConfig],
-    );
-
-    // Handler for addon selection changes
-    const handleAddonsChange = useCallback(
-        (addons: string[]) => {
-            updateState({ selectedAddons: addons });
-        },
-        [updateState],
-    );
-
-
-    // Handler for block library selection changes
-    const handleBlockLibrariesChange = useCallback(
-        (libraries: string[]) => {
-            updateState({ selectedBlockLibraries: libraries });
-        },
-        [updateState],
-    );
-
-    // Handler for optional dependency changes (mesh toggle from BrandGallery modal)
-    const handleOptionalDependenciesChange = useCallback(
-        (deps: string[]) => {
-            updateState({ selectedOptionalDependencies: deps });
-        },
-        [updateState],
-    );
-
-    // Handler for selected appBuilderComponent changes (catalog picker in the modal, D2 Track B)
-    const handleSelectedAppBuilderComponentsChange = useCallback(
-        (appBuilderComponents: string[]) => {
-            updateState({ selectedAppBuilderComponents: appBuilderComponents });
-        },
-        [updateState],
-    );
-
-    // Handler for custom block library changes (from BrandGallery modal)
-    const handleCustomBlockLibrariesChange = useCallback(
-        (libs: CustomBlockLibrary[]) => {
-            updateState({ customBlockLibraries: libs });
-        },
-        [updateState],
+        [updateState, state.selectedPackage, packages],
     );
 
     useEffect(() => {
@@ -212,15 +97,15 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
             state.projectName.length >= 3 &&
             validateProjectName(state.projectName) === undefined;
 
-        // If packages are provided, both package AND stack must be selected
-        // (expandable cards pattern - both selections happen on this step)
-        // Otherwise, fall back to legacy behavior (templates optional)
-        const isPackageStackValid = hasPackages && hasStacks
-            ? Boolean(state.selectedPackage) && Boolean(state.selectedStack)
+        // Package selection only — the architecture (stack) is chosen on the
+        // Project Builder step that follows. Legacy mode (no packages) is
+        // unaffected (templates optional).
+        const isPackageValid = hasPackages && hasStacks
+            ? Boolean(state.selectedPackage)
             : true;
 
-        setCanProceed(isProjectNameValid && isPackageStackValid);
-    }, [state.projectName, state.selectedPackage, state.selectedStack, setCanProceed, validateProjectName, hasPackages, hasStacks]);
+        setCanProceed(isProjectNameValid && isPackageValid);
+    }, [state.projectName, state.selectedPackage, setCanProceed, validateProjectName, hasPackages, hasStacks]);
 
     // Derive package config defaults from package (edit mode fix)
     // When editing a project, selectedPackage is pre-set but packageConfigDefaults is not.
@@ -310,20 +195,9 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
                 stacks={stacks ?? []}
                 selectedPackage={state.selectedPackage}
                 selectedStack={state.selectedStack}
-                selectedAddons={state.selectedAddons}
                 onPackageSelect={handlePackageSelect}
-                onStackSelect={handleStackSelect}
-                onAddonsChange={handleAddonsChange}
                 selectedBlockLibraries={state.selectedBlockLibraries}
-                onBlockLibrariesChange={handleBlockLibrariesChange}
-                blockLibraryDefaults={blockLibraryDefaults}
                 customBlockLibraries={state.customBlockLibraries}
-                onCustomBlockLibrariesChange={handleCustomBlockLibrariesChange}
-                customBlockLibraryDefaults={customBlockLibraryDefaults}
-                selectedOptionalDependencies={state.selectedOptionalDependencies}
-                onOptionalDependenciesChange={handleOptionalDependenciesChange}
-                selectedAppBuilderComponents={state.selectedAppBuilderComponents}
-                onSelectedAppBuilderComponentsChange={handleSelectedAppBuilderComponentsChange}
                 headerContent={projectNameField}
             />
         );

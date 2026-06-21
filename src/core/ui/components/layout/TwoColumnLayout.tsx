@@ -6,8 +6,15 @@ export interface TwoColumnLayoutProps {
     leftContent: React.ReactNode;
     /** Content for the right column (sidebar/summary) */
     rightContent: React.ReactNode;
-    /** Maximum width of left column (default: '800px') - supports Spectrum tokens */
+    /** Maximum width of left column (default: '800px') - supports Spectrum tokens.
+     *  Ignored when `leftWidth` is set (fixed-rail mode). */
     leftMaxWidth?: DimensionValue;
+    /** Fixed width for the left column (a narrow rail). When set, the left pane
+     *  uses `flex: 0 0 <leftWidth>` + explicit width instead of the default
+     *  flex+leftMaxWidth capped-primary layout, and `leftMaxWidth` is ignored.
+     *  Omit for the default behavior. The narrow-viewport responsive CSS in
+     *  custom-spectrum.css releases this width so the columns stack. */
+    leftWidth?: DimensionValue;
     /** Left column padding (default: '24px') - supports Spectrum tokens */
     leftPadding?: DimensionValue;
     /** Right column padding (default: '24px') - supports Spectrum tokens */
@@ -57,12 +64,20 @@ export interface TwoColumnLayoutProps {
  *   leftContent={<ProjectList />}
  *   rightContent={<ConfigurationSummary />}
  * />
+ *
+ * // Fixed narrow rail on the left (hub-and-spoke layouts)
+ * <TwoColumnLayout
+ *   leftWidth="280px"
+ *   leftContent={<BuilderRail />}
+ *   rightContent={<ActivePanel />}
+ * />
  * ```
  */
 export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
     leftContent,
     rightContent,
     leftMaxWidth = '800px' as DimensionValue,
+    leftWidth,
     leftPadding = '24px' as DimensionValue,
     rightPadding = '24px' as DimensionValue,
     rightBackgroundColor = 'var(--spectrum-global-color-gray-75)',
@@ -81,6 +96,22 @@ export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
     const leftColumnClasses = 'flex flex-column w-full min-w-0 overflow-hidden two-column-layout-left';
     const rightColumnClasses = 'flex-1 flex flex-column overflow-hidden two-column-layout-right';
 
+    // Fixed-rail mode: when `leftWidth` is set the left pane becomes a narrow,
+    // non-flexing rail (flex: 0 0 width + explicit width); leftMaxWidth no longer
+    // applies. Otherwise the default capped-primary layout (flex grow + maxWidth)
+    // is unchanged. Dynamic styles stay inline per SOP §11.
+    const translatedLeftWidth = leftWidth !== undefined ? translateSpectrumToken(leftWidth) : undefined;
+    const leftColumnStyle: React.CSSProperties = translatedLeftWidth !== undefined
+        ? {
+              flex: `0 0 ${translatedLeftWidth}`,
+              width: translatedLeftWidth,
+              padding: translateSpectrumToken(leftPadding),
+          }
+        : {
+              maxWidth: translateSpectrumToken(leftMaxWidth),
+              padding: translateSpectrumToken(leftPadding),
+          };
+
     return (
         <div
             className={containerClasses}
@@ -89,10 +120,7 @@ export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
             {/* Left Column: Main Content (constrained width) */}
             <div
                 className={leftColumnClasses}
-                style={{
-                    maxWidth: translateSpectrumToken(leftMaxWidth),
-                    padding: translateSpectrumToken(leftPadding),
-                }}
+                style={leftColumnStyle}
             >
                 {leftContent}
             </div>

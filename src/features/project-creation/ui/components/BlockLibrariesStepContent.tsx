@@ -1,11 +1,11 @@
 /**
  * BlockLibrariesStepContent Component
  *
- * Renders the block libraries step content within the ArchitectureModal:
+ * Renders the block libraries area content within the Project Builder step:
  * native libraries (disabled), available libraries (toggleable),
  * and custom libraries from VS Code settings.
  *
- * Pure presentational component -- all state and handlers live in ArchitectureModal.
+ * Pure presentational component -- all state and handlers live in the Project Builder step.
  */
 
 import { Text, Checkbox, Divider, Link } from '@adobe/react-spectrum';

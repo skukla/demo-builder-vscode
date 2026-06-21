@@ -1,24 +1,22 @@
 /**
  * BrandGallery Component
  *
- * Hybrid approach: Modal for architecture selection + detail panel for confirmation.
- * 1. Click brand -> Modal opens with architecture options (room for descriptions)
- * 2. Select architecture -> Modal closes
- * 3. Detail panel below grid shows the confirmed selection (no layout shift)
+ * Package-select only (mark-and-Continue): clicking a card selects the demo
+ * package and the wizard advances to the Project Builder step, where the
+ * architecture, App Builder components, and block libraries are chosen. The
+ * ArchitectureModal was retired in Slice 2 (Project Builder step).
  */
 
-import { Text, DialogContainer } from '@adobe/react-spectrum';
+import { Text } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { getBlockLibraryName } from '../../services/blockLibraryLoader';
-import { useModalState } from '../hooks/useModalState';
-import { ArchitectureModal } from './ArchitectureModal';
 import { sortPackages, filterPackagesBySearchQuery } from './brandGalleryHelpers';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { cn } from '@/core/ui/utils/classNames';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
-import { DemoPackage, type AddonSource } from '@/types/demoPackages';
+import { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 
 
@@ -27,31 +25,13 @@ export interface BrandGalleryProps {
     packages: DemoPackage[];
     stacks: Stack[];
     selectedPackage?: string;
+    /** Selected stack id — for the card summary display (chosen on the next step). */
     selectedStack?: string;
-    selectedAddons?: string[];
     onPackageSelect: (packageId: string) => void;
-    onStackSelect: (stackId: string) => void;
-    onAddonsChange?: (addons: string[]) => void;
+    /** Selected block library IDs — for the card summary display. */
     selectedBlockLibraries?: string[];
-    onBlockLibrariesChange?: (libraries: string[]) => void;
-    /** User's saved block library default preferences (from settings) */
-    blockLibraryDefaults?: string[];
-    /** Custom block libraries added by URL */
+    /** Custom block libraries added by URL — for the card summary display. */
     customBlockLibraries?: CustomBlockLibrary[];
-    /** Callback when custom block libraries change */
-    onCustomBlockLibrariesChange?: (libs: CustomBlockLibrary[]) => void;
-    /** Custom block library defaults from VS Code settings */
-    customBlockLibraryDefaults?: CustomBlockLibrary[];
-    /** Selected optional dependency IDs (e.g., mesh components from stack.optionalDependencies) */
-    selectedOptionalDependencies?: string[];
-    /** Callback when optional dependencies change */
-    onOptionalDependenciesChange?: (deps: string[]) => void;
-    /** Selected catalog appBuilderComponent IDs (D2 Track B) */
-    selectedAppBuilderComponents?: string[];
-    /** Callback when selected appBuilderComponents change */
-    onSelectedAppBuilderComponentsChange?: (appBuilderComponents: string[]) => void;
-    /** Callback when a custom appBuilderComponent is added from a GitHub URL */
-    onAddCustomAppBuilderComponent?: (source: AddonSource) => void;
     /** Optional content to render above the gallery (e.g., project name field) */
     headerContent?: React.ReactNode;
 }
@@ -182,62 +162,12 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
     stacks,
     selectedPackage,
     selectedStack,
-    selectedAddons = [],
     onPackageSelect,
-    onStackSelect,
-    onAddonsChange,
     selectedBlockLibraries = [],
-    onBlockLibrariesChange,
-    blockLibraryDefaults,
     customBlockLibraries = [],
-    onCustomBlockLibrariesChange,
-    customBlockLibraryDefaults,
-    selectedOptionalDependencies = [],
-    onOptionalDependenciesChange,
-    selectedAppBuilderComponents = [],
-    onSelectedAppBuilderComponentsChange,
-    onAddCustomAppBuilderComponent,
     headerContent,
 }) => {
     const [searchQuery, setSearchQuery] = useState('');
-
-    const {
-        modalPackage,
-        modalAddons,
-        modalBlockLibraries,
-        modalCustomBlockLibraries,
-        modalOptionalDeps,
-        modalAppBuilderComponents,
-        handleCardClick,
-        handleStackSelect,
-        handleModalAddonsChange,
-        handleModalBlockLibrariesChange,
-        handleModalCustomBlockLibrariesChange,
-        handleModalOptionalDepsChange,
-        handleModalAppBuilderComponentsChange,
-        handleAddCustomAppBuilderComponent,
-        handleModalDone,
-        handleModalClose,
-    } = useModalState({
-        packages,
-        stacks,
-        selectedStack,
-        selectedAddons,
-        selectedBlockLibraries,
-        customBlockLibraries,
-        customBlockLibraryDefaults: customBlockLibraryDefaults ?? [],
-        blockLibraryDefaults,
-        selectedOptionalDependencies,
-        selectedAppBuilderComponents,
-        onPackageSelect,
-        onStackSelect,
-        onAddonsChange,
-        onBlockLibrariesChange,
-        onCustomBlockLibrariesChange,
-        onOptionalDependenciesChange,
-        onSelectedAppBuilderComponentsChange,
-        onAddCustomAppBuilderComponent,
-    });
 
     const filteredPackages = useMemo(
         () => sortPackages(filterPackagesBySearchQuery(packages, searchQuery)),
@@ -317,7 +247,7 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
                                     isSelected={isSelected}
                                     isComplete={isSelected && !!selectedStackObj}
                                     isDimmed={isDimmed}
-                                    onCardClick={() => handleCardClick(pkg)}
+                                    onCardClick={() => onPackageSelect(pkg.id)}
                                 />
                             );
                         })}
@@ -330,32 +260,6 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
                     No packages match "{searchQuery}"
                 </Text>
             )}
-
-            {/* Architecture selection modal */}
-            <DialogContainer onDismiss={handleModalClose}>
-                {modalPackage && (
-                    <ArchitectureModal
-                        pkg={modalPackage}
-                        stacks={stacks}
-                        selectedStackId={selectedPackage === modalPackage.id ? selectedStack : undefined}
-                        selectedAddons={modalAddons}
-                        selectedBlockLibraries={modalBlockLibraries}
-                        customBlockLibraries={modalCustomBlockLibraries}
-                        customBlockLibraryDefaults={customBlockLibraryDefaults}
-                        onStackSelect={handleStackSelect}
-                        onAddonsChange={handleModalAddonsChange}
-                        onBlockLibrariesChange={handleModalBlockLibrariesChange}
-                        onCustomBlockLibrariesChange={handleModalCustomBlockLibrariesChange}
-                        selectedOptionalDependencies={modalOptionalDeps}
-                        onOptionalDependenciesChange={handleModalOptionalDepsChange}
-                        selectedAppBuilderComponents={modalAppBuilderComponents}
-                        onSelectedAppBuilderComponentsChange={handleModalAppBuilderComponentsChange}
-                        onAddCustomAppBuilderComponent={handleAddCustomAppBuilderComponent}
-                        onDone={handleModalDone}
-                        onClose={handleModalClose}
-                    />
-                )}
-            </DialogContainer>
         </SingleColumnLayout>
     );
 };

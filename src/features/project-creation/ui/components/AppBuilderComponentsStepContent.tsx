@@ -32,6 +32,12 @@ export interface AppBuilderComponentsStepContentProps {
     onAppBuilderComponentToggle: (id: string, isSelected: boolean) => void;
     /** Add a custom appBuilderComponent from a canonicalized GitHub source. */
     onAddCustomAppBuilderComponent: (source: AddonSource) => void;
+    /**
+     * Whether to render the custom-URL door. Defaults to true to preserve
+     * existing callers. The Project Builder passes false this slice — the door
+     * is inert until creation-side provisioning exists (tracked as backlog).
+     */
+    showCustomDoor?: boolean;
 }
 
 /** One catalog row: required → locked+checked, optional → toggleable. */
@@ -102,6 +108,7 @@ export const AppBuilderComponentsStepContent: React.FC<AppBuilderComponentsStepC
     selectedAppBuilderComponents,
     onAppBuilderComponentToggle,
     onAddCustomAppBuilderComponent,
+    showCustomDoor = true,
 }) => (
     <>
         <Text UNSAFE_className="description-block">Which App Builder components should be included?</Text>
@@ -124,6 +131,8 @@ export const AppBuilderComponentsStepContent: React.FC<AppBuilderComponentsStepC
                 ))}
             </div>
         )}
-        <CustomAppBuilderComponentDoor onAddCustomAppBuilderComponent={onAddCustomAppBuilderComponent} />
+        {showCustomDoor && (
+            <CustomAppBuilderComponentDoor onAddCustomAppBuilderComponent={onAddCustomAppBuilderComponent} />
+        )}
     </>
 );

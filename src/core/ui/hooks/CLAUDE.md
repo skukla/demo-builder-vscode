@@ -342,7 +342,7 @@ return (
 - Works with radio groups, listboxes, grids
 
 **Used By:**
-- `BrandGallery` (ArchitectureModal) - Architecture selection
+- `ProjectBuilderStep` - rail navigation in the Project Builder step
 
 #### useFocusOnMount
 Focus an element on mount using a simple 3-tier strategy.
