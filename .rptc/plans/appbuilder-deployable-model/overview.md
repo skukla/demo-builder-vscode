@@ -1,8 +1,15 @@
 # Plan: App Builder deployable model (Model B) — overview
 
 **Status:** Design accepted (Model B). **D1 spike DONE** (all 5 questions answered live — see
-`../../research/appbuilder-deployable-model/d1-spike-findings.md`). **D1 PLANNED (TDD-ready)** —
-step files `step-00.md`…`step-09.md` below; awaiting PM review before TDD. D2–D6 still pending.
+`../../research/appbuilder-deployable-model/d1-spike-findings.md`). **D1 IMPLEMENTED — steps 01–08
+shipped & green** (keyed state + accessors + migration + catalog + generalized `providesEnvVars`
+mesh-edge + `ow.package` generator + kind-aware build + two-path API subscriber + deploy-contract
+runner; full suite green). **Step 09 (retire manual mesh setup) DEFERRED → D2:** steps 07/08 BUILT
+the subscriber/runner but nothing WIRES them into a live command yet (`DeployMeshCommand`/`checkApiMesh`
+don't call them), so deleting the manual `setupInstructions`/`MeshErrorDialog` path now would leave the
+absent-API case with no remediation. Step 09's true prerequisite is the D2 live wiring (a concrete
+`ApiSubscriberClient` adapter incl. `ensureOAuthCredentialId` + a call site that invokes
+`addDeployable`/`subscribeRequiredApis`). D2–D6 pending.
 **Decision record:** [ADR-011 App Builder Deployables](../../../docs/architecture/adr/011-app-builder-deployables.md).
 **Research base:** [`../../research/appbuilder-deployable-model/research.md`](../../research/appbuilder-deployable-model/research.md)
 (+ [`../../research/app-builder-app-structure/research.md`](../../research/app-builder-app-structure/research.md)).

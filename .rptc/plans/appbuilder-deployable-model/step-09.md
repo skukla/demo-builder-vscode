@@ -1,5 +1,17 @@
 # Step 09 — Retire the manual API-Mesh setup step (automation replaces Console-UI instructions)
 
+> **⚠️ DEFERRED → D2 (2026-06-21).** This step was BLOCKED during D1 TDD and intentionally not executed.
+> Steps 07/08 *built* the subscriber (`subscribeRequiredApis`) and the deploy-contract runner
+> (`addDeployable`), but **nothing wires them into a live flow** — `DeployMeshCommand` and the wizard's
+> `check-api-mesh` handler still never call them (confirmed by repo-wide search). Its stated prerequisite
+> ("automation in place") is only half-true: built ≠ wired. Removing the manual `setupInstructions` /
+> `MeshErrorDialog` path now would leave the absent-API case with **no remediation and no auto-fix** — a
+> regression. **True prerequisite (D2):** a concrete `ApiSubscriberClient` adapter over
+> `AdobeEntityFetcher` (incl. the still-missing `ensureOAuthCredentialId`) + a live call site
+> (`DeployMeshCommand` / wizard finalization) that invokes `addDeployable` / a bounded pre-deploy
+> `subscribeRequiredApis`. Run this step only AFTER that wiring lands and a RED test can assert the
+> subscriber runs on the absent-API case. The body below is otherwise correct.
+
 **Purpose:** With step 07 automating the API-Mesh API addition (`createAdobeIdCredential{platform:
 'apiKey',domain}` + `subscribeAdobeIdIntegrationToServices('GraphQLServiceSDK')`), remove the shipped
 MANUAL remediation: today `checkApiMesh` detects the API absent and returns `setupInstructions` rendered
