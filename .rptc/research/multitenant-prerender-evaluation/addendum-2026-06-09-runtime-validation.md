@@ -90,7 +90,7 @@ curl -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit
 
 The blocker was UA, not architectural. App Builder runtime's `fetch` can set the same UA. The published config is reachable; the Phase 2 Design (A) dependency holds.
 
-**Also confirmed in the same probe**: the live `config.json` matches the discrepancy §3.2 predicted — `commerce-endpoint = na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql` (ACO-native), not the repo's `edge-sandbox-graph.adobe.io/…` (older Catalog Service family). The headers required by Catalog Service queries (`Store`, `Magento-Store-Code`, etc.) are present and non-secret. A direct GraphQL `productSearch` against that endpoint, with those headers, returns the product list (used as the data source for Finding 2's SKU casing evidence). All three sub-items in §3.1's "Residual open items" are now resolved.
+**Also confirmed in the same probe**: the live `config.json` matches the discrepancy §3.2 predicted — `commerce-endpoint = na1-sandbox.api.commerce.adobe.com/<aco-tenant-id>/graphql` (ACO-native), not the repo's `edge-sandbox-graph.adobe.io/…` (older Catalog Service family). The headers required by Catalog Service queries (`Store`, `Magento-Store-Code`, etc.) are present and non-secret. A direct GraphQL `productSearch` against that endpoint, with those headers, returns the product list (used as the data source for Finding 2's SKU casing evidence). All three sub-items in §3.1's "Residual open items" are now resolved.
 
 ---
 
@@ -105,12 +105,12 @@ If Commerce's SKU lookup were case-sensitive, the chain would still 404-fix the 
 ```
 # Mixed-case (the actual stored SKU):
 curl -X POST … -d '{"query":"{ products(skus: [\"Orchard2\"]) { sku name } }"}' \
-  https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql
+  https://na1-sandbox.api.commerce.adobe.com/<aco-tenant-id>/graphql
 → {"products":[{"sku":"Orchard2","name":"Orchard 2"}]}
 
 # Lowercase (what the drop-in will send after the smart-404 redirects):
 curl -X POST … -d '{"query":"{ products(skus: [\"orchard2\"]) { sku name } }"}' \
-  https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql
+  https://na1-sandbox.api.commerce.adobe.com/<aco-tenant-id>/graphql
 → {"products":[{"sku":"Orchard2","name":"Orchard 2"}]}
 ```
 
@@ -126,7 +126,7 @@ Both queries return the same product. The `products(skus: […])` filter is case
 
 Worth periodically re-running the two `curl` commands above to confirm the dependency still holds. If they ever diverge, Phase 1 needs one of the mitigations above before further work.
 
-**Source**: probed live 2026-06-09 against `na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql` with the citisignal-b2b storefront's public headers.
+**Source**: probed live 2026-06-09 against `na1-sandbox.api.commerce.adobe.com/<aco-tenant-id>/graphql` with the citisignal-b2b storefront's public headers.
 
 ---
 
@@ -204,7 +204,7 @@ UA='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, l
 curl -s -o /dev/null -w "%{http_code}\n" -H "User-Agent: $UA" "$SITE/config.json"
 
 # Finding 3: catalog query
-ENDPOINT=https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql
+ENDPOINT=https://na1-sandbox.api.commerce.adobe.com/<aco-tenant-id>/graphql
 curl -s -X POST -H "Content-Type: application/json" \
   -H "Store: citisignal_us" \
   -H "Magento-Store-Code: citisignal_store" \

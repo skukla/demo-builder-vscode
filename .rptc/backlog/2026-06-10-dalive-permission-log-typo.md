@@ -2,7 +2,7 @@
 
 **Filed:** 2026-06-10
 **Origin:** Live ADR-006 smoke test on `skukla/citisignal-b2b`. Reset logs printed:
-  `[DaLiveConfig] Granting access to kukla@adobe.com for ukla/citisignal-b2b`
+  `[DaLiveConfig] Granting access to <email> for ukla/citisignal-b2b`
 The owner is `skukla`, not `ukla` — first character lost. Cosmetic-only; the actual
 access grant succeeded (DA.live confirmed the user had full access), so this is a
 log-formatting bug, not a behavior bug.
@@ -14,9 +14,9 @@ Surfaced in the Step 5b smoke-test logs at timestamp `12:42:01.321`. The grant
 itself worked correctly:
 
 ```
-[DaLiveConfig] Granting access to kukla@adobe.com for ukla/citisignal-b2b
+[DaLiveConfig] Granting access to <email> for ukla/citisignal-b2b
 [DaLiveConfig] Getting org config for skukla
-[DaLiveConfig] User kukla@adobe.com already has full access to citisignal-b2b
+[DaLiveConfig] User <email> already has full access to citisignal-b2b
 ```
 
 So `DaLiveConfig` reads the right org (`skukla`) at the API level — only the

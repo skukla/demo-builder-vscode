@@ -34,8 +34,8 @@ to consolidate to ONE canonical helper and route every Adobe entity fetch (incl.
 path) through it.
 
 **Expanded 2026-06-16 (two research agents, cross-verified).** Reproduced live: token reachable org
-= *Adobe Demo System* (285361) only, but `console.org` pinned to *Adobe Commerce Solution Led*
-(3397333) → every `aio console`/`workspace` call 403s. Triggered by the owner running **two agents
+= *<org-name>* (<org-id>) only, but `console.org` pinned to *<org-name>*
+(<org-id>) → every `aio console`/`workspace` call 403s. Triggered by the owner running **two agents
 in two orgs** that compete for `aio`'s single global `console.org` + the one identity-scoped token.
 This surfaced two facets the original item did not cover — **concurrency / shared global state** and
 **agentic (MCP) signaling** — folded in below as Facets B and C.
@@ -97,10 +97,10 @@ to in-app re-login (`login(force)` → `loginAndRestoreProjectContext`) only if 
 (3) keep 401/AUTH_EXPIRED → re-login as-is.
 
 **Real-world confirmation (2026-06-15):** the re-login branch is NOT a rare edge case. Live repro —
-the target org (*Adobe Commerce Solution Led*, which the user owns) did **not appear** in
+the target org (*<org-name>*, which the user owns) did **not appear** in
 `aio console org select` at all, because the CLI's picker is App-Builder-scoped to the *currently
 logged-in identity/session*, and that session's selectable list only contained a different org
-(*Adobe Demo System*). `org select` with the existing token therefore CANNOT reach the target org;
+(*<org-name>*). `org select` with the existing token therefore CANNOT reach the target org;
 only re-login (with the correct account) surfaces it. So the canonical helper must treat re-login
 as a **first-class branch**, triggered when the target org is absent from the selectable list —
 not merely "if org-select still 403s."

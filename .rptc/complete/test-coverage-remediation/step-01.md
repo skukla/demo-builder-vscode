@@ -68,7 +68,7 @@ npm test -- tests/unit/templates/demoTemplates.test.ts
 
 ### Modify: `src/features/project-creation/ui/helpers/templateLoader.ts`
 
-**Location:** `/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/features/project-creation/ui/helpers/templateLoader.ts`
+**Location:** `/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/features/project-creation/ui/helpers/templateLoader.ts`
 
 **Changes Required:**
 
@@ -93,7 +93,7 @@ npm test -- tests/unit/templates/demoTemplates.test.ts
 
 ### Modify: `tests/unit/templates/demoTemplates.test.ts`
 
-**Location:** `/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/tests/unit/templates/demoTemplates.test.ts`
+**Location:** `/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/tests/unit/templates/demoTemplates.test.ts`
 
 **Changes Required:**
 
@@ -114,7 +114,7 @@ npm test -- tests/unit/templates/demoTemplates.test.ts
 
 ### Modify: `src/types/templates.ts`
 
-**Location:** `/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/types/templates.ts`
+**Location:** `/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/types/templates.ts`
 
 **Changes Required:**
 

@@ -236,7 +236,7 @@ Pick up when real demand surfaces:
 
 ## Cross-references
 
-- Plan file (full detail): `/Users/kukla/.claude/plans/quizzical-purring-turing.md`
+- Plan file (full detail): `/Users/<user>/.claude/plans/quizzical-purring-turing.md`
   (machine-local; the source of this backlog item)
 - ADR-004 (`docs/architecture/adr/004-claude-code-harness.md`) — three
   amendments record the harness journey that led to this scraping plan

@@ -171,10 +171,10 @@ Confirmed against a live demo-builder-delivered storefront, `skukla/citisignal-b
 
 ```
 commerce-endpoint / commerce-core-endpoint:
-  https://edge-sandbox-graph.adobe.io/api/a8101baa-b235-4d8e-88c4-734e5f054b56/graphql
+  https://edge-sandbox-graph.adobe.io/api/<mesh-id>/graphql
 headers.cs:
-  x-api-key:               4dfa19c9fe6f4cccade55cc5b3da94f7
-  Magento-Environment-Id:  G8b9X9oVp44YqwE4mw21H4
+  x-api-key:               <commerce-api-key>
+  Magento-Environment-Id:  <magento-environment-id>
   Magento-Website-Code:    citisignal
 ```
 
@@ -194,7 +194,7 @@ Why this resolves the auth question:
 **Confirmed live (storefront owner, 2026-06-09):** the published storefront
 `https://main--citisignal-b2b--skukla.aem.live/phones` returns ACCS products via the Catalog
 Service through a **publicly accessible GraphQL endpoint**:
-`https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql`
+`https://na1-sandbox.api.commerce.adobe.com/<aco-tenant-id>/graphql`
 (the ACCS SaaS API host: `na1-sandbox` = NA region sandbox, tenant ID in the path). This is
 direct production-equivalent proof that the catalog is queryable with the storefront's public
 client-side headers — exactly the data path design (A) relies on. (Could not be re-probed
@@ -220,8 +220,8 @@ route).
 ### 3.2 Why does the repo config differ from the live endpoint? — CONFIRMED via Adobe docs
 
 The committed `demo-config.json` (`edge-sandbox-graph.adobe.io/api/<uuid>/graphql`,
-env id `G8b9X9oVp44YqwE4mw21H4`) does not match the live endpoint
-(`na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql`), and the three IDs don't
+env id `<magento-environment-id>`) does not match the live endpoint
+(`na1-sandbox.api.commerce.adobe.com/<aco-tenant-id>/graphql`), and the three IDs don't
 match each other. Adobe's storefront documentation explains why — the repo file is **not** the
 live source of truth:
 
@@ -262,7 +262,7 @@ reads, so it is meant to be fetchable — the 403 was environment/UA, not a desi
 confirm (a) server-side fetchability of the live `/config.json` (UA/headers), and (b) a one-shot
 read-only GraphQL query against the live endpoint with the public headers succeeds. Reference
 storefront: `skukla/citisignal-b2b`; live PLP `…/phones`; live endpoint
-`na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql`.
+`na1-sandbox.api.commerce.adobe.com/<aco-tenant-id>/graphql`.
 
 **Sources:** Adobe Commerce Storefront — Boilerplate Configuration
 (`experienceleague.adobe.com/developer/commerce/storefront/boilerplate/configuration/`);

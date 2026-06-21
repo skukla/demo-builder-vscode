@@ -54,11 +54,11 @@ src/features/authentication/ui/steps/AdobeAuthStep.tsx(100,27): error TS18046: '
 src/features/authentication/ui/steps/AdobeAuthStep.tsx(101,31): error TS18046: 'data' is of type 'unknown'.
 src/features/authentication/ui/steps/AdobeProjectStep.tsx(161,74): error TS2322: Type '"flex-end"' is not assignable to type 'Responsive<"start" | "center" | "end" | "stretch" | "self-start" | "self-end" | "baseline" | "first baseline" | "last baseline" | "safe center" | "unsafe center"> | undefined'.
 src/features/authentication/ui/steps/AdobeWorkspaceStep.tsx(160,74): error TS2322: Type '"flex-end"' is not assignable to type 'Responsive<"start" | "center" | "end" | "stretch" | "self-start" | "self-end" | "baseline" | "first baseline" | "last baseline" | "safe center" | "unsafe center"> | undefined'.
-src/features/components/index.ts(8,15): error TS1149: File name '/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/features/components/services/componentManager.ts' differs from already included file name '/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/features/components/services/ComponentManager.ts' only in casing.
+src/features/components/index.ts(8,15): error TS1149: File name '/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/features/components/services/componentManager.ts' differs from already included file name '/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/features/components/services/ComponentManager.ts' only in casing.
   The file is in the program because:
-    Imported via '@/features/components/services/ComponentManager' from file '/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/features/project-creation/handlers/executor.ts'
-    Imported via './services/componentManager' from file '/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/features/components/index.ts'
-    Matched by include pattern 'src/**/*' in '/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/tsconfig.json'
+    Imported via '@/features/components/services/ComponentManager' from file '/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/features/project-creation/handlers/executor.ts'
+    Imported via './services/componentManager' from file '/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/features/components/index.ts'
+    Matched by include pattern 'src/**/*' in '/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/tsconfig.json'
 src/features/components/providers/componentTreeProvider.ts(5,30): error TS2307: Cannot find module '@/core/state' or its corresponding type declarations.
 src/features/components/providers/componentTreeProvider.ts(67,36): error TS2339: Property 'path' does not exist on type '{}'.
 src/features/components/providers/componentTreeProvider.ts(69,48): error TS2339: Property 'icon' does not exist on type '{}'.
