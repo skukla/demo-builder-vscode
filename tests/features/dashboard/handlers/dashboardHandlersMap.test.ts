@@ -105,20 +105,31 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'setAuthoringExperience')).toBe(false);
         });
 
-        it('should have exactly 24 handlers', () => {
+        it('registers the deployable (integrations list) handlers', () => {
+            // The live D1-runner wiring for the dashboard integrations list.
+            expect(hasHandler(dashboardHandlers, 'addDeployable')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'deployDeployable')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'redeployDeployable')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'removeDeployable')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'verifyDeployable')).toBe(true);
+        });
+
+        it('should have exactly 29 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers);
 
-            // Then: Exactly 24 handlers
+            // Then: Exactly 29 handlers
             // 1 init (requestStatus only; no 'ready') + 2 lifecycle + 6 navigation +
             // 1 mesh + 1 syncStorefront + 1 refreshBlockLibrary + 2 auth
             // (reAuthenticate + switchOrg) + 1 project + 1 reset = 16, plus the 4
             // More-menu actions (copyPath, exportProject, republishContent,
             // renameProject) = 20, plus the 4 App Builder actions (addApp,
-            // deployApp, redeployApp, removeApp) = 24. setAuthoringExperience
-            // lives in the Configure webview, not this map.
-            expect(types).toHaveLength(24);
+            // deployApp, redeployApp, removeApp) = 24, plus the 5 deployable
+            // (integrations list) actions (addDeployable, deployDeployable,
+            // redeployDeployable, removeDeployable, verifyDeployable) = 29.
+            // setAuthoringExperience lives in the Configure webview, not this map.
+            expect(types).toHaveLength(29);
         });
 
         it('should have handlers as functions', () => {

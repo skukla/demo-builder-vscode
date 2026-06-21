@@ -2,8 +2,9 @@
  * ArchitectureStepContent Component Tests
  *
  * Tests for the extracted architecture step sub-component that renders
- * stack radio options, optional services, and API mesh sections.
- * Uses grouped prop interfaces (stackSelection, addonSelection, mesh).
+ * stack radio options and optional services. The API Mesh toggle moved to
+ * DeployablesStepContent (D2 Track B), so it is no longer tested here.
+ * Uses grouped prop interfaces (stackSelection, addonSelection).
  *
  * @jest-environment jsdom
  */
@@ -60,12 +61,6 @@ describe('ArchitectureStepContent', () => {
             onAddonToggle: noop,
             addonMetadata: {} as Record<string, { name: string; description: string }>,
             requiredAddonIds: [] as string[],
-        },
-        mesh: {
-            showMeshToggle: false,
-            isMeshAutoIncluded: false,
-            isMeshSelected: false,
-            onMeshToggle: noop,
         },
     };
 
@@ -254,78 +249,6 @@ describe('ArchitectureStepContent', () => {
             );
 
             expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
-        });
-    });
-
-    // --- API Mesh ---
-
-    describe('API mesh section', () => {
-        it('should render mesh toggle when showMeshToggle is true', () => {
-            render(
-                <ArchitectureStepContent
-                    {...defaultProps}
-                    mesh={{ ...defaultProps.mesh, showMeshToggle: true }}
-                />
-            );
-
-            expect(screen.getByText('API Mesh')).toBeInTheDocument();
-            expect(screen.getByText('Include API Mesh')).toBeInTheDocument();
-        });
-
-        it('should render mesh section when isMeshAutoIncluded is true', () => {
-            render(
-                <ArchitectureStepContent
-                    {...defaultProps}
-                    mesh={{ ...defaultProps.mesh, isMeshAutoIncluded: true }}
-                />
-            );
-
-            expect(screen.getByText('API Mesh')).toBeInTheDocument();
-        });
-
-        it('should show mesh checkbox as disabled when auto-included', () => {
-            render(
-                <ArchitectureStepContent
-                    {...defaultProps}
-                    mesh={{ ...defaultProps.mesh, isMeshAutoIncluded: true }}
-                />
-            );
-
-            const checkbox = screen.getByRole('checkbox', { name: /Include API Mesh/i });
-            expect(checkbox).toBeDisabled();
-            expect(checkbox).toBeChecked();
-        });
-
-        it('should call onMeshToggle when mesh checkbox is toggled', () => {
-            const onMeshToggle = jest.fn();
-            render(
-                <ArchitectureStepContent
-                    {...defaultProps}
-                    mesh={{ ...defaultProps.mesh, showMeshToggle: true, onMeshToggle }}
-                />
-            );
-
-            const checkbox = screen.getByRole('checkbox', { name: /Include API Mesh/i });
-            fireEvent.click(checkbox);
-            expect(onMeshToggle).toHaveBeenCalledWith(true);
-        });
-
-        it('should not render mesh section when neither showMeshToggle nor isMeshAutoIncluded', () => {
-            render(<ArchitectureStepContent {...defaultProps} />);
-
-            expect(screen.queryByText('API Mesh')).not.toBeInTheDocument();
-        });
-
-        it('should show mesh as selected when isMeshSelected is true', () => {
-            render(
-                <ArchitectureStepContent
-                    {...defaultProps}
-                    mesh={{ ...defaultProps.mesh, showMeshToggle: true, isMeshSelected: true }}
-                />
-            );
-
-            const checkbox = screen.getByRole('checkbox', { name: /Include API Mesh/i });
-            expect(checkbox).toBeChecked();
         });
     });
 });

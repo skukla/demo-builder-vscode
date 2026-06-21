@@ -32,6 +32,8 @@ root.render(
                 initialEdsStorefrontStatus={data?.initialEdsStorefrontStatus}
                 hasAdobeContext={data?.hasAdobeContext}
                 initialApp={data?.initialApp}
+                deployables={data?.deployables}
+                deployableCatalog={data?.deployableCatalog}
             />
         )}
     </WebviewApp>,

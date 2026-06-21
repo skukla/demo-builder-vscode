@@ -12,17 +12,21 @@ import {
     getAvailableBlockLibraries,
     getNativeBlockLibraries,
 } from '../../services/blockLibraryLoader';
-import { getResolvedMeshRequirement } from '../../services/demoPackageLoader';
+import { getSelectableDeployables } from '../../services/deployableSelection';
+import {
+    withSelectedDeployable,
+    meshDeployableToComponentIds,
+} from '../wizard/deployableSelectionState';
 import { ArchitectureStepContent } from './ArchitectureStepContent';
 import { BlockLibrariesStepContent } from './BlockLibrariesStepContent';
 import { filterAddonsByPackage } from './brandGalleryHelpers';
-import { isMeshComponentId } from '@/core/constants';
+import { DeployablesStepContent } from './DeployablesStepContent';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { useArrowKeyNavigation } from '@/core/ui/hooks/useArrowKeyNavigation';
 import { cn } from '@/core/ui/utils/classNames';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
-import { DemoPackage } from '@/types/demoPackages';
+import { DemoPackage, type AddonSource } from '@/types/demoPackages';
 import type { Stack, StacksConfig } from '@/types/stacks';
 
 /** Addon display metadata from stacks.json */
@@ -30,6 +34,9 @@ const ADDON_METADATA = (stacksConfig as StacksConfig).addonDefinitions ?? {};
 
 /** Duration (ms) for the step crossfade animation — must match CSS transition-duration */
 const STEP_TRANSITION_MS = 200;
+
+/** Stable empty array for selection defaults (avoids the infinite-re-render gotcha). */
+const EMPTY_STRING_ARRAY: string[] = [];
 
 type ModalStep = 'architecture' | 'block-libraries';
 
@@ -47,6 +54,12 @@ export interface ArchitectureModalProps {
     onCustomBlockLibrariesChange: (libs: CustomBlockLibrary[]) => void;
     selectedOptionalDependencies?: string[];
     onOptionalDependenciesChange?: (deps: string[]) => void;
+    /** Selected catalog deployable ids (D2). */
+    selectedDeployables?: string[];
+    /** Update the selected catalog deployable ids (D2). */
+    onSelectedDeployablesChange?: (deployables: string[]) => void;
+    /** Add a custom deployable from a canonicalized GitHub source (D2). */
+    onAddCustomDeployable?: (source: AddonSource) => void;
     onDone: () => void;
     onClose: () => void;
 }
@@ -65,6 +78,9 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
     onCustomBlockLibrariesChange,
     selectedOptionalDependencies = [],
     onOptionalDependenciesChange,
+    selectedDeployables = EMPTY_STRING_ARRAY,
+    onSelectedDeployablesChange,
+    onAddCustomDeployable,
     onDone,
     onClose,
 }) => {
@@ -120,38 +136,51 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
         return getNativeBlockLibraries(selectedStack, pkg.id);
     }, [selectedStack, isEdsStack, pkg.id]);
 
-    // Determine if mesh toggle should be shown
-    // Show when stack has optional mesh dependencies AND package does NOT require mesh
-    const meshOptionalDeps = useMemo((): string[] => {
+    // Catalog-filtered deployables for the selected architecture. The mesh is
+    // now one normal row (no isMeshComponentId special-case); required rows are
+    // locked, optional rows toggle. Replaces the old single mesh toggle.
+    const selectableDeployables = useMemo(() => {
         if (!selectedStack) return [];
-        return (selectedStack.optionalDependencies ?? []).filter(id => isMeshComponentId(id));
-    }, [selectedStack]);
+        return getSelectableDeployables(pkg, selectedStack.backend, selectedStack.frontend);
+    }, [pkg, selectedStack]);
 
-    // Resolve mesh requirement: storefront-level overrides package-level
-    const resolvedMeshReq = useMemo(
-        () => getResolvedMeshRequirement(pkg, selectedStackId ?? ''),
-        [pkg, selectedStackId],
-    );
+    // Toggle a deployable: update selectedDeployables AND, for a mesh deployable,
+    // bridge to selectedOptionalDependencies so the existing Adobe-I/O wizard
+    // step-filtering (hasMeshInDependencies) keeps working. This mesh→optionalDeps
+    // mapping is the ONE transitional special-case (documented for D3 removal).
+    const handleDeployableToggle = useCallback(
+        (id: string, isSelected: boolean) => {
+            onSelectedDeployablesChange?.(
+                withSelectedDeployable(selectedDeployables, id, isSelected),
+            );
 
-    const showMeshToggle = meshOptionalDeps.length > 0 && resolvedMeshReq === 'optional';
-    const isMeshAutoIncluded = meshOptionalDeps.length > 0 && resolvedMeshReq === true;
+            const meshComponentIds = meshDeployableToComponentIds(id);
+            if (meshComponentIds.length === 0 || !onOptionalDependenciesChange) return;
 
-    const handleMeshToggle = useCallback(
-        (isSelected: boolean) => {
-            if (!onOptionalDependenciesChange) return;
             if (isSelected) {
-                const newDeps = [...new Set([...selectedOptionalDependencies, ...meshOptionalDeps])];
-                onOptionalDependenciesChange(newDeps);
+                onOptionalDependenciesChange([
+                    ...new Set([...selectedOptionalDependencies, ...meshComponentIds]),
+                ]);
             } else {
                 onOptionalDependenciesChange(
-                    selectedOptionalDependencies.filter(id => !meshOptionalDeps.includes(id)),
+                    selectedOptionalDependencies.filter(dep => !meshComponentIds.includes(dep)),
                 );
             }
         },
-        [selectedOptionalDependencies, meshOptionalDeps, onOptionalDependenciesChange],
+        [
+            selectedDeployables,
+            onSelectedDeployablesChange,
+            selectedOptionalDependencies,
+            onOptionalDependenciesChange,
+        ],
     );
 
-    const isMeshSelected = meshOptionalDeps.some(id => selectedOptionalDependencies.includes(id));
+    const handleAddCustomDeployable = useCallback(
+        (source: AddonSource) => {
+            onAddCustomDeployable?.(source);
+        },
+        [onAddCustomDeployable],
+    );
 
     const handleBlockLibraryToggle = useCallback(
         (libraryId: string, isSelected: boolean) => {
@@ -280,28 +309,32 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
                 isStepTransitioning && transitionDirection.current,
             )}>
                 {modalStep === 'architecture' && (
-                    <ArchitectureStepContent
-                        stackSelection={{
-                            filteredStacks,
-                            selectedStackId,
-                            getItemProps,
-                            onStackClick: onStackSelect,
-                        }}
-                        addonSelection={{
-                            availableAddons,
-                            displayAddons,
-                            selectedAddons,
-                            onAddonToggle: handleAddonToggle,
-                            addonMetadata: ADDON_METADATA,
-                            requiredAddonIds,
-                        }}
-                        mesh={{
-                            showMeshToggle,
-                            isMeshAutoIncluded,
-                            isMeshSelected,
-                            onMeshToggle: handleMeshToggle,
-                        }}
-                    />
+                    <>
+                        <ArchitectureStepContent
+                            stackSelection={{
+                                filteredStacks,
+                                selectedStackId,
+                                getItemProps,
+                                onStackClick: onStackSelect,
+                            }}
+                            addonSelection={{
+                                availableAddons,
+                                displayAddons,
+                                selectedAddons,
+                                onAddonToggle: handleAddonToggle,
+                                addonMetadata: ADDON_METADATA,
+                                requiredAddonIds,
+                            }}
+                        />
+                        {selectedStack && (
+                            <DeployablesStepContent
+                                deployables={selectableDeployables}
+                                selectedDeployables={selectedDeployables}
+                                onDeployableToggle={handleDeployableToggle}
+                                onAddCustomDeployable={handleAddCustomDeployable}
+                            />
+                        )}
+                    </>
                 )}
 
                 {modalStep === 'block-libraries' && (

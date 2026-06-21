@@ -10,6 +10,7 @@ import {
     Radio,
 } from '@adobe/react-spectrum';
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { DeployableFieldsSection } from './DeployableFieldsSection';
 import { useFieldFocusTracking } from './hooks/useFieldFocusTracking';
 import { useSelectedComponents } from './hooks/useSelectedComponents';
 import { useServiceGroups } from './hooks/useServiceGroups';
@@ -29,8 +30,14 @@ import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreCo
 import { useAutoStoreDetect } from '@/features/components/ui/hooks/useAutoStoreDetect';
 import { useStoreDiscovery } from '@/features/components/ui/hooks/useStoreDiscovery';
 import type { AuthoringExperience, Project } from '@/types/base';
+import type { DeployableCatalogEntry } from '@/types/deployables';
 import { hasEntries } from '@/types/typeGuards';
 import { ComponentEnvVar, ComponentConfigs } from '@/types/webview';
+
+/** Stable empty references for optional deployable props (avoid hook churn). */
+const EMPTY_CATALOG: DeployableCatalogEntry[] = [];
+const EMPTY_PROVIDED: Record<string, string> = {};
+const EMPTY_SECRET_FLAGS: Record<string, Record<string, boolean>> = {};
 
 // Create validators with consistent error messages
 const urlValidator = url('Please enter a valid URL');
@@ -54,6 +61,12 @@ interface ConfigureScreenProps {
     isEds?: boolean;
     /** Resolved authoring experience seeding the radio (EDS only). */
     authoringExperience?: AuthoringExperience;
+    /** Catalog entries for the project's selected deployables (bucket-3 inputs). */
+    deployableCatalog?: DeployableCatalogEntry[];
+    /** Resolved provided env values (bucket-2 "connected" sources). */
+    providedEnvVars?: Record<string, string>;
+    /** Per-deployable "is set" flags for secret vars (booleans only, no values). */
+    deployableSecretFlags?: Record<string, Record<string, boolean>>;
 }
 
 interface ComponentData {
@@ -165,6 +178,9 @@ export function ConfigureScreen({
     existingProjectNames = [],
     isEds = false,
     authoringExperience: initialAuthoringExperience,
+    deployableCatalog = EMPTY_CATALOG,
+    providedEnvVars = EMPTY_PROVIDED,
+    deployableSecretFlags = EMPTY_SECRET_FLAGS,
 }: ConfigureScreenProps) {
     const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>({});
     const [authoringExperience, setAuthoringExperience] = useState<AuthoringExperience>(
@@ -358,6 +374,18 @@ export function ConfigureScreen({
         });
     }, [touchedFields]);
 
+    // Stage a deployable's bucket-3 value into componentConfigs[deployableId].
+    // Text values flow through save-configuration → .env unchanged. Secret values
+    // ride the SAME payload transiently, but the backend (splitDeployableSecrets)
+    // extracts them to SecretStorage and strips them BEFORE anything reaches the
+    // .env/manifest — so they never persist outside SecretStorage.
+    const stageDeployableValue = useCallback((deployableId: string, varName: string, value: string) => {
+        setComponentConfigs(prev => ({
+            ...prev,
+            [deployableId]: { ...(prev[deployableId] ?? {}), [varName]: value },
+        }));
+    }, []);
+
     /**
      * Normalize URL field on blur - removes trailing slashes for visual feedback.
      * Backend also normalizes when writing .env files (safety net).
@@ -510,6 +538,21 @@ export function ConfigureScreen({
     // Can save if no validation errors (env vars and project name)
     const canSave = !hasEntries(validationErrors) && !projectNameError;
 
+    // Deployable bucket-3 inputs (text → .env, secret → SecretStorage) and
+    // bucket-2 "connected" rows, classified from each deployable's catalog
+    // envSchema. Renders null when no deployable has a visible field (e.g. a
+    // seed mesh whose only var is derived → zero new inputs).
+    const deployableSection = (
+        <DeployableFieldsSection
+            catalog={deployableCatalog}
+            configs={componentConfigs}
+            provided={providedEnvVars}
+            secretFlags={deployableSecretFlags}
+            onTextChange={stageDeployableValue}
+            onSecretChange={stageDeployableValue}
+        />
+    );
+
     // EDS-only authoring-experience preference. Rendered inside the form's
     // section fragment (so a non-EDS null never reaches Form's child typing).
     const authoringExperienceSection = isEds ? (
@@ -583,6 +626,7 @@ export function ConfigureScreen({
                                         <Text UNSAFE_className="text-gray-600">
                                             No components requiring configuration were found.
                                         </Text>
+                                        {deployableSection}
                                         {authoringExperienceSection}
                                     </>
                                 ) : (
@@ -617,6 +661,7 @@ export function ConfigureScreen({
                                                 ))}
                                             </ConfigSection>
                                         ))}
+                                        {deployableSection}
                                         {authoringExperienceSection}
                                     </>
                                 )}
