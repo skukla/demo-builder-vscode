@@ -433,6 +433,64 @@ credentials.
 (Rule of Three). Reuse D1's `apiSubscriber`/catalog/accessors — no reimplementation. TDD-first (RED
 before GREEN each step); SDK/CLI MOCKED — no live Adobe calls in tests.
 
+## D2 Track B — selection UX (TDD-ready; PM review pending)
+
+Track B builds the "add a deployable" UX on Track A's proven engine: the wizard catalog picker, the
+generalized Configure collection surface, and the dashboard integrations list wired to D1's
+`addDeployable`/`deployDeployable`/`removeDeployable`. This is where the FULL `addDeployable`
+(clone+install+subscribe+deploy) first goes live (distinct from Track A's bounded mesh subscribe). Step
+files: [`d2-track-b/`](./d2-track-b/) (`step-00.md`…`step-06.md`). Research base:
+[`../../research/appbuilder-deployable-model/d2-research.md`](../../research/appbuilder-deployable-model/d2-research.md)
+§§ B, B.2, C, E; D1 3-bucket rule in `d1-spike-findings.md:406-432`.
+
+**Locked design decisions (PM Q&A — built around, not re-opened):**
+- **Wizard:** EXTEND `ArchitectureModal` (generalize the mesh toggle into a catalog-filtered deployables
+  picker; mesh = one row), NOT a new wizard step. Package-driven required/optional preserved (generalize
+  `requiresMesh:optional` + mirror block-libraries' `nativeForPackages`/`onlyForPackages`). Reuse the
+  block-library curated-list + custom-URL pattern.
+- **Dashboard:** KEEP the mesh badge + PR #55 `mesh-verify` on-open check UNTOUCHED. Add a SEPARATE
+  integrations list (mesh stays special-cased; unification is D3). Rows reuse `AppBuilderCard`'s 4-state
+  machine; mesh keeps its richer enum. Row status from persisted `project.deployables` + on-demand
+  per-row verify — NO new on-open check (P1: no surprise side effects). Confirm dialog before remove.
+- **Acquisition:** pre-built catalog picker + custom-URL door (AI-shell is D4, out of scope). Reuse
+  `AppBuilderCard`'s public-GitHub URL input + validation. Configure collects each deployable's bucket-3
+  inputs from its catalog `envSchema`: `type:'text'`→`componentConfigs`→`.env`; `type:'secret'`→masked
+  →VS Code SecretStorage (repo is PUBLIC). Seed meshes = zero new input; secret path is future-only
+  (fully unit-tested with mocked SecretStorage).
+
+| Step | Title | One-line | Key risk |
+|---|---|---|---|
+| 00 | RPTC re-init | Re-invoke originating command; confirm Track B worktree + `.claude/`; baseline GREEN | — |
+| 01 | Catalog selection model + 3-bucket classifier | Pure helpers: `getSelectableDeployables` (axis-filtered + required/optional) and `classifyEnvSchema` (auto-provisioned/auto-wired/userText/userSecret) | `derivedFrom` bucket ambiguity (treat as auto-provisioned; seed-mesh zero-input test locks it) |
+| 02 | Wizard selection state | Add `selectedDeployables: string[]` beside `selectedOptionalDependencies`; mesh dual-flows for step-filtering backward-compat | dual-state drift / `hasMeshInDependencies` step-filter regression (round-trip test) |
+| 03 | ArchitectureModal deployables picker | Replace the mesh toggle with a catalog-filtered picker (mesh = one row) + custom-URL door, reusing the block-library selector | removing mesh special-case breaks Adobe I/O step-filtering (mesh-id mapping isolated + tested) |
+| 04 | Generalize Configure collection from envSchema | Render bucket-3 fields per deployable; text→`.env`, secret→SecretStorage; bucket-1 hidden, bucket-2 "connected" | secret leakage to `.env`/git (split-on-save gate; public repo); ConfigureScreen over-length |
+| 05 | Dashboard integrations list + runner wiring | Separate list of `kind:'integration'` rows (4-state) wired to D1 `addDeployable`/`deployDeployable`/`removeDeployable` via `buildDefaultRunnerDeps`; guard order mirrors `DeployAppCommand`; on-demand verify | mesh badge/`mesh-verify`/`MESH_ENDPOINT` regression; guard-order divergence; P1 verify side effects; first live `addDeployable` |
+| 06 | Remove-confirm dialog + green | Confirmation dialog before destructive undeploy; full repo-wide lint+tsc+jest gate | accidental teardown (cancel-no-post test) |
+
+**PR #55 constraints honored:** per-row CTAs via `StatusCard.action`; any passive org read via
+`getOrganizationsSdkOnly()`; NO new `CHECK_IDS` entry (persisted state + on-demand verify, not an
+on-open check); the `verifyDeployable` probe is non-interactive (no `aio` write/browser); always post a
+typed outcome. The mesh badge + `mesh-verify` + `MESH_ENDPOINT`→storefront edge are NOT touched (D3 owns
+mesh-UI unification).
+
+**Reuse, don't fork:** `ArchitectureModal`/`BlockLibrariesStepContent` (picker), `AppBuilderCard`
+(4-state + URL door — shared state pieces extracted once for `DeployableRow`), `ConfigureScreen`
+(collection), `deployableCatalogLoader` (catalog), `deployableState` (`listDeployables`),
+`deployableRunner` + `deployableRunnerDeps` (engine, Track A merged), `apiSubscriberClientAdapter`
+(`ctx.subscriberClient`), `DeployAppCommand` (guard-order template).
+
+**CI gate (note for TDD):** CI lints the WHOLE repo — `npm run lint` + `npx tsc --noEmit` + full
+`npx jest --no-coverage` must all pass before pushing (do NOT pipe jest through `tail`/`head`/`grep`;
+redirect to a file — see project memory). Secrets → SecretStorage (repo is PUBLIC); never commit/log
+credential values; use `fake-test-pw-not-a-secret` in fixtures.
+
+**Constraints (Track B):** files <500 / components <350 / functions <50; no nested ternaries;
+module-level constants for stable empty arrays passed to hooks (avoid infinite re-render — project
+memory). KISS/YAGNI — no new wizard step, no mesh unification, no form-engine rewrite, no profile-bound
+API handling (YAGNI). TDD-first (RED before GREEN); React tests via @testing-library/react;
+handler/service tests with mocked SDK/CLI/SecretStorage — no live Adobe calls.
+
 ## Key risks / constraints
 
 - **API subscription is on the critical path (new).** "Add a mesh" requires the API Mesh API on the
