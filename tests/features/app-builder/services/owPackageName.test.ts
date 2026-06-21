@@ -2,7 +2,7 @@
  * deriveOwPackage Test Suite (Step 05)
  *
  * The prune-isolation primitive: a deterministic, collision-free, shell-safe
- * OpenWhisk package name derived from a deployable `id`. Per the D1 spike
+ * OpenWhisk package name derived from an App Builder component `id`. Per the D1 spike
  * (Q1/Q2), two integrations sharing the default `application`/`dx-excshell-1`
  * package clobber each other on deploy/undeploy; a distinct `ow.package` is the
  * load-bearing isolation boundary.

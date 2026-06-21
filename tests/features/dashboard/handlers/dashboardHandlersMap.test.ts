@@ -105,13 +105,13 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'setAuthoringExperience')).toBe(false);
         });
 
-        it('registers the deployable (integrations list) handlers', () => {
+        it('registers the appBuilderComponent (integrations list) handlers', () => {
             // The live D1-runner wiring for the dashboard integrations list.
-            expect(hasHandler(dashboardHandlers, 'addDeployable')).toBe(true);
-            expect(hasHandler(dashboardHandlers, 'deployDeployable')).toBe(true);
-            expect(hasHandler(dashboardHandlers, 'redeployDeployable')).toBe(true);
-            expect(hasHandler(dashboardHandlers, 'removeDeployable')).toBe(true);
-            expect(hasHandler(dashboardHandlers, 'verifyDeployable')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'addAppBuilderComponent')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'deployAppBuilderComponent')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'redeployAppBuilderComponent')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'removeAppBuilderComponent')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'verifyAppBuilderComponent')).toBe(true);
         });
 
         it('should have exactly 29 handlers', () => {
@@ -125,9 +125,9 @@ describe('dashboardHandlers', () => {
             // (reAuthenticate + switchOrg) + 1 project + 1 reset = 16, plus the 4
             // More-menu actions (copyPath, exportProject, republishContent,
             // renameProject) = 20, plus the 4 App Builder actions (addApp,
-            // deployApp, redeployApp, removeApp) = 24, plus the 5 deployable
-            // (integrations list) actions (addDeployable, deployDeployable,
-            // redeployDeployable, removeDeployable, verifyDeployable) = 29.
+            // deployApp, redeployApp, removeApp) = 24, plus the 5 appBuilderComponent
+            // (integrations list) actions (addAppBuilderComponent, deployAppBuilderComponent,
+            // redeployAppBuilderComponent, removeAppBuilderComponent, verifyAppBuilderComponent) = 29.
             // setAuthoringExperience lives in the Configure webview, not this map.
             expect(types).toHaveLength(29);
         });

@@ -1,5 +1,5 @@
 /**
- * Deployable Secret Routing Tests (D2 Track B — Step 04)
+ * AppBuilderComponent Secret Routing Tests (D2 Track B — Step 04)
  *
  * SECRET SAFETY (repo is PUBLIC): a `type:'secret'` value MUST be routed to VS
  * Code SecretStorage and MUST NEVER reach `componentConfigs`, the `.env` file,
@@ -10,18 +10,18 @@
  */
 
 import {
-    splitDeployableSecrets,
-    persistDeployableSecrets,
-    loadDeployableSecretFlags,
-} from '@/features/dashboard/handlers/deployableSecrets';
+    splitAppBuilderComponentSecrets,
+    persistAppBuilderComponentSecrets,
+    loadAppBuilderComponentSecretFlags,
+} from '@/features/dashboard/handlers/appBuilderComponentSecrets';
 import { secretKey } from '@/features/app-builder/services/secretKey';
-import type { DeployableCatalogEntry } from '@/types/deployables';
+import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { ComponentConfigs } from '@/types/webview';
 
 const FAKE_SECRET = 'fake-test-pw-not-a-secret';
 
 /** A catalog entry with one secret var and one text var. */
-const erpEntry: DeployableCatalogEntry = {
+const erpEntry: AppBuilderComponentCatalogEntry = {
     id: 'erp-integration',
     name: 'ERP Integration',
     description: 'Test integration',
@@ -34,7 +34,7 @@ const erpEntry: DeployableCatalogEntry = {
 };
 
 /** A seed mesh: only a derived (bucket 1) var — no secrets. */
-const meshEntry: DeployableCatalogEntry = {
+const meshEntry: AppBuilderComponentCatalogEntry = {
     id: 'commerce-paas-mesh',
     name: 'Commerce PaaS API Mesh',
     description: 'Mesh',
@@ -57,17 +57,17 @@ function makeSecretStorage() {
     };
 }
 
-describe('splitDeployableSecrets', () => {
+describe('splitAppBuilderComponentSecrets', () => {
     it('extracts secret-typed values out of componentConfigs', () => {
         const configs: ComponentConfigs = {
             'erp-integration': { ERP_HOST: 'erp.example.com', ERP_API_KEY: FAKE_SECRET },
         };
 
-        const { sanitizedConfigs, secrets } = splitDeployableSecrets(configs, [erpEntry]);
+        const { sanitizedConfigs, secrets } = splitAppBuilderComponentSecrets(configs, [erpEntry]);
 
         // The secret is captured for SecretStorage routing...
         expect(secrets).toEqual([
-            { deployableId: 'erp-integration', varName: 'ERP_API_KEY', value: FAKE_SECRET },
+            { appBuilderComponentId: 'erp-integration', varName: 'ERP_API_KEY', value: FAKE_SECRET },
         ]);
         // ...and is ABSENT from the sanitized configs (never .env / never manifest).
         expect(sanitizedConfigs['erp-integration']).not.toHaveProperty('ERP_API_KEY');
@@ -78,7 +78,7 @@ describe('splitDeployableSecrets', () => {
             'erp-integration': { ERP_HOST: 'erp.example.com', ERP_API_KEY: FAKE_SECRET },
         };
 
-        const { sanitizedConfigs } = splitDeployableSecrets(configs, [erpEntry]);
+        const { sanitizedConfigs } = splitAppBuilderComponentSecrets(configs, [erpEntry]);
 
         expect(sanitizedConfigs['erp-integration'].ERP_HOST).toBe('erp.example.com');
     });
@@ -88,7 +88,7 @@ describe('splitDeployableSecrets', () => {
             'erp-integration': { ERP_HOST: 'erp.example.com', ERP_API_KEY: FAKE_SECRET },
         };
 
-        const { sanitizedConfigs } = splitDeployableSecrets(configs, [erpEntry]);
+        const { sanitizedConfigs } = splitAppBuilderComponentSecrets(configs, [erpEntry]);
 
         expect(JSON.stringify(sanitizedConfigs)).not.toContain(FAKE_SECRET);
     });
@@ -98,18 +98,18 @@ describe('splitDeployableSecrets', () => {
             'commerce-paas-mesh': { COMMERCE_ENDPOINT: 'https://commerce.example.com' },
         };
 
-        const { secrets } = splitDeployableSecrets(configs, [meshEntry]);
+        const { secrets } = splitAppBuilderComponentSecrets(configs, [meshEntry]);
 
         expect(secrets).toEqual([]);
     });
 });
 
-describe('persistDeployableSecrets', () => {
+describe('persistAppBuilderComponentSecrets', () => {
     it('routes each secret to SecretStorage under the deterministic key', async () => {
         const { api } = makeSecretStorage();
 
-        await persistDeployableSecrets(
-            [{ deployableId: 'erp-integration', varName: 'ERP_API_KEY', value: FAKE_SECRET }],
+        await persistAppBuilderComponentSecrets(
+            [{ appBuilderComponentId: 'erp-integration', varName: 'ERP_API_KEY', value: FAKE_SECRET }],
             'proj-1',
             api as never,
         );
@@ -122,8 +122,8 @@ describe('persistDeployableSecrets', () => {
         const { api } = makeSecretStorage();
         const logger = { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() };
 
-        await persistDeployableSecrets(
-            [{ deployableId: 'erp-integration', varName: 'ERP_API_KEY', value: FAKE_SECRET }],
+        await persistAppBuilderComponentSecrets(
+            [{ appBuilderComponentId: 'erp-integration', varName: 'ERP_API_KEY', value: FAKE_SECRET }],
             'proj-1',
             api as never,
             logger as never,
@@ -140,17 +140,17 @@ describe('persistDeployableSecrets', () => {
 
     it('does nothing (no store calls) for an empty secret list', async () => {
         const { api } = makeSecretStorage();
-        await persistDeployableSecrets([], 'proj-1', api as never);
+        await persistAppBuilderComponentSecrets([], 'proj-1', api as never);
         expect(api.store).not.toHaveBeenCalled();
     });
 });
 
-describe('loadDeployableSecretFlags', () => {
+describe('loadAppBuilderComponentSecretFlags', () => {
     it('reports a secret as set without revealing its value', async () => {
         const { api } = makeSecretStorage();
         await api.store(secretKey('proj-1', 'erp-integration', 'ERP_API_KEY'), FAKE_SECRET);
 
-        const flags = await loadDeployableSecretFlags([erpEntry], 'proj-1', api as never);
+        const flags = await loadAppBuilderComponentSecretFlags([erpEntry], 'proj-1', api as never);
 
         expect(flags['erp-integration'].ERP_API_KEY).toBe(true);
         // The flags map carries only booleans — never the secret value.
@@ -160,7 +160,7 @@ describe('loadDeployableSecretFlags', () => {
     it('reports an unset secret as false', async () => {
         const { api } = makeSecretStorage();
 
-        const flags = await loadDeployableSecretFlags([erpEntry], 'proj-1', api as never);
+        const flags = await loadAppBuilderComponentSecretFlags([erpEntry], 'proj-1', api as never);
 
         expect(flags['erp-integration'].ERP_API_KEY).toBe(false);
     });
@@ -168,7 +168,7 @@ describe('loadDeployableSecretFlags', () => {
     it('produces no entries for a seed mesh (no secret vars)', async () => {
         const { api } = makeSecretStorage();
 
-        const flags = await loadDeployableSecretFlags([meshEntry], 'proj-1', api as never);
+        const flags = await loadAppBuilderComponentSecretFlags([meshEntry], 'proj-1', api as never);
 
         expect(flags['commerce-paas-mesh']).toBeUndefined();
     });

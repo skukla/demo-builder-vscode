@@ -133,12 +133,12 @@ export interface Project {
             lastUpdated: string; // ISO date string
         }>;
     /**
-     * Keyed deployable state — the unified replacement for the singular
+     * Keyed appBuilderComponent state — the unified replacement for the singular
      * `meshState`/`appState` (Model B). In D1 this is additive: the legacy
      * singletons remain authoritative and accessors read through to them.
-     * See docs/architecture/adr/011-app-builder-deployables.md.
+     * See docs/architecture/adr/011-app-builder-appBuilderComponents.md.
      */
-    deployables?: Record<string, DeployableState>;
+    appBuilderComponents?: Record<string, AppBuilderComponentState>;
     /** User-saved AI prompts */
     aiPrompts?: AiPrompt[];
     /**
@@ -152,16 +152,16 @@ export interface Project {
     updatedAt?: Date;
 }
 
-/** A deployable's kind: a mesh artifact or a custom App Builder integration. */
-export type DeployableKind = 'mesh' | 'integration';
+/** An App Builder component's kind: a mesh artifact or a custom App Builder integration. */
+export type AppBuilderComponentKind = 'mesh' | 'integration';
 
 /**
- * Keyed deployable state (Model B). One concept replaces the singular
+ * Keyed appBuilderComponent state (Model B). One concept replaces the singular
  * `meshState` + `appState`. The mesh's endpoint + staleness fields and an
  * integration's URL(s) live here.
  */
-export interface DeployableState {
-    kind: DeployableKind;
+export interface AppBuilderComponentState {
+    kind: AppBuilderComponentKind;
     status: 'deployed' | 'stale' | 'error' | 'not-deployed';
     source: { owner: string; repo: string; branch?: string };
     endpoint?: string;        // mesh GraphQL endpoint
@@ -169,7 +169,7 @@ export interface DeployableState {
     deployedUrls?: Record<string, string>;
     sourceHash?: string | null;
     lastDeployed?: string;    // ISO date string
-    /** Resolved provided values another deployable consumes (e.g. { MESH_ENDPOINT }). */
+    /** Resolved provided values another appBuilderComponent consumes (e.g. { MESH_ENDPOINT }). */
     providesEnvVars?: Record<string, string>;
 }
 

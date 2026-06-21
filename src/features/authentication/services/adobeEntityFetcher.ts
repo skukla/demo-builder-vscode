@@ -603,7 +603,7 @@ export class AdobeEntityFetcher {
 
     /**
      * List the org's entitled services (the `getServicesForOrg` SDK call).
-     * Resolves a deployable's `requiredApis` names → sdkCodes + platformList.
+     * Resolves an App Builder component's `requiredApis` names → sdkCodes + platformList.
      * Each entry carries `{ code, platformList, domainMandatory?, ... }`.
      */
     async getServicesForOrg(orgId: string): Promise<OrgServiceInfo[]> {

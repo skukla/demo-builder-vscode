@@ -10,7 +10,7 @@ import {
     Radio,
 } from '@adobe/react-spectrum';
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { DeployableFieldsSection } from './DeployableFieldsSection';
+import { AppBuilderComponentFieldsSection } from './AppBuilderComponentFieldsSection';
 import { useFieldFocusTracking } from './hooks/useFieldFocusTracking';
 import { useSelectedComponents } from './hooks/useSelectedComponents';
 import { useServiceGroups } from './hooks/useServiceGroups';
@@ -29,13 +29,13 @@ import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelp
 import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreConfigFieldRow';
 import { useAutoStoreDetect } from '@/features/components/ui/hooks/useAutoStoreDetect';
 import { useStoreDiscovery } from '@/features/components/ui/hooks/useStoreDiscovery';
+import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AuthoringExperience, Project } from '@/types/base';
-import type { DeployableCatalogEntry } from '@/types/deployables';
 import { hasEntries } from '@/types/typeGuards';
 import { ComponentEnvVar, ComponentConfigs } from '@/types/webview';
 
-/** Stable empty references for optional deployable props (avoid hook churn). */
-const EMPTY_CATALOG: DeployableCatalogEntry[] = [];
+/** Stable empty references for optional appBuilderComponent props (avoid hook churn). */
+const EMPTY_CATALOG: AppBuilderComponentCatalogEntry[] = [];
 const EMPTY_PROVIDED: Record<string, string> = {};
 const EMPTY_SECRET_FLAGS: Record<string, Record<string, boolean>> = {};
 
@@ -61,12 +61,12 @@ interface ConfigureScreenProps {
     isEds?: boolean;
     /** Resolved authoring experience seeding the radio (EDS only). */
     authoringExperience?: AuthoringExperience;
-    /** Catalog entries for the project's selected deployables (bucket-3 inputs). */
-    deployableCatalog?: DeployableCatalogEntry[];
+    /** Catalog entries for the project's selected appBuilderComponents (bucket-3 inputs). */
+    appBuilderComponentCatalog?: AppBuilderComponentCatalogEntry[];
     /** Resolved provided env values (bucket-2 "connected" sources). */
     providedEnvVars?: Record<string, string>;
-    /** Per-deployable "is set" flags for secret vars (booleans only, no values). */
-    deployableSecretFlags?: Record<string, Record<string, boolean>>;
+    /** Per-appBuilderComponent "is set" flags for secret vars (booleans only, no values). */
+    appBuilderComponentSecretFlags?: Record<string, Record<string, boolean>>;
 }
 
 interface ComponentData {
@@ -178,9 +178,9 @@ export function ConfigureScreen({
     existingProjectNames = [],
     isEds = false,
     authoringExperience: initialAuthoringExperience,
-    deployableCatalog = EMPTY_CATALOG,
+    appBuilderComponentCatalog = EMPTY_CATALOG,
     providedEnvVars = EMPTY_PROVIDED,
-    deployableSecretFlags = EMPTY_SECRET_FLAGS,
+    appBuilderComponentSecretFlags = EMPTY_SECRET_FLAGS,
 }: ConfigureScreenProps) {
     const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>({});
     const [authoringExperience, setAuthoringExperience] = useState<AuthoringExperience>(
@@ -374,15 +374,15 @@ export function ConfigureScreen({
         });
     }, [touchedFields]);
 
-    // Stage a deployable's bucket-3 value into componentConfigs[deployableId].
+    // Stage an App Builder component's bucket-3 value into componentConfigs[appBuilderComponentId].
     // Text values flow through save-configuration → .env unchanged. Secret values
-    // ride the SAME payload transiently, but the backend (splitDeployableSecrets)
+    // ride the SAME payload transiently, but the backend (splitAppBuilderComponentSecrets)
     // extracts them to SecretStorage and strips them BEFORE anything reaches the
     // .env/manifest — so they never persist outside SecretStorage.
-    const stageDeployableValue = useCallback((deployableId: string, varName: string, value: string) => {
+    const stageAppBuilderComponentValue = useCallback((appBuilderComponentId: string, varName: string, value: string) => {
         setComponentConfigs(prev => ({
             ...prev,
-            [deployableId]: { ...(prev[deployableId] ?? {}), [varName]: value },
+            [appBuilderComponentId]: { ...(prev[appBuilderComponentId] ?? {}), [varName]: value },
         }));
     }, []);
 
@@ -538,18 +538,18 @@ export function ConfigureScreen({
     // Can save if no validation errors (env vars and project name)
     const canSave = !hasEntries(validationErrors) && !projectNameError;
 
-    // Deployable bucket-3 inputs (text → .env, secret → SecretStorage) and
-    // bucket-2 "connected" rows, classified from each deployable's catalog
-    // envSchema. Renders null when no deployable has a visible field (e.g. a
+    // AppBuilderComponent bucket-3 inputs (text → .env, secret → SecretStorage) and
+    // bucket-2 "connected" rows, classified from each appBuilderComponent's catalog
+    // envSchema. Renders null when no appBuilderComponent has a visible field (e.g. a
     // seed mesh whose only var is derived → zero new inputs).
-    const deployableSection = (
-        <DeployableFieldsSection
-            catalog={deployableCatalog}
+    const appBuilderComponentSection = (
+        <AppBuilderComponentFieldsSection
+            catalog={appBuilderComponentCatalog}
             configs={componentConfigs}
             provided={providedEnvVars}
-            secretFlags={deployableSecretFlags}
-            onTextChange={stageDeployableValue}
-            onSecretChange={stageDeployableValue}
+            secretFlags={appBuilderComponentSecretFlags}
+            onTextChange={stageAppBuilderComponentValue}
+            onSecretChange={stageAppBuilderComponentValue}
         />
     );
 
@@ -626,7 +626,7 @@ export function ConfigureScreen({
                                         <Text UNSAFE_className="text-gray-600">
                                             No components requiring configuration were found.
                                         </Text>
-                                        {deployableSection}
+                                        {appBuilderComponentSection}
                                         {authoringExperienceSection}
                                     </>
                                 ) : (
@@ -661,7 +661,7 @@ export function ConfigureScreen({
                                                 ))}
                                             </ConfigSection>
                                         ))}
-                                        {deployableSection}
+                                        {appBuilderComponentSection}
                                         {authoringExperienceSection}
                                     </>
                                 )}

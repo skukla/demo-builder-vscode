@@ -29,15 +29,15 @@ export interface UseModalStateProps {
     customBlockLibraryDefaults: CustomBlockLibrary[];
     blockLibraryDefaults?: string[];
     selectedOptionalDependencies: string[];
-    selectedDeployables?: string[];
+    selectedAppBuilderComponents?: string[];
     onPackageSelect: (packageId: string) => void;
     onStackSelect: (stackId: string) => void;
     onAddonsChange?: (addons: string[]) => void;
     onBlockLibrariesChange?: (libraries: string[]) => void;
     onCustomBlockLibrariesChange?: (libs: CustomBlockLibrary[]) => void;
     onOptionalDependenciesChange?: (deps: string[]) => void;
-    onSelectedDeployablesChange?: (deployables: string[]) => void;
-    onAddCustomDeployable?: (source: AddonSource) => void;
+    onSelectedAppBuilderComponentsChange?: (appBuilderComponents: string[]) => void;
+    onAddCustomAppBuilderComponent?: (source: AddonSource) => void;
 }
 
 export interface UseModalStateReturn {
@@ -47,15 +47,15 @@ export interface UseModalStateReturn {
     modalBlockLibraries: string[];
     modalCustomBlockLibraries: CustomBlockLibrary[];
     modalOptionalDeps: string[];
-    modalDeployables: string[];
+    modalAppBuilderComponents: string[];
     handleCardClick: (pkg: DemoPackage) => void;
     handleStackSelect: (stackId: string) => void;
     handleModalAddonsChange: (addons: string[]) => void;
     handleModalBlockLibrariesChange: (libraries: string[]) => void;
     handleModalCustomBlockLibrariesChange: (libs: CustomBlockLibrary[]) => void;
     handleModalOptionalDepsChange: (deps: string[]) => void;
-    handleModalDeployablesChange: (deployables: string[]) => void;
-    handleAddCustomDeployable: (source: AddonSource) => void;
+    handleModalAppBuilderComponentsChange: (appBuilderComponents: string[]) => void;
+    handleAddCustomAppBuilderComponent: (source: AddonSource) => void;
     handleModalDone: () => void;
     handleModalClose: () => void;
 }
@@ -108,7 +108,7 @@ export function useModalState(props: UseModalStateProps): UseModalStateReturn {
     const [modalCustomBlockLibraries, setModalCustomBlockLibraries] = useState<CustomBlockLibrary[]>(customBlockLibraries);
     const [modalOptionalDeps, setModalOptionalDeps] = useState<string[]>(selectedOptionalDependencies);
     const preModalOptionalDepsRef = useRef<string[]>(selectedOptionalDependencies);
-    const [modalDeployables, setModalDeployables] = useState<string[]>(props.selectedDeployables ?? []);
+    const [modalAppBuilderComponents, setModalAppBuilderComponents] = useState<string[]>(props.selectedAppBuilderComponents ?? []);
 
     // Sync custom block libraries when VS Code settings change while modal is open.
     const prevCustomDefaultsRef = useRef(customBlockLibraryDefaults);
@@ -246,13 +246,13 @@ export function useModalState(props: UseModalStateProps): UseModalStateReturn {
         onOptionalDependenciesChange?.(deps);
     }, [onOptionalDependenciesChange]);
 
-    const handleModalDeployablesChange = useCallback((deployables: string[]) => {
-        setModalDeployables(deployables);
-        propsRef.current.onSelectedDeployablesChange?.(deployables);
+    const handleModalAppBuilderComponentsChange = useCallback((appBuilderComponents: string[]) => {
+        setModalAppBuilderComponents(appBuilderComponents);
+        propsRef.current.onSelectedAppBuilderComponentsChange?.(appBuilderComponents);
     }, []);
 
-    const handleAddCustomDeployable = useCallback((source: AddonSource) => {
-        propsRef.current.onAddCustomDeployable?.(source);
+    const handleAddCustomAppBuilderComponent = useCallback((source: AddonSource) => {
+        propsRef.current.onAddCustomAppBuilderComponent?.(source);
     }, []);
 
     const handleModalDone = useCallback(() => {
@@ -297,15 +297,15 @@ export function useModalState(props: UseModalStateProps): UseModalStateReturn {
         modalBlockLibraries,
         modalCustomBlockLibraries,
         modalOptionalDeps,
-        modalDeployables,
+        modalAppBuilderComponents,
         handleCardClick,
         handleStackSelect,
         handleModalAddonsChange,
         handleModalBlockLibrariesChange,
         handleModalCustomBlockLibrariesChange,
         handleModalOptionalDepsChange,
-        handleModalDeployablesChange,
-        handleAddCustomDeployable,
+        handleModalAppBuilderComponentsChange,
+        handleAddCustomAppBuilderComponent,
         handleModalDone,
         handleModalClose,
     };

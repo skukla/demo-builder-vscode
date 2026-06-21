@@ -3,11 +3,11 @@
  *
  * The two-path-by-platformList, union-reconcile API subscriber. Per the D1
  * spike (Q5, DEFINITIVE/CORRECTION sections):
- * - resolve a deployable's requiredApis -> service infos via getServicesForOrg;
+ * - resolve an App Builder component's requiredApis -> service infos via getServicesForOrg;
  * - partition by each service's platformList: apiKey/AdobeID services (incl.
  *   API Mesh GraphQLServiceSDK) vs oauth_server_to_server (e.g.
  *   AdobeIOManagementAPISDK);
- * - subscribe the UNION of all deployables' requiredApis + baseline
+ * - subscribe the UNION of all appBuilderComponents' requiredApis + baseline
  *   AdobeIOManagementAPISDK; idempotent reconcile.
  *
  * The SDK is MOCKED here — no live Adobe calls. We assert the correct
@@ -24,12 +24,12 @@ import {
     type ApiSubscriberClient,
     type OrgTarget,
 } from '@/features/app-builder/services/apiSubscriber';
-import type { DeployableCatalogEntry } from '@/types/deployables';
+import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
 const MGMT = 'AdobeIOManagementAPISDK';
 const MESH = 'GraphQLServiceSDK';
 
-function meshDeployable(): DeployableCatalogEntry {
+function meshAppBuilderComponent(): AppBuilderComponentCatalogEntry {
     return {
         id: 'mesh',
         name: 'API Mesh',
@@ -40,7 +40,7 @@ function meshDeployable(): DeployableCatalogEntry {
     };
 }
 
-function integrationDeployable(apis: string[]): DeployableCatalogEntry {
+function integrationAppBuilderComponent(apis: string[]): AppBuilderComponentCatalogEntry {
     return {
         id: 'erp',
         name: 'ERP',
@@ -59,10 +59,10 @@ const SERVICES_FOR_ORG = [
 
 describe('apiSubscriber', () => {
     describe('computeRequiredApis (union + baseline)', () => {
-        it('should union every deployable requiredApis plus the baseline', () => {
+        it('should union every appBuilderComponent requiredApis plus the baseline', () => {
             const result = computeRequiredApis([
-                meshDeployable(),
-                integrationDeployable(['SomeOtherSDK']),
+                meshAppBuilderComponent(),
+                integrationAppBuilderComponent(['SomeOtherSDK']),
             ]);
             expect(result).toContain(MESH);
             expect(result).toContain('SomeOtherSDK');
@@ -70,14 +70,14 @@ describe('apiSubscriber', () => {
             expect(BASELINE_API).toBe(MGMT);
         });
 
-        it('should always include the baseline even with no deployables', () => {
+        it('should always include the baseline even with no appBuilderComponents', () => {
             expect(computeRequiredApis([])).toEqual([MGMT]);
         });
 
-        it('should dedupe APIs declared by multiple deployables', () => {
+        it('should dedupe APIs declared by multiple appBuilderComponents', () => {
             const result = computeRequiredApis([
-                integrationDeployable([MESH]),
-                meshDeployable(),
+                integrationAppBuilderComponent([MESH]),
+                meshAppBuilderComponent(),
             ]);
             expect(result.filter((a) => a === MESH)).toHaveLength(1);
         });
@@ -130,7 +130,7 @@ describe('apiSubscriber', () => {
         });
 
         it('should subscribe the s2s baseline with id_integration and free-service shape', async () => {
-            await subscribeRequiredApis([integrationDeployable(['SomeOtherSDK'])], orgTarget, client);
+            await subscribeRequiredApis([integrationAppBuilderComponent(['SomeOtherSDK'])], orgTarget, client);
 
             expect(client.subscribeOAuthServerToServerIntegrationToServices).toHaveBeenCalledWith(
                 'org1',
@@ -143,7 +143,7 @@ describe('apiSubscriber', () => {
         });
 
         it('should create an apiKey credential then subscribe GraphQLServiceSDK via the AdobeId path', async () => {
-            await subscribeRequiredApis([meshDeployable()], orgTarget, client);
+            await subscribeRequiredApis([meshAppBuilderComponent()], orgTarget, client);
 
             expect(client.createAdobeIdCredential).toHaveBeenCalledWith(
                 'org1',
@@ -159,7 +159,7 @@ describe('apiSubscriber', () => {
         });
 
         it('should pass a derived localhost domain (not example.com) for the mandatory mesh domain', async () => {
-            await subscribeRequiredApis([meshDeployable()], orgTarget, client, 'localhost:4000');
+            await subscribeRequiredApis([meshAppBuilderComponent()], orgTarget, client, 'localhost:4000');
 
             const credArgs = client.createAdobeIdCredential.mock.calls[0][3] as { domain: string };
             expect(credArgs.domain).toBe('localhost:4000');
@@ -167,19 +167,19 @@ describe('apiSubscriber', () => {
         });
 
         it('should default the domain to localhost:3000 when none is supplied', async () => {
-            await subscribeRequiredApis([meshDeployable()], orgTarget, client);
+            await subscribeRequiredApis([meshAppBuilderComponent()], orgTarget, client);
 
             const credArgs = client.createAdobeIdCredential.mock.calls[0][3] as { domain: string };
             expect(credArgs.domain).toBe('localhost:3000');
         });
 
         it('should NOT skip mesh: a mesh-only set still subscribes GraphQLServiceSDK via apiKey', async () => {
-            await subscribeRequiredApis([meshDeployable()], orgTarget, client);
+            await subscribeRequiredApis([meshAppBuilderComponent()], orgTarget, client);
             expect(client.subscribeAdobeIdIntegrationToServices).toHaveBeenCalled();
         });
 
         it('should still subscribe the s2s baseline for a mesh-only set', async () => {
-            await subscribeRequiredApis([meshDeployable()], orgTarget, client);
+            await subscribeRequiredApis([meshAppBuilderComponent()], orgTarget, client);
             expect(client.subscribeOAuthServerToServerIntegrationToServices).toHaveBeenCalledWith(
                 'org1',
                 's2s-int-id',
@@ -188,9 +188,9 @@ describe('apiSubscriber', () => {
         });
 
         it('should be idempotent: calling twice does not throw and converges to the union', async () => {
-            await subscribeRequiredApis([meshDeployable()], orgTarget, client);
+            await subscribeRequiredApis([meshAppBuilderComponent()], orgTarget, client);
             await expect(
-                subscribeRequiredApis([meshDeployable()], orgTarget, client),
+                subscribeRequiredApis([meshAppBuilderComponent()], orgTarget, client),
             ).resolves.not.toThrow();
 
             // Each call subscribes the FULL union (reconcile, not a delta).
@@ -201,7 +201,7 @@ describe('apiSubscriber', () => {
         });
 
         it('should not create an apiKey credential when no apiKey service is required', async () => {
-            await subscribeRequiredApis([integrationDeployable(['SomeOtherSDK'])], orgTarget, client);
+            await subscribeRequiredApis([integrationAppBuilderComponent(['SomeOtherSDK'])], orgTarget, client);
             expect(client.createAdobeIdCredential).not.toHaveBeenCalled();
         });
     });

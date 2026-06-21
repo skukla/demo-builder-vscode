@@ -18,10 +18,10 @@ import type { Logger } from '@/types/logger';
 jest.mock('vscode');
 
 // Catalog loader — control the rows returned per project selection.
-jest.mock('@/features/project-creation/services/deployableCatalogLoader', () => ({
-    getAvailableDeployables: jest.fn(),
+jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader', () => ({
+    getAvailableAppBuilderComponents: jest.fn(),
 }));
-import { getAvailableDeployables } from '@/features/project-creation/services/deployableCatalogLoader';
+import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 
 // withOrgContext — spy that the subscribe runs inside it; passthrough-executes fn.
 jest.mock('@/core/shell', () => {
@@ -71,7 +71,7 @@ describe('ensureMeshApiSubscribed', () => {
         jest.clearAllMocks();
         logger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as jest.Mocked<Logger>;
         (withOrgContext as jest.Mock).mockImplementation((_t: unknown, fn: () => Promise<unknown>) => fn());
-        (getAvailableDeployables as jest.Mock).mockReturnValue([
+        (getAvailableAppBuilderComponents as jest.Mock).mockReturnValue([
             { id: 'commerce-paas-mesh', name: 'Mesh', requiredApis: [MESH] },
         ]);
     });
@@ -106,7 +106,7 @@ describe('ensureMeshApiSubscribed', () => {
 
         await ensureMeshApiSubscribed({ project: createProject(), authService: authService as any, logger });
 
-        expect(getAvailableDeployables).toHaveBeenCalledWith('adobe-commerce-paas', 'eds-storefront');
+        expect(getAvailableAppBuilderComponents).toHaveBeenCalledWith('adobe-commerce-paas', 'eds-storefront');
     });
 
     it('runs the subscribe inside withOrgContext (org-targeted, no aio console select)', async () => {
@@ -131,7 +131,7 @@ describe('ensureMeshApiSubscribed', () => {
     });
 
     it('skips gracefully when the project has no mesh catalog row', async () => {
-        (getAvailableDeployables as jest.Mock).mockReturnValue([]);
+        (getAvailableAppBuilderComponents as jest.Mock).mockReturnValue([]);
         const authService = createAuthService();
 
         await ensureMeshApiSubscribed({ project: createProject(), authService: authService as any, logger });

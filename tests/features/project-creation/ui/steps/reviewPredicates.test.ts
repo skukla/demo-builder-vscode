@@ -2,13 +2,13 @@
  * reviewPredicates Tests (D2 Track B — Step 02 extension)
  *
  * Covers the existing hasRequiredReviewData predicate (mesh gating) plus the
- * new summarizeSelectedDeployables surface that Review uses to list each
- * selected deployable by name, flagging required ones as "Included".
+ * new summarizeSelectedAppBuilderComponents surface that Review uses to list each
+ * selected appBuilderComponent by name, flagging required ones as "Included".
  */
 
 import {
     hasRequiredReviewData,
-    summarizeSelectedDeployables,
+    summarizeSelectedAppBuilderComponents,
 } from '@/features/project-creation/ui/steps/reviewPredicates';
 
 describe('hasRequiredReviewData (existing mesh gating — regression lock)', () => {
@@ -37,33 +37,33 @@ describe('hasRequiredReviewData (existing mesh gating — regression lock)', () 
     });
 });
 
-describe('summarizeSelectedDeployables', () => {
+describe('summarizeSelectedAppBuilderComponents', () => {
     it('returns an empty list when nothing is selected', () => {
-        expect(summarizeSelectedDeployables([], [])).toEqual([]);
+        expect(summarizeSelectedAppBuilderComponents([], [])).toEqual([]);
     });
 
-    it('lists each selected deployable resolved to its display name', () => {
-        const result = summarizeSelectedDeployables(['commerce-paas-mesh'], []);
+    it('lists each selected appBuilderComponent resolved to its display name', () => {
+        const result = summarizeSelectedAppBuilderComponents(['commerce-paas-mesh'], []);
         expect(result).toHaveLength(1);
-        // getDeployableName resolves the seeded mesh to a non-id display name.
+        // getAppBuilderComponentName resolves the seeded mesh to a non-id display name.
         expect(result[0].name).toBe('Commerce PaaS API Mesh');
     });
 
-    it('flags required deployables as included (locked)', () => {
-        const result = summarizeSelectedDeployables(
+    it('flags required appBuilderComponents as included (locked)', () => {
+        const result = summarizeSelectedAppBuilderComponents(
             ['commerce-paas-mesh'],
             ['commerce-paas-mesh'],
         );
         expect(result[0].included).toBe(true);
     });
 
-    it('marks optional (non-required) deployables as not included/locked', () => {
-        const result = summarizeSelectedDeployables(['commerce-paas-mesh'], []);
+    it('marks optional (non-required) appBuilderComponents as not included/locked', () => {
+        const result = summarizeSelectedAppBuilderComponents(['commerce-paas-mesh'], []);
         expect(result[0].included).toBe(false);
     });
 
-    it('falls back to the id when a deployable name is unknown', () => {
-        const result = summarizeSelectedDeployables(['mystery-deployable'], []);
-        expect(result[0].name).toBe('mystery-deployable');
+    it('falls back to the id when an App Builder component name is unknown', () => {
+        const result = summarizeSelectedAppBuilderComponents(['mystery-appBuilderComponent'], []);
+        expect(result[0].name).toBe('mystery-appBuilderComponent');
     });
 });

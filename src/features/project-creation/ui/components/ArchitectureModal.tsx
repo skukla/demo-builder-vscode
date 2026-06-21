@@ -8,19 +8,19 @@
 
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import stacksConfig from '../../config/stacks.json';
+import { getSelectableAppBuilderComponents } from '../../services/appBuilderComponentSelection';
 import {
     getAvailableBlockLibraries,
     getNativeBlockLibraries,
 } from '../../services/blockLibraryLoader';
-import { getSelectableDeployables } from '../../services/deployableSelection';
 import {
-    withSelectedDeployable,
-    meshDeployableToComponentIds,
-} from '../wizard/deployableSelectionState';
+    withSelectedAppBuilderComponent,
+    meshAppBuilderComponentToComponentIds,
+} from '../wizard/appBuilderComponentSelectionState';
+import { AppBuilderComponentsStepContent } from './AppBuilderComponentsStepContent';
 import { ArchitectureStepContent } from './ArchitectureStepContent';
 import { BlockLibrariesStepContent } from './BlockLibrariesStepContent';
 import { filterAddonsByPackage } from './brandGalleryHelpers';
-import { DeployablesStepContent } from './DeployablesStepContent';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { useArrowKeyNavigation } from '@/core/ui/hooks/useArrowKeyNavigation';
 import { cn } from '@/core/ui/utils/classNames';
@@ -54,12 +54,12 @@ export interface ArchitectureModalProps {
     onCustomBlockLibrariesChange: (libs: CustomBlockLibrary[]) => void;
     selectedOptionalDependencies?: string[];
     onOptionalDependenciesChange?: (deps: string[]) => void;
-    /** Selected catalog deployable ids (D2). */
-    selectedDeployables?: string[];
-    /** Update the selected catalog deployable ids (D2). */
-    onSelectedDeployablesChange?: (deployables: string[]) => void;
-    /** Add a custom deployable from a canonicalized GitHub source (D2). */
-    onAddCustomDeployable?: (source: AddonSource) => void;
+    /** Selected catalog appBuilderComponent ids (D2). */
+    selectedAppBuilderComponents?: string[];
+    /** Update the selected catalog appBuilderComponent ids (D2). */
+    onSelectedAppBuilderComponentsChange?: (appBuilderComponents: string[]) => void;
+    /** Add a custom appBuilderComponent from a canonicalized GitHub source (D2). */
+    onAddCustomAppBuilderComponent?: (source: AddonSource) => void;
     onDone: () => void;
     onClose: () => void;
 }
@@ -78,9 +78,9 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
     onCustomBlockLibrariesChange,
     selectedOptionalDependencies = [],
     onOptionalDependenciesChange,
-    selectedDeployables = EMPTY_STRING_ARRAY,
-    onSelectedDeployablesChange,
-    onAddCustomDeployable,
+    selectedAppBuilderComponents = EMPTY_STRING_ARRAY,
+    onSelectedAppBuilderComponentsChange,
+    onAddCustomAppBuilderComponent,
     onDone,
     onClose,
 }) => {
@@ -136,25 +136,25 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
         return getNativeBlockLibraries(selectedStack, pkg.id);
     }, [selectedStack, isEdsStack, pkg.id]);
 
-    // Catalog-filtered deployables for the selected architecture. The mesh is
+    // Catalog-filtered appBuilderComponents for the selected architecture. The mesh is
     // now one normal row (no isMeshComponentId special-case); required rows are
     // locked, optional rows toggle. Replaces the old single mesh toggle.
-    const selectableDeployables = useMemo(() => {
+    const selectableAppBuilderComponents = useMemo(() => {
         if (!selectedStack) return [];
-        return getSelectableDeployables(pkg, selectedStack.backend, selectedStack.frontend);
+        return getSelectableAppBuilderComponents(pkg, selectedStack.backend, selectedStack.frontend);
     }, [pkg, selectedStack]);
 
-    // Toggle a deployable: update selectedDeployables AND, for a mesh deployable,
+    // Toggle an App Builder component: update selectedAppBuilderComponents AND, for a mesh appBuilderComponent,
     // bridge to selectedOptionalDependencies so the existing Adobe-I/O wizard
     // step-filtering (hasMeshInDependencies) keeps working. This mesh→optionalDeps
     // mapping is the ONE transitional special-case (documented for D3 removal).
-    const handleDeployableToggle = useCallback(
+    const handleAppBuilderComponentToggle = useCallback(
         (id: string, isSelected: boolean) => {
-            onSelectedDeployablesChange?.(
-                withSelectedDeployable(selectedDeployables, id, isSelected),
+            onSelectedAppBuilderComponentsChange?.(
+                withSelectedAppBuilderComponent(selectedAppBuilderComponents, id, isSelected),
             );
 
-            const meshComponentIds = meshDeployableToComponentIds(id);
+            const meshComponentIds = meshAppBuilderComponentToComponentIds(id);
             if (meshComponentIds.length === 0 || !onOptionalDependenciesChange) return;
 
             if (isSelected) {
@@ -168,18 +168,18 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
             }
         },
         [
-            selectedDeployables,
-            onSelectedDeployablesChange,
+            selectedAppBuilderComponents,
+            onSelectedAppBuilderComponentsChange,
             selectedOptionalDependencies,
             onOptionalDependenciesChange,
         ],
     );
 
-    const handleAddCustomDeployable = useCallback(
+    const handleAddCustomAppBuilderComponent = useCallback(
         (source: AddonSource) => {
-            onAddCustomDeployable?.(source);
+            onAddCustomAppBuilderComponent?.(source);
         },
-        [onAddCustomDeployable],
+        [onAddCustomAppBuilderComponent],
     );
 
     const handleBlockLibraryToggle = useCallback(
@@ -327,11 +327,11 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
                             }}
                         />
                         {selectedStack && (
-                            <DeployablesStepContent
-                                deployables={selectableDeployables}
-                                selectedDeployables={selectedDeployables}
-                                onDeployableToggle={handleDeployableToggle}
-                                onAddCustomDeployable={handleAddCustomDeployable}
+                            <AppBuilderComponentsStepContent
+                                appBuilderComponents={selectableAppBuilderComponents}
+                                selectedAppBuilderComponents={selectedAppBuilderComponents}
+                                onAppBuilderComponentToggle={handleAppBuilderComponentToggle}
+                                onAddCustomAppBuilderComponent={handleAddCustomAppBuilderComponent}
                             />
                         )}
                     </>

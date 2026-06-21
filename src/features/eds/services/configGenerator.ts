@@ -21,7 +21,7 @@
 
 import configTemplate from '../config/config-template.json';
 import { isMeshComponentId, COMPONENT_IDS } from '@/core/constants';
-import { getProvidedEnvVars, getMeshDeployable } from '@/features/app-builder/services/deployableState';
+import { getProvidedEnvVars, getMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
 import componentsConfig from '@/features/components/config/components.json';
 import {
     PAAS_GRAPHQL_ENDPOINT, PAAS_ENVIRONMENT_ID, PAAS_STORE_VIEW_CODE,
@@ -277,15 +277,15 @@ export function extractConfigParamsFromConfigs(
 }
 
 /**
- * Resolve the deployed commerce/mesh endpoint from any deployable that provides it.
+ * Resolve the deployed commerce/mesh endpoint from any appBuilderComponent that provides it.
  *
  * Generalizes the former hardcoded `project.meshState?.endpoint` read so the
- * storefront config sources its endpoint from the keyed `deployables` model —
+ * storefront config sources its endpoint from the keyed `appBuilderComponents` model —
  * mesh is the first (and, in D1, only) provider. The resolution order is
  * byte-compatible with the legacy behavior:
  *
- * 1. A keyed deployable's `providesEnvVars.MESH_ENDPOINT` (forward state).
- * 2. The mesh deployable's `endpoint` — `getMeshDeployable` reads through to the
+ * 1. A keyed appBuilderComponent's `providesEnvVars.MESH_ENDPOINT` (forward state).
+ * 2. The mesh appBuilderComponent's `endpoint` — `getMeshAppBuilderComponent` reads through to the
  *    legacy singular `meshState.endpoint` when no keyed entry exists.
  *
  * For existing mesh-backed projects (endpoint only in `meshState`), step 1 is
@@ -293,10 +293,10 @@ export function extractConfigParamsFromConfigs(
  * is unchanged. This is the load-bearing MESH_ENDPOINT→config.json edge.
  *
  * @param project - The project to resolve the endpoint from
- * @returns The deployed endpoint, or undefined when no deployable provides one
+ * @returns The deployed endpoint, or undefined when no appBuilderComponent provides one
  */
 function resolveProvidedEndpoint(project: Project): string | undefined {
-    return getProvidedEnvVars(project).MESH_ENDPOINT ?? getMeshDeployable(project)?.endpoint;
+    return getProvidedEnvVars(project).MESH_ENDPOINT ?? getMeshAppBuilderComponent(project)?.endpoint;
 }
 
 /**
@@ -304,7 +304,7 @@ function resolveProvidedEndpoint(project: Project): string | undefined {
  *
  * Convenience wrapper that extracts componentConfigs and the deployed endpoint
  * from the project. The endpoint is resolved via {@link resolveProvidedEndpoint}
- * (the keyed-deployable provider), which read-throughs to legacy `meshState`.
+ * (the keyed-appBuilderComponent provider), which read-throughs to legacy `meshState`.
  *
  * @param project - The project to extract config from
  * @returns Config parameters for generation

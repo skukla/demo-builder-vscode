@@ -16,7 +16,7 @@
 
 import { View, Flex, Button, TextField, Text } from '@adobe/react-spectrum';
 import React, { useState } from 'react';
-import { DeployingState, DeployedState, ErrorState } from './deployableStates';
+import { DeployingState, DeployedState, ErrorState } from './appBuilderComponentStates';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 /** App deployment status as surfaced to the dashboard card. */
@@ -68,7 +68,7 @@ function NoAppState() {
 /**
  * App Builder card. Switches on the app status; defaults to the "No app" state
  * when no app prop is provided. Deploying/Deployed/Error reuse the shared
- * deployable state pieces (id-less message dispatch for the singular app).
+ * appBuilderComponent state pieces (id-less message dispatch for the singular app).
  */
 export function AppBuilderCard({ app }: AppBuilderCardProps) {
     const status = app?.status ?? 'not-deployed';

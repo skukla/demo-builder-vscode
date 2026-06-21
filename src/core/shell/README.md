@@ -230,10 +230,10 @@ const results = await executor.executeSequence(commands, true);
 
 ### buildComponent
 
-**Purpose**: Shared "npm install (+ optional `npm run build`)" step for a deployable
+**Purpose**: Shared "npm install (+ optional `npm run build`)" step for an App Builder
 component directory. Extracted so the API Mesh and App Builder deploy paths share one
 byte-identical build step instead of duplicating it (Rule of Three — two callers today;
-no generalized "deployable framework" until a third deployable type appears).
+no generalized "App Builder component framework" until a third component kind appears).
 
 **Signature**:
 ```typescript

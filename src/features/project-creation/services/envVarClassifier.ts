@@ -2,12 +2,12 @@
  * Env-Var Classifier (D2 Track B — Step 01)
  *
  * Implements the 3-bucket "what the user provides" rule from D1 findings
- * §"D2 UX rule". Given a deployable's envSchema, partitions each var so the
+ * §"D2 UX rule". Given an App Builder component's envSchema, partitions each var so the
  * collection UX (Step 04) only ASKS for the residual the user must enter:
  *
  *   1. autoProvisioned — `derivedFrom` (e.g. connect-commerce backend config).
  *      Never asked; derived from already-known config.
- *   2. autoWired       — `providedBy` (another deployable provides it, e.g.
+ *   2. autoWired       — `providedBy` (another appBuilderComponent provides it, e.g.
  *      mesh MESH_ENDPOINT → storefront). Never asked; shown as "connected"
  *      (the provider id is carried through for the UI).
  *   3. user-provided   — everything else, split by type into:
@@ -18,7 +18,7 @@
  * treated as autoProvisioned (bucket 1) — seed meshes are all
  * `derivedFrom:'connect-commerce'`, so the classifier yields ZERO
  * userText/userSecret for them ("mesh = zero new input"). A future
- * "derive-or-ask" branch is YAGNI until a deployable needs it.
+ * "derive-or-ask" branch is YAGNI until an App Builder component needs it.
  *
  * Precedence: providedBy > derivedFrom > type. (A providedBy var is autoWired
  * even when also a secret — it is never collected from the user.)
@@ -26,27 +26,27 @@
  * @module features/project-creation/services/envVarClassifier
  */
 
-import type { DeployableEnvVar } from '@/types/deployables';
+import type { AppBuilderComponentEnvVar } from '@/types/appBuilderComponents';
 
-/** The four buckets a deployable's env schema partitions into. */
+/** The four buckets an App Builder component's env schema partitions into. */
 export interface ClassifiedEnvSchema {
     /** Derived from known config (bucket 1) — never asked. */
-    autoProvisioned: DeployableEnvVar[];
-    /** Provided by another deployable (bucket 2) — shown "connected", never asked. */
-    autoWired: DeployableEnvVar[];
+    autoProvisioned: AppBuilderComponentEnvVar[];
+    /** Provided by another appBuilderComponent (bucket 2) — shown "connected", never asked. */
+    autoWired: AppBuilderComponentEnvVar[];
     /** User-provided non-secret text (bucket 3) — collected into .env. */
-    userText: DeployableEnvVar[];
+    userText: AppBuilderComponentEnvVar[];
     /** User-provided secret (bucket 3) — collected into SecretStorage. */
-    userSecret: DeployableEnvVar[];
+    userSecret: AppBuilderComponentEnvVar[];
 }
 
 /**
- * Partition a deployable's env schema into the 3 buckets (secret-split on 3).
+ * Partition an App Builder component's env schema into the 3 buckets (secret-split on 3).
  *
- * @param schema - The deployable's envSchema (empty when none declared)
+ * @param schema - The appBuilderComponent's envSchema (empty when none declared)
  * @returns The four classified buckets (each empty when nothing matches)
  */
-export function classifyEnvSchema(schema: DeployableEnvVar[]): ClassifiedEnvSchema {
+export function classifyEnvSchema(schema: AppBuilderComponentEnvVar[]): ClassifiedEnvSchema {
     const result: ClassifiedEnvSchema = {
         autoProvisioned: [],
         autoWired: [],

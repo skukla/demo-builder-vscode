@@ -91,8 +91,8 @@ Reused **as-is** (no fork): `withOrgContext` + `buildOrgTargetFromProjectAdobe`,
 (`useNodeVersion`/`enhancePath`/streaming), `componentManager.installComponent`/`removeComponent`,
 `ensureAdobeIOAuth`, `detectProjectOrgMismatch`, the dashboard status channel, and the
 `installBlockCollections` additive pattern. The **only** new shared abstraction is
-`@/core/shell/buildComponent` (two callers, byte-identical) — no generalized "deployable
-framework" until a third deployable type appears (Rule of Three).
+`@/core/shell/buildComponent` (two callers, byte-identical) — no generalized "App Builder
+component framework" until a third component kind appears (Rule of Three).
 
 ## Scope & deferrals
 

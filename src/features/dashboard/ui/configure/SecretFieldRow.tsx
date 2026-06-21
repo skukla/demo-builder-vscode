@@ -4,7 +4,7 @@ import React, { useCallback } from 'react';
 /**
  * SecretFieldRow (D2 Track B — Step 04)
  *
- * A MASKED input for a deployable's `type:'secret'` env var. Its value is routed
+ * A MASKED input for an App Builder component's `type:'secret'` env var. Its value is routed
  * to VS Code SecretStorage (never componentConfigs / .env), so the stored value
  * is NEVER round-tripped back to the webview — only an `isSet` boolean. When a
  * secret is already set, the field renders empty with a "set" affordance; typing
@@ -15,15 +15,15 @@ import React, { useCallback } from 'react';
  * preferable to Spectrum's TextField for honest masking.
  */
 export interface SecretFieldRowProps {
-    deployableId: string;
+    appBuilderComponentId: string;
     name: string;
     label: string;
     isSet: boolean;
-    onSecretChange: (deployableId: string, varName: string, value: string) => void;
+    onSecretChange: (appBuilderComponentId: string, varName: string, value: string) => void;
 }
 
 export function SecretFieldRow({
-    deployableId,
+    appBuilderComponentId,
     name,
     label,
     isSet,
@@ -31,9 +31,9 @@ export function SecretFieldRow({
 }: SecretFieldRowProps): React.ReactElement {
     const handleChange = useCallback(
         (event: React.ChangeEvent<HTMLInputElement>) => {
-            onSecretChange(deployableId, name, event.target.value);
+            onSecretChange(appBuilderComponentId, name, event.target.value);
         },
-        [deployableId, name, onSecretChange],
+        [appBuilderComponentId, name, onSecretChange],
     );
 
     const placeholder = isSet ? 'Secret is set — type to replace' : '';

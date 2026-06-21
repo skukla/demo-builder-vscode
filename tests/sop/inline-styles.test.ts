@@ -50,7 +50,7 @@ describe('SOP: Inline Styles', () => {
         'ProjectCard.tsx': 'Inline color/flex style for the inline pin indicator next to project name',
         'ProjectRow.tsx': 'Inline color/flex style for the inline pin indicator next to project name',
 
-        // Deployable secret input (dashboard UI convention: box-sizing on width:100% input)
+        // AppBuilderComponent secret input (dashboard UI convention: box-sizing on width:100% input)
         'SecretFieldRow.tsx': 'box-sizing:border-box on a width:100% masked input (dashboard UI convention)',
 
         // Store structure listbox container

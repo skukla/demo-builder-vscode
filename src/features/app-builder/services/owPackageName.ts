@@ -1,11 +1,11 @@
 /**
  * Collision-free `ow.package` generator (Step 05) — the prune-isolation primitive.
  *
- * Derives a deterministic, shell-safe OpenWhisk package name from a deployable
+ * Derives a deterministic, shell-safe OpenWhisk package name from an App Builder component
  * `id`. Per the D1 spike (Q1/Q2), `aio app deploy`'s prune is keyed to the
  * package name (`projectName === ow.package`): two integrations left on the
  * default `application`/`dx-excshell-1` package clobber each other on deploy AND
- * undeploy. A DISTINCT per-deployable package name is the load-bearing isolation
+ * undeploy. A DISTINCT per-appBuilderComponent package name is the load-bearing isolation
  * boundary. This module produces that name; step 08 applies it to the deploy.
  *
  * Guarantees (all test-pinned):
@@ -47,24 +47,24 @@ function shortHash(id: string): string {
 
 /**
  * Derive a distinct, deterministic, shell-safe `ow.package` name from a
- * deployable id.
+ * appBuilderComponent id.
  *
  * An id that is ALREADY a clean, in-budget, non-reserved package name passes
  * through verbatim (readable names stay readable). Otherwise a stable hash of
  * the RAW id is appended so distinct ids never collide — even when sanitization
  * alone would collapse them — and reserved defaults can never be produced.
  */
-export function deriveOwPackage(deployableId: string): string {
-    const stem = sanitizeStem(deployableId);
+export function deriveOwPackage(appBuilderComponentId: string): string {
+    const stem = sanitizeStem(appBuilderComponentId);
     const isClean =
-        stem === deployableId &&
+        stem === appBuilderComponentId &&
         stem.length <= MAX_LENGTH &&
         !RESERVED_NAMES.has(stem);
     if (isClean) {
         return stem;
     }
 
-    const hash = shortHash(deployableId);
+    const hash = shortHash(appBuilderComponentId);
     const stemBudget = MAX_LENGTH - HASH_LENGTH - 1; // 1 for the joining hyphen
     const truncatedStem = stem.slice(0, stemBudget).replace(/-+$/g, '') || FALLBACK_STEM;
 

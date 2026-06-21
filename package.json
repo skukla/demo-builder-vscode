@@ -237,16 +237,16 @@
         }
       },
       {
-        "title": "Deployables",
+        "title": "App Builder Components",
         "properties": {
-          "demoBuilder.deployables.custom": {
+          "demoBuilder.appBuilderComponents.custom": {
             "type": "array",
             "items": {
               "type": "string",
               "description": "GitHub repository URL (e.g., https://github.com/owner/repo)"
             },
             "default": [],
-            "description": "Custom deployables (meshes or App Builder integrations) to include in the deployable catalog. Each entry is a public GitHub repository URL."
+            "description": "Custom App Builder components (meshes or integrations) to include in the App Builder component catalog. Each entry is a public GitHub repository URL."
           }
         }
       },

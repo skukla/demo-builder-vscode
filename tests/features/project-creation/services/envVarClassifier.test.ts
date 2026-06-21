@@ -12,8 +12,8 @@
  */
 
 import { classifyEnvSchema } from '@/features/project-creation/services/envVarClassifier';
-import { getDeployableEnvSchema } from '@/features/project-creation/services/deployableCatalogLoader';
-import type { DeployableEnvVar } from '@/types/deployables';
+import { getAppBuilderComponentEnvSchema } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
+import type { AppBuilderComponentEnvVar } from '@/types/appBuilderComponents';
 
 describe('classifyEnvSchema', () => {
     it('returns the four buckets, all empty, for an empty schema (Edge)', () => {
@@ -25,7 +25,7 @@ describe('classifyEnvSchema', () => {
     });
 
     it('classifies a providedBy var as autoWired (never asked)', () => {
-        const schema: DeployableEnvVar[] = [
+        const schema: AppBuilderComponentEnvVar[] = [
             { name: 'MESH_ENDPOINT', type: 'text', label: 'Mesh endpoint', providedBy: 'commerce-paas-mesh' },
         ];
         const result = classifyEnvSchema(schema);
@@ -36,7 +36,7 @@ describe('classifyEnvSchema', () => {
     });
 
     it('carries the provider id on the autoWired var for the "connected" UI', () => {
-        const schema: DeployableEnvVar[] = [
+        const schema: AppBuilderComponentEnvVar[] = [
             { name: 'MESH_ENDPOINT', type: 'text', label: 'Mesh endpoint', providedBy: 'commerce-paas-mesh' },
         ];
         const result = classifyEnvSchema(schema);
@@ -44,7 +44,7 @@ describe('classifyEnvSchema', () => {
     });
 
     it('classifies a derivedFrom var as autoProvisioned (bucket 1, never asked)', () => {
-        const schema: DeployableEnvVar[] = [
+        const schema: AppBuilderComponentEnvVar[] = [
             { name: 'COMMERCE_ENDPOINT', type: 'text', label: 'Commerce endpoint', derivedFrom: 'connect-commerce' },
         ];
         const result = classifyEnvSchema(schema);
@@ -55,7 +55,7 @@ describe('classifyEnvSchema', () => {
     });
 
     it('classifies a plain text var (no providedBy/derivedFrom) as userText', () => {
-        const schema: DeployableEnvVar[] = [
+        const schema: AppBuilderComponentEnvVar[] = [
             { name: 'ERP_HOST', type: 'text', label: 'ERP host' },
         ];
         const result = classifyEnvSchema(schema);
@@ -64,7 +64,7 @@ describe('classifyEnvSchema', () => {
     });
 
     it('classifies a plain secret var (no providedBy/derivedFrom) as userSecret', () => {
-        const schema: DeployableEnvVar[] = [
+        const schema: AppBuilderComponentEnvVar[] = [
             { name: 'ERP_API_KEY', type: 'secret', label: 'ERP API key' },
         ];
         const result = classifyEnvSchema(schema);
@@ -73,7 +73,7 @@ describe('classifyEnvSchema', () => {
     });
 
     it('classifies a mixed schema into the correct buckets', () => {
-        const schema: DeployableEnvVar[] = [
+        const schema: AppBuilderComponentEnvVar[] = [
             { name: 'COMMERCE_ENDPOINT', type: 'text', label: 'Commerce', derivedFrom: 'connect-commerce' },
             { name: 'MESH_ENDPOINT', type: 'text', label: 'Mesh', providedBy: 'commerce-paas-mesh' },
             { name: 'ERP_HOST', type: 'text', label: 'ERP host' },
@@ -87,8 +87,8 @@ describe('classifyEnvSchema', () => {
     });
 
     it('treats providedBy as autoWired even when the var is also a secret', () => {
-        const schema: DeployableEnvVar[] = [
-            { name: 'SHARED_SECRET', type: 'secret', label: 'Shared', providedBy: 'other-deployable' },
+        const schema: AppBuilderComponentEnvVar[] = [
+            { name: 'SHARED_SECRET', type: 'secret', label: 'Shared', providedBy: 'other-appBuilderComponent' },
         ];
         const result = classifyEnvSchema(schema);
         expect(result.autoWired.map(v => v.name)).toEqual(['SHARED_SECRET']);
@@ -98,7 +98,7 @@ describe('classifyEnvSchema', () => {
     describe('seed-mesh "zero user input" case', () => {
         it('yields zero userText/userSecret for every seeded mesh', () => {
             for (const id of ['commerce-paas-mesh', 'commerce-eds-mesh', 'headless-commerce-mesh']) {
-                const result = classifyEnvSchema(getDeployableEnvSchema(id));
+                const result = classifyEnvSchema(getAppBuilderComponentEnvSchema(id));
                 expect(result.userText).toEqual([]);
                 expect(result.userSecret).toEqual([]);
             }
