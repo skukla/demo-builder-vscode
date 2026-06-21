@@ -11,7 +11,7 @@
 
 import { createMcpHealthCheck } from '@/features/dashboard/services/onOpenChecks/mcpHealthCheck';
 import { CHECK_IDS } from '@/types/messages';
-import type { CheckOutcome, OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks';
+import type { CheckResult, OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 
@@ -48,11 +48,11 @@ it('drift → posts a visible warning, heals once, then resolves ok', async () =
     const check = createMcpHealthCheck({ detectDrift, heal });
     const { ctx, post } = makeCtx();
 
-    const outcome = await check.run(ctx) as CheckOutcome;
+    const outcome = await check.run(ctx) as CheckResult;
 
-    // Telegraphs the heal BEFORE doing the work (P2: visible, not silent).
+    // Telegraphs the heal BEFORE doing the work (P2: visible, not silent). The
+    // check posts a bare result; the orchestrator stamps checkId (so it's absent here).
     expect(post).toHaveBeenCalledWith(expect.objectContaining({
-        checkId: CHECK_IDS.MCP_HEALTH,
         status: 'warning',
         message: expect.stringMatching(/updating ai configuration/i),
     }));
@@ -66,7 +66,7 @@ it('heal returns failure → error outcome (with a retry hint)', async () => {
     const check = createMcpHealthCheck({ detectDrift, heal });
     const { ctx } = makeCtx();
 
-    const outcome = await check.run(ctx) as CheckOutcome;
+    const outcome = await check.run(ctx) as CheckResult;
 
     expect(outcome.status).toBe('error');
     expect(outcome.message).toBeTruthy();
@@ -78,7 +78,7 @@ it('heal throws → error outcome (no rejection escapes)', async () => {
     const check = createMcpHealthCheck({ detectDrift, heal });
     const { ctx } = makeCtx();
 
-    const outcome = await check.run(ctx) as CheckOutcome;
+    const outcome = await check.run(ctx) as CheckResult;
 
     expect(outcome.status).toBe('error');
     expect(outcome.message).toMatch(/boom/);

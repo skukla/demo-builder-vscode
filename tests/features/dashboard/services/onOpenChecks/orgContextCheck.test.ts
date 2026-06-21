@@ -20,7 +20,7 @@ jest.mock('@/core/di', () => ({
 import { orgContextCheck } from '@/features/dashboard/services/onOpenChecks/orgContextCheck';
 import { ServiceLocator } from '@/core/di';
 import { CHECK_IDS } from '@/types/messages';
-import type { CheckOutcome, OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks';
+import type { CheckResult, OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 
@@ -87,7 +87,7 @@ it('valid token + matching org → ok with currentOrg; no CLI / no interactive p
     (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(auth);
     const { ctx } = makeCtx(projectWithOrg('org1'));
 
-    const outcome = await orgContextCheck.run(ctx) as CheckOutcome<{ currentOrg?: string }>;
+    const outcome = await orgContextCheck.run(ctx) as CheckResult<{ currentOrg?: string }>;
 
     expect(outcome.status).toBe('ok');
     expect(outcome.data?.currentOrg).toBe('Org One');
@@ -117,7 +117,7 @@ it('valid token + mismatch → warning with orgMismatch banner data', async () =
     // Project expects an org the token can't reach.
     const { ctx } = makeCtx(projectWithOrg('orgX', { organizationName: 'Expected Org' }));
 
-    const outcome = await orgContextCheck.run(ctx) as CheckOutcome<{ orgMismatch?: { expectedOrg: string; currentOrg?: string } }>;
+    const outcome = await orgContextCheck.run(ctx) as CheckResult<{ orgMismatch?: { expectedOrg: string; currentOrg?: string } }>;
 
     expect(outcome.status).toBe('warning');
     expect(outcome.message).toBeTruthy();

@@ -11,7 +11,7 @@
 
 import { createAiVerifyCheck } from '@/features/dashboard/services/onOpenChecks/aiVerifyCheck';
 import { CHECK_IDS } from '@/types/messages';
-import type { CheckOutcome, OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks';
+import type { CheckResult, OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 
@@ -43,7 +43,7 @@ it('is the ai-verify check (guarded — verify spawns servers, run once per sess
 it('all checks ok + healthy inventory → ok; data carries checks + inventory', async () => {
     const check = makeCheck({ status: 'ok', checks: okChecks, inventory: emptyInventory });
 
-    const outcome = await check.run(makeCtx()) as CheckOutcome<{ checks: unknown[]; inventory: unknown }>;
+    const outcome = await check.run(makeCtx()) as CheckResult<{ checks: unknown[]; inventory: unknown }>;
 
     expect(outcome.status).toBe('ok');
     expect(outcome.data?.checks).toHaveLength(4);
@@ -57,7 +57,7 @@ it('a failed file check → error (red), with the data still attached', async ()
     ];
     const check = makeCheck({ status: 'error', checks, inventory: emptyInventory });
 
-    const outcome = await check.run(makeCtx()) as CheckOutcome;
+    const outcome = await check.run(makeCtx()) as CheckResult;
 
     expect(outcome.status).toBe('error');
     expect(outcome.message).toBeTruthy();
@@ -71,7 +71,7 @@ it('inventory inspector failure names the failing MCP server + reason (which/why
     };
     const check = makeCheck({ status: 'ok', checks: okChecks, inventory });
 
-    const outcome = await check.run(makeCtx()) as CheckOutcome<{ inventory: unknown }>;
+    const outcome = await check.run(makeCtx()) as CheckResult<{ inventory: unknown }>;
 
     expect(outcome.status).toBe('warning');
     // The which (server id) AND the why (reason) are in the message, not just logs.
@@ -85,7 +85,7 @@ it('an mcpsError (whole inspector failed) → warning naming the inspector failu
     const inventory = { skills: [], mcps: [], sessionMcps: [], mcpsError: 'spawn EACCES' };
     const check = makeCheck({ status: 'ok', checks: okChecks, inventory });
 
-    const outcome = await check.run(makeCtx()) as CheckOutcome;
+    const outcome = await check.run(makeCtx()) as CheckResult;
 
     expect(outcome.status).toBe('warning');
     expect(outcome.message).toMatch(/spawn EACCES/);

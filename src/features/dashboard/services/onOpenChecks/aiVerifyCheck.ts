@@ -20,7 +20,7 @@
  * @module features/dashboard/services/onOpenChecks/aiVerifyCheck
  */
 
-import type { CheckOutcome, OnOpenCheck, OnOpenCheckContext } from './types';
+import type { CheckResult, OnOpenCheck, OnOpenCheckContext } from './types';
 import type { AiCheckResult, AiVerificationResult } from '@/features/ai';
 import type { AiInventory } from '@/types/ai';
 import { CHECK_IDS } from '@/types/messages';
@@ -53,7 +53,7 @@ export function createAiVerifyCheck(deps: AiVerifyCheckDeps): OnOpenCheck {
     return {
         id: CHECK_IDS.AI_VERIFY,
         mode: 'background',
-        async run(ctx: OnOpenCheckContext): Promise<CheckOutcome<AiVerifyCheckData>> {
+        async run(ctx: OnOpenCheckContext): Promise<CheckResult<AiVerifyCheckData>> {
             const { project } = ctx;
 
             const result = await deps.verify(project.path);
@@ -62,16 +62,16 @@ export function createAiVerifyCheck(deps: AiVerifyCheckDeps): OnOpenCheck {
 
             // A failed file-presence check is a hard "broken" — files missing/invalid.
             if (result.checks.some(c => c.status !== 'ok')) {
-                return { checkId: CHECK_IDS.AI_VERIFY, status: 'error', message: FILE_CHECK_FAILED, data };
+                return { status: 'error', message: FILE_CHECK_FAILED, data };
             }
 
             // Files OK but an inventory inspector failed — surface WHICH and WHY (P2).
             const failure = firstInventoryFailure(result.inventory);
             if (failure) {
-                return { checkId: CHECK_IDS.AI_VERIFY, status: 'warning', message: failure, data };
+                return { status: 'warning', message: failure, data };
             }
 
-            return { checkId: CHECK_IDS.AI_VERIFY, status: 'ok', data };
+            return { status: 'ok', data };
         },
     };
 }

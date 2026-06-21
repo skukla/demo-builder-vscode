@@ -27,8 +27,8 @@ import type { Logger } from '@/types/logger';
 export type CheckStatus = 'pending' | 'ok' | 'warning' | 'error' | 'unknown';
 
 /**
- * The single, typed result shape every on-open check produces. Posted to the
- * webview on the `checkResult` channel, keyed by {@link checkId}.
+ * The single, typed result shape posted to the webview on the `checkResult`
+ * channel, keyed by {@link checkId}.
  *
  * `message` is REQUIRED (by convention, enforced in review/tests) for
  * `warning | error | unknown` so the user always sees *why* (P2).
@@ -42,15 +42,28 @@ export interface CheckOutcome<T = unknown> {
     data?: T;
 }
 
+/**
+ * What a check's `run` (and `post`) actually produces — a {@link CheckOutcome}
+ * WITHOUT `checkId`. The orchestrator owns identity: it stamps `checkId` from
+ * `check.id` on every post, so checks never restate it (and can't get it wrong).
+ */
+export type CheckResult<T = unknown> = Omit<CheckOutcome<T>, 'checkId'>;
+
 /** Context handed to a check's `run`. */
 export interface OnOpenCheckContext {
     project: Project;
     logger: Logger;
     /**
      * Emit an intermediate outcome (e.g. `{status:'pending'}`) before the final
-     * returned outcome. The orchestrator stamps `checkId` if omitted.
+     * returned outcome. The orchestrator stamps `checkId` from `check.id` on every
+     * post — a {@link CheckResult} carries no `checkId` of its own.
+     *
+     * Convention: emit a `pending` telegraph only when the check's badge must show
+     * in-progress AND its initial UI state doesn't already (org-context, whose
+     * badge is otherwise idle). Checks whose badge already starts in a Verifying /
+     * Loading state (ai-verify, mesh-verify) skip the pending post.
      */
-    post: (outcome: CheckOutcome) => void;
+    post: (outcome: CheckResult) => void;
 }
 
 /**
@@ -73,9 +86,15 @@ export interface OnOpenCheck {
      * live checks whose result changes with auth state (org-context: a forced
      * Switch IMS Org / re-auth re-invokes `requestStatus` precisely to re-check).
      * Once-per-open checks (mcp-health, ai-verify) leave this falsy.
+     *
+     * NOTE: opting out removes the only idempotency protection, so a `reRunnable`
+     * check's `run` must be safe under back-to-back invocation. In practice the
+     * webview's `statusRequestedRef` serializes `requestStatus` to once per mount,
+     * so concurrent runs don't occur today — but a check added here must not
+     * assume the guard protects it.
      */
     reRunnable?: boolean;
-    run: (ctx: OnOpenCheckContext) => Promise<CheckOutcome>;
+    run: (ctx: OnOpenCheckContext) => Promise<CheckResult>;
 }
 
 /** Dependencies the orchestrator needs (injected — keeps the core vscode-free + testable). */

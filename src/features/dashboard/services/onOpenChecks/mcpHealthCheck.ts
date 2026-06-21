@@ -18,7 +18,7 @@
  * @module features/dashboard/services/onOpenChecks/mcpHealthCheck
  */
 
-import type { CheckOutcome, OnOpenCheck, OnOpenCheckContext } from './types';
+import type { CheckResult, OnOpenCheck, OnOpenCheckContext } from './types';
 import type { McpDriftResult } from '@/features/ai/mcpDriftDetector';
 import { CHECK_IDS } from '@/types/messages';
 
@@ -52,34 +52,29 @@ export function createMcpHealthCheck(deps: McpHealthCheckDeps): OnOpenCheck {
         id: CHECK_IDS.MCP_HEALTH,
         mode: 'background',
         edsOnly: true,
-        async run(ctx: OnOpenCheckContext): Promise<CheckOutcome<McpHealthCheckData>> {
+        async run(ctx: OnOpenCheckContext): Promise<CheckResult<McpHealthCheckData>> {
             const { project, logger, post } = ctx;
 
             const drift = await deps.detectDrift(project.path);
             if (!drift.drifted) {
-                return { checkId: CHECK_IDS.MCP_HEALTH, status: 'ok' };
+                return { status: 'ok' };
             }
 
             // P2: telegraph the heal BEFORE the work — never silent.
             logger.info(`[McpHealth] Stale MCP paths detected (${drift.missing.length}); auto-healing`);
-            post({
-                checkId: CHECK_IDS.MCP_HEALTH,
-                status: 'warning',
-                message: HEALING_MESSAGE,
-                data: { missing: drift.missing },
-            });
+            post({ status: 'warning', message: HEALING_MESSAGE, data: { missing: drift.missing } });
 
             try {
                 const result = await deps.heal();
                 if (result.success) {
-                    return { checkId: CHECK_IDS.MCP_HEALTH, status: 'ok' };
+                    return { status: 'ok' };
                 }
                 logger.warn(`[McpHealth] Heal failed: ${result.error ?? 'unknown error'}`);
-                return { checkId: CHECK_IDS.MCP_HEALTH, status: 'error', message: RETRY_HINT };
+                return { status: 'error', message: RETRY_HINT };
             } catch (error) {
                 const message = error instanceof Error ? error.message : String(error);
                 logger.warn(`[McpHealth] Heal threw: ${message}`);
-                return { checkId: CHECK_IDS.MCP_HEALTH, status: 'error', message };
+                return { status: 'error', message };
             }
         },
     };
