@@ -8,6 +8,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { migrateLegacyToDeployables } from './deployableMigration';
 import type { Project, ComponentInstance } from '@/types';
 import type { AiPrompt } from '@/types/base';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
@@ -48,6 +49,8 @@ export interface ProjectManifest {
     componentConfigs?: Project['componentConfigs'];
     componentVersions?: Project['componentVersions'];
     meshState?: Project['meshState'];
+    appState?: Project['appState'];
+    deployables?: Project['deployables'];
     edsStorefrontState?: Project['edsStorefrontState'];
     edsStorefrontStatusSummary?: Project['edsStorefrontStatusSummary'];
     selectedPackage?: string;
@@ -110,6 +113,7 @@ export class ProjectFileLoader {
                 componentConfigs: manifest.componentConfigs,
                 componentVersions,
                 meshState: manifest.meshState,
+                appState: manifest.appState,
                 edsStorefrontState: manifest.edsStorefrontState,
                 edsStorefrontStatusSummary: manifest.edsStorefrontStatusSummary,
                 selectedPackage: normalizePackageId(manifest.selectedPackage),
@@ -120,6 +124,11 @@ export class ProjectFileLoader {
                 aiPrompts: manifest.aiPrompts,
                 pinned: manifest.pinned,
             };
+
+            // One-time read-side migration of legacy meshState/appState into the
+            // keyed deployables map (on-disk manifest untouched in D1). Idempotent
+            // when the manifest already carries a forward-state `deployables` map.
+            project.deployables = migrateLegacyToDeployables(manifest);
 
             // Detect if demo is actually running
             this.detectDemoStatus(project, terminalProvider);

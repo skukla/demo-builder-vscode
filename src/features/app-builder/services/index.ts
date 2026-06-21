@@ -11,3 +11,14 @@ export type {
     AddAppResult,
     RemoveAppResult,
 } from './appComponentManager';
+
+export {
+    getDeployable,
+    listDeployables,
+    setDeployable,
+    getMeshDeployable,
+    getIntegrationDeployables,
+    getProvidedEnvVars,
+    isDeployableState,
+} from './deployableState';
+export type { IdentifiedDeployable } from './deployableState';

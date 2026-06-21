@@ -1,0 +1,74 @@
+{
+  "$schema": "./deployables.schema.json",
+  "version": "1.0.0",
+  "deployables": [
+    {
+      "id": "commerce-paas-mesh",
+      "name": "Commerce PaaS API Mesh",
+      "description": "API Mesh for an EDS storefront backed by Adobe Commerce PaaS (Catalog Service)",
+      "kind": "mesh",
+      "source": {
+        "owner": "skukla",
+        "repo": "commerce-paas-mesh",
+        "branch": "main"
+      },
+      "compatibleFrontends": ["eds-storefront"],
+      "compatibleBackends": ["adobe-commerce-paas"],
+      "requiredApis": ["GraphQLServiceSDK"],
+      "providesEnvVars": ["MESH_ENDPOINT"],
+      "envSchema": [
+        {
+          "name": "COMMERCE_ENDPOINT",
+          "type": "text",
+          "label": "Adobe Commerce backend endpoint",
+          "derivedFrom": "connect-commerce"
+        }
+      ]
+    },
+    {
+      "id": "commerce-eds-mesh",
+      "name": "Commerce ACCS API Mesh",
+      "description": "API Mesh for an EDS storefront backed by Adobe Commerce as a Cloud Service (SaaS)",
+      "kind": "mesh",
+      "source": {
+        "owner": "skukla",
+        "repo": "commerce-eds-mesh",
+        "branch": "main"
+      },
+      "compatibleFrontends": ["eds-storefront"],
+      "compatibleBackends": ["adobe-commerce-accs"],
+      "requiredApis": ["GraphQLServiceSDK"],
+      "providesEnvVars": ["MESH_ENDPOINT"],
+      "envSchema": [
+        {
+          "name": "COMMERCE_ENDPOINT",
+          "type": "text",
+          "label": "Adobe Commerce backend endpoint",
+          "derivedFrom": "connect-commerce"
+        }
+      ]
+    },
+    {
+      "id": "headless-commerce-mesh",
+      "name": "Headless Commerce API Mesh",
+      "description": "API Mesh for a headless (Next.js) commerce frontend",
+      "kind": "mesh",
+      "source": {
+        "owner": "skukla",
+        "repo": "headless-commerce-mesh",
+        "branch": "main"
+      },
+      "compatibleFrontends": ["headless"],
+      "requiredApis": ["GraphQLServiceSDK"],
+      "providesEnvVars": ["MESH_ENDPOINT"],
+      "envSchema": [
+        {
+          "name": "COMMERCE_ENDPOINT",
+          "type": "text",
+          "label": "Adobe Commerce backend endpoint",
+          "derivedFrom": "connect-commerce"
+        }
+      ]
+    }
+  ]
+}

@@ -10,9 +10,12 @@ import {
     generateHeaders,
     mapBackendToEnvironmentType,
     extractConfigParamsFromConfigs,
+    extractConfigParams,
+    buildConfigGeneratorParams,
     type ConfigGeneratorParams,
 } from '@/features/eds/services/configGenerator';
 import type { Logger } from '@/types/logger';
+import type { Project } from '@/types/base';
 
 describe('configGenerator', () => {
     let mockLogger: Logger;
@@ -477,6 +480,143 @@ describe('configGenerator', () => {
             expect(ids).toContain('cif');
             expect(ids).toContain('personalisation');
             expect(ids).toContain('quick-edit');
+        });
+    });
+
+    // ==========================================================
+    // Step 04 — generalized endpoint provider (MESH EDGE GUARD)
+    // ==========================================================
+    //
+    // These tests pin the load-bearing MESH_ENDPOINT → config.json edge. The
+    // storefront config must read the commerce/mesh endpoint from "any deployable
+    // that provides it" (the keyed `deployables` providesEnvVars / getProvidedEnvVars
+    // accessor) while producing BYTE-IDENTICAL output for existing mesh-backed
+    // projects whose endpoint still lives only in legacy `meshState`.
+    describe('extractConfigParams — generalized endpoint provider (step 04)', () => {
+        const MESH_ENDPOINT = 'https://mesh.example.com/graphql';
+
+        /** Representative PaaS storefront project, endpoint in legacy meshState only. */
+        function legacyMeshProject(): Project {
+            return {
+                id: 'proj-1',
+                name: 'Legacy Mesh Project',
+                path: '/tmp/proj-1',
+                componentSelections: { backend: 'adobe-commerce-paas' },
+                componentConfigs: {
+                    'eds-storefront': {
+                        ADOBE_COMMERCE_STORE_VIEW_CODE: 'en_us',
+                        ADOBE_COMMERCE_STORE_CODE: 'us_store',
+                        ADOBE_COMMERCE_WEBSITE_CODE: 'us_website',
+                        ADOBE_COMMERCE_CUSTOMER_GROUP: 'b2c_group',
+                        ADOBE_CATALOG_API_KEY: 'api-key-123',
+                        ADOBE_COMMERCE_ENVIRONMENT_ID: 'env-id-456',
+                        ADOBE_COMMERCE_CATALOG_SERVICE_ENDPOINT: 'https://catalog.example.com/graphql',
+                        AEM_ASSETS_ENABLED: 'true',
+                    },
+                },
+                componentInstances: {
+                    'eds-storefront': {
+                        metadata: {
+                            githubRepo: 'test-owner/test-repo',
+                            daLiveOrg: 'test-org',
+                            daLiveSite: 'test-site',
+                        },
+                    },
+                },
+                meshState: { endpoint: MESH_ENDPOINT, lastDeployed: '2026-06-20T00:00:00.000Z' },
+            } as unknown as Project;
+        }
+
+        /** Forward-state: same project but endpoint lives only in keyed deployables. */
+        function deployablesOnlyProject(): Project {
+            const base = legacyMeshProject();
+            return {
+                ...base,
+                meshState: undefined,
+                deployables: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                        endpoint: MESH_ENDPOINT,
+                        providesEnvVars: { MESH_ENDPOINT },
+                    },
+                },
+            } as unknown as Project;
+        }
+
+        let mockLogger: Logger;
+        beforeEach(() => {
+            mockLogger = {
+                debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(),
+            } as unknown as Logger;
+        });
+
+        it('GOLDEN: legacy mesh project produces byte-identical config.json (snapshot guard)', () => {
+            // The load-bearing edge. If this snapshot ever changes, the live
+            // storefront republish changes — STOP and investigate, do NOT update
+            // the snapshot to match.
+            const params = buildConfigGeneratorParams(legacyMeshProject());
+            const result = generateConfigJson(params, mockLogger);
+
+            expect(result.success).toBe(true);
+            expect(result.content).toMatchSnapshot('legacy-mesh-config-json');
+        });
+
+        it('resolves MESH_ENDPOINT identically from legacy meshState', () => {
+            const params = extractConfigParams(legacyMeshProject());
+            expect(params.commerceEndpoint).toBe(MESH_ENDPOINT);
+        });
+
+        it('resolves the SAME MESH_ENDPOINT when the endpoint lives only in deployables', () => {
+            const params = extractConfigParams(deployablesOnlyProject());
+            expect(params.commerceEndpoint).toBe(MESH_ENDPOINT);
+        });
+
+        it('produces byte-identical config.json from deployables-only as from legacy meshState', () => {
+            const legacyContent = generateConfigJson(
+                buildConfigGeneratorParams(legacyMeshProject()), mockLogger,
+            ).content;
+            const forwardContent = generateConfigJson(
+                buildConfigGeneratorParams(deployablesOnlyProject()), mockLogger,
+            ).content;
+
+            expect(forwardContent).toBe(legacyContent);
+        });
+
+        it('falls back to the direct backend endpoint when NO provider exists (no mesh)', () => {
+            const noMesh = {
+                ...legacyMeshProject(),
+                meshState: undefined,
+                deployables: undefined,
+                componentConfigs: {
+                    'eds-storefront': {
+                        ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://direct.example.com/graphql',
+                    },
+                },
+            } as unknown as Project;
+
+            const params = extractConfigParams(noMesh);
+            expect(params.commerceEndpoint).toBe('https://direct.example.com/graphql');
+        });
+
+        it('resolves a consistent endpoint when both deployables and legacy meshState are present (mid-migration)', () => {
+            const both = {
+                ...legacyMeshProject(),
+                deployables: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                        endpoint: MESH_ENDPOINT,
+                        providesEnvVars: { MESH_ENDPOINT },
+                    },
+                },
+            } as unknown as Project;
+
+            const params = extractConfigParams(both);
+            // Read-through means both agree — a single resolved value, no conflict.
+            expect(params.commerceEndpoint).toBe(MESH_ENDPOINT);
         });
     });
 });
