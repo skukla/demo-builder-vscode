@@ -37,8 +37,8 @@ _The confirmed root-cause analysis below stands; only the "deleted" framing was 
 Inspected `b2b-tester`'s live `.mcp.json` (the originally-reported `my-commerce-demo` was already
 deleted). Its MCP server args are:
 ```
-commerce-extensibility → node  /Users/kukla/.demo-builder/projects/my-commerce-demo/components/eds-storefront/node_modules/@adobe-commerce/commerce-extensibility-tools/index.js
-playwright             → node  /Users/kukla/.demo-builder/projects/my-commerce-demo/components/eds-storefront/node_modules/@playwright/mcp/cli.js
+commerce-extensibility → node  /Users/<user>/.demo-builder/projects/my-commerce-demo/components/eds-storefront/node_modules/@adobe-commerce/commerce-extensibility-tools/index.js
+playwright             → node  /Users/<user>/.demo-builder/projects/my-commerce-demo/components/eds-storefront/node_modules/@playwright/mcp/cli.js
 ```
 This is **stale on two axes at once**: (1) it points at **a different project** (`my-commerce-demo`,
 now deleted) — hence MODULE_NOT_FOUND; and (2) it uses the **pre-isolation** location
