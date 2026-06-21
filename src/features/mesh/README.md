@@ -135,13 +135,12 @@ if (changes.hasChanges) {
 }
 ```
 
-### getEndpoint / getSetupInstructions
+### getEndpoint
 
-**Purpose**: Generate mesh endpoint URLs and setup instructions
+**Purpose**: Generate mesh endpoint URLs
 
 **Key Functions**:
 - `getEndpoint(workspaceId, orgCode)` - Generate workspace-specific mesh endpoint URL
-- `getSetupInstructions()` - Get mesh setup instructions for users
 
 **Example Usage**:
 ```typescript

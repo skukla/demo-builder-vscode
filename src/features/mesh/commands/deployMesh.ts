@@ -136,6 +136,16 @@ export class DeployMeshCommand extends BaseCommand {
                 meshComponent.status = 'deploying';
                 await this.stateManager.saveProject(project);
 
+                // Bounded pre-deploy subscribe: ensure the API Mesh API (+ baseline)
+                // is subscribed on the shared App Builder project BEFORE deploying.
+                // Runs under the project's org context (preflight already passed +
+                // permission gate); a failure fails-fast via the inner catch below
+                // (no half-deploy). Idempotent on an already-subscribed mesh.
+                const { ensureMeshApiSubscribed } = await import(
+                    '@/features/app-builder/services/ensureMeshApiSubscribed'
+                );
+                await ensureMeshApiSubscribed({ project, authService: authManager, logger: this.logger });
+
                 // Show progress notification while the shared deploy pipeline runs.
                 await vscode.window.withProgress(
                     {

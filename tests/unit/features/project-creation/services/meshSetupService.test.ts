@@ -25,6 +25,10 @@ jest.mock('@/features/project-creation/helpers', () => ({
     generateComponentEnvFile: jest.fn(),
     deployMeshComponent: jest.fn(),
 }));
+const mockEnsureSubscribed = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/features/app-builder/services/ensureMeshApiSubscribed', () => ({
+    ensureMeshApiSubscribed: (...args: unknown[]) => mockEnsureSubscribed(...args),
+}));
 
 // Import mocked functions
 import * as helpers from '@/features/project-creation/helpers';
@@ -114,6 +118,10 @@ describe('meshSetupService', () => {
         };
 
         (ServiceLocator.getCommandExecutor as jest.Mock) = jest.fn().mockReturnValue(mockCommandExecutor);
+        (ServiceLocator.getAuthenticationService as jest.Mock) = jest.fn().mockReturnValue({
+            getCachedOrganization: jest.fn().mockReturnValue(undefined),
+        });
+        mockEnsureSubscribed.mockResolvedValue(undefined);
     });
 
     describe('shouldConfigureExistingMesh', () => {
@@ -162,6 +170,27 @@ describe('meshSetupService', () => {
                 mockMeshDefinition,
                 mockSetupContext,
             );
+        });
+
+        it('should call ensureMeshApiSubscribed BEFORE deployMeshComponent (create-time)', async () => {
+            const order: string[] = [];
+            mockEnsureSubscribed.mockImplementation(async () => { order.push('subscribe'); });
+            (helpers.deployMeshComponent as jest.Mock).mockImplementation(async () => {
+                order.push('deploy');
+                return { success: true, data: { meshId: 'm', endpoint: 'e' } };
+            });
+
+            const context: MeshSetupContext = {
+                setupContext: mockSetupContext,
+                meshDefinition: mockMeshDefinition,
+                progressTracker: mockProgressTracker,
+            };
+
+            await deployNewMesh(context, undefined);
+
+            expect(mockEnsureSubscribed).toHaveBeenCalled();
+            expect(helpers.deployMeshComponent).toHaveBeenCalled();
+            expect(order).toEqual(['subscribe', 'deploy']);
         });
 
         it('should not generate env if mesh component path is missing', async () => {

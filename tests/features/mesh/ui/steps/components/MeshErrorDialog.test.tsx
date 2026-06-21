@@ -16,30 +16,10 @@ function renderWithSpectrum(ui: React.ReactElement) {
 describe('MeshErrorDialog', () => {
     const mockOnRetry = jest.fn();
     const mockOnBack = jest.fn();
-    const mockOnOpenConsole = jest.fn();
-
-    const setupInstructions = [
-        {
-            step: 'Navigate to the Services tab in Adobe Console',
-            details: 'Click on Services in the left sidebar',
-            important: false,
-        },
-        {
-            step: 'Enable API Mesh API',
-            details: 'Find API Mesh in the services list and click Enable',
-            important: true,
-        },
-        {
-            step: 'Wait for activation',
-            details: 'API activation may take a few minutes',
-            important: false,
-        },
-    ];
 
     beforeEach(() => {
         mockOnRetry.mockClear();
         mockOnBack.mockClear();
-        mockOnOpenConsole.mockClear();
     });
 
     describe('Error message rendering', () => {
@@ -47,10 +27,8 @@ describe('MeshErrorDialog', () => {
             renderWithSpectrum(
                 <MeshErrorDialog
                     error="API Mesh API is not enabled"
-                    setupInstructions={[]}
                     onRetry={mockOnRetry}
                     onBack={mockOnBack}
-                    onOpenConsole={mockOnOpenConsole}
                 />
             );
 
@@ -63,10 +41,8 @@ describe('MeshErrorDialog', () => {
             renderWithSpectrum(
                 <MeshErrorDialog
                     error={errorMessage}
-                    setupInstructions={[]}
                     onRetry={mockOnRetry}
                     onBack={mockOnBack}
-                    onOpenConsole={mockOnOpenConsole}
                 />
             );
 
@@ -79,10 +55,8 @@ describe('MeshErrorDialog', () => {
             renderWithSpectrum(
                 <MeshErrorDialog
                     error="API Mesh API is not enabled"
-                    setupInstructions={[]}
                     onRetry={mockOnRetry}
                     onBack={mockOnBack}
-                    onOpenConsole={mockOnOpenConsole}
                 />
             );
 
@@ -95,10 +69,8 @@ describe('MeshErrorDialog', () => {
             renderWithSpectrum(
                 <MeshErrorDialog
                     error="API Mesh API is not enabled"
-                    setupInstructions={[]}
                     onRetry={mockOnRetry}
                     onBack={mockOnBack}
-                    onOpenConsole={mockOnOpenConsole}
                 />
             );
 
@@ -113,10 +85,8 @@ describe('MeshErrorDialog', () => {
             renderWithSpectrum(
                 <MeshErrorDialog
                     error="API Mesh API is not enabled"
-                    setupInstructions={[]}
                     onRetry={mockOnRetry}
                     onBack={mockOnBack}
-                    onOpenConsole={mockOnOpenConsole}
                 />
             );
 
@@ -127,135 +97,20 @@ describe('MeshErrorDialog', () => {
         });
     });
 
-    describe('Setup instructions', () => {
-        it('shows setup instructions link when instructions are provided', () => {
+    describe('Setup instructions retired (Step 04)', () => {
+        // The manual Console-UI remediation is replaced by auto-subscribe on deploy.
+        it('does not render the View Setup Instructions affordance', () => {
             renderWithSpectrum(
                 <MeshErrorDialog
                     error="API Mesh API is not enabled"
-                    setupInstructions={setupInstructions}
                     onRetry={mockOnRetry}
                     onBack={mockOnBack}
-                    onOpenConsole={mockOnOpenConsole}
-                />
-            );
-
-            expect(screen.getByText(/follow the setup guide/i)).toBeInTheDocument();
-            expect(screen.getByText('View Setup Instructions')).toBeInTheDocument();
-        });
-
-        it('does not show setup instructions link when no instructions provided', () => {
-            renderWithSpectrum(
-                <MeshErrorDialog
-                    error="API Mesh API is not enabled"
-                    setupInstructions={[]}
-                    onRetry={mockOnRetry}
-                    onBack={mockOnBack}
-                    onOpenConsole={mockOnOpenConsole}
                 />
             );
 
             expect(screen.queryByText('View Setup Instructions')).not.toBeInTheDocument();
+            expect(screen.queryByText(/follow the setup guide/i)).not.toBeInTheDocument();
         });
-
-        it('opens modal when View Setup Instructions is clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            renderWithSpectrum(
-                <MeshErrorDialog
-                    error="API Mesh API is not enabled"
-                    setupInstructions={setupInstructions}
-                    onRetry={mockOnRetry}
-                    onBack={mockOnBack}
-                    onOpenConsole={mockOnOpenConsole}
-                />
-            );
-
-            const viewInstructionsButton = screen.getByText('View Setup Instructions');
-            await user.click(viewInstructionsButton);
-
-            // Modal should now be visible
-            expect(screen.getByText('API Mesh Setup Guide')).toBeInTheDocument();
-        });
-
-        it('renders numbered instructions in modal', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            renderWithSpectrum(
-                <MeshErrorDialog
-                    error="API Mesh API is not enabled"
-                    setupInstructions={setupInstructions}
-                    onRetry={mockOnRetry}
-                    onBack={mockOnBack}
-                    onOpenConsole={mockOnOpenConsole}
-                />
-            );
-
-            const viewInstructionsButton = screen.getByText('View Setup Instructions');
-            await user.click(viewInstructionsButton);
-
-            // Check that instruction steps are rendered
-            expect(screen.getByText(/navigate to the services tab/i)).toBeInTheDocument();
-            expect(screen.getByText(/enable api mesh api/i)).toBeInTheDocument();
-            expect(screen.getByText(/wait for activation/i)).toBeInTheDocument();
-        });
-
-        it('highlights important instructions', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            renderWithSpectrum(
-                <MeshErrorDialog
-                    error="API Mesh API is not enabled"
-                    setupInstructions={setupInstructions}
-                    onRetry={mockOnRetry}
-                    onBack={mockOnBack}
-                    onOpenConsole={mockOnOpenConsole}
-                />
-            );
-
-            const viewInstructionsButton = screen.getByText('View Setup Instructions');
-            await user.click(viewInstructionsButton);
-
-            // Important step should be marked (e.g., with special styling or indicator)
-            const importantStep = screen.getByText(/enable api mesh api/i);
-            expect(importantStep).toBeInTheDocument();
-        });
-
-        it('renders Open Workspace in Console button in modal', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            renderWithSpectrum(
-                <MeshErrorDialog
-                    error="API Mesh API is not enabled"
-                    setupInstructions={setupInstructions}
-                    onRetry={mockOnRetry}
-                    onBack={mockOnBack}
-                    onOpenConsole={mockOnOpenConsole}
-                />
-            );
-
-            const viewInstructionsButton = screen.getByText('View Setup Instructions');
-            await user.click(viewInstructionsButton);
-
-            expect(screen.getByText('Open Workspace in Console')).toBeInTheDocument();
-        });
-
-        it('calls onOpenConsole when Open Workspace button is clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            renderWithSpectrum(
-                <MeshErrorDialog
-                    error="API Mesh API is not enabled"
-                    setupInstructions={setupInstructions}
-                    onRetry={mockOnRetry}
-                    onBack={mockOnBack}
-                    onOpenConsole={mockOnOpenConsole}
-                />
-            );
-
-            const viewInstructionsButton = screen.getByText('View Setup Instructions');
-            await user.click(viewInstructionsButton);
-
-            const openConsoleButton = screen.getByText('Open Workspace in Console');
-            await user.click(openConsoleButton);
-
-            expect(mockOnOpenConsole).toHaveBeenCalledTimes(1);
-        });
-
     });
 
     describe('Accessibility', () => {
@@ -263,10 +118,8 @@ describe('MeshErrorDialog', () => {
             renderWithSpectrum(
                 <MeshErrorDialog
                     error="API Mesh API is not enabled"
-                    setupInstructions={setupInstructions}
                     onRetry={mockOnRetry}
                     onBack={mockOnBack}
-                    onOpenConsole={mockOnOpenConsole}
                 />
             );
 
@@ -278,10 +131,8 @@ describe('MeshErrorDialog', () => {
             renderWithSpectrum(
                 <MeshErrorDialog
                     error="API Mesh API is not enabled"
-                    setupInstructions={setupInstructions}
                     onRetry={mockOnRetry}
                     onBack={mockOnBack}
-                    onOpenConsole={mockOnOpenConsole}
                 />
             );
 
@@ -298,31 +149,14 @@ describe('MeshErrorDialog', () => {
             const { container } = renderWithSpectrum(
                 <MeshErrorDialog
                     error="API Mesh API is not enabled"
-                    setupInstructions={[]}
                     onRetry={mockOnRetry}
                     onBack={mockOnBack}
-                    onOpenConsole={mockOnOpenConsole}
                 />
             );
 
             // AlertCircle icon should have red styling
             const icon = container.querySelector('[class*="text-red"]');
             expect(icon).toBeInTheDocument();
-        });
-
-        it('uses FadeTransition for smooth appearance', () => {
-            const { container } = renderWithSpectrum(
-                <MeshErrorDialog
-                    error="API Mesh API is not enabled"
-                    setupInstructions={[]}
-                    onRetry={mockOnRetry}
-                    onBack={mockOnBack}
-                    onOpenConsole={mockOnOpenConsole}
-                />
-            );
-
-            // Component should be wrapped in FadeTransition
-            expect(container.firstChild).toBeInTheDocument();
         });
     });
 });

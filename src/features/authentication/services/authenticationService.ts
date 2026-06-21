@@ -10,7 +10,7 @@ import { AuthenticationErrorFormatter } from '@/features/authentication/services
 import { OrganizationValidator } from '@/features/authentication/services/organizationValidator';
 import { withTiming } from '@/features/authentication/services/performanceTracker';
 import { TokenManager } from '@/features/authentication/services/tokenManager';
-import type { AdobeOrg, AdobeProject, AdobeWorkspace, AdobeContext, AuthTokenValidation, WorkspaceCredential } from '@/features/authentication/services/types';
+import type { AdobeOrg, AdobeProject, AdobeWorkspace, AdobeContext, AuthTokenValidation, WorkspaceCredential, AdobeIdCredentialInput, OrgServiceInfo, ServiceSubscriptionInfo } from '@/features/authentication/services/types';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -424,6 +424,46 @@ export class AuthenticationService {
     async createWorkspaceCredential(name: string, description: string): Promise<WorkspaceCredential | undefined> {
         const { fetcher } = await this.ensureEntities();
         return fetcher.createWorkspaceCredential(name, description);
+    }
+
+    // --- ApiSubscriberClient passthroughs (D2 Track A) -------------------------
+    // The 5 subscriber methods the API-mesh subscribe path needs, forwarded to
+    // the fetcher via the existing ensureEntities() seam.
+
+    /** List the org's entitled services (resolves requiredApis → sdkCodes). */
+    async getServicesForOrg(orgId: string): Promise<OrgServiceInfo[]> {
+        const { fetcher } = await this.ensureEntities();
+        return fetcher.getServicesForOrg(orgId);
+    }
+
+    /** Create an apiKey/AdobeID credential; returns its `id_integration`. */
+    async createAdobeIdCredential(
+        orgId: string, projectId: string, workspaceId: string, input: AdobeIdCredentialInput,
+    ): Promise<string | undefined> {
+        const { fetcher } = await this.ensureEntities();
+        return fetcher.createAdobeIdCredential(orgId, projectId, workspaceId, input);
+    }
+
+    /** Subscribe apiKey/AdobeID services onto an AdobeID credential. */
+    async subscribeAdobeIdIntegrationToServices(
+        orgId: string, idIntegration: string, serviceInfo: ServiceSubscriptionInfo[],
+    ): Promise<void> {
+        const { fetcher } = await this.ensureEntities();
+        return fetcher.subscribeAdobeIdIntegrationToServices(orgId, idIntegration, serviceInfo);
+    }
+
+    /** Subscribe OAuth-S2S services onto an S2S credential. */
+    async subscribeOAuthServerToServerIntegrationToServices(
+        orgId: string, idIntegration: string, serviceInfo: ServiceSubscriptionInfo[],
+    ): Promise<void> {
+        const { fetcher } = await this.ensureEntities();
+        return fetcher.subscribeOAuthServerToServerIntegrationToServices(orgId, idIntegration, serviceInfo);
+    }
+
+    /** Ensure the shared S2S credential exists; returns its `id_integration`. */
+    async ensureOAuthCredentialId(orgId: string, projectId: string, workspaceId: string): Promise<string> {
+        const { fetcher } = await this.ensureEntities();
+        return fetcher.ensureOAuthCredentialId(orgId, projectId, workspaceId);
     }
 
     /**
