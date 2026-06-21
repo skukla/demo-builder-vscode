@@ -113,6 +113,32 @@ export interface WorkspaceCredential {
     source: 'oauth_server_to_server' | 'apiKey' | 'jwt' | 'oauth2';
 }
 
+/**
+ * An org service as returned by `getServicesForOrg` (D1 API subscriber).
+ * `platformList` decides the subscribe path: `apiKey`/AdobeID (e.g. API Mesh
+ * `GraphQLServiceSDK`) vs `oauth_server_to_server` (e.g. `AdobeIOManagementAPISDK`).
+ */
+export interface OrgServiceInfo {
+    code: string;
+    platformList?: string[];
+    domainMandatory?: boolean;
+}
+
+/** Input to `createAdobeIdCredential` (apiKey path). `domain` mandatory for API Mesh. */
+export interface AdobeIdCredentialInput {
+    name: string;
+    description: string;
+    platform: 'apiKey';
+    domain: string;
+}
+
+/** A single service to subscribe. Free services use null licenseConfigs/roles. */
+export interface ServiceSubscriptionInfo {
+    sdkCode: string;
+    licenseConfigs: unknown[] | null;
+    roles: unknown[] | null;
+}
+
 export interface AdobeCLIError extends Error {
     code?: string;
     stdout?: string;
