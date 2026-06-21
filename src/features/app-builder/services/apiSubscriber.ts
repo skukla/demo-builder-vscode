@@ -1,7 +1,7 @@
 /**
  * API subscriber (Step 07) — two-path-by-`platformList`, union reconcile.
  *
- * Ensures a demo's deployables have their `requiredApis` subscribed on the one
+ * Ensures a demo's appBuilderComponents have their `requiredApis` subscribed on the one
  * shared App Builder project. Per the D1 spike (Q5 DEFINITIVE/CORRECTION):
  *
  * - `getServicesForOrg(orgId)` resolves API names → `{ sdkCode, platformList,
@@ -11,7 +11,7 @@
  *   `subscribeAdobeIdIntegrationToServices`; `oauth_server_to_server` services
  *   (e.g. `AdobeIOManagementAPISDK`) → `subscribeOAuthServerToServerIntegration
  *   ToServices`.
- * - Subscribe the UNION of all deployables' `requiredApis` + the baseline
+ * - Subscribe the UNION of all appBuilderComponents' `requiredApis` + the baseline
  *   `AdobeIOManagementAPISDK`; idempotent reconcile (PUT the full union — correct
  *   whether the endpoint replaces or merges). Mesh is NOT skipped.
  *
@@ -20,7 +20,7 @@
  */
 
 import type { OrgServiceInfo, ServiceSubscriptionInfo } from '@/features/authentication/services/types';
-import type { DeployableCatalogEntry } from '@/types/deployables';
+import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
 /** Baseline API always subscribed (free; needed for `aio app` operations). */
 export const BASELINE_API = 'AdobeIOManagementAPISDK';
@@ -65,11 +65,11 @@ export interface ApiSubscriberClient {
     ): Promise<void>;
 }
 
-/** Union of every deployable's `requiredApis` + the baseline; deduped. */
-export function computeRequiredApis(deployables: DeployableCatalogEntry[]): string[] {
+/** Union of every appBuilderComponent's `requiredApis` + the baseline; deduped. */
+export function computeRequiredApis(appBuilderComponents: AppBuilderComponentCatalogEntry[]): string[] {
     const apis = new Set<string>([BASELINE_API]);
-    for (const deployable of deployables) {
-        for (const api of deployable.requiredApis ?? []) {
+    for (const appBuilderComponent of appBuilderComponents) {
+        for (const api of appBuilderComponent.requiredApis ?? []) {
             apis.add(api);
         }
     }
@@ -147,17 +147,17 @@ async function subscribeApiKeyServices(
 }
 
 /**
- * Reconcile the UNION of all deployables' `requiredApis` (+ baseline) onto the
+ * Reconcile the UNION of all appBuilderComponents' `requiredApis` (+ baseline) onto the
  * shared project, branching each service by its platform. Idempotent: it always
  * subscribes the full union (not a delta). Mesh is included via the apiKey path.
  */
 export async function subscribeRequiredApis(
-    deployables: DeployableCatalogEntry[],
+    appBuilderComponents: AppBuilderComponentCatalogEntry[],
     target: OrgTarget,
     client: ApiSubscriberClient,
     domain: string = DEFAULT_DOMAIN,
 ): Promise<void> {
-    const requiredApis = computeRequiredApis(deployables);
+    const requiredApis = computeRequiredApis(appBuilderComponents);
     const servicesForOrg = await client.getServicesForOrg(target.orgId);
     const services = resolveServiceInfos(requiredApis, servicesForOrg);
     const { apiKey, oauthS2S } = partitionByPlatform(services);

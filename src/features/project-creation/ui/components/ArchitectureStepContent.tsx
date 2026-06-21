@@ -3,7 +3,7 @@
  *
  * Renders the architecture step content within the ArchitectureModal:
  * stack radio group and optional services (addons). The API Mesh toggle was
- * generalized into the catalog-driven DeployablesStepContent (D2 Track B),
+ * generalized into the catalog-driven AppBuilderComponentsStepContent (D2 Track B),
  * which the modal renders as a sibling section.
  *
  * Pure presentational component -- all state and handlers live in ArchitectureModal.

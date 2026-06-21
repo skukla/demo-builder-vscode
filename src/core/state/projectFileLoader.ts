@@ -8,7 +8,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { migrateLegacyToDeployables } from './deployableMigration';
+import { migrateLegacyToAppBuilderComponents } from './appBuilderComponentMigration';
 import type { Project, ComponentInstance } from '@/types';
 import type { AiPrompt } from '@/types/base';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
@@ -50,7 +50,7 @@ export interface ProjectManifest {
     componentVersions?: Project['componentVersions'];
     meshState?: Project['meshState'];
     appState?: Project['appState'];
-    deployables?: Project['deployables'];
+    appBuilderComponents?: Project['appBuilderComponents'];
     edsStorefrontState?: Project['edsStorefrontState'];
     edsStorefrontStatusSummary?: Project['edsStorefrontStatusSummary'];
     selectedPackage?: string;
@@ -126,9 +126,9 @@ export class ProjectFileLoader {
             };
 
             // One-time read-side migration of legacy meshState/appState into the
-            // keyed deployables map (on-disk manifest untouched in D1). Idempotent
-            // when the manifest already carries a forward-state `deployables` map.
-            project.deployables = migrateLegacyToDeployables(manifest);
+            // keyed appBuilderComponents map (on-disk manifest untouched in D1). Idempotent
+            // when the manifest already carries a forward-state `appBuilderComponents` map.
+            project.appBuilderComponents = migrateLegacyToAppBuilderComponents(manifest);
 
             // Detect if demo is actually running
             this.detectDemoStatus(project, terminalProvider);

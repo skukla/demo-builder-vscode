@@ -191,10 +191,10 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
         [updateState],
     );
 
-    // Handler for selected deployable changes (catalog picker in the modal, D2 Track B)
-    const handleSelectedDeployablesChange = useCallback(
-        (deployables: string[]) => {
-            updateState({ selectedDeployables: deployables });
+    // Handler for selected appBuilderComponent changes (catalog picker in the modal, D2 Track B)
+    const handleSelectedAppBuilderComponentsChange = useCallback(
+        (appBuilderComponents: string[]) => {
+            updateState({ selectedAppBuilderComponents: appBuilderComponents });
         },
         [updateState],
     );
@@ -322,8 +322,8 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
                 customBlockLibraryDefaults={customBlockLibraryDefaults}
                 selectedOptionalDependencies={state.selectedOptionalDependencies}
                 onOptionalDependenciesChange={handleOptionalDependenciesChange}
-                selectedDeployables={state.selectedDeployables}
-                onSelectedDeployablesChange={handleSelectedDeployablesChange}
+                selectedAppBuilderComponents={state.selectedAppBuilderComponents}
+                onSelectedAppBuilderComponentsChange={handleSelectedAppBuilderComponentsChange}
                 headerContent={projectNameField}
             />
         );

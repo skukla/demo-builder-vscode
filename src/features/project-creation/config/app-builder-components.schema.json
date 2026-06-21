@@ -1,0 +1,133 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Demo Builder AppBuilderComponents Catalog Schema",
+  "description": "Schema for the declarative catalog of pre-built appBuilderComponents (meshes and integrations)",
+  "type": "object",
+  "required": ["version", "appBuilderComponents"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Schema version (e.g., '1.0.0')"
+    },
+    "appBuilderComponents": {
+      "type": "array",
+      "description": "Array of appBuilderComponent catalog entries (the three seeded meshes, plus integrations over time)",
+      "items": {
+        "$ref": "#/definitions/appBuilderComponent"
+      },
+      "minItems": 1
+    }
+  },
+  "definitions": {
+    "appBuilderComponent": {
+      "type": "object",
+      "required": ["id", "name", "description", "kind", "source"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Unique identifier (lowercase, hyphen-separated)"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Display name"
+        },
+        "description": {
+          "type": "string",
+          "description": "What the appBuilderComponent provides"
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["mesh", "integration"],
+          "description": "AppBuilderComponent kind"
+        },
+        "source": {
+          "$ref": "#/definitions/gitHubSource"
+        },
+        "compatibleBackends": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Backend ids this appBuilderComponent fits (omitted = any backend)"
+        },
+        "compatibleFrontends": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Frontend ids this appBuilderComponent fits (omitted = any frontend)"
+        },
+        "requiredApis": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Adobe API sdkCodes/names to subscribe on the workspace (e.g. GraphQLServiceSDK)"
+        },
+        "providesEnvVars": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Env-var names this appBuilderComponent provides to consumers (e.g. MESH_ENDPOINT)"
+        },
+        "envSchema": {
+          "type": "array",
+          "description": "The appBuilderComponent's own env-var schema (inputs it needs)",
+          "items": {
+            "$ref": "#/definitions/envVar"
+          }
+        }
+      }
+    },
+    "envVar": {
+      "type": "object",
+      "required": ["name", "type", "label"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Env-var name"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["text", "secret"],
+          "description": "secret → masked + SecretStorage; text → Configure UI → .env"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable label for the collection UI"
+        },
+        "derivedFrom": {
+          "type": "string",
+          "description": "Derived from another known value (e.g. connect-commerce backend config)"
+        },
+        "providedBy": {
+          "type": "string",
+          "description": "Provided by another appBuilderComponent that declares it in providesEnvVars"
+        }
+      }
+    },
+    "gitHubSource": {
+      "type": "object",
+      "required": ["owner", "repo", "branch"],
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "description": "GitHub owner/organization"
+        },
+        "repo": {
+          "type": "string",
+          "minLength": 1,
+          "description": "GitHub repository name"
+        },
+        "branch": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Branch to fetch from"
+        }
+      }
+    }
+  }
+}

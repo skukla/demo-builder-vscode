@@ -33,8 +33,8 @@ jest.mock('@/features/project-creation/services/demoPackageLoader', () => ({
     getResolvedMeshRequirement: jest.fn(() => false),
 }));
 
-jest.mock('@/features/project-creation/services/deployableSelection', () => ({
-    getSelectableDeployables: jest.fn(() => []),
+jest.mock('@/features/project-creation/services/appBuilderComponentSelection', () => ({
+    getSelectableAppBuilderComponents: jest.fn(() => []),
 }));
 
 // ---------------------------------------------------------------------------
@@ -377,15 +377,15 @@ describe('ArchitectureModal - Modal Size', () => {
 });
 
 // ===========================================================================
-// Deployables picker (D2 Track B — Step 03)
+// AppBuilderComponents picker (D2 Track B — Step 03)
 // ===========================================================================
 
-import { getSelectableDeployables } from '@/features/project-creation/services/deployableSelection';
-import type { SelectableDeployable } from '@/features/project-creation/services/deployableSelection';
+import { getSelectableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentSelection';
+import type { SelectableAppBuilderComponent } from '@/features/project-creation/services/appBuilderComponentSelection';
 
-const mockGetSelectable = getSelectableDeployables as jest.Mock;
+const mockGetSelectable = getSelectableAppBuilderComponents as jest.Mock;
 
-const meshRow: SelectableDeployable = {
+const meshRow: SelectableAppBuilderComponent = {
     id: 'commerce-paas-mesh',
     name: 'Commerce PaaS API Mesh',
     description: 'API Mesh for EDS + PaaS',
@@ -394,7 +394,7 @@ const meshRow: SelectableDeployable = {
     requirement: 'optional',
 };
 
-describe('ArchitectureModal - Deployables picker', () => {
+describe('ArchitectureModal - AppBuilderComponents picker', () => {
     beforeEach(() => {
         jest.useFakeTimers();
         jest.clearAllMocks();
@@ -405,30 +405,30 @@ describe('ArchitectureModal - Deployables picker', () => {
         jest.useRealTimers();
     });
 
-    it('renders the deployables picker in place of the old mesh section', () => {
+    it('renders the appBuilderComponents picker in place of the old mesh section', () => {
         render(
             <ArchitectureModal
                 {...defaultProps}
                 selectedStackId="eds-paas"
             />,
         );
-        // The mesh now appears as a catalog row from getSelectableDeployables,
+        // The mesh now appears as a catalog row from getSelectableAppBuilderComponents,
         // not the hardcoded "Include API Mesh" toggle.
         expect(screen.getByText('Commerce PaaS API Mesh')).toBeInTheDocument();
         expect(screen.queryByText('Include API Mesh')).not.toBeInTheDocument();
     });
 
-    it('calls onSelectedDeployablesChange when a deployable row toggles', () => {
-        const onSelectedDeployablesChange = jest.fn();
+    it('calls onSelectedAppBuilderComponentsChange when an App Builder component row toggles', () => {
+        const onSelectedAppBuilderComponentsChange = jest.fn();
         render(
             <ArchitectureModal
                 {...defaultProps}
                 selectedStackId="eds-paas"
-                onSelectedDeployablesChange={onSelectedDeployablesChange}
+                onSelectedAppBuilderComponentsChange={onSelectedAppBuilderComponentsChange}
             />,
         );
         fireEvent.click(screen.getByRole('checkbox', { name: /Commerce PaaS API Mesh/i }));
-        expect(onSelectedDeployablesChange).toHaveBeenCalledWith(['commerce-paas-mesh']);
+        expect(onSelectedAppBuilderComponentsChange).toHaveBeenCalledWith(['commerce-paas-mesh']);
     });
 
     it('propagates a mesh selection to onOptionalDependenciesChange (Adobe-I/O step-filter lock)', () => {
@@ -440,7 +440,7 @@ describe('ArchitectureModal - Deployables picker', () => {
                 onOptionalDependenciesChange={onOptionalDependenciesChange}
             />,
         );
-        // Selecting the mesh deployable must still flow the mesh COMPONENT id into
+        // Selecting the mesh appBuilderComponent must still flow the mesh COMPONENT id into
         // selectedOptionalDependencies so hasMeshInDependencies keeps gating the
         // Adobe I/O steps (the flagged HIGH risk).
         fireEvent.click(screen.getByRole('checkbox', { name: /Commerce PaaS API Mesh/i }));

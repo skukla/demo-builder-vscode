@@ -3,7 +3,7 @@
  *
  * Tests for the extracted architecture step sub-component that renders
  * stack radio options and optional services. The API Mesh toggle moved to
- * DeployablesStepContent (D2 Track B), so it is no longer tested here.
+ * AppBuilderComponentsStepContent (D2 Track B), so it is no longer tested here.
  * Uses grouped prop interfaces (stackSelection, addonSelection).
  *
  * @jest-environment jsdom

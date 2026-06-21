@@ -6,23 +6,23 @@
  * `AdobeIOManagementAPISDK`) are subscribed on the shared App Builder project
  * BEFORE `deployMeshComponent` runs — closing the "built ≠ wired" gap.
  *
- * This is NOT the full `addDeployable` (no clone/install): the mesh component is
+ * This is NOT the full `addAppBuilderComponent` (no clone/install): the mesh component is
  * already cloned by the time a deploy runs. The subscribe runs under the
  * project's org context (P1: org-targeted via `withOrgContext`/AIO_CONSOLE_*,
  * never `aio console select`).
  *
  * Reuses the D1 pieces verbatim — `subscribeRequiredApis`, `subscriberTarget`,
- * `deriveAllowedDomain`, `getAvailableDeployables`, and the Step 02 adapter — so
+ * `deriveAllowedDomain`, `getAvailableAppBuilderComponents`, and the Step 02 adapter — so
  * there is one subscription implementation shared by every call site.
  */
 
 import { deriveAllowedDomain } from './allowedDomain';
 import { subscribeRequiredApis } from './apiSubscriber';
 import { createApiSubscriberClient } from './apiSubscriberClientAdapter';
-import { subscriberTarget } from './deployableRunnerDeps';
+import { subscriberTarget } from './appBuilderComponentRunnerDeps';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import { getAvailableDeployables } from '@/features/project-creation/services/deployableCatalogLoader';
+import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
@@ -44,9 +44,9 @@ export async function ensureMeshApiSubscribed(
 
     const backendId = project.componentSelections?.backend ?? '';
     const frontendId = project.componentSelections?.frontend ?? '';
-    const catalog = getAvailableDeployables(backendId, frontendId);
+    const catalog = getAvailableAppBuilderComponents(backendId, frontendId);
     if (catalog.length === 0) {
-        logger.debug('[Mesh Subscribe] No deployable catalog rows for selection — skipping subscribe');
+        logger.debug('[Mesh Subscribe] No appBuilderComponent catalog rows for selection — skipping subscribe');
         return;
     }
 

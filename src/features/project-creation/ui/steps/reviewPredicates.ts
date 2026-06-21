@@ -5,13 +5,13 @@
  */
 
 import { hasMeshInDependencies } from '@/core/constants';
-import { getDeployableName } from '@/features/project-creation/services/deployableCatalogLoader';
+import { getAppBuilderComponentName } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 
-/** A selected deployable summarized for the Review step. */
-export interface ReviewedDeployable {
-    /** Display name (resolved via getDeployableName, falls back to id). */
+/** A selected appBuilderComponent summarized for the Review step. */
+export interface ReviewedAppBuilderComponent {
+    /** Display name (resolved via getAppBuilderComponentName, falls back to id). */
     name: string;
-    /** True when the package marks this deployable required (shown "Included"). */
+    /** True when the package marks this appBuilderComponent required (shown "Included"). */
     included: boolean;
 }
 
@@ -48,21 +48,21 @@ export function hasRequiredReviewData(state: ReviewState): boolean {
 }
 
 /**
- * Summarize selected deployables for the Review step.
+ * Summarize selected appBuilderComponents for the Review step.
  *
  * Resolves each id to its display name (falling back to the id) and flags
  * required ones as "Included" (locked, auto-included by the package).
  *
- * @param deployableIds - The selected deployable ids
+ * @param appBuilderComponentIds - The selected appBuilderComponent ids
  * @param requiredIds - Ids the package marks required
- * @returns One ReviewedDeployable per selected id
+ * @returns One ReviewedAppBuilderComponent per selected id
  */
-export function summarizeSelectedDeployables(
-    deployableIds: readonly string[],
+export function summarizeSelectedAppBuilderComponents(
+    appBuilderComponentIds: readonly string[],
     requiredIds: readonly string[],
-): ReviewedDeployable[] {
-    return deployableIds.map(id => ({
-        name: getDeployableName(id),
+): ReviewedAppBuilderComponent[] {
+    return appBuilderComponentIds.map(id => ({
+        name: getAppBuilderComponentName(id),
         included: requiredIds.includes(id),
     }));
 }

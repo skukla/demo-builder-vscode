@@ -488,8 +488,8 @@ describe('configGenerator', () => {
     // ==========================================================
     //
     // These tests pin the load-bearing MESH_ENDPOINT → config.json edge. The
-    // storefront config must read the commerce/mesh endpoint from "any deployable
-    // that provides it" (the keyed `deployables` providesEnvVars / getProvidedEnvVars
+    // storefront config must read the commerce/mesh endpoint from "any appBuilderComponent
+    // that provides it" (the keyed `appBuilderComponents` providesEnvVars / getProvidedEnvVars
     // accessor) while producing BYTE-IDENTICAL output for existing mesh-backed
     // projects whose endpoint still lives only in legacy `meshState`.
     describe('extractConfigParams — generalized endpoint provider (step 04)', () => {
@@ -527,13 +527,13 @@ describe('configGenerator', () => {
             } as unknown as Project;
         }
 
-        /** Forward-state: same project but endpoint lives only in keyed deployables. */
-        function deployablesOnlyProject(): Project {
+        /** Forward-state: same project but endpoint lives only in keyed appBuilderComponents. */
+        function appBuilderComponentsOnlyProject(): Project {
             const base = legacyMeshProject();
             return {
                 ...base,
                 meshState: undefined,
-                deployables: {
+                appBuilderComponents: {
                     mesh: {
                         kind: 'mesh',
                         status: 'deployed',
@@ -568,17 +568,17 @@ describe('configGenerator', () => {
             expect(params.commerceEndpoint).toBe(MESH_ENDPOINT);
         });
 
-        it('resolves the SAME MESH_ENDPOINT when the endpoint lives only in deployables', () => {
-            const params = extractConfigParams(deployablesOnlyProject());
+        it('resolves the SAME MESH_ENDPOINT when the endpoint lives only in appBuilderComponents', () => {
+            const params = extractConfigParams(appBuilderComponentsOnlyProject());
             expect(params.commerceEndpoint).toBe(MESH_ENDPOINT);
         });
 
-        it('produces byte-identical config.json from deployables-only as from legacy meshState', () => {
+        it('produces byte-identical config.json from appBuilderComponents-only as from legacy meshState', () => {
             const legacyContent = generateConfigJson(
                 buildConfigGeneratorParams(legacyMeshProject()), mockLogger,
             ).content;
             const forwardContent = generateConfigJson(
-                buildConfigGeneratorParams(deployablesOnlyProject()), mockLogger,
+                buildConfigGeneratorParams(appBuilderComponentsOnlyProject()), mockLogger,
             ).content;
 
             expect(forwardContent).toBe(legacyContent);
@@ -588,7 +588,7 @@ describe('configGenerator', () => {
             const noMesh = {
                 ...legacyMeshProject(),
                 meshState: undefined,
-                deployables: undefined,
+                appBuilderComponents: undefined,
                 componentConfigs: {
                     'eds-storefront': {
                         ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://direct.example.com/graphql',
@@ -600,10 +600,10 @@ describe('configGenerator', () => {
             expect(params.commerceEndpoint).toBe('https://direct.example.com/graphql');
         });
 
-        it('resolves a consistent endpoint when both deployables and legacy meshState are present (mid-migration)', () => {
+        it('resolves a consistent endpoint when both appBuilderComponents and legacy meshState are present (mid-migration)', () => {
             const both = {
                 ...legacyMeshProject(),
-                deployables: {
+                appBuilderComponents: {
                     mesh: {
                         kind: 'mesh',
                         status: 'deployed',

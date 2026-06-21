@@ -2,13 +2,13 @@
  * ProjectFileLoader integration tests (Step 02)
  *
  * Verifies the read-side migration of legacy `meshState`/`appState` into the
- * keyed `deployables` map happens through the REAL loader, and that loading a
+ * keyed `appBuilderComponents` map happens through the REAL loader, and that loading a
  * project does NOT mutate the on-disk manifest (read-only migration in D1).
  */
 
 import * as fs from 'fs/promises';
 import { ProjectFileLoader } from '@/core/state/projectFileLoader';
-import { getMeshDeployable } from '@/features/app-builder/services/deployableState';
+import { getMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
 import type { Logger } from '@/types/logger';
 
 jest.mock('fs/promises');
@@ -34,8 +34,8 @@ function primeFsWithManifest(manifest: Record<string, unknown>): void {
     mockedFs.writeFile.mockResolvedValue(undefined);
 }
 
-describe('ProjectFileLoader — legacy deployable migration', () => {
-    it('loads a manifest with legacy meshState into a migrated mesh deployable', async () => {
+describe('ProjectFileLoader — legacy appBuilderComponent migration', () => {
+    it('loads a manifest with legacy meshState into a migrated mesh appBuilderComponent', async () => {
         primeFsWithManifest({
             name: 'legacy-demo',
             meshState: {
@@ -50,12 +50,12 @@ describe('ProjectFileLoader — legacy deployable migration', () => {
         const project = await loader.loadProject(PROJECT_PATH, () => []);
 
         expect(project).not.toBeNull();
-        const mesh = getMeshDeployable(project!);
+        const mesh = getMeshAppBuilderComponent(project!);
         expect(mesh).toBeDefined();
         expect(mesh?.kind).toBe('mesh');
         expect(mesh?.endpoint).toBe('https://mesh/graphql');
-        // Came from the keyed deployables map (the migration ran), not just read-through.
-        expect(project!.deployables?.mesh?.endpoint).toBe('https://mesh/graphql');
+        // Came from the keyed appBuilderComponents map (the migration ran), not just read-through.
+        expect(project!.appBuilderComponents?.mesh?.endpoint).toBe('https://mesh/graphql');
     });
 
     it('does not write the manifest file during load (read-only migration in D1)', async () => {

@@ -1,8 +1,8 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { loadAppBuilderComponentSecretFlags, persistAppBuilderComponentSecrets, splitAppBuilderComponentSecrets } from '../handlers/appBuilderComponentSecrets';
 import { configureHandlers } from '../handlers/configureHandlers';
-import { loadDeployableSecretFlags, persistDeployableSecrets, splitDeployableSecrets } from '../handlers/deployableSecrets';
 import { mergeEnvValuesFromSources } from './configureEnvLoader';
 import { ProjectDashboardWebviewCommand } from './showDashboard';
 import { BaseWebviewCommand } from '@/core/base';
@@ -13,6 +13,7 @@ import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { parseEnvFile } from '@/core/utils/envParser';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
+import { getProvidedEnvVars } from '@/features/app-builder/services/appBuilderComponentState';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { detectStorefrontChanges, isEdsProject, republishStorefrontConfig } from '@/features/eds';
 import {
@@ -27,13 +28,12 @@ import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
 import { HelixService } from '@/features/eds/services/helixService';
 import { installQuickEdit } from '@/features/eds/services/quickEditPublisher';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
-import { getAvailableDeployables } from '@/features/project-creation/services/deployableCatalogLoader';
 import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers';
+import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 import { handleRenameProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
-import { getProvidedEnvVars } from '@/features/app-builder/services/deployableState';
 import { Project } from '@/types';
+import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AuthoringExperience } from '@/types/base';
-import type { DeployableCatalogEntry } from '@/types/deployables';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, SharedState } from '@/types/handlers';
 import { getComponentInstanceEntries, getEdsDaLiveUrl } from '@/types/typeGuards';
@@ -65,12 +65,12 @@ interface ConfigureInitialData {
     isEds: boolean;
     /** Resolved authoring experience seeding the radio (EDS only). */
     authoringExperience: AuthoringExperience;
-    /** Catalog entries for the project's selected deployables (bucket-3 inputs). */
-    deployableCatalog: DeployableCatalogEntry[];
+    /** Catalog entries for the project's selected appBuilderComponents (bucket-3 inputs). */
+    appBuilderComponentCatalog: AppBuilderComponentCatalogEntry[];
     /** Resolved provided env values (bucket-2 "connected" sources). */
     providedEnvVars: Record<string, string>;
-    /** Per-deployable "is set" flags for secret vars (booleans only, no values). */
-    deployableSecretFlags: Record<string, Record<string, boolean>>;
+    /** Per-appBuilderComponent "is set" flags for secret vars (booleans only, no values). */
+    appBuilderComponentSecretFlags: Record<string, Record<string, boolean>>;
 }
 
 export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
@@ -179,16 +179,16 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         // Get current theme
         const theme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
 
-        // Deployable bucket-3/bucket-2 surface: the catalog for the project's
+        // AppBuilderComponent bucket-3/bucket-2 surface: the catalog for the project's
         // selection, the provided ("connected") values, and the "is set" flags
         // for secrets (booleans only — secret VALUES never travel to the webview).
-        const deployableCatalog = getAvailableDeployables(
+        const appBuilderComponentCatalog = getAvailableAppBuilderComponents(
             project.componentSelections?.backend ?? '',
             project.componentSelections?.frontend ?? '',
         );
         const providedEnvVars = getProvidedEnvVars(project);
-        const deployableSecretFlags = await loadDeployableSecretFlags(
-            deployableCatalog,
+        const appBuilderComponentSecretFlags = await loadAppBuilderComponentSecretFlags(
+            appBuilderComponentCatalog,
             project.path,
             this.context.secrets,
         );
@@ -201,9 +201,9 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             existingProjectNames,
             isEds: isEdsProject(project),
             authoringExperience: resolveProjectAuthoringExperience(project),
-            deployableCatalog,
+            appBuilderComponentCatalog,
             providedEnvVars,
-            deployableSecretFlags,
+            appBuilderComponentSecretFlags,
         };
     }
 
@@ -249,21 +249,21 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                     }
                 }
 
-                // SECRET SAFETY (repo is PUBLIC): split deployable `type:'secret'`
+                // SECRET SAFETY (repo is PUBLIC): split appBuilderComponent `type:'secret'`
                 // values out of componentConfigs → VS Code SecretStorage BEFORE any
                 // detection/persistence/.env work. The sanitized configs (no secrets)
                 // are what every downstream path sees; secrets never reach the
                 // manifest, the .env file, or the change-detectors.
-                const deployableCatalog = getAvailableDeployables(
+                const appBuilderComponentCatalog = getAvailableAppBuilderComponents(
                     project.componentSelections?.backend ?? '',
                     project.componentSelections?.frontend ?? '',
                 );
-                const split = splitDeployableSecrets(data.componentConfigs, deployableCatalog);
+                const split = splitAppBuilderComponentSecrets(data.componentConfigs, appBuilderComponentCatalog);
                 // Values are all strings here (the Configure payload is text/secret
                 // strings); the split only deletes secret keys, so the narrow local
                 // ComponentConfigs shape is preserved.
                 const sanitizedConfigs = split.sanitizedConfigs as ComponentConfigs;
-                await persistDeployableSecrets(
+                await persistAppBuilderComponentSecrets(
                     split.secrets,
                     project.path,
                     this.context.secrets,

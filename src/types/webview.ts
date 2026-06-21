@@ -28,7 +28,7 @@ export interface WizardState {
     selectedAddons?: string[];  // Selected addon IDs (e.g., ['adobe-commerce-aco'])
     selectedBlockLibraries?: string[];  // Selected block library IDs (e.g., ['isle5', 'demo-team-blocks'])
     selectedOptionalDependencies?: string[];  // Selected optional dependency IDs (e.g., mesh component IDs from stack.optionalDependencies)
-    selectedDeployables?: string[];  // Selected catalog deployable IDs (D2; intent the dashboard reads). Mesh dual-flows through selectedOptionalDependencies for step-filtering — see deployableSelectionState.ts
+    selectedAppBuilderComponents?: string[];  // Selected catalog appBuilderComponent IDs (D2; intent the dashboard reads). Mesh dual-flows through selectedOptionalDependencies for step-filtering — see appBuilderComponentSelectionState.ts
     customBlockLibraries?: CustomBlockLibrary[];  // Custom block libraries added by URL
     packageConfigDefaults?: Record<string, string>;  // Package-specific config defaults (e.g., store codes)
     components?: ComponentSelection;

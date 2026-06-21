@@ -30,22 +30,22 @@ export type {
 } from './appComponentManager';
 
 export {
-    getDeployable,
-    listDeployables,
-    setDeployable,
-    getMeshDeployable,
-    getIntegrationDeployables,
+    getAppBuilderComponent,
+    listAppBuilderComponents,
+    setAppBuilderComponent,
+    getMeshAppBuilderComponent,
+    getIntegrationAppBuilderComponents,
     getProvidedEnvVars,
-    isDeployableState,
-} from './deployableState';
-export type { IdentifiedDeployable } from './deployableState';
+    isAppBuilderComponentState,
+} from './appBuilderComponentState';
+export type { IdentifiedAppBuilderComponent } from './appBuilderComponentState';
 
 export {
-    addDeployable,
-    deployDeployable,
-    removeDeployable,
-} from './deployableRunner';
-export type { DeployableRunnerDeps, RunnerResult } from './deployableRunner';
+    addAppBuilderComponent,
+    deployAppBuilderComponent,
+    removeAppBuilderComponent,
+} from './appBuilderComponentRunner';
+export type { AppBuilderComponentRunnerDeps, RunnerResult } from './appBuilderComponentRunner';
 
-export { buildDefaultRunnerDeps } from './deployableRunnerDeps';
-export type { RunnerDepsContext } from './deployableRunnerDeps';
+export { buildDefaultRunnerDeps } from './appBuilderComponentRunnerDeps';
+export type { RunnerDepsContext } from './appBuilderComponentRunnerDeps';

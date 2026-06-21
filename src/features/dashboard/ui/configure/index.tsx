@@ -2,8 +2,8 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { ConfigureScreen, ComponentsData } from './ConfigureScreen';
 import { WebviewApp, WebviewInitData } from '@/core/ui/components/WebviewApp';
+import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import { AuthoringExperience, Project } from '@/types/base';
-import type { DeployableCatalogEntry } from '@/types/deployables';
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/wizard.css';
@@ -16,9 +16,9 @@ interface ConfigureInitData extends WebviewInitData {
     existingProjectNames?: string[];
     isEds?: boolean;
     authoringExperience?: AuthoringExperience;
-    deployableCatalog?: DeployableCatalogEntry[];
+    appBuilderComponentCatalog?: AppBuilderComponentCatalogEntry[];
     providedEnvVars?: Record<string, string>;
-    deployableSecretFlags?: Record<string, Record<string, boolean>>;
+    appBuilderComponentSecretFlags?: Record<string, Record<string, boolean>>;
 }
 
 // Get root element
@@ -42,9 +42,9 @@ root.render(
                     existingProjectNames={data.existingProjectNames}
                     isEds={data.isEds}
                     authoringExperience={data.authoringExperience}
-                    deployableCatalog={data.deployableCatalog}
+                    appBuilderComponentCatalog={data.appBuilderComponentCatalog}
                     providedEnvVars={data.providedEnvVars}
-                    deployableSecretFlags={data.deployableSecretFlags}
+                    appBuilderComponentSecretFlags={data.appBuilderComponentSecretFlags}
                 />
             ) : null;
         }}
