@@ -18,7 +18,7 @@
  * @module features/dashboard/services/onOpenChecks/meshVerifyCheck
  */
 
-import type { CheckOutcome, OnOpenCheck, OnOpenCheckContext } from './types';
+import type { CheckResult, OnOpenCheck, OnOpenCheckContext } from './types';
 import type { Project } from '@/types';
 import { CHECK_IDS } from '@/types/messages';
 
@@ -46,6 +46,10 @@ export interface MeshVerifyCheckData {
     endpoint?: string;
 }
 
+/** User-facing messages (hoisted for parity with the sibling checks). */
+const MESH_GONE_MESSAGE = 'API Mesh is no longer deployed';
+const MESH_VERIFY_TRANSIENT_MESSAGE = 'Cannot verify API Mesh right now';
+
 /** Build the mesh-verify check. Pass the mesh verifier fns + state markDirty. */
 export function createMeshVerifyCheck<R extends MeshVerifyResultLike>(deps: MeshVerifyCheckDeps<R>): OnOpenCheck {
     return {
@@ -54,7 +58,7 @@ export function createMeshVerifyCheck<R extends MeshVerifyResultLike>(deps: Mesh
         // Re-verify on each requestStatus (mirrors the prior background verify),
         // e.g. after a re-auth refresh — not a once-per-session check.
         reRunnable: true,
-        async run(ctx: OnOpenCheckContext): Promise<CheckOutcome<MeshVerifyCheckData>> {
+        async run(ctx: OnOpenCheckContext): Promise<CheckResult<MeshVerifyCheckData>> {
             const { project, logger } = ctx;
 
             const result = await deps.verify(project);
@@ -62,25 +66,21 @@ export function createMeshVerifyCheck<R extends MeshVerifyResultLike>(deps: Mesh
             if (result?.success && result.data?.exists) {
                 await deps.syncMeshStatus(project, result);
                 deps.markDirty('meshState');
-                return { checkId: CHECK_IDS.MESH_VERIFY, status: 'ok', data: { endpoint: result.data.endpoint } };
+                return { status: 'ok', data: { endpoint: result.data.endpoint } };
             }
 
             if (!result?.success) {
                 // Transient verify error — do NOT flip persisted state to not-deployed
                 // (the old path's scare). Surface it as unknown and move on.
                 logger.warn(`[MeshVerify] Verification failed (transient): ${result?.error ?? 'unknown error'}`);
-                return { checkId: CHECK_IDS.MESH_VERIFY, status: 'unknown', message: 'Cannot verify API Mesh right now' };
+                return { status: 'unknown', message: MESH_VERIFY_TRANSIENT_MESSAGE };
             }
 
             // Verified, but the mesh is gone (deleted externally). Persist AND tell the user.
             logger.warn('[MeshVerify] Mesh not found in Adobe I/O — may have been deleted externally');
             await deps.syncMeshStatus(project, result);
             deps.markDirty('meshState');
-            return {
-                checkId: CHECK_IDS.MESH_VERIFY,
-                status: 'warning',
-                message: 'API Mesh is no longer deployed',
-            };
+            return { status: 'warning', message: MESH_GONE_MESSAGE };
         },
     };
 }

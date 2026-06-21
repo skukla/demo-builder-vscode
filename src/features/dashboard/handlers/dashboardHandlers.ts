@@ -150,9 +150,11 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         }),
     ];
     if (shouldVerifyMesh) {
+        // Single lazy import (resolved once) shared by both injected fns.
+        const meshVerifier = await import('@/features/mesh/services/meshVerifier');
         checks.push(createMeshVerifyCheck({
-            verify: (p) => import('@/features/mesh/services/meshVerifier').then(m => m.verifyMeshDeployment(p)),
-            syncMeshStatus: (p, r) => import('@/features/mesh/services/meshVerifier').then(m => m.syncMeshStatus(p, r)),
+            verify: (p) => meshVerifier.verifyMeshDeployment(p),
+            syncMeshStatus: (p, r) => meshVerifier.syncMeshStatus(p, r),
             markDirty: (key) => context.stateManager.markDirty(key),
         }));
     }

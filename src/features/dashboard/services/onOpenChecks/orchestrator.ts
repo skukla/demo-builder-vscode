@@ -14,7 +14,7 @@
  * @module features/dashboard/services/onOpenChecks/orchestrator
  */
 
-import type { CheckOutcome, OnOpenCheck, RunOnOpenChecksDeps } from './types';
+import type { CheckResult, OnOpenCheck, RunOnOpenChecksDeps } from './types';
 import { CHECK_RESULT_MESSAGE } from '@/types/messages';
 
 /** Per-session guard: `${project.path}::${checkId}` already run this session. */
@@ -50,19 +50,21 @@ export async function runOnOpenChecks(
             ranThisSession.add(guardKey);
         }
 
-        const post = (outcome: CheckOutcome): void => {
-            postMessage(CHECK_RESULT_MESSAGE, { ...outcome, checkId: outcome.checkId || check.id });
+        // The orchestrator owns identity: stamp `checkId` from `check.id` here, the
+        // single place it's set, so checks return bare {status, message?, data?}.
+        const post = (outcome: CheckResult): void => {
+            postMessage(CHECK_RESULT_MESSAGE, { ...outcome, checkId: check.id });
         };
 
         try {
             const outcome = await check.run({ project, logger, post });
-            post({ ...outcome, checkId: check.id });
+            post(outcome);
         } catch (error) {
             // P2: a throw never escapes and never goes silent — surface it as an
             // error outcome on the same channel.
             const message = error instanceof Error ? error.message : String(error);
             logger.warn(`[OnOpenChecks] '${check.id}' failed: ${message}`);
-            post({ checkId: check.id, status: 'error', message });
+            post({ status: 'error', message });
         }
     };
 

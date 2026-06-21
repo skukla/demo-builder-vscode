@@ -26,6 +26,7 @@ export {
 export type {
     CheckStatus,
     CheckOutcome,
+    CheckResult,
     OnOpenCheck,
     OnOpenCheckContext,
     RunOnOpenChecksDeps,

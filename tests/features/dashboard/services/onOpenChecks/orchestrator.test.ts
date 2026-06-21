@@ -51,7 +51,7 @@ it('runs a check and posts its outcome on checkResult', async () => {
     const check: OnOpenCheck = {
         id: 'org-context',
         mode: 'background',
-        run: async () => ({ checkId: 'org-context', status: 'ok', data: { org: 'X' } }),
+        run: async () => ({ status: 'ok', data: { org: 'X' } }),
     };
 
     await runOnOpenChecks(deps, [check]);
@@ -61,12 +61,14 @@ it('runs a check and posts its outcome on checkResult', async () => {
     expect(posted[0]).toMatchObject({ checkId: 'org-context', status: 'ok', data: { org: 'X' } });
 });
 
-it('stamps checkId on the outcome even if the check omits it', async () => {
+it('stamps checkId from check.id onto every posted outcome', async () => {
+    // Checks return a bare CheckResult (no checkId); the orchestrator is the sole
+    // stamp site, so the posted payload always carries the check's id.
     const { deps, postMessage } = makeDeps();
     const check: OnOpenCheck = {
         id: 'mesh-verify',
         mode: 'background',
-        run: async () => ({ checkId: '', status: 'ok' }),
+        run: async () => ({ status: 'ok' }),
     };
 
     await runOnOpenChecks(deps, [check]);
@@ -95,7 +97,7 @@ it('P2: a throwing check posts an error outcome and never rejects; others still 
     const healthy: OnOpenCheck = {
         id: 'ai-verify',
         mode: 'background',
-        run: async () => ({ checkId: 'ai-verify', status: 'ok' }),
+        run: async () => ({ status: 'ok' }),
     };
 
     await expect(runOnOpenChecks(deps, [thrower, healthy])).resolves.toBeUndefined();
@@ -113,8 +115,8 @@ it('supports an intermediate pending post then the resolved outcome', async () =
         id: 'org-context',
         mode: 'background',
         run: async (ctx) => {
-            ctx.post({ checkId: 'org-context', status: 'pending' });
-            return { checkId: 'org-context', status: 'warning', message: 'mismatch' };
+            ctx.post({ status: 'pending' });
+            return { status: 'warning', message: 'mismatch' };
         },
     };
 
@@ -126,7 +128,7 @@ it('supports an intermediate pending post then the resolved outcome', async () =
 
 it('re-entrancy: a check runs at most once per session for the same project', async () => {
     const { deps, postMessage } = makeDeps();
-    const run = jest.fn(async () => ({ checkId: 'org-context', status: 'ok' as const }));
+    const run = jest.fn(async () => ({ status: 'ok' as const }));
     const check: OnOpenCheck = { id: 'org-context', mode: 'background', run };
 
     await runOnOpenChecks(deps, [check]);
@@ -140,7 +142,7 @@ it('reRunnable: a check opts out of the per-session guard and runs every time', 
     // Org-context is a live check: a forced switch / re-auth re-invokes
     // requestStatus precisely to re-check, so it must NOT be guarded.
     const { deps, postMessage } = makeDeps();
-    const run = jest.fn(async () => ({ checkId: 'org-context', status: 'ok' as const }));
+    const run = jest.fn(async () => ({ status: 'ok' as const }));
     const check: OnOpenCheck = { id: 'org-context', mode: 'background', reRunnable: true, run };
 
     await runOnOpenChecks(deps, [check]);
@@ -153,7 +155,7 @@ it('reRunnable: a check opts out of the per-session guard and runs every time', 
 it('runs multiple checks concurrently and posts each', async () => {
     const { deps, postMessage } = makeDeps();
     const mk = (id: string): OnOpenCheck => ({
-        id, mode: 'background', run: async () => ({ checkId: id, status: 'ok' }),
+        id, mode: 'background', run: async () => ({ status: 'ok' }),
     });
 
     await runOnOpenChecks(deps, [mk('org-context'), mk('mesh-verify'), mk('ai-verify')]);

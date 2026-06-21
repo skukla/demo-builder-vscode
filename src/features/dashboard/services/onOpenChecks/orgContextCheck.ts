@@ -20,7 +20,7 @@
  * @module features/dashboard/services/onOpenChecks/orgContextCheck
  */
 
-import type { CheckOutcome, OnOpenCheck, OnOpenCheckContext } from './types';
+import type { CheckResult, OnOpenCheck, OnOpenCheckContext } from './types';
 import { ServiceLocator } from '@/core/di';
 import type {
     OrgContextResult,
@@ -39,9 +39,9 @@ export interface OrgContextCheckData {
 }
 
 const SIGN_IN_MESSAGE = 'Sign in to check organization';
+const ORG_MISMATCH_MESSAGE = 'This project is configured for a different Adobe organization';
 
-const unknownOutcome = (): CheckOutcome<OrgContextCheckData> => ({
-    checkId: CHECK_IDS.ORG_CONTEXT,
+const unknownOutcome = (): CheckResult<OrgContextCheckData> => ({
     status: 'unknown',
     message: SIGN_IN_MESSAGE,
 });
@@ -84,23 +84,30 @@ function toMismatch(project: Project, result: OrgContextResult): OrgMismatchInfo
     };
 }
 
+/**
+ * Unlike the `createXCheck(deps)` factory checks (mesh/mcp/ai), org-context is a
+ * bare singleton that reaches `ServiceLocator` for the auth service + state
+ * manager directly. That's deliberate: it's a `reRunnable` live check with no
+ * per-request collaborator that varies, so a factory would be abstraction for
+ * symmetry's sake (YAGNI). Its tests stub the locator instead of passing fakes.
+ */
 export const orgContextCheck: OnOpenCheck = {
     id: CHECK_IDS.ORG_CONTEXT,
     mode: 'background',
     // Live check: a forced Switch IMS Org / re-auth re-invokes requestStatus to
     // re-check, so it must run every time (not once per session).
     reRunnable: true,
-    async run(ctx: OnOpenCheckContext): Promise<CheckOutcome<OrgContextCheckData>> {
+    async run(ctx: OnOpenCheckContext): Promise<CheckResult<OrgContextCheckData>> {
         const { project, logger, post } = ctx;
 
         const expectedOrg = project.adobe?.organization;
         if (!expectedOrg) {
             // No Adobe org on this project — nothing to check (badge stays hidden).
-            return { checkId: CHECK_IDS.ORG_CONTEXT, status: 'ok' };
+            return { status: 'ok' };
         }
 
         // Telegraph "Checking…" (preserves the min-display UX); resolves fast (no CLI).
-        post({ checkId: CHECK_IDS.ORG_CONTEXT, status: 'pending' });
+        post({ status: 'pending' });
 
         const authManager = ServiceLocator.getAuthenticationService();
 
@@ -131,17 +138,12 @@ export const orgContextCheck: OnOpenCheck = {
 
         if (result.reachable) {
             await selfHealOrgData(project, result, logger);
-            return {
-                checkId: CHECK_IDS.ORG_CONTEXT,
-                status: 'ok',
-                data: { currentOrg: result.currentOrg },
-            };
+            return { status: 'ok', data: { currentOrg: result.currentOrg } };
         }
 
         return {
-            checkId: CHECK_IDS.ORG_CONTEXT,
             status: 'warning',
-            message: 'This project is configured for a different Adobe organization',
+            message: ORG_MISMATCH_MESSAGE,
             data: { orgMismatch: toMismatch(project, result), currentOrg: result.currentOrg },
         };
     },

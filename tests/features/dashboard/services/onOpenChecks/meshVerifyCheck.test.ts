@@ -13,7 +13,7 @@
 
 import { createMeshVerifyCheck } from '@/features/dashboard/services/onOpenChecks/meshVerifyCheck';
 import { CHECK_IDS } from '@/types/messages';
-import type { CheckOutcome, OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks';
+import type { CheckResult, OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 
@@ -43,7 +43,7 @@ it('deployed mesh still exists → ok with endpoint; persists state', async () =
     const check = createMeshVerifyCheck(deps);
     const { ctx } = makeCtx();
 
-    const outcome = await check.run(ctx) as CheckOutcome<{ endpoint?: string }>;
+    const outcome = await check.run(ctx) as CheckResult<{ endpoint?: string }>;
 
     expect(outcome.status).toBe('ok');
     expect(outcome.data?.endpoint).toBe('https://mesh.example/graphql');
@@ -56,7 +56,7 @@ it('mesh gone (success but !exists) → VISIBLE warning + still persists state',
     const check = createMeshVerifyCheck(deps);
     const { ctx } = makeCtx();
 
-    const outcome = await check.run(ctx) as CheckOutcome;
+    const outcome = await check.run(ctx) as CheckResult;
 
     expect(outcome.status).toBe('warning');
     expect(outcome.message).toMatch(/no longer deployed/i);
@@ -70,7 +70,7 @@ it('verify error → unknown (transient); does NOT flip persisted state', async 
     const check = createMeshVerifyCheck(deps);
     const { ctx } = makeCtx();
 
-    const outcome = await check.run(ctx) as CheckOutcome;
+    const outcome = await check.run(ctx) as CheckResult;
 
     expect(outcome.status).toBe('unknown');
     // The old path flipped to not-deployed on a transient error — no more.
