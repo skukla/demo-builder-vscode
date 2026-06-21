@@ -185,13 +185,12 @@ function StepContentArea(props: {
     githubAppInstallData: GitHubAppInstallData | null;
     onRetryMeshCheck: () => void;
     onBack: () => void;
-    onOpenConsole: () => void;
     onGitHubAppInstalled: () => void;
 }) {
     const {
         phase, progress, isActive, isCompleted, isOpeningProject,
         showGenericError, isCancelled, meshCheckResult, githubAppInstallData,
-        onRetryMeshCheck, onBack, onOpenConsole, onGitHubAppInstalled,
+        onRetryMeshCheck, onBack, onGitHubAppInstalled,
     } = props;
 
     if (phase === 'checking-mesh') {
@@ -206,10 +205,8 @@ function StepContentArea(props: {
         return (
             <MeshErrorDialog
                 error={meshCheckResult.error || 'API Mesh API is not enabled for this workspace.'}
-                setupInstructions={meshCheckResult.setupInstructions}
                 onRetry={onRetryMeshCheck}
                 onBack={onBack}
-                onOpenConsole={onOpenConsole}
             />
         );
     }
@@ -328,7 +325,6 @@ interface MeshCheckResult {
     meshStatus?: 'deployed' | 'not-deployed' | 'pending' | 'error';
     endpoint?: string;
     error?: string;
-    setupInstructions?: { step: string; details: string; important?: boolean }[];
 }
 
 type StepPhase = 'checking-mesh' | 'mesh-error' | 'github-app-install' | 'creating' | 'completed' | 'failed' | 'cancelled';
@@ -492,14 +488,6 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
         }, TIMEOUTS.PROJECT_OPEN_TRANSITION);
     };
 
-    const handleOpenConsole = useCallback(() => {
-        webviewClient.postMessage('open-adobe-console', {
-            orgId: state.adobeProject?.org_id,
-            projectId: state.adobeProject?.id,
-            workspaceId: state.adobeWorkspace?.id,
-        });
-    }, [state.adobeProject?.org_id, state.adobeProject?.id, state.adobeWorkspace?.id]);
-
     const handleRetryMeshCheck = useCallback(() => {
         checkMeshAccess();
     }, [checkMeshAccess]);
@@ -531,7 +519,6 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
                         githubAppInstallData={githubAppInstallData}
                         onRetryMeshCheck={handleRetryMeshCheck}
                         onBack={onBack}
-                        onOpenConsole={handleOpenConsole}
                         onGitHubAppInstalled={handleGitHubAppInstalled}
                     />
                 </SingleColumnLayout>

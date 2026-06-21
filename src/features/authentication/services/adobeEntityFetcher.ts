@@ -43,6 +43,10 @@ import { AuthError } from '@/types/errors';
 import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
 
+/** Name/description for the shared S2S credential created by ensureOAuthCredentialId. */
+const OAUTH_CREDENTIAL_NAME = 'demo-builder-s2s';
+const OAUTH_CREDENTIAL_DESCRIPTION = 'OAuth Server-to-Server access (Demo Builder)';
+
 /**
  * Configuration for AdobeEntityFetcher
  */
@@ -668,5 +672,57 @@ export class AdobeEntityFetcher {
             ) => Promise<SDKResponse<unknown>>;
         };
         await client.subscribeOAuthServerToServerIntegrationToServices(orgId, idIntegration, serviceInfo);
+    }
+
+    /**
+     * Ensure the shared OAuth Server-to-Server credential exists on the workspace
+     * and return its `id_integration` (the id the subscribe calls require — NOT
+     * the client_id). List-first: returns an existing S2S credential's
+     * `id_integration` if present, else creates one and returns the create
+     * response's `id`.
+     *
+     * Takes EXPLICIT args (does NOT read org/proj/ws from cacheManager) so the
+     * runner/subscriber can target any workspace. Return is non-optional; throws
+     * on missing SDK/args/id rather than returning a bogus value.
+     */
+    async ensureOAuthCredentialId(
+        orgId: string,
+        projectId: string,
+        workspaceId: string,
+    ): Promise<string> {
+        await this.ensureSDKReady();
+
+        if (!orgId || !projectId || !workspaceId) {
+            throw new Error('ensureOAuthCredentialId: orgId, projectId, and workspaceId are required');
+        }
+        if (!this.sdkClient.isInitialized()) {
+            throw new Error('ensureOAuthCredentialId: Adobe Console SDK is not initialized');
+        }
+
+        const client = this.sdkClient.getClient() as {
+            getCredentials: (orgId: string, projectId: string, workspaceId: string) =>
+                Promise<SDKResponse<RawWorkspaceCredential[]>>;
+            createOAuthServerToServerCredential: (
+                orgId: string, projectId: string, workspaceId: string,
+                name: string, description: string,
+            ) => Promise<SDKResponse<{ id: string; apiKey: string }>>;
+        };
+
+        const existing = (await client.getCredentials(orgId, projectId, workspaceId))?.body;
+        const s2s = existing?.find(
+            (c) => c.integration_type === 'oauth_server_to_server' && c.id_integration,
+        );
+        if (s2s?.id_integration) {
+            return s2s.id_integration;
+        }
+
+        const created = await client.createOAuthServerToServerCredential(
+            orgId, projectId, workspaceId, OAUTH_CREDENTIAL_NAME, OAUTH_CREDENTIAL_DESCRIPTION,
+        );
+        const idIntegration = created?.body?.id;
+        if (!idIntegration) {
+            throw new Error('ensureOAuthCredentialId: credential created but no id in response');
+        }
+        return idIntegration;
     }
 }

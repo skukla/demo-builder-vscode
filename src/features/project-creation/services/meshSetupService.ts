@@ -196,6 +196,18 @@ export async function deployNewMesh(
     );
     logger.debug('[Project Creation] Mesh .env generated');
 
+    // Bounded pre-deploy subscribe: ensure the API Mesh API (+ baseline) is
+    // subscribed on the shared App Builder project BEFORE the first mesh deploy
+    // of this brand-new project. Runs once (idempotent), before the retry loop.
+    const { ensureMeshApiSubscribed } = await import(
+        '@/features/app-builder/services/ensureMeshApiSubscribed'
+    );
+    await ensureMeshApiSubscribed({
+        project,
+        authService: ServiceLocator.getAuthenticationService(),
+        logger,
+    });
+
     // Helper to update mesh phase state
     const updateMeshPhase = (state: Partial<MeshPhaseState> & { status: MeshPhaseState['status'] }) => {
         if (onMeshPhaseUpdate) {

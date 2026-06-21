@@ -69,7 +69,6 @@ export interface WizardState {
         endpoint?: string;
         error?: string;
         code?: ErrorCode;  // Typed error code for programmatic handling
-        setupInstructions?: Array<{ step: string; details: string; important?: boolean }>;
     };
 
     // Wizard mode - determines flow behavior and UI labels

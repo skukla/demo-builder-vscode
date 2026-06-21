@@ -33,7 +33,10 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
         createAdobeIdCredential: jest.Mock;
         subscribeAdobeIdIntegrationToServices: jest.Mock;
         subscribeOAuthServerToServerIntegrationToServices: jest.Mock;
+        getCredentials: jest.Mock;
+        createOAuthServerToServerCredential: jest.Mock;
     };
+    let mockCacheManager: jest.Mocked<AuthCacheManager>;
 
     beforeEach(() => {
         (getLogger as jest.Mock).mockReturnValue({
@@ -45,6 +48,8 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
             createAdobeIdCredential: jest.fn(),
             subscribeAdobeIdIntegrationToServices: jest.fn(),
             subscribeOAuthServerToServerIntegrationToServices: jest.fn(),
+            getCredentials: jest.fn(),
+            createOAuthServerToServerCredential: jest.fn(),
         };
 
         mockSDKClient = {
@@ -53,10 +58,18 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
             ensureInitialized: jest.fn().mockResolvedValue(true),
         } as unknown as jest.Mocked<AdobeSDKClient>;
 
+        // A cacheManager that would return DIFFERENT ids than the explicit args,
+        // to prove ensureOAuthCredentialId uses the args passed in, not the cache.
+        mockCacheManager = {
+            getCachedOrganization: jest.fn().mockReturnValue({ id: 'cache-org' }),
+            getCachedProject: jest.fn().mockReturnValue({ id: 'cache-proj' }),
+            getCachedWorkspace: jest.fn().mockReturnValue({ id: 'cache-ws' }),
+        } as unknown as jest.Mocked<AuthCacheManager>;
+
         fetcher = new AdobeEntityFetcher(
             { execute: jest.fn() } as unknown as jest.Mocked<CommandExecutor>,
             mockSDKClient,
-            {} as unknown as jest.Mocked<AuthCacheManager>,
+            mockCacheManager,
             { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() } as unknown as jest.Mocked<Logger>,
             { logTemplate: jest.fn() } as unknown as jest.Mocked<StepLogger>,
         );
@@ -118,6 +131,78 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
             expect(sdk.subscribeOAuthServerToServerIntegrationToServices).toHaveBeenCalledWith(
                 'org1', 'int-456', [{ sdkCode: MGMT, licenseConfigs: null, roles: null }],
             );
+        });
+    });
+
+    describe('ensureOAuthCredentialId', () => {
+        it('should return an existing S2S credential id_integration without creating one', async () => {
+            sdk.getCredentials.mockResolvedValue({
+                body: [
+                    { integration_type: 'apikey', id_integration: 'apikey-cred' },
+                    { integration_type: 'oauth_server_to_server', id_integration: 'cred-123' },
+                ],
+            });
+
+            const id = await fetcher.ensureOAuthCredentialId('o', 'p', 'w');
+
+            expect(id).toBe('cred-123');
+            expect(sdk.getCredentials).toHaveBeenCalledWith('o', 'p', 'w');
+            expect(sdk.createOAuthServerToServerCredential).not.toHaveBeenCalled();
+        });
+
+        it('should create a credential and return its body.id when none exists', async () => {
+            sdk.getCredentials.mockResolvedValue({ body: [] });
+            sdk.createOAuthServerToServerCredential.mockResolvedValue({
+                body: { id: 'new-cred-456', apiKey: 'key' },
+            });
+
+            const id = await fetcher.ensureOAuthCredentialId('o', 'p', 'w');
+
+            expect(sdk.createOAuthServerToServerCredential).toHaveBeenCalledWith(
+                'o', 'p', 'w', expect.any(String), expect.any(String),
+            );
+            expect(id).toBe('new-cred-456');
+        });
+
+        it('should use the explicit args, not cacheManager values', async () => {
+            sdk.getCredentials.mockResolvedValue({ body: [] });
+            sdk.createOAuthServerToServerCredential.mockResolvedValue({ body: { id: 'x' } });
+
+            await fetcher.ensureOAuthCredentialId('arg-org', 'arg-proj', 'arg-ws');
+
+            expect(sdk.getCredentials).toHaveBeenCalledWith('arg-org', 'arg-proj', 'arg-ws');
+            expect(sdk.createOAuthServerToServerCredential).toHaveBeenCalledWith(
+                'arg-org', 'arg-proj', 'arg-ws', expect.any(String), expect.any(String),
+            );
+        });
+
+        it('should skip non-S2S credentials and fall through to create', async () => {
+            sdk.getCredentials.mockResolvedValue({
+                body: [{ integration_type: 'apikey', id_integration: 'apikey-cred' }],
+            });
+            sdk.createOAuthServerToServerCredential.mockResolvedValue({ body: { id: 'created' } });
+
+            const id = await fetcher.ensureOAuthCredentialId('o', 'p', 'w');
+
+            expect(id).toBe('created');
+            expect(sdk.createOAuthServerToServerCredential).toHaveBeenCalled();
+        });
+
+        it('should throw when SDK is not initialized', async () => {
+            (mockSDKClient.isInitialized as jest.Mock).mockReturnValue(false);
+
+            await expect(fetcher.ensureOAuthCredentialId('o', 'p', 'w')).rejects.toThrow();
+        });
+
+        it('should throw when required args are missing', async () => {
+            await expect(fetcher.ensureOAuthCredentialId('', 'p', 'w')).rejects.toThrow();
+        });
+
+        it('should throw when create yields no id', async () => {
+            sdk.getCredentials.mockResolvedValue({ body: [] });
+            sdk.createOAuthServerToServerCredential.mockResolvedValue({ body: {} });
+
+            await expect(fetcher.ensureOAuthCredentialId('o', 'p', 'w')).rejects.toThrow();
         });
     });
 });

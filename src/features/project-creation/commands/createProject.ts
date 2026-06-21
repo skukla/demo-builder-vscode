@@ -18,7 +18,6 @@ import { PrerequisitesManager } from '@/features/prerequisites/services/Prerequi
 import { projectCreationHandlers, needsProgressCallback } from '@/features/project-creation/handlers';
 import {
     formatGroupName as formatGroupNameHelper,
-    getSetupInstructions as getSetupInstructionsHelper,
     getEndpoint as getEndpointHelper,
     deployMeshComponent as deployMeshHelper,
 } from '@/features/project-creation/helpers';
@@ -552,11 +551,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             actionParams,
             timestamp: Date.now(),
         });
-    }
-
-    // Helper methods that delegate to extracted helpers
-    private _getSetupInstructions(selectedComponents: string[] = []): { step: string; details: string; important?: boolean }[] | undefined {
-        return getSetupInstructionsHelper(this.sharedState.apiServicesConfig, selectedComponents, this.sharedState.componentsData as import('@/types/components').ComponentRegistry | undefined);
     }
 
     /**

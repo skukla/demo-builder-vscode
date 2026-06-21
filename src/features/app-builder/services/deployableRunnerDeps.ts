@@ -70,7 +70,7 @@ async function applyOwPackage(componentPath: string, owPackage: string, logger: 
 }
 
 /** Build the {@link OrgTarget} the subscriber needs from the project's identity. */
-function subscriberTarget(project: Project): OrgTarget {
+export function subscriberTarget(project: Project): OrgTarget {
     return {
         orgId: project.adobe?.organization ?? '',
         projectId: project.adobe?.projectId ?? '',
