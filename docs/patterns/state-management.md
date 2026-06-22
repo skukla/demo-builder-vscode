@@ -144,7 +144,7 @@ const canProceed = useMemo(() => {
         case 'welcome':
             return !!(state.projectName && state.projectTemplate);
 
-        case 'commerce':
+        case 'build-your-project':
             return !!state.selectedStack;
 
         case 'adobe-project':

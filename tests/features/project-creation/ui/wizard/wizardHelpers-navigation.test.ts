@@ -51,7 +51,7 @@ describe('wizardHelpers - navigation', () => {
             { id: 'adobe-auth', name: 'Auth' },
             { id: 'adobe-project', name: 'Project' },
             { id: 'adobe-workspace', name: 'Workspace' },
-            { id: 'commerce', name: 'Commerce' },
+            { id: 'build-your-project', name: 'Build Your Project' },
             { id: 'review', name: 'Review' },
         ];
 
@@ -62,7 +62,7 @@ describe('wizardHelpers - navigation', () => {
         });
 
         it('should remove target step and all steps after it', () => {
-            const completed: WizardStep[] = ['adobe-auth', 'adobe-project', 'adobe-workspace', 'commerce'];
+            const completed: WizardStep[] = ['adobe-auth', 'adobe-project', 'adobe-workspace', 'build-your-project'];
             const result = filterCompletedStepsForBackwardNav(completed, 'adobe-project', 1, wizardSteps);
             expect(result).toEqual(['adobe-auth']);
         });
@@ -305,7 +305,7 @@ describe('wizardHelpers - navigation', () => {
     describe('shouldShowWizardFooter', () => {
         it('should return true for normal step', () => {
             expect(shouldShowWizardFooter(false, 'adobe-auth')).toBe(true);
-            expect(shouldShowWizardFooter(false, 'commerce')).toBe(true);
+            expect(shouldShowWizardFooter(false, 'build-your-project')).toBe(true);
             expect(shouldShowWizardFooter(false, 'prerequisites')).toBe(true);
         });
 
@@ -318,8 +318,8 @@ describe('wizardHelpers - navigation', () => {
             expect(shouldShowWizardFooter(false, 'mesh-deployment')).toBe(false);
         });
 
-        it('should return true on the commerce group step (uses the wizard footer)', () => {
-            expect(shouldShowWizardFooter(false, 'commerce')).toBe(true);
+        it('should return true on the build-your-project step (uses the wizard footer)', () => {
+            expect(shouldShowWizardFooter(false, 'build-your-project')).toBe(true);
         });
     });
 });

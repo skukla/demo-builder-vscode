@@ -421,7 +421,7 @@ src/features/
 ├── prerequisites/ui/steps/     # PrerequisitesStep
 ├── mesh/ui/steps/             # MeshDeploymentStep
 ├── eds/ui/steps/             # RepoSelectionInline, StorefrontSetupStep
-└── project-creation/ui/steps/ # WelcomeStep, CommerceStep, IntegrationsStep, StorefrontStep, ReviewStep, ProjectCreationStep
+└── project-creation/ui/steps/ # WelcomeStep, BuildYourProjectStep (renders CommerceStep / StorefrontStep / IntegrationsStep area bodies), ReviewStep, ProjectCreationStep
 ```
 
 **Note**: After the Frontend Architecture Cleanup (v1.x), all webviews use inline App components in `index.tsx` rather than separate `app/` directories. Shared utilities like `WebviewClient` live in `webview-ui/src/shared/`.

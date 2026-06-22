@@ -40,28 +40,10 @@
       }
     },
     {
-      "id": "commerce",
-      "name": "Commerce",
-      "description": "Choose your backend, connect, and discover your store.",
+      "id": "build-your-project",
+      "name": "Build Your Project",
+      "description": "Configure commerce, integrations, and storefront for your project.",
       "enabled": true
-    },
-    {
-      "id": "integrations",
-      "name": "Integrations",
-      "description": "Set up the integrations deployed with your project.",
-      "enabled": true,
-      "condition": {
-        "requiresAdobeAuth": true
-      }
-    },
-    {
-      "id": "storefront",
-      "name": "Storefront",
-      "description": "Connect Edge Delivery services and choose block libraries.",
-      "enabled": true,
-      "condition": {
-        "stackRequiresAny": ["requiresGitHub", "requiresDaLive"]
-      }
     },
     {
       "id": "review",

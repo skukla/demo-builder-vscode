@@ -40,16 +40,15 @@ import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjec
 import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
 import { StorefrontSetupStep } from '@/features/eds/ui/steps/StorefrontSetupStep';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
-import { CommerceStep } from '@/features/project-creation/ui/steps/CommerceStep';
-import { IntegrationsStep } from '@/features/project-creation/ui/steps/IntegrationsStep';
+import { BuildYourProjectStep } from '@/features/project-creation/ui/steps/BuildYourProjectStep';
+import { buildYourProjectAreas } from '@/features/project-creation/ui/steps/buildYourProjectAreas';
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
 import { ReviewStep } from '@/features/project-creation/ui/steps/ReviewStep';
-import { StorefrontStep } from '@/features/project-creation/ui/steps/StorefrontStep';
 import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
-import { ComponentSelection } from '@/types/webview';
+import { BuildAreaId, ComponentSelection } from '@/types/webview';
 
 // Extracted hooks
 
@@ -295,27 +294,18 @@ export function WizardContainer({
                 return <AdobeProjectStep {...props} completedSteps={completedSteps} />;
             case 'adobe-workspace':
                 return <AdobeWorkspaceStep {...props} completedSteps={completedSteps} />;
-            // Group-paced steps: Commerce (backend + connect), Integrations
-            // (App-Builder-gated placeholder; tiles in R2), Storefront (EDS).
-            case 'commerce':
+            // Collapsed builder step. The shell routes the active area to the
+            // existing Commerce / Storefront / Integrations bodies and owns the
+            // Continue gate over all required areas.
+            case 'build-your-project':
                 return (
-                    <CommerceStep
-                        {...props}
-                        packages={packages}
-                        stacks={stacks}
-                        onArchitectureChange={handleArchitectureChange}
-                    />
-                );
-            case 'integrations':
-                return <IntegrationsStep {...props} />;
-            case 'storefront':
-                return (
-                    <StorefrontStep
+                    <BuildYourProjectStep
                         {...props}
                         packages={packages}
                         stacks={stacks}
                         blockLibraryDefaults={blockLibraryDefaults}
                         customBlockLibraryDefaults={customBlockLibraryDefaults}
+                        onArchitectureChange={handleArchitectureChange}
                     />
                 );
             case 'storefront-setup':
@@ -349,6 +339,24 @@ export function WizardContainer({
     const completedStepIndices = getCompletedStepIndices(completedSteps, WIZARD_STEPS);
     const confirmedStepIndices = getCompletedStepIndices(confirmedSteps, WIZARD_STEPS);
     const isEditMode = (state.wizardMode ?? 'create') !== 'create';
+
+    // Nested timeline: on `build-your-project`, the active parent shows the
+    // visible build areas as a single indented sub-level. Clicking a child only
+    // switches the active area (never changes currentStep).
+    const onBuildStep = state.currentStep === 'build-your-project';
+    const buildAreas = onBuildStep ? buildYourProjectAreas(state, stacks) : [];
+    const timelineChildren = onBuildStep
+        ? buildAreas.map(a => ({ id: a.id, name: a.label }))
+        : undefined;
+    const childStatusById = onBuildStep
+        ? Object.fromEntries(buildAreas.map(a => [a.id, a.status]))
+        : undefined;
+    const activeChildId = onBuildStep
+        ? (state.activeBuildArea ?? buildAreas[0]?.id)
+        : undefined;
+    const handleBuildAreaClick = (childId: string) => {
+        updateState({ activeBuildArea: childId as BuildAreaId });
+    };
 
     const handleTimelineStepClick = (targetIndex: number) => {
         const targetStep = WIZARD_STEPS[targetIndex];
@@ -384,6 +392,10 @@ export function WizardContainer({
                         showHeader={true}
                         headerText="Setup Progress"
                         isEditMode={isEditMode}
+                        childSteps={timelineChildren}
+                        childStatusById={childStatusById}
+                        activeChildId={activeChildId}
+                        onChildClick={handleBuildAreaClick}
                     />
                 </div>
 

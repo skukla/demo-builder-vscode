@@ -12,12 +12,17 @@ export type WizardStep =
     | 'adobe-auth'  // Adobe authentication step
     | 'adobe-project'  // Adobe project selection step
     | 'adobe-workspace'  // Adobe workspace selection step
-    | 'commerce'  // Group step: backend selection + Commerce connection + store discovery
-    | 'integrations'  // Group step: App Builder integrations (gated on requiresAdobeAuth)
-    | 'storefront'  // Group step: EDS connect services + repo + block libraries (gated on requiresGitHub OR requiresDaLive)
+    | 'build-your-project'  // Collapsed builder step: commerce + integrations + storefront areas (BuildYourProjectStep shell)
     | 'storefront-setup'  // EDS: Storefront setup/publish (GitHub repo, DA.live content, Helix config)
     | 'review'
     | 'create-project';
+
+/**
+ * Build areas within the collapsed `build-your-project` wizard step.
+ * Distinct concept from the retired standalone wizard-step ids — these identify
+ * the area the nested builder is currently focused on.
+ */
+export type BuildAreaId = 'commerce' | 'storefront' | 'integrations';
 
 export interface WizardState {
     currentStep: WizardStep;
@@ -39,6 +44,7 @@ export interface WizardState {
     // back/forward navigation. See ui/steps/tileStatus.ts.
     commerceConnectValid?: boolean;  // Commerce connect form reported valid (ConnectStoreStepContent)
     storefrontRepoValid?: boolean;   // Storefront repo selection reported valid (RepoSelectionInline)
+    activeBuildArea?: BuildAreaId;   // Area currently focused within the build-your-project step
     adobeAuth: AdobeAuthState;
     adobeOrg?: Organization;  // Renamed for consistency
     adobeProject?: AdobeProject;  // Renamed for consistency

@@ -1707,12 +1707,29 @@ button[class*="spectrum-Button"][disabled],
     z-index: 0 !important;
 }
 
+/* When the current step shows an indented child rail, stretch its connector from
+   below the dot to the bottom of the (padded) step container, so the parent line
+   runs continuously down to the next top-level step past the children. */
+.timeline-connector-stretch {
+    top: 28px !important;
+    bottom: 0 !important;
+    height: auto !important;
+}
+
 .timeline-connector-completed {
     background: repeating-linear-gradient(to bottom, var(--spectrum-global-color-blue-600) 0px, var(--spectrum-global-color-blue-600) 4px, transparent 4px, transparent 8px) !important;
 }
 
 .timeline-connector-pending {
     background: repeating-linear-gradient(to bottom, var(--spectrum-global-color-gray-400) 0px, var(--spectrum-global-color-gray-400) 4px, transparent 4px, transparent 8px) !important;
+}
+
+/* Nested sub-step (child) scale — mirrors .timeline-step-dot / .timeline-connector
+   at a smaller scale so a single indented level reads as a sub-level. The status
+   color classes (.timeline-step-dot-*) are reused as-is. */
+.timeline-child-dot {
+    width: var(--spectrum-global-dimension-size-200) !important;  /* 16px */
+    height: var(--spectrum-global-dimension-size-200) !important;
 }
 
 /* Timeline step entrance animation - fade in with expand */

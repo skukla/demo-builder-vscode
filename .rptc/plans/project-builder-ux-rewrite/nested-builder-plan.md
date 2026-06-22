@@ -2,6 +2,8 @@
 
 **Design:** `.rptc/research/project-builder-ux/research.md` → "LOCKED design v3 — nested timeline".
 **Visual spec:** `.rptc/research/project-builder-ux/prototype-v2-nested.html` (clickable).
+**Reuse guide:** `.rptc/research/project-builder-ux/component-reuse-guide.md` (aesthetic rules + component
+reuse map + the only net-new primitives) — consult per slice to stay on the existing design system.
 **Supersedes:** R1 (group-paced steps) + R1b (tiles+modals) — both shipped to this worktree, uncommitted.
 **Worktree:** `feature/project-builder-ux`. No commit without approval; no AI-attribution.
 

@@ -407,7 +407,7 @@ describe('stepFiltering', () => {
             expect(stepIds).toContain('review');
         });
 
-        it('should show the commerce group step from wizard-steps.json for all flows (no condition)', () => {
+        it('should show the build-your-project step from wizard-steps.json for all flows (no condition)', () => {
             // Given: The actual wizard-steps.json configuration
 
             const wizardStepsConfig = require('@/features/project-creation/config/wizard-steps.json');
@@ -416,12 +416,12 @@ describe('stepFiltering', () => {
             // When: Filtering with a stack selected
             const result = filterStepsForStack(steps, edgeDeliveryStack);
 
-            // Then: Commerce group step should be shown (unconditional)
+            // Then: build-your-project step should be shown (unconditional)
             const stepIds = result.map(s => s.id);
-            expect(stepIds).toContain('commerce');
+            expect(stepIds).toContain('build-your-project');
         });
 
-        it('should position the commerce group step after adobe-workspace in wizard-steps.json', () => {
+        it('should position the build-your-project step after adobe-workspace and before review in wizard-steps.json', () => {
             // Given: The actual wizard-steps.json configuration
 
             const wizardStepsConfig = require('@/features/project-creation/config/wizard-steps.json');
@@ -430,12 +430,12 @@ describe('stepFiltering', () => {
             // When: Looking at step order
             const stepIds = steps.map((s: WizardStepWithCondition) => s.id);
             const workspaceIndex = stepIds.indexOf('adobe-workspace');
-            const commerceIndex = stepIds.indexOf('commerce');
-            const storefrontIndex = stepIds.indexOf('storefront');
+            const buildIndex = stepIds.indexOf('build-your-project');
+            const reviewIndex = stepIds.indexOf('review');
 
-            // Then: commerce should be after adobe-workspace and before the storefront group
-            expect(commerceIndex).toBeGreaterThan(workspaceIndex);
-            expect(commerceIndex).toBeLessThan(storefrontIndex);
+            // Then: build-your-project should be after adobe-workspace and before review
+            expect(buildIndex).toBeGreaterThan(workspaceIndex);
+            expect(buildIndex).toBeLessThan(reviewIndex);
         });
 
         it('should show all showWhenNoStack steps when no stack is selected', () => {

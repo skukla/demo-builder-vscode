@@ -6,103 +6,21 @@
  */
 
 import { View, Text } from '@adobe/react-spectrum';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useRef, useEffect, useState } from 'react';
+import { TimelineChildren } from './TimelineChildren';
+import {
+    getTimelineLabelClasses,
+    getTimelineStepDotClasses,
+    renderStepIndicator,
+    type TimelineStatus,
+    type TimelineStep,
+} from './timelineNav.helpers';
 import { cn } from '@/core/ui/utils/classNames';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 
-/**
- * Timeline step status type
- */
-type TimelineStatus = 'completed' | 'completed-current' | 'current' | 'upcoming' | 'review';
-
-/**
- * Lookup map for timeline step dot status classes
- */
-const TIMELINE_DOT_STATUS_CLASS: Record<TimelineStatus, string> = {
-    'completed': 'timeline-step-dot-completed',
-    'completed-current': 'timeline-step-dot-completed',
-    'current': 'timeline-step-dot-current',
-    'upcoming': 'timeline-step-dot-upcoming',
-    'review': 'timeline-step-dot-review',
-};
-
-/**
- * Build timeline step dot classes based on status
- */
-function getTimelineStepDotClasses(status: TimelineStatus): string {
-    const baseClasses = 'timeline-step-dot';
-    const statusClass = TIMELINE_DOT_STATUS_CLASS[status] ?? 'timeline-step-dot-upcoming';
-    return cn(baseClasses, statusClass);
-}
-
-/**
- * Lookup map for timeline step label color classes
- */
-const TIMELINE_LABEL_COLOR_CLASS: Record<TimelineStatus, string> = {
-    'completed': 'text-gray-800',
-    'completed-current': 'text-blue-700',
-    'current': 'text-blue-700',
-    'upcoming': 'text-gray-600',
-    'review': 'text-gray-800',
-};
-
-/**
- * Build timeline step label classes based on status
- */
-function getTimelineLabelClasses(status: TimelineStatus): string {
-    const isCurrent = status === 'current' || status === 'completed-current';
-    const fontWeight = isCurrent ? 'font-semibold' : 'font-normal';
-    const color = TIMELINE_LABEL_COLOR_CLASS[status];
-    return cn('text-base', fontWeight, color, 'whitespace-nowrap', 'user-select-none');
-}
-
-/**
- * Render the appropriate indicator icon for a timeline step
- */
-function renderStepIndicator(status: TimelineStatus): React.ReactNode {
-    if (status === 'completed' || status === 'completed-current') {
-        return <CheckmarkCircle size="XS" UNSAFE_className={cn('text-white', 'icon-xs')} />;
-    }
-    if (status === 'review') {
-        // Solid white inner dot for edit mode (no checkmark - indicates "can review/edit")
-        return (
-            <View
-                width="size-100"
-                height="size-100"
-                UNSAFE_className="rounded-full"
-                UNSAFE_style={{ backgroundColor: '#ffffff' }}
-            />
-        );
-    }
-    if (status === 'current') {
-        // White inner dot creates contrast against the blue outer ring
-        // Use inline style for true white since bg-white maps to gray-100 in dark theme
-        return (
-            <View
-                width="size-100"
-                height="size-100"
-                UNSAFE_className={cn('rounded-full', 'animate-pulse')}
-                UNSAFE_style={{ backgroundColor: '#ffffff' }}
-            />
-        );
-    }
-    return (
-        <View
-            width="size-100"
-            height="size-100"
-            UNSAFE_className={cn('rounded-full', 'bg-gray-400')}
-        />
-    );
-}
-
-/**
- * Step definition for TimelineNav
- */
-export interface TimelineStep {
-    id: string;
-    name: string;
-}
+// Re-export the shared timeline types so existing importers keep their
+// `from '.../TimelineNav'` path. (Helpers + types live in ./timelineNav.helpers.)
+export type { TimelineStatus, TimelineStep };
 
 export interface TimelineNavProps {
     /** Array of steps to display */
@@ -123,6 +41,20 @@ export interface TimelineNavProps {
     compact?: boolean;
     /** Whether we're in edit mode (reviewing existing project) */
     isEditMode?: boolean;
+    /**
+     * Optional sub-steps rendered as a single indented level beneath the
+     * current (active) parent step only. One level — no recursion.
+     */
+    childSteps?: TimelineStep[];
+    /** Status per child id (defaults to `upcoming` when a child id is absent) */
+    childStatusById?: Record<string, TimelineStatus>;
+    /** Which child is active/highlighted (gets the `current` styling) */
+    activeChildId?: string;
+    /**
+     * Click handler for a child. Receives the child id. Does NOT affect parent
+     * navigation (`onStepClick` / `currentStepIndex` are untouched).
+     */
+    onChildClick?: (childId: string) => void;
 }
 
 /** Animation duration in milliseconds - uses semantic constant */
@@ -143,6 +75,10 @@ export function TimelineNav({
     headerText = 'Setup Progress',
     compact = false,
     isEditMode: _isEditMode = false,
+    childSteps,
+    childStatusById,
+    activeChildId,
+    onChildClick,
 }: TimelineNavProps) {
     // Track previous steps for detecting changes
     const prevStepsRef = useRef<TimelineStep[]>([]);
@@ -294,9 +230,18 @@ export function TimelineNav({
                     const isClickable = !step.isExiting && isStepClickable(actualIndex);
                     const isEntering = enteringSteps.has(step.id);
                     const isExiting = step.isExiting;
+                    // When the current step shows children, its bottom spacing moves to
+                    // the children block (small gap above the first child, full step-gap
+                    // below the last) so the rail rhythm stays even.
+                    const isCurrentWithChildren =
+                        !step.isExiting && status === 'current' && (childSteps?.length ?? 0) > 0;
 
                     return (
-                        <View key={step.id} position="relative">
+                        <View
+                            key={step.id}
+                            position="relative"
+                            paddingBottom={isCurrentWithChildren ? 'size-400' : undefined}
+                        >
                             {/* Step item - role/tabIndex/keyboard conditionally applied when clickable */}
                             {/* The `data-step-name` attribute powers a CSS-only `::after` tooltip in
                                 custom-spectrum.css, scoped to the rail-collapse media query — it shows
@@ -311,7 +256,7 @@ export function TimelineNav({
                                 aria-current={!step.isExiting && actualIndex === currentStepIndex ? 'step' : undefined}
                                 aria-label={step.name}
                                 style={{
-                                    marginBottom: displayIndex < displaySteps.length - 1 ? stepSpacing : undefined,
+                                    marginBottom: displayIndex < displaySteps.length - 1 && !isCurrentWithChildren ? stepSpacing : undefined,
                                     // Staggered animation delay for cascade effect
                                     animationDelay: isEntering ? `${displayIndex * 40}ms` : undefined,
                                 }}
@@ -360,7 +305,21 @@ export function TimelineNav({
                                     UNSAFE_className={cn(
                                         'timeline-connector',
                                         status === 'completed' ? 'timeline-connector-completed' : 'timeline-connector-pending',
+                                        // When the step shows children, stretch the line to the next
+                                        // top-level dot so it runs continuously past the indented children.
+                                        isCurrentWithChildren && 'timeline-connector-stretch',
                                     )}
+                                />
+                            )}
+
+                            {/* Nested sub-steps: one indented level under the current parent only */}
+                            {!step.isExiting && status === 'current' && (
+                                <TimelineChildren
+                                    parentId={step.id}
+                                    childSteps={childSteps ?? []}
+                                    childStatusById={childStatusById}
+                                    activeChildId={activeChildId}
+                                    onChildClick={onChildClick}
                                 />
                             )}
                         </View>

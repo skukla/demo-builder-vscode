@@ -34,6 +34,8 @@ describe('SOP: Inline Styles', () => {
         // Spectrum UNSAFE_style (required for Spectrum overrides)
         'SearchHeader.tsx': 'Spectrum UNSAFE_style for theme integration',
         'TimelineNav.tsx': 'Spectrum UNSAFE_style for background colors',
+        'TimelineChildren.tsx': 'Inline marginBottom for child sub-step spacing (CSS var)',
+        'timelineNav.helpers.tsx': 'Spectrum UNSAFE_style for true-white inner dot',
         'VerifiedField.tsx': 'Spectrum UNSAFE_style for semantic colors',
         'Sidebar.tsx': 'Spectrum UNSAFE_style for top padding offset',
 

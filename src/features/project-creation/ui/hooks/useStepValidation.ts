@@ -32,8 +32,8 @@ export interface StepValidation {
 const STEP_VALIDATORS: Record<string, (state: WizardState) => boolean> = {
     'adobe-auth': (state) => state.adobeAuth?.isAuthenticated === true,
     'project-name': (state) => Boolean(state.projectName?.trim()),
-    // Commerce gates on stack selection — stack is the source of truth for components
-    'commerce': (state) => Boolean(state.selectedStack),
+    // build-your-project gates on stack selection — stack is the source of truth for components
+    'build-your-project': (state) => Boolean(state.selectedStack),
     'adobe-project': (state) => Boolean(state.adobeProject),
     'adobe-workspace': (state) => Boolean(state.adobeWorkspace),
 };

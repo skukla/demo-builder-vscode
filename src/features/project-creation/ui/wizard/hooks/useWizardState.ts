@@ -397,14 +397,15 @@ export function useWizardState({
         if (orgActuallyChanged) {
             const isReviewMode = state.wizardMode && state.wizardMode !== 'create';
             if (isReviewMode) {
-                // Reset all org-dependent steps (project → workspace → commerce)
+                // Reset all org-dependent steps (project → workspace → build-your-project)
                 // These form a cascade: org owns projects, projects own workspaces,
-                // workspaces own meshes, and the commerce group may reference org
-                // credentials. Remove org-dependent steps - user must re-traverse them.
+                // workspaces own meshes, and the build-your-project step (commerce
+                // area) may reference org credentials. Remove org-dependent steps -
+                // user must re-traverse them.
                 const orgDependentSteps: WizardStep[] = [
                     'adobe-project',
                     'adobe-workspace',
-                    'commerce',
+                    'build-your-project',
                 ];
                 setCompletedSteps(prev =>
                     prev.filter(stepId => !orgDependentSteps.includes(stepId)),

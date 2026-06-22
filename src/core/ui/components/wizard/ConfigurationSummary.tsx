@@ -19,9 +19,7 @@ export function ConfigurationSummary({ state, completedSteps = [], currentStep }
         'adobe-auth',
         'adobe-project',
         'adobe-workspace',
-        'commerce',
-        'integrations',
-        'storefront',
+        'build-your-project',
         'review',
         'create-project',
     ];
