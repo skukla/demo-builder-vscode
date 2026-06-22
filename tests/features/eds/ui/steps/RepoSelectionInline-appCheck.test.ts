@@ -1,8 +1,10 @@
 /**
- * GitHubRepoSelectionStep - GitHub App Check Integration Tests
+ * RepoSelectionInline - GitHub App Check Integration Tests
  *
- * Context-Aware GitHub App Verification:
- * - NEW repos: Check early in GitHubRepoSelectionStep (template is pre-configured)
+ * Context-Aware GitHub App Verification (logic lives in
+ * repoSelectionInline.helpers, surfaced via RepoSelectionInline's
+ * onValidityChange — formerly the GitHubRepoSelectionStep canProceed gate):
+ * - NEW repos: Check early in RepoSelectionInline (template is pre-configured)
  * - EXISTING repos: NO check here - deferred to StorefrontSetup after fstab.yaml push
  *
  * Tests verify:
@@ -25,7 +27,7 @@ interface GitHubAppStatus {
     installUrl?: string;
 }
 
-describe('GitHubRepoSelectionStep - GitHub App Check', () => {
+describe('RepoSelectionInline - GitHub App Check', () => {
     describe('Context-Aware Check Trigger Logic', () => {
         /**
          * Context-aware GitHub App checking:

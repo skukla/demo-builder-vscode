@@ -202,7 +202,7 @@ describe('Wizard Step Configuration', () => {
         // Should compute first step from config
         expect(content).toMatch(/enabledSteps\[0\]\.id/);
 
-        // Should have fallback to adobe-auth
-        expect(content).toMatch(/adobe-auth.*as WizardStep/);
+        // Should have fallback to the always-present first step (welcome)
+        expect(content).toMatch(/welcome.*as WizardStep/);
     });
 });

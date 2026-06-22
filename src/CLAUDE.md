@@ -418,10 +418,10 @@ src/features/project-creation/ui/wizard/
 ```
 src/features/
 ├── authentication/ui/steps/    # AdobeAuthStep, AdobeProjectStep, AdobeWorkspaceStep
-├── components/ui/steps/        # ComponentSelectionStep
 ├── prerequisites/ui/steps/     # PrerequisitesStep
 ├── mesh/ui/steps/             # MeshDeploymentStep
-└── project-creation/ui/steps/ # WelcomeStep, ReviewStep, ProjectCreationStep
+├── eds/ui/steps/             # RepoSelectionInline, StorefrontSetupStep
+└── project-creation/ui/steps/ # WelcomeStep, CommerceStep, IntegrationsStep, StorefrontStep, ReviewStep, ProjectCreationStep
 ```
 
 **Note**: After the Frontend Architecture Cleanup (v1.x), all webviews use inline App components in `index.tsx` rather than separate `app/` directories. Shared utilities like `WebviewClient` live in `webview-ui/src/shared/`.

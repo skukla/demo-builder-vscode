@@ -39,7 +39,7 @@ const stacks: Stack[] = [edsAccsStack];
 // Mirrors the real wizard-steps.json shape for the steps under test.
 const wizardSteps: WizardStepConfigWithRequirements[] = [
     { id: 'welcome', name: 'Demo Setup', description: '', enabled: true },
-    { id: 'project-builder', name: 'Project Builder', description: '', enabled: true },
+    { id: 'prerequisites', name: 'Prerequisites', description: '', enabled: true },
     {
         id: 'adobe-auth',
         name: 'Adobe Authentication',

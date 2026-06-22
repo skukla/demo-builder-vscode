@@ -339,12 +339,15 @@ export function useWizardState({
         ];
         const meshIncluded = hasMeshInDependencies(effectiveDeps);
         const isAccsBackend = selectedStack?.backend === 'adobe-commerce-accs';
+        // Any selected App Builder component requires Adobe sign-in (auth), not
+        // just mesh. Mesh keeps its dedicated I/O project/workspace path below.
+        const hasAppBuilderComponent = (state.selectedAppBuilderComponents?.length ?? 0) > 0;
 
         // Step 5: Apply stack-based, mode-based, and Adobe I/O-based filtering
         const filteredSteps = filterStepsForStack(stepsWithConditions, selectedStack, {
             isEditMode: !!editProject,
             hasAdobeIO: meshIncluded,
-            hasAdobeAuth: meshIncluded || isAccsBackend,
+            hasAdobeAuth: meshIncluded || isAccsBackend || hasAppBuilderComponent,
         });
 
         return filteredSteps.map(step => ({
@@ -352,7 +355,14 @@ export function useWizardState({
             name: step.name,
             description: step.description,
         }));
-    }, [wizardSteps, stacks, state.selectedStack, state.selectedOptionalDependencies, editProject]);
+    }, [
+        wizardSteps,
+        stacks,
+        state.selectedStack,
+        state.selectedOptionalDependencies,
+        state.selectedAppBuilderComponents,
+        editProject,
+    ]);
 
     // Step completion tracking
     // Neither import mode nor edit mode pre-marks steps as completed
@@ -387,14 +397,14 @@ export function useWizardState({
         if (orgActuallyChanged) {
             const isReviewMode = state.wizardMode && state.wizardMode !== 'create';
             if (isReviewMode) {
-                // Reset all org-dependent steps (project → workspace → mesh → settings)
+                // Reset all org-dependent steps (project → workspace → commerce)
                 // These form a cascade: org owns projects, projects own workspaces,
-                // workspaces own meshes, and settings may reference org credentials
-                // Remove org-dependent steps - user must re-traverse them
+                // workspaces own meshes, and the commerce group may reference org
+                // credentials. Remove org-dependent steps - user must re-traverse them.
                 const orgDependentSteps: WizardStep[] = [
                     'adobe-project',
                     'adobe-workspace',
-                    'settings',
+                    'commerce',
                 ];
                 setCompletedSteps(prev =>
                     prev.filter(stepId => !orgDependentSteps.includes(stepId)),

@@ -15,12 +15,13 @@ export function ConfigurationSummary({ state, completedSteps = [], currentStep }
     // Note: 'api-mesh' removed - mesh deployment now happens in Project Creation Phase 3
     const stepOrder: WizardStep[] = [
         'welcome',
-        'component-selection',
         'prerequisites',
         'adobe-auth',
         'adobe-project',
         'adobe-workspace',
-        'settings',
+        'commerce',
+        'integrations',
+        'storefront',
         'review',
         'create-project',
     ];

@@ -342,7 +342,7 @@ return (
 - Works with radio groups, listboxes, grids
 
 **Used By:**
-- `ProjectBuilderStep` - rail navigation in the Project Builder step
+- `CommerceStep` - arrow-key navigation across the architecture/stack selection grid
 
 #### useFocusOnMount
 Focus an element on mount using a simple 3-tier strategy.

@@ -224,57 +224,70 @@ describe('TwoColumnLayout', () => {
     });
   });
 
-  describe('Fixed-Width Left Rail (leftWidth)', () => {
-    it('gives the left pane an explicit fixed width when leftWidth is set', () => {
+  describe('Container max-width + centering', () => {
+    it('caps the flex container at the default max-width (1200px)', () => {
+      // The container caps the left+right pair so the summary gets enough room
+      // but never dominates, and the pair does not stretch edge-to-edge on a
+      // fullscreen monitor.
       const { container } = render(
         <TwoColumnLayout
-          leftWidth="280px"
           leftContent={<div>Left</div>}
           rightContent={<div>Right</div>}
         />
       );
-      const leftColumn = container.firstChild?.childNodes[0] as HTMLDivElement;
-      expect(leftColumn.style.width).toBe('280px');
+      const flexContainer = container.firstChild as HTMLDivElement;
+      expect(flexContainer.style.maxWidth).toBe('1200px');
     });
 
-    it('pins the rail with flex: 0 0 <leftWidth> so it does not grow or shrink', () => {
+    it('centers the flex container with margin auto', () => {
       const { container } = render(
         <TwoColumnLayout
-          leftWidth="280px"
           leftContent={<div>Left</div>}
           rightContent={<div>Right</div>}
         />
       );
-      const leftColumn = container.firstChild?.childNodes[0] as HTMLDivElement;
-      expect(leftColumn.style.flex).toBe('0 0 280px');
+      const flexContainer = container.firstChild as HTMLDivElement;
+      expect(flexContainer.style.margin).toBe('0px auto');
     });
 
-    it('translates a Spectrum-token leftWidth (size-1000 -> 80px)', () => {
-      const leftWidth: DimensionValue = 'size-1000';
+    it('honors a pixel maxWidth override on the container', () => {
       const { container } = render(
         <TwoColumnLayout
-          leftWidth={leftWidth}
+          maxWidth="1000px"
           leftContent={<div>Left</div>}
           rightContent={<div>Right</div>}
         />
       );
-      const leftColumn = container.firstChild?.childNodes[0] as HTMLDivElement;
-      expect(leftColumn.style.width).toBe('80px');
+      const flexContainer = container.firstChild as HTMLDivElement;
+      expect(flexContainer.style.maxWidth).toBe('1000px');
     });
 
-    it('drops leftMaxWidth when leftWidth is set (fixed rail, not capped-primary)', () => {
+    it('translates a Spectrum-token maxWidth (size-6000 -> 480px)', () => {
+      const maxWidth: DimensionValue = 'size-6000';
       const { container } = render(
         <TwoColumnLayout
-          leftWidth="280px"
+          maxWidth={maxWidth}
           leftContent={<div>Left</div>}
           rightContent={<div>Right</div>}
         />
       );
-      const leftColumn = container.firstChild?.childNodes[0] as HTMLDivElement;
-      expect(leftColumn.style.maxWidth).toBe('');
+      const flexContainer = container.firstChild as HTMLDivElement;
+      expect(flexContainer.style.maxWidth).toBe('480px');
     });
 
-    it('keeps the default capped-primary behavior when leftWidth is omitted', () => {
+    it('allows opting out of the cap with maxWidth="none"', () => {
+      const { container } = render(
+        <TwoColumnLayout
+          maxWidth="none"
+          leftContent={<div>Left</div>}
+          rightContent={<div>Right</div>}
+        />
+      );
+      const flexContainer = container.firstChild as HTMLDivElement;
+      expect(flexContainer.style.maxWidth).toBe('none');
+    });
+
+    it('keeps the capped-primary left column (maxWidth, no fixed width)', () => {
       const { container } = render(
         <TwoColumnLayout
           leftContent={<div>Left</div>}

@@ -21,7 +21,7 @@ export const mockUpdateState = jest.fn();
 export const mockSetCanProceed = jest.fn();
 
 export const baseState: Partial<WizardState> = {
-    currentStep: 'component-selection',
+    currentStep: 'commerce',
     components: undefined,
 };
 

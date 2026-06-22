@@ -82,11 +82,12 @@ describe('WizardContainer - No Welcome Step', () => {
             expect(screen.getByRole('button', { name: /continue/i })).toBeInTheDocument();
         });
 
-        it('should have correct step count (8 steps without welcome)', () => {
-            // This test verifies the wizard configuration has 8 steps
-            // (welcome and api-mesh removed, deploy-mesh added)
+        it('should have correct step count (6 render-able mock steps without welcome)', () => {
+            // The mock flow uses only render-able steps; the group steps
+            // (commerce/integrations/storefront) render null placeholders in
+            // R1 Step 2 and are not part of this mock configuration.
             const steps = createMockWizardSteps();
-            expect(steps).toHaveLength(8);
+            expect(steps).toHaveLength(6);
 
             // Verify welcome is not in the list
             const stepIds = steps.map(s => s.id);

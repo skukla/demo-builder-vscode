@@ -205,10 +205,9 @@ demo-builder-vscode/
   - `src/features/components/ui/steps/` - Component selection steps
   - `src/features/prerequisites/ui/steps/` - Prerequisites step
   - `src/features/mesh/ui/steps/` - API Mesh step
-  - `src/features/project-creation/ui/steps/` - WelcomeStep (with template selection), ReviewStep, ProjectCreationStep
-  - `src/features/project-creation/ui/builder/` - Project Builder step (two-column hub-and-spoke: architecture, App Builder components, block libraries). `ProjectBuilderStep.tsx` + `useProjectBuilder.ts` + `ProjectBuilderRail.tsx`/`ProjectBuilderDetail.tsx` + `projectBuilderAreas.ts`. Registered as the `'project-builder'` step (right after `welcome`) in `src/features/project-creation/config/wizard-steps.json`.
-  - `src/features/project-creation/ui/components/ConnectStoreStepContent.tsx` - Connect Commerce step (step ID: `'settings'`) — Commerce connection fields + store discovery with progressive disclosure
--> Note: WelcomeStep's brand card selects a demo package; architecture, App Builder components, and block library selection happen in the two-column `project-builder` wizard step (not a modal). Custom block libraries are configured in VS Code settings and selected via checkboxes. (see `src/features/project-creation/config/demo-packages.json`, `src/features/project-creation/config/block-libraries.json`, and `src/types/blockLibraries.ts`)
+  - `src/features/project-creation/ui/steps/` - the group-paced steps: WelcomeStep (demo package selection), `CommerceStep` (step id `'commerce'`: `ArchitectureStepContent` backend/stack + `ConnectStoreStepContent` connect + store discovery), `IntegrationsStep` (step id `'integrations'`: App-Builder-gated placeholder; tiled typed-Add surface arrives in R2), `StorefrontStep` (step id `'storefront'`: GitHub/DA.live connect + inline repo + block libraries), ReviewStep, ProjectCreationStep, plus `useProjectBuilder.ts` (selection hub holding the mesh dual-flow mirror-write)
+  - `src/features/eds/ui/steps/RepoSelectionInline.tsx` - single-column repo choose/create body used by `StorefrontStep`
+-> Note: WelcomeStep's brand card selects a demo package; the backend/stack + connect, integrations, and storefront (GitHub/DA.live + block libraries) are configured across the group-paced `'commerce'` → `'integrations'` → `'storefront'` steps. The canonical step order and registration live in `src/features/project-creation/config/wizard-steps.json`. Custom block libraries are configured in VS Code settings and selected via checkboxes. (see `src/features/project-creation/config/demo-packages.json`, `src/features/project-creation/config/block-libraries.json`, and `src/types/blockLibraries.ts`)
 -> See feature documentation for wizard orchestration details
 
 ### Debugging Width Issues

@@ -43,8 +43,9 @@ describe('SOP: Inline Styles', () => {
         // Dashboard link positioning
         'ProjectDashboardScreen.tsx': 'Spectrum UNSAFE_style for auth link margin',
 
-        // Modal/dialog layout stability
-        'GitHubRepoSelectionStep.tsx': 'Fixed height container prevents modal resize during status recheck',
+        // Modal/dialog layout stability (GitHubAppInstallModal, extracted from the
+        // former GitHubRepoSelectionStep into the RepoSelectionInline helpers)
+        'repoSelectionInline.helpers.tsx': 'Fixed height container prevents modal resize during status recheck',
 
         // Pin indicators for projects (single-property style for inline icon color)
         'ProjectCard.tsx': 'Inline color/flex style for the inline pin indicator next to project name',

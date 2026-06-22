@@ -6,15 +6,14 @@ export interface TwoColumnLayoutProps {
     leftContent: React.ReactNode;
     /** Content for the right column (sidebar/summary) */
     rightContent: React.ReactNode;
-    /** Maximum width of left column (default: '800px') - supports Spectrum tokens.
-     *  Ignored when `leftWidth` is set (fixed-rail mode). */
+    /** Maximum width of left column (default: '800px') - supports Spectrum tokens. */
     leftMaxWidth?: DimensionValue;
-    /** Fixed width for the left column (a narrow rail). When set, the left pane
-     *  uses `flex: 0 0 <leftWidth>` + explicit width instead of the default
-     *  flex+leftMaxWidth capped-primary layout, and `leftMaxWidth` is ignored.
-     *  Omit for the default behavior. The narrow-viewport responsive CSS in
-     *  custom-spectrum.css releases this width so the columns stack. */
-    leftWidth?: DimensionValue;
+    /** Maximum width of the whole column pair (default: '1200px') - supports
+     *  Spectrum tokens. Caps the left+right pair and centers it (`margin: 0 auto`)
+     *  so the summary gets enough room without dominating and the pair does not
+     *  stretch edge-to-edge on a fullscreen monitor. Pass `'none'` to opt out
+     *  (full-width) for consumers that genuinely need it. */
+    maxWidth?: DimensionValue;
     /** Left column padding (default: '24px') - supports Spectrum tokens */
     leftPadding?: DimensionValue;
     /** Right column padding (default: '24px') - supports Spectrum tokens */
@@ -40,12 +39,13 @@ export interface TwoColumnLayoutProps {
  *
  * Provides a consistent two-column layout pattern with Spectrum design token support.
  * Left column is constrained to configurable max width for readability,
- * right column is flexible.
+ * right column is flexible. The whole pair is capped at `maxWidth` and centered.
  *
  * Used in:
  * - AdobeProjectStep (selection + summary)
  * - AdobeWorkspaceStep (selection + summary)
  * - ConfigureScreen (form + summary)
+ * - ComponentConfigStep
  *
  * @example
  * ```tsx
@@ -65,11 +65,11 @@ export interface TwoColumnLayoutProps {
  *   rightContent={<ConfigurationSummary />}
  * />
  *
- * // Fixed narrow rail on the left (hub-and-spoke layouts)
+ * // Opt out of the centered cap (full-width)
  * <TwoColumnLayout
- *   leftWidth="280px"
- *   leftContent={<BuilderRail />}
- *   rightContent={<ActivePanel />}
+ *   maxWidth="none"
+ *   leftContent={<List />}
+ *   rightContent={<Summary />}
  * />
  * ```
  */
@@ -77,7 +77,7 @@ export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
     leftContent,
     rightContent,
     leftMaxWidth = '800px' as DimensionValue,
-    leftWidth,
+    maxWidth = '1200px' as DimensionValue,
     leftPadding = '24px' as DimensionValue,
     rightPadding = '24px' as DimensionValue,
     rightBackgroundColor = 'var(--spectrum-global-color-gray-75)',
@@ -96,26 +96,26 @@ export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
     const leftColumnClasses = 'flex flex-column w-full min-w-0 overflow-hidden two-column-layout-left';
     const rightColumnClasses = 'flex-1 flex flex-column overflow-hidden two-column-layout-right';
 
-    // Fixed-rail mode: when `leftWidth` is set the left pane becomes a narrow,
-    // non-flexing rail (flex: 0 0 width + explicit width); leftMaxWidth no longer
-    // applies. Otherwise the default capped-primary layout (flex grow + maxWidth)
-    // is unchanged. Dynamic styles stay inline per SOP §11.
-    const translatedLeftWidth = leftWidth !== undefined ? translateSpectrumToken(leftWidth) : undefined;
-    const leftColumnStyle: React.CSSProperties = translatedLeftWidth !== undefined
-        ? {
-              flex: `0 0 ${translatedLeftWidth}`,
-              width: translatedLeftWidth,
-              padding: translateSpectrumToken(leftPadding),
-          }
-        : {
-              maxWidth: translateSpectrumToken(leftMaxWidth),
-              padding: translateSpectrumToken(leftPadding),
-          };
+    // Capped-primary left column: flex grow + maxWidth for readability. The right
+    // column stays flexible (floored by rightMinWidth) but is bounded by the
+    // container cap so the summary gets enough room without dominating. Dynamic
+    // styles stay inline per SOP §11.
+    const leftColumnStyle: React.CSSProperties = {
+        maxWidth: translateSpectrumToken(leftMaxWidth),
+        padding: translateSpectrumToken(leftPadding),
+    };
 
     return (
         <div
             className={containerClasses}
-            style={{ gap: translateSpectrumToken(gap) }}
+            style={{
+                gap: translateSpectrumToken(gap),
+                // Cap + center the pair so it never stretches edge-to-edge on a
+                // fullscreen monitor. The responsive stack query keeps working
+                // (it only swaps flex-direction + releases the column widths).
+                maxWidth: translateSpectrumToken(maxWidth),
+                margin: '0 auto',
+            }}
         >
             {/* Left Column: Main Content (constrained width) */}
             <div

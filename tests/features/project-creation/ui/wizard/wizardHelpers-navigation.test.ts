@@ -51,7 +51,7 @@ describe('wizardHelpers - navigation', () => {
             { id: 'adobe-auth', name: 'Auth' },
             { id: 'adobe-project', name: 'Project' },
             { id: 'adobe-workspace', name: 'Workspace' },
-            { id: 'component-selection', name: 'Components' },
+            { id: 'commerce', name: 'Commerce' },
             { id: 'review', name: 'Review' },
         ];
 
@@ -62,7 +62,7 @@ describe('wizardHelpers - navigation', () => {
         });
 
         it('should remove target step and all steps after it', () => {
-            const completed: WizardStep[] = ['adobe-auth', 'adobe-project', 'adobe-workspace', 'component-selection'];
+            const completed: WizardStep[] = ['adobe-auth', 'adobe-project', 'adobe-workspace', 'commerce'];
             const result = filterCompletedStepsForBackwardNav(completed, 'adobe-project', 1, wizardSteps);
             expect(result).toEqual(['adobe-auth']);
         });
@@ -179,6 +179,14 @@ describe('wizardHelpers - navigation', () => {
         it('should return "Create" on review step in import mode', () => {
             expect(getNextButtonText(false, 3, 5, 'import', 'review')).toBe('Create');
         });
+
+        it('should be id-driven, not index-driven (review not second-to-last)', () => {
+            // R1 order puts storefront-setup between review and create-project, so
+            // review sits at totalSteps-3. The label must still follow the id.
+            expect(getNextButtonText(false, 8, 11, 'create', 'review')).toBe('Create');
+            expect(getNextButtonText(false, 8, 11, 'edit', 'review')).toBe('Save Changes');
+            expect(getNextButtonText(false, 9, 11, undefined, 'storefront-setup')).toBe('Continue');
+        });
     });
 
     describe('hasMeshComponentSelected', () => {
@@ -277,27 +285,27 @@ describe('wizardHelpers - navigation', () => {
             expect(getFirstEnabledStep(steps)).toBe('adobe-auth');
         });
 
-        it('should return adobe-auth as fallback for empty array', () => {
-            expect(getFirstEnabledStep([])).toBe('adobe-auth');
+        it('should return welcome as fallback for empty array', () => {
+            expect(getFirstEnabledStep([])).toBe('welcome');
         });
 
-        it('should return adobe-auth as fallback for undefined', () => {
-            expect(getFirstEnabledStep(undefined)).toBe('adobe-auth');
+        it('should return welcome as fallback for undefined', () => {
+            expect(getFirstEnabledStep(undefined)).toBe('welcome');
         });
 
-        it('should return adobe-auth when all steps disabled', () => {
+        it('should return welcome when all steps disabled', () => {
             const steps = [
                 { id: 'welcome', enabled: false },
                 { id: 'prerequisites', enabled: false },
             ];
-            expect(getFirstEnabledStep(steps)).toBe('adobe-auth');
+            expect(getFirstEnabledStep(steps)).toBe('welcome');
         });
     });
 
     describe('shouldShowWizardFooter', () => {
         it('should return true for normal step', () => {
             expect(shouldShowWizardFooter(false, 'adobe-auth')).toBe(true);
-            expect(shouldShowWizardFooter(false, 'component-selection')).toBe(true);
+            expect(shouldShowWizardFooter(false, 'commerce')).toBe(true);
             expect(shouldShowWizardFooter(false, 'prerequisites')).toBe(true);
         });
 
@@ -308,6 +316,10 @@ describe('wizardHelpers - navigation', () => {
 
         it('should return false when on mesh-deployment step', () => {
             expect(shouldShowWizardFooter(false, 'mesh-deployment')).toBe(false);
+        });
+
+        it('should return true on the commerce group step (uses the wizard footer)', () => {
+            expect(shouldShowWizardFooter(false, 'commerce')).toBe(true);
         });
     });
 });

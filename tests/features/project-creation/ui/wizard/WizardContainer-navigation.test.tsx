@@ -193,11 +193,11 @@ describe('WizardContainer - Navigation', () => {
                 />
             );
 
-            // Navigate through all steps explicitly (no welcome step, no api-mesh step)
-            // Note: api-mesh step is now disabled - mesh deployment happens in project-creation
+            // Navigate through all render-able mock steps (group steps render null
+            // placeholders in R1 Step 2 and are not part of this mock flow).
             const getButton = () => screen.getByRole('button', { name: /continue|^create$/i });
 
-            // Start at adobe-auth (first step after welcome removal)
+            // Start at adobe-auth (first step in the mock flow)
             expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
 
             // adobe-auth → adobe-project
@@ -208,20 +208,11 @@ describe('WizardContainer - Navigation', () => {
             await user.click(getButton());
             await screen.findByTestId('adobe-workspace-step', {}, { timeout: 1000 });
 
-            // adobe-workspace → component-selection
-            await user.click(getButton());
-            await screen.findByTestId('component-selection-step', {}, { timeout: 1000 });
-
-            // component-selection → prerequisites
+            // adobe-workspace → prerequisites
             await user.click(getButton());
             await screen.findByTestId('prerequisites-step', {}, { timeout: 1000 });
 
-            // prerequisites → settings (connect-store)
-            // Note: api-mesh step is disabled, so we skip directly to settings
-            await user.click(getButton());
-            await screen.findByTestId('connect-store-step', {}, { timeout: 1000 });
-
-            // settings → review
+            // prerequisites → review
             await user.click(getButton());
             await screen.findByTestId('review-step', {}, { timeout: 1000 });
 

@@ -18,7 +18,7 @@
  *    resolveMeshOptionalDeps (the cross-package leak guard): the stack's mesh
  *    deps when mesh is required, [] otherwise.
  *
- * @module features/project-creation/ui/builder/useProjectBuilder
+ * @module features/project-creation/ui/steps/useProjectBuilder
  */
 
 import { useCallback } from 'react';

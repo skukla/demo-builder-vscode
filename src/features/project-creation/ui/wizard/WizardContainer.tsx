@@ -8,7 +8,7 @@ import {
 import React, { useEffect, useRef, useState } from 'react';
 import { loadStacks } from '../helpers/brandStackLoader';
 import { getSelectablePackages } from '../helpers/demoPackageLoader';
-import { filterComponentConfigsForStackChange } from '../helpers/stackHelpers';
+import { filterComponentConfigsForStackChange, buildStackChangeStateReset } from '../helpers/stackHelpers';
 import {
     useWizardState,
     useWizardNavigation,
@@ -38,15 +38,13 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjectStep';
 import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
-import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
-import { ConnectServicesStep } from '@/features/eds/ui/steps/ConnectServicesStep';
-import { GitHubRepoSelectionStep } from '@/features/eds/ui/steps/GitHubRepoSelectionStep';
 import { StorefrontSetupStep } from '@/features/eds/ui/steps/StorefrontSetupStep';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
-import { ProjectBuilderStep } from '@/features/project-creation/ui/builder/ProjectBuilderStep';
-import { ConnectStoreStepContent } from '@/features/project-creation/ui/components/ConnectStoreStepContent';
+import { CommerceStep } from '@/features/project-creation/ui/steps/CommerceStep';
+import { IntegrationsStep } from '@/features/project-creation/ui/steps/IntegrationsStep';
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
 import { ReviewStep } from '@/features/project-creation/ui/steps/ReviewStep';
+import { StorefrontStep } from '@/features/project-creation/ui/steps/StorefrontStep';
 import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
@@ -262,12 +260,9 @@ export function WizardContainer({
         setState(prev => ({
             ...prev,
             componentConfigs: filteredConfigs,
-            // Clear EDS state (consolidated in edsConfig)
-            edsConfig: undefined,
-            githubReposCache: undefined,
-            daLiveSitesCache: undefined,
-            githubRepoSearchFilter: undefined,
-            daLiveSiteSearchFilter: undefined,
+            // Clear architecture-dependent EDS state/caches AND the cached config-tile
+            // validity verdicts, so a stale ✓ tile can't survive a stack change.
+            ...buildStackChangeStateReset(),
         }));
     };
 
@@ -292,19 +287,6 @@ export function WizardContainer({
                         stacks={stacks}
                     />
                 );
-            case 'project-builder':
-                return (
-                    <ProjectBuilderStep
-                        {...props}
-                        packages={packages}
-                        stacks={stacks}
-                        blockLibraryDefaults={blockLibraryDefaults}
-                        customBlockLibraryDefaults={customBlockLibraryDefaults}
-                        onArchitectureChange={handleArchitectureChange}
-                    />
-                );
-            case 'component-selection':
-                return <ComponentSelectionStep {...props} componentsData={componentsData?.data as Record<string, unknown>} />;
             case 'prerequisites':
                 return <PrerequisitesStep {...props} componentsData={componentsData?.data as Record<string, unknown>} currentStep={state.currentStep} />;
             case 'adobe-auth':
@@ -313,25 +295,31 @@ export function WizardContainer({
                 return <AdobeProjectStep {...props} completedSteps={completedSteps} />;
             case 'adobe-workspace':
                 return <AdobeWorkspaceStep {...props} completedSteps={completedSteps} />;
-            case 'eds-connect-services':
-                return <ConnectServicesStep {...props} />;
-            case 'eds-repository-config':
-                return <GitHubRepoSelectionStep {...props} />;
-            case 'storefront-setup':
-                return <StorefrontSetupStep {...props} />;
-            case 'settings':
+            // Group-paced steps: Commerce (backend + connect), Integrations
+            // (App-Builder-gated placeholder; tiles in R2), Storefront (EDS).
+            case 'commerce':
                 return (
-                    <ConnectStoreStepContent
-                        selectedStackId={state.selectedStack ?? ''}
-                        componentConfigs={state.componentConfigs ?? {}}
-                        packageConfigDefaults={state.packageConfigDefaults}
-                        adobeOrg={state.adobeOrg}
-                        onComponentConfigsChange={(configs) => updateState({ componentConfigs: configs })}
-                        onValidationChange={setCanProceed}
-                        storeDiscoveryData={state.storeDiscoveryData}
-                        onStoreDiscoveryDataChange={(data) => updateState({ storeDiscoveryData: data ?? undefined })}
+                    <CommerceStep
+                        {...props}
+                        packages={packages}
+                        stacks={stacks}
+                        onArchitectureChange={handleArchitectureChange}
                     />
                 );
+            case 'integrations':
+                return <IntegrationsStep {...props} />;
+            case 'storefront':
+                return (
+                    <StorefrontStep
+                        {...props}
+                        packages={packages}
+                        stacks={stacks}
+                        blockLibraryDefaults={blockLibraryDefaults}
+                        customBlockLibraryDefaults={customBlockLibraryDefaults}
+                    />
+                );
+            case 'storefront-setup':
+                return <StorefrontSetupStep {...props} />;
             case 'review':
                 return <ReviewStep state={state} updateState={updateState} setCanProceed={setCanProceed} componentsData={componentsData?.data} packages={packages} stacks={stacks} />;
             case 'create-project':

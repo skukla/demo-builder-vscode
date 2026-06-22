@@ -8,16 +8,14 @@ export type ThemeMode = 'light' | 'dark';
 
 export type WizardStep =
     | 'welcome'
-    | 'project-builder'  // Two-column hub-and-spoke: stack + components + block libs (replaces ArchitectureModal)
-    | 'component-selection'
     | 'prerequisites'
     | 'adobe-auth'  // Adobe authentication step
     | 'adobe-project'  // Adobe project selection step
     | 'adobe-workspace'  // Adobe workspace selection step
-    | 'eds-connect-services'  // EDS: Combined GitHub + DA.live authentication (conditional: requiresGitHub OR requiresDaLive stack)
-    | 'eds-repository-config'  // EDS: Repository configuration. DA.live site name is derived from the repo name (see backlog 2026-06-08-unify-da-site-and-repo-name).
-    | 'storefront-setup'  // EDS: Storefront setup (GitHub repo, DA.live content, Helix config)
-    | 'settings'  // Component-specific settings collection
+    | 'commerce'  // Group step: backend selection + Commerce connection + store discovery
+    | 'integrations'  // Group step: App Builder integrations (gated on requiresAdobeAuth)
+    | 'storefront'  // Group step: EDS connect services + repo + block libraries (gated on requiresGitHub OR requiresDaLive)
+    | 'storefront-setup'  // EDS: Storefront setup/publish (GitHub repo, DA.live content, Helix config)
     | 'review'
     | 'create-project';
 
@@ -34,6 +32,13 @@ export interface WizardState {
     packageConfigDefaults?: Record<string, string>;  // Package-specific config defaults (e.g., store codes)
     components?: ComponentSelection;
     componentConfigs?: ComponentConfigs;  // Component-specific environment configurations
+    // Cached validity verdicts from the group-step config-tile modal bodies. The
+    // authoritative validity is hook-computed (ConnectStoreStepContent /
+    // RepoSelectionInline); persisting the verdict keeps each tile's status badge
+    // and the step's Continue gate correct when the modal is closed and across
+    // back/forward navigation. See ui/steps/tileStatus.ts.
+    commerceConnectValid?: boolean;  // Commerce connect form reported valid (ConnectStoreStepContent)
+    storefrontRepoValid?: boolean;   // Storefront repo selection reported valid (RepoSelectionInline)
     adobeAuth: AdobeAuthState;
     adobeOrg?: Organization;  // Renamed for consistency
     adobeProject?: AdobeProject;  // Renamed for consistency

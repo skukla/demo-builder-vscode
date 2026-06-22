@@ -822,8 +822,6 @@ button[class*="spectrum-Button"][disabled],
     }
     .two-column-layout-left {
         max-width: none !important;
-        /* Release the fixed-rail width (leftWidth mode) so the left column goes
-           full-width and the columns stack instead of leaving a narrow rail. */
         flex: 0 0 auto !important;
         width: 100% !important;
     }
@@ -835,59 +833,6 @@ button[class*="spectrum-Button"][disabled],
     }
 }
 
-/* Project Builder rail (Slice 2 — Step 4): single-select LEFT rail of the
-   two-column Project Builder step. Subtle, dashboard-style rows (StatusCard +
-   requirement tag). Box-sizing pinned so full-width buttons don't overflow the
-   fixed rail width. */
-.project-builder-rail {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 4px !important;
-    width: 100% !important;
-}
-
-.project-builder-rail-row {
-    box-sizing: border-box !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    gap: 8px !important;
-    width: 100% !important;
-    padding: 10px 12px !important;
-    border: 1px solid transparent !important;
-    border-radius: 6px !important;
-    background: transparent !important;
-    text-align: left !important;
-    cursor: pointer !important;
-    color: inherit !important;
-}
-
-.project-builder-rail-row:hover:not(:disabled) {
-    background-color: var(--spectrum-global-color-gray-75) !important;
-}
-
-.project-builder-rail-row.active {
-    background-color: var(--spectrum-global-color-gray-100) !important;
-    border-color: var(--spectrum-global-color-gray-300) !important;
-}
-
-.project-builder-rail-row:disabled,
-.project-builder-rail-row.disabled {
-    cursor: default !important;
-    opacity: 0.55 !important;
-}
-
-.project-builder-rail-tag {
-    flex: 0 0 auto !important;
-    font-size: 11px !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.04em !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-}
-
-.project-builder-rail-tag.required {
-    color: var(--spectrum-global-color-gray-700) !important;
-}
 
 /* Step main content area */
 .step-main-content {
@@ -3809,6 +3754,86 @@ div[class*="spectrum"] input[type="search"] {
     align-items: center !important;
     justify-content: center !important;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* =========================================================================
+   Project Builder — component overview
+   A calm, flat list of component rows (icon · role · value · right-side state).
+   Editing a component opens a focused modal (the shared Modal in a
+   DialogContainer). The step uses the wizard footer — no own footer, no card,
+   no sub-progress. All theme values come from Spectrum tokens.
+   ========================================================================= */
+
+/* Overview shell: a single scrollable column (no footer of its own). */
+.builder-overview {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+    box-sizing: border-box !important;
+}
+
+/* LEFT-aligned to match the PageHeader (which is full-width with size-400 padding,
+   not constrained/centered) so the rows' left edge lines up under the step title.
+   max-width keeps the rows readable; size-400 padding matches the header. */
+.builder-overview-wrap {
+    width: 100% !important;
+    max-width: 800px !important;
+    margin: 0 !important;
+    padding: var(--spectrum-global-dimension-size-400) !important;
+    box-sizing: border-box !important;
+}
+
+.builder-overview-intro {
+    display: block !important;
+    color: var(--spectrum-global-color-gray-700) !important;
+    margin-bottom: var(--spectrum-global-dimension-size-300) !important;
+}
+
+/* Separate cards (matches .architecture-modal-options) — NOT one bordered list. */
+.builder-overview-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: var(--spectrum-global-dimension-size-150) !important;
+    box-sizing: border-box !important;
+}
+
+/* One component card — matches the existing .architecture-modal-option treatment. */
+.builder-overview-row {
+    padding: var(--spectrum-global-dimension-size-200) !important;
+    border-radius: var(--spectrum-global-dimension-size-100) !important;
+    background: var(--spectrum-global-color-gray-75) !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    box-sizing: border-box !important;
+}
+
+.builder-overview-role {
+    font-size: var(--spectrum-global-dimension-font-size-50) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.06em !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+}
+
+.builder-overview-value {
+    font-size: var(--spectrum-global-dimension-font-size-100) !important;
+    font-weight: 600 !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+}
+
+.builder-overview-desc {
+    font-size: var(--spectrum-global-dimension-font-size-75) !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    line-height: 1.4 !important;
+}
+
+/* Read-only "Included" state. */
+.builder-overview-included {
+    color: var(--spectrum-global-color-green-600) !important;
+}
+
+.builder-overview-included-label {
+    font-size: var(--spectrum-global-dimension-font-size-75) !important;
+    color: var(--spectrum-global-color-green-600) !important;
 }
 
 } /* End of second @layer theme block */

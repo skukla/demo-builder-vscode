@@ -407,7 +407,7 @@ describe('stepFiltering', () => {
             expect(stepIds).toContain('review');
         });
 
-        it('should show the settings step from wizard-steps.json for all flows (no condition)', () => {
+        it('should show the commerce group step from wizard-steps.json for all flows (no condition)', () => {
             // Given: The actual wizard-steps.json configuration
 
             const wizardStepsConfig = require('@/features/project-creation/config/wizard-steps.json');
@@ -416,12 +416,12 @@ describe('stepFiltering', () => {
             // When: Filtering with a stack selected
             const result = filterStepsForStack(steps, edgeDeliveryStack);
 
-            // Then: Settings step should be shown (unconditional)
+            // Then: Commerce group step should be shown (unconditional)
             const stepIds = result.map(s => s.id);
-            expect(stepIds).toContain('settings');
+            expect(stepIds).toContain('commerce');
         });
 
-        it('should position settings step after adobe-workspace in wizard-steps.json', () => {
+        it('should position the commerce group step after adobe-workspace in wizard-steps.json', () => {
             // Given: The actual wizard-steps.json configuration
 
             const wizardStepsConfig = require('@/features/project-creation/config/wizard-steps.json');
@@ -430,12 +430,12 @@ describe('stepFiltering', () => {
             // When: Looking at step order
             const stepIds = steps.map((s: WizardStepWithCondition) => s.id);
             const workspaceIndex = stepIds.indexOf('adobe-workspace');
-            const settingsIndex = stepIds.indexOf('settings');
-            const connectServicesIndex = stepIds.indexOf('eds-connect-services');
+            const commerceIndex = stepIds.indexOf('commerce');
+            const storefrontIndex = stepIds.indexOf('storefront');
 
-            // Then: settings should be after adobe-workspace and before eds-connect-services
-            expect(settingsIndex).toBeGreaterThan(workspaceIndex);
-            expect(settingsIndex).toBeLessThan(connectServicesIndex);
+            // Then: commerce should be after adobe-workspace and before the storefront group
+            expect(commerceIndex).toBeGreaterThan(workspaceIndex);
+            expect(commerceIndex).toBeLessThan(storefrontIndex);
         });
 
         it('should show all showWhenNoStack steps when no stack is selected', () => {

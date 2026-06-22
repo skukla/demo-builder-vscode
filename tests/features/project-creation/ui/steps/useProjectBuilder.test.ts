@@ -11,7 +11,7 @@
  */
 
 import { renderHook, act } from '@testing-library/react';
-import { useProjectBuilder } from '@/features/project-creation/ui/builder/useProjectBuilder';
+import { useProjectBuilder } from '@/features/project-creation/ui/steps/useProjectBuilder';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';

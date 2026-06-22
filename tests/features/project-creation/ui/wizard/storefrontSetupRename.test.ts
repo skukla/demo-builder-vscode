@@ -57,14 +57,13 @@ describe('Storefront Setup Rename - Type Safety', () => {
         // Note: This is enforced at compile time, but we test runtime behavior
         const validSteps: WizardStep[] = [
             'welcome',
-            'component-selection',
             'prerequisites',
             'adobe-auth',
             'adobe-project',
             'adobe-workspace',
-            'eds-connect-services',
-            'eds-repository-config',
-            'settings',
+            'commerce',
+            'integrations',
+            'storefront',
             'review',
             'create-project',
             'storefront-setup', // New step ID

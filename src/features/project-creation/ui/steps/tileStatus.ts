@@ -1,0 +1,43 @@
+/**
+ * Config-tile status predicates (R1b — group-paced steps)
+ *
+ * Pure, side-effect-free predicates that decide whether a group-step config tile
+ * is "configured" (✓) or still "needs setup" (⚠). They derive from PERSISTED
+ * wizard state so a tile's badge and the step's Continue gate stay correct when
+ * the modal is closed and across back/forward navigation.
+ *
+ * Each predicate combines persisted selections with the authoritative validity
+ * verdict the modal body reports — `commerceConnectValid` (ConnectStoreStepContent's
+ * onValidationChange) and `storefrontRepoValid` (RepoSelectionInline's
+ * onValidityChange). The modal bodies own the live, fine-grained validation; these
+ * predicates are the single source for the tile badge AND the step canProceed.
+ *
+ * @module features/project-creation/ui/steps/tileStatus
+ */
+
+import type { WizardState } from '@/types/webview';
+
+/**
+ * Whether the Commerce step's Backend tile is fully configured.
+ *
+ * @param state - Wizard state
+ * @returns true when a stack is selected AND the connect form reported valid
+ */
+export function isCommerceConfigured(state: WizardState): boolean {
+    return Boolean(state.selectedStack) && state.commerceConnectValid === true;
+}
+
+/**
+ * Whether the Storefront step's Storefront tile is fully configured.
+ *
+ * @param state - Wizard state
+ * @returns true when GitHub + DA.live are authenticated AND the repo reported valid
+ */
+export function isStorefrontConfigured(state: WizardState): boolean {
+    const eds = state.edsConfig;
+    return (
+        Boolean(eds?.githubAuth?.isAuthenticated) &&
+        Boolean(eds?.daLiveAuth?.isAuthenticated) &&
+        state.storefrontRepoValid === true
+    );
+}

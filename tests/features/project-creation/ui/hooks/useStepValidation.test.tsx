@@ -95,14 +95,14 @@ describe('useStepValidation', () => {
         });
     });
 
-    describe('component-selection Step Validation', () => {
+    describe('commerce Step Validation', () => {
         it('should return valid when stack is selected', () => {
             const state = createMockState({
                 selectedStack: 'headless',
             } as Partial<WizardState>);
 
             const { result } = renderHook(() =>
-                useStepValidation('component-selection', state)
+                useStepValidation('commerce', state)
             );
 
             expect(result.current).toEqual({
@@ -115,7 +115,7 @@ describe('useStepValidation', () => {
             const state = createMockState({ selectedStack: undefined });
 
             const { result } = renderHook(() =>
-                useStepValidation('component-selection', state)
+                useStepValidation('commerce', state)
             );
 
             expect(result.current).toEqual({
@@ -130,7 +130,7 @@ describe('useStepValidation', () => {
             } as Partial<WizardState>);
 
             const { result } = renderHook(() =>
-                useStepValidation('component-selection', state)
+                useStepValidation('commerce', state)
             );
 
             expect(result.current).toEqual({
