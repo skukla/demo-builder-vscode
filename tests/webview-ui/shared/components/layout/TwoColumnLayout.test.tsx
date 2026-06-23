@@ -301,6 +301,100 @@ describe('TwoColumnLayout', () => {
     });
   });
 
+  describe('Fixed-width right column (rightWidth)', () => {
+    it('pins the right column to a fixed flex/width when rightWidth is set', () => {
+      // rightWidth makes the summary a fixed-width sidebar (no flex-grow) so the
+      // left content column takes the majority of the width.
+      const { container } = render(
+        <TwoColumnLayout
+          rightWidth="320px"
+          leftContent={<div>Left</div>}
+          rightContent={<div>Right</div>}
+        />
+      );
+      const rightColumn = container.firstChild?.childNodes[1] as HTMLDivElement;
+      expect(rightColumn.style.flex).toBe('0 0 320px');
+      expect(rightColumn.style.width).toBe('320px');
+    });
+
+    it('drops the flex-1 grow class from the right column when rightWidth is set', () => {
+      const { container } = render(
+        <TwoColumnLayout
+          rightWidth="320px"
+          leftContent={<div>Left</div>}
+          rightContent={<div>Right</div>}
+        />
+      );
+      const rightColumn = container.firstChild?.childNodes[1] as HTMLDivElement;
+      expect(rightColumn).not.toHaveClass('flex-1');
+      // Keeps its structural class hook for the responsive query.
+      expect(rightColumn).toHaveClass('two-column-layout-right');
+    });
+
+    it('makes the left column the flexible majority when rightWidth is set', () => {
+      const { container } = render(
+        <TwoColumnLayout
+          rightWidth="320px"
+          leftContent={<div>Left</div>}
+          rightContent={<div>Right</div>}
+        />
+      );
+      const leftColumn = container.firstChild?.childNodes[0] as HTMLDivElement;
+      // jsdom normalizes the unitless flex-basis to '0px' but keeps min-width '0'.
+      expect(leftColumn.style.flex).toBe('1 1 0px');
+      expect(leftColumn.style.minWidth).toBe('0');
+    });
+
+    it('drops the left maxWidth cap when rightWidth is set', () => {
+      // When the right column is fixed, the left column must grow to fill the
+      // remaining space; the readability cap would defeat that.
+      const { container } = render(
+        <TwoColumnLayout
+          rightWidth="320px"
+          leftMaxWidth="800px"
+          leftContent={<div>Left</div>}
+          rightContent={<div>Right</div>}
+        />
+      );
+      const leftColumn = container.firstChild?.childNodes[0] as HTMLDivElement;
+      expect(leftColumn.style.maxWidth).toBe('');
+    });
+
+    it('translates a Spectrum-token rightWidth (size-4000 -> 320px)', () => {
+      const rightWidth: DimensionValue = 'size-4000';
+      const { container } = render(
+        <TwoColumnLayout
+          rightWidth={rightWidth}
+          leftContent={<div>Left</div>}
+          rightContent={<div>Right</div>}
+        />
+      );
+      const rightColumn = container.firstChild?.childNodes[1] as HTMLDivElement;
+      expect(rightColumn.style.flex).toBe('0 0 320px');
+      expect(rightColumn.style.width).toBe('320px');
+    });
+
+    it('keeps the existing flexible behavior when rightWidth is omitted', () => {
+      // No regression: right column stays flex-1 grow + min-width floor, left
+      // column stays capped by leftMaxWidth with no fixed flex/width.
+      const { container } = render(
+        <TwoColumnLayout
+          leftMaxWidth="800px"
+          leftContent={<div>Left</div>}
+          rightContent={<div>Right</div>}
+        />
+      );
+      const leftColumn = container.firstChild?.childNodes[0] as HTMLDivElement;
+      const rightColumn = container.firstChild?.childNodes[1] as HTMLDivElement;
+
+      expect(rightColumn).toHaveClass('flex-1');
+      expect(rightColumn.style.flex).toBe('');
+      expect(rightColumn.style.width).toBe('');
+      expect(leftColumn.style.maxWidth).toBe('800px');
+      expect(leftColumn.style.flex).toBe('');
+    });
+  });
+
   describe('Right Column Min-Width', () => {
     it('defaults right column min-width to 300px', () => {
       // Floors the summary panel so the left column gives up space first

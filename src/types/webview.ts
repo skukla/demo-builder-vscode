@@ -28,6 +28,7 @@ export interface WizardState {
     currentStep: WizardStep;
     projectName: string;
     selectedPackage?: string;  // Selected package ID (e.g., 'citisignal', 'buildright')
+    selectedBackend?: string;  // Persisted Commerce backend id (e.g., 'adobe-commerce-paas'); source of truth for the backend choice + the "frontend pending" display. selectedStack stays the downstream key.
     selectedStack?: string;  // Selected stack ID (e.g., 'headless-paas', 'eds-paas')
     selectedAddons?: string[];  // Selected addon IDs (e.g., ['adobe-commerce-aco'])
     selectedBlockLibraries?: string[];  // Selected block library IDs (e.g., ['isle5', 'demo-team-blocks'])
@@ -43,6 +44,7 @@ export interface WizardState {
     // and the step's Continue gate correct when the modal is closed and across
     // back/forward navigation. See ui/steps/tileStatus.ts.
     commerceConnectValid?: boolean;  // Commerce connect form reported valid (ConnectStoreStepContent)
+    commerceStoreViewChosen?: boolean;  // Persisted verdict: the Business Structure store-view selection was made — drives the Catalog tab's gate/status
     storefrontRepoValid?: boolean;   // Storefront repo selection reported valid (RepoSelectionInline)
     activeBuildArea?: BuildAreaId;   // Area currently focused within the build-your-project step
     adobeAuth: AdobeAuthState;

@@ -10,7 +10,11 @@
  * `storefrontRepoValid` from RepoSelectionInline's onValidityChange).
  */
 
-import { isCommerceConfigured, isStorefrontConfigured } from '@/features/project-creation/ui/steps/tileStatus';
+import {
+    isAdobeSignedIn,
+    isCommerceConfigured,
+    isStorefrontConfigured,
+} from '@/features/project-creation/ui/steps/tileStatus';
 import type { WizardState } from '@/types/webview';
 
 function state(overrides: Partial<WizardState> = {}): WizardState {
@@ -74,6 +78,32 @@ describe('isStorefrontConfigured', () => {
     it('is true when GitHub + DA.live are authed AND the repo is valid', () => {
         expect(
             isStorefrontConfigured(state({ edsConfig: authed, storefrontRepoValid: true })),
+        ).toBe(true);
+    });
+});
+
+describe('isAdobeSignedIn', () => {
+    const org = { id: 'org-1', name: 'Acme', code: 'ACME' } as WizardState['adobeOrg'];
+
+    it('is false with no auth and no org', () => {
+        expect(isAdobeSignedIn(state())).toBe(false);
+    });
+
+    it('is false when authenticated but no org is selected', () => {
+        expect(isAdobeSignedIn(state({ adobeAuth: { isAuthenticated: true, isChecking: false } }))).toBe(
+            false,
+        );
+    });
+
+    it('is false when an org is selected but not authenticated', () => {
+        expect(
+            isAdobeSignedIn(state({ adobeAuth: { isAuthenticated: false, isChecking: false }, adobeOrg: org })),
+        ).toBe(false);
+    });
+
+    it('is true when authenticated AND an org is selected', () => {
+        expect(
+            isAdobeSignedIn(state({ adobeAuth: { isAuthenticated: true, isChecking: false }, adobeOrg: org })),
         ).toBe(true);
     });
 });

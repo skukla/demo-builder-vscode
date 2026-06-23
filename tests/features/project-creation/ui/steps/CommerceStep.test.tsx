@@ -1,34 +1,48 @@
 /**
- * CommerceStep Tests (R1b — tile + focused modal)
+ * CommerceStep Tests — rendering / step list / active-view / gate / summary
+ * (Project Builder — vertical step list + dedicated view)
  *
- * Commerce is now a single "Backend" {@link ConfigTile}; clicking it opens a
- * focused {@link Modal} whose body is the EXISTING Commerce content
- * (ArchitectureStepContent + ConnectStoreStepContent), unchanged. The step's
- * Continue gate derives from {@link isCommerceConfigured} (selectedStack set AND
- * commerceConnectValid true), and the connect form's validity verdict persists to
- * wizard state via updateState({ commerceConnectValid }) so it survives the modal
- * closing and back/forward navigation.
+ * The Commerce area is a {@link TwoColumnLayout}: LEFT = a [list | view] row with a
+ * {@link VerticalStepList} (Backend · [Sign in] · Connection · Business Structure ·
+ * Catalog) beside a dedicated view showing the ACTIVE step's body (the single
+ * {@link ConnectStoreStepContent} instance for config steps); RIGHT = a persistent
+ * {@link CommerceSummary}.
  *
- * The two content panels are mocked to lightweight stubs so the tests assert the
- * STEP's wiring (tile status, modal open/close, which handlers fire, how the gate
- * combines) rather than re-testing the panels (covered by their own suites). The
- * services consumed by useProjectBuilder are mocked so the real hook runs unchanged.
+ * This file covers the layout/step list, active-view switching, the ACCS sign-in
+ * gate + locked tabs, the summary architecture label, and the dedicated-view content +
+ * persistence passthrough. The Backend→stack bridge (selection/commit/security guard,
+ * save & continue, continue gate) lives in CommerceStep.bridge.test.tsx.
+ *
+ * The shared harness (child mocks, fixtures, setup, DOM helpers) lives in
+ * ./commerceStepTestHarness. jest.mock is hoisted per file, so the module factories are
+ * declared here and delegate to the harness's exported mock factories.
  *
  * @jest-environment jsdom
  */
 
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
+import { screen, fireEvent, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { CommerceStep } from '@/features/project-creation/ui/steps/CommerceStep';
-import { COMPONENT_IDS } from '@/core/constants';
-import type { DemoPackage, GitSource } from '@/types/demoPackages';
-import type { Stack } from '@/types/stacks';
-import type { WizardState } from '@/types/webview';
+import {
+    ACCS_STORE_VIEW_CODE,
+    PAAS_STORE_VIEW_CODE,
+} from '@/features/components/config/envVarKeys';
+import type { ComponentConfigs, WizardState } from '@/types/webview';
+import {
+    PAAS,
+    ACCS,
+    setup,
+    stepTab,
+    isLocked,
+    stepView,
+    architectureLine,
+} from './commerceStepTestHarness';
 
 // ---------------------------------------------------------------------------
-// Mocks: services consumed by useProjectBuilder (real hook runs)
+// Mocks (jest.mock is hoisted to the top of THIS file, above the harness import,
+// so the factory bodies must be self-contained — no imported bindings). Services
+// consumed by useProjectBuilder are stubbed so the real hook runs; the child
+// stubs surface the props the step wires.
 // ---------------------------------------------------------------------------
 
 jest.mock('@/core/ui/utils/vscode-api', () => ({
@@ -46,51 +60,22 @@ jest.mock('@/features/project-creation/services/demoPackageLoader', () => ({
     getResolvedMeshRequirement: jest.fn(() => false),
 }));
 
-// Lightweight panel stubs — capture the props each panel receives so the test
-// can drive the step's wired handlers without rendering the real panels.
-type ArchProps = {
-    stackSelection: { onStackClick: (id: string) => void };
-    addonSelection: {
-        onAddonToggle: (id: string, isSelected: boolean) => void;
-        requiredAddonIds?: string[];
-        displayAddons: { id: string }[];
-    };
-};
-type ConnectProps = {
-    selectedStackId: string;
-    onValidationChange: (valid: boolean) => void;
-};
-
-jest.mock('@/features/project-creation/ui/components/ArchitectureStepContent', () => ({
-    ArchitectureStepContent: (props: ArchProps) => (
-        <div data-testid="architecture-panel">
-            <button
-                type="button"
-                data-testid="select-stack"
-                onClick={() => props.stackSelection.onStackClick('venia-paas')}
-            >
-                select stack
-            </button>
-            <button
-                type="button"
-                data-testid="toggle-addon"
-                onClick={() => props.addonSelection.onAddonToggle('analytics', true)}
-            >
-                toggle addon
-            </button>
-            <span data-testid="required-addons">
-                {(props.addonSelection.requiredAddonIds ?? []).join(',')}
-            </span>
-            <span data-testid="display-addons">
-                {props.addonSelection.displayAddons.map(a => a.id).join(',')}
-            </span>
-        </div>
-    ),
-}));
-
 jest.mock('@/features/project-creation/ui/components/ConnectStoreStepContent', () => ({
-    ConnectStoreStepContent: (props: ConnectProps) => (
-        <div data-testid="connect-store-panel" data-stack-id={props.selectedStackId}>
+    ConnectStoreStepContent: (props: {
+        section?: string;
+        selectedStackId: string;
+        componentConfigs: Record<string, unknown>;
+        storeDiscoveryData?: unknown;
+        onValidationChange: (valid: boolean) => void;
+        onComponentConfigsChange: (configs: Record<string, unknown>) => void;
+    }) => (
+        <div
+            data-testid="connect-store-panel"
+            data-section={props.section ?? ''}
+            data-stack-id={props.selectedStackId}
+            data-has-store-discovery={props.storeDiscoveryData ? 'yes' : 'no'}
+            data-config-keys={Object.keys(props.componentConfigs ?? {}).join(',')}
+        >
             <button
                 type="button"
                 data-testid="connect-valid"
@@ -100,106 +85,32 @@ jest.mock('@/features/project-creation/ui/components/ConnectStoreStepContent', (
             </button>
             <button
                 type="button"
-                data-testid="connect-invalid"
-                onClick={() => props.onValidationChange(false)}
+                data-testid="choose-store-view"
+                onClick={() =>
+                    props.onComponentConfigsChange({
+                        'adobe-commerce': { ADOBE_COMMERCE_STORE_VIEW_CODE: 'default' },
+                    })
+                }
             >
-                mark invalid
+                choose store view
             </button>
         </div>
     ),
 }));
 
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
-
-const mockGitSource: GitSource = {
-    type: 'git',
-    url: 'https://github.com/test/repo',
-    branch: 'main',
-    gitOptions: { shallow: true },
-};
-
-const veniaStack: Stack = {
-    id: 'venia-paas',
-    name: 'Venia + PaaS',
-    description: 'Venia with PaaS backend',
-    frontend: 'venia',
-    backend: 'adobe-commerce-paas',
-    dependencies: [],
-    optionalDependencies: [],
-    optionalAddons: [
-        { id: 'analytics', default: false },
-    ],
-};
-
-const edsStack: Stack = {
-    id: 'eds-paas',
-    name: 'EDS + PaaS',
-    description: 'Edge Delivery with PaaS backend',
-    frontend: 'eds-storefront',
-    backend: 'adobe-commerce-paas',
-    dependencies: [],
-    optionalDependencies: [COMPONENT_IDS.EDS_COMMERCE_MESH],
-    optionalAddons: [],
-};
-
-const citisignal: DemoPackage = {
-    id: 'citisignal',
-    name: 'CitiSignal',
-    description: 'A test package',
-    storefronts: {
-        'venia-paas': { name: 'CS Venia', description: '', source: mockGitSource },
-        'eds-paas': { name: 'CS EDS', description: '', source: mockGitSource },
-    },
-    addons: { analytics: 'required' },
-};
-
-const PACKAGES = [citisignal];
-const STACKS = [veniaStack, edsStack];
-
-function baseState(initial: Partial<WizardState> = {}): WizardState {
-    return {
-        currentStep: 'commerce',
-        projectName: '',
-        selectedPackage: 'citisignal',
-        adobeAuth: { isAuthenticated: false, isChecking: false },
-        ...initial,
-    } as WizardState;
-}
-
-/** Render the step with a controlled, mutable WizardState (Spectrum-wrapped). */
-function setup(initial: Partial<WizardState> = {}) {
-    const stateRef = { current: baseState(initial) };
-    const updateState = jest.fn((partial: Partial<WizardState>) => {
-        stateRef.current = { ...stateRef.current, ...partial };
-    });
-    const setCanProceed = jest.fn();
-
-    const renderUi = () => (
-        <Provider theme={defaultTheme}>
-            <CommerceStep
-                state={stateRef.current}
-                updateState={updateState}
-                setCanProceed={setCanProceed}
-                packages={PACKAGES}
-                stacks={STACKS}
-            />
-        </Provider>
-    );
-
-    const utils = render(renderUi());
-    const rerender = () => utils.rerender(renderUi());
-
-    return { ...utils, rerender, updateState, setCanProceed, stateRef };
-}
-
-/** Open the focused modal by pressing the Backend tile. */
-function openModal() {
-    act(() => {
-        fireEvent.click(screen.getByTestId('backend-tile'));
-    });
-}
+jest.mock('@/features/authentication/ui/steps/AdobeAuthStep', () => ({
+    AdobeAuthStep: (props: { setCanProceed: (v: boolean) => void }) => (
+        <div data-testid="adobe-auth-panel">
+            <button
+                type="button"
+                data-testid="auth-noop"
+                onClick={() => props.setCanProceed(true)}
+            >
+                ping setCanProceed
+            </button>
+        </div>
+    ),
+}));
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -209,145 +120,238 @@ beforeEach(() => {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('CommerceStep', () => {
-    describe('tile', () => {
-        it('should render a Backend tile', () => {
+describe('CommerceStep (v7 tabs + dedicated views)', () => {
+    describe('layout', () => {
+        it('should render the vertical step list and the summary column', () => {
             setup();
-            expect(screen.getByTestId('backend-tile')).toBeInTheDocument();
+            expect(document.querySelector('.vsteplist')).toBeInTheDocument();
+            expect(document.querySelector('.sum-title')).toBeInTheDocument();
         });
 
-        it('should show needs-setup status when no stack is selected', () => {
+        it('should render the "Commerce" area label above the step list', () => {
             setup();
-            expect(screen.getByTestId('backend-tile')).toHaveAttribute(
-                'data-status',
-                'needs-setup',
+            // The area label tells the user which area they configure now that the
+            // area sub-nav left the wizard timeline. Queried by text (not class) so it
+            // asserts the rendered label, not an implementation detail. There is a
+            // "Commerce" exact-text node that sits BEFORE the step list in DOM order.
+            const list = document.querySelector('.vsteplist');
+            expect(list).toBeInTheDocument();
+            const label = screen
+                .getAllByText('Commerce')
+                .find(
+                    el =>
+                        (el.compareDocumentPosition(list as Node) &
+                            Node.DOCUMENT_POSITION_FOLLOWING) !==
+                        0,
+                );
+            expect(label).toBeTruthy();
+        });
+
+        it('should render every commerce step as a step button', () => {
+            setup();
+            expect(stepTab('backend')).toBeInTheDocument();
+            expect(stepTab('connection')).toBeInTheDocument();
+            expect(stepTab('business-structure')).toBeInTheDocument();
+            expect(stepTab('catalog')).toBeInTheDocument();
+        });
+
+        it('should show the backend step active first (its body in the dedicated view)', () => {
+            setup();
+            expect(stepTab('backend')).toHaveAttribute('aria-selected', 'true');
+            expect(stepView()).toContainElement(screen.getByTestId('backend-cards'));
+        });
+    });
+
+    describe('dedicated-view header', () => {
+        it('should render the active step title as a heading (Backend first)', () => {
+            setup();
+            expect(
+                screen.getByRole('heading', { name: 'Backend' }),
+            ).toBeInTheDocument();
+        });
+
+        it('should render the active step description below the title', () => {
+            setup();
+            expect(
+                screen.getByText(/choose how your commerce backend is hosted/i),
+            ).toBeInTheDocument();
+        });
+
+        it('should show the config step title when a config tab is active', () => {
+            setup({ selectedPackage: 'buildright', selectedBackend: PAAS, selectedStack: 'eds-paas' });
+            // Committed PaaS opens connection first → the Connection header shows.
+            expect(
+                screen.getByRole('heading', { name: 'Connection' }),
+            ).toBeInTheDocument();
+        });
+
+        it('should omit the step-view header for the signin step (auth owns its title)', () => {
+            setup({ selectedBackend: ACCS, selectedStack: 'eds-accs' });
+            // signin is active + gated; no duplicate "Sign in to Adobe" heading from the view.
+            expect(
+                screen.queryByRole('heading', { name: /sign in to adobe/i }),
+            ).not.toBeInTheDocument();
+        });
+    });
+
+    describe('backend cards (availability per package)', () => {
+        it('should enable both PaaS and ACCS for citisignal', () => {
+            setup();
+            expect(screen.getByTestId(`backend-card-${PAAS}`)).not.toBeDisabled();
+            expect(screen.getByTestId(`backend-card-${ACCS}`)).not.toBeDisabled();
+        });
+
+        it('should disable ACCS for buildright (PaaS only)', () => {
+            setup({ selectedPackage: 'buildright' });
+            expect(screen.getByTestId(`backend-card-${PAAS}`)).not.toBeDisabled();
+            expect(screen.getByTestId(`backend-card-${ACCS}`)).toBeDisabled();
+        });
+
+        it('should show a "Not available" note on the disabled ACCS card for buildright', () => {
+            setup({ selectedPackage: 'buildright' });
+            expect(screen.getByTestId(`backend-note-${ACCS}`)).toHaveTextContent(
+                /not available/i,
             );
         });
 
-        it('should show needs-setup when a stack exists but connect is not valid', () => {
-            setup({ selectedStack: 'venia-paas' });
-            expect(screen.getByTestId('backend-tile')).toHaveAttribute(
-                'data-status',
-                'needs-setup',
+        it('should render a check affordance only on the selected backend card', () => {
+            // Seed a committed ACCS stack, then re-open the Backend tab (committed stack
+            // opens a config step first) so both cards render with ACCS selected —
+            // only the selected card shows the check.
+            setup({ selectedBackend: ACCS, selectedStack: 'eds-accs' });
+            fireEvent.click(stepTab('backend'));
+            const cards = screen.getByTestId('backend-cards');
+            const checks = cards.querySelectorAll('[data-testid="backend-card-check"]');
+            expect(checks).toHaveLength(1);
+            expect(screen.getByTestId(`backend-card-${ACCS}`)).toContainElement(
+                checks[0] as HTMLElement,
+            );
+            expect(
+                screen.getByTestId(`backend-card-${PAAS}`).querySelector(
+                    '[data-testid="backend-card-check"]',
+                ),
+            ).toBeNull();
+        });
+    });
+
+    describe('summary architecture label', () => {
+        it('should show the committed stack name when a full stack is selected', () => {
+            setup({ selectedPackage: 'buildright', selectedBackend: PAAS, selectedStack: 'eds-paas' });
+            expect(architectureLine()).toHaveTextContent(
+                'Edge Delivery + PaaS',
             );
         });
 
-        it('should show configured when a stack is selected AND connect is valid', () => {
-            setup({ selectedStack: 'venia-paas', commerceConnectValid: true });
-            expect(screen.getByTestId('backend-tile')).toHaveAttribute(
-                'data-status',
-                'configured',
+        it('should show the pending placeholder when nothing is chosen', () => {
+            setup();
+            expect(architectureLine()).toHaveTextContent(
+                /architecture pending/i,
+            );
+        });
+    });
+
+    describe('dedicated view — active step content + persistence passthrough', () => {
+        it('should render the config form in the dedicated view when a config step is active', () => {
+            setup({ selectedPackage: 'buildright', selectedBackend: PAAS, selectedStack: 'eds-paas' });
+            const panel = screen.getByTestId('connect-store-panel');
+            // The committed PaaS stack opens connection first → the form fills the view.
+            expect(stepView()).toContainElement(panel);
+            expect(panel).toHaveAttribute('data-section', 'connection');
+        });
+
+        it('should switch the active view + flip the section when another config tab is clicked', () => {
+            setup({ selectedPackage: 'buildright', selectedBackend: PAAS, selectedStack: 'eds-paas' });
+            fireEvent.click(stepTab('business-structure'));
+            const panel = screen.getByTestId('connect-store-panel');
+            expect(stepView()).toContainElement(panel);
+            expect(panel).toHaveAttribute('data-section', 'business-structure');
+            // Only the single active step's body renders — backend cards are gone.
+            expect(screen.queryByTestId('backend-cards')).not.toBeInTheDocument();
+        });
+
+        it('should keep passing persisted props so a remount rehydrates (no re-fetch)', () => {
+            const storeDiscoveryData = { websites: [] } as unknown as WizardState['storeDiscoveryData'];
+            const componentConfigs = {
+                'adobe-commerce': { [PAAS_STORE_VIEW_CODE]: 'default' },
+            } as unknown as ComponentConfigs;
+            setup({
+                selectedPackage: 'buildright',
+                selectedBackend: PAAS,
+                selectedStack: 'eds-paas',
+                storeDiscoveryData,
+                componentConfigs,
+            });
+            // Persisted store structure + configs reach the panel in the connection step.
+            expect(screen.getByTestId('connect-store-panel')).toHaveAttribute(
+                'data-has-store-discovery',
+                'yes',
+            );
+            fireEvent.click(stepTab('business-structure'));
+            // After the step switch (remount), the SAME persisted props are passed
+            // back in — so the rehydrated panel will not re-fetch store discovery.
+            const panel = screen.getByTestId('connect-store-panel');
+            expect(panel).toHaveAttribute('data-has-store-discovery', 'yes');
+            expect(panel).toHaveAttribute('data-config-keys', 'adobe-commerce');
+        });
+    });
+
+    describe('ACCS sign-in gate', () => {
+        it('should show the signin step (AdobeAuthStep) when ACCS is chosen and not signed in', () => {
+            setup({ selectedBackend: ACCS, selectedStack: 'eds-accs' });
+            expect(stepView()).toContainElement(screen.getByTestId('adobe-auth-panel'));
+        });
+
+        it('should lock connection/business/catalog tabs with a sign-in reason when gated', () => {
+            setup({ selectedBackend: ACCS, selectedStack: 'eds-accs' });
+            expect(isLocked('connection')).toBe(true);
+            expect(isLocked('catalog')).toBe(true);
+            expect(stepTab('connection')).toHaveAttribute(
+                'title',
+                expect.stringMatching(/sign in to adobe/i),
             );
         });
 
-        it('should NOT render the modal content until the tile is pressed', () => {
-            setup({ selectedStack: 'venia-paas' });
-            expect(screen.queryByTestId('architecture-panel')).not.toBeInTheDocument();
+        it('should not switch the active view when a locked config tab is clicked', () => {
+            setup({ selectedBackend: ACCS, selectedStack: 'eds-accs' });
+            // signin is active first (gated). Clicking the locked connection tab is a no-op.
+            fireEvent.click(stepTab('connection'));
+            expect(stepView()).toContainElement(screen.getByTestId('adobe-auth-panel'));
             expect(screen.queryByTestId('connect-store-panel')).not.toBeInTheDocument();
         });
-    });
 
-    describe('modal', () => {
-        it('should open the modal with both panels when the tile is pressed', () => {
-            setup({ selectedStack: 'venia-paas' });
-            openModal();
-            expect(screen.getByTestId('architecture-panel')).toBeInTheDocument();
-            expect(screen.getByTestId('connect-store-panel')).toBeInTheDocument();
+        it('should hand a no-op setCanProceed to the AdobeAuthStep (the step owns the gate)', () => {
+            const { setCanProceed } = setup({ selectedBackend: ACCS, selectedStack: 'eds-accs' });
+            const callsBefore = setCanProceed.mock.calls.length;
+            fireEvent.click(screen.getByTestId('auth-noop'));
+            // The auth body's setCanProceed is a NOOP — it must not reach the gate.
+            expect(setCanProceed.mock.calls.length).toBe(callsBefore);
         });
 
-        it('should pass the selected stack id to the connect panel', () => {
-            setup({ selectedStack: 'venia-paas' });
-            openModal();
+        it('should advance from signin to connection once signed in (ACCS)', () => {
+            const { rerender, stateRef } = setup({
+                selectedBackend: ACCS,
+                selectedStack: 'eds-accs',
+            });
+            expect(screen.getByTestId('adobe-auth-panel')).toBeInTheDocument();
+            act(() => {
+                stateRef.current = {
+                    ...stateRef.current,
+                    adobeAuth: { isAuthenticated: true, isChecking: false },
+                    adobeOrg: { id: 'org-1', name: 'Org One' },
+                } as WizardState;
+            });
+            rerender();
             expect(screen.getByTestId('connect-store-panel')).toHaveAttribute(
-                'data-stack-id',
-                'venia-paas',
+                'data-section',
+                'connection',
             );
         });
     });
 
-    describe('stack selection (useProjectBuilder)', () => {
-        it('should write selectedStack via the hook when the panel selects a stack', () => {
-            const { updateState } = setup({ selectedStack: 'eds-paas' });
-            openModal();
-            fireEvent.click(screen.getByTestId('select-stack'));
-            expect(updateState).toHaveBeenCalledWith(
-                expect.objectContaining({ selectedStack: 'venia-paas' }),
-            );
-        });
-
-        it('should reset selectedOptionalDependencies for a non-mesh package on stack select', () => {
-            // Pre-seed stale optional deps; selecting a non-mesh stack must clear them.
-            const { updateState } = setup({
-                selectedStack: 'eds-paas',
-                selectedOptionalDependencies: [COMPONENT_IDS.EDS_COMMERCE_MESH],
-            });
-            openModal();
-            fireEvent.click(screen.getByTestId('select-stack'));
-            expect(updateState).toHaveBeenCalledWith(
-                expect.objectContaining({ selectedOptionalDependencies: [] }),
-            );
-        });
-    });
-
-    describe('addon selection', () => {
-        it('should route addon toggles through the hook (onAddonsChange)', () => {
-            const { updateState } = setup({ selectedStack: 'venia-paas', selectedAddons: [] });
-            openModal();
-            fireEvent.click(screen.getByTestId('toggle-addon'));
-            expect(updateState).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    selectedAddons: expect.arrayContaining(['analytics']),
-                }),
-            );
-        });
-
-        it('should mark package-required addons as required (pre-checked/disabled upstream)', () => {
-            setup({ selectedStack: 'venia-paas' });
-            openModal();
-            expect(screen.getByTestId('required-addons')).toHaveTextContent('analytics');
-        });
-    });
-
-    describe('connect validity persistence', () => {
-        it('should persist commerceConnectValid via updateState when connect reports valid', () => {
-            const { updateState } = setup({ selectedStack: 'venia-paas' });
-            openModal();
-            fireEvent.click(screen.getByTestId('connect-valid'));
-            expect(updateState).toHaveBeenCalledWith(
-                expect.objectContaining({ commerceConnectValid: true }),
-            );
-        });
-
-        it('should persist commerceConnectValid=false when connect reports invalid', () => {
-            const { updateState } = setup({
-                selectedStack: 'venia-paas',
-                commerceConnectValid: true,
-            });
-            openModal();
-            fireEvent.click(screen.getByTestId('connect-invalid'));
-            expect(updateState).toHaveBeenCalledWith(
-                expect.objectContaining({ commerceConnectValid: false }),
-            );
-        });
-    });
-
-    describe('continue gate (isCommerceConfigured)', () => {
-        it('should be false when no stack is selected', () => {
-            const { setCanProceed } = setup();
-            expect(setCanProceed).toHaveBeenLastCalledWith(false);
-        });
-
-        it('should be false when a stack exists but connect is not valid', () => {
-            const { setCanProceed } = setup({ selectedStack: 'venia-paas' });
-            expect(setCanProceed).toHaveBeenLastCalledWith(false);
-        });
-
-        it('should be true when a stack is selected AND commerceConnectValid is true', () => {
-            const { setCanProceed } = setup({
-                selectedStack: 'venia-paas',
-                commerceConnectValid: true,
-            });
-            expect(setCanProceed).toHaveBeenLastCalledWith(true);
+    describe('store-view keys guard', () => {
+        it('should reuse the shared ACCS/PaaS store-view keys', () => {
+            expect(ACCS_STORE_VIEW_CODE).toBe('ACCS_STORE_VIEW_CODE');
+            expect(PAAS_STORE_VIEW_CODE).toBe('ADOBE_COMMERCE_STORE_VIEW_CODE');
         });
     });
 });

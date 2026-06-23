@@ -31,8 +31,9 @@ export interface StepCondition {
 
     /**
      * If true, this step is only shown when Adobe authentication is needed.
-     * Broader than requiresAdobeIO — includes mesh OR ACCS backend
-     * (ACCS store discovery requires IMS token).
+     * Broader than requiresAdobeIO — includes mesh OR any App Builder component.
+     * (ACCS no longer gates this step; ACCS auth is handled contextually by
+     * Commerce's Sign-in tab.)
      */
     requiresAdobeAuth?: boolean;
 
@@ -81,7 +82,7 @@ export interface FilterOptions {
     isEditMode?: boolean;
     /** Whether the project requires Adobe I/O project/workspace (mesh included) */
     hasAdobeIO?: boolean;
-    /** Whether the project requires Adobe authentication (mesh OR ACCS backend) */
+    /** Whether the project requires Adobe authentication (mesh OR App Builder component) */
     hasAdobeAuth?: boolean;
 }
 

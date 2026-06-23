@@ -96,10 +96,10 @@ describe('useWizardState — mesh dual-flow regression (builder path)', () => {
         expect(stepIds).toContain('adobe-workspace');
     });
 
-    it('hides Adobe-IO steps when no mesh is selected (ACCS keeps only auth)', () => {
+    it('hides all Adobe steps for an ACCS-only project (Commerce owns ACCS auth)', () => {
         const { result } = renderWizardState();
 
-        // Select the ACCS stack but NO mesh component.
+        // Select the ACCS stack but NO mesh component and NO App Builder component.
         act(() => {
             result.current.setState(prev => ({
                 ...prev,
@@ -110,9 +110,10 @@ describe('useWizardState — mesh dual-flow regression (builder path)', () => {
         });
 
         const stepIds = result.current.WIZARD_STEPS.map(s => s.id);
-        // ACCS backend still requires auth, but project/workspace (Adobe I/O)
-        // are mesh-only and must be hidden without a mesh selection.
-        expect(stepIds).toContain('adobe-auth');
+        // ACCS auth is now handled inside Commerce's contextual Sign-in tab, so
+        // the top-level adobe-auth step (and the mesh-only project/workspace
+        // steps) must NOT appear for an ACCS-only project.
+        expect(stepIds).not.toContain('adobe-auth');
         expect(stepIds).not.toContain('adobe-project');
         expect(stepIds).not.toContain('adobe-workspace');
     });

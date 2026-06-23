@@ -1,52 +1,74 @@
 /**
- * CommerceStep Component (R1b — tile + focused modal)
+ * CommerceStep Component (Project Builder — vertical step list + dedicated view)
  *
- * Commerce is a single "Backend" {@link ConfigTile}: its status comes from
- * {@link isCommerceConfigured}, and pressing it opens a focused {@link Modal}
- * whose body is the EXISTING Commerce content — {@link ArchitectureStepContent}
- * (backend/stack + addons) ABOVE {@link ConnectStoreStepContent} (connect + store
- * discovery). Both content components are reused as-is; only their host changed
- * from an inline column to the modal.
+ * The Commerce area is a {@link TwoColumnLayout}: LEFT = a [list | view] row
+ * (.commerce-body) with a {@link VerticalStepList} on the left (Backend · [Sign in] ·
+ * Connection · Business Structure · Catalog) and, to its right, a dedicated view
+ * showing the ACTIVE step's body (the single {@link ConnectStoreStepContent} instance
+ * for config steps); RIGHT = a persistent {@link CommerceSummary}. Presentation swap —
+ * the step model, the Backend→stack bridge, the security guard, and the summary all
+ * carry over unchanged).
  *
- * Selections persist via {@link useProjectBuilder} — the mesh dual-flow invariant
- * lives in that hook (selecting a stack resets selectedOptionalDependencies via
- * resolveMeshOptionalDeps; toggling a mesh App Builder component mirror-writes
- * them). The connect form's validity verdict persists to wizard state
- * (`commerceConnectValid`) so it survives the modal closing and back/forward
- * navigation. The Continue gate derives solely from {@link isCommerceConfigured}.
+ * Backend selection drives the architecture. Choosing a backend resolves it against
+ * the brand's allowed stacks ({@link resolveStackForBackend}). A UNIQUE mapping
+ * commits the stack via {@link useProjectBuilder.onStackSelect} (preserving the mesh
+ * dual-flow reset + eds/addon/block-library seed — never bypassed). An AMBIGUOUS one
+ * (>1 frontend, e.g. citisignal + PaaS) persists `selectedBackend` only and shows
+ * "Frontend pending" in the summary; the single ConnectStoreStepContent is still
+ * driven from a provisional (eds-preferred) stack id so Connection / Business /
+ * Catalog work off the backend until the later Storefront slice resolves the frontend.
  *
- * Block-library + App Builder component selection do NOT belong here — they live
- * in Storefront (Step 4) / Integrations (R2). Commerce = stack/backend + addons
- * + connect/discovery only.
+ * Completion / lock status comes from {@link commerceSectionStates} (pure); the
+ * active step is local state, seeded by {@link firstOpenSection} and advanced on
+ * "Save & continue" / sign-in / store-view-chosen. The Continue gate derives from
+ * {@link isCommerceConfigured} (the step's BuildYourProjectStep parent owns the real
+ * gate via a NO-OP setCanProceed — harmless).
+ *
+ * ONE ConnectStoreStepContent instance serves the three config steps, rendered in the
+ * dedicated view only when the active step is a config step. Switching the active
+ * config step REMOUNTS it, but the parent round-trips storeDiscoveryData /
+ * componentConfigs to wizard state, so a remount rehydrates synchronously (no
+ * re-fetch) — see the inline note at the `configForm` memo.
  *
  * @module features/project-creation/ui/steps/CommerceStep
  */
 
-import { DialogContainer } from '@adobe/react-spectrum';
-import StorefrontIcon from '@spectrum-icons/workflow/ShoppingCart';
-import React, { useMemo, useState, useCallback } from 'react';
-import stacksConfig from '../../config/stacks.json';
-import { ArchitectureStepContent } from '../components/ArchitectureStepContent';
-import { filterAddonsByPackage } from '../components/brandGalleryHelpers';
-import { ConfigTile } from '../components/ConfigTile';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import { CommerceSummary, type SummaryRow } from '../components/CommerceSummary';
 import { ConnectStoreStepContent } from '../components/ConnectStoreStepContent';
-import { isCommerceConfigured } from './tileStatus';
+import { VerticalStepList, type StepTab } from '../components/VerticalStepList';
+import {
+    commerceSectionStates,
+    resolveStackForBackend,
+    provisionalStackForBackend,
+    availableBackendsForPackage,
+    type CommerceSectionId,
+    type CommerceSectionState,
+} from './commerceSections';
+import {
+    SECTION_TITLES,
+    ROW_LABELS,
+    StepViewHeader,
+    sectionBody,
+} from './commerceStepBodies';
+import { isCommerceConfigured, isAdobeSignedIn } from './tileStatus';
 import { useProjectBuilder } from './useProjectBuilder';
-import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
-import { Modal } from '@/core/ui/components/ui/Modal';
-import { useArrowKeyNavigation } from '@/core/ui/hooks/useArrowKeyNavigation';
+import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
 import { useCanProceedAll } from '@/core/ui/hooks/useCanProceed';
+import {
+    ACCS_STORE_VIEW_CODE,
+    PAAS_STORE_VIEW_CODE,
+} from '@/features/components/config/envVarKeys';
+import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
 import type { DemoPackage } from '@/types/demoPackages';
-import type { Stack, StacksConfig, OptionalAddon } from '@/types/stacks';
+import type { Stack } from '@/types/stacks';
 import type { ComponentConfigs } from '@/types/webview';
 import type { BaseStepProps } from '@/types/wizard';
 
-/** Addon display metadata from stacks.json (id → {name, description}). */
-const ADDON_METADATA = (stacksConfig as StacksConfig).addonDefinitions ?? {};
+/** The ACCS backend id; its stacks add a contextual Adobe sign-in gate. */
+const ACCS_BACKEND = 'adobe-commerce-accs';
 
-/** Stable empty defaults for list props (avoids the infinite-re-render gotcha). */
-const EMPTY_STRING_ARRAY: string[] = [];
-const EMPTY_ADDON_ARRAY: OptionalAddon[] = [];
+/** Stable empty defaults for list/object props (avoids the re-render gotcha). */
 const EMPTY_PACKAGES: DemoPackage[] = [];
 const EMPTY_STACKS: Stack[] = [];
 const EMPTY_CONFIGS: ComponentConfigs = {};
@@ -63,11 +85,55 @@ export interface CommerceStepProps extends BaseStepProps {
     onArchitectureChange?: (oldStackId: string, newStackId: string) => void;
 }
 
+/** Whether a store-view code (ACCS or PaaS) is present in the component configs. */
+function hasStoreViewCode(configs: ComponentConfigs): boolean {
+    const accsView = lookupComponentConfigValue(configs, ACCS_STORE_VIEW_CODE);
+    const paasView = lookupComponentConfigValue(configs, PAAS_STORE_VIEW_CODE);
+    return Boolean(accsView || paasView);
+}
+
 /**
- * The Commerce step: a Backend tile that opens a focused configuration modal.
+ * The section to open first: the first `current` section, else the first
+ * openable (non-done, non-locked) one, else the last section.
+ *
+ * @param sectionStates - Ordered section states from commerceSectionStates
+ * @returns the id of the section to open
+ */
+export function firstOpenSection(sectionStates: CommerceSectionState[]): CommerceSectionId {
+    const current = sectionStates.find(s => s.status === 'current');
+    if (current) return current.id;
+    const openable = sectionStates.find(s => s.status !== 'done' && s.status !== 'locked');
+    if (openable) return openable.id;
+    return sectionStates[sectionStates.length - 1].id;
+}
+
+/** The next openable section after `from`, or null when none remain. */
+function nextOpenableSection(
+    sectionStates: CommerceSectionState[],
+    from: CommerceSectionId,
+): CommerceSectionId | null {
+    const idx = sectionStates.findIndex(s => s.id === from);
+    for (let i = idx + 1; i < sectionStates.length; i++) {
+        if (sectionStates[i].status !== 'locked') return sectionStates[i].id;
+    }
+    return null;
+}
+
+/** The Commerce summary rows (Backend, Sign-in?, Connection, Business, Catalog). */
+function buildSummaryRows(sectionStates: CommerceSectionState[]): SummaryRow[] {
+    return sectionStates.map(s => ({
+        label: ROW_LABELS[s.id],
+        value: s.value,
+        done: s.status === 'done',
+    }));
+}
+
+/**
+ * The Commerce step: a restyled step-tab strip + dedicated view + persistent summary
+ * (v7 surface).
  *
  * @param props - Wizard step props plus catalog data (packages + stacks)
- * @returns The Backend tile and its focused modal
+ * @returns The two-column tabs + dedicated-view Commerce surface
  */
 export function CommerceStep({
     state,
@@ -77,16 +143,12 @@ export function CommerceStep({
     stacks = EMPTY_STACKS,
     onArchitectureChange,
 }: CommerceStepProps) {
-    // Whether the focused Backend modal is open.
-    const [open, setOpen] = useState(false);
-
     const handlers = useProjectBuilder(state, updateState, {
         packages,
         stacks,
         onArchitectureChange,
     });
 
-    // Resolve the selected package + stack from catalog data.
     const pkg = useMemo(
         () => packages.find(p => p.id === state.selectedPackage),
         [packages, state.selectedPackage],
@@ -96,106 +158,212 @@ export function CommerceStep({
         [stacks, state.selectedStack],
     );
 
-    // Stacks available for the selected package (storefront keys restrict them).
-    const filteredStacks = useMemo(() => {
-        const availableStackIds = Object.keys(pkg?.storefronts ?? {});
-        if (availableStackIds.length === 0) return stacks;
-        return stacks.filter(stack => availableStackIds.includes(stack.id));
-    }, [stacks, pkg]);
+    const isAccs = state.selectedBackend === ACCS_BACKEND;
+    const signedIn = isAdobeSignedIn(state);
 
-    const { getItemProps } = useArrowKeyNavigation({
-        itemCount: filteredStacks.length,
-        onSelect: (index) => handlers.onStackSelect(filteredStacks[index].id),
-        wrap: true,
-        autoFocusFirst: true,
-        orientation: 'both',
-    });
-
-    // Available addons: stack defines possibilities, package restricts by brand.
-    const availableAddons = useMemo(() => {
-        if (!pkg || !selectedStack) return EMPTY_ADDON_ARRAY;
-        const stackAddons = (selectedStack.optionalAddons ?? []).filter(a => ADDON_METADATA[a.id]);
-        return filterAddonsByPackage(stackAddons, pkg);
-    }, [pkg, selectedStack]);
-
-    const requiredAddonIds = useMemo(() => {
-        if (!pkg?.addons) return EMPTY_STRING_ARRAY;
-        return Object.entries(pkg.addons)
-            .filter(([, config]) => config === 'required')
-            .map(([id]) => id);
-    }, [pkg]);
-
-    const handleAddonToggle = useCallback(
-        (addonId: string, isSelected: boolean) => {
-            const current = state.selectedAddons ?? EMPTY_STRING_ARRAY;
-            handlers.onAddonsChange(
-                isSelected ? [...current, addonId] : current.filter(id => id !== addonId),
-            );
-        },
-        [state.selectedAddons, handlers],
+    const sectionStates = useMemo(
+        () => commerceSectionStates(state, { isAccs, signedIn }),
+        [state, isAccs, signedIn],
     );
 
-    // Continue gate derives from persisted state (tile status === gate).
-    // Primitive boolean only (no fresh arrays/objects) to avoid re-render loops.
+    // Local UI state: the single active step (completion/lock is in sectionStates).
+    const [activeStep, setActiveStep] = useState<CommerceSectionId>(() =>
+        firstOpenSection(sectionStates),
+    );
+
+    // Backends the brand offers (drives which cards are enabled).
+    const availableBackends = useMemo(
+        () => (pkg ? availableBackendsForPackage(stacks, pkg) : []),
+        [stacks, pkg],
+    );
+
+    // Drive config from the committed stack, else a provisional (eds-preferred) one.
+    const configStackId = useMemo(() => {
+        if (state.selectedStack) return state.selectedStack;
+        if (pkg && state.selectedBackend) {
+            return provisionalStackForBackend(stacks, pkg, state.selectedBackend) ?? '';
+        }
+        return '';
+    }, [state.selectedStack, state.selectedBackend, stacks, pkg]);
+
+    const handleBackendSelect = useCallback(
+        (backend: string) => {
+            if (!pkg) return;
+            const resolution = resolveStackForBackend(stacks, pkg, backend);
+            // Unique mapping → commit the stack (preserves mesh dual-flow reset, which
+            // includes clearing the stale config-validity verdicts).
+            // Ambiguous → defer the stack; config runs off the provisional id. Since
+            // onStackSelect (and its stack-change reset) never fires here, clear the
+            // stale committed stack + config verdicts ourselves so a prior unique
+            // backend's commit can't keep isCommerceConfigured true / show a committed
+            // architecture while the frontend is pending and the sections re-lock.
+            if (resolution.stackId) {
+                updateState({ selectedBackend: backend });
+                handlers.onStackSelect(resolution.stackId);
+            } else {
+                updateState({
+                    selectedBackend: backend,
+                    selectedStack: undefined,
+                    commerceConnectValid: false,
+                    commerceStoreViewChosen: false,
+                });
+            }
+            // Auto-advance past Backend to the next openable step.
+            const nextGated = backend === ACCS_BACKEND && !signedIn;
+            setActiveStep(nextGated ? 'signin' : 'connection');
+        },
+        [pkg, stacks, handlers, updateState, signedIn],
+    );
+
+    // Persist the store-view selection so Catalog unlocks (shared env-var keys).
+    const handleComponentConfigsChange = useCallback(
+        (configs: ComponentConfigs) => {
+            updateState({
+                componentConfigs: configs,
+                commerceStoreViewChosen: hasStoreViewCode(configs),
+            });
+        },
+        [updateState],
+    );
+
+    const storeViewChosen = state.commerceStoreViewChosen === true;
+
+    // Auto-advance: store view chosen → Catalog; sign-in done → Connection (ACCS).
+    useEffect(() => {
+        if (storeViewChosen) setActiveStep('catalog');
+    }, [storeViewChosen]);
+
+    useEffect(() => {
+        if (signedIn) {
+            setActiveStep(current => (current === 'signin' ? 'connection' : current));
+        }
+    }, [signedIn]);
+
+    // Continue gate derives from persisted state (primitive boolean only).
     useCanProceedAll([isCommerceConfigured(state)], setCanProceed);
 
-    // One-line tile summary: the selected stack's display name, or undefined.
-    const tileSummary = selectedStack?.name;
+    // Save & continue: mark the section done (via persisted validity) + advance.
+    const handleSaveAndContinue = useCallback(
+        (from: CommerceSectionId) => {
+            if (from === 'connection') {
+                updateState({ commerceConnectValid: true });
+            }
+            const next = nextOpenableSection(sectionStates, from);
+            if (next) setActiveStep(next);
+        },
+        [sectionStates, updateState],
+    );
 
-    const handleClose = useCallback(() => setOpen(false), []);
+    const pkgName = pkg?.name ?? '';
+
+    // The single ConnectStoreStepContent, driven by the ACTIVE config step. It
+    // remounts when the active config step changes — that is safe: the parent
+    // round-trips storeDiscoveryData / componentConfigs to wizard state, so a remount
+    // rehydrates synchronously (useStoreDiscovery seeds from initialStoreData) and
+    // useAutoStoreDetect's hasStoreData guard prevents a re-fetch.
+    const configForm = useMemo(
+        () => (
+            <ConnectStoreStepContent
+                section={activeStep as 'connection' | 'business-structure' | 'catalog'}
+                selectedStackId={configStackId}
+                componentConfigs={state.componentConfigs ?? EMPTY_CONFIGS}
+                packageConfigDefaults={state.packageConfigDefaults}
+                adobeOrg={state.adobeOrg}
+                onComponentConfigsChange={handleComponentConfigsChange}
+                onValidationChange={valid => updateState({ commerceConnectValid: valid })}
+                storeDiscoveryData={state.storeDiscoveryData}
+                onStoreDiscoveryDataChange={data =>
+                    updateState({ storeDiscoveryData: data ?? undefined })
+                }
+            />
+        ),
+        [activeStep, configStackId, state, handleComponentConfigsChange, updateState],
+    );
+
+    // Step models drive the VerticalStepList (status/lock only — the active highlight is
+    // the local activeStep, passed separately).
+    const tabModels = useMemo<StepTab[]>(
+        () =>
+            sectionStates.map(sec => ({
+                id: sec.id,
+                title: SECTION_TITLES[sec.id],
+                status: sec.status,
+                lockReason: sec.lockReason,
+            })),
+        [sectionStates],
+    );
+
+    // Only the ACTIVE step's body is built (no all-steps map). The config form is
+    // passed only when the active step is a config step.
+    const activeBody = useMemo(
+        () =>
+            sectionBody(activeStep, {
+                availableBackends,
+                selectedBackend: state.selectedBackend,
+                pkgName,
+                onBackendSelect: handleBackendSelect,
+                state,
+                updateState,
+                onSaveAndContinue: handleSaveAndContinue,
+                configForm,
+            }),
+        [
+            activeStep,
+            availableBackends,
+            state,
+            pkgName,
+            handleBackendSelect,
+            updateState,
+            handleSaveAndContinue,
+            configForm,
+        ],
+    );
+
+    const architectureLabel = useMemo(() => {
+        if (selectedStack) return selectedStack.name;
+        if (state.selectedBackend) return 'Frontend pending';
+        return null;
+    }, [selectedStack, state.selectedBackend]);
+
+    const summaryRows = useMemo(() => buildSummaryRows(sectionStates), [sectionStates]);
 
     return (
-        <SingleColumnLayout>
-            <ConfigTile
-                label="Backend"
-                summary={tileSummary}
-                status={isCommerceConfigured(state) ? 'configured' : 'needs-setup'}
-                icon={<StorefrontIcon size="S" />}
-                onPress={() => setOpen(true)}
-                testId="backend-tile"
-            />
-            <DialogContainer onDismiss={handleClose}>
-                {open && (
-                    <Modal
-                        title="Backend"
-                        size="L"
-                        onClose={handleClose}
-                    >
-                        <ArchitectureStepContent
-                            stackSelection={{
-                                filteredStacks,
-                                selectedStackId: state.selectedStack,
-                                getItemProps,
-                                onStackClick: handlers.onStackSelect,
-                            }}
-                            addonSelection={{
-                                availableAddons,
-                                displayAddons: availableAddons,
-                                selectedAddons: state.selectedAddons ?? EMPTY_STRING_ARRAY,
-                                onAddonToggle: handleAddonToggle,
-                                addonMetadata: ADDON_METADATA,
-                                requiredAddonIds,
-                            }}
+        <TwoColumnLayout
+            // Full-width: let the right summary column's background reach the
+            // screen's right edge instead of the centered 1200px cap leaving an
+            // unfilled gutter. rightWidth pins the summary to a modest fixed
+            // sidebar (~320px) so the left column (nav + step-view) takes the
+            // majority of the width — the center step-view gets the bulk.
+            maxWidth="none"
+            rightWidth="size-4000"
+            // Scopes the responsive "hide the summary once it stacks" rule (≤1180px)
+            // to this layout only — other TwoColumnLayout consumers keep their summary.
+            className="commerce-two-col"
+            // Drop the left column padding so the left nav can bleed to the content
+            // area's left edge as a full-height panel (gray-75 + right border),
+            // mirroring the summary sidebar. The nav and step-view supply their own
+            // padding (see .step-nav / .step-view).
+            leftPadding="0px"
+            leftContent={
+                <div className="commerce-body">
+                    {/* Left nav: a small all-caps area label tells the user which
+                        area they configure now that the area sub-nav left the wizard
+                        timeline, above the vertical step list. */}
+                    <div className="step-nav">
+                        <div className="step-nav-area">Commerce</div>
+                        <VerticalStepList
+                            steps={tabModels}
+                            activeId={activeStep}
+                            onSelect={id => setActiveStep(id as CommerceSectionId)}
                         />
-                        <ConnectStoreStepContent
-                            selectedStackId={state.selectedStack ?? ''}
-                            componentConfigs={state.componentConfigs ?? EMPTY_CONFIGS}
-                            packageConfigDefaults={state.packageConfigDefaults}
-                            adobeOrg={state.adobeOrg}
-                            onComponentConfigsChange={(configs) =>
-                                updateState({ componentConfigs: configs })
-                            }
-                            onValidationChange={(valid) =>
-                                updateState({ commerceConnectValid: valid })
-                            }
-                            storeDiscoveryData={state.storeDiscoveryData}
-                            onStoreDiscoveryDataChange={(data) =>
-                                updateState({ storeDiscoveryData: data ?? undefined })
-                            }
-                        />
-                    </Modal>
-                )}
-            </DialogContainer>
-        </SingleColumnLayout>
+                    </div>
+                    <div className="step-view">
+                        <StepViewHeader step={activeStep} />
+                        {activeBody}
+                    </div>
+                </div>
+            }
+            rightContent={<CommerceSummary architectureLabel={architectureLabel} rows={summaryRows} />}
+        />
     );
 }

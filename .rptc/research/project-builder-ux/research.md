@@ -223,6 +223,10 @@ order follows the data dependency **Backend → Integrations → Storefront** (s
 5. Per-component **status model** + the Create gate (all required tiles ✓).
 
 ### LOCKED design v3 — nested timeline (PM-confirmed 2026-06-22; supersedes v1 group-paced + v2 tiles-everywhere)
+> **SUPERSEDED by LOCKED design v6 (below).** v3's sequenced tabs + Architecture-header are replaced by the
+> decomposed + guided-accordion + summary-column model. Kept for history. The nested shell (slice 1, committed
+> `507bf062`) and the per-area rail still hold.
+
 After F5 review of the shipped R1 (group-paced steps) and R1b (tiles+modals), BOTH were rejected: per-step
 groups gave no sense of the whole project, and tiles-everywhere left single-component steps as a lone tile.
 The locked model:
@@ -267,6 +271,83 @@ app-builder-components.json, demo-packages.json) — render generically, never h
 
 **Visual spec:** `prototype-v2-nested.html` (this directory) is the agreed clickable reference for the build.
 The earlier `prototype.html` (group-paced) is superseded.
+
+### LOCKED design v6 — decomposed + guided + summary (PM-confirmed 2026-06-23; SUPERSEDES v3)
+> **Commerce surface SUPERSEDED by LOCKED design v7 (below)** — v6's guided **single-expand accordion** (point 2)
+> is replaced by a **restyled top tab/step strip + a dedicated full view per step**. Everything else in v6 stands
+> (decomposed backend, in-tab Adobe sign-in gate, persist-backend / "frontend pending", the summary column, the
+> preserved invariants). Kept for history.
+
+After F5 of the v3 build, three problems surfaced: the per-area **sequenced tabs were a third competing
+progress level** (NN/g caps disclosure at 2 levels; Material: "don't nest steppers"), the **sign-in screen-swap
+was jarring**, and there was **no running summary of choices**. v6 resolves all three. The committed nested
+shell (slice 1) is unchanged; v6 changes what lives *inside* each area.
+
+**1. "Architecture" is dissolved — it was redundant.** This is a headless solution: **Commerce IS the backend,
+Storefront IS the frontend.** So the backend choice (PaaS / ACCS) becomes **Commerce's first section**, the
+frontend choice (Edge Delivery / Headless) becomes **Storefront's first section**, and there is no Architecture
+concept/header/modal. The 4 stacks are the cross-product of {`headless`, `eds-storefront`} × {`adobe-commerce-paas`,
+`adobe-commerce-accs`}; a brand may offer a **non-rectangular subset** (`citisignal` omits headless+accs), so the
+two area choices **cross-filter** against the brand's allowed stacks. The derived label ("Edge Delivery + ACCS")
+is shown read-only in the summary column.
+
+**2. Guided single-expand accordion replaces sequenced tabs** (Commerce + Storefront). One section open at a
+time; **Save & continue** collapses it to a value summary + ✓ and auto-advances; locked future sections show a
+one-line reason; smooth `grid-rows` expand. Fits one screen, no scroll, no second timeline.
+
+**3. Sign-in is an in-accordion gate** — not a tab, not a banner, not a screen-swap (all tried, rejected). On
+ACCS: pick backend → Backend collapses → a **"Sign in to Adobe" accordion section** (amber key) slides in →
+Connection/Business/Catalog locked until signed in. **One shared Adobe session** across Commerce(ACCS) +
+Integrations(Mesh) — reused unless expired.
+
+**4. Right-hand persistent summary column** (two-column, mirroring the Adobe Setup / GitHub wizard steps):
+choices per section, grouped by area, ✓ on done, "Not set" placeholders, derived Architecture at top. Replaces
+the rail's old "Architecture:" line; the rail returns to a clean timeline.
+
+**5. Addon placement corrected:** **ACO → Commerce/Catalog** (a backend catalog service; package-gated —
+`buildright` required, others excluded). **API Mesh + Experience Platform → Integrations.** **App Builder** is
+implied by Mesh (its deployment target), not a separate tile.
+
+**6. In-app Adobe I/O provisioning (zero Developer Console).** Mesh config shows project + workspace selectors
+with "+ Create new…"; the extension creates project + workspace + OAuth S2S credential + subscribes the
+component's `requiredApis` (e.g. `GraphQLServiceSDK`), all in-app. **Backend SHIPPED** on two stacked branches:
+`feature/adobe-io-project-creation` (`createProject`/`createFireflyProject` + `handleCreateAdobeProject` +
+`can-create-adobe-project` probe) and `feature/adobe-io-workspace-creation` (`createWorkspace` +
+`handleCreateAdobeWorkspace`), each with a permission-gated **Flow A** (in-app create) / **Flow B** (fallback:
+select-existing / `open-adobe-console` / Switch-IMS-Org).
+
+**Preserved invariants:** same as v3 — mesh dual-flow, `MESH_ENDPOINT`→config.json edge, App Builder gating,
+all field/option sets config-driven (render generically, never hardcode).
+
+**Visual spec (authoritative):** `prototype-v6-interactive.html` (this directory) — clickable, animated, with the
+two-column summary and the dev-controls toolbar (area/brand/Adobe-session). Supersedes v2–v5.
+
+**Build approach (incremental, behind the committed slice-1 shell):** Commerce (accordion + summary +
+decomposed backend + in-accordion sign-in gate; **reuse** `ConnectStoreStepContent` `section` prop, **delete**
+`SequencedTabs`/`ArchitectureSummary`) → Storefront → Integrations (wire the shipped provisioning) → data-model
+cleanup (remove the Architecture concept from `useProjectBuilder`/areas). Each slice independently green + F5'd.
+
+### LOCKED design v7 — tabs + dedicated views + summary (PM-confirmed; supersedes v6 accordion)
+F5 of the v6 **guided accordion** Commerce area fell flat (PM): the single-expand inline bodies felt cramped.
+**New direction (PM-confirmed):** each step gets its **own dedicated full view**, navigated by a **restyled top
+tab/step strip**, with the right-hand **summary column kept**. This is a **presentation swap only** of the v6
+Commerce slice — the step model (`commerceSections.ts`), the Backend→stack bridge, the ambiguous-clear security
+guard, the auto-advance effects, `ConnectStoreStepContent`, and the Continue gate (`isCommerceConfigured`) all
+carry over **unchanged**; only the left-column container changes from `GuidedAccordion` (single-expand, inline
+bodies) to `StepTabs` (a numbered, restyled tab strip) + a roomy `.step-view` dedicated view showing the active
+step's body.
+
+- **Steps/tabs (order unchanged):** Backend · [Sign in — ACCS only, when not signed in] · Connection · Business
+  Structure · Catalog. **Backend is the first tab.** Done tabs show ✓; the active tab is accent + `aria-selected`;
+  upcoming tabs are muted; locked tabs are greyed, `aria-disabled`, non-clickable, and surface their reason
+  (title + visually-hidden text).
+- **`StepTabs`** (`components/StepTabs.tsx`) is a presentational, controlled, reusable primitive
+  (`{ steps, activeId, onSelect }`); the Storefront slice will reuse it. Restyled with subtle Spectrum tokens
+  (theme-aware), connectors between steps, accessible focus rings, no saturated fills, `prefers-reduced-motion`
+  respected. `.steptabs*` + `.step-view` CSS in `custom-spectrum.css`; the dead `.acc*` accordion CSS removed.
+- **`GuidedAccordion` deleted** (no soft-deprecation) along with its test.
+- The rest of v6 stands: decomposed backend, in-**tab** Adobe sign-in gate, persist-backend / "frontend pending",
+  the summary column, and all preserved invariants (mesh dual-flow, config-driven option sets).
 
 ## Sources
 NN/g (Wizards; Modal & Nonmodal Dialogs; Overuse of Overlays; Progressive Disclosure; Required Fields);

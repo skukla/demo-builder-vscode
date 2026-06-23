@@ -13,7 +13,7 @@ export interface TwoColumnLayoutProps {
      *  so the summary gets enough room without dominating and the pair does not
      *  stretch edge-to-edge on a fullscreen monitor. Pass `'none'` to opt out
      *  (full-width) for consumers that genuinely need it. */
-    maxWidth?: DimensionValue;
+    maxWidth?: DimensionValue | 'none';
     /** Left column padding (default: '24px') - supports Spectrum tokens */
     leftPadding?: DimensionValue;
     /** Right column padding (default: '24px') - supports Spectrum tokens */
@@ -30,6 +30,16 @@ export interface TwoColumnLayoutProps {
      *  custom-spectrum.css overrides this to 0 and stacks the columns vertically
      *  instead of letting the right column squeeze past readability. */
     rightMinWidth?: DimensionValue;
+    /** Fixed width for the right column (default: unset) - supports Spectrum tokens.
+     *  When set, the right column becomes a fixed-width sidebar (`flex: 0 0 <rightWidth>`
+     *  + `width: <rightWidth>`, no flex-grow) and the LEFT column becomes the flexible
+     *  majority (`flex: 1 1 0` + `min-width: 0`), with the left `leftMaxWidth` cap
+     *  dropped so the content fills all remaining space between the columns. Used by the
+     *  full-width Commerce step to pin a modest summary sidebar to the right edge while
+     *  the nav+content take the bulk of the width. When UNSET, the layout keeps its
+     *  default behavior: left capped by `leftMaxWidth`, right `flex-1` floored by
+     *  `rightMinWidth`. */
+    rightWidth?: DimensionValue;
     /** Additional className for container */
     className?: string;
 }
@@ -84,6 +94,7 @@ export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
     showBorder = true,
     gap = '0' as DimensionValue,
     rightMinWidth = '300px' as DimensionValue,
+    rightWidth,
     className,
 }) => {
     // SOP §11: Static styles use utility classes, dynamic styles stay inline.
@@ -92,18 +103,39 @@ export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
     // CSS swaps flex-direction to column and clears the left max-width / right
     // min-width / left border so the summary slides under the active column
     // instead of being squeezed.
+    // Fixed-width right column mode: the summary becomes a fixed sidebar (no
+    // flex-grow) and the left column becomes the flexible majority. In this mode
+    // the right column drops its `flex-1` grow class and the left column drops its
+    // readability cap so the content fills all remaining space.
+    const fixedRight = rightWidth !== undefined;
+    const translatedRightWidth = fixedRight ? translateSpectrumToken(rightWidth) : undefined;
+
     const containerClasses = ['flex', 'h-full', 'w-full', 'flex-1', 'min-h-0', 'items-stretch', 'two-column-layout', className].filter(Boolean).join(' ');
     const leftColumnClasses = 'flex flex-column w-full min-w-0 overflow-hidden two-column-layout-left';
-    const rightColumnClasses = 'flex-1 flex flex-column overflow-hidden two-column-layout-right';
+    const rightColumnClasses = [
+        fixedRight ? null : 'flex-1',
+        'flex', 'flex-column', 'overflow-hidden', 'two-column-layout-right',
+    ].filter(Boolean).join(' ');
 
-    // Capped-primary left column: flex grow + maxWidth for readability. The right
-    // column stays flexible (floored by rightMinWidth) but is bounded by the
-    // container cap so the summary gets enough room without dominating. Dynamic
+    // Left column. Default: capped-primary (flex grow + maxWidth for readability).
+    // Fixed-right mode: flexible majority (flex: 1 1 0 + min-width: 0) with the cap
+    // dropped so the content fills the space the fixed sidebar leaves. Dynamic
     // styles stay inline per SOP §11.
-    const leftColumnStyle: React.CSSProperties = {
-        maxWidth: translateSpectrumToken(leftMaxWidth),
-        padding: translateSpectrumToken(leftPadding),
-    };
+    // box-sizing: border-box keeps padding inside the column width so a padded
+    // 100%/fixed-width column never overflows its parent (clipping content at
+    // narrow/zoomed viewports).
+    const leftColumnStyle: React.CSSProperties = fixedRight
+        ? {
+              flex: '1 1 0',
+              minWidth: 0,
+              boxSizing: 'border-box',
+              padding: translateSpectrumToken(leftPadding),
+          }
+        : {
+              maxWidth: translateSpectrumToken(leftMaxWidth),
+              boxSizing: 'border-box',
+              padding: translateSpectrumToken(leftPadding),
+          };
 
     return (
         <div
@@ -113,7 +145,7 @@ export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
                 // Cap + center the pair so it never stretches edge-to-edge on a
                 // fullscreen monitor. The responsive stack query keeps working
                 // (it only swaps flex-direction + releases the column widths).
-                maxWidth: translateSpectrumToken(maxWidth),
+                maxWidth: maxWidth === 'none' ? 'none' : translateSpectrumToken(maxWidth),
                 margin: '0 auto',
             }}
         >
@@ -125,16 +157,24 @@ export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
                 {leftContent}
             </div>
 
-            {/* Right Column: Sidebar/Summary (flexible width, floored by rightMinWidth) */}
+            {/* Right Column: Sidebar/Summary. Default: flexible (flex-1), floored by
+                rightMinWidth. Fixed-width mode (rightWidth set): a pinned sidebar
+                (flex: 0 0 <rightWidth> + width: <rightWidth>, no grow). */}
             <div
                 className={rightColumnClasses}
                 style={{
+                    boxSizing: 'border-box',
                     padding: translateSpectrumToken(rightPadding),
                     backgroundColor: rightBackgroundColor,
                     borderLeft: showBorder
                         ? '1px solid var(--spectrum-global-color-gray-200)'
                         : undefined,
-                    minWidth: translateSpectrumToken(rightMinWidth),
+                    ...(fixedRight
+                        ? {
+                              flex: `0 0 ${translatedRightWidth}`,
+                              width: translatedRightWidth,
+                          }
+                        : { minWidth: translateSpectrumToken(rightMinWidth) }),
                 }}
             >
                 {rightContent}

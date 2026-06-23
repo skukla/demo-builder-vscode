@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Guided builder — de-cluttered, single-expand accordion (one screen, no scroll)</title>
+<style>
+  :root{
+    --bg:#1e1e1e;--panel:#252526;--panel-2:#2d2d2e;--rail-bg:#1b1b1c;
+    --border:#393939;--border-soft:#303031;
+    --text:#e8e8e8;--text-dim:#9a9a9a;--text-faint:#6c6c6c;
+    --blue:#378ef0;--blue-deep:#2680eb;--blue-ring:rgba(55,142,240,.35);
+    --green:#33ab84;--gray-dot:#4a4a4a;--gray-dot-bd:#6a6a6a;
+    --radius:8px;--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box} html,body{margin:0;padding:0}
+  body{background:#141414;color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.5;padding:24px}
+
+  .toolbar{max-width:1180px;margin:0 auto 12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .toolbar h1{font-size:14px;margin:0 6px 0 0;font-weight:600;color:var(--text-dim)}
+  .toolbar .devlabel{font-size:11px;color:var(--text-faint);background:#2a2a2a;border:1px solid var(--border);padding:2px 8px;border-radius:4px}
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:999px;overflow:hidden;background:var(--panel)}
+  .seg button{appearance:none;border:0;background:transparent;color:var(--text-dim);padding:5px 13px;font-family:var(--sans);font-size:12px;cursor:pointer}
+  .seg button.active{background:var(--blue-deep);color:#fff}
+  .seg button:not(.active):hover{background:var(--panel-2);color:var(--text)}
+  .label{color:var(--text-faint);font-size:11px}
+
+  .frame{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:262px 1fr;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;min-height:600px}
+
+  /* rail */
+  .rail{background:var(--rail-bg);border-right:1px solid var(--border-soft);padding:22px 18px}
+  .rail .kicker{font-size:11px;letter-spacing:.12em;color:var(--text-faint);margin-bottom:18px}
+  .step{display:flex;align-items:flex-start;gap:12px;position:relative;padding-bottom:20px}
+  .step:last-child{padding-bottom:0}
+  .dot{width:22px;height:22px;border-radius:50%;flex:0 0 22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;z-index:1}
+  .dot.done{background:var(--green)} .dot.current{background:var(--blue);box-shadow:0 0 0 4px var(--blue-ring)} .dot.upcoming{background:var(--gray-dot);border:1px solid var(--gray-dot-bd)}
+  .step:not(:last-child)::before{content:"";position:absolute;left:10px;top:24px;bottom:0;width:0;border-left:2px dashed #3a3a3a}
+  .step.done:not(:last-child)::before{border-left-color:#2c5d4b}
+  .step .label{font-size:14px;color:var(--text-dim);padding-top:1px}
+  .step.current>.label{color:var(--blue);font-weight:600}
+  .step.done>.label{color:var(--text)}
+  .archsum{margin:8px 0 2px 34px;font-size:11.5px;color:var(--text-faint);border-left:2px solid var(--border);padding:2px 0 2px 10px}
+  .archsum b{color:var(--text-dim);font-weight:600}
+  .children{margin:6px 0 0 34px}
+  .child{display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer}
+  .child .cdot{width:14px;height:14px;border-radius:50%;flex:0 0 14px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff}
+  .cdot.done{background:var(--green)} .cdot.current{background:var(--blue);box-shadow:0 0 0 3px var(--blue-ring)} .cdot.upcoming{background:var(--gray-dot);border:1px solid var(--gray-dot-bd)}
+  .child .clabel{font-size:13px;color:var(--text-dim)}
+  .child.current .clabel{color:var(--text);font-weight:600}
+  .child:hover .clabel{color:var(--text)}
+
+  /* content — minimal chrome: ONE heading, no breadcrumb, no tagline */
+  .content{padding:26px 36px;display:flex;flex-direction:column;min-height:600px}
+  .area-title{font-size:20px;font-weight:700;margin:0 0 18px}
+
+  .btn{appearance:none;border:0;border-radius:18px;padding:9px 18px;font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer}
+  .btn.primary{background:var(--blue-deep);color:#fff;display:inline-flex;gap:8px;align-items:center}
+  .btn.ghost{background:var(--panel-2);color:var(--text)}
+  .btn.small{padding:7px 15px;font-size:12px}
+  .btn[disabled]{opacity:.45;cursor:not-allowed}
+  .footer{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:16px;border-top:1px solid var(--border-soft)}
+  .footer .right{display:flex;gap:12px}
+
+  /* single-expand accordion */
+  .acc{border:1px solid var(--border-soft);border-radius:6px;overflow:hidden}
+  .acc-sec+.acc-sec{border-top:1px solid var(--border-soft)}
+  .acc-head{display:flex;align-items:center;gap:12px;width:100%;padding:13px 16px;background:var(--panel);border:0;cursor:pointer;color:var(--text);font-family:var(--sans);font-size:14px;text-align:left}
+  .acc-head:hover:not([disabled]){background:var(--panel-2)}
+  .acc-head[disabled]{cursor:default}
+  .acc-mark{width:20px;height:20px;border-radius:50%;flex:0 0 20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
+  .acc-mark.done{background:var(--green)} .acc-mark.current{background:var(--blue)} .acc-mark.locked{background:var(--gray-dot);color:var(--text-faint);font-size:9px} .acc-mark.upcoming{background:var(--gray-dot);border:1px solid var(--gray-dot-bd)}
+  .acc-title{font-weight:600}
+  .acc-sec.upcoming .acc-title,.acc-sec.locked .acc-title{color:var(--text-faint);font-weight:500}
+  .acc-right{margin-left:auto;font-size:12px;color:var(--text-dim)}
+  .acc-right.done{color:var(--green)} .acc-right.locked{color:var(--text-faint)}
+  .acc-body{padding:4px 18px 18px 48px;background:#202021;display:none}
+  .acc-sec.open .acc-body{display:block}
+
+  .field{margin:12px 0}
+  .field label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:5px}
+  .field input,.field select{width:100%;background:#161617;border:1px solid var(--border);border-radius:5px;color:var(--text);padding:8px 11px;font-size:13px;font-family:var(--sans)}
+  .sec-cta{margin-top:14px}
+
+  .cards{display:flex;gap:12px;flex-wrap:wrap;margin:4px 0 2px}
+  .card{flex:1;min-width:210px;border:1px solid var(--border);border-radius:6px;padding:13px;cursor:pointer;background:#161617}
+  .card:hover:not(.disabled){border-color:#555}
+  .card.sel{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
+  .card.disabled{opacity:.4;cursor:not-allowed}
+  .card .ct{font-weight:600;margin-bottom:3px}
+  .card .cd{font-size:12px;color:var(--text-dim)}
+  .card .cx{font-size:11px;color:var(--text-faint);margin-top:6px}
+
+  /* sign-in gate — replaces accordion until signed in */
+  .signin{text-align:center;padding:40px 20px}
+  .signin .key{font-size:30px;margin-bottom:12px;opacity:.85}
+  .signin h3{margin:0 0 6px;font-size:15px}
+  .signin p{margin:0 0 18px;color:var(--text-dim);font-size:13px}
+
+  /* integration tiles */
+  .tiles{display:flex;flex-direction:column;gap:12px}
+  .tile{border:1px solid var(--border-soft);border-radius:6px;background:var(--panel);padding:15px}
+  .tile .th{display:flex;align-items:center;gap:10px}
+  .tile .tname{font-weight:600}
+  .tile .tdesc{font-size:12px;color:var(--text-dim);margin:6px 0 0}
+  .tile .tactions{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .pill{font-size:11px;padding:2px 9px;border-radius:999px;border:1px solid var(--border)}
+  .pill.on{background:rgba(51,171,132,.15);border-color:transparent;color:var(--green)}
+  .pill.off{color:var(--text-faint)} .pill.gate{background:rgba(55,142,240,.12);border-color:transparent;color:var(--blue)}
+  .tnote{font-size:12px;color:var(--text-faint);margin-top:10px;border-left:2px solid var(--border);padding-left:10px}
+
+  .anno{max-width:1180px;margin:14px auto 0;font-size:12px;color:var(--text-faint);border-left:2px solid var(--border);padding-left:12px}
+  .anno b{color:var(--text-dim)}
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="devlabel">DEV CONTROLS</span>
+  <span class="label">Area:</span>
+  <div class="seg" id="areaSeg">
+    <button data-area="commerce" class="active">Commerce</button>
+    <button data-area="storefront">Storefront</button>
+    <button data-area="integrations">Integrations</button>
+  </div>
+  <span class="label">Brand:</span>
+  <div class="seg" id="pkgSeg">
+    <button data-pkg="citisignal" class="active">Citisignal</button>
+    <button data-pkg="isle5">Isle5</button>
+    <button data-pkg="buildright">Buildright</button>
+  </div>
+</div>
+
+<div class="frame">
+  <div class="rail" id="rail"></div>
+  <div class="content" id="pane"></div>
+</div>
+<div class="anno" id="anno"></div>
+
+<script>
+  const PKG_STACKS={citisignal:['headless-paas','eds-paas','eds-accs'],isle5:['eds-paas','eds-accs'],buildright:['eds-paas']};
+  const PKG_ACO={citisignal:'excluded',isle5:'excluded',buildright:'required'};
+  const FE={headless:'headless','eds-storefront':'eds'};
+  const BE={'adobe-commerce-paas':'paas','adobe-commerce-accs':'accs'};
+  const stackId=(fe,be)=>`${FE[fe]}-${BE[be]}`;
+  const FE_LABEL={headless:'Headless','eds-storefront':'Edge Delivery Storefront'};
+  const BE_LABEL={'adobe-commerce-paas':'Adobe Commerce (PaaS)','adobe-commerce-accs':'Adobe Commerce (ACCS / SaaS)'};
+  const BE_SHORT={'adobe-commerce-paas':'PaaS','adobe-commerce-accs':'ACCS'};
+
+  const s={
+    pkg:'citisignal',area:'commerce',
+    backend:null,frontend:null,authAdobe:false,
+    open:'backend',                 // which Commerce section is expanded
+    connDone:false,storeView:null,catalogDone:false,
+    authIO:false,meshOn:false,epOn:false,sfOpen:'frontend',
+  };
+  const allowed=()=>PKG_STACKS[s.pkg];
+  const backendsFor=fe=>Object.keys(BE).filter(be=> fe?allowed().includes(stackId(fe,be)):allowed().some(x=>x.endsWith('-'+BE[be])));
+  const frontendsFor=be=>Object.keys(FE).filter(fe=> be?allowed().includes(stackId(fe,be)):allowed().some(x=>x.startsWith(FE[fe]+'-')));
+  const isAccs=()=>s.backend==='adobe-commerce-accs';
+  const archLabel=()=>{ if(!s.backend&&!s.frontend)return null;
+    return `${s.frontend?FE_LABEL[s.frontend]:'—'} + ${s.backend?BE_SHORT[s.backend]:'—'}`; };
+
+  // ---------- RAIL ----------
+  function renderRail(){
+    const areas=[['commerce','Commerce'],['storefront','Storefront'],['integrations','Integrations']];
+    const kids=areas.map(([id,label])=>{const c=id===s.area;
+      return `<div class="child ${c?'current':''}" data-area="${id}"><div class="cdot ${c?'current':'upcoming'}">${c?'•':''}</div><div class="clabel">${label}</div></div>`;}).join('');
+    const arch=archLabel();
+    document.getElementById('rail').innerHTML=`
+      <div class="kicker">SETUP PROGRESS</div>
+      <div class="step done"><div class="dot done">✓</div><div class="label">Demo Setup</div></div>
+      <div class="step done"><div class="dot done">✓</div><div class="label">Prerequisites</div></div>
+      <div class="step current"><div class="dot current">•</div><div style="flex:1">
+        <div class="label">Build Your Project</div>
+        ${arch?`<div class="archsum">Architecture: <b>${arch}</b></div>`:''}
+        <div class="children">${kids}</div></div></div>
+      <div class="step upcoming"><div class="dot upcoming"></div><div class="label">Final Review</div></div>
+      <div class="step upcoming"><div class="dot upcoming"></div><div class="label">Create Project</div></div>`;
+    document.querySelectorAll('#rail .child').forEach(c=>c.addEventListener('click',()=>{s.area=c.dataset.area;render();}));
+  }
+
+  const footer=en=>`<div class="footer"><button class="btn ghost">Cancel</button>
+    <div class="right"><button class="btn ghost">Back</button><button class="btn primary" ${en?'':'disabled'}>Continue</button></div></div>`;
+
+  // generic single-expand section
+  function sec(id,status,title,right,body){
+    const open=id===s.open && (status==='current'||status==='done');
+    const mark = status==='done'?'<span class="acc-mark done">✓</span>'
+               : status==='current'?'<span class="acc-mark current"></span>'
+               : status==='locked'?'<span class="acc-mark locked">🔒</span>'
+               : '<span class="acc-mark upcoming"></span>';
+    const rcls = status==='done'?'done':status==='locked'?'locked':'';
+    const clickable = status==='done'||status==='current';
+    return `<div class="acc-sec ${status} ${open?'open':''}" data-sec="${id}">
+      <button class="acc-head" ${clickable?'':'disabled'} ${clickable?`data-open="${id}"`:''}>
+        ${mark}<span class="acc-title">${title}</span>${right?`<span class="acc-right ${rcls}">${right}</span>`:''}
+      </button><div class="acc-body">${open?body:''}</div></div>`;
+  }
+
+  // ---------- COMMERCE ----------
+  function backendCards(){
+    const ok=backendsFor(s.frontend);
+    return Object.keys(BE).map(be=>{const a=ok.includes(be),sel=s.backend===be;
+      return `<div class="card ${sel?'sel':''} ${a?'':'disabled'}" ${a?`data-be="${be}"`:''}>
+        <div class="ct">${BE_LABEL[be]}</div>
+        <div class="cd">${be==='adobe-commerce-accs'?'SaaS — requires Adobe sign-in':'Platform-as-a-Service'}</div>
+        ${a?'':`<div class="cx">Not available for ${s.pkg}${s.frontend?(' with '+FE_LABEL[s.frontend]):''}</div>`}</div>`;}).join('');
+  }
+  function renderCommerce(){
+    const head=`<div class="area-title">Commerce</div>`;
+    // 1) backend not chosen → only Backend open, rest upcoming
+    if(!s.backend){
+      return head+`<div class="acc">
+        ${sec('backend','current','Backend','',`<div class="cards">${backendCards()}</div>`)}
+        ${sec('connection','upcoming','Connection','')}
+        ${sec('business','upcoming','Business Structure','')}
+        ${sec('catalog','upcoming','Catalog','')}
+      </div>`+footer(false);
+    }
+    // 2) ACCS gate → backend done summary + sign-in, rest hidden behind gate
+    if(isAccs()&&!s.authAdobe){
+      return head+`<div class="acc">${sec('backend','done',BE_LABEL[s.backend]?'Backend':'Backend',BE_LABEL[s.backend],`<div class="cards">${backendCards()}</div>`)}</div>
+        <div class="signin"><div class="key">🔑</div><h3>Connect your Adobe account</h3>
+        <p>ACCS is a SaaS backend — sign in with Adobe to continue.</p>
+        <button class="btn primary" id="doAdobe">👤 Sign In with Adobe</button></div>`+footer(false);
+    }
+    // 3) full guided accordion
+    const acoMode=PKG_ACO[s.pkg];
+    const connBody=`<div class="field"><label>ACCS GraphQL endpoint</label><input value="https://demo.commerce.adobe.io/graphql"/></div>
+      <div class="field"><label>Environment ID</label><input value="ABCD-1234"/></div>
+      <div class="sec-cta"><button class="btn primary small" data-adv="connection">Save &amp; continue</button></div>`;
+    const bizBody=`<div class="field"><label>Website</label><select><option>Main Website</option></select></div>
+      <div class="field"><label>Store view</label><select id="svSel"><option value="">Choose…</option><option value="Default View (en)">Default View (en)</option></select></div>
+      <div class="sec-cta"><button class="btn primary small" data-adv="business">Save &amp; continue</button></div>`;
+    const catBody=(acoMode==='excluded'
+      ? `<div class="field"><label>Catalog Service</label><input value="Provided by backend" disabled/></div>
+         <div class="field"><label>Live Search</label><input value="Provided by backend" disabled/></div>`
+      : `<div class="field"><label>Adobe Commerce Optimizer${acoMode==='required'?' · required':''}</label><select ${acoMode==='required'?'disabled':''}><option>Enabled</option></select></div>
+         <div class="tnote">ACO provides Catalog Service + Live Search.</div>`)
+      + `<div class="sec-cta"><button class="btn primary small" data-adv="catalog">Save &amp; continue</button></div>`;
+
+    const bStatus = 'done';
+    const cStatus = s.connDone?'done':(s.open==='connection'?'current':'upcoming');
+    const biStatus= s.storeView?'done':(s.open==='business'?'current':(s.connDone?'upcoming':'upcoming'));
+    const caStatus= !s.storeView?'locked':(s.catalogDone?'done':(s.open==='catalog'?'current':'upcoming'));
+
+    return head+`<div class="acc">
+      ${sec('backend',bStatus,'Backend',BE_LABEL[s.backend],`<div class="cards">${backendCards()}</div>`)}
+      ${sec('connection',cStatus,'Connection',s.connDone?'demo.commerce.adobe.io':'',connBody)}
+      ${sec('business',biStatus,'Business Structure',s.storeView||'',bizBody)}
+      ${sec('catalog',caStatus,'Catalog',!s.storeView?'Choose a store view first':(s.catalogDone?'Configured':''),catBody)}
+    </div>`+footer(s.catalogDone);
+  }
+
+  // ---------- STOREFRONT ----------
+  function frontendCards(){
+    const ok=frontendsFor(s.backend);
+    return Object.keys(FE).map(fe=>{const a=ok.includes(fe),sel=s.frontend===fe;
+      return `<div class="card ${sel?'sel':''} ${a?'':'disabled'}" ${a?`data-fe="${fe}"`:''}>
+        <div class="ct">${FE_LABEL[fe]}</div>
+        <div class="cd">${fe==='headless'?'No managed storefront':'Adobe-managed EDS storefront'}</div>
+        ${a?'':`<div class="cx">Not available for ${s.pkg}${s.backend?(' with '+BE_SHORT[s.backend]):''}</div>`}</div>`;}).join('');
+  }
+  function renderStorefront(){
+    const chosen=!!s.frontend;
+    const feStatus = chosen?(s.sfOpen==='frontend'?'done':'done'):'current';
+    const feOpen = s.sfOpen==='frontend';
+    const feSec=`<div class="acc-sec ${chosen?'done':'current'} ${feOpen?'open':''}" data-sec="frontend">
+      <button class="acc-head" data-sfopen="frontend">${chosen?'<span class="acc-mark done">✓</span>':'<span class="acc-mark current"></span>'}
+        <span class="acc-title">Frontend</span>${chosen?`<span class="acc-right done">${FE_LABEL[s.frontend]}</span>`:''}</button>
+      <div class="acc-body">${feOpen?`<div class="cards">${frontendCards()}</div>`:''}</div></div>`;
+    let setup='';
+    if(chosen&&s.frontend==='eds-storefront'){
+      const open=s.sfOpen==='setup';
+      setup=`<div class="acc-sec ${open?'current open':'upcoming'}" data-sec="setup">
+        <button class="acc-head" data-sfopen="setup"><span class="acc-mark ${open?'current':'upcoming'}"></span>
+        <span class="acc-title">Storefront setup</span></button>
+        <div class="acc-body">${open?`<div class="field"><label>GitHub repo</label><input placeholder="org/repo"/></div>`:''}</div></div>`;
+    }
+    const note=chosen&&s.frontend==='headless'?`<div class="tnote" style="margin-top:12px">Headless: no Adobe-managed storefront to configure.</div>`:'';
+    return `<div class="area-title">Storefront</div><div class="acc">${feSec}${setup}</div>${note}`+footer(chosen);
+  }
+
+  // ---------- INTEGRATIONS ----------
+  function renderIntegrations(){
+    const variant=s.backend&&s.frontend?stackId(s.frontend,s.backend):null;
+    const meshAvail=variant&&['eds-paas','eds-accs','headless-paas'].includes(variant);
+    const gate=s.meshOn&&!s.authIO;
+    const meshActions=!meshAvail?`<span class="pill off">N/A for this architecture</span>`
+      :gate?`<span class="pill gate">Needs Adobe I/O sign-in</span><button class="btn small primary" id="doIO">Sign in</button>`
+      :`<span class="pill ${s.meshOn?'on':'off'}">${s.meshOn?'On':'Off'}</span><button class="btn small ghost" id="toggleMesh">${s.meshOn?'Remove':'Add'}</button>`;
+    const mesh=`<div class="tile"><div class="th"><span class="tname">API Mesh</span><div class="tactions">${meshActions}</div></div>
+      <div class="tdesc">GraphQL bridge between storefront and backend. Deploys to Adobe I/O; provides MESH_ENDPOINT.</div>
+      ${s.meshOn&&!gate?'<div class="tnote">App Builder is provisioned automatically as the deployment target.</div>':''}</div>`;
+    const ep=`<div class="tile"><div class="th"><span class="tname">Experience Platform</span>
+      <div class="tactions"><span class="pill ${s.epOn?'on':'off'}">${s.epOn?'On':'Off'}</span><button class="btn small ghost" id="toggleEp">${s.epOn?'Remove':'Add'}</button></div></div>
+      <div class="tdesc">AEP integration via Commerce Data Sharing. Requires an API key.</div>
+      ${s.epOn?'<div class="field" style="margin-top:10px"><label>Datastream ID</label><input placeholder="EXPERIENCE_PLATFORM_DATASTREAM_ID"/></div>':''}</div>`;
+    return `<div class="area-title">Integrations</div><div class="tiles">${mesh}${ep}</div>
+      <div class="tnote" style="margin-top:14px"><b>Note:</b> Adobe Commerce Optimizer is in <b>Commerce → Catalog</b>, not here.</div>`+footer(true);
+  }
+
+  const annos={
+    commerce:`<b>De-cluttered + guided.</b> One heading, no breadcrumb/tagline. Single-expand accordion: one section open, the rest are thin rows. Completing a section collapses it to a summary and opens the next (Save &amp; continue). Pick ACCS to see the sign-in gate; reach Business Structure and choose a store view to unlock Catalog. Fits one screen, no scroll.`,
+    storefront:`<b>Storefront = frontend.</b> Same single-expand model. Cross-filter: set Brand=Citisignal + Commerce backend=ACCS, then here Headless is disabled (no headless+accs for citisignal).`,
+    integrations:`<b>Integrations.</b> API Mesh (with Adobe I/O sign-in gate; App Builder implied) + Experience Platform. ACO lives in Commerce → Catalog.`,
+  };
+
+  function render(){
+    renderRail();
+    const pane=document.getElementById('pane');
+    pane.innerHTML = s.area==='commerce'?renderCommerce():s.area==='storefront'?renderStorefront():renderIntegrations();
+    document.getElementById('anno').innerHTML=annos[s.area];
+
+    // backend/frontend selection
+    pane.querySelectorAll('[data-be]').forEach(c=>c.addEventListener('click',()=>{s.backend=c.dataset.be;
+      if(!isAccs())s.authAdobe=false;
+      // reset downstream when backend changes
+      s.connDone=false;s.storeView=null;s.catalogDone=false;
+      s.open=(isAccs()&&!s.authAdobe)?'backend':'connection';render();}));
+    pane.querySelectorAll('[data-fe]').forEach(c=>c.addEventListener('click',()=>{s.frontend=c.dataset.fe;s.sfOpen='setup';render();}));
+    // open a done/current section
+    pane.querySelectorAll('[data-open]').forEach(h=>h.addEventListener('click',()=>{s.open=h.dataset.open;render();}));
+    pane.querySelectorAll('[data-sfopen]').forEach(h=>h.addEventListener('click',()=>{s.sfOpen=h.dataset.sfopen;render();}));
+    // advance (Save & continue)
+    pane.querySelectorAll('[data-adv]').forEach(b=>b.addEventListener('click',()=>{
+      const id=b.dataset.adv;
+      if(id==='connection'){s.connDone=true;s.open='business';}
+      else if(id==='business'){const sel=document.getElementById('svSel');s.storeView=(sel&&sel.value)||'Default View (en)';s.open='catalog';}
+      else if(id==='catalog'){s.catalogDone=true;s.open=null;}
+      render();
+    }));
+    const adobe=document.getElementById('doAdobe');if(adobe)adobe.addEventListener('click',()=>{s.authAdobe=true;s.open='connection';render();});
+    const io=document.getElementById('doIO');if(io)io.addEventListener('click',()=>{s.authIO=true;render();});
+    const tm=document.getElementById('toggleMesh');if(tm)tm.addEventListener('click',()=>{s.meshOn=!s.meshOn;render();});
+    const te=document.getElementById('toggleEp');if(te)te.addEventListener('click',()=>{s.epOn=!s.epOn;render();});
+  }
+
+  document.getElementById('areaSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+    s.area=b.dataset.area;document.querySelectorAll('#areaSeg button').forEach(x=>x.classList.toggle('active',x===b));render();});
+  document.getElementById('pkgSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+    s.pkg=b.dataset.pkg;s.backend=null;s.frontend=null;s.authAdobe=false;s.connDone=false;s.storeView=null;s.catalogDone=false;s.open='backend';
+    document.querySelectorAll('#pkgSeg button').forEach(x=>x.classList.toggle('active',x===b));render();});
+
+  render();
+</script>
+</body>
+</html>

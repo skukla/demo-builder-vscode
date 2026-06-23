@@ -14,7 +14,7 @@
  * Valid Spectrum size token strings
  *
  * Only includes tokens actually used in this codebase (YAGNI principle).
- * Based on codebase analysis, 13 tokens are currently in use.
+ * Based on codebase analysis, 14 tokens are currently in use.
  */
 export type SpectrumSizeToken =
   | 'size-50'    // 4px  - Extra small spacing
@@ -29,6 +29,7 @@ export type SpectrumSizeToken =
   | 'size-500'   // 40px - Section spacing
   | 'size-600'   // 48px - Large section spacing
   | 'size-1000'  // 80px - Very large spacing
+  | 'size-4000'  // 320px - Fixed sidebar width
   | 'size-6000'; // 480px - Maximum width constraints
 
 /**
@@ -44,7 +45,7 @@ export type DimensionValue = SpectrumSizeToken | `${number}px` | number;
  * Token-to-pixel mapping based on Adobe Spectrum Design System
  *
  * Maps each token to its corresponding pixel value.
- * Only includes the 13 tokens actually used in this codebase.
+ * Only includes the 14 tokens actually used in this codebase.
  */
 const SPECTRUM_TOKEN_MAP: Record<SpectrumSizeToken, string> = {
   'size-50': '4px',
@@ -59,6 +60,7 @@ const SPECTRUM_TOKEN_MAP: Record<SpectrumSizeToken, string> = {
   'size-500': '40px',
   'size-600': '48px',
   'size-1000': '80px',
+  'size-4000': '320px',
   'size-6000': '480px',
 };
 

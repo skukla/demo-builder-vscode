@@ -332,13 +332,14 @@ export function useWizardState({
 
         // Step 4: Determine if Adobe I/O credentials are needed
         // Adobe I/O project/workspace required when mesh is included
-        // Adobe auth (sign-in only) required when mesh OR ACCS backend
+        // Adobe auth (sign-in only) required when mesh OR an App Builder
+        // component is selected. ACCS-only auth is now owned by Commerce's
+        // contextual Sign-in tab, so it no longer gates the top-level step.
         const effectiveDeps = [
             ...(selectedStack?.dependencies || []),
             ...(state.selectedOptionalDependencies || []),
         ];
         const meshIncluded = hasMeshInDependencies(effectiveDeps);
-        const isAccsBackend = selectedStack?.backend === 'adobe-commerce-accs';
         // Any selected App Builder component requires Adobe sign-in (auth), not
         // just mesh. Mesh keeps its dedicated I/O project/workspace path below.
         const hasAppBuilderComponent = (state.selectedAppBuilderComponents?.length ?? 0) > 0;
@@ -347,7 +348,7 @@ export function useWizardState({
         const filteredSteps = filterStepsForStack(stepsWithConditions, selectedStack, {
             isEditMode: !!editProject,
             hasAdobeIO: meshIncluded,
-            hasAdobeAuth: meshIncluded || isAccsBackend || hasAppBuilderComponent,
+            hasAdobeAuth: meshIncluded || hasAppBuilderComponent,
         });
 
         return filteredSteps.map(step => ({
