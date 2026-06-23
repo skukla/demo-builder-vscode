@@ -9,13 +9,17 @@
  * that area's EXISTING body component — {@link CommerceStep} / {@link StorefrontStep}
  * / {@link IntegrationsStep} — reused as-is.
  *
- * The STEP owns the Continue gate over ALL REQUIRED areas: commerce always,
- * storefront only when visible (EDS stacks), integrations optional. Each body
- * still persists its own validity verdict to wizard state (`commerceConnectValid`
- * / `storefrontRepoValid` / edsConfig auth), which feeds {@link buildYourProjectAreas}'s
- * status — so the gate stays correct across area switches and back/forward nav.
- * The rendered body receives a NO-OP `setCanProceed` so it cannot override the
- * step's gate with its own single-area verdict.
+ * Areas are walked ONE AT A TIME via the wizard's Continue/Back buttons (owned by
+ * {@link WizardContainer}) — there is no timeline sub-nav. The STEP gates Continue
+ * on the CURRENT area's completion: required areas (commerce always; storefront
+ * when visible) must be completed before you can leave them, while the optional
+ * area (integrations) always passes. Because navigation is linear, per-area gating
+ * enforces the all-required rule overall. Each body still persists its own validity
+ * verdict to wizard state (`commerceConnectValid` / `storefrontRepoValid` /
+ * edsConfig auth), which feeds {@link buildYourProjectAreas}'s status — so the gate
+ * stays correct across area switches and back/forward nav. The rendered body
+ * receives a NO-OP `setCanProceed` so it cannot override the step's gate with its
+ * own verdict.
  *
  * @module features/project-creation/ui/steps/BuildYourProjectStep
  */
@@ -79,13 +83,15 @@ export function BuildYourProjectStep({
     // Active area: the persisted one if it's still visible, else the first visible.
     const activeArea = areas.find(a => a.id === state.activeBuildArea) ?? areas[0];
 
-    // Continue gate over ALL required areas: commerce always; storefront only when
-    // visible; integrations optional. Primitive booleans only (re-render-loop guard).
-    const commerceOk = areas.find(a => a.id === 'commerce')?.status === 'completed';
-    const storefrontVisible = areas.some(a => a.id === 'storefront');
-    const storefrontOk =
-        !storefrontVisible || areas.find(a => a.id === 'storefront')?.status === 'completed';
-    useCanProceedAll([commerceOk, storefrontOk], setCanProceed);
+    // Continue gate over the CURRENT area. Areas are walked one at a time via the
+    // wizard's Continue/Back (WizardContainer), so gating the active area enforces
+    // the all-required rule linearly: you can't leave an incomplete required area
+    // (commerce/storefront), while the optional area (integrations) always passes.
+    // Primitive boolean only (re-render-loop guard).
+    const activeAreaId = activeArea?.id;
+    const activeOptional = activeAreaId === 'integrations';
+    const canLeaveArea = activeOptional || activeArea?.status === 'completed';
+    useCanProceedAll([canLeaveArea], setCanProceed);
 
     // Body props shared by every area. The active body gets a NO-OP setCanProceed
     // so it cannot override the step's gate (it still persists validity to state).

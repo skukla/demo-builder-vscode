@@ -40,15 +40,15 @@ import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjec
 import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
 import { StorefrontSetupStep } from '@/features/eds/ui/steps/StorefrontSetupStep';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
-import { BuildYourProjectStep } from '@/features/project-creation/ui/steps/BuildYourProjectStep';
 import { buildYourProjectAreas } from '@/features/project-creation/ui/steps/buildYourProjectAreas';
+import { BuildYourProjectStep } from '@/features/project-creation/ui/steps/BuildYourProjectStep';
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
 import { ReviewStep } from '@/features/project-creation/ui/steps/ReviewStep';
 import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
-import { BuildAreaId, ComponentSelection } from '@/types/webview';
+import { ComponentSelection } from '@/types/webview';
 
 // Extracted hooks
 
@@ -340,23 +340,34 @@ export function WizardContainer({
     const confirmedStepIndices = getCompletedStepIndices(confirmedSteps, WIZARD_STEPS);
     const isEditMode = (state.wizardMode ?? 'create') !== 'create';
 
-    // Nested timeline: on `build-your-project`, the active parent shows the
-    // visible build areas as a single indented sub-level. Clicking a child only
-    // switches the active area (never changes currentStep).
+    // On `build-your-project`, the visible build areas are walked ONE AT A TIME
+    // via the footer Continue/Back buttons — they are NOT a timeline sub-nav.
+    // `buildAreas` is the ordered, visible areas for the current stack.
     const onBuildStep = state.currentStep === 'build-your-project';
     const buildAreas = onBuildStep ? buildYourProjectAreas(state, stacks) : [];
-    const timelineChildren = onBuildStep
-        ? buildAreas.map(a => ({ id: a.id, name: a.label }))
-        : undefined;
-    const childStatusById = onBuildStep
-        ? Object.fromEntries(buildAreas.map(a => [a.id, a.status]))
-        : undefined;
-    const activeChildId = onBuildStep
-        ? (state.activeBuildArea ?? buildAreas[0]?.id)
-        : undefined;
-    const handleBuildAreaClick = (childId: string) => {
-        updateState({ activeBuildArea: childId as BuildAreaId });
+    const activeAreaId = state.activeBuildArea ?? buildAreas[0]?.id;
+    const activeAreaIndex = buildAreas.findIndex(a => a.id === activeAreaId);
+
+    // Area-aware navigation: Continue steps to the next visible area until the
+    // last one, then advances the wizard step. Back steps to the previous area
+    // until the first one, then goes back a wizard step.
+    const handleNext = () => {
+        if (onBuildStep && activeAreaIndex >= 0 && activeAreaIndex < buildAreas.length - 1) {
+            updateState({ activeBuildArea: buildAreas[activeAreaIndex + 1].id });
+            return;
+        }
+        void goNext();
     };
+    const handleBack = () => {
+        if (onBuildStep && activeAreaIndex > 0) {
+            updateState({ activeBuildArea: buildAreas[activeAreaIndex - 1].id });
+            return;
+        }
+        goBack();
+    };
+
+    // Back is available when there is a previous wizard step OR a previous area.
+    const canGoBack = currentStepIndex > 0 || (onBuildStep && activeAreaIndex > 0);
 
     const handleTimelineStepClick = (targetIndex: number) => {
         const targetStep = WIZARD_STEPS[targetIndex];
@@ -392,10 +403,6 @@ export function WizardContainer({
                         showHeader={true}
                         headerText="Setup Progress"
                         isEditMode={isEditMode}
-                        childSteps={timelineChildren}
-                        childStatusById={childStatusById}
-                        activeChildId={activeChildId}
-                        onChildClick={handleBuildAreaClick}
                     />
                 </div>
 
@@ -450,10 +457,10 @@ export function WizardContainer({
                             }
                             rightContent={
                                 <Flex gap="size-100">
-                                    {currentStepIndex > 0 && (
+                                    {canGoBack && (
                                         <Button
                                             variant="secondary"
-                                            onPress={goBack}
+                                            onPress={handleBack}
                                             isQuiet
                                             isDisabled={isConfirmingSelection}
                                         >
@@ -462,7 +469,7 @@ export function WizardContainer({
                                     )}
                                     <Button
                                         variant="accent"
-                                        onPress={goNext}
+                                        onPress={handleNext}
                                         isDisabled={!canProceed || isConfirmingSelection}
                                     >
                                         {getNextButtonText(isConfirmingSelection, currentStepIndex, WIZARD_STEPS.length, state.wizardMode, state.currentStep)}

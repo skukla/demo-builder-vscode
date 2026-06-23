@@ -144,46 +144,50 @@ describe('BuildYourProjectStep — active-area routing', () => {
     });
 });
 
-describe('BuildYourProjectStep — Continue gate over ALL required areas', () => {
-    it('is false when commerce is not configured', () => {
+describe('BuildYourProjectStep — Continue gate over the CURRENT area', () => {
+    // Area progression now walks the areas one at a time via the wizard's
+    // Continue/Back; the STEP gates Continue on the ACTIVE area's completion so
+    // you can't leave an incomplete required area (commerce/storefront), while
+    // the optional area (integrations) is always passable.
+
+    it('is false when the active area (commerce) is not configured', () => {
         const { setCanProceed } = setup({ selectedStack: 'eds-paas' });
         expect(setCanProceed).toHaveBeenLastCalledWith(false);
     });
 
-    it('is false on an EDS stack when commerce is configured but storefront is not', () => {
+    it('is true when the active area (commerce) is configured', () => {
         const { setCanProceed } = setup({
             selectedStack: 'eds-paas',
+            commerceConnectValid: true,
+        });
+        expect(setCanProceed).toHaveBeenLastCalledWith(true);
+    });
+
+    it('is false when the active area is an incomplete storefront (EDS)', () => {
+        const { setCanProceed } = setup({
+            selectedStack: 'eds-paas',
+            activeBuildArea: 'storefront',
+            // commerce done but storefront not → active (storefront) gates false.
             commerceConnectValid: true,
         });
         expect(setCanProceed).toHaveBeenLastCalledWith(false);
     });
 
-    it('is true on an EDS stack when commerce AND storefront are completed', () => {
+    it('is true when the active area (storefront) is completed (EDS)', () => {
         const { setCanProceed } = setup({
             selectedStack: 'eds-paas',
-            commerceConnectValid: true,
+            activeBuildArea: 'storefront',
             edsConfig: EDS_AUTHED as WizardState['edsConfig'],
             storefrontRepoValid: true,
         });
         expect(setCanProceed).toHaveBeenLastCalledWith(true);
     });
 
-    it('is true on a non-EDS stack when only commerce is completed (storefront not required)', () => {
-        const { setCanProceed } = setup({
-            selectedStack: 'headless-paas',
-            commerceConnectValid: true,
-        });
-        expect(setCanProceed).toHaveBeenLastCalledWith(true);
-    });
-
-    it('is not affected by integrations (optional area)', () => {
-        // Commerce + storefront complete on EDS → gate true regardless of integrations.
+    it('is true when the active area is integrations (optional) regardless of completion', () => {
         const { setCanProceed } = setup({
             selectedStack: 'eds-paas',
             activeBuildArea: 'integrations',
-            commerceConnectValid: true,
-            edsConfig: EDS_AUTHED as WizardState['edsConfig'],
-            storefrontRepoValid: true,
+            // Nothing else configured — integrations is optional → gate still true.
         });
         expect(setCanProceed).toHaveBeenLastCalledWith(true);
     });

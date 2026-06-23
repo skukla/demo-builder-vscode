@@ -1,15 +1,20 @@
 /**
- * WizardContainer — nested timeline wiring (Nested Builder — Slice 1, step 4)
+ * WizardContainer — build-area progression on Continue/Back (no timeline sub-nav)
  *
- * When the wizard is on `build-your-project`, the parent <TimelineNav> renders a
- * single indented sub-level: the VISIBLE build areas (commerce/storefront/
- * integrations) as `children`, with `activeChildId` from `state.activeBuildArea`
- * and a `childStatusById` map. Clicking a child must ONLY update
- * `state.activeBuildArea` — it must NEVER change `currentStep`.
+ * The build areas (commerce/storefront/integrations) are NO LONGER a nested
+ * sub-nav under "Build Your Project" in the timeline. Instead, the wizard walks
+ * the VISIBLE areas one at a time via the footer Continue/Back buttons:
+ *   - Continue on a non-last area → advance `state.activeBuildArea` to the next
+ *     area (currentStep UNCHANGED, still `build-your-project`).
+ *   - Continue on the LAST area → advance the wizard step (goNext).
+ *   - Back on a non-first area → step `activeBuildArea` to the previous area.
+ *   - Back on the first area → goBack (wizard step).
  *
- * TimelineNav and BuildYourProjectStep are mocked to lightweight stubs that
- * capture their props, so the test asserts the WIRING (which children, active id,
- * onChildClick behavior) rather than re-rendering the real components.
+ * <TimelineNav> must therefore receive NO build-area child props.
+ *
+ * TimelineNav captures its props; BuildYourProjectStep is mocked to a stub that
+ * always enables the gate (so Continue is clickable). The footer Continue/Back
+ * buttons are the REAL ones rendered by WizardContainer.
  *
  * @jest-environment jsdom
  */
@@ -17,7 +22,8 @@
 // Import shared step/vscode/loader mocks FIRST.
 import './WizardContainer.mocks';
 
-import { screen, cleanup, act } from '@testing-library/react';
+import { screen, cleanup, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { WizardContainer } from '@/features/project-creation/ui/wizard/WizardContainer';
 import '@testing-library/jest-dom';
@@ -50,7 +56,8 @@ jest.mock('@/core/ui/components/TimelineNav', () => ({
 }));
 
 // BuildYourProjectStep is mocked so the wizard can sit on `build-your-project`
-// without rendering the real shell (covered by its own suite).
+// without rendering the real shell (covered by its own suite). The stub always
+// enables the gate so the footer Continue button is clickable.
 jest.mock('@/features/project-creation/ui/steps/BuildYourProjectStep', () => ({
     BuildYourProjectStep: ({ setCanProceed }: { setCanProceed: (v: boolean) => void }) => {
         React.useEffect(() => setCanProceed(true), [setCanProceed]);
@@ -60,9 +67,7 @@ jest.mock('@/features/project-creation/ui/steps/BuildYourProjectStep', () => ({
 
 // NOTE: in create mode the wizard starts with no `selectedStack`, so the
 // storefront area (EDS-only) is correctly hidden — the visible areas are
-// [commerce, integrations]. That's the right surface for asserting the WIRING
-// (children passed, activeChildId, onChildClick) without needing to drive a
-// stack selection through the full create flow.
+// [commerce, integrations].
 
 // Steps that put `build-your-project` first so the wizard initializes on it.
 const buildFirstSteps = [
@@ -80,7 +85,10 @@ function renderOnBuildStep() {
     );
 }
 
-describe('WizardContainer — nested timeline on build-your-project', () => {
+const getContinue = () => screen.getByRole('button', { name: /continue/i });
+const getBack = () => screen.queryByRole('button', { name: /back/i });
+
+describe('WizardContainer — build-area progression (no timeline sub-nav)', () => {
     beforeEach(() => {
         setupTest();
         timelineProps.last = undefined;
@@ -91,42 +99,96 @@ describe('WizardContainer — nested timeline on build-your-project', () => {
         await cleanupTest();
     });
 
-    it('passes the visible build areas as TimelineNav children', async () => {
+    it('passes NO build-area child props to TimelineNav', async () => {
         renderOnBuildStep();
         await screen.findByTestId('build-your-project-step');
 
-        // No stack selected → storefront hidden; commerce + integrations remain.
-        const childSteps = timelineProps.last?.childSteps ?? [];
-        expect(childSteps.map(c => c.id)).toEqual(['commerce', 'integrations']);
+        expect(timelineProps.last?.childSteps).toBeUndefined();
+        expect(timelineProps.last?.activeChildId).toBeUndefined();
+        expect(timelineProps.last?.childStatusById).toBeUndefined();
+        expect(timelineProps.last?.onChildClick).toBeUndefined();
     });
 
-    it('sets activeChildId to the first area when activeBuildArea is unset', async () => {
+    it('Continue on a non-last area advances to the next area (currentStep unchanged)', async () => {
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
         renderOnBuildStep();
         await screen.findByTestId('build-your-project-step');
 
-        expect(timelineProps.last?.activeChildId).toBe('commerce');
-    });
+        // Visible areas: [commerce, integrations]. Start on commerce (first).
+        // Continue → move to integrations WITHOUT leaving build-your-project.
+        await user.click(getContinue());
 
-    it('provides a childStatusById map for the visible areas', async () => {
-        renderOnBuildStep();
-        await screen.findByTestId('build-your-project-step');
-
-        const map = timelineProps.last?.childStatusById ?? {};
-        expect(Object.keys(map).sort()).toEqual(['commerce', 'integrations']);
-    });
-
-    it('onChildClick updates activeBuildArea without changing currentStep', async () => {
-        renderOnBuildStep();
-        await screen.findByTestId('build-your-project-step');
-
-        // Clicking a visible child switches the active area...
-        act(() => {
-            timelineProps.last?.onChildClick?.('integrations');
-        });
-
-        // ...and the step still renders (currentStep unchanged → no transition away).
+        // Still on the build step (no wizard-step advance).
         expect(screen.getByTestId('build-your-project-step')).toBeInTheDocument();
-        // activeChildId reflects the new area on the next render.
-        expect(timelineProps.last?.activeChildId).toBe('integrations');
+        // Review step (next wizard step) must NOT have appeared.
+        expect(screen.queryByTestId('review-step')).not.toBeInTheDocument();
+    });
+
+    it('Continue on the LAST area advances the wizard step', async () => {
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+        renderOnBuildStep();
+        await screen.findByTestId('build-your-project-step');
+
+        // commerce → integrations (last area)
+        await user.click(getContinue());
+        expect(screen.getByTestId('build-your-project-step')).toBeInTheDocument();
+
+        // integrations is last → Continue advances the wizard step to review.
+        await user.click(getContinue());
+        await waitFor(() => {
+            expect(screen.getByTestId('review-step')).toBeInTheDocument();
+        }, { timeout: 1000 });
+    });
+
+    it('Back on a non-first area returns to the previous area (currentStep unchanged)', async () => {
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+        renderOnBuildStep();
+        await screen.findByTestId('build-your-project-step');
+
+        // Advance to the second area (integrations) first.
+        await user.click(getContinue());
+        expect(screen.getByTestId('build-your-project-step')).toBeInTheDocument();
+
+        // Back → return to commerce, still on build-your-project.
+        const back = getBack();
+        expect(back).toBeInTheDocument();
+        await user.click(back!);
+
+        expect(screen.getByTestId('build-your-project-step')).toBeInTheDocument();
+        // A second Back (now on the first area) would leave the step — but the
+        // build step is the FIRST wizard step here, so Back should call goBack
+        // (no-op navigation / no prior step) and not crash.
+    });
+
+    it('Back on the first area leaves area progression (calls goBack → previous wizard step)', async () => {
+        // build-your-project is NOT the first wizard step here, so Back renders.
+        // On the FIRST area (commerce), Back must navigate the WIZARD step back to
+        // adobe-auth (goBack), not stay on the build step.
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+        renderWithTheme(
+            <WizardContainer
+                componentDefaults={createMockComponentDefaults()}
+                wizardSteps={[
+                    { id: 'adobe-auth', name: 'Adobe Authentication', enabled: true },
+                    { id: 'build-your-project', name: 'Build Your Project', enabled: true },
+                    { id: 'review', name: 'Review', enabled: true },
+                    { id: 'create-project', name: 'Create Project', enabled: true },
+                ]}
+            />,
+        );
+
+        // adobe-auth → build-your-project
+        await user.click(getContinue());
+        await screen.findByTestId('build-your-project-step');
+
+        // On the first area (commerce). Back → goBack to adobe-auth.
+        const back = getBack();
+        expect(back).toBeInTheDocument();
+        await user.click(back!);
+
+        await waitFor(() => {
+            expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
+        }, { timeout: 1000 });
+        expect(screen.queryByTestId('build-your-project-step')).not.toBeInTheDocument();
     });
 });
