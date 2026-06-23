@@ -426,6 +426,17 @@ export class AuthenticationService {
         return fetcher.createWorkspaceCredential(name, description);
     }
 
+    /**
+     * Create a new Adobe I/O App Builder project in the current organization.
+     * Returns the created project, or undefined on failure (permission, quota, etc.).
+     */
+    async createProject(name: string, description: string): Promise<AdobeProject | undefined> {
+        return withTiming('createProject', async () => {
+            const { fetcher } = await this.ensureEntities();
+            return fetcher.createProject(name, description);
+        });
+    }
+
     // --- ApiSubscriberClient passthroughs (D2 Track A) -------------------------
     // The 5 subscriber methods the API-mesh subscribe path needs, forwarded to
     // the fetcher via the existing ensureEntities() seam.

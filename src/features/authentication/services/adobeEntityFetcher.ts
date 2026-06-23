@@ -602,6 +602,78 @@ export class AdobeEntityFetcher {
     }
 
     /**
+     * Create a new Adobe I/O App Builder project in the current organization.
+     *
+     * Uses the Console SDK's `createFireflyProject` (project type 'jaeger' =
+     * App Builder). Needs only the cached org id. SDK-only (no CLI fallback).
+     * Never throws — returns the mapped project, or `undefined` on validation
+     * failure, missing org, unavailable SDK, or any SDK error (403 permission /
+     * 409 name-taken / quota), which the handler surfaces to the user.
+     */
+    async createProject(
+        name: string,
+        description: string,
+    ): Promise<AdobeProject | undefined> {
+        // Input validation — enforce constraints regardless of caller.
+        if (!name || name.length > 200) {
+            this.debugLogger.error('[Entity Fetcher] Invalid project name (empty or >200 chars)');
+            return undefined;
+        }
+        if (description.length > 500) {
+            this.debugLogger.error('[Entity Fetcher] Invalid project description (>500 chars)');
+            return undefined;
+        }
+
+        try {
+            await this.ensureSDKReady();
+
+            const orgId = this.cacheManager.getCachedOrganization()?.id;
+            if (!orgId) {
+                this.debugLogger.debug('[Entity Fetcher] Cannot create project: missing org ID');
+                return undefined;
+            }
+
+            if (!this.sdkClient.isInitialized()) {
+                this.debugLogger.debug('[Entity Fetcher] SDK not available for project creation');
+                return undefined;
+            }
+
+            const client = this.sdkClient.getClient() as {
+                createFireflyProject: (
+                    orgId: string,
+                    details: { name: string; title: string; description: string; who_created: string },
+                ) => Promise<SDKResponse<RawAdobeProject>>;
+            };
+
+            this.debugLogger.info(`[Entity Fetcher] Creating App Builder project "${name}" in org ${orgId}`);
+
+            const response = await client.createFireflyProject(orgId, {
+                name,
+                title: name,
+                description,
+                who_created: 'Demo Builder',
+            });
+
+            const raw = response?.body;
+            if (!raw?.id) {
+                this.debugLogger.error('[Entity Fetcher] Project created but no project in response');
+                return undefined;
+            }
+
+            this.debugLogger.info('[Entity Fetcher] App Builder project created successfully');
+            return mapProjects([raw])[0];
+        } catch (error) {
+            const message = (error as Error).message || '';
+            if (message.includes('409') || message.includes('Conflict')) {
+                this.debugLogger.error('[Entity Fetcher] Project name already exists (409)');
+            } else {
+                this.debugLogger.error('[Entity Fetcher] Failed to create project', error as Error);
+            }
+            return undefined;
+        }
+    }
+
+    /**
      * List the org's entitled services (the `getServicesForOrg` SDK call).
      * Resolves an App Builder component's `requiredApis` names → sdkCodes + platformList.
      * Each entry carries `{ code, platformList, domainMandatory?, ... }`.

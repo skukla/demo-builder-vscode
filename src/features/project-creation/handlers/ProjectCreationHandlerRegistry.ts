@@ -61,6 +61,8 @@ export const projectCreationHandlers = defineHandlers({
     'get-projects': authentication.handleGetProjects,
     'select-project': authentication.handleSelectProject,
     'check-project-apis': authentication.handleCheckProjectApis,
+    'can-create-adobe-project': authentication.handleCanCreateAdobeProject,
+    'create-adobe-project': authentication.handleCreateAdobeProject,
 
     // Workspace handlers
     'get-workspaces': authentication.handleGetWorkspaces,

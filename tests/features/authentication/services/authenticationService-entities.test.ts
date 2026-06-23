@@ -68,6 +68,7 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
             getOrganizations: jest.fn().mockResolvedValue([mockOrg]),
             getProjects: jest.fn().mockResolvedValue([mockProject]),
             getWorkspaces: jest.fn().mockResolvedValue([mockWorkspace]),
+            createProject: jest.fn().mockResolvedValue(mockProject),
         };
         mockResolver = {
             getCurrentOrganization: jest.fn().mockResolvedValue(mockOrg),
@@ -103,6 +104,13 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
 
             expect(result).toEqual([mockProject]);
             expect(mockFetcher.getProjects).toHaveBeenCalled();
+        });
+
+        it('should create a project (delegates to fetcher.createProject)', async () => {
+            const result = await authService.createProject('My Demo', 'A demo project');
+
+            expect(result).toEqual(mockProject);
+            expect(mockFetcher.createProject).toHaveBeenCalledWith('My Demo', 'A demo project');
         });
 
         it('should get workspaces', async () => {
