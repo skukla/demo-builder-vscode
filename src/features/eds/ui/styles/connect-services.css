@@ -13,7 +13,7 @@
     align-items: start; /* Each card takes its natural height */
 }
 
-@media (max-width: 600px) {
+@media (max-width: 600px) { /* bp: linear / single-col — service cards 2→1 (registry: custom-spectrum.css) */
     .services-cards-grid {
         grid-template-columns: 1fr;
     }

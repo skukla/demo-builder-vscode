@@ -53,6 +53,10 @@ export const SingleColumnLayout: React.FC<SingleColumnLayoutProps> = ({
             style={{
                 maxWidth: translateSpectrumToken(maxWidth),
                 width: '100%',
+                // Keep padding inside the 100% width. Without this the default
+                // content-box adds the padding outside, so the column overflows its
+                // parent by 2x padding and clips content at narrow/zoomed viewports.
+                boxSizing: 'border-box',
                 margin: translateSpectrumToken(margin),
                 padding: translateSpectrumToken(padding),
             }}

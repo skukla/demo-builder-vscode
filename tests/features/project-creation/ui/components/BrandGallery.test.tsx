@@ -74,6 +74,55 @@ describe('BrandGallery', () => {
         jest.clearAllMocks();
     });
 
+    describe('grid layout (self-reflowing CSS grid)', () => {
+        it('renders all packages as cards directly in .expandable-brand-grid (no column wrappers)', () => {
+            const { container } = render(<BrandGallery {...defaultProps} />);
+
+            const grid = container.querySelector('.expandable-brand-grid');
+            expect(grid).toBeInTheDocument();
+
+            // No intermediate masonry-column wrappers — cards are direct children.
+            expect(container.querySelector('.brand-grid-column')).not.toBeInTheDocument();
+
+            const cards = screen.getAllByTestId('package-card');
+            expect(cards).toHaveLength(defaultProps.packages.length);
+            cards.forEach(card => {
+                expect(card.parentElement).toBe(grid);
+            });
+        });
+
+        it('narrows the rendered cards when the search filter matches a subset', () => {
+            // searchThreshold=2 inside BrandGallery — need >2 packages for the
+            // search field to render.
+            const extraPackage: DemoPackage = {
+                id: 'other-brand',
+                name: 'Other Brand',
+                description: 'Another active brand',
+                configDefaults: {},
+                storefronts: {
+                    'eds-paas': {
+                        name: 'Other EDS + PaaS',
+                        description: 'Other storefront',
+                        source: mockGitSource,
+                    },
+                },
+            };
+            render(
+                <BrandGallery
+                    {...defaultProps}
+                    packages={[activePackage, extraPackage, comingSoonPackage]}
+                />,
+            );
+
+            const search = screen.getByRole('searchbox');
+            fireEvent.change(search, { target: { value: 'Other' } });
+
+            const cards = screen.getAllByTestId('package-card');
+            expect(cards).toHaveLength(1);
+            expect(screen.getByText('Other Brand')).toBeInTheDocument();
+        });
+    });
+
     describe('package selection (mark-and-Continue)', () => {
         it('calls onPackageSelect when clicking an active card', () => {
             render(<BrandGallery {...defaultProps} />);

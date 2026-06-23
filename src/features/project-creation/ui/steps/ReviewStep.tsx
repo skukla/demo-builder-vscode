@@ -4,6 +4,7 @@ import { getStackById } from '../hooks/useSelectedStack';
 import { hasRequiredReviewData } from './reviewPredicates';
 import { buildComponentInfoList, resolveServiceNames } from './reviewStepHelpers';
 import { COMPONENT_IDS } from '@/core/constants';
+import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { useCanProceed } from '@/core/ui/hooks';
 import { cn } from '@/core/ui/utils/classNames';
 import type { DemoPackage } from '@/types/demoPackages';
@@ -270,7 +271,7 @@ export function ReviewStep({ state, setCanProceed, componentsData, packages, sta
         : undefined;
 
     return (
-        <div className="container-wizard">
+        <SingleColumnLayout className="container-wizard">
             <Heading level={2} marginBottom="size-300">
                 {state.projectName}
             </Heading>
@@ -306,6 +307,6 @@ export function ReviewStep({ state, setCanProceed, componentsData, packages, sta
                     <View />
                 )}
             </div>
-        </div>
+        </SingleColumnLayout>
     );
 }

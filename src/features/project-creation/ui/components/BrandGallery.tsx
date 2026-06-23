@@ -9,7 +9,7 @@
 
 import { Text } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { getBlockLibraryName } from '../../services/blockLibraryLoader';
 import { sortPackages, filterPackagesBySearchQuery } from './brandGalleryHelpers';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
@@ -174,31 +174,6 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
         [packages, searchQuery],
     );
 
-    // Responsive column count based on container width (matches old grid minmax(220px, 1fr))
-    const gridRef = useRef<HTMLDivElement>(null);
-    const [columnCount, setColumnCount] = useState(3);
-    useEffect(() => {
-        const el = gridRef.current;
-        if (!el) return;
-        const observer = new ResizeObserver(entries => {
-            const width = entries[0].contentRect.width;
-            const minCardWidth = 220;
-            const gap = 20;
-            setColumnCount(Math.max(1, Math.floor((width + gap) / (minCardWidth + gap))));
-        });
-        observer.observe(el);
-        return () => observer.disconnect();
-    }, []);
-
-    // Distribute packages into columns (left-to-right, then wrap to next row)
-    const columns = useMemo(() => {
-        const cols: DemoPackage[][] = Array.from({ length: columnCount }, () => []);
-        filteredPackages.forEach((pkg, i) => {
-            cols[i % columnCount].push(pkg);
-        });
-        return cols;
-    }, [filteredPackages, columnCount]);
-
     // Get the selected stack object
     const selectedStackObj = useMemo(() => {
         if (!selectedStack) return undefined;
@@ -231,28 +206,24 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
                 hasLoadedOnce={true}
             />
 
-            <div ref={gridRef} className="expandable-brand-grid">
-                {columns.map((colItems, colIndex) => (
-                    <div key={colIndex} className="brand-grid-column">
-                        {colItems.map(pkg => {
-                            const isSelected = selectedPackage === pkg.id;
-                            const isDimmed = selectedPackage !== undefined && !isSelected;
-                            return (
-                                <PackageCard
-                                    key={pkg.id}
-                                    pkg={pkg}
-                                    selectedStack={isSelected ? selectedStackObj : undefined}
-                                    selectedBlockLibraries={isSelected ? selectedBlockLibraries : undefined}
-                                    customBlockLibraries={isSelected ? customBlockLibraries : undefined}
-                                    isSelected={isSelected}
-                                    isComplete={isSelected && !!selectedStackObj}
-                                    isDimmed={isDimmed}
-                                    onCardClick={() => onPackageSelect(pkg.id)}
-                                />
-                            );
-                        })}
-                    </div>
-                ))}
+            <div className="expandable-brand-grid">
+                {filteredPackages.map(pkg => {
+                    const isSelected = selectedPackage === pkg.id;
+                    const isDimmed = selectedPackage !== undefined && !isSelected;
+                    return (
+                        <PackageCard
+                            key={pkg.id}
+                            pkg={pkg}
+                            selectedStack={isSelected ? selectedStackObj : undefined}
+                            selectedBlockLibraries={isSelected ? selectedBlockLibraries : undefined}
+                            customBlockLibraries={isSelected ? customBlockLibraries : undefined}
+                            isSelected={isSelected}
+                            isComplete={isSelected && !!selectedStackObj}
+                            isDimmed={isDimmed}
+                            onCardClick={() => onPackageSelect(pkg.id)}
+                        />
+                    );
+                })}
             </div>
 
             {searchQuery && filteredPackages.length === 0 && (
