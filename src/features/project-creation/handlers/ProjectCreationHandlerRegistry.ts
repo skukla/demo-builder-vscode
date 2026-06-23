@@ -68,6 +68,7 @@ export const projectCreationHandlers = defineHandlers({
     'get-workspaces': authentication.handleGetWorkspaces,
     'select-workspace': authentication.handleSelectWorkspace,
     'create-workspace-credential': authentication.handleCreateWorkspaceCredential,
+    'create-adobe-workspace': authentication.handleCreateAdobeWorkspace,
 
     // Mesh handlers
     'check-api-mesh': meshHandlers['check-api-mesh'],

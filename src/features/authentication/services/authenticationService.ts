@@ -437,6 +437,17 @@ export class AuthenticationService {
         });
     }
 
+    /**
+     * Create a new workspace in the current organization's selected project.
+     * Returns the created workspace, or undefined on failure (permission, quota, etc.).
+     */
+    async createWorkspace(name: string, description: string): Promise<AdobeWorkspace | undefined> {
+        return withTiming('createWorkspace', async () => {
+            const { fetcher } = await this.ensureEntities();
+            return fetcher.createWorkspace(name, description);
+        });
+    }
+
     // --- ApiSubscriberClient passthroughs (D2 Track A) -------------------------
     // The 5 subscriber methods the API-mesh subscribe path needs, forwarded to
     // the fetcher via the existing ensureEntities() seam.

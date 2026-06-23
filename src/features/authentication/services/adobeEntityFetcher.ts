@@ -674,6 +674,80 @@ export class AdobeEntityFetcher {
     }
 
     /**
+     * Create a new workspace in the current organization's selected project.
+     *
+     * Uses the Console SDK's `createWorkspace`. Needs the cached org id AND
+     * project id. SDK-only (no CLI fallback). Never throws — returns the mapped
+     * workspace, or `undefined` on validation failure, missing org/project,
+     * unavailable SDK, or any SDK error (403 permission / 409 name-taken /
+     * quota), which the handler surfaces to the user.
+     */
+    async createWorkspace(
+        name: string,
+        description: string,
+    ): Promise<AdobeWorkspace | undefined> {
+        // Input validation — enforce constraints regardless of caller.
+        if (!name || name.length > 200) {
+            this.debugLogger.error('[Entity Fetcher] Invalid workspace name (empty or >200 chars)');
+            return undefined;
+        }
+        if (description.length > 500) {
+            this.debugLogger.error('[Entity Fetcher] Invalid workspace description (>500 chars)');
+            return undefined;
+        }
+
+        try {
+            await this.ensureSDKReady();
+
+            const orgId = this.cacheManager.getCachedOrganization()?.id;
+            const projectId = this.cacheManager.getCachedProject()?.id;
+            if (!orgId || !projectId) {
+                this.debugLogger.debug('[Entity Fetcher] Cannot create workspace: missing org or project ID');
+                return undefined;
+            }
+
+            if (!this.sdkClient.isInitialized()) {
+                this.debugLogger.debug('[Entity Fetcher] SDK not available for workspace creation');
+                return undefined;
+            }
+
+            const client = this.sdkClient.getClient() as {
+                createWorkspace: (
+                    orgId: string,
+                    projectId: string,
+                    details: { name: string; title: string; description: string; who_created: string },
+                ) => Promise<SDKResponse<RawAdobeWorkspace>>;
+            };
+
+            this.debugLogger.info(`[Entity Fetcher] Creating workspace "${name}" in project ${projectId}`);
+
+            const response = await client.createWorkspace(orgId, projectId, {
+                name,
+                title: name,
+                description,
+                who_created: 'Demo Builder',
+            });
+
+            const raw = response?.body;
+            if (!raw?.id) {
+                this.debugLogger.error('[Entity Fetcher] Workspace created but no workspace in response');
+                return undefined;
+            }
+
+            this.debugLogger.info('[Entity Fetcher] Workspace created successfully');
+            return mapWorkspaces([raw])[0];
+        } catch (error) {
+            const message = (error as Error).message || '';
+            if (message.includes('409') || message.includes('Conflict')) {
+                this.debugLogger.error('[Entity Fetcher] Workspace name already exists (409)');
+            } else {
+                this.debugLogger.error('[Entity Fetcher] Failed to create workspace', error as Error);
+            }
+            return undefined;
+        }
+    }
+
+    /**
      * List the org's entitled services (the `getServicesForOrg` SDK call).
      * Resolves an App Builder component's `requiredApis` names → sdkCodes + platformList.
      * Each entry carries `{ code, platformList, domainMandatory?, ... }`.

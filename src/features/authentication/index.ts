@@ -41,6 +41,7 @@ export {
     handleGetWorkspaces,
     handleSelectWorkspace,
     handleCreateWorkspaceCredential,
+    handleCreateAdobeWorkspace,
 } from './handlers/workspaceHandlers';
 
 // Types
