@@ -9,7 +9,9 @@
  * filled accent marker, and (paired with `activeId`) a left accent bar + gray-100 fill +
  * bold gray-900 label — NO border box; `upcoming` → blank mark + muted label; `locked` →
  * muted, `aria-disabled`, reason surfaced. `aria-selected` flags the active step.
- * Openable steps (`done` / `current` / `upcoming`) call `onSelect(id)`; `locked` does not.
+ * Only REACHED steps (`done` / `current`) call `onSelect(id)` — a user can navigate
+ * BACK to a reached step, never AHEAD to an `upcoming` one; `upcoming` and `locked` are
+ * non-actionable (`aria-disabled`, out of the tab order) and do NOT call `onSelect`.
  *
  * Presentational only — no wizard/business logic and no internal state; the parent
  * (CommerceStep) owns `activeId` and `onSelect`. The Storefront slice reuses this
@@ -45,32 +47,18 @@ export interface VerticalStepListProps {
     onSelect: (id: string) => void;
 }
 
-/** Small inline check glyph for the `done` mark (subtle, matches the summary ✓). */
-const CheckIcon: React.FC = () => (
-    <svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true" focusable="false">
-        <path
-            d="M2 6.2 4.6 9 10 3"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        />
-    </svg>
-);
-
 /**
- * The fixed-width leading mark for a step. `done` → a subtle check glyph; `current` →
- * a filled accent marker; `upcoming` / `locked` → blank (keeps labels aligned). No
- * numbered circles, no connector.
+ * A single step button (label only — NO leading status marker). Done/current
+ * markers were intentionally removed: the right-hand summary column owns the
+ * "done" ✓ + value, and the active highlight (accent bar + fill + bold) plus
+ * muted text on upcoming/locked carry "where you are" and reachability, so a
+ * per-item glyph here would just duplicate the summary. Only REACHED steps
+ * (`done` / `current`) are actionable — they call `onSelect(id)`, so the user can
+ * navigate BACK to a reached step but never AHEAD. `upcoming` and `locked` steps are
+ * non-actionable: `aria-disabled`, out of the tab order, no `onSelect`. `locked` also
+ * surfaces its reason (title + visually-hidden text); `upcoming` has none (it is just
+ * future, not gated).
  */
-const StepMark: React.FC<{ status: StepTabStatus }> = ({ status }) => (
-    <span className={cn('vsteplist-mark', status)} aria-hidden="true">
-        {status === 'done' ? <CheckIcon /> : null}
-    </span>
-);
-
-/** A single step button (leading mark column + label). */
 const StepButton: React.FC<{
     step: StepTab;
     isActive: boolean;
@@ -78,6 +66,7 @@ const StepButton: React.FC<{
 }> = ({ step, isActive, onSelect }) => {
     const { id, title, status, lockReason } = step;
     const locked = status === 'locked';
+    const reachable = status === 'done' || status === 'current';
 
     return (
         <li className="vsteplist-item">
@@ -88,11 +77,11 @@ const StepButton: React.FC<{
                 role="tab"
                 className={cn('vsteplist-step', status, isActive && 'active')}
                 aria-selected={isActive}
-                aria-disabled={locked || undefined}
+                aria-disabled={reachable ? undefined : true}
+                tabIndex={reachable ? undefined : -1}
                 title={locked ? lockReason : undefined}
-                onClick={locked ? undefined : () => onSelect(id)}
+                onClick={reachable ? () => onSelect(id) : undefined}
             >
-                <StepMark status={status} />
                 <span className="vsteplist-title">{title}</span>
                 {locked && lockReason ? (
                     <span className="vsteplist-sr">{lockReason}</span>

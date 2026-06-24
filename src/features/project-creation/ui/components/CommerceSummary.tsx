@@ -16,6 +16,7 @@
  */
 
 import React from 'react';
+import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import { cn } from '@/core/ui/utils/classNames';
 
 /** A single summary row: a label, an optional value, and a done flag. */
@@ -47,7 +48,16 @@ const Row: React.FC<{ row: SummaryRow }> = ({ row }) => {
     const isDone = Boolean(row.done && row.value);
     return (
         <div className={cn('sum-row', isDone && 'done')}>
-            <span className="sum-label">{row.label}</span>
+            <span className="sum-rowlabel">
+                {isDone && (
+                    <CheckmarkCircle
+                        size="XS"
+                        UNSAFE_className="text-green-600 sum-check"
+                        aria-hidden="true"
+                    />
+                )}
+                <span className="sum-label">{row.label}</span>
+            </span>
             {row.value ? (
                 <span className="sum-value">{row.value}</span>
             ) : (

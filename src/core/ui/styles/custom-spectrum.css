@@ -621,6 +621,35 @@ button[class*="spectrum-Button"][disabled],
 .grid-align-center { justify-self: center !important; }
 .grid-align-end { justify-self: end !important; }
 
+/* Build Your Project footer: align the actions to the center step-view column.
+ * That step uses a full-width 3-column layout (nav | step-view | summary), so the
+ * default left-aligned 800px footer misaligns. Drop the cap and inset the footer
+ * content to the step-view's CONTENT box: left = nav width (size-3000) + step-view
+ * padding (size-300); right = summary width (320px) + step-view padding — each
+ * minus the footer View's own size-400 padding so Cancel lands at the content's
+ * left edge and Back/Continue at its right. NOTE: the summary width 320px is the
+ * literal value of the project's `size-4000` JS token (TwoColumnLayout rightWidth);
+ * `--spectrum-global-dimension-size-4000` is NOT a real Spectrum CSS variable, so
+ * referencing it via var() makes the calc invalid and the padding is dropped — use
+ * the literal. Only above the 1180 stack breakpoint (bp: two-column stack); when
+ * stacked the footer keeps its default. */
+@media (min-width: 1181px) {
+    .footer-build-step .footer-content-container {
+        max-width: none !important;
+        box-sizing: border-box !important;
+        padding-left: calc(
+            var(--spectrum-global-dimension-size-3000) +
+            var(--spectrum-global-dimension-size-300) -
+            var(--spectrum-global-dimension-size-400)
+        ) !important;
+        padding-right: calc(
+            320px +
+            var(--spectrum-global-dimension-size-300) -
+            var(--spectrum-global-dimension-size-400)
+        ) !important;
+    }
+}
+
 /* Modal footer - separator with action buttons */
 .modal-footer-actions {
     margin-top: 24px !important;
@@ -3984,31 +4013,8 @@ div[class*="spectrum"] input[type="search"] {
     cursor: default !important;
     color: var(--spectrum-global-color-gray-500) !important;
 }
-/* Fixed-width leading mark column. Holds the ✓ glyph (done) or the filled accent
- * marker (current), and stays blank-but-sized for upcoming/locked so every label
- * aligns to the same left edge. No background, no border — it is just a glyph slot. */
-.vsteplist-mark {
-    flex: 0 0 var(--spectrum-global-dimension-size-175) !important;
-    width: var(--spectrum-global-dimension-size-175) !important;
-    height: var(--spectrum-global-dimension-size-175) !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    color: var(--spectrum-global-color-gray-500) !important;
-}
-/* done → a subtle, restrained check (matches the summary column's green-600 ✓). */
-.vsteplist-mark.done {
-    color: var(--spectrum-global-color-green-600) !important;
-}
-/* current → a small filled accent dot (blue-500), drawn purely with the box itself. */
-.vsteplist-mark.current::before {
-    content: '' !important;
-    width: var(--spectrum-global-dimension-size-100) !important;
-    height: var(--spectrum-global-dimension-size-100) !important;
-    border-radius: 50% !important;
-    background: var(--spectrum-global-color-blue-500) !important;
-}
-/* upcoming / locked → blank: the sized .vsteplist-mark box keeps labels aligned. */
+/* No leading status marker: the summary column owns "done" (✓ + value), and the
+ * active highlight + muted upcoming/locked text carry position + reachability. */
 .vsteplist-title {
     flex: 1 1 auto !important;
     min-width: 0 !important;
@@ -4099,14 +4105,6 @@ div[class*="spectrum"] input[type="search"] {
         background: transparent !important;
         border-left-color: transparent !important;
         box-shadow: inset 0 -2px 0 var(--spectrum-global-color-blue-500) !important;
-    }
-    /* Drop the leading mark for every non-done step in the strip: the fixed-width
-     * mark column only matters for vertical-menu alignment. Without it the label
-     * sits flush and its underline reads centered (rather than offset by an empty
-     * mark slot). The current step's indicator is the underline; done keeps its
-     * green check inline. */
-    .vsteplist-mark:not(.done) {
-        display: none !important;
     }
     /* Drop the summary entirely once it would stack — at this width the nav strip +
      * content own the space; the stacked summary block just adds clutter. Scoped to
@@ -4286,13 +4284,16 @@ div[class*="spectrum"] input[type="search"] {
 .sum-row + .sum-row {
     border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
 }
+/* Left group: the shared small CheckmarkCircle (done only) + the row label. */
+.sum-rowlabel {
+    display: flex !important;
+    align-items: center !important;
+    gap: var(--spectrum-global-dimension-size-65) !important;
+    min-width: 0 !important;
+}
 .sum-label {
     color: var(--spectrum-global-color-gray-600) !important;
     white-space: nowrap !important;
-}
-.sum-row.done .sum-label::before {
-    content: '✓ ' !important;
-    color: var(--spectrum-global-color-green-600) !important;
 }
 .sum-value {
     color: var(--spectrum-global-color-gray-900) !important;

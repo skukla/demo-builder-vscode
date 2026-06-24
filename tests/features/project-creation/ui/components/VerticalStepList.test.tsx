@@ -4,8 +4,10 @@
  * Presentational, fully-controlled VERTICAL step list replacing the rejected
  * horizontal StepTabs strip. Renders steps top-to-bottom as real <button role="tab">s
  * inside a `role="tablist"` with `aria-orientation="vertical"`; the active step is
- * `aria-selected`; locked steps are `aria-disabled`, surface their reason, and do NOT
- * call `onSelect`; openable steps call `onSelect(id)`. Quiet per-status marks (done →
+ * `aria-selected`; only REACHED steps (`done` / `current`) call `onSelect(id)` — you may
+ * click BACK to a reached step but never AHEAD to an `upcoming` one. `upcoming` and
+ * `locked` steps are `aria-disabled` + out of the tab order and do NOT call `onSelect`;
+ * `locked` additionally surfaces its reason. Quiet per-status marks (done →
  * subtle ✓ glyph / current → filled accent marker / upcoming + locked → blank, so the
  * labels stay aligned). No numbered circles, no connector rail. No business logic, no
  * internal state — parent owns activeId / onSelect. Same interface as the deleted
@@ -85,21 +87,16 @@ describe('VerticalStepList', () => {
             expect(tab('catalog')).toHaveAttribute('data-status', 'locked');
         });
 
-        it('renders a subtle check (svg) glyph on a done step', () => {
+        it('renders NO status glyph on any step — done included (the summary owns the ✓)', () => {
             renderWithProvider(
                 <VerticalStepList steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
             );
-            expect(tab('backend').querySelector('svg')).toBeInTheDocument();
-        });
-
-        it('renders a blank (no glyph, no number) mark on upcoming and locked steps', () => {
-            renderWithProvider(
-                <VerticalStepList steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
-            );
-            // No numbered circles anywhere — labels align via a fixed-width blank mark.
-            expect(tab('business-structure')).not.toHaveTextContent(/\d/);
-            expect(tab('business-structure').querySelector('svg')).not.toBeInTheDocument();
-            expect(tab('catalog').querySelector('svg')).not.toBeInTheDocument();
+            // The left sub-menu is navigation only: status lives in data-status (and the
+            // adjacent summary column), never a per-item glyph. No svg/icon, no numbers.
+            for (const id of ['backend', 'connection', 'business-structure', 'catalog']) {
+                expect(tab(id).querySelector('svg')).not.toBeInTheDocument();
+                expect(tab(id)).not.toHaveTextContent(/\d/);
+            }
         });
 
         it('does not render numbered circles on any step', () => {
@@ -141,14 +138,50 @@ describe('VerticalStepList', () => {
         });
     });
 
-    describe('interaction', () => {
-        it('calls onSelect with the id when an openable step is clicked', () => {
+    describe('upcoming steps', () => {
+        it('marks an upcoming step aria-disabled + out of the tab order', () => {
+            renderWithProvider(
+                <VerticalStepList steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
+            );
+            expect(tab('business-structure')).toHaveAttribute('aria-disabled', 'true');
+            expect(tab('business-structure')).toHaveAttribute('tabindex', '-1');
+        });
+
+        it('does not call onSelect when an upcoming (ahead) step is clicked', () => {
             const onSelect = jest.fn();
             renderWithProvider(
                 <VerticalStepList steps={STEPS} activeId="connection" onSelect={onSelect} />,
             );
+            fireEvent.click(tab('business-structure'));
+            expect(onSelect).not.toHaveBeenCalled();
+        });
+
+        it('does not surface a reason on an upcoming step (it is future, not gated)', () => {
+            renderWithProvider(
+                <VerticalStepList steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
+            );
+            expect(tab('business-structure')).not.toHaveAttribute('title');
+        });
+    });
+
+    describe('interaction', () => {
+        it('calls onSelect with the id when a reached (done/current) step is clicked', () => {
+            const onSelect = jest.fn();
+            renderWithProvider(
+                <VerticalStepList steps={STEPS} activeId="connection" onSelect={onSelect} />,
+            );
+            // `backend` is `done` — a reached step you can click BACK to.
             fireEvent.click(tab('backend'));
             expect(onSelect).toHaveBeenCalledWith('backend');
+        });
+
+        it('calls onSelect when the current step is clicked', () => {
+            const onSelect = jest.fn();
+            renderWithProvider(
+                <VerticalStepList steps={STEPS} activeId="connection" onSelect={onSelect} />,
+            );
+            fireEvent.click(tab('connection'));
+            expect(onSelect).toHaveBeenCalledWith('connection');
         });
     });
 
