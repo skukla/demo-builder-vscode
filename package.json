@@ -270,8 +270,14 @@
           },
           "demoBuilder.daLive.authoringExperience": {
             "type": "string",
-            "enum": ["da-live-classic", "experience-workspace"],
-            "enumItemLabels": ["DA.live Classic", "Experience Workspace"],
+            "enum": [
+              "da-live-classic",
+              "experience-workspace"
+            ],
+            "enumItemLabels": [
+              "DA.live Classic",
+              "Experience Workspace"
+            ],
             "default": "da-live-classic",
             "description": "Default AEM authoring experience for new EDS projects. DA.live Classic opens the da.live doc editor (with the Universal Editor punch-out for Sidekick Edit); Experience Workspace uses the da.live-native canvas. Override per project from the project's Configure screen."
           },
@@ -438,6 +444,7 @@
     "@types/vscode": "^1.74.0",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.7.1",
+    "chokidar": "^3.6.0",
     "cloc": "^2.6.0-cloc",
     "concurrently": "^9.2.1",
     "css-loader": "^7.1.2",

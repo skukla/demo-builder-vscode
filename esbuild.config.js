@@ -11,9 +11,17 @@
  *   --watch            Rebuild on file changes
  *   --extension-only   Build extension host only
  *   --webview-only     Build webview UI only
+ *
+ * Watch mode uses a POLLING chokidar watcher (not esbuild's ctx.watch()): the
+ * latter is fsevents-based and silently drops change events under heavy
+ * concurrent filesystem load (e.g. when a test run + tsc + lint fire right after
+ * an edit), so the bundle would go stale. Polling diffs file state, so it can't
+ * miss a change; a debounce coalesces bursts and a single-flight queue guarantees
+ * the final change always rebuilds. See startWatch().
  */
 
 const esbuild = require('esbuild');
+const chokidar = require('chokidar');
 const fs = require('fs');
 const path = require('path');
 
@@ -79,10 +87,26 @@ document.head.appendChild(__s);
 };
 
 // ---------------------------------------------------------------------------
+// Create a context, run the initial build, and return it for watch mode.
+// In non-watch mode the context is built once and disposed.
+// ---------------------------------------------------------------------------
+async function startContext(name, options) {
+    const ctx = await esbuild.context(options);
+    const result = await ctx.rebuild();
+    logOutputSizes(result.metafile);
+    if (!watch) {
+        await ctx.dispose();
+        return null;
+    }
+    console.log(`[esbuild] ${name}: built`);
+    return { ctx, name };
+}
+
+// ---------------------------------------------------------------------------
 // Extension host build
 // ---------------------------------------------------------------------------
-async function runExtensionBuild() {
-    const ctx = await esbuild.context({
+function runExtensionBuild() {
+    return startContext('extension', {
         entryPoints: ['src/extension.ts'],
         bundle: true,
         format: 'cjs',
@@ -101,22 +125,13 @@ async function runExtensionBuild() {
         logLevel: 'info',
         metafile: true,
     });
-
-    if (watch) {
-        await ctx.watch();
-        console.log('[esbuild] extension: watching…');
-    } else {
-        const result = await ctx.rebuild();
-        logOutputSizes(result.metafile);
-        await ctx.dispose();
-    }
 }
 
 // ---------------------------------------------------------------------------
 // MCP proxy build (stdio→UDS forwarder spawned by Claude Code — no vscode)
 // ---------------------------------------------------------------------------
-async function runMcpProxyBuild() {
-    const ctx = await esbuild.context({
+function runMcpProxyBuild() {
+    return startContext('mcp-proxy', {
         entryPoints: ['src/mcp-proxy.ts'],
         bundle: true,
         format: 'cjs',
@@ -130,14 +145,6 @@ async function runMcpProxyBuild() {
         logLevel: 'info',
         metafile: true,
     });
-    if (watch) {
-        await ctx.watch();
-        console.log('[esbuild] mcp-proxy: watching…');
-    } else {
-        const result = await ctx.rebuild();
-        logOutputSizes(result.metafile);
-        await ctx.dispose();
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -153,8 +160,8 @@ const WEBVIEW_ENTRIES = {
     aiOverview:   'src/features/dashboard/ui/aiSurface/index.tsx',
 };
 
-async function runWebviewBuild() {
-    const ctx = await esbuild.context({
+function runWebviewBuild() {
+    return startContext('webview', {
         entryPoints: WEBVIEW_ENTRIES,
         bundle: true,
         format: 'iife',
@@ -179,15 +186,6 @@ async function runWebviewBuild() {
         logLevel: 'info',
         metafile: true,
     });
-
-    if (watch) {
-        await ctx.watch();
-        console.log('[esbuild] webview: watching…');
-    } else {
-        const result = await ctx.rebuild();
-        logOutputSizes(result.metafile);
-        await ctx.dispose();
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -204,6 +202,71 @@ function logOutputSizes(metafile) {
 }
 
 // ---------------------------------------------------------------------------
+// Robust watch: poll src/ with chokidar and drive incremental ctx.rebuild().
+//
+// Why polling: esbuild's ctx.watch() (and chokidar's default fsevents) drop
+// change events when the filesystem is under heavy concurrent load — e.g. a full
+// jest run + tsc + lint firing right after an edit — leaving the bundle stale.
+// Polling compares file state each interval, so a change is never missed; the
+// debounce coalesces rapid bursts and the single-flight queue (`building` +
+// `pending`) guarantees the LAST change still rebuilds even if it lands mid-build.
+// All contexts rebuild on any src change — esbuild's incremental rebuilds reuse
+// each context's cache, so this stays fast (and avoids brittle path routing for
+// files shared between the extension and webview).
+// ---------------------------------------------------------------------------
+function startWatch(contexts) {
+    let debounce = null;
+    let building = false;
+    let pending = false;
+
+    const rebuildAll = async () => {
+        if (building) {
+            pending = true;
+            return;
+        }
+        building = true;
+        const started = Date.now();
+        try {
+            for (const { ctx } of contexts) {
+                const result = await ctx.rebuild();
+                logOutputSizes(result.metafile);
+            }
+            console.log(`[watch] rebuilt in ${Date.now() - started}ms`);
+        } catch (e) {
+            console.error('[watch] rebuild failed:', e.message);
+        } finally {
+            building = false;
+            if (pending) {
+                pending = false;
+                schedule();
+            }
+        }
+    };
+
+    const schedule = () => {
+        clearTimeout(debounce);
+        debounce = setTimeout(rebuildAll, 100);
+    };
+
+    const watcher = chokidar.watch('src', {
+        ignoreInitial: true,
+        usePolling: true,
+        interval: 250,
+        binaryInterval: 500,
+        // Wait for writes to settle so we never bundle a half-written file.
+        awaitWriteFinish: { stabilityThreshold: 120, pollInterval: 40 },
+    });
+
+    watcher.on('all', (event, file) => {
+        console.log(`[watch] ${event}: ${file}`);
+        schedule();
+    });
+    watcher.on('error', err => console.error('[watch] watcher error:', err));
+
+    console.log('[watch] polling src/ via chokidar — robust against dropped fs events');
+}
+
+// ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
 async function main() {
@@ -215,7 +278,11 @@ async function main() {
     if (buildWebviews) {
         tasks.push(runWebviewBuild());
     }
-    await Promise.all(tasks);
+    const contexts = (await Promise.all(tasks)).filter(Boolean);
+
+    if (watch) {
+        startWatch(contexts);
+    }
 }
 
 main().catch(e => {
