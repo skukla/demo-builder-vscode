@@ -11,6 +11,7 @@
  * Shared by ComponentConfigStep and ConnectStoreStepContent.
  */
 import { Button, Flex, ProgressCircle, Text } from '@adobe/react-spectrum';
+import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
 import {
     CONNECTION_FIELDS,
@@ -43,6 +44,41 @@ export interface StoreConfigFieldRowProps {
     onRefresh?: () => void;
     /** Context for resolving {placeholder} tokens inside field-description URLs (e.g., {orgCode}) */
     descriptionContext?: DescriptionContext;
+}
+
+/**
+ * Detection status line. Fixed minimum height so the Website/Store/Store View
+ * dropdowns below never jump when detection finishes: the indeterminate spinner
+ * resolves into a green ✓ IN PLACE (eased in) rather than the line collapsing to
+ * nothing. Empty (but height-reserved) in the brief pre-detect idle.
+ */
+function DetectStatus({
+    isFetching,
+    hasStoreData,
+}: {
+    isFetching: boolean;
+    hasStoreData: boolean;
+}): React.ReactNode {
+    return (
+        <Flex alignItems="center" gap="size-100" marginBottom="size-100" minHeight="size-300">
+            {hasStoreData && (
+                <Flex alignItems="center" gap="size-100" UNSAFE_className="animate-fade-in">
+                    <CheckmarkCircle
+                        size="S"
+                        UNSAFE_className="text-green-600"
+                        aria-label="Detected"
+                    />
+                    <Text UNSAFE_className="status-text">Store structure detected</Text>
+                </Flex>
+            )}
+            {!hasStoreData && isFetching && (
+                <>
+                    <ProgressCircle size="S" isIndeterminate aria-label="Detecting" />
+                    <Text UNSAFE_className="status-text">Detecting store structure…</Text>
+                </>
+            )}
+        </Flex>
+    );
 }
 
 export function StoreConfigFieldRow({
@@ -107,12 +143,7 @@ export function StoreConfigFieldRow({
 
         return (
             <div>
-                {isFetching && (
-                    <Flex alignItems="center" gap="size-100" marginBottom="size-100">
-                        <ProgressCircle size="S" isIndeterminate aria-label="Detecting" />
-                        <Text UNSAFE_className="status-text">Detecting store structure...</Text>
-                    </Flex>
-                )}
+                <DetectStatus isFetching={isFetching} hasStoreData={hasStoreData} />
                 <StoreSelectionRow
                     group={group}
                     getFieldValue={getFieldValue}
