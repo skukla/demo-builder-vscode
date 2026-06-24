@@ -6,6 +6,7 @@ import {
     computeStateUpdatesForBackwardNav,
     ImportedSettings,
 } from '../wizardHelpers';
+import { markStepCompleted } from '@/core/ui/utils/stepCompletion';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -181,7 +182,7 @@ export function useWizardNavigation({
                 await handleStepBackendCalls(state.currentStep, nextStep.id, state, importedSettings, packages);
 
                 if (!completedSteps.includes(state.currentStep)) {
-                    setCompletedSteps(prev => [...prev, state.currentStep]);
+                    setCompletedSteps(prev => markStepCompleted(prev, state.currentStep));
                     setHighestCompletedStepIndex(Math.max(highestCompletedStepIndex, currentIndex));
                 }
 

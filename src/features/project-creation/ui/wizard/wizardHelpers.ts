@@ -5,6 +5,7 @@
 import { getStackById } from '../hooks/useSelectedStack';
 import type { StepCondition } from './stepFiltering';
 import { hasMeshInDependencies } from '@/core/constants';
+import { clearCompletedFrom } from '@/core/ui/utils/stepCompletion';
 import type { SettingsEdsConfig } from '@/features/projects-dashboard/types/settingsFile';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
@@ -170,21 +171,13 @@ export function filterCompletedStepsForBackwardNav(
     targetIndex: number,
     wizardSteps: WizardStepConfig[],
 ): WizardStep[] {
-    // Special case: first step clears everything
-    if (targetIndex === 0) {
-        return [];
-    }
-
-    return completedSteps.filter(completedStep => {
-        // Always remove the target step
-        if (completedStep === targetStep) {
-            return false;
-        }
-
-        // Keep only steps that come before the target
-        const stepIndex = wizardSteps.findIndex(ws => ws.id === completedStep);
-        return stepIndex < targetIndex;
-    });
+    // Shared with the Commerce sub-steps — same drop-target-and-after semantics.
+    return clearCompletedFrom(
+        completedSteps,
+        wizardSteps.map(ws => ws.id),
+        targetStep,
+        targetIndex,
+    );
 }
 
 /**
