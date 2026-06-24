@@ -15,6 +15,10 @@ import {
     provisionalStackForBackend,
     availableBackendsForPackage,
     commerceSectionStates,
+    firstOpenSection,
+    nextSubStep,
+    prevSubStep,
+    isCommerceStepComplete,
     type CommerceSectionId,
 } from '@/features/project-creation/ui/steps/commerceSections';
 import type { DemoPackage, DemoPackagesConfig } from '@/types/demoPackages';
@@ -162,10 +166,46 @@ describe('commerceSectionStates — ACCS sign-in gate', () => {
         }
     });
 
-    it('omits the sign-in section once signed in (ACCS)', () => {
+    it('keeps the sign-in section as done (with the org name) once signed in (ACCS)', () => {
+        // The Sign-in sub-step must PERSIST so the footer can land on it to show the
+        // "Connected" result and the sub-step walk reaches Connection next.
+        const sections = commerceSectionStates(
+            state({ selectedBackend: ACCS, adobeOrg: { id: 'org-1', name: 'Org One' } }),
+            { isAccs: true, signedIn: true },
+        );
+        const signin = sections.find(s => s.id === 'signin');
+        expect(signin?.status).toBe('done');
+        expect(signin?.value).toBe('Org One');
+    });
+
+    it('falls back to a plain "Signed in" value when no org name is present (ACCS)', () => {
         const sections = commerceSectionStates(
             state({ selectedBackend: ACCS }),
             { isAccs: true, signedIn: true },
+        );
+        const signin = sections.find(s => s.id === 'signin');
+        expect(signin?.status).toBe('done');
+        expect(signin?.value).toBe('Signed in');
+    });
+
+    it('unlocks connection once signed in but keeps business/catalog locked until connection (ACCS)', () => {
+        const sections = commerceSectionStates(
+            state({ selectedBackend: ACCS }),
+            { isAccs: true, signedIn: true },
+        );
+        expect(sections.find(s => s.id === 'connection')?.status).not.toBe('locked');
+        // Config-step chain: Business Structure / Catalog stay locked until Connection is done.
+        for (const id of ['business-structure', 'catalog'] as CommerceSectionId[]) {
+            const sec = sections.find(s => s.id === id);
+            expect(sec?.status).toBe('locked');
+            expect(sec?.lockReason).toBe('Connect to Commerce first');
+        }
+    });
+
+    it('omits the sign-in section entirely for PaaS (not ACCS)', () => {
+        const sections = commerceSectionStates(
+            state({ selectedBackend: PAAS }),
+            { isAccs: false, signedIn: true },
         );
         expect(sections.find(s => s.id === 'signin')).toBeUndefined();
     });
@@ -180,17 +220,43 @@ describe('commerceSectionStates — connection / business / catalog progression'
         expect(sections.find(s => s.id === 'connection')?.status).toBe('done');
     });
 
-    it('marks business-structure done when commerceStoreViewChosen is true', () => {
+    it('marks business-structure done when connection is done and a store view is chosen', () => {
         const sections = commerceSectionStates(
-            state({ selectedBackend: PAAS, commerceStoreViewChosen: true }),
+            state({
+                selectedBackend: PAAS,
+                commerceConnectValid: true,
+                commerceStoreViewChosen: true,
+            }),
             { isAccs: false, signedIn: false },
         );
         expect(sections.find(s => s.id === 'business-structure')?.status).toBe('done');
     });
 
-    it('locks catalog with a reason until a store view is chosen', () => {
+    it('keeps business-structure locked until connection, even with a store view chosen', () => {
+        // A package-seeded store-view code must NOT make Business Structure show done
+        // before Connection — the config-step chain locks it on connection.
         const sections = commerceSectionStates(
-            state({ selectedBackend: PAAS }),
+            state({ selectedBackend: PAAS, commerceStoreViewChosen: true }),
+            { isAccs: false, signedIn: false },
+        );
+        const business = sections.find(s => s.id === 'business-structure');
+        expect(business?.status).toBe('locked');
+        expect(business?.lockReason).toBe('Connect to Commerce first');
+    });
+
+    it('locks catalog with "Connect to Commerce first" until connection is done', () => {
+        const sections = commerceSectionStates(
+            state({ selectedBackend: PAAS, commerceStoreViewChosen: true }),
+            { isAccs: false, signedIn: false },
+        );
+        const catalog = sections.find(s => s.id === 'catalog');
+        expect(catalog?.status).toBe('locked');
+        expect(catalog?.lockReason).toBe('Connect to Commerce first');
+    });
+
+    it('locks catalog with a reason until a store view is chosen (connection done)', () => {
+        const sections = commerceSectionStates(
+            state({ selectedBackend: PAAS, commerceConnectValid: true }),
             { isAccs: false, signedIn: false },
         );
         const catalog = sections.find(s => s.id === 'catalog');
@@ -198,11 +264,191 @@ describe('commerceSectionStates — connection / business / catalog progression'
         expect(catalog?.lockReason).toBe('Choose a store view first');
     });
 
-    it('unlocks catalog once a store view is chosen', () => {
+    it('unlocks catalog once connection is done and a store view is chosen', () => {
         const sections = commerceSectionStates(
-            state({ selectedBackend: PAAS, commerceStoreViewChosen: true }),
+            state({
+                selectedBackend: PAAS,
+                commerceConnectValid: true,
+                commerceStoreViewChosen: true,
+            }),
             { isAccs: false, signedIn: false },
         );
         expect(sections.find(s => s.id === 'catalog')?.status).not.toBe('locked');
     });
 });
+
+describe('commerceSectionStates — summary values for connection / business / catalog', () => {
+    const allDone = {
+        selectedBackend: PAAS,
+        commerceConnectValid: true,
+        commerceStoreViewChosen: true,
+    };
+
+    it('gives Connection a "Connected" value once done', () => {
+        const sections = commerceSectionStates(
+            state({ selectedBackend: PAAS, commerceConnectValid: true }),
+            { isAccs: false, signedIn: false },
+        );
+        const connection = sections.find(s => s.id === 'connection');
+        expect(connection?.status).toBe('done');
+        expect(connection?.value).toBe('Connected');
+    });
+
+    it('gives Business Structure a general "Selected" value once done', () => {
+        const sections = commerceSectionStates(
+            state(allDone),
+            { isAccs: false, signedIn: false },
+        );
+        const business = sections.find(s => s.id === 'business-structure');
+        expect(business?.status).toBe('done');
+        expect(business?.value).toBe('Selected');
+    });
+
+    it('marks Catalog done with a "Configured" value once connection + store view are done', () => {
+        const sections = commerceSectionStates(
+            state(allDone),
+            { isAccs: false, signedIn: false },
+        );
+        const catalog = sections.find(s => s.id === 'catalog');
+        expect(catalog?.status).toBe('done');
+        expect(catalog?.value).toBe('Configured');
+    });
+
+    it('carries NO value while a config step is not yet done (so the summary reads "Not set")', () => {
+        const sections = commerceSectionStates(
+            state({ selectedBackend: PAAS }),
+            { isAccs: false, signedIn: false },
+        );
+        // Connection upcoming → no value; business locked (chain) → no value.
+        expect(sections.find(s => s.id === 'connection')?.value).toBeUndefined();
+        expect(sections.find(s => s.id === 'business-structure')?.value).toBeUndefined();
+    });
+});
+
+describe('nextSubStep / prevSubStep — linear walk over the displayed sections', () => {
+    // PaaS, no sign-in → display order: backend, connection, business-structure, catalog.
+    const paasSections = commerceSectionStates(
+        state({ selectedBackend: PAAS }),
+        { isAccs: false, signedIn: false },
+    );
+    // ACCS, not signed in → display order includes signin (current) after backend.
+    const accsSections = commerceSectionStates(
+        state({ selectedBackend: ACCS }),
+        { isAccs: true, signedIn: false },
+    );
+    // ACCS, signed in → signin PERSISTS (done) so the walk still reaches it.
+    const accsSignedIn = commerceSectionStates(
+        state({ selectedBackend: ACCS }),
+        { isAccs: true, signedIn: true },
+    );
+
+    it('returns the next id in display order (PaaS: backend → connection)', () => {
+        expect(nextSubStep(paasSections, 'backend')).toBe('connection');
+    });
+
+    it('returns the next id across the middle (connection → business-structure)', () => {
+        expect(nextSubStep(paasSections, 'connection')).toBe('business-structure');
+    });
+
+    it('returns null at the last display step (catalog)', () => {
+        expect(nextSubStep(paasSections, 'catalog')).toBeNull();
+    });
+
+    it('walks through the ACCS sign-in step (backend → signin → connection)', () => {
+        expect(nextSubStep(accsSections, 'backend')).toBe('signin');
+        expect(nextSubStep(accsSections, 'signin')).toBe('connection');
+    });
+
+    it('returns null when current is not in the displayed sections', () => {
+        // signin is not displayed for PaaS.
+        expect(nextSubStep(paasSections, 'signin')).toBeNull();
+    });
+
+    it('returns the previous id in display order (connection → backend)', () => {
+        expect(prevSubStep(paasSections, 'connection')).toBe('backend');
+    });
+
+    it('returns the previous id across the middle (catalog → business-structure)', () => {
+        expect(prevSubStep(paasSections, 'catalog')).toBe('business-structure');
+    });
+
+    it('returns null at the first display step (backend)', () => {
+        expect(prevSubStep(paasSections, 'backend')).toBeNull();
+    });
+
+    it('walks backward through the ACCS sign-in step (connection → signin → backend)', () => {
+        expect(prevSubStep(accsSections, 'connection')).toBe('signin');
+        expect(prevSubStep(accsSections, 'signin')).toBe('backend');
+    });
+
+    it('still walks forward signin → connection once signed in (ACCS)', () => {
+        // The PM-F5 bug: when signin was omitted on sign-in, nextSubStep('signin')
+        // returned null and Continue skipped Connection. It must reach connection.
+        expect(nextSubStep(accsSignedIn, 'signin')).toBe('connection');
+    });
+
+    it('still walks backward connection → signin once signed in (ACCS)', () => {
+        expect(prevSubStep(accsSignedIn, 'connection')).toBe('signin');
+    });
+});
+
+describe('isCommerceStepComplete — per-step done conditions', () => {
+    const PAAS_CTX = { isAccs: false, signedIn: false };
+    const ACCS_OUT = { isAccs: true, signedIn: false };
+    const ACCS_IN = { isAccs: true, signedIn: true };
+
+    it('backend complete only once selectedBackend is set', () => {
+        expect(isCommerceStepComplete(state(), 'backend', PAAS_CTX)).toBe(false);
+        expect(
+            isCommerceStepComplete(state({ selectedBackend: PAAS }), 'backend', PAAS_CTX),
+        ).toBe(true);
+    });
+
+    it('signin complete only when signed in (ACCS)', () => {
+        expect(isCommerceStepComplete(state({ selectedBackend: ACCS }), 'signin', ACCS_OUT)).toBe(
+            false,
+        );
+        expect(isCommerceStepComplete(state({ selectedBackend: ACCS }), 'signin', ACCS_IN)).toBe(
+            true,
+        );
+    });
+
+    it('connection complete only when commerceConnectValid is true', () => {
+        expect(isCommerceStepComplete(state(), 'connection', PAAS_CTX)).toBe(false);
+        expect(
+            isCommerceStepComplete(state({ commerceConnectValid: true }), 'connection', PAAS_CTX),
+        ).toBe(true);
+    });
+
+    it('business-structure complete only when commerceStoreViewChosen is true', () => {
+        expect(isCommerceStepComplete(state(), 'business-structure', PAAS_CTX)).toBe(false);
+        expect(
+            isCommerceStepComplete(
+                state({ commerceStoreViewChosen: true }),
+                'business-structure',
+                PAAS_CTX,
+            ),
+        ).toBe(true);
+    });
+
+    it('catalog is always complete (terminal)', () => {
+        expect(isCommerceStepComplete(state(), 'catalog', PAAS_CTX)).toBe(true);
+    });
+});
+
+describe('firstOpenSection — re-exported pure helper', () => {
+    it('returns the first current section (backend when nothing chosen)', () => {
+        const sections = commerceSectionStates(state(), { isAccs: false, signedIn: false });
+        expect(firstOpenSection(sections)).toBe('backend');
+    });
+
+    it('returns the first openable (non-done, non-locked) section', () => {
+        // Backend done, connection upcoming → first openable is connection.
+        const sections = commerceSectionStates(
+            state({ selectedBackend: PAAS }),
+            { isAccs: false, signedIn: false },
+        );
+        expect(firstOpenSection(sections)).toBe('connection');
+    });
+});
+

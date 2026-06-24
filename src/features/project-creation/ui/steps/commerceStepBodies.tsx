@@ -12,7 +12,6 @@
  * @module features/project-creation/ui/steps/commerceStepBodies
  */
 
-import { Button } from '@adobe/react-spectrum';
 import React from 'react';
 import { BACKEND_LABELS, type CommerceSectionId } from './commerceSections';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
@@ -130,12 +129,11 @@ export interface SectionBodyContext {
     onBackendSelect: (backend: string) => void;
     state: WizardState;
     updateState: (partial: Partial<WizardState>) => void;
-    onSaveAndContinue: (from: CommerceSectionId) => void;
     /** The single ConnectStoreStepContent (rendered only by a config step's body). */
     configForm: React.ReactNode;
 }
 
-/** Build the body node for a section (backend cards / sign-in / config form + CTA). */
+/** Build the body node for a section (backend cards / sign-in / config form). */
 export function sectionBody(id: CommerceSectionId, ctx: SectionBodyContext): React.ReactNode {
     if (id === 'backend') {
         return (
@@ -158,17 +156,8 @@ export function sectionBody(id: CommerceSectionId, ctx: SectionBodyContext): Rea
             <AdobeAuthStep state={ctx.state} updateState={ctx.updateState} setCanProceed={NOOP} />
         );
     }
-    // Config steps: the form fills the dedicated view, with "Save & continue" below
-    // the fields. sectionBody is built only for the active step, so the single
-    // configForm instance (driven by activeStep) lives in exactly one place at a time.
-    return (
-        <>
-            {ctx.configForm}
-            <div className="sec-cta">
-                <Button variant="accent" onPress={() => ctx.onSaveAndContinue(id)}>
-                    Save &amp; continue
-                </Button>
-            </div>
-        </>
-    );
+    // Config steps render ONLY the form — the footer Continue advances to the next
+    // sub-step (no in-body "Save & continue" CTA). sectionBody is built only for the
+    // active step, so the single configForm instance lives in exactly one place.
+    return <>{ctx.configForm}</>;
 }

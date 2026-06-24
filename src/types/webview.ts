@@ -24,6 +24,20 @@ export type WizardStep =
  */
 export type BuildAreaId = 'commerce' | 'storefront' | 'integrations';
 
+/**
+ * The ordered Commerce sub-step ids within the `build-your-project` step's
+ * Commerce area (sign-in is conditional — ACCS gate only). Defined here (rather
+ * than in the UI layer) so `WizardState.activeCommerceStep` can reference it
+ * without `types/` depending on `ui/`. The pure section logic in
+ * `ui/steps/commerceSections.ts` re-exports this type.
+ */
+export type CommerceSectionId =
+    | 'backend'
+    | 'signin'
+    | 'connection'
+    | 'business-structure'
+    | 'catalog';
+
 export interface WizardState {
     currentStep: WizardStep;
     projectName: string;
@@ -47,6 +61,8 @@ export interface WizardState {
     commerceStoreViewChosen?: boolean;  // Persisted verdict: the Business Structure store-view selection was made — drives the Catalog tab's gate/status
     storefrontRepoValid?: boolean;   // Storefront repo selection reported valid (RepoSelectionInline)
     activeBuildArea?: BuildAreaId;   // Area currently focused within the build-your-project step
+    activeCommerceStep?: CommerceSectionId;  // Active Commerce sub-step within the build step (footer Continue/Back walks sub-steps → areas → wizard steps)
+    committedCommerceSteps?: CommerceSectionId[];  // Commerce sub-steps the user has pressed Continue past — gates the summary ✓ (a valid form alone does NOT mark a row done)
     adobeAuth: AdobeAuthState;
     adobeOrg?: Organization;  // Renamed for consistency
     adobeProject?: AdobeProject;  // Renamed for consistency

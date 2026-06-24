@@ -19,10 +19,16 @@
  * Catalog work off the backend until the later Storefront slice resolves the frontend.
  *
  * Completion / lock status comes from {@link commerceSectionStates} (pure); the
- * active step is local state, seeded by {@link firstOpenSection} and advanced on
- * "Save & continue" / sign-in / store-view-chosen. The Continue gate derives from
- * {@link isCommerceConfigured} (the step's BuildYourProjectStep parent owns the real
- * gate via a NO-OP setCanProceed — harmless).
+ * active sub-step is LIFTED to wizard state (`state.activeCommerceStep`) and PINNED
+ * once on entry (a seeding effect sets it to {@link firstOpenSection} when unset),
+ * so it stops following completion. Without the pin the derived fallback would
+ * re-evaluate every render and signing in (signin current→done) would silently jump
+ * the view from Sign in to Connection. After seeding, only the footer Continue/Back
+ * (owned by WizardContainer) and the vertical-list click move the active step —
+ * selecting a backend, signing in, or choosing a store view never auto-advances. The
+ * Continue gate derives from {@link isCommerceConfigured} here, but the step's
+ * BuildYourProjectStep parent owns the REAL per-sub-step gate via a NO-OP
+ * setCanProceed — harmless.
  *
  * ONE ConnectStoreStepContent instance serves the three config steps, rendered in the
  * dedicated view only when the active step is a config step. Switching the active
@@ -33,7 +39,7 @@
  * @module features/project-creation/ui/steps/CommerceStep
  */
 
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import React, { useMemo, useCallback, useEffect } from 'react';
 import { CommerceSummary, type SummaryRow } from '../components/CommerceSummary';
 import { ConnectStoreStepContent } from '../components/ConnectStoreStepContent';
 import { VerticalStepList, type StepTab } from '../components/VerticalStepList';
@@ -42,6 +48,7 @@ import {
     resolveStackForBackend,
     provisionalStackForBackend,
     availableBackendsForPackage,
+    firstOpenSection,
     type CommerceSectionId,
     type CommerceSectionState,
 } from './commerceSections';
@@ -93,39 +100,24 @@ function hasStoreViewCode(configs: ComponentConfigs): boolean {
 }
 
 /**
- * The section to open first: the first `current` section, else the first
- * openable (non-done, non-locked) one, else the last section.
- *
- * @param sectionStates - Ordered section states from commerceSectionStates
- * @returns the id of the section to open
+ * The Commerce summary rows (Backend, Sign-in?, Connection, Business, Catalog).
+ * A row shows ✓ + value only when the step is BOTH done (valid) AND committed —
+ * i.e. the user pressed Continue past it. A merely-valid (or auto-detected) step
+ * stays "Not set" until committed, so values never appear on their own.
  */
-export function firstOpenSection(sectionStates: CommerceSectionState[]): CommerceSectionId {
-    const current = sectionStates.find(s => s.status === 'current');
-    if (current) return current.id;
-    const openable = sectionStates.find(s => s.status !== 'done' && s.status !== 'locked');
-    if (openable) return openable.id;
-    return sectionStates[sectionStates.length - 1].id;
-}
-
-/** The next openable section after `from`, or null when none remain. */
-function nextOpenableSection(
+function buildSummaryRows(
     sectionStates: CommerceSectionState[],
-    from: CommerceSectionId,
-): CommerceSectionId | null {
-    const idx = sectionStates.findIndex(s => s.id === from);
-    for (let i = idx + 1; i < sectionStates.length; i++) {
-        if (sectionStates[i].status !== 'locked') return sectionStates[i].id;
-    }
-    return null;
-}
-
-/** The Commerce summary rows (Backend, Sign-in?, Connection, Business, Catalog). */
-function buildSummaryRows(sectionStates: CommerceSectionState[]): SummaryRow[] {
-    return sectionStates.map(s => ({
-        label: ROW_LABELS[s.id],
-        value: s.value,
-        done: s.status === 'done',
-    }));
+    committedSteps: CommerceSectionId[] | undefined,
+): SummaryRow[] {
+    const committed = new Set(committedSteps ?? []);
+    return sectionStates.map(s => {
+        const done = s.status === 'done' && committed.has(s.id);
+        return {
+            label: ROW_LABELS[s.id],
+            value: done ? s.value : undefined,
+            done,
+        };
+    });
 }
 
 /**
@@ -166,10 +158,25 @@ export function CommerceStep({
         [state, isAccs, signedIn],
     );
 
-    // Local UI state: the single active step (completion/lock is in sectionStates).
-    const [activeStep, setActiveStep] = useState<CommerceSectionId>(() =>
-        firstOpenSection(sectionStates),
+    // The single active step is LIFTED to wizard state so the footer Continue/Back
+    // (owned by WizardContainer) can walk the sub-steps linearly. It derives from
+    // `state.activeCommerceStep`, falling back to the first openable section.
+    const activeStep = state.activeCommerceStep ?? firstOpenSection(sectionStates);
+    const setActiveStep = useCallback(
+        (id: CommerceSectionId) => updateState({ activeCommerceStep: id }),
+        [updateState],
     );
+
+    // Seed the active sub-step ONCE on entry (when unset) so it stops following
+    // completion. Without this pin the derived fallback re-evaluates firstOpenSection
+    // every render, so signing in (signin current→done) would silently JUMP the view
+    // from Sign in to Connection. The `== null` guard fires exactly once; afterwards
+    // only the footer Continue/Back and the vertical-list click move the active step.
+    useEffect(() => {
+        if (state.activeCommerceStep == null) {
+            updateState({ activeCommerceStep: firstOpenSection(sectionStates) });
+        }
+    }, [state.activeCommerceStep, sectionStates, updateState]);
 
     // Backends the brand offers (drives which cards are enabled).
     const availableBackends = useMemo(
@@ -198,7 +205,9 @@ export function CommerceStep({
             // backend's commit can't keep isCommerceConfigured true / show a committed
             // architecture while the frontend is pending and the sections re-lock.
             if (resolution.stackId) {
-                updateState({ selectedBackend: backend });
+                // Changing the backend invalidates the downstream sub-steps — drop
+                // their commitments so no stale ✓ (backend/sign-in included) survives.
+                updateState({ selectedBackend: backend, committedCommerceSteps: [] });
                 handlers.onStackSelect(resolution.stackId);
             } else {
                 updateState({
@@ -206,13 +215,13 @@ export function CommerceStep({
                     selectedStack: undefined,
                     commerceConnectValid: false,
                     commerceStoreViewChosen: false,
+                    committedCommerceSteps: [],
                 });
             }
-            // Auto-advance past Backend to the next openable step.
-            const nextGated = backend === ACCS_BACKEND && !signedIn;
-            setActiveStep(nextGated ? 'signin' : 'connection');
+            // Selecting a backend STAYS on Backend — the footer Continue advances to
+            // the next sub-step (no auto-advance).
         },
-        [pkg, stacks, handlers, updateState, signedIn],
+        [pkg, stacks, handlers, updateState],
     );
 
     // Persist the store-view selection so Catalog unlocks (shared env-var keys).
@@ -226,33 +235,10 @@ export function CommerceStep({
         [updateState],
     );
 
-    const storeViewChosen = state.commerceStoreViewChosen === true;
-
-    // Auto-advance: store view chosen → Catalog; sign-in done → Connection (ACCS).
-    useEffect(() => {
-        if (storeViewChosen) setActiveStep('catalog');
-    }, [storeViewChosen]);
-
-    useEffect(() => {
-        if (signedIn) {
-            setActiveStep(current => (current === 'signin' ? 'connection' : current));
-        }
-    }, [signedIn]);
-
-    // Continue gate derives from persisted state (primitive boolean only).
+    // Continue gate derives from persisted state (primitive boolean only). The
+    // step's BuildYourProjectStep parent owns the REAL per-sub-step gate via the
+    // footer; this NO-OP-backed call is harmless (parent passes a no-op setter).
     useCanProceedAll([isCommerceConfigured(state)], setCanProceed);
-
-    // Save & continue: mark the section done (via persisted validity) + advance.
-    const handleSaveAndContinue = useCallback(
-        (from: CommerceSectionId) => {
-            if (from === 'connection') {
-                updateState({ commerceConnectValid: true });
-            }
-            const next = nextOpenableSection(sectionStates, from);
-            if (next) setActiveStep(next);
-        },
-        [sectionStates, updateState],
-    );
 
     const pkgName = pkg?.name ?? '';
 
@@ -304,7 +290,6 @@ export function CommerceStep({
                 onBackendSelect: handleBackendSelect,
                 state,
                 updateState,
-                onSaveAndContinue: handleSaveAndContinue,
                 configForm,
             }),
         [
@@ -314,7 +299,6 @@ export function CommerceStep({
             pkgName,
             handleBackendSelect,
             updateState,
-            handleSaveAndContinue,
             configForm,
         ],
     );
@@ -325,7 +309,10 @@ export function CommerceStep({
         return null;
     }, [selectedStack, state.selectedBackend]);
 
-    const summaryRows = useMemo(() => buildSummaryRows(sectionStates), [sectionStates]);
+    const summaryRows = useMemo(
+        () => buildSummaryRows(sectionStates, state.committedCommerceSteps),
+        [sectionStates, state.committedCommerceSteps],
+    );
 
     return (
         <TwoColumnLayout

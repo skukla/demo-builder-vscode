@@ -32,6 +32,7 @@ import { PageHeader, PageFooter } from '@/core/ui/components/layout';
 import { TimelineNav, TimelineStep } from '@/core/ui/components/TimelineNav';
 import { useFocusTrap } from '@/core/ui/hooks';
 import { cn } from '@/core/ui/utils/classNames';
+import { markStepCompleted, clearCompletedFrom } from '@/core/ui/utils/stepCompletion';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -42,17 +43,47 @@ import { StorefrontSetupStep } from '@/features/eds/ui/steps/StorefrontSetupStep
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
 import { buildYourProjectAreas } from '@/features/project-creation/ui/steps/buildYourProjectAreas';
 import { BuildYourProjectStep } from '@/features/project-creation/ui/steps/BuildYourProjectStep';
+import {
+    commerceSectionStates,
+    firstOpenSection,
+    nextSubStep,
+    prevSubStep,
+    type CommerceSectionState,
+} from '@/features/project-creation/ui/steps/commerceSections';
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
 import { ReviewStep } from '@/features/project-creation/ui/steps/ReviewStep';
+import { isAdobeSignedIn } from '@/features/project-creation/ui/steps/tileStatus';
 import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
-import { ComponentSelection } from '@/types/webview';
+import { ComponentSelection, type CommerceSectionId, type WizardState } from '@/types/webview';
 
 // Extracted hooks
 
 const log = webviewLogger('WizardContainer');
+
+/** The ACCS backend id; its stacks add the contextual Adobe sign-in sub-step. */
+const ACCS_BACKEND = 'adobe-commerce-accs';
+
+/** Build area id for the Commerce area (the only sub-stepped area). */
+const COMMERCE_AREA = 'commerce';
+
+/** The ordered Commerce sub-step states for the current wizard state. */
+function commerceSubSteps(state: WizardState): CommerceSectionState[] {
+    return commerceSectionStates(state, {
+        isAccs: state.selectedBackend === ACCS_BACKEND,
+        signedIn: isAdobeSignedIn(state),
+    });
+}
+
+/** The active Commerce sub-step id (persisted, falling back to the first openable). */
+function activeCommerceSubStep(
+    state: WizardState,
+    sections: CommerceSectionState[],
+): CommerceSectionId {
+    return state.activeCommerceStep ?? firstOpenSection(sections);
+}
 
 // Re-export for consumers that import from WizardContainer
 export type { ImportedSettings, EditProjectConfig };
@@ -348,26 +379,79 @@ export function WizardContainer({
     const activeAreaId = state.activeBuildArea ?? buildAreas[0]?.id;
     const activeAreaIndex = buildAreas.findIndex(a => a.id === activeAreaId);
 
-    // Area-aware navigation: Continue steps to the next visible area until the
-    // last one, then advances the wizard step. Back steps to the previous area
-    // until the first one, then goes back a wizard step.
+    // The footer Continue/Back is the single LINEAR driver: it walks SUB-STEPS
+    // (within the Commerce area) → AREAS → wizard steps. The Commerce area is the
+    // only sub-stepped area; its ordered sub-steps + the active one come from state.
+    const commerceActive = onBuildStep && activeAreaId === COMMERCE_AREA;
+    const subSteps = commerceActive ? commerceSubSteps(state) : [];
+    const activeSub = commerceActive ? activeCommerceSubStep(state, subSteps) : null;
+    const nextSub = activeSub ? nextSubStep(subSteps, activeSub) : null;
+    const prevSub = activeSub ? prevSubStep(subSteps, activeSub) : null;
+
+    /** When Continue/Back lands on the Commerce area, pin its FIRST/LAST sub-step. */
+    const commerceEntryStep = (toAreaId: string | undefined, atEnd: boolean):
+        Partial<WizardState> => {
+        if (toAreaId !== COMMERCE_AREA) return {};
+        const sections = commerceSubSteps(state);
+        const id = atEnd ? sections[sections.length - 1]?.id : firstOpenSection(sections);
+        return id ? { activeCommerceStep: id } : {};
+    };
+
+    // Continue: next Commerce sub-step → next visible area (resetting the Commerce
+    // sub-step when entering it) → next wizard step. Pressing Continue COMMITS the
+    // current Commerce sub-step — that (not mere form validity) is what flips its
+    // summary row to done, so an auto-detected value never shows ✓ on its own.
     const handleNext = () => {
-        if (onBuildStep && activeAreaIndex >= 0 && activeAreaIndex < buildAreas.length - 1) {
-            updateState({ activeBuildArea: buildAreas[activeAreaIndex + 1].id });
+        const commit: Partial<WizardState> =
+            commerceActive && activeSub
+                ? { committedCommerceSteps: markStepCompleted(state.committedCommerceSteps, activeSub) }
+                : {};
+        if (commerceActive && nextSub) {
+            updateState({ ...commit, activeCommerceStep: nextSub });
             return;
+        }
+        if (onBuildStep && activeAreaIndex >= 0 && activeAreaIndex < buildAreas.length - 1) {
+            const next = buildAreas[activeAreaIndex + 1];
+            updateState({ ...commit, activeBuildArea: next.id, ...commerceEntryStep(next.id, false) });
+            return;
+        }
+        if (Object.keys(commit).length > 0) {
+            updateState(commit);
         }
         void goNext();
     };
+    // Back: previous Commerce sub-step → previous visible area (entering Commerce at
+    // its LAST sub-step) → previous wizard step.
     const handleBack = () => {
+        if (commerceActive && prevSub) {
+            // Match the main timeline: stepping BACK un-commits the target sub-step
+            // and everything after it, so its summary ✓ clears until re-Continued.
+            const order = subSteps.map(s => s.id);
+            updateState({
+                activeCommerceStep: prevSub,
+                committedCommerceSteps: clearCompletedFrom(
+                    state.committedCommerceSteps,
+                    order,
+                    prevSub,
+                    order.indexOf(prevSub),
+                ),
+            });
+            return;
+        }
         if (onBuildStep && activeAreaIndex > 0) {
-            updateState({ activeBuildArea: buildAreas[activeAreaIndex - 1].id });
+            const prev = buildAreas[activeAreaIndex - 1];
+            updateState({ activeBuildArea: prev.id, ...commerceEntryStep(prev.id, true) });
             return;
         }
         goBack();
     };
 
-    // Back is available when there is a previous wizard step OR a previous area.
-    const canGoBack = currentStepIndex > 0 || (onBuildStep && activeAreaIndex > 0);
+    // Back is available when there is a previous wizard step, a previous area, OR a
+    // previous Commerce sub-step.
+    const canGoBack =
+        currentStepIndex > 0 ||
+        (onBuildStep && activeAreaIndex > 0) ||
+        Boolean(prevSub);
 
     const handleTimelineStepClick = (targetIndex: number) => {
         const targetStep = WIZARD_STEPS[targetIndex];
@@ -477,6 +561,10 @@ export function WizardContainer({
                                 </Flex>
                             }
                             constrainWidth={true}
+                            // On the full-width Build Your Project step, align the
+                            // footer actions to the center step-view column (inset by
+                            // the nav + summary widths) — see .footer-build-step.
+                            className={onBuildStep ? 'footer-build-step' : undefined}
                         />
                     )}
 

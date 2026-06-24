@@ -15,8 +15,9 @@
  * render helper, and the DOM-contract query helpers.
  */
 
-import { render } from '@testing-library/react';
+import { render, act } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
+import React from 'react';
 import { CommerceStep } from '@/features/project-creation/ui/steps/CommerceStep';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
@@ -117,36 +118,59 @@ export function baseState(initial: Partial<WizardState> = {}): WizardState {
     } as WizardState;
 }
 
-/** Render the step with a controlled, mutable WizardState (Spectrum-wrapped). */
+/**
+ * Render the step inside a stateful host so `updateState` re-renders the step
+ * (mirroring the real wizard: updateState → state change → re-render). The step
+ * now derives its active sub-step from `state.activeCommerceStep`, so a tab
+ * click (which calls `updateState`) must flow back through state to take effect.
+ *
+ * `stateRef` exposes the latest state; `setExternalState` (and the returned
+ * `rerender`, kept for callers that simulate external state changes) lets a test
+ * push a new state object from outside (e.g. a sign-in completing).
+ */
 export function setup(initial: Partial<WizardState> = {}) {
     const stateRef = { current: baseState(initial) };
-    const updateState = jest.fn((partial: Partial<WizardState>) => {
-        stateRef.current = { ...stateRef.current, ...partial };
-    });
     const setCanProceed = jest.fn();
+    let setHostState: (s: WizardState) => void = () => {};
 
-    const renderUi = () => (
-        <Provider theme={defaultTheme}>
-            <CommerceStep
-                state={stateRef.current}
-                updateState={updateState}
-                setCanProceed={setCanProceed}
-                packages={PACKAGES}
-                stacks={STACKS}
-            />
-        </Provider>
-    );
+    const updateState = jest.fn((partial: Partial<WizardState>) => {
+        const next = { ...stateRef.current, ...partial };
+        stateRef.current = next;
+        act(() => setHostState(next));
+    });
 
-    const utils = render(renderUi());
-    const rerender = () => utils.rerender(renderUi());
+    const Host: React.FC = () => {
+        const [hostState, setState] = React.useState<WizardState>(stateRef.current);
+        setHostState = setState;
+        // Keep the ref in sync with what the host actually renders.
+        stateRef.current = hostState;
+        return (
+            <Provider theme={defaultTheme}>
+                <CommerceStep
+                    state={hostState}
+                    updateState={updateState}
+                    setCanProceed={setCanProceed}
+                    packages={PACKAGES}
+                    stacks={STACKS}
+                />
+            </Provider>
+        );
+    };
+
+    const utils = render(<Host />);
+    // Push a brand-new state object from outside (simulates the wizard updating
+    // state, e.g. a sign-in completing) so the host re-renders.
+    const rerender = () => act(() => setHostState({ ...stateRef.current }));
 
     return { ...utils, rerender, updateState, setCanProceed, stateRef };
 }
 
 // ---------------------------------------------------------------------------
 // DOM contract helpers (VerticalStepList + CommerceSummary render for real).
-// A step's button is `[data-step="<id>"]` (aria-disabled="true" when locked); the
-// active step's body lives in `.step-view`.
+// A step's button is `[data-step="<id>"]` with its status on `data-status`; only
+// REACHED steps (done/current) are clickable — `upcoming`/`locked` are aria-disabled,
+// so `data-status` (not aria-disabled) is the locked discriminator. The active step's
+// body lives in `.step-view`.
 // ---------------------------------------------------------------------------
 
 /** The step button for a step (by its stable data-step id). */
@@ -156,9 +180,14 @@ export function stepTab(id: string): HTMLButtonElement {
     return el as HTMLButtonElement;
 }
 
-/** Whether a step's tab is locked (aria-disabled). */
+/**
+ * Whether a step's tab is LOCKED (gated) — distinct from merely non-clickable.
+ * Reads `data-status="locked"` (the real status), NOT `aria-disabled`: since
+ * `upcoming` (ahead) steps are now also `aria-disabled`/out of the tab order, the
+ * aria attribute no longer distinguishes a locked step from an upcoming one.
+ */
 export function isLocked(id: string): boolean {
-    return stepTab(id).getAttribute('aria-disabled') === 'true';
+    return stepTab(id).getAttribute('data-status') === 'locked';
 }
 
 /** The dedicated active-step view container. */

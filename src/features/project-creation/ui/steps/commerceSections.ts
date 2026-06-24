@@ -21,15 +21,10 @@
 
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
-import type { WizardState } from '@/types/webview';
+import type { CommerceSectionId, WizardState } from '@/types/webview';
 
 /** The ordered Commerce section ids (sign-in is conditional — ACCS gate only). */
-export type CommerceSectionId =
-    | 'backend'
-    | 'signin'
-    | 'connection'
-    | 'business-structure'
-    | 'catalog';
+export type { CommerceSectionId };
 
 /** Completion / lock status of a Commerce section (no open/active highlight). */
 export type CommerceSectionStatus = 'current' | 'done' | 'upcoming' | 'locked';
@@ -151,8 +146,9 @@ export function availableBackendsForPackage(stacks: Stack[], pkg: DemoPackage): 
 /**
  * The ordered Commerce section-state model (completion / lock status only).
  *
- * Transcribed from the prototype renderCommerce(): backend done once chosen; the
- * ACCS sign-in gate (when not signed in) locks the three config sections; catalog
+ * Transcribed from the prototype renderCommerce(): backend done once chosen; for
+ * ACCS the Sign-in sub-step PERSISTS (current until signed in, then done with the
+ * org name) and, while not signed in, locks the three config sections; catalog
  * stays locked until a store view is chosen.
  *
  * @param state - Wizard state (persisted selections + validity verdicts)
@@ -174,16 +170,122 @@ export function commerceSectionStates(
             : { id: 'backend', status: 'current' },
     ];
 
-    if (gated) {
-        sections.push({ id: 'signin', status: 'current' });
+    // The Sign-in sub-step PERSISTS for ACCS (it never gets omitted on sign-in):
+    // `current` until signed in, then `done` carrying the org name. Persisting it
+    // keeps a step for AdobeAuthStep's "Connected" result and lets the footer's
+    // sub-step walk reach Connection next (omitting it broke nextSubStep('signin')).
+    if (ctx.isAccs) {
+        sections.push(
+            ctx.signedIn
+                ? { id: 'signin', status: 'done', value: state.adobeOrg?.name ?? 'Signed in' }
+                : { id: 'signin', status: 'current' },
+        );
     }
 
-    const lockedReason = gated ? 'Sign in to Adobe first' : undefined;
-    sections.push(configSection('connection', connectionDone, gated, lockedReason));
-    sections.push(configSection('business-structure', storeViewChosen, gated, lockedReason));
-    sections.push(catalogSection(state, gated));
+    const signinReason = gated ? 'Sign in to Adobe first' : undefined;
+    sections.push(configSection('connection', connectionDone, gated, signinReason, 'Connected'));
+
+    // Config steps chain: Business Structure unlocks only once Connection is done
+    // (store views are discovered THROUGH the connection), and Catalog only once a
+    // store view is chosen. Without this, a package-seeded store-view code would
+    // make Business Structure show `done` before Connection is even attempted.
+    let businessReason: string | undefined;
+    if (gated) businessReason = 'Sign in to Adobe first';
+    else if (!connectionDone) businessReason = 'Connect to Commerce first';
+    // A general "Selected" label (parallels Connection's "Connected" / Catalog's
+    // "Configured") rather than the raw store-view code — the summary recaps THAT it's
+    // done, not the specific value.
+    sections.push(
+        configSection(
+            'business-structure',
+            storeViewChosen,
+            gated || !connectionDone,
+            businessReason,
+            'Selected',
+        ),
+    );
+    sections.push(catalogSection(state, gated, connectionDone));
 
     return sections;
+}
+
+/**
+ * The section to open first: the first `current` section, else the first
+ * openable (non-done, non-locked) one, else the last section.
+ *
+ * @param sectionStates - Ordered section states from commerceSectionStates
+ * @returns the id of the section to open
+ */
+export function firstOpenSection(sectionStates: CommerceSectionState[]): CommerceSectionId {
+    const current = sectionStates.find(s => s.status === 'current');
+    if (current) return current.id;
+    const openable = sectionStates.find(s => s.status !== 'done' && s.status !== 'locked');
+    if (openable) return openable.id;
+    return sectionStates[sectionStates.length - 1].id;
+}
+
+/**
+ * The next sub-step id in DISPLAY order after `current`, or null at the end (or
+ * when `current` is not among the displayed sections).
+ *
+ * @param sectionStates - Ordered section states from commerceSectionStates
+ * @param current - The active sub-step id
+ * @returns the next displayed id, or null
+ */
+export function nextSubStep(
+    sectionStates: CommerceSectionState[],
+    current: CommerceSectionId,
+): CommerceSectionId | null {
+    const idx = sectionStates.findIndex(s => s.id === current);
+    if (idx < 0 || idx >= sectionStates.length - 1) return null;
+    return sectionStates[idx + 1].id;
+}
+
+/**
+ * The previous sub-step id in DISPLAY order before `current`, or null at the
+ * start (or when `current` is not among the displayed sections).
+ *
+ * @param sectionStates - Ordered section states from commerceSectionStates
+ * @param current - The active sub-step id
+ * @returns the previous displayed id, or null
+ */
+export function prevSubStep(
+    sectionStates: CommerceSectionState[],
+    current: CommerceSectionId,
+): CommerceSectionId | null {
+    const idx = sectionStates.findIndex(s => s.id === current);
+    if (idx <= 0) return null;
+    return sectionStates[idx - 1].id;
+}
+
+/**
+ * Whether a single Commerce sub-step's done-condition is satisfied (the per-step
+ * gate used by the footer Continue): Backend → a backend is chosen; Sign in →
+ * signed in; Connection → the connect form reported valid; Business Structure →
+ * a store view was chosen; Catalog → always (terminal).
+ *
+ * @param state - Wizard state (persisted selections + validity verdicts)
+ * @param stepId - The sub-step to evaluate
+ * @param ctx - isAccs / signedIn flags
+ * @returns true when the sub-step is complete
+ */
+export function isCommerceStepComplete(
+    state: WizardState,
+    stepId: CommerceSectionId,
+    ctx: CommerceSectionContext,
+): boolean {
+    switch (stepId) {
+        case 'backend':
+            return Boolean(state.selectedBackend);
+        case 'signin':
+            return ctx.signedIn;
+        case 'connection':
+            return state.commerceConnectValid === true;
+        case 'business-structure':
+            return state.commerceStoreViewChosen === true;
+        case 'catalog':
+            return true;
+    }
 }
 
 /** A config section whose `done` is a single boolean (connection / business). */
@@ -192,16 +294,31 @@ function configSection(
     done: boolean,
     gated: boolean,
     lockReason: string | undefined,
+    value?: string,
 ): CommerceSectionState {
     if (gated) return { id, status: 'locked', lockReason };
-    return { id, status: done ? 'done' : 'upcoming' };
+    // The done value populates the summary row; without it the row reads "Not set".
+    return { id, status: done ? 'done' : 'upcoming', value: done ? value : undefined };
 }
 
-/** The catalog section: locked until a store view is chosen, then done/upcoming. */
-function catalogSection(state: WizardState, gated: boolean): CommerceSectionState {
+/**
+ * The catalog section: locked until Connection is done and a store view is
+ * chosen (the config-step chain), then done/upcoming.
+ */
+function catalogSection(
+    state: WizardState,
+    gated: boolean,
+    connectionDone: boolean,
+): CommerceSectionState {
     if (gated) return { id: 'catalog', status: 'locked', lockReason: 'Sign in to Adobe first' };
+    if (!connectionDone) {
+        return { id: 'catalog', status: 'locked', lockReason: 'Connect to Commerce first' };
+    }
     if (state.commerceStoreViewChosen !== true) {
         return { id: 'catalog', status: 'locked', lockReason: 'Choose a store view first' };
     }
-    return { id: 'catalog', status: 'upcoming' };
+    // Catalog is terminal — it has no required input of its own (the catalog service
+    // is configured off the chosen store), so once unlocked it reads as done. This is
+    // why the summary can show it ✓ as soon as a store view is chosen.
+    return { id: 'catalog', status: 'done', value: 'Configured' };
 }

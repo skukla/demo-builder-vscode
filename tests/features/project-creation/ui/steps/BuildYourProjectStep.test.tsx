@@ -144,25 +144,78 @@ describe('BuildYourProjectStep — active-area routing', () => {
     });
 });
 
-describe('BuildYourProjectStep — Continue gate over the CURRENT area', () => {
-    // Area progression now walks the areas one at a time via the wizard's
-    // Continue/Back; the STEP gates Continue on the ACTIVE area's completion so
-    // you can't leave an incomplete required area (commerce/storefront), while
-    // the optional area (integrations) is always passable.
+describe('BuildYourProjectStep — Continue gate over the CURRENT Commerce SUB-STEP', () => {
+    // The Commerce area is walked SUB-STEP by SUB-STEP via the wizard's
+    // Continue/Back; the STEP gates Continue on the ACTIVE Commerce sub-step's
+    // done-condition (Backend → a backend chosen; Sign in → signed in; Connection →
+    // connect valid; Business → store view chosen; Catalog → always). Non-commerce
+    // areas keep their area-complete/optional gate.
 
-    it('is false when the active area (commerce) is not configured', () => {
+    it('is false on the Backend sub-step until a backend is chosen', () => {
+        // activeCommerceStep unset → firstOpenSection lands on backend (current).
         const { setCanProceed } = setup({ selectedStack: 'eds-paas' });
         expect(setCanProceed).toHaveBeenLastCalledWith(false);
     });
 
-    it('is true when the active area (commerce) is configured', () => {
+    it('is true on the Backend sub-step once a backend is chosen', () => {
         const { setCanProceed } = setup({
             selectedStack: 'eds-paas',
+            selectedBackend: 'adobe-commerce-paas',
+            activeCommerceStep: 'backend',
+        });
+        expect(setCanProceed).toHaveBeenLastCalledWith(true);
+    });
+
+    it('is false on the Connection sub-step until the connect form reports valid', () => {
+        const { setCanProceed } = setup({
+            selectedStack: 'eds-paas',
+            selectedBackend: 'adobe-commerce-paas',
+            activeCommerceStep: 'connection',
+        });
+        expect(setCanProceed).toHaveBeenLastCalledWith(false);
+    });
+
+    it('is true on the Connection sub-step once the connect form reports valid', () => {
+        const { setCanProceed } = setup({
+            selectedStack: 'eds-paas',
+            selectedBackend: 'adobe-commerce-paas',
+            activeCommerceStep: 'connection',
             commerceConnectValid: true,
         });
         expect(setCanProceed).toHaveBeenLastCalledWith(true);
     });
 
+    it('is false on the Sign in sub-step until signed in (ACCS)', () => {
+        const { setCanProceed } = setup({
+            selectedStack: 'eds-accs',
+            selectedBackend: 'adobe-commerce-accs',
+            activeCommerceStep: 'signin',
+        });
+        expect(setCanProceed).toHaveBeenLastCalledWith(false);
+    });
+
+    it('is true on the Sign in sub-step once signed in (ACCS)', () => {
+        const { setCanProceed } = setup({
+            selectedStack: 'eds-accs',
+            selectedBackend: 'adobe-commerce-accs',
+            activeCommerceStep: 'signin',
+            adobeAuth: { isAuthenticated: true, isChecking: false } as WizardState['adobeAuth'],
+            adobeOrg: { id: 'org-1', name: 'Org One' } as WizardState['adobeOrg'],
+        });
+        expect(setCanProceed).toHaveBeenLastCalledWith(true);
+    });
+
+    it('is true on the Catalog sub-step (terminal — always passes)', () => {
+        const { setCanProceed } = setup({
+            selectedStack: 'eds-paas',
+            selectedBackend: 'adobe-commerce-paas',
+            activeCommerceStep: 'catalog',
+        });
+        expect(setCanProceed).toHaveBeenLastCalledWith(true);
+    });
+});
+
+describe('BuildYourProjectStep — Continue gate over non-commerce areas', () => {
     it('is false when the active area is an incomplete storefront (EDS)', () => {
         const { setCanProceed } = setup({
             selectedStack: 'eds-paas',

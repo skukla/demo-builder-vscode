@@ -9,12 +9,14 @@
  * that area's EXISTING body component — {@link CommerceStep} / {@link StorefrontStep}
  * / {@link IntegrationsStep} — reused as-is.
  *
- * Areas are walked ONE AT A TIME via the wizard's Continue/Back buttons (owned by
- * {@link WizardContainer}) — there is no timeline sub-nav. The STEP gates Continue
- * on the CURRENT area's completion: required areas (commerce always; storefront
- * when visible) must be completed before you can leave them, while the optional
- * area (integrations) always passes. Because navigation is linear, per-area gating
- * enforces the all-required rule overall. Each body still persists its own validity
+ * Areas — and, within the Commerce area, SUB-STEPS — are walked ONE AT A TIME via
+ * the wizard's Continue/Back buttons (owned by {@link WizardContainer}); there is
+ * no timeline sub-nav. The STEP gates Continue on the CURRENT thing's completion:
+ * for Commerce that is the ACTIVE SUB-STEP's done-condition (Backend chosen / signed
+ * in / connect valid / store view chosen / catalog always — via
+ * {@link isCommerceStepComplete}); other areas gate on area completion (storefront
+ * required when visible; integrations optional always passes). Because navigation is
+ * linear, per-step gating enforces the all-required rule overall. Each body still persists its own validity
  * verdict to wizard state (`commerceConnectValid` / `storefrontRepoValid` /
  * edsConfig auth), which feeds {@link buildYourProjectAreas}'s status — so the gate
  * stays correct across area switches and back/forward nav. The rendered body
@@ -26,13 +28,20 @@
 
 import React, { useMemo } from 'react';
 import { buildYourProjectAreas } from './buildYourProjectAreas';
+import {
+    commerceSectionStates,
+    firstOpenSection,
+    isCommerceStepComplete,
+} from './commerceSections';
 import { CommerceStep } from './CommerceStep';
 import { IntegrationsStep } from './IntegrationsStep';
 import { StorefrontStep } from './StorefrontStep';
+import { isAdobeSignedIn } from './tileStatus';
 import { useCanProceedAll } from '@/core/ui/hooks/useCanProceed';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
+import type { WizardState } from '@/types/webview';
 import type { BaseStepProps } from '@/types/wizard';
 
 /**
@@ -44,6 +53,27 @@ const NOOP = (): void => {};
 /** Stable empty defaults for catalog/list props (avoids re-render loops). */
 const EMPTY_PACKAGES: DemoPackage[] = [];
 const EMPTY_STACKS: Stack[] = [];
+
+/** The ACCS backend id; its stacks add the contextual Adobe sign-in sub-step. */
+const ACCS_BACKEND = 'adobe-commerce-accs';
+
+/**
+ * Whether the Commerce area's CURRENT sub-step is complete (the per-sub-step
+ * Continue gate). Mirrors CommerceStep's own derivation: the active sub-step is
+ * `state.activeCommerceStep`, falling back to the first openable section.
+ *
+ * @param state - Wizard state (persisted selections + validity verdicts)
+ * @returns true when the active Commerce sub-step's done-condition is satisfied
+ */
+function canLeaveCommerceSubStep(state: WizardState): boolean {
+    const ctx = {
+        isAccs: state.selectedBackend === ACCS_BACKEND,
+        signedIn: isAdobeSignedIn(state),
+    };
+    const sectionStates = commerceSectionStates(state, ctx);
+    const activeStep = state.activeCommerceStep ?? firstOpenSection(sectionStates);
+    return isCommerceStepComplete(state, activeStep, ctx);
+}
 
 export interface BuildYourProjectStepProps extends BaseStepProps {
     /** Available demo packages (catalog data, forwarded to area bodies). */
@@ -83,14 +113,18 @@ export function BuildYourProjectStep({
     // Active area: the persisted one if it's still visible, else the first visible.
     const activeArea = areas.find(a => a.id === state.activeBuildArea) ?? areas[0];
 
-    // Continue gate over the CURRENT area. Areas are walked one at a time via the
-    // wizard's Continue/Back (WizardContainer), so gating the active area enforces
-    // the all-required rule linearly: you can't leave an incomplete required area
-    // (commerce/storefront), while the optional area (integrations) always passes.
-    // Primitive boolean only (re-render-loop guard).
+    // Continue gate over the CURRENT step. Areas — and, within Commerce, SUB-STEPS —
+    // are walked one at a time via the wizard's Continue/Back (WizardContainer), so
+    // gating the active step enforces the all-required rule linearly. For the
+    // Commerce area the gate is the ACTIVE SUB-STEP's done-condition; other areas
+    // keep their area-complete (or optional) gate. Primitive boolean only
+    // (re-render-loop guard).
     const activeAreaId = activeArea?.id;
     const activeOptional = activeAreaId === 'integrations';
-    const canLeaveArea = activeOptional || activeArea?.status === 'completed';
+    const canLeaveArea =
+        activeAreaId === 'commerce'
+            ? canLeaveCommerceSubStep(state)
+            : activeOptional || activeArea?.status === 'completed';
     useCanProceedAll([canLeaveArea], setCanProceed);
 
     // Body props shared by every area. The active body gets a NO-OP setCanProceed

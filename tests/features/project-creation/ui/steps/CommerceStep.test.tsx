@@ -250,6 +250,38 @@ describe('CommerceStep (v7 tabs + dedicated views)', () => {
         });
     });
 
+    describe('summary — commit gating (✓ only after Continue, not on mere validity)', () => {
+        // "Business" is the summary label (the step list says "Business Structure"),
+        // so getByText('Business') unambiguously targets the summary row.
+        const businessRow = () => screen.getByText('Business').closest('.sum-row');
+
+        const validState: Partial<WizardState> = {
+            selectedPackage: 'buildright',
+            selectedBackend: PAAS,
+            selectedStack: 'eds-paas',
+            commerceConnectValid: true,
+            commerceStoreViewChosen: true,
+            componentConfigs: {
+                'adobe-commerce': { [PAAS_STORE_VIEW_CODE]: 'default' },
+            } as unknown as ComponentConfigs,
+        };
+
+        it('keeps a VALID-but-uncommitted Business row at "Not set"', () => {
+            setup({ ...validState, committedCommerceSteps: [] });
+            expect(businessRow()).toHaveTextContent(/not set/i);
+            expect(businessRow()).not.toHaveClass('done');
+        });
+
+        it('shows ✓ + the general "Selected" value once Business is committed', () => {
+            setup({
+                ...validState,
+                committedCommerceSteps: ['connection', 'business-structure'],
+            });
+            expect(businessRow()).toHaveTextContent('Selected');
+            expect(businessRow()).toHaveClass('done');
+        });
+    });
+
     describe('dedicated view — active step content + persistence passthrough', () => {
         it('should render the config form in the dedicated view when a config step is active', () => {
             setup({ selectedPackage: 'buildright', selectedBackend: PAAS, selectedStack: 'eds-paas' });
@@ -260,7 +292,15 @@ describe('CommerceStep (v7 tabs + dedicated views)', () => {
         });
 
         it('should switch the active view + flip the section when another config tab is clicked', () => {
-            setup({ selectedPackage: 'buildright', selectedBackend: PAAS, selectedStack: 'eds-paas' });
+            // Connection + business done (store view chosen) so business-structure is a
+            // REACHED tab the user can click BACK to — the active step opens on catalog.
+            setup({
+                selectedPackage: 'buildright',
+                selectedBackend: PAAS,
+                selectedStack: 'eds-paas',
+                commerceConnectValid: true,
+                commerceStoreViewChosen: true,
+            });
             fireEvent.click(stepTab('business-structure'));
             const panel = screen.getByTestId('connect-store-panel');
             expect(stepView()).toContainElement(panel);
@@ -280,8 +320,12 @@ describe('CommerceStep (v7 tabs + dedicated views)', () => {
                 selectedStack: 'eds-paas',
                 storeDiscoveryData,
                 componentConfigs,
+                // Connection + business done so business-structure is a REACHED tab the
+                // user can click BACK to (active opens on catalog).
+                commerceConnectValid: true,
+                commerceStoreViewChosen: true,
             });
-            // Persisted store structure + configs reach the panel in the connection step.
+            // Persisted store structure + configs reach the active config panel.
             expect(screen.getByTestId('connect-store-panel')).toHaveAttribute(
                 'data-has-store-discovery',
                 'yes',
@@ -327,10 +371,14 @@ describe('CommerceStep (v7 tabs + dedicated views)', () => {
             expect(setCanProceed.mock.calls.length).toBe(callsBefore);
         });
 
-        it('should advance from signin to connection once signed in (ACCS)', () => {
+        it('should STAY on the pinned signin step when the user signs in (no skip)', () => {
+            // PM F5: the active sub-step is PINNED to wizard state, so signing in must
+            // keep the sign-in step active (showing AdobeAuthStep's "Connected" result)
+            // — it must NOT jump to Connection on its own. Only the footer Continue moves it.
             const { rerender, stateRef } = setup({
                 selectedBackend: ACCS,
                 selectedStack: 'eds-accs',
+                activeCommerceStep: 'signin',
             });
             expect(screen.getByTestId('adobe-auth-panel')).toBeInTheDocument();
             act(() => {
@@ -341,9 +389,75 @@ describe('CommerceStep (v7 tabs + dedicated views)', () => {
                 } as WizardState;
             });
             rerender();
+            // STILL on the sign-in step — the auth panel remains and Connection has NOT
+            // taken over the view.
+            expect(screen.getByTestId('adobe-auth-panel')).toBeInTheDocument();
+            expect(screen.queryByTestId('connect-store-panel')).not.toBeInTheDocument();
+        });
+
+        it('should NOT jump to Connection on sign-in when entered via the default path (F5 repro)', () => {
+            // Default path: user picks ACCS on Backend (activeCommerceStep UNSET). The
+            // seeding effect pins it to the first openable = signin. Signing in must then
+            // STAY on signin (showing the result), NOT skip to Connection.
+            const { rerender, stateRef } = setup({
+                selectedBackend: ACCS,
+                selectedStack: 'eds-accs',
+            });
+            // Seeded to signin (first openable while gated) → auth panel shows.
+            expect(screen.getByTestId('adobe-auth-panel')).toBeInTheDocument();
+            act(() => {
+                stateRef.current = {
+                    ...stateRef.current,
+                    adobeAuth: { isAuthenticated: true, isChecking: false },
+                    adobeOrg: { id: 'org-1', name: 'Org One' },
+                } as WizardState;
+            });
+            rerender();
+            // STILL on signin — no implicit jump to Connection.
+            expect(screen.getByTestId('adobe-auth-panel')).toBeInTheDocument();
+            expect(screen.queryByTestId('connect-store-panel')).not.toBeInTheDocument();
+        });
+
+        it('should seed activeCommerceStep to the first openable step on mount when unset', () => {
+            // Fresh state (no backend, activeCommerceStep unset) → the seeding effect
+            // pins the active sub-step ONCE to the first openable (backend), so later
+            // completion changes can no longer move it via the derived fallback.
+            const { updateState } = setup({ selectedPackage: 'citisignal' });
+            expect(updateState).toHaveBeenCalledWith(
+                expect.objectContaining({ activeCommerceStep: 'backend' }),
+            );
+        });
+
+        it('should NOT re-seed activeCommerceStep when it is already set', () => {
+            // With activeCommerceStep already pinned, the seeding effect is a no-op —
+            // it must not overwrite the user's / footer's chosen sub-step.
+            const { updateState } = setup({
+                selectedBackend: ACCS,
+                selectedStack: 'eds-accs',
+                activeCommerceStep: 'signin',
+            });
+            const seededCalls = updateState.mock.calls.filter(
+                ([partial]) =>
+                    Object.prototype.hasOwnProperty.call(partial, 'activeCommerceStep'),
+            );
+            expect(seededCalls).toHaveLength(0);
+        });
+
+        it('should keep the active sub-step from state.activeCommerceStep when set', () => {
+            // Signed-in ACCS with the active sub-step pinned to business-structure and
+            // connection done → the displayed body is business-structure, derived from
+            // state (not from any auto-advance effect).
+            setup({
+                selectedBackend: ACCS,
+                selectedStack: 'eds-accs',
+                adobeAuth: { isAuthenticated: true, isChecking: false },
+                adobeOrg: { id: 'org-1', name: 'Org One' },
+                commerceConnectValid: true,
+                activeCommerceStep: 'business-structure',
+            });
             expect(screen.getByTestId('connect-store-panel')).toHaveAttribute(
                 'data-section',
-                'connection',
+                'business-structure',
             );
         });
     });

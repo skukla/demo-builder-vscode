@@ -278,7 +278,7 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
         });
     });
 
-    describe('config steps — save & continue / locks', () => {
+    describe('config steps — validity / locks (footer Continue advances)', () => {
         it('should default the active config step to connection for a committed PaaS stack', () => {
             setup({ selectedPackage: 'buildright', selectedBackend: PAAS, selectedStack: 'eds-paas' });
             expect(screen.getByTestId('connect-store-panel')).toHaveAttribute(
@@ -287,30 +287,28 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
             );
         });
 
-        it('should advance to business-structure when "Save & continue" is pressed on connection', () => {
-            const { rerender } = setup({
+        it('should NOT render an in-body "Save & continue" CTA on a config step', () => {
+            // The footer Continue (WizardContainer) advances the sub-step now; the
+            // config body renders only the form, no in-body advance button.
+            setup({ selectedPackage: 'buildright', selectedBackend: PAAS, selectedStack: 'eds-paas' });
+            expect(
+                screen.queryByRole('button', { name: /save & continue/i }),
+            ).not.toBeInTheDocument();
+        });
+
+        it('should render the active config sub-step body from state.activeCommerceStep', () => {
+            // The active sub-step is lifted to wizard state; pinning it to
+            // business-structure (connection done) shows that body directly.
+            setup({
                 selectedPackage: 'buildright',
                 selectedBackend: PAAS,
                 selectedStack: 'eds-paas',
+                commerceConnectValid: true,
+                activeCommerceStep: 'business-structure',
             });
-            // Connection is active first for a committed PaaS stack; press Save.
-            fireEvent.click(screen.getByRole('button', { name: /save & continue/i }));
-            rerender();
             expect(screen.getByTestId('connect-store-panel')).toHaveAttribute(
                 'data-section',
                 'business-structure',
-            );
-        });
-
-        it('should persist commerceConnectValid when "Save & continue" is pressed on connection', () => {
-            const { updateState } = setup({
-                selectedPackage: 'buildright',
-                selectedBackend: PAAS,
-                selectedStack: 'eds-paas',
-            });
-            fireEvent.click(screen.getByRole('button', { name: /save & continue/i }));
-            expect(updateState).toHaveBeenCalledWith(
-                expect.objectContaining({ commerceConnectValid: true }),
             );
         });
 
@@ -327,12 +325,15 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
         });
 
         it('should persist commerceStoreViewChosen when a store-view code becomes present', () => {
+            // Connection done → business-structure is the first OPEN step (active), so
+            // its body renders without needing to click ahead to a not-yet-reached tab.
             const { updateState } = setup({
                 selectedPackage: 'buildright',
                 selectedBackend: PAAS,
                 selectedStack: 'eds-paas',
+                commerceConnectValid: true,
             });
-            fireEvent.click(stepTab('business-structure'));
+            expect(stepTab('business-structure')).toHaveAttribute('aria-selected', 'true');
             fireEvent.click(screen.getByTestId('choose-store-view'));
             expect(updateState).toHaveBeenCalledWith(
                 expect.objectContaining({ commerceStoreViewChosen: true }),
@@ -340,7 +341,13 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
         });
 
         it('should keep the catalog tab locked until a store view is chosen', () => {
-            setup({ selectedPackage: 'buildright', selectedBackend: PAAS, selectedStack: 'eds-paas' });
+            // Connection done so the lock is on the store view (not the connection chain).
+            setup({
+                selectedPackage: 'buildright',
+                selectedBackend: PAAS,
+                selectedStack: 'eds-paas',
+                commerceConnectValid: true,
+            });
             expect(isLocked('catalog')).toBe(true);
             expect(stepTab('catalog')).toHaveAttribute(
                 'title',
@@ -348,31 +355,58 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
             );
         });
 
-        it('should unlock the catalog tab once a store view is chosen', () => {
+        it('should keep the catalog tab locked until connection is done (chain)', () => {
+            // A store view chosen but no connection → catalog stays locked on the
+            // connection, not the store view (config-step chain).
             setup({
                 selectedPackage: 'buildright',
                 selectedBackend: PAAS,
                 selectedStack: 'eds-paas',
                 commerceStoreViewChosen: true,
             });
+            expect(isLocked('catalog')).toBe(true);
+            expect(stepTab('catalog')).toHaveAttribute(
+                'title',
+                expect.stringMatching(/connect/i),
+            );
+        });
+
+        it('should unlock the catalog tab once connection is done and a store view is chosen', () => {
+            setup({
+                selectedPackage: 'buildright',
+                selectedBackend: PAAS,
+                selectedStack: 'eds-paas',
+                commerceConnectValid: true,
+                commerceStoreViewChosen: true,
+            });
             expect(isLocked('catalog')).toBe(false);
         });
 
-        it('should advance to catalog once a store view is chosen', () => {
+        it('should NOT auto-advance to catalog when a store view is chosen (footer drives it)', () => {
+            // Connection done → business-structure is the first OPEN (active) step, so
+            // its store-view control renders. Choosing a store view persists the flag
+            // (unlocking catalog) but must NOT auto-advance — the active sub-step stays
+            // on business-structure until the footer Continue moves it.
+            // Pin the active sub-step to business-structure so the derivation can't
+            // move it — proving there is no auto-advance EFFECT (only the footer moves it).
             const { rerender } = setup({
                 selectedPackage: 'buildright',
                 selectedBackend: PAAS,
                 selectedStack: 'eds-paas',
+                commerceConnectValid: true,
+                activeCommerceStep: 'business-structure',
             });
-            fireEvent.click(stepTab('business-structure'));
+            expect(stepTab('business-structure')).toHaveAttribute('aria-selected', 'true');
             act(() => {
                 fireEvent.click(screen.getByTestId('choose-store-view'));
             });
             rerender();
             expect(screen.getByTestId('connect-store-panel')).toHaveAttribute(
                 'data-section',
-                'catalog',
+                'business-structure',
             );
+            // Catalog is now unlocked (reachable) even though we stayed put.
+            expect(isLocked('catalog')).toBe(false);
         });
     });
 
