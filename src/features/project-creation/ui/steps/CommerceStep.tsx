@@ -316,13 +316,18 @@ export function CommerceStep({
 
     return (
         <TwoColumnLayout
-            // Full-width: let the right summary column's background reach the
-            // screen's right edge instead of the centered 1200px cap leaving an
-            // unfilled gutter. rightWidth pins the summary to a modest fixed
-            // sidebar (~320px) so the left column (nav + step-view) takes the
-            // majority of the width — the center step-view gets the bulk.
+            // Left-aligned, full-width (NOT centered): the block hugs the content
+            // area's left edge (no centered gutter) and the right summary column
+            // GROWS to fill all remaining width so its gray panel reaches the screen's
+            // right edge. The summary CONTENT is capped (.commerce-summary-content) so
+            // label↔value stay tight inside that wide panel. The LEFT (nav + step-view)
+            // is capped instead — keeping a roomy, bounded ~760px center after the
+            // ~200px nav — so the center never stretches sparse.
             maxWidth="none"
-            rightWidth="size-4000"
+            // The left-zone cap (nav + step-view) is applied via CSS from the shared
+            // --commerce-zone-max var (`.commerce-two-col .two-column-layout-left`), NOT
+            // this prop — so the footer mirrors it from one source of truth. The default
+            // leftMaxWidth's inline style is overridden by that !important rule.
             // Scopes the responsive "hide the summary once it stacks" rule (≤1180px)
             // to this layout only — other TwoColumnLayout consumers keep their summary.
             className="commerce-two-col"
@@ -350,7 +355,11 @@ export function CommerceStep({
                     </div>
                 </div>
             }
-            rightContent={<CommerceSummary architectureLabel={architectureLabel} rows={summaryRows} />}
+            rightContent={
+                <div className="commerce-summary-content">
+                    <CommerceSummary architectureLabel={architectureLabel} rows={summaryRows} />
+                </div>
+            }
         />
     );
 }

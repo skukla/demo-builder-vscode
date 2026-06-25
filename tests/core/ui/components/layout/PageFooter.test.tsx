@@ -141,6 +141,30 @@ describe('PageFooter', () => {
         });
     });
 
+    describe('commerceColumns variant', () => {
+        it('renders the mirrored [nav-spacer | actions | summary-spacer] structure', () => {
+            const { container } = renderWithProvider(
+                <PageFooter
+                    leftContent={<Button>Cancel</Button>}
+                    rightContent={<Button>Continue</Button>}
+                    commerceColumns
+                />
+            );
+
+            // The structural mirror: a capped zone (nav-spacer + actions) + a flex-grow
+            // summary spacer. Both buttons live inside the actions zone, not the grid.
+            expect(container.querySelector('.footer-cols')).toBeInTheDocument();
+            expect(container.querySelector('.footer-cols-navspacer')).toBeInTheDocument();
+            expect(container.querySelector('.footer-cols-spacer')).toBeInTheDocument();
+            const actions = container.querySelector('.footer-cols-actions');
+            expect(actions).toBeInTheDocument();
+            expect(actions).toHaveTextContent('Cancel');
+            expect(actions).toHaveTextContent('Continue');
+            // The variant supersedes the default grid container.
+            expect(container.querySelector('.footer-content-container')).not.toBeInTheDocument();
+        });
+    });
+
     describe('layout', () => {
         it('should use CSS Grid layout for left, center, and right content', () => {
             // Given: PageFooter with both left and right content

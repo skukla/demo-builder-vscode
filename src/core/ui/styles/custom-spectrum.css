@@ -621,32 +621,53 @@ button[class*="spectrum-Button"][disabled],
 .grid-align-center { justify-self: center !important; }
 .grid-align-end { justify-self: end !important; }
 
-/* Build Your Project footer: align the actions to the center step-view column.
- * That step uses a full-width 3-column layout (nav | step-view | summary), so the
- * default left-aligned 800px footer misaligns. Drop the cap and inset the footer
- * content to the step-view's CONTENT box: left = nav width (size-3000) + step-view
- * padding (size-300); right = summary width (320px) + step-view padding — each
- * minus the footer View's own size-400 padding so Cancel lands at the content's
- * left edge and Back/Continue at its right. NOTE: the summary width 320px is the
- * literal value of the project's `size-4000` JS token (TwoColumnLayout rightWidth);
- * `--spectrum-global-dimension-size-4000` is NOT a real Spectrum CSS variable, so
- * referencing it via var() makes the calc invalid and the padding is dropped — use
- * the literal. Only above the 1180 stack breakpoint (bp: two-column stack); when
- * stacked the footer keeps its default. */
-@media (min-width: 1181px) {
-    .footer-build-step .footer-content-container {
+/* Build Your Project footer (PageFooter commerceColumns variant): MIRROR the content's
+ * [nav | step-view | summary] columns so the actions track the center step-view column
+ * structurally — Cancel at its left edge, Back/Continue at its right — with the summary
+ * panel left button-free. Same flex rules + shared --commerce-* vars as the content, so
+ * the alignment holds as the columns flex (no fixed-px drift, no duplicated widths). */
+.footer-cols {
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+}
+/* Mirrors the LEFT column (nav + step-view): width:100% capped at the shared zone max. */
+.footer-cols-zone {
+    width: 100% !important;
+    max-width: var(--commerce-zone-max) !important;
+    min-width: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+}
+/* Mirrors .step-nav (fixed width) so the actions begin at the step-view's left edge. */
+.footer-cols-navspacer {
+    flex: 0 0 var(--commerce-nav-width) !important;
+}
+/* Mirrors .step-view (flex + horizontal padding): Cancel left, Back/Continue right. */
+.footer-cols-actions {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 0 var(--commerce-content-pad) !important;
+}
+/* Mirrors the flex-grow summary column, so the zone width tracks the content. */
+.footer-cols-spacer {
+    flex: 1 1 0 !important;
+}
+/* Below the two-column stack breakpoint the summary hides and the content goes
+ * full-width — collapse the spacers + uncap the zone so the footer matches. */
+@media (max-width: 1180px) {
+    .footer-cols-navspacer,
+    .footer-cols-spacer {
+        display: none !important;
+    }
+    .footer-cols-zone {
         max-width: none !important;
-        box-sizing: border-box !important;
-        padding-left: calc(
-            var(--spectrum-global-dimension-size-3000) +
-            var(--spectrum-global-dimension-size-300) -
-            var(--spectrum-global-dimension-size-400)
-        ) !important;
-        padding-right: calc(
-            320px +
-            var(--spectrum-global-dimension-size-300) -
-            var(--spectrum-global-dimension-size-400)
-        ) !important;
+    }
+    .footer-cols-actions {
+        padding: 0 !important;
     }
 }
 
@@ -733,6 +754,13 @@ button[class*="spectrum-Button"][disabled],
     flex: 1 !important;
     height: 100% !important;
     min-width: 0 !important;
+    /* Commerce builder zone widths — SINGLE SOURCE OF TRUTH shared by the content
+     * layout (.step-nav width, .step-view padding, TwoColumnLayout leftMaxWidth) AND
+     * the footer (.footer-cols*), so the footer's actions align to the center column
+     * structurally (same flex rules), not via a duplicated fixed-px calc. */
+    --commerce-nav-width: var(--spectrum-global-dimension-size-3000);   /* 240px nav */
+    --commerce-content-pad: var(--spectrum-global-dimension-size-300);  /* 24px step-view pad */
+    --commerce-zone-max: 960px;                                          /* nav + step-view cap */
 }
 
 /* --------------------------------------------------------------------------
@@ -3913,6 +3941,12 @@ div[class*="spectrum"] input[type="search"] {
  * The left nav (.step-nav = area label + vertical step list) takes its intrinsic
  * width (~200-240px); the step-view flexes to fill the rest so the choice-grid cards
  * read spacious. */
+/* Cap the LEFT column (nav + step-view) at the shared zone max — the single source
+ * of truth the footer (.footer-cols-zone) mirrors. Overrides TwoColumnLayout's inline
+ * leftMaxWidth so the cap lives in one place (CSS var), not duplicated in JS. */
+.commerce-two-col .two-column-layout-left {
+    max-width: var(--commerce-zone-max) !important;
+}
 .commerce-body {
     display: flex !important;
     flex: 1 1 auto !important;
@@ -3932,9 +3966,9 @@ div[class*="spectrum"] input[type="search"] {
     display: flex !important;
     flex-direction: column !important;
     flex: 0 0 auto !important;
-    width: var(--spectrum-global-dimension-size-3000) !important;
+    width: var(--commerce-nav-width) !important;
     box-sizing: border-box !important;
-    padding: var(--spectrum-global-dimension-size-300) !important;
+    padding: var(--commerce-content-pad) !important;
     /* Matched left panel — mirrors the summary sidebar (gray-75 fill + 1px gray-200
      * border) so the nav and summary read as symmetric panels framing the content. */
     background: var(--spectrum-global-color-gray-75) !important;
@@ -4132,7 +4166,7 @@ div[class*="spectrum"] input[type="search"] {
 .step-view {
     width: 100% !important;
     box-sizing: border-box !important;
-    padding: var(--spectrum-global-dimension-size-300) !important;
+    padding: var(--commerce-content-pad) !important;
 }
 
 /* ---- Dedicated-view per-step header (.step-view-header*) — title + one-liner ---- */
@@ -4246,6 +4280,12 @@ div[class*="spectrum"] input[type="search"] {
 }
 
 /* ---- CommerceSummary (.sum*) ---- */
+/* The summary column GROWS to fill the remaining width (its gray panel reaches the
+   screen edge), but the CONTENT is capped + left-aligned so label↔value stay tight
+   inside the wide panel instead of flinging apart. */
+.commerce-summary-content {
+    max-width: 280px !important;
+}
 .sum-title {
     font-size: var(--spectrum-global-dimension-font-size-50) !important;
     letter-spacing: 0.1em !important;

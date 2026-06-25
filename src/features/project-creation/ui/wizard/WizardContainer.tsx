@@ -561,10 +561,10 @@ export function WizardContainer({
                                 </Flex>
                             }
                             constrainWidth={true}
-                            // On the full-width Build Your Project step, align the
-                            // footer actions to the center step-view column (inset by
-                            // the nav + summary widths) — see .footer-build-step.
-                            className={onBuildStep ? 'footer-build-step' : undefined}
+                            // Build Your Project: mirror the [nav | step-view | summary]
+                            // layout so the actions align to the center column (see the
+                            // commerceColumns variant + .footer-cols*).
+                            commerceColumns={onBuildStep}
                         />
                     )}
 

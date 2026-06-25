@@ -47,6 +47,17 @@ export interface PageFooterProps {
     constrainWidth?: boolean;
     /** Additional className for the outer container */
     className?: string;
+    /**
+     * Build Your Project variant. Aligns the action buttons to the CENTER content
+     * column by MIRRORING the page's [nav | step-view | summary] layout — a nav-width
+     * spacer + a flex actions zone + a flex-grow summary spacer — using the shared
+     * `--commerce-*` CSS vars (defined on `.wizard-main-content`). `leftContent` lands
+     * at the content's left edge and `rightContent` at its right, with no buttons under
+     * the flex-grow summary panel. Because it uses the same flex rules as the content
+     * (not fixed-px math), the alignment holds as the columns flex. `centerContent` and
+     * `constrainWidth` are ignored in this variant.
+     */
+    commerceColumns?: boolean;
 }
 
 /**
@@ -67,8 +78,9 @@ export const PageFooter: React.FC<PageFooterProps> = ({
     rightContent,
     constrainWidth = true,
     className,
+    commerceColumns = false,
 }) => {
-    const footerContent = (
+    const gridContent = (
         <div className="footer-grid">
             <div className="grid-align-start">{leftContent}</div>
             <div className="grid-align-center">{centerContent}</div>
@@ -76,18 +88,37 @@ export const PageFooter: React.FC<PageFooterProps> = ({
         </div>
     );
 
+    // commerceColumns mirrors the [nav | step-view | summary] content layout so the
+    // actions align to the center column structurally; otherwise the standard grid.
+    let inner: React.ReactNode;
+    if (commerceColumns) {
+        inner = (
+            <div className="footer-cols">
+                <div className="footer-cols-zone">
+                    <div className="footer-cols-navspacer" aria-hidden="true" />
+                    <div className="footer-cols-actions">
+                        {leftContent}
+                        {rightContent}
+                    </div>
+                </div>
+                <div className="footer-cols-spacer" aria-hidden="true" />
+            </div>
+        );
+    } else if (constrainWidth) {
+        inner = <div className="footer-content-container">{gridContent}</div>;
+    } else {
+        inner = gridContent;
+    }
+
     return (
         <View
-            padding="size-400"
+            paddingY="size-400"
+            // Build variant bleeds to the edges (paddingX 0) so the footer columns line
+            // up with the content's edge-bleeding nav + full-width summary panel.
+            paddingX={commerceColumns ? 0 : 'size-400'}
             UNSAFE_className={cn('border-t', 'bg-gray-75', className)}
         >
-            {constrainWidth ? (
-                <div className="footer-content-container">
-                    {footerContent}
-                </div>
-            ) : (
-                footerContent
-            )}
+            {inner}
         </View>
     );
 };
