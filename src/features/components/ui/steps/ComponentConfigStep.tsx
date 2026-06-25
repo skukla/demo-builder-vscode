@@ -12,7 +12,7 @@ import { useConfigNavigation } from '../hooks/useConfigNavigation';
 import { useStoreDiscovery } from '../hooks/useStoreDiscovery';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
-import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
+import { ContentWithSidebar } from '@/core/ui/components/layout/ContentWithSidebar';
 import { BaseStepProps } from '@/types/wizard';
 
 // Re-export types for component consumption
@@ -129,17 +129,9 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
     };
 
     return (
-        <TwoColumnLayout
-            leftContent={
-                <div className="flex-column h-full">
-                    <Text marginBottom="size-300" UNSAFE_className="text-gray-700">
-                        Required fields are marked with an asterisk.
-                    </Text>
-
-                    {renderContent()}
-                </div>
-            }
-            rightContent={
+        <ContentWithSidebar
+            sidebarContentWidth="300px"
+            sidebar={
                 <ConfigNavigationPanel
                     serviceGroups={serviceGroups}
                     expandedNavSections={expandedNavSections}
@@ -151,6 +143,14 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                     isFieldComplete={isFieldComplete}
                 />
             }
-        />
+        >
+            <div className="flex-column h-full">
+                <Text marginBottom="size-300" UNSAFE_className="text-gray-700">
+                    Required fields are marked with an asterisk.
+                </Text>
+
+                {renderContent()}
+            </div>
+        </ContentWithSidebar>
     );
 }

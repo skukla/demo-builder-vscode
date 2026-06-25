@@ -560,16 +560,46 @@ button[class*="spectrum-Button"][disabled],
    Replace utility class combinations with meaningful names
    =========================================== */
 
-/* Page container - centers content at 800px max-width */
+/* Page container - centers content at the canonical content width */
 .page-container {
-    max-width: 800px !important;
+    max-width: var(--content-width) !important;
     margin-left: auto !important;
     margin-right: auto !important;
 }
 
+/* === Dedicated content layouts (ContentColumn / ContentWithSidebar) ===
+ * --content-width is the canonical, LEFT-ALIGNED content width shared across ALL
+ * wizard/app screens (including Commerce's nav + step-view zone) — a single source so
+ * a screen "chooses" a layout instead of re-configuring widths each time.
+ * 960 is the one app-wide content band: it fits Commerce's widest step (the Business
+ * Structure Website/Store/Store View row) so there is no per-step exception — the
+ * footer and every screen share this width. */
+:root {
+    --content-width: 960px;
+}
+.content-column {
+    width: 100% !important;
+    max-width: var(--content-width) !important;
+    box-sizing: border-box !important;
+    padding: var(--spectrum-global-dimension-size-300) !important;
+}
+/* Cap the LEFT column at the canonical width (overrides TwoColumnLayout's inline
+ * leftMaxWidth so it's single-sourced); the right column flex-grows to the screen edge
+ * (TwoColumnLayout default), with the sidebar's inner content capped by the component. */
+.content-with-sidebar .two-column-layout-left {
+    max-width: var(--content-width) !important;
+}
+
+/* ControlPanelLayout single-column fallback (no detail panel): pad the action
+ * column to match the two-column left padding (TwoColumnLayout leftPadding
+ * size-400) so the tiles still align under the masthead content. */
+.control-panel-single {
+    padding: var(--spectrum-global-dimension-size-400);
+}
+
 /* Page container with horizontal padding */
 .page-container-padded {
-    max-width: 800px !important;
+    max-width: var(--content-width) !important;
     margin-left: auto !important;
     margin-right: auto !important;
     padding-left: 16px !important;
@@ -595,7 +625,7 @@ button[class*="spectrum-Button"][disabled],
 
 /* Step container - full width with max constraint */
 .step-content-container {
-    max-width: 800px !important;
+    max-width: var(--content-width) !important;
     width: 100% !important;
     margin: 0 !important;
     padding: 20px !important;
@@ -603,7 +633,7 @@ button[class*="spectrum-Button"][disabled],
 
 /* Footer content container */
 .footer-content-container {
-    max-width: 800px !important;
+    max-width: var(--content-width) !important;
     width: 100% !important;
 }
 
@@ -620,56 +650,6 @@ button[class*="spectrum-Button"][disabled],
 .grid-align-start { justify-self: start !important; }
 .grid-align-center { justify-self: center !important; }
 .grid-align-end { justify-self: end !important; }
-
-/* Build Your Project footer (PageFooter commerceColumns variant): MIRROR the content's
- * [nav | step-view | summary] columns so the actions track the center step-view column
- * structurally — Cancel at its left edge, Back/Continue at its right — with the summary
- * panel left button-free. Same flex rules + shared --commerce-* vars as the content, so
- * the alignment holds as the columns flex (no fixed-px drift, no duplicated widths). */
-.footer-cols {
-    display: flex !important;
-    align-items: center !important;
-    width: 100% !important;
-}
-/* Mirrors the LEFT column (nav + step-view): width:100% capped at the shared zone max. */
-.footer-cols-zone {
-    width: 100% !important;
-    max-width: var(--commerce-zone-max) !important;
-    min-width: 0 !important;
-    display: flex !important;
-    align-items: center !important;
-}
-/* Mirrors .step-nav (fixed width) so the actions begin at the step-view's left edge. */
-.footer-cols-navspacer {
-    flex: 0 0 var(--commerce-nav-width) !important;
-}
-/* Mirrors .step-view (flex + horizontal padding): Cancel left, Back/Continue right. */
-.footer-cols-actions {
-    flex: 1 1 auto !important;
-    min-width: 0 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    padding: 0 var(--commerce-content-pad) !important;
-}
-/* Mirrors the flex-grow summary column, so the zone width tracks the content. */
-.footer-cols-spacer {
-    flex: 1 1 0 !important;
-}
-/* Below the two-column stack breakpoint the summary hides and the content goes
- * full-width — collapse the spacers + uncap the zone so the footer matches. */
-@media (max-width: 1180px) {
-    .footer-cols-navspacer,
-    .footer-cols-spacer {
-        display: none !important;
-    }
-    .footer-cols-zone {
-        max-width: none !important;
-    }
-    .footer-cols-actions {
-        padding: 0 !important;
-    }
-}
 
 /* Modal footer - separator with action buttons */
 .modal-footer-actions {
@@ -754,20 +734,22 @@ button[class*="spectrum-Button"][disabled],
     flex: 1 !important;
     height: 100% !important;
     min-width: 0 !important;
-    /* Commerce builder zone widths — SINGLE SOURCE OF TRUTH shared by the content
-     * layout (.step-nav width, .step-view padding, TwoColumnLayout leftMaxWidth) AND
-     * the footer (.footer-cols*), so the footer's actions align to the center column
-     * structurally (same flex rules), not via a duplicated fixed-px calc. */
-    --commerce-nav-width: var(--spectrum-global-dimension-size-3000);   /* 240px nav */
-    --commerce-content-pad: var(--spectrum-global-dimension-size-300);  /* 24px step-view pad */
-    --commerce-zone-max: 960px;                                          /* nav + step-view cap */
+    /* Commerce step tokens. Its left zone (nav + step-view) is capped at the canonical
+     * --content-width (960) — the SAME band as every other screen, not an exception. That
+     * width is what fits Commerce's widest step (the Business Structure Website / Store /
+     * Store View row, ~720 of content) after the 240 sub-nav, which is why 960 is the
+     * app-wide content width. --wizard-content-pad is content padding. */
+    --wizard-content-pad: var(--spectrum-global-dimension-size-300);  /* 24px content padding */
+    --commerce-nav-width: var(--spectrum-global-dimension-size-3000); /* 240px Commerce sub-nav */
+    --commerce-zone-max: var(--content-width);                        /* nav + step-view = app content band */
 }
+
 
 /* --------------------------------------------------------------------------
    Responsive layout: narrow-viewport adjustments for the wizard chrome and
    the shared TwoColumnLayout primitive. On a 13-14" laptop at ideal zoom
    (effective ~1280px logical width), the 280px progress rail leaves the
-   main column too narrow to fit the 800px left content + a 300px summary
+   main column too narrow to fit the 960px left content + a 300px summary
    side-by-side; the summary squeezes and its labels wrap to two and three
    lines. Two breakpoints handle this:
 
@@ -1911,6 +1893,26 @@ button[class*="spectrum-Button"][disabled],
     margin-bottom: 16px !important;
 }
 
+/* Project dashboard: left-anchored single column.
+   The shared .page-container / .page-container-padded center their content
+   (margin: auto), which on a wide editor floats the whole dashboard in the
+   middle with gaps on both sides. Scoped under .dashboard-left (the screen
+   root) we drop the centering so the column hugs the left edge — consistent
+   with the wizard's left-aligned content. The full-width header/status BANDS
+   (background + border) still span edge-to-edge; only their inner content
+   left-anchors. Left padding is normalized to size-400 (32px) so the status
+   badges, org banner, action tiles, and integrations all share the project
+   title's left edge (the title sits at the PageHeader's size-400 inset). */
+.dashboard-left .page-container,
+.dashboard-left .page-container-padded {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+.dashboard-left .page-container-padded {
+    padding-left: var(--spectrum-global-dimension-size-400) !important;
+    padding-right: var(--spectrum-global-dimension-size-400) !important;
+}
+
 /* Match the height of the Projects List search header so content aligns */
 .dashboard-status-header > div {
     min-height: 122px !important;
@@ -1918,45 +1920,50 @@ button[class*="spectrum-Button"][disabled],
     align-items: center !important;
 }
 
-/* Dashboard action-tile geometry. The content width is DERIVED from the tile
-   size + gap (not a hand-typed magic number), sized to the widest action row
-   (4 tiles: the Build row, and the Primary+Storefront clusters which sum to
-   the same width). The status header uses the same width so its badges
-   left-align with the title and "All Projects" right-aligns with the rightmost
-   tile. Change the tile size/gap and everything re-derives. */
+/* Dashboard action-tile geometry. Only the tile size + inter-cluster gaps are
+   tokens now — the dashboard no longer derives a bespoke content width. Every
+   block (status header, org banner, integrations) shares the standard --content-width
+   band like the rest of the app; the action tiles are intrinsically small and
+   simply sit left within that band (a compact cluster, the way a short wizard
+   form doesn't stretch to fill the column). */
 :root {
     --dashboard-tile-size: 96px;
     --dashboard-tile-gap: 16px;
     /* Extra breathing room between the Primary and Storefront clusters in row 1
        so they read as two distinct groups rather than one row of four. */
     --dashboard-cluster-gap: 40px;
-    /* Widest action row wins, so the status header right-aligns to the rightmost
-       tile. Candidates: the Build row (4 tiles) and the EDS row-1 clusters
-       (2 + 2 tiles separated by the cluster gap). Derived — no magic number. */
-    --dashboard-content-width: max(
-        calc(4 * var(--dashboard-tile-size) + 3 * var(--dashboard-tile-gap)),
-        calc(2 * (2 * var(--dashboard-tile-size) + var(--dashboard-tile-gap)) + var(--dashboard-cluster-gap))
-    );
 }
 
-/* Status header spans the action-zone width, left-aligned (matches the title's
-   left edge); the inner flex pushes "All Projects" to the right edge. */
+/* Status header spans the standard content band (its padded container), badges
+   left-aligned with the title; the inner flex pushes "All Projects" to the right
+   edge — a header-row pattern (content left, action right). */
 .dashboard-status-content {
-    width: var(--dashboard-content-width);
+    width: 100%;
     margin: 0;
 }
 
-/* Dashboard status grid - align labels and values across rows */
+/* Dashboard status — the badge row plus the "View AI Capabilities" link below it. */
 .dashboard-status-grid {
-    display: grid !important;
-    grid-template-columns: auto auto 1fr !important;
-    align-items: center !important;
-    row-gap: 4px !important;
-    column-gap: 8px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
 }
 
-.dashboard-status-grid .status-row {
-    display: contents !important;
+/* Badges in a single horizontal row (wrap only if the band is too narrow) so they
+   use the masthead's width instead of stacking into three rows. */
+.dashboard-status-badges {
+    display: flex !important;
+    flex-flow: row wrap !important;
+    align-items: center !important;
+    column-gap: 28px !important;
+    row-gap: 4px !important;
+}
+
+/* Each badge is a self-contained inline unit: dot · label · value (· action). */
+.dashboard-status-badges .status-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
 }
 
 /* Dashboard status badges - match card grid style */
@@ -1986,8 +1993,8 @@ button[class*="spectrum-Button"][disabled],
 
 /* Org-mismatch banner — a dark, accent-bordered warning card that matches the
    dashboard's bordered-tile attention idiom (cf. the Delete tile's accent
-   border) while calling attention. Aligned to the action-zone column, below the
-   status header. */
+   border) while calling attention. Spans the standard content band (like the
+   status header and integrations), below the status header. */
 /* Fade + slight rise so the notice eases in after the org check resolves,
    instead of popping in. Disabled under prefers-reduced-motion (reset.css). */
 @keyframes org-context-fade-in {
@@ -1997,7 +2004,6 @@ button[class*="spectrum-Button"][disabled],
 
 .dashboard-org-banner {
     width: 100%;
-    max-width: 800px;
     margin: 0 0 16px;
     display: flex;
     align-items: center;
@@ -2047,17 +2053,18 @@ button[class*="spectrum-Button"][disabled],
     margin-right: 6px;
 }
 
-/* Stacked, labeled rows + isolated delete footer. Fixed to the derived content
-   width so the status header (same width) aligns badge-left / button-right. */
+/* Stacked, labeled rows + isolated delete footer. No fixed width — the zones
+   take their intrinsic content width and sit left within the standard band (a
+   compact action cluster); the delete divider spans that cluster, not the band. */
 .dashboard-zones {
     display: flex;
     flex-direction: column;
     gap: 24px;
-    width: var(--dashboard-content-width);
+    width: fit-content;
 }
 
-/* Row 1 lays its two clusters (Primary + Storefront) side by side. Wraps only
-   if the viewport is too narrow. */
+/* The action row lays its groups (Primary + Storefront + Build) side by side.
+   Wraps only if the viewport is too narrow. */
 .dashboard-zone-row {
     display: flex;
     flex-flow: row wrap;
@@ -2807,7 +2814,7 @@ button[class*="spectrum-Button"][disabled],
    =========================================== */
 .welcome-step-container {
     padding: 20px !important;
-    max-width: 800px !important;
+    max-width: var(--content-width) !important;
     margin: 0 auto !important;
     width: 100% !important;
 }
@@ -2914,7 +2921,7 @@ button[class*="spectrum-Button"][disabled],
    Container Patterns
    =========================================== */
 .container-wizard {
-    max-width: 800px !important;
+    max-width: var(--content-width) !important;
     width: 100% !important;
     margin: 0 !important;
     padding: 24px !important;
@@ -3872,7 +3879,7 @@ div[class*="spectrum"] input[type="search"] {
    max-width keeps the rows readable; size-400 padding matches the header. */
 .builder-overview-wrap {
     width: 100% !important;
-    max-width: 800px !important;
+    max-width: var(--content-width) !important;
     margin: 0 !important;
     padding: var(--spectrum-global-dimension-size-400) !important;
     box-sizing: border-box !important;
@@ -3941,9 +3948,9 @@ div[class*="spectrum"] input[type="search"] {
  * The left nav (.step-nav = area label + vertical step list) takes its intrinsic
  * width (~200-240px); the step-view flexes to fill the rest so the choice-grid cards
  * read spacious. */
-/* Cap the LEFT column (nav + step-view) at the shared zone max — the single source
- * of truth the footer (.footer-cols-zone) mirrors. Overrides TwoColumnLayout's inline
- * leftMaxWidth so the cap lives in one place (CSS var), not duplicated in JS. */
+/* Cap the LEFT column (nav + step-view) at the shared content-band max. Overrides
+ * TwoColumnLayout's inline leftMaxWidth so the cap lives in one place (the CSS var),
+ * not duplicated in JS. */
 .commerce-two-col .two-column-layout-left {
     max-width: var(--commerce-zone-max) !important;
 }
@@ -3968,7 +3975,7 @@ div[class*="spectrum"] input[type="search"] {
     flex: 0 0 auto !important;
     width: var(--commerce-nav-width) !important;
     box-sizing: border-box !important;
-    padding: var(--commerce-content-pad) !important;
+    padding: var(--wizard-content-pad) !important;
     /* Matched left panel — mirrors the summary sidebar (gray-75 fill + 1px gray-200
      * border) so the nav and summary read as symmetric panels framing the content. */
     background: var(--spectrum-global-color-gray-75) !important;
@@ -4166,7 +4173,7 @@ div[class*="spectrum"] input[type="search"] {
 .step-view {
     width: 100% !important;
     box-sizing: border-box !important;
-    padding: var(--commerce-content-pad) !important;
+    padding: var(--wizard-content-pad) !important;
 }
 
 /* ---- Dedicated-view per-step header (.step-view-header*) — title + one-liner ---- */

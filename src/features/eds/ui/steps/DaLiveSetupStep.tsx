@@ -157,7 +157,7 @@ export function DaLiveSetupStep({
                     title="Sign in to DA.live"
                     message="Connect your Adobe account to access DA.live content management."
                     centerMessage
-                    maxWidth="450px"
+                    maxWidth="520px"
                     actions={[
                         { label: 'Sign In to DA.live', icon: <Login size="S" />, variant: 'accent', onPress: handleSignIn },
                     ]}

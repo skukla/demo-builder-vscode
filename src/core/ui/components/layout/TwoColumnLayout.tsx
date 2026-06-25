@@ -6,7 +6,7 @@ export interface TwoColumnLayoutProps {
     leftContent: React.ReactNode;
     /** Content for the right column (sidebar/summary) */
     rightContent: React.ReactNode;
-    /** Maximum width of left column (default: '800px') - supports Spectrum tokens. */
+    /** Maximum width of left column (default: '960px', the canonical --content-width) - supports Spectrum tokens. */
     leftMaxWidth?: DimensionValue;
     /** Maximum width of the whole column pair (default: '1200px') - supports
      *  Spectrum tokens. Caps the left+right pair and centers it (`margin: 0 auto`)
@@ -26,7 +26,7 @@ export interface TwoColumnLayoutProps {
     gap?: DimensionValue;
     /** Minimum width for the right column (default: '300px') - supports Spectrum tokens.
      *  Floors the summary panel so it stays legible while the left column gives up
-     *  space first (max-width: 800px). At narrow viewports the responsive CSS in
+     *  space first (max-width: 960px). At narrow viewports the responsive CSS in
      *  custom-spectrum.css overrides this to 0 and stacks the columns vertically
      *  instead of letting the right column squeeze past readability. */
     rightMinWidth?: DimensionValue;
@@ -86,7 +86,8 @@ export interface TwoColumnLayoutProps {
 export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
     leftContent,
     rightContent,
-    leftMaxWidth = '800px' as DimensionValue,
+    // 960 mirrors the canonical CSS --content-width (DimensionValue can't take a var()).
+    leftMaxWidth = '960px' as DimensionValue,
     maxWidth = '1200px' as DimensionValue,
     leftPadding = '24px' as DimensionValue,
     rightPadding = '24px' as DimensionValue,

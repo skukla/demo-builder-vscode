@@ -298,7 +298,8 @@ function configSection(
 ): CommerceSectionState {
     if (gated) return { id, status: 'locked', lockReason };
     // The done value populates the summary row; without it the row reads "Not set".
-    return { id, status: done ? 'done' : 'upcoming', value: done ? value : undefined };
+    const summaryValue = done ? value : undefined;
+    return { id, status: done ? 'done' : 'upcoming', value: summaryValue };
 }
 
 /**

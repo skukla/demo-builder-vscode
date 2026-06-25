@@ -140,7 +140,7 @@ describe('TwoColumnLayout', () => {
       expect(flexContainer.style.gap).toBe('0');
       expect(leftColumn.style.padding).toBe('24px');
       expect(rightColumn.style.padding).toBe('24px');
-      expect(leftColumn.style.maxWidth).toBe('800px');
+      expect(leftColumn.style.maxWidth).toBe('960px');
     });
   });
 
@@ -295,7 +295,7 @@ describe('TwoColumnLayout', () => {
         />
       );
       const leftColumn = container.firstChild?.childNodes[0] as HTMLDivElement;
-      expect(leftColumn.style.maxWidth).toBe('800px');
+      expect(leftColumn.style.maxWidth).toBe('960px');
       expect(leftColumn.style.width).toBe('');
       expect(leftColumn.style.flex).toBe('');
     });
@@ -398,7 +398,7 @@ describe('TwoColumnLayout', () => {
   describe('Right Column Min-Width', () => {
     it('defaults right column min-width to 300px', () => {
       // Floors the summary panel so the left column gives up space first
-      // (max-width: 800px). Without this, the right column would shrink
+      // (max-width: 960px). Without this, the right column would shrink
       // past readability before the left would.
       const { container } = render(
         <TwoColumnLayout

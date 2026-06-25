@@ -15,7 +15,7 @@ import { useFieldFocusTracking } from './hooks/useFieldFocusTracking';
 import { useSelectedComponents } from './hooks/useSelectedComponents';
 import { useServiceGroups } from './hooks/useServiceGroups';
 import { ConfigSection } from '@/core/ui/components/forms';
-import { TwoColumnLayout, PageHeader, PageFooter } from '@/core/ui/components/layout';
+import { ContentWithSidebar, PageHeader, PageFooter } from '@/core/ui/components/layout';
 import { NavigationPanel, NavigationSection } from '@/core/ui/components/navigation';
 import { useFocusTrap } from '@/core/ui/hooks';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -595,12 +595,19 @@ export function ConfigureScreen({
                 />
 
                 {/* Content */}
-                <TwoColumnLayout
-                    leftMaxWidth="800px"
-                    leftPadding="size-300"
-                    rightPadding="size-300"
-                    gap={0}
-                    leftContent={
+                <ContentWithSidebar
+                    sidebarContentWidth="300px"
+                    sidebar={
+                        <NavigationPanel
+                            sections={navigationSections}
+                            activeSection={activeSection}
+                            activeField={activeField}
+                            expandedSections={expandedNavSections}
+                            onToggleSection={toggleNavSection}
+                            onNavigateToField={navigateToField}
+                        />
+                    }
+                >
                         <div className="flex-column h-full">
                             <Form UNSAFE_className="container-form">
                                 {/* Project Name Field */}
@@ -667,18 +674,7 @@ export function ConfigureScreen({
                                 )}
                             </Form>
                         </div>
-                    }
-                    rightContent={
-                        <NavigationPanel
-                            sections={navigationSections}
-                            activeSection={activeSection}
-                            activeField={activeField}
-                            expandedSections={expandedNavSections}
-                            onToggleSection={toggleNavSection}
-                            onNavigateToField={navigateToField}
-                        />
-                    }
-                />
+                </ContentWithSidebar>
 
                 {/* Footer */}
                 <PageFooter

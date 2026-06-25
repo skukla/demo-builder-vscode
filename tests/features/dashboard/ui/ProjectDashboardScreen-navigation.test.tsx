@@ -141,6 +141,13 @@ jest.mock('@/core/ui/components/layout', () => ({
             {subtitle && <h3>{subtitle}</h3>}
         </div>
     ),
+    ControlPanelLayout: ({ masthead, primary, secondary }: any) => (
+        <div data-testid="control-panel">
+            <div data-testid="control-panel-masthead">{masthead}</div>
+            <div data-testid="control-panel-primary">{primary}</div>
+            {secondary && <div data-testid="control-panel-secondary">{secondary}</div>}
+        </div>
+    ),
 }));
 
 // Mock dashboardPredicates

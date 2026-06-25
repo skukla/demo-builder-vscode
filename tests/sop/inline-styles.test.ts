@@ -26,6 +26,8 @@ describe('SOP: Inline Styles', () => {
         'TwoColumnLayout.tsx': 'Dynamic gap/ratio from props via translateSpectrumToken()',
         'PageLayout.tsx': 'Dynamic backgroundColor from props',
         'SingleColumnLayout.tsx': 'Dynamic gap from props via translateSpectrumToken()',
+        'ContentWithSidebar.tsx': 'Dynamic sidebar inner-content max-width from props',
+        'ControlPanelLayout.tsx': 'Dynamic secondary-panel inner-content max-width from props',
         // Components with conditional styles
         'StatusDot.tsx': 'Dynamic color/size based on props',
         'FadeTransition.tsx': 'Animation styles that must be inline for transitions',
@@ -41,9 +43,6 @@ describe('SOP: Inline Styles', () => {
 
         // Grid layouts (CSS Grid properties for complex layouts)
         'ReviewStep.tsx': 'CSS Grid layout for two-column review summary',
-
-        // Dashboard link positioning
-        'ProjectDashboardScreen.tsx': 'Spectrum UNSAFE_style for auth link margin',
 
         // Modal/dialog layout stability (GitHubAppInstallModal, extracted from the
         // former GitHubRepoSelectionStep into the RepoSelectionInline helpers)

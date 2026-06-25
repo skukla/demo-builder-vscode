@@ -51,7 +51,7 @@ function SuccessContent({ isOpeningProject }: {
 
     return (
         <CenteredFeedbackContainer>
-            <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
+            <Flex direction="column" gap="size-200" alignItems="center" maxWidth="520px">
                 <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
                 <Flex direction="column" gap="size-100" alignItems="center">
                     <Text UNSAFE_className="text-xl font-medium">Project Created Successfully</Text>
@@ -69,7 +69,7 @@ function ErrorContent({ isCancelled, errorMessage }: {
 }) {
     return (
         <CenteredFeedbackContainer>
-            <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
+            <Flex direction="column" gap="size-200" alignItems="center" maxWidth="520px">
                 <AlertCircle size="L" UNSAFE_className="text-red-600" />
                 <Flex direction="column" gap="size-100" alignItems="center">
                     <Text UNSAFE_className="text-xl font-medium">

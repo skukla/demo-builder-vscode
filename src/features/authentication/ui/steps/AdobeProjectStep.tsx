@@ -1,6 +1,6 @@
 import { Text } from '@adobe/react-spectrum';
 import React from 'react';
-import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
+import { ContentWithSidebar } from '@/core/ui/components/layout/ContentWithSidebar';
 import { SelectionStepContent } from '@/core/ui/components/selection';
 import { ConfigurationSummary } from '@/core/ui/components/wizard';
 import { useCanProceed , useSelectionStep } from '@/core/ui/hooks';
@@ -84,9 +84,12 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
     // The hook's onSelect callback handles the state update with the same logic
 
     return (
-        <TwoColumnLayout
-            leftContent={
-                <SelectionStepContent
+        <ContentWithSidebar
+            sidebar={
+                <ConfigurationSummary state={state} completedSteps={completedSteps} currentStep={state.currentStep} />
+            }
+        >
+            <SelectionStepContent
                     items={projects}
                     filteredItems={filteredProjects}
                     showLoading={showLoading}
@@ -119,10 +122,6 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                         </Text>
                     ) : null}
                 />
-            }
-            rightContent={
-                <ConfigurationSummary state={state} completedSteps={completedSteps} currentStep={state.currentStep} />
-            }
-        />
+        </ContentWithSidebar>
     );
 }

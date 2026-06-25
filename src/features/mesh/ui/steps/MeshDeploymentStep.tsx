@@ -92,7 +92,7 @@ export function MeshDeploymentStep({
                     {/* Timeout state - show recovery options */}
                     {state.status === 'timeout' && (
                         <CenteredFeedbackContainer>
-                            <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
+                            <Flex direction="column" gap="size-200" alignItems="center" maxWidth="520px">
                                 <Clock size="L" UNSAFE_className="text-yellow-600" />
                                 <Flex direction="column" gap="size-100" alignItems="center">
                                     <Text UNSAFE_className="text-xl font-medium">
@@ -120,7 +120,7 @@ export function MeshDeploymentStep({
                     {/* Error state - show recovery options */}
                     {state.status === 'error' && (
                         <CenteredFeedbackContainer>
-                            <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
+                            <Flex direction="column" gap="size-200" alignItems="center" maxWidth="520px">
                                 <AlertCircle size="L" UNSAFE_className="text-red-600" />
                                 <Flex direction="column" gap="size-100" alignItems="center">
                                     <Text UNSAFE_className="text-xl font-medium">
@@ -145,7 +145,7 @@ export function MeshDeploymentStep({
                     {/* Success state */}
                     {isSuccess && (
                         <CenteredFeedbackContainer>
-                            <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
+                            <Flex direction="column" gap="size-200" alignItems="center" maxWidth="520px">
                                 <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
                                 <Flex direction="column" gap="size-100" alignItems="center">
                                     <Text UNSAFE_className="text-xl font-medium">

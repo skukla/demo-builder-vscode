@@ -27,6 +27,9 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
 
 // Mock layout components
 jest.mock('@/core/ui/components/layout', () => ({
+    ContentWithSidebar: ({ children, sidebar }: any) => (
+        <div><div data-testid="left-column">{children}</div><div data-testid="right-column">{sidebar}</div></div>
+    ),
     TwoColumnLayout: ({ leftContent, rightContent }: any) => (
         <div>
             <div data-testid="left-column">{leftContent}</div>

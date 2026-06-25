@@ -321,13 +321,12 @@ export function CommerceStep({
             // GROWS to fill all remaining width so its gray panel reaches the screen's
             // right edge. The summary CONTENT is capped (.commerce-summary-content) so
             // label↔value stay tight inside that wide panel. The LEFT (nav + step-view)
-            // is capped instead — keeping a roomy, bounded ~760px center after the
-            // ~200px nav — so the center never stretches sparse.
+            // is capped instead — a ~720px center after the ~240px nav.
             maxWidth="none"
-            // The left-zone cap (nav + step-view) is applied via CSS from the shared
-            // --commerce-zone-max var (`.commerce-two-col .two-column-layout-left`), NOT
-            // this prop — so the footer mirrors it from one source of truth. The default
-            // leftMaxWidth's inline style is overridden by that !important rule.
+            // The left-zone cap (nav + step-view) is applied via CSS from --commerce-zone-max,
+            // which aliases the canonical --content-width (960) — so Commerce's nav+content
+            // zone is the SAME band as every other screen and the footer lines up. The default
+            // leftMaxWidth inline style is overridden by that !important rule.
             // Scopes the responsive "hide the summary once it stacks" rule (≤1180px)
             // to this layout only — other TwoColumnLayout consumers keep their summary.
             className="commerce-two-col"

@@ -36,7 +36,7 @@ import { BlockLibrariesStepContent } from '../components/BlockLibrariesStepConte
 import { ConfigTile } from '../components/ConfigTile';
 import { isStorefrontConfigured } from './tileStatus';
 import { useProjectBuilder } from './useProjectBuilder';
-import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
+import { ContentColumn } from '@/core/ui/components/layout/ContentColumn';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { useCanProceedAll } from '@/core/ui/hooks/useCanProceed';
 import { vscode } from '@/core/ui/utils/vscode-api';
@@ -204,7 +204,7 @@ export function StorefrontStep({
     const closeBlockLibs = useCallback(() => setOpenBlockLibs(false), []);
 
     return (
-        <SingleColumnLayout maxWidth="900px">
+        <ContentColumn>
             <ConfigTile
                 label="Storefront"
                 status={storefrontConfigured ? 'configured' : 'needs-setup'}
@@ -288,6 +288,6 @@ export function StorefrontStep({
                     </Modal>
                 )}
             </DialogContainer>
-        </SingleColumnLayout>
+        </ContentColumn>
     );
 }
