@@ -22,7 +22,6 @@ import type { ServiceGroup, UniqueField } from '../hooks/useComponentConfig';
 import type { StoreListItem } from '../hooks/useStoreDiscovery';
 import { ConfigFieldRenderer } from './ConfigFieldRenderer';
 import { StoreSelectionRow } from './StoreSelectionRow';
-import type { DescriptionContext } from '@/core/ui/components/forms/descriptionRenderer';
 
 export interface StoreConfigFieldRowProps {
     field: UniqueField;
@@ -42,8 +41,6 @@ export interface StoreConfigFieldRowProps {
     getStoreViewItems: (storeGroupCode: string) => StoreListItem[];
     /** Called when user clicks the Re-detect button to re-run store discovery */
     onRefresh?: () => void;
-    /** Context for resolving {placeholder} tokens inside field-description URLs (e.g., {orgCode}) */
-    descriptionContext?: DescriptionContext;
 }
 
 /**
@@ -98,7 +95,6 @@ export function StoreConfigFieldRow({
     getStoreGroupItems,
     getStoreViewItems,
     onRefresh,
-    descriptionContext,
 }: StoreConfigFieldRowProps): React.ReactNode {
     const fieldProps = {
         field,
@@ -107,7 +103,6 @@ export function StoreConfigFieldRow({
         isTouched: touchedFields.has(field.key),
         onUpdate: updateField,
         onNormalizeUrl: normalizeUrlField,
-        descriptionContext,
     };
 
     if (CONNECTION_FIELDS.has(field.key)) {

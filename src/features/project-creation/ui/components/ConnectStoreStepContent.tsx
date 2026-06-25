@@ -213,11 +213,6 @@ export function ConnectStoreStepContent({
         );
     }
 
-    // Context for resolving {placeholder} tokens in field-description URLs
-    // (e.g., the ACCS GraphQL Endpoint description includes a link to the
-    // Experience Cloud Commerce instances page for the selected org).
-    const descriptionContext = { orgCode: adobeOrg?.code };
-
     return (
         <SingleColumnLayout>
             <Form UNSAFE_className="container-form">
@@ -241,7 +236,6 @@ export function ConnectStoreStepContent({
                             getStoreGroupItems={getStoreGroupItems}
                             getStoreViewItems={getStoreViewItems}
                             onRefresh={forceFetch}
-                            descriptionContext={descriptionContext}
                         />
                     )}
                 />
