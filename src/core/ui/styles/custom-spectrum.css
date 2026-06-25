@@ -3939,7 +3939,7 @@ div[class*="spectrum"] input[type="search"] {
 
 /* =========================================================================
  * Project Builder — Commerce: VerticalStepList (.vsteplist*) + [list | view]
- * row (.commerce-body) + dedicated view (.step-view) + CommerceSummary (.sum*).
+ * row (.commerce-body) + dedicated view (.step-view) + BuildYourProjectSummary (.sum*).
  * Adapted to Spectrum design tokens so the surface follows the active
  * (light/dark) theme.
  * ========================================================================= */
@@ -3948,11 +3948,17 @@ div[class*="spectrum"] input[type="search"] {
  * The left nav (.step-nav = area label + vertical step list) takes its intrinsic
  * width (~200-240px); the step-view flexes to fill the rest so the choice-grid cards
  * read spacious. */
-/* Cap the LEFT column (nav + step-view) at the shared content-band max. Overrides
- * TwoColumnLayout's inline leftMaxWidth so the cap lives in one place (the CSS var),
- * not duplicated in JS. */
-.commerce-two-col .two-column-layout-left {
+/* The Build step owns ONE two-column [ active area body | unified summary ] (.build-two-col).
+ * Cap the LEFT column (the active area body — Commerce's nav+view, or a Storefront/
+ * Integrations form) at the shared content-band max. Overrides TwoColumnLayout's inline
+ * leftMaxWidth so the cap lives in one place (the CSS var), not duplicated in JS. */
+.build-two-col .two-column-layout-left {
     max-width: var(--commerce-zone-max) !important;
+}
+/* Non-nav area bodies (Storefront / Integrations) supply their own padding since the
+ * Build two-column drops the left padding (so Commerce's nav can bleed to the edge). */
+.build-area-pad {
+    padding: var(--spectrum-global-dimension-size-400);
 }
 .commerce-body {
     display: flex !important;
@@ -4147,11 +4153,11 @@ div[class*="spectrum"] input[type="search"] {
         border-left-color: transparent !important;
         box-shadow: inset 0 -2px 0 var(--spectrum-global-color-blue-500) !important;
     }
-    /* Drop the summary entirely once it would stack — at this width the nav strip +
-     * content own the space; the stacked summary block just adds clutter. Scoped to
-     * the Commerce layout (.commerce-two-col) so other TwoColumnLayout consumers keep
-     * their stacked summary. */
-    .commerce-two-col .two-column-layout-right {
+    /* Drop the summary entirely once it would stack — at this width the area body
+     * owns the space; the stacked summary block just adds clutter. Scoped to the
+     * Build layout (.build-two-col) so other TwoColumnLayout consumers keep their
+     * stacked summary. */
+    .build-two-col .two-column-layout-right {
         display: none !important;
     }
 }
@@ -4286,7 +4292,7 @@ div[class*="spectrum"] input[type="search"] {
     margin-top: var(--spectrum-global-dimension-size-200) !important;
 }
 
-/* ---- CommerceSummary (.sum*) ---- */
+/* ---- BuildYourProjectSummary (.sum*) — the unified "Your project" column ---- */
 /* The summary column GROWS to fill the remaining width (its gray panel reaches the
    screen edge), but the CONTENT is capped + left-aligned so label↔value stay tight
    inside the wide panel instead of flinging apart. */

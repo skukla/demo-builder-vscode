@@ -27,6 +27,8 @@
  */
 
 import React, { useMemo } from 'react';
+import { BuildYourProjectSummary } from '../components/BuildYourProjectSummary';
+import { architectureLabel, buildSummaryGroups } from './buildSummary';
 import { buildYourProjectAreas } from './buildYourProjectAreas';
 import {
     commerceSectionStates,
@@ -37,6 +39,7 @@ import { CommerceStep } from './CommerceStep';
 import { IntegrationsStep } from './IntegrationsStep';
 import { StorefrontStep } from './StorefrontStep';
 import { isAdobeSignedIn } from './tileStatus';
+import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
 import { useCanProceedAll } from '@/core/ui/hooks/useCanProceed';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
@@ -131,13 +134,22 @@ export function BuildYourProjectStep({
     // so it cannot override the step's gate (it still persists validity to state).
     const bodyProps = { state, updateState, setCanProceed: NOOP };
 
-    // No outer layout wrapper: each area body already provides its own
-    // SingleColumnLayout (Storefront uses a wider 900px), so wrapping here would
-    // double the padding and cap Storefront's width. A Fragment keeps the return
-    // a ReactElement without adding any layout.
+    // The Build step owns ONE two-column [ active area body | unified "Your project"
+    // summary ]. The summary aggregates every VISIBLE area's group (commerce/
+    // storefront/integrations) so it persists across area switches — the v6 model.
+    const visibleAreaIds = areas.map(a => a.id);
+    const summaryGroups = buildSummaryGroups(state, stacks, visibleAreaIds);
+    const archLabel = architectureLabel(state, stacks);
+
     return (
-        <>
-            {renderActiveArea(activeArea?.id, {
+        <TwoColumnLayout
+            // Edge-reaching summary + left-zone cap + ≤1180 stack/hide are scoped to
+            // .build-two-col; leftPadding 0 lets Commerce's nav bleed to the edge —
+            // Storefront/Integrations bodies supply their own padding (.build-area-pad).
+            maxWidth="none"
+            leftPadding="0px"
+            className="build-two-col"
+            leftContent={renderActiveArea(activeArea?.id, {
                 bodyProps,
                 packages,
                 stacks,
@@ -145,7 +157,12 @@ export function BuildYourProjectStep({
                 customBlockLibraryDefaults,
                 onArchitectureChange,
             })}
-        </>
+            rightContent={
+                <div className="commerce-summary-content">
+                    <BuildYourProjectSummary architectureLabel={archLabel} groups={summaryGroups} />
+                </div>
+            }
+        />
     );
 }
 

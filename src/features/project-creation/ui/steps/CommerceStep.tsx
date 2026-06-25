@@ -1,13 +1,13 @@
 /**
  * CommerceStep Component (Project Builder — vertical step list + dedicated view)
  *
- * The Commerce area is a {@link TwoColumnLayout}: LEFT = a [list | view] row
- * (.commerce-body) with a {@link VerticalStepList} on the left (Backend · [Sign in] ·
- * Connection · Business Structure · Catalog) and, to its right, a dedicated view
- * showing the ACTIVE step's body (the single {@link ConnectStoreStepContent} instance
- * for config steps); RIGHT = a persistent {@link CommerceSummary}. Presentation swap —
- * the step model, the Backend→stack bridge, the security guard, and the summary all
- * carry over unchanged).
+ * The Commerce area renders just its BODY — a [list | view] row (.commerce-body) with
+ * a {@link VerticalStepList} on the left (Backend · [Sign in] · Connection · Business
+ * Structure · Catalog) and, to its right, a dedicated view showing the ACTIVE step's
+ * body (the single {@link ConnectStoreStepContent} instance for config steps). The
+ * surrounding two-column [ area body | unified "Your project" summary ] is owned by
+ * {@link BuildYourProjectStep}; this step's summary contribution is computed by
+ * `commerceSummaryGroup` (see buildSummary), not here.
  *
  * Backend selection drives the architecture. Choosing a backend resolves it against
  * the brand's allowed stacks ({@link resolveStackForBackend}). A UNIQUE mapping
@@ -40,7 +40,6 @@
  */
 
 import React, { useMemo, useCallback, useEffect } from 'react';
-import { CommerceSummary, type SummaryRow } from '../components/CommerceSummary';
 import { ConnectStoreStepContent } from '../components/ConnectStoreStepContent';
 import { VerticalStepList, type StepTab } from '../components/VerticalStepList';
 import {
@@ -50,17 +49,14 @@ import {
     availableBackendsForPackage,
     firstOpenSection,
     type CommerceSectionId,
-    type CommerceSectionState,
 } from './commerceSections';
 import {
     SECTION_TITLES,
-    ROW_LABELS,
     StepViewHeader,
     sectionBody,
 } from './commerceStepBodies';
 import { isCommerceConfigured, isAdobeSignedIn } from './tileStatus';
 import { useProjectBuilder } from './useProjectBuilder';
-import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
 import { useCanProceedAll } from '@/core/ui/hooks/useCanProceed';
 import {
     ACCS_STORE_VIEW_CODE,
@@ -100,29 +96,9 @@ function hasStoreViewCode(configs: ComponentConfigs): boolean {
 }
 
 /**
- * The Commerce summary rows (Backend, Sign-in?, Connection, Business, Catalog).
- * A row shows ✓ + value only when the step is BOTH done (valid) AND committed —
- * i.e. the user pressed Continue past it. A merely-valid (or auto-detected) step
- * stays "Not set" until committed, so values never appear on their own.
- */
-function buildSummaryRows(
-    sectionStates: CommerceSectionState[],
-    committedSteps: CommerceSectionId[] | undefined,
-): SummaryRow[] {
-    const committed = new Set(committedSteps ?? []);
-    return sectionStates.map(s => {
-        const done = s.status === 'done' && committed.has(s.id);
-        return {
-            label: ROW_LABELS[s.id],
-            value: done ? s.value : undefined,
-            done,
-        };
-    });
-}
-
-/**
- * The Commerce step: a restyled step-tab strip + dedicated view + persistent summary
- * (v7 surface).
+ * The Commerce step: the area BODY only — a vertical step list (left nav) + the
+ * active sub-step's dedicated view. The surrounding two-column [ body | unified
+ * summary ] is owned by BuildYourProjectStep.
  *
  * @param props - Wizard step props plus catalog data (packages + stacks)
  * @returns The two-column tabs + dedicated-view Commerce surface
@@ -144,10 +120,6 @@ export function CommerceStep({
     const pkg = useMemo(
         () => packages.find(p => p.id === state.selectedPackage),
         [packages, state.selectedPackage],
-    );
-    const selectedStack = useMemo(
-        () => stacks.find(s => s.id === state.selectedStack) ?? null,
-        [stacks, state.selectedStack],
     );
 
     const isAccs = state.selectedBackend === ACCS_BACKEND;
@@ -303,62 +275,27 @@ export function CommerceStep({
         ],
     );
 
-    const architectureLabel = useMemo(() => {
-        if (selectedStack) return selectedStack.name;
-        if (state.selectedBackend) return 'Frontend pending';
-        return null;
-    }, [selectedStack, state.selectedBackend]);
-
-    const summaryRows = useMemo(
-        () => buildSummaryRows(sectionStates, state.committedCommerceSteps),
-        [sectionStates, state.committedCommerceSteps],
-    );
-
+    // CommerceStep returns just its area BODY — the [ left nav | dedicated view ] row.
+    // The Build step owns the surrounding two-column [ active area body | unified
+    // summary ] (see BuildYourProjectStep), so the summary lives there now, fed by
+    // commerceSummaryGroup(state) rather than computed here.
     return (
-        <TwoColumnLayout
-            // Left-aligned, full-width (NOT centered): the block hugs the content
-            // area's left edge (no centered gutter) and the right summary column
-            // GROWS to fill all remaining width so its gray panel reaches the screen's
-            // right edge. The summary CONTENT is capped (.commerce-summary-content) so
-            // label↔value stay tight inside that wide panel. The LEFT (nav + step-view)
-            // is capped instead — a ~720px center after the ~240px nav.
-            maxWidth="none"
-            // The left-zone cap (nav + step-view) is applied via CSS from --commerce-zone-max,
-            // which aliases the canonical --content-width (960) — so Commerce's nav+content
-            // zone is the SAME band as every other screen and the footer lines up. The default
-            // leftMaxWidth inline style is overridden by that !important rule.
-            // Scopes the responsive "hide the summary once it stacks" rule (≤1180px)
-            // to this layout only — other TwoColumnLayout consumers keep their summary.
-            className="commerce-two-col"
-            // Drop the left column padding so the left nav can bleed to the content
-            // area's left edge as a full-height panel (gray-75 + right border),
-            // mirroring the summary sidebar. The nav and step-view supply their own
-            // padding (see .step-nav / .step-view).
-            leftPadding="0px"
-            leftContent={
-                <div className="commerce-body">
-                    {/* Left nav: a small all-caps area label tells the user which
-                        area they configure now that the area sub-nav left the wizard
-                        timeline, above the vertical step list. */}
-                    <div className="step-nav">
-                        <div className="step-nav-area">Commerce</div>
-                        <VerticalStepList
-                            steps={tabModels}
-                            activeId={activeStep}
-                            onSelect={id => setActiveStep(id as CommerceSectionId)}
-                        />
-                    </div>
-                    <div className="step-view">
-                        <StepViewHeader step={activeStep} />
-                        {activeBody}
-                    </div>
-                </div>
-            }
-            rightContent={
-                <div className="commerce-summary-content">
-                    <CommerceSummary architectureLabel={architectureLabel} rows={summaryRows} />
-                </div>
-            }
-        />
+        <div className="commerce-body">
+            {/* Left nav: a small all-caps area label tells the user which area they
+                configure now that the area sub-nav left the wizard timeline, above the
+                vertical step list. */}
+            <div className="step-nav">
+                <div className="step-nav-area">Commerce</div>
+                <VerticalStepList
+                    steps={tabModels}
+                    activeId={activeStep}
+                    onSelect={id => setActiveStep(id as CommerceSectionId)}
+                />
+            </div>
+            <div className="step-view">
+                <StepViewHeader step={activeStep} />
+                {activeBody}
+            </div>
+        </div>
     );
 }

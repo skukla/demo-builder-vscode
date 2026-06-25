@@ -18,7 +18,6 @@
 
 import { Content, Heading, Text, View } from '@adobe/react-spectrum';
 import React, { useEffect } from 'react';
-import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import type { BaseStepProps } from '@/types/wizard';
 
 /**
@@ -34,7 +33,7 @@ export function IntegrationsStep({ setCanProceed }: BaseStepProps) {
     }, [setCanProceed]);
 
     return (
-        <SingleColumnLayout>
+        <div className="build-area-pad">
             <View
                 backgroundColor="gray-75"
                 borderWidth="thin"
@@ -52,6 +51,6 @@ export function IntegrationsStep({ setCanProceed }: BaseStepProps) {
                     </Text>
                 </Content>
             </View>
-        </SingleColumnLayout>
+        </div>
     );
 }

@@ -2,11 +2,12 @@
  * CommerceStep Tests — rendering / step list / active-view / gate / summary
  * (Project Builder — vertical step list + dedicated view)
  *
- * The Commerce area is a {@link TwoColumnLayout}: LEFT = a [list | view] row with a
+ * The Commerce area renders its BODY — a [list | view] row with a
  * {@link VerticalStepList} (Backend · [Sign in] · Connection · Business Structure ·
  * Catalog) beside a dedicated view showing the ACTIVE step's body (the single
- * {@link ConnectStoreStepContent} instance for config steps); RIGHT = a persistent
- * {@link CommerceSummary}.
+ * {@link ConnectStoreStepContent} instance for config steps). The harness renders the
+ * unified BuildYourProjectSummary alongside it (as BuildYourProjectStep does) so the
+ * `.sum-*` summary DOM is present for the summary-architecture assertions.
  *
  * This file covers the layout/step list, active-view switching, the ACCS sign-in
  * gate + locked tabs, the summary architecture label, and the dedicated-view content +

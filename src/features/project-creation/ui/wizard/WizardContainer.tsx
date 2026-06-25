@@ -371,13 +371,18 @@ export function WizardContainer({
     const confirmedStepIndices = getCompletedStepIndices(confirmedSteps, WIZARD_STEPS);
     const isEditMode = (state.wizardMode ?? 'create') !== 'create';
 
-    // On `build-your-project`, the visible build areas are walked ONE AT A TIME
-    // via the footer Continue/Back buttons — they are NOT a timeline sub-nav.
-    // `buildAreas` is the ordered, visible areas for the current stack.
+    // On `build-your-project`, the visible build areas are walked via the footer
+    // Continue/Back (the linear driver) AND shown as children under the Build step
+    // in the rail — click a REACHED area to jump back. `buildAreas` is the ordered,
+    // visible areas for the current stack.
     const onBuildStep = state.currentStep === 'build-your-project';
     const buildAreas = onBuildStep ? buildYourProjectAreas(state, stacks) : [];
     const activeAreaId = state.activeBuildArea ?? buildAreas[0]?.id;
     const activeAreaIndex = buildAreas.findIndex(a => a.id === activeAreaId);
+
+    // Rail children: the areas under the (current) Build step, with per-area status.
+    const buildChildSteps: TimelineStep[] = buildAreas.map(a => ({ id: a.id, name: a.label }));
+    const buildChildStatusById = Object.fromEntries(buildAreas.map(a => [a.id, a.status]));
 
     // The footer Continue/Back is the single LINEAR driver: it walks SUB-STEPS
     // (within the Commerce area) → AREAS → wizard steps. The Commerce area is the
@@ -395,6 +400,13 @@ export function WizardContainer({
         const sections = commerceSubSteps(state);
         const id = atEnd ? sections[sections.length - 1]?.id : firstOpenSection(sections);
         return id ? { activeCommerceStep: id } : {};
+    };
+
+    /** Jump to a REACHED rail area (at or before the active one); forward stays gated to Continue. */
+    const handleAreaClick = (areaId: string): void => {
+        const idx = buildAreas.findIndex(a => a.id === areaId);
+        if (idx < 0 || idx > activeAreaIndex) return;
+        updateState({ activeBuildArea: buildAreas[idx].id, ...commerceEntryStep(areaId, false) });
     };
 
     // Continue: next Commerce sub-step → next visible area (resetting the Commerce
@@ -487,6 +499,11 @@ export function WizardContainer({
                         showHeader={true}
                         headerText="Setup Progress"
                         isEditMode={isEditMode}
+                        // Build-step areas as children under the (current) Build step.
+                        childSteps={buildChildSteps}
+                        childStatusById={buildChildStatusById}
+                        activeChildId={activeAreaId}
+                        onChildClick={handleAreaClick}
                     />
                 </div>
 

@@ -18,6 +18,8 @@
 import { render, act } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import React from 'react';
+import { BuildYourProjectSummary } from '@/features/project-creation/ui/components/BuildYourProjectSummary';
+import { architectureLabel, buildSummaryGroups } from '@/features/project-creation/ui/steps/buildSummary';
 import { CommerceStep } from '@/features/project-creation/ui/steps/CommerceStep';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
@@ -144,6 +146,9 @@ export function setup(initial: Partial<WizardState> = {}) {
         setHostState = setState;
         // Keep the ref in sync with what the host actually renders.
         stateRef.current = hostState;
+        // Mirror BuildYourProjectStep's composition: the Commerce area BODY plus the
+        // unified summary (which the Build step owns), fed from the same state — so the
+        // `.sum-*` summary DOM the harness helpers query renders for real.
         return (
             <Provider theme={defaultTheme}>
                 <CommerceStep
@@ -153,6 +158,12 @@ export function setup(initial: Partial<WizardState> = {}) {
                     packages={PACKAGES}
                     stacks={STACKS}
                 />
+                <div className="commerce-summary-content">
+                    <BuildYourProjectSummary
+                        architectureLabel={architectureLabel(hostState, STACKS)}
+                        groups={buildSummaryGroups(hostState, STACKS, ['commerce'])}
+                    />
+                </div>
             </Provider>
         );
     };
@@ -166,7 +177,7 @@ export function setup(initial: Partial<WizardState> = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// DOM contract helpers (VerticalStepList + CommerceSummary render for real).
+// DOM contract helpers (VerticalStepList + BuildYourProjectSummary render for real).
 // A step's button is `[data-step="<id>"]` with its status on `data-status`; only
 // REACHED steps (done/current) are clickable — `upcoming`/`locked` are aria-disabled,
 // so `data-status` (not aria-disabled) is the locked discriminator. The active step's

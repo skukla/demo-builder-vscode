@@ -5,8 +5,8 @@
  * stays under the size limit: the per-section view-body builder ({@link sectionBody}),
  * the Backend "choice cards" ({@link BackendCard} + {@link ChoiceCheckIcon}), the
  * dedicated-view per-step header ({@link StepViewHeader}), and the copy constants
- * ({@link SECTION_TITLES} / {@link SECTION_DESCRIPTIONS} / {@link ROW_LABELS} /
- * {@link BACKEND_DESCRIPTIONS}). No wizard logic lives here — CommerceStep owns state,
+ * ({@link SECTION_TITLES} / {@link SECTION_DESCRIPTIONS} / {@link BACKEND_DESCRIPTIONS};
+ * the summary `ROW_LABELS` live in commerceSections). No wizard logic lives here — CommerceStep owns state,
  * the Backend→stack bridge, the gate, and the summary; it imports these to render.
  *
  * @module features/project-creation/ui/steps/commerceStepBodies
@@ -45,15 +45,6 @@ export const SECTION_DESCRIPTIONS: Record<CommerceSectionId, string> = {
     connection: 'Connect to your Commerce instance.',
     'business-structure': 'Select the website, store, and store view to use.',
     catalog: 'Configure catalog services for your store.',
-};
-
-/** Summary-row labels (a subset of section titles, with a shorter Business label). */
-export const ROW_LABELS: Record<CommerceSectionId, string> = {
-    backend: 'Backend',
-    signin: 'Sign-in',
-    connection: 'Connection',
-    'business-structure': 'Business',
-    catalog: 'Catalog',
 };
 
 /** No-op setter handed to the contextual AdobeAuthStep (the step owns the gate). */

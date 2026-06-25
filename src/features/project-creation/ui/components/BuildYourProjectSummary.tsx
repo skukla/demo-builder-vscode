@@ -1,22 +1,20 @@
 /**
- * CommerceSummary Component (v6 Commerce slice)
+ * BuildYourProjectSummary Component (v6 unified scaffold)
  *
- * The right-hand persistent summary column, mirroring the prototype
- * renderSummary() but scoped to what this slice fills (Commerce). Renders a
- * "Your project" title, a derived read-only Architecture line (the full stack
- * label, "Frontend pending" when only the backend is chosen, or an
- * "Architecture pending" placeholder when nothing is chosen), then a "Commerce"
- * group of rows — each showing its value or a muted "Not set", with a ✓ when done.
+ * The single persistent "Your project" summary column for the whole Build Your
+ * Project step — the generalization of the Commerce-only `CommerceSummary`.
+ * Renders a "Your project" title, a derived read-only Architecture line, then one
+ * GROUP per area (Commerce / Storefront / Integrations), each with its heading and
+ * rows. A row shows its value or a muted "Not set", with a ✓ when done+value.
  *
- * Presentational only — Batch B computes the architecture label and the row list
- * from wizard state and passes them in. The row list is designed so the later
- * Storefront / Integrations groups can be appended without changing this contract.
+ * Presentational only — the per-area providers in `buildSummary.ts` compute the
+ * architecture label + the visible groups from wizard state and pass them in.
  *
- * @module features/project-creation/ui/components/CommerceSummary
+ * @module features/project-creation/ui/components/BuildYourProjectSummary
  */
 
-import React from 'react';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
+import React from 'react';
 import { cn } from '@/core/ui/utils/classNames';
 
 /** A single summary row: a label, an optional value, and a done flag. */
@@ -29,15 +27,23 @@ export interface SummaryRow {
     done?: boolean;
 }
 
-export interface CommerceSummaryProps {
+/** A labeled group of summary rows (one per Build area). */
+export interface SummaryGroup {
+    /** Group heading (e.g. "Commerce"). */
+    heading: string;
+    /** The group's rows. */
+    rows: SummaryRow[];
+}
+
+export interface BuildYourProjectSummaryProps {
     /**
      * Derived architecture label: the full label (e.g. "Edge Delivery + ACCS"),
      * "Frontend pending" when only the backend is chosen, or null → a pending
      * placeholder.
      */
     architectureLabel: string | null;
-    /** The Commerce group rows (Backend, Sign-in?, Connection, Business, Catalog). */
-    rows: SummaryRow[];
+    /** The visible area groups, in order (Commerce, Storefront, Integrations). */
+    groups: SummaryGroup[];
 }
 
 /** Placeholder shown when no architecture has been chosen yet. */
@@ -68,20 +74,27 @@ const Row: React.FC<{ row: SummaryRow }> = ({ row }) => {
 };
 
 /**
- * The persistent Commerce summary column.
+ * The persistent cross-area "Your project" summary column.
  *
- * @param props - the derived architecture label and the Commerce rows
+ * @param props - the derived architecture label and the visible area groups
  * @returns the summary column element
  */
-export const CommerceSummary: React.FC<CommerceSummaryProps> = ({ architectureLabel, rows }) => (
+export const BuildYourProjectSummary: React.FC<BuildYourProjectSummaryProps> = ({
+    architectureLabel,
+    groups,
+}) => (
     <>
         <div className="sum-title">Your project</div>
         <div className="sum-arch">
             {architectureLabel ?? <span className="empty">{ARCHITECTURE_PENDING}</span>}
         </div>
-        <div className="sum-group-h">Commerce</div>
-        {rows.map(row => (
-            <Row key={row.label} row={row} />
+        {groups.map(group => (
+            <React.Fragment key={group.heading}>
+                <div className="sum-group-h">{group.heading}</div>
+                {group.rows.map(row => (
+                    <Row key={row.label} row={row} />
+                ))}
+            </React.Fragment>
         ))}
     </>
 );

@@ -125,14 +125,36 @@ describe('WizardContainer — sub-step → area → wizard-step progression', ()
         await cleanupTest();
     });
 
-    it('passes NO build-area child props to TimelineNav', async () => {
+    it('passes the visible Build areas to TimelineNav as child steps (rail sub-nav)', async () => {
         renderOnBuildStep();
         await screen.findByTestId('build-your-project-step');
 
-        expect(timelineProps.last?.childSteps).toBeUndefined();
-        expect(timelineProps.last?.activeChildId).toBeUndefined();
-        expect(timelineProps.last?.childStatusById).toBeUndefined();
-        expect(timelineProps.last?.onChildClick).toBeUndefined();
+        // The visible areas (Storefront is hidden for this non-EDS stack) render as
+        // children under the current Build step, the first active by default, with a
+        // per-area status map and a click handler for jumping to a reached area.
+        const childIds = (timelineProps.last?.childSteps ?? []).map((c: { id: string }) => c.id);
+        expect(childIds).toEqual(['commerce', 'integrations']);
+        expect(timelineProps.last?.activeChildId).toBe('commerce');
+        expect(timelineProps.last?.childStatusById).toBeDefined();
+        expect(typeof timelineProps.last?.onChildClick).toBe('function');
+    });
+
+    it('clicking an AHEAD rail area is gated — forward stays on Continue', async () => {
+        renderOnBuildStep();
+        await screen.findByTestId('build-your-project-step');
+
+        // Active area is the first (Commerce). Clicking the ahead Integrations area is
+        // a no-op; forward progression stays gated to the footer Continue.
+        await act(async () => {
+            timelineProps.last?.onChildClick?.('integrations');
+            await Promise.resolve();
+        });
+        await flush();
+
+        // The ahead click did NOT switch the active area — still Commerce, still on
+        // the Build step (real handleAreaClick gates a forward jump).
+        expect(timelineProps.last?.activeChildId).toBe('commerce');
+        expect(screen.getByTestId('build-your-project-step')).toBeInTheDocument();
     });
 
     it('Continue walks the Commerce SUB-STEPS before leaving the Commerce area', async () => {

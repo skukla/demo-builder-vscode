@@ -58,6 +58,15 @@ export const BACKEND_LABELS: Record<string, string> = {
     'adobe-commerce-accs': 'Adobe Commerce (ACCS / SaaS)',
 };
 
+/** Summary-row label per Commerce sub-step (the short forms used in the summary). */
+export const ROW_LABELS: Record<CommerceSectionId, string> = {
+    backend: 'Backend',
+    signin: 'Sign-in',
+    connection: 'Connection',
+    'business-structure': 'Business',
+    catalog: 'Catalog',
+};
+
 /** Context flags the section-state model needs beyond persisted wizard state. */
 export interface CommerceSectionContext {
     /** Whether the chosen backend is ACCS (adds the sign-in gate). */
