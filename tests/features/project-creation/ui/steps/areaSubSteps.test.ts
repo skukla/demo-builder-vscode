@@ -10,6 +10,7 @@ const state = (partial: Partial<WizardState>): WizardState => partial as WizardS
 
 const CONFIGURED_STOREFRONT = {
     storefrontRepoValid: true,
+    storefrontCodeSyncValid: true,
     edsConfig: {
         repoName: 'my-repo',
         githubAuth: { isAuthenticated: true },
@@ -29,34 +30,43 @@ describe('areaSubSteps registry', () => {
 describe('storefront driver', () => {
     const driver = areaSubSteps('storefront')!;
 
-    it('lists the storefront + block-libraries sub-steps, active = first open', () => {
+    it('lists the 4 sub-steps in order, active = first open', () => {
         const s = state({});
-        expect(driver.subSteps(s).map(x => x.id)).toEqual(['storefront', 'block-libraries']);
-        expect(driver.active(s)).toBe('storefront'); // block-libraries is locked
-        expect(driver.next(s)).toBe('block-libraries');
+        expect(driver.subSteps(s).map(x => x.id)).toEqual([
+            'accounts',
+            'repository',
+            'code-sync',
+            'block-libraries',
+        ]);
+        expect(driver.active(s)).toBe('accounts'); // repository..code-sync are locked
+        expect(driver.next(s)).toBe('repository');
         expect(driver.prev(s)).toBeNull();
     });
 
     it('uses the activeStorefrontStep state key for active + setActive', () => {
         expect(driver.active(state({ activeStorefrontStep: 'block-libraries' }))).toBe('block-libraries');
-        expect(driver.setActive('block-libraries')).toEqual({ activeStorefrontStep: 'block-libraries' });
+        expect(driver.setActive('repository')).toEqual({ activeStorefrontStep: 'repository' });
     });
 
-    it('gates the storefront sub-step but lets block-libraries pass', () => {
-        expect(driver.isComplete(state({}), 'storefront')).toBe(false);
-        expect(driver.isComplete(CONFIGURED_STOREFRONT, 'storefront')).toBe(true);
+    it('gates each required sub-step but lets block-libraries pass', () => {
+        expect(driver.isComplete(state({}), 'accounts')).toBe(false);
+        expect(driver.isComplete(CONFIGURED_STOREFRONT, 'accounts')).toBe(true);
+        expect(driver.isComplete(state({}), 'repository')).toBe(false);
+        expect(driver.isComplete(CONFIGURED_STOREFRONT, 'repository')).toBe(true);
+        expect(driver.isComplete(state({}), 'code-sync')).toBe(false);
+        expect(driver.isComplete(CONFIGURED_STOREFRONT, 'code-sync')).toBe(true);
         expect(driver.isComplete(state({}), 'block-libraries')).toBe(true);
     });
 
     it('enters at the first OPEN sub-step (or last when atEnd)', () => {
-        const fresh = state({}); // storefront is current/open, block-libraries locked
-        expect(driver.entry(fresh, false)).toEqual({ activeStorefrontStep: 'storefront' });
+        const fresh = state({}); // accounts is current/open, later required steps locked
+        expect(driver.entry(fresh, false)).toEqual({ activeStorefrontStep: 'accounts' });
         expect(driver.entry(fresh, true)).toEqual({ activeStorefrontStep: 'block-libraries' });
     });
 
     it('has no commit-gating (no-op commit/uncommit)', () => {
-        expect(driver.commit(state({}), 'storefront')).toEqual({});
-        expect(driver.uncommit(state({}), ['storefront', 'block-libraries'], 'storefront')).toEqual({});
+        expect(driver.commit(state({}), 'accounts')).toEqual({});
+        expect(driver.uncommit(state({}), ['accounts', 'block-libraries'], 'accounts')).toEqual({});
     });
 });
 

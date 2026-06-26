@@ -106,8 +106,43 @@ export async function pollGitHubAppInstallation(
 }
 
 /**
+ * Compute whether the REPOSITORY choice is valid (repo picked/created), WITHOUT
+ * the AEM-Code-Sync app gate. This is the `repository` sub-step's verdict:
+ * - new:      created and not mid-creation
+ * - existing: a repo is selected and not loading
+ */
+export function computeRepoValid(
+    repoMode: string,
+    repoCreationState: RepoCreationState,
+    selectedRepo: GitHubRepoItem | undefined,
+    isLoading: boolean,
+): boolean {
+    if (repoMode === 'new') {
+        return repoCreationState.isCreated && !repoCreationState.isCreating;
+    }
+    return !!selectedRepo && !isLoading;
+}
+
+/**
+ * Compute whether the AEM-Code-Sync app gate is satisfied (the `code-sync`
+ * sub-step's verdict). Existing repos have no app gate at this step, so they pass:
+ * - new:      the app is verified installed and not mid-check
+ * - existing: always true (gate deferred to StorefrontSetup after fstab.yaml push)
+ */
+export function computeCodeSyncValid(
+    repoMode: string,
+    githubAppStatus: GitHubAppStatus,
+): boolean {
+    if (repoMode === 'new') {
+        return githubAppStatus.isInstalled === true && !githubAppStatus.isChecking;
+    }
+    return true;
+}
+
+/**
  * Compute whether the user can proceed based on repo mode and current state.
- * The GitHub-App-install gate lives here (new repos require app verified).
+ * The GitHub-App-install gate lives here (new repos require app verified) —
+ * the combination of the repo-choice gate and the Code-Sync app gate.
  */
 export function computeCanProceed(
     repoMode: string,
@@ -116,15 +151,10 @@ export function computeCanProceed(
     selectedRepo: GitHubRepoItem | undefined,
     isLoading: boolean,
 ): boolean {
-    if (repoMode === 'new') {
-        return (
-            repoCreationState.isCreated &&
-            githubAppStatus.isInstalled === true &&
-            !githubAppStatus.isChecking &&
-            !repoCreationState.isCreating
-        );
-    }
-    return !!selectedRepo && !isLoading;
+    return (
+        computeRepoValid(repoMode, repoCreationState, selectedRepo, isLoading) &&
+        computeCodeSyncValid(repoMode, githubAppStatus)
+    );
 }
 
 /** Build GitHubAppStatus from a check result. */

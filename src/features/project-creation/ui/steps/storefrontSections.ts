@@ -2,18 +2,19 @@
  * storefrontSections — the Storefront area's sub-step model (mirrors commerceSections).
  *
  * The Storefront area is walked one sub-step at a time, the same way Commerce is:
- *   1. `storefront`      — the setup (GitHub → DA.live → repo). Gates Continue on
- *                          {@link isStorefrontConfigured}.
- *   2. `block-libraries` — the optional EDS block-library picker. Locked until the
- *                          storefront is configured, then always passable (terminal).
+ *   1. `accounts`        — connect GitHub + DA.live (two independent, parallel sign-ins).
+ *   2. `repository`      — pick/create the GitHub repo.
+ *   3. `code-sync`       — install the AEM Code Sync GitHub App (existing repos pass).
+ *   4. `block-libraries` — the optional EDS block-library picker (terminal).
  *
  * Pure logic only (no React) so the footer walk, the gate, and the VerticalStepList
  * nav can all derive from it. The active sub-step is `state.activeStorefrontStep`.
+ * Lock is sequential: the first not-done step is `current`, every step after it is
+ * `locked`, and every done step before it stays `done` (no commit-gating, no context).
  *
  * @module features/project-creation/ui/steps/storefrontSections
  */
 
-import { isStorefrontConfigured } from './tileStatus';
 import type { StorefrontSectionId, WizardState } from '@/types/webview';
 
 export type { StorefrontSectionId };
@@ -31,37 +32,64 @@ export interface StorefrontSectionState {
 
 /** Sub-step titles for the vertical step list nav. */
 export const STOREFRONT_SECTION_TITLES: Record<StorefrontSectionId, string> = {
-    storefront: 'Storefront',
+    accounts: 'Accounts',
+    repository: 'Repository',
+    'code-sync': 'Code Sync',
     'block-libraries': 'Block Libraries',
 };
 
+/** The ordered Storefront sub-step ids (the walk + nav order). */
+const STOREFRONT_SECTION_ORDER: StorefrontSectionId[] = [
+    'accounts',
+    'repository',
+    'code-sync',
+    'block-libraries',
+];
+
 /**
- * The ordered Storefront section states. `storefront` is current until the setup
- * is complete, then `done`; `block-libraries` is locked until then, then current.
+ * The ordered Storefront section states with a sequential lock: each step is `done`
+ * when its own complete-condition holds; otherwise the FIRST not-done step is
+ * `current` and every step after it is `locked`. Done steps before the current one
+ * stay `done`.
+ *
+ * @param state - Wizard state (persisted selections + validity verdicts)
+ * @returns the ordered sections with status / lockReason
  */
 export function storefrontSectionStates(state: WizardState): StorefrontSectionState[] {
-    const configured = isStorefrontConfigured(state);
-    return [
-        { id: 'storefront', status: configured ? 'done' : 'current' },
-        configured
-            ? { id: 'block-libraries', status: 'current' }
-            : {
-                id: 'block-libraries',
-                status: 'locked',
-                lockReason: 'Set up the storefront repository first',
-            },
-    ];
+    let currentReached = false;
+    return STOREFRONT_SECTION_ORDER.map((id) => {
+        if (isStorefrontStepComplete(state, id)) {
+            return { id, status: 'done' as const };
+        }
+        if (!currentReached) {
+            currentReached = true;
+            return { id, status: 'current' as const };
+        }
+        return { id, status: 'locked' as const, lockReason: 'Complete the previous step first' };
+    });
 }
 
 /**
  * Whether a single Storefront sub-step's done-condition is satisfied (the per-step
- * Continue gate): storefront → the setup is configured; block-libraries → always
- * (optional, terminal — Continue advances to the next area).
+ * Continue gate): accounts → BOTH GitHub and DA.live are authenticated; repository →
+ * the repo reported valid; code-sync → the app gate reported valid; block-libraries →
+ * always (optional, terminal — Continue advances to the next area).
+ *
+ * @param state - Wizard state (persisted selections + validity verdicts)
+ * @param stepId - The sub-step to evaluate
+ * @returns true when the sub-step is complete
  */
 export function isStorefrontStepComplete(state: WizardState, stepId: StorefrontSectionId): boolean {
     switch (stepId) {
-        case 'storefront':
-            return isStorefrontConfigured(state);
+        case 'accounts':
+            return (
+                Boolean(state.edsConfig?.githubAuth?.isAuthenticated) &&
+                Boolean(state.edsConfig?.daLiveAuth?.isAuthenticated)
+            );
+        case 'repository':
+            return state.storefrontRepoValid === true;
+        case 'code-sync':
+            return state.storefrontCodeSyncValid === true;
         case 'block-libraries':
             return true;
     }

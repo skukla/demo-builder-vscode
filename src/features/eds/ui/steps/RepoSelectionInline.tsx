@@ -1,18 +1,19 @@
 /**
  * RepoSelectionInline
  *
- * The GitHub repository choose/create body, re-homed from the former
- * GitHubRepoSelectionStep's TwoColumnLayout into a single column for the
- * StorefrontStep group. It owns the same selection wiring (useSelectionStep,
- * cached repos, new-repo creation, GitHub-App-install gate) — but instead of
- * driving the wizard's canProceed directly, it surfaces its validity to the
- * parent via `onValidityChange(boolean)` so the Storefront gate can combine it
- * with the GitHub + DA.live connection state.
+ * The GitHub repository choose/create + AEM-Code-Sync-install body, re-homed from
+ * the former GitHubRepoSelectionStep's TwoColumnLayout into a single column for the
+ * StorefrontStep group. It owns the same selection wiring (useSelectionStep, cached
+ * repos, new-repo creation, GitHub-App-install gate), but the Storefront area now
+ * splits it across TWO sub-steps via the `phase` prop:
+ *   - `repository` — the repo pick/create UI
+ *   - `code-sync`  — the AEM Code Sync GitHub-App install UI
  *
- * The right-column ConfigurationSummary is dropped; the only status surfaced
- * inline is the AEM Code Sync app status for NEW repos (the install gate).
- * Behavior is unchanged from GitHubRepoSelectionStep — only the container and the
- * validity-output channel changed.
+ * ALL hooks/state/effects run regardless of `phase` (so both validities stay live
+ * across the sub-step switch); only the RENDERED body changes. Two independent
+ * verdicts flow OUT — `onRepoValidChange` (repo chosen/created) and
+ * `onCodeSyncValidChange` (the app gate; existing repos pass) — so the Storefront
+ * sections can gate each sub-step separately.
  *
  * @module features/eds/ui/steps/RepoSelectionInline
  */
@@ -25,7 +26,8 @@ import {
     NewRepoForm,
     ResetToTemplateOption,
     buildAppStatusFromResult,
-    computeCanProceed,
+    computeCodeSyncValid,
+    computeRepoValid,
     pollGitHubAppInstallation,
     type GitHubAppCheckResult,
     type GitHubAppStatus,
@@ -44,10 +46,17 @@ import type { GitHubRepoItem } from '@/types/webview';
 import type { BaseStepProps } from '@/types/wizard';
 import '../styles/eds-steps.css';
 
+/** Which part of the repo/code-sync flow to render (validities stay live for both). */
+export type RepoSelectionPhase = 'repository' | 'code-sync';
+
 /** Props: state-driven like the parent step, but validity flows OUT to the parent. */
 export interface RepoSelectionInlineProps extends Pick<BaseStepProps, 'state' | 'updateState'> {
-    /** Reports whether the repo selection (incl. the App-install gate) is valid. */
-    onValidityChange: (valid: boolean) => void;
+    /** Which sub-step body to render: the repo pick/create UI or the Code Sync UI. */
+    phase: RepoSelectionPhase;
+    /** Reports whether the repository choice is valid (WITHOUT the app gate). */
+    onRepoValidChange: (valid: boolean) => void;
+    /** Reports whether the AEM Code Sync app gate is satisfied (existing repos pass). */
+    onCodeSyncValidChange: (valid: boolean) => void;
 }
 
 /** Get GitHub App status text for the inline (new-repo) status badge. */
@@ -71,13 +80,15 @@ function getGitHubAppStatusIndicator(
 /**
  * RepoSelectionInline Component.
  *
- * @param props - state/updateState plus the onValidityChange validity channel
- * @returns The single-column repo choose/create body
+ * @param props - state/updateState, the phase to render, plus the two validity channels
+ * @returns The single-column repo choose/create OR code-sync body (per `phase`)
  */
 export function RepoSelectionInline({
     state,
     updateState,
-    onValidityChange,
+    phase,
+    onRepoValidChange,
+    onCodeSyncValidChange,
 }: RepoSelectionInlineProps): React.ReactElement {
     const edsConfig = state.edsConfig;
     const repoMode = edsConfig?.repoMode || 'existing';
@@ -316,83 +327,105 @@ export function RepoSelectionInline({
         }
     }, [repoMode, edsConfig?.createdRepo, githubAppStatus.isInstalled, checkGitHubApp]);
 
-    // Report validity (incl. the App-install gate) to the parent gate.
+    // Report the repository-choice verdict (WITHOUT the app gate) — runs for both
+    // phases so the `repository` sub-step gate stays live while showing `code-sync`.
     useEffect(() => {
-        onValidityChange(
-            computeCanProceed(repoMode, repoCreationState, githubAppStatus, selectedRepo, isLoading),
-        );
-    }, [repoMode, repoCreationState, selectedRepo, githubAppStatus, isLoading, onValidityChange]);
+        onRepoValidChange(computeRepoValid(repoMode, repoCreationState, selectedRepo, isLoading));
+    }, [repoMode, repoCreationState, selectedRepo, isLoading, onRepoValidChange]);
+
+    // Report the Code-Sync app-gate verdict — runs for both phases so the
+    // `code-sync` sub-step gate stays live while showing `repository`.
+    useEffect(() => {
+        onCodeSyncValidChange(computeCodeSyncValid(repoMode, githubAppStatus));
+    }, [repoMode, githubAppStatus, onCodeSyncValidChange]);
 
     // Derived state for showing reset option.
     const shouldShowResetOption = selectedRepo && hasLoadedOnce && !isLoading;
     const templateAvailable = !!(edsConfig?.templateOwner && edsConfig?.templateRepo);
     const showNewRepoStatus = repoMode === 'new' && repoCreationState.isCreated;
 
+    // --- `repository` phase: pick/create the repo (no app-install UI) ---------
+    if (phase === 'repository') {
+        return (
+            <div className="w-full relative">
+                {repoMode === 'new' && (
+                    <NewRepoForm
+                        repoName={repoName}
+                        githubUser={githubUser}
+                        repoNameError={repoNameError}
+                        repoCreationState={repoCreationState}
+                        templateAvailable={templateAvailable}
+                        onRepoNameChange={handleRepoNameChange}
+                        onRepoNameBlur={handleRepoNameBlur}
+                        onUseExisting={handleUseExisting}
+                        onCreateRepository={handleCreateRepository}
+                    />
+                )}
+
+                {repoMode === 'existing' && (
+                    <>
+                        <SelectionStepContent
+                            headerAction={
+                                <Button variant="accent" onPress={handleCreateNew}>
+                                    <Add size="S" />
+                                    <Text>New</Text>
+                                </Button>
+                            }
+                            items={repos}
+                            filteredItems={filteredRepos}
+                            showLoading={showLoading}
+                            isLoading={isLoading}
+                            isRefreshing={isRefreshing}
+                            hasLoadedOnce={hasLoadedOnce}
+                            error={error}
+                            searchQuery={searchQuery}
+                            onSearchChange={setSearchQuery}
+                            onLoad={loadRepos}
+                            onRefresh={refresh}
+                            selectedId={selectedRepo?.id}
+                            onSelect={selectItem}
+                            labels={{
+                                loadingMessage: 'Loading your repositories...',
+                                loadingSubMessage: 'Fetching repositories with write access',
+                                errorTitle: 'Error Loading Repositories',
+                                emptyTitle: 'No Repositories Found',
+                                emptyMessage: 'No repositories found with write access. Create a new repository to get started.',
+                                searchPlaceholder: 'Type to filter repositories...',
+                                itemNoun: 'repository',
+                                itemNounPlural: 'repositories',
+                                ariaLabel: 'GitHub Repositories',
+                            }}
+                            renderDescription={(item) => (
+                                <Text slot="description">
+                                    {item.isPrivate && (
+                                        <span className="repo-private-badge">Private</span>
+                                    )}
+                                    {item.description || <span className="repo-no-description">No description</span>}
+                                </Text>
+                            )}
+                        />
+                        {shouldShowResetOption && (
+                            <ResetToTemplateOption
+                                resetToTemplate={resetToTemplate}
+                                onResetToTemplateChange={handleResetToTemplateChange}
+                            />
+                        )}
+                    </>
+                )}
+            </div>
+        );
+    }
+
+    // --- `code-sync` phase: AEM Code Sync app install (new repos only) --------
+    // Existing repos have no app gate here (it's deferred to StorefrontSetup after
+    // the fstab.yaml push), so they just show a short "nothing to install" message.
     return (
         <div className="w-full relative">
-            {repoMode === 'new' && (
-                <NewRepoForm
-                    repoName={repoName}
-                    githubUser={githubUser}
-                    repoNameError={repoNameError}
-                    repoCreationState={repoCreationState}
-                    templateAvailable={templateAvailable}
-                    onRepoNameChange={handleRepoNameChange}
-                    onRepoNameBlur={handleRepoNameBlur}
-                    onUseExisting={handleUseExisting}
-                    onCreateRepository={handleCreateRepository}
-                />
-            )}
-
             {repoMode === 'existing' && (
-                <>
-                    <SelectionStepContent
-                        headerAction={
-                            <Button variant="accent" onPress={handleCreateNew}>
-                                <Add size="S" />
-                                <Text>New</Text>
-                            </Button>
-                        }
-                        items={repos}
-                        filteredItems={filteredRepos}
-                        showLoading={showLoading}
-                        isLoading={isLoading}
-                        isRefreshing={isRefreshing}
-                        hasLoadedOnce={hasLoadedOnce}
-                        error={error}
-                        searchQuery={searchQuery}
-                        onSearchChange={setSearchQuery}
-                        onLoad={loadRepos}
-                        onRefresh={refresh}
-                        selectedId={selectedRepo?.id}
-                        onSelect={selectItem}
-                        labels={{
-                            loadingMessage: 'Loading your repositories...',
-                            loadingSubMessage: 'Fetching repositories with write access',
-                            errorTitle: 'Error Loading Repositories',
-                            emptyTitle: 'No Repositories Found',
-                            emptyMessage: 'No repositories found with write access. Create a new repository to get started.',
-                            searchPlaceholder: 'Type to filter repositories...',
-                            itemNoun: 'repository',
-                            itemNounPlural: 'repositories',
-                            ariaLabel: 'GitHub Repositories',
-                        }}
-                        renderDescription={(item) => (
-                            <Text slot="description">
-                                {item.isPrivate && (
-                                    <span className="repo-private-badge">Private</span>
-                                )}
-                                {item.description || <span className="repo-no-description">No description</span>}
-                            </Text>
-                        )}
-                    />
-                    {shouldShowResetOption && (
-                        <ResetToTemplateOption
-                            resetToTemplate={resetToTemplate}
-                            onResetToTemplateChange={handleResetToTemplateChange}
-                        />
-                    )}
-                </>
+                <Text>
+                    The selected repository is ready — the AEM Code Sync app isn&apos;t
+                    required for an existing repository.
+                </Text>
             )}
 
             {showNewRepoStatus && (

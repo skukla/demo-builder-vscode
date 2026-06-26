@@ -29,6 +29,7 @@ export function buildStackChangeStateReset(): Partial<WizardState> {
         daLiveSiteSearchFilter: undefined,
         commerceConnectValid: false,
         storefrontRepoValid: false,
+        storefrontCodeSyncValid: false,
     };
 }
 

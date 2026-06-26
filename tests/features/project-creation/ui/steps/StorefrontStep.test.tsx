@@ -1,20 +1,19 @@
 /**
- * StorefrontStep Tests (R1b — two tiles + focused modals)
+ * StorefrontStep Tests (v6 — vertical step list + 5 dedicated views)
  *
- * The Storefront step renders two {@link ConfigTile}s — a Storefront tile (status
- * from {@link isStorefrontConfigured}) and a Block Libraries tile (always
- * "configured"; optional, never gates Continue). Each tile opens a focused Modal:
- * the Storefront modal hosts the GitHub + DA.live service cards + RepoSelectionInline;
- * the Block Libraries modal hosts BlockLibrariesStepContent.
+ * The Storefront step renders a {@link VerticalStepList} nav + the active sub-step's
+ * dedicated view across 5 sub-steps: `github` → GitHubServiceCard, `dalive` →
+ * DaLiveServiceCard, `repository`/`code-sync` → RepoSelectionInline (same element
+ * instance, only the `phase` prop changes), `block-libraries` → BlockLibrariesStepContent.
  *
- * The Continue gate uses isStorefrontConfigured(state) — github + dalive
- * authenticated in edsConfig AND storefrontRepoValid true. Block-library selection
- * does NOT affect the gate. RepoSelectionInline.onValidityChange persists
- * storefrontRepoValid via updateState so the verdict survives modal close + nav.
+ * The Continue gate uses isStorefrontConfigured(state) — github + dalive authenticated
+ * in edsConfig AND storefrontRepoValid true AND storefrontCodeSyncValid true. Block-
+ * library selection does NOT affect the gate. RepoSelectionInline reports validity via
+ * onRepoValidChange / onCodeSyncValidChange, persisted to state via updateState.
  *
- * The auth hooks, RepoSelectionInline, the service cards, and Modal/DialogContainer
- * are mocked to lightweight stubs so the tests assert the STEP's wiring (tiles,
- * gate, modal open/close, persistence) rather than re-testing children.
+ * The auth hooks, RepoSelectionInline, and the service cards are mocked to lightweight
+ * stubs so the tests assert the STEP's wiring (nav, view routing, gate, persistence)
+ * rather than re-testing children.
  *
  * @jest-environment jsdom
  */
@@ -94,40 +93,30 @@ jest.mock('@/features/eds/ui/components', () => ({
     ),
 }));
 
-// RepoSelectionInline — stub exposing buttons to flip validity.
+// RepoSelectionInline — stub exposing the phase + buttons to flip both validities.
 jest.mock('@/features/eds/ui/steps/RepoSelectionInline', () => ({
-    RepoSelectionInline: (props: { onValidityChange: (valid: boolean) => void }) => (
-        <div data-testid="repo-selection-inline">
-            <button type="button" data-testid="repo-valid" onClick={() => props.onValidityChange(true)}>
+    RepoSelectionInline: (props: {
+        phase: string;
+        onRepoValidChange: (valid: boolean) => void;
+        onCodeSyncValidChange: (valid: boolean) => void;
+    }) => (
+        <div data-testid="repo-selection-inline" data-phase={props.phase}>
+            <button type="button" data-testid="repo-valid" onClick={() => props.onRepoValidChange(true)}>
                 repo valid
             </button>
-            <button type="button" data-testid="repo-invalid" onClick={() => props.onValidityChange(false)}>
+            <button type="button" data-testid="repo-invalid" onClick={() => props.onRepoValidChange(false)}>
                 repo invalid
             </button>
-        </div>
-    ),
-}));
-
-// Modal + DialogContainer — render children inline only when present so we can
-// assert what each modal hosts without portal/tray machinery.
-jest.mock('@/core/ui/components/ui/Modal', () => ({
-    Modal: (props: { title: string; children: React.ReactNode; onClose: () => void }) => (
-        <div data-testid={`modal-${props.title.replace(/\s+/g, '-').toLowerCase()}`}>
-            <button type="button" data-testid="modal-close" onClick={props.onClose}>
-                close
+            <button
+                type="button"
+                data-testid="codesync-valid"
+                onClick={() => props.onCodeSyncValidChange(true)}
+            >
+                code-sync valid
             </button>
-            {props.children}
         </div>
     ),
 }));
-
-jest.mock('@adobe/react-spectrum', () => {
-    const actual = jest.requireActual('@adobe/react-spectrum');
-    return {
-        ...actual,
-        DialogContainer: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-    };
-});
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -259,34 +248,71 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('StorefrontStep', () => {
-    describe('nav + inline storefront setup', () => {
-        it('renders the Storefront and Block Libraries sub-steps in the nav', () => {
+    describe('nav + view routing', () => {
+        it('renders all 4 sub-steps in the nav', () => {
             setup();
-            expect(document.querySelector('[data-step="storefront"]')).toBeInTheDocument();
-            expect(document.querySelector('[data-step="block-libraries"]')).toBeInTheDocument();
+            for (const id of ['accounts', 'repository', 'code-sync', 'block-libraries']) {
+                expect(document.querySelector(`[data-step="${id}"]`)).toBeInTheDocument();
+            }
         });
 
-        it('shows the storefront setup inline by default (no tile to open)', () => {
+        it('shows BOTH account cards on the accounts sub-step (the default)', () => {
             setup();
+            // GitHub + DA.live are independent, parallel sign-ins — one sub-step, two cards.
             expect(screen.getByTestId('github-card')).toBeInTheDocument();
             expect(screen.getByTestId('dalive-card')).toBeInTheDocument();
-            expect(screen.getByTestId('repo-selection-inline')).toBeInTheDocument();
+            expect(screen.queryByTestId('repo-selection-inline')).not.toBeInTheDocument();
+        });
+
+        it('shows RepoSelectionInline with the repository phase on the repository sub-step', () => {
+            setup({ activeStorefrontStep: 'repository', edsConfig: authedEdsConfig() });
+            const inline = screen.getByTestId('repo-selection-inline');
+            expect(inline).toBeInTheDocument();
+            expect(inline).toHaveAttribute('data-phase', 'repository');
+        });
+
+        it('shows RepoSelectionInline with the code-sync phase on the code-sync sub-step', () => {
+            setup({
+                activeStorefrontStep: 'code-sync',
+                edsConfig: authedEdsConfig(),
+                storefrontRepoValid: true,
+            });
+            const inline = screen.getByTestId('repo-selection-inline');
+            expect(inline).toBeInTheDocument();
+            expect(inline).toHaveAttribute('data-phase', 'code-sync');
         });
 
         it('persists storefrontRepoValid via updateState when the repo reports valid', () => {
-            const { updateState } = setup();
+            const { updateState } = setup({
+                activeStorefrontStep: 'repository',
+                edsConfig: authedEdsConfig(),
+            });
             act(() => {
                 fireEvent.click(screen.getByTestId('repo-valid'));
             });
             expect(updateState).toHaveBeenCalledWith({ storefrontRepoValid: true });
         });
 
-        it('persists storefrontRepoValid=false when the repo reports invalid', () => {
-            const { updateState } = setup();
-            act(() => {
-                fireEvent.click(screen.getByTestId('repo-invalid'));
+        it('persists storefrontCodeSyncValid via updateState when code-sync reports valid', () => {
+            const { updateState } = setup({
+                activeStorefrontStep: 'code-sync',
+                edsConfig: authedEdsConfig(),
+                storefrontRepoValid: true,
             });
-            expect(updateState).toHaveBeenCalledWith({ storefrontRepoValid: false });
+            act(() => {
+                fireEvent.click(screen.getByTestId('codesync-valid'));
+            });
+            expect(updateState).toHaveBeenCalledWith({ storefrontCodeSyncValid: true });
+        });
+
+        it('switches the active sub-step when a reached nav step is clicked', () => {
+            // both authed → accounts is `done` (reachable), repository is `current`.
+            const { updateState } = setup({
+                activeStorefrontStep: 'repository',
+                edsConfig: authedEdsConfig(),
+            });
+            fireEvent.click(document.querySelector('[data-step="accounts"]')!);
+            expect(updateState).toHaveBeenCalledWith({ activeStorefrontStep: 'accounts' });
         });
     });
 
@@ -316,12 +342,6 @@ describe('StorefrontStep', () => {
             expect(nativeCheckbox).toBeChecked();
             expect(nativeCheckbox).toBeDisabled();
         });
-
-        it('switches the active sub-step when a nav step is clicked', () => {
-            const { updateState } = setup(onBlockLibs);
-            fireEvent.click(document.querySelector('[data-step="storefront"]')!);
-            expect(updateState).toHaveBeenCalledWith({ activeStorefrontStep: 'storefront' });
-        });
     });
 
     describe('Continue gate (isStorefrontConfigured — block libs do NOT gate)', () => {
@@ -335,10 +355,19 @@ describe('StorefrontStep', () => {
             expect(setCanProceed).toHaveBeenLastCalledWith(false);
         });
 
-        it('should be true when github+dalive authed AND storefrontRepoValid true', () => {
+        it('should be false when repo valid but code-sync not yet valid', () => {
             const { setCanProceed } = setup({
                 edsConfig: authedEdsConfig(),
                 storefrontRepoValid: true,
+            });
+            expect(setCanProceed).toHaveBeenLastCalledWith(false);
+        });
+
+        it('should be true when github+dalive authed AND repo+code-sync valid', () => {
+            const { setCanProceed } = setup({
+                edsConfig: authedEdsConfig(),
+                storefrontRepoValid: true,
+                storefrontCodeSyncValid: true,
             });
             expect(setCanProceed).toHaveBeenLastCalledWith(true);
         });
@@ -350,6 +379,7 @@ describe('StorefrontStep', () => {
                     daLiveAuth: { isAuthenticated: false },
                 },
                 storefrontRepoValid: true,
+                storefrontCodeSyncValid: true,
             });
             expect(setCanProceed).toHaveBeenLastCalledWith(false);
         });
@@ -359,6 +389,7 @@ describe('StorefrontStep', () => {
             const { setCanProceed } = setup({
                 edsConfig: authedEdsConfig(),
                 storefrontRepoValid: true,
+                storefrontCodeSyncValid: true,
                 selectedBlockLibraries: [],
             });
             expect(setCanProceed).toHaveBeenLastCalledWith(true);

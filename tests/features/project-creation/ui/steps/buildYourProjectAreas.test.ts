@@ -106,10 +106,15 @@ describe('buildYourProjectAreas — status', () => {
         expect(statusOf(state({ selectedStack: 'eds-paas' }), 'storefront')).toBe('upcoming');
     });
 
-    it('storefront is completed when github+dalive authed AND storefrontRepoValid', () => {
+    it('storefront is completed when github+dalive authed AND repo+code-sync valid', () => {
         expect(
             statusOf(
-                state({ selectedStack: 'eds-paas', edsConfig: edsAuthed, storefrontRepoValid: true }),
+                state({
+                    selectedStack: 'eds-paas',
+                    edsConfig: edsAuthed,
+                    storefrontRepoValid: true,
+                    storefrontCodeSyncValid: true,
+                }),
                 'storefront',
             ),
         ).toBe('completed');

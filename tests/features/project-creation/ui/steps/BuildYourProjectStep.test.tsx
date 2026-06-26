@@ -232,6 +232,7 @@ describe('BuildYourProjectStep — Continue gate over non-commerce areas', () =>
             activeBuildArea: 'storefront',
             edsConfig: EDS_AUTHED as WizardState['edsConfig'],
             storefrontRepoValid: true,
+            storefrontCodeSyncValid: true,
         });
         expect(setCanProceed).toHaveBeenLastCalledWith(true);
     });

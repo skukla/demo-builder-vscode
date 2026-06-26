@@ -3,7 +3,7 @@
  *
  * Context-Aware GitHub App Verification (logic lives in
  * repoSelectionInline.helpers, surfaced via RepoSelectionInline's
- * onValidityChange — formerly the GitHubRepoSelectionStep canProceed gate):
+ * onRepoValidChange / onCodeSyncValidChange verdicts):
  * - NEW repos: Check early in RepoSelectionInline (template is pre-configured)
  * - EXISTING repos: NO check here - deferred to StorefrontSetup after fstab.yaml push
  *
@@ -15,7 +15,12 @@
  * 5. Status display text (only for NEW repos)
  */
 
+import {
+    computeRepoValid,
+    computeCodeSyncValid,
+} from '@/features/eds/ui/steps/repoSelectionInline.helpers';
 import { isValidRepositoryName } from '@/core/validation/normalizers';
+import type { GitHubRepoItem } from '@/types/webview';
 
 // Define the GitHubAppStatus interface (same as in component)
 interface GitHubAppStatus {
@@ -26,6 +31,83 @@ interface GitHubAppStatus {
     error?: string;
     installUrl?: string;
 }
+
+const repo = { id: 'r1', name: 'my-repo', fullName: 'me/my-repo' } as unknown as GitHubRepoItem;
+
+describe('computeRepoValid (repo choice, no app gate)', () => {
+    describe('new repos', () => {
+        it('is valid when created and not mid-creation', () => {
+            expect(
+                computeRepoValid('new', { isCreated: true, isCreating: false }, undefined, false),
+            ).toBe(true);
+        });
+
+        it('is invalid before creation', () => {
+            expect(
+                computeRepoValid('new', { isCreated: false, isCreating: false }, undefined, false),
+            ).toBe(false);
+        });
+
+        it('is invalid while still creating', () => {
+            expect(
+                computeRepoValid('new', { isCreated: true, isCreating: true }, undefined, false),
+            ).toBe(false);
+        });
+    });
+
+    describe('existing repos', () => {
+        it('is valid when a repo is selected and not loading', () => {
+            expect(
+                computeRepoValid('existing', { isCreated: false, isCreating: false }, repo, false),
+            ).toBe(true);
+        });
+
+        it('is invalid when no repo is selected', () => {
+            expect(
+                computeRepoValid('existing', { isCreated: false, isCreating: false }, undefined, false),
+            ).toBe(false);
+        });
+
+        it('is invalid while loading', () => {
+            expect(
+                computeRepoValid('existing', { isCreated: false, isCreating: false }, repo, true),
+            ).toBe(false);
+        });
+    });
+});
+
+describe('computeCodeSyncValid (app gate)', () => {
+    describe('new repos', () => {
+        it('is valid when the app is installed and not mid-check', () => {
+            expect(
+                computeCodeSyncValid('new', { isChecking: false, isInstalled: true }),
+            ).toBe(true);
+        });
+
+        it('is invalid when the app is not installed', () => {
+            expect(
+                computeCodeSyncValid('new', { isChecking: false, isInstalled: false }),
+            ).toBe(false);
+        });
+
+        it('is invalid while still checking', () => {
+            expect(
+                computeCodeSyncValid('new', { isChecking: true, isInstalled: null }),
+            ).toBe(false);
+        });
+    });
+
+    describe('existing repos', () => {
+        it('always passes (no app gate at this step)', () => {
+            expect(
+                computeCodeSyncValid('existing', { isChecking: false, isInstalled: null }),
+            ).toBe(true);
+            expect(
+                computeCodeSyncValid('existing', { isChecking: false, isInstalled: false }),
+            ).toBe(true);
+        });
+    });
+});
 
 describe('RepoSelectionInline - GitHub App Check', () => {
     describe('Context-Aware Check Trigger Logic', () => {

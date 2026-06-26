@@ -3,14 +3,16 @@
  *
  * The GitHubRepoSelectionStep body re-homed from TwoColumnLayout to a single
  * column for the StorefrontStep group. It no longer owns canProceed — instead it
- * surfaces its validity (including the GitHub-App-install gate) to the parent via
- * the `onValidityChange(boolean)` callback. No right-column ConfigurationSummary.
+ * surfaces TWO independent verdicts to the parent: `onRepoValidChange` (the repo
+ * choice, no app gate) and `onCodeSyncValidChange` (the AEM-Code-Sync app gate).
+ * The `phase` prop selects which body renders (`repository` vs `code-sync`), but
+ * BOTH validity callbacks fire regardless of phase. No right-column summary.
  *
  * Coverage:
- * - Single-column render (no TwoColumnLayout, no "Configuration Summary")
+ * - `repository` phase renders the repo pick/create UI (NOT the Code Sync status)
+ * - `code-sync` phase renders the Code Sync status/install UI
  * - New-repo + existing-repo selection update edsConfig
- * - The GitHub-App-install gate drives validity (un-installed → invalid;
- *   installed → valid; existing selected → valid)
+ * - Validity flows out via onRepoValidChange / onCodeSyncValidChange
  * - daLiveSite is locked to repoName on new-repo input
  *
  * @jest-environment jsdom
@@ -74,43 +76,65 @@ const createDefaultState = (overrides?: Partial<EDSConfig>): WizardState => ({
 
 describe('RepoSelectionInline', () => {
     let mockUpdateState: jest.Mock;
-    let mockOnValidityChange: jest.Mock;
+    let mockOnRepoValidChange: jest.Mock;
+    let mockOnCodeSyncValidChange: jest.Mock;
 
     beforeEach(() => {
         jest.clearAllMocks();
         mockUpdateState = jest.fn();
-        mockOnValidityChange = jest.fn();
+        mockOnRepoValidChange = jest.fn();
+        mockOnCodeSyncValidChange = jest.fn();
         mockRequest.mockReset();
     });
 
-    const renderInline = (state: WizardState) =>
+    const renderInline = (
+        state: WizardState,
+        phase: 'repository' | 'code-sync' = 'repository',
+    ) =>
         import('@/features/eds/ui/steps/RepoSelectionInline').then(({ RepoSelectionInline }) => {
             render(
                 <TestWrapper>
                     <RepoSelectionInline
                         state={state}
                         updateState={mockUpdateState}
-                        onValidityChange={mockOnValidityChange}
+                        phase={phase}
+                        onRepoValidChange={mockOnRepoValidChange}
+                        onCodeSyncValidChange={mockOnCodeSyncValidChange}
                     />
                 </TestWrapper>,
             );
         });
 
-    describe('single-column layout', () => {
+    describe('repository phase', () => {
         it('should render the new-repo form in new mode', async () => {
-            await renderInline(createDefaultState({ repoMode: 'new' }));
+            await renderInline(createDefaultState({ repoMode: 'new' }), 'repository');
             expect(screen.getByLabelText(/repository name/i)).toBeInTheDocument();
         });
 
         it('should NOT render a "Configuration Summary" right column', async () => {
-            await renderInline(createDefaultState({ repoMode: 'new' }));
+            await renderInline(createDefaultState({ repoMode: 'new' }), 'repository');
             expect(screen.queryByText(/configuration summary/i)).not.toBeInTheDocument();
+        });
+
+        it('should NOT render the "AEM Code Sync App" status in the repository phase', async () => {
+            const state = createDefaultState({ repoMode: 'new', repoName: 'my-repo' });
+            await renderInline(state, 'repository');
+            expect(screen.queryByText(/AEM Code Sync App/i)).not.toBeInTheDocument();
+        });
+
+        it('should show the "New" action to switch to create mode (existing)', async () => {
+            const state = createDefaultState({ repoMode: 'existing' });
+            (state as WizardState & { githubReposCache: unknown[] }).githubReposCache = [
+                { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo' },
+            ];
+            await renderInline(state, 'repository');
+            expect(screen.getByRole('button', { name: /new/i })).toBeInTheDocument();
         });
     });
 
     describe('new-repo input updates edsConfig (daLiveSite locked to repoName)', () => {
         it('mirrors daLiveSite to the normalized repo name on new-repo input', async () => {
-            await renderInline(createDefaultState({ repoMode: 'new' }));
+            await renderInline(createDefaultState({ repoMode: 'new' }), 'repository');
 
             const input = screen.getByLabelText(/repository name/i);
             fireEvent.change(input, { target: { value: 'My New Store' } });
@@ -122,9 +146,8 @@ describe('RepoSelectionInline', () => {
         });
     });
 
-    describe('GitHub-App-install gate drives validity', () => {
-        it('should report VALID when an existing repo is selected (app check deferred)', async () => {
-            mockRequest.mockResolvedValue({ success: true, isInstalled: true });
+    describe('repo validity flows out via onRepoValidChange (no app gate)', () => {
+        it('should report repo VALID when an existing repo is selected', async () => {
             const state = createDefaultState({
                 repoMode: 'existing',
                 selectedRepo: { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo' },
@@ -134,47 +157,78 @@ describe('RepoSelectionInline', () => {
                 { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo' },
             ];
 
-            await renderInline(state);
+            await renderInline(state, 'repository');
 
             await waitFor(() => {
-                expect(mockOnValidityChange).toHaveBeenCalledWith(true);
+                expect(mockOnRepoValidChange).toHaveBeenCalledWith(true);
             });
         });
 
-        it('should report INVALID for a new repo not yet created (app gate not satisfied)', async () => {
-            mockRequest.mockResolvedValue({ success: true, isInstalled: true });
+        it('should report repo INVALID for a new repo not yet created', async () => {
             const state = createDefaultState({ repoMode: 'new', repoName: 'my-valid-repo' });
 
-            await renderInline(state);
+            await renderInline(state, 'repository');
 
             await waitFor(() => {
-                expect(mockOnValidityChange).toHaveBeenCalledWith(false);
+                expect(mockOnRepoValidChange).toHaveBeenCalledWith(false);
             });
         });
+    });
 
-        it('should report INVALID when GitHub App is not installed', async () => {
-            mockRequest.mockResolvedValue({ success: true, isInstalled: false });
+    describe('code-sync phase', () => {
+        it('should render a "ready" message for an existing repo (no app gate)', async () => {
+            mockRequest.mockResolvedValue({ success: true, isInstalled: true });
             const state = createDefaultState({
                 repoMode: 'existing',
                 selectedRepo: { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo' },
             });
 
-            await renderInline(state);
+            await renderInline(state, 'code-sync');
+
+            expect(screen.getByText(/is ready/i)).toBeInTheDocument();
+        });
+
+        it('should report code-sync VALID for an existing repo (gate deferred)', async () => {
+            const state = createDefaultState({
+                repoMode: 'existing',
+                selectedRepo: { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo' },
+            });
+
+            await renderInline(state, 'code-sync');
 
             await waitFor(() => {
-                expect(mockOnValidityChange).toHaveBeenCalledWith(false);
+                expect(mockOnCodeSyncValidChange).toHaveBeenCalledWith(true);
             });
         });
-    });
 
-    describe('existing-repo browse mode', () => {
-        it('should show the "New" action to switch to create mode', async () => {
-            const state = createDefaultState({ repoMode: 'existing' });
-            (state as WizardState & { githubReposCache: unknown[] }).githubReposCache = [
-                { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo' },
-            ];
-            await renderInline(state);
-            expect(screen.getByRole('button', { name: /new/i })).toBeInTheDocument();
+        it('should report code-sync INVALID for a new created repo whose app is not installed', async () => {
+            mockRequest.mockResolvedValue({ success: true, isInstalled: false });
+            const state = createDefaultState({
+                repoMode: 'new',
+                repoName: 'my-repo',
+                createdRepo: { owner: 'testuser', name: 'my-repo', url: '', fullName: 'testuser/my-repo' },
+            });
+
+            await renderInline(state, 'code-sync');
+
+            await waitFor(() => {
+                expect(mockOnCodeSyncValidChange).toHaveBeenCalledWith(false);
+            });
+        });
+
+        it('should render the "AEM Code Sync App" status for a created new repo', async () => {
+            mockRequest.mockResolvedValue({ success: true, isInstalled: false });
+            const state = createDefaultState({
+                repoMode: 'new',
+                repoName: 'my-repo',
+                createdRepo: { owner: 'testuser', name: 'my-repo', url: '', fullName: 'testuser/my-repo' },
+            });
+
+            await renderInline(state, 'code-sync');
+
+            await waitFor(() => {
+                expect(screen.getByText(/AEM Code Sync App/i)).toBeInTheDocument();
+            });
         });
     });
 });

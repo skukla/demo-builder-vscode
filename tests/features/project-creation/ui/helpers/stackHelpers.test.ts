@@ -546,6 +546,7 @@ describe('stackHelpers', () => {
             const reset = buildStackChangeStateReset();
             expect(reset.commerceConnectValid).toBe(false);
             expect(reset.storefrontRepoValid).toBe(false);
+            expect(reset.storefrontCodeSyncValid).toBe(false);
         });
     });
 });

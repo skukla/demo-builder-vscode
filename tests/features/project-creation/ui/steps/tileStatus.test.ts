@@ -71,13 +71,28 @@ describe('isStorefrontConfigured', () => {
     it('is false when both authed but the repo is not valid', () => {
         expect(isStorefrontConfigured(state({ edsConfig: authed }))).toBe(false);
         expect(
-            isStorefrontConfigured(state({ edsConfig: authed, storefrontRepoValid: false })),
+            isStorefrontConfigured(
+                state({ edsConfig: authed, storefrontRepoValid: false, storefrontCodeSyncValid: true }),
+            ),
         ).toBe(false);
     });
 
-    it('is true when GitHub + DA.live are authed AND the repo is valid', () => {
+    it('is false when the repo is valid but code-sync is not', () => {
         expect(
             isStorefrontConfigured(state({ edsConfig: authed, storefrontRepoValid: true })),
+        ).toBe(false);
+        expect(
+            isStorefrontConfigured(
+                state({ edsConfig: authed, storefrontRepoValid: true, storefrontCodeSyncValid: false }),
+            ),
+        ).toBe(false);
+    });
+
+    it('is true when GitHub + DA.live authed AND repo + code-sync are valid', () => {
+        expect(
+            isStorefrontConfigured(
+                state({ edsConfig: authed, storefrontRepoValid: true, storefrontCodeSyncValid: true }),
+            ),
         ).toBe(true);
     });
 });

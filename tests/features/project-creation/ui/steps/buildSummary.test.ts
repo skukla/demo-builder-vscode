@@ -78,6 +78,7 @@ describe('storefrontSummaryGroup', () => {
             state({
                 selectedStack: 'eds-accs',
                 storefrontRepoValid: true,
+                storefrontCodeSyncValid: true,
                 edsConfig: {
                     repoName: 'my-repo',
                     githubAuth: { isAuthenticated: true },

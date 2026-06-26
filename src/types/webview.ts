@@ -40,11 +40,16 @@ export type CommerceSectionId =
 
 /**
  * The ordered Storefront sub-step ids within the build step's Storefront area:
- * the storefront setup (GitHub/DA.live/repo) then the optional block-libraries
- * picker. Defined here so `WizardState.activeStorefrontStep` can reference it; the
- * pure section logic lives in `ui/steps/storefrontSections.ts`.
+ * connect accounts (GitHub + DA.live), pick/create the repository, install the AEM
+ * Code Sync app, then the optional block-libraries picker. Defined here so
+ * `WizardState.activeStorefrontStep` can reference it; the pure section logic
+ * lives in `ui/steps/storefrontSections.ts`.
  */
-export type StorefrontSectionId = 'storefront' | 'block-libraries';
+export type StorefrontSectionId =
+    | 'accounts'
+    | 'repository'
+    | 'code-sync'
+    | 'block-libraries';
 
 export interface WizardState {
     currentStep: WizardStep;
@@ -67,7 +72,8 @@ export interface WizardState {
     // back/forward navigation. See ui/steps/tileStatus.ts.
     commerceConnectValid?: boolean;  // Commerce connect form reported valid (ConnectStoreStepContent)
     commerceStoreViewChosen?: boolean;  // Persisted verdict: the Business Structure store-view selection was made — drives the Catalog tab's gate/status
-    storefrontRepoValid?: boolean;   // Storefront repo selection reported valid (RepoSelectionInline)
+    storefrontRepoValid?: boolean;   // Storefront repo selection reported valid (RepoSelectionInline repository phase)
+    storefrontCodeSyncValid?: boolean;   // Storefront AEM Code Sync app install reported valid (RepoSelectionInline code-sync phase)
     activeBuildArea?: BuildAreaId;   // Area currently focused within the build-your-project step
     activeCommerceStep?: CommerceSectionId;  // Active Commerce sub-step within the build step (footer Continue/Back walks sub-steps → areas → wizard steps)
     committedCommerceSteps?: CommerceSectionId[];  // Commerce sub-steps the user has pressed Continue past — gates the summary ✓ (a valid form alone does NOT mark a row done)

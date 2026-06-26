@@ -44,13 +44,15 @@ export function isAdobeSignedIn(state: WizardState): boolean {
  * Whether the Storefront step's Storefront tile is fully configured.
  *
  * @param state - Wizard state
- * @returns true when GitHub + DA.live are authenticated AND the repo reported valid
+ * @returns true when GitHub + DA.live are authenticated AND both the repo and the
+ *   AEM Code Sync app reported valid
  */
 export function isStorefrontConfigured(state: WizardState): boolean {
     const eds = state.edsConfig;
     return (
         Boolean(eds?.githubAuth?.isAuthenticated) &&
         Boolean(eds?.daLiveAuth?.isAuthenticated) &&
-        state.storefrontRepoValid === true
+        state.storefrontRepoValid === true &&
+        state.storefrontCodeSyncValid === true
     );
 }

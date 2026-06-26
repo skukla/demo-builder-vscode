@@ -2,13 +2,18 @@
  * StorefrontStep Component (v6 — vertical step list + dedicated view, like Commerce)
  *
  * The Storefront area renders just its BODY — a [list | view] row (.commerce-body)
- * with a {@link VerticalStepList} on the left (Storefront · Block Libraries) and the
- * active sub-step's dedicated view on the right:
- *   1. `storefront`      — the setup: GitHub + DA.live service cards + the repo
- *                          selection ({@link RepoSelectionInline}). Gates Continue on
- *                          {@link isStorefrontConfigured}.
- *   2. `block-libraries` — the optional EDS block-library picker
+ * with a {@link VerticalStepList} on the left and the active sub-step's dedicated
+ * view on the right (five sub-steps):
+ *   1. `github`          — connect GitHub ({@link GitHubServiceCard}).
+ *   2. `dalive`          — connect DA.live ({@link DaLiveServiceCard}).
+ *   3. `repository`      — pick/create the repo ({@link RepoSelectionInline}, repository phase).
+ *   4. `code-sync`       — install the AEM Code Sync app ({@link RepoSelectionInline}, code-sync phase).
+ *   5. `block-libraries` — the optional EDS block-library picker
  *                          ({@link BlockLibrariesStepContent}); never gates Continue.
+ *
+ * `repository` and `code-sync` render the SAME {@link RepoSelectionInline} element
+ * instance (same JSX position, so React keeps it mounted) — only its `phase` prop
+ * changes — so its local repo-creation / app-check state survives the switch.
  *
  * The footer Continue/Back walks these sub-steps (WizardContainer), driven by the
  * shared {@link areaSubSteps} provider; the active one is `state.activeStorefrontStep`.
@@ -187,43 +192,38 @@ export function StorefrontStep({
     const activeStep = driver.active(state) as StorefrontSectionId;
     const activeTitle = subSteps.find(s => s.id === activeStep)?.title ?? '';
 
-    const storefrontSetup = (
-        <>
-            <div className="services-cards-grid">
-                <GitHubServiceCard
-                    isChecking={gitHubAuth.isChecking}
-                    isAuthenticating={gitHubAuth.isAuthenticating}
-                    isAuthenticated={gitHubAuth.isAuthenticated}
-                    user={gitHubAuth.user}
-                    error={gitHubAuth.error}
-                    onConnect={gitHubAuth.startOAuth}
-                    onChangeAccount={gitHubAuth.changeAccount}
-                />
-                <DaLiveServiceCard
-                    isChecking={daLiveAuth.isChecking}
-                    isAuthenticating={daLiveAuth.isAuthenticating && !showDaLiveInput}
-                    isAuthenticated={daLiveAuth.isAuthenticated}
-                    verifiedOrg={daLiveAuth.verifiedOrg}
-                    error={daLiveAuth.error}
-                    showInput={showDaLiveInput}
-                    setupComplete={daLiveAuth.setupComplete}
-                    defaultOrg={state.edsConfig?.daLiveOrg}
-                    onSetup={handleDaLiveSetup}
-                    onSubmit={handleDaLiveSubmit}
-                    onReset={handleDaLiveReset}
-                    onCancelInput={handleCancelInput}
-                    onOpenDaLive={daLiveAuth.openDaLive}
-                    onOpenBookmarkletSetup={
-                        daLiveAuth.bookmarkletUrl ? handleOpenBookmarkletSetup : undefined
-                    }
-                />
-            </div>
-            <RepoSelectionInline
-                state={state}
-                updateState={updateState}
-                onValidityChange={(valid) => updateState({ storefrontRepoValid: valid })}
+    // Accounts sub-step: GitHub + DA.live are independent, parallel sign-ins, so
+    // they share ONE sub-step (two cards) rather than two — gate is both connected.
+    const accountsCards = (
+        <div className="services-cards-grid">
+            <GitHubServiceCard
+                isChecking={gitHubAuth.isChecking}
+                isAuthenticating={gitHubAuth.isAuthenticating}
+                isAuthenticated={gitHubAuth.isAuthenticated}
+                user={gitHubAuth.user}
+                error={gitHubAuth.error}
+                onConnect={gitHubAuth.startOAuth}
+                onChangeAccount={gitHubAuth.changeAccount}
             />
-        </>
+            <DaLiveServiceCard
+                isChecking={daLiveAuth.isChecking}
+                isAuthenticating={daLiveAuth.isAuthenticating && !showDaLiveInput}
+                isAuthenticated={daLiveAuth.isAuthenticated}
+                verifiedOrg={daLiveAuth.verifiedOrg}
+                error={daLiveAuth.error}
+                showInput={showDaLiveInput}
+                setupComplete={daLiveAuth.setupComplete}
+                defaultOrg={state.edsConfig?.daLiveOrg}
+                onSetup={handleDaLiveSetup}
+                onSubmit={handleDaLiveSubmit}
+                onReset={handleDaLiveReset}
+                onCancelInput={handleCancelInput}
+                onOpenDaLive={daLiveAuth.openDaLive}
+                onOpenBookmarkletSetup={
+                    daLiveAuth.bookmarkletUrl ? handleOpenBookmarkletSetup : undefined
+                }
+            />
+        </div>
     );
 
     const blockLibraries = isEdsStack ? (
@@ -253,7 +253,23 @@ export function StorefrontStep({
                 <div className="step-view-header">
                     <h3 className="step-view-title">{activeTitle}</h3>
                 </div>
-                {activeStep === 'block-libraries' ? blockLibraries : storefrontSetup}
+                {/* The trailing RepoSelectionInline arm covers BOTH `repository` and
+                    `code-sync` at the SAME JSX position so React keeps the same
+                    element instance mounted across the switch (its repo-creation /
+                    app-check local state must survive). Only the `phase` prop flips. */}
+                {activeStep === 'accounts' ? (
+                    accountsCards
+                ) : activeStep === 'block-libraries' ? (
+                    blockLibraries
+                ) : (
+                    <RepoSelectionInline
+                        phase={activeStep}
+                        state={state}
+                        updateState={updateState}
+                        onRepoValidChange={v => updateState({ storefrontRepoValid: v })}
+                        onCodeSyncValidChange={v => updateState({ storefrontCodeSyncValid: v })}
+                    />
+                )}
             </div>
         </div>
     );
