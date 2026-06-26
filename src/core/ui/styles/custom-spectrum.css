@@ -1759,20 +1759,32 @@ button[class*="spectrum-Button"][disabled],
 
 .timeline-connector {
     position: absolute !important;
-    left: 11px !important;
-    top: 28px !important;
+    /* The connector is a CHILD of the step dot (its positioning anchor), so it centers
+       on the dot by construction: left:50% is the dot's own center and translateX(-50%)
+       centers the line on it. Robust to Spectrum scale, the collapsed 56px rail, and any
+       wrapper offset — none of which a computed left could survive. */
+    left: 50% !important;
+    top: 100% !important; /* start at the dot's bottom edge */
+    transform: translateX(-50%) !important;
     width: 3px !important;
-    height: 28px !important;
+    /* Bridge the gap to the next dot (overlaps slightly behind it — z-index keeps it under). */
+    height: var(--spectrum-global-dimension-size-500, 40px) !important;
     z-index: 0 !important;
 }
 
-/* When the current step shows an indented child rail, stretch its connector from
-   below the dot to the bottom of the (padded) step container, so the parent line
-   runs continuously down to the next top-level step past the children. */
+/* When the current step shows an indented child rail, the parent line must run
+   continuously down to the next top-level step past the children. A very tall line,
+   clipped by the step wrapper's overflow (.timeline-step-wrap-clip), lands exactly at
+   the wrapper's bottom regardless of how many children show. */
 .timeline-connector-stretch {
-    top: 28px !important;
-    bottom: 0 !important;
-    height: auto !important;
+    height: 9999px !important;
+}
+
+/* Applied to a step wrapper ONLY while it shows its child rail: clips the tall
+   stretch connector at the wrapper's bottom (the next-step boundary). Normal step
+   wrappers stay overflow:visible so their connectors reach into the gap below. */
+.timeline-step-wrap-clip {
+    overflow: hidden !important;
 }
 
 .timeline-connector-completed {

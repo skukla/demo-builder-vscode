@@ -241,6 +241,9 @@ export function TimelineNav({
                             key={step.id}
                             position="relative"
                             paddingBottom={isCurrentWithChildren ? 'size-400' : undefined}
+                            // While children show, clip the tall stretch connector at the
+                            // wrapper's bottom so it ends exactly at the next step.
+                            UNSAFE_className={isCurrentWithChildren ? 'timeline-step-wrap-clip' : undefined}
                         >
                             {/* Step item - role/tabIndex/keyboard conditionally applied when clickable */}
                             {/* The `data-step-name` attribute powers a CSS-only `::after` tooltip in
@@ -279,13 +282,26 @@ export function TimelineNav({
                                 <View
                                     UNSAFE_className="nav-item-row"
                                 >
-                                    {/* Step indicator dot */}
+                                    {/* Step indicator dot — also the positioning ANCHOR for the
+                                        connector below it, so the line centers on the dot's own box
+                                        (responsive at any scale; no wrapper-offset possible). */}
                                     <View
                                         width="size-300"
                                         height="size-300"
                                         UNSAFE_className={cn(getTimelineStepDotClasses(status), 'shrink-0')}
                                     >
                                         {renderStepIndicator(status)}
+                                        {/* Dotted connector after each step except the last. */}
+                                        {displayIndex < displaySteps.length - 1 && (
+                                            <View
+                                                UNSAFE_className={cn(
+                                                    'timeline-connector',
+                                                    status === 'completed' ? 'timeline-connector-completed' : 'timeline-connector-pending',
+                                                    // Stretch past the indented children to the next dot.
+                                                    isCurrentWithChildren && 'timeline-connector-stretch',
+                                                )}
+                                            />
+                                        )}
                                     </View>
 
                                     {/* Step label */}
@@ -296,21 +312,6 @@ export function TimelineNav({
                                     </Text>
                                 </View>
                             </div>
-
-                            {/* Dotted line connector after each step except last */}
-                            {displayIndex < displaySteps.length - 1 && (
-                                <View
-                                    position="absolute"
-                                    left="11px"
-                                    UNSAFE_className={cn(
-                                        'timeline-connector',
-                                        status === 'completed' ? 'timeline-connector-completed' : 'timeline-connector-pending',
-                                        // When the step shows children, stretch the line to the next
-                                        // top-level dot so it runs continuously past the indented children.
-                                        isCurrentWithChildren && 'timeline-connector-stretch',
-                                    )}
-                                />
-                            )}
 
                             {/* Nested sub-steps: one indented level under the current parent only */}
                             {!step.isExiting && status === 'current' && (
