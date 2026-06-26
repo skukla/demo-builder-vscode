@@ -51,10 +51,7 @@ import {
     SECTION_TITLES,
     type CommerceSectionId,
 } from './commerceSections';
-import {
-    StepViewHeader,
-    sectionBody,
-} from './commerceStepBodies';
+import { sectionBody } from './commerceStepBodies';
 import { isCommerceConfigured, isAdobeSignedIn } from './tileStatus';
 import { useProjectBuilder } from './useProjectBuilder';
 import { useCanProceedAll } from '@/core/ui/hooks/useCanProceed';
@@ -293,7 +290,6 @@ export function CommerceStep({
                 />
             </div>
             <div className="step-view">
-                <StepViewHeader step={activeStep} />
                 {activeBody}
             </div>
         </div>

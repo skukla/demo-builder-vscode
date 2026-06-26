@@ -163,37 +163,8 @@ describe('CommerceStep (v7 tabs + dedicated views)', () => {
         });
     });
 
-    describe('dedicated-view header', () => {
-        it('should render the active step title as a heading (Backend first)', () => {
-            setup();
-            expect(
-                screen.getByRole('heading', { name: 'Backend' }),
-            ).toBeInTheDocument();
-        });
-
-        it('should render the active step description below the title', () => {
-            setup();
-            expect(
-                screen.getByText(/choose how your commerce backend is hosted/i),
-            ).toBeInTheDocument();
-        });
-
-        it('should show the config step title when a config tab is active', () => {
-            setup({ selectedPackage: 'buildright', selectedBackend: PAAS, selectedStack: 'eds-paas' });
-            // Committed PaaS opens connection first → the Connection header shows.
-            expect(
-                screen.getByRole('heading', { name: 'Connection' }),
-            ).toBeInTheDocument();
-        });
-
-        it('should omit the step-view header for the signin step (auth owns its title)', () => {
-            setup({ selectedBackend: ACCS, selectedStack: 'eds-accs' });
-            // signin is active + gated; no duplicate "Sign in to Adobe" heading from the view.
-            expect(
-                screen.queryByRole('heading', { name: /sign in to adobe/i }),
-            ).not.toBeInTheDocument();
-        });
-    });
+    // The per-step view header was removed — the sub-step nav strip names the
+    // active step, so there's no heading/description in the view body anymore.
 
     describe('backend cards (availability per package)', () => {
         it('should enable both PaaS and ACCS for citisignal', () => {

@@ -3,17 +3,17 @@
  *
  * Pure presentational pieces extracted from {@link CommerceStep} so the step file
  * stays under the size limit: the per-section view-body builder ({@link sectionBody}),
- * the Backend "choice cards" ({@link BackendCard} + {@link ChoiceCheckIcon}), the
- * dedicated-view per-step header ({@link StepViewHeader}), and the copy constants
- * ({@link SECTION_TITLES} / {@link SECTION_DESCRIPTIONS} / {@link BACKEND_DESCRIPTIONS};
- * the summary `ROW_LABELS` live in commerceSections). No wizard logic lives here — CommerceStep owns state,
- * the Backend→stack bridge, the gate, and the summary; it imports these to render.
+ * the Backend "choice cards" ({@link BackendCard} + {@link ChoiceCheckIcon}), and the
+ * copy constants ({@link SECTION_TITLES} / {@link BACKEND_DESCRIPTIONS}; the summary
+ * `ROW_LABELS` live in commerceSections). The sub-step nav strip names the active
+ * step, so there's no per-step view header. No wizard logic lives here — CommerceStep
+ * owns state, the Backend→stack bridge, the gate, and the summary; it imports these.
  *
  * @module features/project-creation/ui/steps/commerceStepBodies
  */
 
 import React from 'react';
-import { BACKEND_LABELS, SECTION_TITLES, type CommerceSectionId } from './commerceSections';
+import { BACKEND_LABELS, type CommerceSectionId } from './commerceSections';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import type { WizardState } from '@/types/webview';
 
@@ -25,15 +25,6 @@ import type { WizardState } from '@/types/webview';
 export const BACKEND_DESCRIPTIONS: Record<string, string> = {
     'adobe-commerce-paas': 'Self-managed PaaS. Full control over hosting and extensions.',
     'adobe-commerce-accs': 'Adobe-hosted SaaS. Fast setup; requires Adobe sign-in.',
-};
-
-/** One-line description shown under the step title in the dedicated view header. */
-export const SECTION_DESCRIPTIONS: Record<CommerceSectionId, string> = {
-    backend: 'Choose how your Commerce backend is hosted.',
-    signin: 'Sign in with your Adobe account to configure the SaaS backend.',
-    connection: 'Connect to your Commerce instance.',
-    'business-structure': 'Select the website, store, and store view to use.',
-    catalog: 'Configure catalog services for your store.',
 };
 
 /** No-op setter handed to the contextual AdobeAuthStep (the step owns the gate). */
@@ -83,23 +74,6 @@ export const BackendCard: React.FC<{
         )}
     </button>
 );
-
-/**
- * The dedicated view's per-step header (title + one-line description).
- *
- * Omitted for `signin`: {@link AdobeAuthStep} renders its own prominent
- * StatusDisplay titles ("Sign in to Adobe" / status states), so a step-view
- * header there would read as a duplicate title.
- */
-export const StepViewHeader: React.FC<{ step: CommerceSectionId }> = ({ step }) => {
-    if (step === 'signin') return null;
-    return (
-        <div className="step-view-header">
-            <h3 className="step-view-title">{SECTION_TITLES[step]}</h3>
-            <p className="step-view-desc">{SECTION_DESCRIPTIONS[step]}</p>
-        </div>
-    );
-};
 
 /** Context passed to the per-section body builder. */
 export interface SectionBodyContext {

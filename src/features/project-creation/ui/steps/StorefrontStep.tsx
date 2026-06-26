@@ -190,7 +190,6 @@ export function StorefrontStep({
     const driver = areaSubSteps('storefront')!;
     const subSteps = driver.subSteps(state);
     const activeStep = driver.active(state) as StorefrontSectionId;
-    const activeTitle = subSteps.find(s => s.id === activeStep)?.title ?? '';
 
     // Accounts sub-step: GitHub + DA.live are independent, parallel sign-ins, so
     // they share ONE sub-step (two cards) rather than two — gate is both connected.
@@ -251,9 +250,6 @@ export function StorefrontStep({
                 />
             </div>
             <div className="step-view">
-                <div className="step-view-header">
-                    <h3 className="step-view-title">{activeTitle}</h3>
-                </div>
                 {/* The trailing RepoSelectionInline arm covers BOTH `repository` and
                     `code-sync` at the SAME JSX position so React keeps the same
                     element instance mounted across the switch (its repo-creation /

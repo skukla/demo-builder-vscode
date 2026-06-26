@@ -59,12 +59,12 @@ describe('VerticalStepList', () => {
             expect(ids).toEqual(['backend', 'connection', 'business-structure', 'catalog']);
         });
 
-        it('exposes a vertical tablist orientation', () => {
+        it('exposes a horizontal tablist orientation (the strip)', () => {
             renderWithProvider(
                 <VerticalStepList steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
             );
             const list = screen.getByRole('tablist');
-            expect(list).toHaveAttribute('aria-orientation', 'vertical');
+            expect(list).toHaveAttribute('aria-orientation', 'horizontal');
         });
 
         it('renders each step title text', () => {

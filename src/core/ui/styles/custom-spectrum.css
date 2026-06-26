@@ -3974,6 +3974,9 @@ div[class*="spectrum"] input[type="search"] {
 }
 .commerce-body {
     display: flex !important;
+    /* Sub-step nav is a horizontal strip ON TOP, the active view fills below
+       (was a [left rail | view] row). */
+    flex-direction: column !important;
     flex: 1 1 auto !important;
     min-height: 0 !important;
     gap: 0 !important;
@@ -3984,33 +3987,34 @@ div[class*="spectrum"] input[type="search"] {
     min-width: 0 !important;
 }
 
-/* ---- Left nav (.step-nav) — the area label stacked above the vertical step list.
- * The label names the area the user is configuring now that the area sub-nav left
- * the wizard timeline. */
+/* ---- Sub-step nav (.step-nav) — a horizontal strip across the top of the area
+ * body: the all-caps area label inline at the left, then the sub-step tabs. The
+ * label names the area the user is configuring now that the area sub-nav left the
+ * wizard timeline. (Was a vertical left rail — promoted the small-screen strip to
+ * the default.) */
 .step-nav {
     display: flex !important;
-    flex-direction: column !important;
+    flex-direction: row !important;
+    align-items: center !important;
     flex: 0 0 auto !important;
-    width: var(--commerce-nav-width) !important;
+    width: 100% !important;
     box-sizing: border-box !important;
     padding: var(--wizard-content-pad) !important;
-    /* Matched left panel — mirrors the summary sidebar (gray-75 fill + 1px gray-200
-     * border) so the nav and summary read as symmetric panels framing the content. */
+    gap: var(--spectrum-global-dimension-size-300) !important;
+    /* Matched toolbar — gray-75 fill + a bottom divider (was a right border on the
+     * left rail) so the strip and summary still read as the same panel family. */
     background: var(--spectrum-global-color-gray-75) !important;
-    border-right: 1px solid var(--spectrum-global-color-gray-200) !important;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-200) !important;
 }
-/* All-caps area label — mirrors the summary column's .sum-group-h treatment so the
- * left nav and the summary read with the same small, quiet, uppercase heading style. */
+/* All-caps area label — pinned at the strip's left edge (doesn't scroll with tabs). */
 .step-nav-area {
     font-size: var(--spectrum-global-dimension-font-size-50) !important;
     color: var(--spectrum-global-color-gray-700) !important;
     font-weight: 700 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.05em !important;
-    margin: 0 0 var(--spectrum-global-dimension-size-150) 0 !important;
-}
-.step-nav > .vsteplist {
-    width: 100% !important;
+    margin: 0 !important;
+    flex: 0 0 auto !important;
 }
 
 /* ---- VerticalStepList (.vsteplist*) — a QUIET vertical MENU on the panel's left ----
@@ -4023,15 +4027,24 @@ div[class*="spectrum"] input[type="search"] {
  * Spectrum tokens (theme-aware), no saturated fills, accessible focus ring. */
 .vsteplist {
     display: flex !important;
-    flex-direction: column !important;
-    flex: 0 0 auto !important;
-    width: 100% !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    /* Takes the strip's remaining width and scrolls horizontally when the tabs
+       overflow (the active tab is scrolled into view by VerticalStepList). */
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    width: auto !important;
+    overflow-x: auto !important;
+    scroll-behavior: smooth !important;
+    gap: var(--spectrum-global-dimension-size-150)
+        var(--spectrum-global-dimension-size-300) !important;
     list-style: none !important;
     margin: 0 !important;
     padding: 0 !important;
 }
 .vsteplist-item {
     display: block !important;
+    flex: 0 0 auto !important;
 }
 /* A quiet menu row. Matches the summary's small type scale (font-size-75) and gray
  * tokens. NO border / outline anywhere except the :focus-visible ring — the active
@@ -4040,14 +4053,16 @@ div[class*="spectrum"] input[type="search"] {
     display: flex !important;
     align-items: center !important;
     gap: var(--spectrum-global-dimension-size-100) !important;
-    width: 100% !important;
+    /* Inline tab: intrinsic width, never shrinks (overflow scrolls instead), one line. */
+    width: auto !important;
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
     box-sizing: border-box !important;
     padding: var(--spectrum-global-dimension-size-100)
-        var(--spectrum-global-dimension-size-125) !important;
+        var(--spectrum-global-dimension-size-150) !important;
     background: transparent !important;
     border: 0 !important;
-    border-left: 3px solid transparent !important;
-    border-radius: var(--spectrum-global-dimension-size-50) !important;
+    border-radius: 0 !important;
     cursor: pointer !important;
     color: var(--spectrum-global-color-gray-700) !important;
     font-family: inherit !important;
@@ -4062,10 +4077,10 @@ div[class*="spectrum"] input[type="search"] {
     outline: 2px solid var(--spectrum-global-color-blue-500) !important;
     outline-offset: 2px !important;
 }
-/* Active row: left accent bar + subtle gray-100 fill + bold gray-900 label. NO box. */
+/* Active tab: a single simple bottom underline (no pill fill, no box) + bold label. */
 .vsteplist-step.active {
-    background: var(--spectrum-global-color-gray-100) !important;
-    border-left-color: var(--spectrum-global-color-blue-500) !important;
+    background: transparent !important;
+    box-shadow: inset 0 -2px 0 var(--spectrum-global-color-blue-500) !important;
     color: var(--spectrum-global-color-gray-900) !important;
 }
 .vsteplist-step[aria-disabled='true'] {
@@ -4114,73 +4129,13 @@ div[class*="spectrum"] input[type="search"] {
  * new breakpoints invented. Above 1180px the vertical nav panel is unchanged.
  * ========================================================================= */
 
-/* ≤1180px — REUSES the established 1180 breakpoint (the same query that stacks
- * TwoColumnLayout, custom-spectrum.css ~814). Composes with it: the left column
- * goes full-width and the summary drops below with a border-top. Here we ALSO
- * flip the Commerce nav PANEL from a vertical left rail to a horizontal strip,
- * so the final stacked order is: nav strip → step-view → summary. */
-@media (max-width: 1180px) { /* bp: two-column stack — Commerce nav panel→strip + summary hide */
-    /* nav on top, step-view below (was [nav | view] row) */
-    .commerce-body {
-        flex-direction: column !important;
-        align-items: stretch !important;
-    }
-    /* Panel → full-width horizontal strip. Keeps the gray-75 fill + padding so it
-     * still reads as the same panel; divider swaps right-border → bottom-border. */
-    .step-nav {
-        width: 100% !important;
-        flex: 0 0 auto !important;
-        flex-direction: row !important;
-        align-items: center !important;
-        gap: var(--spectrum-global-dimension-size-300) !important;
-        border-right: none !important;
-        border-bottom: 1px solid var(--spectrum-global-color-gray-200) !important;
-    }
-    /* "COMMERCE" label sits inline at the strip's left edge. */
-    .step-nav-area {
-        margin: 0 !important;
-        flex: 0 0 auto !important;
-    }
-    /* Step list → horizontal, wrapping to a 2nd row rather than overflowing. */
-    .step-nav > .vsteplist,
-    .vsteplist {
-        flex-direction: row !important;
-        flex-wrap: wrap !important;
-        width: auto !important;
-        gap: var(--spectrum-global-dimension-size-150)
-            var(--spectrum-global-dimension-size-300) !important;
-    }
-    /* Rows become inline tab-like items. Active = bold label + a single, simple
-     * bottom underline — no pill fill, no rounded box, no extra blue marks. The
-     * square corners keep hover/focus a clean rectangle rather than a busy pill. */
-    .vsteplist-step {
-        width: auto !important;
-        border-left: 0 !important;
-        border-radius: 0 !important;
-        padding: var(--spectrum-global-dimension-size-100)
-            var(--spectrum-global-dimension-size-150) !important;
-    }
-    .vsteplist-step.active {
-        background: transparent !important;
-        border-left-color: transparent !important;
-        box-shadow: inset 0 -2px 0 var(--spectrum-global-color-blue-500) !important;
-    }
-    /* Drop the summary entirely once it would stack — at this width the area body
-     * owns the space; the stacked summary block just adds clutter. Scoped to the
-     * Build layout (.build-two-col) so other TwoColumnLayout consumers keep their
-     * stacked summary. */
+/* ≤1180px — the sub-step strip + stacked layout are now the DEFAULT (see the base
+ * .commerce-body / .step-nav / .vsteplist rules above), so this breakpoint only
+ * still drops the summary: at this width the area body owns the space and the
+ * stacked summary block just adds clutter. Scoped to the Build layout
+ * (.build-two-col) so other TwoColumnLayout consumers keep their stacked summary. */
+@media (max-width: 1180px) { /* bp: two-column stack — Build summary hidden */
     .build-two-col .two-column-layout-right {
-        display: none !important;
-    }
-}
-
-/* ≤600px — REUSES the wizard's smallest established breakpoint (600, also used
- * in connect-services.css). At this extreme the wizard degrades to linear: the
- * .step-view-header still names the current step and Continue/Back/Save & continue
- * drive progression, so the nav strip is hidden entirely. (Trade-off: click-to-jump
- * between steps is unavailable ≤600px — consistent with the rail collapsing to dots.) */
-@media (max-width: 600px) { /* bp: linear / single-col — Commerce nav hidden */
-    .step-nav {
         display: none !important;
     }
 }
@@ -4192,21 +4147,6 @@ div[class*="spectrum"] input[type="search"] {
     width: 100% !important;
     box-sizing: border-box !important;
     padding: var(--wizard-content-pad) !important;
-}
-
-/* ---- Dedicated-view per-step header (.step-view-header*) — title + one-liner ---- */
-.step-view-header {
-    margin-bottom: var(--spectrum-global-dimension-size-300) !important;
-}
-.step-view-title {
-    margin: 0 !important;
-    font-size: var(--spectrum-global-dimension-font-size-200) !important;
-    font-weight: 700 !important;
-    color: var(--spectrum-global-color-gray-900) !important;
-}
-.step-view-desc {
-    margin: var(--spectrum-global-dimension-size-75) 0 0 !important;
-    color: var(--spectrum-global-color-gray-600) !important;
 }
 
 /* ---- Backend "choice cards" (.choice-*) — prominent binary pick, not a dense tile.

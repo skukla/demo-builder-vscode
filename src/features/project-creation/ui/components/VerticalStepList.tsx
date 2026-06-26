@@ -20,7 +20,7 @@
  * @module features/project-creation/ui/components/VerticalStepList
  */
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { cn } from '@/core/ui/utils/classNames';
 
 /** Status of a step (completion / lock — the active highlight is separate via activeId). */
@@ -92,24 +92,38 @@ const StepButton: React.FC<{
 };
 
 /**
- * The controlled vertical step list.
+ * The controlled step list. Rendered as a horizontal, scrollable tab strip by the
+ * `.vsteplist` CSS (the name is historical — orientation lives in CSS); when the
+ * tabs overflow, the active one is scrolled into view on every step change.
  *
  * @param props - the steps, the active id, and the onSelect callback
- * @returns the vertical step list element
+ * @returns the step list element
  */
 export const VerticalStepList: React.FC<VerticalStepListProps> = ({
     steps,
     activeId,
     onSelect,
-}) => (
-    <ol className="vsteplist" role="tablist" aria-orientation="vertical">
-        {steps.map(step => (
-            <StepButton
-                key={step.id}
-                step={step}
-                isActive={step.id === activeId}
-                onSelect={onSelect}
-            />
-        ))}
-    </ol>
-);
+}) => {
+    const listRef = useRef<HTMLOListElement>(null);
+
+    // Keep the active tab visible when the strip scrolls (more tabs than fit).
+    // block:'nearest' avoids nudging the page vertically; jsdom lacks the API
+    // (optional-chained so tests don't throw).
+    useEffect(() => {
+        const active = listRef.current?.querySelector<HTMLElement>(`[data-step="${activeId}"]`);
+        active?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+    }, [activeId]);
+
+    return (
+        <ol ref={listRef} className="vsteplist" role="tablist" aria-orientation="horizontal">
+            {steps.map(step => (
+                <StepButton
+                    key={step.id}
+                    step={step}
+                    isActive={step.id === activeId}
+                    onSelect={onSelect}
+                />
+            ))}
+        </ol>
+    );
+};
