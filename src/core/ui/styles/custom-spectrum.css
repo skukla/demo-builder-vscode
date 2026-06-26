@@ -1231,12 +1231,14 @@ button[class*="spectrum-Button"][disabled],
     line-height: 1.4 !important;
 }
 
-/* Architecture options section (inside expanded card) */
+/* Architecture options section (inside expanded card) slides + fades down on expand.
+ * Its own keyframe (was a second `fadeIn` definition that the later plain `fadeIn`
+ * silently shadowed — so this slide never actually ran; renamed to restore it). */
 .brand-card-architectures {
-    animation: fadeIn 0.2s ease-out !important;
+    animation: fadeInDown var(--db-motion-base) var(--db-motion-ease) !important;
 }
 
-@keyframes fadeIn {
+@keyframes fadeInDown {
     from {
         opacity: 0;
         transform: translateY(-8px);
@@ -4083,6 +4085,18 @@ div[class*="spectrum"] input[type="search"] {
     box-shadow: inset 0 -2px 0 var(--spectrum-global-color-blue-500) !important;
     color: var(--spectrum-global-color-gray-900) !important;
 }
+/* A newly-revealed tab (e.g. "Sign in" appearing when the ACCS backend is chosen)
+ * grows + fades in so the siblings shift smoothly instead of the tab popping in —
+ * mirrors the rail's timeline-enter (animate a max dimension + opacity, clip while
+ * growing). Applied for one render by VerticalStepList; zeroed under reduced-motion. */
+.vsteplist-step--enter {
+    overflow: hidden !important;
+    animation: vsteplist-step-enter var(--db-motion-slow) var(--db-motion-ease);
+}
+@keyframes vsteplist-step-enter {
+    from { opacity: 0; max-width: 0; }
+    to { opacity: 1; max-width: 12rem; }
+}
 .vsteplist-step[aria-disabled='true'] {
     cursor: default !important;
     color: var(--spectrum-global-color-gray-500) !important;
@@ -4147,6 +4161,14 @@ div[class*="spectrum"] input[type="search"] {
     width: 100% !important;
     box-sizing: border-box !important;
     padding: var(--wizard-content-pad) !important;
+}
+
+/* Sub-step view crossfade: the active view body fades + slides up when the sub-step
+ * (or area) changes. The body is wrapped in a `.step-view-anim` element keyed on the
+ * active sub-step, so React remounts it on each change → this entrance fires. Reuses
+ * the existing `fadeInUp` (opacity + 4px). Zeroed under prefers-reduced-motion. */
+.step-view-anim {
+    animation: fadeInUp var(--db-motion-base) var(--db-motion-ease);
 }
 
 /* ---- Backend "choice cards" (.choice-*) — prominent binary pick, not a dense tile.
@@ -4310,6 +4332,16 @@ div[class*="spectrum"] input[type="search"] {
 .sum-value.empty {
     color: var(--spectrum-global-color-gray-600) !important;
     font-style: italic !important;
+}
+/* Completion feedback: the shared ✓ renders only when a row is done, so it mounts
+ * on completion and this pop fires once — a subtle reward as each sub-step lands.
+ * Zeroed under the global prefers-reduced-motion reset. */
+@keyframes sum-check-in {
+    from { opacity: 0; transform: scale(0.6); }
+    to { opacity: 1; transform: scale(1); }
+}
+.sum-check {
+    animation: sum-check-in var(--db-motion-base) var(--db-motion-ease);
 }
 
 } /* End of second @layer theme block */

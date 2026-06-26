@@ -290,7 +290,10 @@ export function CommerceStep({
                 />
             </div>
             <div className="step-view">
-                {activeBody}
+                {/* Keyed on the active sub-step so it remounts → the view crossfades in. */}
+                <div className="step-view-anim" key={activeStep}>
+                    {activeBody}
+                </div>
             </div>
         </div>
     );

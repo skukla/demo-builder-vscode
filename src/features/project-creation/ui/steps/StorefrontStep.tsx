@@ -190,6 +190,11 @@ export function StorefrontStep({
     const driver = areaSubSteps('storefront')!;
     const subSteps = driver.subSteps(state);
     const activeStep = driver.active(state) as StorefrontSectionId;
+    // Crossfade key: groups repository + code-sync so the SAME RepoSelectionInline
+    // instance stays mounted across those two (its repo-creation / app-check state
+    // must survive); accounts + block-libraries each remount → fade.
+    const viewKey =
+        activeStep === 'repository' || activeStep === 'code-sync' ? 'repo' : activeStep;
 
     // Accounts sub-step: GitHub + DA.live are independent, parallel sign-ins, so
     // they share ONE sub-step (two cards) rather than two — gate is both connected.
@@ -250,23 +255,25 @@ export function StorefrontStep({
                 />
             </div>
             <div className="step-view">
-                {/* The trailing RepoSelectionInline arm covers BOTH `repository` and
-                    `code-sync` at the SAME JSX position so React keeps the same
-                    element instance mounted across the switch (its repo-creation /
-                    app-check local state must survive). Only the `phase` prop flips. */}
-                {activeStep === 'accounts' ? (
-                    accountsCards
-                ) : activeStep === 'block-libraries' ? (
-                    blockLibraries
-                ) : (
-                    <RepoSelectionInline
-                        phase={activeStep}
-                        state={state}
-                        updateState={updateState}
-                        onRepoValidChange={v => updateState({ storefrontRepoValid: v })}
-                        onCodeSyncValidChange={v => updateState({ storefrontCodeSyncValid: v })}
-                    />
-                )}
+                {/* `key={viewKey}` remounts (crossfades) on sub-step change, but groups
+                    repository + code-sync under one key so the trailing RepoSelectionInline
+                    arm — which covers BOTH at the SAME JSX position — keeps its element
+                    instance (and repo-creation / app-check state) across the phase flip. */}
+                <div className="step-view-anim" key={viewKey}>
+                    {activeStep === 'accounts' ? (
+                        accountsCards
+                    ) : activeStep === 'block-libraries' ? (
+                        blockLibraries
+                    ) : (
+                        <RepoSelectionInline
+                            phase={activeStep}
+                            state={state}
+                            updateState={updateState}
+                            onRepoValidChange={v => updateState({ storefrontRepoValid: v })}
+                            onCodeSyncValidChange={v => updateState({ storefrontCodeSyncValid: v })}
+                        />
+                    )}
+                </div>
             </div>
         </div>
     );

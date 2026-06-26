@@ -21,6 +21,7 @@
  */
 
 import React, { useEffect, useRef } from 'react';
+import { useEnterExit } from '@/core/ui/hooks/useEnterExit';
 import { cn } from '@/core/ui/utils/classNames';
 
 /** Status of a step (completion / lock — the active highlight is separate via activeId). */
@@ -62,8 +63,9 @@ export interface VerticalStepListProps {
 const StepButton: React.FC<{
     step: StepTab;
     isActive: boolean;
+    isEntering: boolean;
     onSelect: (id: string) => void;
-}> = ({ step, isActive, onSelect }) => {
+}> = ({ step, isActive, isEntering, onSelect }) => {
     const { id, title, status, lockReason } = step;
     const locked = status === 'locked';
     const reachable = status === 'done' || status === 'current';
@@ -75,7 +77,15 @@ const StepButton: React.FC<{
                 data-step={id}
                 data-status={status}
                 role="tab"
-                className={cn('vsteplist-step', status, isActive && 'active')}
+                className={cn(
+                    'vsteplist-step',
+                    status,
+                    isActive && 'active',
+                    // Grows + fades IN when it just appeared (e.g. "Sign in" when ACCS is
+                    // chosen). Removal is instant on purpose — a lingering exit makes the
+                    // click feel laggy; appearing delights, leaving should be immediate.
+                    isEntering && 'vsteplist-step--enter',
+                )}
                 aria-selected={isActive}
                 aria-disabled={reachable ? undefined : true}
                 tabIndex={reachable ? undefined : -1}
@@ -106,6 +116,12 @@ export const VerticalStepList: React.FC<VerticalStepListProps> = ({
 }) => {
     const listRef = useRef<HTMLOListElement>(null);
 
+    // Shared enter orchestration (cf. TimelineNav): only a newly-revealed tab animates
+    // in (flicker-free via useLayoutEffect), and the first render doesn't animate every
+    // tab. We render the CURRENT steps (not the hook's exit-inclusive displayItems) — a
+    // removed tab disappears instantly so the click feels responsive.
+    const { isEntering } = useEnterExit(steps);
+
     // Keep the active tab visible when the strip scrolls (more tabs than fit).
     // block:'nearest' avoids nudging the page vertically; jsdom lacks the API
     // (optional-chained so tests don't throw).
@@ -121,6 +137,7 @@ export const VerticalStepList: React.FC<VerticalStepListProps> = ({
                     key={step.id}
                     step={step}
                     isActive={step.id === activeId}
+                    isEntering={isEntering(step.id)}
                     onSelect={onSelect}
                 />
             ))}

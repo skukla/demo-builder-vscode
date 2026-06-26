@@ -1,9 +1,9 @@
 /**
  * VerticalStepList tests (Commerce slice — vertical nav)
  *
- * Presentational, fully-controlled VERTICAL step list replacing the rejected
- * horizontal StepTabs strip. Renders steps top-to-bottom as real <button role="tab">s
- * inside a `role="tablist"` with `aria-orientation="vertical"`; the active step is
+ * Presentational, fully-controlled step list (name is historical — it now renders as a
+ * HORIZONTAL tab strip via CSS). Renders steps as real <button role="tab">s inside a
+ * `role="tablist"` with `aria-orientation="horizontal"`; the active step is
  * `aria-selected`; only REACHED steps (`done` / `current`) call `onSelect(id)` — you may
  * click BACK to a reached step but never AHEAD to an `upcoming` one. `upcoming` and
  * `locked` steps are `aria-disabled` + out of the tab order and do NOT call `onSelect`;
@@ -17,7 +17,7 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 import {
@@ -191,6 +191,52 @@ describe('VerticalStepList', () => {
                 <VerticalStepList steps={[]} activeId="" onSelect={jest.fn()} />,
             );
             expect(document.querySelectorAll('.vsteplist-step')).toHaveLength(0);
+        });
+    });
+
+    describe('reveal animation (enter only — instant removal)', () => {
+        const STEPS_WITH_SIGNIN: StepTab[] = [
+            STEPS[0],
+            { id: 'signin', title: 'Sign in', status: 'current' },
+            ...STEPS.slice(1),
+        ];
+        /** Let the initial settle window pass so the enter animation is enabled. */
+        const settle = () => act(() => { jest.advanceTimersByTime(600); });
+
+        it('marks ONLY a newly-added tab as entering — not existing tabs, not on first render', () => {
+            const { rerender } = renderWithProvider(
+                <VerticalStepList steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
+            );
+            // Nothing animates on first render or during the settle window.
+            expect(document.querySelectorAll('.vsteplist-step--enter')).toHaveLength(0);
+            settle();
+
+            // Reveal a new sub-step (e.g. "Sign in" appearing when ACCS is chosen).
+            rerender(
+                <Provider theme={defaultTheme}>
+                    <VerticalStepList steps={STEPS_WITH_SIGNIN} activeId="connection" onSelect={jest.fn()} />
+                </Provider>,
+            );
+            expect(tab('signin').className).toMatch(/vsteplist-step--enter/);
+            expect(tab('backend').className).not.toMatch(/vsteplist-step--enter/);
+            expect(tab('connection').className).not.toMatch(/vsteplist-step--enter/);
+        });
+
+        it('removes a tab INSTANTLY — no lingering exit animation (responsive feedback)', () => {
+            const { rerender } = renderWithProvider(
+                <VerticalStepList steps={STEPS_WITH_SIGNIN} activeId="connection" onSelect={jest.fn()} />,
+            );
+            settle();
+            expect(document.querySelector('[data-step="signin"]')).not.toBeNull();
+
+            // Remove the sub-step (e.g. switching ACCS → PaaS drops "Sign in").
+            rerender(
+                <Provider theme={defaultTheme}>
+                    <VerticalStepList steps={STEPS} activeId="connection" onSelect={jest.fn()} />
+                </Provider>,
+            );
+            // Gone immediately — not held for an exit animation.
+            expect(document.querySelector('[data-step="signin"]')).toBeNull();
         });
     });
 });
