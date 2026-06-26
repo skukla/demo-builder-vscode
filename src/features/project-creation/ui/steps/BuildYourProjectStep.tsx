@@ -111,7 +111,7 @@ export function BuildYourProjectStep({
     // summary ]. The summary aggregates every VISIBLE area's group (commerce/
     // storefront/integrations) so it persists across area switches — the v6 model.
     const visibleAreaIds = areas.map(a => a.id);
-    const summaryGroups = buildSummaryGroups(state, stacks, visibleAreaIds);
+    const summaryGroups = buildSummaryGroups(state, visibleAreaIds);
     const archLabel = architectureLabel(state, stacks);
 
     return (

@@ -161,7 +161,7 @@ export function setup(initial: Partial<WizardState> = {}) {
                 <div className="commerce-summary-content">
                     <BuildYourProjectSummary
                         architectureLabel={architectureLabel(hostState, STACKS)}
-                        groups={buildSummaryGroups(hostState, STACKS, ['commerce'])}
+                        groups={buildSummaryGroups(hostState, ['commerce'])}
                     />
                 </div>
             </Provider>

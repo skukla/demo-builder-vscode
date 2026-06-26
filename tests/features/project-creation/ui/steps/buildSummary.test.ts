@@ -59,37 +59,71 @@ describe('commerceSummaryGroup', () => {
 });
 
 describe('storefrontSummaryGroup', () => {
-    it('shows the chosen Frontend from the committed stack', () => {
-        const group = storefrontSummaryGroup(state({ selectedStack: 'headless-paas' }), stacks);
+    it('heads "Storefront" and mirrors the four sub-steps', () => {
+        const group = storefrontSummaryGroup(state({}));
         expect(group.heading).toBe('Storefront');
-        const frontend = group.rows.find(r => r.label === 'Frontend');
-        expect(frontend?.value).toBe('Headless');
-        expect(frontend?.done).toBe(true);
+        expect(group.rows.map(r => r.label)).toEqual([
+            'Accounts',
+            'Repository',
+            'Code Sync',
+            'Block Libraries',
+        ]);
     });
 
-    it('gates the Repository row on full storefront configuration', () => {
-        const unconfigured = storefrontSummaryGroup(
-            state({ selectedStack: 'eds-accs', edsConfig: { repoName: 'my-repo' } } as Partial<WizardState>),
-            stacks,
+    it('marks Accounts done only when BOTH GitHub and DA.live are connected', () => {
+        const githubOnly = storefrontSummaryGroup(
+            state({ edsConfig: { githubAuth: { isAuthenticated: true } } } as Partial<WizardState>),
         );
-        expect(unconfigured.rows.find(r => r.label === 'Repository')?.value).toBeUndefined();
+        expect(githubOnly.rows.find(r => r.label === 'Accounts')?.done).toBe(false);
 
-        const configured = storefrontSummaryGroup(
+        const both = storefrontSummaryGroup(
             state({
-                selectedStack: 'eds-accs',
-                storefrontRepoValid: true,
-                storefrontCodeSyncValid: true,
                 edsConfig: {
-                    repoName: 'my-repo',
                     githubAuth: { isAuthenticated: true },
                     daLiveAuth: { isAuthenticated: true },
                 },
             } as Partial<WizardState>),
-            stacks,
         );
-        const repo = configured.rows.find(r => r.label === 'Repository');
+        const accounts = both.rows.find(r => r.label === 'Accounts');
+        expect(accounts?.done).toBe(true);
+        expect(accounts?.value).toBe('Connected');
+    });
+
+    it('shows Repository + Code Sync values from their persisted validity', () => {
+        const group = storefrontSummaryGroup(
+            state({
+                storefrontRepoValid: true,
+                storefrontCodeSyncValid: true,
+                edsConfig: { repoName: 'my-repo' },
+            } as Partial<WizardState>),
+        );
+        const repo = group.rows.find(r => r.label === 'Repository');
         expect(repo?.value).toBe('my-repo');
         expect(repo?.done).toBe(true);
+        const codeSync = group.rows.find(r => r.label === 'Code Sync');
+        expect(codeSync?.value).toBe('Verified');
+        expect(codeSync?.done).toBe(true);
+    });
+
+    it('counts selected block libraries (native + custom)', () => {
+        const none = storefrontSummaryGroup(state({}));
+        expect(none.rows.find(r => r.label === 'Block Libraries')?.done).toBe(false);
+
+        const some = storefrontSummaryGroup(
+            state({
+                selectedBlockLibraries: ['a', 'b'],
+                customBlockLibraries: [{ source: { owner: 'o', repo: 'r' } }],
+            } as unknown as Partial<WizardState>),
+        );
+        const libs = some.rows.find(r => r.label === 'Block Libraries');
+        expect(libs?.done).toBe(true);
+        expect(libs?.value).toBe('3 selected');
+    });
+
+    it('leaves not-yet-configured rows undone with no value', () => {
+        const group = storefrontSummaryGroup(state({}));
+        expect(group.rows.every(r => !r.done)).toBe(true);
+        expect(group.rows.every(r => r.value === undefined)).toBe(true);
     });
 });
 
@@ -103,7 +137,6 @@ describe('buildSummaryGroups', () => {
     it('aggregates visible areas in order and drops empty groups', () => {
         const groups = buildSummaryGroups(
             state({ selectedStack: 'eds-accs', selectedBackend: 'adobe-commerce-accs' }),
-            stacks,
             ['commerce', 'storefront', 'integrations'],
         );
         // Integrations contributes no rows yet → dropped.
@@ -113,7 +146,6 @@ describe('buildSummaryGroups', () => {
     it('omits a hidden area (not in the visible list)', () => {
         const groups = buildSummaryGroups(
             state({ selectedBackend: 'adobe-commerce-paas' }),
-            stacks,
             ['commerce'],
         );
         expect(groups.map(g => g.heading)).toEqual(['Commerce']);

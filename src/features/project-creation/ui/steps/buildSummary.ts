@@ -15,18 +15,13 @@ import type {
     SummaryGroup,
 } from '../components/BuildYourProjectSummary';
 import { commerceSectionStates, ROW_LABELS } from './commerceSections';
-import { isAdobeSignedIn, isStorefrontConfigured } from './tileStatus';
+import { STOREFRONT_SECTION_TITLES } from './storefrontSections';
+import { isAdobeSignedIn } from './tileStatus';
 import type { Stack } from '@/types/stacks';
 import type { WizardState } from '@/types/webview';
 
 /** Backend id whose flow adds the Adobe sign-in gate (duplicated literal, cf. CommerceStep). */
 const ACCS_BACKEND = 'adobe-commerce-accs';
-
-/** Frontend id → display label (cf. BACKEND_LABELS; only two frontends exist). */
-const FRONTEND_LABELS: Record<string, string> = {
-    'eds-storefront': 'Edge Delivery Storefront',
-    headless: 'Headless',
-};
 
 /** Resolve the selected Stack object from the catalog (the persisted value is an id). */
 function selectedStackObject(state: WizardState, stacks: Stack[]): Stack | undefined {
@@ -61,20 +56,41 @@ export function commerceSummaryGroup(state: WizardState): SummaryGroup {
 }
 
 /**
- * The Storefront group: the chosen Frontend (known once a stack is committed) and
- * the Repository (shown once the storefront is fully configured — commit-gated).
+ * The Storefront group: mirrors the Storefront sub-steps the way the Commerce group
+ * mirrors its sub-steps — Accounts (both services connected), Repository, Code Sync,
+ * and Block Libraries. Each row shows ✓ + value once that sub-step's PERSISTED state
+ * is satisfied (Storefront has no commit-gating, so no Continue-press is required).
+ * The chosen frontend isn't a sub-step — it lives in the architecture line above.
  */
-export function storefrontSummaryGroup(state: WizardState, stacks: Stack[]): SummaryGroup {
-    const frontendId = selectedStackObject(state, stacks)?.frontend;
-    const frontendLabel = frontendId ? FRONTEND_LABELS[frontendId] ?? frontendId : undefined;
-    const configured = isStorefrontConfigured(state);
-    const repoName = state.edsConfig?.repoName;
+export function storefrontSummaryGroup(state: WizardState): SummaryGroup {
+    const eds = state.edsConfig;
+    const accountsDone =
+        Boolean(eds?.githubAuth?.isAuthenticated) && Boolean(eds?.daLiveAuth?.isAuthenticated);
+    const repoDone = state.storefrontRepoValid === true;
+    const codeSyncDone = state.storefrontCodeSyncValid === true;
+    const libCount =
+        (state.selectedBlockLibraries?.length ?? 0) + (state.customBlockLibraries?.length ?? 0);
+
     const rows: SummaryRow[] = [
-        { label: 'Frontend', value: frontendLabel, done: Boolean(frontendLabel) },
         {
-            label: 'Repository',
-            value: configured ? repoName : undefined,
-            done: configured && Boolean(repoName),
+            label: STOREFRONT_SECTION_TITLES.accounts,
+            value: accountsDone ? 'Connected' : undefined,
+            done: accountsDone,
+        },
+        {
+            label: STOREFRONT_SECTION_TITLES.repository,
+            value: repoDone ? eds?.repoName : undefined,
+            done: repoDone && Boolean(eds?.repoName),
+        },
+        {
+            label: STOREFRONT_SECTION_TITLES['code-sync'],
+            value: codeSyncDone ? 'Verified' : undefined,
+            done: codeSyncDone,
+        },
+        {
+            label: STOREFRONT_SECTION_TITLES['block-libraries'],
+            value: libCount > 0 ? `${libCount} selected` : undefined,
+            done: libCount > 0,
         },
     ];
     return { heading: 'Storefront', rows };
@@ -89,12 +105,12 @@ export function integrationsSummaryGroup(_state: WizardState): SummaryGroup {
 }
 
 /** Map an area id to its provider. */
-function groupForArea(areaId: string, state: WizardState, stacks: Stack[]): SummaryGroup | null {
+function groupForArea(areaId: string, state: WizardState): SummaryGroup | null {
     switch (areaId) {
         case 'commerce':
             return commerceSummaryGroup(state);
         case 'storefront':
-            return storefrontSummaryGroup(state, stacks);
+            return storefrontSummaryGroup(state);
         case 'integrations':
             return integrationsSummaryGroup(state);
         default:
@@ -107,15 +123,13 @@ function groupForArea(areaId: string, state: WizardState, stacks: Stack[]): Summ
  * group with no rows so empty placeholders don't show.
  *
  * @param state - wizard state
- * @param stacks - the stack catalog (to resolve names/frontend)
  * @param visibleAreaIds - the ids of the areas currently visible, in order
  */
 export function buildSummaryGroups(
     state: WizardState,
-    stacks: Stack[],
     visibleAreaIds: string[],
 ): SummaryGroup[] {
     return visibleAreaIds
-        .map(id => groupForArea(id, state, stacks))
+        .map(id => groupForArea(id, state))
         .filter((g): g is SummaryGroup => g !== null && g.rows.length > 0);
 }
