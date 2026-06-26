@@ -336,8 +336,8 @@ export function RepoSelectionInline({
     // Report the Code-Sync app-gate verdict — runs for both phases so the
     // `code-sync` sub-step gate stays live while showing `repository`.
     useEffect(() => {
-        onCodeSyncValidChange(computeCodeSyncValid(repoMode, githubAppStatus));
-    }, [repoMode, githubAppStatus, onCodeSyncValidChange]);
+        onCodeSyncValidChange(computeCodeSyncValid(repoMode, githubAppStatus, selectedRepo));
+    }, [repoMode, githubAppStatus, selectedRepo, onCodeSyncValidChange]);
 
     // Derived state for showing reset option.
     const shouldShowResetOption = selectedRepo && hasLoadedOnce && !isLoading;

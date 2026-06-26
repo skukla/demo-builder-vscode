@@ -80,31 +80,34 @@ describe('computeCodeSyncValid (app gate)', () => {
     describe('new repos', () => {
         it('is valid when the app is installed and not mid-check', () => {
             expect(
-                computeCodeSyncValid('new', { isChecking: false, isInstalled: true }),
+                computeCodeSyncValid('new', { isChecking: false, isInstalled: true }, undefined),
             ).toBe(true);
         });
 
         it('is invalid when the app is not installed', () => {
             expect(
-                computeCodeSyncValid('new', { isChecking: false, isInstalled: false }),
+                computeCodeSyncValid('new', { isChecking: false, isInstalled: false }, undefined),
             ).toBe(false);
         });
 
         it('is invalid while still checking', () => {
             expect(
-                computeCodeSyncValid('new', { isChecking: true, isInstalled: null }),
+                computeCodeSyncValid('new', { isChecking: true, isInstalled: null }, undefined),
             ).toBe(false);
         });
     });
 
     describe('existing repos', () => {
-        it('always passes (no app gate at this step)', () => {
+        it('is valid once a repo is SELECTED (no app gate, but follows Repository)', () => {
             expect(
-                computeCodeSyncValid('existing', { isChecking: false, isInstalled: null }),
+                computeCodeSyncValid('existing', { isChecking: false, isInstalled: null }, repo),
             ).toBe(true);
+        });
+
+        it('is invalid before a repo is selected (must not pass before Repository)', () => {
             expect(
-                computeCodeSyncValid('existing', { isChecking: false, isInstalled: false }),
-            ).toBe(true);
+                computeCodeSyncValid('existing', { isChecking: false, isInstalled: null }, undefined),
+            ).toBe(false);
         });
     });
 });

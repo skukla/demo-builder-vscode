@@ -125,18 +125,23 @@ export function computeRepoValid(
 
 /**
  * Compute whether the AEM-Code-Sync app gate is satisfied (the `code-sync`
- * sub-step's verdict). Existing repos have no app gate at this step, so they pass:
- * - new:      the app is verified installed and not mid-check
- * - existing: always true (gate deferred to StorefrontSetup after fstab.yaml push)
+ * sub-step's verdict). Code Sync logically follows Repository, so it is never
+ * satisfied before a repo exists:
+ * - new:      the app is verified installed and not mid-check (implies the repo
+ *             was created — the app can't be installed before that)
+ * - existing: ready once a repo is actually SELECTED (no app gate at this step —
+ *             it's deferred to StorefrontSetup after the fstab.yaml push — but the
+ *             step isn't "done" until a repo has been chosen)
  */
 export function computeCodeSyncValid(
     repoMode: string,
     githubAppStatus: GitHubAppStatus,
+    selectedRepo: GitHubRepoItem | undefined,
 ): boolean {
     if (repoMode === 'new') {
         return githubAppStatus.isInstalled === true && !githubAppStatus.isChecking;
     }
-    return true;
+    return !!selectedRepo;
 }
 
 /**
@@ -153,7 +158,7 @@ export function computeCanProceed(
 ): boolean {
     return (
         computeRepoValid(repoMode, repoCreationState, selectedRepo, isLoading) &&
-        computeCodeSyncValid(repoMode, githubAppStatus)
+        computeCodeSyncValid(repoMode, githubAppStatus, selectedRepo)
     );
 }
 
