@@ -216,8 +216,15 @@ async function executePhaseNewRepo(
 
     logger.info(`[Storefront Setup] Creating repository: ${repoInfo.repoName}`);
 
+    // edsConfig.daLiveOrg is the namespace picked in the wizard. It serves
+    // as the GitHub-side target for the new repo (personal user or team org)
+    // and is the same value that DA.live writes target. Passing undefined
+    // when daLiveOrg is empty preserves the legacy default of "create under
+    // the authenticated user" — defensive against any state that escapes
+    // the picker (e.g., direct invocation paths).
     const repo = await services.githubRepoOps.createFromTemplate(
         templateOwner, templateRepo, repoInfo.repoName, edsConfig.isPrivate ?? false,
+        edsConfig.daLiveOrg || undefined,
     );
 
     repoInfo.repoUrl = repo.htmlUrl;

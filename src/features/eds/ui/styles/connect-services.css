@@ -156,3 +156,16 @@
     display: flex;
     flex-direction: column;
 }
+
+/* The namespace Picker renders at Spectrum's default (large) field text, which
+   towers over the small label and the 13px Token field below it. Bring the label
+   and the selected value down to the card's compact field sizing so the label +
+   value read as one group. Spectrum's own rules are specific, so !important. */
+.dalive-namespace-picker label {
+    font-size: 12px !important;
+}
+.dalive-namespace-picker button,
+.dalive-namespace-picker button span {
+    font-size: 13px !important;
+    font-weight: 400 !important;
+}

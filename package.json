@@ -253,11 +253,6 @@
       {
         "title": "DA.live",
         "properties": {
-          "demoBuilder.daLive.defaultOrg": {
-            "type": "string",
-            "default": "",
-            "description": "Default DA.live organization name. Auto-fills the organization field during authentication."
-          },
           "demoBuilder.daLive.aemAuthorUrl": {
             "type": "string",
             "default": "author-p158081-e1683323.adobeaemcloud.com",

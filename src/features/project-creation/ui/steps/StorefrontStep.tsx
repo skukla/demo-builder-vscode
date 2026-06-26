@@ -3,12 +3,12 @@
  *
  * The Storefront area renders just its BODY — a [list | view] row (.commerce-body)
  * with a {@link VerticalStepList} on the left and the active sub-step's dedicated
- * view on the right (five sub-steps):
- *   1. `github`          — connect GitHub ({@link GitHubServiceCard}).
- *   2. `dalive`          — connect DA.live ({@link DaLiveServiceCard}).
- *   3. `repository`      — pick/create the repo ({@link RepoSelectionInline}, repository phase).
- *   4. `code-sync`       — install the AEM Code Sync app ({@link RepoSelectionInline}, code-sync phase).
- *   5. `block-libraries` — the optional EDS block-library picker
+ * view on the right (four sub-steps):
+ *   1. `accounts`        — connect GitHub + DA.live ({@link GitHubServiceCard} +
+ *                          {@link DaLiveServiceCard}; gate: both connected).
+ *   2. `repository`      — pick/create the repo ({@link RepoSelectionInline}, repository phase).
+ *   3. `code-sync`       — install the AEM Code Sync app ({@link RepoSelectionInline}, code-sync phase).
+ *   4. `block-libraries` — the optional EDS block-library picker
  *                          ({@link BlockLibrariesStepContent}); never gates Continue.
  *
  * `repository` and `code-sync` render the SAME {@link RepoSelectionInline} element
@@ -213,7 +213,8 @@ export function StorefrontStep({
                 error={daLiveAuth.error}
                 showInput={showDaLiveInput}
                 setupComplete={daLiveAuth.setupComplete}
-                defaultOrg={state.edsConfig?.daLiveOrg}
+                githubUser={gitHubAuth.user?.login}
+                availableOrgs={gitHubAuth.orgs ?? EMPTY_STRING_ARRAY}
                 onSetup={handleDaLiveSetup}
                 onSubmit={handleDaLiveSubmit}
                 onReset={handleDaLiveReset}

@@ -1,10 +1,10 @@
 /**
- * StorefrontStep Tests (v6 — vertical step list + 5 dedicated views)
+ * StorefrontStep Tests (v6 — vertical step list + 4 dedicated views)
  *
  * The Storefront step renders a {@link VerticalStepList} nav + the active sub-step's
- * dedicated view across 5 sub-steps: `github` → GitHubServiceCard, `dalive` →
- * DaLiveServiceCard, `repository`/`code-sync` → RepoSelectionInline (same element
- * instance, only the `phase` prop changes), `block-libraries` → BlockLibrariesStepContent.
+ * dedicated view across 4 sub-steps: `accounts` → GitHubServiceCard + DaLiveServiceCard,
+ * `repository`/`code-sync` → RepoSelectionInline (same element instance, only the `phase`
+ * prop changes), `block-libraries` → BlockLibrariesStepContent.
  *
  * The Continue gate uses isStorefrontConfigured(state) — github + dalive authenticated
  * in edsConfig AND storefrontRepoValid true AND storefrontCodeSyncValid true. Block-
@@ -56,6 +56,7 @@ const mockGitHubAuth = {
     isAuthenticating: false,
     isAuthenticated: false,
     user: undefined as undefined | { login: string },
+    orgs: [] as string[],
     error: undefined,
     startOAuth: jest.fn(),
     changeAccount: jest.fn(),
