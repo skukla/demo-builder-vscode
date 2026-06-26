@@ -6,7 +6,7 @@
  */
 
 import { View, Text } from '@adobe/react-spectrum';
-import React, { useRef, useEffect, useState } from 'react';
+import React from 'react';
 import { TimelineChildren } from './TimelineChildren';
 import {
     getTimelineLabelClasses,
@@ -15,8 +15,8 @@ import {
     type TimelineStatus,
     type TimelineStep,
 } from './timelineNav.helpers';
+import { useEnterExit } from '@/core/ui/hooks/useEnterExit';
 import { cn } from '@/core/ui/utils/classNames';
-import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 
 // Re-export the shared timeline types so existing importers keep their
 // `from '.../TimelineNav'` path. (Helpers + types live in ./timelineNav.helpers.)
@@ -57,14 +57,6 @@ export interface TimelineNavProps {
     onChildClick?: (childId: string) => void;
 }
 
-/** Animation duration in milliseconds - uses semantic constant */
-const ANIMATION_DURATION = FRONTEND_TIMEOUTS.ANIMATION_SETTLE;
-
-/** Exiting step with its original position */
-interface ExitingStep extends TimelineStep {
-    originalIndex: number;
-}
-
 export function TimelineNav({
     steps,
     currentStepIndex,
@@ -80,98 +72,10 @@ export function TimelineNav({
     activeChildId,
     onChildClick,
 }: TimelineNavProps) {
-    // Track previous steps for detecting changes
-    const prevStepsRef = useRef<TimelineStep[]>([]);
-    // Delay before enabling animations (lets initial load settle)
-    const [animationsEnabled, setAnimationsEnabled] = useState(false);
-
-    // Animation states
-    const [enteringSteps, setEnteringSteps] = useState<Set<string>>(new Set());
-    const [exitingSteps, setExitingSteps] = useState<ExitingStep[]>([]);
-
-    // Enable animations after initial load settles
-    useEffect(() => {
-        if (steps.length > 0 && !animationsEnabled) {
-            const timer = setTimeout(() => {
-                setAnimationsEnabled(true);
-            }, FRONTEND_TIMEOUTS.INIT_ANIMATION_DELAY);
-            return () => clearTimeout(timer);
-        }
-        return undefined;
-    }, [steps.length, animationsEnabled]);
-
-    // Track step changes and animate
-    useEffect(() => {
-        // Always keep ref updated
-        if (steps.length === 0) {
-            return undefined;
-        }
-
-        // Don't animate until initialization period is over
-        if (!animationsEnabled) {
-            prevStepsRef.current = steps;
-            return undefined;
-        }
-
-        const currentIds = new Set(steps.map(s => s.id));
-        const prevSteps = prevStepsRef.current;
-        const prevIds = new Set(prevSteps.map(s => s.id));
-
-        // Find entering steps (in current but not in previous)
-        const entering = steps.filter(s => !prevIds.has(s.id)).map(s => s.id);
-
-        // Find exiting steps with their original index (in previous but not in current)
-        const exiting: ExitingStep[] = prevSteps
-            .map((s, i) => ({ ...s, originalIndex: i }))
-            .filter(s => !currentIds.has(s.id));
-
-        // Only animate if there are changes
-        if (entering.length > 0 || exiting.length > 0) {
-            // Mark entering steps
-            if (entering.length > 0) {
-                setEnteringSteps(new Set(entering));
-            }
-
-            // Keep exiting steps visible for exit animation (with their positions)
-            if (exiting.length > 0) {
-                setExitingSteps(exiting);
-            }
-
-            // Clear animation states after animation completes
-            const timer = setTimeout(() => {
-                setEnteringSteps(new Set());
-                setExitingSteps([]);
-                // Update ref AFTER animation completes
-                prevStepsRef.current = steps;
-            }, ANIMATION_DURATION);
-
-            return () => clearTimeout(timer);
-        }
-
-        prevStepsRef.current = steps;
-        return undefined;
-    }, [steps, animationsEnabled]);
-
-    // Combine current steps with exiting steps for rendering
-    const displaySteps = React.useMemo(() => {
-        if (exitingSteps.length === 0) {
-            return steps.map(s => ({ ...s, isExiting: false }));
-        }
-
-        // Insert exiting steps at their original positions
-        const result: Array<TimelineStep & { isExiting: boolean }> =
-            steps.map(s => ({ ...s, isExiting: false }));
-
-        // Insert exiting steps at their original indices (adjust for already inserted)
-        let offset = 0;
-        for (const exitingStep of exitingSteps) {
-            const insertIndex = Math.min(exitingStep.originalIndex + offset, result.length);
-            result.splice(insertIndex, 0, { ...exitingStep, isExiting: true });
-            offset++;
-        }
-
-        return result;
-    }, [steps, exitingSteps]);
+    // Enter/exit orchestration (shared with the area sub-step strip): which steps just
+    // appeared (→ timeline-step-enter) and the items to render incl. exiting ones
+    // (re-inserted at their old index, → timeline-step-exit) before they're dropped.
+    const { displayItems: displaySteps, isEntering: isStepEntering } = useEnterExit(steps);
 
     const getStepStatus = (index: number): TimelineStatus => {
         const isCompleted = completedStepIndices.includes(index);
@@ -228,7 +132,7 @@ export function TimelineNav({
                     const actualIndex = step.isExiting ? -1 : steps.findIndex(s => s.id === step.id);
                     const status = step.isExiting ? 'upcoming' : getStepStatus(actualIndex);
                     const isClickable = !step.isExiting && isStepClickable(actualIndex);
-                    const isEntering = enteringSteps.has(step.id);
+                    const isEntering = isStepEntering(step.id);
                     const isExiting = step.isExiting;
                     // When the current step shows children, its bottom spacing moves to
                     // the children block (small gap above the first child, full step-gap
