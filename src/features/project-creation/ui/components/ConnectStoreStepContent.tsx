@@ -214,7 +214,9 @@ export function ConnectStoreStepContent({
     }
 
     return (
-        <SingleColumnLayout>
+        // padding 0: the surrounding .step-view already supplies the content padding —
+        // a second 24px here pushed the first group heading well below the tab strip.
+        <SingleColumnLayout padding="0px">
             <Form UNSAFE_className="container-form">
                 <ServiceGroupList
                     groups={visibleGroups}

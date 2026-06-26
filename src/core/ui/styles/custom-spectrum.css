@@ -3496,6 +3496,11 @@ button[class*="spectrum-Button"][disabled],
     margin-bottom: 12px !important;
     border-bottom: 1px solid var(--spectrum-global-color-gray-200) !important;
 }
+/* Zero the Spectrum Heading's default top margin so the first group title sits tight
+ * under the tab strip (section dividers/padding handle separation between groups). */
+.config-section-header h3 {
+    margin-top: 0 !important;
+}
 
 /* Config field scroll margin */
 .config-field {
