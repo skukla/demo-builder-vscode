@@ -21,12 +21,10 @@ import type { WizardState } from '@/types/webview';
  * Tradeoff copy for the Backend choice cards (UI labels for the two known backend
  * ids — a constant map, same as {@link BACKEND_LABELS}).
  */
+// Kept to ~2 lines in the choice card (~240px) — trimmed copy rather than clamped.
 export const BACKEND_DESCRIPTIONS: Record<string, string> = {
-    'adobe-commerce-paas':
-        'Self-managed Platform-as-a-Service. Full control over hosting, ' +
-        'extensions, and customization.',
-    'adobe-commerce-accs':
-        'Adobe-hosted SaaS. Fastest to set up and maintain; requires Adobe sign-in.',
+    'adobe-commerce-paas': 'Self-managed PaaS. Full control over hosting and extensions.',
+    'adobe-commerce-accs': 'Adobe-hosted SaaS. Fast setup; requires Adobe sign-in.',
 };
 
 /** One-line description shown under the step title in the dedicated view header. */
