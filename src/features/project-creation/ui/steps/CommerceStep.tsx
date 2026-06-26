@@ -48,10 +48,10 @@ import {
     provisionalStackForBackend,
     availableBackendsForPackage,
     firstOpenSection,
+    SECTION_TITLES,
     type CommerceSectionId,
 } from './commerceSections';
 import {
-    SECTION_TITLES,
     StepViewHeader,
     sectionBody,
 } from './commerceStepBodies';

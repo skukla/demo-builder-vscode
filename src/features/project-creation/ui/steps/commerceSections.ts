@@ -67,6 +67,15 @@ export const ROW_LABELS: Record<CommerceSectionId, string> = {
     catalog: 'Catalog',
 };
 
+/** Human labels for the step/tab titles (the vertical step list nav). */
+export const SECTION_TITLES: Record<CommerceSectionId, string> = {
+    backend: 'Backend',
+    signin: 'Sign in to Adobe',
+    connection: 'Connection',
+    'business-structure': 'Business Structure',
+    catalog: 'Catalog',
+};
+
 /** Context flags the section-state model needs beyond persisted wizard state. */
 export interface CommerceSectionContext {
     /** Whether the chosen backend is ACCS (adds the sign-in gate). */

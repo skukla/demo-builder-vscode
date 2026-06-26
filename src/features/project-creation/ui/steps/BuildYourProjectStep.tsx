@@ -28,23 +28,17 @@
 
 import React, { useMemo } from 'react';
 import { BuildYourProjectSummary } from '../components/BuildYourProjectSummary';
+import { areaSubSteps } from './areaSubSteps';
 import { architectureLabel, buildSummaryGroups } from './buildSummary';
 import { buildYourProjectAreas } from './buildYourProjectAreas';
-import {
-    commerceSectionStates,
-    firstOpenSection,
-    isCommerceStepComplete,
-} from './commerceSections';
 import { CommerceStep } from './CommerceStep';
 import { IntegrationsStep } from './IntegrationsStep';
 import { StorefrontStep } from './StorefrontStep';
-import { isAdobeSignedIn } from './tileStatus';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
 import { useCanProceedAll } from '@/core/ui/hooks/useCanProceed';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
-import type { WizardState } from '@/types/webview';
 import type { BaseStepProps } from '@/types/wizard';
 
 /**
@@ -56,27 +50,6 @@ const NOOP = (): void => {};
 /** Stable empty defaults for catalog/list props (avoids re-render loops). */
 const EMPTY_PACKAGES: DemoPackage[] = [];
 const EMPTY_STACKS: Stack[] = [];
-
-/** The ACCS backend id; its stacks add the contextual Adobe sign-in sub-step. */
-const ACCS_BACKEND = 'adobe-commerce-accs';
-
-/**
- * Whether the Commerce area's CURRENT sub-step is complete (the per-sub-step
- * Continue gate). Mirrors CommerceStep's own derivation: the active sub-step is
- * `state.activeCommerceStep`, falling back to the first openable section.
- *
- * @param state - Wizard state (persisted selections + validity verdicts)
- * @returns true when the active Commerce sub-step's done-condition is satisfied
- */
-function canLeaveCommerceSubStep(state: WizardState): boolean {
-    const ctx = {
-        isAccs: state.selectedBackend === ACCS_BACKEND,
-        signedIn: isAdobeSignedIn(state),
-    };
-    const sectionStates = commerceSectionStates(state, ctx);
-    const activeStep = state.activeCommerceStep ?? firstOpenSection(sectionStates);
-    return isCommerceStepComplete(state, activeStep, ctx);
-}
 
 export interface BuildYourProjectStepProps extends BaseStepProps {
     /** Available demo packages (catalog data, forwarded to area bodies). */
@@ -116,18 +89,18 @@ export function BuildYourProjectStep({
     // Active area: the persisted one if it's still visible, else the first visible.
     const activeArea = areas.find(a => a.id === state.activeBuildArea) ?? areas[0];
 
-    // Continue gate over the CURRENT step. Areas — and, within Commerce, SUB-STEPS —
-    // are walked one at a time via the wizard's Continue/Back (WizardContainer), so
-    // gating the active step enforces the all-required rule linearly. For the
-    // Commerce area the gate is the ACTIVE SUB-STEP's done-condition; other areas
-    // keep their area-complete (or optional) gate. Primitive boolean only
-    // (re-render-loop guard).
+    // Continue gate over the CURRENT step. Areas — and, within a sub-stepped area,
+    // SUB-STEPS — are walked one at a time via the wizard's Continue/Back, so gating
+    // the active step enforces the all-required rule linearly. A sub-stepped area
+    // (Commerce/Storefront) gates on its ACTIVE SUB-STEP's done-condition via the
+    // shared driver; a single-view area keeps its area-complete (or optional) gate.
+    // Primitive boolean only (re-render-loop guard).
     const activeAreaId = activeArea?.id;
     const activeOptional = activeAreaId === 'integrations';
-    const canLeaveArea =
-        activeAreaId === 'commerce'
-            ? canLeaveCommerceSubStep(state)
-            : activeOptional || activeArea?.status === 'completed';
+    const driver = areaSubSteps(activeAreaId);
+    const canLeaveArea = driver
+        ? driver.isComplete(state, driver.active(state))
+        : activeOptional || activeArea?.status === 'completed';
     useCanProceedAll([canLeaveArea], setCanProceed);
 
     // Body props shared by every area. The active body gets a NO-OP setCanProceed

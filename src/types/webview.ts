@@ -38,6 +38,14 @@ export type CommerceSectionId =
     | 'business-structure'
     | 'catalog';
 
+/**
+ * The ordered Storefront sub-step ids within the build step's Storefront area:
+ * the storefront setup (GitHub/DA.live/repo) then the optional block-libraries
+ * picker. Defined here so `WizardState.activeStorefrontStep` can reference it; the
+ * pure section logic lives in `ui/steps/storefrontSections.ts`.
+ */
+export type StorefrontSectionId = 'storefront' | 'block-libraries';
+
 export interface WizardState {
     currentStep: WizardStep;
     projectName: string;
@@ -63,6 +71,7 @@ export interface WizardState {
     activeBuildArea?: BuildAreaId;   // Area currently focused within the build-your-project step
     activeCommerceStep?: CommerceSectionId;  // Active Commerce sub-step within the build step (footer Continue/Back walks sub-steps → areas → wizard steps)
     committedCommerceSteps?: CommerceSectionId[];  // Commerce sub-steps the user has pressed Continue past — gates the summary ✓ (a valid form alone does NOT mark a row done)
+    activeStorefrontStep?: StorefrontSectionId;  // Active Storefront sub-step within the build step (same footer-driven walk as Commerce)
     adobeAuth: AdobeAuthState;
     adobeOrg?: Organization;  // Renamed for consistency
     adobeProject?: AdobeProject;  // Renamed for consistency

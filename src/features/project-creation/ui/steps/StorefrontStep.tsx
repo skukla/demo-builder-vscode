@@ -1,23 +1,19 @@
 /**
- * StorefrontStep Component (R1b — two tiles + focused modals)
+ * StorefrontStep Component (v6 — vertical step list + dedicated view, like Commerce)
  *
- * The Storefront group step rendered as two {@link ConfigTile}s over focused
- * modals (replacing the R1 inline column):
- *   1. Storefront tile — status from {@link isStorefrontConfigured}. Its modal
- *      hosts the GitHub + DA.live service cards + {@link RepoSelectionInline}.
- *   2. Block Libraries tile — optional/informational (always "configured", never
- *      gates Continue). Its modal hosts {@link BlockLibrariesStepContent} (EDS
- *      stacks only). The summary shows the selected-library count.
+ * The Storefront area renders just its BODY — a [list | view] row (.commerce-body)
+ * with a {@link VerticalStepList} on the left (Storefront · Block Libraries) and the
+ * active sub-step's dedicated view on the right:
+ *   1. `storefront`      — the setup: GitHub + DA.live service cards + the repo
+ *                          selection ({@link RepoSelectionInline}). Gates Continue on
+ *                          {@link isStorefrontConfigured}.
+ *   2. `block-libraries` — the optional EDS block-library picker
+ *                          ({@link BlockLibrariesStepContent}); never gates Continue.
  *
- * The Continue gate uses {@link isStorefrontConfigured} (github + dalive
- * authenticated in edsConfig AND storefrontRepoValid true) — block-library
- * selection does NOT affect it. RepoSelectionInline.onValidityChange persists
- * `storefrontRepoValid` via updateState so the repo verdict survives the modal
- * close and back/forward navigation.
- *
- * The service-card composition and block-library handlers/derivation are carried
- * over unchanged (real {@link useProjectBuilder} hook, EDS-only block libraries),
- * just moved into the two modal bodies.
+ * The footer Continue/Back walks these sub-steps (WizardContainer), driven by the
+ * shared {@link areaSubSteps} provider; the active one is `state.activeStorefrontStep`.
+ * The surrounding two-column [ area body | unified summary ] is owned by
+ * {@link BuildYourProjectStep}.
  *
  * Re-render-loop guard (MEMORY): only a primitive boolean enters the
  * useCanProceedAll conditions array; module-level EMPTY constants back the
@@ -26,17 +22,16 @@
  * @module features/project-creation/ui/steps/StorefrontStep
  */
 
-import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useState, useMemo, useCallback } from 'react';
 import {
     getAvailableBlockLibraries,
     getNativeBlockLibraries,
 } from '../../services/blockLibraryLoader';
 import { BlockLibrariesStepContent } from '../components/BlockLibrariesStepContent';
-import { ConfigTile } from '../components/ConfigTile';
+import { VerticalStepList } from '../components/VerticalStepList';
+import { areaSubSteps } from './areaSubSteps';
 import { isStorefrontConfigured } from './tileStatus';
 import { useProjectBuilder } from './useProjectBuilder';
-import { Modal } from '@/core/ui/components/ui/Modal';
 import { useCanProceedAll } from '@/core/ui/hooks/useCanProceed';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { GitHubServiceCard, DaLiveServiceCard } from '@/features/eds/ui/components';
@@ -47,10 +42,11 @@ import { RepoSelectionInline } from '@/features/eds/ui/steps/RepoSelectionInline
 import type { BlockLibrary, CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
+import type { StorefrontSectionId } from '@/types/webview';
 import type { BaseStepProps } from '@/types/wizard';
 import '../../../eds/ui/styles/connect-services.css';
 
-/** The EDS frontend id that gates the block-libraries section. */
+/** The EDS frontend id that gates the block-libraries sub-step content. */
 const EDS_FRONTEND_ID = 'eds-storefront';
 
 /** Stable empty arrays for hook/list props (avoids the infinite-re-render gotcha). */
@@ -72,10 +68,10 @@ export interface StorefrontStepProps extends BaseStepProps {
 }
 
 /**
- * The Storefront group step (two tiles + focused modals).
+ * The Storefront group step ([nav | view], like Commerce).
  *
  * @param props - Wizard step props plus catalog data + block-library defaults
- * @returns The two-tile layout with the storefront + block-libraries modals
+ * @returns The vertical step list + dedicated-view storefront surface
  */
 export function StorefrontStep({
     state,
@@ -86,8 +82,6 @@ export function StorefrontStep({
     blockLibraryDefaults = EMPTY_STRING_ARRAY,
     customBlockLibraryDefaults = EMPTY_CUSTOM_LIBRARY_ARRAY,
 }: StorefrontStepProps): React.ReactElement {
-    const [openStorefront, setOpenStorefront] = useState(false);
-    const [openBlockLibs, setOpenBlockLibs] = useState(false);
     const [showDaLiveInput, setShowDaLiveInput] = useState(false);
 
     const gitHubAuth = useGitHubAuth({ state, updateState });
@@ -100,9 +94,8 @@ export function StorefrontStep({
         customBlockLibraryDefaults,
     });
 
-    // Continue gate: derived from PERSISTED state so it stays correct with the
-    // modal closed + across navigation. Block libraries are optional (no gate).
-    // Primitive boolean only (no fresh arrays/objects) to avoid re-render loops.
+    // Continue gate: derived from PERSISTED state. The Build step owns the REAL
+    // per-sub-step gate via the footer/driver; this NO-OP-backed call is harmless.
     useCanProceedAll([isStorefrontConfigured(state)], setCanProceed);
 
     // --- DA.live card handlers (carried over from the inline form) -----------
@@ -188,105 +181,80 @@ export function StorefrontStep({
         vscode.postMessage('open-block-library-settings');
     }, []);
 
-    // --- Tile summaries ------------------------------------------------------
-    const storefrontConfigured = isStorefrontConfigured(state);
-    const storefrontSummary = storefrontConfigured
-        ? (state.edsConfig?.repoName || undefined)
-        : undefined;
+    // --- Sub-step nav + dedicated view (shared driver) -----------------------
+    const driver = areaSubSteps('storefront')!;
+    const subSteps = driver.subSteps(state);
+    const activeStep = driver.active(state) as StorefrontSectionId;
+    const activeTitle = subSteps.find(s => s.id === activeStep)?.title ?? '';
 
-    const blockLibCount =
-        (state.selectedBlockLibraries?.length ?? 0) +
-        (state.customBlockLibraries?.length ?? 0);
-    const blockLibSummary = blockLibCount > 0 ? `${blockLibCount} selected` : 'None selected';
+    const storefrontSetup = (
+        <>
+            <div className="services-cards-grid">
+                <GitHubServiceCard
+                    isChecking={gitHubAuth.isChecking}
+                    isAuthenticating={gitHubAuth.isAuthenticating}
+                    isAuthenticated={gitHubAuth.isAuthenticated}
+                    user={gitHubAuth.user}
+                    error={gitHubAuth.error}
+                    onConnect={gitHubAuth.startOAuth}
+                    onChangeAccount={gitHubAuth.changeAccount}
+                />
+                <DaLiveServiceCard
+                    isChecking={daLiveAuth.isChecking}
+                    isAuthenticating={daLiveAuth.isAuthenticating && !showDaLiveInput}
+                    isAuthenticated={daLiveAuth.isAuthenticated}
+                    verifiedOrg={daLiveAuth.verifiedOrg}
+                    error={daLiveAuth.error}
+                    showInput={showDaLiveInput}
+                    setupComplete={daLiveAuth.setupComplete}
+                    defaultOrg={state.edsConfig?.daLiveOrg}
+                    onSetup={handleDaLiveSetup}
+                    onSubmit={handleDaLiveSubmit}
+                    onReset={handleDaLiveReset}
+                    onCancelInput={handleCancelInput}
+                    onOpenDaLive={daLiveAuth.openDaLive}
+                    onOpenBookmarkletSetup={
+                        daLiveAuth.bookmarkletUrl ? handleOpenBookmarkletSetup : undefined
+                    }
+                />
+            </div>
+            <RepoSelectionInline
+                state={state}
+                updateState={updateState}
+                onValidityChange={(valid) => updateState({ storefrontRepoValid: valid })}
+            />
+        </>
+    );
 
-    const closeStorefront = useCallback(() => setOpenStorefront(false), []);
-    const closeBlockLibs = useCallback(() => setOpenBlockLibs(false), []);
+    const blockLibraries = isEdsStack ? (
+        <BlockLibrariesStepContent
+            nativeBlockLibraries={nativeBlockLibraries}
+            availableBlockLibraries={availableBlockLibraries}
+            selectedBlockLibraries={state.selectedBlockLibraries ?? EMPTY_STRING_ARRAY}
+            onBlockLibraryToggle={handleBlockLibraryToggle}
+            customBlockLibraryDefaults={customBlockLibraryDefaults}
+            customBlockLibraries={state.customBlockLibraries ?? EMPTY_CUSTOM_LIBRARY_ARRAY}
+            onCustomLibraryToggle={handleCustomLibraryToggle}
+            onOpenCustomSettings={handleOpenCustomSettings}
+        />
+    ) : null;
 
     return (
-        <div className="build-area-pad">
-            <ConfigTile
-                label="Storefront"
-                status={storefrontConfigured ? 'configured' : 'needs-setup'}
-                summary={storefrontSummary}
-                onPress={() => setOpenStorefront(true)}
-                testId="storefront-tile"
-            />
-            <ConfigTile
-                label="Block Libraries"
-                status="configured"
-                summary={blockLibSummary}
-                onPress={() => setOpenBlockLibs(true)}
-                testId="block-libraries-tile"
-            />
-
-            <DialogContainer onDismiss={closeStorefront}>
-                {openStorefront && (
-                    <Modal
-                        title="Storefront"
-                        size="L"
-                        onClose={closeStorefront}
-                    >
-                        <div className="services-cards-grid">
-                            <GitHubServiceCard
-                                isChecking={gitHubAuth.isChecking}
-                                isAuthenticating={gitHubAuth.isAuthenticating}
-                                isAuthenticated={gitHubAuth.isAuthenticated}
-                                user={gitHubAuth.user}
-                                error={gitHubAuth.error}
-                                onConnect={gitHubAuth.startOAuth}
-                                onChangeAccount={gitHubAuth.changeAccount}
-                            />
-                            <DaLiveServiceCard
-                                isChecking={daLiveAuth.isChecking}
-                                isAuthenticating={daLiveAuth.isAuthenticating && !showDaLiveInput}
-                                isAuthenticated={daLiveAuth.isAuthenticated}
-                                verifiedOrg={daLiveAuth.verifiedOrg}
-                                error={daLiveAuth.error}
-                                showInput={showDaLiveInput}
-                                setupComplete={daLiveAuth.setupComplete}
-                                defaultOrg={state.edsConfig?.daLiveOrg}
-                                onSetup={handleDaLiveSetup}
-                                onSubmit={handleDaLiveSubmit}
-                                onReset={handleDaLiveReset}
-                                onCancelInput={handleCancelInput}
-                                onOpenDaLive={daLiveAuth.openDaLive}
-                                onOpenBookmarkletSetup={
-                                    daLiveAuth.bookmarkletUrl ? handleOpenBookmarkletSetup : undefined
-                                }
-                            />
-                        </div>
-
-                        <RepoSelectionInline
-                            state={state}
-                            updateState={updateState}
-                            onValidityChange={(valid) => updateState({ storefrontRepoValid: valid })}
-                        />
-                    </Modal>
-                )}
-            </DialogContainer>
-
-            <DialogContainer onDismiss={closeBlockLibs}>
-                {openBlockLibs && (
-                    <Modal
-                        title="Block Libraries"
-                        size="L"
-                        onClose={closeBlockLibs}
-                    >
-                        {isEdsStack ? (
-                            <BlockLibrariesStepContent
-                                nativeBlockLibraries={nativeBlockLibraries}
-                                availableBlockLibraries={availableBlockLibraries}
-                                selectedBlockLibraries={state.selectedBlockLibraries ?? EMPTY_STRING_ARRAY}
-                                onBlockLibraryToggle={handleBlockLibraryToggle}
-                                customBlockLibraryDefaults={customBlockLibraryDefaults}
-                                customBlockLibraries={state.customBlockLibraries ?? EMPTY_CUSTOM_LIBRARY_ARRAY}
-                                onCustomLibraryToggle={handleCustomLibraryToggle}
-                                onOpenCustomSettings={handleOpenCustomSettings}
-                            />
-                        ) : null}
-                    </Modal>
-                )}
-            </DialogContainer>
+        <div className="commerce-body">
+            <div className="step-nav">
+                <div className="step-nav-area">Storefront</div>
+                <VerticalStepList
+                    steps={subSteps}
+                    activeId={activeStep}
+                    onSelect={id => updateState(driver.setActive(id))}
+                />
+            </div>
+            <div className="step-view">
+                <div className="step-view-header">
+                    <h3 className="step-view-title">{activeTitle}</h3>
+                </div>
+                {activeStep === 'block-libraries' ? blockLibraries : storefrontSetup}
+            </div>
         </div>
     );
 }

@@ -13,7 +13,7 @@
  */
 
 import React from 'react';
-import { BACKEND_LABELS, type CommerceSectionId } from './commerceSections';
+import { BACKEND_LABELS, SECTION_TITLES, type CommerceSectionId } from './commerceSections';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import type { WizardState } from '@/types/webview';
 
@@ -27,15 +27,6 @@ export const BACKEND_DESCRIPTIONS: Record<string, string> = {
         'extensions, and customization.',
     'adobe-commerce-accs':
         'Adobe-hosted SaaS. Fastest to set up and maintain; requires Adobe sign-in.',
-};
-
-/** Human labels for the step/tab titles. */
-export const SECTION_TITLES: Record<CommerceSectionId, string> = {
-    backend: 'Backend',
-    signin: 'Sign in to Adobe',
-    connection: 'Connection',
-    'business-structure': 'Business Structure',
-    catalog: 'Catalog',
 };
 
 /** One-line description shown under the step title in the dedicated view header. */

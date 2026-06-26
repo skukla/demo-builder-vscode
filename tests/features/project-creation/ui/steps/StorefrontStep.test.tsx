@@ -259,42 +259,30 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('StorefrontStep', () => {
-    describe('tiles (no modal until pressed)', () => {
-        it('should render the Storefront and Block Libraries tiles', () => {
+    describe('nav + inline storefront setup', () => {
+        it('renders the Storefront and Block Libraries sub-steps in the nav', () => {
             setup();
-            expect(screen.getByTestId('storefront-tile')).toBeInTheDocument();
-            expect(screen.getByTestId('block-libraries-tile')).toBeInTheDocument();
+            expect(document.querySelector('[data-step="storefront"]')).toBeInTheDocument();
+            expect(document.querySelector('[data-step="block-libraries"]')).toBeInTheDocument();
         });
 
-        it('should NOT show modal bodies before a tile is pressed', () => {
+        it('shows the storefront setup inline by default (no tile to open)', () => {
             setup();
-            expect(screen.queryByTestId('repo-selection-inline')).not.toBeInTheDocument();
-            expect(screen.queryByTestId('github-card')).not.toBeInTheDocument();
-            expect(screen.queryByText('Native Blocks')).not.toBeInTheDocument();
-        });
-    });
-
-    describe('storefront modal', () => {
-        it('should open with service cards + RepoSelectionInline when the tile is pressed', () => {
-            setup();
-            fireEvent.click(screen.getByTestId('storefront-tile'));
             expect(screen.getByTestId('github-card')).toBeInTheDocument();
             expect(screen.getByTestId('dalive-card')).toBeInTheDocument();
             expect(screen.getByTestId('repo-selection-inline')).toBeInTheDocument();
         });
 
-        it('should persist storefrontRepoValid via updateState when repo reports valid', () => {
+        it('persists storefrontRepoValid via updateState when the repo reports valid', () => {
             const { updateState } = setup();
-            fireEvent.click(screen.getByTestId('storefront-tile'));
             act(() => {
                 fireEvent.click(screen.getByTestId('repo-valid'));
             });
             expect(updateState).toHaveBeenCalledWith({ storefrontRepoValid: true });
         });
 
-        it('should persist storefrontRepoValid=false when repo reports invalid', () => {
+        it('persists storefrontRepoValid=false when the repo reports invalid', () => {
             const { updateState } = setup();
-            fireEvent.click(screen.getByTestId('storefront-tile'));
             act(() => {
                 fireEvent.click(screen.getByTestId('repo-invalid'));
             });
@@ -302,19 +290,19 @@ describe('StorefrontStep', () => {
         });
     });
 
-    describe('block libraries modal', () => {
-        it('should open BlockLibrariesStepContent when the tile is pressed (EDS stack)', () => {
-            setup({ selectedStack: 'eds-paas' });
-            fireEvent.click(screen.getByTestId('block-libraries-tile'));
+    describe('block-libraries sub-step', () => {
+        // The baseState stack is EDS; activating block-libraries shows its body.
+        const onBlockLibs = { activeStorefrontStep: 'block-libraries' as const };
+
+        it('renders BlockLibrariesStepContent on the block-libraries sub-step (EDS)', () => {
+            setup(onBlockLibs);
             expect(screen.getByText('Native Blocks')).toBeInTheDocument();
             expect(screen.getByText('Library A')).toBeInTheDocument();
         });
 
-        it('should route an available-library toggle through useProjectBuilder', () => {
-            const { updateState } = setup({ selectedStack: 'eds-paas', selectedBlockLibraries: [] });
-            fireEvent.click(screen.getByTestId('block-libraries-tile'));
-            const checkbox = screen.getByRole('checkbox', { name: /Library A/i });
-            fireEvent.click(checkbox);
+        it('routes an available-library toggle through useProjectBuilder', () => {
+            const { updateState } = setup({ ...onBlockLibs, selectedBlockLibraries: [] });
+            fireEvent.click(screen.getByRole('checkbox', { name: /Library A/i }));
             expect(updateState).toHaveBeenCalledWith(
                 expect.objectContaining({
                     selectedBlockLibraries: expect.arrayContaining(['lib-a']),
@@ -322,12 +310,17 @@ describe('StorefrontStep', () => {
             );
         });
 
-        it('should render native libraries as checked and disabled', () => {
-            setup({ selectedStack: 'eds-paas' });
-            fireEvent.click(screen.getByTestId('block-libraries-tile'));
+        it('renders native libraries as checked and disabled', () => {
+            setup(onBlockLibs);
             const nativeCheckbox = screen.getByRole('checkbox', { name: /Native Blocks/i });
             expect(nativeCheckbox).toBeChecked();
             expect(nativeCheckbox).toBeDisabled();
+        });
+
+        it('switches the active sub-step when a nav step is clicked', () => {
+            const { updateState } = setup(onBlockLibs);
+            fireEvent.click(document.querySelector('[data-step="storefront"]')!);
+            expect(updateState).toHaveBeenCalledWith({ activeStorefrontStep: 'storefront' });
         });
     });
 
@@ -372,25 +365,4 @@ describe('StorefrontStep', () => {
         });
     });
 
-    describe('storefront tile status', () => {
-        it('should be needs-setup when not fully configured', () => {
-            setup();
-            expect(screen.getByTestId('storefront-tile')).toHaveAttribute('data-status', 'needs-setup');
-        });
-
-        it('should be configured when github+dalive authed AND storefrontRepoValid true', () => {
-            setup({ edsConfig: authedEdsConfig(), storefrontRepoValid: true });
-            expect(screen.getByTestId('storefront-tile')).toHaveAttribute('data-status', 'configured');
-        });
-    });
-
-    describe('block libraries tile status', () => {
-        it('should always be configured (optional concern, never gates)', () => {
-            setup();
-            expect(screen.getByTestId('block-libraries-tile')).toHaveAttribute(
-                'data-status',
-                'configured',
-            );
-        });
-    });
 });
