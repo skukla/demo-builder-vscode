@@ -22,6 +22,11 @@ import {
     type CommerceSectionContext,
 } from './commerceSections';
 import {
+    integrationsSectionStates,
+    isIntegrationsStepComplete,
+    INTEGRATIONS_SECTION_TITLES,
+} from './integrationsSections';
+import {
     storefrontSectionStates,
     isStorefrontStepComplete,
     STOREFRONT_SECTION_TITLES,
@@ -185,12 +190,54 @@ const storefrontDriver: AreaSubStepDriver = {
     },
 };
 
+const integrationsDriver: AreaSubStepDriver = {
+    subSteps(state) {
+        return integrationsSectionStates(state).map(s => ({
+            id: s.id,
+            title: INTEGRATIONS_SECTION_TITLES[s.id],
+            status: s.status,
+            lockReason: s.lockReason,
+        }));
+    },
+    active(state) {
+        return state.activeIntegrationsStep ?? firstOpen(integrationsDriver.subSteps(state));
+    },
+    setActive(id) {
+        return { activeIntegrationsStep: id as WizardState['activeIntegrationsStep'] };
+    },
+    next(state) {
+        return nextOf(integrationsDriver.subSteps(state), integrationsDriver.active(state));
+    },
+    prev(state) {
+        return prevOf(integrationsDriver.subSteps(state), integrationsDriver.active(state));
+    },
+    entry(state, atEnd) {
+        const steps = integrationsDriver.subSteps(state);
+        const id = atEnd ? steps[steps.length - 1]?.id : firstOpen(steps);
+        return id ? { activeIntegrationsStep: id as WizardState['activeIntegrationsStep'] } : {};
+    },
+    isComplete(state, subStepId) {
+        return isIntegrationsStepComplete(
+            state,
+            subStepId as Parameters<typeof isIntegrationsStepComplete>[1],
+        );
+    },
+    // Integrations has no commit-gated summary — its rows derive directly from state.
+    commit() {
+        return {};
+    },
+    uncommit() {
+        return {};
+    },
+};
+
 const DRIVERS: Record<string, AreaSubStepDriver> = {
     commerce: commerceDriver,
     storefront: storefrontDriver,
+    integrations: integrationsDriver,
 };
 
-/** The sub-step driver for an area, or null for a single-view area (e.g. Integrations). */
+/** The sub-step driver for an area, or null for an area with no sub-steps. */
 export function areaSubSteps(areaId: string | undefined): AreaSubStepDriver | null {
     return areaId ? DRIVERS[areaId] ?? null : null;
 }

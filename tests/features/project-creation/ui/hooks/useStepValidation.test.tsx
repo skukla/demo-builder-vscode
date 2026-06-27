@@ -140,65 +140,10 @@ describe('useStepValidation', () => {
         });
     });
 
-    describe('adobe-project Step Validation', () => {
-        it('should return valid when adobeProject is selected', () => {
-            const state = createMockState({
-                adobeProject: { id: 'proj-123', title: 'My Project' }
-            } as Partial<WizardState>);
-
-            const { result } = renderHook(() =>
-                useStepValidation('adobe-project', state)
-            );
-
-            expect(result.current).toEqual({
-                isValid: true,
-                canProceed: true,
-            });
-        });
-
-        it('should return invalid when adobeProject is not selected', () => {
-            const state = createMockState({ adobeProject: undefined });
-
-            const { result } = renderHook(() =>
-                useStepValidation('adobe-project', state)
-            );
-
-            expect(result.current).toEqual({
-                isValid: false,
-                canProceed: false,
-            });
-        });
-    });
-
-    describe('adobe-workspace Step Validation', () => {
-        it('should return valid when adobeWorkspace is selected', () => {
-            const state = createMockState({
-                adobeWorkspace: { id: 'ws-123', name: 'Production' }
-            } as Partial<WizardState>);
-
-            const { result } = renderHook(() =>
-                useStepValidation('adobe-workspace', state)
-            );
-
-            expect(result.current).toEqual({
-                isValid: true,
-                canProceed: true,
-            });
-        });
-
-        it('should return invalid when adobeWorkspace is not selected', () => {
-            const state = createMockState({ adobeWorkspace: undefined });
-
-            const { result } = renderHook(() =>
-                useStepValidation('adobe-workspace', state)
-            );
-
-            expect(result.current).toEqual({
-                isValid: false,
-                canProceed: false,
-            });
-        });
-    });
+    // Note: the `adobe-project` / `adobe-workspace` step validators were retired
+    // along with those wizard steps (their pickers now live inside the
+    // build-your-project Mesh tile). Unknown step names fall through to the
+    // default valid verdict — covered by the "Unknown Step" describe below.
 
     describe('Unknown Step', () => {
         it('should return valid for unknown step names', () => {

@@ -19,10 +19,11 @@ const CONFIGURED_STOREFRONT = {
 } as unknown as WizardState;
 
 describe('areaSubSteps registry', () => {
-    it('returns a driver for commerce and storefront, null otherwise', () => {
+    it('returns a driver for commerce, storefront and integrations, null otherwise', () => {
         expect(areaSubSteps('commerce')).not.toBeNull();
         expect(areaSubSteps('storefront')).not.toBeNull();
-        expect(areaSubSteps('integrations')).toBeNull();
+        expect(areaSubSteps('integrations')).not.toBeNull();
+        expect(areaSubSteps('nope')).toBeNull();
         expect(areaSubSteps(undefined)).toBeNull();
     });
 });
@@ -67,6 +68,62 @@ describe('storefront driver', () => {
     it('has no commit-gating (no-op commit/uncommit)', () => {
         expect(driver.commit(state({}), 'accounts')).toEqual({});
         expect(driver.uncommit(state({}), ['accounts', 'block-libraries'], 'accounts')).toEqual({});
+    });
+});
+
+describe('integrations driver', () => {
+    const driver = areaSubSteps('integrations')!;
+
+    it('lists only "deployables" until a deployable is selected', () => {
+        const s = state({});
+        expect(driver.subSteps(s).map(x => x.id)).toEqual(['deployables']);
+        expect(driver.active(s)).toBe('deployables');
+        expect(driver.next(s)).toBeNull();
+        expect(driver.prev(s)).toBeNull();
+    });
+
+    it('adds the "target" sub-step once a deployable is selected', () => {
+        const s = state({ selectedAppBuilderComponents: ['commerce-paas-mesh'] });
+        expect(driver.subSteps(s).map(x => x.id)).toEqual(['deployables', 'target']);
+        // deployables is always done → target is the first OPEN (current) step.
+        expect(driver.active(s)).toBe('target');
+        expect(driver.next(state({ selectedAppBuilderComponents: ['x'], activeIntegrationsStep: 'deployables' }))).toBe('target');
+        expect(driver.prev(state({ selectedAppBuilderComponents: ['x'], activeIntegrationsStep: 'target' }))).toBe('deployables');
+    });
+
+    it('also counts a mesh dual-flowed via selectedOptionalDependencies', () => {
+        const s = state({ selectedOptionalDependencies: ['eds-commerce-mesh'] });
+        expect(driver.subSteps(s).map(x => x.id)).toEqual(['deployables', 'target']);
+    });
+
+    it('uses the activeIntegrationsStep state key for active + setActive', () => {
+        const s = state({ selectedAppBuilderComponents: ['x'], activeIntegrationsStep: 'deployables' });
+        expect(driver.active(s)).toBe('deployables');
+        expect(driver.setActive('target')).toEqual({ activeIntegrationsStep: 'target' });
+    });
+
+    it('gates deployables open, target on project + workspace', () => {
+        expect(driver.isComplete(state({}), 'deployables')).toBe(true);
+        expect(driver.isComplete(state({}), 'target')).toBe(false);
+        expect(
+            driver.isComplete(
+                state({ adobeProject: { id: 'p' }, adobeWorkspace: { id: 'w' } } as Partial<WizardState>),
+                'target',
+            ),
+        ).toBe(true);
+    });
+
+    it('enters at the first OPEN sub-step (or last when atEnd)', () => {
+        const s = state({ selectedAppBuilderComponents: ['x'] });
+        expect(driver.entry(s, false)).toEqual({ activeIntegrationsStep: 'target' });
+        expect(driver.entry(s, true)).toEqual({ activeIntegrationsStep: 'target' });
+        // Nothing selected → only deployables.
+        expect(driver.entry(state({}), false)).toEqual({ activeIntegrationsStep: 'deployables' });
+    });
+
+    it('has no commit-gating (no-op commit/uncommit)', () => {
+        expect(driver.commit(state({}), 'deployables')).toEqual({});
+        expect(driver.uncommit(state({}), ['deployables', 'target'], 'deployables')).toEqual({});
     });
 });
 

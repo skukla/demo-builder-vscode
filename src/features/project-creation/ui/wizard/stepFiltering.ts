@@ -24,20 +24,6 @@ export interface StepCondition {
     stackRequiresAny?: Array<'requiresGitHub' | 'requiresDaLive'>;
 
     /**
-     * If true, this step is only shown when Adobe I/O project/workspace are needed.
-     * Currently: only when API Mesh is included.
-     */
-    requiresAdobeIO?: boolean;
-
-    /**
-     * If true, this step is only shown when Adobe authentication is needed.
-     * Broader than requiresAdobeIO — includes mesh OR any App Builder component.
-     * (ACCS no longer gates this step; ACCS auth is handled contextually by
-     * Commerce's Sign-in tab.)
-     */
-    requiresAdobeAuth?: boolean;
-
-    /**
      * If true, this step is only shown when NO predefined stack is selected.
      * Used for steps like Component Selection that are hidden when a stack
      * already determines the components, but should appear for a future
@@ -80,10 +66,6 @@ export interface WizardStepWithCondition {
 export interface FilterOptions {
     /** Whether the wizard is in edit mode (editing existing project) */
     isEditMode?: boolean;
-    /** Whether the project requires Adobe I/O project/workspace (mesh included) */
-    hasAdobeIO?: boolean;
-    /** Whether the project requires Adobe authentication (mesh OR App Builder component) */
-    hasAdobeAuth?: boolean;
 }
 
 /**
@@ -137,17 +119,7 @@ export function filterStepsForStack(
             return true;
         }
 
-        const { stackRequires, stackRequiresAny, showWhenNoStack, requiresAdobeIO, requiresAdobeAuth } = step.condition;
-
-        // Steps that require Adobe auth are hidden when no auth is needed
-        if (requiresAdobeAuth && !options.hasAdobeAuth) {
-            return false;
-        }
-
-        // Steps that require Adobe I/O project/workspace are hidden when not needed
-        if (requiresAdobeIO && !options.hasAdobeIO) {
-            return false;
-        }
+        const { stackRequires, stackRequiresAny, showWhenNoStack } = step.condition;
 
         // Steps with showWhenNoStack are only shown when no stack is selected
         // (already handled above - if we get here, a stack IS selected, so hide it)

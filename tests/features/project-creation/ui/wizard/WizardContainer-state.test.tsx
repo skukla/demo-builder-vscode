@@ -35,32 +35,32 @@ describe('WizardContainer - State Management', () => {
                 />
             );
 
-            // Start at adobe-auth step (first step)
-            expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
+            // Start at welcome step (first step)
+            expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
 
-            // Navigate to adobe-project step (second step)
+            // Navigate to welcome step (second step)
             const continueButton = screen.getByRole('button', { name: /continue/i });
             await user.click(continueButton);
-            await screen.findByTestId('adobe-project-step', {}, { timeout: 500 });
+            await screen.findByTestId('storefront-setup-step', {}, { timeout: 500 });
 
-            // Navigate to adobe-workspace step (third step)
+            // Navigate to prerequisites step (third step)
             await user.click(screen.getByRole('button', { name: /continue/i }));
-            await screen.findByTestId('adobe-workspace-step', {}, { timeout: 500 });
+            await screen.findByTestId('prerequisites-step', {}, { timeout: 500 });
 
             // Now Back button should be visible (we're on step 3, not step 1)
             const backButton = screen.getByRole('button', { name: /back/i });
             await user.click(backButton);
 
-            // Should navigate back to adobe-project
-            await screen.findByTestId('adobe-project-step', {}, { timeout: 500 });
+            // Should navigate back to welcome
+            await screen.findByTestId('storefront-setup-step', {}, { timeout: 500 });
 
             // Back button still visible (we're on step 2, not step 1)
             const backButton2 = screen.getByRole('button', { name: /back/i });
             await user.click(backButton2);
 
-            // Should navigate back to adobe-auth (first step)
+            // Should navigate back to welcome (first step)
             await waitFor(() => {
-                expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
+                expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
             }, { timeout: 500 });
 
             // Back button hidden on first step (d1b31df)
@@ -79,20 +79,20 @@ describe('WizardContainer - State Management', () => {
                 />
             );
 
-            // Start at adobe-auth step (first step)
-            expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
+            // Start at welcome step (first step)
+            expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
 
-            // Navigate to adobe-project step (second step)
+            // Navigate to welcome step (second step)
             const continueButton = screen.getByRole('button', { name: /continue/i });
             await user.click(continueButton);
-            await screen.findByTestId('adobe-project-step', {}, { timeout: 500 });
+            await screen.findByTestId('storefront-setup-step', {}, { timeout: 500 });
 
-            // Navigate to adobe-workspace step (third step)
+            // Navigate to prerequisites step (third step)
             await user.click(screen.getByRole('button', { name: /continue/i }));
-            await screen.findByTestId('adobe-workspace-step', {}, { timeout: 500 });
+            await screen.findByTestId('prerequisites-step', {}, { timeout: 500 });
 
             // Verify we're on the third step
-            expect(screen.getByTestId('adobe-workspace-step')).toBeInTheDocument();
+            expect(screen.getByTestId('prerequisites-step')).toBeInTheDocument();
         });
 
         it('should disable Continue button when canProceed is false', () => {
@@ -124,12 +124,12 @@ describe('WizardContainer - State Management', () => {
                 />
             );
 
-            // Navigate to adobe-project step (starts at adobe-auth, no welcome)
+            // Navigate to welcome step (starts at welcome)
             const getButton = () => screen.getByRole('button', { name: /continue/i });
 
-            // Click to navigate from adobe-auth to adobe-project
+            // Click to navigate from welcome to welcome
             await user.click(getButton());
-            await screen.findByTestId('adobe-project-step', {}, { timeout: 1000 });
+            await screen.findByTestId('storefront-setup-step', {}, { timeout: 1000 });
 
             // Click Continue (should show loading overlay during backend call)
             await user.click(getButton());

@@ -8,8 +8,12 @@
  * REGISTRATIONS are removed here.
  *
  * Target order (array order = wizard order):
- *   welcome → prerequisites → adobe-auth → adobe-project → adobe-workspace →
- *   build-your-project → review → storefront-setup → create-project
+ *   welcome → prerequisites → build-your-project → review →
+ *   storefront-setup → create-project
+ *
+ * (The adobe-project / adobe-workspace AND the standalone adobe-auth steps were
+ * retired — sign-in + the project/workspace pickers now live inside
+ * build-your-project's Integrations Deployment-target sub-step.)
  */
 
 import wizardStepsConfig from '@/features/project-creation/config/wizard-steps.json';
@@ -43,19 +47,21 @@ describe('wizard-steps.json — build-your-project step registration', () => {
             'settings',
             'eds-connect-services',
             'eds-repository-config',
+            // Retired in slice 2b — folded into build-your-project's Mesh tile.
+            'adobe-project',
+            'adobe-workspace',
+            // Retired — sign-in subsumed into the Integrations Deployment-target sub-step.
+            'adobe-auth',
         ])('does NOT include the retired %s step', (id) => {
             expect(stepIds).not.toContain(id);
         });
     });
 
     describe('order', () => {
-        it('orders welcome → prerequisites → adobe-* → build-your-project → review → storefront-setup → create-project', () => {
+        it('orders welcome → prerequisites → build-your-project → review → storefront-setup → create-project', () => {
             expect(idx('welcome')).toBeGreaterThanOrEqual(0);
             expect(idx('welcome')).toBeLessThan(idx('prerequisites'));
-            expect(idx('prerequisites')).toBeLessThan(idx('adobe-auth'));
-            expect(idx('adobe-auth')).toBeLessThan(idx('adobe-project'));
-            expect(idx('adobe-project')).toBeLessThan(idx('adobe-workspace'));
-            expect(idx('adobe-workspace')).toBeLessThan(idx('build-your-project'));
+            expect(idx('prerequisites')).toBeLessThan(idx('build-your-project'));
             expect(idx('build-your-project')).toBeLessThan(idx('review'));
             expect(idx('review')).toBeLessThan(idx('storefront-setup'));
             expect(idx('storefront-setup')).toBeLessThan(idx('create-project'));

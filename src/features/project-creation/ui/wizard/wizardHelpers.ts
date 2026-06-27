@@ -57,8 +57,8 @@ export interface WizardStepConfigWithRequirements {
     /**
      * Optional: Condition for stack/auth-based filtering.
      * Reuses the canonical StepCondition from stepFiltering.ts (DRY) so all
-     * condition keys (stackRequires, stackRequiresAny, requiresAdobeIO,
-     * requiresAdobeAuth, showWhenNoStack, createModeOnly) type-check here.
+     * condition keys (stackRequires, stackRequiresAny, requiresAdobeAuth,
+     * showWhenNoStack, createModeOnly) type-check here.
      */
     condition?: StepCondition;
 }
@@ -181,36 +181,38 @@ export function filterCompletedStepsForBackwardNav(
 }
 
 /**
- * Find step indices for Adobe selection steps.
+ * Index of the step that owns Adobe I/O project + workspace selection.
  *
- * Used to determine which state needs to be cleared during backward navigation.
+ * The Adobe project + workspace pickers now live INSIDE the `build-your-project`
+ * step's Integrations (Mesh) tile, so backward-nav clearing keys off that step's
+ * index: navigating before it clears the (now co-located) project AND workspace.
  */
 export interface AdobeStepIndices {
-    workspaceIndex: number;
-    projectIndex: number;
+    /** Index of `build-your-project` (the picker host), or -1 when absent. */
+    buildStepIndex: number;
 }
 
 /**
- * Get indices of Adobe selection steps in the wizard.
+ * Get the index of the step that hosts the Adobe project/workspace pickers.
  */
 export function getAdobeStepIndices(wizardSteps: WizardStepConfig[]): AdobeStepIndices {
     return {
-        workspaceIndex: wizardSteps.findIndex(s => s.id === 'adobe-workspace'),
-        projectIndex: wizardSteps.findIndex(s => s.id === 'adobe-project'),
+        buildStepIndex: wizardSteps.findIndex(s => s.id === 'build-your-project'),
     };
 }
 
 /**
  * Compute state updates needed when navigating backward.
  *
- * Clears Adobe selections and caches when navigating before their respective steps.
- * This maintains state consistency - if user goes back before project selection,
- * both project AND workspace selections should be cleared.
+ * Clears the Adobe project + workspace selections (and their caches) when
+ * navigating BEFORE the `build-your-project` step that now hosts their pickers.
+ * Project and workspace are co-located there, so both clear together — keeping
+ * state consistent on re-traversal (the pickers re-load + re-auto-select).
  *
- * @param currentState - Current wizard state
+ * @param _currentState - Current wizard state (unused; signature kept for callers)
  * @param targetStep - Step we're navigating to
  * @param targetIndex - Index of target step
- * @param indices - Adobe step indices
+ * @param indices - Picker-host step index
  * @returns Partial state updates to apply
  */
 export function computeStateUpdatesForBackwardNav(
@@ -223,21 +225,13 @@ export function computeStateUpdatesForBackwardNav(
         currentStep: targetStep,
     };
 
-    // Clear workspace and its cache when going before workspace step
-    if (indices.workspaceIndex !== -1 && targetIndex < indices.workspaceIndex) {
-        updates.adobeWorkspace = undefined;
-        updates.workspacesCache = undefined;
-    }
-
-    // Clear project and its cache (plus dependent caches) when going before project step
-    if (indices.projectIndex !== -1 && targetIndex < indices.projectIndex) {
+    // Clear project + workspace (and caches) when going before the picker host.
+    if (indices.buildStepIndex !== -1 && targetIndex < indices.buildStepIndex) {
         updates.adobeProject = undefined;
         updates.projectsCache = undefined;
-        // Also clear workspace since workspaces are project-specific
         updates.adobeWorkspace = undefined;
         updates.workspacesCache = undefined;
     }
-
 
     return updates;
 }

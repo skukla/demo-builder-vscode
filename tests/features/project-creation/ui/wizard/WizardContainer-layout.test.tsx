@@ -52,9 +52,9 @@ describe('WizardContainer - Layout Components', () => {
                 />
             );
 
-            // First step (adobe-auth) should show "Adobe Authentication" as subtitle
+            // First step (welcome) should show "Demo Setup" as subtitle
             // PageHeader renders H3 for subtitle
-            expect(screen.getByRole('heading', { level: 3, name: /adobe authentication/i })).toBeInTheDocument();
+            expect(screen.getByRole('heading', { level: 3, name: /demo setup/i })).toBeInTheDocument();
         });
 
         it('should update subtitle when navigating to different step', async () => {
@@ -66,15 +66,17 @@ describe('WizardContainer - Layout Components', () => {
                 />
             );
 
-            // Initially shows "Adobe Authentication"
-            expect(screen.getByRole('heading', { level: 3, name: /adobe authentication/i })).toBeInTheDocument();
+            // Initially shows "Demo Setup"
+            expect(screen.getByRole('heading', { level: 3, name: /demo setup/i })).toBeInTheDocument();
 
             // Navigate to next step
             const continueButton = screen.getByRole('button', { name: /continue/i });
             await user.click(continueButton);
 
-            // Wait for transition and verify subtitle changed to "Adobe Project"
-            await screen.findByRole('heading', { level: 3, name: /adobe project/i }, { timeout: 500 });
+            // Wait for transition and verify subtitle changed to the next step's
+            // name ("Storefront Setup" — the 2nd step in the mock flow now that the
+            // retired adobe-project step is gone).
+            await screen.findByRole('heading', { level: 3, name: /storefront setup/i }, { timeout: 500 });
         });
     });
 

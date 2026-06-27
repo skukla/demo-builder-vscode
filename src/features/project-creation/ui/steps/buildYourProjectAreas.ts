@@ -24,8 +24,13 @@ import {
     type StepCondition,
     type WizardStepWithCondition,
 } from '../wizard/stepFiltering';
-import { isCommerceConfigured, isStorefrontConfigured } from './tileStatus';
+import {
+    isCommerceConfigured,
+    isIntegrationsComplete,
+    isStorefrontConfigured,
+} from './tileStatus';
 import type { TimelineStatus } from '@/core/ui/components/TimelineNav';
+import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import type { BuildAreaId, WizardState } from '@/types/webview';
 
@@ -61,16 +66,23 @@ const BUILD_AREA_DESCRIPTORS: readonly BuildAreaDescriptor[] = [
 
 /**
  * Compute the completion status for a visible area from persisted wizard state.
- * Integrations has no real status yet (slice 4) — defaults to 'upcoming'.
+ *
+ * Integrations is "completed" when {@link isIntegrationsComplete} holds — i.e. mesh
+ * is N/A, mesh is Off, or mesh is On with both project + workspace chosen.
  */
-function statusForArea(id: BuildAreaId, state: WizardState): TimelineStatus {
+function statusForArea(
+    id: BuildAreaId,
+    state: WizardState,
+    packages: DemoPackage[],
+    stacks: Stack[],
+): TimelineStatus {
     switch (id) {
         case 'commerce':
             return isCommerceConfigured(state) ? 'completed' : 'upcoming';
         case 'storefront':
             return isStorefrontConfigured(state) ? 'completed' : 'upcoming';
         case 'integrations':
-            return 'upcoming';
+            return isIntegrationsComplete(state, packages, stacks) ? 'completed' : 'upcoming';
     }
 }
 
@@ -79,9 +91,14 @@ function statusForArea(id: BuildAreaId, state: WizardState): TimelineStatus {
  *
  * @param state - Wizard state (provides the selected stack id + config validity)
  * @param stacks - Available stacks, used to resolve the selected Stack object
+ * @param packages - Demo-package catalog (drives the Integrations area's status)
  * @returns Visible areas in canonical order, each with its completion status
  */
-export function buildYourProjectAreas(state: WizardState, stacks: Stack[]): BuildArea[] {
+export function buildYourProjectAreas(
+    state: WizardState,
+    stacks: Stack[],
+    packages: DemoPackage[] = [],
+): BuildArea[] {
     // Resolve the selected Stack object, mirroring useWizardState's resolution.
     const selectedStack = state.selectedStack
         ? stacks.find(s => s.id === state.selectedStack)
@@ -102,6 +119,6 @@ export function buildYourProjectAreas(state: WizardState, stacks: Stack[]): Buil
     return BUILD_AREA_DESCRIPTORS.filter(d => visibleIds.has(d.id)).map(d => ({
         id: d.id,
         label: d.label,
-        status: statusForArea(d.id, state),
+        status: statusForArea(d.id, state, packages, stacks),
     }));
 }

@@ -84,7 +84,10 @@ export function BuildYourProjectStep({
     customBlockLibraryDefaults,
     onArchitectureChange,
 }: BuildYourProjectStepProps): React.ReactElement {
-    const areas = useMemo(() => buildYourProjectAreas(state, stacks), [state, stacks]);
+    const areas = useMemo(
+        () => buildYourProjectAreas(state, stacks, packages),
+        [state, stacks, packages],
+    );
 
     // Active area: the persisted one if it's still visible, else the first visible.
     const activeArea = areas.find(a => a.id === state.activeBuildArea) ?? areas[0];
@@ -92,15 +95,19 @@ export function BuildYourProjectStep({
     // Continue gate over the CURRENT step. Areas — and, within a sub-stepped area,
     // SUB-STEPS — are walked one at a time via the wizard's Continue/Back, so gating
     // the active step enforces the all-required rule linearly. A sub-stepped area
-    // (Commerce/Storefront) gates on its ACTIVE SUB-STEP's done-condition via the
-    // shared driver; a single-view area keeps its area-complete (or optional) gate.
-    // Primitive boolean only (re-render-loop guard).
+    // (Commerce / Storefront / Integrations) gates on its ACTIVE SUB-STEP's
+    // done-condition via the shared driver (Integrations' "Deployment target" sub-step
+    // blocks until project + workspace are chosen; its "Deployables" sub-step always
+    // passes); any other single-view area gates on area completion. Primitive boolean
+    // only (re-render-loop guard).
     const activeAreaId = activeArea?.id;
-    const activeOptional = activeAreaId === 'integrations';
     const driver = areaSubSteps(activeAreaId);
-    const canLeaveArea = driver
-        ? driver.isComplete(state, driver.active(state))
-        : activeOptional || activeArea?.status === 'completed';
+    let canLeaveArea: boolean;
+    if (driver) {
+        canLeaveArea = driver.isComplete(state, driver.active(state));
+    } else {
+        canLeaveArea = activeArea?.status === 'completed';
+    }
     useCanProceedAll([canLeaveArea], setCanProceed);
 
     // Body props shared by every area. The active body gets a NO-OP setCanProceed
@@ -111,7 +118,7 @@ export function BuildYourProjectStep({
     // summary ]. The summary aggregates every VISIBLE area's group (commerce/
     // storefront/integrations) so it persists across area switches — the v6 model.
     const visibleAreaIds = areas.map(a => a.id);
-    const summaryGroups = buildSummaryGroups(state, visibleAreaIds);
+    const summaryGroups = buildSummaryGroups(state, visibleAreaIds, packages, stacks);
     const archLabel = architectureLabel(state, stacks);
 
     return (
@@ -166,7 +173,13 @@ function renderActiveArea(
                 />
             );
         case 'integrations':
-            return <IntegrationsStep {...ctx.bodyProps} />;
+            return (
+                <IntegrationsStep
+                    {...ctx.bodyProps}
+                    packages={ctx.packages}
+                    stacks={ctx.stacks}
+                />
+            );
         case 'commerce':
         default:
             return (

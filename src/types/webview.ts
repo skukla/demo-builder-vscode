@@ -51,6 +51,15 @@ export type StorefrontSectionId =
     | 'code-sync'
     | 'block-libraries';
 
+/**
+ * The ordered Integrations sub-step ids within the build step's Integrations area:
+ * the deployables list (mesh + addable integrations), then the shared Adobe I/O
+ * deployment target (project + workspace). `target` is conditional — it appears only
+ * once a deployable is selected. Defined here so `WizardState.activeIntegrationsStep`
+ * can reference it; the pure section logic lives in `ui/steps/integrationsSections.ts`.
+ */
+export type IntegrationsSectionId = 'deployables' | 'target';
+
 export interface WizardState {
     currentStep: WizardStep;
     projectName: string;
@@ -78,6 +87,7 @@ export interface WizardState {
     activeCommerceStep?: CommerceSectionId;  // Active Commerce sub-step within the build step (footer Continue/Back walks sub-steps → areas → wizard steps)
     committedCommerceSteps?: CommerceSectionId[];  // Commerce sub-steps the user has pressed Continue past — gates the summary ✓ (a valid form alone does NOT mark a row done)
     activeStorefrontStep?: StorefrontSectionId;  // Active Storefront sub-step within the build step (same footer-driven walk as Commerce)
+    activeIntegrationsStep?: IntegrationsSectionId;  // Active Integrations sub-step within the build step (same footer-driven walk; 'target' appears once a deployable is selected)
     adobeAuth: AdobeAuthState;
     adobeOrg?: Organization;  // Renamed for consistency
     adobeProject?: AdobeProject;  // Renamed for consistency

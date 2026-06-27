@@ -220,13 +220,13 @@ describe('WizardContainer — sub-step → area → wizard-step progression', ()
     it('Back on the FIRST sub-step of the FIRST area calls goBack → previous wizard step', async () => {
         // build-your-project is NOT the first wizard step here, so Back renders.
         // On the first sub-step (backend) of the first area (commerce), Back must
-        // navigate the WIZARD step back to adobe-auth (goBack).
+        // navigate the WIZARD step back to welcome (goBack).
         const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
         renderWithTheme(
             <WizardContainer
                 componentDefaults={createMockComponentDefaults()}
                 wizardSteps={[
-                    { id: 'adobe-auth', name: 'Adobe Authentication', enabled: true },
+                    { id: 'welcome', name: 'Adobe Authentication', enabled: true },
                     { id: 'build-your-project', name: 'Build Your Project', enabled: true },
                     { id: 'review', name: 'Review', enabled: true },
                     { id: 'create-project', name: 'Create Project', enabled: true },
@@ -234,7 +234,7 @@ describe('WizardContainer — sub-step → area → wizard-step progression', ()
             />,
         );
 
-        // adobe-auth → build-your-project
+        // welcome → build-your-project
         await user.click(getContinue());
         await screen.findByTestId('build-your-project-step');
 
@@ -244,7 +244,7 @@ describe('WizardContainer — sub-step → area → wizard-step progression', ()
         await user.click(back!);
 
         await waitFor(() => {
-            expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
+            expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
         }, { timeout: 1000 });
         expect(screen.queryByTestId('build-your-project-step')).not.toBeInTheDocument();
     });

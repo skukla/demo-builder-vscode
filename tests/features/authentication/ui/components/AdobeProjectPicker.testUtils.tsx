@@ -1,52 +1,4 @@
-import React from 'react';
 import { AdobeProject, WizardState } from '@/types/webview';
-
-// Mock WebviewClient
-export const mockPostMessage = jest.fn();
-export const mockOnMessage = jest.fn();
-
-// Setup WebviewClient mock
-export function setupWebviewClientMock() {
-    jest.mock('@/core/ui/utils/WebviewClient', () => ({
-        webviewClient: {
-            postMessage: mockPostMessage,
-            onMessage: mockOnMessage,
-        },
-    }));
-}
-
-// Setup useSelectionStep mock
-export function setupUseSelectionStepMock() {
-    jest.mock('@/core/ui/hooks/useSelectionStep', () => ({
-        useSelectionStep: jest.fn(),
-    }));
-}
-
-// Setup ConfigurationSummary mock
-export function setupConfigurationSummaryMock() {
-    jest.mock('@/core/ui/components/wizard', () => ({
-        ConfigurationSummary: () => <div data-testid="config-summary">Configuration Summary</div>,
-    }));
-}
-
-// Setup LoadingDisplay mock
-export function setupLoadingDisplayMock() {
-    jest.mock('@/core/ui/components/feedback/LoadingDisplay', () => ({
-        LoadingDisplay: ({ message, subMessage }: { message: string; subMessage?: string }) => (
-            <div data-testid="loading-display">
-                <div>{message}</div>
-                {subMessage && <div>{subMessage}</div>}
-            </div>
-        ),
-    }));
-}
-
-// Setup FadeTransition mock
-export function setupFadeTransitionMock() {
-    jest.mock('@/core/ui/components/ui/FadeTransition', () => ({
-        FadeTransition: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-    }));
-}
 
 // Mock data
 export const mockProjects: AdobeProject[] = [
@@ -122,10 +74,4 @@ export function createManyProjects(count: number): AdobeProject[] {
         description: `Project ${i}`,
         org_id: 'org123',
     }));
-}
-
-// Common beforeEach setup
-export function setupBeforeEach() {
-    jest.clearAllMocks();
-    mockOnMessage.mockReturnValue(jest.fn());
 }

@@ -80,25 +80,26 @@ describe('wizardHelpers - navigation', () => {
     });
 
     describe('getAdobeStepIndices', () => {
-        it('should return correct indices when steps exist', () => {
+        it('should return the build-your-project index (the picker host) when present', () => {
             const wizardSteps: WizardStepConfig[] = [
                 { id: 'adobe-auth', name: 'Auth' },
-                { id: 'adobe-project', name: 'Project' },
-                { id: 'adobe-workspace', name: 'Workspace' },
+                { id: 'build-your-project', name: 'Build Your Project' },
+                { id: 'review', name: 'Review' },
             ];
             const result = getAdobeStepIndices(wizardSteps);
-            expect(result).toEqual({ projectIndex: 1, workspaceIndex: 2 });
+            expect(result).toEqual({ buildStepIndex: 1 });
         });
 
-        it('should return -1 for missing steps', () => {
+        it('should return -1 when the build-your-project step is missing', () => {
             const wizardSteps: WizardStepConfig[] = [{ id: 'adobe-auth', name: 'Auth' }];
             const result = getAdobeStepIndices(wizardSteps);
-            expect(result).toEqual({ projectIndex: -1, workspaceIndex: -1 });
+            expect(result).toEqual({ buildStepIndex: -1 });
         });
     });
 
     describe('computeStateUpdatesForBackwardNav', () => {
-        const indices = { projectIndex: 1, workspaceIndex: 2 };
+        // build-your-project (the project/workspace picker host) sits at index 1.
+        const indices = { buildStepIndex: 1 };
 
         const createState = (): WizardState => ({
             currentStep: 'review',
@@ -113,18 +114,11 @@ describe('wizardHelpers - navigation', () => {
 
         it('should set currentStep to target step', () => {
             const state = createState();
-            const result = computeStateUpdatesForBackwardNav(state, 'adobe-project', 1, indices);
-            expect(result.currentStep).toBe('adobe-project');
+            const result = computeStateUpdatesForBackwardNav(state, 'adobe-auth', 0, indices);
+            expect(result.currentStep).toBe('adobe-auth');
         });
 
-        it('should clear workspace when going before workspace step', () => {
-            const state = createState();
-            const result = computeStateUpdatesForBackwardNav(state, 'adobe-project', 1, indices);
-            expect(result.adobeWorkspace).toBeUndefined();
-            expect(result.workspacesCache).toBeUndefined();
-        });
-
-        it('should clear project and workspace when going before project step', () => {
+        it('should clear project + workspace (and caches) when going before the build step', () => {
             const state = createState();
             const result = computeStateUpdatesForBackwardNav(state, 'adobe-auth', 0, indices);
             expect(result.adobeProject).toBeUndefined();
@@ -133,17 +127,15 @@ describe('wizardHelpers - navigation', () => {
             expect(result.workspacesCache).toBeUndefined();
         });
 
-        it('should not clear anything when going to workspace step itself', () => {
+        it('should not clear anything when going to the build step itself', () => {
             const state = createState();
-            const result = computeStateUpdatesForBackwardNav(state, 'adobe-workspace', 2, indices);
-            expect(result.adobeProject).toBeUndefined();
-            expect(result.adobeWorkspace).toBeUndefined();
+            const result = computeStateUpdatesForBackwardNav(state, 'build-your-project', 1, indices);
             expect(Object.keys(result)).toEqual(['currentStep']);
         });
 
-        it('should handle missing step indices', () => {
+        it('should handle a missing build step index', () => {
             const state = createState();
-            const noIndices = { projectIndex: -1, workspaceIndex: -1 };
+            const noIndices = { buildStepIndex: -1 };
             const result = computeStateUpdatesForBackwardNav(state, 'adobe-auth', 0, noIndices);
             expect(Object.keys(result)).toEqual(['currentStep']);
         });

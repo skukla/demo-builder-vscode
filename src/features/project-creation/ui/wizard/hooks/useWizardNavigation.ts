@@ -57,19 +57,24 @@ async function handleStepBackendCalls(
     _importedSettings?: ImportedSettings | null,
     _packages?: DemoPackage[],
 ): Promise<void> {
-    // Project selection: Commit the UI selection to backend
-    if (currentStep === 'adobe-project' && wizardState.adobeProject?.id) {
-        const result = await vscode.request('select-project', { projectId: wizardState.adobeProject.id }) as { success: boolean; error?: string };
-        if (!result.success) {
-            throw new Error(result.error || 'Failed to select project');
+    // Adobe I/O project + workspace are now picked INSIDE the build-your-project
+    // step's Integrations (Mesh) tile, so their backend commits move here — fired
+    // on Continue out of build-your-project. The handlers only VALIDATE
+    // reachability + ack (Phase 4a: no shared `aio` global mutation); creation
+    // reads adobeProject/adobeWorkspace from state. Only commit when a selection
+    // exists (mesh-off / non-mesh stacks leave them unset — nothing to validate).
+    if (currentStep === 'build-your-project') {
+        if (wizardState.adobeProject?.id) {
+            const result = await vscode.request('select-project', { projectId: wizardState.adobeProject.id }) as { success: boolean; error?: string };
+            if (!result.success) {
+                throw new Error(result.error || 'Failed to select project');
+            }
         }
-    }
-
-    // Workspace selection: Commit the UI selection to backend
-    if (currentStep === 'adobe-workspace' && wizardState.adobeWorkspace?.id) {
-        const result = await vscode.request('select-workspace', { workspaceId: wizardState.adobeWorkspace.id }) as { success: boolean; error?: string };
-        if (!result.success) {
-            throw new Error(result.error || 'Failed to select workspace');
+        if (wizardState.adobeWorkspace?.id) {
+            const result = await vscode.request('select-workspace', { workspaceId: wizardState.adobeWorkspace.id }) as { success: boolean; error?: string };
+            if (!result.success) {
+                throw new Error(result.error || 'Failed to select workspace');
+            }
         }
     }
 

@@ -16,9 +16,14 @@ import type {
 } from '../components/BuildYourProjectSummary';
 import { commerceSectionStates, ROW_LABELS } from './commerceSections';
 import { STOREFRONT_SECTION_TITLES } from './storefrontSections';
-import { isAdobeSignedIn } from './tileStatus';
+import { isAdobeSignedIn, isMeshSelected, meshComponentForStack } from './tileStatus';
+import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import type { WizardState } from '@/types/webview';
+
+/** Stable empty defaults for catalog props (avoids the infinite-re-render gotcha). */
+const EMPTY_PACKAGES: DemoPackage[] = [];
+const EMPTY_STACKS: Stack[] = [];
 
 /** Backend id whose flow adds the Adobe sign-in gate (duplicated literal, cf. CommerceStep). */
 const ACCS_BACKEND = 'adobe-commerce-accs';
@@ -97,22 +102,43 @@ export function storefrontSummaryGroup(state: WizardState): SummaryGroup {
 }
 
 /**
- * The Integrations group. Minimal until the Integrations slice (R2) lands — it
- * contributes no rows yet, so aggregation drops it from the summary for now.
+ * The Integrations group. Contributes an "API Mesh" row only when a mesh component
+ * applies to the current package + stack ({@link meshComponentForStack}); the row
+ * shows ✓ + "On" when the mesh is selected, else "Off". On a non-mesh architecture
+ * it returns NO rows so aggregation drops the empty Integrations group entirely.
  */
-export function integrationsSummaryGroup(_state: WizardState): SummaryGroup {
-    return { heading: 'Integrations', rows: [] };
+export function integrationsSummaryGroup(
+    state: WizardState,
+    packages: DemoPackage[],
+    stacks: Stack[],
+): SummaryGroup {
+    const meshComponent = meshComponentForStack(state, packages, stacks);
+    if (!meshComponent) return { heading: 'Integrations', rows: [] };
+    const selected = isMeshSelected(state, meshComponent.id);
+    const rows: SummaryRow[] = [
+        {
+            label: 'API Mesh',
+            value: selected ? 'On' : undefined,
+            done: selected,
+        },
+    ];
+    return { heading: 'Integrations', rows };
 }
 
 /** Map an area id to its provider. */
-function groupForArea(areaId: string, state: WizardState): SummaryGroup | null {
+function groupForArea(
+    areaId: string,
+    state: WizardState,
+    packages: DemoPackage[],
+    stacks: Stack[],
+): SummaryGroup | null {
     switch (areaId) {
         case 'commerce':
             return commerceSummaryGroup(state);
         case 'storefront':
             return storefrontSummaryGroup(state);
         case 'integrations':
-            return integrationsSummaryGroup(state);
+            return integrationsSummaryGroup(state, packages, stacks);
         default:
             return null;
     }
@@ -124,12 +150,16 @@ function groupForArea(areaId: string, state: WizardState): SummaryGroup | null {
  *
  * @param state - wizard state
  * @param visibleAreaIds - the ids of the areas currently visible, in order
+ * @param packages - demo-package catalog (drives the Integrations mesh row)
+ * @param stacks - stack catalog (drives the Integrations mesh row)
  */
 export function buildSummaryGroups(
     state: WizardState,
     visibleAreaIds: string[],
+    packages: DemoPackage[] = EMPTY_PACKAGES,
+    stacks: Stack[] = EMPTY_STACKS,
 ): SummaryGroup[] {
     return visibleAreaIds
-        .map(id => groupForArea(id, state))
+        .map(id => groupForArea(id, state, packages, stacks))
         .filter((g): g is SummaryGroup => g !== null && g.rows.length > 0);
 }

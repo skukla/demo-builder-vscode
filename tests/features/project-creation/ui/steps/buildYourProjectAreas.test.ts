@@ -10,6 +10,7 @@
  */
 
 import { buildYourProjectAreas } from '@/features/project-creation/ui/steps/buildYourProjectAreas';
+import type { DemoPackage } from '@/types/demoPackages';
 import type { WizardState } from '@/types/webview';
 import type { Stack } from '@/types/stacks';
 
@@ -43,6 +44,9 @@ const NON_EDS_STACK = stack({
 });
 
 const STACKS: Stack[] = [EDS_STACK, NON_EDS_STACK];
+
+// Real-id package so the real catalog can resolve a mesh for eds-storefront + PaaS.
+const PACKAGES = [{ id: 'citisignal', name: 'Citisignal' }] as unknown as DemoPackage[];
 
 function ids(state: WizardState, stacks: Stack[] = STACKS): string[] {
     return buildYourProjectAreas(state, stacks).map(a => a.id);
@@ -83,8 +87,12 @@ describe('buildYourProjectAreas — labels', () => {
 });
 
 describe('buildYourProjectAreas — status', () => {
-    function statusOf(state: WizardState, id: string): string | undefined {
-        return buildYourProjectAreas(state, STACKS).find(a => a.id === id)?.status;
+    function statusOf(
+        state: WizardState,
+        id: string,
+        packages: DemoPackage[] = [],
+    ): string | undefined {
+        return buildYourProjectAreas(state, STACKS, packages).find(a => a.id === id)?.status;
     }
 
     const edsAuthed = {
@@ -120,13 +128,44 @@ describe('buildYourProjectAreas — status', () => {
         ).toBe('completed');
     });
 
-    it('integrations is always upcoming for now', () => {
-        expect(statusOf(state({ selectedStack: 'eds-paas' }), 'integrations')).toBe('upcoming');
+    it('integrations is completed when the Mesh is N/A or Off (nothing outstanding)', () => {
+        // Mesh available (eds-storefront + PaaS) but left Off → optional → completed.
         expect(
             statusOf(
-                state({ selectedStack: 'eds-paas', commerceConnectValid: true }),
+                state({ selectedPackage: 'citisignal', selectedStack: 'eds-paas' }),
                 'integrations',
+                PACKAGES,
+            ),
+        ).toBe('completed');
+    });
+
+    it('integrations is upcoming when the Mesh is On but project/workspace are missing', () => {
+        expect(
+            statusOf(
+                state({
+                    selectedPackage: 'citisignal',
+                    selectedStack: 'eds-paas',
+                    selectedAppBuilderComponents: ['commerce-paas-mesh'],
+                }),
+                'integrations',
+                PACKAGES,
             ),
         ).toBe('upcoming');
+    });
+
+    it('integrations is completed when the Mesh is On with project + workspace set', () => {
+        expect(
+            statusOf(
+                state({
+                    selectedPackage: 'citisignal',
+                    selectedStack: 'eds-paas',
+                    selectedAppBuilderComponents: ['commerce-paas-mesh'],
+                    adobeProject: { id: 'p1', name: 'proj' },
+                    adobeWorkspace: { id: 'w1', name: 'ws' },
+                }),
+                'integrations',
+                PACKAGES,
+            ),
+        ).toBe('completed');
     });
 });

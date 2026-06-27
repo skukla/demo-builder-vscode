@@ -22,15 +22,18 @@ export const createMockComponentDefaults = (): ComponentSelection => ({
     appBuilder: [],
 });
 
-// Note: Welcome step removed from this mock flow - wizard starts at adobe-auth.
+// Note: the wizard starts at welcome (Demo Setup) — the real first step now that the
+// standalone adobe-auth / adobe-project / adobe-workspace steps are all retired (sign-in
+// + the Adobe I/O pickers live inside build-your-project's Integrations sub-steps).
 // Note: api-mesh step disabled - mesh deployment now happens in project-creation.
-// Group-paced order (R1): the 3 group steps (commerce/integrations/storefront)
-// render null placeholders in WizardContainer, so the navigable mock flow uses
-// the render-able steps. prerequisites is the self-managed-focus step under test.
+// The navigable mock flow uses only steps WizardContainer actually renders with a
+// visible testid (welcome / storefront-setup / prerequisites are mocked as simple divs
+// and routed by WizardContainer's renderStep switch). prerequisites remains the
+// self-managed-focus step under test; storefront-setup is the first navigable
+// intermediate step (it has no sub-step footer driver, unlike build-your-project).
 export const createMockWizardSteps = () => [
-    { id: 'adobe-auth', name: 'Adobe Authentication', enabled: true },
-    { id: 'adobe-project', name: 'Adobe Project', enabled: true },
-    { id: 'adobe-workspace', name: 'Adobe Workspace', enabled: true },
+    { id: 'welcome', name: 'Demo Setup', enabled: true },
+    { id: 'storefront-setup', name: 'Storefront Setup', enabled: true },
     { id: 'prerequisites', name: 'Prerequisites', enabled: true },
     { id: 'review', name: 'Review', enabled: true },
     { id: 'create-project', name: 'Create Project', enabled: true },

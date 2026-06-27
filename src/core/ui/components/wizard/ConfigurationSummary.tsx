@@ -17,8 +17,6 @@ export function ConfigurationSummary({ state, completedSteps = [], currentStep }
         'welcome',
         'prerequisites',
         'adobe-auth',
-        'adobe-project',
-        'adobe-workspace',
         'build-your-project',
         'review',
         'create-project',

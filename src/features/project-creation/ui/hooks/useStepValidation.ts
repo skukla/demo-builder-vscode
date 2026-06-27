@@ -34,8 +34,6 @@ const STEP_VALIDATORS: Record<string, (state: WizardState) => boolean> = {
     'project-name': (state) => Boolean(state.projectName?.trim()),
     // build-your-project gates on stack selection — stack is the source of truth for components
     'build-your-project': (state) => Boolean(state.selectedStack),
-    'adobe-project': (state) => Boolean(state.adobeProject),
-    'adobe-workspace': (state) => Boolean(state.adobeWorkspace),
 };
 
 /**

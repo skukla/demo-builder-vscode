@@ -11,13 +11,17 @@ import {
     integrationsSummaryGroup,
     buildSummaryGroups,
 } from '@/features/project-creation/ui/steps/buildSummary';
+import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import type { WizardState } from '@/types/webview';
 
 const stacks = [
     { id: 'eds-accs', name: 'Edge Delivery + ACCS', frontend: 'eds-storefront', backend: 'adobe-commerce-accs' },
     { id: 'headless-paas', name: 'Headless + PaaS', frontend: 'headless', backend: 'adobe-commerce-paas' },
+    { id: 'eds-none', name: 'EDS + (no mesh backend)', frontend: 'eds-storefront', backend: 'no-mesh-backend' },
 ] as unknown as Stack[];
+
+const packages = [{ id: 'citisignal', name: 'Citisignal' }] as unknown as DemoPackage[];
 
 const state = (partial: Partial<WizardState>): WizardState => partial as WizardState;
 
@@ -128,18 +132,70 @@ describe('storefrontSummaryGroup', () => {
 });
 
 describe('integrationsSummaryGroup', () => {
-    it('contributes no rows until the Integrations slice fills it', () => {
-        expect(integrationsSummaryGroup(state({})).rows).toEqual([]);
+    it('contributes no rows on a non-mesh architecture (no stack committed)', () => {
+        expect(integrationsSummaryGroup(state({}), packages, stacks).rows).toEqual([]);
+    });
+
+    it('contributes no rows when the committed stack has no mesh component', () => {
+        const group = integrationsSummaryGroup(
+            state({ selectedPackage: 'citisignal', selectedStack: 'eds-none' }),
+            packages,
+            stacks,
+        );
+        expect(group.rows).toEqual([]);
+    });
+
+    it('adds an undone "API Mesh" row (no value) when mesh is available but Off', () => {
+        const group = integrationsSummaryGroup(
+            state({ selectedPackage: 'citisignal', selectedStack: 'eds-accs' }),
+            packages,
+            stacks,
+        );
+        const mesh = group.rows.find(r => r.label === 'API Mesh');
+        expect(mesh).toBeDefined();
+        expect(mesh?.done).toBe(false);
+        expect(mesh?.value).toBeUndefined();
+    });
+
+    it('marks the "API Mesh" row done with value "On" when the mesh is selected', () => {
+        const group = integrationsSummaryGroup(
+            state({
+                selectedPackage: 'citisignal',
+                selectedStack: 'eds-accs',
+                selectedAppBuilderComponents: ['commerce-eds-mesh'],
+            }),
+            packages,
+            stacks,
+        );
+        const mesh = group.rows.find(r => r.label === 'API Mesh');
+        expect(mesh?.done).toBe(true);
+        expect(mesh?.value).toBe('On');
     });
 });
 
 describe('buildSummaryGroups', () => {
-    it('aggregates visible areas in order and drops empty groups', () => {
+    it('includes Integrations when mesh applies to the committed stack', () => {
         const groups = buildSummaryGroups(
-            state({ selectedStack: 'eds-accs', selectedBackend: 'adobe-commerce-accs' }),
+            state({
+                selectedPackage: 'citisignal',
+                selectedStack: 'eds-accs',
+                selectedBackend: 'adobe-commerce-accs',
+                selectedAppBuilderComponents: ['commerce-eds-mesh'],
+            }),
             ['commerce', 'storefront', 'integrations'],
+            packages,
+            stacks,
         );
-        // Integrations contributes no rows yet → dropped.
+        expect(groups.map(g => g.heading)).toEqual(['Commerce', 'Storefront', 'Integrations']);
+    });
+
+    it('drops the Integrations group on a non-mesh architecture', () => {
+        const groups = buildSummaryGroups(
+            state({ selectedPackage: 'citisignal', selectedStack: 'eds-none' }),
+            ['commerce', 'storefront', 'integrations'],
+            packages,
+            stacks,
+        );
         expect(groups.map(g => g.heading)).toEqual(['Commerce', 'Storefront']);
     });
 
@@ -147,6 +203,8 @@ describe('buildSummaryGroups', () => {
         const groups = buildSummaryGroups(
             state({ selectedBackend: 'adobe-commerce-paas' }),
             ['commerce'],
+            packages,
+            stacks,
         );
         expect(groups.map(g => g.heading)).toEqual(['Commerce']);
     });

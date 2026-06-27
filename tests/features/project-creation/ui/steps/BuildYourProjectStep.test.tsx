@@ -7,8 +7,10 @@
  * that area's existing body component (CommerceStep / StorefrontStep /
  * IntegrationsStep) — reused as-is. The STEP owns the Continue gate over ALL
  * REQUIRED areas (commerce always; storefront when visible; integrations
- * optional), so it hands a NO-OP `setCanProceed` to the body it renders (the body
- * still persists its validity to wizard state, which feeds buildYourProjectAreas).
+ * CONDITIONALLY — blocked only when Mesh is On but unconfigured, via
+ * isIntegrationsComplete), so it hands a NO-OP `setCanProceed` to the body it
+ * renders (the body still persists its validity to wizard state, which feeds
+ * buildYourProjectAreas).
  *
  * The three body components are mocked to lightweight stubs that surface which one
  * rendered and capture their `setCanProceed` prop, so the tests assert the SHELL's
@@ -23,6 +25,7 @@ import { render, screen } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 import { BuildYourProjectStep } from '@/features/project-creation/ui/steps/BuildYourProjectStep';
+import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import type { WizardState } from '@/types/webview';
 
@@ -80,6 +83,10 @@ const NON_EDS_STACK = stack({ id: 'headless-paas', frontend: 'headless-storefron
 
 const STACKS: Stack[] = [EDS_STACK, NON_EDS_STACK];
 
+// Real-id package so the real catalog resolves a mesh for eds-storefront + PaaS,
+// exercising the Integrations gate (isIntegrationsComplete).
+const PACKAGES = [{ id: 'citisignal', name: 'Citisignal' }] as unknown as DemoPackage[];
+
 const EDS_AUTHED = {
     githubAuth: { isAuthenticated: true },
     daLiveAuth: { isAuthenticated: true },
@@ -99,6 +106,7 @@ function setup(initial: Partial<WizardState> = {}) {
                 updateState={updateState}
                 setCanProceed={setCanProceed}
                 stacks={STACKS}
+                packages={PACKAGES}
             />
         </Provider>,
     );
@@ -237,11 +245,34 @@ describe('BuildYourProjectStep — Continue gate over non-commerce areas', () =>
         expect(setCanProceed).toHaveBeenLastCalledWith(true);
     });
 
-    it('is true when the active area is integrations (optional) regardless of completion', () => {
+    it('is true when the active area is integrations with the Mesh left Off (optional)', () => {
         const { setCanProceed } = setup({
+            selectedPackage: 'citisignal',
             selectedStack: 'eds-paas',
             activeBuildArea: 'integrations',
-            // Nothing else configured — integrations is optional → gate still true.
+            // Mesh available but not selected → integrations is optional → gate true.
+        });
+        expect(setCanProceed).toHaveBeenLastCalledWith(true);
+    });
+
+    it('is false when integrations has the Mesh On but no project/workspace (blocks Finish)', () => {
+        const { setCanProceed } = setup({
+            selectedPackage: 'citisignal',
+            selectedStack: 'eds-paas',
+            activeBuildArea: 'integrations',
+            selectedAppBuilderComponents: ['commerce-paas-mesh'],
+        });
+        expect(setCanProceed).toHaveBeenLastCalledWith(false);
+    });
+
+    it('is true when integrations has the Mesh On with BOTH project + workspace set', () => {
+        const { setCanProceed } = setup({
+            selectedPackage: 'citisignal',
+            selectedStack: 'eds-paas',
+            activeBuildArea: 'integrations',
+            selectedAppBuilderComponents: ['commerce-paas-mesh'],
+            adobeProject: { id: 'p1', name: 'proj' } as WizardState['adobeProject'],
+            adobeWorkspace: { id: 'w1', name: 'ws' } as WizardState['adobeWorkspace'],
         });
         expect(setCanProceed).toHaveBeenLastCalledWith(true);
     });

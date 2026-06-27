@@ -1,9 +1,5 @@
 import { WizardState, Workspace } from '@/types/webview';
 
-// Mock functions (to be used after jest.mock() calls in test files)
-export const mockPostMessage = jest.fn();
-export const mockOnMessage = jest.fn();
-
 // Test data
 export const mockWorkspaces: Workspace[] = [
     {

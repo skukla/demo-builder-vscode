@@ -13,33 +13,6 @@
       "enabled": true
     },
     {
-      "id": "adobe-auth",
-      "name": "Adobe Authentication",
-      "description": "Authenticate with Adobe to access Adobe services and store discovery.",
-      "enabled": true,
-      "condition": {
-        "requiresAdobeAuth": true
-      }
-    },
-    {
-      "id": "adobe-project",
-      "name": "I/O Project Selection",
-      "description": "Select the Adobe I/O project for your demo.",
-      "enabled": true,
-      "condition": {
-        "requiresAdobeIO": true
-      }
-    },
-    {
-      "id": "adobe-workspace",
-      "name": "Workspace Selection",
-      "description": "Select the workspace within your project.",
-      "enabled": true,
-      "condition": {
-        "requiresAdobeIO": true
-      }
-    },
-    {
       "id": "build-your-project",
       "name": "Build Your Project",
       "description": "Configure commerce, integrations, and storefront for your project.",

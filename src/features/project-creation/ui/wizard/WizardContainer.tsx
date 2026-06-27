@@ -35,9 +35,6 @@ import { cn } from '@/core/ui/utils/classNames';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
-import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjectStep';
-import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
 import { StorefrontSetupStep } from '@/features/eds/ui/steps/StorefrontSetupStep';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
 import { areaSubSteps } from '@/features/project-creation/ui/steps/areaSubSteps';
@@ -289,12 +286,6 @@ export function WizardContainer({
                 );
             case 'prerequisites':
                 return <PrerequisitesStep {...props} componentsData={componentsData?.data as Record<string, unknown>} currentStep={state.currentStep} />;
-            case 'adobe-auth':
-                return <AdobeAuthStep {...props} />;
-            case 'adobe-project':
-                return <AdobeProjectStep {...props} completedSteps={completedSteps} />;
-            case 'adobe-workspace':
-                return <AdobeWorkspaceStep {...props} completedSteps={completedSteps} />;
             // Collapsed builder step. The shell routes the active area to the
             // existing Commerce / Storefront / Integrations bodies and owns the
             // Continue gate over all required areas.

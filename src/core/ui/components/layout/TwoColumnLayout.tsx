@@ -52,8 +52,6 @@ export interface TwoColumnLayoutProps {
  * right column is flexible. The whole pair is capped at `maxWidth` and centered.
  *
  * Used in:
- * - AdobeProjectStep (selection + summary)
- * - AdobeWorkspaceStep (selection + summary)
  * - ConfigureScreen (form + summary)
  * - ComponentConfigStep
  *
