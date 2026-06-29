@@ -259,6 +259,8 @@ describe('BuildYourProjectStep — Continue gate over non-commerce areas', () =>
         const { setCanProceed } = setup({
             selectedPackage: 'citisignal',
             selectedStack: 'eds-paas',
+            // ACCS → no Sign-in sub-step, so the active step is Destination (the target gate).
+            selectedBackend: 'adobe-commerce-accs',
             activeBuildArea: 'integrations',
             selectedAppBuilderComponents: ['commerce-paas-mesh'],
         });
@@ -269,6 +271,7 @@ describe('BuildYourProjectStep — Continue gate over non-commerce areas', () =>
         const { setCanProceed } = setup({
             selectedPackage: 'citisignal',
             selectedStack: 'eds-paas',
+            selectedBackend: 'adobe-commerce-accs',
             activeBuildArea: 'integrations',
             selectedAppBuilderComponents: ['commerce-paas-mesh'],
             adobeProject: { id: 'p1', name: 'proj' } as WizardState['adobeProject'],

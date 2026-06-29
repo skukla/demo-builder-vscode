@@ -1,19 +1,19 @@
 /**
  * IntegrationsStep Tests (Integrations area — top-rail sub-steps)
  *
- * The Integrations area renders a sub-step strip (Services · Destination) over a
- * dedicated view, like Commerce/Storefront. These tests pin the contract:
+ * The Integrations area renders a sub-step strip (Services · [Sign in] · Destination)
+ * over a dedicated view, like Commerce/Storefront. These tests pin the contract:
  *  - Services: the API Mesh card with an Add/Remove toggle (real useProjectBuilder
  *    mesh dual-flow), a "N/A for this architecture" pill + no toggle on a non-mesh
  *    stack, and a dashed "add an integration" simulated slot;
- *  - the "Destination" tab appears only once a deployable is selected;
- *  - Destination: signed out → the subsumed AdobeAuthStep; signed in → the real
- *    project picker + provision list, with the workspace picker revealed progressively.
+ *  - Sign in: a CONDITIONAL sub-step — present for backends with no earlier sign-in
+ *    (PaaS), skipped for ACCS (which signs in at Commerce). Its body is AdobeAuthStep;
+ *  - Destination: NO auth — the project + workspace select-or-create fields (workspace
+ *    revealed once a project is chosen) + the provision summary.
  *
  * The real catalog (app-builder-components.json) drives availability, so fixtures use
- * real stack backend/frontend ids. vscode-api is stubbed so the real hooks run;
- * WebviewClient is stubbed so the sign-in trigger is observable. The picker bodies are
- * mocked to sentinels (they have their own suites).
+ * real stack backend/frontend ids. AdobeAuthStep + the create fields are mocked to
+ * sentinels (they have their own suites).
  *
  * @jest-environment jsdom
  */
@@ -31,16 +31,14 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
     vscode: { postMessage: jest.fn(), request: jest.fn(), onMessage: jest.fn(() => jest.fn()) },
 }));
 
-// The Deployment-target sub-step subsumes the full AdobeAuthStep (sign-in / connected);
-// mock it to a sentinel so this suite stays focused on the Integrations wiring.
+// The Sign-in sub-step body reuses the full AdobeAuthStep; mock it to a sentinel.
 jest.mock('@/features/authentication/ui/steps/AdobeAuthStep', () => ({
     AdobeAuthStep: () => <div data-testid="adobe-auth-step">Adobe Auth Step</div>,
 }));
-jest.mock('@/features/authentication/ui/components/AdobeProjectPicker', () => ({
-    AdobeProjectPicker: () => <div data-testid="project-picker">Project Picker</div>,
-}));
-jest.mock('@/features/authentication/ui/components/AdobeWorkspacePicker', () => ({
-    AdobeWorkspacePicker: () => <div data-testid="workspace-picker">Workspace Picker</div>,
+// The Destination body uses the select-or-create fields; mock them to sentinels.
+jest.mock('@/features/authentication/ui/components/AdobeEntityFields', () => ({
+    AdobeProjectField: () => <div data-testid="project-field">Project Field</div>,
+    AdobeWorkspaceField: () => <div data-testid="workspace-field">Workspace Field</div>,
 }));
 
 // ---------------------------------------------------------------------------
@@ -62,10 +60,18 @@ const nonMeshStack = {
 const stacks = [meshStack, nonMeshStack] as Stack[];
 
 const signedInOrg = { id: 'org-1', name: 'Acme', code: 'ACME' } as WizardState['adobeOrg'];
+const ACCS = 'adobe-commerce-accs';
+const PAAS = 'adobe-commerce-paas';
 
 function baseState(overrides: Partial<WizardState> = {}): WizardState {
     return { selectedPackage: 'citisignal', ...overrides } as WizardState;
 }
+
+/** A signed-in Adobe session (org selected). */
+const SIGNED_IN: Partial<WizardState> = {
+    adobeAuth: { isAuthenticated: true, isChecking: false },
+    adobeOrg: signedInOrg,
+};
 
 function renderStep(state: WizardState, updateState = jest.fn()) {
     render(
@@ -83,18 +89,19 @@ function renderStep(state: WizardState, updateState = jest.fn()) {
 }
 
 describe('IntegrationsStep (top-rail sub-steps)', () => {
-    it('renders the Deployables view with the Mesh row (Off + Add) and the simulated add slot', () => {
-        renderStep(baseState({ selectedStack: 'eds-paas' }));
+    it('renders the Services view with the Mesh card (Off + Add) and the simulated add slot', () => {
+        renderStep(baseState({ selectedStack: 'eds-paas', selectedBackend: PAAS }));
         expect(screen.getByText('API Mesh')).toBeInTheDocument();
         expect(screen.getByText('Off')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Add' })).toBeInTheDocument();
         expect(screen.getByText('+ Add an integration')).toBeInTheDocument();
-        // Destination tab hidden until a deployable is selected.
+        // No Sign in / Destination tabs until a deployable is selected.
+        expect(screen.queryByRole('tab', { name: 'Sign in' })).not.toBeInTheDocument();
         expect(screen.queryByRole('tab', { name: 'Destination' })).not.toBeInTheDocument();
     });
 
     it('toggles the mesh ON when Add is pressed (mesh dual-flow)', () => {
-        const { updateState } = renderStep(baseState({ selectedStack: 'eds-paas' }));
+        const { updateState } = renderStep(baseState({ selectedStack: 'eds-paas', selectedBackend: PAAS }));
         fireEvent.click(screen.getByRole('button', { name: 'Add' }));
         expect(updateState).toHaveBeenCalledWith(
             expect.objectContaining({ selectedAppBuilderComponents: ['commerce-paas-mesh'] }),
@@ -109,61 +116,77 @@ describe('IntegrationsStep (top-rail sub-steps)', () => {
         ).not.toBeInTheDocument();
     });
 
-    it('shows the Remove action on the Deployables view when mesh is On', () => {
+    it('PaaS: shows a Sign in tab AND a Destination tab once mesh is On', () => {
         renderStep(
             baseState({
                 selectedStack: 'eds-paas',
+                selectedBackend: PAAS,
                 selectedAppBuilderComponents: ['commerce-paas-mesh'],
                 activeIntegrationsStep: 'deployables',
             }),
         );
-        expect(screen.getByText('On')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Remove' })).toBeInTheDocument();
-        // The Destination tab now exists in the strip.
+        expect(screen.getByRole('tab', { name: 'Sign in' })).toBeInTheDocument();
+        // target is locked while Sign in is current → its name includes the lock reason.
+        expect(screen.getByRole('tab', { name: /Destination/ })).toBeInTheDocument();
+    });
+
+    it('ACCS: NO Sign in tab (already signed in at Commerce) — just Services + Destination', () => {
+        renderStep(
+            baseState({
+                selectedStack: 'eds-paas',
+                selectedBackend: ACCS,
+                selectedAppBuilderComponents: ['commerce-paas-mesh'],
+                activeIntegrationsStep: 'deployables',
+                ...SIGNED_IN,
+            }),
+        );
+        expect(screen.queryByRole('tab', { name: 'Sign in' })).not.toBeInTheDocument();
         expect(screen.getByRole('tab', { name: 'Destination' })).toBeInTheDocument();
     });
 
-    it('subsumes AdobeAuthStep on the Deployment target view; no pickers when signed out', () => {
-        // Mesh selected → target sub-step is the first OPEN step (active by default).
+    it('PaaS not signed in: the Sign-in sub-step (AdobeAuthStep) is active', () => {
+        // Mesh selected, PaaS, signed out → `signin` is the first OPEN step.
         renderStep(
             baseState({
                 selectedStack: 'eds-paas',
+                selectedBackend: PAAS,
                 selectedAppBuilderComponents: ['commerce-paas-mesh'],
             }),
         );
         expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
-        // Signed out → the project/workspace pickers + provision list are not shown yet.
-        expect(screen.queryByTestId('project-picker')).not.toBeInTheDocument();
-        expect(screen.queryByText(/On create, the extension will/i)).not.toBeInTheDocument();
+        // The Destination fields are NOT shown while on the Sign-in step.
+        expect(screen.queryByTestId('project-field')).not.toBeInTheDocument();
     });
 
-    it('shows AdobeAuthStep + the project picker (not yet workspace) + provision list when On + signed in, no project', () => {
+    it('Destination has NO auth — shows the project field + provision list (signed in)', () => {
+        // ACCS + signed in → no Sign-in step; Destination is active.
         renderStep(
             baseState({
                 selectedStack: 'eds-paas',
+                selectedBackend: ACCS,
                 selectedAppBuilderComponents: ['commerce-paas-mesh'],
-                adobeAuth: { isAuthenticated: true, isChecking: false },
-                adobeOrg: signedInOrg,
+                ...SIGNED_IN,
             }),
         );
-        expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
-        expect(screen.getByTestId('project-picker')).toBeInTheDocument();
-        expect(screen.queryByTestId('workspace-picker')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('adobe-auth-step')).not.toBeInTheDocument();
+        expect(screen.getByTestId('project-field')).toBeInTheDocument();
+        expect(screen.queryByTestId('workspace-field')).not.toBeInTheDocument();
         expect(screen.getByText(/On create, the extension will/i)).toBeInTheDocument();
         expect(screen.getByText(/GraphQL Service SDK/i)).toBeInTheDocument();
     });
 
-    it('reveals the workspace picker once a project is chosen (progressive)', () => {
+    it('reveals the workspace field once a project is chosen (progressive)', () => {
         renderStep(
             baseState({
                 selectedStack: 'eds-paas',
+                selectedBackend: ACCS,
                 selectedAppBuilderComponents: ['commerce-paas-mesh'],
-                adobeAuth: { isAuthenticated: true, isChecking: false },
-                adobeOrg: signedInOrg,
+                ...SIGNED_IN,
                 adobeProject: { id: 'p1', name: 'proj', title: 'Demo Project' },
             }),
         );
-        expect(screen.getByTestId('project-picker')).toBeInTheDocument();
-        expect(screen.getByTestId('workspace-picker')).toBeInTheDocument();
+        expect(screen.getByTestId('project-field')).toBeInTheDocument();
+        expect(screen.getByTestId('workspace-field')).toBeInTheDocument();
     });
 });

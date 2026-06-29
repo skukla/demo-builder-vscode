@@ -58,7 +58,7 @@ export type StorefrontSectionId =
  * once a deployable is selected. Defined here so `WizardState.activeIntegrationsStep`
  * can reference it; the pure section logic lives in `ui/steps/integrationsSections.ts`.
  */
-export type IntegrationsSectionId = 'deployables' | 'target';
+export type IntegrationsSectionId = 'deployables' | 'signin' | 'target';
 
 export interface WizardState {
     currentStep: WizardStep;

@@ -9,13 +9,14 @@
  *    provisioning for a custom integration isn't wired, so the slot is a forward-looking
  *    affordance with honest "coming soon" copy — NOT a live picker. When integration
  *    catalog entries land it becomes the real picker.
- *  - {@link DeploymentTargetBody} — the ONE shared Adobe I/O deployment target. Adobe
- *    sign-in is subsumed here (the retired standalone "Adobe Authentication" step): the
- *    full AdobeAuthStep renders the sign-in / connected status, then — once signed in —
- *    the REAL project + workspace pickers (progressive) + the provisioning summary.
+ *  - {@link DeploymentTargetBody} — the ONE shared Adobe I/O destination. NO auth (the
+ *    user is signed in already, via the Commerce/Integrations signin sub-step): the
+ *    project + workspace select-or-create fields (in-app create) + the provisioning
+ *    summary. Sign-in itself is a separate sub-step (the `signin` body lives in
+ *    {@link IntegrationsStep}, reusing AdobeAuthStep).
  *
- * Presentational: the parent {@link IntegrationsStep} computes the mesh row's status +
- * action and the sign-in trigger; these bodies just render.
+ * Presentational: the parent {@link IntegrationsStep} computes the mesh card's status +
+ * action; these bodies just render.
  *
  * @module features/project-creation/ui/steps/integrationsStepBodies
  */
@@ -26,13 +27,11 @@ import {
     type IntegrationCardAction,
     type IntegrationCardStatus,
 } from '../components/IntegrationCard';
-import { AdobeProjectPicker } from '@/features/authentication/ui/components/AdobeProjectPicker';
-import { AdobeWorkspacePicker } from '@/features/authentication/ui/components/AdobeWorkspacePicker';
-import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
+import {
+    AdobeProjectField,
+    AdobeWorkspaceField,
+} from '@/features/authentication/ui/components/AdobeEntityFields';
 import type { WizardState } from '@/types/webview';
-
-/** No-op setter handed to the subsumed AdobeAuthStep (the Build step owns the gate). */
-const NOOP = (): void => {};
 
 /** The static mesh description (matches the v6 prototype). */
 export const MESH_DESCRIPTION =
@@ -77,59 +76,49 @@ export function DeployablesBody({
 export interface DeploymentTargetBodyProps {
     state: WizardState;
     updateState: (updates: Partial<WizardState>) => void;
-    /** Whether the user is signed in to Adobe with an org selected. */
-    signedIn: boolean;
 }
 
 /**
- * The "Destination" sub-step (id `target`): Adobe sign-in (the standalone "Adobe
- * Authentication" wizard step is fully subsumed here) over the ONE shared Adobe I/O
- * project + workspace for every deployable. The full {@link AdobeAuthStep} renders the
- * sign-in / connected status; once signed in, the project picker — then, progressively,
- * the workspace picker — and the provisioning summary appear below. The pickers write
- * `adobeProject` / `adobeWorkspace`.
+ * The "Destination" sub-step (id `target`): the ONE shared Adobe I/O project + workspace
+ * for every deployable. NO auth here — the user is already signed in (the Commerce signin
+ * sub-step for ACCS, or the Integrations `signin` sub-step for other backends). The
+ * project field ({@link AdobeProjectField}) selects an existing project OR creates a new
+ * one in-app; once a project is chosen, the workspace field appears (same select-or-create,
+ * under the selected project). They write `adobeProject` / `adobeWorkspace`.
  *
- * @param props - state, updateState, sign-in status
+ * @param props - state, updateState
  * @returns the deployment-target view
  */
 export function DeploymentTargetBody({
     state,
     updateState,
-    signedIn,
 }: DeploymentTargetBodyProps): React.ReactElement {
     const hasProject = Boolean(state.adobeProject?.id);
     return (
         <div className="int-target">
-            <AdobeAuthStep state={state} updateState={updateState} setCanProceed={NOOP} />
-            {signedIn && (
-                <>
-                    <div className="int-field">
-                        <span className="int-field-label">Adobe I/O project</span>
-                        <AdobeProjectPicker state={state} updateState={updateState} />
-                    </div>
-                    {hasProject && (
-                        <div className="int-field">
-                            <span className="int-field-label">Workspace</span>
-                            <AdobeWorkspacePicker state={state} updateState={updateState} />
-                        </div>
-                    )}
-                    <div className="int-provision">
-                        <div className="int-provision-title">On create, the extension will:</div>
-                        <ul className="int-provision-list">
-                            <li>Create the Adobe I/O project</li>
-                            <li>Create the workspace</li>
-                            <li>Create an OAuth Server-to-Server credential</li>
-                            <li>
-                                Subscribe required APIs: <b>GraphQL Service SDK</b>
-                            </li>
-                        </ul>
-                    </div>
-                    <div className="int-tile-note">
-                        Reuses your Adobe session and the Commerce connection values; provides
-                        MESH_ENDPOINT to the storefront.
-                    </div>
-                </>
+            <div className="int-field">
+                <span className="int-field-label">Adobe I/O project</span>
+                <AdobeProjectField state={state} updateState={updateState} />
+            </div>
+            {hasProject && (
+                <div className="int-field">
+                    <span className="int-field-label">Workspace</span>
+                    <AdobeWorkspaceField state={state} updateState={updateState} />
+                </div>
             )}
+            <div className="int-provision">
+                <div className="int-provision-title">On create, the extension will:</div>
+                <ul className="int-provision-list">
+                    <li>Create an OAuth Server-to-Server credential</li>
+                    <li>
+                        Subscribe required APIs: <b>GraphQL Service SDK</b>
+                    </li>
+                </ul>
+            </div>
+            <div className="int-tile-note">
+                Reuses your Adobe session and the Commerce connection values; provides MESH_ENDPOINT
+                to the storefront.
+            </div>
         </div>
     );
 }

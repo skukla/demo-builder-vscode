@@ -30,8 +30,9 @@ import type { IntegrationCardAction, IntegrationCardStatus } from '../components
 import { VerticalStepList } from '../components/VerticalStepList';
 import { areaSubSteps } from './areaSubSteps';
 import { DeployablesBody, DeploymentTargetBody } from './integrationsStepBodies';
-import { isAdobeSignedIn, isMeshSelected, meshComponentForStack } from './tileStatus';
+import { isMeshSelected, meshComponentForStack } from './tileStatus';
 import { useProjectBuilder } from './useProjectBuilder';
+import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import type { IntegrationsSectionId } from '@/types/webview';
@@ -40,6 +41,9 @@ import type { BaseStepProps } from '@/types/wizard';
 /** Stable empty defaults for catalog props (avoids the infinite-re-render gotcha). */
 const EMPTY_PACKAGES: DemoPackage[] = [];
 const EMPTY_STACKS: Stack[] = [];
+
+/** No-op setter for the Sign-in sub-step's AdobeAuthStep (the footer/driver owns the gate). */
+const NOOP = (): void => {};
 
 export interface IntegrationsStepProps extends BaseStepProps {
     /** Available demo packages (catalog data; drives mesh availability). */
@@ -77,12 +81,11 @@ export function IntegrationsStep({
     );
     const available = meshComponent !== undefined;
     const selected = available ? isMeshSelected(state, meshComponent.id) : false;
-    const signedIn = isAdobeSignedIn(state);
 
     const status = meshStatus(available, selected);
 
     // Card action: none when N/A; Add/Remove otherwise. Sign-in is NOT a card action —
-    // it lives in the Deployment target sub-step (auth is only needed to pick a target).
+    // it lives in the conditional Sign-in sub-step (auth is only needed to deploy).
     let meshAction: IntegrationCardAction | undefined;
     if (available && meshComponent) {
         meshAction = {
@@ -96,6 +99,18 @@ export function IntegrationsStep({
     const subSteps = driver.subSteps(state);
     const activeStep = driver.active(state) as IntegrationsSectionId;
 
+    // The active sub-step's body (if/else, not a nested ternary).
+    let body: React.ReactNode;
+    if (activeStep === 'signin') {
+        // Adobe sign-in for backends with no earlier sign-in (PaaS); reuses the full
+        // AdobeAuthStep, like Commerce's signin sub-step.
+        body = <AdobeAuthStep state={state} updateState={updateState} setCanProceed={NOOP} />;
+    } else if (activeStep === 'target') {
+        body = <DeploymentTargetBody state={state} updateState={updateState} />;
+    } else {
+        body = <DeployablesBody meshStatus={status} meshAction={meshAction} />;
+    }
+
     return (
         <div className="commerce-body">
             <div className="step-nav">
@@ -108,15 +123,7 @@ export function IntegrationsStep({
             </div>
             <div className="step-view">
                 <div className="step-view-anim" key={activeStep}>
-                    {activeStep === 'target' ? (
-                        <DeploymentTargetBody
-                            state={state}
-                            updateState={updateState}
-                            signedIn={signedIn}
-                        />
-                    ) : (
-                        <DeployablesBody meshStatus={status} meshAction={meshAction} />
-                    )}
+                    {body}
                 </div>
             </div>
         </div>
