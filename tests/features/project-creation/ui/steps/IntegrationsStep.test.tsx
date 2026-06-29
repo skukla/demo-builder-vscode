@@ -1,14 +1,13 @@
 /**
  * IntegrationsStep Tests (Integrations area — top-rail sub-steps)
  *
- * The Integrations area renders a sub-step strip (Deployables · Deployment target)
- * over a dedicated view, like Commerce/Storefront. These tests pin the contract:
- *  - Deployables: the API Mesh row with an Add/Remove toggle (real useProjectBuilder
+ * The Integrations area renders a sub-step strip (Services · Destination) over a
+ * dedicated view, like Commerce/Storefront. These tests pin the contract:
+ *  - Services: the API Mesh card with an Add/Remove toggle (real useProjectBuilder
  *    mesh dual-flow), a "N/A for this architecture" pill + no toggle on a non-mesh
  *    stack, and a dashed "add an integration" simulated slot;
- *  - the "Deployment target" tab appears only once a deployable is selected;
- *  - Deployment target: signed out → a Sign in button that triggers the SAME Adobe
- *    login the Commerce step uses (webviewClient.requestAuth); signed in → the real
+ *  - the "Destination" tab appears only once a deployable is selected;
+ *  - Destination: signed out → the subsumed AdobeAuthStep; signed in → the real
  *    project picker + provision list, with the workspace picker revealed progressively.
  *
  * The real catalog (app-builder-components.json) drives availability, so fixtures use
@@ -90,8 +89,8 @@ describe('IntegrationsStep (top-rail sub-steps)', () => {
         expect(screen.getByText('Off')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Add' })).toBeInTheDocument();
         expect(screen.getByText('+ Add an integration')).toBeInTheDocument();
-        // Deployment target tab hidden until a deployable is selected.
-        expect(screen.queryByRole('tab', { name: 'Deployment target' })).not.toBeInTheDocument();
+        // Destination tab hidden until a deployable is selected.
+        expect(screen.queryByRole('tab', { name: 'Destination' })).not.toBeInTheDocument();
     });
 
     it('toggles the mesh ON when Add is pressed (mesh dual-flow)', () => {
@@ -120,8 +119,8 @@ describe('IntegrationsStep (top-rail sub-steps)', () => {
         );
         expect(screen.getByText('On')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Remove' })).toBeInTheDocument();
-        // The Deployment target tab now exists in the strip.
-        expect(screen.getByRole('tab', { name: 'Deployment target' })).toBeInTheDocument();
+        // The Destination tab now exists in the strip.
+        expect(screen.getByRole('tab', { name: 'Destination' })).toBeInTheDocument();
     });
 
     it('subsumes AdobeAuthStep on the Deployment target view; no pickers when signed out', () => {

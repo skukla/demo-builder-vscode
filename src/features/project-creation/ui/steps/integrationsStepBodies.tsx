@@ -46,7 +46,8 @@ export interface DeployablesBodyProps {
 }
 
 /**
- * The "Deployables" sub-step: the API Mesh card + a simulated "add an integration" card.
+ * The "Services" sub-step (id `deployables`): the API Mesh card + a simulated
+ * "add an integration" card.
  *
  * @param props - the mesh card's status + action
  * @returns the deployables list view
@@ -81,7 +82,7 @@ export interface DeploymentTargetBodyProps {
 }
 
 /**
- * The "Deployment target" sub-step: Adobe sign-in (the standalone "Adobe
+ * The "Destination" sub-step (id `target`): Adobe sign-in (the standalone "Adobe
  * Authentication" wizard step is fully subsumed here) over the ONE shared Adobe I/O
  * project + workspace for every deployable. The full {@link AdobeAuthStep} renders the
  * sign-in / connected status; once signed in, the project picker — then, progressively,
@@ -103,9 +104,7 @@ export function DeploymentTargetBody({
             {signedIn && (
                 <>
                     <div className="int-field">
-                        <span className="int-field-label">
-                            Adobe I/O project (deployment target)
-                        </span>
+                        <span className="int-field-label">Adobe I/O project</span>
                         <AdobeProjectPicker state={state} updateState={updateState} />
                     </div>
                     {hasProject && (

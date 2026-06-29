@@ -35,10 +35,10 @@ export interface IntegrationsSectionState {
     lockReason?: string;
 }
 
-/** Sub-step titles for the vertical step list nav. */
+/** Sub-step titles for the vertical step list nav. (Internal ids stay deployables/target.) */
 export const INTEGRATIONS_SECTION_TITLES: Record<IntegrationsSectionId, string> = {
-    deployables: 'Deployables',
-    target: 'Deployment target',
+    deployables: 'Services',
+    target: 'Destination',
 };
 
 /**

@@ -165,7 +165,7 @@ describe('TimelineNav', () => {
             expect(screen.getByText('Integrations')).toBeInTheDocument();
         });
 
-        it('reflects childStatusById on child status dots (completed child)', () => {
+        it('tiers a completed child label via childStatusById (done modifier)', () => {
             renderWithProvider(
                 <TimelineNav
                     steps={STEPS}
@@ -177,12 +177,11 @@ describe('TimelineNav', () => {
             );
 
             const completedChild = screen.getByTestId('timeline-child-commerce');
-            const dot = completedChild.querySelector('.timeline-step-dot');
-            expect(dot).not.toBeNull();
-            expect(dot).toHaveClass('timeline-step-dot-completed');
+            expect(completedChild).toHaveClass('timeline-child--done');
+            expect(completedChild).not.toHaveClass('timeline-child--active');
         });
 
-        it('defaults children without an explicit status to upcoming', () => {
+        it('leaves children without an explicit status quiet (no done/active modifier)', () => {
             renderWithProvider(
                 <TimelineNav
                     steps={STEPS}
@@ -194,12 +193,11 @@ describe('TimelineNav', () => {
             );
 
             const upcomingChild = screen.getByTestId('timeline-child-storefront');
-            const dot = upcomingChild.querySelector('.timeline-step-dot');
-            expect(dot).not.toBeNull();
-            expect(dot).toHaveClass('timeline-step-dot-upcoming');
+            expect(upcomingChild).not.toHaveClass('timeline-child--done');
+            expect(upcomingChild).not.toHaveClass('timeline-child--active');
         });
 
-        it('applies active (current) styling to the activeChildId child', () => {
+        it('applies active styling (accent bar modifier) to the activeChildId child', () => {
             renderWithProvider(
                 <TimelineNav
                     steps={STEPS}
@@ -211,24 +209,25 @@ describe('TimelineNav', () => {
             );
 
             const activeChild = screen.getByTestId('timeline-child-storefront');
-            const dot = activeChild.querySelector('.timeline-step-dot');
-            expect(dot).not.toBeNull();
-            expect(dot).toHaveClass('timeline-step-dot-current');
+            expect(activeChild).toHaveClass('timeline-child--active');
         });
 
-        it('applies a child-scale class to nested dots', () => {
+        it('renders sub-items as quiet labels with NO dots/checkmarks', () => {
             renderWithProvider(
                 <TimelineNav
                     steps={STEPS}
                     currentStepIndex={1}
                     completedStepIndices={[0]}
                     childSteps={CHILDREN}
+                    childStatusById={{ commerce: 'completed' }}
+                    activeChildId="storefront"
                 />
             );
 
             const child = screen.getByTestId('timeline-child-commerce');
-            const dot = child.querySelector('.timeline-child-dot');
-            expect(dot).not.toBeNull();
+            // No per-child indicator dots anymore (the active accent bar + weight carry it).
+            expect(child.querySelector('.timeline-step-dot')).toBeNull();
+            expect(child.querySelector('.timeline-child-dot')).toBeNull();
         });
     });
 

@@ -33,6 +33,9 @@ const ACCOUNTS_DONE = {
     },
 } as unknown as WizardState;
 
+/** A NEW-repo flow — the only case where the Code Sync sub-step applies. */
+const NEW_REPO = { edsConfig: { repoMode: 'new' } } as unknown as WizardState;
+
 describe('STOREFRONT_SECTION_TITLES', () => {
     it('titles each of the 4 sub-steps', () => {
         expect(STOREFRONT_SECTION_TITLES).toEqual({
@@ -45,8 +48,13 @@ describe('STOREFRONT_SECTION_TITLES', () => {
 });
 
 describe('storefrontSectionStates', () => {
-    it('lists the 4 sub-steps in order', () => {
+    it('lists 3 sub-steps for an existing repo — Code Sync omitted (not required)', () => {
         const states = storefrontSectionStates(UNCONFIGURED);
+        expect(states.map(s => s.id)).toEqual(['accounts', 'repository', 'block-libraries']);
+    });
+
+    it('includes Code Sync only for a NEW repo (4 sub-steps)', () => {
+        const states = storefrontSectionStates(NEW_REPO);
         expect(states.map(s => s.id)).toEqual([
             'accounts',
             'repository',
@@ -55,12 +63,11 @@ describe('storefrontSectionStates', () => {
         ]);
     });
 
-    it('starts on accounts as current with later required steps locked', () => {
+    it('starts on accounts as current with the next required step locked', () => {
         const states = storefrontSectionStates(UNCONFIGURED);
         expect(states[0].status).toBe('current'); // accounts
         expect(states[1].status).toBe('locked'); // repository
         expect(states[1].lockReason).toMatch(/previous step/i);
-        expect(states[2].status).toBe('locked'); // code-sync
     });
 
     it('marks accounts done and advances current to repository once both are authed', () => {
@@ -68,7 +75,6 @@ describe('storefrontSectionStates', () => {
         expect(states[0].status).toBe('done'); // accounts
         expect(states[1].status).toBe('current'); // repository
         expect(states[1].lockReason).toBeUndefined();
-        expect(states[2].status).toBe('locked'); // code-sync
     });
 
     it('marks every step done when fully configured', () => {

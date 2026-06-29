@@ -38,7 +38,7 @@ export const STOREFRONT_SECTION_TITLES: Record<StorefrontSectionId, string> = {
     'block-libraries': 'Block Libraries',
 };
 
-/** The ordered Storefront sub-step ids (the walk + nav order). */
+/** The full ordered Storefront sub-step ids (canonical walk + nav order). */
 const STOREFRONT_SECTION_ORDER: StorefrontSectionId[] = [
     'accounts',
     'repository',
@@ -47,17 +47,31 @@ const STOREFRONT_SECTION_ORDER: StorefrontSectionId[] = [
 ];
 
 /**
+ * The Storefront sub-steps for the current state. `code-sync` (the AEM Code Sync app
+ * install) is only required for a NEW repo; an existing repo has no app gate here, so
+ * the sub-step is omitted — dynamic, like Commerce's conditional Sign-in step.
+ *
+ * @param state - Wizard state (provides edsConfig.repoMode)
+ * @returns the ordered, applicable sub-step ids
+ */
+export function storefrontSectionOrder(state: WizardState): StorefrontSectionId[] {
+    const needsCodeSync = state.edsConfig?.repoMode === 'new';
+    return STOREFRONT_SECTION_ORDER.filter(id => id !== 'code-sync' || needsCodeSync);
+}
+
+/**
  * The ordered Storefront section states with a sequential lock: each step is `done`
  * when its own complete-condition holds; otherwise the FIRST not-done step is
  * `current` and every step after it is `locked`. Done steps before the current one
- * stay `done`.
+ * stay `done`. The `code-sync` step is present only for a new repo (see
+ * {@link storefrontSectionOrder}).
  *
  * @param state - Wizard state (persisted selections + validity verdicts)
  * @returns the ordered sections with status / lockReason
  */
 export function storefrontSectionStates(state: WizardState): StorefrontSectionState[] {
     let currentReached = false;
-    return STOREFRONT_SECTION_ORDER.map((id) => {
+    return storefrontSectionOrder(state).map((id) => {
         if (isStorefrontStepComplete(state, id)) {
             return { id, status: 'done' as const };
         }

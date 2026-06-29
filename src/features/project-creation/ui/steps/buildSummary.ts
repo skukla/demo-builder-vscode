@@ -87,17 +87,21 @@ export function storefrontSummaryGroup(state: WizardState): SummaryGroup {
             value: repoDone ? eds?.repoName : undefined,
             done: repoDone && Boolean(eds?.repoName),
         },
-        {
+    ];
+    // Code Sync only applies to a NEW repo (mirrors storefrontSectionOrder); an existing
+    // repo has no Code Sync sub-step, so omit the row.
+    if (eds?.repoMode === 'new') {
+        rows.push({
             label: STOREFRONT_SECTION_TITLES['code-sync'],
             value: codeSyncDone ? 'Verified' : undefined,
             done: codeSyncDone,
-        },
-        {
-            label: STOREFRONT_SECTION_TITLES['block-libraries'],
-            value: libCount > 0 ? `${libCount} selected` : undefined,
-            done: libCount > 0,
-        },
-    ];
+        });
+    }
+    rows.push({
+        label: STOREFRONT_SECTION_TITLES['block-libraries'],
+        value: libCount > 0 ? `${libCount} selected` : undefined,
+        done: libCount > 0,
+    });
     return { heading: 'Storefront', rows };
 }
 

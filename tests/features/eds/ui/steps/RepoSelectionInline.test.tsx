@@ -176,18 +176,9 @@ describe('RepoSelectionInline', () => {
     });
 
     describe('code-sync phase', () => {
-        it('should render a "ready" message for an existing repo (no app gate)', async () => {
-            mockRequest.mockResolvedValue({ success: true, isInstalled: true });
-            const state = createDefaultState({
-                repoMode: 'existing',
-                selectedRepo: { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo' },
-            });
-
-            await renderInline(state, 'code-sync');
-
-            expect(screen.getByText(/is ready/i)).toBeInTheDocument();
-        });
-
+        // Note: the `code-sync` sub-step is omitted entirely for an existing repo
+        // (storefrontSectionOrder), so there is no existing-repo code-sync VIEW to test;
+        // its validity is still auto-reported (below) which is what makes the skip safe.
         it('should report code-sync VALID for an existing repo (gate deferred)', async () => {
             const state = createDefaultState({
                 repoMode: 'existing',

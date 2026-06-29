@@ -63,9 +63,16 @@ describe('commerceSummaryGroup', () => {
 });
 
 describe('storefrontSummaryGroup', () => {
-    it('heads "Storefront" and mirrors the four sub-steps', () => {
+    it('heads "Storefront" and mirrors the sub-steps (existing repo → no Code Sync)', () => {
         const group = storefrontSummaryGroup(state({}));
         expect(group.heading).toBe('Storefront');
+        expect(group.rows.map(r => r.label)).toEqual(['Accounts', 'Repository', 'Block Libraries']);
+    });
+
+    it('includes the Code Sync row only for a NEW repo', () => {
+        const group = storefrontSummaryGroup(
+            state({ edsConfig: { repoMode: 'new' } } as Partial<WizardState>),
+        );
         expect(group.rows.map(r => r.label)).toEqual([
             'Accounts',
             'Repository',
@@ -98,7 +105,7 @@ describe('storefrontSummaryGroup', () => {
             state({
                 storefrontRepoValid: true,
                 storefrontCodeSyncValid: true,
-                edsConfig: { repoName: 'my-repo' },
+                edsConfig: { repoName: 'my-repo', repoMode: 'new' },
             } as Partial<WizardState>),
         );
         const repo = group.rows.find(r => r.label === 'Repository');

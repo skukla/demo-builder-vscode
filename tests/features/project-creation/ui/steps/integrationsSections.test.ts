@@ -16,8 +16,8 @@ const state = (partial: Partial<WizardState>): WizardState => partial as WizardS
 describe('integrationsSections', () => {
     it('titles the two sub-steps', () => {
         expect(INTEGRATIONS_SECTION_TITLES).toEqual({
-            deployables: 'Deployables',
-            target: 'Deployment target',
+            deployables: 'Services',
+            target: 'Destination',
         });
     });
 

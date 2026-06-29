@@ -250,8 +250,16 @@ beforeEach(() => {
 
 describe('StorefrontStep', () => {
     describe('nav + view routing', () => {
-        it('renders all 4 sub-steps in the nav', () => {
-            setup();
+        it('renders the sub-steps in the nav — no Code Sync for an existing repo', () => {
+            setup(); // baseState uses repoMode: 'existing'
+            for (const id of ['accounts', 'repository', 'block-libraries']) {
+                expect(document.querySelector(`[data-step="${id}"]`)).toBeInTheDocument();
+            }
+            expect(document.querySelector('[data-step="code-sync"]')).not.toBeInTheDocument();
+        });
+
+        it('includes the Code Sync sub-step in the nav for a new repo', () => {
+            setup({ edsConfig: { repoMode: 'new' } as WizardState['edsConfig'] });
             for (const id of ['accounts', 'repository', 'code-sync', 'block-libraries']) {
                 expect(document.querySelector(`[data-step="${id}"]`)).toBeInTheDocument();
             }

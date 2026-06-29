@@ -1797,12 +1797,31 @@ button[class*="spectrum-Button"][disabled],
     background: repeating-linear-gradient(to bottom, var(--spectrum-global-color-gray-400) 0px, var(--spectrum-global-color-gray-400) 4px, transparent 4px, transparent 8px) !important;
 }
 
-/* Nested sub-step (child) scale — mirrors .timeline-step-dot / .timeline-connector
-   at a smaller scale so a single indented level reads as a sub-level. The status
-   color classes (.timeline-step-dot-*) are reused as-is. */
-.timeline-child-dot {
-    width: var(--spectrum-global-dimension-size-200) !important;  /* 16px */
-    height: var(--spectrum-global-dimension-size-200) !important;
+/* Nested sub-step rail — quiet indented LABELS (no dots / checkmarks / pulse). The
+   active child gets a 2px accent bar + bold gray-900 label; a done child is a touch
+   darker than an upcoming one. The whole rail is indented well clear of the parent's
+   dotted spine (TimelineChildren CHILD_INDENT) so the accent bar never reads as a
+   second rail next to the dotted line. Mirrors the in-body VerticalStepList nav. */
+.timeline-child {
+    box-sizing: border-box;
+    padding: 5px 0 5px 12px;
+    border-left: 2px solid transparent;
+}
+.timeline-child-label {
+    font-size: var(--spectrum-global-dimension-font-size-100);
+    color: var(--spectrum-global-color-gray-500);
+    white-space: nowrap;
+    user-select: none;
+}
+.timeline-child--done .timeline-child-label {
+    color: var(--spectrum-global-color-gray-700);
+}
+.timeline-child--active {
+    border-left-color: var(--spectrum-global-color-blue-500);
+}
+.timeline-child--active .timeline-child-label {
+    color: var(--spectrum-global-color-gray-900);
+    font-weight: 600;
 }
 
 /* Timeline step entrance animation - fade in with expand */
@@ -4016,7 +4035,9 @@ div[class*="spectrum"] input[type="search"] {
     flex: 0 0 auto !important;
     width: 100% !important;
     box-sizing: border-box !important;
-    padding: var(--wizard-content-pad) !important;
+    /* Thinner rail: trim the vertical padding (keep the horizontal content padding so
+       the label + tabs stay aligned with the content band). */
+    padding: var(--spectrum-global-dimension-size-150) var(--wizard-content-pad) !important;
     gap: var(--spectrum-global-dimension-size-300) !important;
     /* Matched toolbar — gray-75 fill + a bottom divider (was a right border on the
      * left rail) so the strip and summary still read as the same panel family. */

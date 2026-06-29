@@ -9,20 +9,14 @@
 
 import { View, Text } from '@adobe/react-spectrum';
 import React from 'react';
-import {
-    getTimelineLabelClasses,
-    getTimelineStepDotClasses,
-    renderStepIndicator,
-    type TimelineStatus,
-    type TimelineStep,
-} from './timelineNav.helpers';
+import { type TimelineStatus, type TimelineStep } from './timelineNav.helpers';
 import { cn } from '@/core/ui/utils/classNames';
 
-/** Child sub-step spacing — tighter than the parent rhythm to read as a sub-level. */
-const CHILD_SPACING = 'var(--spectrum-global-dimension-size-200)';
 /** Small gap from the parent label down to the first child. */
 const CHILD_TOP_GAP = 'size-150';
-const CHILD_INDENT = 'size-300';
+/** Indent the sub-rail well clear of the parent's dotted spine so the active
+ *  child's accent bar reads as a sub-level marker, not a second rail. */
+const CHILD_INDENT = 'size-500';
 
 export interface TimelineChildrenProps {
     /** Parent step id (used for the container test id). */
@@ -66,61 +60,40 @@ export function TimelineChildren({
             marginStart={CHILD_INDENT}
             position="relative"
         >
-            {childSteps.map((child, childIndex) => {
-                const childStatus: TimelineStatus = child.id === activeChildId
+            {childSteps.map((child) => {
+                const isActive = child.id === activeChildId;
+                // Status only tiers the quiet label (done a touch darker than upcoming);
+                // there are no per-child dots or checkmarks now (the active accent bar +
+                // weight carry "where you are", mirroring the in-body VerticalStepList nav).
+                const status: TimelineStatus = isActive
                     ? 'current'
                     : (childStatusById?.[child.id] ?? 'upcoming');
-                const isLastChild = childIndex === childSteps.length - 1;
+                const isDone = status === 'completed' || status === 'completed-current';
 
                 return (
-                    <View key={child.id} position="relative">
-                        <div
-                            data-testid={`timeline-child-${child.id}`}
-                            role="button"
-                            tabIndex={0}
-                            aria-current={child.id === activeChildId ? 'step' : undefined}
-                            aria-label={child.name}
-                            style={{ marginBottom: isLastChild ? undefined : CHILD_SPACING }}
-                            className={cn(
-                                'timeline-step',
-                                'timeline-child',
-                                'cursor-pointer',
-                                childStatus === 'upcoming' ? 'opacity-50' : 'opacity-100',
-                                'transition-opacity',
-                            )}
-                            onClick={() => handleChildClick(child.id)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                    e.preventDefault();
-                                    handleChildClick(child.id);
-                                }
-                            }}
-                        >
-                            <View UNSAFE_className="nav-item-row">
-                                {/* Child indicator dot (smaller scale via timeline-child-dot) */}
-                                <View
-                                    width="size-200"
-                                    height="size-200"
-                                    UNSAFE_className={cn(
-                                        getTimelineStepDotClasses(childStatus),
-                                        'timeline-child-dot',
-                                        'shrink-0',
-                                    )}
-                                >
-                                    {renderStepIndicator(childStatus)}
-                                </View>
-
-                                <Text
-                                    UNSAFE_className={cn(
-                                        getTimelineLabelClasses(childStatus),
-                                        'timeline-step-label',
-                                    )}
-                                >
-                                    {child.name}
-                                </Text>
-                            </View>
-                        </div>
-                    </View>
+                    <div
+                        key={child.id}
+                        data-testid={`timeline-child-${child.id}`}
+                        role="button"
+                        tabIndex={0}
+                        aria-current={isActive ? 'step' : undefined}
+                        aria-label={child.name}
+                        className={cn(
+                            'timeline-child',
+                            'cursor-pointer',
+                            isActive && 'timeline-child--active',
+                            !isActive && isDone && 'timeline-child--done',
+                        )}
+                        onClick={() => handleChildClick(child.id)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                handleChildClick(child.id);
+                            }
+                        }}
+                    >
+                        <Text UNSAFE_className="timeline-child-label">{child.name}</Text>
+                    </div>
                 );
             })}
         </View>

@@ -416,18 +416,12 @@ export function RepoSelectionInline({
         );
     }
 
-    // --- `code-sync` phase: AEM Code Sync app install (new repos only) --------
-    // Existing repos have no app gate here (it's deferred to StorefrontSetup after
-    // the fstab.yaml push), so they just show a short "nothing to install" message.
+    // --- `code-sync` phase: AEM Code Sync app install (NEW repos only) --------
+    // The `code-sync` sub-step is omitted entirely for an existing repo (its app gate
+    // is deferred to StorefrontSetup after the fstab.yaml push — see storefrontSectionOrder),
+    // so this phase only renders for a new repo.
     return (
         <div className="w-full relative">
-            {repoMode === 'existing' && (
-                <Text>
-                    The selected repository is ready — the AEM Code Sync app isn&apos;t
-                    required for an existing repository.
-                </Text>
-            )}
-
             {showNewRepoStatus && (
                 <>
                     <Divider size="S" marginTop="size-300" marginBottom="size-200" />
