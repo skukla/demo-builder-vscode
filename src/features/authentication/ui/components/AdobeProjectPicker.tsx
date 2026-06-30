@@ -32,6 +32,8 @@ export interface AdobeProjectPickerProps {
     state: WizardState;
     /** Updates wizard state (writes `adobeProject`, clears dependent workspace). */
     updateState: (updates: Partial<WizardState>) => void;
+    /** Optional header action (e.g. a "New" button) rendered in the list header. */
+    headerAction?: React.ReactNode;
 }
 
 /**
@@ -43,6 +45,7 @@ export interface AdobeProjectPickerProps {
 export function AdobeProjectPicker({
     state,
     updateState,
+    headerAction,
 }: AdobeProjectPickerProps): React.ReactElement {
     const {
         items: projects,
@@ -98,6 +101,7 @@ export function AdobeProjectPicker({
 
     return (
         <SelectionStepContent
+            headerAction={headerAction}
             items={projects}
             filteredItems={filteredProjects}
             showLoading={showLoading}

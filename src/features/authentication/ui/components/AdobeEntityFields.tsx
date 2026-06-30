@@ -1,24 +1,31 @@
 /**
- * AdobeEntityFields — "select OR create" controls for the Adobe I/O deployment target.
+ * AdobeEntityFields — "browse or create" controls for the Adobe I/O deployment target.
  *
  * The Integrations "Destination" sub-step lets the user pick an EXISTING Adobe I/O
- * project/workspace ({@link AdobeProjectPicker} / {@link AdobeWorkspacePicker}) OR
- * create a NEW one in-app via the ported create handlers:
+ * project/workspace OR create a NEW one in-app. The look + feel mirrors the extension's
+ * existing "create GitHub repo" flow (see {@link NewRepoForm} in
+ * `eds/ui/steps/repoSelectionInline.helpers`): a BROWSE list with a "New" header button
+ * that toggles to a CREATE panel (a gray-50 card with a name field + Browse/Create
+ * footer), then snaps back to the browse list once the entity exists and is selected.
+ *
+ * The create wiring uses the ported handlers:
  *  - `can-create-adobe-project` — permission probe (Flow A vs Flow B). Workspace reuses
- *    the SAME probe. When the user lacks permission we hide the "+ Create" affordance and
- *    fall back to selection-only (the pickers' own "create in Console" guidance).
- *  - `create-adobe-project` `{ name, description }` → the new project (also refreshes the
- *    list + acks selection on the backend); we write `state.adobeProject`.
- *  - `create-adobe-workspace` `{ name, description }` → the new workspace under the cached
- *    (selected) project; we write `state.adobeWorkspace`.
+ *    the SAME probe. When the user lacks permission we hide the "New" button and fall
+ *    back to selection-only (the pickers' own "create in Console" guidance).
+ *  - `create-adobe-project` `{ name }` → the new project (also refreshes the list + acks
+ *    selection on the backend); we write `state.adobeProject`.
+ *  - `create-adobe-workspace` `{ name }` → the new workspace under the cached (selected)
+ *    project; we write `state.adobeWorkspace`.
  *
  * @module features/authentication/ui/components/AdobeEntityFields
  */
 
-import { Button, Flex, Text, TextField } from '@adobe/react-spectrum';
+import { Button, Flex, Heading, Text, TextField, View } from '@adobe/react-spectrum';
+import Add from '@spectrum-icons/workflow/Add';
 import React, { useCallback, useEffect, useState } from 'react';
 import { AdobeProjectPicker } from './AdobeProjectPicker';
 import { AdobeWorkspacePicker } from './AdobeWorkspacePicker';
+import { LoadingOverlay } from '@/core/ui/components/feedback/LoadingOverlay';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { AdobeProject, WizardState, Workspace } from '@/types/webview';
 
@@ -30,11 +37,8 @@ interface HandlerResult<T> {
     code?: string;
 }
 
-/** The outcome of a create attempt, surfaced inline by {@link CreateEntityForm}. */
-interface CreateOutcome {
-    ok: boolean;
-    error?: string;
-}
+/** Which half of the select-or-create control is showing. */
+type FieldMode = 'browse' | 'create';
 
 interface FieldProps {
     state: WizardState;
@@ -66,91 +70,100 @@ function useCanCreateAdobeEntity(): boolean {
 }
 
 /**
- * A "+ Create new {noun}" affordance that expands to a name field + Create button and
- * reports the outcome inline. Presentational — the parent injects the actual create call.
+ * The CREATE panel — a gray-50 card with a name field + Browse/Create footer, matching
+ * the extension's "Create New Repository" form. Presentational: the parent injects the
+ * actual create call, the busy/error state, and the "Browse" (back-to-list) handler.
  *
- * @param props - the lowercase noun + an async create(name) → outcome
- * @returns the create affordance
+ * @param props - the title noun, a context hint, busy/error state, and the callbacks
+ * @returns the create panel
  */
-export function CreateEntityForm({
+function NewAdobeEntityForm({
     noun,
+    contextHint,
+    busy,
+    error,
+    onBrowse,
     onCreate,
 }: {
-    noun: string;
-    onCreate: (name: string) => Promise<CreateOutcome>;
+    noun: 'Project' | 'Workspace';
+    contextHint?: string;
+    busy: boolean;
+    error?: string;
+    onBrowse: () => void;
+    onCreate: (name: string) => void;
 }): React.ReactElement {
-    const [open, setOpen] = useState(false);
     const [name, setName] = useState('');
-    const [busy, setBusy] = useState(false);
-    const [error, setError] = useState<string | undefined>();
-
-    const close = () => {
-        setOpen(false);
-        setName('');
-        setError(undefined);
-    };
-
-    const submit = async () => {
-        const trimmed = name.trim();
-        if (!trimmed || busy) return;
-        setBusy(true);
-        setError(undefined);
-        const outcome = await onCreate(trimmed);
-        setBusy(false);
-        if (outcome.ok) {
-            close();
-        } else {
-            setError(outcome.error ?? `Could not create the ${noun}.`);
-        }
-    };
-
-    if (!open) {
-        return (
-            <Button variant="secondary" onPress={() => setOpen(true)}>
-                {`+ Create new ${noun}`}
-            </Button>
-        );
-    }
+    const trimmed = name.trim();
 
     return (
-        <Flex direction="column" gap="size-100">
+        <View backgroundColor="gray-50" borderRadius="medium" padding="size-300">
+            <Heading level={3} margin={0} marginBottom="size-200">{`Create New ${noun}`}</Heading>
+
             <TextField
-                label={`New ${noun} name`}
+                label={`${noun} name`}
                 value={name}
                 onChange={setName}
-                isDisabled={busy}
+                description={contextHint}
+                validationState={error ? 'invalid' : undefined}
+                errorMessage={error}
                 width="100%"
+                isRequired
                 autoFocus
+                isDisabled={busy}
             />
-            {error && <Text UNSAFE_className="text-sm text-red-600">{error}</Text>}
-            <Flex gap="size-100">
+
+            <Flex justifyContent="end" gap="size-100" marginTop="size-200">
+                <Button variant="secondary" isDisabled={busy} onPress={onBrowse}>
+                    Browse
+                </Button>
                 <Button
-                    variant="primary"
+                    variant="accent"
                     isPending={busy}
-                    isDisabled={!name.trim()}
-                    onPress={submit}
+                    isDisabled={!trimmed || busy}
+                    onPress={() => onCreate(trimmed)}
                 >
                     Create
                 </Button>
-                <Button variant="secondary" isDisabled={busy} onPress={close}>
-                    Cancel
-                </Button>
             </Flex>
-        </Flex>
+
+            <LoadingOverlay isVisible={busy} />
+        </View>
+    );
+}
+
+/** The "New" header button shown in browse mode (Flow A only). */
+function NewButton({ onPress }: { onPress: () => void }): React.ReactElement {
+    return (
+        <Button variant="accent" onPress={onPress}>
+            <Add size="S" />
+            <Text>New</Text>
+        </Button>
     );
 }
 
 /**
- * The Adobe I/O project field: select an existing project, or create a new one in-app.
+ * The Adobe I/O project field: browse existing projects, or create a new one in-app
+ * (matching the GitHub repo browse/create flow).
  *
  * @param props - wizard state + updater
- * @returns the project select-or-create control
+ * @returns the project browse-or-create control
  */
 export function AdobeProjectField({ state, updateState }: FieldProps): React.ReactElement {
     const canCreate = useCanCreateAdobeEntity();
+    const [mode, setMode] = useState<FieldMode>('browse');
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState<string | undefined>();
+
+    const browse = useCallback(() => {
+        setMode('browse');
+        setError(undefined);
+    }, []);
 
     const handleCreate = useCallback(
-        async (name: string): Promise<CreateOutcome> => {
+        async (name: string): Promise<void> => {
+            if (!name || busy) return;
+            setBusy(true);
+            setError(undefined);
             try {
                 const res = await webviewClient.request<HandlerResult<AdobeProject>>(
                     'create-adobe-project',
@@ -169,36 +182,68 @@ export function AdobeProjectField({ state, updateState }: FieldProps): React.Rea
                         adobeWorkspace: undefined,
                         workspacesCache: undefined,
                     });
-                    return { ok: true };
+                    setMode('browse');
+                } else {
+                    setError(res?.error ?? 'Could not create the project.');
                 }
-                return { ok: false, error: res?.error };
             } catch (e) {
-                return { ok: false, error: (e as Error).message };
+                setError((e as Error).message);
+            } finally {
+                setBusy(false);
             }
         },
-        [updateState],
+        [busy, updateState],
     );
 
+    if (mode === 'create') {
+        return (
+            <NewAdobeEntityForm
+                noun="Project"
+                contextHint={
+                    state.adobeOrg?.name
+                        ? `Will be created in ${state.adobeOrg.name}`
+                        : 'Name for your new Adobe I/O project'
+                }
+                busy={busy}
+                error={error}
+                onBrowse={browse}
+                onCreate={handleCreate}
+            />
+        );
+    }
+
     return (
-        <Flex direction="column" gap="size-150">
-            <AdobeProjectPicker state={state} updateState={updateState} />
-            {canCreate && <CreateEntityForm noun="project" onCreate={handleCreate} />}
-        </Flex>
+        <AdobeProjectPicker
+            state={state}
+            updateState={updateState}
+            headerAction={canCreate ? <NewButton onPress={() => setMode('create')} /> : undefined}
+        />
     );
 }
 
 /**
- * The Adobe I/O workspace field: select an existing workspace, or create a new one in-app
- * (under the currently-selected project). Shown by the parent only once a project is chosen.
+ * The Adobe I/O workspace field: browse existing workspaces, or create a new one in-app
+ * (under the currently-selected project). Shown by the parent once a project is chosen.
  *
  * @param props - wizard state + updater
- * @returns the workspace select-or-create control
+ * @returns the workspace browse-or-create control
  */
 export function AdobeWorkspaceField({ state, updateState }: FieldProps): React.ReactElement {
     const canCreate = useCanCreateAdobeEntity();
+    const [mode, setMode] = useState<FieldMode>('browse');
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState<string | undefined>();
+
+    const browse = useCallback(() => {
+        setMode('browse');
+        setError(undefined);
+    }, []);
 
     const handleCreate = useCallback(
-        async (name: string): Promise<CreateOutcome> => {
+        async (name: string): Promise<void> => {
+            if (!name || busy) return;
+            setBusy(true);
+            setError(undefined);
             try {
                 const res = await webviewClient.request<HandlerResult<Workspace>>(
                     'create-adobe-workspace',
@@ -212,20 +257,42 @@ export function AdobeWorkspaceField({ state, updateState }: FieldProps): React.R
                             title: res.data.title,
                         },
                     });
-                    return { ok: true };
+                    setMode('browse');
+                } else {
+                    setError(res?.error ?? 'Could not create the workspace.');
                 }
-                return { ok: false, error: res?.error };
             } catch (e) {
-                return { ok: false, error: (e as Error).message };
+                setError((e as Error).message);
+            } finally {
+                setBusy(false);
             }
         },
-        [updateState],
+        [busy, updateState],
     );
 
+    if (mode === 'create') {
+        const projectName = state.adobeProject?.title || state.adobeProject?.name;
+        return (
+            <NewAdobeEntityForm
+                noun="Workspace"
+                contextHint={
+                    projectName
+                        ? `Will be created under ${projectName}`
+                        : 'Name for your new workspace'
+                }
+                busy={busy}
+                error={error}
+                onBrowse={browse}
+                onCreate={handleCreate}
+            />
+        );
+    }
+
     return (
-        <Flex direction="column" gap="size-150">
-            <AdobeWorkspacePicker state={state} updateState={updateState} />
-            {canCreate && <CreateEntityForm noun="workspace" onCreate={handleCreate} />}
-        </Flex>
+        <AdobeWorkspacePicker
+            state={state}
+            updateState={updateState}
+            headerAction={canCreate ? <NewButton onPress={() => setMode('create')} /> : undefined}
+        />
     );
 }

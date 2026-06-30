@@ -29,6 +29,8 @@ export interface AdobeWorkspacePickerProps {
     state: WizardState;
     /** Updates wizard state (writes `adobeWorkspace`). */
     updateState: (updates: Partial<WizardState>) => void;
+    /** Optional header action (e.g. a "New" button) rendered in the list header. */
+    headerAction?: React.ReactNode;
 }
 
 /**
@@ -40,6 +42,7 @@ export interface AdobeWorkspacePickerProps {
 export function AdobeWorkspacePicker({
     state,
     updateState,
+    headerAction,
 }: AdobeWorkspacePickerProps): React.ReactElement {
     const {
         items: workspaces,
@@ -92,6 +95,7 @@ export function AdobeWorkspacePicker({
 
     return (
         <SelectionStepContent
+            headerAction={headerAction}
             items={workspaces}
             filteredItems={filteredWorkspaces}
             showLoading={showLoading}
