@@ -239,6 +239,8 @@ describe('ConnectStoreStepContent - section filtering', () => {
         it('should render the store-view cascade', () => {
             mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
             configurePaasConnectionFilled();
+            // The cascade renders once discovery has populated the structure.
+            mockUseStoreDiscovery.hasStoreData = true;
 
             renderWithProvider(
                 <ConnectStoreStepContent {...defaultProps} section="business-structure" />,
@@ -347,6 +349,8 @@ describe('ConnectStoreStepContent - section filtering', () => {
                 catalogServiceGroup as any,
             ];
             configureStoreViewFilled();
+            // The cascade renders once discovery has populated the structure.
+            mockUseStoreDiscovery.hasStoreData = true;
 
             renderWithProvider(<ConnectStoreStepContent {...defaultProps} />);
 

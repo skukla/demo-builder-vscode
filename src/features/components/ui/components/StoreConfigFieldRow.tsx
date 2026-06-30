@@ -10,8 +10,7 @@
  *
  * Shared by ComponentConfigStep and ConnectStoreStepContent.
  */
-import { Button, Flex, ProgressCircle, Text } from '@adobe/react-spectrum';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
+import { Button, Flex, Text } from '@adobe/react-spectrum';
 import React from 'react';
 import {
     CONNECTION_FIELDS,
@@ -22,6 +21,8 @@ import type { ServiceGroup, UniqueField } from '../hooks/useComponentConfig';
 import type { StoreListItem } from '../hooks/useStoreDiscovery';
 import { ConfigFieldRenderer } from './ConfigFieldRenderer';
 import { StoreSelectionRow } from './StoreSelectionRow';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 
 export interface StoreConfigFieldRowProps {
     field: UniqueField;
@@ -41,41 +42,6 @@ export interface StoreConfigFieldRowProps {
     getStoreViewItems: (storeGroupCode: string) => StoreListItem[];
     /** Called when user clicks the Re-detect button to re-run store discovery */
     onRefresh?: () => void;
-}
-
-/**
- * Detection status line. Fixed minimum height so the Website/Store/Store View
- * dropdowns below never jump when detection finishes: the indeterminate spinner
- * resolves into a green ✓ IN PLACE (eased in) rather than the line collapsing to
- * nothing. Empty (but height-reserved) in the brief pre-detect idle.
- */
-function DetectStatus({
-    isFetching,
-    hasStoreData,
-}: {
-    isFetching: boolean;
-    hasStoreData: boolean;
-}): React.ReactNode {
-    return (
-        <Flex alignItems="center" gap="size-100" marginBottom="size-100" minHeight="size-300">
-            {hasStoreData && (
-                <Flex alignItems="center" gap="size-100" UNSAFE_className="animate-fade-in">
-                    <CheckmarkCircle
-                        size="S"
-                        UNSAFE_className="text-green-600"
-                        aria-label="Detected"
-                    />
-                    <Text UNSAFE_className="status-text">Store structure detected</Text>
-                </Flex>
-            )}
-            {!hasStoreData && isFetching && (
-                <>
-                    <ProgressCircle size="S" isIndeterminate aria-label="Detecting" />
-                    <Text UNSAFE_className="status-text">Detecting store structure…</Text>
-                </>
-            )}
-        </Flex>
-    );
 }
 
 export function StoreConfigFieldRow({
@@ -122,10 +88,13 @@ export function StoreConfigFieldRow({
 
     if (isWebsiteCodeField(field.key)) {
         /*
-         * Store selection. To avoid a layout shift, render the store-selection
-         * fields and the Re-detect slot from the start in a disabled "detecting"
-         * state and populate them in place — never swap a short spinner for the
-         * tall populated layout. The fetchError branch keeps its fallback inputs.
+         * Store selection — one loading treatment, used for the INITIAL detect AND
+         * any Re-detect: the large centered spinner (LoadingDisplay) stands in for
+         * the whole row while discovery runs, centered in the content area via
+         * CenteredFeedbackContainer (the same loader the component uses for "Loading
+         * component configurations…"). On success the populated dropdowns ARE the
+         * result (no separate "detected" confirmation). The fetchError branch keeps
+         * its fallback inputs.
          */
         if (fetchError) {
             return (
@@ -136,9 +105,16 @@ export function StoreConfigFieldRow({
             );
         }
 
+        if (isFetching || !hasStoreData) {
+            return (
+                <CenteredFeedbackContainer>
+                    <LoadingDisplay size="L" message="Detecting store structure…" />
+                </CenteredFeedbackContainer>
+            );
+        }
+
         return (
             <div>
-                <DetectStatus isFetching={isFetching} hasStoreData={hasStoreData} />
                 <StoreSelectionRow
                     group={group}
                     getFieldValue={getFieldValue}
@@ -146,14 +122,12 @@ export function StoreConfigFieldRow({
                     getWebsiteItems={getWebsiteItems}
                     getStoreGroupItems={getStoreGroupItems}
                     getStoreViewItems={getStoreViewItems}
-                    isLoading={!hasStoreData}
                 />
                 {onRefresh && (
                     <Flex marginTop="size-100" marginStart="size-50">
                         <Button
                             variant="secondary"
                             onPress={onRefresh}
-                            isDisabled={!hasStoreData}
                             UNSAFE_className="btn-standard text-base"
                         >
                             Re-detect
