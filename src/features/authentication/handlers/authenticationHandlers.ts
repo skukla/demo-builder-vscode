@@ -101,10 +101,19 @@ async function getAuthContext(
     const cachedOrg = context.authManager?.getCachedOrganization();
     const cachedProject = context.authManager?.getCachedProject();
 
-    // If cache is empty, read from Adobe CLI (persists across extension restarts)
+    // Cache miss: resolve the org from the TOKEN — `getOrganizations()[0]`, the org
+    // the current IMS token actually reaches (the same source autoSelectSingleOrg and
+    // detectProjectOrgMismatch use). We deliberately do NOT use getCurrentOrganization()
+    // here: that reads the Adobe CLI's persisted console selection, which is
+    // token-independent and goes stale after an org switch. Cache the token org so this
+    // stays a one-time (cache-first) resolve and the quick-auth check remains fast.
     if (!cachedOrg) {
-        const currentOrg = await context.authManager?.getCurrentOrganization();
+        const orgs = await context.authManager?.getOrganizations();
+        const currentOrg = orgs?.[0];
         const currentProject = await context.authManager?.getCurrentProject();
+        if (currentOrg) {
+            context.authManager?.setCachedOrganization(currentOrg);
+        }
         return { currentOrg, currentProject };
     }
 

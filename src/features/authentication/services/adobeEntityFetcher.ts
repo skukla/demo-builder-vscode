@@ -316,8 +316,15 @@ export class AdobeEntityFetcher {
     private async tryFetchProjectsViaSDK(
         cachedOrg: AdobeOrg | undefined,
         startTime: number,
+        targetOrgId?: string,
     ): Promise<AdobeProject[]> {
-        const hasValidOrgId = cachedOrg?.id && cachedOrg.id.length > 0;
+        // Fetch for the EFFECTIVE target org: the explicitly threaded org id wins
+        // (the caller's intent — e.g. the wizard's selected org), falling back to
+        // the cached/ambient org only when no id was threaded. The cached org can
+        // be stale after an org switch, so blindly using it returns the wrong
+        // org's projects (or an empty list).
+        const effectiveOrgId = targetOrgId ?? cachedOrg?.id;
+        const hasValidOrgId = !!effectiveOrgId && effectiveOrgId.length > 0;
         if (!hasValidOrgId) {
             if (this.sdkClient.isInitialized()) {
                 this.debugLogger.debug('[Entity Fetcher] SDK available but org ID is missing, using CLI');
@@ -327,7 +334,7 @@ export class AdobeEntityFetcher {
 
         const client = this.sdkClient.getClient() as { getProjectsForOrg: (orgId: string) => Promise<SDKResponse<RawAdobeProject[]>> };
         return this.trySDKFetch(
-            () => client.getProjectsForOrg(cachedOrg.id),
+            () => client.getProjectsForOrg(effectiveOrgId),
             mapProjects, 'projects', startTime,
         );
     }
@@ -366,7 +373,7 @@ export class AdobeEntityFetcher {
             await this.ensureSDKReady();
             const cachedOrg = this.cacheManager.getCachedOrganization();
 
-            let mappedProjects = await this.tryFetchProjectsViaSDK(cachedOrg, startTime);
+            let mappedProjects = await this.tryFetchProjectsViaSDK(cachedOrg, startTime, options?.orgId);
 
             if (mappedProjects.length === 0) {
                 mappedProjects = await this.executeCLIFallback<RawAdobeProject, AdobeProject>(

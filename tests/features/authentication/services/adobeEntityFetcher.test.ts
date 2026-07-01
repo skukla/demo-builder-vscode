@@ -515,6 +515,65 @@ describe('AdobeEntityFetcher', () => {
         });
     });
 
+    describe('getProjects() - SDK fetch honors the threaded org id', () => {
+        it('fetches projects for the THREADED orgId, not the cached (stale) org, when orgId is supplied', async () => {
+            // Regression: the wizard threads the intended org into get-projects, but the
+            // SDK path used to fetch the cached/ambient org (which can be stale), returning
+            // the wrong org's projects (or an empty list). The threaded org is the truth.
+            const getProjectsForOrg = jest.fn().mockResolvedValue({
+                body: [{ id: 'proj1', name: 'Project 1', title: 'Project 1 Title' }],
+            });
+            mockCacheManager.getCachedOrganization.mockReturnValue({
+                id: 'stale-org',
+                code: 'STALE@AdobeOrg',
+                name: 'Stale Org',
+            });
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.getClient.mockReturnValue({
+                getProjectsForOrg,
+            } as ReturnType<typeof mockSDKClient.getClient>);
+
+            await fetcher.getProjects({ orgId: 'target-org' });
+
+            expect(getProjectsForOrg).toHaveBeenCalledWith('target-org');
+            expect(getProjectsForOrg).not.toHaveBeenCalledWith('stale-org');
+        });
+
+        it('falls back to the cached org id for the SDK fetch when orgId is omitted', async () => {
+            const getProjectsForOrg = jest.fn().mockResolvedValue({
+                body: [{ id: 'proj1', name: 'Project 1', title: 'Project 1 Title' }],
+            });
+            mockCacheManager.getCachedOrganization.mockReturnValue({
+                id: 'cached-org',
+                code: 'CACHED@AdobeOrg',
+                name: 'Cached Org',
+            });
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.getClient.mockReturnValue({
+                getProjectsForOrg,
+            } as ReturnType<typeof mockSDKClient.getClient>);
+
+            await fetcher.getProjects();
+
+            expect(getProjectsForOrg).toHaveBeenCalledWith('cached-org');
+        });
+
+        it('uses the threaded orgId for the SDK fetch even when no org is cached', async () => {
+            const getProjectsForOrg = jest.fn().mockResolvedValue({
+                body: [{ id: 'proj1', name: 'Project 1', title: 'Project 1 Title' }],
+            });
+            mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.getClient.mockReturnValue({
+                getProjectsForOrg,
+            } as ReturnType<typeof mockSDKClient.getClient>);
+
+            await fetcher.getProjects({ orgId: 'target-org' });
+
+            expect(getProjectsForOrg).toHaveBeenCalledWith('target-org');
+        });
+    });
+
     describe('getWorkspaces()', () => {
         it('should fetch workspaces via SDK with valid org and project IDs', async () => {
             mockCacheManager.getCachedOrganization.mockReturnValue({

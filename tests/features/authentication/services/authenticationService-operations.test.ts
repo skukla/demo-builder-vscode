@@ -286,6 +286,27 @@ describe('AuthenticationService - Login/Logout Operations', () => {
             expect(clearTokenInspectionCacheSpy).toHaveBeenCalled();
         });
 
+        it('should clear the cached organization AND org list after non-forced login', async () => {
+            // Regression: a non-forced re-auth used to keep the stale org caches, so the
+            // wizard kept showing the previous org. The org is re-derived via
+            // getOrganizations(), which is org-list-cache-first — so the org LIST must be
+            // cleared too, else the org re-derives from a stale list (~60s TTL). The forced
+            // path already clears both via clearAll.
+            const cacheManager = (authService as any).cacheManager;
+            cacheManager.setCachedOrganization(mockOrg); // seed a stale org
+            cacheManager.setCachedOrgList([mockOrg]); // seed a stale org list
+
+            const token = 'x'.repeat(150);
+            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult(token));
+
+            await authService.login(false);
+
+            // Both the org and the org list must be cleared so re-derivation reflects the
+            // fresh token — not the previous, stale org.
+            expect(cacheManager.getCachedOrganization()).toBeUndefined();
+            expect(cacheManager.getCachedOrgList()).toBeUndefined();
+        });
+
         it('should call clearAll before forced login', async () => {
             // Given: Successful forced login
             const token = 'x'.repeat(150);

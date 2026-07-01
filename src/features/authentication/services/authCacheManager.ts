@@ -198,6 +198,15 @@ export class AuthCacheManager {
     }
 
     /**
+     * Clear ONLY the cached org list (targeted). Used on a non-forced login so the org is
+     * re-derived from the fresh token: `getOrganizations()` is org-list-cache-first, so a
+     * stale list would otherwise re-supply the previous org for the cache's short TTL.
+     */
+    clearOrgListCache(): void {
+        this.orgListCache = undefined;
+    }
+
+    /**
      * Get cached console.where result
      */
     getCachedConsoleWhere(): AdobeConsoleWhereResponse | undefined {

@@ -177,3 +177,12 @@ Numbers-first measurement pass to map the codebase's actual size, complexity, an
 #### Oversized test-file splits — non-AI areas ([`2026-05-27-oversized-test-file-splits.md`](2026-05-27-oversized-test-file-splits.md))
 
 ⚠️ **Mostly resolved** — `blockCollectionHelpers.test.ts` and the priority files were split (`35418a26`, `4fd26bf7`). Re-audit current `max-lines` warnings before treating this as active; keep only if any of the original 7 files still exceed 500 lines.
+
+#### Wizard org-context follow-ups (from the `fix/wizard-org-mismatch` review)
+
+Two non-blocking correctness follow-ups deferred out of the org-mismatch fix (which landed the core
+token-org scoping). Both are constrained to the user's own org memberships (no cross-tenant exposure);
+diagnosis in [`../research/wizard-org-mismatch/research.md`](../research/wizard-org-mismatch/research.md).
+
+- **Org/project mispairing on the auth step** ([`2026-07-01-wizard-org-project-mispairing.md`](2026-07-01-wizard-org-project-mispairing.md)) — the displayed org is now token-sourced but `currentProject` still comes from the stale CLI console; self-heals downstream. Also folds in the `withOrgContext` code/name + `testDeveloperPermissions` org-targeting hardening.
+- **Multi-org selection guard** ([`2026-07-01-wizard-multi-org-selection-guard.md`](2026-07-01-wizard-multi-org-selection-guard.md)) — `getOrganizations()[0]` is arbitrary for multi-org users; add a `detectProjectOrgMismatch`/`ensureOrgContext` guard before "Connected" (keep the forced-login recovery model, no in-app picker).

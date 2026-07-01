@@ -255,7 +255,14 @@ export class AuthenticationService {
                             this.cacheManager.clearAuthStatusCache();
                             this.cacheManager.clearValidationCache();
                             this.cacheManager.clearTokenInspectionCache();
-                            this.debugLogger.debug('[Auth] Cleared auth, validation, and token inspection caches after login');
+                            // Also clear the cached org AND the org-list cache so the org is
+                            // re-derived from the fresh token (the forced path clears both via
+                            // clearAll). Without clearing the LIST too, `getOrganizations()`
+                            // (org-list-cache-first) re-supplies the previous, stale org for
+                            // the cache's short TTL — keeping the wizard on the wrong org.
+                            this.cacheManager.setCachedOrganization(undefined);
+                            this.cacheManager.clearOrgListCache();
+                            this.debugLogger.debug('[Auth] Cleared auth, validation, token inspection, and org caches after login');
                         }
 
                         return true;
