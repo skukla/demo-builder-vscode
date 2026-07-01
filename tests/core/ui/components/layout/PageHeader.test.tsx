@@ -1,10 +1,13 @@
 /**
  * PageHeader Component Tests
  *
- * Tests the PageHeader layout component that provides consistent page headers
- * with title, subtitle, optional action buttons, and back navigation.
+ * PageHeader is the app's single, canonical page header: one tight single row
+ * ([back?] title · subtitle crumb … [action]) with an optional secondary line for a
+ * description/status. The reclaimed density is the DEFAULT (there is no "compact"
+ * mode) — the left rail / page context owns wayfinding, so the header stays short.
  *
- * Used in: ProjectsDashboard, dashboard views, and other page-level screens.
+ * Used by: WizardContainer, ProjectsDashboard, ProjectDashboardScreen, AiOverviewScreen,
+ * ConfigureScreen.
  */
 
 import React from 'react';
@@ -13,7 +16,6 @@ import { Provider, defaultTheme, Button } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 
-// Helper to render with Spectrum Provider
 const renderWithProvider = (ui: React.ReactElement) => {
     return render(
         <Provider theme={defaultTheme} colorScheme="light">
@@ -24,77 +26,67 @@ const renderWithProvider = (ui: React.ReactElement) => {
 
 describe('PageHeader', () => {
     describe('title rendering', () => {
-        it('should render title correctly as H1 heading', () => {
-            // Given: PageHeader with title="Test Title"
-            // When: Component renders
-            renderWithProvider(
-                <PageHeader title="Test Title" />
-            );
+        it('should render title as the H1 heading', () => {
+            renderWithProvider(<PageHeader title="Test Title" />);
 
-            // Then: H1 heading displays "Test Title"
-            const heading = screen.getByRole('heading', { level: 1 });
-            expect(heading).toHaveTextContent('Test Title');
+            expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Test Title');
         });
 
         it('should render different title values', () => {
-            renderWithProvider(
-                <PageHeader title="Your Projects" />
-            );
+            renderWithProvider(<PageHeader title="Your Projects" />);
 
             expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Your Projects');
         });
     });
 
     describe('subtitle rendering', () => {
-        it('should render subtitle when provided', () => {
-            // Given: PageHeader with subtitle="Subtitle text"
-            // When: Component renders
+        it('should render the subtitle as an inline crumb (text, not a heading)', () => {
             renderWithProvider(
-                <PageHeader
-                    title="Main Title"
-                    subtitle="Select a project to manage or create a new one"
-                />
+                <PageHeader title="Main Title" subtitle="Build Your Project" />
             );
 
-            // Then: Subtitle text is displayed
-            expect(screen.getByText('Select a project to manage or create a new one')).toBeInTheDocument();
+            // Subtitle text is present…
+            expect(screen.getByText('Build Your Project')).toBeInTheDocument();
+            // …but it is a crumb, NOT an H3 heading (single-row treatment).
+            expect(screen.queryByRole('heading', { level: 3 })).not.toBeInTheDocument();
         });
 
-        it('should render subtitle as H3 heading', () => {
-            renderWithProvider(
-                <PageHeader
-                    title="Main Title"
-                    subtitle="This is a subtitle"
-                />
-            );
+        it('should not render subtitle text when not provided', () => {
+            renderWithProvider(<PageHeader title="Title Only" subtitle={undefined} />);
 
-            const subtitleHeading = screen.getByRole('heading', { level: 3 });
-            expect(subtitleHeading).toHaveTextContent('This is a subtitle');
-        });
-
-        it('should not render subtitle element when not provided', () => {
-            renderWithProvider(
-                <PageHeader title="Title Only" />
-            );
-
-            // Only H1 should exist, no H3
             expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
             expect(screen.queryByRole('heading', { level: 3 })).not.toBeInTheDocument();
         });
     });
 
-    describe('action button rendering', () => {
-        it('should render action button when provided', () => {
-            // Given: PageHeader with action={<Button>Action</Button>}
-            // When: Component renders
+    describe('description / status (optional secondary line)', () => {
+        it('should render the description when provided', () => {
             renderWithProvider(
-                <PageHeader
-                    title="Page Title"
-                    action={<Button variant="accent">New</Button>}
-                />
+                <PageHeader title="Title" description="Configure everything here" />
             );
 
-            // Then: Action button appears
+            expect(screen.getByText('Configure everything here')).toBeInTheDocument();
+        });
+
+        it('should not render a description when not provided', () => {
+            renderWithProvider(<PageHeader title="Title" />);
+
+            expect(screen.queryByText('Configure everything here')).not.toBeInTheDocument();
+        });
+
+        it('should render statusText when provided', () => {
+            renderWithProvider(<PageHeader title="Title" statusText="Deploying…" />);
+
+            expect(screen.getByText('Deploying…')).toBeInTheDocument();
+        });
+    });
+
+    describe('action rendering', () => {
+        it('should render an action element when provided', () => {
+            renderWithProvider(
+                <PageHeader title="Page Title" action={<Button variant="accent">New</Button>} />
+            );
+
             expect(screen.getByRole('button', { name: 'New' })).toBeInTheDocument();
         });
 
@@ -109,200 +101,82 @@ describe('PageHeader', () => {
             expect(screen.getByTestId('custom-action')).toBeInTheDocument();
         });
 
-        it('should not render action area when action is not provided', () => {
-            const { container } = renderWithProvider(
-                <PageHeader title="Title Only" />
-            );
+        it('should not render any button when neither action nor back button provided', () => {
+            const { container } = renderWithProvider(<PageHeader title="Title Only" />);
 
-            // Check that only the title area is rendered (no sibling for action)
-            const buttons = container.querySelectorAll('button');
-            expect(buttons).toHaveLength(0);
+            expect(container.querySelectorAll('button')).toHaveLength(0);
         });
     });
 
     describe('back button rendering', () => {
-        it('should render back button when backButton prop is provided', () => {
-            // Given: PageHeader with backButton={{ label: "Back", onPress: mockFn }}
-            const mockOnPress = jest.fn();
-
-            // When: Component renders
+        it('should render the back button when provided', () => {
             renderWithProvider(
-                <PageHeader
-                    title="Page Title"
-                    backButton={{ label: 'Back', onPress: mockOnPress }}
-                />
+                <PageHeader title="Page Title" backButton={{ label: 'Back', onPress: jest.fn() }} />
             );
 
-            // Then: Back button appears
             expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument();
         });
 
-        it('should call onPress callback when back button is clicked', () => {
-            // Given: PageHeader with backButton={{ label: "Back", onPress: mockFn }}
-            const mockOnPress = jest.fn();
-
+        it('should call onPress when the back button is clicked', () => {
+            const onPress = jest.fn();
             renderWithProvider(
-                <PageHeader
-                    title="Page Title"
-                    backButton={{ label: 'Go Back', onPress: mockOnPress }}
-                />
+                <PageHeader title="Page Title" backButton={{ label: 'Go Back', onPress }} />
             );
 
-            // When: Back button clicked
-            const backButton = screen.getByRole('button', { name: 'Go Back' });
-            fireEvent.click(backButton);
+            fireEvent.click(screen.getByRole('button', { name: 'Go Back' }));
 
-            // Then: onPress callback fires
-            expect(mockOnPress).toHaveBeenCalledTimes(1);
+            expect(onPress).toHaveBeenCalledTimes(1);
         });
 
-        it('should render back button with custom label', () => {
-            renderWithProvider(
-                <PageHeader
-                    title="Page Title"
-                    backButton={{ label: 'Return to Projects', onPress: jest.fn() }}
-                />
-            );
+        it('should not render a back button when not provided', () => {
+            renderWithProvider(<PageHeader title="Title Only" />);
 
-            expect(screen.getByRole('button', { name: 'Return to Projects' })).toBeInTheDocument();
-        });
-
-        it('should not render back button when not provided', () => {
-            renderWithProvider(
-                <PageHeader title="Title Only" />
-            );
-
-            // No back button should be rendered
             expect(screen.queryByRole('button')).not.toBeInTheDocument();
         });
     });
 
     describe('width constraint', () => {
-        it('should constrain content width when constrainWidth is true', () => {
-            // Given: PageHeader with constrainWidth={true}
+        it('should wrap content in page-container when constrainWidth is true', () => {
             const { container } = renderWithProvider(
-                <PageHeader
-                    title="Page Title"
-                    constrainWidth={true}
-                />
+                <PageHeader title="Page Title" constrainWidth />
             );
 
-            // Then: Content wrapped in page-container div
-            const constrainedDiv = container.querySelector('.page-container');
-            expect(constrainedDiv).toBeInTheDocument();
+            expect(container.querySelector('.page-container')).toBeInTheDocument();
         });
 
-        it('should not constrain width when constrainWidth is false', () => {
-            // Given: PageHeader with constrainWidth={false}
-            const { container } = renderWithProvider(
-                <PageHeader
-                    title="Page Title"
-                    constrainWidth={false}
-                />
-            );
+        it('should not wrap content by default', () => {
+            const { container } = renderWithProvider(<PageHeader title="Page Title" />);
 
-            // Then: No page-container div
-            const constrainedDiv = container.querySelector('.page-container');
-            expect(constrainedDiv).not.toBeInTheDocument();
-        });
-
-        it('should not constrain width by default', () => {
-            // Given: PageHeader without constrainWidth prop
-            const { container } = renderWithProvider(
-                <PageHeader title="Page Title" />
-            );
-
-            // Then: No page-container div (default is false)
-            const constrainedDiv = container.querySelector('.page-container');
-            expect(constrainedDiv).not.toBeInTheDocument();
+            expect(container.querySelector('.page-container')).not.toBeInTheDocument();
         });
     });
 
     describe('styling', () => {
-        it('should apply border-b and bg-gray-75 classes', () => {
+        it('should apply the border-b, bg-gray-75, and page-header classes', () => {
+            const { container } = renderWithProvider(<PageHeader title="Page Title" />);
+
+            expect(container.querySelector('.border-b.bg-gray-75.page-header')).toBeInTheDocument();
+        });
+
+        it('should apply a custom className when provided', () => {
             const { container } = renderWithProvider(
-                <PageHeader title="Page Title" />
+                <PageHeader title="Page Title" className="custom-class" />
             );
 
-            // The header wrapper should have the standard styling classes
-            const headerWrapper = container.querySelector('.border-b.bg-gray-75');
-            expect(headerWrapper).toBeInTheDocument();
-        });
-
-        it('should apply custom className when provided', () => {
-            const { container } = renderWithProvider(
-                <PageHeader
-                    title="Page Title"
-                    className="custom-class"
-                />
-            );
-
-            const headerWithCustomClass = container.querySelector('.custom-class');
-            expect(headerWithCustomClass).toBeInTheDocument();
-        });
-    });
-
-    describe('combined features', () => {
-        it('should render all features together', () => {
-            const mockBack = jest.fn();
-            const mockAction = jest.fn();
-
-            renderWithProvider(
-                <PageHeader
-                    title="Your Projects"
-                    subtitle="Select a project to manage"
-                    backButton={{ label: 'Back', onPress: mockBack }}
-                    action={<Button variant="accent" onPress={mockAction}>New</Button>}
-                    constrainWidth={true}
-                />
-            );
-
-            // Verify all elements present
-            expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Your Projects');
-            expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Select a project to manage');
-            expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: 'New' })).toBeInTheDocument();
-        });
-
-        it('should handle interactions correctly when all features present', () => {
-            const mockBack = jest.fn();
-            const mockAction = jest.fn();
-
-            renderWithProvider(
-                <PageHeader
-                    title="Your Projects"
-                    subtitle="Select a project"
-                    backButton={{ label: 'Back', onPress: mockBack }}
-                    action={<Button variant="accent" onPress={mockAction}>Create</Button>}
-                />
-            );
-
-            // Click back button
-            fireEvent.click(screen.getByRole('button', { name: 'Back' }));
-            expect(mockBack).toHaveBeenCalledTimes(1);
-
-            // Click action button
-            fireEvent.click(screen.getByRole('button', { name: 'Create' }));
-            expect(mockAction).toHaveBeenCalledTimes(1);
+            expect(container.querySelector('.custom-class')).toBeInTheDocument();
         });
     });
 
     describe('accessibility', () => {
-        it('should have proper heading hierarchy', () => {
-            renderWithProvider(
-                <PageHeader
-                    title="Main Title"
-                    subtitle="Subtitle"
-                />
-            );
+        it('should expose a single H1 and no H3 (single-row header)', () => {
+            renderWithProvider(<PageHeader title="Main Title" subtitle="Subtitle" />);
 
-            // H1 should come before H3 in the DOM
             const headings = screen.getAllByRole('heading');
+            expect(headings).toHaveLength(1);
             expect(headings[0].tagName).toBe('H1');
-            expect(headings[1].tagName).toBe('H3');
         });
 
-        it('should have accessible buttons', () => {
+        it('should keep buttons accessible', () => {
             renderWithProvider(
                 <PageHeader
                     title="Title"
@@ -311,10 +185,27 @@ describe('PageHeader', () => {
                 />
             );
 
-            const buttons = screen.getAllByRole('button');
-            buttons.forEach(button => {
+            screen.getAllByRole('button').forEach(button => {
                 expect(button).not.toHaveAttribute('aria-hidden', 'true');
             });
+        });
+    });
+
+    describe('combined features', () => {
+        it('should render title, subtitle crumb, back button, and action together', () => {
+            renderWithProvider(
+                <PageHeader
+                    title="Your Projects"
+                    subtitle="Manage a project"
+                    backButton={{ label: 'Back', onPress: jest.fn() }}
+                    action={<Button variant="accent">New</Button>}
+                />
+            );
+
+            expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Your Projects');
+            expect(screen.getByText('Manage a project')).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'New' })).toBeInTheDocument();
         });
     });
 });

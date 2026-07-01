@@ -1119,8 +1119,9 @@ button[class*="spectrum-Button"][disabled],
 
 /* Base brand card - expandable variant */
 .expandable-brand-card {
+    position: relative !important;
     background: var(--spectrum-global-color-gray-50) !important;
-    border-radius: 12px !important;
+    border-radius: 8px !important;
     padding: 16px !important;
     border: 1px solid var(--spectrum-global-color-gray-300) !important;
     cursor: pointer !important;
@@ -1129,6 +1130,9 @@ button[class*="spectrum-Button"][disabled],
        refuses to shrink into its reflowing-grid track and overflows. */
     min-width: 0 !important;
     box-sizing: border-box !important;
+    /* Shared card-family height floor so package cards and stack (selector) cards
+       read at a consistent height across steps. */
+    min-height: 100px !important;
 }
 
 .expandable-brand-card:hover {
@@ -1219,10 +1223,7 @@ button[class*="spectrum-Button"][disabled],
     color: var(--spectrum-global-color-gray-900) !important;
 }
 
-.brand-card-check {
-    color: var(--spectrum-global-color-green-600) !important;
-    flex-shrink: 0 !important;
-}
+/* .brand-card-check retired — replaced by the shared .selection-check-corner. */
 
 .brand-card-description {
     display: block !important;
@@ -1373,11 +1374,19 @@ button[class*="spectrum-Button"][disabled],
 }
 
 /* Compact selection summary in expanded brand card */
+/* A quiet secondary line — no divider / uppercase micro-label — so the package card's
+   architecture summary reads in the same tone as the backend card's description. */
 .brand-card-selection {
-    margin-top: 10px !important;
-    padding-top: 10px !important;
-    border-top: 1px solid var(--spectrum-global-color-gray-300) !important;
+    margin-top: 6px !important;
     animation: fadeIn 0.2s ease-out !important;
+}
+.brand-card-selection-summary {
+    font-size: 12px !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    line-height: 1.4 !important;
+}
+.brand-card-selection-sep {
+    color: var(--spectrum-global-color-gray-400) !important;
 }
 
 @keyframes fadeIn {
@@ -1405,7 +1414,8 @@ button[class*="spectrum-Button"][disabled],
 /* Hover tooltip for block library details */
 .brand-card-detail-trigger {
     position: relative !important;
-    margin-top: 6px !important;
+    /* Inline on the architecture summary line (was a block below it). */
+    white-space: nowrap !important;
 }
 
 .brand-card-detail-link {
@@ -2645,10 +2655,11 @@ button[class*="spectrum-Button"][disabled],
    Aligns with wizard component-card patterns
    =========================================== */
 .project-card-spectrum {
-    /* Base - lighter than current (gray-50 vs gray-100) */
     background: var(--spectrum-global-color-gray-50) !important;
     border-radius: 8px !important;
-    padding: 20px !important;
+    /* Match the demo-package card family (.expandable-brand-card): 16px padding +
+       a 100px height floor so the two card types read at the same scale. */
+    padding: 16px !important;
     border: 1px solid var(--spectrum-global-color-gray-300) !important;
     cursor: pointer !important;
 
@@ -2660,8 +2671,7 @@ button[class*="spectrum-Button"][disabled],
     flex-direction: column !important;
     gap: 8px !important;
 
-    /* Larger, more square cards */
-    min-height: 120px !important;
+    min-height: 100px !important;
     min-width: 200px !important;
 }
 
@@ -2687,7 +2697,8 @@ button[class*="spectrum-Button"][disabled],
 
 /* Typography - name stays similar */
 .project-card-spectrum-name {
-    font-size: 14px !important;
+    /* Match .brand-card-name (15px) so the project card title reads at the same scale. */
+    font-size: 15px !important;
     font-weight: 600 !important;
     color: var(--spectrum-global-color-gray-900) !important;
     line-height: 1.3 !important;
@@ -2696,7 +2707,8 @@ button[class*="spectrum-Button"][disabled],
 /* Typography - component summary */
 .project-card-spectrum-components {
     font-size: 12px !important;
-    color: var(--spectrum-global-color-gray-500) !important;
+    /* Match .brand-card-description (gray-600) — the package card's description tone. */
+    color: var(--spectrum-global-color-gray-600) !important;
     line-height: 1.4 !important;
     flex: 1 !important;
 }
@@ -4231,7 +4243,10 @@ div[class*="spectrum"] input[type="search"] {
     background: var(--spectrum-global-color-gray-50) !important;
     border: 1px solid var(--spectrum-global-color-gray-300) !important;
     border-radius: var(--spectrum-global-dimension-size-100) !important;
-    padding: var(--spectrum-global-dimension-size-300) !important;
+    /* Match the demo-package card family (.expandable-brand-card): 16px padding +
+       a shared 100px height floor so the backend picker reads at the same scale. */
+    padding: var(--spectrum-global-dimension-size-200) !important;
+    min-height: 100px !important;
     cursor: pointer !important;
     transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease,
         box-shadow 0.2s ease !important;
@@ -4262,8 +4277,9 @@ div[class*="spectrum"] input[type="search"] {
 }
 .choice-card-name {
     display: block !important;
-    font-size: var(--spectrum-global-dimension-font-size-100) !important;
-    font-weight: 700 !important;
+    /* Match .brand-card-name (15px / 600) so the two card families share a title scale. */
+    font-size: 15px !important;
+    font-weight: 600 !important;
     color: var(--spectrum-global-color-gray-900) !important;
 }
 .choice-card-description {
@@ -4279,15 +4295,7 @@ div[class*="spectrum"] input[type="search"] {
     font-size: var(--spectrum-global-dimension-font-size-75) !important;
     color: var(--spectrum-global-color-gray-500) !important;
 }
-.choice-card-check {
-    position: absolute !important;
-    top: var(--spectrum-global-dimension-size-200) !important;
-    right: var(--spectrum-global-dimension-size-200) !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    color: var(--spectrum-global-color-blue-500) !important;
-}
+/* .choice-card-check retired — replaced by the shared .selection-check(-corner). */
 @media (prefers-reduced-motion: reduce) {
     .choice-card {
         transition: none !important;
@@ -4387,24 +4395,67 @@ div[class*="spectrum"] input[type="search"] {
  * / .projects-grid): gray-50 tiles, 8px radius, name + muted description + a footer
  * row (status pill + action). Paired with a dashed SIMULATED empty tile (same size)
  * for a future integration. Pills reuse .int-pill-*; the Deployment-target sub-step
- * reuses .int-field-* / .int-provision-* / .int-tile-note. No JS motion — the
- * reduced-motion reset covers it.
+ * uses the standard config-section-header + Spectrum primitives (no bespoke type).
+ * No JS motion — the reduced-motion reset covers it.
  * ------------------------------------------------------------------------ */
 .int-deployables {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 16px;
-    align-items: stretch;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
+/* Canonical page header — one tight single row (title · subtitle crumb … action),
+ * the same reclaimed density on every screen. The page context (a rail, a grid) owns
+ * the wayfinding, so the title stays modest and the header spends little vertical budget. */
+.page-header-title {
+    font-size: var(--spectrum-global-dimension-font-size-300) !important;
+    line-height: 1.2 !important;
+    /* Zero the Spectrum Heading's default block margins so the single-row header
+     * content sits vertically centered in its (now tight) padded band. */
+    margin: 0 !important;
+}
+.page-header-subtitle {
+    font-size: var(--spectrum-global-dimension-font-size-100) !important;
+}
+.page-header-secondary {
+    margin-top: var(--spectrum-global-dimension-size-75) !important;
+}
+
 .int-card {
     background: var(--spectrum-global-color-gray-50);
     border: 1px solid var(--spectrum-global-color-gray-300);
     border-radius: 8px;
-    padding: 20px;
+    padding: 16px 18px;
+    transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+/* Selected — the Commerce choice-card language: blue border + tint + a ✓ badge. */
+.int-card[data-selected="true"] {
+    border-color: var(--spectrum-global-color-blue-400);
+    box-shadow: 0 0 0 1px var(--spectrum-global-color-blue-400);
+    background: var(--spectrum-global-color-blue-100);
+}
+.int-card-head {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    min-height: 130px;
+    align-items: flex-start;
+    gap: 11px;
+}
+/* The ONE selection checkmark, shared across every "pick this" card in the wizard
+   (package cards, backend cards, block-library cards, integration cards). */
+.selection-check {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--spectrum-global-color-blue-500);
+}
+/* Pin to the card's top-right (for whole-card selects); the card is position:relative. */
+.selection-check-corner {
+    position: absolute;
+    top: var(--spectrum-global-dimension-size-200);
+    right: var(--spectrum-global-dimension-size-200);
+}
+.int-card-headings {
+    flex: 1;
+    min-width: 0;
 }
 .int-card-name {
     font-size: 14px;
@@ -4414,25 +4465,85 @@ div[class*="spectrum"] input[type="search"] {
 }
 .int-card-desc {
     font-size: 12px;
-    color: var(--spectrum-global-color-gray-500);
+    color: var(--spectrum-global-color-gray-600);
     line-height: 1.4;
-    flex: 1;
+    margin-top: 3px;
 }
-.int-card-footer {
+.int-card-actions {
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    gap: 8px;
 }
-/* Simulated empty tile for a future integration — a dashed sibling of the cards. */
+.int-card-na {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--spectrum-global-color-gray-200);
+    color: var(--spectrum-global-color-gray-600);
+    white-space: nowrap;
+}
+/* Config revealed inline under a selected card (destination sign-in + fields). */
+.int-card-config {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--spectrum-global-color-gray-300);
+}
+/* The inline Adobe I/O destination inside a selected card. */
+.int-destination-label {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-600);
+    margin-bottom: 10px;
+}
+/* A committed destination choice, collapsed to one compact line + "Change". */
+.int-chosen {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 8px;
+    background: var(--spectrum-global-color-gray-50);
+}
+.int-chosen-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: var(--spectrum-global-color-green-500);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+}
+.int-chosen-label {
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-600);
+}
+.int-chosen-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-900);
+}
+.int-chosen .spectrum-Button,
+.int-chosen button {
+    margin-left: auto;
+}
+/* Simulated empty card for a future integration — a dashed sibling. */
 .int-add-card {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 4px;
-    padding: 20px;
-    min-height: 130px;
+    padding: 16px;
     border: 1px dashed var(--spectrum-global-color-gray-400);
     border-radius: 8px;
     text-align: center;
@@ -4446,62 +4557,4 @@ div[class*="spectrum"] input[type="search"] {
     font-size: 12px;
     color: var(--spectrum-global-color-gray-500);
 }
-/* Deployment-target sub-step: a simple vertical stack of fields + provisioning note. */
-.int-target {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-}
-.int-pill {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 10px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 18px;
-    white-space: nowrap;
-}
-.int-pill-on {
-    background: var(--spectrum-global-color-green-100);
-    color: var(--spectrum-global-color-green-700);
-}
-.int-pill-off {
-    background: var(--spectrum-global-color-gray-200);
-    color: var(--spectrum-global-color-gray-700);
-}
-.int-pill-na {
-    background: var(--spectrum-global-color-gray-200);
-    color: var(--spectrum-global-color-gray-600);
-}
-.int-field {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-.int-field-label {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--spectrum-global-color-gray-700);
-}
-.int-provision-title {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--spectrum-global-color-gray-700);
-    margin-bottom: 6px;
-}
-.int-provision-list {
-    margin: 0;
-    padding-left: 18px;
-    font-size: 13px;
-    color: var(--spectrum-global-color-gray-700);
-}
-.int-provision-list li {
-    margin-bottom: 2px;
-}
-.int-tile-note {
-    font-size: 12px;
-    color: var(--spectrum-global-color-gray-600);
-}
-
 } /* End of second @layer theme block */

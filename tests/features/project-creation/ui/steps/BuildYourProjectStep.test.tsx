@@ -267,13 +267,17 @@ describe('BuildYourProjectStep — Continue gate over non-commerce areas', () =>
         expect(setCanProceed).toHaveBeenLastCalledWith(false);
     });
 
-    it('is true when integrations has the Mesh On with BOTH project + workspace set', () => {
+    it('is true when integrations has the Mesh On, signed in, with BOTH project + workspace set', () => {
         const { setCanProceed } = setup({
             selectedPackage: 'citisignal',
             selectedStack: 'eds-paas',
             selectedBackend: 'adobe-commerce-accs',
             activeBuildArea: 'integrations',
             selectedAppBuilderComponents: ['commerce-paas-mesh'],
+            // The destination gate now lives on the single Services screen: it needs a
+            // signed-in Adobe session AND a project + workspace (all set in the card).
+            adobeAuth: { isAuthenticated: true, isChecking: false } as WizardState['adobeAuth'],
+            adobeOrg: { id: 'o', name: 'Acme' } as WizardState['adobeOrg'],
             adobeProject: { id: 'p1', name: 'proj' } as WizardState['adobeProject'],
             adobeWorkspace: { id: 'w1', name: 'ws' } as WizardState['adobeWorkspace'],
         });

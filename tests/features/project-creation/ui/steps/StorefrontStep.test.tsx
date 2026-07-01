@@ -337,7 +337,8 @@ describe('StorefrontStep', () => {
 
         it('routes an available-library toggle through useProjectBuilder', () => {
             const { updateState } = setup({ ...onBlockLibs, selectedBlockLibraries: [] });
-            fireEvent.click(screen.getByRole('checkbox', { name: /Library A/i }));
+            // Block libraries render as selection cards (toggle buttons), not checkboxes.
+            fireEvent.click(screen.getByRole('button', { name: /Library A/i }));
             expect(updateState).toHaveBeenCalledWith(
                 expect.objectContaining({
                     selectedBlockLibraries: expect.arrayContaining(['lib-a']),
@@ -345,11 +346,11 @@ describe('StorefrontStep', () => {
             );
         });
 
-        it('renders native libraries as checked and disabled', () => {
+        it('renders native libraries as selected, disabled cards', () => {
             setup(onBlockLibs);
-            const nativeCheckbox = screen.getByRole('checkbox', { name: /Native Blocks/i });
-            expect(nativeCheckbox).toBeChecked();
-            expect(nativeCheckbox).toBeDisabled();
+            const nativeCard = screen.getByRole('button', { name: /Native Blocks/i });
+            expect(nativeCard).toBeDisabled();
+            expect(nativeCard).toHaveAttribute('aria-pressed', 'true');
         });
     });
 

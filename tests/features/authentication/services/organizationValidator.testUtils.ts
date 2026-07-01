@@ -28,6 +28,10 @@ export function createMockCacheManager(): jest.Mocked<AuthCacheManager> {
         setCachedConsoleWhere: jest.fn(),
         getValidationCache: jest.fn(),
         setValidationCache: jest.fn(),
+        // Developer-permission probe cache — default get returns undefined (cache miss).
+        getCachedDeveloperPermissions: jest.fn(),
+        setCachedDeveloperPermissions: jest.fn(),
+        clearDeveloperPermissionsCache: jest.fn(),
         clearAll: jest.fn(),
         clearConsoleWhereCache: jest.fn(),
         setOrgClearedDueToValidation: jest.fn(),

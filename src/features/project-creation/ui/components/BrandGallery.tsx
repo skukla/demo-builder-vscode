@@ -8,10 +8,10 @@
  */
 
 import { Text } from '@adobe/react-spectrum';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState, useMemo, useCallback } from 'react';
 import { getBlockLibraryName } from '../../services/blockLibraryLoader';
 import { sortPackages, filterPackagesBySearchQuery } from './brandGalleryHelpers';
+import { SelectionCheck } from './SelectionCheck';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { cn } from '@/core/ui/utils/classNames';
@@ -106,31 +106,28 @@ const PackageCard: React.FC<PackageCardProps> = ({
             {isComingSoon && (
                 <span className="architecture-badge">Coming Soon</span>
             )}
+            {isSelected && <SelectionCheck corner />}
             <div className="brand-card-header">
                 <div className="brand-card-title-row">
                     <Text UNSAFE_className="brand-card-name">
                         {pkg.name}
                     </Text>
-                    {isComplete && (
-                        <CheckmarkCircle size="S" UNSAFE_className="brand-card-check" />
-                    )}
                 </div>
                 <Text UNSAFE_className="brand-card-description">
                     {pkg.description}
                 </Text>
             </div>
 
-            {/* Compact selection: architecture name + hover tooltip for libraries */}
+            {/* Compact selection: a quiet secondary line (matching the backend card's
+                tone) — architecture + an optional block-libraries hover trigger. */}
             {isComplete && selectedStack && (
                 <div className="brand-card-selection">
-                    <Text UNSAFE_className="brand-card-selection-label">
-                        Architecture
-                    </Text>
-                    <Text UNSAFE_className="brand-card-selection-value">
-                        {selectedStack.name}
+                    <Text UNSAFE_className="brand-card-selection-summary">
+                        {`Architecture: ${selectedStack.name}`}
                     </Text>
                     {libraryCount > 0 && (
-                        <div className="brand-card-detail-trigger">
+                        <span className="brand-card-detail-trigger">
+                            <span className="brand-card-selection-sep"> · </span>
                             <Text UNSAFE_className="brand-card-detail-link">
                                 {libraryCount} block {libraryCount === 1 ? 'library' : 'libraries'}
                             </Text>
@@ -149,7 +146,7 @@ const PackageCard: React.FC<PackageCardProps> = ({
                                     </Text>
                                 ))}
                             </div>
-                        </div>
+                        </span>
                     )}
                 </div>
             )}

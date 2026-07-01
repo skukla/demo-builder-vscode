@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Chrome reclaim — before/after, with the Integrations card in context</title>
+<style>
+  :root{
+    --bg:#1e1e1e;--panel:#252526;--panel-2:#2d2d2e;--rail-bg:#1b1b1c;
+    --border:#393939;--border-soft:#303031;
+    --text:#e8e8e8;--text-dim:#9a9a9a;--text-faint:#6c6c6c;
+    --blue:#378ef0;--blue-deep:#2680eb;--blue-ring:rgba(55,142,240,.35);
+    --green:#33ab84;--gray-dot:#4a4a4a;--gray-dot-bd:#6a6a6a;
+    --radius:8px;--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  *{box-sizing:border-box} html,body{margin:0;padding:0}
+  body{background:#141414;color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.5;padding:24px}
+
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes fadeSlideIn{0%{opacity:0;transform:translateY(-7px)}100%{opacity:1;transform:translateY(0)}}
+  @keyframes checkDraw{0%{transform:scale(0) rotate(-25deg);opacity:0}100%{transform:scale(1) rotate(0);opacity:1}}
+  @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+
+  .toolbar{max-width:1180px;margin:0 auto 12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .toolbar .devlabel{font-size:11px;color:var(--text-faint);background:#2a2a2a;border:1px solid var(--border);padding:2px 8px;border-radius:4px}
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:999px;overflow:hidden;background:var(--panel)}
+  .seg button{appearance:none;border:0;background:transparent;color:var(--text-dim);padding:5px 13px;font-family:var(--sans);font-size:12px;cursor:pointer;transition:background .15s,color .15s}
+  .seg button.active{background:var(--blue-deep);color:#fff}
+  .seg button:not(.active):hover{background:var(--panel-2);color:var(--text)}
+  .label{color:var(--text-faint);font-size:11px}
+  .readout{margin-left:auto;display:flex;gap:14px;align-items:center;font-size:12px}
+  .readout .metric{color:var(--text-dim)} .readout .metric b{color:var(--text);font-variant-numeric:tabular-nums}
+  .readout .fit{color:var(--green);font-weight:600} .readout .over{color:#e8703a;font-weight:600}
+  .readout .delta{color:var(--blue);font-weight:600}
+
+  /* fixed-height webview frame so scroll/fit is real */
+  .frame{max-width:1180px;height:760px;margin:0 auto;display:grid;grid-template-columns:230px 1fr;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+
+  /* left timeline column (vertical progress rail) */
+  .rail{background:var(--rail-bg);border-right:1px solid var(--border-soft);padding:20px 16px;overflow-y:auto}
+  .rail .kicker{font-size:11px;letter-spacing:.12em;color:var(--text-faint);margin-bottom:16px}
+  .step{display:flex;align-items:flex-start;gap:11px;position:relative;padding-bottom:16px}
+  .step:last-child{padding-bottom:0}
+  .dot{width:20px;height:20px;border-radius:50%;flex:0 0 20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;z-index:1}
+  .dot.done{background:var(--green)} .dot.current{background:var(--blue);box-shadow:0 0 0 4px var(--blue-ring)} .dot.upcoming{background:var(--gray-dot);border:1px solid var(--gray-dot-bd)}
+  .step:not(:last-child)::before{content:"";position:absolute;left:9px;top:22px;bottom:0;width:0;border-left:2px dashed #3a3a3a}
+  .step.done:not(:last-child)::before{border-left-color:#2c5d4b}
+  .step .label{font-size:13px;color:var(--text-dim);padding-top:1px}
+  .step.current>.label{color:var(--blue);font-weight:600}
+  .step.done>.label{color:var(--text)}
+  .children{margin:6px 0 0 31px}
+  .child{display:flex;align-items:center;gap:9px;padding:5px 0}
+  .child .cdot{width:13px;height:13px;border-radius:50%;flex:0 0 13px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff}
+  .cdot.done{background:var(--green)} .cdot.current{background:var(--blue);box-shadow:0 0 0 3px var(--blue-ring)} .cdot.upcoming{background:var(--gray-dot);border:1px solid var(--gray-dot-bd)}
+  .child .clabel{font-size:12px;color:var(--text-dim)}
+  .child.current .clabel{color:var(--text);font-weight:600}
+
+  /* right column = header (top) + scroll body (mid) + footer (bottom) */
+  .main{display:flex;flex-direction:column;min-width:0;min-height:0}
+
+  /* ---- HEADER: two treatments ---- */
+  .pv-header{border-bottom:1px solid var(--border-soft);background:#212122;flex:0 0 auto;position:relative}
+  .pv-header .tag{position:absolute;top:6px;right:10px;font-size:10px;color:var(--text-faint);background:#2a2a2a;border:1px solid var(--border);border-radius:4px;padding:1px 6px}
+  /* CURRENT: size-400 padding (32px) + H1 + subtitle + description */
+  .pv-header.current{padding:32px}
+  .pv-header.current h1{margin:0 0 8px;font-size:26px;font-weight:700;line-height:1.15}
+  .pv-header.current .sub{font-size:16px;color:var(--text-dim);font-weight:400}
+  .pv-header.current .desc{font-size:13px;color:var(--text-faint);margin-top:4px}
+  /* RECLAIMED: single compact line (rail already shows the wayfinding), tight padding */
+  .pv-header.reclaimed{padding:12px 24px;display:flex;align-items:baseline;gap:10px}
+  .pv-header.reclaimed .h{font-size:15px;font-weight:700}
+  .pv-header.reclaimed .crumb{font-size:13px;color:var(--text-faint)}
+
+  /* ---- BODY (scrolls only if content overflows) ---- */
+  .bodywrap{flex:1 1 auto;min-height:0;overflow-y:auto}
+  .body{padding:20px 24px}
+  .area-title{font-size:19px;font-weight:700;margin:0 0 4px}
+  .area-title.hide{display:none}
+  .area-sub{font-size:13px;color:var(--text-dim);margin:0 0 16px}
+
+  /* ---- FOOTER: two treatments ---- */
+  .pv-footer{border-top:1px solid var(--border-soft);background:#212122;flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;position:relative}
+  .pv-footer .tag{position:absolute;top:-9px;right:10px;font-size:10px;color:var(--text-faint);background:#2a2a2a;border:1px solid var(--border);border-radius:4px;padding:1px 6px}
+  .pv-footer.current{padding:24px 32px}
+  .pv-footer.reclaimed{padding:12px 24px}
+  .pv-footer .right{display:flex;gap:10px}
+
+  .btn{appearance:none;border:0;border-radius:18px;padding:8px 16px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;transition:transform .1s var(--ease),filter .15s,background .15s}
+  .btn.primary{background:var(--blue-deep);color:#fff;display:inline-flex;gap:7px;align-items:center}
+  .btn.primary:hover:not([disabled]){filter:brightness(1.12)}
+  .btn.ghost{background:var(--panel-2);color:var(--text)}
+  .btn.ghost:hover:not([disabled]){background:#3a3a3b}
+  .btn:active:not([disabled]){transform:scale(.95)}
+  .btn[disabled]{opacity:.4;cursor:not-allowed}
+  .btn.quiet{background:none;color:var(--text-dim)}
+
+  /* ---- the integration card (from v7) ---- */
+  .cards{display:flex;flex-direction:column;gap:12px}
+  .card{position:relative;border:1px solid var(--border-soft);border-radius:8px;background:var(--panel);padding:16px 18px;transition:border-color .2s var(--ease),background .2s var(--ease),box-shadow .2s var(--ease)}
+  .card:not(.sel):not(.na):hover{border-color:#4a4a4b}
+  .card.sel{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue);background:rgba(55,142,240,.06)}
+  .card.na{opacity:.7}
+  .card-head{display:flex;align-items:flex-start;gap:11px}
+  .card-check{width:20px;height:20px;border-radius:50%;flex:0 0 20px;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-top:1px}
+  .card-check span{display:inline-block;animation:checkDraw .35s var(--ease)}
+  .card-title{font-weight:600;font-size:14px}
+  .card-desc{font-size:12px;color:var(--text-dim);margin-top:3px;max-width:56ch}
+  .card-actions{margin-left:auto;display:flex;gap:8px;align-items:center;flex:0 0 auto}
+  .na-pill{font-size:11px;padding:3px 10px;border-radius:999px;background:var(--panel-2);color:var(--text-faint);border:1px solid var(--border)}
+
+  .card-config{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .3s var(--ease),opacity .24s var(--ease),margin .3s var(--ease);margin-top:0}
+  .card-config.exp{grid-template-rows:1fr;opacity:1;margin-top:14px}
+  .card-config-inner{overflow:hidden;min-height:0}
+  .config-divider{border-top:1px solid var(--border-soft);padding-top:14px}
+  .config-h{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);margin-bottom:10px}
+
+  .field{margin:0 0 12px}
+  .field label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:5px}
+  .field input{width:100%;background:#161617;border:1px solid var(--border);border-radius:5px;color:var(--text);padding:8px 11px;font-size:13px;font-family:var(--sans)}
+  .field input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 1px var(--blue-ring)}
+
+  .picker{border:1px solid var(--border);border-radius:8px;background:#161617;overflow:hidden;margin-bottom:12px}
+  .picker-head{display:flex;align-items:center;justify-content:space-between;padding:9px 10px 9px 13px;border-bottom:1px solid var(--border-soft)}
+  .picker-label{font-size:12px;color:var(--text-dim);font-weight:600}
+  .picker-search{display:block;width:calc(100% - 20px);margin:10px;background:#0f0f10;border:1px solid var(--border);border-radius:5px;color:var(--text);padding:7px 10px;font-size:13px;font-family:var(--sans)}
+  .picker-search:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 1px var(--blue-ring)}
+  .picker-list{max-height:150px;overflow-y:auto}
+  .li{display:flex;align-items:center;justify-content:space-between;padding:9px 13px;cursor:pointer;border-top:1px solid #232324;transition:background .12s}
+  .li:first-child{border-top:0}
+  .li:hover{background:var(--panel-2)}
+  .li.sel{background:rgba(55,142,240,.12)}
+  .li-name{font-size:13px}
+  .li-check{color:var(--blue);font-weight:700;font-size:12px}
+  .li-empty{padding:14px;color:var(--text-faint);font-size:12px;text-align:center}
+  .picker-hint{font-size:11px;color:var(--text-faint);padding:0 13px 9px}
+
+  .create-panel{background:var(--panel);border:1px solid var(--border-soft);border-radius:8px;padding:14px;margin-bottom:12px;animation:fadeSlideIn .2s var(--ease)}
+  .create-h{font-weight:600;font-size:13px;margin-bottom:10px}
+  .create-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
+  .btn.newbtn{border-radius:6px;padding:5px 11px;background:var(--panel-2);color:var(--text);border:1px solid var(--border);font-size:12px}
+  .btn.newbtn:hover{background:#3a3a3b}
+
+  .chosen{display:flex;align-items:center;gap:10px;padding:10px 13px;border:1px solid var(--border);border-radius:8px;background:#161617;margin-bottom:12px;animation:fadeSlideIn .2s var(--ease)}
+  .chosen-check{width:18px;height:18px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex:0 0 18px}
+  .chosen-label{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em}
+  .chosen-val{font-size:13px;color:var(--text);font-weight:600}
+  .chosen .btn-link{margin-left:auto}
+  .btn-link{background:none;border:0;color:var(--blue);font-size:12px;font-family:var(--sans);cursor:pointer;padding:2px 4px}
+  .btn-link:hover{text-decoration:underline}
+
+  .callout{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--blue-ring);background:rgba(55,142,240,.10);border-radius:6px;font-size:13px;animation:fadeSlideIn .28s var(--ease)}
+  .callout .ckey{font-size:18px} .callout .ctext{color:var(--text)} .callout .ctext b{font-weight:600} .callout .btn{margin-left:auto}
+  .provision{margin-top:6px;padding:10px 12px;background:#1a1a1b;border:1px solid var(--border-soft);border-radius:6px}
+  .provision-title{font-size:12px;color:var(--text-dim);font-weight:600;margin-bottom:6px}
+  .provision-list{margin:0;padding-left:18px;font-size:12px;color:var(--text-dim)}
+  .provision-list li{margin:2px 0} .provision-list b{color:var(--text)}
+  .add-slot{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:16px;min-height:64px;border:1px dashed var(--gray-dot-bd);border-radius:8px;text-align:center}
+  .add-slot .lab{font-size:13px;font-weight:600;color:var(--text-dim)} .add-slot .note{font-size:11px;color:var(--text-faint)}
+  .tnote{font-size:12px;color:var(--text-faint);margin-top:14px;border-left:2px solid var(--border);padding-left:10px}
+  .anno{max-width:1180px;margin:12px auto 0;font-size:12px;color:var(--text-faint);border-left:2px solid var(--border);padding-left:12px}
+  .anno b{color:var(--text-dim)}
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="devlabel">DEV</span>
+  <span class="label">Chrome:</span>
+  <div class="seg" id="chromeSeg">
+    <button data-chrome="current" class="active">Current</button>
+    <button data-chrome="reclaimed">Reclaimed</button>
+  </div>
+  <span class="label">Arch:</span>
+  <div class="seg" id="archSeg">
+    <button data-arch="eds-accs" class="active">EDS + ACCS</button>
+    <button data-arch="eds-paas">EDS + PaaS</button>
+  </div>
+  <span class="label">Session:</span>
+  <div class="seg" id="authSeg">
+    <button data-auth="in" class="active">Signed in</button>
+    <button data-auth="out">Signed out</button>
+  </div>
+  <div class="readout" id="readout"></div>
+</div>
+
+<div class="frame">
+  <div class="rail" id="rail"></div>
+  <div class="main" id="main"></div>
+</div>
+<div class="anno" id="anno"></div>
+
+<script>
+  const PROJECTS=['Demo Commerce Project','Citisignal Production','Existing Sandbox','Partner Demo Env','Staging Environment','Archived 2023'];
+  const WORKSPACES=['Stage','Production'];
+  const s={
+    chrome:'current', arch:'eds-accs', adobeSignedIn:true,
+    meshOn:true,
+    projMode:'browse', proj:null, projOpen:true, projQuery:'', projDraft:'Demo Commerce Project',
+    wsMode:'browse',   ws:null,   wsOpen:true,   wsQuery:'',   wsDraft:'Demo Stage',
+    focusSel:null,
+  };
+  const isPaas=()=>s.arch==='eds-paas';
+  const gateOpen=()=> s.meshOn && !s.adobeSignedIn;
+
+  function rail(){
+    return `<div class="kicker">SETUP PROGRESS</div>
+      <div class="step done"><div class="dot done"><span>✓</span></div><div class="label">Demo Setup</div></div>
+      <div class="step done"><div class="dot done"><span>✓</span></div><div class="label">Prerequisites</div></div>
+      <div class="step current"><div class="dot current">•</div><div style="flex:1">
+        <div class="label">Build Your Project</div>
+        <div class="children">
+          <div class="child"><div class="cdot done"><span>✓</span></div><div class="clabel">Commerce</div></div>
+          <div class="child"><div class="cdot done"><span>✓</span></div><div class="clabel">Storefront</div></div>
+          <div class="child current"><div class="cdot current">•</div><div class="clabel">Integrations</div></div>
+        </div></div></div>
+      <div class="step upcoming"><div class="dot upcoming"></div><div class="label">Final Review</div></div>
+      <div class="step upcoming"><div class="dot upcoming"></div><div class="label">Create Project</div></div>`;
+  }
+
+  function header(){
+    if(s.chrome==='current'){
+      return `<div class="pv-header current"><span class="tag">size-400 · H1 + sub + desc</span>
+        <h1>Create Demo Project</h1>
+        <div class="sub">Build Your Project</div>
+        <div class="desc">Configure Commerce, Storefront, and Integrations for your demo.</div></div>`;
+    }
+    return `<div class="pv-header reclaimed"><span class="tag">compact · rail owns wayfinding</span>
+      <span class="h">Build Your Project</span><span class="crumb">› Integrations</span></div>`;
+  }
+  function footer(ready){
+    const cls=s.chrome==='current'?'current':'reclaimed';
+    const tag=s.chrome==='current'?'size-400':'compact';
+    return `<div class="pv-footer ${cls}"><span class="tag">${tag}</span>
+      <button class="btn quiet">Cancel</button>
+      <div class="right"><button class="btn ghost">Back</button>
+      <button class="btn primary" ${ready?'':'disabled'}>Finish</button></div></div>`;
+  }
+
+  // ---- integration card (v7 logic) ----
+  function pickerList(label, items, selected, query, pfx){
+    const showSearch = items.length > 5;
+    const q=(query||'').toLowerCase();
+    const filtered = q ? items.filter(i=>i.toLowerCase().includes(q)) : items;
+    const rows = filtered.length
+      ? filtered.map(i=>`<div class="li ${selected===i?'sel':''}" data-pick="${pfx}" data-val="${i}"><span class="li-name">${i}</span>${selected===i?'<span class="li-check">✓</span>':''}</div>`).join('')
+      : `<div class="li-empty">No matches</div>`;
+    return `<div class="picker"><div class="picker-head"><span class="picker-label">${label}</span>
+        <button class="btn newbtn" data-new="${pfx}">+ New</button></div>
+      ${showSearch?`<input class="picker-search" data-search="${pfx}" placeholder="Type to filter…" value="${query||''}"/>`:''}
+      <div class="picker-list">${rows}</div>
+      ${showSearch?`<div class="picker-hint">${filtered.length} of ${items.length}</div>`:''}</div>`;
+  }
+  function chosenRow(label, pfx, val){
+    return `<div class="chosen"><span class="chosen-check">✓</span><span class="chosen-label">${label}</span>
+      <span class="chosen-val">${val}</span><button class="btn-link" data-change="${pfx}">Change</button></div>`;
+  }
+  function createForm(label, pfx, draft){
+    return `<div class="create-panel"><div class="create-h">Create New ${label}</div>
+      <div class="field"><label>${label} name</label><input data-cinput="${pfx}" value="${draft||''}" autofocus/></div>
+      <div class="create-actions"><button class="btn ghost" data-browse="${pfx}">Browse</button>
+        <button class="btn primary" data-create="${pfx}">Create</button></div></div>`;
+  }
+  function meshCard(){
+    const sel=s.meshOn;
+    const check = sel?`<div class="card-check"><span>✓</span></div>`:'';
+    const btn = sel?`<button class="btn ghost" id="toggleMesh">Remove</button>`:`<button class="btn primary" id="toggleMesh">+ Add</button>`;
+    let cfg='';
+    if(sel && gateOpen()){
+      cfg=`<div class="config-divider"><div class="callout"><span class="ckey">🔑</span>
+        <span class="ctext"><b>Sign in to Adobe</b> to choose where this deploys.</span>
+        <button class="btn primary" id="doSignin">Sign In with Adobe</button></div></div>`;
+    } else if(sel){
+      let projPart;
+      if(s.projMode==='create') projPart=createForm('Project','proj',s.projDraft);
+      else if(s.proj && !s.projOpen) projPart=chosenRow('Project','proj',s.proj);
+      else projPart=pickerList('Project',PROJECTS,s.proj,s.projQuery,'proj');
+      let wsPart='';
+      if(s.proj){
+        if(s.wsMode==='create') wsPart=createForm('Workspace','ws',s.wsDraft);
+        else if(s.ws && !s.wsOpen) wsPart=chosenRow('Workspace','ws',s.ws);
+        else wsPart=pickerList('Workspace',WORKSPACES,s.ws,s.wsQuery,'ws');
+      }
+      cfg=`<div class="config-divider"><div class="config-h">Destination · Adobe I/O</div>
+        ${projPart}${wsPart}</div>`;
+    }
+    return `<div class="card ${sel?'sel':''}"><div class="card-head">${check}
+      <div style="flex:1"><div class="card-title">API Mesh</div>
+        <div class="card-desc">GraphQL bridge between storefront and backend. Deploys to Adobe I/O; provides MESH_ENDPOINT.</div></div>
+      <div class="card-actions">${btn}</div></div>
+      <div class="card-config" id="meshCfg"><div class="card-config-inner">${cfg}</div></div></div>`;
+  }
+
+  function render(){
+    document.getElementById('rail').innerHTML=rail();
+    const ready = !s.meshOn || (s.adobeSignedIn && !!s.proj && !!s.ws);
+    // On reclaimed chrome, the in-body area title is dropped (header crumb covers it).
+    const areaTitle = s.chrome==='current'
+      ? `<div class="area-title">Integrations</div><p class="area-sub">Add the integrations this demo needs.</p>`
+      : `<p class="area-sub" style="margin-top:2px">Add the integrations this demo needs.</p>`;
+    const body=`<div class="body">${areaTitle}
+      <div class="cards">${meshCard()}
+        <div class="add-slot"><div class="lab">+ Add an integration</div><div class="note">Pre-built integrations coming soon</div></div>
+      </div>
+      <div class="tnote"><b>Note:</b> Adobe Commerce Optimizer lives in <b>Commerce → Catalog</b>, not here.</div></div>`;
+    document.getElementById('main').innerHTML = header() + `<div class="bodywrap" id="bodywrap">${body}</div>` + footer(ready);
+
+    document.querySelectorAll('#chromeSeg button').forEach(x=>x.classList.toggle('active',x.dataset.chrome===s.chrome));
+    document.querySelectorAll('#archSeg button').forEach(x=>x.classList.toggle('active',x.dataset.arch===s.arch));
+    document.querySelectorAll('#authSeg button').forEach(x=>x.classList.toggle('active',x.dataset.auth===(s.adobeSignedIn?'in':'out')));
+
+    wire();
+    requestAnimationFrame(()=>{
+      const c=document.getElementById('meshCfg'); if(c&&s.meshOn)c.classList.add('exp');
+      if(s.focusSel){const el=document.querySelector(s.focusSel); if(el){el.focus(); const v=el.value; try{el.setSelectionRange(v.length,v.length);}catch(_){}}}
+      measure();
+    });
+    document.getElementById('anno').innerHTML=`<b>Before/after chrome, card in context.</b> Toggle <b>Current → Reclaimed</b> and watch <b>content budget</b> jump and the fit/scroll flag change. Reclaimed = compact single-line header (the left rail already shows wayfinding) + tighter header/footer padding + no duplicated in-body area title. Try <b>Signed out + EDS + PaaS</b> (in-card sign-in gate) and open a picker to stress the height.`;
+  }
+
+  function measure(){
+    const main=document.getElementById('main');
+    const head=main.querySelector('.pv-header'), foot=main.querySelector('.pv-footer'), wrap=document.getElementById('bodywrap');
+    if(!head||!foot||!wrap)return;
+    const budget=Math.round(wrap.clientHeight);
+    const needed=Math.round(wrap.scrollHeight);
+    const fits=needed<=budget+1;
+    const other = s.chrome==='current'?652:0; // reference only
+    document.getElementById('readout').innerHTML=
+      `<span class="metric">header <b>${Math.round(head.offsetHeight)}px</b></span>`+
+      `<span class="metric">footer <b>${Math.round(foot.offsetHeight)}px</b></span>`+
+      `<span class="metric">content budget <b>${budget}px</b></span>`+
+      `<span class="${fits?'fit':'over'}">${fits?'✓ fits':'⚠ scrolls ('+needed+'px)'}</span>`;
+  }
+
+  function wire(){
+    const seg=(id,fn)=>document.getElementById(id).onclick=e=>{const b=e.target.closest('button');if(!b)return;fn(b);};
+    const tm=document.getElementById('toggleMesh');
+    if(tm)tm.addEventListener('click',()=>{s.focusSel=null;s.meshOn=!s.meshOn;
+      if(!s.meshOn){s.proj=null;s.ws=null;s.projMode='browse';s.wsMode='browse';s.projOpen=true;s.wsOpen=true;s.projQuery='';s.wsQuery='';}render();});
+    const si=document.getElementById('doSignin');
+    if(si)si.addEventListener('click',()=>{s.focusSel=null;s.adobeSignedIn=true;render();});
+    document.querySelectorAll('[data-pick]').forEach(r=>r.addEventListener('click',()=>{const pfx=r.dataset.pick,val=r.dataset.val;s.focusSel=null;
+      if(pfx==='proj'){s.proj=val;s.projOpen=false;s.ws=null;s.wsMode='browse';s.wsOpen=true;s.wsQuery='';}else{s.ws=val;s.wsOpen=false;}render();}));
+    document.querySelectorAll('[data-change]').forEach(b=>b.addEventListener('click',()=>{const pfx=b.dataset.change;s.focusSel=null;
+      if(pfx==='proj')s.projOpen=true;else s.wsOpen=true;render();}));
+    document.querySelectorAll('[data-new]').forEach(b=>b.addEventListener('click',()=>{const pfx=b.dataset.new;s.focusSel=`[data-cinput="${pfx}"]`;
+      if(pfx==='proj')s.projMode='create';else s.wsMode='create';render();}));
+    document.querySelectorAll('[data-browse]').forEach(b=>b.addEventListener('click',()=>{const pfx=b.dataset.browse;s.focusSel=null;
+      if(pfx==='proj')s.projMode='browse';else s.wsMode='browse';render();}));
+    document.querySelectorAll('[data-create]').forEach(b=>b.addEventListener('click',()=>{const pfx=b.dataset.create;s.focusSel=null;
+      if(pfx==='proj'){s.proj=s.projDraft;s.projMode='browse';s.projOpen=false;s.ws=null;s.wsMode='browse';s.wsOpen=true;}else{s.ws=s.wsDraft;s.wsMode='browse';s.wsOpen=false;}render();}));
+    document.querySelectorAll('[data-search]').forEach(inp=>inp.addEventListener('input',()=>{const pfx=inp.dataset.search;s.focusSel=`[data-search="${pfx}"]`;
+      if(pfx==='proj')s.projQuery=inp.value;else s.wsQuery=inp.value;render();}));
+    document.querySelectorAll('[data-cinput]').forEach(inp=>inp.addEventListener('input',()=>{const pfx=inp.dataset.cinput;s.focusSel=`[data-cinput="${pfx}"]`;
+      if(pfx==='proj')s.projDraft=inp.value;else s.wsDraft=inp.value;render();}));
+    seg('chromeSeg',b=>{s.chrome=b.dataset.chrome;render();});
+    seg('archSeg',b=>{s.arch=b.dataset.arch;render();});
+    seg('authSeg',b=>{s.adobeSignedIn=b.dataset.auth==='in';render();});
+  }
+
+  render();
+</script>
+</body>
+</html>

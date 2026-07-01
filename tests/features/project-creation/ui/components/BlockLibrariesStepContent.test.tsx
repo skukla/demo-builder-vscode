@@ -1,8 +1,9 @@
 /**
  * BlockLibrariesStepContent Component Tests
  *
- * Tests for the extracted block libraries step sub-component that renders
- * native libraries, available libraries, and custom libraries sections.
+ * The block libraries render as selection CARDS (the blue-check family) — multi-select
+ * toggle buttons (`aria-pressed`); native libraries are locked, always-selected (disabled)
+ * cards. Tests pin that contract for native, available, and custom libraries.
  *
  * @jest-environment jsdom
  */
@@ -70,33 +71,25 @@ describe('BlockLibrariesStepContent', () => {
     it('should render the intro text about native blocks', () => {
         render(<BlockLibrariesStepContent {...defaultProps} />);
 
-        expect(
-            screen.getByText(/native blocks are always included/i)
-        ).toBeInTheDocument();
+        expect(screen.getByText(/native blocks are always included/i)).toBeInTheDocument();
     });
 
     // --- Native Libraries ---
 
     describe('native libraries', () => {
-        it('should render native libraries as disabled checked checkboxes', () => {
+        it('should render native libraries as disabled, selected cards', () => {
             render(
-                <BlockLibrariesStepContent
-                    {...defaultProps}
-                    nativeBlockLibraries={[nativeLib]}
-                />
+                <BlockLibrariesStepContent {...defaultProps} nativeBlockLibraries={[nativeLib]} />
             );
 
-            const checkbox = screen.getByRole('checkbox', { name: /Core Blocks/i });
-            expect(checkbox).toBeChecked();
-            expect(checkbox).toBeDisabled();
+            const card = screen.getByRole('button', { name: /Core Blocks/i });
+            expect(card).toBeDisabled();
+            expect(card).toHaveAttribute('aria-pressed', 'true');
         });
 
         it('should show "Included with your storefront" for native libraries', () => {
             render(
-                <BlockLibrariesStepContent
-                    {...defaultProps}
-                    nativeBlockLibraries={[nativeLib]}
-                />
+                <BlockLibrariesStepContent {...defaultProps} nativeBlockLibraries={[nativeLib]} />
             );
 
             expect(screen.getByText('Included with your storefront')).toBeInTheDocument();
@@ -106,7 +99,7 @@ describe('BlockLibrariesStepContent', () => {
     // --- Available Libraries ---
 
     describe('available libraries', () => {
-        it('should render available libraries with checkboxes', () => {
+        it('should render available libraries with name + description', () => {
             render(
                 <BlockLibrariesStepContent
                     {...defaultProps}
@@ -118,7 +111,7 @@ describe('BlockLibrariesStepContent', () => {
             expect(screen.getByText('Commerce block library')).toBeInTheDocument();
         });
 
-        it('should show library as checked when in selectedBlockLibraries', () => {
+        it('should mark a library selected (aria-pressed) when in selectedBlockLibraries', () => {
             render(
                 <BlockLibrariesStepContent
                     {...defaultProps}
@@ -127,11 +120,13 @@ describe('BlockLibrariesStepContent', () => {
                 />
             );
 
-            const checkbox = screen.getByRole('checkbox', { name: /Commerce Blocks/i });
-            expect(checkbox).toBeChecked();
+            expect(screen.getByRole('button', { name: /Commerce Blocks/i })).toHaveAttribute(
+                'aria-pressed',
+                'true',
+            );
         });
 
-        it('should call onBlockLibraryToggle when library checkbox toggled', () => {
+        it('should call onBlockLibraryToggle when a library card is clicked', () => {
             const onBlockLibraryToggle = jest.fn();
             render(
                 <BlockLibrariesStepContent
@@ -141,8 +136,7 @@ describe('BlockLibrariesStepContent', () => {
                 />
             );
 
-            const checkbox = screen.getByRole('checkbox', { name: /Commerce Blocks/i });
-            fireEvent.click(checkbox);
+            fireEvent.click(screen.getByRole('button', { name: /Commerce Blocks/i }));
             expect(onBlockLibraryToggle).toHaveBeenCalledWith('commerce-blocks', true);
         });
     });
@@ -179,7 +173,7 @@ describe('BlockLibrariesStepContent', () => {
             expect(screen.getByText('myorg/my-blocks')).toBeInTheDocument();
         });
 
-        it('should show custom library as checked when in customBlockLibraries', () => {
+        it('should mark a custom library selected when in customBlockLibraries', () => {
             render(
                 <BlockLibrariesStepContent
                     {...defaultProps}
@@ -188,11 +182,13 @@ describe('BlockLibrariesStepContent', () => {
                 />
             );
 
-            const checkbox = screen.getByRole('checkbox', { name: /My Custom Lib/i });
-            expect(checkbox).toBeChecked();
+            expect(screen.getByRole('button', { name: /My Custom Lib/i })).toHaveAttribute(
+                'aria-pressed',
+                'true',
+            );
         });
 
-        it('should show custom library as unchecked when not in customBlockLibraries', () => {
+        it('should mark a custom library unselected when not in customBlockLibraries', () => {
             render(
                 <BlockLibrariesStepContent
                     {...defaultProps}
@@ -201,11 +197,13 @@ describe('BlockLibrariesStepContent', () => {
                 />
             );
 
-            const checkbox = screen.getByRole('checkbox', { name: /My Custom Lib/i });
-            expect(checkbox).not.toBeChecked();
+            expect(screen.getByRole('button', { name: /My Custom Lib/i })).toHaveAttribute(
+                'aria-pressed',
+                'false',
+            );
         });
 
-        it('should call onCustomLibraryToggle when custom library checkbox toggled', () => {
+        it('should call onCustomLibraryToggle when a custom library card is clicked', () => {
             const onCustomLibraryToggle = jest.fn();
             render(
                 <BlockLibrariesStepContent
@@ -215,8 +213,7 @@ describe('BlockLibrariesStepContent', () => {
                 />
             );
 
-            const checkbox = screen.getByRole('checkbox', { name: /My Custom Lib/i });
-            fireEvent.click(checkbox);
+            fireEvent.click(screen.getByRole('button', { name: /My Custom Lib/i }));
             expect(onCustomLibraryToggle).toHaveBeenCalledWith(customLib, true);
         });
 

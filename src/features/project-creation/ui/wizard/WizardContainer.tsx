@@ -324,7 +324,6 @@ export function WizardContainer({
     const currentStepIndex = getCurrentStepIndex();
     const isLastStep = state.currentStep === 'create-project';
     const currentStepName = WIZARD_STEPS[currentStepIndex]?.name;
-    const currentStepDescription = WIZARD_STEPS[currentStepIndex]?.description;
 
     // Timeline state — derived from local wizard state, no sidebar messaging.
     const timelineSteps: TimelineStep[] = WIZARD_STEPS.map(s => ({ id: s.id, name: s.name }));
@@ -463,7 +462,8 @@ export function WizardContainer({
                     <PageHeader
                         title={getWizardTitle(state.wizardMode)}
                         subtitle={currentStepName}
-                        description={currentStepDescription}
+                        // The left timeline rail owns wayfinding on every step, so the
+                        // header is just the title + step crumb — no restated description.
                     />
 
                     {/* Step Content */}

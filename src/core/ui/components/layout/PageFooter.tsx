@@ -78,7 +78,8 @@ export const PageFooter: React.FC<PageFooterProps> = ({
 
     return (
         <View
-            padding="size-400"
+            paddingX="size-400"
+            paddingY="size-200"
             UNSAFE_className={cn('border-t', 'bg-gray-75', className)}
         >
             {constrainWidth ? (

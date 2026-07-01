@@ -46,6 +46,7 @@ export class AuthenticationService {
         this.organizationValidator = new OrganizationValidator(
             commandManager,
             logger,
+            this.cacheManager,
         );
         // Note: entityService will be initialized lazily when first needed
         // because it depends on stepLogger which requires async initialization

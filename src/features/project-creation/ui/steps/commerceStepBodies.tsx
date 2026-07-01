@@ -13,6 +13,7 @@
  */
 
 import React from 'react';
+import { SelectionCheck } from '../components/SelectionCheck';
 import { BACKEND_LABELS, type CommerceSectionId } from './commerceSections';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import type { WizardState } from '@/types/webview';
@@ -30,20 +31,6 @@ export const BACKEND_DESCRIPTIONS: Record<string, string> = {
 /** No-op setter handed to the contextual AdobeAuthStep (the step owns the gate). */
 const NOOP = (): void => {};
 
-/** Small inline check icon for a selected choice card (mirrors the done mark). */
-const ChoiceCheckIcon: React.FC = () => (
-    <svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true" focusable="false">
-        <path
-            d="M2 6.2 4.6 9 10 3"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        />
-    </svg>
-);
-
 /** A single roomy Backend "choice card" (a prominent binary pick, not a dense tile). */
 export const BackendCard: React.FC<{
     backend: string;
@@ -60,11 +47,7 @@ export const BackendCard: React.FC<{
         disabled={!available}
         onClick={available ? () => onSelect(backend) : undefined}
     >
-        {selected ? (
-            <span className="choice-card-check" data-testid="backend-card-check">
-                <ChoiceCheckIcon />
-            </span>
-        ) : null}
+        {selected ? <SelectionCheck corner testId="backend-card-check" /> : null}
         <span className="choice-card-name">{BACKEND_LABELS[backend] ?? backend}</span>
         <span className="choice-card-description">{BACKEND_DESCRIPTIONS[backend] ?? ''}</span>
         {available ? null : (

@@ -1,19 +1,13 @@
 /**
- * IntegrationsStep Tests (Integrations area — top-rail sub-steps)
+ * IntegrationsStep Tests (Integrations area — a single "Services" screen)
  *
- * The Integrations area renders a sub-step strip (Services · [Sign in] · Destination)
- * over a dedicated view, like Commerce/Storefront. These tests pin the contract:
- *  - Services: the API Mesh card with an Add/Remove toggle (real useProjectBuilder
- *    mesh dual-flow), a "N/A for this architecture" pill + no toggle on a non-mesh
- *    stack, and a dashed "add an integration" simulated slot;
- *  - Sign in: a CONDITIONAL sub-step — present for backends with no earlier sign-in
- *    (PaaS), skipped for ACCS (which signs in at Commerce). Its body is AdobeAuthStep;
- *  - Destination: NO auth — the project + workspace select-or-create fields (workspace
- *    revealed once a project is chosen) + the provision summary.
+ * The Integrations area is now ONE screen: the deployable list. The API Mesh renders as a
+ * selection-aware card that, when added, expands INLINE to host its Adobe I/O destination
+ * (a sign-in gate when signed out; the project/workspace select-or-create fields when
+ * signed in) — the former Sign in / Destination sub-step TABS are gone.
  *
- * The real catalog (app-builder-components.json) drives availability, so fixtures use
- * real stack backend/frontend ids. AdobeAuthStep + the create fields are mocked to
- * sentinels (they have their own suites).
+ * The real catalog (app-builder-components.json) drives availability, so fixtures use real
+ * stack backend/frontend ids. AdobeAuthStep + the entity fields are mocked to sentinels.
  *
  * @jest-environment jsdom
  */
@@ -31,11 +25,18 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
     vscode: { postMessage: jest.fn(), request: jest.fn(), onMessage: jest.fn(() => jest.fn()) },
 }));
 
-// The Sign-in sub-step body reuses the full AdobeAuthStep; mock it to a sentinel.
+// The Integrations area warms the developer-permission probe (so the Destination "New"
+// buttons are instant). Mock the webview client to observe the prefetch.
+const request = jest.fn().mockResolvedValue({ success: true, data: { canCreate: true } });
+jest.mock('@/core/ui/utils/WebviewClient', () => ({
+    webviewClient: { request: (...args: unknown[]) => request(...args) },
+}));
+
+// The mesh card's inline sign-in gate reuses AdobeAuthStep; the destination reuses the
+// select-or-create fields. Mock them to sentinels (they have their own suites).
 jest.mock('@/features/authentication/ui/steps/AdobeAuthStep', () => ({
     AdobeAuthStep: () => <div data-testid="adobe-auth-step">Adobe Auth Step</div>,
 }));
-// The Destination body uses the select-or-create fields; mock them to sentinels.
 jest.mock('@/features/authentication/ui/components/AdobeEntityFields', () => ({
     AdobeProjectField: () => <div data-testid="project-field">Project Field</div>,
     AdobeWorkspaceField: () => <div data-testid="workspace-field">Workspace Field</div>,
@@ -88,19 +89,19 @@ function renderStep(state: WizardState, updateState = jest.fn()) {
     return { updateState };
 }
 
-describe('IntegrationsStep (top-rail sub-steps)', () => {
-    it('renders the Services view with the Mesh card (Off + Add) and the simulated add slot', () => {
+beforeEach(() => request.mockClear());
+
+describe('IntegrationsStep (single Services screen)', () => {
+    it('renders the Services view: the Mesh card (Add) + the simulated add slot, no tabs', () => {
         renderStep(baseState({ selectedStack: 'eds-paas', selectedBackend: PAAS }));
         expect(screen.getByText('API Mesh')).toBeInTheDocument();
-        expect(screen.getByText('Off')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Add' })).toBeInTheDocument();
         expect(screen.getByText('+ Add an integration')).toBeInTheDocument();
-        // No Sign in / Destination tabs until a deployable is selected.
-        expect(screen.queryByRole('tab', { name: 'Sign in' })).not.toBeInTheDocument();
-        expect(screen.queryByRole('tab', { name: 'Destination' })).not.toBeInTheDocument();
+        // No sub-step tabs — Integrations is one screen.
+        expect(screen.queryByRole('tab')).not.toBeInTheDocument();
     });
 
-    it('toggles the mesh ON when Add is pressed (mesh dual-flow)', () => {
+    it('adds the mesh when Add is pressed (mesh dual-flow)', () => {
         const { updateState } = renderStep(baseState({ selectedStack: 'eds-paas', selectedBackend: PAAS }));
         fireEvent.click(screen.getByRole('button', { name: 'Add' }));
         expect(updateState).toHaveBeenCalledWith(
@@ -108,59 +109,27 @@ describe('IntegrationsStep (top-rail sub-steps)', () => {
         );
     });
 
-    it('shows the "N/A" pill and NO action on a non-mesh stack', () => {
+    it('shows the "N/A" label and NO action on a non-mesh stack', () => {
         renderStep(baseState({ selectedStack: 'eds-none' }));
         expect(screen.getByText('N/A for this architecture')).toBeInTheDocument();
-        expect(
-            screen.queryByRole('button', { name: /add|remove|sign in/i }),
-        ).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /add|remove/i })).not.toBeInTheDocument();
     });
 
-    it('PaaS: shows a Sign in tab AND a Destination tab once mesh is On', () => {
+    it('PaaS + mesh, signed out: the card expands to the inline sign-in gate', () => {
         renderStep(
             baseState({
                 selectedStack: 'eds-paas',
                 selectedBackend: PAAS,
                 selectedAppBuilderComponents: ['commerce-paas-mesh'],
-                activeIntegrationsStep: 'deployables',
             }),
         );
         expect(screen.getByRole('button', { name: 'Remove' })).toBeInTheDocument();
-        expect(screen.getByRole('tab', { name: 'Sign in' })).toBeInTheDocument();
-        // target is locked while Sign in is current → its name includes the lock reason.
-        expect(screen.getByRole('tab', { name: /Destination/ })).toBeInTheDocument();
-    });
-
-    it('ACCS: NO Sign in tab (already signed in at Commerce) — just Services + Destination', () => {
-        renderStep(
-            baseState({
-                selectedStack: 'eds-paas',
-                selectedBackend: ACCS,
-                selectedAppBuilderComponents: ['commerce-paas-mesh'],
-                activeIntegrationsStep: 'deployables',
-                ...SIGNED_IN,
-            }),
-        );
-        expect(screen.queryByRole('tab', { name: 'Sign in' })).not.toBeInTheDocument();
-        expect(screen.getByRole('tab', { name: 'Destination' })).toBeInTheDocument();
-    });
-
-    it('PaaS not signed in: the Sign-in sub-step (AdobeAuthStep) is active', () => {
-        // Mesh selected, PaaS, signed out → `signin` is the first OPEN step.
-        renderStep(
-            baseState({
-                selectedStack: 'eds-paas',
-                selectedBackend: PAAS,
-                selectedAppBuilderComponents: ['commerce-paas-mesh'],
-            }),
-        );
         expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
-        // The Destination fields are NOT shown while on the Sign-in step.
+        // No destination fields until signed in.
         expect(screen.queryByTestId('project-field')).not.toBeInTheDocument();
     });
 
-    it('Destination has NO auth — shows the project field + provision list (signed in)', () => {
-        // ACCS + signed in → no Sign-in step; Destination is active.
+    it('ACCS + mesh, signed in: the card expands to the destination project field (no gate)', () => {
         renderStep(
             baseState({
                 selectedStack: 'eds-paas',
@@ -172,11 +141,9 @@ describe('IntegrationsStep (top-rail sub-steps)', () => {
         expect(screen.queryByTestId('adobe-auth-step')).not.toBeInTheDocument();
         expect(screen.getByTestId('project-field')).toBeInTheDocument();
         expect(screen.queryByTestId('workspace-field')).not.toBeInTheDocument();
-        expect(screen.getByText(/On create, the extension will/i)).toBeInTheDocument();
-        expect(screen.getByText(/GraphQL Service SDK/i)).toBeInTheDocument();
     });
 
-    it('reveals the workspace field once a project is chosen (progressive)', () => {
+    it('reveals the workspace field once a project is chosen (progressive, in-card)', () => {
         renderStep(
             baseState({
                 selectedStack: 'eds-paas',
@@ -186,7 +153,36 @@ describe('IntegrationsStep (top-rail sub-steps)', () => {
                 adobeProject: { id: 'p1', name: 'proj', title: 'Demo Project' },
             }),
         );
-        expect(screen.getByTestId('project-field')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-field')).toBeInTheDocument();
+    });
+});
+
+describe('IntegrationsStep — developer-permission prefetch', () => {
+    it('warms can-create-adobe-project when signed in with a deployable selected', () => {
+        renderStep(
+            baseState({
+                selectedStack: 'eds-paas',
+                selectedBackend: ACCS,
+                selectedAppBuilderComponents: ['commerce-paas-mesh'],
+                ...SIGNED_IN,
+            }),
+        );
+        expect(request).toHaveBeenCalledWith('can-create-adobe-project');
+    });
+
+    it('does NOT prefetch without a deployable selected', () => {
+        renderStep(baseState({ selectedStack: 'eds-paas', selectedBackend: ACCS, ...SIGNED_IN }));
+        expect(request).not.toHaveBeenCalled();
+    });
+
+    it('does NOT prefetch while signed out', () => {
+        renderStep(
+            baseState({
+                selectedStack: 'eds-paas',
+                selectedBackend: PAAS,
+                selectedAppBuilderComponents: ['commerce-paas-mesh'],
+            }),
+        );
+        expect(request).not.toHaveBeenCalled();
     });
 });

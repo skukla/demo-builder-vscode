@@ -83,66 +83,47 @@ describe('storefront driver', () => {
 describe('integrations driver', () => {
     const driver = areaSubSteps('integrations')!;
 
-    it('lists only "deployables" until a deployable is selected', () => {
-        const s = state({});
+    it('is a single "deployables" screen (no sub-step tabs)', () => {
+        const s = state({ selectedAppBuilderComponents: ['commerce-paas-mesh'] });
         expect(driver.subSteps(s).map(x => x.id)).toEqual(['deployables']);
         expect(driver.active(s)).toBe('deployables');
+        // One sub-step → nothing to walk; Continue advances the area.
         expect(driver.next(s)).toBeNull();
         expect(driver.prev(s)).toBeNull();
-    });
-
-    it('PaaS: adds Sign in + target once a deployable is selected', () => {
-        const s = state({
-            selectedAppBuilderComponents: ['commerce-paas-mesh'],
-            selectedBackend: 'adobe-commerce-paas',
-        });
-        expect(driver.subSteps(s).map(x => x.id)).toEqual(['deployables', 'signin', 'target']);
-        // deployables done → signin (not signed in) is the first OPEN (current) step.
-        expect(driver.active(s)).toBe('signin');
-        expect(driver.next(state({ ...s, activeIntegrationsStep: 'deployables' }))).toBe('signin');
-        expect(driver.prev(state({ ...s, activeIntegrationsStep: 'target' }))).toBe('signin');
-    });
-
-    it('ACCS: adds only target (no Sign in — signed in at Commerce), active = target', () => {
-        const s = state({
-            selectedAppBuilderComponents: ['commerce-paas-mesh'],
-            selectedBackend: 'adobe-commerce-accs',
-        });
-        expect(driver.subSteps(s).map(x => x.id)).toEqual(['deployables', 'target']);
-        expect(driver.active(s)).toBe('target');
-    });
-
-    it('also counts a mesh dual-flowed via selectedOptionalDependencies', () => {
-        const s = state({
-            selectedOptionalDependencies: ['eds-commerce-mesh'],
-            selectedBackend: 'adobe-commerce-accs',
-        });
-        expect(driver.subSteps(s).map(x => x.id)).toEqual(['deployables', 'target']);
     });
 
     it('uses the activeIntegrationsStep state key for active + setActive', () => {
         const s = state({ selectedAppBuilderComponents: ['x'], activeIntegrationsStep: 'deployables' });
         expect(driver.active(s)).toBe('deployables');
-        expect(driver.setActive('target')).toEqual({ activeIntegrationsStep: 'target' });
+        expect(driver.setActive('deployables')).toEqual({ activeIntegrationsStep: 'deployables' });
     });
 
-    it('gates deployables open, target on project + workspace', () => {
+    it('gates the area on the deployables destination (project + workspace once selected)', () => {
+        // Nothing selected → complete (optional).
         expect(driver.isComplete(state({}), 'deployables')).toBe(true);
-        expect(driver.isComplete(state({}), 'target')).toBe(false);
+        // A deployable selected without a full destination → incomplete.
+        expect(
+            driver.isComplete(state({ selectedAppBuilderComponents: ['x'] }), 'deployables'),
+        ).toBe(false);
+        // Signed in + project + workspace → complete.
         expect(
             driver.isComplete(
-                state({ adobeProject: { id: 'p' }, adobeWorkspace: { id: 'w' } } as Partial<WizardState>),
-                'target',
+                state({
+                    selectedAppBuilderComponents: ['x'],
+                    adobeAuth: { isAuthenticated: true, isChecking: false },
+                    adobeOrg: { id: 'o', name: 'Acme' },
+                    adobeProject: { id: 'p' },
+                    adobeWorkspace: { id: 'w' },
+                } as unknown as Partial<WizardState>),
+                'deployables',
             ),
         ).toBe(true);
     });
 
-    it('enters at the first OPEN sub-step (or last when atEnd)', () => {
-        // ACCS + a deployable → [deployables, target]; deployables done → target current.
+    it('enters at the single deployables sub-step', () => {
         const s = state({ selectedAppBuilderComponents: ['x'], selectedBackend: 'adobe-commerce-accs' });
-        expect(driver.entry(s, false)).toEqual({ activeIntegrationsStep: 'target' });
-        expect(driver.entry(s, true)).toEqual({ activeIntegrationsStep: 'target' });
-        // Nothing selected → only deployables.
+        expect(driver.entry(s, false)).toEqual({ activeIntegrationsStep: 'deployables' });
+        expect(driver.entry(s, true)).toEqual({ activeIntegrationsStep: 'deployables' });
         expect(driver.entry(state({}), false)).toEqual({ activeIntegrationsStep: 'deployables' });
     });
 

@@ -109,11 +109,13 @@ describe('AuthCacheManager - Invalidation Operations', () => {
 
             cacheManager.setCachedOrgList([mockOrg]);
             cacheManager.setCachedConsoleWhere(mockConsoleWhere);
+            cacheManager.setCachedDeveloperPermissions({ hasPermissions: true });
 
             cacheManager.clearPerformanceCaches();
 
             expect(cacheManager.getCachedOrgList()).toBeUndefined();
             expect(cacheManager.getCachedConsoleWhere()).toBeUndefined();
+            expect(cacheManager.getCachedDeveloperPermissions()).toBeUndefined();
         });
 
         it('should not affect other caches', () => {
