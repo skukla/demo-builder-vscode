@@ -552,6 +552,26 @@ describe('AdobeEntityFetcher', () => {
 
             expect(seen).toEqual([undefined]);
         });
+
+        it('prefers the threaded target over the (stale) cache', async () => {
+            // The cache holds a stale/pruned project; the threaded selection must win so the
+            // lookup targets the real project (not "Invalid Project id").
+            const seen: { orgId?: string; projectId?: string }[] = [];
+            mockCacheManager.getCachedOrganization.mockReturnValue({ id: 'cached-org', code: 'X@AdobeOrg', name: 'Cached Org' });
+            mockCacheManager.getCachedProject.mockReturnValue({ id: 'stale-proj', name: 'Stale' });
+            mockSDKClient.isInitialized.mockReturnValue(false);
+
+            const { getActiveOrgContext } = require('@/core/shell/orgContextEnv');
+            mockCommandExecutor.execute.mockImplementation(async () => {
+                const ctx = getActiveOrgContext();
+                seen.push({ orgId: ctx?.orgId, projectId: ctx?.projectId });
+                return { stdout: JSON.stringify([]), stderr: '', code: 0 };
+            });
+
+            await fetcher.getWorkspaces({ orgId: 'threaded-org', projectId: 'threaded-proj' });
+
+            expect(seen).toContainEqual({ orgId: 'threaded-org', projectId: 'threaded-proj' });
+        });
     });
 
     describe('getProjects() - SDK fetch honors the threaded org id', () => {

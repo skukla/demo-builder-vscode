@@ -397,27 +397,32 @@ export class AdobeEntityFetcher {
     }
 
     /**
-     * Get list of workspaces for the current project (SDK with CLI fallback).
+     * Get list of workspaces (SDK with CLI fallback).
      *
-     * Org-targets the fetch (AIO_CONSOLE_* env via withOrgContext) using the cached org +
-     * project, so the CLI fallback hits the project's org/project — NOT the CLI's ambient
-     * console context, which otherwise raises ORG_MISMATCH ("Adobe CLI is targeting a
-     * different organization"). Mirrors getProjects; the SDK path already targets explicitly.
+     * Targets the fetch (AIO_CONSOLE_* env via withOrgContext) at the THREADED org +
+     * project (from webview state, passed by the handler) so both the SDK and the CLI
+     * fallback hit the right project — NOT the stale in-memory cache. The selected project
+     * is deliberately not cached (Phase 4a threads it per-op), so relying on the cache
+     * targets a wrong or deleted project ("Invalid Project id") or the CLI's ambient org
+     * ("Adobe CLI is targeting a different organization"). Falls back to the cache only when
+     * nothing is threaded. Mirrors getProjects' org-context targeting.
      */
-    async getWorkspaces(): Promise<AdobeWorkspace[]> {
+    async getWorkspaces(target?: { orgId?: string; projectId?: string }): Promise<AdobeWorkspace[]> {
         const cachedOrg = this.cacheManager.getCachedOrganization();
         const cachedProject = this.cacheManager.getCachedProject();
-        const orgId = cachedOrg?.id;
-        const projectId = cachedProject?.id;
+        // Prefer the threaded selection; fall back to the cache for un-threaded callers.
+        const orgId = target?.orgId ?? cachedOrg?.id;
+        const projectId = target?.projectId ?? cachedProject?.id;
+        // Enrich org code/name only when the target org still matches the cached org.
+        const orgMatches = !!cachedOrg && cachedOrg.id === orgId;
 
         if (orgId && projectId) {
             return withOrgContext(
                 {
                     orgId,
-                    orgCode: cachedOrg?.code,
-                    orgName: cachedOrg?.name,
+                    orgCode: orgMatches ? cachedOrg?.code : undefined,
+                    orgName: orgMatches ? cachedOrg?.name : undefined,
                     projectId,
-                    projectName: cachedProject?.name,
                 },
                 () => this.fetchWorkspaces(orgId, projectId),
             );

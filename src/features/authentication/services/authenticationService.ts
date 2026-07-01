@@ -406,12 +406,13 @@ export class AuthenticationService {
     }
 
     /**
-     * Get workspaces
+     * Get workspaces. `target` threads the selected org + project (webview state) so the
+     * fetch targets them instead of the stale in-memory cache.
      */
-    async getWorkspaces(): Promise<AdobeWorkspace[]> {
+    async getWorkspaces(target?: { orgId?: string; projectId?: string }): Promise<AdobeWorkspace[]> {
         return withTiming('getWorkspaces', async () => {
             const { fetcher } = await this.ensureEntities();
-            return fetcher.getWorkspaces();
+            return fetcher.getWorkspaces(target);
         });
     }
 

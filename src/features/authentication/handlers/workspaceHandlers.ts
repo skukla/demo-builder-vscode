@@ -24,7 +24,7 @@ import { toError } from '@/types/typeGuards';
  */
 export async function handleGetWorkspaces(
     context: HandlerContext,
-    _payload?: { orgId?: string; projectId?: string },
+    payload?: { orgId?: string; projectId?: string },
 ): Promise<DataResult<AdobeWorkspace[]>> {
     try {
         // Send loading status with sub-message
@@ -37,8 +37,9 @@ export async function handleGetWorkspaces(
             });
         }
 
-        // Wrap getWorkspaces with timeout (30 seconds)
-        const workspacesPromise = context.authManager?.getWorkspaces();
+        // Wrap getWorkspaces with timeout (30 seconds). Thread the selected org + project
+        // (webview state) so the fetch targets them, not the stale in-memory cache.
+        const workspacesPromise = context.authManager?.getWorkspaces(payload);
         if (!workspacesPromise) {
             throw new Error('Auth manager not available');
         }
