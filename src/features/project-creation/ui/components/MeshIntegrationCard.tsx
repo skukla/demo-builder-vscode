@@ -123,7 +123,6 @@ export function MeshIntegrationCard({
             const workspaceOpen = Boolean(projectId) && (!workspaceId || editing === 'workspace');
             config = (
                 <div className="int-destination">
-                    <div className="int-destination-label">Destination · Adobe I/O</div>
                     {projectOpen ? (
                         <AdobeProjectField state={state} updateState={updateState} />
                     ) : (

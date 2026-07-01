@@ -8,10 +8,14 @@
  * that toggles to a CREATE panel (a gray-50 card with a name field + Browse/Create
  * footer), then snaps back to the browse list once the entity exists and is selected.
  *
+ * The "New" affordance is ALWAYS shown — we don't pre-flight a permission probe (that
+ * was a multi-second `aio app list` CLI call that made the button lag). Permission is
+ * validated where it matters: the `create-adobe-project` / `create-adobe-workspace`
+ * handlers re-check it and return an `AUTH_FORBIDDEN`-coded error, which the create panel
+ * surfaces inline ("…create one in the Adobe Console. Select an existing project instead.").
+ * Honest by attempt, not by prediction.
+ *
  * The create wiring uses the ported handlers:
- *  - `can-create-adobe-project` — permission probe (Flow A vs Flow B). Workspace reuses
- *    the SAME probe. When the user lacks permission we hide the "New" button and fall
- *    back to selection-only (the pickers' own "create in Console" guidance).
  *  - `create-adobe-project` `{ name }` → the new project (also refreshes the list + acks
  *    selection on the backend); we write `state.adobeProject`.
  *  - `create-adobe-workspace` `{ name }` → the new workspace under the cached (selected)
@@ -22,7 +26,7 @@
 
 import { Button, Flex, Heading, Text, TextField, View } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { AdobeProjectPicker } from './AdobeProjectPicker';
 import { AdobeWorkspacePicker } from './AdobeWorkspacePicker';
 import { LoadingOverlay } from '@/core/ui/components/feedback/LoadingOverlay';
@@ -43,30 +47,6 @@ type FieldMode = 'browse' | 'create';
 interface FieldProps {
     state: WizardState;
     updateState: (updates: Partial<WizardState>) => void;
-}
-
-/**
- * Probe `can-create-adobe-project` once (Flow A vs Flow B). Both project and workspace
- * creation reuse this single permission probe. Degrades to `false` on any failure so the
- * UI safely shows selection-only.
- */
-function useCanCreateAdobeEntity(): boolean {
-    const [canCreate, setCanCreate] = useState(false);
-    useEffect(() => {
-        let cancelled = false;
-        webviewClient
-            .request<HandlerResult<{ canCreate: boolean }>>('can-create-adobe-project')
-            .then(res => {
-                if (!cancelled) setCanCreate(Boolean(res?.data?.canCreate));
-            })
-            .catch(() => {
-                if (!cancelled) setCanCreate(false);
-            });
-        return () => {
-            cancelled = true;
-        };
-    }, []);
-    return canCreate;
 }
 
 /**
@@ -149,7 +129,6 @@ function NewButton({ onPress }: { onPress: () => void }): React.ReactElement {
  * @returns the project browse-or-create control
  */
 export function AdobeProjectField({ state, updateState }: FieldProps): React.ReactElement {
-    const canCreate = useCanCreateAdobeEntity();
     const [mode, setMode] = useState<FieldMode>('browse');
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | undefined>();
@@ -216,7 +195,7 @@ export function AdobeProjectField({ state, updateState }: FieldProps): React.Rea
         <AdobeProjectPicker
             state={state}
             updateState={updateState}
-            headerAction={canCreate ? <NewButton onPress={() => setMode('create')} /> : undefined}
+            headerAction={<NewButton onPress={() => setMode('create')} />}
         />
     );
 }
@@ -229,7 +208,6 @@ export function AdobeProjectField({ state, updateState }: FieldProps): React.Rea
  * @returns the workspace browse-or-create control
  */
 export function AdobeWorkspaceField({ state, updateState }: FieldProps): React.ReactElement {
-    const canCreate = useCanCreateAdobeEntity();
     const [mode, setMode] = useState<FieldMode>('browse');
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | undefined>();
@@ -292,7 +270,7 @@ export function AdobeWorkspaceField({ state, updateState }: FieldProps): React.R
         <AdobeWorkspacePicker
             state={state}
             updateState={updateState}
-            headerAction={canCreate ? <NewButton onPress={() => setMode('create')} /> : undefined}
+            headerAction={<NewButton onPress={() => setMode('create')} />}
         />
     );
 }

@@ -68,12 +68,6 @@ describe('BlockLibrariesStepContent', () => {
         expect(screen.getByText('Which block libraries should be included?')).toBeInTheDocument();
     });
 
-    it('should render the intro text about native blocks', () => {
-        render(<BlockLibrariesStepContent {...defaultProps} />);
-
-        expect(screen.getByText(/native blocks are always included/i)).toBeInTheDocument();
-    });
-
     // --- Native Libraries ---
 
     describe('native libraries', () => {

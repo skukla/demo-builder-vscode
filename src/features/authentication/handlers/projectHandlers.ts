@@ -337,35 +337,12 @@ export async function handleCheckProjectApis(context: HandlerContext): Promise<D
 }
 
 /**
- * can-create-adobe-project — permission probe for the Adobe-project-create UX.
+ * create-adobe-project — create a new Adobe I/O App Builder project in-app.
  *
- * The UI calls this on entering the project step to choose Flow A (in-app create)
- * vs Flow B (fallback: select existing / open console / switch org). Read-only,
- * never throws; degrades to `canCreate:false` when auth is unavailable so the UI
- * safely shows the fallback.
- */
-export async function handleCanCreateAdobeProject(
-    context: HandlerContext,
-): Promise<HandlerResponse> {
-    if (!context.authManager) {
-        return { success: true, data: { canCreate: false, reason: 'Authentication not available' } };
-    }
-    try {
-        const { hasPermissions, error } = await context.authManager.testDeveloperPermissions();
-        return { success: true, data: { canCreate: hasPermissions, reason: error } };
-    } catch (error) {
-        context.logger.error('[Project] Permission probe failed:', error as Error);
-        return { success: true, data: { canCreate: false, reason: toError(error).message } };
-    }
-}
-
-/**
- * create-adobe-project — Flow A: create a new Adobe I/O App Builder project in-app.
- *
- * Defensively re-checks developer permission (the probe may be stale) and returns
- * an `AUTH_FORBIDDEN`-coded error so the UI drops to Flow B. On success, refreshes
- * the project list and acks the new selection (mirrors `handleSelectProject`).
- * Never throws.
+ * The "New" affordance is always offered; permission is validated HERE. Checks developer
+ * permission and, when absent, returns an `AUTH_FORBIDDEN`-coded error the UI surfaces
+ * inline (telegraph-on-attempt, no pre-flight probe). On success, refreshes the project
+ * list and acks the new selection (mirrors `handleSelectProject`). Never throws.
  */
 export async function handleCreateAdobeProject(
     context: HandlerContext,

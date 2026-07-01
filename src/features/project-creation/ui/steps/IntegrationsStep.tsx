@@ -16,16 +16,10 @@
  * @module features/project-creation/ui/steps/IntegrationsStep
  */
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { DeployablesBody } from './integrationsStepBodies';
-import {
-    anyDeployableSelected,
-    isAdobeSignedIn,
-    isMeshSelected,
-    meshComponentForStack,
-} from './tileStatus';
+import { isMeshSelected, meshComponentForStack } from './tileStatus';
 import { useProjectBuilder } from './useProjectBuilder';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import type { BaseStepProps } from '@/types/wizard';
@@ -64,17 +58,6 @@ export function IntegrationsStep({
     );
     const available = meshComponent !== undefined;
     const selected = available ? isMeshSelected(state, meshComponent.id) : false;
-
-    // Warm the developer-permission probe (a multi-second `aio app list` CLI call,
-    // backend-cached) as soon as it's relevant — signed in with a deployable selected —
-    // so the Destination "New" buttons appear immediately. Fire-and-forget.
-    const signedIn = isAdobeSignedIn(state);
-    const deployableSelected = anyDeployableSelected(state);
-    useEffect(() => {
-        if (signedIn && deployableSelected) {
-            webviewClient.request('can-create-adobe-project').catch(() => {});
-        }
-    }, [signedIn, deployableSelected]);
 
     const onMeshToggle = (next: boolean): void => {
         if (available && meshComponent) {

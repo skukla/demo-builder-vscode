@@ -3,12 +3,12 @@
  *
  * Pins the create-flow wiring against the ported handlers, matching the GitHub
  * browse/create look + feel:
- *  - `can-create-adobe-project` probe decides Flow A (show the "New" header button) vs
- *    Flow B (browse-only);
+ *  - the "New" header button is ALWAYS offered (no permission pre-flight probe);
  *  - clicking "New" reveals the create panel; "Create" sends `create-adobe-project` /
  *    `create-adobe-workspace` with the typed name and, on success, writes
  *    `adobeProject` / `adobeWorkspace` and returns to browse;
- *  - a failed create surfaces the error inline (no state write, stays on the panel).
+ *  - a failed create — including a permission denial (`AUTH_FORBIDDEN`) — surfaces the
+ *    error inline (no state write, stays on the panel). Honest by attempt, not by probe.
  *
  * The selection pickers are mocked to sentinels that RENDER their `headerAction` (so the
  * "New" button is observable); the webview request layer is mocked so the handler
@@ -48,36 +48,26 @@ function renderField(node: React.ReactElement) {
     return render(<Provider theme={defaultTheme}>{node}</Provider>);
 }
 
-/** Resolve the can-create probe with a fixed verdict; other calls per `impl`. */
-function mockRequests(canCreate: boolean, impl?: (type: string, payload?: unknown) => unknown) {
-    request.mockImplementation((type: string, payload?: unknown) => {
-        if (type === 'can-create-adobe-project') {
-            return Promise.resolve({ success: true, data: { canCreate } });
-        }
-        return Promise.resolve(impl ? impl(type, payload) : { success: true });
-    });
+/** Route create calls through `impl`; anything else resolves success. */
+function mockRequests(impl?: (type: string, payload?: unknown) => unknown) {
+    request.mockImplementation((type: string, payload?: unknown) =>
+        Promise.resolve(impl ? impl(type, payload) : { success: true }),
+    );
 }
 
 beforeEach(() => request.mockReset());
 
 describe('AdobeProjectField', () => {
-    it('always renders the selection picker (browse mode)', async () => {
-        mockRequests(false);
+    it('renders the selection picker with the "New" button always offered', () => {
+        mockRequests();
         renderField(<AdobeProjectField state={EMPTY} updateState={jest.fn()} />);
         expect(screen.getByTestId('project-picker')).toBeInTheDocument();
-        await waitFor(() => expect(request).toHaveBeenCalledWith('can-create-adobe-project'));
+        expect(screen.getByRole('button', { name: 'New' })).toBeInTheDocument();
     });
 
-    it('hides the "New" button when not permitted (Flow B)', async () => {
-        mockRequests(false);
-        renderField(<AdobeProjectField state={EMPTY} updateState={jest.fn()} />);
-        await waitFor(() => expect(request).toHaveBeenCalledWith('can-create-adobe-project'));
-        expect(screen.queryByRole('button', { name: 'New' })).not.toBeInTheDocument();
-    });
-
-    it('shows "New" when permitted, and creates → writes adobeProject + returns to browse', async () => {
+    it('shows "New" and creates → writes adobeProject + returns to browse', async () => {
         const updateState = jest.fn();
-        mockRequests(true, (type) =>
+        mockRequests((type) =>
             type === 'create-adobe-project'
                 ? { success: true, data: { id: 'p9', name: 'np', title: 'New Project' } }
                 : { success: true },
@@ -102,9 +92,36 @@ describe('AdobeProjectField', () => {
         await waitFor(() => expect(screen.getByTestId('project-picker')).toBeInTheDocument());
     });
 
-    it('surfaces a create error inline and stays on the panel (no state write)', async () => {
+    it('telegraphs a permission denial from Create inline (no pre-flight probe)', async () => {
         const updateState = jest.fn();
-        mockRequests(true, (type) =>
+        mockRequests((type) =>
+            type === 'create-adobe-project'
+                ? {
+                      success: false,
+                      code: 'AUTH_FORBIDDEN',
+                      error:
+                          'You do not have permission to create projects in this organization. '
+                          + 'Select an existing project instead.',
+                  }
+                : { success: true },
+        );
+        renderField(<AdobeProjectField state={EMPTY} updateState={updateState} />);
+
+        fireEvent.click(await screen.findByRole('button', { name: 'New' }));
+        fireEvent.change(screen.getByRole('textbox'), { target: { value: 'np' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+        expect(
+            await screen.findByText(/do not have permission to create projects/i),
+        ).toBeInTheDocument();
+        expect(updateState).not.toHaveBeenCalled();
+        // Stays on the panel so the user can adjust or Browse.
+        expect(screen.getByRole('heading', { name: 'Create New Project' })).toBeInTheDocument();
+    });
+
+    it('surfaces a generic create error inline and stays on the panel (no state write)', async () => {
+        const updateState = jest.fn();
+        mockRequests((type) =>
             type === 'create-adobe-project'
                 ? { success: false, error: 'Name already exists' }
                 : { success: true },
@@ -121,7 +138,7 @@ describe('AdobeProjectField', () => {
     });
 
     it('Browse returns to the list without creating', async () => {
-        mockRequests(true);
+        mockRequests();
         renderField(<AdobeProjectField state={EMPTY} updateState={jest.fn()} />);
 
         fireEvent.click(await screen.findByRole('button', { name: 'New' }));
@@ -134,9 +151,9 @@ describe('AdobeProjectField', () => {
 });
 
 describe('AdobeWorkspaceField', () => {
-    it('creates a workspace → writes adobeWorkspace', async () => {
+    it('offers "New" and creates a workspace → writes adobeWorkspace', async () => {
         const updateState = jest.fn();
-        mockRequests(true, (type) =>
+        mockRequests((type) =>
             type === 'create-adobe-workspace'
                 ? { success: true, data: { id: 'w9', name: 'nw', title: 'New WS' } }
                 : { success: true },

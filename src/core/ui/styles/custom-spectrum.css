@@ -1556,10 +1556,6 @@ button[class*="spectrum-Button"][disabled],
     letter-spacing: 0.3px !important;
 }
 
-.block-libraries-intro {
-    margin-bottom: var(--spectrum-global-dimension-size-200);
-}
-
 .settings-link {
     margin-top: var(--spectrum-global-dimension-size-200);
     font-size: var(--spectrum-global-dimension-font-size-75);
@@ -4500,14 +4496,6 @@ div[class*="spectrum"] input[type="search"] {
     margin-top: 14px;
     padding-top: 14px;
     border-top: 1px solid var(--spectrum-global-color-gray-300);
-}
-/* The inline Adobe I/O destination inside a selected card. */
-.int-destination-label {
-    font-size: 11px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--spectrum-global-color-gray-600);
-    margin-bottom: 10px;
 }
 /* A committed destination choice, collapsed to one compact line + "Change". */
 .int-chosen {

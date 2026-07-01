@@ -1,10 +1,9 @@
 /**
  * Workspace Handlers - Create Tests
  *
- * Tests for in-app Adobe I/O workspace creation (Flow A):
- * - handleCreateAdobeWorkspace: create with defensive permission re-check.
- *   (The permission probe is the shared `can-create-adobe-project` handler,
- *   tested in projectHandlers-create.test.ts.)
+ * Tests for in-app Adobe I/O workspace creation:
+ * - handleCreateAdobeWorkspace: create with a permission check that returns an
+ *   AUTH_FORBIDDEN-coded error the UI telegraphs inline (no pre-flight probe).
  */
 
 import { handleCreateAdobeWorkspace } from '@/features/authentication/handlers/workspaceHandlers';

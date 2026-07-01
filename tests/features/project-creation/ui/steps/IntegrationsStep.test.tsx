@@ -25,9 +25,9 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
     vscode: { postMessage: jest.fn(), request: jest.fn(), onMessage: jest.fn(() => jest.fn()) },
 }));
 
-// The Integrations area warms the developer-permission probe (so the Destination "New"
-// buttons are instant). Mock the webview client to observe the prefetch.
-const request = jest.fn().mockResolvedValue({ success: true, data: { canCreate: true } });
+// Generic webview-client stub for anything in the render tree that requests (the mesh
+// card / project-builder hook). The Integrations area itself makes no requests on mount.
+const request = jest.fn().mockResolvedValue({ success: true });
 jest.mock('@/core/ui/utils/WebviewClient', () => ({
     webviewClient: { request: (...args: unknown[]) => request(...args) },
 }));
@@ -154,35 +154,5 @@ describe('IntegrationsStep (single Services screen)', () => {
             }),
         );
         expect(screen.getByTestId('workspace-field')).toBeInTheDocument();
-    });
-});
-
-describe('IntegrationsStep — developer-permission prefetch', () => {
-    it('warms can-create-adobe-project when signed in with a deployable selected', () => {
-        renderStep(
-            baseState({
-                selectedStack: 'eds-paas',
-                selectedBackend: ACCS,
-                selectedAppBuilderComponents: ['commerce-paas-mesh'],
-                ...SIGNED_IN,
-            }),
-        );
-        expect(request).toHaveBeenCalledWith('can-create-adobe-project');
-    });
-
-    it('does NOT prefetch without a deployable selected', () => {
-        renderStep(baseState({ selectedStack: 'eds-paas', selectedBackend: ACCS, ...SIGNED_IN }));
-        expect(request).not.toHaveBeenCalled();
-    });
-
-    it('does NOT prefetch while signed out', () => {
-        renderStep(
-            baseState({
-                selectedStack: 'eds-paas',
-                selectedBackend: PAAS,
-                selectedAppBuilderComponents: ['commerce-paas-mesh'],
-            }),
-        );
-        expect(request).not.toHaveBeenCalled();
     });
 });

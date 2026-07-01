@@ -2,14 +2,11 @@
  * Project Handlers - Create Tests
  *
  * Tests for in-app Adobe I/O App Builder project creation:
- * - handleCanCreateAdobeProject: permission probe (decides Flow A vs fallback Flow B)
- * - handleCreateAdobeProject: Flow A create (with defensive permission re-check)
+ * - handleCreateAdobeProject: create with a permission check that returns an
+ *   AUTH_FORBIDDEN-coded error the UI telegraphs inline (no pre-flight probe).
  */
 
-import {
-    handleCanCreateAdobeProject,
-    handleCreateAdobeProject,
-} from '@/features/authentication/handlers/projectHandlers';
+import { handleCreateAdobeProject } from '@/features/authentication/handlers/projectHandlers';
 import { ErrorCode } from '@/types/errorCodes';
 import { createMockContext } from './projectHandlers.testUtils';
 
@@ -34,42 +31,7 @@ describe('projectHandlers - Create', () => {
         mockContext.authManager.createProject = jest.fn().mockResolvedValue(PROJECT);
     });
 
-    describe('handleCanCreateAdobeProject (permission probe)', () => {
-        it('reports canCreate=true when the user has developer permissions', async () => {
-            mockContext.authManager.testDeveloperPermissions.mockResolvedValue({ hasPermissions: true });
-
-            const result = await handleCanCreateAdobeProject(mockContext);
-
-            expect(result.success).toBe(true);
-            expect(result.data).toEqual({ canCreate: true, reason: undefined });
-        });
-
-        it('reports canCreate=false with the reason when permission is denied', async () => {
-            mockContext.authManager.testDeveloperPermissions.mockResolvedValue({
-                hasPermissions: false,
-                error: 'Developer or System Admin role required.',
-            });
-
-            const result = await handleCanCreateAdobeProject(mockContext);
-
-            expect(result.success).toBe(true);
-            expect(result.data).toEqual({
-                canCreate: false,
-                reason: 'Developer or System Admin role required.',
-            });
-        });
-
-        it('degrades gracefully (canCreate=false) when authManager is missing', async () => {
-            const ctx = { ...mockContext, authManager: undefined } as any;
-
-            const result = await handleCanCreateAdobeProject(ctx);
-
-            expect(result.success).toBe(true);
-            expect((result.data as any).canCreate).toBe(false);
-        });
-    });
-
-    describe('handleCreateAdobeProject (Flow A)', () => {
+    describe('handleCreateAdobeProject', () => {
         it('returns an error when authManager is missing', async () => {
             const ctx = { ...mockContext, authManager: undefined } as any;
 

@@ -62,10 +62,6 @@ export const BlockLibrariesStepContent: React.FC<BlockLibrariesStepContentProps>
         <Text UNSAFE_className="description-block">
             Which block libraries should be included?
         </Text>
-        <Text UNSAFE_className="description-block-sm block-libraries-intro">
-            Your storefront&apos;s native blocks are always included. Select any additional
-            libraries to add extra blocks to your project.
-        </Text>
         <div className="choice-grid" role="group" aria-label="Block libraries">
             {nativeBlockLibraries.map((lib) => (
                 <LibraryCard

@@ -34,7 +34,6 @@ export {
     handleGetProjects,
     handleSelectProject,
     handleCheckProjectApis,
-    handleCanCreateAdobeProject,
     handleCreateAdobeProject,
 } from './handlers/projectHandlers';
 export {
