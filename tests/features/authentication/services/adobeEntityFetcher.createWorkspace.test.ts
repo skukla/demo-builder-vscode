@@ -69,15 +69,19 @@ describe('AdobeEntityFetcher.createWorkspace()', () => {
         expect(result).toEqual({ id: 'ws-new', name: 'Stage', title: 'Stage' });
     });
 
-    it('calls createWorkspace with org id, project id, and workspace details', async () => {
+    it('passes the free-form title through and derives an alphanumeric name from it', async () => {
         createWorkspace.mockResolvedValue({ body: { id: 'ws1', name: 'Stage', title: 'Stage' } });
 
-        await fetcher.createWorkspace('Stage', 'A workspace');
+        await fetcher.createWorkspace('My Stage', 'A workspace');
 
         expect(createWorkspace).toHaveBeenCalledWith(
             'org-123',
             'proj-456',
-            expect.objectContaining({ name: 'Stage', who_created: 'Demo Builder' }),
+            expect.objectContaining({
+                title: 'My Stage',
+                name: expect.stringMatching(/^MyStage[A-Za-z0-9]+$/),
+                who_created: 'Demo Builder',
+            }),
         );
     });
 

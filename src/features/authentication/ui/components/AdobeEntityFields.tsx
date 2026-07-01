@@ -76,7 +76,7 @@ function NewAdobeEntityForm({
     const trimmed = name.trim();
 
     return (
-        <View backgroundColor="gray-50" borderRadius="medium" padding="size-300">
+        <View backgroundColor="gray-50" borderRadius="medium" padding="size-300" position="relative">
             <Heading level={3} margin={0} marginBottom="size-200">{`Create New ${noun}`}</Heading>
 
             <TextField
@@ -98,7 +98,6 @@ function NewAdobeEntityForm({
                 </Button>
                 <Button
                     variant="accent"
-                    isPending={busy}
                     isDisabled={!trimmed || busy}
                     onPress={() => onCreate(trimmed)}
                 >

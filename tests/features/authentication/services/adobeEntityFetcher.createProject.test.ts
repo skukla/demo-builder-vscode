@@ -72,14 +72,19 @@ describe('AdobeEntityFetcher.createProject()', () => {
         });
     });
 
-    it('calls createFireflyProject with the org id and App Builder project details', async () => {
-        createFireflyProject.mockResolvedValue({ body: { id: 'p1', name: 'My Demo', title: 'My Demo' } });
+    it('passes the free-form title through and derives an alphanumeric name from it', async () => {
+        createFireflyProject.mockResolvedValue({ body: { id: 'p1', name: 'MyDemo', title: 'My Demo' } });
 
+        // "My Demo" has a space — Adobe rejects a spaced `name`, so it must be stripped.
         await fetcher.createProject('My Demo', 'A demo project');
 
         expect(createFireflyProject).toHaveBeenCalledWith(
             'org-123',
-            expect.objectContaining({ name: 'My Demo', who_created: 'Demo Builder' }),
+            expect.objectContaining({
+                title: 'My Demo',
+                name: expect.stringMatching(/^MyDemo[A-Za-z0-9]+$/),
+                who_created: 'Demo Builder',
+            }),
         );
     });
 

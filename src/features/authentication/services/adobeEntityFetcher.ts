@@ -17,6 +17,7 @@
  * - Logger/StepLogger for logging
  */
 
+import { deriveAdobeEntityName } from './adobeEntityName';
 import { mapOrganizations, mapProjects, mapWorkspaces } from './adobeEntityMapper';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';
@@ -618,12 +619,12 @@ export class AdobeEntityFetcher {
      * 409 name-taken / quota), which the handler surfaces to the user.
      */
     async createProject(
-        name: string,
+        title: string,
         description: string,
     ): Promise<AdobeProject | undefined> {
         // Input validation — enforce constraints regardless of caller.
-        if (!name || name.length > 200) {
-            this.debugLogger.error('[Entity Fetcher] Invalid project name (empty or >200 chars)');
+        if (!title || title.length > 200) {
+            this.debugLogger.error('[Entity Fetcher] Invalid project title (empty or >200 chars)');
             return undefined;
         }
         if (description.length > 500) {
@@ -652,11 +653,16 @@ export class AdobeEntityFetcher {
                 ) => Promise<SDKResponse<RawAdobeProject>>;
             };
 
-            this.debugLogger.info(`[Entity Fetcher] Creating App Builder project "${name}" in org ${orgId}`);
+            // Adobe validates the machine `name` as alphanumeric-only; derive it from the
+            // free-form title (the user's input). The title stays human-readable in the UI.
+            const name = deriveAdobeEntityName(title);
+            this.debugLogger.info(
+                `[Entity Fetcher] Creating App Builder project "${title}" (name: ${name}) in org ${orgId}`,
+            );
 
             const response = await client.createFireflyProject(orgId, {
                 name,
-                title: name,
+                title,
                 description,
                 who_created: 'Demo Builder',
             });
@@ -690,12 +696,12 @@ export class AdobeEntityFetcher {
      * quota), which the handler surfaces to the user.
      */
     async createWorkspace(
-        name: string,
+        title: string,
         description: string,
     ): Promise<AdobeWorkspace | undefined> {
         // Input validation — enforce constraints regardless of caller.
-        if (!name || name.length > 200) {
-            this.debugLogger.error('[Entity Fetcher] Invalid workspace name (empty or >200 chars)');
+        if (!title || title.length > 200) {
+            this.debugLogger.error('[Entity Fetcher] Invalid workspace title (empty or >200 chars)');
             return undefined;
         }
         if (description.length > 500) {
@@ -726,11 +732,16 @@ export class AdobeEntityFetcher {
                 ) => Promise<SDKResponse<RawAdobeWorkspace>>;
             };
 
-            this.debugLogger.info(`[Entity Fetcher] Creating workspace "${name}" in project ${projectId}`);
+            // Adobe validates the machine `name` as alphanumeric-only; derive it from the
+            // free-form title (the user's input). The title stays human-readable in the UI.
+            const name = deriveAdobeEntityName(title);
+            this.debugLogger.info(
+                `[Entity Fetcher] Creating workspace "${title}" (name: ${name}) in project ${projectId}`,
+            );
 
             const response = await client.createWorkspace(orgId, projectId, {
                 name,
-                title: name,
+                title,
                 description,
                 who_created: 'Demo Builder',
             });
