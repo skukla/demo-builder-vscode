@@ -60,6 +60,9 @@ export function AdobeWorkspacePicker({
     } = useSelectionStep<Workspace>({
         cacheKey: 'workspacesCache',
         messageType: 'get-workspaces',
+        // Thread the selected org + project so the backend targets THEM, not the stale
+        // in-memory cache (the selection isn't cached — it's threaded per-op).
+        messagePayload: { orgId: state.adobeOrg?.id, projectId: state.adobeProject?.id },
         errorMessageType: 'workspace-error',
         state,
         updateState,
