@@ -581,7 +581,8 @@ button[class*="spectrum-Button"][disabled],
     width: 100% !important;
     max-width: var(--content-width) !important;
     box-sizing: border-box !important;
-    padding: var(--spectrum-global-dimension-size-300) !important;
+    /* Content starts size-400 (32px) below the header; sides/bottom stay size-300 (24px). */
+    padding: var(--spectrum-global-dimension-size-400) var(--spectrum-global-dimension-size-300) var(--spectrum-global-dimension-size-300) !important;
 }
 /* Cap the LEFT column at the canonical width (overrides TwoColumnLayout's inline
  * leftMaxWidth so it's single-sourced); the right column flex-grows to the screen edge
@@ -1118,6 +1119,14 @@ button[class*="spectrum-Button"][disabled],
 }
 
 /* Base brand card - expandable variant */
+/* Demo Setup renders BrandGallery in a SingleColumnLayout whose padding is an INLINE
+   style (24px). !important overrides just the top to size-400 (32px) so its content
+   starts at the same inset below the header as every other flow step; sides/bottom keep
+   the layout's default 24px. */
+.brand-gallery-column {
+    padding-top: var(--spectrum-global-dimension-size-400) !important;
+}
+
 .expandable-brand-card {
     position: relative !important;
     background: var(--spectrum-global-color-gray-50) !important;
@@ -2969,7 +2978,8 @@ button[class*="spectrum-Button"][disabled],
     max-width: var(--content-width) !important;
     width: 100% !important;
     margin: 0 !important;
-    padding: 24px !important;
+    /* Content starts size-400 (32px) below the header (no nav rail on these steps). */
+    padding: var(--spectrum-global-dimension-size-400) 24px 24px !important;
 }
 
 
@@ -4208,7 +4218,9 @@ div[class*="spectrum"] input[type="search"] {
 .step-view {
     width: 100% !important;
     box-sizing: border-box !important;
-    padding: var(--wizard-content-pad) !important;
+    /* Content sits size-400 (32px) below the flush sub-step nav rail — the rail is chrome,
+       this view is the content. Horizontal + bottom stay at --wizard-content-pad (24px). */
+    padding: var(--spectrum-global-dimension-size-400) var(--wizard-content-pad) var(--wizard-content-pad) !important;
 }
 
 /* Sub-step view crossfade: the active view body fades + slides up when the sub-step

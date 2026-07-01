@@ -188,7 +188,7 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
     }
 
     return (
-        <SingleColumnLayout>
+        <SingleColumnLayout className="brand-gallery-column">
             {/* Optional header content (e.g., project name field) */}
             {headerContent}
 
