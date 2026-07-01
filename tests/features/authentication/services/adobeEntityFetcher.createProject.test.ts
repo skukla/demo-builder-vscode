@@ -25,6 +25,7 @@ describe('AdobeEntityFetcher.createProject()', () => {
     let mockLogger: jest.Mocked<Logger>;
     let mockStepLogger: jest.Mocked<StepLogger>;
     let createFireflyProject: jest.Mock;
+    let createWorkspace: jest.Mock;
 
     const ORG = { id: 'org-123', code: 'ORG@AdobeOrg', name: 'Test Org' };
 
@@ -39,9 +40,11 @@ describe('AdobeEntityFetcher.createProject()', () => {
         mockCommandExecutor = { execute: jest.fn() } as unknown as jest.Mocked<CommandExecutor>;
 
         createFireflyProject = jest.fn();
+        // The default Stage-workspace create (App Builder template parity); resolves unless overridden.
+        createWorkspace = jest.fn().mockResolvedValue({ body: { workspaceId: 'ws-stage' } });
         mockSDKClient = {
             isInitialized: jest.fn().mockReturnValue(true),
-            getClient: jest.fn().mockReturnValue({ createFireflyProject }),
+            getClient: jest.fn().mockReturnValue({ createFireflyProject, createWorkspace }),
             ensureInitialized: jest.fn().mockResolvedValue(true),
         } as unknown as jest.Mocked<AdobeSDKClient>;
 
@@ -89,6 +92,30 @@ describe('AdobeEntityFetcher.createProject()', () => {
                 who_created: 'Demo Builder',
             }),
         );
+    });
+
+    it('creates a "Stage" workspace after the project (App Builder template parity)', async () => {
+        // createFireflyProject provisions only Production; we add Stage to match the template.
+        createFireflyProject.mockResolvedValue({ body: { projectId: 'proj-new' } });
+
+        await fetcher.createProject('My Demo', '');
+
+        expect(createWorkspace).toHaveBeenCalledWith(
+            'org-123',
+            'proj-new',
+            // Named exactly "Stage" — NOT the suffix-derived name — to match the convention.
+            expect.objectContaining({ name: 'Stage', title: 'Stage', who_created: 'Demo Builder' }),
+        );
+    });
+
+    it('returns the project even when the Stage workspace fails (best-effort)', async () => {
+        createFireflyProject.mockResolvedValue({ body: { projectId: 'proj-new' } });
+        createWorkspace.mockRejectedValue(new Error('workspace create failed'));
+
+        const result = await fetcher.createProject('My Demo', '');
+
+        // The project was created (Production exists); a Stage failure must not fail the create.
+        expect(result).toEqual(expect.objectContaining({ id: 'proj-new', title: 'My Demo' }));
     });
 
     it('returns undefined for an empty name (no SDK call)', async () => {
