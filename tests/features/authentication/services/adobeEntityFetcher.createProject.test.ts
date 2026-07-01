@@ -60,15 +60,18 @@ describe('AdobeEntityFetcher.createProject()', () => {
         );
     });
 
-    it('creates an App Builder project and returns the mapped AdobeProject', async () => {
-        createFireflyProject.mockResolvedValue({
-            body: { id: 'proj-new', name: 'My Demo', title: 'My Demo', org_id: 'org-123' },
-        });
+    it('constructs the AdobeProject from the returned projectId + the details we sent', async () => {
+        // The create endpoint returns ONLY the new id ({ projectId }), not a full project.
+        createFireflyProject.mockResolvedValue({ body: { projectId: 'proj-new' } });
 
         const result = await fetcher.createProject('My Demo', 'A demo project');
 
         expect(result).toEqual({
-            id: 'proj-new', name: 'My Demo', title: 'My Demo', description: undefined, org_id: 'org-123',
+            id: 'proj-new',
+            name: expect.stringMatching(/^MyDemo[A-Za-z0-9]+$/),
+            title: 'My Demo',
+            description: 'A demo project',
+            org_id: 'org-123',
         });
     });
 

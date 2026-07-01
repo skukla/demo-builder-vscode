@@ -667,14 +667,17 @@ export class AdobeEntityFetcher {
                 who_created: 'Demo Builder',
             });
 
-            const raw = response?.body;
-            if (!raw?.id) {
-                this.debugLogger.error('[Entity Fetcher] Project created but no project in response');
+            // The create endpoint returns only the new id ({ projectId }), NOT a full
+            // project — so construct the AdobeProject from that id + the details we sent.
+            const raw = response?.body as { id?: string; projectId?: string } | undefined;
+            const projectId = raw?.id ?? raw?.projectId;
+            if (!projectId) {
+                this.debugLogger.error('[Entity Fetcher] Project created but no projectId in response');
                 return undefined;
             }
 
             this.debugLogger.info('[Entity Fetcher] App Builder project created successfully');
-            return mapProjects([raw])[0];
+            return { id: projectId, name, title, description: description || undefined, org_id: orgId };
         } catch (error) {
             const message = (error as Error).message || '';
             if (message.includes('409') || message.includes('Conflict')) {
@@ -746,14 +749,17 @@ export class AdobeEntityFetcher {
                 who_created: 'Demo Builder',
             });
 
-            const raw = response?.body;
-            if (!raw?.id) {
-                this.debugLogger.error('[Entity Fetcher] Workspace created but no workspace in response');
+            // The create endpoint returns only the new id ({ workspaceId }), NOT a full
+            // workspace — so construct the workspace from that id + the details we sent.
+            const raw = response?.body as { id?: string; workspaceId?: string } | undefined;
+            const workspaceId = raw?.id ?? raw?.workspaceId;
+            if (!workspaceId) {
+                this.debugLogger.error('[Entity Fetcher] Workspace created but no workspaceId in response');
                 return undefined;
             }
 
             this.debugLogger.info('[Entity Fetcher] Workspace created successfully');
-            return mapWorkspaces([raw])[0];
+            return { id: workspaceId, name, title };
         } catch (error) {
             const message = (error as Error).message || '';
             if (message.includes('409') || message.includes('Conflict')) {

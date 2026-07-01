@@ -61,12 +61,17 @@ describe('AdobeEntityFetcher.createWorkspace()', () => {
         );
     });
 
-    it('creates a workspace and returns the mapped AdobeWorkspace', async () => {
-        createWorkspace.mockResolvedValue({ body: { id: 'ws-new', name: 'Stage', title: 'Stage' } });
+    it('constructs the workspace from the returned workspaceId + the details we sent', async () => {
+        // The create endpoint returns ONLY the new id ({ workspaceId }), not a full workspace.
+        createWorkspace.mockResolvedValue({ body: { workspaceId: 'ws-new' } });
 
         const result = await fetcher.createWorkspace('Stage', 'A workspace');
 
-        expect(result).toEqual({ id: 'ws-new', name: 'Stage', title: 'Stage' });
+        expect(result).toEqual({
+            id: 'ws-new',
+            name: expect.stringMatching(/^Stage[A-Za-z0-9]+$/),
+            title: 'Stage',
+        });
     });
 
     it('passes the free-form title through and derives an alphanumeric name from it', async () => {
