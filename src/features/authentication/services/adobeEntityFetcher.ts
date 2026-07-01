@@ -397,19 +397,45 @@ export class AdobeEntityFetcher {
     }
 
     /**
-     * Get list of workspaces for current project (SDK with CLI fallback)
+     * Get list of workspaces for the current project (SDK with CLI fallback).
+     *
+     * Org-targets the fetch (AIO_CONSOLE_* env via withOrgContext) using the cached org +
+     * project, so the CLI fallback hits the project's org/project — NOT the CLI's ambient
+     * console context, which otherwise raises ORG_MISMATCH ("Adobe CLI is targeting a
+     * different organization"). Mirrors getProjects; the SDK path already targets explicitly.
      */
     async getWorkspaces(): Promise<AdobeWorkspace[]> {
+        const cachedOrg = this.cacheManager.getCachedOrganization();
+        const cachedProject = this.cacheManager.getCachedProject();
+        const orgId = cachedOrg?.id;
+        const projectId = cachedProject?.id;
+
+        if (orgId && projectId) {
+            return withOrgContext(
+                {
+                    orgId,
+                    orgCode: cachedOrg?.code,
+                    orgName: cachedOrg?.name,
+                    projectId,
+                    projectName: cachedProject?.name,
+                },
+                () => this.fetchWorkspaces(orgId, projectId),
+            );
+        }
+        return this.fetchWorkspaces(orgId, projectId);
+    }
+
+    /**
+     * Core workspace-fetch (SDK-first with CLI fallback). Wrapped by getWorkspaces, which
+     * applies org-context targeting.
+     */
+    private async fetchWorkspaces(orgId?: string, projectId?: string): Promise<AdobeWorkspace[]> {
         const startTime = Date.now();
 
         try {
             this.stepLogger.logTemplate('adobe-auth', 'operations.retrieving-workspaces', {});
             await this.ensureSDKReady();
 
-            const cachedOrg = this.cacheManager.getCachedOrganization();
-            const cachedProject = this.cacheManager.getCachedProject();
-            const orgId = cachedOrg?.id;
-            const projectId = cachedProject?.id;
             const hasValidIds = !!orgId && orgId.length > 0 && !!projectId && projectId.length > 0;
 
             let mappedWorkspaces: AdobeWorkspace[] = [];

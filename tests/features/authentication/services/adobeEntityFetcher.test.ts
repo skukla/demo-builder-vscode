@@ -515,6 +515,45 @@ describe('AdobeEntityFetcher', () => {
         });
     });
 
+    describe('getWorkspaces() - org-context targeting', () => {
+        it('runs the workspace fetch under org-context targeting (cached org + project)', async () => {
+            // getWorkspaces has no orgId option: it targets from the cached org + project so
+            // the CLI fallback hits the project's org, not the CLI's ambient one (ORG_MISMATCH).
+            const seen: { orgId?: string; projectId?: string }[] = [];
+            mockCacheManager.getCachedOrganization.mockReturnValue({ id: 'org-ws', code: 'C@AdobeOrg', name: 'WS Org' });
+            mockCacheManager.getCachedProject.mockReturnValue({ id: 'proj-ws', name: 'Proj WS' });
+            mockSDKClient.isInitialized.mockReturnValue(false); // force the CLI fallback
+
+            const { getActiveOrgContext } = require('@/core/shell/orgContextEnv');
+            mockCommandExecutor.execute.mockImplementation(async () => {
+                const ctx = getActiveOrgContext();
+                seen.push({ orgId: ctx?.orgId, projectId: ctx?.projectId });
+                return { stdout: JSON.stringify([]), stderr: '', code: 0 };
+            });
+
+            await fetcher.getWorkspaces();
+
+            expect(seen).toContainEqual({ orgId: 'org-ws', projectId: 'proj-ws' });
+        });
+
+        it('does not establish targeting when org or project id is missing (back-compat)', async () => {
+            const seen: (string | undefined)[] = [];
+            mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
+            mockCacheManager.getCachedProject.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(false);
+
+            const { getActiveOrgContext } = require('@/core/shell/orgContextEnv');
+            mockCommandExecutor.execute.mockImplementation(async () => {
+                seen.push(getActiveOrgContext()?.orgId);
+                return { stdout: JSON.stringify([]), stderr: '', code: 0 };
+            });
+
+            await fetcher.getWorkspaces();
+
+            expect(seen).toEqual([undefined]);
+        });
+    });
+
     describe('getProjects() - SDK fetch honors the threaded org id', () => {
         it('fetches projects for the THREADED orgId, not the cached (stale) org, when orgId is supplied', async () => {
             // Regression: the wizard threads the intended org into get-projects, but the
