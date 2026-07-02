@@ -795,18 +795,42 @@ button[class*="spectrum-Button"][disabled],
         display: none !important;
     }
 
+    /* Also hide the active step's nested sub-step rail (TimelineChildren) when the rail
+       collapses — its indented text labels (e.g. Commerce / Integrations) would spill past
+       the 56px column. The current area stays visible in the content's sub-nav strip, and
+       area navigation happens via Back/Continue at this width (matching how the collapsed
+       main steps can't be freely jumped either). */
+    .wizard-timeline-column .timeline-children {
+        display: none !important;
+    }
+    /* With the sub-steps hidden, undo the layout that accommodated them on the current
+       step: un-clip the wrapper so the current step's persistent `::after` tooltip (the
+       only "where am I" label in collapsed mode) can escape the rail edge, and revert the
+       connector from its clipped 9999px stretch back to the normal length (there is no
+       longer a children block to stretch past — without this, un-clipping would let the
+       9999px line spill down the rail). */
+    .wizard-timeline-column .timeline-step-wrap-clip {
+        overflow: visible !important;
+    }
+    .wizard-timeline-column .timeline-connector-stretch {
+        height: var(--spectrum-global-dimension-size-500, 40px) !important;
+    }
+
     /* CSS-only step-name tooltip. Anchored to the per-step `<View>` wrapper
        which is `position: relative`, so the `::after` floats to its right.
-       Three trigger conditions in this collapsed-rail mode:
+       HOVER / FOCUS ONLY — deliberately NOT persistent:
 
-         1. `[aria-current="step"]` — the current step's tooltip is ALWAYS
-            visible. Without this, users would have to hover to know which
-            step they're on (the inline label is hidden). Persistent so
-            "where am I" is always answered.
-         2. `:hover` — every step's tooltip shows on pointer hover. Lets
-            users scan ahead/behind without changing steps.
-         3. `:focus-visible` — same trigger for keyboard users tabbing
-            through the rail.
+         - `:hover` — a step's name shows on pointer hover, so users can scan
+            ahead/behind without changing steps.
+         - `:focus-visible` — same trigger, for keyboard users tabbing the rail.
+
+       The current step is intentionally NOT labelled persistently: at
+       `left: 100%` the tooltip floats into the content zone (the rail is only
+       56px wide), so an always-on label sits on top of the section header. And
+       it would be redundant — "where am I" is already answered, more prominently
+       and without overlap, by the content header ("… · Build Your Project") and
+       the sub-nav, while the active (blue) dot shows position. So the tooltip is
+       a transient scan aid, shown only on demand.
 
        100ms delay + 150ms fade-in feels snappy without being jumpy on a
        casual pointer pass. Pointer-events disabled so the tooltip never
@@ -814,7 +838,6 @@ button[class*="spectrum-Button"][disabled],
     .wizard-timeline-column .timeline-step {
         position: relative;
     }
-    .wizard-timeline-column .timeline-step[aria-current="step"]::after,
     .wizard-timeline-column .timeline-step:hover::after,
     .wizard-timeline-column .timeline-step:focus-visible::after {
         content: attr(data-step-name);

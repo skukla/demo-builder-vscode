@@ -56,6 +56,7 @@ export function TimelineChildren({
     return (
         <View
             data-testid={`timeline-children-${parentId}`}
+            UNSAFE_className="timeline-children"
             marginTop={CHILD_TOP_GAP}
             marginStart={CHILD_INDENT}
             position="relative"
