@@ -339,8 +339,6 @@ export function RepoSelectionInline({
         onCodeSyncValidChange(computeCodeSyncValid(repoMode, githubAppStatus, selectedRepo));
     }, [repoMode, githubAppStatus, selectedRepo, onCodeSyncValidChange]);
 
-    // Derived state for showing reset option.
-    const shouldShowResetOption = selectedRepo && hasLoadedOnce && !isLoading;
     const templateAvailable = !!(edsConfig?.templateOwner && edsConfig?.templateRepo);
     const showNewRepoStatus = repoMode === 'new' && repoCreationState.isCreated;
 
@@ -364,12 +362,13 @@ export function RepoSelectionInline({
 
                 {repoMode === 'existing' && (
                     <>
-                        {shouldShowResetOption && (
-                            <ResetToTemplateOption
-                                resetToTemplate={resetToTemplate}
-                                onResetToTemplateChange={handleResetToTemplateChange}
-                            />
-                        )}
+                        {/* Always rendered (disabled until a repo is selected) so selecting one
+                            never reflows the search + list below. */}
+                        <ResetToTemplateOption
+                            resetToTemplate={resetToTemplate}
+                            onResetToTemplateChange={handleResetToTemplateChange}
+                            disabled={!selectedRepo}
+                        />
                         <SelectionStepContent
                             headerAction={
                                 <Button variant="accent" onPress={handleCreateNew}>

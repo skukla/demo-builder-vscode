@@ -331,10 +331,15 @@ export function NewRepoForm({
 export function ResetToTemplateOption({
     resetToTemplate,
     onResetToTemplateChange,
+    disabled = false,
 }: {
     resetToTemplate: boolean;
     onResetToTemplateChange: (isSelected: boolean) => void;
+    /** Disabled until a repository is selected; always rendered so the row never reflows. */
+    disabled?: boolean;
 }): React.ReactElement {
+    // When disabled (no repo selected) present as unchecked with no warning.
+    const active = !disabled && resetToTemplate;
     return (
         <Flex
             direction="column"
@@ -343,7 +348,8 @@ export function ResetToTemplateOption({
             UNSAFE_className="reset-to-template-top"
         >
             <Checkbox
-                isSelected={resetToTemplate}
+                isSelected={active}
+                isDisabled={disabled}
                 onChange={onResetToTemplateChange}
             >
                 Reset to template (replaces all content)
@@ -357,7 +363,7 @@ export function ResetToTemplateOption({
                 <Flex
                     alignItems="center"
                     gap="size-100"
-                    UNSAFE_className={resetToTemplate ? 'reset-warning-visible' : 'reset-warning-hidden'}
+                    UNSAFE_className={active ? 'reset-warning-visible' : 'reset-warning-hidden'}
                 >
                     <Alert size="S" UNSAFE_className="text-orange-500 flex-shrink-0" />
                     <Text UNSAFE_className="text-xs text-orange-600">
