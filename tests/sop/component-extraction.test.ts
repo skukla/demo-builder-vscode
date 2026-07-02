@@ -275,7 +275,7 @@ describe('SOP: Component Extraction', () => {
             /**
              * These components have 1 usage but are kept as acceptable technical debt:
              * - LoadingOverlay: 64 lines, used by WizardContainer
-             * - NumberedInstructions: 72 lines, used by MeshErrorDialog
+             * - NumberedInstructions: 72 lines, used by GitHubAppInstallDialog
              *
              * Rationale: Small components that may gain future usage.
              * Inlining would cause code churn for minimal benefit.

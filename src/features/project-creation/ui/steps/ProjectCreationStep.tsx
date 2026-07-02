@@ -3,10 +3,8 @@ import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getCancelButtonText } from '../helpers/buttonTextHelpers';
-import { getStackById } from '../hooks/useSelectedStack';
 import { buildProjectConfig, ImportedSettings } from '../wizard/wizardHelpers';
 import { isProgressActive } from './projectCreationPredicates';
-import { hasMeshInDependencies } from '@/core/constants';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { PageFooter } from '@/core/ui/components/layout/PageFooter';
@@ -14,7 +12,6 @@ import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayo
 import { vscode, webviewClient } from '@/core/ui/utils/vscode-api';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { GitHubAppInstallDialog } from '@/features/eds/ui/components';
-import { MeshErrorDialog } from '@/features/mesh/ui/steps/components/MeshErrorDialog';
 import { DemoPackage } from '@/types/demoPackages';
 import { WizardState } from '@/types/webview';
 
@@ -84,67 +81,6 @@ function ErrorContent({ isCancelled, errorMessage }: {
     );
 }
 
-type DetectedMeshInfo = { meshId?: string; meshStatus?: 'deployed' | 'not-deployed' | 'pending' | 'error'; endpoint?: string };
-
-/**
- * Run API Mesh access check for the selected workspace.
- * Returns mesh info on success, null on failure, undefined if no mesh found.
- */
-async function runMeshCheck(
-    state: WizardState,
-    stack: import('@/types/stacks').Stack | undefined,
-    dependencies: string[],
-    updateState: (updates: Partial<WizardState>) => void,
-    setMeshCheckResult: (result: MeshCheckResult | null) => void,
-    setPhase: (phase: StepPhase) => void,
-): Promise<DetectedMeshInfo | null | undefined> {
-    setPhase('checking-mesh');
-    setMeshCheckResult(null);
-
-    try {
-        const result = await webviewClient.request<MeshCheckResult>('check-api-mesh', {
-            workspaceId: state.adobeWorkspace?.id,
-            projectId: state.adobeProject?.id,
-            selectedComponents: stack ? [
-                stack.frontend, stack.backend, ...dependencies,
-            ].filter(Boolean) : [],
-        });
-
-        // The API Mesh API being absent is NOT a dead-end: the deploy path auto-subscribes it
-        // (ensureMeshApiSubscribed runs before deployMeshComponent, targeting the selected
-        // workspace) for both newly-created and selected-existing projects. Only a genuine
-        // check failure (success=false) still gates here; "not enabled" falls through so
-        // creation proceeds and the subscribe adds the API.
-        if (!result.success) {
-            setMeshCheckResult(result);
-            setPhase('mesh-error');
-            return null;
-        }
-
-        if (result.meshExists && result.meshId) {
-            const meshInfo: DetectedMeshInfo = {
-                meshId: result.meshId,
-                meshStatus: result.meshStatus,
-                endpoint: result.endpoint,
-            };
-            updateState({
-                apiMesh: { isChecking: false, apiEnabled: true, meshExists: true, ...meshInfo },
-            });
-            return meshInfo;
-        }
-
-        return undefined;
-    } catch (error) {
-        setMeshCheckResult({
-            success: false,
-            apiEnabled: false,
-            error: error instanceof Error ? error.message : 'Failed to check API Mesh access',
-        });
-        setPhase('mesh-error');
-        return null;
-    }
-}
-
 /** Determine StepPhase from creation progress */
 function derivePhaseFromProgress(
     progress: WizardState['creationProgress'],
@@ -186,35 +122,14 @@ function StepContentArea(props: {
     isOpeningProject: boolean;
     showGenericError: boolean;
     isCancelled: boolean;
-    meshCheckResult: MeshCheckResult | null;
     githubAppInstallData: GitHubAppInstallData | null;
-    onRetryMeshCheck: () => void;
-    onBack: () => void;
     onGitHubAppInstalled: () => void;
 }) {
     const {
         phase, progress, isActive, isCompleted, isOpeningProject,
-        showGenericError, isCancelled, meshCheckResult, githubAppInstallData,
-        onRetryMeshCheck, onBack, onGitHubAppInstalled,
+        showGenericError, isCancelled, githubAppInstallData,
+        onGitHubAppInstalled,
     } = props;
-
-    if (phase === 'checking-mesh') {
-        return (
-            <CenteredFeedbackContainer>
-                <LoadingDisplay size="L" message="Checking API Mesh Access" subMessage="Verifying workspace configuration..." />
-            </CenteredFeedbackContainer>
-        );
-    }
-
-    if (phase === 'mesh-error' && meshCheckResult) {
-        return (
-            <MeshErrorDialog
-                error={meshCheckResult.error || 'Could not verify API Mesh access for this workspace.'}
-                onRetry={onRetryMeshCheck}
-                onBack={onBack}
-            />
-        );
-    }
 
     if (phase === 'github-app-install' && githubAppInstallData) {
         return (
@@ -262,7 +177,6 @@ function StepContentArea(props: {
 
 /** Footer area - renders the appropriate buttons for each phase */
 function StepFooterArea(props: {
-    isCheckingMesh: boolean;
     isActive: boolean;
     isGitHubAppInstall: boolean;
     isCompleted: boolean;
@@ -275,17 +189,17 @@ function StepFooterArea(props: {
     onOpenProject: () => void;
 }) {
     const {
-        isCheckingMesh, isActive, isGitHubAppInstall, isCompleted,
+        isActive, isGitHubAppInstall, isCompleted,
         isOpeningProject, showGenericError, isCancelling, hasError,
         onBack, onCancel, onOpenProject,
     } = props;
 
-    if (isCheckingMesh || isActive || isGitHubAppInstall) {
+    if (isActive || isGitHubAppInstall) {
         return (
             <PageFooter
                 leftContent={
-                    <Button variant="secondary" onPress={isCheckingMesh ? onBack : onCancel} isQuiet isDisabled={isCancelling}>
-                        {getCancelButtonText(isCheckingMesh, isCancelling)}
+                    <Button variant="secondary" onPress={onCancel} isQuiet isDisabled={isCancelling}>
+                        {getCancelButtonText(false, isCancelling)}
                     </Button>
                 }
                 constrainWidth={true}
@@ -322,17 +236,7 @@ interface ProjectCreationStepProps {
     packages?: DemoPackage[];
 }
 
-interface MeshCheckResult {
-    success: boolean;
-    apiEnabled: boolean;
-    meshExists?: boolean;
-    meshId?: string;
-    meshStatus?: 'deployed' | 'not-deployed' | 'pending' | 'error';
-    endpoint?: string;
-    error?: string;
-}
-
-type StepPhase = 'checking-mesh' | 'mesh-error' | 'github-app-install' | 'creating' | 'completed' | 'failed' | 'cancelled';
+type StepPhase = 'github-app-install' | 'creating' | 'completed' | 'failed' | 'cancelled';
 
 interface GitHubAppInstallData {
     owner: string;
@@ -341,26 +245,13 @@ interface GitHubAppInstallData {
     message: string;
 }
 
-export function ProjectCreationStep({ state, updateState, onBack, importedSettings, packages }: ProjectCreationStepProps) {
+export function ProjectCreationStep({ state, onBack, importedSettings, packages }: ProjectCreationStepProps) {
     const progress = state.creationProgress;
     const [isCancelling, setIsCancelling] = useState(false);
     const [isOpeningProject, setIsOpeningProject] = useState(false);
     const [phase, setPhase] = useState<StepPhase>('creating');
-    const [meshCheckResult, setMeshCheckResult] = useState<MeshCheckResult | null>(null);
     const [githubAppInstallData, setGitHubAppInstallData] = useState<GitHubAppInstallData | null>(null);
 
-    // Get stack directly from config - source of truth for components
-    const stack = useMemo(
-        () => state.selectedStack ? getStackById(state.selectedStack) : undefined,
-        [state.selectedStack],
-    );
-
-    // Determine if checks are needed - check both stack dependencies and user-selected optional deps
-    const effectiveDependencies = useMemo(
-        () => [...(stack?.dependencies || []), ...(state.selectedOptionalDependencies || [])],
-        [stack?.dependencies, state.selectedOptionalDependencies],
-    );
-    const needsMeshCheck = hasMeshInDependencies(effectiveDependencies);
     const needsGitHubAppCheck = useMemo(() => {
         const stackId = state.selectedStack;
         if (!stackId) return false;
@@ -413,32 +304,15 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
      * Run pre-flight checks before starting project creation
      */
     const runPreFlightChecks = useCallback(async () => {
-        // Run mesh check if needed (returns null on failure, meshInfo on success, undefined if no mesh)
-        const meshInfo = needsMeshCheck
-            ? await runMeshCheck(state, stack, effectiveDependencies, updateState, setMeshCheckResult, setPhase)
-            : undefined;
-
-        if (meshInfo === null) return; // Mesh check failed, phase already set
-
         const githubAppOk = await checkGitHubApp();
         if (!githubAppOk) return;
 
         // All checks passed, start creation
         setPhase('creating');
 
-        const stateWithMeshInfo = meshInfo ? {
-            ...state,
-            apiMesh: { isChecking: false, apiEnabled: true, meshExists: true, ...meshInfo },
-        } : state;
-        // eslint-disable-next-line no-console
-        console.log('[ProjectCreationStep] Before buildProjectConfig - state.edsConfig:', {
-            hasEdsConfig: !!stateWithMeshInfo.edsConfig,
-            repoUrl: stateWithMeshInfo.edsConfig?.repoUrl,
-            selectedStack: stateWithMeshInfo.selectedStack,
-        });
-        const projectConfig = buildProjectConfig(stateWithMeshInfo, importedSettings, packages);
+        const projectConfig = buildProjectConfig(state, importedSettings, packages);
         vscode.createProject(projectConfig);
-    }, [needsMeshCheck, checkGitHubApp, state, stack, effectiveDependencies, updateState, importedSettings, packages]);
+    }, [checkGitHubApp, state, importedSettings, packages]);
 
     /**
      * Handle detected GitHub app installation
@@ -450,15 +324,6 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
         const projectConfig = buildProjectConfig(state, importedSettings, packages);
         vscode.createProject(projectConfig);
     }, [state, importedSettings, packages]);
-
-    /**
-     * Check API Mesh access for the selected workspace
-     * @deprecated Use runPreFlightChecks instead
-     */
-    const checkMeshAccess = useCallback(async () => {
-        // Delegated to runPreFlightChecks
-        await runPreFlightChecks();
-    }, [runPreFlightChecks]);
 
     // Run pre-flight checks on mount
     useEffect(() => {
@@ -493,19 +358,14 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
         }, TIMEOUTS.PROJECT_OPEN_TRANSITION);
     };
 
-    const handleRetryMeshCheck = useCallback(() => {
-        checkMeshAccess();
-    }, [checkMeshAccess]);
-
     const isCancelled = phase === 'cancelled';
     const isFailed = phase === 'failed';
     const isCompleted = phase === 'completed';
     const isActive = phase === 'creating' && isProgressActive(progress, isCancelled, isFailed, isCompleted);
 
-    // Helper: Should show generic error UI (not mesh-error or github-app-install dialogs)
+    // Helper: Should show generic error UI (not the github-app-install dialog)
     const showGenericError = (progress?.error || isCancelled || isFailed) &&
-        phase !== 'mesh-error' && phase !== 'github-app-install';
-    const isCheckingMesh = phase === 'checking-mesh';
+        phase !== 'github-app-install';
     const isGitHubAppInstall = phase === 'github-app-install';
 
     return (
@@ -520,17 +380,13 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
                         isOpeningProject={isOpeningProject}
                         showGenericError={!!showGenericError}
                         isCancelled={isCancelled}
-                        meshCheckResult={meshCheckResult}
                         githubAppInstallData={githubAppInstallData}
-                        onRetryMeshCheck={handleRetryMeshCheck}
-                        onBack={onBack}
                         onGitHubAppInstalled={handleGitHubAppInstalled}
                     />
                 </SingleColumnLayout>
             </div>
 
             <StepFooterArea
-                isCheckingMesh={isCheckingMesh}
                 isActive={isActive}
                 isGitHubAppInstall={isGitHubAppInstall}
                 isCompleted={isCompleted}

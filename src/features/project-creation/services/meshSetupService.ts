@@ -220,6 +220,14 @@ export async function deployNewMesh(
         }
     };
 
+    // Self-detect an existing mesh so a redeploy uses the update strategy.
+    // The Create Project pre-flight no longer supplies meshId, so describe the
+    // workspace mesh here (deployNewMesh already runs inside withOrgContext, so
+    // describe is org-targeted). Without this, a workspace that already has a
+    // mesh would wrongly `create` and fail.
+    const { meshId: describedMeshId } = await fetchMeshInfoFromDescribe(logger);
+    const existingMeshId = apiMeshConfig?.meshId ?? describedMeshId;
+
     // Retry loop for mesh deployment
     let attempt = 0;
     const startTime = Date.now();
@@ -255,7 +263,7 @@ export async function deployNewMesh(
                         message: subMessage || message,
                     });
                 },
-                apiMeshConfig?.meshId,
+                existingMeshId,
             );
 
             if (meshDeployResult.success) {
