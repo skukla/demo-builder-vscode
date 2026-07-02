@@ -51,6 +51,12 @@ jest.mock('@/core/ui/components/layout', () => ({
             <div data-testid="right-column">{rightContent}</div>
         </div>
     ),
+    ContentWithSidebar: ({ children, sidebar }: any) => (
+        <div>
+            <div data-testid="left-column">{children}</div>
+            <div data-testid="right-column">{sidebar}</div>
+        </div>
+    ),
     PageHeader: ({ title, subtitle }: any) => (
         <div data-testid="page-header">
             <h1>{title}</h1>

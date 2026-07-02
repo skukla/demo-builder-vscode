@@ -9,7 +9,9 @@
  *
  * The SDK is MOCKED via the SDK client's getClient() — no live Adobe calls.
  * Asserts each wrapper calls the correct SDK method with the right arguments and
- * unwraps `.body`. Credential id field is `id_integration` (NOT `.id`).
+ * unwraps `.body`. The create response returns the id in `.id` (like the OAuth create);
+ * `.id_integration` only appears on getCredentials LIST entries — so create reads
+ * `id_integration ?? id`.
  */
 
 import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
@@ -103,6 +105,58 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
                 expect.objectContaining({ platform: 'apiKey', domain: 'localhost:3000' }),
             );
             expect(id).toBe('int-123');
+        });
+
+        it('should fall back to the create response .id when id_integration is absent (real Console shape)', async () => {
+            // The adobeId create endpoint returns the integration id in `.id` (like the
+            // OAuth create), not `.id_integration`. Regression for the empty-id_integration bug.
+            sdk.createAdobeIdCredential.mockResolvedValue({
+                body: { id: 'cred-id-789' },
+            });
+
+            const id = await fetcher.createAdobeIdCredential('org1', 'proj1', 'ws1', {
+                name: 'demo-builder-api-mesh', description: 'demo cred', platform: 'apiKey', domain: 'localhost:3000',
+            });
+
+            expect(id).toBe('cred-id-789');
+        });
+
+        it('should return an existing apiKey credential id_integration without creating one', async () => {
+            sdk.getCredentials.mockResolvedValue({
+                body: [
+                    { integration_type: 'oauth_server_to_server', id_integration: 's2s-cred' },
+                    { integration_type: 'apikey', integration_name: 'demo-builder-api-mesh', id_integration: 'existing-int' },
+                ],
+            });
+
+            const id = await fetcher.createAdobeIdCredential('org1', 'proj1', 'ws1', {
+                name: 'demo-builder-api-mesh', description: 'demo cred', platform: 'apiKey', domain: 'localhost:3000',
+            });
+
+            expect(id).toBe('existing-int');
+            expect(sdk.getCredentials).toHaveBeenCalledWith('org1', 'proj1', 'ws1');
+            expect(sdk.createAdobeIdCredential).not.toHaveBeenCalled();
+        });
+
+        it('should create when no apiKey credential matches by name', async () => {
+            sdk.getCredentials.mockResolvedValue({
+                body: [
+                    { integration_type: 'apikey', integration_name: 'some-other-cred', id_integration: 'other-int' },
+                ],
+            });
+            sdk.createAdobeIdCredential.mockResolvedValue({
+                body: { id_integration: 'new-int' },
+            });
+
+            const id = await fetcher.createAdobeIdCredential('org1', 'proj1', 'ws1', {
+                name: 'demo-builder-api-mesh', description: 'demo cred', platform: 'apiKey', domain: 'localhost:3000',
+            });
+
+            expect(id).toBe('new-int');
+            expect(sdk.createAdobeIdCredential).toHaveBeenCalledWith(
+                'org1', 'proj1', 'ws1',
+                expect.objectContaining({ name: 'demo-builder-api-mesh', platform: 'apiKey' }),
+            );
         });
     });
 

@@ -159,4 +159,28 @@ describe('AppBuilderComponentsStepContent', () => {
             );
         });
     });
+
+    describe('showCustomDoor prop', () => {
+        it('shows the custom-URL door by default (preserves existing callers)', () => {
+            render(<AppBuilderComponentsStepContent {...defaultProps} />);
+            expect(
+                screen.getByRole('textbox', { name: /App Builder component.*url/i }),
+            ).toBeInTheDocument();
+        });
+
+        it('shows the custom-URL door when showCustomDoor is true', () => {
+            render(<AppBuilderComponentsStepContent {...defaultProps} showCustomDoor />);
+            expect(
+                screen.getByRole('textbox', { name: /App Builder component.*url/i }),
+            ).toBeInTheDocument();
+        });
+
+        it('hides the custom-URL door when showCustomDoor is false', () => {
+            render(<AppBuilderComponentsStepContent {...defaultProps} showCustomDoor={false} />);
+            expect(
+                screen.queryByRole('textbox', { name: /App Builder component.*url/i }),
+            ).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /Add/i })).not.toBeInTheDocument();
+        });
+    });
 });

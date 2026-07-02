@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Decomposed builder — Architecture dissolved into Commerce (backend) + Storefront (frontend) + Integrations</title>
+<style>
+  :root {
+    --bg:#1e1e1e; --panel:#252526; --panel-2:#2d2d2e; --rail-bg:#1b1b1c;
+    --border:#393939; --border-soft:#303031;
+    --text:#e8e8e8; --text-dim:#9a9a9a; --text-faint:#6c6c6c;
+    --blue:#378ef0; --blue-deep:#2680eb; --blue-ring:rgba(55,142,240,.35);
+    --green:#33ab84; --gray-dot:#4a4a4a; --gray-dot-bd:#6a6a6a;
+    --radius:8px; --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box} html,body{margin:0;padding:0}
+  body{background:#141414;color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.5;padding:24px}
+
+  .toolbar{max-width:1200px;margin:0 auto 14px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+  .toolbar h1{font-size:15px;margin:0 8px 0 0;font-weight:600}
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:999px;overflow:hidden;background:var(--panel)}
+  .seg button{appearance:none;border:0;background:transparent;color:var(--text-dim);padding:7px 15px;font-family:var(--sans);font-size:13px;cursor:pointer}
+  .seg button.active{background:var(--blue-deep);color:#fff}
+  .seg button:not(.active):hover{background:var(--panel-2);color:var(--text)}
+  .seg.small button{padding:5px 12px;font-size:12px}
+  .label{color:var(--text-faint);font-size:12px}
+
+  .frame{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:268px 1fr;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;min-height:660px}
+
+  /* rail */
+  .rail{background:var(--rail-bg);border-right:1px solid var(--border-soft);padding:22px 18px}
+  .rail .kicker{font-size:11px;letter-spacing:.12em;color:var(--text-faint);margin-bottom:18px}
+  .step{display:flex;align-items:flex-start;gap:12px;position:relative;padding-bottom:20px}
+  .step:last-child{padding-bottom:0}
+  .dot{width:22px;height:22px;border-radius:50%;flex:0 0 22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;z-index:1}
+  .dot.done{background:var(--green)} .dot.current{background:var(--blue);box-shadow:0 0 0 4px var(--blue-ring)} .dot.upcoming{background:var(--gray-dot);border:1px solid var(--gray-dot-bd)}
+  .step:not(:last-child)::before{content:"";position:absolute;left:10px;top:24px;bottom:0;width:0;border-left:2px dashed #3a3a3a}
+  .step.done:not(:last-child)::before{border-left-color:#2c5d4b}
+  .step .label{font-size:14px;color:var(--text-dim);padding-top:1px}
+  .step.current>.label{color:var(--blue);font-weight:600}
+  .step.done>.label{color:var(--text)}
+
+  /* derived architecture summary INSIDE the rail (read-only) */
+  .archsum{margin:8px 0 2px 34px;font-size:11.5px;color:var(--text-faint);border-left:2px solid var(--border);padding:2px 0 2px 10px}
+  .archsum b{color:var(--text-dim);font-weight:600}
+
+  .children{margin:6px 0 0 34px}
+  .child{display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer}
+  .child .cdot{width:14px;height:14px;border-radius:50%;flex:0 0 14px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff}
+  .cdot.done{background:var(--green)} .cdot.current{background:var(--blue);box-shadow:0 0 0 3px var(--blue-ring)} .cdot.upcoming{background:var(--gray-dot);border:1px solid var(--gray-dot-bd)}
+  .child .clabel{font-size:13px;color:var(--text-dim)}
+  .child.current .clabel{color:var(--text);font-weight:600}
+  .child:hover .clabel{color:var(--text)}
+
+  /* content */
+  .content{padding:28px 38px}
+  .breadcrumb{font-size:12px;color:var(--text-faint);margin-bottom:4px}
+  .area-title{font-size:21px;font-weight:700;margin:0 0 4px}
+  .area-desc{color:var(--text-dim);margin:0 0 22px;font-size:13px}
+
+  .btn{appearance:none;border:0;border-radius:18px;padding:9px 18px;font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer}
+  .btn.primary{background:var(--blue-deep);color:#fff;display:inline-flex;gap:8px;align-items:center}
+  .btn.ghost{background:var(--panel-2);color:var(--text)}
+  .btn.small{padding:6px 13px;font-size:12px}
+  .btn[disabled]{opacity:.45;cursor:not-allowed}
+  .footer{display:flex;justify-content:space-between;align-items:center;margin-top:30px;padding-top:16px;border-top:1px solid var(--border-soft)}
+  .footer .right{display:flex;gap:12px}
+
+  /* accordion */
+  .acc{border:1px solid var(--border-soft);border-radius:6px;overflow:hidden}
+  .acc-sec+.acc-sec{border-top:1px solid var(--border-soft)}
+  .acc-head{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;background:var(--panel);border:0;cursor:pointer;color:var(--text);font-family:var(--sans);font-size:14px;text-align:left}
+  .acc-head:hover:not([disabled]){background:var(--panel-2)}
+  .acc-head[disabled]{cursor:not-allowed;color:var(--text-faint)}
+  .acc-head .caret{width:14px;color:var(--text-dim);transition:transform .15s}
+  .acc-sec.open .acc-head .caret{transform:rotate(90deg)}
+  .acc-mark{width:20px;height:20px;border-radius:50%;flex:0 0 20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
+  .acc-mark.done{background:var(--green)} .acc-mark.current{background:var(--blue)} .acc-mark.locked{background:transparent;color:var(--text-faint)}
+  .acc-title{font-weight:600}
+  .acc-status{margin-left:auto;font-size:12px;color:var(--text-dim)}
+  .acc-status.locked{color:var(--text-faint)} .acc-status.done{color:var(--green)}
+  .acc-body{padding:6px 18px 20px 48px;background:#202021;display:none}
+  .acc-sec.open .acc-body{display:block}
+
+  .field{margin:14px 0}
+  .field label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:5px}
+  .field input,.field select{width:100%;background:#161617;border:1px solid var(--border);border-radius:5px;color:var(--text);padding:9px 11px;font-size:13px;font-family:var(--sans)}
+
+  /* radio cards (backend / frontend pickers) */
+  .cards{display:flex;gap:12px;flex-wrap:wrap;margin:6px 0}
+  .card{flex:1;min-width:200px;border:1px solid var(--border);border-radius:6px;padding:14px;cursor:pointer;background:#161617}
+  .card:hover:not(.disabled){border-color:#555}
+  .card.sel{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
+  .card.disabled{opacity:.4;cursor:not-allowed}
+  .card .ct{font-weight:600;margin-bottom:3px}
+  .card .cd{font-size:12px;color:var(--text-dim)}
+  .card .cx{font-size:11px;color:var(--text-faint);margin-top:6px}
+
+  /* sign-in gate */
+  .signin{text-align:center;padding:46px 20px}
+  .signin .key{font-size:32px;margin-bottom:12px;opacity:.85}
+  .signin h3{margin:0 0 6px;font-size:16px}
+  .signin p{margin:0 0 20px;color:var(--text-dim);font-size:13px}
+
+  /* integration tiles */
+  .tiles{display:flex;flex-direction:column;gap:12px}
+  .tile{border:1px solid var(--border-soft);border-radius:6px;background:var(--panel);padding:16px}
+  .tile .th{display:flex;align-items:center;gap:10px}
+  .tile .tname{font-weight:600}
+  .tile .tdesc{font-size:12px;color:var(--text-dim);margin:6px 0 0}
+  .tile .tactions{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .pill{font-size:11px;padding:2px 9px;border-radius:999px;border:1px solid var(--border)}
+  .pill.on{background:rgba(51,171,132,.15);border-color:transparent;color:var(--green)}
+  .pill.off{color:var(--text-faint)}
+  .pill.gate{background:rgba(55,142,240,.12);border-color:transparent;color:var(--blue)}
+  .tnote{font-size:12px;color:var(--text-faint);margin-top:10px;border-left:2px solid var(--border);padding-left:10px}
+
+  .callout{display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid var(--blue-ring);background:rgba(55,142,240,.10);border-radius:6px;margin:0 0 16px;font-size:13px}
+  .callout .key{font-size:18px}
+  .callout .btn{margin-left:auto}
+
+  .anno{max-width:1200px;margin:14px auto 0;font-size:12px;color:var(--text-faint);border-left:2px solid var(--border);padding-left:12px}
+  .anno b{color:var(--text-dim)}
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h1>Decomposed builder</h1>
+  <span class="label">Area:</span>
+  <div class="seg" id="areaSeg">
+    <button data-area="commerce" class="active">Commerce (backend)</button>
+    <button data-area="storefront">Storefront (frontend)</button>
+    <button data-area="integrations">Integrations</button>
+  </div>
+  <span class="label">Brand:</span>
+  <div class="seg small" id="pkgSeg">
+    <button data-pkg="citisignal" class="active">Citisignal</button>
+    <button data-pkg="isle5">Isle5</button>
+    <button data-pkg="buildright">Buildright</button>
+  </div>
+</div>
+
+<div class="frame">
+  <div class="rail" id="rail"></div>
+  <div class="content" id="pane"></div>
+</div>
+
+<div class="anno" id="anno"></div>
+
+<script>
+  // ---- data derived from stacks.json + demo-packages.json + components.json ----
+  const PKG_STACKS = {
+    citisignal: ['headless-paas','eds-paas','eds-accs'],   // non-rectangular: no headless-accs
+    isle5:      ['eds-paas','eds-accs'],                   // frontend fixed = eds
+    buildright: ['eds-paas'],                              // single combo; ACO required
+  };
+  const PKG_ACO = { citisignal:'excluded', isle5:'excluded', buildright:'required' };
+  const FE = { headless:'headless', 'eds-storefront':'eds' };
+  const BE = { 'adobe-commerce-paas':'paas', 'adobe-commerce-accs':'accs' };
+  const stackId = (fe,be) => `${FE[fe]}-${BE[be]}`;
+  const FE_LABEL = { headless:'Headless', 'eds-storefront':'Edge Delivery Storefront' };
+  const BE_LABEL = { 'adobe-commerce-paas':'Adobe Commerce (PaaS)', 'adobe-commerce-accs':'Adobe Commerce (ACCS / SaaS)' };
+
+  const state = {
+    pkg: 'citisignal', area: 'commerce',
+    backend: null, frontend: null,
+    authAdobe: false,   // Commerce ACCS sign-in
+    authIO: false,      // Adobe I/O sign-in for Mesh
+    meshOn: false, epOn: false,
+    open: { backend:true, connection:false, business:false, catalog:false, frontend:true, sfsetup:false },
+  };
+
+  const allowed = () => PKG_STACKS[state.pkg];
+  const backendsFor = (fe) => Object.keys(BE).filter(be => allowed().includes(stackId(fe||'__', be)) || (!fe && allowed().some(s=>s.endsWith('-'+BE[be]))));
+  const frontendsFor = (be) => Object.keys(FE).filter(fe => allowed().includes(stackId(fe, be||'__')) || (!be && allowed().some(s=>s.startsWith(FE[fe]+'-'))));
+  const isAccs = () => state.backend === 'adobe-commerce-accs';
+  const archLabel = () => {
+    if (!state.backend && !state.frontend) return 'Not chosen yet';
+    const fe = state.frontend ? FE_LABEL[state.frontend] : '—';
+    const be = state.backend ? BE_LABEL[state.backend].replace('Adobe Commerce ','') : '—';
+    return `${fe} + ${be}`;
+  };
+
+  // ---------- RAIL ----------
+  function renderRail() {
+    const areas = [
+      {id:'commerce', label:'Commerce'},
+      {id:'storefront', label:'Storefront'},
+      {id:'integrations', label:'Integrations'},
+    ];
+    const children = areas.map(a=>{
+      const cur = a.id===state.area;
+      return `<div class="child ${cur?'current':''}" data-area="${a.id}">
+        <div class="cdot ${cur?'current':'upcoming'}">${cur?'•':''}</div>
+        <div class="clabel">${a.label}</div></div>`;
+    }).join('');
+    document.getElementById('rail').innerHTML = `
+      <div class="kicker">SETUP PROGRESS</div>
+      <div class="step done"><div class="dot done">✓</div><div class="label">Demo Setup</div></div>
+      <div class="step done"><div class="dot done">✓</div><div class="label">Prerequisites</div></div>
+      <div class="step current">
+        <div class="dot current">•</div>
+        <div style="flex:1">
+          <div class="label">Build Your Project</div>
+          <div class="archsum">Architecture: <b>${archLabel()}</b></div>
+          <div class="children">${children}</div>
+        </div>
+      </div>
+      <div class="step upcoming"><div class="dot upcoming"></div><div class="label">Final Review</div></div>
+      <div class="step upcoming"><div class="dot upcoming"></div><div class="label">Create Project</div></div>`;
+    document.querySelectorAll('#rail .child').forEach(c=>c.addEventListener('click',()=>{state.area=c.dataset.area;render();}));
+  }
+
+  const footer = (en)=>`<div class="footer"><button class="btn ghost">Cancel</button>
+    <div class="right"><button class="btn ghost">Back</button>
+    <button class="btn primary" ${en?'':'disabled'}>Continue</button></div></div>`;
+
+  // ---------- COMMERCE (backend area) ----------
+  function backendCards() {
+    const opts = backendsFor(state.frontend);
+    return Object.keys(BE).map(be=>{
+      const ok = opts.includes(be);
+      const sel = state.backend===be;
+      const why = !ok ? `Not available for ${state.pkg}${state.frontend?(' with '+FE_LABEL[state.frontend]):''}` : '';
+      return `<div class="card ${sel?'sel':''} ${ok?'':'disabled'}" ${ok?`data-be="${be}"`:''}>
+        <div class="ct">${BE_LABEL[be]}</div>
+        <div class="cd">${be==='adobe-commerce-accs'?'SaaS backend — requires Adobe sign-in':'Platform-as-a-Service backend'}</div>
+        ${why?`<div class="cx">${why}</div>`:''}</div>`;
+    }).join('');
+  }
+
+  function commerceSection(id, mark, title, status, bodyHtml, locked) {
+    const open = !locked && state.open[id];
+    return `<div class="acc-sec ${open?'open':''}" data-sec="${id}">
+      <button class="acc-head" ${locked?'disabled':''}>
+        <span class="caret">▸</span>
+        <span class="acc-mark ${mark}">${mark==='done'?'✓':mark==='locked'?'🔒':''}</span>
+        <span class="acc-title">${title}</span>
+        <span class="acc-status ${mark==='done'?'done':locked?'locked':''}">${status}</span>
+      </button>
+      <div class="acc-body">${bodyHtml}</div></div>`;
+  }
+
+  function renderCommerce() {
+    const backendChosen = !!state.backend;
+    const needSignin = backendChosen && isAccs() && !state.authAdobe;
+    const acoMode = PKG_ACO[state.pkg];
+
+    // backend section (the decomposed "architecture" choice)
+    const backendSec = commerceSection('backend',
+      backendChosen?'done':'current',
+      'Backend',
+      backendChosen?BE_LABEL[state.backend]:'Choose your commerce backend',
+      `<div class="cards">${backendCards()}</div>`, false);
+
+    if (!backendChosen) {
+      return header('Commerce','Choose and configure your commerce backend.') +
+        `<div class="acc">${backendSec}</div>` + footer(false);
+    }
+
+    if (needSignin) {
+      return header('Commerce','Sign in to Adobe to configure your ACCS backend.') +
+        `<div class="acc">${backendSec}</div>` +
+        `<div class="signin"><div class="key">🔑</div><h3>Connect your Adobe account</h3>
+          <p>ACCS is a SaaS backend — sign in with Adobe to continue.</p>
+          <button class="btn primary" id="doAdobe">👤 Sign In with Adobe</button></div>` +
+        footer(false);
+    }
+
+    const conn = commerceSection('connection','current','Connection','Endpoint + environment',
+      `<div class="field"><label>ACCS GraphQL endpoint</label><input value="https://demo.commerce.adobe.io/graphql"/></div>
+       <div class="field"><label>Environment ID</label><input value="ABCD-1234"/></div>`, false);
+    const biz = commerceSection('business','done','Business Structure','Main Website / Main Store / Default View',
+      `<div class="field"><label>Website</label><select><option>Main Website</option></select></div>
+       <div class="field"><label>Store View</label><select><option>Default View (en)</option></select></div>`, false);
+    const acoBody = acoMode==='excluded'
+      ? `<div class="tnote">Adobe Commerce Optimizer is not offered for ${state.pkg}.</div>
+         <div class="field"><label>Catalog Service</label><input value="Provided by backend" disabled/></div>
+         <div class="field"><label>Live Search</label><input value="Provided by backend" disabled/></div>`
+      : `<div class="field"><label>Adobe Commerce Optimizer (ACO) ${acoMode==='required'?'· required':''}</label>
+           <select ${acoMode==='required'?'disabled':''}><option>Enabled</option></select></div>
+         <div class="tnote">ACO provides Catalog Service + Live Search.</div>`;
+    const catalog = commerceSection('catalog','locked','Catalog','Choose a store view first', acoBody, false /*demo: unlocked*/);
+
+    return header('Commerce','Connect your store and choose what to sell.') +
+      `<div class="acc">${backendSec}${conn}${biz}${catalog}</div>` + footer(true);
+  }
+
+  // ---------- STOREFRONT (frontend area) ----------
+  function frontendCards() {
+    const opts = frontendsFor(state.backend);
+    return Object.keys(FE).map(fe=>{
+      const ok = opts.includes(fe);
+      const sel = state.frontend===fe;
+      const why = !ok ? `Not available for ${state.pkg}${state.backend?(' with '+BE_LABEL[state.backend].replace('Adobe Commerce ','')):''}` : '';
+      return `<div class="card ${sel?'sel':''} ${ok?'':'disabled'}" ${ok?`data-fe="${fe}"`:''}>
+        <div class="ct">${FE_LABEL[fe]}</div>
+        <div class="cd">${fe==='headless'?'No managed storefront (bring your own)':'Adobe-managed EDS storefront'}</div>
+        ${why?`<div class="cx">${why}</div>`:''}</div>`;
+    }).join('');
+  }
+  function renderStorefront() {
+    const chosen = !!state.frontend;
+    const feSec = `<div class="acc-sec open"><button class="acc-head">
+        <span class="caret">▸</span><span class="acc-mark ${chosen?'done':'current'}">${chosen?'✓':''}</span>
+        <span class="acc-title">Frontend</span>
+        <span class="acc-status ${chosen?'done':''}">${chosen?FE_LABEL[state.frontend]:'Choose your storefront type'}</span>
+      </button><div class="acc-body"><div class="cards">${frontendCards()}</div></div></div>`;
+    let setup = '';
+    if (chosen && state.frontend==='eds-storefront') {
+      setup = `<div class="acc-sec"><button class="acc-head"><span class="caret">▸</span>
+        <span class="acc-mark locked">🔒</span><span class="acc-title">Storefront setup</span>
+        <span class="acc-status locked">GitHub + DA.live, repo, block libraries</span></button>
+        <div class="acc-body"><div class="field"><label>GitHub repo</label><input placeholder="org/repo"/></div></div></div>`;
+    } else if (chosen && state.frontend==='headless') {
+      setup = `<div class="tnote" style="margin-top:12px">Headless: no Adobe-managed storefront to configure. The backend is consumed via API by your own frontend.</div>`;
+    }
+    return header('Storefront','Choose and configure your storefront.') +
+      `<div class="acc">${feSec}${state.frontend==='eds-storefront'?setup:''}</div>${state.frontend==='headless'?setup:''}` +
+      footer(chosen);
+  }
+
+  // ---------- INTEGRATIONS (addons) ----------
+  function renderIntegrations() {
+    const meshVariant = state.backend && state.frontend ? stackId(state.frontend,state.backend) : null;
+    const meshAvail = meshVariant && (meshVariant==='eds-paas'||meshVariant==='eds-accs'||meshVariant==='headless-paas');
+    const meshGate = state.meshOn && !state.authIO;
+
+    const meshActions = !meshAvail
+      ? `<span class="pill off">N/A for this architecture</span>`
+      : meshGate
+        ? `<span class="pill gate">Needs Adobe I/O sign-in</span><button class="btn small primary" id="doIO">Sign in</button>`
+        : `<span class="pill ${state.meshOn?'on':'off'}">${state.meshOn?'On':'Off'}</span><button class="btn small ghost" id="toggleMesh">${state.meshOn?'Remove':'Add'}</button>`;
+
+    const mesh = `<div class="tile"><div class="th">
+        <span class="tname">API Mesh</span>
+        <div class="tactions">${meshActions}</div></div>
+        <div class="tdesc">GraphQL bridge between your storefront and commerce backend. Deploys to Adobe I/O (App Builder) and provides MESH_ENDPOINT to the storefront.</div>
+        ${state.meshOn&&!meshGate?'<div class="tnote">App Builder runtime is provisioned automatically as the Mesh deployment target — no separate choice.</div>':''}
+      </div>`;
+
+    const ep = `<div class="tile"><div class="th">
+        <span class="tname">Experience Platform</span>
+        <div class="tactions"><span class="pill ${state.epOn?'on':'off'}">${state.epOn?'On':'Off'}</span>
+        <button class="btn small ghost" id="toggleEp">${state.epOn?'Remove':'Add'}</button></div></div>
+        <div class="tdesc">Adobe Experience Platform integration via Commerce Data Sharing. Requires an API key + datastream ID.</div>
+        ${state.epOn?'<div class="field" style="margin-top:10px"><label>Datastream ID</label><input placeholder="EXPERIENCE_PLATFORM_DATASTREAM_ID"/></div>':''}
+      </div>`;
+
+    return header('Integrations','Connect optional Adobe services.') +
+      `<div class="tiles">${mesh}${ep}</div>
+       <div class="tnote" style="margin-top:14px"><b style="color:var(--text-dim)">Note:</b> Adobe Commerce Optimizer is <b style="color:var(--text-dim)">not</b> here — it lives in <b style="color:var(--text-dim)">Commerce → Catalog</b>, because it's a backend catalog service, not an integration.</div>` +
+      footer(true);
+  }
+
+  function header(title,desc){
+    return `<div class="breadcrumb">Build Your Project › ${title}</div>
+      <div class="area-title">${title}</div><div class="area-desc">${desc}</div>`;
+  }
+
+  const annos = {
+    commerce:`<b>Commerce = the backend.</b> The old "Architecture" choice is now this area's first decision (Backend: PaaS / ACCS), filtered by brand and cross-filtered against the frontend. ACCS triggers the sign-in gate (precondition, not a tab). Catalog holds ACO + its catalog-service/live-search.`,
+    storefront:`<b>Storefront = the frontend.</b> Frontend choice (EDS / Headless) lives here, cross-filtered against the backend. Try Citisignal + backend=ACCS, then come here: Headless is disabled (citisignal has no headless+accs).`,
+    integrations:`<b>Integrations = true add-ons.</b> API Mesh (carries the Adobe I/O sign-in gate; App Builder is its implied deployment target) and Experience Platform. ACO is intentionally absent — it's a Commerce/Catalog concern.`,
+  };
+
+  function render() {
+    renderRail();
+    const pane=document.getElementById('pane');
+    pane.innerHTML = state.area==='commerce'?renderCommerce():state.area==='storefront'?renderStorefront():renderIntegrations();
+    document.getElementById('anno').innerHTML = annos[state.area];
+
+    // wire
+    pane.querySelectorAll('[data-be]').forEach(c=>c.addEventListener('click',()=>{state.backend=c.dataset.be;
+      if(!isAccs())state.authAdobe=false; render();}));
+    pane.querySelectorAll('[data-fe]').forEach(c=>c.addEventListener('click',()=>{state.frontend=c.dataset.fe; render();}));
+    pane.querySelectorAll('.acc-head:not([disabled])').forEach(h=>{
+      const sec=h.closest('.acc-sec').dataset.sec;
+      h.addEventListener('click',()=>{ if(sec)state.open[sec]=!state.open[sec]; h.closest('.acc-sec').classList.toggle('open'); });
+    });
+    const adobe=document.getElementById('doAdobe'); if(adobe)adobe.addEventListener('click',()=>{state.authAdobe=true;state.open.connection=true;render();});
+    const io=document.getElementById('doIO'); if(io)io.addEventListener('click',()=>{state.authIO=true;render();});
+    const tm=document.getElementById('toggleMesh'); if(tm)tm.addEventListener('click',()=>{state.meshOn=!state.meshOn;render();});
+    const te=document.getElementById('toggleEp'); if(te)te.addEventListener('click',()=>{state.epOn=!state.epOn;render();});
+  }
+
+  document.getElementById('areaSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+    state.area=b.dataset.area;document.querySelectorAll('#areaSeg button').forEach(x=>x.classList.toggle('active',x===b));render();});
+  document.getElementById('pkgSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+    state.pkg=b.dataset.pkg;state.backend=null;state.frontend=null;state.authAdobe=false;
+    document.querySelectorAll('#pkgSeg button').forEach(x=>x.classList.toggle('active',x===b));render();});
+
+  render();
+</script>
+</body>
+</html>

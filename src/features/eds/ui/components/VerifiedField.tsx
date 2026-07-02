@@ -112,7 +112,7 @@ export function VerifiedField({
                     <Flex alignItems="center" gap="size-100">
                         <CheckmarkCircle
                             size="S"
-                            UNSAFE_className="text-green-500"
+                            UNSAFE_className="text-green-600"
                         />
                         <Text UNSAFE_style={{ color: 'var(--spectrum-semantic-positive-color-text-small)' }}>
                             Verified

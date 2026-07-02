@@ -181,7 +181,11 @@ describe('workspaceHandlers', () => {
             });
 
             expect(result.success).toBe(true);
-            expect(mockAuthManager.getWorkspaces).toHaveBeenCalled();
+            // Threads the selected org + project through to the fetch (not the stale cache).
+            expect(mockAuthManager.getWorkspaces).toHaveBeenCalledWith({
+                orgId: 'org-123',
+                projectId: 'proj-123',
+            });
         });
 
         it('should handle error when no current project', async () => {

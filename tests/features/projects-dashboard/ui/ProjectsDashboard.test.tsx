@@ -246,11 +246,11 @@ describe('ProjectsDashboard', () => {
             expect(screen.getByText(/your projects/i)).toBeInTheDocument();
         });
 
-        it('should display subtitle in PageHeader', () => {
-            // Given: ProjectsDashboard with projects
+        it('should not render the filler subtitle in PageHeader', () => {
+            // The descriptive subtitle was dropped as filler — the grid + New button
+            // make the purpose obvious, and the canonical header stays a single line.
             const projects = createMockProjects(2);
 
-            // When: Component renders
             renderWithProvider(
                 <ProjectsDashboard
                     projects={projects}
@@ -259,10 +259,10 @@ describe('ProjectsDashboard', () => {
                 />
             );
 
-            // Then: Subtitle text is visible
+            expect(screen.getByText(/your projects/i)).toBeInTheDocument();
             expect(
-                screen.getByText(/select a project to manage or create a new one/i)
-            ).toBeInTheDocument();
+                screen.queryByText(/select a project to manage or create a new one/i)
+            ).not.toBeInTheDocument();
         });
 
         it('should use PageHeader with constrained width', () => {

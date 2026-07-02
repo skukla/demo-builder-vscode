@@ -61,16 +61,19 @@ export const projectCreationHandlers = defineHandlers({
     'get-projects': authentication.handleGetProjects,
     'select-project': authentication.handleSelectProject,
     'check-project-apis': authentication.handleCheckProjectApis,
+    'create-adobe-project': authentication.handleCreateAdobeProject,
 
     // Workspace handlers
     'get-workspaces': authentication.handleGetWorkspaces,
     'select-workspace': authentication.handleSelectWorkspace,
     'create-workspace-credential': authentication.handleCreateWorkspaceCredential,
+    'create-adobe-workspace': authentication.handleCreateAdobeWorkspace,
 
     // Mesh handlers
     'check-api-mesh': meshHandlers['check-api-mesh'],
     'create-api-mesh': meshHandlers['create-api-mesh'],
     'delete-api-mesh': meshHandlers['delete-api-mesh'],
+    'ensure-mesh-api-subscribed': meshHandlers['ensure-mesh-api-subscribed'],
 
     // EDS handlers - GitHub
     'check-github-auth': eds.handleCheckGitHubAuth,

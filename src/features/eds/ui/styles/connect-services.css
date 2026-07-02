@@ -13,7 +13,7 @@
     align-items: start; /* Each card takes its natural height */
 }
 
-@media (max-width: 600px) {
+@media (max-width: 600px) { /* bp: linear / single-col — service cards 2→1 (registry: custom-spectrum.css) */
     .services-cards-grid {
         grid-template-columns: 1fr;
     }
@@ -155,4 +155,17 @@
 .dalive-input-form {
     display: flex;
     flex-direction: column;
+}
+
+/* The namespace Picker renders at Spectrum's default (large) field text, which
+   towers over the small label and the 13px Token field below it. Bring the label
+   and the selected value down to the card's compact field sizing so the label +
+   value read as one group. Spectrum's own rules are specific, so !important. */
+.dalive-namespace-picker label {
+    font-size: 12px !important;
+}
+.dalive-namespace-picker button,
+.dalive-namespace-picker button span {
+    font-size: 13px !important;
+    font-weight: 400 !important;
 }

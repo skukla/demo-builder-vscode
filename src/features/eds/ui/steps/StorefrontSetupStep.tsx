@@ -470,7 +470,7 @@ export function StorefrontSetupStep({
                     {/* Error state - show error message with recovery options */}
                     {setupState.phase === 'error' && (
                         <CenteredFeedbackContainer>
-                            <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
+                            <Flex direction="column" gap="size-200" alignItems="center" maxWidth="520px">
                                 <AlertCircle size="L" UNSAFE_className="text-red-600" />
                                 <Flex direction="column" gap="size-100" alignItems="center">
                                     <Text UNSAFE_className="text-xl font-medium">
@@ -495,7 +495,7 @@ export function StorefrontSetupStep({
                     {/* Success state - show completion message */}
                     {setupState.phase === 'completed' && (
                         <CenteredFeedbackContainer>
-                            <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
+                            <Flex direction="column" gap="size-200" alignItems="center" maxWidth="520px">
                                 <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
                                 <Flex direction="column" gap="size-100" alignItems="center">
                                     <Text UNSAFE_className="text-xl font-medium">

@@ -20,7 +20,7 @@ import type { AdobeProject } from '@/features/authentication/services/types';
 import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 import { ErrorCode } from '@/types/errorCodes';
 import { toAppError, isTimeout } from '@/types/errors';
-import { HandlerContext } from '@/types/handlers';
+import { HandlerContext, HandlerResponse } from '@/types/handlers';
 import { DataResult, SimpleResult } from '@/types/results';
 import { parseJSON, toError } from '@/types/typeGuards';
 
@@ -333,5 +333,66 @@ export async function handleCheckProjectApis(context: HandlerContext): Promise<D
     } catch (error) {
         context.logger.error('[Adobe Setup] Failed to check project APIs', error as Error);
         throw error;
+    }
+}
+
+/**
+ * create-adobe-project — create a new Adobe I/O App Builder project in-app.
+ *
+ * The "New" affordance is always offered; permission is validated HERE. Checks developer
+ * permission and, when absent, returns an `AUTH_FORBIDDEN`-coded error the UI surfaces
+ * inline (telegraph-on-attempt, no pre-flight probe). On success, refreshes the project
+ * list and acks the new selection (mirrors `handleSelectProject`). Never throws.
+ */
+export async function handleCreateAdobeProject(
+    context: HandlerContext,
+    payload: { name: string; description?: string },
+): Promise<HandlerResponse> {
+    if (!context.authManager) {
+        return { success: false, error: 'Authentication not available' };
+    }
+
+    const name = (payload?.name ?? '').trim();
+    const description = payload?.description ?? '';
+
+    try {
+        // Defensive permission re-check (guards a stale probe) → UI drops to Flow B.
+        const { hasPermissions, error: permError } = await context.authManager.testDeveloperPermissions();
+        if (!hasPermissions) {
+            return {
+                success: false,
+                code: ErrorCode.AUTH_FORBIDDEN,
+                error: permError
+                    || 'You do not have permission to create projects in this organization. Select an existing project instead.',
+            };
+        }
+
+        if (!name) {
+            return { success: false, error: 'Project name is required.' };
+        }
+
+        const project = await context.authManager.createProject(name, description);
+        if (!project) {
+            return {
+                success: false,
+                error: "Could not create the project. You may have hit your organization's project quota — "
+                    + 'select an existing project instead.',
+            };
+        }
+
+        // Refresh the project list and ack the new selection (best-effort).
+        try {
+            const projects = await context.authManager.getProjects();
+            await context.sendMessage('get-projects', projects);
+            await context.sendMessage('projectSelected', { projectId: project.id });
+        } catch (refreshError) {
+            context.debugLogger.debug('[Project] Post-create refresh failed:', refreshError);
+        }
+
+        context.logger.info(`[Project] Created App Builder project: ${project.name}`);
+        return { success: true, data: project };
+    } catch (error) {
+        context.logger.error('[Project] Failed to create project:', error as Error);
+        return { success: false, error: `Failed to create project: ${toError(error).message}` };
     }
 }

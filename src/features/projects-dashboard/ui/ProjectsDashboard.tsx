@@ -176,7 +176,6 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
             header={
                 <PageHeader
                     title="Your Projects"
-                    subtitle="Select a project to manage or create a new one"
                     constrainWidth
                 />
             }

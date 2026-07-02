@@ -10,7 +10,6 @@ import {
     EditProjectConfig,
     WizardStepConfigWithRequirements,
 } from '../wizardHelpers';
-import { hasMeshInDependencies } from '@/core/constants';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import type { ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
 import type { Stack } from '@/types/stacks';
@@ -330,21 +329,12 @@ export function useWizardState({
             };
         });
 
-        // Step 4: Determine if Adobe I/O credentials are needed
-        // Adobe I/O project/workspace required when mesh is included
-        // Adobe auth (sign-in only) required when mesh OR ACCS backend
-        const effectiveDeps = [
-            ...(selectedStack?.dependencies || []),
-            ...(state.selectedOptionalDependencies || []),
-        ];
-        const meshIncluded = hasMeshInDependencies(effectiveDeps);
-        const isAccsBackend = selectedStack?.backend === 'adobe-commerce-accs';
-
-        // Step 5: Apply stack-based, mode-based, and Adobe I/O-based filtering
+        // Step 4: Apply stack-based and mode-based filtering. Adobe sign-in is no
+        // longer a standalone step — it's subsumed into the Build step (Commerce's
+        // Sign-in sub-step + the Integrations Deployment-target sub-step), so no
+        // mesh/App-Builder gate inserts an "Adobe Authentication" step here.
         const filteredSteps = filterStepsForStack(stepsWithConditions, selectedStack, {
             isEditMode: !!editProject,
-            hasAdobeIO: meshIncluded,
-            hasAdobeAuth: meshIncluded || isAccsBackend,
         });
 
         return filteredSteps.map(step => ({
@@ -352,7 +342,12 @@ export function useWizardState({
             name: step.name,
             description: step.description,
         }));
-    }, [wizardSteps, stacks, state.selectedStack, state.selectedOptionalDependencies, editProject]);
+    }, [
+        wizardSteps,
+        stacks,
+        state.selectedStack,
+        editProject,
+    ]);
 
     // Step completion tracking
     // Neither import mode nor edit mode pre-marks steps as completed
@@ -387,15 +382,11 @@ export function useWizardState({
         if (orgActuallyChanged) {
             const isReviewMode = state.wizardMode && state.wizardMode !== 'create';
             if (isReviewMode) {
-                // Reset all org-dependent steps (project → workspace → mesh → settings)
-                // These form a cascade: org owns projects, projects own workspaces,
-                // workspaces own meshes, and settings may reference org credentials
-                // Remove org-dependent steps - user must re-traverse them
-                const orgDependentSteps: WizardStep[] = [
-                    'adobe-project',
-                    'adobe-workspace',
-                    'settings',
-                ];
+                // Reset the org-dependent build step. The Adobe I/O project +
+                // workspace pickers now live INSIDE build-your-project's Integrations
+                // (Mesh) tile, so resetting that step forces the user to re-traverse
+                // project/workspace selection (and any org-credentialed commerce area).
+                const orgDependentSteps: WizardStep[] = ['build-your-project'];
                 setCompletedSteps(prev =>
                     prev.filter(stepId => !orgDependentSteps.includes(stepId)),
                 );

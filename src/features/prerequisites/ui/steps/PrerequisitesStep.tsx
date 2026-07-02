@@ -66,7 +66,7 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
     );
 
     return (
-        <div className="container-wizard">
+        <div className={cn('container-wizard', 'prereq-fill')}>
             <Text marginBottom="size-200" UNSAFE_className={cn('text-gray-700', 'text-md')}>
                 Checking required tools. Missing tools can be installed automatically.
             </Text>

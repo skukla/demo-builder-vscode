@@ -1,7 +1,7 @@
 // Import mocks FIRST - before any component imports
 import './WizardContainer.mocks';
 
-import { screen, cleanup } from '@testing-library/react';
+import { screen, cleanup, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { WizardContainer } from '@/features/project-creation/ui/wizard/WizardContainer';
@@ -44,37 +44,40 @@ describe('WizardContainer - Layout Components', () => {
             expect(screen.getByRole('heading', { level: 1, name: /create demo project/i })).toBeInTheDocument();
         });
 
-        it('should display current step name as subtitle', () => {
-            renderWithTheme(
+        it('should display current step name as the header subtitle crumb', () => {
+            const { container } = renderWithTheme(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
                 />
             );
 
-            // First step (adobe-auth) should show "Adobe Authentication" as subtitle
-            // PageHeader renders H3 for subtitle
-            expect(screen.getByRole('heading', { level: 3, name: /adobe authentication/i })).toBeInTheDocument();
+            // Subtitle is an inline crumb (not an H3). The timeline rail also lists
+            // step names, so scope the assertion to the header region.
+            const header = container.querySelector('.page-header') as HTMLElement;
+            expect(within(header).getByText(/demo setup/i)).toBeInTheDocument();
         });
 
-        it('should update subtitle when navigating to different step', async () => {
+        it('should update the subtitle crumb when navigating to a different step', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            renderWithTheme(
+            const { container } = renderWithTheme(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
                 />
             );
 
-            // Initially shows "Adobe Authentication"
-            expect(screen.getByRole('heading', { level: 3, name: /adobe authentication/i })).toBeInTheDocument();
+            const header = container.querySelector('.page-header') as HTMLElement;
+            // Initially shows "Demo Setup"
+            expect(within(header).getByText(/demo setup/i)).toBeInTheDocument();
 
             // Navigate to next step
             const continueButton = screen.getByRole('button', { name: /continue/i });
             await user.click(continueButton);
 
-            // Wait for transition and verify subtitle changed to "Adobe Project"
-            await screen.findByRole('heading', { level: 3, name: /adobe project/i }, { timeout: 500 });
+            // Wait for transition and verify the crumb changed to the next step's
+            // name ("Storefront Setup" — the 2nd step in the mock flow).
+            await within(header).findByText(/storefront setup/i, undefined, { timeout: 500 });
         });
     });
 

@@ -34,11 +34,13 @@ export {
     handleGetProjects,
     handleSelectProject,
     handleCheckProjectApis,
+    handleCreateAdobeProject,
 } from './handlers/projectHandlers';
 export {
     handleGetWorkspaces,
     handleSelectWorkspace,
     handleCreateWorkspaceCredential,
+    handleCreateAdobeWorkspace,
 } from './handlers/workspaceHandlers';
 
 // Types

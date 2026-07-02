@@ -7,6 +7,16 @@
 @layer theme {
   :root {
     /* =========================================
+       MOTION — durations + easing for subtle UI animation. Theme-independent;
+       one source so motion stays consistent + tunable. All durations are zeroed
+       under the global prefers-reduced-motion reset (reset.css).
+       ========================================= */
+    --db-motion-fast: 150ms;   /* hovers, small state flips */
+    --db-motion-base: 200ms;   /* view crossfades, reveals */
+    --db-motion-slow: 300ms;   /* entrances, expands */
+    --db-motion-ease: cubic-bezier(0.2, 0, 0, 1); /* Spectrum-ish ease-out */
+
+    /* =========================================
        LAYER 1: PRIMITIVE TOKENS
        Raw color values - DO NOT use directly in components
        ========================================= */

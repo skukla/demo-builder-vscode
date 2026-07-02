@@ -73,6 +73,9 @@ jest.mock('@/features/components/ui/components/StoreConfigFieldRow', () => ({
 
 // Mock layout components (same shape as other ConfigureScreen tests)
 jest.mock('@/core/ui/components/layout', () => ({
+    ContentWithSidebar: ({ children, sidebar }: any) => (
+        <div><div data-testid="left-column">{children}</div><div data-testid="right-column">{sidebar}</div></div>
+    ),
     TwoColumnLayout: ({ leftContent, rightContent }: { leftContent: React.ReactNode; rightContent: React.ReactNode }) => (
         <div>
             <div data-testid="left-column">{leftContent}</div>

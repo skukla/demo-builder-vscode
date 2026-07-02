@@ -81,7 +81,7 @@ export function GitHubSetupStep({
                     title="Connection Failed"
                     message={authError}
                     centerMessage
-                    maxWidth="450px"
+                    maxWidth="520px"
                     actions={[
                         { label: 'Try Again', icon: <Refresh size="S" />, variant: 'secondary', onPress: startOAuth },
                         { label: 'Sign In with GitHub', icon: <Login size="S" />, variant: 'accent', onPress: startOAuth },
@@ -134,7 +134,7 @@ export function GitHubSetupStep({
                 title="Sign in to GitHub"
                 message="Connect your GitHub account to create Edge Delivery Services repositories."
                 centerMessage
-                maxWidth="450px"
+                maxWidth="520px"
                 actions={[
                     { label: 'Sign In with GitHub', icon: <Login size="S" />, variant: 'accent', onPress: startOAuth },
                 ]}

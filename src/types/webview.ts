@@ -8,22 +8,63 @@ export type ThemeMode = 'light' | 'dark';
 
 export type WizardStep =
     | 'welcome'
-    | 'component-selection'
     | 'prerequisites'
     | 'adobe-auth'  // Adobe authentication step
     | 'adobe-project'  // Adobe project selection step
     | 'adobe-workspace'  // Adobe workspace selection step
-    | 'eds-connect-services'  // EDS: Combined GitHub + DA.live authentication (conditional: requiresGitHub OR requiresDaLive stack)
-    | 'eds-repository-config'  // EDS: Repository configuration. DA.live site name is derived from the repo name (see backlog 2026-06-08-unify-da-site-and-repo-name).
-    | 'storefront-setup'  // EDS: Storefront setup (GitHub repo, DA.live content, Helix config)
-    | 'settings'  // Component-specific settings collection
+    | 'build-your-project'  // Collapsed builder step: commerce + integrations + storefront areas (BuildYourProjectStep shell)
+    | 'storefront-setup'  // EDS: Storefront setup/publish (GitHub repo, DA.live content, Helix config)
     | 'review'
     | 'create-project';
+
+/**
+ * Build areas within the collapsed `build-your-project` wizard step.
+ * Distinct concept from the retired standalone wizard-step ids — these identify
+ * the area the nested builder is currently focused on.
+ */
+export type BuildAreaId = 'commerce' | 'storefront' | 'integrations';
+
+/**
+ * The ordered Commerce sub-step ids within the `build-your-project` step's
+ * Commerce area (sign-in is conditional — ACCS gate only). Defined here (rather
+ * than in the UI layer) so `WizardState.activeCommerceStep` can reference it
+ * without `types/` depending on `ui/`. The pure section logic in
+ * `ui/steps/commerceSections.ts` re-exports this type.
+ */
+export type CommerceSectionId =
+    | 'backend'
+    | 'signin'
+    | 'connection'
+    | 'business-structure'
+    | 'catalog';
+
+/**
+ * The ordered Storefront sub-step ids within the build step's Storefront area:
+ * connect accounts (GitHub + DA.live), pick/create the repository, install the AEM
+ * Code Sync app, then the optional block-libraries picker. Defined here so
+ * `WizardState.activeStorefrontStep` can reference it; the pure section logic
+ * lives in `ui/steps/storefrontSections.ts`.
+ */
+export type StorefrontSectionId =
+    | 'accounts'
+    | 'repository'
+    | 'code-sync'
+    | 'block-libraries';
+
+/**
+ * The ordered Integrations sub-step ids within the build step's Integrations area:
+ * the deployables list (mesh + addable integrations), then the shared Adobe I/O
+ * deployment target (project + workspace). `target` is conditional — it appears only
+ * once a deployable is selected. Defined here so `WizardState.activeIntegrationsStep`
+ * can reference it; the pure section logic lives in `ui/steps/integrationsSections.ts`.
+ */
+export type IntegrationsSectionId = 'deployables';
 
 export interface WizardState {
     currentStep: WizardStep;
     projectName: string;
     selectedPackage?: string;  // Selected package ID (e.g., 'citisignal', 'buildright')
+    selectedBackend?: string;  // Persisted Commerce backend id (e.g., 'adobe-commerce-paas'); source of truth for the backend choice + the "frontend pending" display. selectedStack stays the downstream key.
     selectedStack?: string;  // Selected stack ID (e.g., 'headless-paas', 'eds-paas')
     selectedAddons?: string[];  // Selected addon IDs (e.g., ['adobe-commerce-aco'])
     selectedBlockLibraries?: string[];  // Selected block library IDs (e.g., ['isle5', 'demo-team-blocks'])
@@ -33,6 +74,20 @@ export interface WizardState {
     packageConfigDefaults?: Record<string, string>;  // Package-specific config defaults (e.g., store codes)
     components?: ComponentSelection;
     componentConfigs?: ComponentConfigs;  // Component-specific environment configurations
+    // Cached validity verdicts from the group-step config-tile modal bodies. The
+    // authoritative validity is hook-computed (ConnectStoreStepContent /
+    // RepoSelectionInline); persisting the verdict keeps each tile's status badge
+    // and the step's Continue gate correct when the modal is closed and across
+    // back/forward navigation. See ui/steps/tileStatus.ts.
+    commerceConnectValid?: boolean;  // Commerce connect form reported valid (ConnectStoreStepContent)
+    commerceStoreViewChosen?: boolean;  // Persisted verdict: the Business Structure store-view selection was made — drives the Catalog tab's gate/status
+    storefrontRepoValid?: boolean;   // Storefront repo selection reported valid (RepoSelectionInline repository phase)
+    storefrontCodeSyncValid?: boolean;   // Storefront AEM Code Sync app install reported valid (RepoSelectionInline code-sync phase)
+    activeBuildArea?: BuildAreaId;   // Area currently focused within the build-your-project step
+    activeCommerceStep?: CommerceSectionId;  // Active Commerce sub-step within the build step (footer Continue/Back walks sub-steps → areas → wizard steps)
+    committedCommerceSteps?: CommerceSectionId[];  // Commerce sub-steps the user has pressed Continue past — gates the summary ✓ (a valid form alone does NOT mark a row done)
+    activeStorefrontStep?: StorefrontSectionId;  // Active Storefront sub-step within the build step (same footer-driven walk as Commerce)
+    activeIntegrationsStep?: IntegrationsSectionId;  // Active Integrations sub-step within the build step (same footer-driven walk; 'target' appears once a deployable is selected)
     adobeAuth: AdobeAuthState;
     adobeOrg?: Organization;  // Renamed for consistency
     adobeProject?: AdobeProject;  // Renamed for consistency

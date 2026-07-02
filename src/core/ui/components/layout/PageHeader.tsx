@@ -74,54 +74,54 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     constrainWidth = false,
     className,
 }) => {
+    // One tight single row: [back?] title · subtitle crumb … [action]. A description or
+    // status renders as an optional secondary line only when supplied. This reclaimed
+    // density is the canonical header for every screen — the page context (a left rail
+    // on the wizard, the grid on a dashboard) carries the wayfinding, so the header
+    // stays short rather than restating it.
     const headerContent = (
-        <Flex justifyContent="space-between" alignItems="start">
-            <View>
+        <div className="page-header-inner">
+            <Flex alignItems="center" gap="size-200" wrap>
                 {backButton && (
-                    <Button
-                        variant="secondary"
-                        onPress={backButton.onPress}
-                        marginBottom="size-100"
-                    >
+                    <Button variant="secondary" isQuiet onPress={backButton.onPress}>
                         {backButton.label}
                     </Button>
                 )}
-                <Heading level={1} marginBottom={subtitle ? 'size-100' : undefined}>
-                    {title}
-                </Heading>
-                {subtitle && (
-                    <Heading level={3} marginBottom="size-0" UNSAFE_className={cn('font-normal', 'text-gray-600')}>
-                        {subtitle}
+                <Flex alignItems="baseline" gap="size-150" wrap>
+                    <Heading level={1} margin={0} UNSAFE_className="page-header-title">
+                        {title}
                     </Heading>
-                )}
-                {description && (
-                    <div>
-                        <Text UNSAFE_className={cn('text-gray-500', 'text-sm')}>
-                            {description}
+                    {subtitle && (
+                        <Text UNSAFE_className={cn('text-gray-600', 'page-header-subtitle')}>
+                            {subtitle}
                         </Text>
-                    </div>
-                )}
-                {statusText && (
-                    <div className="mt-1">
-                        <Text UNSAFE_className={cn('text-gray-600', 'text-sm', 'font-medium')}>
-                            {statusText}
-                        </Text>
-                    </div>
-                )}
-            </View>
-            {action}
-        </Flex>
+                    )}
+                </Flex>
+                {action ? <View marginStart="auto">{action}</View> : null}
+            </Flex>
+            {description && (
+                <div className="page-header-secondary">
+                    <Text UNSAFE_className={cn('text-gray-500', 'text-sm')}>{description}</Text>
+                </div>
+            )}
+            {statusText && (
+                <div className="page-header-secondary">
+                    <Text UNSAFE_className={cn('text-gray-600', 'text-sm', 'font-medium')}>
+                        {statusText}
+                    </Text>
+                </div>
+            )}
+        </div>
     );
 
     return (
         <View
-            padding="size-400"
-            UNSAFE_className={cn('border-b', 'bg-gray-75', className)}
+            paddingX="size-400"
+            paddingY="size-200"
+            UNSAFE_className={cn('border-b', 'bg-gray-75', 'page-header', className)}
         >
             {constrainWidth ? (
-                <div className="page-container">
-                    {headerContent}
-                </div>
+                <div className="page-container">{headerContent}</div>
             ) : (
                 headerContent
             )}

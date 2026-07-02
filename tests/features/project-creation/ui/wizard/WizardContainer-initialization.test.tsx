@@ -39,7 +39,7 @@ describe('WizardContainer - Initialization', () => {
             });
         });
 
-        it('should render initial adobe-auth step (welcome removed)', () => {
+        it('should render the initial welcome step (Demo Setup) as the first step', () => {
             renderWithTheme(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
@@ -47,9 +47,8 @@ describe('WizardContainer - Initialization', () => {
                 />
             );
 
-            // Wizard now starts at adobe-auth (welcome step removed in Step 3)
-            expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
-            expect(screen.queryByTestId('welcome-step')).not.toBeInTheDocument();
+            // Wizard starts at welcome (Demo Setup) — the standalone adobe-auth step is retired.
+            expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
         });
 
         it('should render wizard with navigation buttons (Back hidden on first step)', () => {
@@ -65,8 +64,8 @@ describe('WizardContainer - Initialization', () => {
             expect(screen.queryByRole('button', { name: /back/i })).not.toBeInTheDocument();
             expect(screen.getByRole('button', { name: /continue/i })).toBeInTheDocument();
 
-            // Verify first step is adobe-auth (welcome removed)
-            expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
+            // Verify first step is welcome (welcome removed)
+            expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
         });
 
         it('should display footer buttons (Cancel, Continue) on first step', () => {
@@ -110,8 +109,8 @@ describe('WizardContainer - Initialization', () => {
 
         it('should filter out disabled steps', () => {
             const stepsWithDisabled = [
-                { id: 'adobe-auth', name: 'Adobe Auth', enabled: true },
-                { id: 'adobe-project', name: 'Adobe Project', enabled: false }, // Disabled
+                { id: 'welcome', name: 'Adobe Auth', enabled: true },
+                { id: 'prerequisites', name: 'Prerequisites', enabled: false }, // Disabled
                 { id: 'review', name: 'Review', enabled: true },
             ];
 
@@ -122,14 +121,14 @@ describe('WizardContainer - Initialization', () => {
                 />
             );
 
-            // Verify the wizard starts at adobe-auth (first enabled step)
-            expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
+            // Verify the wizard starts at welcome (first enabled step)
+            expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
 
             // Verify step configuration by checking the filtered steps array
             // (disabled steps are filtered out internally)
             const enabledSteps = stepsWithDisabled.filter(s => s.enabled);
             expect(enabledSteps).toHaveLength(2);
-            expect(enabledSteps.map(s => s.id)).toEqual(['adobe-auth', 'review']);
+            expect(enabledSteps.map(s => s.id)).toEqual(['welcome', 'review']);
         });
     });
 });

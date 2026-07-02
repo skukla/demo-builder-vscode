@@ -275,83 +275,6 @@ describe('stepFiltering', () => {
             expect(stepIds).toContain('connect-services');
         });
 
-        it('should show requiresAdobeIO step when hasAdobeIO is true', () => {
-            const stepsWithAdobeIO: WizardStepWithCondition[] = [
-                { id: 'welcome', name: 'Welcome' },
-                { id: 'adobe-auth', name: 'Adobe Auth', condition: { requiresAdobeIO: true } },
-                { id: 'review', name: 'Review' },
-            ];
-
-            const result = filterStepsForStack(stepsWithAdobeIO, edgeDeliveryStack, { hasAdobeIO: true });
-            const stepIds = result.map(s => s.id);
-            expect(stepIds).toContain('adobe-auth');
-        });
-
-        it('should hide requiresAdobeIO step when hasAdobeIO is false', () => {
-            const stepsWithAdobeIO: WizardStepWithCondition[] = [
-                { id: 'welcome', name: 'Welcome' },
-                { id: 'adobe-auth', name: 'Adobe Auth', condition: { requiresAdobeIO: true } },
-                { id: 'review', name: 'Review' },
-            ];
-
-            const result = filterStepsForStack(stepsWithAdobeIO, headlessStack, { hasAdobeIO: false });
-            const stepIds = result.map(s => s.id);
-            expect(stepIds).not.toContain('adobe-auth');
-        });
-
-        it('should hide requiresAdobeIO step when hasAdobeIO is not provided', () => {
-            const stepsWithAdobeIO: WizardStepWithCondition[] = [
-                { id: 'welcome', name: 'Welcome' },
-                { id: 'adobe-auth', name: 'Adobe Auth', condition: { requiresAdobeIO: true } },
-                { id: 'review', name: 'Review' },
-            ];
-
-            const result = filterStepsForStack(stepsWithAdobeIO, headlessStack);
-            const stepIds = result.map(s => s.id);
-            expect(stepIds).not.toContain('adobe-auth');
-        });
-
-        it('should show requiresAdobeAuth step when hasAdobeAuth is true', () => {
-            const steps: WizardStepWithCondition[] = [
-                { id: 'welcome', name: 'Welcome' },
-                { id: 'adobe-auth', name: 'Adobe Auth', condition: { requiresAdobeAuth: true } },
-                { id: 'review', name: 'Review' },
-            ];
-
-            const result = filterStepsForStack(steps, edgeDeliveryStack, { hasAdobeAuth: true });
-            const stepIds = result.map(s => s.id);
-            expect(stepIds).toContain('adobe-auth');
-        });
-
-        it('should hide requiresAdobeAuth step when hasAdobeAuth is false', () => {
-            const steps: WizardStepWithCondition[] = [
-                { id: 'welcome', name: 'Welcome' },
-                { id: 'adobe-auth', name: 'Adobe Auth', condition: { requiresAdobeAuth: true } },
-                { id: 'review', name: 'Review' },
-            ];
-
-            const result = filterStepsForStack(steps, headlessStack, { hasAdobeAuth: false });
-            const stepIds = result.map(s => s.id);
-            expect(stepIds).not.toContain('adobe-auth');
-        });
-
-        it('should show auth step but hide project/workspace steps for ACCS without mesh', () => {
-            const steps: WizardStepWithCondition[] = [
-                { id: 'welcome', name: 'Welcome' },
-                { id: 'adobe-auth', name: 'Adobe Auth', condition: { requiresAdobeAuth: true } },
-                { id: 'adobe-project', name: 'Project', condition: { requiresAdobeIO: true } },
-                { id: 'adobe-workspace', name: 'Workspace', condition: { requiresAdobeIO: true } },
-                { id: 'review', name: 'Review' },
-            ];
-
-            // ACCS without mesh: hasAdobeAuth=true, hasAdobeIO=false
-            const result = filterStepsForStack(steps, edgeDeliveryStack, { hasAdobeAuth: true, hasAdobeIO: false });
-            const stepIds = result.map(s => s.id);
-            expect(stepIds).toContain('adobe-auth');
-            expect(stepIds).not.toContain('adobe-project');
-            expect(stepIds).not.toContain('adobe-workspace');
-        });
-
         it('should hide settings step when a stack is selected (showWhenNoStack)', () => {
             // Given: Steps including a settings step with showWhenNoStack condition
             const stepsWithSettings: WizardStepWithCondition[] = [
@@ -407,7 +330,7 @@ describe('stepFiltering', () => {
             expect(stepIds).toContain('review');
         });
 
-        it('should show the settings step from wizard-steps.json for all flows (no condition)', () => {
+        it('should show the build-your-project step from wizard-steps.json for all flows (no condition)', () => {
             // Given: The actual wizard-steps.json configuration
 
             const wizardStepsConfig = require('@/features/project-creation/config/wizard-steps.json');
@@ -416,12 +339,12 @@ describe('stepFiltering', () => {
             // When: Filtering with a stack selected
             const result = filterStepsForStack(steps, edgeDeliveryStack);
 
-            // Then: Settings step should be shown (unconditional)
+            // Then: build-your-project step should be shown (unconditional)
             const stepIds = result.map(s => s.id);
-            expect(stepIds).toContain('settings');
+            expect(stepIds).toContain('build-your-project');
         });
 
-        it('should position settings step after adobe-workspace in wizard-steps.json', () => {
+        it('should position the build-your-project step after adobe-auth and before review in wizard-steps.json', () => {
             // Given: The actual wizard-steps.json configuration
 
             const wizardStepsConfig = require('@/features/project-creation/config/wizard-steps.json');
@@ -429,13 +352,15 @@ describe('stepFiltering', () => {
 
             // When: Looking at step order
             const stepIds = steps.map((s: WizardStepWithCondition) => s.id);
-            const workspaceIndex = stepIds.indexOf('adobe-workspace');
-            const settingsIndex = stepIds.indexOf('settings');
-            const connectServicesIndex = stepIds.indexOf('eds-connect-services');
+            const authIndex = stepIds.indexOf('adobe-auth');
+            const buildIndex = stepIds.indexOf('build-your-project');
+            const reviewIndex = stepIds.indexOf('review');
 
-            // Then: settings should be after adobe-workspace and before eds-connect-services
-            expect(settingsIndex).toBeGreaterThan(workspaceIndex);
-            expect(settingsIndex).toBeLessThan(connectServicesIndex);
+            // Then: build-your-project should be after adobe-auth and before review.
+            // (adobe-project/adobe-workspace steps were retired — their pickers now
+            // live inside build-your-project's Mesh tile.)
+            expect(buildIndex).toBeGreaterThan(authIndex);
+            expect(buildIndex).toBeLessThan(reviewIndex);
         });
 
         it('should show all showWhenNoStack steps when no stack is selected', () => {

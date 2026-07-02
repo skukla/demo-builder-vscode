@@ -4,7 +4,7 @@ import { translateSpectrumToken, DimensionValue } from '@/core/ui/utils/spectrum
 export interface SingleColumnLayoutProps {
     /** Content for the single column */
     children: React.ReactNode;
-    /** Maximum width of column (default: '800px') - supports Spectrum tokens */
+    /** Maximum width of column (default: '960px', the canonical --content-width) - supports Spectrum tokens */
     maxWidth?: DimensionValue;
     /** Column padding (default: '24px') - supports Spectrum tokens */
     padding?: DimensionValue;
@@ -43,7 +43,8 @@ export interface SingleColumnLayoutProps {
  */
 export const SingleColumnLayout: React.FC<SingleColumnLayoutProps> = ({
     children,
-    maxWidth = '800px' as DimensionValue,
+    // 960 mirrors the canonical CSS --content-width (DimensionValue can't take a var()).
+    maxWidth = '960px' as DimensionValue,
     padding = '24px' as DimensionValue,
     margin = '0' as DimensionValue,
     className,
@@ -53,6 +54,10 @@ export const SingleColumnLayout: React.FC<SingleColumnLayoutProps> = ({
             style={{
                 maxWidth: translateSpectrumToken(maxWidth),
                 width: '100%',
+                // Keep padding inside the 100% width. Without this the default
+                // content-box adds the padding outside, so the column overflows its
+                // parent by 2x padding and clips content at narrow/zoomed viewports.
+                boxSizing: 'border-box',
                 margin: translateSpectrumToken(margin),
                 padding: translateSpectrumToken(padding),
             }}

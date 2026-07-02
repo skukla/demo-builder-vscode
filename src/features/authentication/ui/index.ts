@@ -4,8 +4,10 @@
 
 // Steps
 export { AdobeAuthStep } from './steps/AdobeAuthStep';
-export { AdobeProjectStep } from './steps/AdobeProjectStep';
-export { AdobeWorkspaceStep } from './steps/AdobeWorkspaceStep';
+
+// Inline pickers (folded into the Integrations Mesh tile)
+export { AdobeProjectPicker } from './components/AdobeProjectPicker';
+export { AdobeWorkspacePicker } from './components/AdobeWorkspacePicker';
 
 // Hooks re-exported from core/ui/hooks for backward compatibility
 export { useSelectionStep } from '@/core/ui/hooks/useSelectionStep';

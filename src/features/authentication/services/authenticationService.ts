@@ -46,6 +46,7 @@ export class AuthenticationService {
         this.organizationValidator = new OrganizationValidator(
             commandManager,
             logger,
+            this.cacheManager,
         );
         // Note: entityService will be initialized lazily when first needed
         // because it depends on stepLogger which requires async initialization
@@ -254,7 +255,14 @@ export class AuthenticationService {
                             this.cacheManager.clearAuthStatusCache();
                             this.cacheManager.clearValidationCache();
                             this.cacheManager.clearTokenInspectionCache();
-                            this.debugLogger.debug('[Auth] Cleared auth, validation, and token inspection caches after login');
+                            // Also clear the cached org AND the org-list cache so the org is
+                            // re-derived from the fresh token (the forced path clears both via
+                            // clearAll). Without clearing the LIST too, `getOrganizations()`
+                            // (org-list-cache-first) re-supplies the previous, stale org for
+                            // the cache's short TTL — keeping the wizard on the wrong org.
+                            this.cacheManager.setCachedOrganization(undefined);
+                            this.cacheManager.clearOrgListCache();
+                            this.debugLogger.debug('[Auth] Cleared auth, validation, token inspection, and org caches after login');
                         }
 
                         return true;
@@ -398,12 +406,13 @@ export class AuthenticationService {
     }
 
     /**
-     * Get workspaces
+     * Get workspaces. `target` threads the selected org + project (webview state) so the
+     * fetch targets them instead of the stale in-memory cache.
      */
-    async getWorkspaces(): Promise<AdobeWorkspace[]> {
+    async getWorkspaces(target?: { orgId?: string; projectId?: string }): Promise<AdobeWorkspace[]> {
         return withTiming('getWorkspaces', async () => {
             const { fetcher } = await this.ensureEntities();
-            return fetcher.getWorkspaces();
+            return fetcher.getWorkspaces(target);
         });
     }
 
@@ -424,6 +433,28 @@ export class AuthenticationService {
     async createWorkspaceCredential(name: string, description: string): Promise<WorkspaceCredential | undefined> {
         const { fetcher } = await this.ensureEntities();
         return fetcher.createWorkspaceCredential(name, description);
+    }
+
+    /**
+     * Create a new Adobe I/O App Builder project in the current organization.
+     * Returns the created project, or undefined on failure (permission, quota, etc.).
+     */
+    async createProject(name: string, description: string): Promise<AdobeProject | undefined> {
+        return withTiming('createProject', async () => {
+            const { fetcher } = await this.ensureEntities();
+            return fetcher.createProject(name, description);
+        });
+    }
+
+    /**
+     * Create a new workspace in the current organization's selected project.
+     * Returns the created workspace, or undefined on failure (permission, quota, etc.).
+     */
+    async createWorkspace(name: string, description: string): Promise<AdobeWorkspace | undefined> {
+        return withTiming('createWorkspace', async () => {
+            const { fetcher } = await this.ensureEntities();
+            return fetcher.createWorkspace(name, description);
+        });
     }
 
     // --- ApiSubscriberClient passthroughs (D2 Track A) -------------------------

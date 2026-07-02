@@ -18,6 +18,7 @@
  */
 
 import { mapOrganizations, mapProjects, mapWorkspaces } from './adobeEntityMapper';
+import { deriveAdobeEntityName } from './adobeEntityName';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';
 import type {
@@ -311,14 +312,43 @@ export class AdobeEntityFetcher {
     }
 
     /**
-     * Try fetching projects via SDK (requires valid cached org ID)
+     * Resolve the org id an SDK entity fetch should target.
+     *
+     * Prefers the caller-supplied id (the threaded selection, then the
+     * cached/ambient org). When neither is present, falls back to the TOKEN org
+     * (`getOrganizationsSdkOnly()[0]` — the canonical "token org is truth"
+     * convention, same source `detectProjectOrgMismatch` uses) via the SDK, NOT
+     * the CLI. That keeps an un-threaded, un-cached fetch on the SDK path instead
+     * of dropping to the CLI fallback, which targets the STALE `aio console` org
+     * and 403s -> ORG_MISMATCH (a slow, noisy failure).
+     *
+     * `getOrganizationsSdkOnly` is self-guarding: it returns [] (→ this returns
+     * undefined) when the SDK isn't initialized, so the caller then keeps its
+     * existing return-[] → CLI path. Deliberately SDK-only to avoid a circular
+     * CLI dependency.
+     */
+    private async resolveEffectiveOrgId(preferredOrgId?: string): Promise<string | undefined> {
+        if (preferredOrgId && preferredOrgId.length > 0) return preferredOrgId;
+        return (await this.getOrganizationsSdkOnly())?.[0]?.id;
+    }
+
+    /**
+     * Try fetching projects via SDK (requires a resolvable org ID)
      */
     private async tryFetchProjectsViaSDK(
         cachedOrg: AdobeOrg | undefined,
         startTime: number,
+        targetOrgId?: string,
     ): Promise<AdobeProject[]> {
-        const hasValidOrgId = cachedOrg?.id && cachedOrg.id.length > 0;
+        // Fetch for the EFFECTIVE target org: the explicitly threaded org id wins
+        // (the caller's intent — e.g. the wizard's selected org), then the
+        // cached/ambient org, then the TOKEN org (see resolveEffectiveOrgId). The
+        // cached org can be stale after an org switch, so blindly using it returns
+        // the wrong org's projects (or an empty list).
+        const effectiveOrgId = await this.resolveEffectiveOrgId(targetOrgId ?? cachedOrg?.id);
+        const hasValidOrgId = !!effectiveOrgId && effectiveOrgId.length > 0;
         if (!hasValidOrgId) {
+            // Still no id (e.g. SDK not initialized, or the token has no orgs): use the CLI.
             if (this.sdkClient.isInitialized()) {
                 this.debugLogger.debug('[Entity Fetcher] SDK available but org ID is missing, using CLI');
             }
@@ -327,7 +357,7 @@ export class AdobeEntityFetcher {
 
         const client = this.sdkClient.getClient() as { getProjectsForOrg: (orgId: string) => Promise<SDKResponse<RawAdobeProject[]>> };
         return this.trySDKFetch(
-            () => client.getProjectsForOrg(cachedOrg.id),
+            () => client.getProjectsForOrg(effectiveOrgId),
             mapProjects, 'projects', startTime,
         );
     }
@@ -366,7 +396,7 @@ export class AdobeEntityFetcher {
             await this.ensureSDKReady();
             const cachedOrg = this.cacheManager.getCachedOrganization();
 
-            let mappedProjects = await this.tryFetchProjectsViaSDK(cachedOrg, startTime);
+            let mappedProjects = await this.tryFetchProjectsViaSDK(cachedOrg, startTime, options?.orgId);
 
             if (mappedProjects.length === 0) {
                 mappedProjects = await this.executeCLIFallback<RawAdobeProject, AdobeProject>(
@@ -389,19 +419,53 @@ export class AdobeEntityFetcher {
     }
 
     /**
-     * Get list of workspaces for current project (SDK with CLI fallback)
+     * Get list of workspaces (SDK with CLI fallback).
+     *
+     * Targets the fetch (AIO_CONSOLE_* env via withOrgContext) at the THREADED org +
+     * project (from webview state, passed by the handler) so both the SDK and the CLI
+     * fallback hit the right project — NOT the stale in-memory cache. The selected project
+     * is deliberately not cached (Phase 4a threads it per-op), so relying on the cache
+     * targets a wrong or deleted project ("Invalid Project id") or the CLI's ambient org
+     * ("Adobe CLI is targeting a different organization"). Falls back to the cache only when
+     * nothing is threaded. Mirrors getProjects' org-context targeting.
      */
-    async getWorkspaces(): Promise<AdobeWorkspace[]> {
+    async getWorkspaces(target?: { orgId?: string; projectId?: string }): Promise<AdobeWorkspace[]> {
+        const cachedOrg = this.cacheManager.getCachedOrganization();
+        const cachedProject = this.cacheManager.getCachedProject();
+        // Prefer the threaded selection, then the cache, then the TOKEN org via the
+        // SDK (see resolveEffectiveOrgId). The token fallback keeps an un-threaded,
+        // un-cached workspace fetch on the SDK path instead of the CLI (which targets
+        // the stale `aio console` org -> ORG_MISMATCH). projectId threading is unchanged.
+        const orgId = await this.resolveEffectiveOrgId(target?.orgId ?? cachedOrg?.id);
+        const projectId = target?.projectId ?? cachedProject?.id;
+        // Enrich org code/name only when the resolved org still matches the cached org.
+        const orgMatches = !!cachedOrg && cachedOrg.id === orgId;
+
+        if (orgId && projectId) {
+            return withOrgContext(
+                {
+                    orgId,
+                    orgCode: orgMatches ? cachedOrg?.code : undefined,
+                    orgName: orgMatches ? cachedOrg?.name : undefined,
+                    projectId,
+                },
+                () => this.fetchWorkspaces(orgId, projectId),
+            );
+        }
+        return this.fetchWorkspaces(orgId, projectId);
+    }
+
+    /**
+     * Core workspace-fetch (SDK-first with CLI fallback). Wrapped by getWorkspaces, which
+     * applies org-context targeting.
+     */
+    private async fetchWorkspaces(orgId?: string, projectId?: string): Promise<AdobeWorkspace[]> {
         const startTime = Date.now();
 
         try {
             this.stepLogger.logTemplate('adobe-auth', 'operations.retrieving-workspaces', {});
             await this.ensureSDKReady();
 
-            const cachedOrg = this.cacheManager.getCachedOrganization();
-            const cachedProject = this.cacheManager.getCachedProject();
-            const orgId = cachedOrg?.id;
-            const projectId = cachedProject?.id;
             const hasValidIds = !!orgId && orgId.length > 0 && !!projectId && projectId.length > 0;
 
             let mappedWorkspaces: AdobeWorkspace[] = [];
@@ -602,6 +666,211 @@ export class AdobeEntityFetcher {
     }
 
     /**
+     * Create a new Adobe I/O App Builder project in the current organization.
+     *
+     * Uses the Console SDK's `createFireflyProject` (project type 'jaeger' =
+     * App Builder). Needs only the cached org id. SDK-only (no CLI fallback).
+     * Never throws — returns the mapped project, or `undefined` on validation
+     * failure, missing org, unavailable SDK, or any SDK error (403 permission /
+     * 409 name-taken / quota), which the handler surfaces to the user.
+     */
+    async createProject(
+        title: string,
+        description: string,
+    ): Promise<AdobeProject | undefined> {
+        // Input validation — enforce constraints regardless of caller.
+        if (!title || title.length > 200) {
+            this.debugLogger.error('[Entity Fetcher] Invalid project title (empty or >200 chars)');
+            return undefined;
+        }
+        if (description.length > 500) {
+            this.debugLogger.error('[Entity Fetcher] Invalid project description (>500 chars)');
+            return undefined;
+        }
+
+        try {
+            await this.ensureSDKReady();
+
+            const orgId = this.cacheManager.getCachedOrganization()?.id;
+            if (!orgId) {
+                this.debugLogger.debug('[Entity Fetcher] Cannot create project: missing org ID');
+                return undefined;
+            }
+
+            if (!this.sdkClient.isInitialized()) {
+                this.debugLogger.debug('[Entity Fetcher] SDK not available for project creation');
+                return undefined;
+            }
+
+            const client = this.sdkClient.getClient() as {
+                createFireflyProject: (
+                    orgId: string,
+                    details: { name: string; title: string; description: string; who_created: string },
+                ) => Promise<SDKResponse<RawAdobeProject>>;
+            };
+
+            // Adobe validates the machine `name` as alphanumeric-only; derive it from the
+            // free-form title (the user's input). The title stays human-readable in the UI.
+            const name = deriveAdobeEntityName(title);
+            this.debugLogger.info(
+                `[Entity Fetcher] Creating App Builder project "${title}" (name: ${name}) in org ${orgId}`,
+            );
+
+            const response = await client.createFireflyProject(orgId, {
+                name,
+                title,
+                description,
+                who_created: 'Demo Builder',
+            });
+
+            // The create endpoint returns only the new id ({ projectId }), NOT a full
+            // project — so construct the AdobeProject from that id + the details we sent.
+            const raw = response?.body as { id?: string; projectId?: string } | undefined;
+            const projectId = raw?.id ?? raw?.projectId;
+            if (!projectId) {
+                this.debugLogger.error('[Entity Fetcher] Project created but no projectId in response');
+                return undefined;
+            }
+
+            this.debugLogger.info('[Entity Fetcher] App Builder project created successfully');
+
+            // createFireflyProject provisions ONLY the default Production workspace. The
+            // Console's "Project from template → App Builder" flow also creates Stage, and
+            // there is NO public API to provision both in one call (aio-lib-console exposes
+            // createWorkspace only as a separate operation). Mirror the template so our
+            // projects match. Best-effort: a Stage failure leaves the valid Production-only
+            // project rather than failing the whole create.
+            await this.createDefaultStageWorkspace(orgId, projectId);
+
+            return { id: projectId, name, title, description: description || undefined, org_id: orgId };
+        } catch (error) {
+            const message = (error as Error).message || '';
+            if (message.includes('409') || message.includes('Conflict')) {
+                this.debugLogger.error('[Entity Fetcher] Project name already exists (409)');
+            } else {
+                this.debugLogger.error('[Entity Fetcher] Failed to create project', error as Error);
+            }
+            return undefined;
+        }
+    }
+
+    /**
+     * Create the "Stage" workspace to mirror the App Builder template.
+     *
+     * createFireflyProject provisions only the default Production workspace; the Console's
+     * templated App Builder create additionally makes Stage. There is no public API to
+     * provision both at once, so we add Stage explicitly. Named exactly "Stage" (NOT the
+     * suffix-derived name) to match the convention the workspace picker auto-selects on and
+     * downstream tooling expects. Best-effort — never throws; a failure just leaves the
+     * project with Production only.
+     */
+    private async createDefaultStageWorkspace(orgId: string, projectId: string): Promise<void> {
+        try {
+            const client = this.sdkClient.getClient() as {
+                createWorkspace: (
+                    orgId: string,
+                    projectId: string,
+                    details: { name: string; title: string; description: string; who_created: string },
+                ) => Promise<SDKResponse<RawAdobeWorkspace>>;
+            };
+            await client.createWorkspace(orgId, projectId, {
+                name: 'Stage',
+                title: 'Stage',
+                description: '',
+                who_created: 'Demo Builder',
+            });
+            this.debugLogger.info('[Entity Fetcher] Created Stage workspace (App Builder template parity)');
+        } catch (error) {
+            this.debugLogger.warn(
+                '[Entity Fetcher] Could not create the Stage workspace; project has Production only: '
+                + `${(error as Error).message}`,
+            );
+        }
+    }
+
+    /**
+     * Create a new workspace in the current organization's selected project.
+     *
+     * Uses the Console SDK's `createWorkspace`. Needs the cached org id AND
+     * project id. SDK-only (no CLI fallback). Never throws — returns the mapped
+     * workspace, or `undefined` on validation failure, missing org/project,
+     * unavailable SDK, or any SDK error (403 permission / 409 name-taken /
+     * quota), which the handler surfaces to the user.
+     */
+    async createWorkspace(
+        title: string,
+        description: string,
+    ): Promise<AdobeWorkspace | undefined> {
+        // Input validation — enforce constraints regardless of caller.
+        if (!title || title.length > 200) {
+            this.debugLogger.error('[Entity Fetcher] Invalid workspace title (empty or >200 chars)');
+            return undefined;
+        }
+        if (description.length > 500) {
+            this.debugLogger.error('[Entity Fetcher] Invalid workspace description (>500 chars)');
+            return undefined;
+        }
+
+        try {
+            await this.ensureSDKReady();
+
+            const orgId = this.cacheManager.getCachedOrganization()?.id;
+            const projectId = this.cacheManager.getCachedProject()?.id;
+            if (!orgId || !projectId) {
+                this.debugLogger.debug('[Entity Fetcher] Cannot create workspace: missing org or project ID');
+                return undefined;
+            }
+
+            if (!this.sdkClient.isInitialized()) {
+                this.debugLogger.debug('[Entity Fetcher] SDK not available for workspace creation');
+                return undefined;
+            }
+
+            const client = this.sdkClient.getClient() as {
+                createWorkspace: (
+                    orgId: string,
+                    projectId: string,
+                    details: { name: string; title: string; description: string; who_created: string },
+                ) => Promise<SDKResponse<RawAdobeWorkspace>>;
+            };
+
+            // Adobe validates the machine `name` as alphanumeric-only; derive it from the
+            // free-form title (the user's input). The title stays human-readable in the UI.
+            const name = deriveAdobeEntityName(title);
+            this.debugLogger.info(
+                `[Entity Fetcher] Creating workspace "${title}" (name: ${name}) in project ${projectId}`,
+            );
+
+            const response = await client.createWorkspace(orgId, projectId, {
+                name,
+                title,
+                description,
+                who_created: 'Demo Builder',
+            });
+
+            // The create endpoint returns only the new id ({ workspaceId }), NOT a full
+            // workspace — so construct the workspace from that id + the details we sent.
+            const raw = response?.body as { id?: string; workspaceId?: string } | undefined;
+            const workspaceId = raw?.id ?? raw?.workspaceId;
+            if (!workspaceId) {
+                this.debugLogger.error('[Entity Fetcher] Workspace created but no workspaceId in response');
+                return undefined;
+            }
+
+            this.debugLogger.info('[Entity Fetcher] Workspace created successfully');
+            return { id: workspaceId, name, title };
+        } catch (error) {
+            const message = (error as Error).message || '';
+            if (message.includes('409') || message.includes('Conflict')) {
+                this.debugLogger.error('[Entity Fetcher] Workspace name already exists (409)');
+            } else {
+                this.debugLogger.error('[Entity Fetcher] Failed to create workspace', error as Error);
+            }
+            return undefined;
+        }
+    }
+
+    /**
      * List the org's entitled services (the `getServicesForOrg` SDK call).
      * Resolves an App Builder component's `requiredApis` names → sdkCodes + platformList.
      * Each entry carries `{ code, platformList, domainMandatory?, ... }`.
@@ -619,6 +888,11 @@ export class AdobeEntityFetcher {
      * Create an AdobeID/apiKey credential for apiKey-platform services (e.g. API
      * Mesh `GraphQLServiceSDK`). Returns the credential's `id_integration` (the
      * subscribe id — NOT `.id`). `domain` is MANDATORY for API Mesh.
+     *
+     * List-first (mirrors {@link ensureOAuthCredentialId}): returns an existing
+     * apiKey credential's `id_integration` when one already matches `input.name`
+     * (e.g. `demo-builder-api-mesh`), so running the subscribe twice never leaves
+     * a duplicate credential. Creates only when none matches.
      */
     async createAdobeIdCredential(
         orgId: string,
@@ -628,12 +902,28 @@ export class AdobeEntityFetcher {
     ): Promise<string | undefined> {
         await this.ensureSDKReady();
         const client = this.sdkClient.getClient() as {
+            getCredentials: (orgId: string, projectId: string, workspaceId: string) =>
+                Promise<SDKResponse<RawWorkspaceCredential[]>>;
             createAdobeIdCredential: (
                 orgId: string, projectId: string, workspaceId: string, input: AdobeIdCredentialInput,
-            ) => Promise<SDKResponse<{ id_integration: string }>>;
+            ) => Promise<SDKResponse<{ id_integration?: string; id?: string }>>;
         };
+
+        const existing = (await client.getCredentials(orgId, projectId, workspaceId))?.body;
+        const match = existing?.find(
+            (c) => (c.integration_type === 'apikey' || c.flow_type === 'adobeid')
+                && c.integration_name === input.name
+                && c.id_integration,
+        );
+        if (match?.id_integration) {
+            return match.id_integration;
+        }
+
+        // The create response returns the integration id in `.id` (like the OAuth create),
+        // NOT `.id_integration` — that field only appears on getCredentials LIST entries.
+        // Prefer id_integration when present, else fall back to id.
         const response = await client.createAdobeIdCredential(orgId, projectId, workspaceId, input);
-        return response?.body?.id_integration;
+        return response?.body?.id_integration ?? response?.body?.id;
     }
 
     /**

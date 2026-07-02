@@ -7,72 +7,16 @@
       "enabled": true
     },
     {
-      "id": "component-selection",
-      "name": "Component Selection",
-      "description": "Select the components to include in your project.",
-      "enabled": true,
-      "condition": {
-        "showWhenNoStack": true
-      },
-      "_comment": "Hidden when a predefined stack is selected (stack determines components). Kept for future 'Custom' brand option where users manually select components."
-    },
-    {
       "id": "prerequisites",
       "name": "Prerequisites",
       "description": "Verify that required tools are installed on your system.",
       "enabled": true
     },
     {
-      "id": "adobe-auth",
-      "name": "Adobe Authentication",
-      "description": "Authenticate with Adobe to access Adobe services and store discovery.",
-      "enabled": true,
-      "condition": {
-        "requiresAdobeAuth": true
-      }
-    },
-    {
-      "id": "adobe-project",
-      "name": "I/O Project Selection",
-      "description": "Select the Adobe I/O project for your demo.",
-      "enabled": true,
-      "condition": {
-        "requiresAdobeIO": true
-      }
-    },
-    {
-      "id": "adobe-workspace",
-      "name": "Workspace Selection",
-      "description": "Select the workspace within your project.",
-      "enabled": true,
-      "condition": {
-        "requiresAdobeIO": true
-      }
-    },
-    {
-      "id": "settings",
-      "name": "Connect Commerce",
-      "description": "Connect to your Commerce backend and configure store settings.",
+      "id": "build-your-project",
+      "name": "Build Your Project",
+      "description": "Configure commerce, integrations, and storefront for your project.",
       "enabled": true
-    },
-    {
-      "id": "eds-connect-services",
-      "name": "Connect Services",
-      "description": "Connect to GitHub and DA.live for Edge Delivery Services.",
-      "enabled": true,
-      "condition": {
-        "stackRequiresAny": ["requiresGitHub", "requiresDaLive"]
-      },
-      "_comment": "Combined GitHub + DA.live authentication in side-by-side panels"
-    },
-    {
-      "id": "eds-repository-config",
-      "name": "Repository Configuration",
-      "description": "Configure your GitHub repository for Edge Delivery Services.",
-      "enabled": true,
-      "condition": {
-        "stackRequires": "requiresGitHub"
-      }
     },
     {
       "id": "review",

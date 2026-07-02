@@ -8,7 +8,7 @@ import {
 import React, { useEffect, useRef, useState } from 'react';
 import { loadStacks } from '../helpers/brandStackLoader';
 import { getSelectablePackages } from '../helpers/demoPackageLoader';
-import { filterComponentConfigsForStackChange } from '../helpers/stackHelpers';
+import { filterComponentConfigsForStackChange, buildStackChangeStateReset } from '../helpers/stackHelpers';
 import {
     useWizardState,
     useWizardNavigation,
@@ -35,22 +35,18 @@ import { cn } from '@/core/ui/utils/classNames';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
-import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjectStep';
-import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
-import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
-import { ConnectServicesStep } from '@/features/eds/ui/steps/ConnectServicesStep';
-import { GitHubRepoSelectionStep } from '@/features/eds/ui/steps/GitHubRepoSelectionStep';
 import { StorefrontSetupStep } from '@/features/eds/ui/steps/StorefrontSetupStep';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
-import { ConnectStoreStepContent } from '@/features/project-creation/ui/components/ConnectStoreStepContent';
+import { areaSubSteps } from '@/features/project-creation/ui/steps/areaSubSteps';
+import { buildYourProjectAreas } from '@/features/project-creation/ui/steps/buildYourProjectAreas';
+import { BuildYourProjectStep } from '@/features/project-creation/ui/steps/BuildYourProjectStep';
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
 import { ReviewStep } from '@/features/project-creation/ui/steps/ReviewStep';
 import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
-import { ComponentSelection } from '@/types/webview';
+import { ComponentSelection, type WizardState } from '@/types/webview';
 
 // Extracted hooks
 
@@ -84,24 +80,26 @@ export function WizardContainer({
     blockLibraryDefaults: initialBlockLibraryDefaults,
     customBlockLibraryDefaults: initialCustomBlockLibraryDefaults,
 }: WizardContainerProps) {
-    // Block library defaults — live state that updates when VS Code settings change
+    // Block-library defaults — live state, refreshed when VS Code settings change.
+    // The Project Builder step pre-selects built-in libs (`blockLibraryDefaults`)
+    // and seeds the custom block-library checkboxes (`customBlockLibraryDefaults`).
     const [blockLibraryDefaults, setBlockLibraryDefaults] = useState(initialBlockLibraryDefaults);
     const [customBlockLibraryDefaults, setCustomBlockLibraryDefaults] = useState(initialCustomBlockLibraryDefaults);
 
     useEffect(() => {
-        const unsubCustom = vscode.onMessage(
-            'customBlockLibraryDefaultsUpdated',
-            (data: { customBlockLibraryDefaults: CustomBlockLibrary[] }) => {
-                setCustomBlockLibraryDefaults(data.customBlockLibraryDefaults);
-            },
-        );
         const unsubDefaults = vscode.onMessage(
             'blockLibraryDefaultsUpdated',
             (data: { blockLibraryDefaults: string[] }) => {
                 setBlockLibraryDefaults(data.blockLibraryDefaults);
             },
         );
-        return () => { unsubCustom(); unsubDefaults(); };
+        const unsubCustom = vscode.onMessage(
+            'customBlockLibraryDefaultsUpdated',
+            (data: { customBlockLibraryDefaults: CustomBlockLibrary[] }) => {
+                setCustomBlockLibraryDefaults(data.customBlockLibraryDefaults);
+            },
+        );
+        return () => { unsubDefaults(); unsubCustom(); };
     }, []);
 
     // Packages and stacks - loaded once on mount
@@ -259,12 +257,9 @@ export function WizardContainer({
         setState(prev => ({
             ...prev,
             componentConfigs: filteredConfigs,
-            // Clear EDS state (consolidated in edsConfig)
-            edsConfig: undefined,
-            githubReposCache: undefined,
-            daLiveSitesCache: undefined,
-            githubRepoSearchFilter: undefined,
-            daLiveSiteSearchFilter: undefined,
+            // Clear architecture-dependent EDS state/caches AND the cached config-tile
+            // validity verdicts, so a stale ✓ tile can't survive a stack change.
+            ...buildStackChangeStateReset(),
         }));
     };
 
@@ -287,40 +282,26 @@ export function WizardContainer({
                         initialViewMode={projectsViewMode}
                         packages={packages}
                         stacks={stacks}
-                        onArchitectureChange={handleArchitectureChange}
-                        blockLibraryDefaults={blockLibraryDefaults}
-                        customBlockLibraryDefaults={customBlockLibraryDefaults}
                     />
                 );
-            case 'component-selection':
-                return <ComponentSelectionStep {...props} componentsData={componentsData?.data as Record<string, unknown>} />;
             case 'prerequisites':
                 return <PrerequisitesStep {...props} componentsData={componentsData?.data as Record<string, unknown>} currentStep={state.currentStep} />;
-            case 'adobe-auth':
-                return <AdobeAuthStep {...props} />;
-            case 'adobe-project':
-                return <AdobeProjectStep {...props} completedSteps={completedSteps} />;
-            case 'adobe-workspace':
-                return <AdobeWorkspaceStep {...props} completedSteps={completedSteps} />;
-            case 'eds-connect-services':
-                return <ConnectServicesStep {...props} />;
-            case 'eds-repository-config':
-                return <GitHubRepoSelectionStep {...props} />;
-            case 'storefront-setup':
-                return <StorefrontSetupStep {...props} />;
-            case 'settings':
+            // Collapsed builder step. The shell routes the active area to the
+            // existing Commerce / Storefront / Integrations bodies and owns the
+            // Continue gate over all required areas.
+            case 'build-your-project':
                 return (
-                    <ConnectStoreStepContent
-                        selectedStackId={state.selectedStack ?? ''}
-                        componentConfigs={state.componentConfigs ?? {}}
-                        packageConfigDefaults={state.packageConfigDefaults}
-                        adobeOrg={state.adobeOrg}
-                        onComponentConfigsChange={(configs) => updateState({ componentConfigs: configs })}
-                        onValidationChange={setCanProceed}
-                        storeDiscoveryData={state.storeDiscoveryData}
-                        onStoreDiscoveryDataChange={(data) => updateState({ storeDiscoveryData: data ?? undefined })}
+                    <BuildYourProjectStep
+                        {...props}
+                        packages={packages}
+                        stacks={stacks}
+                        blockLibraryDefaults={blockLibraryDefaults}
+                        customBlockLibraryDefaults={customBlockLibraryDefaults}
+                        onArchitectureChange={handleArchitectureChange}
                     />
                 );
+            case 'storefront-setup':
+                return <StorefrontSetupStep {...props} />;
             case 'review':
                 return <ReviewStep state={state} updateState={updateState} setCanProceed={setCanProceed} componentsData={componentsData?.data} packages={packages} stacks={stacks} />;
             case 'create-project':
@@ -343,13 +324,95 @@ export function WizardContainer({
     const currentStepIndex = getCurrentStepIndex();
     const isLastStep = state.currentStep === 'create-project';
     const currentStepName = WIZARD_STEPS[currentStepIndex]?.name;
-    const currentStepDescription = WIZARD_STEPS[currentStepIndex]?.description;
 
     // Timeline state — derived from local wizard state, no sidebar messaging.
     const timelineSteps: TimelineStep[] = WIZARD_STEPS.map(s => ({ id: s.id, name: s.name }));
     const completedStepIndices = getCompletedStepIndices(completedSteps, WIZARD_STEPS);
     const confirmedStepIndices = getCompletedStepIndices(confirmedSteps, WIZARD_STEPS);
     const isEditMode = (state.wizardMode ?? 'create') !== 'create';
+
+    // On `build-your-project`, the visible build areas are walked via the footer
+    // Continue/Back (the linear driver) AND shown as children under the Build step
+    // in the rail — click a REACHED area to jump back. `buildAreas` is the ordered,
+    // visible areas for the current stack.
+    const onBuildStep = state.currentStep === 'build-your-project';
+    const buildAreas = onBuildStep ? buildYourProjectAreas(state, stacks) : [];
+    const activeAreaId = state.activeBuildArea ?? buildAreas[0]?.id;
+    const activeAreaIndex = buildAreas.findIndex(a => a.id === activeAreaId);
+
+    // Rail children: the areas under the (current) Build step, with per-area status.
+    const buildChildSteps: TimelineStep[] = buildAreas.map(a => ({ id: a.id, name: a.label }));
+    const buildChildStatusById = Object.fromEntries(buildAreas.map(a => [a.id, a.status]));
+
+    // The footer Continue/Back is the single LINEAR driver: it walks an area's
+    // SUB-STEPS → AREAS → wizard steps. The active area's sub-step DRIVER (Commerce /
+    // Storefront today; null for a single-view area like Integrations) generalizes the
+    // walk; its ordered sub-steps + the active one come from state.
+    const activeDriver = onBuildStep ? areaSubSteps(activeAreaId) : null;
+    const subSteps = activeDriver ? activeDriver.subSteps(state) : [];
+    const activeSub = activeDriver ? activeDriver.active(state) : null;
+    const nextSub = activeDriver ? activeDriver.next(state) : null;
+    const prevSub = activeDriver ? activeDriver.prev(state) : null;
+
+    /** When Continue/Back lands on an area, pin its FIRST/LAST sub-step (no-op if none). */
+    const areaEntry = (toAreaId: string | undefined, atEnd: boolean): Partial<WizardState> =>
+        areaSubSteps(toAreaId)?.entry(state, atEnd) ?? {};
+
+    /** Jump to a REACHED rail area (at or before the active one); forward stays gated to Continue. */
+    const handleAreaClick = (areaId: string): void => {
+        const idx = buildAreas.findIndex(a => a.id === areaId);
+        if (idx < 0 || idx > activeAreaIndex) return;
+        updateState({ activeBuildArea: buildAreas[idx].id, ...areaEntry(areaId, false) });
+    };
+
+    // Continue: next sub-step (within the active area) → next visible area (entering it
+    // at its first sub-step) → next wizard step. Pressing Continue COMMITS the current
+    // sub-step via the driver (Commerce's commit-gated ✓; a no-op for areas without it),
+    // so an auto-detected value never shows ✓ on form validity alone.
+    const handleNext = () => {
+        const commit: Partial<WizardState> =
+            activeDriver && activeSub ? activeDriver.commit(state, activeSub) : {};
+        if (activeDriver && nextSub) {
+            updateState({ ...commit, ...activeDriver.setActive(nextSub) });
+            return;
+        }
+        if (onBuildStep && activeAreaIndex >= 0 && activeAreaIndex < buildAreas.length - 1) {
+            const next = buildAreas[activeAreaIndex + 1];
+            updateState({ ...commit, activeBuildArea: next.id, ...areaEntry(next.id, false) });
+            return;
+        }
+        if (Object.keys(commit).length > 0) {
+            updateState(commit);
+        }
+        void goNext();
+    };
+    // Back: previous sub-step (within the active area) → previous visible area (entering
+    // it at its LAST sub-step) → previous wizard step.
+    const handleBack = () => {
+        if (activeDriver && prevSub) {
+            // Match the main timeline: stepping BACK un-commits the target sub-step and
+            // everything after it (driver no-op when there's no commit-gating).
+            const order = subSteps.map(s => s.id);
+            updateState({
+                ...activeDriver.setActive(prevSub),
+                ...activeDriver.uncommit(state, order, prevSub),
+            });
+            return;
+        }
+        if (onBuildStep && activeAreaIndex > 0) {
+            const prev = buildAreas[activeAreaIndex - 1];
+            updateState({ activeBuildArea: prev.id, ...areaEntry(prev.id, true) });
+            return;
+        }
+        goBack();
+    };
+
+    // Back is available when there is a previous wizard step, a previous area, OR a
+    // previous sub-step within the active area.
+    const canGoBack =
+        currentStepIndex > 0 ||
+        (onBuildStep && activeAreaIndex > 0) ||
+        Boolean(prevSub);
 
     const handleTimelineStepClick = (targetIndex: number) => {
         const targetStep = WIZARD_STEPS[targetIndex];
@@ -385,6 +448,11 @@ export function WizardContainer({
                         showHeader={true}
                         headerText="Setup Progress"
                         isEditMode={isEditMode}
+                        // Build-step areas as children under the (current) Build step.
+                        childSteps={buildChildSteps}
+                        childStatusById={buildChildStatusById}
+                        activeChildId={activeAreaId}
+                        onChildClick={handleAreaClick}
                     />
                 </div>
 
@@ -394,7 +462,8 @@ export function WizardContainer({
                     <PageHeader
                         title={getWizardTitle(state.wizardMode)}
                         subtitle={currentStepName}
-                        description={currentStepDescription}
+                        // The left timeline rail owns wayfinding on every step, so the
+                        // header is just the title + step crumb — no restated description.
                     />
 
                     {/* Step Content */}
@@ -439,10 +508,10 @@ export function WizardContainer({
                             }
                             rightContent={
                                 <Flex gap="size-100">
-                                    {currentStepIndex > 0 && (
+                                    {canGoBack && (
                                         <Button
                                             variant="secondary"
-                                            onPress={goBack}
+                                            onPress={handleBack}
                                             isQuiet
                                             isDisabled={isConfirmingSelection}
                                         >
@@ -451,7 +520,7 @@ export function WizardContainer({
                                     )}
                                     <Button
                                         variant="accent"
-                                        onPress={goNext}
+                                        onPress={handleNext}
                                         isDisabled={!canProceed || isConfirmingSelection}
                                     >
                                         {getNextButtonText(isConfirmingSelection, currentStepIndex, WIZARD_STEPS.length, state.wizardMode, state.currentStep)}

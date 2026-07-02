@@ -354,7 +354,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
     protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
         // Handle one-time tip to save block library defaults
-        // Fires once when user first confirms block library selection in the architecture modal.
+        // Fires once when user first confirms block library selection in the Project Builder step.
         // Tracked via globalState. Uses shared showOneTimeTip utility.
         comm.on('offer-save-block-library-defaults', (data: unknown) => {
             const payload = data as { selectedLibraries?: string[] };

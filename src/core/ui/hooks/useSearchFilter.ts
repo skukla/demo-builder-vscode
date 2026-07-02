@@ -28,7 +28,8 @@ interface UseSearchFilterReturn<T> {
  * Hook for searching and filtering arrays of items
  *
  * Provides search query state and memoized filtered results.
- * Extracted from AdobeProjectStep and AdobeWorkspaceStep.
+ * Extracted from the Adobe project/workspace selection flow (now AdobeProjectPicker
+ * and AdobeWorkspacePicker).
  *
  * @param items - Array of items to filter
  * @param options - Configuration options

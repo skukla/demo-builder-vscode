@@ -57,7 +57,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: NavigableSt
                     title="Session Expiring Soon"
                     message={`Your Adobe session expires in ${adobeAuth.tokenExpiresIn || 0} ${adobeAuth.tokenExpiresIn === 1 ? 'minute' : 'minutes'}. Please re-authenticate to avoid interruption during project setup.`}
                     centerMessage
-                    maxWidth="450px"
+                    maxWidth="520px"
                     actions={[
                         { label: 'Re-authenticate Now', icon: <Login size="S" />, variant: 'accent', onPress: () => handleLogin(true) },
                     ]}
@@ -84,7 +84,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: NavigableSt
                     title="Select Your Organization"
                     message={getOrgSelectionMessage(adobeAuth)}
                     centerMessage
-                    maxWidth="450px"
+                    maxWidth="520px"
                     actions={[
                         { label: 'Switch IMS Org', icon: <Login size="S" />, variant: 'accent', onPress: switchAccount },
                     ]}
@@ -99,7 +99,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: NavigableSt
                     title={authStatus || 'Sign in to Adobe'}
                     message={authSubMessage || 'Connect your Adobe account to create and deploy App Builder applications.'}
                     centerMessage
-                    maxWidth="450px"
+                    maxWidth="520px"
                     actions={[
                         { label: 'Sign In with Adobe', icon: <Login size="S" />, variant: 'accent', onPress: () => handleLogin(false) },
                     ]}
@@ -119,7 +119,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: NavigableSt
                         ? 'You need Developer or System Admin role in an Adobe organization with App Builder access.'
                         : "We couldn't connect to Adobe services. Please check your internet connection.")}
                     centerMessage
-                    maxWidth="450px"
+                    maxWidth="520px"
                     actions={adobeAuth.code === ErrorCode.AUTH_NO_APP_BUILDER
                         ? [{ label: 'Sign in with a different account', icon: <Login size="S" />, variant: 'accent', onPress: () => handleLogin(true) }]
                         : [
@@ -138,7 +138,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: NavigableSt
                     title="Authentication Timed Out"
                     message="The browser authentication window may have been closed or the session expired."
                     centerMessage
-                    maxWidth="450px"
+                    maxWidth="520px"
                     actions={[
                         { label: 'Retry Login', icon: <Login size="S" />, variant: 'accent', onPress: () => handleLogin(false) },
                     ]}

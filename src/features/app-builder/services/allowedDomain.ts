@@ -8,7 +8,7 @@
  * the hardcoded `example.com` the spike first used.
  */
 
-import type { Project } from '@/types/base';
+import type { MeshSubscribeTarget } from './ensureMeshApiSubscribed';
 
 const DEFAULT_PORT = 3000;
 
@@ -17,7 +17,7 @@ const DEFAULT_PORT = 3000;
  * project's selected frontend: `localhost:<port>`, defaulting to
  * `localhost:3000` when no frontend/port is known.
  */
-export function deriveAllowedDomain(project: Project): string {
+export function deriveAllowedDomain(project: MeshSubscribeTarget): string {
     const frontendId = project.componentSelections?.frontend;
     const port = frontendId
         ? project.componentInstances?.[frontendId]?.port ?? DEFAULT_PORT

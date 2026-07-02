@@ -272,6 +272,55 @@ describe('meshSetupService', () => {
                 '[Project Creation] Mesh .env generated',
             );
         });
+
+        describe('self-detects existing mesh for update-vs-create', () => {
+            const context = (): MeshSetupContext => ({
+                setupContext: mockSetupContext,
+                meshDefinition: mockMeshDefinition,
+                progressTracker: mockProgressTracker,
+            });
+
+            const getExistingMeshIdArg = (): unknown => {
+                const call = (helpers.deployMeshComponent as jest.Mock).mock.calls[0];
+                return call[4];
+            };
+
+            it('should pass describe-derived mesh id when apiMeshConfig.meshId is undefined', async () => {
+                mockCommandExecutor.execute.mockResolvedValue({
+                    code: 0,
+                    stdout: JSON.stringify({
+                        meshId: 'described-mesh-id',
+                        endpoint: 'https://described.adobe.io/graphql',
+                    }),
+                });
+
+                await deployNewMesh(context(), undefined);
+
+                expect(getExistingMeshIdArg()).toBe('described-mesh-id');
+            });
+
+            it('should pass undefined when neither apiMeshConfig nor describe report a mesh', async () => {
+                mockCommandExecutor.execute.mockResolvedValue({
+                    code: 0,
+                    stdout: '{}',
+                });
+
+                await deployNewMesh(context(), undefined);
+
+                expect(getExistingMeshIdArg()).toBeUndefined();
+            });
+
+            it('should prefer apiMeshConfig.meshId over describe-derived id when present', async () => {
+                mockCommandExecutor.execute.mockResolvedValue({
+                    code: 0,
+                    stdout: JSON.stringify({ meshId: 'described-mesh-id' }),
+                });
+
+                await deployNewMesh(context(), { meshId: 'wizard-mesh-id' });
+
+                expect(getExistingMeshIdArg()).toBe('wizard-mesh-id');
+            });
+        });
     });
 
     describe('linkExistingMesh', () => {

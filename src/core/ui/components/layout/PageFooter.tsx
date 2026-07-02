@@ -68,7 +68,7 @@ export const PageFooter: React.FC<PageFooterProps> = ({
     constrainWidth = true,
     className,
 }) => {
-    const footerContent = (
+    const gridContent = (
         <div className="footer-grid">
             <div className="grid-align-start">{leftContent}</div>
             <div className="grid-align-center">{centerContent}</div>
@@ -78,15 +78,14 @@ export const PageFooter: React.FC<PageFooterProps> = ({
 
     return (
         <View
-            padding="size-400"
+            paddingX="size-400"
+            paddingY="size-200"
             UNSAFE_className={cn('border-t', 'bg-gray-75', className)}
         >
             {constrainWidth ? (
-                <div className="footer-content-container">
-                    {footerContent}
-                </div>
+                <div className="footer-content-container">{gridContent}</div>
             ) : (
-                footerContent
+                gridContent
             )}
         </View>
     );

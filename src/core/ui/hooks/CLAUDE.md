@@ -341,8 +341,7 @@ return (
 - Auto-focus first item on mount (optional)
 - Works with radio groups, listboxes, grids
 
-**Used By:**
-- `BrandGallery` (ArchitectureModal) - Architecture selection
+**Used By:** None currently (retained as a list/grid navigation primitive)
 
 #### useFocusOnMount
 Focus an element on mount using a simple 3-tier strategy.

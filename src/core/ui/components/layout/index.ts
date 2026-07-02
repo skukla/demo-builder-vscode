@@ -27,3 +27,12 @@ export type { CenteredFeedbackContainerProps } from './CenteredFeedbackContainer
 
 export { SingleColumnLayout } from './SingleColumnLayout';
 export type { SingleColumnLayoutProps } from './SingleColumnLayout';
+
+export { ContentColumn } from './ContentColumn';
+export type { ContentColumnProps } from './ContentColumn';
+
+export { ContentWithSidebar } from './ContentWithSidebar';
+export type { ContentWithSidebarProps } from './ContentWithSidebar';
+
+export { ControlPanelLayout } from './ControlPanelLayout';
+export type { ControlPanelLayoutProps } from './ControlPanelLayout';

@@ -23,11 +23,22 @@ import { subscriberTarget } from './appBuilderComponentRunnerDeps';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
-import type { Project } from '@/types/base';
+import type { AdobeConfig, Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
+/**
+ * Narrow structural target for the mesh subscribe. `Project` is structurally
+ * assignable to this, so the deploy-path caller passing a full `Project` needs
+ * no change — and the wizard handler can build one from a payload (no cast).
+ */
+export interface MeshSubscribeTarget {
+    adobe?: Pick<AdobeConfig, 'organization' | 'projectId' | 'workspace'>;
+    componentSelections?: Pick<NonNullable<Project['componentSelections']>, 'backend' | 'frontend'>;
+    componentInstances?: Project['componentInstances'];
+}
+
 export interface EnsureMeshApiSubscribedParams {
-    project: Project;
+    project: MeshSubscribeTarget;
     authService: AuthenticationService;
     logger: Logger;
 }

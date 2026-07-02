@@ -13,7 +13,7 @@
  */
 
 import { getNextButtonText } from '@/features/project-creation/ui/wizard/wizardHelpers';
-import type { WizardStep } from '@/types/webview';
+import type { BuildAreaId, WizardStep, WizardState } from '@/types/webview';
 
 describe('Storefront Setup Rename - Wizard Helpers', () => {
     describe('getNextButtonText', () => {
@@ -45,6 +45,23 @@ describe('Storefront Setup Rename - Wizard Helpers', () => {
 });
 
 describe('Storefront Setup Rename - Type Safety', () => {
+    it('should accept build-your-project as a valid WizardStep', () => {
+        // The three group steps collapse into one build-your-project step.
+        const step: WizardStep = 'build-your-project';
+        expect(step).toBe('build-your-project');
+    });
+
+    it('should expose BuildAreaId for the three build areas (distinct from retired step ids)', () => {
+        // Area ids are a distinct concept from the retired wizard-step ids.
+        const areas: BuildAreaId[] = ['commerce', 'storefront', 'integrations'];
+        expect(areas).toHaveLength(3);
+    });
+
+    it('should allow activeBuildArea on WizardState', () => {
+        const partial: Pick<WizardState, 'activeBuildArea'> = { activeBuildArea: 'commerce' };
+        expect(partial.activeBuildArea).toBe('commerce');
+    });
+
     it('should accept storefront-setup as a valid WizardStep', () => {
         // This test validates the WizardStep type includes 'storefront-setup'
         // If the type doesn't include it, this will cause a TypeScript error at compile time
@@ -57,14 +74,11 @@ describe('Storefront Setup Rename - Type Safety', () => {
         // Note: This is enforced at compile time, but we test runtime behavior
         const validSteps: WizardStep[] = [
             'welcome',
-            'component-selection',
             'prerequisites',
             'adobe-auth',
             'adobe-project',
             'adobe-workspace',
-            'eds-connect-services',
-            'eds-repository-config',
-            'settings',
+            'build-your-project',
             'review',
             'create-project',
             'storefront-setup', // New step ID

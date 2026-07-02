@@ -7,7 +7,7 @@
  * - Empty state with message
  * - List view with search/filter (delegates to SearchableList)
  *
- * Used by AdobeProjectStep and AdobeWorkspaceStep to reduce duplication.
+ * Used by AdobeProjectPicker and AdobeWorkspacePicker to reduce duplication.
  */
 import {
     Flex,

@@ -9,12 +9,16 @@ jest.mock('vscode', () => ({
     SecretStorage: jest.fn(),
 }));
 
-// Mock Octokit
-jest.mock('@octokit/core', () => ({
-    Octokit: jest.fn().mockImplementation(() => ({
+// Mock Octokit — the real code calls `Octokit.plugin(retry)` which returns a
+// constructor; the mock has to expose `.plugin()` returning itself so the
+// downstream `new` succeeds.
+jest.mock('@octokit/core', () => {
+    const MockOctokit: any = jest.fn().mockImplementation(() => ({
         request: jest.fn(),
-    })),
-}));
+    }));
+    MockOctokit.plugin = jest.fn(() => MockOctokit);
+    return { Octokit: MockOctokit };
+});
 
 jest.mock('@octokit/plugin-retry', () => ({
     retry: jest.fn(() => ({})),
@@ -176,6 +180,59 @@ describe('GitHub Token Service', () => {
 
             // Then: Should return false
             expect(result).toBe(false);
+        });
+    });
+
+    describe('getUserOrgs', () => {
+        it('returns the list of org logins for the authenticated user', async () => {
+            // Given: stored token, /user/orgs returns three orgs
+            const service = new GitHubTokenService(mockSecretStorage);
+            mockSecretStorage.get.mockResolvedValue(JSON.stringify({ token: 'xxx' }));
+
+            const mockRequest = jest.fn().mockResolvedValue({
+                data: [
+                    { login: 'adobe' },
+                    { login: 'demo-system-stores' },
+                    { login: 'hlxsites' },
+                ],
+            });
+            const { Octokit } = await import('@octokit/core');
+            (Octokit as unknown as jest.Mock).mockImplementation(() => ({ request: mockRequest }));
+
+            // When
+            const orgs = await service.getUserOrgs();
+
+            // Then
+            expect(orgs).toEqual(['adobe', 'demo-system-stores', 'hlxsites']);
+            expect(mockRequest).toHaveBeenCalledWith('GET /user/orgs', expect.objectContaining({ per_page: 100 }));
+        });
+
+        it('returns empty array when no token is stored', async () => {
+            // Given: no stored token
+            const service = new GitHubTokenService(mockSecretStorage);
+            mockSecretStorage.get.mockResolvedValue(undefined);
+
+            // When
+            const orgs = await service.getUserOrgs();
+
+            // Then: empty (picker degrades to "personal account only")
+            expect(orgs).toEqual([]);
+        });
+
+        it('returns empty array when the GitHub request fails (graceful degradation)', async () => {
+            // Given: stored token, but /user/orgs throws (network, scope, etc.)
+            const service = new GitHubTokenService(mockSecretStorage);
+            mockSecretStorage.get.mockResolvedValue(JSON.stringify({ token: 'xxx' }));
+
+            const mockRequest = jest.fn().mockRejectedValue(new Error('Network error'));
+            const { Octokit } = await import('@octokit/core');
+            (Octokit as unknown as jest.Mock).mockImplementation(() => ({ request: mockRequest }));
+
+            // When
+            const orgs = await service.getUserOrgs();
+
+            // Then: empty, not throw — wizard should still advance with personal-only picker
+            expect(orgs).toEqual([]);
         });
     });
 });

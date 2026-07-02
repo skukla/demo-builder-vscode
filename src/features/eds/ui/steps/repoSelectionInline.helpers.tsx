@@ -1,0 +1,376 @@
+/**
+ * RepoSelectionInline helpers
+ *
+ * Pure functions + presentational sub-components extracted VERBATIM from the
+ * former GitHubRepoSelectionStep so RepoSelectionInline stays within the file-size
+ * budget. Behavior is unchanged — only the home moved (TwoColumn step → inline
+ * single-column body within the Storefront group).
+ *
+ * @module features/eds/ui/steps/repoSelectionInline.helpers
+ */
+
+import {
+    ActionButton,
+    Button,
+    Checkbox,
+    DialogTrigger,
+    Flex,
+    Heading,
+    Text,
+    TextField,
+    View,
+} from '@adobe/react-spectrum';
+import Alert from '@spectrum-icons/workflow/Alert';
+import React from 'react';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { LoadingOverlay } from '@/core/ui/components/feedback/LoadingOverlay';
+import { Modal } from '@/core/ui/components/ui/Modal';
+import { NumberedInstructions } from '@/core/ui/components/ui/NumberedInstructions';
+import { webviewClient } from '@/core/ui/utils/vscode-api';
+import { isValidRepositoryName } from '@/core/validation/normalizers';
+import type { GitHubRepoItem } from '@/types/webview';
+
+/** GitHub App installation status tracking. */
+export interface GitHubAppStatus {
+    isChecking: boolean;
+    isInstalled: boolean | null; // null = not checked yet
+    /** The actual code.status from the Helix admin endpoint (200, 400, 404, etc.) */
+    codeStatus?: number;
+    error?: string;
+    installUrl?: string;
+}
+
+/** Repository creation state tracking. */
+export interface RepoCreationState {
+    isCreating: boolean;
+    isCreated: boolean;
+    error?: string;
+}
+
+/** GitHub App check result type. */
+export interface GitHubAppCheckResult {
+    success: boolean;
+    isInstalled: boolean;
+    codeStatus?: number;
+    installUrl?: string;
+    error?: string;
+}
+
+/**
+ * Retry-poll for GitHub App installation with exponential backoff.
+ * Extracted to reduce component complexity.
+ */
+export async function pollGitHubAppInstallation(
+    owner: string,
+    repo: string,
+    setRecheckMessage: (msg: string) => void,
+): Promise<{ status: GitHubAppStatus; failed: boolean }> {
+    const maxAttempts = 5;
+    const retryDelayMs = 5000;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            const result = await webviewClient.request<GitHubAppCheckResult>(
+                'check-github-app', { owner, repo, lenient: true },
+            );
+
+            if (result.success && result.isInstalled) {
+                return {
+                    status: { isChecking: false, isInstalled: true, codeStatus: result.codeStatus },
+                    failed: false,
+                };
+            }
+
+            // HTTP 404 (codeStatus undefined) means repo not yet indexed -- retry
+            if (result.codeStatus === undefined && attempt < maxAttempts) {
+                setRecheckMessage(`Repository is still being registered... (attempt ${attempt + 1} of ${maxAttempts})`);
+                await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+                continue;
+            }
+
+            return {
+                status: { isChecking: false, isInstalled: false, codeStatus: result.codeStatus, installUrl: result.installUrl },
+                failed: true,
+            };
+        } catch (err) {
+            console.error('[GitHub App] Check failed:', err);
+            return {
+                status: { isChecking: false, isInstalled: false, error: (err as Error).message },
+                failed: true,
+            };
+        }
+    }
+
+    // All retries exhausted
+    return { status: { isChecking: false, isInstalled: false }, failed: true };
+}
+
+/**
+ * Compute whether the REPOSITORY choice is valid (repo picked/created), WITHOUT
+ * the AEM-Code-Sync app gate. This is the `repository` sub-step's verdict:
+ * - new:      created and not mid-creation
+ * - existing: a repo is selected and not loading
+ */
+export function computeRepoValid(
+    repoMode: string,
+    repoCreationState: RepoCreationState,
+    selectedRepo: GitHubRepoItem | undefined,
+    isLoading: boolean,
+): boolean {
+    if (repoMode === 'new') {
+        return repoCreationState.isCreated && !repoCreationState.isCreating;
+    }
+    return !!selectedRepo && !isLoading;
+}
+
+/**
+ * Compute whether the AEM-Code-Sync app gate is satisfied (the `code-sync`
+ * sub-step's verdict). Code Sync logically follows Repository, so it is never
+ * satisfied before a repo exists:
+ * - new:      the app is verified installed and not mid-check (implies the repo
+ *             was created — the app can't be installed before that)
+ * - existing: ready once a repo is actually SELECTED (no app gate at this step —
+ *             it's deferred to StorefrontSetup after the fstab.yaml push — but the
+ *             step isn't "done" until a repo has been chosen)
+ */
+export function computeCodeSyncValid(
+    repoMode: string,
+    githubAppStatus: GitHubAppStatus,
+    selectedRepo: GitHubRepoItem | undefined,
+): boolean {
+    if (repoMode === 'new') {
+        return githubAppStatus.isInstalled === true && !githubAppStatus.isChecking;
+    }
+    return !!selectedRepo;
+}
+
+/**
+ * Compute whether the user can proceed based on repo mode and current state.
+ * The GitHub-App-install gate lives here (new repos require app verified) —
+ * the combination of the repo-choice gate and the Code-Sync app gate.
+ */
+export function computeCanProceed(
+    repoMode: string,
+    repoCreationState: RepoCreationState,
+    githubAppStatus: GitHubAppStatus,
+    selectedRepo: GitHubRepoItem | undefined,
+    isLoading: boolean,
+): boolean {
+    return (
+        computeRepoValid(repoMode, repoCreationState, selectedRepo, isLoading) &&
+        computeCodeSyncValid(repoMode, githubAppStatus, selectedRepo)
+    );
+}
+
+/** Build GitHubAppStatus from a check result. */
+export function buildAppStatusFromResult(result: GitHubAppCheckResult): GitHubAppStatus {
+    return {
+        isChecking: false,
+        isInstalled: result.success ? result.isInstalled : false,
+        codeStatus: result.codeStatus,
+        installUrl: result.installUrl,
+        error: result.success ? undefined : (result.error || 'Failed to check GitHub App status'),
+    };
+}
+
+/**
+ * GitHubAppInstallModal - Shows the GitHub App installation modal for new repos.
+ * Returns null when the modal should not be shown.
+ */
+export function GitHubAppInstallModal({
+    repoMode,
+    repoCreationState,
+    createdRepo,
+    githubAppStatus,
+    isRechecking,
+    isModalDismissed,
+    recheckMessage,
+    hasRecheckFailed,
+    onCheckAgain,
+    onOpenInstallPage,
+    onDismiss,
+}: {
+    repoMode: string;
+    repoCreationState: RepoCreationState;
+    createdRepo?: { owner: string; name: string };
+    githubAppStatus: GitHubAppStatus;
+    isRechecking: boolean;
+    isModalDismissed: boolean;
+    recheckMessage: string;
+    hasRecheckFailed: boolean;
+    onCheckAgain: () => void;
+    onOpenInstallPage: () => void;
+    onDismiss: () => void;
+}): React.ReactElement | null {
+    const isNewWithCreatedRepo = repoMode === 'new' && repoCreationState.isCreated && !!createdRepo;
+    if (!isNewWithCreatedRepo) return null;
+    if (githubAppStatus.isInstalled === true) return null;
+
+    const shouldShowModal = (githubAppStatus.isInstalled === false || isRechecking) && !isModalDismissed;
+    if (!shouldShowModal || !createdRepo) return null;
+
+    const { owner, name: repo } = createdRepo;
+
+    return (
+        <DialogTrigger type="modal" isOpen={true} onOpenChange={(isOpen) => { if (!isOpen) onDismiss(); }}>
+            <ActionButton isHidden>Open</ActionButton>
+            {() => (
+                <Modal
+                    title="Install GitHub App"
+                    actionButtons={
+                        isRechecking
+                            ? []
+                            : [
+                                { label: 'Check Again', variant: 'secondary', onPress: onCheckAgain },
+                                { label: 'Install App', variant: 'accent', onPress: onOpenInstallPage },
+                            ]
+                    }
+                    onClose={onDismiss}
+                >
+                    <div style={{ minHeight: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {isRechecking ? (
+                            <LoadingDisplay message={recheckMessage} />
+                        ) : hasRecheckFailed ? (
+                            <Text UNSAFE_className="text-sm text-orange-700">
+                                {githubAppStatus.codeStatus === undefined
+                                    ? 'Your repository is still being registered. This can take a few minutes for new repositories. Please wait and try again.'
+                                    : 'App not detected. Please verify the app is installed for this repository.'}
+                            </Text>
+                        ) : (
+                            <NumberedInstructions
+                                instructions={[
+                                    { step: 'Click "Install App"', details: 'Opens the AEM Code Sync GitHub App page' },
+                                    { step: 'Configure the app', details: `Click "Configure", sign in if prompted, then click "Configure" next to "${owner}"` },
+                                    { step: 'Grant repository access', details: `Select "Only select repositories", search for "${repo}", and click the green "Save" button` },
+                                    { step: 'Return here and click "Check Again"', details: 'We\'ll verify the installation completed' },
+                                ]}
+                            />
+                        )}
+                    </div>
+                </Modal>
+            )}
+        </DialogTrigger>
+    );
+}
+
+/**
+ * NewRepoForm - Form for creating a new repository.
+ */
+export function NewRepoForm({
+    repoName,
+    githubUser,
+    repoNameError,
+    repoCreationState,
+    templateAvailable,
+    onRepoNameChange,
+    onRepoNameBlur,
+    onUseExisting,
+    onCreateRepository,
+}: {
+    repoName: string;
+    githubUser?: { login: string };
+    repoNameError?: string;
+    repoCreationState: RepoCreationState;
+    templateAvailable: boolean;
+    onRepoNameChange: (value: string) => void;
+    onRepoNameBlur: () => void;
+    onUseExisting: () => void;
+    onCreateRepository: () => void;
+}): React.ReactElement {
+    return (
+        <View
+            backgroundColor="gray-50"
+            borderRadius="medium"
+            padding="size-300"
+        >
+            <Heading level={3} margin={0} marginBottom="size-200">Create New Repository</Heading>
+
+            <TextField
+                label="Repository Name"
+                value={repoName}
+                onChange={onRepoNameChange}
+                onBlur={onRepoNameBlur}
+                validationState={repoNameError || repoCreationState.error ? 'invalid' : undefined}
+                errorMessage={repoNameError || repoCreationState.error}
+                placeholder="my-eds-project"
+                description={githubUser ? `Will be created as ${githubUser.login}/${repoName || 'my-eds-project'}` : 'Name for your new GitHub repository'}
+                width="100%"
+                isRequired
+                autoFocus
+                isDisabled={repoCreationState.isCreated || repoCreationState.isCreating}
+            />
+
+            <Flex justifyContent="end" gap="size-100" marginTop="size-200">
+                <Button variant="secondary" onPress={onUseExisting}>
+                    Browse
+                </Button>
+                {!repoCreationState.isCreated && (
+                    <Button
+                        variant="accent"
+                        onPress={onCreateRepository}
+                        isDisabled={
+                            !repoName ||
+                            !isValidRepositoryName(repoName) ||
+                            repoCreationState.isCreating ||
+                            !templateAvailable
+                        }
+                    >
+                        Create
+                    </Button>
+                )}
+            </Flex>
+
+            <LoadingOverlay isVisible={repoCreationState.isCreating} />
+        </View>
+    );
+}
+
+/**
+ * ResetToTemplateOption - Checkbox with warning for resetting existing repos.
+ */
+export function ResetToTemplateOption({
+    resetToTemplate,
+    onResetToTemplateChange,
+    disabled = false,
+}: {
+    resetToTemplate: boolean;
+    onResetToTemplateChange: (isSelected: boolean) => void;
+    /** Disabled until a repository is selected; always rendered so the row never reflows. */
+    disabled?: boolean;
+}): React.ReactElement {
+    // When disabled (no repo selected) present as unchecked with no warning.
+    const active = !disabled && resetToTemplate;
+    return (
+        <Flex
+            direction="column"
+            gap="size-100"
+            marginTop="size-300"
+            UNSAFE_className="reset-to-template-top"
+        >
+            <Checkbox
+                isSelected={active}
+                isDisabled={disabled}
+                onChange={onResetToTemplateChange}
+            >
+                Reset to template (replaces all content)
+            </Checkbox>
+
+            <View
+                marginStart="size-300"
+                minHeight="size-250"
+                UNSAFE_className="reset-warning-container"
+            >
+                <Flex
+                    alignItems="center"
+                    gap="size-100"
+                    UNSAFE_className={active ? 'reset-warning-visible' : 'reset-warning-hidden'}
+                >
+                    <Alert size="S" UNSAFE_className="text-orange-500 flex-shrink-0" />
+                    <Text UNSAFE_className="text-xs text-orange-600">
+                        This will delete and recreate the repository with the selected template content.
+                    </Text>
+                </Flex>
+            </View>
+        </Flex>
+    );
+}

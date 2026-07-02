@@ -21,17 +21,56 @@ import {
     ACCS_STORE_VIEW_CODE,
     PAAS_STORE_VIEW_CODE,
 } from '@/features/components/config/envVarKeys';
+import {
+    CONNECTION_FIELDS,
+    isStoreCodeField,
+} from '@/features/components/config/storeFieldHelpers';
 import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
 import { ServiceGroupList } from '@/features/components/ui/components/ServiceGroupList';
 import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreConfigFieldRow';
 import { useAutoStoreDetect } from '@/features/components/ui/hooks/useAutoStoreDetect';
-import { useComponentConfig } from '@/features/components/ui/hooks/useComponentConfig';
+import {
+    useComponentConfig,
+    type ServiceGroup,
+} from '@/features/components/ui/hooks/useComponentConfig';
 import { useStoreDiscovery } from '@/features/components/ui/hooks/useStoreDiscovery';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
 import type { ComponentConfigs } from '@/types/webview';
 
 /** Groups that contain connection + store fields (shown immediately with progressive disclosure) */
 const CONNECTION_GROUPS = new Set(['accs', 'adobe-commerce']);
+
+/** Which slice of the commerce config to render. Absent = render everything (legacy callers). */
+export type ConnectStoreSection = 'connection' | 'business-structure' | 'catalog';
+
+/**
+ * Filter the visible service groups down to a single section's fields.
+ *
+ * The hooks stay fully mounted regardless of section — only what renders is
+ * filtered, so store-discovery/config state persists across tab switches.
+ *
+ * - connection: connection groups, CONNECTION_FIELDS only (no store-code cascade)
+ * - business-structure: connection groups, the store-code cascade only
+ * - catalog: the non-connection groups (already gated on store selection upstream)
+ */
+function filterGroupsForSection(
+    groups: ServiceGroup[],
+    section: ConnectStoreSection,
+): ServiceGroup[] {
+    if (section === 'catalog') {
+        return groups.filter(group => !CONNECTION_GROUPS.has(group.id));
+    }
+
+    const keepField =
+        section === 'connection'
+            ? (key: string) => CONNECTION_FIELDS.has(key)
+            : (key: string) => isStoreCodeField(key);
+
+    return groups
+        .filter(group => CONNECTION_GROUPS.has(group.id))
+        .map(group => ({ ...group, fields: group.fields.filter(field => keepField(field.key)) }))
+        .filter(group => group.fields.length > 0);
+}
 
 // ---------------------------------------------------------------------------
 // Props
@@ -48,6 +87,11 @@ export interface ConnectStoreStepContentProps {
     storeDiscoveryData?: CommerceStoreStructure;
     /** Called when store structure changes — persist to wizard state */
     onStoreDiscoveryDataChange?: (data: CommerceStoreStructure | null) => void;
+    /**
+     * Render only one slice of the commerce config (for the Commerce tabs).
+     * Absent = render all sections (legacy single-step callers unchanged).
+     */
+    section?: ConnectStoreSection;
 }
 
 // ---------------------------------------------------------------------------
@@ -63,6 +107,7 @@ export function ConnectStoreStepContent({
     onValidationChange,
     storeDiscoveryData,
     onStoreDiscoveryDataChange,
+    section,
 }: ConnectStoreStepContentProps) {
     const {
         componentConfigs: liveConfigs,
@@ -148,17 +193,30 @@ export function ConnectStoreStepContent({
 
     // Filter groups: non-connection groups (e.g., AEM Assets, Catalog Service)
     // are hidden until store selection is complete
-    const visibleGroups = serviceGroups.filter(
+    const disclosedGroups = serviceGroups.filter(
         group => CONNECTION_GROUPS.has(group.id) || storeSelectionComplete,
     );
 
-    // Context for resolving {placeholder} tokens in field-description URLs
-    // (e.g., the ACCS GraphQL Endpoint description includes a link to the
-    // Experience Cloud Commerce instances page for the selected org).
-    const descriptionContext = { orgCode: adobeOrg?.code };
+    // When a section is requested (Commerce tabs), render only that slice.
+    // Hooks stay mounted; only rendering is filtered so state persists across tabs.
+    const visibleGroups = section
+        ? filterGroupsForSection(disclosedGroups, section)
+        : disclosedGroups;
+
+    // Catalog section gate: catalog/assets groups stay hidden until a store view
+    // is chosen. Show a hint rather than a confusing empty pane.
+    if (section === 'catalog' && !storeSelectionComplete) {
+        return (
+            <Text UNSAFE_className="text-gray-600">
+                Choose a store view in Business Structure to configure catalog services.
+            </Text>
+        );
+    }
 
     return (
-        <SingleColumnLayout>
+        // padding 0: the surrounding .step-view already supplies the content padding —
+        // a second 24px here pushed the first group heading well below the tab strip.
+        <SingleColumnLayout padding="0px">
             <Form UNSAFE_className="container-form">
                 <ServiceGroupList
                     groups={visibleGroups}
@@ -180,7 +238,6 @@ export function ConnectStoreStepContent({
                             getStoreGroupItems={getStoreGroupItems}
                             getStoreViewItems={getStoreViewItems}
                             onRefresh={forceFetch}
-                            descriptionContext={descriptionContext}
                         />
                     )}
                 />

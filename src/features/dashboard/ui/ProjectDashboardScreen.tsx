@@ -7,26 +7,19 @@
  * @module features/dashboard/ui/ProjectDashboardScreen
  */
 
-import {
-    View,
-    Flex,
-    Button,
-    Link,
-    DialogContainer,
-} from '@adobe/react-spectrum';
+import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useState, useEffect, useRef } from 'react';
 import { ActionGrid } from './components/ActionGrid';
 import { AiCapabilitiesModal } from './components/AiCapabilitiesModal';
-import { AppBuilderCard, type AppCardState } from './components/AppBuilderCard';
+import type { AppCardState } from './components/AppBuilderCard';
 import { DashboardRenameDialog } from './components/DashboardRenameDialog';
-import { IntegrationsBlock } from './components/IntegrationsBlock';
+import { DashboardStatusHeader } from './components/DashboardStatusHeader';
 import { OrgContextNotice } from './components/OrgContextNotice';
 import { isStartActionDisabled } from './dashboardPredicates';
 import { useDashboardActions } from './hooks/useDashboardActions';
 import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
 import { useRenameDialog } from './hooks/useRenameDialog';
-import { StatusCard } from '@/core/ui/components/feedback';
-import { PageLayout, PageHeader } from '@/core/ui/components/layout';
+import { PageLayout, PageHeader, ControlPanelLayout } from '@/core/ui/components/layout';
 import { useFocusTrap, useSingleTimer } from '@/core/ui/hooks';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -70,16 +63,6 @@ interface ProjectDashboardScreenProps {
 
 
 /**
- * Whether to render the App Builder card: shown when the project has an Adobe
- * workspace to deploy into (so the "Add an App Builder app" affordance is
- * reachable) or already carries an app. Extracted to keep the screen component's
- * cyclomatic complexity in check.
- */
-function shouldShowAppCard(hasAdobeContext: boolean | undefined, app: AppCardState | undefined): boolean {
-    return Boolean(hasAdobeContext) || Boolean(app);
-}
-
-/**
  * Project dashboard screen component
  *
  * Displays the control panel for a demo project including:
@@ -90,7 +73,7 @@ function shouldShowAppCard(hasAdobeContext: boolean | undefined, app: AppCardSta
  *
  * @param props - Component props
  */
-export function ProjectDashboardScreen({ project, hasMesh = false, brandName, stackName, isEds = false, edsLiveUrl, edsDaLiveUrl, authoringExperience, initialMeshStatus, initialEdsStorefrontStatus, hasAdobeContext, initialApp, appBuilderComponents, appBuilderComponentCatalog }: ProjectDashboardScreenProps) {
+export function ProjectDashboardScreen({ project, hasMesh = false, brandName, stackName, isEds = false, edsLiveUrl, edsDaLiveUrl, authoringExperience, initialMeshStatus, initialEdsStorefrontStatus, hasAdobeContext }: ProjectDashboardScreenProps) {
     // Capture isEds on first render and never change it (project type doesn't change)
     const isEdsRef = useRef(isEds);
     if (isEds && !isEdsRef.current) {
@@ -111,13 +94,6 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
     // open-time props) updated by the `authoringExperienceUpdate` message below.
     const [liveAuthoringExperience, setLiveAuthoringExperience] = useState(authoringExperience);
     const [liveEdsDaLiveUrl, setLiveEdsDaLiveUrl] = useState(edsDaLiveUrl);
-
-    // App Builder app state — seeded from initialApp (project.appState) and
-    // updated live by the `appStatusUpdate` channel (mirrors the mesh card). When
-    // initialApp is absent the project has no app yet; the card still renders its
-    // No-app ("Add an App Builder app") state as long as the project has Adobe
-    // context (see the render gate below).
-    const [appState, setAppState] = useState<AppCardState | undefined>(initialApp);
 
     // Tracks whether the user has attempted a forced org switch this session.
     // After an attempt that still leaves them mismatched, the banner adds a
@@ -224,23 +200,6 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
         return unsubscribe;
     }, []);
 
-    // Subscribe to App Builder app status pushed by the deployApp command. Mirrors
-    // the meshStatusUpdate subscription: the payload's {status, message, url} maps
-    // straight onto the card's AppCardState.
-    useEffect(() => {
-        const unsubscribe = webviewClient.onMessage('appStatusUpdate', (data: unknown) => {
-            const payload = data as { status?: AppCardState['status']; message?: string; url?: string };
-            if (!payload.status) return;
-            setAppState(prev => ({
-                status: payload.status as AppCardState['status'],
-                message: payload.message,
-                url: payload.url ?? prev?.url,
-                deployedUrls: prev?.deployedUrls,
-            }));
-        });
-        return unsubscribe;
-    }, []);
-
     // Reset the switch-attempt flag once the org check RESOLVES clean (not on the
     // transient 'checking' a re-check passes through — that would drop the no-loop
     // hint), so a future, unrelated mismatch starts without a stale hint.
@@ -282,7 +241,7 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
     const isMeshActionDisabled = isTransitioning || isMeshBusy(meshStatus);
 
     return (
-        <div ref={containerRef}>
+        <div ref={containerRef} className="dashboard-left">
             <PageLayout
                 header={
                     <PageHeader
@@ -293,171 +252,66 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
                 }
                 backgroundColor="var(--spectrum-global-color-gray-50)"
             >
-                {/* Status Header - matches Projects List header design */}
-                <div className="dashboard-status-header">
-                    <div className="page-container-padded page-header-section">
-                        {/* Content wrapper matches grid width for alignment */}
-                        <div className="dashboard-status-content">
-                            <Flex alignItems="center" gap="size-300">
-                                {/* Status indicators */}
-                                <View flex>
-                                <div className="dashboard-status-grid">
-                                {/* Demo Status */}
-                                <StatusCard
-                                    label="Frontend"
-                                    status={demoStatusDisplay.text}
-                                    color={demoStatusDisplay.color}
-                                    size="S"
-                                    className="dashboard-status-badge"
-                                />
+                <ControlPanelLayout
+                    className="dashboard-control-panel"
+                    masthead={
+                        <>
+                            <DashboardStatusHeader
+                                demoStatusDisplay={demoStatusDisplay}
+                                meshStatusDisplay={meshStatusDisplay}
+                                meshStatus={meshStatus}
+                                aiReady={aiReady}
+                                imsOrgDisplay={imsOrgDisplay}
+                                orgCheckState={orgCheckState}
+                                onReAuthenticate={handleReAuthenticate}
+                                onRegenerateAi={() => { void regenerateAiFiles(); }}
+                                onViewCapabilities={() => setShowCapabilities(true)}
+                                onNavigateBack={handleNavigateBack}
+                            />
 
-                                {/* Mesh Status — `needs-auth` surfaces a "Sign in"
-                                    remediation through the shared StatusCard.action
-                                    (user-initiated re-auth; allowed to open a browser). */}
-                                {meshStatusDisplay && (
-                                    <StatusCard
-                                        label="API Mesh"
-                                        status={meshStatusDisplay.text}
-                                        color={meshStatusDisplay.color}
-                                        size="S"
-                                        className="dashboard-status-badge"
-                                        action={meshStatus === 'needs-auth'
-                                            ? { label: 'Sign in', onPress: handleReAuthenticate }
-                                            : undefined}
-                                    />
-                                )}
-
-                                {/* AI Ready Status — a failing/incomplete badge
-                                    (red/yellow) surfaces the "Regenerate AI files"
-                                    fix through the shared StatusCard.action. The
-                                    always-on "View AI Capabilities" navigation stays
-                                    a separate link below (it's not a remediation). */}
-                                <StatusCard
-                                    label={aiReady.label}
-                                    status={aiReady.text}
-                                    color={aiReady.color}
-                                    size="S"
-                                    className="dashboard-status-badge"
-                                    action={(aiReady.color === 'red' || aiReady.color === 'yellow')
-                                        ? {
-                                            label: 'Regenerate AI files',
-                                            onPress: () => { void regenerateAiFiles(); },
-                                            testId: 'ai-regenerate-trigger',
-                                        }
-                                        : undefined}
-                                />
-
-                                {/* IMS Org status — ambient org-context health (blue checking →
-                                    green org name / red wrong org). Shown only for Adobe projects.
-                                    The `unknown` case (couldn't check non-interactively on open)
-                                    surfaces a quiet "Sign in to check" via StatusCard.action — a
-                                    user-initiated sign-in (allowed to open a browser). The
-                                    actionable mismatch banner is separate (below). */}
-                                {imsOrgDisplay && (
-                                    <StatusCard
-                                        label="IMS Org"
-                                        status={imsOrgDisplay.text}
-                                        color={imsOrgDisplay.color}
-                                        size="S"
-                                        className="dashboard-status-badge"
-                                        action={orgCheckState === 'unknown'
-                                            ? { label: 'Sign in to check', onPress: handleReAuthenticate }
-                                            : undefined}
-                                    />
-                                )}
-
-                                {/* AI capability discovery — always-on navigation to
-                                    the capability catalog (NOT a status remediation, so
-                                    it stays a standalone link, not a StatusCard.action).
-                                    Placed at column 2 so it's flush with the status
-                                    labels above, not the dot column. */}
-                                <Flex
-                                    direction="row"
-                                    gap="size-200"
-                                    alignItems="center"
-                                    UNSAFE_style={{ gridColumn: '2 / -1' }}
-                                >
-                                    <Link
-                                        data-testid="ai-view-capabilities-trigger"
-                                        onPress={() => setShowCapabilities(true)}
-                                        isQuiet
-                                        UNSAFE_className="text-sm cursor-pointer"
-                                    >
-                                        View AI Capabilities
-                                    </Link>
-                                </Flex>
-                                </div>
-                            </View>
-                                {/* All Projects button */}
-                                <Button variant="secondary" onPress={handleNavigateBack}>
-                                    All Projects
-                                </Button>
-                            </Flex>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Org-mismatch banner — the actionable half of org-context
-                    surfacing (ambient checking/ok/wrong status lives in the "IMS
-                    Org" badge above). Shows only on mismatch, with Switch IMS Org. */}
-                <OrgContextNotice
-                    state={orgCheckState}
-                    orgMismatch={orgMismatch}
-                    switchAttempted={switchAttempted}
-                    isSwitching={isSwitchingOrg}
-                    onSwitchOrg={onSwitchOrg}
-                />
-
-                <div className="page-container-padded pb-4">
-
-                    {/* Center the grid of fixed-width buttons */}
-                    <div className="dashboard-grid-container">
-                        <ActionGrid
-                            isEds={isEdsStable}
-                            hasMesh={hasMesh}
-                            isRunning={isRunning}
-                            isStartDisabled={isStartDisabled}
-                            isStopDisabled={isStopDisabled}
-                            isMeshActionDisabled={isMeshActionDisabled}
-                            isOpeningBrowser={isOpeningBrowser}
-                            handleStartDemo={handleStartDemo}
-                            handleStopDemo={handleStopDemo}
-                            handleOpenBrowser={handleOpenBrowser}
-                            handleOpenLiveSite={handleOpenLiveSite}
-                            handleOpenDaLive={handleOpenDaLive}
-                            authoringExperience={liveAuthoringExperience}
-                            handleDeployMesh={handleDeployMesh}
-                            handleSyncStorefront={handleSyncStorefront}
-                            handleRefreshBlockLibrary={isEdsStable ? handleRefreshBlockLibrary : undefined}
-                            handleRepublishContent={isEdsStable ? handleRepublishContent : undefined}
-                            handleConfigure={handleConfigure}
-                            handleOpenDevConsole={handleOpenDevConsole}
-                            handleRename={openRenameDialog}
-                            handleCopyPath={handleCopyPath}
-                            handleExportProject={handleExportProject}
-                            handleResetProject={handleResetProject}
-                            handleDeleteProject={handleDeleteProject}
-                        />
-                    </div>
-
-                    {/* App Builder app card — sibling of the mesh surface. Shown
-                        whenever the project has an Adobe workspace to deploy into
-                        (so the "Add an App Builder app" affordance is reachable) or
-                        already carries an app. `appState` is undefined for a no-app
-                        project → the card renders its No-app state. */}
-                    {shouldShowAppCard(hasAdobeContext, appState) && (
+                            {/* Org-mismatch banner — the actionable half of org-context
+                                surfacing (ambient checking/ok/wrong status lives in the
+                                "IMS Org" badge above). Shows only on mismatch. */}
+                            <OrgContextNotice
+                                state={orgCheckState}
+                                orgMismatch={orgMismatch}
+                                switchAttempted={switchAttempted}
+                                isSwitching={isSwitchingOrg}
+                                onSwitchOrg={onSwitchOrg}
+                            />
+                        </>
+                    }
+                    primary={
                         <div className="dashboard-grid-container">
-                            <AppBuilderCard app={appState} />
+                            <ActionGrid
+                                isEds={isEdsStable}
+                                hasMesh={hasMesh}
+                                isRunning={isRunning}
+                                isStartDisabled={isStartDisabled}
+                                isStopDisabled={isStopDisabled}
+                                isMeshActionDisabled={isMeshActionDisabled}
+                                isOpeningBrowser={isOpeningBrowser}
+                                handleStartDemo={handleStartDemo}
+                                handleStopDemo={handleStopDemo}
+                                handleOpenBrowser={handleOpenBrowser}
+                                handleOpenLiveSite={handleOpenLiveSite}
+                                handleOpenDaLive={handleOpenDaLive}
+                                authoringExperience={liveAuthoringExperience}
+                                handleDeployMesh={handleDeployMesh}
+                                handleSyncStorefront={handleSyncStorefront}
+                                handleRefreshBlockLibrary={isEdsStable ? handleRefreshBlockLibrary : undefined}
+                                handleRepublishContent={isEdsStable ? handleRepublishContent : undefined}
+                                handleConfigure={handleConfigure}
+                                handleOpenDevConsole={handleOpenDevConsole}
+                                handleRename={openRenameDialog}
+                                handleCopyPath={handleCopyPath}
+                                handleExportProject={handleExportProject}
+                                handleResetProject={handleResetProject}
+                                handleDeleteProject={handleDeleteProject}
+                            />
                         </div>
-                    )}
-
-                    {/* Integrations list (self-gates on Adobe context). */}
-                    <IntegrationsBlock
-                        hasAdobeContext={hasAdobeContext}
-                        appBuilderComponents={appBuilderComponents}
-                        catalog={appBuilderComponentCatalog}
-                    />
-                </div>
+                    }
+                />
             </PageLayout>
 
             {/* Rename dialog — opened from the More menu's Rename item. On confirm

@@ -10,6 +10,7 @@ import { withTimeout } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateWorkspaceId } from '@/core/validation';
 import type { AdobeWorkspace } from '@/features/authentication/services/types';
+import { ErrorCode } from '@/types/errorCodes';
 import { toAppError, isTimeout } from '@/types/errors';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import { DataResult, SimpleResult } from '@/types/results';
@@ -23,7 +24,7 @@ import { toError } from '@/types/typeGuards';
  */
 export async function handleGetWorkspaces(
     context: HandlerContext,
-    _payload?: { orgId?: string; projectId?: string },
+    payload?: { orgId?: string; projectId?: string },
 ): Promise<DataResult<AdobeWorkspace[]>> {
     try {
         // Send loading status with sub-message
@@ -36,8 +37,9 @@ export async function handleGetWorkspaces(
             });
         }
 
-        // Wrap getWorkspaces with timeout (30 seconds)
-        const workspacesPromise = context.authManager?.getWorkspaces();
+        // Wrap getWorkspaces with timeout (30 seconds). Thread the selected org + project
+        // (webview state) so the fetch targets them, not the stale in-memory cache.
+        const workspacesPromise = context.authManager?.getWorkspaces(payload);
         if (!workspacesPromise) {
             throw new Error('Auth manager not available');
         }
@@ -139,5 +141,69 @@ export async function handleCreateWorkspaceCredential(
     } catch (error) {
         context.logger.error('[Workspace] Failed to create credential:', error as Error);
         return { success: false, error: `Failed to create credential: ${(error as Error).message}` };
+    }
+}
+
+/**
+ * create-adobe-workspace — Flow A: create a new workspace in the selected project.
+ *
+ * Defensively re-checks developer permission (the shared `can-create-adobe-project`
+ * probe may be stale) and returns an `AUTH_FORBIDDEN`-coded error so the UI drops
+ * to Flow B (select existing / open console / switch org). On success, refreshes
+ * the workspace list and acks the new selection (mirrors `handleSelectWorkspace`).
+ * Never throws.
+ */
+export async function handleCreateAdobeWorkspace(
+    context: HandlerContext,
+    payload: { name: string; description?: string; projectId?: string },
+): Promise<HandlerResponse> {
+    if (!context.authManager) {
+        return { success: false, error: 'Authentication not available' };
+    }
+
+    const name = (payload?.name ?? '').trim();
+    const description = payload?.description ?? '';
+
+    try {
+        // Defensive permission re-check (guards a stale probe) → UI drops to Flow B.
+        const { hasPermissions, error: permError } = await context.authManager.testDeveloperPermissions();
+        if (!hasPermissions) {
+            return {
+                success: false,
+                code: ErrorCode.AUTH_FORBIDDEN,
+                error: permError
+                    || 'You do not have permission to create workspaces in this organization. Select an existing workspace instead.',
+            };
+        }
+
+        if (!name) {
+            return { success: false, error: 'Workspace name is required.' };
+        }
+
+        const workspace = await context.authManager.createWorkspace(name, description);
+        if (!workspace) {
+            return {
+                success: false,
+                error: "Could not create the workspace. You may have hit your project's workspace quota — "
+                    + 'select an existing workspace instead.',
+            };
+        }
+
+        // Refresh the workspace list and ack the new selection (best-effort). Thread the
+        // wizard's project so the fetch takes the SDK path (the org resolves via the
+        // fetcher's token-org fallback); unthreaded it would drop to the stale-org CLI.
+        try {
+            const workspaces = await context.authManager.getWorkspaces({ projectId: payload?.projectId });
+            await context.sendMessage('get-workspaces', workspaces);
+            await context.sendMessage('workspaceSelected', { workspaceId: workspace.id });
+        } catch (refreshError) {
+            context.debugLogger.debug('[Workspace] Post-create refresh failed:', refreshError);
+        }
+
+        context.logger.info(`[Workspace] Created workspace: ${workspace.name}`);
+        return { success: true, data: workspace };
+    } catch (error) {
+        context.logger.error('[Workspace] Failed to create workspace:', error as Error);
+        return { success: false, error: `Failed to create workspace: ${toError(error).message}` };
     }
 }

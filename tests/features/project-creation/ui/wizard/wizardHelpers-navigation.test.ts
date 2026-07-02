@@ -51,7 +51,7 @@ describe('wizardHelpers - navigation', () => {
             { id: 'adobe-auth', name: 'Auth' },
             { id: 'adobe-project', name: 'Project' },
             { id: 'adobe-workspace', name: 'Workspace' },
-            { id: 'component-selection', name: 'Components' },
+            { id: 'build-your-project', name: 'Build Your Project' },
             { id: 'review', name: 'Review' },
         ];
 
@@ -62,7 +62,7 @@ describe('wizardHelpers - navigation', () => {
         });
 
         it('should remove target step and all steps after it', () => {
-            const completed: WizardStep[] = ['adobe-auth', 'adobe-project', 'adobe-workspace', 'component-selection'];
+            const completed: WizardStep[] = ['adobe-auth', 'adobe-project', 'adobe-workspace', 'build-your-project'];
             const result = filterCompletedStepsForBackwardNav(completed, 'adobe-project', 1, wizardSteps);
             expect(result).toEqual(['adobe-auth']);
         });
@@ -80,25 +80,26 @@ describe('wizardHelpers - navigation', () => {
     });
 
     describe('getAdobeStepIndices', () => {
-        it('should return correct indices when steps exist', () => {
+        it('should return the build-your-project index (the picker host) when present', () => {
             const wizardSteps: WizardStepConfig[] = [
                 { id: 'adobe-auth', name: 'Auth' },
-                { id: 'adobe-project', name: 'Project' },
-                { id: 'adobe-workspace', name: 'Workspace' },
+                { id: 'build-your-project', name: 'Build Your Project' },
+                { id: 'review', name: 'Review' },
             ];
             const result = getAdobeStepIndices(wizardSteps);
-            expect(result).toEqual({ projectIndex: 1, workspaceIndex: 2 });
+            expect(result).toEqual({ buildStepIndex: 1 });
         });
 
-        it('should return -1 for missing steps', () => {
+        it('should return -1 when the build-your-project step is missing', () => {
             const wizardSteps: WizardStepConfig[] = [{ id: 'adobe-auth', name: 'Auth' }];
             const result = getAdobeStepIndices(wizardSteps);
-            expect(result).toEqual({ projectIndex: -1, workspaceIndex: -1 });
+            expect(result).toEqual({ buildStepIndex: -1 });
         });
     });
 
     describe('computeStateUpdatesForBackwardNav', () => {
-        const indices = { projectIndex: 1, workspaceIndex: 2 };
+        // build-your-project (the project/workspace picker host) sits at index 1.
+        const indices = { buildStepIndex: 1 };
 
         const createState = (): WizardState => ({
             currentStep: 'review',
@@ -113,18 +114,11 @@ describe('wizardHelpers - navigation', () => {
 
         it('should set currentStep to target step', () => {
             const state = createState();
-            const result = computeStateUpdatesForBackwardNav(state, 'adobe-project', 1, indices);
-            expect(result.currentStep).toBe('adobe-project');
+            const result = computeStateUpdatesForBackwardNav(state, 'adobe-auth', 0, indices);
+            expect(result.currentStep).toBe('adobe-auth');
         });
 
-        it('should clear workspace when going before workspace step', () => {
-            const state = createState();
-            const result = computeStateUpdatesForBackwardNav(state, 'adobe-project', 1, indices);
-            expect(result.adobeWorkspace).toBeUndefined();
-            expect(result.workspacesCache).toBeUndefined();
-        });
-
-        it('should clear project and workspace when going before project step', () => {
+        it('should clear project + workspace (and caches) when going before the build step', () => {
             const state = createState();
             const result = computeStateUpdatesForBackwardNav(state, 'adobe-auth', 0, indices);
             expect(result.adobeProject).toBeUndefined();
@@ -133,17 +127,15 @@ describe('wizardHelpers - navigation', () => {
             expect(result.workspacesCache).toBeUndefined();
         });
 
-        it('should not clear anything when going to workspace step itself', () => {
+        it('should not clear anything when going to the build step itself', () => {
             const state = createState();
-            const result = computeStateUpdatesForBackwardNav(state, 'adobe-workspace', 2, indices);
-            expect(result.adobeProject).toBeUndefined();
-            expect(result.adobeWorkspace).toBeUndefined();
+            const result = computeStateUpdatesForBackwardNav(state, 'build-your-project', 1, indices);
             expect(Object.keys(result)).toEqual(['currentStep']);
         });
 
-        it('should handle missing step indices', () => {
+        it('should handle a missing build step index', () => {
             const state = createState();
-            const noIndices = { projectIndex: -1, workspaceIndex: -1 };
+            const noIndices = { buildStepIndex: -1 };
             const result = computeStateUpdatesForBackwardNav(state, 'adobe-auth', 0, noIndices);
             expect(Object.keys(result)).toEqual(['currentStep']);
         });
@@ -178,6 +170,14 @@ describe('wizardHelpers - navigation', () => {
 
         it('should return "Create" on review step in import mode', () => {
             expect(getNextButtonText(false, 3, 5, 'import', 'review')).toBe('Create');
+        });
+
+        it('should be id-driven, not index-driven (review not second-to-last)', () => {
+            // R1 order puts storefront-setup between review and create-project, so
+            // review sits at totalSteps-3. The label must still follow the id.
+            expect(getNextButtonText(false, 8, 11, 'create', 'review')).toBe('Create');
+            expect(getNextButtonText(false, 8, 11, 'edit', 'review')).toBe('Save Changes');
+            expect(getNextButtonText(false, 9, 11, undefined, 'storefront-setup')).toBe('Continue');
         });
     });
 
@@ -277,27 +277,27 @@ describe('wizardHelpers - navigation', () => {
             expect(getFirstEnabledStep(steps)).toBe('adobe-auth');
         });
 
-        it('should return adobe-auth as fallback for empty array', () => {
-            expect(getFirstEnabledStep([])).toBe('adobe-auth');
+        it('should return welcome as fallback for empty array', () => {
+            expect(getFirstEnabledStep([])).toBe('welcome');
         });
 
-        it('should return adobe-auth as fallback for undefined', () => {
-            expect(getFirstEnabledStep(undefined)).toBe('adobe-auth');
+        it('should return welcome as fallback for undefined', () => {
+            expect(getFirstEnabledStep(undefined)).toBe('welcome');
         });
 
-        it('should return adobe-auth when all steps disabled', () => {
+        it('should return welcome when all steps disabled', () => {
             const steps = [
                 { id: 'welcome', enabled: false },
                 { id: 'prerequisites', enabled: false },
             ];
-            expect(getFirstEnabledStep(steps)).toBe('adobe-auth');
+            expect(getFirstEnabledStep(steps)).toBe('welcome');
         });
     });
 
     describe('shouldShowWizardFooter', () => {
         it('should return true for normal step', () => {
             expect(shouldShowWizardFooter(false, 'adobe-auth')).toBe(true);
-            expect(shouldShowWizardFooter(false, 'component-selection')).toBe(true);
+            expect(shouldShowWizardFooter(false, 'build-your-project')).toBe(true);
             expect(shouldShowWizardFooter(false, 'prerequisites')).toBe(true);
         });
 
@@ -308,6 +308,10 @@ describe('wizardHelpers - navigation', () => {
 
         it('should return false when on mesh-deployment step', () => {
             expect(shouldShowWizardFooter(false, 'mesh-deployment')).toBe(false);
+        });
+
+        it('should return true on the build-your-project step (uses the wizard footer)', () => {
+            expect(shouldShowWizardFooter(false, 'build-your-project')).toBe(true);
         });
     });
 });

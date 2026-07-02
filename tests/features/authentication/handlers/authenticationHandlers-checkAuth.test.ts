@@ -12,6 +12,7 @@
 
 import { handleCheckAuth } from '@/features/authentication/handlers/authenticationHandlers';
 import type { HandlerContext } from '@/types/handlers';
+import type { AdobeOrg } from '@/features/authentication/services/types';
 import { createMockHandlerContext, mockOrg, mockProject } from './testUtils';
 
 describe('authenticationHandlers - handleCheckAuth', () => {
@@ -178,21 +179,23 @@ describe('authenticationHandlers - handleCheckAuth', () => {
             );
         });
 
-        it('should fetch from Adobe CLI when cache is empty', async () => {
+        it('should resolve org from the token and project from CLI when cache is empty', async () => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
             (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(undefined);
             (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(undefined);
-            (mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue(undefined);
+            (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([]);
             (mockContext.authManager!.getCurrentProject as jest.Mock).mockResolvedValue(undefined);
             (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
 
             const result = await handleCheckAuth(mockContext);
 
-            // Should fetch from CLI when cache is empty
-            expect(mockContext.authManager!.getCurrentOrganization).toHaveBeenCalledTimes(1);
+            // Org comes from the token (getOrganizations), not the stale CLI console org.
+            expect(mockContext.authManager!.getOrganizations).toHaveBeenCalledTimes(1);
+            expect(mockContext.authManager!.getCurrentOrganization).not.toHaveBeenCalled();
+            // Project still comes from the CLI on a cache miss.
             expect(mockContext.authManager!.getCurrentProject).toHaveBeenCalledTimes(1);
 
-            // Should succeed - just means no persisted org/project
+            // Should succeed - token reaches no org yet, so selection is required.
             expect(result.success).toBe(true);
             expect(mockContext.sendMessage).toHaveBeenLastCalledWith(
                 'auth-status',
@@ -243,13 +246,73 @@ describe('authenticationHandlers - handleCheckAuth', () => {
         });
     });
 
+    describe('org source on cache miss (token org is the truth)', () => {
+        // The token/IMS org is `getOrganizations()[0]` — the org the current token
+        // actually reaches. The CLI console org (`getCurrentOrganization()`) is
+        // token-INDEPENDENT and goes stale after an org switch, so it must NOT be the
+        // displayed/cached org on a cache miss.
+        const tokenOrg: AdobeOrg = { id: 'token-org', code: 'TOKEN@AdobeOrg', name: 'Token Org' };
+        const consoleOrg: AdobeOrg = { id: 'console-org', code: 'CONSOLE@AdobeOrg', name: 'Stale Console Org' };
+
+        it('resolves the TOKEN org (getOrganizations()[0]), not the CLI console org, on a cache miss', async () => {
+            (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
+            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(undefined);
+            (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(undefined);
+            (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([tokenOrg]);
+            (mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue(consoleOrg);
+            (mockContext.authManager!.getCurrentProject as jest.Mock).mockResolvedValue(undefined);
+            (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
+
+            await handleCheckAuth(mockContext);
+
+            // The token org wins — it is what gets displayed.
+            expect(mockContext.sendMessage).toHaveBeenLastCalledWith(
+                'auth-status',
+                expect.objectContaining({ organization: tokenOrg }),
+            );
+            // The stale CLI console org must NOT be consulted for the display org.
+            expect(mockContext.authManager!.getCurrentOrganization).not.toHaveBeenCalled();
+        });
+
+        it('caches the resolved token org on a cache miss', async () => {
+            (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
+            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(undefined);
+            (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(undefined);
+            (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([tokenOrg]);
+            (mockContext.authManager!.getCurrentProject as jest.Mock).mockResolvedValue(undefined);
+            (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
+
+            await handleCheckAuth(mockContext);
+
+            expect(mockContext.authManager!.setCachedOrganization).toHaveBeenCalledWith(tokenOrg);
+        });
+
+        it('does NOT resolve from the token on a cache HIT (perf: no getOrganizations call)', async () => {
+            (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
+            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
+            (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(mockProject);
+            (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
+
+            await handleCheckAuth(mockContext);
+
+            // The <1s quick-auth-check must stay cache-first: warm cache => no token resolve.
+            expect(mockContext.authManager!.getOrganizations).not.toHaveBeenCalled();
+            expect(mockContext.sendMessage).toHaveBeenLastCalledWith(
+                'auth-status',
+                expect.objectContaining({ organization: mockOrg }),
+            );
+        });
+    });
+
     describe('edge cases', () => {
-        it('should retrieve persisted org from Adobe CLI when cache is empty (post-restart scenario)', async () => {
-            // This is the critical UX improvement: extension restart with valid token + persisted org
+        it('should resolve org from the token and project from CLI when cache is empty (post-restart scenario)', async () => {
+            // Critical UX: extension restart with a valid token. The displayed org must be
+            // the TOKEN org (getOrganizations()[0]), not the CLI's persisted console org
+            // (which can be stale after an org switch). The project still comes from the CLI.
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
             (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(undefined); // Cache empty (restart)
             (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(undefined);
-            (mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg); // CLI has persisted org
+            (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]); // Token reaches this org
             (mockContext.authManager!.getCurrentProject as jest.Mock).mockResolvedValue(mockProject); // CLI has persisted project
             (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
 
@@ -257,11 +320,12 @@ describe('authenticationHandlers - handleCheckAuth', () => {
 
             expect(result.success).toBe(true);
 
-            // Should fetch from Adobe CLI when cache is empty
-            expect(mockContext.authManager!.getCurrentOrganization).toHaveBeenCalledTimes(1);
+            // Org from the token; project from the CLI. Stale console org must NOT be read.
+            expect(mockContext.authManager!.getOrganizations).toHaveBeenCalledTimes(1);
+            expect(mockContext.authManager!.getCurrentOrganization).not.toHaveBeenCalled();
             expect(mockContext.authManager!.getCurrentProject).toHaveBeenCalledTimes(1);
 
-            // Should show persisted org/project from Adobe CLI
+            // Should show token org + persisted project
             expect(mockContext.sendMessage).toHaveBeenLastCalledWith('auth-status', {
                 authenticated: true,
                 isAuthenticated: true,

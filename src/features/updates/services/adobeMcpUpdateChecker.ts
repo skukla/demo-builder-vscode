@@ -16,8 +16,8 @@ import * as path from 'path';
 import semver from 'semver';
 import * as vscode from 'vscode';
 import { getLatestRelease } from './githubApiClient';
-import { resolveMcpToolsDir } from '@/features/project-creation/services';
 import { COMPONENT_IDS } from '@/core/constants';
+import { resolveMcpToolsDir } from '@/features/project-creation/services';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 

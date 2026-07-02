@@ -188,8 +188,9 @@ export function ActionGrid({
 
     return (
         <div className="dashboard-zones">
-            {/* Row 1 — Primary (universal) + Storefront (EDS-only). Storefront
-                hides on non-EDS, leaving Primary alone. */}
+            {/* Action row — Primary (universal) + Storefront (EDS-only) + Build,
+                side by side as one bar. Storefront hides on non-EDS; groups wrap
+                to the next line only if the band is too narrow. */}
             <div className="dashboard-zone-row">
                 {/* Primary zone — the surfaces you use the project through:
                     see it as a customer (Open in Browser) and edit it as a
@@ -282,61 +283,60 @@ export function ActionGrid({
                         </div>
                     </div>
                 )}
-            </div>
+                {/* Build zone — deploy/configure plus an overflow menu. On the same
+                    row as Primary + Storefront so the action groups read as a single
+                    bar; tiles pack left within the group. */}
+                <div className="dashboard-zone-section" data-zone="build">
+                    <span className="dashboard-zone-label">Build</span>
+                    <div className="dashboard-zone-grid">
+                        {hasMesh && (
+                            <ActionButton
+                                onPress={handleDeployMesh}
+                                isQuiet
+                                isDisabled={isMeshActionDisabled}
+                                UNSAFE_className="dashboard-action-button"
+                                data-action="deploy-mesh"
+                            >
+                                <Refresh size="L" />
+                                <Text UNSAFE_className="icon-label">Deploy Mesh</Text>
+                            </ActionButton>
+                        )}
 
-            {/* Build zone — deploy/configure plus an overflow menu. Tiles pack
-                left so Configure and More stay grouped (the row holds only a few
-                tiles after Deploy Mesh gates out and Logs/Components moved away). */}
-            <div className="dashboard-zone-section" data-zone="build">
-                <span className="dashboard-zone-label">Build</span>
-                <div className="dashboard-zone-grid">
-                    {hasMesh && (
                         <ActionButton
-                            onPress={handleDeployMesh}
+                            onPress={handleConfigure}
                             isQuiet
                             isDisabled={isMeshActionDisabled}
                             UNSAFE_className="dashboard-action-button"
-                            data-action="deploy-mesh"
                         >
-                            <Refresh size="L" />
-                            <Text UNSAFE_className="icon-label">Deploy Mesh</Text>
+                            <Settings size="L" />
+                            <Text UNSAFE_className="icon-label">Configure</Text>
                         </ActionButton>
-                    )}
 
-                    <ActionButton
-                        onPress={handleConfigure}
-                        isQuiet
-                        isDisabled={isMeshActionDisabled}
-                        UNSAFE_className="dashboard-action-button"
-                    >
-                        <Settings size="L" />
-                        <Text UNSAFE_className="icon-label">Configure</Text>
-                    </ActionButton>
-
-                    {/* Overflow — rarely used actions tucked into a menu */}
-                    <MenuTrigger>
-                        <ActionButton
-                            isQuiet
-                            UNSAFE_className="dashboard-action-button"
-                            aria-label="More actions"
-                        >
-                            <More size="L" />
-                            <Text UNSAFE_className="icon-label">More</Text>
-                        </ActionButton>
-                        <Menu onAction={handleOverflowAction}>
-                            {canRename ? <Item key="rename">Rename</Item> : null}
-                            <Item key="copyPath">Copy Path</Item>
-                            <Item key="export">Export</Item>
-                            {isEds && handleRefreshBlockLibrary ? (
-                                <Item key="refreshBlockLibrary">Refresh Block Library</Item>
-                            ) : null}
-                            {isEds && handleRepublishContent ? (
-                                <Item key="republishContent">Republish Content</Item>
-                            ) : null}
-                            <Item key="devConsole">Dev Console</Item>
-                            <Item key="reset">Reset</Item>
-                        </Menu>
-                    </MenuTrigger>
+                        {/* Overflow — rarely used actions tucked into a menu */}
+                        <MenuTrigger>
+                            <ActionButton
+                                isQuiet
+                                UNSAFE_className="dashboard-action-button"
+                                aria-label="More actions"
+                            >
+                                <More size="L" />
+                                <Text UNSAFE_className="icon-label">More</Text>
+                            </ActionButton>
+                            <Menu onAction={handleOverflowAction}>
+                                {canRename ? <Item key="rename">Rename</Item> : null}
+                                <Item key="copyPath">Copy Path</Item>
+                                <Item key="export">Export</Item>
+                                {isEds && handleRefreshBlockLibrary ? (
+                                    <Item key="refreshBlockLibrary">Refresh Block Library</Item>
+                                ) : null}
+                                {isEds && handleRepublishContent ? (
+                                    <Item key="republishContent">Republish Content</Item>
+                                ) : null}
+                                <Item key="devConsole">Dev Console</Item>
+                                <Item key="reset">Reset</Item>
+                            </Menu>
+                        </MenuTrigger>
+                    </div>
                 </div>
             </div>
 

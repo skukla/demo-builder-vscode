@@ -3,7 +3,9 @@
  */
 
 import { getStackById } from '../hooks/useSelectedStack';
+import type { StepCondition } from './stepFiltering';
 import { hasMeshInDependencies } from '@/core/constants';
+import { clearCompletedFrom } from '@/core/ui/utils/stepCompletion';
 import type { SettingsEdsConfig } from '@/features/projects-dashboard/types/settingsFile';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
@@ -52,13 +54,13 @@ export interface WizardStepConfigWithRequirements {
     requiredComponents?: string[];
     /** Optional: Component IDs where ANY selection makes this step appear (OR logic) */
     requiredAny?: string[];
-    /** Optional: Condition for stack-based filtering */
-    condition?: {
-        /** Stack property that must be truthy for this step to be shown */
-        stackRequires?: 'requiresGitHub' | 'requiresDaLive';
-        /** If true, this step is only shown when NO predefined stack is selected */
-        showWhenNoStack?: boolean;
-    };
+    /**
+     * Optional: Condition for stack/auth-based filtering.
+     * Reuses the canonical StepCondition from stepFiltering.ts (DRY) so all
+     * condition keys (stackRequires, stackRequiresAny, requiresAdobeAuth,
+     * showWhenNoStack, createModeOnly) type-check here.
+     */
+    condition?: StepCondition;
 }
 
 // ============================================================================
@@ -169,54 +171,48 @@ export function filterCompletedStepsForBackwardNav(
     targetIndex: number,
     wizardSteps: WizardStepConfig[],
 ): WizardStep[] {
-    // Special case: first step clears everything
-    if (targetIndex === 0) {
-        return [];
-    }
-
-    return completedSteps.filter(completedStep => {
-        // Always remove the target step
-        if (completedStep === targetStep) {
-            return false;
-        }
-
-        // Keep only steps that come before the target
-        const stepIndex = wizardSteps.findIndex(ws => ws.id === completedStep);
-        return stepIndex < targetIndex;
-    });
+    // Shared with the Commerce sub-steps — same drop-target-and-after semantics.
+    return clearCompletedFrom(
+        completedSteps,
+        wizardSteps.map(ws => ws.id),
+        targetStep,
+        targetIndex,
+    );
 }
 
 /**
- * Find step indices for Adobe selection steps.
+ * Index of the step that owns Adobe I/O project + workspace selection.
  *
- * Used to determine which state needs to be cleared during backward navigation.
+ * The Adobe project + workspace pickers now live INSIDE the `build-your-project`
+ * step's Integrations (Mesh) tile, so backward-nav clearing keys off that step's
+ * index: navigating before it clears the (now co-located) project AND workspace.
  */
 export interface AdobeStepIndices {
-    workspaceIndex: number;
-    projectIndex: number;
+    /** Index of `build-your-project` (the picker host), or -1 when absent. */
+    buildStepIndex: number;
 }
 
 /**
- * Get indices of Adobe selection steps in the wizard.
+ * Get the index of the step that hosts the Adobe project/workspace pickers.
  */
 export function getAdobeStepIndices(wizardSteps: WizardStepConfig[]): AdobeStepIndices {
     return {
-        workspaceIndex: wizardSteps.findIndex(s => s.id === 'adobe-workspace'),
-        projectIndex: wizardSteps.findIndex(s => s.id === 'adobe-project'),
+        buildStepIndex: wizardSteps.findIndex(s => s.id === 'build-your-project'),
     };
 }
 
 /**
  * Compute state updates needed when navigating backward.
  *
- * Clears Adobe selections and caches when navigating before their respective steps.
- * This maintains state consistency - if user goes back before project selection,
- * both project AND workspace selections should be cleared.
+ * Clears the Adobe project + workspace selections (and their caches) when
+ * navigating BEFORE the `build-your-project` step that now hosts their pickers.
+ * Project and workspace are co-located there, so both clear together — keeping
+ * state consistent on re-traversal (the pickers re-load + re-auto-select).
  *
- * @param currentState - Current wizard state
+ * @param _currentState - Current wizard state (unused; signature kept for callers)
  * @param targetStep - Step we're navigating to
  * @param targetIndex - Index of target step
- * @param indices - Adobe step indices
+ * @param indices - Picker-host step index
  * @returns Partial state updates to apply
  */
 export function computeStateUpdatesForBackwardNav(
@@ -229,21 +225,13 @@ export function computeStateUpdatesForBackwardNav(
         currentStep: targetStep,
     };
 
-    // Clear workspace and its cache when going before workspace step
-    if (indices.workspaceIndex !== -1 && targetIndex < indices.workspaceIndex) {
-        updates.adobeWorkspace = undefined;
-        updates.workspacesCache = undefined;
-    }
-
-    // Clear project and its cache (plus dependent caches) when going before project step
-    if (indices.projectIndex !== -1 && targetIndex < indices.projectIndex) {
+    // Clear project + workspace (and caches) when going before the picker host.
+    if (indices.buildStepIndex !== -1 && targetIndex < indices.buildStepIndex) {
         updates.adobeProject = undefined;
         updates.projectsCache = undefined;
-        // Also clear workspace since workspaces are project-specific
         updates.adobeWorkspace = undefined;
         updates.workspacesCache = undefined;
     }
-
 
     return updates;
 }
@@ -424,13 +412,13 @@ export function initializeProjectName(
  * Get the first enabled step from wizard configuration.
  *
  * @param wizardSteps - Wizard step configuration
- * @returns First enabled step ID or 'adobe-auth' as fallback
+ * @returns First enabled step ID or 'welcome' as fallback
  */
 export function getFirstEnabledStep(
     wizardSteps: Array<{ id: string; enabled: boolean }> | undefined,
 ): WizardStep {
     const enabledSteps = wizardSteps?.filter(step => step.enabled) || [];
-    return (enabledSteps.length > 0 ? enabledSteps[0].id : 'adobe-auth') as WizardStep;
+    return (enabledSteps.length > 0 ? enabledSteps[0].id : 'welcome') as WizardStep;
 }
 
 // ============================================================================
@@ -441,17 +429,20 @@ export function getFirstEnabledStep(
  * Determine whether to show wizard footer (SOP §10 compliance)
  *
  * Extracts long validation chain to named helper for readability.
- * Footer is hidden on final step and mesh-deployment (has own buttons).
+ * Footer is hidden on the final step and on steps that render their own footer
+ * (mesh-deployment). The group-paced steps use the shared wizard footer.
  *
  * @param isLastStep - Whether current step is the final step
  * @param currentStep - Current step ID
  * @returns true if footer should be shown
  */
+const STEPS_WITH_OWN_FOOTER = new Set(['mesh-deployment']);
+
 export function shouldShowWizardFooter(
     isLastStep: boolean,
     currentStep: string,
 ): boolean {
-    return !isLastStep && currentStep !== 'mesh-deployment';
+    return !isLastStep && !STEPS_WITH_OWN_FOOTER.has(currentStep);
 }
 
 /**
@@ -480,6 +471,10 @@ export function getWizardTitle(wizardMode?: WizardMode): string {
  * project-creation. The storefront-setup step shows "Continue" because it's
  * an intermediate creation step, not the final one.
  *
+ * The label follows the step ID, not its index: storefront-setup sits between
+ * review and create-project, so review is no longer second-to-last. Keying on the
+ * id keeps the label correct regardless of how many steps the active stack shows.
+ *
  * - Edit mode on review: "Save Changes"
  * - Create/import mode on review: "Create"
  * - All other steps: "Continue"
@@ -492,8 +487,8 @@ export function getNextButtonText(
     currentStepId?: string,
 ): string {
     if (isConfirmingSelection) return 'Continue';
-    // Only show "Create"/"Save Changes" on Final Review step
-    if (currentStepIndex === totalSteps - 2 && currentStepId === 'review') {
+    // Only show "Create"/"Save Changes" on the Final Review step (id-driven).
+    if (currentStepId === 'review') {
         return wizardMode === 'edit' ? 'Save Changes' : 'Create';
     }
     return 'Continue';

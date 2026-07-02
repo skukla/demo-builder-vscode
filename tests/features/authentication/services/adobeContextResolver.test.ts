@@ -220,6 +220,8 @@ describe('AdobeContextResolver', () => {
 
             expect(result).toBeDefined();
             expect(result?.id).toBe('proj1');
+            // No org threaded here: getProjects resolves the org itself (threaded → cached →
+            // TOKEN org via the SDK), so this best-effort lookup stays on the SDK path.
             expect(mockFetcher.getProjects).toHaveBeenCalledWith({ silent: true });
         });
     });

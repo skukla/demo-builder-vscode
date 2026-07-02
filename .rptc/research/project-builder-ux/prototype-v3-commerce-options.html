@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Commerce area — option comparison (A: Accordion+Gate · B: Task list · C: Sequenced tabs)</title>
+<style>
+  /* ---- Spectrum-ish dark tokens (approximated from the extension webview) ---- */
+  :root {
+    --bg:            #1e1e1e;
+    --panel:         #252526;
+    --panel-2:       #2d2d2e;
+    --rail-bg:       #1b1b1c;
+    --border:        #393939;
+    --border-soft:   #303031;
+    --text:          #e8e8e8;
+    --text-dim:      #9a9a9a;
+    --text-faint:    #6c6c6c;
+    --blue:          #378ef0;   /* current / accent */
+    --blue-deep:     #2680eb;
+    --blue-ring:     rgba(55,142,240,.35);
+    --green:         #33ab84;   /* completed */
+    --gray-dot:      #4a4a4a;
+    --gray-dot-bd:   #6a6a6a;
+    --radius:        8px;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #141414;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 24px;
+  }
+
+  /* ---- top toolbar (the picker, not part of the product) ---- */
+  .toolbar {
+    max-width: 1180px;
+    margin: 0 auto 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+  }
+  .toolbar h1 { font-size: 15px; margin: 0 12px 0 0; font-weight: 600; }
+  .seg {
+    display: inline-flex;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+    background: var(--panel);
+  }
+  .seg button {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--text-dim);
+    padding: 7px 16px;
+    font-family: var(--sans);
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .seg button.active { background: var(--blue-deep); color: #fff; }
+  .seg button:not(.active):hover { background: var(--panel-2); color: var(--text); }
+  .note { color: var(--text-faint); font-size: 12px; }
+
+  .substate {
+    max-width: 1180px;
+    margin: 0 auto 14px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    min-height: 28px;
+  }
+  .substate .label { color: var(--text-faint); font-size: 12px; }
+  .chip-toggle {
+    display: inline-flex; gap: 6px;
+  }
+  .chip-toggle button {
+    appearance: none; border: 1px solid var(--border); background: var(--panel);
+    color: var(--text-dim); padding: 4px 12px; border-radius: 999px; font-size: 12px; cursor: pointer;
+  }
+  .chip-toggle button.active { border-color: var(--blue); color: var(--text); background: var(--panel-2); }
+
+  /* ---- the webview frame ---- */
+  .frame {
+    max-width: 1180px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    min-height: 640px;
+  }
+
+  /* ---- left rail (the primary timeline; LEVEL 1 + nested LEVEL 2) ---- */
+  .rail { background: var(--rail-bg); border-right: 1px solid var(--border-soft); padding: 22px 18px; }
+  .rail .kicker { font-size: 11px; letter-spacing: .12em; color: var(--text-faint); margin-bottom: 18px; }
+  .step { display: flex; align-items: flex-start; gap: 12px; position: relative; padding-bottom: 22px; }
+  .step:last-child { padding-bottom: 0; }
+  .dot {
+    width: 22px; height: 22px; border-radius: 50%; flex: 0 0 22px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: #fff; z-index: 1;
+  }
+  .dot.done { background: var(--green); }
+  .dot.current { background: var(--blue); box-shadow: 0 0 0 4px var(--blue-ring); }
+  .dot.upcoming { background: var(--gray-dot); border: 1px solid var(--gray-dot-bd); }
+  /* vertical dashed connector — the rail's signature visual language */
+  .step:not(:last-child)::before {
+    content: ""; position: absolute; left: 10px; top: 24px; bottom: 0; width: 0;
+    border-left: 2px dashed #3a3a3a;
+  }
+  .step.done:not(:last-child)::before { border-left-color: #2c5d4b; }
+  .step .label { font-size: 14px; color: var(--text-dim); padding-top: 1px; }
+  .step.current > .label { color: var(--blue); font-weight: 600; }
+  .step.done > .label { color: var(--text); }
+
+  /* nested areas (LEVEL 2) live INSIDE the rail, indented under current step */
+  .children { margin: 6px 0 0 34px; }
+  .child { display: flex; align-items: center; gap: 10px; padding: 7px 0; position: relative; }
+  .child .cdot {
+    width: 14px; height: 14px; border-radius: 50%; flex: 0 0 14px;
+    display:flex; align-items:center; justify-content:center; font-size: 8px; color: #fff;
+  }
+  .cdot.done { background: var(--green); }
+  .cdot.current { background: var(--blue); box-shadow: 0 0 0 3px var(--blue-ring); }
+  .cdot.upcoming { background: var(--gray-dot); border: 1px solid var(--gray-dot-bd); }
+  .child .clabel { font-size: 13px; color: var(--text-dim); }
+  .child.current .clabel { color: var(--text); font-weight: 600; }
+
+  /* ---- content pane ---- */
+  .content { padding: 30px 40px; }
+  .h1 { font-size: 26px; font-weight: 700; margin: 0 0 14px; }
+  /* area-aware header (proposed for A & B) */
+  .breadcrumb { font-size: 12px; color: var(--text-faint); margin-bottom: 4px; }
+  .area-title { font-size: 21px; font-weight: 700; margin: 0 0 4px; }
+  .area-desc { color: var(--text-dim); margin: 0 0 22px; font-size: 13px; }
+  /* generic header (current, for C) */
+  .gen-sub { font-size: 18px; font-weight: 600; color: var(--text-dim); margin: 0 0 4px; }
+  .gen-desc { color: var(--text-dim); margin: 0 0 22px; font-size: 13px; }
+
+  /* architecture summary line (shared by all three) */
+  .arch {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px; border: 1px solid var(--border-soft); border-radius: 6px;
+    background: var(--panel); margin-bottom: 22px; font-size: 13px;
+  }
+  .arch .adot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); }
+  .arch .akey { color: var(--text-dim); }
+  .arch .aval { color: var(--text); font-weight: 600; }
+  .arch .change { margin-left: auto; color: var(--blue); cursor: pointer; }
+
+  /* generic buttons */
+  .btn {
+    appearance: none; border: 0; border-radius: 18px; padding: 9px 18px;
+    font-family: var(--sans); font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .btn.primary { background: var(--blue-deep); color: #fff; display: inline-flex; gap: 8px; align-items: center; }
+  .btn.ghost   { background: var(--panel-2); color: var(--text); }
+  .btn[disabled] { opacity: .45; cursor: not-allowed; }
+
+  /* footer nav */
+  .footer { display: flex; justify-content: space-between; align-items: center; margin-top: 34px; padding-top: 18px; border-top: 1px solid var(--border-soft); }
+  .footer .right { display: flex; gap: 12px; }
+
+  /* ===== OPTION A: ACCORDION ===== */
+  .acc { border: 1px solid var(--border-soft); border-radius: 6px; overflow: hidden; }
+  .acc-sec + .acc-sec { border-top: 1px solid var(--border-soft); }
+  .acc-head {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    padding: 14px 16px; background: var(--panel); border: 0; cursor: pointer;
+    color: var(--text); font-family: var(--sans); font-size: 14px; text-align: left;
+  }
+  .acc-head:hover:not([disabled]) { background: var(--panel-2); }
+  .acc-head[disabled] { cursor: not-allowed; color: var(--text-faint); }
+  .acc-head .caret { width: 14px; color: var(--text-dim); transition: transform .15s; }
+  .acc-sec.open .acc-head .caret { transform: rotate(90deg); }
+  .acc-mark {
+    width: 20px; height: 20px; border-radius: 50%; flex: 0 0 20px;
+    display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff;
+  }
+  .acc-mark.done { background: var(--green); }
+  .acc-mark.current { background: var(--blue); }
+  .acc-mark.locked { background: transparent; color: var(--text-faint); }
+  .acc-title { font-weight: 600; }
+  .acc-status { margin-left: auto; font-size: 12px; color: var(--text-dim); }
+  .acc-status.locked { color: var(--text-faint); }
+  .acc-status.done { color: var(--green); }
+  .acc-body { padding: 4px 18px 20px 48px; background: #202021; display: none; }
+  .acc-sec.open .acc-body { display: block; }
+
+  /* form bits (shared) */
+  .field { margin: 14px 0; }
+  .field label { display: block; font-size: 12px; color: var(--text-dim); margin-bottom: 5px; }
+  .field input, .field select {
+    width: 100%; background: #161617; border: 1px solid var(--border); border-radius: 5px;
+    color: var(--text); padding: 9px 11px; font-size: 13px; font-family: var(--sans);
+  }
+  .summary-line { font-size: 12px; color: var(--text-dim); }
+  .summary-line b { color: var(--text); font-weight: 600; }
+
+  /* ===== OPTION B: TASK LIST ===== */
+  .tasks { border: 1px solid var(--border-soft); border-radius: 6px; overflow: hidden; }
+  .task-row {
+    display: flex; align-items: center; gap: 14px; width: 100%;
+    padding: 15px 16px; background: var(--panel); border: 0; cursor: pointer;
+    color: var(--text); font-family: var(--sans); font-size: 14px; text-align: left;
+  }
+  .task-row + .task-row { border-top: 1px solid var(--border-soft); }
+  .task-row:hover:not([disabled]) { background: var(--panel-2); }
+  .task-row[disabled] { cursor: not-allowed; }
+  .task-name { font-weight: 600; }
+  .task-row[disabled] .task-name { color: var(--text-faint); font-weight: 500; }
+  .task-tag { margin-left: auto; font-size: 12px; padding: 3px 10px; border-radius: 4px; }
+  .task-tag.completed { color: var(--green); }
+  .task-tag.progress { background: rgba(55,142,240,.18); color: var(--blue); }
+  .task-tag.blocked { color: var(--text-faint); }
+  .task-arrow { color: var(--text-dim); }
+  .task-row[disabled] .task-arrow { visibility: hidden; }
+
+  /* ===== OPTION C: SEQUENCED TABS (current) ===== */
+  .seqtabs { display: flex; align-items: center; border-bottom: 1px solid var(--border); margin-bottom: 24px; padding-bottom: 0; }
+  .seqtab {
+    display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px;
+    border-bottom: 2px solid transparent; cursor: pointer; color: var(--text-dim); font-size: 13px;
+  }
+  .seqtab.active { color: var(--text); border-bottom-color: var(--blue); }
+  .seqtab .snum {
+    width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: #fff;
+  }
+  .snum.done { background: var(--green); }
+  .snum.current { background: var(--blue); }
+  .snum.upcoming { background: var(--gray-dot); border: 1px solid var(--gray-dot-bd); }
+  .seqtab.upcoming { opacity: .55; }
+  /* the connector that echoes the rail's timeline — the thing that "feels off" */
+  .seq-conn { width: 26px; height: 0; border-top: 1px solid #4a4a4a; margin: 0 2px; }
+
+  /* ===== sign-in gate (A & B) / sign-in tab body (C) ===== */
+  .signin {
+    text-align: center; padding: 60px 20px;
+  }
+  .signin .key { font-size: 34px; margin-bottom: 14px; opacity: .85; }
+  .signin h3 { margin: 0 0 6px; font-size: 16px; }
+  .signin p { margin: 0 0 22px; color: var(--text-dim); font-size: 13px; }
+
+  .callout {
+    display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+    border: 1px solid var(--blue-ring); background: rgba(55,142,240,.10);
+    border-radius: 6px; margin-bottom: 18px; font-size: 13px;
+  }
+  .callout .key { font-size: 18px; }
+  .callout .btn { margin-left: auto; }
+
+  .anno {
+    max-width: 1180px; margin: 14px auto 0; font-size: 12px; color: var(--text-faint);
+    border-left: 2px solid var(--border); padding-left: 12px;
+  }
+  .anno b { color: var(--text-dim); }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h1>Commerce area — option comparison</h1>
+  <div class="seg" id="optSeg">
+    <button data-opt="A" class="active">A · Accordion + gate</button>
+    <button data-opt="B">B · Task list</button>
+    <button data-opt="C">C · Sequenced tabs (current)</button>
+  </div>
+  <span class="note">Architecture = Edge Delivery + ACCS (so sign-in applies)</span>
+</div>
+
+<div class="substate">
+  <span class="label">Auth state:</span>
+  <span class="chip-toggle" id="authToggle">
+    <button data-auth="out" class="active">Not signed in</button>
+    <button data-auth="in">Signed in</button>
+  </span>
+  <span class="label" id="authHint"></span>
+</div>
+
+<div class="frame">
+  <!-- ============ LEFT RAIL (shared) ============ -->
+  <div class="rail">
+    <div class="kicker">SETUP PROGRESS</div>
+
+    <div class="step done"><div class="dot done">✓</div><div class="label">Demo Setup</div></div>
+    <div class="step done"><div class="dot done">✓</div><div class="label">Prerequisites</div></div>
+
+    <div class="step current">
+      <div class="dot current">•</div>
+      <div style="flex:1">
+        <div class="label">Build Your Project</div>
+        <div class="children">
+          <div class="child current"><div class="cdot current">•</div><div class="clabel">Commerce</div></div>
+          <div class="child"><div class="cdot upcoming"></div><div class="clabel">Storefront</div></div>
+          <div class="child"><div class="cdot upcoming"></div><div class="clabel">Integrations</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step upcoming"><div class="dot upcoming"></div><div class="label">Final Review</div></div>
+    <div class="step upcoming"><div class="dot upcoming"></div><div class="label">Publish Storefront</div></div>
+    <div class="step upcoming"><div class="dot upcoming"></div><div class="label">Create Project</div></div>
+  </div>
+
+  <!-- ============ CONTENT PANE ============ -->
+  <div class="content" id="pane"><!-- rendered by JS --></div>
+</div>
+
+<div class="anno" id="anno"></div>
+
+<script>
+  const state = { opt: 'A', auth: 'out' };
+
+  // ---------- shared fragments ----------
+  const archLine = `
+    <div class="arch">
+      <span class="adot"></span>
+      <span class="akey">Architecture</span>
+      <span class="aval">Edge Delivery + ACCS</span>
+      <span class="change">Change</span>
+    </div>`;
+
+  const footer = (continueEnabled) => `
+    <div class="footer">
+      <button class="btn ghost">Cancel</button>
+      <div class="right">
+        <button class="btn ghost">Back</button>
+        <button class="btn primary" ${continueEnabled ? '' : 'disabled'}>Continue</button>
+      </div>
+    </div>`;
+
+  const connectionFields = `
+    <div class="field"><label>Commerce GraphQL endpoint</label><input value="https://demo.commerce.adobe.io/graphql" /></div>
+    <div class="field"><label>Environment ID</label><input value="ABCD-1234-EFGH-5678" /></div>`;
+
+  const businessFields = `
+    <div class="field"><label>Website</label><select><option>Main Website</option></select></div>
+    <div class="field"><label>Store</label><select><option>Main Store</option></select></div>
+    <div class="field"><label>Store View</label><select><option>Default View (en)</option></select></div>`;
+
+  const catalogFields = `
+    <div class="field"><label>Catalog Service API key</label><input placeholder="Optional — defaults from store view" /></div>
+    <div class="field"><label>Adobe Commerce Optimizer (ACO)</label><select><option>Not connected</option></select></div>`;
+
+  const signinHero = `
+    <div class="signin">
+      <div class="key">🔑</div>
+      <h3>Connect your Adobe account</h3>
+      <p>Sign in with Adobe to configure your ACCS store.</p>
+      <button class="btn primary">👤 Sign In with Adobe</button>
+    </div>`;
+
+  // ---------- OPTION A: accordion + gate + area header ----------
+  function renderA() {
+    if (state.auth === 'out') {
+      return `
+        <div class="breadcrumb">Build Your Project › Commerce</div>
+        <div class="area-title">Commerce</div>
+        <div class="area-desc">Connect your Adobe account to configure ACCS, then set up your store.</div>
+        ${archLine}
+        ${signinHero}
+        ${footer(false)}`;
+    }
+    return `
+      <div class="breadcrumb">Build Your Project › Commerce</div>
+      <div class="area-title">Commerce</div>
+      <div class="area-desc">Connect your store and choose what to sell.</div>
+      ${archLine}
+      <div class="acc">
+        <div class="acc-sec open" data-sec="connection">
+          <button class="acc-head">
+            <span class="caret">▸</span>
+            <span class="acc-mark current">1</span>
+            <span class="acc-title">Connection</span>
+            <span class="acc-status">In progress</span>
+          </button>
+          <div class="acc-body">${connectionFields}</div>
+        </div>
+        <div class="acc-sec" data-sec="business">
+          <button class="acc-head">
+            <span class="caret">▸</span>
+            <span class="acc-mark done">✓</span>
+            <span class="acc-title">Business Structure</span>
+            <span class="acc-status done">Main Website / Main Store / Default View</span>
+          </button>
+          <div class="acc-body">${businessFields}</div>
+        </div>
+        <div class="acc-sec" data-sec="catalog">
+          <button class="acc-head" disabled>
+            <span class="caret">▸</span>
+            <span class="acc-mark locked">🔒</span>
+            <span class="acc-title">Catalog</span>
+            <span class="acc-status locked">Choose a store view first</span>
+          </button>
+          <div class="acc-body">${catalogFields}</div>
+        </div>
+      </div>
+      ${footer(true)}`;
+  }
+
+  // ---------- OPTION B: task list + gate + area header ----------
+  function renderB() {
+    if (state.auth === 'out') {
+      return `
+        <div class="breadcrumb">Build Your Project › Commerce</div>
+        <div class="area-title">Commerce</div>
+        <div class="area-desc">Connect your Adobe account to configure ACCS, then set up your store.</div>
+        ${archLine}
+        ${signinHero}
+        ${footer(false)}`;
+    }
+    return `
+      <div class="breadcrumb">Build Your Project › Commerce</div>
+      <div class="area-title">Commerce</div>
+      <div class="area-desc">Complete each step to configure your store.</div>
+      ${archLine}
+      <div class="tasks">
+        <button class="task-row">
+          <span class="task-name">Connection</span>
+          <span class="task-tag completed">Completed</span>
+          <span class="task-arrow">›</span>
+        </button>
+        <button class="task-row">
+          <span class="task-name">Business Structure</span>
+          <span class="task-tag progress">In progress</span>
+          <span class="task-arrow">›</span>
+        </button>
+        <button class="task-row" disabled>
+          <span class="task-name">Catalog</span>
+          <span class="task-tag blocked">Cannot start yet</span>
+          <span class="task-arrow">›</span>
+        </button>
+      </div>
+      ${footer(false)}`;
+  }
+
+  // ---------- OPTION C: sequenced tabs (current), generic header ----------
+  function renderC() {
+    // C keeps the generic step header to show the contrast.
+    const tabStrip = (active) => `
+      <div class="seqtabs">
+        <div class="seqtab ${active==='signin'?'active':''} ${state.auth==='in'?'':''}">
+          <span class="snum ${state.auth==='in'?'done':'current'}">${state.auth==='in'?'✓':'1'}</span> Sign in
+        </div>
+        <div class="seq-conn"></div>
+        <div class="seqtab ${active==='connection'?'active':(state.auth==='in'?'':'upcoming')}">
+          <span class="snum ${active==='connection'?'current':'upcoming'}">2</span> Connection
+        </div>
+        <div class="seq-conn"></div>
+        <div class="seqtab upcoming">
+          <span class="snum upcoming">3</span> Business Structure
+        </div>
+        <div class="seq-conn"></div>
+        <div class="seqtab upcoming">
+          <span class="snum upcoming">4</span> Catalog
+        </div>
+      </div>`;
+
+    if (state.auth === 'out') {
+      return `
+        <div class="gen-sub">Build Your Project</div>
+        <div class="gen-desc">Configure commerce, integrations, and storefront for your project.</div>
+        ${archLine}
+        ${tabStrip('signin')}
+        ${signinHero}
+        ${footer(false)}`;
+    }
+    return `
+      <div class="gen-sub">Build Your Project</div>
+      <div class="gen-desc">Configure commerce, integrations, and storefront for your project.</div>
+      ${archLine}
+      ${tabStrip('connection')}
+      ${connectionFields}
+      ${footer(false)}`;
+  }
+
+  const annotations = {
+    A: `<b>Option A — Accordion + gate.</b> Two progress levels total (rail + nested areas). Inside Commerce: sequential accordion, no third stepper. Sign-in is a gate (shown only when not signed in). Catalog header is locked until a store view is chosen. Done sections collapse to a value summary. Header is area-aware ("Commerce"). Research pick #1; lowest a11y risk; Spectrum 3.46 ships Accordion/Disclosure natively.`,
+    B: `<b>Option B — Task list.</b> Same gate + area header, but the inner sequence is a GOV.UK-style task list with Completed / In progress / Cannot start yet tags; clicking a row drills into that section's fields (not shown). Native "Cannot start yet" semantics for the Catalog dependency. Heavier (list-then-detail) for only 3 short sections.`,
+    C: `<b>Option C — Sequenced tabs (current).</b> Shown for contrast. Sign-in is numbered tab "1 of 4". The horizontal numbered strip with connectors is a THIRD stepped-progress level that echoes the rail — the documented anti-pattern (NN/g 2-level cap; Material "don't nest steppers"; competing indicators). Header stays generic.`
+  };
+
+  function render() {
+    const pane = document.getElementById('pane');
+    pane.innerHTML = state.opt === 'A' ? renderA() : state.opt === 'B' ? renderB() : renderC();
+    document.getElementById('anno').innerHTML = annotations[state.opt];
+    // wire accordion expand/collapse (A only)
+    if (state.opt === 'A' && state.auth === 'in') {
+      pane.querySelectorAll('.acc-head:not([disabled])').forEach(h => {
+        h.addEventListener('click', () => h.closest('.acc-sec').classList.toggle('open'));
+      });
+    }
+    // auth hint
+    document.getElementById('authHint').textContent =
+      state.auth === 'out'
+        ? '— how the Commerce area looks before Adobe sign-in'
+        : '— how it looks once signed in';
+  }
+
+  document.getElementById('optSeg').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    state.opt = b.dataset.opt;
+    document.querySelectorAll('#optSeg button').forEach(x => x.classList.toggle('active', x === b));
+    render();
+  });
+  document.getElementById('authToggle').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    state.auth = b.dataset.auth;
+    document.querySelectorAll('#authToggle button').forEach(x => x.classList.toggle('active', x === b));
+    render();
+  });
+
+  render();
+</script>
+</body>
+</html>

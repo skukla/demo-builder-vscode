@@ -583,9 +583,9 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
             expect(screen.getByRole('button', { name: /re-detect/i })).toBeEnabled();
         });
 
-        it('reserves the refresh button slot (rendered disabled) while store data has not loaded', () => {
-            // No layout shift: the Re-detect slot is reserved from the start and
-            // rendered disabled until store discovery populates the structure.
+        it('shows the spinner and NO Re-detect while store data has not loaded', () => {
+            // The spinner stands in for the whole row during detection — the
+            // Re-detect button only appears once the dropdowns are populated.
             mockUseStoreDiscovery.hasStoreData = false;
             mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
             configurePaasLookup();
@@ -604,7 +604,8 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
                 />,
             );
 
-            expect(screen.getByRole('button', { name: /re-detect/i })).toBeDisabled();
+            expect(screen.getByText('Detecting store structure…')).toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /re-detect/i })).not.toBeInTheDocument();
         });
 
         it('should call fetchStores when refresh button is clicked', async () => {

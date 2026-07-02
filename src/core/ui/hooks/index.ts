@@ -17,6 +17,8 @@ export type { UseAsyncOperationOptions, UseAsyncOperationReturn } from './useAsy
 
 // UI Interaction Hooks
 export { useAutoScroll } from './useAutoScroll';
+export { useEnterExit } from './useEnterExit';
+export type { EnterExitItem, UseEnterExitResult } from './useEnterExit';
 export { useSearchFilter } from './useSearchFilter';
 export { useFocusTrap, FOCUSABLE_SELECTOR } from './useFocusTrap';
 export { useFocusOnMount } from './useFocusOnMount';

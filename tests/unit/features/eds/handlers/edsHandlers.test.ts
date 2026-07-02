@@ -19,6 +19,7 @@ const mockGitHubTokenService = {
     validateToken: jest.fn(),
     storeToken: jest.fn(),
     clearToken: jest.fn(),
+    getUserOrgs: jest.fn().mockResolvedValue([]),
 };
 
 const mockGitHubRepoOps = {

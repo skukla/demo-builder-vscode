@@ -8,6 +8,7 @@
 import {
     getStackComponentIds,
     filterComponentConfigsForStackChange,
+    buildStackChangeStateReset,
 } from '@/features/project-creation/ui/helpers/stackHelpers';
 import type { Stack } from '@/types/stacks';
 
@@ -528,6 +529,24 @@ describe('stackHelpers', () => {
                     LOG_LEVEL: 'debug',
                 });
             });
+        });
+    });
+
+    describe('buildStackChangeStateReset', () => {
+        it('clears architecture-dependent EDS state and caches', () => {
+            const reset = buildStackChangeStateReset();
+            expect(reset.edsConfig).toBeUndefined();
+            expect(reset.githubReposCache).toBeUndefined();
+            expect(reset.daLiveSitesCache).toBeUndefined();
+            expect(reset.githubRepoSearchFilter).toBeUndefined();
+            expect(reset.daLiveSiteSearchFilter).toBeUndefined();
+        });
+
+        it('clears the cached tile-validity verdicts so a stale ✓ cannot survive a stack change', () => {
+            const reset = buildStackChangeStateReset();
+            expect(reset.commerceConnectValid).toBe(false);
+            expect(reset.storefrontRepoValid).toBe(false);
+            expect(reset.storefrontCodeSyncValid).toBe(false);
         });
     });
 });

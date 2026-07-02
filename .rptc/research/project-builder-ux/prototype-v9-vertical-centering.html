@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vertical alignment — top vs adaptive-center (feel the step-to-step jump)</title>
+<style>
+  :root{
+    --bg:#1e1e1e;--panel:#252526;--panel-2:#2d2d2e;--rail-bg:#1b1b1c;
+    --border:#393939;--border-soft:#303031;
+    --text:#e8e8e8;--text-dim:#9a9a9a;--text-faint:#6c6c6c;
+    --blue:#378ef0;--blue-deep:#2680eb;--blue-ring:rgba(55,142,240,.35);
+    --green:#33ab84;--gray-dot:#4a4a4a;--gray-dot-bd:#6a6a6a;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;--ease:cubic-bezier(.22,.61,.36,1);
+  }
+  *{box-sizing:border-box} html,body{margin:0;padding:0}
+  body{background:#141414;color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.5;padding:24px}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+  .toolbar{max-width:1180px;margin:0 auto 12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .toolbar .devlabel{font-size:11px;color:var(--text-faint);background:#2a2a2a;border:1px solid var(--border);padding:2px 8px;border-radius:4px}
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:999px;overflow:hidden;background:var(--panel)}
+  .seg button{appearance:none;border:0;background:transparent;color:var(--text-dim);padding:5px 13px;font-family:var(--sans);font-size:12px;cursor:pointer;transition:background .15s,color .15s}
+  .seg button.active{background:var(--blue-deep);color:#fff}
+  .seg button:not(.active):hover{background:var(--panel-2);color:var(--text)}
+  .label{color:var(--text-faint);font-size:11px}
+  .hint{max-width:1180px;margin:0 auto 12px;font-size:12px;color:var(--text-faint);border-left:2px solid var(--border);padding-left:12px}
+  .hint b{color:var(--text-dim)}
+
+  .frame{max-width:1180px;height:760px;margin:0 auto;display:grid;grid-template-columns:230px 1fr;background:var(--bg);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+
+  .rail{background:var(--rail-bg);border-right:1px solid var(--border-soft);padding:20px 16px}
+  .rail .kicker{font-size:11px;letter-spacing:.12em;color:var(--text-faint);margin-bottom:16px}
+  .step{display:flex;align-items:center;gap:11px;position:relative;padding-bottom:16px}
+  .dot{width:20px;height:20px;border-radius:50%;flex:0 0 20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
+  .dot.done{background:var(--green)} .dot.current{background:var(--blue);box-shadow:0 0 0 4px var(--blue-ring)} .dot.upcoming{background:var(--gray-dot);border:1px solid var(--gray-dot-bd)}
+  .step .lbl{font-size:13px;color:var(--text-dim)} .step.current .lbl{color:var(--blue);font-weight:600} .step.done .lbl{color:var(--text)}
+
+  .main{display:flex;flex-direction:column;min-width:0;min-height:0}
+  /* compact reclaimed header */
+  .pv-header{border-bottom:1px solid var(--border-soft);background:#212122;flex:0 0 auto;padding:12px 24px;display:flex;align-items:baseline;gap:10px}
+  .pv-header .h{font-size:15px;font-weight:700} .pv-header .crumb{font-size:13px;color:var(--text-faint)}
+  /* the content region — alignment toggles here */
+  .bodywrap{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;position:relative}
+  .bodywrap.align-top{justify-content:flex-start}
+  .bodywrap.align-inset{justify-content:flex-start}
+  .bodywrap.align-center{justify-content:safe center}
+  .body{padding:22px 26px 26px;max-width:760px;animation:fadeIn .2s var(--ease)}
+  /* a faint marker of the content's top edge (moves with the inset) */
+  .body::before{content:"";display:block;height:2px;background:linear-gradient(90deg,var(--blue),transparent);opacity:.5;margin-bottom:14px}
+  .area-title{font-size:19px;font-weight:700;margin:0 0 4px}
+  .area-sub{font-size:13px;color:var(--text-dim);margin:0 0 16px}
+
+  .pv-footer{border-top:1px solid var(--border-soft);background:#212122;flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;padding:12px 24px}
+  .pv-footer .right{display:flex;gap:10px}
+  .btn{appearance:none;border:0;border-radius:18px;padding:8px 16px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;transition:transform .1s var(--ease),filter .15s,background .15s}
+  .btn.primary{background:var(--blue-deep);color:#fff}.btn.primary:hover:not([disabled]){filter:brightness(1.12)}
+  .btn.ghost{background:var(--panel-2);color:var(--text)}.btn.ghost:hover:not([disabled]){background:#3a3a3b}
+  .btn.quiet{background:none;color:var(--text-dim)} .btn:active:not([disabled]){transform:scale(.95)} .btn[disabled]{opacity:.4;cursor:not-allowed}
+
+  /* content bits */
+  .field{margin:0 0 14px;max-width:520px}
+  .field label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:5px}
+  .field input{width:100%;background:#161617;border:1px solid var(--border);border-radius:5px;color:var(--text);padding:8px 11px;font-size:13px;font-family:var(--sans)}
+  .cards{display:flex;gap:12px;flex-wrap:wrap;max-width:640px}
+  .card{flex:1;min-width:230px;border:1px solid var(--border);border-radius:8px;padding:16px;background:#161617}
+  .card .ct{font-weight:600;font-size:15px;margin-bottom:4px} .card .cd{font-size:12px;color:var(--text-dim)}
+  .checkrow{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #262627;max-width:560px}
+  .checkrow:last-child{border-bottom:0}
+  .ok{width:20px;height:20px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;flex:0 0 20px}
+  .crn{font-size:13px} .crd{font-size:12px;color:var(--text-faint)}
+  .anno{max-width:1180px;margin:12px auto 0;font-size:12px;color:var(--text-faint);border-left:2px solid var(--border);padding-left:12px}
+  .anno b{color:var(--text-dim)}
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="devlabel">DEV</span>
+  <span class="label">Vertical alignment:</span>
+  <div class="seg" id="alignSeg">
+    <button data-align="top" class="active">Top-aligned</button>
+    <button data-align="inset">Top + breathing room</button>
+    <button data-align="center">Adaptive center</button>
+  </div>
+  <span class="label">Inset:</span>
+  <input id="insetRange" type="range" min="24" max="180" value="32" style="accent-color:var(--blue-deep);width:110px"/>
+  <span class="label" id="insetVal" style="min-width:34px">32px</span>
+  <span class="label">Step:</span>
+  <div class="seg" id="stepSeg">
+    <button data-step="0" class="active">Short</button>
+    <button data-step="1">Medium</button>
+    <button data-step="2">Tall</button>
+  </div>
+</div>
+<div class="hint">The blue line marks the <b>top of the content</b>. Toggle to <b>Adaptive center</b>, then click <b>Continue</b>/<b>Back</b> (or Short/Medium/Tall) and watch where that line lands each step — that jump is the thing to judge.</div>
+
+<div class="frame">
+  <div class="rail" id="rail"></div>
+  <div class="main" id="main"></div>
+</div>
+<div class="anno" id="anno"></div>
+
+<script>
+  const STEPS = [
+    { name:'Demo Setup',   short:'Short' },
+    { name:'Prerequisites',short:'Medium' },
+    { name:'Storefront',   short:'Tall' },
+  ];
+  const s = { step:0, align:'inset', inset:32 };
+
+  function rail(){
+    const rows = STEPS.map((st,i)=>{
+      const cls = i<s.step?'done':i===s.step?'current':'upcoming';
+      return `<div class="step ${cls}"><div class="dot ${cls}">${i<s.step?'<span>✓</span>':i===s.step?'•':''}</div><div class="lbl">${st.name}</div></div>`;
+    }).join('');
+    return `<div class="kicker">SETUP PROGRESS</div>${rows}
+      <div class="step upcoming"><div class="dot upcoming"></div><div class="lbl">Final Review</div></div>
+      <div class="step upcoming"><div class="dot upcoming"></div><div class="lbl">Create Project</div></div>`;
+  }
+
+  function bodyFor(step){
+    if(step===0){ // SHORT
+      return `<div class="area-title">Demo Setup</div><p class="area-sub">Name your project and pick a package.</p>
+        <div class="field"><label>Project Name *</label><input value="my-commerce-demo"/></div>
+        <div class="cards">
+          <div class="card"><div class="ct">Custom (B2B + B2C)</div><div class="cd">Unbranded B2C + B2B demo with company accounts, quotes, and purchase orders</div></div>
+          <div class="card"><div class="ct">CitiSignal</div><div class="cd">Hybrid commerce demo serving both B2C and B2B customers from one storefront</div></div>
+        </div>`;
+    }
+    if(step===1){ // MEDIUM
+      const rows = ['Node.js 22','Adobe I/O CLI','API Mesh plugin','App Builder plugin','Git'].map(n=>
+        `<div class="checkrow"><span class="ok">✓</span><div><div class="crn">${n}</div><div class="crd">Installed and verified</div></div></div>`).join('');
+      return `<div class="area-title">Prerequisites</div><p class="area-sub">Everything needed is installed.</p>${rows}`;
+    }
+    // TALL
+    const rows = ['Native blocks','Commerce Blocks','Demo Team Collection','Isle5 Collection','Newsletter','Store Locator','Carousel Pro'].map(n=>
+      `<div class="checkrow"><span class="ok">✓</span><div><div class="crn">${n}</div><div class="crd">Included in this storefront build</div></div></div>`).join('');
+    return `<div class="area-title">Storefront</div><p class="area-sub">Repository, accounts, and blocks.</p>
+      <div class="field"><label>GitHub repository</label><input value="my-org/my-commerce-demo"/></div>
+      <div class="field"><label>Commerce accounts endpoint</label><input value="https://demo.commerce.adobe.io"/></div>
+      <div class="cards" style="margin-bottom:14px">
+        <div class="card"><div class="ct">Edge Delivery</div><div class="cd">Adobe-managed EDS storefront</div></div>
+        <div class="card"><div class="ct">ACCS</div><div class="cd">Adobe Commerce SaaS backend</div></div>
+      </div>
+      ${rows}`;
+  }
+
+  function render(){
+    document.getElementById('rail').innerHTML = rail();
+    const st = STEPS[s.step];
+    const padTop = s.align==='inset' ? s.inset+'px' : '22px';
+    const body = `<div class="pv-header"><span class="h">Create Demo Project</span><span class="crumb">› ${st.name}</span></div>
+      <div class="bodywrap align-${s.align}"><div class="body" style="padding-top:${padTop}">${bodyFor(s.step)}</div></div>
+      <div class="pv-footer"><button class="btn quiet">Cancel</button>
+        <div class="right"><button class="btn ghost" id="back" ${s.step===0?'disabled':''}>Back</button>
+        <button class="btn primary" id="cont" ${s.step===STEPS.length-1?'disabled':''}>Continue</button></div></div>`;
+    document.getElementById('main').innerHTML = body;
+
+    document.querySelectorAll('#alignSeg button').forEach(b=>b.classList.toggle('active',b.dataset.align===s.align));
+    document.querySelectorAll('#stepSeg button').forEach(b=>b.classList.toggle('active',+b.dataset.step===s.step));
+    const back=document.getElementById('back'), cont=document.getElementById('cont');
+    if(back)back.onclick=()=>{ if(s.step>0){s.step--;render();} };
+    if(cont)cont.onclick=()=>{ if(s.step<STEPS.length-1){s.step++;render();} };
+
+    const anno = {
+      top: `<b>Top-aligned.</b> The blue "top of content" line is in the SAME place on every step; short screens leave empty room below (down to the pinned footer). Stable anchor, but sparse and top-jammed on short steps.`,
+      inset: `<b>Top + breathing room (recommended).</b> Still top-aligned — the line is at the SAME place on every step (no jump) — but sits a fixed <b>${s.inset}px</b> down, so short steps get room above and below and feel deliberate, not top-jammed. Tune the inset; click Short → Medium → Tall to confirm the line never moves.`,
+      center: `<b>Adaptive center.</b> Short content sits in the optical middle; tall content pins to the top and scrolls. Click through Short → Medium → Tall — the line lands at a DIFFERENT height each step. That jump is the instability to avoid in a step-through flow.`,
+    };
+    document.getElementById('anno').innerHTML = anno[s.align];
+  }
+
+  document.getElementById('alignSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;s.align=b.dataset.align;render();};
+  document.getElementById('stepSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;s.step=+b.dataset.step;render();};
+  document.getElementById('insetRange').addEventListener('input',e=>{
+    s.inset=+e.target.value; document.getElementById('insetVal').textContent=s.inset+'px';
+    if(s.align!=='inset'){s.align='inset';} render();
+  });
+  render();
+</script>
+</body>
+</html>

@@ -85,7 +85,7 @@
     {
       "id": "custom",
       "name": "Custom (B2B + B2C)",
-      "description": "Unbranded commerce demo serving both B2C and B2B (company accounts, quotes, purchase orders)",
+      "description": "Unbranded B2C + B2B demo with company accounts, quotes, and purchase orders",
       "icon": "custom",
       "featured": false,
       "requiresMesh": false,

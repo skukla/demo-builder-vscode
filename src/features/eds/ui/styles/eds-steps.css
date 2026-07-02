@@ -102,6 +102,24 @@
     border-radius: 4px;
 }
 
+/* ========== Repository picker: reset-to-template option (top of the list) ========== */
+/*
+ * The repo list (a VIRTUALIZED Spectrum ListView) is long and page-scrolls. "Reset to
+ * template" only renders once a repo is selected; placed BELOW the list it was stranded at
+ * the bottom. Every height-based fix (fill / sticky) is fragile here because the area-body
+ * layout has no definite-height anchor for a virtualized list to fill (confirmed: `flex:
+ * 1 1 0` collapsed the list to zero) — a reliable contained list would require restructuring
+ * the shared TwoColumnLayout → step-view chain. So the option lives at the TOP of the repo
+ * area instead: always visible, no scroll, zero layout dependency. A bottom rule separates
+ * it from the search/list below.
+ */
+.reset-to-template-top {
+    margin-top: 0 !important;
+    margin-bottom: var(--spectrum-global-dimension-size-200);
+    padding-bottom: var(--spectrum-global-dimension-size-200);
+    border-bottom: 1px solid var(--spectrum-global-color-gray-200);
+}
+
 /* ========== Reset Warning Animation ========== */
 /* 
  * Smooth fade in/out transition for the "Reset to template" warning message.

@@ -1,10 +1,11 @@
 /**
  * StoreConfigFieldRow Component Tests
  *
- * Focus: the website-code branch must NOT shift layout while store discovery
- * runs. The store-selection fields (three pickers) and the Re-detect button slot
- * render from the start in a disabled "detecting" state and populate in place —
- * instead of swapping a short one-line spinner for the tall populated layout.
+ * Focus: the website-code branch's loading treatment. While discovery runs (the
+ * initial detect OR any Re-detect), the large centered spinner (LoadingDisplay)
+ * stands in for the whole store-selection row. On success the populated dropdowns
+ * ARE the result — there is NO separate "Store structure detected" confirmation.
+ * The spinner box reserves ~the dropdowns' height so the swap doesn't jump.
  *
  * StoreSelectionRow and ConfigFieldRenderer are mocked so these tests assert the
  * branching/footprint contract of StoreConfigFieldRow itself, not Spectrum
@@ -79,47 +80,43 @@ function buildProps(overrides: Partial<Parameters<typeof StoreConfigFieldRow>[0]
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe('StoreConfigFieldRow — website-code branch (no layout shift)', () => {
-    it('renders the store-selection row from the start while fetching (disabled)', () => {
+describe('StoreConfigFieldRow — website-code branch (spinner replaces the row)', () => {
+    it('shows the large centered spinner while detecting (no dropdowns/Re-detect)', () => {
         render(<StoreConfigFieldRow {...buildProps({ isFetching: true, hasStoreData: false })} />);
 
-        const row = screen.getByTestId('store-selection-row');
-        expect(row).toBeInTheDocument();
-        expect(row).toHaveAttribute('data-loading', 'true');
+        expect(screen.getByText('Detecting store structure…')).toBeInTheDocument();
+        // The spinner stands in for the whole row — no dropdowns or Re-detect yet.
+        expect(screen.queryByTestId('store-selection-row')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /re-detect/i })).not.toBeInTheDocument();
     });
 
-    it('renders the store-selection row enabled once store data has loaded', () => {
-        render(<StoreConfigFieldRow {...buildProps({ isFetching: false, hasStoreData: true })} />);
-
-        const row = screen.getByTestId('store-selection-row');
-        expect(row).toBeInTheDocument();
-        expect(row).toHaveAttribute('data-loading', 'false');
-    });
-
-    it('reserves the Re-detect button slot during fetch (rendered disabled, not popped in)', () => {
+    it('shows the spinner (not stale dropdowns) on a Re-detect — every fetch swaps the row', () => {
+        // A Re-detect nulls store data while it re-runs: same spinner branch as the
+        // initial detect. The user's selection is preserved in the field values.
         render(<StoreConfigFieldRow {...buildProps({ isFetching: true, hasStoreData: false })} />);
 
-        const button = screen.getByRole('button', { name: /re-detect/i });
-        expect(button).toBeInTheDocument();
-        expect(button).toBeDisabled();
+        expect(screen.getByText('Detecting store structure…')).toBeInTheDocument();
+        expect(screen.queryByTestId('store-selection-row')).not.toBeInTheDocument();
     });
 
-    it('enables the Re-detect button once store data has loaded', () => {
+    it('renders the dropdowns once store data has loaded — and NO "detected" success message', () => {
         render(<StoreConfigFieldRow {...buildProps({ isFetching: false, hasStoreData: true })} />);
 
-        const button = screen.getByRole('button', { name: /re-detect/i });
-        expect(button).toBeEnabled();
+        expect(screen.getByTestId('store-selection-row')).toBeInTheDocument();
+        // The dropdowns ARE the result — no separate success confirmation.
+        expect(screen.queryByText('Store structure detected')).not.toBeInTheDocument();
+        expect(screen.queryByText('Detecting store structure…')).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /re-detect/i })).toBeEnabled();
     });
 
-    it('does not swap a separate one-line spinner for the populated layout', () => {
-        // The footprint is constant: the store-selection row is always present in
-        // the detect/data area, so there is no short→tall content swap.
+    it('spinner gives way to the populated dropdowns on success (row swap, no success line)', () => {
         const { rerender } = render(
             <StoreConfigFieldRow {...buildProps({ isFetching: true, hasStoreData: false })} />,
         );
-        expect(screen.getByTestId('store-selection-row')).toBeInTheDocument();
+        expect(screen.getByText('Detecting store structure…')).toBeInTheDocument();
 
         rerender(<StoreConfigFieldRow {...buildProps({ isFetching: false, hasStoreData: true })} />);
+        expect(screen.queryByText('Detecting store structure…')).not.toBeInTheDocument();
         expect(screen.getByTestId('store-selection-row')).toBeInTheDocument();
     });
 
