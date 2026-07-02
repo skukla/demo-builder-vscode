@@ -336,7 +336,12 @@ export function ResetToTemplateOption({
     onResetToTemplateChange: (isSelected: boolean) => void;
 }): React.ReactElement {
     return (
-        <Flex direction="column" gap="size-100" marginTop="size-300">
+        <Flex
+            direction="column"
+            gap="size-100"
+            marginTop="size-300"
+            UNSAFE_className="reset-to-template-top"
+        >
             <Checkbox
                 isSelected={resetToTemplate}
                 onChange={onResetToTemplateChange}

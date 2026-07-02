@@ -364,6 +364,12 @@ export function RepoSelectionInline({
 
                 {repoMode === 'existing' && (
                     <>
+                        {shouldShowResetOption && (
+                            <ResetToTemplateOption
+                                resetToTemplate={resetToTemplate}
+                                onResetToTemplateChange={handleResetToTemplateChange}
+                            />
+                        )}
                         <SelectionStepContent
                             headerAction={
                                 <Button variant="accent" onPress={handleCreateNew}>
@@ -404,12 +410,6 @@ export function RepoSelectionInline({
                                 </Text>
                             )}
                         />
-                        {shouldShowResetOption && (
-                            <ResetToTemplateOption
-                                resetToTemplate={resetToTemplate}
-                                onResetToTemplateChange={handleResetToTemplateChange}
-                            />
-                        )}
                     </>
                 )}
             </div>
