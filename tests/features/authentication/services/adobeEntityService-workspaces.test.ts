@@ -119,11 +119,15 @@ describe('AdobeEntityService - Workspaces', () => {
             expect(mockCommandExecutor.execute).toHaveBeenCalled();
         });
 
-        it('should use CLI if org ID missing', async () => {
+        it('should use CLI if org ID missing (and no token org)', async () => {
             const { service, mockCacheManager, mockSDKClient, mockCommandExecutor } = testMocks;
             mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
             mockCacheManager.getCachedProject.mockReturnValue(mockProjects[0]);
             mockSDKClient.isInitialized.mockReturnValue(true);
+            // No cached/threaded org AND the token-org SDK fallback yields nothing → CLI.
+            mockSDKClient.getClient.mockReturnValue({
+                getOrganizations: jest.fn().mockResolvedValue({ body: [] }),
+            } as ReturnType<typeof mockSDKClient.getClient>);
             mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify([{ id: 'ws1', name: 'Production', title: 'Production' }]),
                 stderr: '',

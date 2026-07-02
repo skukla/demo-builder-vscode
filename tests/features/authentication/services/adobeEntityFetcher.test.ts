@@ -326,9 +326,11 @@ describe('AdobeEntityFetcher', () => {
             expect(result[0].name).toBe('Project 1');
         });
 
-        it('should use CLI when org ID is missing', async () => {
+        it('should use CLI when org ID is missing (and no token org)', async () => {
             mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
             mockSDKClient.isInitialized.mockReturnValue(true);
+            // No threaded/cached org AND the token org fallback yields nothing → CLI.
+            jest.spyOn(fetcher, 'getOrganizationsSdkOnly').mockResolvedValue([]);
 
             mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify([
@@ -630,6 +632,90 @@ describe('AdobeEntityFetcher', () => {
             await fetcher.getProjects({ orgId: 'target-org' });
 
             expect(getProjectsForOrg).toHaveBeenCalledWith('target-org');
+        });
+    });
+
+    describe('token-org SDK fallback (no threaded/cached org)', () => {
+        it('getProjects resolves the TOKEN org via the SDK and skips the CLI', async () => {
+            // Regression: an un-threaded, un-cached getProjects used to fall to the CLI,
+            // which targets the stale `aio console` org and 403s -> ORG_MISMATCH. With the
+            // SDK initialized it must instead resolve the TOKEN org (getOrganizationsSdkOnly()[0])
+            // and fetch via the SDK.
+            mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            const getProjectsForOrg = jest.fn().mockResolvedValue({
+                body: [{ id: 'proj1', name: 'Project 1', title: 'Project 1 Title' }],
+            });
+            mockSDKClient.getClient.mockReturnValue({
+                getProjectsForOrg,
+            } as ReturnType<typeof mockSDKClient.getClient>);
+            jest.spyOn(fetcher, 'getOrganizationsSdkOnly').mockResolvedValue([
+                { id: 'tok-org', code: 'TOK@AdobeOrg', name: 'Token Org' },
+            ]);
+
+            await fetcher.getProjects();
+
+            expect(getProjectsForOrg).toHaveBeenCalledWith('tok-org');
+            // The SDK path succeeded — the CLI fallback must NOT run.
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
+        });
+
+        it('getProjects does NOT consult the token org when an orgId is threaded', async () => {
+            mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            const getProjectsForOrg = jest.fn().mockResolvedValue({
+                body: [{ id: 'proj1', name: 'Project 1', title: 'Project 1 Title' }],
+            });
+            mockSDKClient.getClient.mockReturnValue({
+                getProjectsForOrg,
+            } as ReturnType<typeof mockSDKClient.getClient>);
+            const tokenSpy = jest.spyOn(fetcher, 'getOrganizationsSdkOnly');
+
+            await fetcher.getProjects({ orgId: 'threaded-org' });
+
+            expect(getProjectsForOrg).toHaveBeenCalledWith('threaded-org');
+            expect(tokenSpy).not.toHaveBeenCalled();
+        });
+
+        it('getProjects does NOT consult the token org when an org is cached', async () => {
+            mockCacheManager.getCachedOrganization.mockReturnValue({
+                id: 'cached-org', code: 'C@AdobeOrg', name: 'Cached Org',
+            });
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            const getProjectsForOrg = jest.fn().mockResolvedValue({
+                body: [{ id: 'proj1', name: 'Project 1', title: 'Project 1 Title' }],
+            });
+            mockSDKClient.getClient.mockReturnValue({
+                getProjectsForOrg,
+            } as ReturnType<typeof mockSDKClient.getClient>);
+            const tokenSpy = jest.spyOn(fetcher, 'getOrganizationsSdkOnly');
+
+            await fetcher.getProjects();
+
+            expect(getProjectsForOrg).toHaveBeenCalledWith('cached-org');
+            expect(tokenSpy).not.toHaveBeenCalled();
+        });
+
+        it('getWorkspaces resolves the TOKEN org via the SDK and skips the CLI', async () => {
+            // Mirror of the getProjects fallback: no threaded/cached org, a threaded
+            // projectId, SDK initialized → resolve the token org and fetch via the SDK.
+            mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
+            mockCacheManager.getCachedProject.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            const getWorkspacesForProject = jest.fn().mockResolvedValue({
+                body: [{ id: 'ws1', name: 'Production', title: 'Production' }],
+            });
+            mockSDKClient.getClient.mockReturnValue({
+                getWorkspacesForProject,
+            } as ReturnType<typeof mockSDKClient.getClient>);
+            jest.spyOn(fetcher, 'getOrganizationsSdkOnly').mockResolvedValue([
+                { id: 'tok-org', code: 'TOK@AdobeOrg', name: 'Token Org' },
+            ]);
+
+            await fetcher.getWorkspaces({ projectId: 'threaded-proj' });
+
+            expect(getWorkspacesForProject).toHaveBeenCalledWith('tok-org', 'threaded-proj');
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
         });
     });
 

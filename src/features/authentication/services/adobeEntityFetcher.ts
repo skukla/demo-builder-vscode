@@ -312,7 +312,28 @@ export class AdobeEntityFetcher {
     }
 
     /**
-     * Try fetching projects via SDK (requires valid cached org ID)
+     * Resolve the org id an SDK entity fetch should target.
+     *
+     * Prefers the caller-supplied id (the threaded selection, then the
+     * cached/ambient org). When neither is present, falls back to the TOKEN org
+     * (`getOrganizationsSdkOnly()[0]` — the canonical "token org is truth"
+     * convention, same source `detectProjectOrgMismatch` uses) via the SDK, NOT
+     * the CLI. That keeps an un-threaded, un-cached fetch on the SDK path instead
+     * of dropping to the CLI fallback, which targets the STALE `aio console` org
+     * and 403s -> ORG_MISMATCH (a slow, noisy failure).
+     *
+     * `getOrganizationsSdkOnly` is self-guarding: it returns [] (→ this returns
+     * undefined) when the SDK isn't initialized, so the caller then keeps its
+     * existing return-[] → CLI path. Deliberately SDK-only to avoid a circular
+     * CLI dependency.
+     */
+    private async resolveEffectiveOrgId(preferredOrgId?: string): Promise<string | undefined> {
+        if (preferredOrgId && preferredOrgId.length > 0) return preferredOrgId;
+        return (await this.getOrganizationsSdkOnly())?.[0]?.id;
+    }
+
+    /**
+     * Try fetching projects via SDK (requires a resolvable org ID)
      */
     private async tryFetchProjectsViaSDK(
         cachedOrg: AdobeOrg | undefined,
@@ -320,13 +341,14 @@ export class AdobeEntityFetcher {
         targetOrgId?: string,
     ): Promise<AdobeProject[]> {
         // Fetch for the EFFECTIVE target org: the explicitly threaded org id wins
-        // (the caller's intent — e.g. the wizard's selected org), falling back to
-        // the cached/ambient org only when no id was threaded. The cached org can
-        // be stale after an org switch, so blindly using it returns the wrong
-        // org's projects (or an empty list).
-        const effectiveOrgId = targetOrgId ?? cachedOrg?.id;
+        // (the caller's intent — e.g. the wizard's selected org), then the
+        // cached/ambient org, then the TOKEN org (see resolveEffectiveOrgId). The
+        // cached org can be stale after an org switch, so blindly using it returns
+        // the wrong org's projects (or an empty list).
+        const effectiveOrgId = await this.resolveEffectiveOrgId(targetOrgId ?? cachedOrg?.id);
         const hasValidOrgId = !!effectiveOrgId && effectiveOrgId.length > 0;
         if (!hasValidOrgId) {
+            // Still no id (e.g. SDK not initialized, or the token has no orgs): use the CLI.
             if (this.sdkClient.isInitialized()) {
                 this.debugLogger.debug('[Entity Fetcher] SDK available but org ID is missing, using CLI');
             }
@@ -410,10 +432,13 @@ export class AdobeEntityFetcher {
     async getWorkspaces(target?: { orgId?: string; projectId?: string }): Promise<AdobeWorkspace[]> {
         const cachedOrg = this.cacheManager.getCachedOrganization();
         const cachedProject = this.cacheManager.getCachedProject();
-        // Prefer the threaded selection; fall back to the cache for un-threaded callers.
-        const orgId = target?.orgId ?? cachedOrg?.id;
+        // Prefer the threaded selection, then the cache, then the TOKEN org via the
+        // SDK (see resolveEffectiveOrgId). The token fallback keeps an un-threaded,
+        // un-cached workspace fetch on the SDK path instead of the CLI (which targets
+        // the stale `aio console` org -> ORG_MISMATCH). projectId threading is unchanged.
+        const orgId = await this.resolveEffectiveOrgId(target?.orgId ?? cachedOrg?.id);
         const projectId = target?.projectId ?? cachedProject?.id;
-        // Enrich org code/name only when the target org still matches the cached org.
+        // Enrich org code/name only when the resolved org still matches the cached org.
         const orgMatches = !!cachedOrg && cachedOrg.id === orgId;
 
         if (orgId && projectId) {

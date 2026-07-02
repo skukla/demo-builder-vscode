@@ -182,13 +182,11 @@ export class AdobeContextResolver {
     private async resolveProjectFromString(projectString: string): Promise<AdobeProject> {
         const fallback: AdobeProject = { id: projectString, name: projectString, title: projectString };
         try {
-            // Thread the TOKEN org (getOrganizations()[0] — the canonical "token org is
-            // truth" convention) so getProjects takes the SDK path. Without it the fetch
-            // falls back to the CLI, which targets the stale console org and 403s ->
-            // ORG_MISMATCH: a slow (~2s), noisy failure for what is only a best-effort
-            // project-ID lookup.
-            const orgId = (await this.fetcher.getOrganizations())?.[0]?.id;
-            const projects = await this.fetcher.getProjects({ silent: true, orgId });
+            // getProjects resolves the org itself: threaded → cached → TOKEN org via the
+            // SDK (see AdobeEntityFetcher.resolveEffectiveOrgId). That systemic fallback
+            // keeps this best-effort project-ID lookup on the SDK path — no need to thread
+            // the token org here — while avoiding the stale-console CLI 403 -> ORG_MISMATCH.
+            const projects = await this.fetcher.getProjects({ silent: true });
             const matched = projects.find(p => p.name === projectString || p.title === projectString);
             if (matched) return matched;
 
