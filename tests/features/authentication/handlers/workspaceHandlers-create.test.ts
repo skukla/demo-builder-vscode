@@ -88,6 +88,14 @@ describe('workspaceHandlers - Create', () => {
         expect(mockContext.sendMessage).toHaveBeenCalledWith('workspaceSelected', { workspaceId: 'ws-new' });
     });
 
+    it('threads the payload projectId into the post-create refresh (SDK path, not the stale CLI)', async () => {
+        await handleCreateAdobeWorkspace(mockContext, { name: 'Stage', projectId: 'proj-42' });
+
+        // The refresh must target the wizard's project; the fetcher resolves the org via
+        // its token-org fallback. Unthreaded, the fetch would drop to the stale-org CLI.
+        expect(mockContext.authManager.getWorkspaces).toHaveBeenCalledWith({ projectId: 'proj-42' });
+    });
+
     it('returns an error when createWorkspace throws', async () => {
         mockContext.authManager.createWorkspace.mockRejectedValue(new Error('boom'));
 

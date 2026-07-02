@@ -155,7 +155,7 @@ export async function handleCreateWorkspaceCredential(
  */
 export async function handleCreateAdobeWorkspace(
     context: HandlerContext,
-    payload: { name: string; description?: string },
+    payload: { name: string; description?: string; projectId?: string },
 ): Promise<HandlerResponse> {
     if (!context.authManager) {
         return { success: false, error: 'Authentication not available' };
@@ -189,9 +189,11 @@ export async function handleCreateAdobeWorkspace(
             };
         }
 
-        // Refresh the workspace list and ack the new selection (best-effort).
+        // Refresh the workspace list and ack the new selection (best-effort). Thread the
+        // wizard's project so the fetch takes the SDK path (the org resolves via the
+        // fetcher's token-org fallback); unthreaded it would drop to the stale-org CLI.
         try {
-            const workspaces = await context.authManager.getWorkspaces();
+            const workspaces = await context.authManager.getWorkspaces({ projectId: payload?.projectId });
             await context.sendMessage('get-workspaces', workspaces);
             await context.sendMessage('workspaceSelected', { workspaceId: workspace.id });
         } catch (refreshError) {

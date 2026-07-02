@@ -224,7 +224,7 @@ export function AdobeWorkspaceField({ state, updateState }: FieldProps): React.R
             try {
                 const res = await webviewClient.request<HandlerResult<Workspace>>(
                     'create-adobe-workspace',
-                    { name },
+                    { name, projectId: state.adobeProject?.id },
                 );
                 if (res?.success && res.data) {
                     updateState({
@@ -244,7 +244,7 @@ export function AdobeWorkspaceField({ state, updateState }: FieldProps): React.R
                 setBusy(false);
             }
         },
-        [busy, updateState],
+        [busy, updateState, state.adobeProject?.id],
     );
 
     if (mode === 'create') {
