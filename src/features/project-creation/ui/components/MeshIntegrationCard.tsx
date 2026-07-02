@@ -18,7 +18,7 @@
  * @module features/project-creation/ui/components/MeshIntegrationCard
  */
 
-import { Button } from '@adobe/react-spectrum';
+import { ActionButton } from '@adobe/react-spectrum';
 import React, { useEffect, useState } from 'react';
 import { isAdobeSignedIn } from '../steps/tileStatus';
 import { IntegrationCard, type IntegrationCardAction } from './IntegrationCard';
@@ -68,9 +68,9 @@ function ChosenRow({
             </span>
             <span className="int-chosen-label">{label}</span>
             <span className="int-chosen-value">{value}</span>
-            <Button variant="secondary" isQuiet onPress={onChange}>
+            <ActionButton isQuiet onPress={onChange}>
                 Change
-            </Button>
+            </ActionButton>
         </div>
     );
 }
