@@ -4268,7 +4268,14 @@ div[class*="spectrum"] input[type="search"] {
     flex: 1 1 0 !important;
     min-width: 240px !important;
     position: relative !important;
-    display: block !important;
+    /* Flex column + top-align so the heading pins to the TOP of the (stretched)
+       card. A <button> vertically-centers its content by default, so with a
+       shared height the card carrying the shorter 1-line description floats its
+       heading down, out of line with the 2-line card. */
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
     text-align: left !important;
     font-family: inherit !important;
     background: var(--spectrum-global-color-gray-50) !important;
