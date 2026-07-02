@@ -50,6 +50,7 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     'check-api-mesh': TIMEOUTS.AUTH.BROWSER,         // 60s - workspace download + mesh describe
     'create-api-mesh': TIMEOUTS.LONG,                // 180s - create and deploy mesh
     'update-api-mesh': TIMEOUTS.LONG,                // 180s - update and deploy mesh
+    'ensure-mesh-api-subscribed': TIMEOUTS.LONG,     // 180s - subscribe required APIs (getCredentials + create + subscribe; multiple Adobe calls)
 
     // Project deletion (EDS cleanup involves multiple external APIs)
     'deleteProject': TIMEOUTS.LONG,                  // 180s - DA.live + GitHub + local cleanup

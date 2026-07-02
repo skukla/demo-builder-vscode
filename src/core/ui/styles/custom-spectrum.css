@@ -4525,6 +4525,11 @@ div[class*="spectrum"] input[type="search"] {
     display: flex;
     align-items: center;
     gap: 10px;
+    box-sizing: border-box;
+    /* Uniform row height across Project / Workspace / API access — the quiet action
+       button (Change) sets the tallest natural height; rows without one (e.g. API access
+       once Enabled) fill to match. Failed rows may grow (wrapped error) — acceptable. */
+    min-height: 48px;
     padding: 8px 12px;
     margin-bottom: 12px;
     border: 1px solid var(--spectrum-global-color-gray-300);
@@ -4544,11 +4549,30 @@ div[class*="spectrum"] input[type="search"] {
     font-size: 11px;
     font-weight: 700;
 }
+/* The failed counterpart to .int-chosen-check: same badge shape, negative color. */
+.int-chosen-warn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: var(--spectrum-global-color-red-600);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+}
 .int-chosen-label {
     font-size: 11px;
     letter-spacing: 0.05em;
     text-transform: uppercase;
     color: var(--spectrum-global-color-gray-600);
+}
+/* The inline error detail shown next to a failed enablement. */
+.int-enable-error {
+    font-size: 12px;
+    color: var(--spectrum-global-color-red-600);
 }
 .int-chosen-value {
     font-size: 13px;

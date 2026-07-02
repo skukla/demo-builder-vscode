@@ -8,6 +8,7 @@
  */
 
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
+import { handleEnsureMeshApiSubscribed } from '@/features/mesh/handlers/subscribeHandler';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 
 describe('meshHandlers', () => {
@@ -24,19 +25,20 @@ describe('meshHandlers', () => {
         it('should include all required message types', () => {
             // Given: meshHandlers object
             // When: Checking for required message types
-            // Then: All 3 handlers present
+            // Then: All handlers present
             expect(hasHandler(meshHandlers, 'check-api-mesh')).toBe(true);
             expect(hasHandler(meshHandlers, 'create-api-mesh')).toBe(true);
             expect(hasHandler(meshHandlers, 'delete-api-mesh')).toBe(true);
+            expect(hasHandler(meshHandlers, 'ensure-mesh-api-subscribed')).toBe(true);
         });
 
-        it('should have exactly 3 handlers', () => {
+        it('should have exactly 4 handlers', () => {
             // Given: meshHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(meshHandlers);
 
-            // Then: Exactly 3 handlers
-            expect(types).toHaveLength(3);
+            // Then: Exactly 4 handlers
+            expect(types).toHaveLength(4);
         });
 
         it('should have handlers as functions', () => {
@@ -46,6 +48,11 @@ describe('meshHandlers', () => {
             expect(typeof meshHandlers['check-api-mesh']).toBe('function');
             expect(typeof meshHandlers['create-api-mesh']).toBe('function');
             expect(typeof meshHandlers['delete-api-mesh']).toBe('function');
+            expect(typeof meshHandlers['ensure-mesh-api-subscribed']).toBe('function');
+        });
+
+        it('should wire ensure-mesh-api-subscribed to handleEnsureMeshApiSubscribed', () => {
+            expect(meshHandlers['ensure-mesh-api-subscribed']).toBe(handleEnsureMeshApiSubscribed);
         });
     });
 });

@@ -17,8 +17,8 @@
  * - Logger/StepLogger for logging
  */
 
-import { deriveAdobeEntityName } from './adobeEntityName';
 import { mapOrganizations, mapProjects, mapWorkspaces } from './adobeEntityMapper';
+import { deriveAdobeEntityName } from './adobeEntityName';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';
 import type {
@@ -863,6 +863,11 @@ export class AdobeEntityFetcher {
      * Create an AdobeID/apiKey credential for apiKey-platform services (e.g. API
      * Mesh `GraphQLServiceSDK`). Returns the credential's `id_integration` (the
      * subscribe id — NOT `.id`). `domain` is MANDATORY for API Mesh.
+     *
+     * List-first (mirrors {@link ensureOAuthCredentialId}): returns an existing
+     * apiKey credential's `id_integration` when one already matches `input.name`
+     * (e.g. `demo-builder-api-mesh`), so running the subscribe twice never leaves
+     * a duplicate credential. Creates only when none matches.
      */
     async createAdobeIdCredential(
         orgId: string,
@@ -872,12 +877,28 @@ export class AdobeEntityFetcher {
     ): Promise<string | undefined> {
         await this.ensureSDKReady();
         const client = this.sdkClient.getClient() as {
+            getCredentials: (orgId: string, projectId: string, workspaceId: string) =>
+                Promise<SDKResponse<RawWorkspaceCredential[]>>;
             createAdobeIdCredential: (
                 orgId: string, projectId: string, workspaceId: string, input: AdobeIdCredentialInput,
-            ) => Promise<SDKResponse<{ id_integration: string }>>;
+            ) => Promise<SDKResponse<{ id_integration?: string; id?: string }>>;
         };
+
+        const existing = (await client.getCredentials(orgId, projectId, workspaceId))?.body;
+        const match = existing?.find(
+            (c) => (c.integration_type === 'apikey' || c.flow_type === 'adobeid')
+                && c.integration_name === input.name
+                && c.id_integration,
+        );
+        if (match?.id_integration) {
+            return match.id_integration;
+        }
+
+        // The create response returns the integration id in `.id` (like the OAuth create),
+        // NOT `.id_integration` — that field only appears on getCredentials LIST entries.
+        // Prefer id_integration when present, else fall back to id.
         const response = await client.createAdobeIdCredential(orgId, projectId, workspaceId, input);
-        return response?.body?.id_integration;
+        return response?.body?.id_integration ?? response?.body?.id;
     }
 
     /**

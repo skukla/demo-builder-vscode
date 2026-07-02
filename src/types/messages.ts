@@ -57,6 +57,7 @@ export type MessageType =
     | 'check-api-mesh'
     | 'create-api-mesh'
     | 'delete-api-mesh'
+    | 'ensure-mesh-api-subscribed'
     | 'check-mesh-status-async'
 
     // Project creation messages

@@ -20,6 +20,7 @@ import { deriveAllowedDomain } from './allowedDomain';
 import { subscribeRequiredApis, type ApiSubscriberClient, type OrgTarget } from './apiSubscriber';
 import type { AppBuilderComponentRunnerDeps } from './appBuilderComponentRunner';
 import { deployAppComponent } from './appDeployment';
+import type { MeshSubscribeTarget } from './ensureMeshApiSubscribed';
 import type { CachedOrgRef, CommandExecutor } from '@/core/shell';
 import type { ComponentManager } from '@/features/components/services/componentManager';
 import { republishStorefrontConfig } from '@/features/eds/services/storefrontRepublishService';
@@ -70,7 +71,7 @@ async function applyOwPackage(componentPath: string, owPackage: string, logger: 
 }
 
 /** Build the {@link OrgTarget} the subscriber needs from the project's identity. */
-export function subscriberTarget(project: Project): OrgTarget {
+export function subscriberTarget(project: MeshSubscribeTarget): OrgTarget {
     return {
         orgId: project.adobe?.organization ?? '',
         projectId: project.adobe?.projectId ?? '',

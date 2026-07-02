@@ -73,6 +73,7 @@ export const projectCreationHandlers = defineHandlers({
     'check-api-mesh': meshHandlers['check-api-mesh'],
     'create-api-mesh': meshHandlers['create-api-mesh'],
     'delete-api-mesh': meshHandlers['delete-api-mesh'],
+    'ensure-mesh-api-subscribed': meshHandlers['ensure-mesh-api-subscribed'],
 
     // EDS handlers - GitHub
     'check-github-auth': eds.handleCheckGitHubAuth,

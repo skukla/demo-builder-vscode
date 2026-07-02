@@ -12,6 +12,7 @@ export { DeployMeshCommand } from './commands/deployMesh';
 export { handleCheckApiMesh } from './handlers/checkHandler';
 export { handleCreateApiMesh } from './handlers/createHandler';
 export { handleDeleteApiMesh } from './handlers/deleteHandler';
+export { handleEnsureMeshApiSubscribed } from './handlers/subscribeHandler';
 export { getEndpoint as getHandlerEndpoint } from './handlers/shared';
 
 // Services

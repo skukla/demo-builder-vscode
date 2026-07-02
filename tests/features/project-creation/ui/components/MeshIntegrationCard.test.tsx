@@ -13,12 +13,19 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 import { MeshIntegrationCard } from '@/features/project-creation/ui/components/MeshIntegrationCard';
 import type { WizardState } from '@/types/webview';
 
+const mockRequest = jest.fn();
+
+jest.mock('@/core/ui/utils/vscode-api', () => ({
+    webviewClient: {
+        request: (...args: unknown[]) => mockRequest(...args),
+    },
+}));
 jest.mock('@/features/authentication/ui/steps/AdobeAuthStep', () => ({
     AdobeAuthStep: () => <div data-testid="adobe-auth-step">Adobe Auth Step</div>,
 }));
@@ -54,6 +61,14 @@ function renderCard(overrides: {
 }
 
 describe('MeshIntegrationCard', () => {
+    beforeEach(() => {
+        // The enablement row auto-issues this request whenever a workspace is
+        // committed. Default to a pending promise so the destination-focused
+        // tests below don't trigger an unawaited post-render state update
+        // (the enablement-row describe overrides this with a resolved value).
+        mockRequest.mockReturnValue(new Promise(() => {}));
+    });
+
     it('unselected: shows Add and no expanded config', () => {
         renderCard({ selected: false });
 
@@ -143,5 +158,72 @@ describe('MeshIntegrationCard', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
 
         expect(onToggle).toHaveBeenCalledWith(false);
+    });
+
+    describe('API access enablement row', () => {
+        beforeEach(() => {
+            jest.clearAllMocks();
+            mockRequest.mockResolvedValue({ success: true });
+        });
+
+        it('is not rendered (and issues no request) until a workspace is committed', () => {
+            renderCard({
+                selected: true,
+                state: {
+                    ...SIGNED_IN,
+                    adobeProject: { id: 'p1', name: 'proj', title: 'Demo Project' },
+                    selectedStack: 'eds-paas',
+                },
+            });
+
+            expect(screen.queryByText('API access')).not.toBeInTheDocument();
+            expect(mockRequest).not.toHaveBeenCalled();
+        });
+
+        it('renders and issues the request with the payload derived from state + stack', async () => {
+            renderCard({
+                selected: true,
+                state: {
+                    ...SIGNED_IN,
+                    adobeProject: { id: 'p1', name: 'proj', title: 'Demo Project' },
+                    adobeWorkspace: { id: 'w1', name: 'Stage', title: 'Stage' },
+                    selectedStack: 'eds-paas',
+                },
+            });
+
+            expect(screen.getByText('API access')).toBeInTheDocument();
+            await waitFor(() => {
+                expect(mockRequest).toHaveBeenCalledWith('ensure-mesh-api-subscribed', {
+                    orgId: 'org-1',
+                    projectId: 'p1',
+                    workspaceId: 'w1',
+                    backendId: 'adobe-commerce-paas',
+                    frontendId: 'eds-storefront',
+                });
+            });
+        });
+
+        it('has no "Change" affordance on the enablement row', async () => {
+            renderCard({
+                selected: true,
+                state: {
+                    ...SIGNED_IN,
+                    adobeProject: { id: 'p1', name: 'proj', title: 'Demo Project' },
+                    adobeWorkspace: { id: 'w1', name: 'Stage', title: 'Stage' },
+                    selectedStack: 'eds-paas',
+                },
+            });
+
+            // Let the auto-run resolve so we assert on the settled row.
+            await waitFor(() => {
+                expect(screen.getByText('Enabled')).toBeInTheDocument();
+            });
+
+            const row = screen.getByText('API access').closest('.int-chosen') as HTMLElement;
+            expect(row).not.toBeNull();
+            expect(
+                within(row).queryByRole('button', { name: /change/i }),
+            ).not.toBeInTheDocument();
+        });
     });
 });

@@ -20,8 +20,10 @@
 
 import { ActionButton } from '@adobe/react-spectrum';
 import React, { useEffect, useState } from 'react';
+import { getStackById } from '../hooks/useSelectedStack';
 import { isAdobeSignedIn } from '../steps/tileStatus';
 import { IntegrationCard, type IntegrationCardAction } from './IntegrationCard';
+import { MeshApiEnableRow } from './MeshApiEnableRow';
 import {
     AdobeProjectField,
     AdobeWorkspaceField,
@@ -75,6 +77,73 @@ function ChosenRow({
     );
 }
 
+/** Props for the signed-in destination body. */
+interface MeshDestinationProps {
+    state: WizardState;
+    updateState: (updates: Partial<WizardState>) => void;
+    editing: DestinationField | null;
+    setEditing: (field: DestinationField) => void;
+    projectId?: string;
+    workspaceId?: string;
+    projectName: string;
+    workspaceName: string;
+}
+
+/**
+ * The signed-in destination body: project field/ChosenRow, workspace field/ChosenRow,
+ * and the auto-running {@link MeshApiEnableRow}. Extracted from MeshIntegrationCard to
+ * keep the parent's branch logic simple.
+ *
+ * @param props - state, updater, the open/edit field, and the committed names/ids
+ * @returns the destination fields block
+ */
+function MeshDestination({
+    state,
+    updateState,
+    editing,
+    setEditing,
+    projectId,
+    workspaceId,
+    projectName,
+    workspaceName,
+}: MeshDestinationProps): React.ReactElement {
+    const projectOpen = !projectId || editing === 'project';
+    const workspaceOpen = Boolean(projectId) && (!workspaceId || editing === 'workspace');
+    const stack = state.selectedStack ? getStackById(state.selectedStack) : undefined;
+    return (
+        <div className="int-destination">
+            {projectOpen ? (
+                <AdobeProjectField state={state} updateState={updateState} />
+            ) : (
+                <ChosenRow
+                    label="Project"
+                    value={projectName}
+                    onChange={() => setEditing('project')}
+                />
+            )}
+            {projectId &&
+                (workspaceOpen ? (
+                    <AdobeWorkspaceField state={state} updateState={updateState} />
+                ) : (
+                    <ChosenRow
+                        label="Workspace"
+                        value={workspaceName}
+                        onChange={() => setEditing('workspace')}
+                    />
+                ))}
+            {workspaceId && (
+                <MeshApiEnableRow
+                    orgId={state.adobeOrg?.id}
+                    projectId={projectId}
+                    workspaceId={workspaceId}
+                    backendId={stack?.backend}
+                    frontendId={stack?.frontend}
+                />
+            )}
+        </div>
+    );
+}
+
 /**
  * The API Mesh card with its inline destination.
  *
@@ -119,30 +188,17 @@ export function MeshIntegrationCard({
             // Inline sign-in gate — reuses the full auth step (like Commerce's signin).
             config = <AdobeAuthStep state={state} updateState={updateState} setCanProceed={NOOP} />;
         } else {
-            const projectOpen = !projectId || editing === 'project';
-            const workspaceOpen = Boolean(projectId) && (!workspaceId || editing === 'workspace');
             config = (
-                <div className="int-destination">
-                    {projectOpen ? (
-                        <AdobeProjectField state={state} updateState={updateState} />
-                    ) : (
-                        <ChosenRow
-                            label="Project"
-                            value={projectName}
-                            onChange={() => setEditing('project')}
-                        />
-                    )}
-                    {projectId &&
-                        (workspaceOpen ? (
-                            <AdobeWorkspaceField state={state} updateState={updateState} />
-                        ) : (
-                            <ChosenRow
-                                label="Workspace"
-                                value={workspaceName}
-                                onChange={() => setEditing('workspace')}
-                            />
-                        ))}
-                </div>
+                <MeshDestination
+                    state={state}
+                    updateState={updateState}
+                    editing={editing}
+                    setEditing={setEditing}
+                    projectId={projectId}
+                    workspaceId={workspaceId}
+                    projectName={projectName}
+                    workspaceName={workspaceName}
+                />
             );
         }
     }
