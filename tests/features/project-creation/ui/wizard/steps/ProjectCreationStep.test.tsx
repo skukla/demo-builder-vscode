@@ -35,6 +35,7 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
 
 describe('ProjectCreationStep', () => {
     const mockOnBack = jest.fn();
+    const mockUpdateState = jest.fn();
 
     const baseState: Partial<WizardState> = {
         currentStep: 'create-project',
@@ -527,6 +528,66 @@ describe('ProjectCreationStep', () => {
                 const openButton = screen.getByRole('button', { name: /View Projects/i });
                 expect(openButton).toBeInTheDocument();
             });
+        });
+    });
+
+    describe('API Mesh pre-flight — auto-subscribe (no manual "not enabled" gate)', () => {
+        // A mesh dependency makes the pre-flight run the check-api-mesh call.
+        const meshState: Partial<WizardState> = {
+            ...baseState,
+            selectedOptionalDependencies: ['eds-accs-mesh'], // a MESH_COMPONENT_ID
+        };
+
+        it('proceeds to creation when the API Mesh API is not yet enabled (deploy path subscribes it)', async () => {
+            // A fresh/selected workspace lacks the API. The deploy path auto-subscribes it,
+            // so the wizard must NOT dead-end on the manual "API Mesh API Not Enabled" gate.
+            mockWebviewClientRequest.mockResolvedValue({
+                success: true,
+                apiEnabled: false,
+                meshExists: false,
+            });
+
+            render(
+                <Provider theme={defaultTheme}>
+                    <ProjectCreationStep
+                        state={meshState as WizardState}
+                        updateState={mockUpdateState}
+                        onBack={mockOnBack}
+                    />
+                </Provider>
+            );
+
+            await waitFor(() => {
+                expect(mockCreateProject).toHaveBeenCalled();
+            });
+            expect(screen.queryByText(/API Mesh API Not Enabled/i)).not.toBeInTheDocument();
+        });
+
+        it('still surfaces an error when the API Mesh check genuinely fails', async () => {
+            // A real check failure (not "absent") is not silently swallowed.
+            mockWebviewClientRequest.mockResolvedValue({
+                success: false,
+                apiEnabled: false,
+                error: 'Adobe I/O request timed out',
+            });
+
+            render(
+                <Provider theme={defaultTheme}>
+                    <ProjectCreationStep
+                        state={meshState as WizardState}
+                        updateState={mockUpdateState}
+                        onBack={mockOnBack}
+                    />
+                </Provider>
+            );
+
+            await waitFor(() => {
+                expect(screen.getByText('Adobe I/O request timed out')).toBeInTheDocument();
+            });
+            // The dialog is now a generic check-failure surface, not the retired "not enabled" gate.
+            expect(screen.getByText(/API Mesh Check Failed/i)).toBeInTheDocument();
+            expect(screen.queryByText(/API Mesh API Not Enabled/i)).not.toBeInTheDocument();
+            expect(mockCreateProject).not.toHaveBeenCalled();
         });
     });
 });

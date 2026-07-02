@@ -32,7 +32,7 @@ describe('MeshErrorDialog', () => {
                 />
             );
 
-            expect(screen.getByText('API Mesh API Not Enabled')).toBeInTheDocument();
+            expect(screen.getByText('API Mesh Check Failed')).toBeInTheDocument();
         });
 
         it('renders error message text', () => {
@@ -123,7 +123,7 @@ describe('MeshErrorDialog', () => {
                 />
             );
 
-            const heading = screen.getByText('API Mesh API Not Enabled');
+            const heading = screen.getByText('API Mesh Check Failed');
             expect(heading).toBeInTheDocument();
         });
 

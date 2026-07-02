@@ -110,7 +110,12 @@ async function runMeshCheck(
             ].filter(Boolean) : [],
         });
 
-        if (!result.success || !result.apiEnabled) {
+        // The API Mesh API being absent is NOT a dead-end: the deploy path auto-subscribes it
+        // (ensureMeshApiSubscribed runs before deployMeshComponent, targeting the selected
+        // workspace) for both newly-created and selected-existing projects. Only a genuine
+        // check failure (success=false) still gates here; "not enabled" falls through so
+        // creation proceeds and the subscribe adds the API.
+        if (!result.success) {
             setMeshCheckResult(result);
             setPhase('mesh-error');
             return null;
@@ -204,7 +209,7 @@ function StepContentArea(props: {
     if (phase === 'mesh-error' && meshCheckResult) {
         return (
             <MeshErrorDialog
-                error={meshCheckResult.error || 'API Mesh API is not enabled for this workspace.'}
+                error={meshCheckResult.error || 'Could not verify API Mesh access for this workspace.'}
                 onRetry={onRetryMeshCheck}
                 onBack={onBack}
             />

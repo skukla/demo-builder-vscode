@@ -14,7 +14,7 @@ export function MeshErrorDialog({ error, code: _code, onRetry, onBack }: MeshErr
     return (
         <StatusDisplay
             variant="error"
-            title="API Mesh API Not Enabled"
+            title="API Mesh Check Failed"
             message={error}
             actions={[
                 { label: 'Retry', variant: 'accent', onPress: onRetry },

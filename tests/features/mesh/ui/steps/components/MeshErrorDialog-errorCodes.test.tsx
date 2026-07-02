@@ -48,7 +48,7 @@ describe('MeshErrorDialog with error codes', () => {
                 code={ErrorCode.TIMEOUT}
             />
         );
-        expect(screen.getByText(/API Mesh API Not Enabled/i)).toBeInTheDocument();
+        expect(screen.getByText(/API Mesh Check Failed/i)).toBeInTheDocument();
     });
 
     it('accepts MESH_DEPLOY_FAILED error code', () => {
