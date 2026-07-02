@@ -212,6 +212,9 @@ describe('AdobeContextResolver', () => {
             mockCacheManager.getCachedConsoleWhere.mockReturnValue({
                 project: 'Project Name',
             });
+            mockFetcher.getOrganizations.mockResolvedValue([
+                { id: 'org-token', code: 'TOKEN@AdobeOrg', name: 'Token Org' },
+            ]);
             mockFetcher.getProjects.mockResolvedValue([
                 { id: 'proj1', name: 'Project Name', title: 'Project Name' },
             ]);
@@ -220,7 +223,9 @@ describe('AdobeContextResolver', () => {
 
             expect(result).toBeDefined();
             expect(result?.id).toBe('proj1');
-            expect(mockFetcher.getProjects).toHaveBeenCalledWith({ silent: true });
+            // Resolve the project ID against the TOKEN org (getOrganizations()[0]) so the
+            // fetch takes the SDK path, not the unthreaded CLI fallback (avoids ORG_MISMATCH).
+            expect(mockFetcher.getProjects).toHaveBeenCalledWith({ silent: true, orgId: 'org-token' });
         });
     });
 
