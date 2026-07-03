@@ -228,3 +228,44 @@ the way the feature will; or (c) confirm during implementation against a workspa
 2. Enumerate + delete registrations (workspace) then providers (org-wide list filtered to the workspace)
    via `aio event …` under `withOrgContext`, OR via the Events REST API using the credential.
 3. Delete the project (Console SDK). Extend `projectDeletionService`.
+
+---
+
+## Spike close (2026-07-03) — full end-to-end delete executed
+
+Completed the flow live: created an S2S credential + throwaway provider on Kukla Mesh Test / Stage,
+reproduced the delete-block, tore down, and deleted the project (user-approved). All findings:
+
+1. **Bare S2S credential 403s on the Events API.** `createOAuthServerToServerCredential` alone is not
+   enough — `aio event provider list` returned 403 until the credential was subscribed to the
+   **I/O Management API** (`AdobeIOManagementAPISDK` — our `BASELINE_API` in `apiSubscriber.ts`) via
+   `subscribeOAuthServerToServerIntegrationToServices(orgId, idIntegration,
+   [{ sdkCode: 'AdobeIOManagementAPISDK', licenseConfigs: null, roles: null }])`. After subscribing,
+   the 403 cleared immediately. (The subscribe call hung once >2 min, then succeeded on retry —
+   treat it as retryable/slow, like other Console SDK ops.)
+2. **`aio event provider create` is inquirer-only** (no label/description flags) — unusable
+   programmatically. Use `@adobe/aio-lib-events` instead: `init(orgId, credApiKey, userToken)` →
+   `createProvider(orgId, projectId, workspaceId, { label, description })`. The lib ships inside the
+   global aio CLI install and would be a (dev)dependency for the feature.
+3. **✅ OPEN ITEM RESOLVED — there is NO workspace-id field on provider JSON.** Create/get/list all
+   return the same shape; the project/workspace binding is encoded ONLY in
+   `_links["rel:update"].href` = `/events/{consumerOrgId}/{projectId}/{workspaceId}/providers/{id}`,
+   and that link IS present in the org-wide list response. Discovery algorithm (validated live —
+   found exactly the 1 spike provider among 1,567 org providers):
+   `getAllProviders(orgId)` → filter `provider_metadata === '3rd_party_custom_events'` (only 10
+   existed org-wide) → parse `rel:update` href → match `projectId`.
+4. **Delete-block reproduced.** With the provider attached, `deleteProject` → **409 Conflict,
+   `ERR_MSG_PROJECT_DELETE_FORBIDDEN`** ("Project delete is not allowed for entity id=…"). The error
+   is OPAQUE — it never mentions event providers — which is exactly why the feature must tear down
+   pre-emptively rather than parse the failure.
+5. **Causality proven.** `deleteProvider(orgId, projectId, workspaceId, providerId)` → retry
+   `deleteProject` → **OK**. Kukla Mesh Test deleted 2026-07-03.
+6. **What does NOT block deletion:** the deployed API Mesh and the S2S credential — both were still
+   present at delete time. Only the event provider blocked. (No registrations existed; with
+   registrations the documented order registrations → providers still applies.)
+7. **Post-delete local state:** the aio console selection still pointed at the deleted project
+   (`aio console where` shows it; any subsequent selected-context command would fail). The feature
+   should clear/reselect console config after a successful delete.
+
+**Feature design is confirmed as corrected above**, with one amendment: provider discovery/deletion
+can run entirely on `@adobe/aio-lib-events` (no CLI dependency), keyed off the `rel:update` href.

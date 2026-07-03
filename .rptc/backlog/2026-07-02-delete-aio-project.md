@@ -45,18 +45,20 @@ Either transport (aio CLI or Events REST) works once the workspace has an S2S cr
 - Reuse the canonical org-context approach (`withOrgContext` / token-org truth); do NOT add an org picker.
 - TDD; CI lints the whole repo + enforces the 750-line test-file cap.
 
-## Open question (verify empirically before building step 2)
-The exact field in `aio event provider list --json` that carries the **workspace id** for filtering
-could not be confirmed from Adobe docs (the `provider_api/` reference variant 404'd). Run the command
-against a real project that has a provider and confirm the field before relying on programmatic
-provider→workspace matching. It's load-bearing: mis-filter and you either miss the blocking provider or
-delete a sibling project's. **The 2026-07-02 spike could not close this** — Kukla Mesh Test is mesh-only
-(no S2S credential, so no providers), so no live provider was reachable to inspect. Close it by adding an
-S2S credential to a workspace (Console UI or the scripted SDK path) and creating a throwaway provider,
-or during implementation against a workspace that has a real provider.
+## ~~Open question~~ — CLOSED by the 2026-07-03 spike (full end-to-end delete executed)
+**There is no workspace-id field on provider JSON.** The binding is encoded only in
+`_links["rel:update"].href` = `/events/{consumerOrgId}/{projectId}/{workspaceId}/providers/{id}`,
+which IS present in the org-wide list response. Validated discovery: `getAllProviders(orgId)` →
+filter `provider_metadata === '3rd_party_custom_events'` → parse the href → match projectId.
+Also proven live: bare S2S cred 403s until subscribed to `AdobeIOManagementAPISDK`; blocked delete =
+**409 `ERR_MSG_PROJECT_DELETE_FORBIDDEN`** (opaque — never mentions providers); mesh + S2S cred do
+NOT block deletion, only the provider does; post-delete the local aio console selection is stale and
+must be cleared. Full log: `.rptc/research/delete-aio-project/research.md` "Spike close (2026-07-03)".
 
 ## Kickoff prompt
 `/rptc:feat "Add a 'Delete project' action to AdobeProjectPicker that tears down an Adobe I/O Console
-project — delete event registrations then providers via the aio CLI (workspace-filtered), then delete
-the project via the Console SDK — extending projectDeletionService. Research + teardown order in
-.rptc/research/delete-aio-project/research.md. Verify the provider-list workspace-id field empirically first."`
+project — ensure an S2S credential subscribed to AdobeIOManagementAPISDK per workspace, delete event
+registrations then providers via @adobe/aio-lib-events (discovered by parsing each provider's
+rel:update href for the projectId), then delete the project via the Console SDK and clear the stale
+aio console selection — extending projectDeletionService. Spike-validated flow + gotchas in
+.rptc/research/delete-aio-project/research.md (see 'Spike close (2026-07-03)')."`
