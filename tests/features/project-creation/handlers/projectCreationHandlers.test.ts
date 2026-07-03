@@ -40,6 +40,11 @@ describe('projectCreationHandlers', () => {
             expect(hasHandler(projectCreationHandlers, 'authenticate')).toBe(true);
         });
 
+        it('should register Adobe project management handlers', () => {
+            expect(hasHandler(projectCreationHandlers, 'create-adobe-project')).toBe(true);
+            expect(hasHandler(projectCreationHandlers, 'delete-adobe-project')).toBe(true);
+        });
+
         it('should register project creation handlers', () => {
             expect(hasHandler(projectCreationHandlers, 'validate')).toBe(true);
             expect(hasHandler(projectCreationHandlers, 'create-project')).toBe(true);

@@ -29,8 +29,11 @@ import { parseJSON, toError } from '@/types/typeGuards';
  * authenticated org list as the selectable source. Returns the typed result so
  * handlers can branch (ok vs org_mismatch/needs_relogin/access_revoked) WITHOUT
  * ever running the store-mutating `aio console * select`.
+ *
+ * Exported for sibling handlers (e.g. deleteAdobeProjectHandler) that need the
+ * same org gate.
  */
-async function resolveOrgContext(
+export async function resolveOrgContext(
     context: HandlerContext,
     orgId: string,
 ): Promise<EnsureOrgContextResult> {
@@ -58,8 +61,10 @@ function orgMismatchMessage(status: EnsureOrgContextResult['status']): string {
 /**
  * Send a structured ORG_MISMATCH message and return a failed DataResult.
  * Carries the ErrorCode + targetOrg so the UI can offer an in-app remedy.
+ *
+ * Exported for sibling handlers that reuse the org gate (see resolveOrgContext).
  */
-async function sendOrgMismatch<T>(
+export async function sendOrgMismatch<T>(
     context: HandlerContext,
     channel: string,
     ctxResult: EnsureOrgContextResult,

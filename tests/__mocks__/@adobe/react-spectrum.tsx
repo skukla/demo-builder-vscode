@@ -201,12 +201,16 @@ export const Button = React.forwardRef<HTMLButtonElement, any>(({ children, onPr
     </button>
 ));
 
-// ActionButton mock - handles both onPress (Spectrum) and onClick (DOM)
+// ActionButton mock - handles both onPress (Spectrum) and onClick (DOM).
+// Real Spectrum presses do NOT bubble to ancestor click handlers (e.g. a
+// selectable row's onClick), so the mock stops propagation before invoking
+// the handlers — production code must not need test-only stopPropagation.
 export const ActionButton: React.FC<any> = ({ children, onPress, onClick, isDisabled, ...props }) => (
     <button
         data-testid="spectrum-action-button"
         tabIndex={0}
         onClick={(e) => {
+            e.stopPropagation();
             onClick?.(e);
             onPress?.(e);
         }}

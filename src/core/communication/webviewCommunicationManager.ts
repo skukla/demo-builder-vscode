@@ -54,6 +54,10 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
 
     // Project deletion (EDS cleanup involves multiple external APIs)
     'deleteProject': TIMEOUTS.LONG,                  // 180s - DA.live + GitHub + local cleanup
+
+    // Adobe Console project teardown (modal think-time + registrations +
+    // providers + project delete; see PROJECT_TEARDOWN's budget math)
+    'delete-adobe-project': TIMEOUTS.PROJECT_TEARDOWN, // 900s
 };
 
 /**

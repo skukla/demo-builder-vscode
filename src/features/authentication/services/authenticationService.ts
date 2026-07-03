@@ -10,7 +10,7 @@ import { AuthenticationErrorFormatter } from '@/features/authentication/services
 import { OrganizationValidator } from '@/features/authentication/services/organizationValidator';
 import { withTiming } from '@/features/authentication/services/performanceTracker';
 import { TokenManager } from '@/features/authentication/services/tokenManager';
-import type { AdobeOrg, AdobeProject, AdobeWorkspace, AdobeContext, AuthTokenValidation, WorkspaceCredential, AdobeIdCredentialInput, OrgServiceInfo, ServiceSubscriptionInfo } from '@/features/authentication/services/types';
+import type { AdobeOrg, AdobeProject, AdobeWorkspace, AdobeContext, AuthTokenValidation, WorkspaceCredential, WorkspaceS2SCredentialIds, AdobeIdCredentialInput, OrgServiceInfo, ServiceSubscriptionInfo } from '@/features/authentication/services/types';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -501,6 +501,36 @@ export class AuthenticationService {
     async ensureOAuthCredentialId(orgId: string, projectId: string, workspaceId: string): Promise<string> {
         const { fetcher } = await this.ensureEntities();
         return fetcher.ensureOAuthCredentialId(orgId, projectId, workspaceId);
+    }
+
+    // --- Console-project teardown passthroughs (delete-aio-project) ------------
+
+    /** Get the workspace's existing S2S credential ids, or undefined when none. */
+    async getWorkspaceS2SCredential(
+        orgId: string, projectId: string, workspaceId: string,
+    ): Promise<WorkspaceS2SCredentialIds | undefined> {
+        const { fetcher } = await this.ensureEntities();
+        return fetcher.getWorkspaceS2SCredential(orgId, projectId, workspaceId);
+    }
+
+    /** Create the shared S2S credential on the workspace; returns its ids. */
+    async createWorkspaceS2SCredentialFor(
+        orgId: string, projectId: string, workspaceId: string,
+    ): Promise<WorkspaceS2SCredentialIds> {
+        const { fetcher } = await this.ensureEntities();
+        return fetcher.createWorkspaceS2SCredentialFor(orgId, projectId, workspaceId);
+    }
+
+    /** Delete a Console project. SDK errors propagate unchanged (callers map them). */
+    async deleteConsoleProject(orgId: string, projectId: string): Promise<void> {
+        const { fetcher } = await this.ensureEntities();
+        return fetcher.deleteConsoleProject(orgId, projectId);
+    }
+
+    /** Clear the aio console selection (org/project/workspace) after a delete. */
+    async clearConsoleContext(): Promise<void> {
+        const { selector } = await this.ensureEntities();
+        return selector.clearConsoleContext();
     }
 
     /**

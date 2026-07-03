@@ -114,6 +114,16 @@ export interface WorkspaceCredential {
 }
 
 /**
+ * The two ids of a workspace's OAuth Server-to-Server credential:
+ * `clientId` (the `client_id` / create-response `apiKey` — used as x-api-key)
+ * and `idIntegration` (the integration id the Console subscribe calls take).
+ */
+export interface WorkspaceS2SCredentialIds {
+    clientId: string;
+    idIntegration: string;
+}
+
+/**
  * An org service as returned by `getServicesForOrg` (D1 API subscriber).
  * `platformList` decides the subscribe path: `apiKey`/AdobeID (e.g. API Mesh
  * `GraphQLServiceSDK`) vs `oauth_server_to_server` (e.g. `AdobeIOManagementAPISDK`).

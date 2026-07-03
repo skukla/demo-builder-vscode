@@ -144,6 +144,7 @@ package-binding, scaffolding, app-only projects, multi-workspace + API-subscript
 - `createEntityServices` / `EntityServices` - Factory for org/project/workspace operations
 - `AuthCacheManager` - Token and org/project caching with TTL
 - `TokenManager` - Token validation and refresh
+- `teardownConsoleProject` (`consoleProjectTeardown.ts` + `ioEventsClient.ts`) - Console-project delete: removes event registrations/3rd-party providers first (pre-empts the opaque 409), collect-don't-throw, org-gated
 
 **Responsibilities:**
 - Adobe I/O CLI authentication (browser-based login)

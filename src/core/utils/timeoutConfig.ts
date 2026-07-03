@@ -284,6 +284,18 @@ export const TIMEOUTS = {
 
     /** Mesh deployment total timeout (3 minutes) */
     MESH_DEPLOY_TOTAL: 180000,
+
+    /** Adobe Console project teardown request window (15 minutes).
+     *  The `delete-adobe-project` webview request spans the ENTIRE flow, so the
+     *  budget must cover:
+     *  - user think-time on the native confirm modal (minutes; user-paced),
+     *  - worst-case subscribe-on-403 recovery: 2 × LONG = 6 min (the spike saw
+     *    the subscribe call hang >2 min once before succeeding on retry),
+     *  - propagation retries: 2s + 5s + 10s = 17s, potentially per workspace,
+     *  - per-entity registration/provider deletes + the project delete itself.
+     *  VERY_LONG (5 min) was observed too tight: the webview showed a timeout
+     *  error while the teardown kept running extension-side. */
+    PROJECT_TEARDOWN: 900_000,
 } as const;
 
 /**

@@ -34,6 +34,7 @@ import type {
     SDKResponse,
     ServiceSubscriptionInfo,
     WorkspaceCredential,
+    WorkspaceS2SCredentialIds,
 } from './types';
 import { getLogger, StepLogger } from '@/core/logging';
 import { withOrgContext, type CommandExecutor } from '@/core/shell';
@@ -1036,39 +1037,115 @@ export class AdobeEntityFetcher {
         projectId: string,
         workspaceId: string,
     ): Promise<string> {
+        const existing = await this.getWorkspaceS2SCredential(orgId, projectId, workspaceId);
+        return existing?.idIntegration
+            ?? (await this.createWorkspaceS2SCredentialFor(orgId, projectId, workspaceId)).idIntegration;
+    }
+
+    /**
+     * Get the workspace's existing OAuth Server-to-Server credential ids, or
+     * `undefined` when the workspace has none. Matches ONLY
+     * `integration_type === 'oauth_server_to_server'` list entries — an
+     * apiKey/AdobeID credential never matches. Returns both ids teardown needs:
+     * `clientId` (list entry `client_id`) and `idIntegration` (the id the
+     * Console subscribe calls take).
+     *
+     * Takes EXPLICIT args (does NOT read org/proj/ws from cacheManager). Throws
+     * on missing SDK/args; SDK errors propagate unchanged.
+     */
+    async getWorkspaceS2SCredential(
+        orgId: string,
+        projectId: string,
+        workspaceId: string,
+    ): Promise<WorkspaceS2SCredentialIds | undefined> {
         await this.ensureSDKReady();
 
         if (!orgId || !projectId || !workspaceId) {
-            throw new Error('ensureOAuthCredentialId: orgId, projectId, and workspaceId are required');
+            throw new Error('getWorkspaceS2SCredential: orgId, projectId, and workspaceId are required');
         }
         if (!this.sdkClient.isInitialized()) {
-            throw new Error('ensureOAuthCredentialId: Adobe Console SDK is not initialized');
+            throw new Error('getWorkspaceS2SCredential: Adobe Console SDK is not initialized');
         }
 
         const client = this.sdkClient.getClient() as {
             getCredentials: (orgId: string, projectId: string, workspaceId: string) =>
                 Promise<SDKResponse<RawWorkspaceCredential[]>>;
+        };
+
+        const credentials = (await client.getCredentials(orgId, projectId, workspaceId))?.body;
+        const s2s = credentials?.find(
+            (c) => c.integration_type === 'oauth_server_to_server' && c.id_integration,
+        );
+        if (!s2s?.id_integration) {
+            return undefined;
+        }
+        // client_id is always present on list entries (see RawWorkspaceCredential);
+        // fall back defensively rather than dropping the credential, so
+        // ensureOAuthCredentialId keeps its original list-phase semantics.
+        return { clientId: s2s.client_id ?? '', idIntegration: s2s.id_integration };
+    }
+
+    /**
+     * Create the shared OAuth Server-to-Server credential on the workspace and
+     * return its ids: `clientId` (create response `apiKey`) and `idIntegration`
+     * (create response `id` — `id_integration` only appears on LIST entries).
+     *
+     * Takes EXPLICIT args (does NOT read org/proj/ws from cacheManager). Throws
+     * on missing SDK/args or when the create response lacks either id; SDK
+     * errors propagate unchanged.
+     */
+    async createWorkspaceS2SCredentialFor(
+        orgId: string,
+        projectId: string,
+        workspaceId: string,
+    ): Promise<WorkspaceS2SCredentialIds> {
+        await this.ensureSDKReady();
+
+        if (!orgId || !projectId || !workspaceId) {
+            throw new Error('createWorkspaceS2SCredentialFor: orgId, projectId, and workspaceId are required');
+        }
+        if (!this.sdkClient.isInitialized()) {
+            throw new Error('createWorkspaceS2SCredentialFor: Adobe Console SDK is not initialized');
+        }
+
+        const client = this.sdkClient.getClient() as {
             createOAuthServerToServerCredential: (
                 orgId: string, projectId: string, workspaceId: string,
                 name: string, description: string,
             ) => Promise<SDKResponse<{ id: string; apiKey: string }>>;
         };
 
-        const existing = (await client.getCredentials(orgId, projectId, workspaceId))?.body;
-        const s2s = existing?.find(
-            (c) => c.integration_type === 'oauth_server_to_server' && c.id_integration,
-        );
-        if (s2s?.id_integration) {
-            return s2s.id_integration;
-        }
-
         const created = await client.createOAuthServerToServerCredential(
             orgId, projectId, workspaceId, OAUTH_CREDENTIAL_NAME, OAUTH_CREDENTIAL_DESCRIPTION,
         );
         const idIntegration = created?.body?.id;
-        if (!idIntegration) {
-            throw new Error('ensureOAuthCredentialId: credential created but no id in response');
+        const clientId = created?.body?.apiKey;
+        if (!idIntegration || !clientId) {
+            throw new Error(
+                'createWorkspaceS2SCredentialFor: credential created but response is missing id or apiKey',
+            );
         }
-        return idIntegration;
+        return { clientId, idIntegration };
+    }
+
+    /**
+     * Delete an Adobe Console project. SDK errors propagate UNCHANGED — the
+     * teardown caller maps them (notably the 409 ERR_MSG_PROJECT_DELETE_FORBIDDEN
+     * thrown while event providers are still attached to the project).
+     */
+    async deleteConsoleProject(orgId: string, projectId: string): Promise<void> {
+        await this.ensureSDKReady();
+
+        if (!orgId || !projectId) {
+            throw new Error('deleteConsoleProject: orgId and projectId are required');
+        }
+        if (!this.sdkClient.isInitialized()) {
+            throw new Error('deleteConsoleProject: Adobe Console SDK is not initialized');
+        }
+
+        const client = this.sdkClient.getClient() as {
+            deleteProject: (orgId: string, projectId: string) => Promise<unknown>;
+        };
+        await client.deleteProject(orgId, projectId);
     }
 }

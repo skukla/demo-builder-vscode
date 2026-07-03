@@ -278,7 +278,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
 
         it('should use the explicit args, not cacheManager values', async () => {
             sdk.getCredentials.mockResolvedValue({ body: [] });
-            sdk.createOAuthServerToServerCredential.mockResolvedValue({ body: { id: 'x' } });
+            sdk.createOAuthServerToServerCredential.mockResolvedValue({ body: { id: 'x', apiKey: 'key-x' } });
 
             await fetcher.ensureOAuthCredentialId('arg-org', 'arg-proj', 'arg-ws');
 
@@ -292,7 +292,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
             sdk.getCredentials.mockResolvedValue({
                 body: [{ integration_type: 'apikey', id_integration: 'apikey-cred' }],
             });
-            sdk.createOAuthServerToServerCredential.mockResolvedValue({ body: { id: 'created' } });
+            sdk.createOAuthServerToServerCredential.mockResolvedValue({ body: { id: 'created', apiKey: 'key-created' } });
 
             const id = await fetcher.ensureOAuthCredentialId('o', 'p', 'w');
 

@@ -269,3 +269,28 @@ reproduced the delete-block, tore down, and deleted the project (user-approved).
 
 **Feature design is confirmed as corrected above**, with one amendment: provider discovery/deletion
 can run entirely on `@adobe/aio-lib-events` (no CLI dependency), keyed off the `rel:update` href.
+
+---
+
+## Implementation verification (Slice 2/Batch B-C, 2026-07-03)
+
+Live run of the BUILT `IoEventsClient` (esbuild-bundled from the worktree) against a throwaway
+Console project (`spikedeleteverify`, created + fully torn down in the run):
+
+1. **Registration shape (real JSON)**: entries carry BOTH a numeric `id` (e.g. `3730111`) and a
+   UUID `registration_id`. The LIST `_embedded.registrations` parse works; the client's
+   `registration_id ?? id` fallback returns the UUID, and **DELETE
+   `/{org}/{project}/{workspace}/registrations/{uuid}` succeeds with exactly that UUID**
+   (post-delete list = `[]`). The fallback ORDER is load-bearing — the numeric `id` is not what
+   the DELETE path wants.
+2. **Provider discovery through the built `parseProviderBinding`**: exactly 1 bound provider
+   found among the org-wide list; delete succeeded; repeat delete returned 404 → treated as
+   already-gone success (idempotency confirmed).
+3. **No propagation 403 this run** — a freshly created+subscribed credential worked immediately.
+   The `[2s,5s,10s]` retry ladder remains as defense (the spike did hit one >2-min subscribe hang).
+4. **Console gotcha for tests/UI**: `createProject` rejects non-alphanumeric `name`
+   ("Project name allows only alphanumeric values") — title may contain hyphens, name may not.
+5. Registration key set captured for fixtures: `_links, id, name, description, client_id,
+   registration_id, events_of_interest, webhook_status, created_date, updated_date, consumer_id,
+   project_id, workspace_id, delivery_type, enabled, subscriber_filters, event_delivery_formats,
+   read_only`.

@@ -36,6 +36,7 @@ export {
     handleCheckProjectApis,
     handleCreateAdobeProject,
 } from './handlers/projectHandlers';
+export { handleDeleteAdobeProject } from './handlers/deleteAdobeProjectHandler';
 export {
     handleGetWorkspaces,
     handleSelectWorkspace,

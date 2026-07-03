@@ -36,6 +36,7 @@ export type MessageType =
     | 'get-projects'
     | 'select-project'
     | 'check-project-apis'
+    | 'delete-adobe-project'
     | 'project-selected' // UI-only selection
 
     // Workspace messages
