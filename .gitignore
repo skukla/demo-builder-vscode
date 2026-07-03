@@ -46,10 +46,12 @@ yarn-error.log*
 .claude/hooks/state/
 *.pyc
 
-# Claude Project Orchestrator
-# The orchestrator itself is external (github.com/skukla/claude-project-orchestrator)
-# Workflows and analysis are temporary - valuable docs extracted to docs/architecture/
-.claude/
+# Claude per-developer config (settings, hooks, plans) stays local — but
+# .claude/skills/ is TRACKED: project skills are shared living documents
+# (decision: .rptc/research/project-skills/research.md §3).
+# NOTE: `.claude/*` not `.claude/` — git can't re-include below an excluded dir.
+.claude/*
+!.claude/skills/
 
 # Cursor IDE rules — per-developer AI tool config, same policy as .claude/.
 .cursor/

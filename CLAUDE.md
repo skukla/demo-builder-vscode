@@ -100,6 +100,13 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 → Check "Demo Builder: Debug Logs" output channel
 → `docs/systems/debugging.md`
 
+## Project Skills (`.claude/skills/` — tracked; bodies load on invocation)
+
+- `gate` — inner-loop quality gate (scoped jest + tsc + eslint) · `cut-release` — VSIX beta release
+- `adobe-org-context` — canonical IMS org/auth model; use for ANY org guard or org-mismatch work
+- `eds-publish-and-config` — Helix/DA.live/Config Service auth+scoping traps · `eds-dropin-vendoring` — dropin delivery / import map / B2B template rules
+- `webview-command-handler` — add an extension↔webview message end-to-end · `wizard-step-authoring` — add/modify wizard steps and Build-Your-Project areas
+
 ## Gotchas (verified, load-bearing)
 
 - **Adobe Spectrum Flex constrains width** (450px): use a standard HTML div with flex styles for critical wizard layouts.
