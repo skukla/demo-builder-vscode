@@ -177,6 +177,10 @@ Full RPTC plan (overview + 3 steps) drafted 2025-12-16, never executed. Adds tag
 
 ### F. Maintenance cycle anchors
 
+#### DX follow-through — verification pipeline + guidance freshness ([`2026-07-03-dx-verification-pipeline.md`](2026-07-03-dx-verification-pipeline.md))
+
+Deferred items from the 2026-07-03 DX audit (`../research/dx-audit/research.md`): secret-file PreToolUse guard, evidence capture in the `gate` skill + fresh-context `/code-review` habit, periodic re-verification of the `<!-- Last verified -->` markers now stamped on every CLAUDE.md, and removal of the unused webpack devDependencies.
+
 #### Structural baseline ([`2026-05-21-structural-baseline.md`](2026-05-21-structural-baseline.md))
 
 Numbers-first measurement pass to map the codebase's actual size, complexity, and coupling after ~1 year of AI-assisted development. **Run after Cycle D ships.** Produces a report that informs subsequent trim cycles.

@@ -1,275 +1,120 @@
+<!-- Last verified: 2026-07-03 -->
 # Architecture Documentation Index
 
-## Quick Start
+**New to the codebase?** Start with [`overview.md`](overview.md), then
+[`component-system.md`](component-system.md), then
+[`adobe-setup.md`](adobe-setup.md).
 
-**New to the codebase?** → Start with [`overview.md`](overview.md)  
-**Need Adobe integration details?** → See [`adobe-setup.md`](adobe-setup.md)  
-**Want to understand components?** → Read [`component-system.md`](component-system.md)
+## Documents
 
-## Documents Overview
+### Core
 
-### [`overview.md`](overview.md) - **START HERE**
-**Purpose**: High-level system architecture and technology stack
+- [`overview.md`](overview.md) — **START HERE.** High-level system
+  architecture, technology stack, key components, and design decisions.
+- [`adobe-setup.md`](adobe-setup.md) — Adobe authentication and
+  org/project/workspace selection flow: two-column layout, progressive
+  disclosure, per-operation org targeting (no global `aio console` mutation).
+- [`component-system.md`](component-system.md) — Component-based architecture
+  for mixing frontends, backends, and dependencies; registry structure and
+  installation workflow. Implementation:
+  `src/features/components/services/componentManager.ts`,
+  `src/features/components/config/components.json`.
+- [`service-resolution-pattern.md`](service-resolution-pattern.md) — How
+  components declare services they *provide* as well as *require*,
+  eliminating redundant service prompts in the registry.
+- [`state-ownership.md`](state-ownership.md) — Single-source-of-truth
+  principle for project state; written after the mesh-endpoint dual-storage
+  bug.
+- [`error-handling.md`](error-handling.md) — Error handling architecture
+  (backend phases complete; frontend migration pending at time of writing).
+- [`graph-based-dependencies.md`](graph-based-dependencies.md) — Planned
+  evolution from the two-level prerequisite/plugin hierarchy to a
+  graph-based dependency system (topological install order, cycle
+  detection).
+- [`working-directory-and-node-version.md`](working-directory-and-node-version.md)
+  — Why commands must run from the correct component directory, and how
+  per-component Node versions (fnm) are managed.
 
-**When to Read**:
-- First time exploring the codebase
-- Need to understand overall system design
-- Want to know key design decisions
-- Looking for technology stack information
+### Components and Updates
 
-**Topics Covered**:
-- High-level architecture diagram
-- Technology stack (Extension, UI, Integrations)
-- Key components (Wizard, State Management, Auto-Update, etc.)
-- Design decisions and rationale
-- Development workflow
-- File organization
-- Security considerations
+- [`component-version-management.md`](component-version-management.md) —
+  Floating stable-tag pattern that decouples component updates from
+  extension releases.
+- [`component-update-env-migration.md`](component-update-env-migration.md) —
+  Handling environment-variable renames across component updates so `.env`
+  files don't rot.
+- [`update-system-refactoring.md`](update-system-refactoring.md) — Dynamic
+  repository resolution from `components.json` instead of hardcoded
+  mappings. Implementation:
+  `src/features/updates/services/updateManager.ts`.
 
-**Reading Time**: 15-20 minutes
+### Edge Delivery Services (EDS)
 
----
+- [`eds-content-separation.md`](eds-content-separation.md) — The
+  two-repository EDS model: GitHub repo = code, DA.live = content, joined by
+  configuration.
+- [`eds-backend-configuration.md`](eds-backend-configuration.md) — How EDS
+  projects are configured based on the selected backend component.
+- [`eds-unified-config-generation.md`](eds-unified-config-generation.md) —
+  Registry-based generation of both `.env` and `site.json` in one phase.
+- [`eds-standard-pattern-refactoring.md`](eds-standard-pattern-refactoring.md)
+  — Aligning EDS configuration with the standard component pattern
+  (removing custom `.env` generation logic).
+- [`eds-byom-pdp-routing.md`](eds-byom-pdp-routing.md) — How
+  `/products/{urlKey}/{sku}` URLs work for every storefront: shared
+  `render-pdp` overlay, browser-side smart 404, reversible SKU encoding.
+  Decision rationale: [ADR-005](adr/005-byom-pdp-routing.md) and
+  [ADR-007](adr/007-pdp-sku-url-encoding.md).
 
-### [`adobe-setup.md`](adobe-setup.md)
-**Purpose**: Deep dive into Adobe authentication and configuration flow
+## Architecture Decision Records (`adr/`)
 
-**When to Read**:
-- Implementing or modifying Adobe authentication
-- Debugging org/project/workspace selection issues
-- Understanding the two-column layout pattern
-- Working on the wizard's Adobe Setup step
-
-**Topics Covered**:
-- Two-column layout design philosophy
-- Progressive disclosure pattern
-- State flow (authentication → projects → workspaces)
-- Message protocol for Adobe operations
-- Fast polling optimization (1-second intervals)
-- Edit capabilities and summary panel
-
-**Reading Time**: 10-15 minutes
-
-**Prerequisites**: Basic understanding of React and VS Code webviews
-
----
-
-### [`component-system.md`](component-system.md)
-**Purpose**: Component-based architecture for demos
-
-**When to Read**:
-- Adding new components to the registry
-- Implementing component installation or updates
-- Understanding component dependencies
-- Working with component lifecycle
-
-**Topics Covered**:
-- Component types (Frontend, Backend, Dependencies, etc.)
-- Component registry structure
-- Dependency resolution
-- Component installation workflow
-- Git-based component management
-
-**Reading Time**: 10 minutes
-
-**Related**: `src/features/components/services/componentManager.ts`, `src/features/components/config/components.json`
-
----
-
-### [`graph-based-dependencies.md`](graph-based-dependencies.md)
-**Purpose**: Dependency resolution algorithm
-
-**When to Read**:
-- Debugging circular dependency issues
-- Implementing dependency validation
-- Understanding install order
-- Modifying prerequisite system
-
-**Topics Covered**:
-- Dependency graph construction
-- Topological sorting for install order
-- Circular dependency detection
-- Optional vs required dependencies
-
-**Reading Time**: 5-10 minutes
-
-**Related**: `src/utils/prerequisitesManager.ts`
-
----
-
-### [`working-directory-and-node-version.md`](working-directory-and-node-version.md)
-**Purpose**: Node version management and command execution context
-
-**When to Read**:
-- Debugging Node version issues
-- Implementing new command execution
-- Understanding fnm integration
-- Working with multi-version Node setup
-
-**Topics Covered**:
-- fnm (Fast Node Manager) integration
-- Per-component Node version switching
-- Working directory management
-- Command execution context
-
-**Reading Time**: 5 minutes
-
-**Related**: `src/utils/externalCommandManager.ts`
-
----
-
-### [`eds-byom-pdp-routing.md`](eds-byom-pdp-routing.md)
-**Purpose**: How PDP URLs (`/products/{urlKey}/{sku}`) work for every storefront
-
-**When to Read**:
-- Touching anything in `src/features/eds/services/pdp404HandlerPublisher.ts`, `pdpUrlEncoding.ts`, `catalogPrewarmService.ts`, or the smart-404 step in `executeEdsPipeline`
-- Debugging PDP 404s or blank PDPs in a live storefront
-- Changing how SKUs are encoded into `/products/{urlKey}/{sku}` URLs
-- Understanding the two-repo seam with `accs-discovery-service`
-
-**Topics Covered**:
-- The shared `render-pdp` overlay + browser-side smart 404 + admin-trigger architecture (Phase 2 LIVE — overlay serves the SC's authored template)
-- Cold-path and warm-path request flows
-- Reversible, lowercase-stable SKU URL encoding (ADR-007)
-- Load-bearing dependencies: Helix path-lowercasing, Catalog Service case-insensitivity, open Helix admin POST, reversible SKU encoding
-- Verification probes for the live system
-
-**Reading Time**: 10 minutes
-
-**Related**: [ADR-005](adr/005-byom-pdp-routing.md) (routing) and [ADR-007](adr/007-pdp-sku-url-encoding.md) (SKU encoding) for decision rationale; `.rptc/research/multitenant-prerender-evaluation/` and `.rptc/research/pdp-sku-encoding-gap/` for empirical research
-
----
-
-## Reading Paths
-
-### For New Contributors
-
-**Goal**: Understand the system to start contributing
-
-1. **Start**: [`overview.md`](overview.md) - Get the big picture
-2. **Then**: [`component-system.md`](component-system.md) - Understand core abstractions
-3. **Finally**: [`adobe-setup.md`](adobe-setup.md) - Learn the most complex UI flow
-
-**Time Investment**: 30-40 minutes  
-**Result**: Ready to contribute to most areas of the codebase
-
----
-
-### For System Architects
-
-**Goal**: Deep understanding of architecture decisions
-
-1. **Start**: [`overview.md`](overview.md) - Current architecture
-2. **Then**: [`graph-based-dependencies.md`](graph-based-dependencies.md) - Dependency algorithm
-3. **Then**: [`working-directory-and-node-version.md`](working-directory-and-node-version.md) - Execution context
-
-**Time Investment**: 30-45 minutes
-**Result**: Complete understanding of system design and trade-offs
-
----
-
-### For UI Developers
-
-**Goal**: Understand webview architecture and patterns
-
-1. **Start**: [`overview.md`](overview.md) - Focus on "Webview Layer" section
-2. **Then**: [`adobe-setup.md`](adobe-setup.md) - Study the two-column layout and progressive disclosure
-3. **Finally**: `src/webviews/CLAUDE.md` - React component patterns
-
-**Time Investment**: 25-30 minutes  
-**Result**: Ready to work on webview components
-
----
-
-### For Backend/Integration Developers
-
-**Goal**: Understand Adobe I/O and command execution
-
-1. **Start**: [`overview.md`](overview.md) - Focus on "Adobe Integration" section
-2. **Then**: [`working-directory-and-node-version.md`](working-directory-and-node-version.md) - Command execution
-3. **Finally**: `src/utils/CLAUDE.md` - Study ExternalCommandManager and AdobeAuthManager
-
-**Time Investment**: 20-25 minutes  
-**Result**: Ready to work on CLI integrations and process management
-
----
+| ADR | Title | Status |
+|-----|-------|--------|
+| [001](adr/001-component-naming-standardization.md) | Component naming standardization (`externalSystems` → `integrations`) | Accepted and implemented |
+| [002](adr/002-helix-bulk-api-fallback.md) | Helix bulk API fallback strategy | Accepted and implemented |
+| [003](adr/003-multisite-architecture-seam.md) | Multisite architecture seam | Accepted (implementation deferred) |
+| [004](adr/004-claude-code-harness.md) | Claude Code (CLI) as the AI harness | Accepted |
+| [005](adr/005-byom-pdp-routing.md) | BYOM PDP routing — canonical pattern with multi-tenancy and smart-404 gap-fill | Accepted |
+| [006](adr/006-thin-layer-storefront-customization.md) | Thin-layer storefront customization — retire CitiSignal forks, canonical + code patches | Accepted (implementation in progress) |
+| [007](adr/007-pdp-sku-url-encoding.md) | PDP SKU URL encoding — reversible, lowercase-stable, Helix-safe | Accepted |
+| [008](adr/008-derive-runtime-surface-inventory.md) | Derive the runtime-surface inventory from the boilerplate, not by hand | Accepted (producer built; consumer wiring pending) |
+| [009](adr/009-storefront-config-flag-injection.md) | Storefront `config.json` flag injection — the generator owns config, so template flags must be re-injected | Accepted |
+| [010](adr/010-content-copy-completeness.md) | Content-copy completeness — follow document references so unindexed fragments aren't dropped | Accepted |
+| [011](adr/011-app-builder-deployables.md) | App Builder deployables — a keyed set of deployable components in one App Builder project | Accepted (not yet implemented) |
 
 ## Quick Reference
 
-### Common Questions
+**Q: Where are wizard step definitions?**
+A: `src/features/project-creation/config/wizard-steps.json` (config) and
+feature-specific `ui/steps/` directories (React components).
 
-**Q: Where do I find the wizard step definitions?**  
-A: `src/features/project-creation/config/wizard-steps.json` (config) and feature-specific `ui/steps/` directories (React components)
+**Q: How does Adobe authentication work?**
+A: [`adobe-setup.md`](adobe-setup.md) for the flow;
+`src/features/authentication/services/authenticationService.ts` for
+implementation.
 
-**Q: How does Adobe authentication work?**  
-A: See [`adobe-setup.md`](adobe-setup.md) for the flow, and `src/utils/adobeAuthManager.ts` for implementation
+**Q: How are components cloned and installed?**
+A: [`component-system.md`](component-system.md) and
+`src/features/components/services/componentManager.ts`.
 
-**Q: How are components cloned and installed?**  
-A: See [`component-system.md`](component-system.md) and `src/utils/componentManager.ts`
-
-**Q: Why does the extension use both Adobe CLI and SDK?**  
-A: See [`overview.md`](overview.md#4-adobe-io-cli--console-sdk-hybrid) - CLI for auth, SDK for 30x faster operations
-
-**Q: How does the auto-update system work?**  
-A: See [`overview.md`](overview.md#6-auto-update-system) and `src/utils/updateManager.ts`
-
-**Q: What's the "Backend Call on Continue" pattern?**  
-A: See [`adobe-setup.md`](adobe-setup.md) and `docs/patterns/selection-pattern.md`
-
----
+**Q: What's the "Backend Call on Continue" pattern?**
+A: `docs/patterns/selection-pattern.md`.
 
 ## Related Documentation
 
-### Source Code Documentation
-- **`src/CLAUDE.md`** - Source code organization
-- **`src/commands/CLAUDE.md`** - Command implementations
-- **`src/utils/CLAUDE.md`** - Utility functions and systems
-- **`src/webviews/CLAUDE.md`** - React UI components
-- **`src/features/*/config/`** - Configuration files (per feature)
-
-### System Documentation
-- **`docs/systems/prerequisites-system.md`** - Prerequisite checking and installation
-- **`docs/systems/race-conditions.md`** - Race condition solutions
-- **`docs/systems/logging-system.md`** - Logging architecture
-- **`docs/systems/webview-loading.md`** - Webview loading states
-
-### Development Guides
-- **`docs/CLAUDE.md`** - Development strategy and best practices
-- **`docs/patterns/selection-pattern.md`** - Backend Call on Continue pattern
-- **`docs/patterns/state-management.md`** - State management patterns
-
----
+- `src/CLAUDE.md`, `src/core/CLAUDE.md`, `src/commands/CLAUDE.md`,
+  `src/features/CLAUDE.md` — source-level guidance
+- `docs/systems/prerequisites-system.md`, `docs/systems/race-conditions.md`,
+  `docs/systems/logging-system.md`, `docs/systems/webview-loading.md` —
+  subsystem docs
+- `docs/CLAUDE.md` — development strategy;
+  `docs/patterns/selection-pattern.md`, `docs/patterns/state-management.md`
+  — design patterns
 
 ## Maintenance
 
-### Document Status
-
-| Document | Status | Last Updated |
-|----------|--------|--------------|
-| overview.md | ✅ Current | Feb 2026 |
-| adobe-setup.md | ✅ Current | Jan 2024 |
-| component-system.md | ✅ Current | Feb 2026 |
-| graph-based-dependencies.md | ✅ Current | Oct 2024 |
-| working-directory-and-node-version.md | ✅ Current | Dec 2024 |
-
-### Update Process
-
 When making architectural changes:
 
-1. **Update relevant architecture docs** within the same PR
-2. **Update this index** if new docs are added or purposes change
-3. **Update cross-references** in root CLAUDE.md and other docs
-4. **Mark status** in the table above
-
-### Contributing
-
-Found outdated information? Please:
-1. Create an issue describing what's outdated
-2. Submit a PR with corrections
-3. Update the "Last Updated" date
-4. Tag @maintainers for review
-
----
-
-**Index Last Updated**: February 2026
-**Index Maintained By**: Development Team
-
+1. Update the relevant architecture doc within the same PR
+2. Update this index if docs are added, removed, or repurposed
+3. Record significant decisions as a new ADR in `adr/` (next number)

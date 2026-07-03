@@ -1,3 +1,4 @@
+<!-- Last verified: 2026-07-03 -->
 # Features Architecture
 
 ## Overview
@@ -18,7 +19,6 @@ The `features/` directory contains self-contained feature modules organized by b
 
 ```
 features/
-├── ai/                  # AI context verification + in-extension MCP server
 ├── ai/                  # AI context verification + in-extension MCP server
 ├── app-builder/         # App Builder app attach/deploy (→ README.md)
 ├── authentication/       # Adobe authentication & SDK
@@ -436,5 +436,5 @@ Each feature should have a README.md documenting:
 
 ---
 
-For shared infrastructure, see `../shared/CLAUDE.md`
+For core infrastructure, see `../core/CLAUDE.md`
 For overall architecture, see `../CLAUDE.md`
