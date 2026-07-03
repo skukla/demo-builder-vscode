@@ -19,6 +19,7 @@ import {
     type MeshSubscribeTarget,
 } from '@/features/app-builder/services/ensureMeshApiSubscribed';
 import { ensureAuthenticated } from '@/features/mesh/handlers/shared';
+import { formatApiAccessError } from '@/features/mesh/utils/errorFormatter';
 import { ErrorCode } from '@/types/errorCodes';
 import { toError } from '@/types/typeGuards';
 
@@ -96,7 +97,7 @@ export async function handleEnsureMeshApiSubscribed(
         context.logger.error('[API Mesh] Subscribe failed', error as Error);
         return {
             success: false,
-            error: toError(error).message,
+            error: formatApiAccessError(toError(error)),
             code: ErrorCode.UNKNOWN,
         };
     }
