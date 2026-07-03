@@ -12,14 +12,20 @@ providers, so this blocks the common case.
 Add a "Delete project" action (per-row in `AdobeProjectPicker`, strong confirmation) that fully tears a
 Console project down — including the event-provider prerequisite — then deletes the project.
 
-The delete path is the **aio CLI**, not REST. A provider DELETE endpoint exists
-(`DELETE /events/{consumerId}/{projectId}/{workspaceId}/providers/{providerId}`) but requires an OAuth
-S2S credential provisioned in the same workspace; our extension uses user IMS login, so the CLI
-(`aio event provider delete`, which runs under the user's login + console context) is the correct path.
+> **Spike correction (2026-07-02):** the CLI does **not** avoid the S2S requirement. `aio event
+> provider list` fails with *"Workspace … has no oAuth Server-to-Server or JWT credential associated."*
+> — CLI and REST both need a per-workspace S2S credential. **Not a blocker:** we already automate it
+> via `ensureOAuthCredentialId` → `createWorkspaceCredential` → `createOAuthServerToServerCredential`
+> (`adobeEntityFetcher.ts:588`), with `getWorkspaceCredential` (:560) to reuse an existing one.
+
+Either transport (aio CLI or Events REST) works once the workspace has an S2S credential.
 `@adobe/aio-cli-plugin-events` ships bundled with `aio-cli` — **no new prerequisite install** (unlike
-`api-mesh`).
+`api-mesh`). A workspace with no S2S credential can hold no providers, so it's skipped.
 
 ## Execution plan (teardown order is load-bearing)
+0. **Per workspace, detect-or-create an S2S credential** — `getWorkspaceCredential` to reuse an
+   existing `oauth_server_to_server` cred, else `ensureOAuthCredentialId` to create one. Required
+   before any `aio event …` / Events REST call. Skip workspaces with no credential and no providers.
 1. **Delete event registrations** (workspace-scoped) for each workspace:
    `aio event registration list --json` → `aio event registration delete <id>`.
 2. **Delete event providers** (ORG-scoped — `aio event provider list --json` returns ALL org providers;
@@ -44,7 +50,10 @@ The exact field in `aio event provider list --json` that carries the **workspace
 could not be confirmed from Adobe docs (the `provider_api/` reference variant 404'd). Run the command
 against a real project that has a provider and confirm the field before relying on programmatic
 provider→workspace matching. It's load-bearing: mis-filter and you either miss the blocking provider or
-delete a sibling project's.
+delete a sibling project's. **The 2026-07-02 spike could not close this** — Kukla Mesh Test is mesh-only
+(no S2S credential, so no providers), so no live provider was reachable to inspect. Close it by adding an
+S2S credential to a workspace (Console UI or the scripted SDK path) and creating a throwaway provider,
+or during implementation against a workspace that has a real provider.
 
 ## Kickoff prompt
 `/rptc:feat "Add a 'Delete project' action to AdobeProjectPicker that tears down an Adobe I/O Console

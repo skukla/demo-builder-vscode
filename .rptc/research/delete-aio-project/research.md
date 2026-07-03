@@ -6,6 +6,18 @@
 
 ---
 
+> **⚠️ SPIKE CORRECTION (2026-07-02) — Q2 below was WRONG.** A live spike (Adobe Demo System org)
+> proved the aio CLI does **NOT** avoid the S2S requirement: `aio event provider list` and
+> `registration list` both fail with *"Workspace … has no oAuth Server-to-Server or JWT credential
+> associated."* — on both Stage and Production. **CLI and REST share the same per-workspace S2S
+> credential requirement.** This is **not a blocker**: our codebase already automates S2S credential
+> creation — `ensureOAuthCredentialId` → `createWorkspaceCredential` →
+> `client.createOAuthServerToServerCredential` (`src/features/authentication/services/adobeEntityFetcher.ts:588`),
+> and `getWorkspaceCredential` (:560) detects an existing `oauth_server_to_server` cred to reuse.
+> **Corrected teardown:** for each workspace, *detect-or-create* an S2S credential → run the events
+> teardown (CLI or REST) → delete the project (the transient credential dies with it). A workspace
+> with **no** S2S credential can hold **no** providers, so skip it. Full spike log at the end of this doc.
+
 ## TL;DR (definitive answers)
 
 - **Q1 — The constraint: CONFIRMED.** A Developer Console project **cannot be deleted while an Events Provider is still associated with one of its workspaces.** The Developer Console surfaces a delete error, and Adobe's own FAQ documents the workaround: delete the conflicting provider(s) first, then retry the project delete. ([FAQ](https://developer.adobe.com/events/docs/support/faq))
@@ -175,3 +187,44 @@ Codebase (our reuse points):
 - `src/features/project-creation/handlers/createHandler.ts:146` — `aio api-mesh:delete` precedent
 - `src/features/authentication/handlers/projectHandlers.ts:254,282` — `aio ... --json` + `aio plugins --json` precedent
 - `src/features/prerequisites/config/prerequisites.json:139` — api-mesh install (events needs NO analogous step)
+
+---
+
+## Spike log (2026-07-02) — live validation against Adobe Demo System
+
+Ran the `aio` CLI against **Adobe Demo System** (org `285361`) / **Kukla Mesh Test** (project
+`4566206088345706102`, workspaces Production `…745404` + Stage `…745405`). Findings, in order:
+
+1. **`aio event` is bundled** — `aio event --help` works out of the box (topics: `provider`,
+   `registration`, `eventmetadata`). The "no new prerequisite install" claim holds; `aio plugins`
+   lists only the separately-installed `api-mesh`, but core plugins don't appear there.
+2. **Stale console context ≠ token org (again).** `aio config get console.org` returned `3397333`,
+   but `aio console org list` (token) returned **only** `285361` (Adobe Demo System). Same
+   stale-CLI-vs-token-org class the wizard fix addressed. Selecting the token org explicitly fixed it.
+3. **❌ THE KEY FINDING — events CLI needs a workspace S2S credential.** With Stage selected,
+   `aio event provider list --json` failed: *"Workspace Stage has no oAuth Server-to-Server or JWT
+   credential associated."* Production failed identically. So Q2's "CLI reuses the user login, no S2S
+   needed" is **false** — the CLI authenticates to the Events API via the workspace's service
+   credential, same as REST. `provider list --help` has no auth-override flag.
+4. **No `aio` command creates an S2S credential** — `aio console workspace` offers only
+   `api / create / download / list / select`. Credentials come from the Console UI or the Console SDK.
+5. **We already automate the SDK path** — `createWorkspaceCredential` (:588) →
+   `createOAuthServerToServerCredential`, wrapped list-first by `ensureOAuthCredentialId`; the SDK libs
+   (`@adobe/aio-lib-console`, `@adobe/aio-lib-ims`) are already dependencies. So the S2S requirement is
+   an automatable step, not a wall.
+6. **Kukla Mesh Test is mesh-only** → both workspaces lack S2S → it holds **no** event providers, so
+   it can't reproduce the provider scenario without first adding a credential. (Reassuring for the
+   feature: no-S2S ⟹ nothing to tear down.)
+
+**Still OPEN (needs a live provider to confirm):** the exact field in `aio event provider list --json`
+that ties a provider to a workspace (for filtering the org-wide list). Blocked in this session because
+Kukla Mesh Test has no S2S credential / no providers. Options to close it: (a) add an S2S credential to
+a workspace via the Console UI, then create a throwaway provider; (b) script `createOAuthServerToServerCredential`
+the way the feature will; or (c) confirm during implementation against a workspace that has a real provider.
+
+**Corrected feature design (supersedes the CLI-only plan above):**
+1. For each workspace in the project: `getWorkspaceCredential` → reuse an existing `oauth_server_to_server`
+   cred, else `ensureOAuthCredentialId` to create one (skip workspaces with no cred AND no providers).
+2. Enumerate + delete registrations (workspace) then providers (org-wide list filtered to the workspace)
+   via `aio event …` under `withOrgContext`, OR via the Events REST API using the credential.
+3. Delete the project (Console SDK). Extend `projectDeletionService`.
