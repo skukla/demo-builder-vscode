@@ -1,10 +1,44 @@
 import {
     formatAdobeCliError,
     formatMeshDeploymentError,
-    formatAdobeError
+    formatAdobeError,
+    formatApiAccessError
 } from '@/features/mesh/utils/errorFormatter';
 
 describe('ErrorFormatter', () => {
+    describe('formatApiAccessError', () => {
+        it('condenses a verbose 5xx SDK error to a short retry message', () => {
+            const raw = '[CoreConsoleAPISDK:ERROR_GET_SERVICES_FOR_ORG] 500 - Internal Server Error '
+                + '({"id":"abc","messages":[{"template":"ERR_MSG_RETRY_ON_INTERNAL_ERROR",'
+                + '"message":"a very long nested json blob that would flood the row"}]})';
+
+            const result = formatApiAccessError(raw);
+
+            expect(result).toContain('500');
+            expect(result.toLowerCase()).toContain('retry');
+            expect(result).not.toContain('CoreConsoleAPISDK');
+            expect(result.length).toBeLessThan(120);
+        });
+
+        it('reports a 4xx as a permission-oriented message', () => {
+            const result = formatApiAccessError('Request failed: 403 - Forbidden');
+
+            expect(result).toContain('403');
+            expect(result.length).toBeLessThan(120);
+        });
+
+        it('passes a short message through unchanged', () => {
+            expect(formatApiAccessError('subscribe boom')).toBe('subscribe boom');
+        });
+
+        it('caps a long status-less blob with an ellipsis', () => {
+            const result = formatApiAccessError('x'.repeat(500));
+
+            expect(result.length).toBeLessThanOrEqual(201);
+            expect(result.endsWith('…')).toBe(true);
+        });
+    });
+
     describe('formatAdobeCliError', () => {
         it('should replace arrows with newlines in error messages', () => {
             const input = 'Error: Issue in .env file › missing keys › ADOBE_CATALOG_ENDPOINT';

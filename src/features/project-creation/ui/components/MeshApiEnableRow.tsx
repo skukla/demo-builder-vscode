@@ -141,17 +141,20 @@ export function MeshApiEnableRow({
 
     if (!workspaceId) return null;
 
+    const isFailed = status === 'failed';
     return (
-        <div className="int-chosen">
-            <StatusIcon status={status} label={label} />
-            <span className="int-chosen-label">{label}</span>
-            <span className="int-chosen-value">{statusText(status)}</span>
-            {status === 'failed' && error && <span className="int-enable-error">{error}</span>}
-            {status === 'failed' && (
-                <ActionButton isQuiet onPress={retry}>
-                    Retry
-                </ActionButton>
-            )}
-        </div>
+        <>
+            <div className="int-chosen">
+                <StatusIcon status={status} label={label} />
+                <span className="int-chosen-label">{label}</span>
+                <span className="int-chosen-value">{statusText(status)}</span>
+                {isFailed && (
+                    <ActionButton isQuiet onPress={retry}>
+                        Retry
+                    </ActionButton>
+                )}
+            </div>
+            {isFailed && error && <div className="int-enable-error">{error}</div>}
+        </>
     );
 }

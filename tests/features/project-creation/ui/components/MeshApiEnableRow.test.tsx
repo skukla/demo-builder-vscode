@@ -116,6 +116,26 @@ describe('MeshApiEnableRow', () => {
         );
     });
 
+    it('renders the error on its own line (outside the row) while keeping Retry reachable', async () => {
+        const longError = 'x'.repeat(300);
+        mockRequest.mockResolvedValue({ success: false, error: longError });
+
+        const { container } = renderRow();
+
+        await waitFor(() => {
+            expect(screen.getByText('Failed')).toBeInTheDocument();
+        });
+        // Retry survives regardless of error length.
+        expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+        // The error lives in its own .int-enable-error element, a SIBLING of the row —
+        // not inside .int-chosen, where it would displace the Retry button.
+        const errorEl = container.querySelector('.int-enable-error');
+        expect(errorEl).toHaveTextContent(longError);
+        const row = container.querySelector('.int-chosen');
+        expect(row).not.toBeNull();
+        expect(row?.contains(errorEl)).toBe(false);
+    });
+
     it('re-issues once for a new workspaceId when the workspace changes', async () => {
         mockRequest.mockResolvedValue({ success: true });
 

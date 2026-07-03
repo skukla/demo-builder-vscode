@@ -4576,10 +4576,16 @@ div[class*="spectrum"] input[type="search"] {
     text-transform: uppercase;
     color: var(--spectrum-global-color-gray-600);
 }
-/* The inline error detail shown next to a failed enablement. */
+/* The error detail for a failed enablement — rendered on its own line BELOW the
+   .int-chosen row (a sibling, not inline) so it never displaces the Retry button. */
 .int-enable-error {
+    display: block;
+    margin: -6px 0 12px;
+    padding: 0 12px;
     font-size: 12px;
+    line-height: 1.4;
     color: var(--spectrum-global-color-red-600);
+    overflow-wrap: anywhere;
 }
 .int-chosen-value {
     font-size: 13px;

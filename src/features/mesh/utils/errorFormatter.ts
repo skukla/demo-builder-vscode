@@ -96,6 +96,30 @@ export function formatAdobeError(error: Error | string, context?: string): strin
 }
 
 /**
+ * Condense a verbose SDK/HTTP error into one short line for inline UI display.
+ *
+ * The Console SDK surfaces failures as `[CoreConsoleAPISDK:CODE] 500 - Internal Server
+ * Error ({…large nested JSON…})`; rendered verbatim that floods a status row. Map a
+ * recognizable HTTP status to a short, actionable line, and hard-cap anything else so an
+ * unrecognized blob can never overwhelm the UI.
+ *
+ * @param error - the raw error (Error or string)
+ * @param maxLen - fallback truncation length for unrecognized messages
+ * @returns a single readable line
+ */
+export function formatApiAccessError(error: Error | string, maxLen = 200): string {
+    const raw = formatAdobeCliError(error);
+    const status = (/\b([45]\d\d)\s*-\s/.exec(raw) ?? /"status":\s*([45]\d\d)/.exec(raw))?.[1];
+    if (status) {
+        return status.startsWith('5')
+            ? `Adobe returned a temporary server error (${status}) while enabling API access. Please retry.`
+            : `Couldn't enable API access (error ${status}). Please retry, or check your Adobe permissions.`;
+    }
+    const firstLine = raw.split('\n')[0].trim();
+    return firstLine.length > maxLen ? `${firstLine.slice(0, maxLen - 1)}…` : firstLine;
+}
+
+/**
  * Extract user-friendly summary from verbose mesh deployment errors
  *
  * Adobe mesh errors contain verbose build logs that aren't useful to users.
