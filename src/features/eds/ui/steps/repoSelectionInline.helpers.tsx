@@ -70,9 +70,11 @@ export async function pollGitHubAppInstallation(
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
-            const result = await webviewClient.request<GitHubAppCheckResult>(
-                'check-github-app', { owner, repo, lenient: true },
-            );
+            const result = await webviewClient.request<GitHubAppCheckResult>('check-github-app', {
+                owner,
+                repo,
+                lenient: true,
+            });
 
             if (result.success && result.isInstalled) {
                 return {
@@ -83,13 +85,20 @@ export async function pollGitHubAppInstallation(
 
             // HTTP 404 (codeStatus undefined) means repo not yet indexed -- retry
             if (result.codeStatus === undefined && attempt < maxAttempts) {
-                setRecheckMessage(`Repository is still being registered... (attempt ${attempt + 1} of ${maxAttempts})`);
-                await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+                setRecheckMessage(
+                    `Repository is still being registered... (attempt ${attempt + 1} of ${maxAttempts})`,
+                );
+                await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
                 continue;
             }
 
             return {
-                status: { isChecking: false, isInstalled: false, codeStatus: result.codeStatus, installUrl: result.installUrl },
+                status: {
+                    isChecking: false,
+                    isInstalled: false,
+                    codeStatus: result.codeStatus,
+                    installUrl: result.installUrl,
+                },
                 failed: true,
             };
         } catch (err) {
@@ -169,7 +178,7 @@ export function buildAppStatusFromResult(result: GitHubAppCheckResult): GitHubAp
         isInstalled: result.success ? result.isInstalled : false,
         codeStatus: result.codeStatus,
         installUrl: result.installUrl,
-        error: result.success ? undefined : (result.error || 'Failed to check GitHub App status'),
+        error: result.success ? undefined : result.error || 'Failed to check GitHub App status',
     };
 }
 
@@ -206,13 +215,20 @@ export function GitHubAppInstallModal({
     if (!isNewWithCreatedRepo) return null;
     if (githubAppStatus.isInstalled === true) return null;
 
-    const shouldShowModal = (githubAppStatus.isInstalled === false || isRechecking) && !isModalDismissed;
+    const shouldShowModal =
+        (githubAppStatus.isInstalled === false || isRechecking) && !isModalDismissed;
     if (!shouldShowModal || !createdRepo) return null;
 
     const { owner, name: repo } = createdRepo;
 
     return (
-        <DialogTrigger type="modal" isOpen={true} onOpenChange={(isOpen) => { if (!isOpen) onDismiss(); }}>
+        <DialogTrigger
+            type="modal"
+            isOpen={true}
+            onOpenChange={(isOpen) => {
+                if (!isOpen) onDismiss();
+            }}
+        >
             <ActionButton isHidden>Open</ActionButton>
             {() => (
                 <Modal
@@ -221,13 +237,28 @@ export function GitHubAppInstallModal({
                         isRechecking
                             ? []
                             : [
-                                { label: 'Check Again', variant: 'secondary', onPress: onCheckAgain },
-                                { label: 'Install App', variant: 'accent', onPress: onOpenInstallPage },
-                            ]
+                                  {
+                                      label: 'Check Again',
+                                      variant: 'secondary',
+                                      onPress: onCheckAgain,
+                                  },
+                                  {
+                                      label: 'Install App',
+                                      variant: 'accent',
+                                      onPress: onOpenInstallPage,
+                                  },
+                              ]
                     }
                     onClose={onDismiss}
                 >
-                    <div style={{ minHeight: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div
+                        style={{
+                            minHeight: '220px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}
+                    >
                         {isRechecking ? (
                             <LoadingDisplay message={recheckMessage} />
                         ) : hasRecheckFailed ? (
@@ -239,10 +270,22 @@ export function GitHubAppInstallModal({
                         ) : (
                             <NumberedInstructions
                                 instructions={[
-                                    { step: 'Click "Install App"', details: 'Opens the AEM Code Sync GitHub App page' },
-                                    { step: 'Configure the app', details: `Click "Configure", sign in if prompted, then click "Configure" next to "${owner}"` },
-                                    { step: 'Grant repository access', details: `Select "Only select repositories", search for "${repo}", and click the green "Save" button` },
-                                    { step: 'Return here and click "Check Again"', details: 'We\'ll verify the installation completed' },
+                                    {
+                                        step: 'Click "Install App"',
+                                        details: 'Opens the AEM Code Sync GitHub App page',
+                                    },
+                                    {
+                                        step: 'Configure the app',
+                                        details: `Click "Configure", sign in if prompted, then click "Configure" next to "${owner}"`,
+                                    },
+                                    {
+                                        step: 'Grant repository access',
+                                        details: `Select "Only select repositories", search for "${repo}", and click the green "Save" button`,
+                                    },
+                                    {
+                                        step: 'Return here and click "Check Again"',
+                                        details: "We'll verify the installation completed",
+                                    },
                                 ]}
                             />
                         )}
@@ -278,12 +321,10 @@ export function NewRepoForm({
     onCreateRepository: () => void;
 }): React.ReactElement {
     return (
-        <View
-            backgroundColor="gray-50"
-            borderRadius="medium"
-            padding="size-300"
-        >
-            <Heading level={3} margin={0} marginBottom="size-200">Create New Repository</Heading>
+        <View backgroundColor="gray-50" borderRadius="medium" padding="size-300">
+            <Heading level={3} margin={0} marginBottom="size-200">
+                Create New Repository
+            </Heading>
 
             <TextField
                 label="Repository Name"
@@ -293,7 +334,11 @@ export function NewRepoForm({
                 validationState={repoNameError || repoCreationState.error ? 'invalid' : undefined}
                 errorMessage={repoNameError || repoCreationState.error}
                 placeholder="my-eds-project"
-                description={githubUser ? `Will be created as ${githubUser.login}/${repoName || 'my-eds-project'}` : 'Name for your new GitHub repository'}
+                description={
+                    githubUser
+                        ? `Will be created as ${githubUser.login}/${repoName || 'my-eds-project'}`
+                        : 'Name for your new GitHub repository'
+                }
                 width="100%"
                 isRequired
                 autoFocus
@@ -341,23 +386,14 @@ export function ResetToTemplateOption({
     // When disabled (no repo selected) present as unchecked with no warning.
     const active = !disabled && resetToTemplate;
     return (
-        <Flex
-            direction="column"
-            gap="size-100"
-            marginTop="size-300"
-            UNSAFE_className="reset-to-template-top"
-        >
-            <Checkbox
-                isSelected={active}
-                isDisabled={disabled}
-                onChange={onResetToTemplateChange}
-            >
+        <Flex direction="column" gap="size-50" UNSAFE_className="reset-to-template-top">
+            <Checkbox isSelected={active} isDisabled={disabled} onChange={onResetToTemplateChange}>
                 Reset to template (replaces all content)
             </Checkbox>
 
             <View
                 marginStart="size-300"
-                minHeight="size-250"
+                minHeight="size-200"
                 UNSAFE_className="reset-warning-container"
             >
                 <Flex
@@ -367,7 +403,8 @@ export function ResetToTemplateOption({
                 >
                     <Alert size="S" UNSAFE_className="text-orange-500 flex-shrink-0" />
                     <Text UNSAFE_className="text-xs text-orange-600">
-                        This will delete and recreate the repository with the selected template content.
+                        This will delete and recreate the repository with the selected template
+                        content.
                     </Text>
                 </Flex>
             </View>

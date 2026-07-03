@@ -18,7 +18,6 @@
  * @module features/project-creation/ui/components/MeshIntegrationCard
  */
 
-import { ActionButton } from '@adobe/react-spectrum';
 import React, { useEffect, useState } from 'react';
 import { getStackById } from '../hooks/useSelectedStack';
 import { isAdobeSignedIn } from '../steps/tileStatus';
@@ -70,9 +69,9 @@ function ChosenRow({
             </span>
             <span className="int-chosen-label">{label}</span>
             <span className="int-chosen-value">{value}</span>
-            <ActionButton isQuiet onPress={onChange}>
+            <button type="button" className="service-action-link" onClick={onChange}>
                 Change
-            </ActionButton>
+            </button>
         </div>
     );
 }
@@ -167,10 +166,10 @@ export function MeshIntegrationCard({
     // changes (a selection/creation committed), so only one field is open at a time.
     const [editing, setEditing] = useState<DestinationField | null>(null);
     useEffect(() => {
-        setEditing(e => (e === 'project' ? null : e));
+        setEditing((e) => (e === 'project' ? null : e));
     }, [projectId]);
     useEffect(() => {
-        setEditing(e => (e === 'workspace' ? null : e));
+        setEditing((e) => (e === 'workspace' ? null : e));
     }, [workspaceId]);
 
     let action: IntegrationCardAction | undefined;
