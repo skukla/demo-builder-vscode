@@ -35,6 +35,8 @@ export function mapProjects(data: RawAdobeProject[]): AdobeProject[] {
         title: proj.title || proj.name,
         description: proj.description,
         org_id: proj.org_id,
+        // Ownership signal for the delete gate; absent → treated as NOT owned.
+        who_created: proj.who_created,
     }));
 }
 

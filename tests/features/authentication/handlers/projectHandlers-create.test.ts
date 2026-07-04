@@ -8,6 +8,7 @@
 
 import { handleCreateAdobeProject } from '@/features/authentication/handlers/projectHandlers';
 import { ErrorCode } from '@/types/errorCodes';
+import { makeJwt, TEST_USER_ID } from '../imsTestTokens';
 import { createMockContext } from './projectHandlers.testUtils';
 
 jest.mock('@/core/di/serviceLocator');
@@ -78,8 +79,30 @@ describe('projectHandlers - Create', () => {
             expect(result.success).toBe(true);
             expect(result.data).toEqual(PROJECT);
             expect(mockContext.authManager.createProject).toHaveBeenCalledWith('My Demo', 'A demo');
-            expect(mockContext.sendMessage).toHaveBeenCalledWith('get-projects', [PROJECT]);
+            // The refresh push goes through the same deletable stamping as
+            // get-projects (no token manager on the harness → false).
+            expect(mockContext.sendMessage).toHaveBeenCalledWith(
+                'get-projects', [{ ...PROJECT, deletable: false }],
+            );
             expect(mockContext.sendMessage).toHaveBeenCalledWith('projectSelected', { projectId: 'proj-new' });
+        });
+
+        it('stamps the refresh push with ownership (deletable=true for own projects)', async () => {
+            const userId = TEST_USER_ID;
+            const token = makeJwt({ user_id: userId });
+            mockContext.authManager.getTokenManager = jest.fn().mockReturnValue({
+                inspectToken: jest.fn().mockResolvedValue({ valid: true, expiresIn: 60, token }),
+            });
+            mockContext.authManager.getProjects.mockResolvedValue([
+                { ...PROJECT, who_created: userId },
+            ]);
+
+            await handleCreateAdobeProject(mockContext, { name: 'My Demo' });
+
+            expect(mockContext.sendMessage).toHaveBeenCalledWith(
+                'get-projects',
+                [{ ...PROJECT, who_created: userId, deletable: true }],
+            );
         });
 
         it('returns an error when createProject throws', async () => {

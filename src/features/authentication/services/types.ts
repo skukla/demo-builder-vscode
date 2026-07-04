@@ -26,6 +26,8 @@ export interface RawAdobeProject {
     description?: string;
     type?: string;  // Project type from Adobe API
     org_id?: string;
+    /** Creator's IMS user id (`<GUID>@<authsrc>.e`) — present on Console list/detail responses */
+    who_created?: string;
 }
 
 export interface RawAdobeWorkspace {

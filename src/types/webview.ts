@@ -167,6 +167,10 @@ export interface AdobeProject {
     title?: string;
     description?: string;
     org_id?: string; // Organization ID from Adobe Console API
+    /** Creator's IMS user id (`<GUID>@<authsrc>.e`) from the Console API; absent when unknown */
+    who_created?: string;
+    /** True only when the current token user created this project (extension-stamped; fail closed) */
+    deletable?: boolean;
 }
 
 // Note: Import shared types from @/types directly where needed (removed circular re-export)

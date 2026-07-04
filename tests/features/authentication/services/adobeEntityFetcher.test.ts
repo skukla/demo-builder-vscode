@@ -324,6 +324,34 @@ describe('AdobeEntityFetcher', () => {
             expect(result[0].name).toBe('Project 1');
         });
 
+        it('should carry who_created through the SDK project mapping', async () => {
+            mockCacheManager.getCachedOrganization.mockReturnValue({
+                id: '123456',
+                code: 'ORG@AdobeOrg',
+                name: 'Test Org',
+            });
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.getClient.mockReturnValue({
+                getProjectsForOrg: jest.fn().mockResolvedValue({
+                    body: [
+                        {
+                            id: 'proj1',
+                            name: 'Project 1',
+                            title: 'Project 1 Title',
+                            who_created: '5DA1B2C3D4E5F607080910A1@abcdef1234567890.e',
+                        },
+                        { id: 'proj2', name: 'Project 2', title: 'Project 2 Title' },
+                    ],
+                }),
+            } as ReturnType<typeof mockSDKClient.getClient>);
+
+            const result = await fetcher.getProjects();
+
+            expect(result[0].who_created).toBe('5DA1B2C3D4E5F607080910A1@abcdef1234567890.e');
+            // Missing on the wire → stays absent (ownership gate fails closed later).
+            expect(result[1].who_created).toBeUndefined();
+        });
+
         it('should use CLI when org ID is missing (and no token org)', async () => {
             mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
             mockSDKClient.isInitialized.mockReturnValue(true);

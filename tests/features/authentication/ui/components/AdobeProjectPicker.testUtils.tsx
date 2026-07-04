@@ -1,6 +1,7 @@
 import { AdobeProject, WizardState } from '@/types/webview';
 
-// Mock data
+// Mock data — deletable:true because most delete-affordance tests exercise
+// rows the current user owns (the handler stamps ownership extension-side).
 export const mockProjects: AdobeProject[] = [
     {
         id: 'project1',
@@ -8,6 +9,7 @@ export const mockProjects: AdobeProject[] = [
         title: 'Test Project 1',
         description: 'First test project',
         org_id: 'org123',
+        deletable: true,
     },
     {
         id: 'project2',
@@ -15,6 +17,7 @@ export const mockProjects: AdobeProject[] = [
         title: 'Test Project 2',
         description: 'Second test project',
         org_id: 'org123',
+        deletable: true,
     },
     {
         id: 'project3',
@@ -22,6 +25,7 @@ export const mockProjects: AdobeProject[] = [
         title: 'Test Project 3',
         description: 'Third test project',
         org_id: 'org123',
+        deletable: true,
     },
 ];
 

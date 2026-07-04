@@ -16,6 +16,7 @@ import {
     ensureOrgContext,
     type EnsureOrgContextResult,
 } from '@/features/authentication/services/ensureOrgContext';
+import { stampProjectsDeletable } from '@/features/authentication/services/projectOwnership';
 import type { AdobeProject } from '@/features/authentication/services/types';
 import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 import { ErrorCode } from '@/types/errorCodes';
@@ -150,8 +151,11 @@ export async function handleGetProjects(
                 timeoutMessage: 'Request timed out. Please check your connection and try again.',
             },
         );
-        await context.sendMessage('get-projects', projects);
-        return { success: true, data: projects };
+        // Stamp ownership (deletable) so the webview only offers delete on
+        // projects the current token user created (fail closed on unknowns).
+        const stamped = await stampProjectsDeletable(context.authManager, projects);
+        await context.sendMessage('get-projects', stamped);
+        return { success: true, data: stamped };
     } catch (error) {
         const appError = toAppError(error);
         const originalMessage = (error instanceof Error) ? error.message : '';
@@ -386,9 +390,13 @@ export async function handleCreateAdobeProject(
         }
 
         // Refresh the project list and ack the new selection (best-effort).
+        // The push goes through the SAME deletable stamping as get-projects.
         try {
             const projects = await context.authManager.getProjects();
-            await context.sendMessage('get-projects', projects);
+            await context.sendMessage(
+                'get-projects',
+                await stampProjectsDeletable(context.authManager, projects),
+            );
             await context.sendMessage('projectSelected', { projectId: project.id });
         } catch (refreshError) {
             context.debugLogger.debug('[Project] Post-create refresh failed:', refreshError);

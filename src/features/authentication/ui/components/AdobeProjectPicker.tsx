@@ -127,29 +127,33 @@ export function AdobeProjectPicker({
 
     // Row content rendered INSIDE SelectionStepContent's <Item> wrapper (which
     // owns the key/textValue and the description/disabledReason slot): the
-    // default label Text plus the trash affordance at the row end.
+    // default label Text plus the trash affordance at the row end. The trash
+    // renders ONLY on rows the extension stamped `deletable` (ownership match
+    // against the token user; missing flag fails closed → no affordance).
     const renderProjectRow = useCallback(
         (item: AdobeProject): React.ReactNode => {
             const title = item.title || item.name;
             return (
                 <>
                     <Text>{title}</Text>
-                    {deletingId === item.id ? (
-                        <ProgressCircle
-                            isIndeterminate
-                            size="S"
-                            aria-label={`Deleting project ${title}`}
-                        />
-                    ) : (
-                        <ActionButton
-                            isQuiet
-                            aria-label={`Delete project ${title}`}
-                            // Spectrum presses don't bubble to the row's
-                            // selection handler, so no propagation handling.
-                            onPress={() => void handleDelete(item)}
-                        >
-                            <Delete size="S" />
-                        </ActionButton>
+                    {item.deletable === true && (
+                        deletingId === item.id ? (
+                            <ProgressCircle
+                                isIndeterminate
+                                size="S"
+                                aria-label={`Deleting project ${title}`}
+                            />
+                        ) : (
+                            <ActionButton
+                                isQuiet
+                                aria-label={`Delete project ${title}`}
+                                // Spectrum presses don't bubble to the row's
+                                // selection handler, so no propagation handling.
+                                onPress={() => void handleDelete(item)}
+                            >
+                                <Delete size="S" />
+                            </ActionButton>
+                        )
                     )}
                 </>
             );

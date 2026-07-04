@@ -24,6 +24,10 @@ import {
     type TeardownTarget,
 } from '@/features/authentication/services/consoleProjectTeardown';
 import { IoEventsClient } from '@/features/authentication/services/ioEventsClient';
+import {
+    stampProjectsDeletable,
+    verifyProjectOwnership,
+} from '@/features/authentication/services/projectOwnership';
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext, HandlerResponse } from '@/types/handlers';
 
@@ -162,12 +166,19 @@ async function clearSelectionIfCurrent(
     }
 }
 
-/** Refresh the project list for the org (mirrors handleCreateAdobeProject; best-effort). */
+/**
+ * Refresh the project list for the org (mirrors handleCreateAdobeProject;
+ * best-effort). The push goes through the SAME deletable stamping as
+ * get-projects so the webview's delete affordances stay ownership-accurate.
+ */
 async function refreshProjects(context: HandlerContext, orgId: string): Promise<void> {
     try {
         const projects = await context.authManager?.getProjects({ orgId });
         if (projects) {
-            await context.sendMessage('get-projects', projects);
+            await context.sendMessage(
+                'get-projects',
+                await stampProjectsDeletable(context.authManager, projects),
+            );
         }
     } catch (refreshError) {
         context.debugLogger.debug('[Project] Post-delete refresh failed:', refreshError);
@@ -242,6 +253,17 @@ export async function handleDeleteAdobeProject(
     if (ctxResult.status !== 'ok') {
         // Spread into a fresh literal: DataResult lacks HandlerResponse's index signature.
         return { ...(await sendOrgMismatch(context, 'delete-adobe-project', ctxResult)) };
+    }
+
+    // SECURITY: ownership gate — only the project's creator may delete it.
+    // who_created is fetched independently (never trusted from the webview)
+    // and compared to the token's own user id; unknowns fail closed.
+    if (!(await verifyProjectOwnership(context.authManager, { orgId, projectId }))) {
+        return {
+            success: false,
+            error: 'You can only delete Adobe projects you created.',
+            code: ErrorCode.NOT_PROJECT_OWNER,
+        };
     }
 
     if (!(await confirmDeletion(title, projectId))) {

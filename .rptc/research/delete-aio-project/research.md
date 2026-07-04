@@ -294,3 +294,26 @@ Console project (`spikedeleteverify`, created + fully torn down in the run):
    registration_id, events_of_interest, webhook_status, created_date, updated_date, consumer_id,
    project_id, workspace_id, delivery_type, enabled, subscriber_filters, event_delivery_formats,
    read_only`.
+
+---
+
+## Ownership gate research (2026-07-03, user requirement: only delete YOUR projects)
+
+Live-probed against the org (SDK spec bodies are untyped, so empirical confirmation was required):
+
+1. **`who_created` exists on every project entry** from `getProjectsForOrg` (and `getProject`),
+   format `<IMS-user-GUID>@<authsrc>.e` (e.g. `93DC1EBB…@7b4b1f61….e`), alongside
+   `who_last_modified`, `date_created`, `date_last_modified`. Ownership costs ZERO extra calls —
+   the picker's existing list already carries it.
+2. **The CLI access token's JWT payload carries `user_id`** in the same format; for a project the
+   current user created they match exactly. Local decode (no network) via the token
+   `TokenManager.inspectToken()` already reads.
+3. **Bonus**: `POST /console/organizations/{orgId}/projects/{projectId}/can-delete` exists
+   (undocumented in the SDK's typed surface; returned `200 {"errors":[]}` for a deletable
+   project). It checks DELETABILITY (blockers), not ownership — noted for the future; not used.
+
+**Design shipped**: handler-side `deletable` stamping on the projects list (webview never sees
+user ids; missing `who_created` ⇒ not deletable, fail closed) → picker renders the trash only on
+owned rows → and the REAL boundary: `handleDeleteAdobeProject` independently re-verifies
+ownership before the confirm modal (`NOT_PROJECT_OWNER` shaped error otherwise), so a crafted
+webview message cannot delete someone else's project.

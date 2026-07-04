@@ -111,7 +111,7 @@ describe('AdobeProjectPicker — delete affordance', () => {
     });
 
     describe('Trash button rendering', () => {
-        it('should render a delete button for every project row with a project-specific aria-label', () => {
+        it('should render a delete button for every DELETABLE project row with a project-specific aria-label', () => {
             renderPicker();
 
             expect(screen.getByLabelText('Delete project Test Project 1')).toBeInTheDocument();
@@ -121,7 +121,7 @@ describe('AdobeProjectPicker — delete affordance', () => {
 
         it('should fall back to the project name in the aria-label when title is missing', () => {
             const untitled: AdobeProject[] = [
-                { id: 'p9', name: 'proj-nine', org_id: 'org123' },
+                { id: 'p9', name: 'proj-nine', org_id: 'org123', deletable: true },
             ];
             mockHookWithProjects(untitled);
 
@@ -134,6 +134,73 @@ describe('AdobeProjectPicker — delete affordance', () => {
             renderPicker();
 
             expect(screen.getByText('Test Project 1')).toBeInTheDocument();
+        });
+    });
+
+    describe('Ownership gating (deletable flag)', () => {
+        it('should NOT render a delete button when the project is not deletable', () => {
+            mockHookWithProjects([
+                { ...mockProjects[0], deletable: false },
+            ]);
+
+            renderPicker();
+
+            expect(screen.getByText('Test Project 1')).toBeInTheDocument();
+            expect(screen.queryByLabelText('Delete project Test Project 1')).not.toBeInTheDocument();
+        });
+
+        it('should NOT render a delete button when deletable is missing (fail closed)', () => {
+            const unstamped: AdobeProject[] = [
+                { id: 'p9', name: 'proj-nine', title: 'Unstamped', org_id: 'org123' },
+            ];
+            mockHookWithProjects(unstamped);
+
+            renderPicker();
+
+            expect(screen.getByText('Unstamped')).toBeInTheDocument();
+            expect(screen.queryByLabelText('Delete project Unstamped')).not.toBeInTheDocument();
+        });
+
+        it('should render trash buttons only on the deletable rows of a mixed list', () => {
+            mockHookWithProjects([
+                { ...mockProjects[0], deletable: true },
+                { ...mockProjects[1], deletable: false },
+                { ...mockProjects[2], deletable: undefined },
+            ]);
+
+            renderPicker();
+
+            expect(screen.getByLabelText('Delete project Test Project 1')).toBeInTheDocument();
+            expect(screen.queryByLabelText('Delete project Test Project 2')).not.toBeInTheDocument();
+            expect(screen.queryByLabelText('Delete project Test Project 3')).not.toBeInTheDocument();
+        });
+
+        it('should send no delete request from a non-deletable row (no affordance exists)', async () => {
+            mockHookWithProjects([
+                { ...mockProjects[0], deletable: false },
+            ]);
+
+            renderPicker();
+            // Clicking the row itself selects; it must never fire a delete request.
+            fireEvent.click(screen.getByText('Test Project 1'));
+            await act(async () => {
+                await Promise.resolve();
+            });
+
+            expect(mockRequest).not.toHaveBeenCalled();
+        });
+
+        it('should keep selection working on non-deletable rows', () => {
+            mockHookWithProjects([
+                { ...mockProjects[0], deletable: false },
+            ]);
+
+            renderPicker();
+            fireEvent.click(screen.getByText('Test Project 1'));
+
+            expect(mockSelectItem).toHaveBeenCalledWith(
+                expect.objectContaining({ id: 'project1' })
+            );
         });
     });
 
@@ -153,7 +220,7 @@ describe('AdobeProjectPicker — delete affordance', () => {
 
         it('should use the project name as projectTitle when title is missing', async () => {
             const untitled: AdobeProject[] = [
-                { id: 'p9', name: 'proj-nine', org_id: 'org123' },
+                { id: 'p9', name: 'proj-nine', org_id: 'org123', deletable: true },
             ];
             mockHookWithProjects(untitled);
             mockRequest.mockResolvedValue({ success: true });
