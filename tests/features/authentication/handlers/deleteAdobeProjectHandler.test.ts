@@ -5,6 +5,8 @@
  * - payload validation (no modal, no teardown on bad input)
  * - org gate via resolveOrgContext (structured ORG_MISMATCH, no modal)
  * - native confirmation modal (dismissed → cancelled, no teardown)
+ * - project-delete-started signal (sent after confirm, before teardown;
+ *   never on cancel / ownership reject / org mismatch / invalid payload)
  * - happy path (teardown deps/target, progress, toast, refresh, conditional clear)
  * - partial failure (warning names failed items, NOT deleted, no clear)
  * - best-effort refresh/clear (failures never flip the result)
@@ -312,6 +314,64 @@ describe('handleDeleteAdobeProject', () => {
             expect(result.success).toBe(false);
             expect(result.cancelled).toBe(true);
             expect(mockTeardown).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('project-delete-started signal', () => {
+        const NO_SIGNAL = ['project-delete-started', expect.anything()] as const;
+
+        it('signals the webview with the projectId once the user confirms', async () => {
+            await handleDeleteAdobeProject(mockContext, PAYLOAD);
+
+            expect(mockContext.sendMessage).toHaveBeenCalledWith(
+                'project-delete-started',
+                { projectId: 'proj-1' },
+            );
+        });
+
+        it('sends the signal AFTER the confirm modal and BEFORE the teardown', async () => {
+            await handleDeleteAdobeProject(mockContext, PAYLOAD);
+
+            const index = mockContext.sendMessage.mock.calls.findIndex(
+                (c: unknown[]) => c[0] === 'project-delete-started',
+            );
+            const signalOrder = mockContext.sendMessage.mock.invocationCallOrder[index];
+            expect(signalOrder).toBeGreaterThan(mockShowWarning.mock.invocationCallOrder[0]);
+            expect(signalOrder).toBeLessThan(mockTeardown.mock.invocationCallOrder[0]);
+        });
+
+        it('does NOT signal when the confirm modal is dismissed', async () => {
+            mockShowWarning.mockResolvedValue(undefined);
+
+            await handleDeleteAdobeProject(mockContext, PAYLOAD);
+
+            expect(mockContext.sendMessage).not.toHaveBeenCalledWith(...NO_SIGNAL);
+        });
+
+        it('does NOT signal when ownership is rejected', async () => {
+            mockContext.authManager.getProjects.mockResolvedValue([
+                { ...OWNED_PROJECT, who_created: OTHER_USER_ID },
+            ]);
+
+            await handleDeleteAdobeProject(mockContext, PAYLOAD);
+
+            expect(mockContext.sendMessage).not.toHaveBeenCalledWith(...NO_SIGNAL);
+        });
+
+        it('does NOT signal on an org mismatch', async () => {
+            mockContext.authManager.getOrganizations.mockResolvedValue([
+                { id: 'other-org', code: 'O', name: 'Other' },
+            ]);
+
+            await handleDeleteAdobeProject(mockContext, PAYLOAD);
+
+            expect(mockContext.sendMessage).not.toHaveBeenCalledWith(...NO_SIGNAL);
+        });
+
+        it('does NOT signal on an invalid payload', async () => {
+            await handleDeleteAdobeProject(mockContext, { ...PAYLOAD, projectId: '' });
+
+            expect(mockContext.sendMessage).not.toHaveBeenCalledWith(...NO_SIGNAL);
         });
     });
 

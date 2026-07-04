@@ -521,13 +521,15 @@ export const Avatar: React.FC<any> = ({ src, alt, ...props }) => (
 
 // ListView mock - supports static Item children, render function, and items prop
 // Spectrum ListView actually uses role="grid" (not listbox)
+// disabledKeys is surfaced faithfully: disabled rows carry aria-disabled="true"
+// and ignore clicks (real Spectrum rows don't fire selection when disabled).
 export const ListView: React.FC<any> = ({
     children,
     items,
     onSelectionChange,
     selectedKeys: _selectedKeys,
     defaultSelectedKeys: _defaultSelectedKeys,
-    disabledKeys: _disabledKeys,
+    disabledKeys,
     selectionMode: _selectionMode,
     'aria-label': ariaLabel,
     UNSAFE_className,
@@ -540,6 +542,19 @@ export const ListView: React.FC<any> = ({
     // Reflect the controlled selection so tests can assert the highlighted row.
     const selectedSet = new Set<React.Key>(Array.isArray(_selectedKeys) ? _selectedKeys : []);
 
+    // disabledKeys may arrive as an array or an Iterable (Spectrum accepts both).
+    const disabledKeySet = new Set<any>(disabledKeys ?? []);
+    const rowProps = (key: any) => {
+        const isDisabled = disabledKeySet.has(key);
+        return {
+            role: 'gridcell',
+            'data-key': key,
+            'aria-selected': selectedSet.has(key) || undefined,
+            'aria-disabled': isDisabled ? true : undefined,
+            onClick: isDisabled ? undefined : () => onSelectionChange?.(new Set([key])),
+        };
+    };
+
     // Render the list content
     let content: React.ReactNode;
     if (hasChildElements && !renderItem) {
@@ -548,13 +563,7 @@ export const ListView: React.FC<any> = ({
             if (!React.isValidElement(child)) return child;
             const key = child.key || (items?.[index] as any)?.id || index;
             return (
-                <li
-                    key={key}
-                    role="gridcell"
-                    data-key={key}
-                    aria-selected={selectedSet.has(key) || undefined}
-                    onClick={() => onSelectionChange?.(new Set([key]))}
-                >
+                <li key={key} {...rowProps(key)}>
                     {child}
                 </li>
             );
@@ -564,13 +573,7 @@ export const ListView: React.FC<any> = ({
         content = items.map((item: any) => {
             const key = item.id || item.key;
             return (
-                <li
-                    key={key}
-                    role="gridcell"
-                    data-key={key}
-                    aria-selected={selectedSet.has(key) || undefined}
-                    onClick={() => onSelectionChange?.(new Set([key]))}
-                >
+                <li key={key} {...rowProps(key)}>
                     {renderItem(item)}
                 </li>
             );
@@ -580,13 +583,7 @@ export const ListView: React.FC<any> = ({
         content = items.map((item: any) => {
             const key = item.id || item.key;
             return (
-                <li
-                    key={key}
-                    role="gridcell"
-                    data-key={key}
-                    aria-selected={selectedSet.has(key) || undefined}
-                    onClick={() => onSelectionChange?.(new Set([key]))}
-                >
+                <li key={key} {...rowProps(key)}>
                     {item.title || item.name || item.label || String(key)}
                 </li>
             );

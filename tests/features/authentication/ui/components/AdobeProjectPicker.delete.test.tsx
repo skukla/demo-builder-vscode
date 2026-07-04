@@ -4,13 +4,16 @@
  * Covers the quiet trash button rendered at the end of each project row:
  *  - sends `delete-adobe-project` via webviewClient.request with the exact
  *    payload (projectId, projectTitle, orgId) without changing row selection,
- *  - in-flight state: row disabled with a "Deleting…" reason, trash swapped
- *    for a ProgressCircle, second press impossible,
+ *  - in-flight state: the row stays untouched at press time (the native
+ *    confirm modal is still open) and only disables — via `disabledIds`,
+ *    no spinner or reason text — once the extension pushes
+ *    `project-delete-started` after the user confirms,
  *  - response handling: success (selected vs other row), `cancelled: true`
- *    (silent), failure (inline error, row re-enabled), request rejection,
- *  - auto-select suppression after a delete (autoSelectSingle flipped off
- *    per-render, synchronously at press time — before the handler's
- *    refreshed `get-projects` push can arrive).
+ *    (silent, row never disabled), failure (inline error, row re-enabled),
+ *    request rejection,
+ *  - auto-select suppression after a delete (autoSelectSingle flips off when
+ *    `project-delete-started` arrives — before the handler's refreshed
+ *    `get-projects` push can arrive; a cancelled delete never suppresses).
  *
  * Split from AdobeProjectPicker.test.tsx (471 lines) to keep both files
  * comfortably under the test-file size cap; shares its testUtils.
@@ -27,14 +30,16 @@ import {
     createMockSelectionStep,
 } from './AdobeProjectPicker.testUtils';
 
-// Mock WebviewClient (postMessage for the hook contract, request for delete)
+// Mock WebviewClient (postMessage for the hook contract, request for delete,
+// onMessage for the extension's project-delete-started push)
 const mockPostMessage = jest.fn();
 const mockRequest = jest.fn();
+const mockOnMessage = jest.fn();
 jest.mock('@/core/ui/utils/WebviewClient', () => ({
     webviewClient: {
         postMessage: (...args: unknown[]) => mockPostMessage(...args),
         request: (...args: unknown[]) => mockRequest(...args),
-        onMessage: jest.fn(),
+        onMessage: (...args: unknown[]) => mockOnMessage(...args),
     },
 }));
 
@@ -71,9 +76,20 @@ function latestHookOptions(): Record<string, unknown> {
     return calls[calls.length - 1][0];
 }
 
+/** The <li> row (from the ListView mock) containing the given row title. */
+function projectRow(title: string): HTMLElement {
+    const row = screen.getByText(title).closest('li');
+    expect(row).not.toBeNull();
+    return row as HTMLElement;
+}
+
 describe('AdobeProjectPicker — delete affordance', () => {
     const mockUpdateState = jest.fn();
     const mockSelectItem = jest.fn();
+
+    // Handlers the component registered via webviewClient.onMessage, keyed by
+    // message type — lets tests fire the extension's project-delete-started push.
+    const messageHandlers = new Map<string, (data: unknown) => void>();
 
     function mockHookWithProjects(items: AdobeProject[] = mockProjects) {
         mockUseSelectionStep.mockImplementation(() =>
@@ -97,6 +113,15 @@ describe('AdobeProjectPicker — delete affordance', () => {
         );
     }
 
+    /** Fire the captured project-delete-started handler (post-confirm signal). */
+    function fireDeleteStarted(projectId: string) {
+        const handler = messageHandlers.get('project-delete-started');
+        expect(handler).toBeDefined();
+        act(() => {
+            handler!({ projectId });
+        });
+    }
+
     /** Press a row's trash button and flush the settled request. */
     async function pressDeleteAndSettle(label: string) {
         fireEvent.click(screen.getByLabelText(label));
@@ -105,8 +130,35 @@ describe('AdobeProjectPicker — delete affordance', () => {
         });
     }
 
+    /**
+     * Full confirmed-delete flow: press the trash, fire the extension's
+     * project-delete-started push (the user confirmed the native modal),
+     * then settle the request with the given result.
+     */
+    async function pressDeleteConfirmAndSettle(
+        label: string,
+        projectId: string,
+        result: unknown,
+    ) {
+        const { promise, resolve } = deferred<unknown>();
+        mockRequest.mockReturnValue(promise);
+        fireEvent.click(screen.getByLabelText(label));
+        fireDeleteStarted(projectId);
+        await act(async () => {
+            resolve(result);
+            await promise;
+        });
+    }
+
     beforeEach(() => {
         jest.clearAllMocks();
+        messageHandlers.clear();
+        mockOnMessage.mockImplementation(
+            (type: string, handler: (data: unknown) => void) => {
+                messageHandlers.set(type, handler);
+                return jest.fn(); // unsubscribe
+            },
+        );
         mockHookWithProjects();
     });
 
@@ -134,6 +186,12 @@ describe('AdobeProjectPicker — delete affordance', () => {
             renderPicker();
 
             expect(screen.getByText('Test Project 1')).toBeInTheDocument();
+        });
+
+        it('should subscribe to project-delete-started pushes from the extension', () => {
+            renderPicker();
+
+            expect(messageHandlers.has('project-delete-started')).toBe(true);
         });
     });
 
@@ -274,61 +332,67 @@ describe('AdobeProjectPicker — delete affordance', () => {
     });
 
     describe('In-flight state', () => {
-        it('should show a ProgressCircle in place of the trash button on the deleting row', () => {
+        it('should NOT disable the row at press time (confirm modal still open, no signal yet)', () => {
             const { promise } = deferred<unknown>();
             mockRequest.mockReturnValue(promise);
 
             renderPicker();
             fireEvent.click(screen.getByLabelText('Delete project Test Project 1'));
-
-            expect(screen.queryByLabelText('Delete project Test Project 1')).not.toBeInTheDocument();
-            expect(screen.getByLabelText('Deleting project Test Project 1')).toBeInTheDocument();
-        });
-
-        it('should show a "Deleting…" reason on the deleting row', () => {
-            const { promise } = deferred<unknown>();
-            mockRequest.mockReturnValue(promise);
-
-            renderPicker();
-            fireEvent.click(screen.getByLabelText('Delete project Test Project 1'));
-
-            expect(screen.getByText('Deleting…')).toBeInTheDocument();
-        });
-
-        it('should keep other rows deletable-looking but ignore a second press while one delete is in flight', () => {
-            const { promise } = deferred<unknown>();
-            mockRequest.mockReturnValue(promise);
-
-            renderPicker();
-            fireEvent.click(screen.getByLabelText('Delete project Test Project 1'));
-            fireEvent.click(screen.getByLabelText('Delete project Test Project 2'));
 
             expect(mockRequest).toHaveBeenCalledTimes(1);
+            expect(projectRow('Test Project 1')).not.toHaveAttribute('aria-disabled');
+            // No spinner or reason text — the trash affordance stays as-is.
+            expect(screen.getByLabelText('Delete project Test Project 1')).toBeInTheDocument();
         });
 
-        it('should make a second press on the same row impossible (button replaced)', () => {
+        it('should disable the row once project-delete-started arrives (confirmed)', () => {
             const { promise } = deferred<unknown>();
             mockRequest.mockReturnValue(promise);
 
             renderPicker();
             fireEvent.click(screen.getByLabelText('Delete project Test Project 1'));
+            fireDeleteStarted('project1');
 
-            // The trash button is gone; only the progress indicator remains.
-            expect(screen.queryByLabelText('Delete project Test Project 1')).not.toBeInTheDocument();
+            expect(projectRow('Test Project 1')).toHaveAttribute('aria-disabled', 'true');
+            expect(projectRow('Test Project 2')).not.toHaveAttribute('aria-disabled');
+        });
+
+        it('should show no spinner or "Deleting…" text on the disabled row', () => {
+            const { promise } = deferred<unknown>();
+            mockRequest.mockReturnValue(promise);
+
+            renderPicker();
+            fireEvent.click(screen.getByLabelText('Delete project Test Project 1'));
+            fireDeleteStarted('project1');
+
+            expect(screen.queryByText('Deleting…')).not.toBeInTheDocument();
+            expect(screen.queryByLabelText('Deleting project Test Project 1')).not.toBeInTheDocument();
+        });
+
+        it('should ignore a second press while a confirmed delete is in flight', () => {
+            const { promise } = deferred<unknown>();
+            mockRequest.mockReturnValue(promise);
+
+            renderPicker();
+            fireEvent.click(screen.getByLabelText('Delete project Test Project 1'));
+            fireDeleteStarted('project1');
+            fireEvent.click(screen.getByLabelText('Delete project Test Project 2'));
+
             expect(mockRequest).toHaveBeenCalledTimes(1);
         });
     });
 
     describe('Success handling', () => {
         it('should clear adobeProject, adobeWorkspace and workspacesCache when the deleted project was selected', async () => {
-            mockRequest.mockResolvedValue({ success: true });
             const stateWithSelection: Partial<WizardState> = {
                 ...baseState,
                 adobeProject: mockProjects[0],
             };
 
             renderPicker(stateWithSelection);
-            await pressDeleteAndSettle('Delete project Test Project 1');
+            await pressDeleteConfirmAndSettle(
+                'Delete project Test Project 1', 'project1', { success: true },
+            );
 
             expect(mockUpdateState).toHaveBeenCalledWith({
                 adobeProject: undefined,
@@ -338,33 +402,34 @@ describe('AdobeProjectPicker — delete affordance', () => {
         });
 
         it('should leave wizard selection state untouched when a non-selected project is deleted', async () => {
-            mockRequest.mockResolvedValue({ success: true });
             const stateWithSelection: Partial<WizardState> = {
                 ...baseState,
                 adobeProject: mockProjects[0],
             };
 
             renderPicker(stateWithSelection);
-            await pressDeleteAndSettle('Delete project Test Project 2');
+            await pressDeleteConfirmAndSettle(
+                'Delete project Test Project 2', 'project2', { success: true },
+            );
 
             expect(mockUpdateState).not.toHaveBeenCalled();
         });
 
-        it('should clear the in-flight state after success (trash button returns)', async () => {
-            mockRequest.mockResolvedValue({ success: true });
-
+        it('should re-enable the row after success', async () => {
             renderPicker();
-            await pressDeleteAndSettle('Delete project Test Project 1');
+            await pressDeleteConfirmAndSettle(
+                'Delete project Test Project 1', 'project1', { success: true },
+            );
 
+            expect(projectRow('Test Project 1')).not.toHaveAttribute('aria-disabled');
             expect(screen.getByLabelText('Delete project Test Project 1')).toBeInTheDocument();
-            expect(screen.queryByText('Deleting…')).not.toBeInTheDocument();
         });
 
         it('should not show any error after success', async () => {
-            mockRequest.mockResolvedValue({ success: true });
-
             renderPicker();
-            await pressDeleteAndSettle('Delete project Test Project 1');
+            await pressDeleteConfirmAndSettle(
+                'Delete project Test Project 1', 'project1', { success: true },
+            );
 
             expect(screen.queryByText(/could not delete/i)).not.toBeInTheDocument();
         });
@@ -381,17 +446,25 @@ describe('AdobeProjectPicker — delete affordance', () => {
             expect(mockUpdateState).not.toHaveBeenCalled();
         });
 
-        it('should clear the in-flight state after a cancel (trash button returns)', async () => {
-            mockRequest.mockResolvedValue({ success: false, cancelled: true });
+        it('should never disable the row on a cancelled delete (no project-delete-started)', async () => {
+            const { promise, resolve } = deferred<unknown>();
+            mockRequest.mockReturnValue(promise);
 
             renderPicker();
-            await pressDeleteAndSettle('Delete project Test Project 1');
+            fireEvent.click(screen.getByLabelText('Delete project Test Project 1'));
+            // While the (dismissed) modal round-trip is pending: still enabled.
+            expect(projectRow('Test Project 1')).not.toHaveAttribute('aria-disabled');
 
+            await act(async () => {
+                resolve({ success: false, cancelled: true });
+                await promise;
+            });
+
+            expect(projectRow('Test Project 1')).not.toHaveAttribute('aria-disabled');
             expect(screen.getByLabelText('Delete project Test Project 1')).toBeInTheDocument();
-            expect(screen.queryByText('Deleting…')).not.toBeInTheDocument();
         });
 
-        it('should restore auto-selection after a cancel (nothing was deleted)', async () => {
+        it('should keep auto-selection enabled after a cancel (nothing was deleted)', async () => {
             mockRequest.mockResolvedValue({ success: false, cancelled: true });
 
             renderPicker();
@@ -403,13 +476,11 @@ describe('AdobeProjectPicker — delete affordance', () => {
 
     describe('Failure handling', () => {
         it('should surface the handler error inline', async () => {
-            mockRequest.mockResolvedValue({
+            renderPicker();
+            await pressDeleteConfirmAndSettle('Delete project Test Project 1', 'project1', {
                 success: false,
                 error: 'Failed to delete the Adobe project. Check the logs for details.',
             });
-
-            renderPicker();
-            await pressDeleteAndSettle('Delete project Test Project 1');
 
             expect(
                 screen.getByText('Failed to delete the Adobe project. Check the logs for details.')
@@ -417,44 +488,46 @@ describe('AdobeProjectPicker — delete affordance', () => {
         });
 
         it('should show a fallback error message when the handler returns no error text', async () => {
-            mockRequest.mockResolvedValue({ success: false });
-
             renderPicker();
-            await pressDeleteAndSettle('Delete project Test Project 1');
+            await pressDeleteConfirmAndSettle(
+                'Delete project Test Project 1', 'project1', { success: false },
+            );
 
             expect(screen.getByText(/could not delete/i)).toBeInTheDocument();
         });
 
-        it('should re-enable the row after a failure (trash back, reason gone)', async () => {
-            mockRequest.mockResolvedValue({ success: false, error: 'boom' });
-
+        it('should re-enable the row after a failure', async () => {
             renderPicker();
-            await pressDeleteAndSettle('Delete project Test Project 1');
+            await pressDeleteConfirmAndSettle(
+                'Delete project Test Project 1', 'project1', { success: false, error: 'boom' },
+            );
 
+            expect(projectRow('Test Project 1')).not.toHaveAttribute('aria-disabled');
             expect(screen.getByLabelText('Delete project Test Project 1')).toBeInTheDocument();
-            expect(screen.queryByText('Deleting…')).not.toBeInTheDocument();
         });
 
         it('should not touch wizard selection state on failure', async () => {
-            mockRequest.mockResolvedValue({ success: false, error: 'boom' });
             const stateWithSelection: Partial<WizardState> = {
                 ...baseState,
                 adobeProject: mockProjects[0],
             };
 
             renderPicker(stateWithSelection);
-            await pressDeleteAndSettle('Delete project Test Project 1');
+            await pressDeleteConfirmAndSettle(
+                'Delete project Test Project 1', 'project1', { success: false, error: 'boom' },
+            );
 
             expect(mockUpdateState).not.toHaveBeenCalled();
         });
 
-        it('should surface a rejected request as an inline error and re-enable the row', async () => {
+        it('should surface a rejected request as an inline error and keep the row enabled', async () => {
             mockRequest.mockRejectedValue(new Error('Request timed out'));
 
             renderPicker();
             await pressDeleteAndSettle('Delete project Test Project 1');
 
             expect(screen.getByText('Request timed out')).toBeInTheDocument();
+            expect(projectRow('Test Project 1')).not.toHaveAttribute('aria-disabled');
             expect(screen.getByLabelText('Delete project Test Project 1')).toBeInTheDocument();
         });
 
@@ -480,21 +553,32 @@ describe('AdobeProjectPicker — delete affordance', () => {
             expect(latestHookOptions().autoSelectSingle).toBe(true);
         });
 
-        it('should suppress autoSelectSingle synchronously at press time (before the refreshed list arrives)', () => {
+        it('should keep autoSelectSingle enabled at press time (user has not confirmed yet)', () => {
             const { promise } = deferred<unknown>();
             mockRequest.mockReturnValue(promise);
 
             renderPicker();
             fireEvent.click(screen.getByLabelText('Delete project Test Project 1'));
 
+            expect(latestHookOptions().autoSelectSingle).toBe(true);
+        });
+
+        it('should suppress autoSelectSingle when project-delete-started arrives (before the refreshed list)', () => {
+            const { promise } = deferred<unknown>();
+            mockRequest.mockReturnValue(promise);
+
+            renderPicker();
+            fireEvent.click(screen.getByLabelText('Delete project Test Project 1'));
+            fireDeleteStarted('project1');
+
             expect(latestHookOptions().autoSelectSingle).toBe(false);
         });
 
         it('should keep autoSelectSingle suppressed after a successful delete', async () => {
-            mockRequest.mockResolvedValue({ success: true });
-
             renderPicker();
-            await pressDeleteAndSettle('Delete project Test Project 1');
+            await pressDeleteConfirmAndSettle(
+                'Delete project Test Project 1', 'project1', { success: true },
+            );
 
             expect(latestHookOptions().autoSelectSingle).toBe(false);
         });
