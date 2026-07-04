@@ -114,7 +114,16 @@
  * it from the search/list below.
  */
 .reset-to-template-top {
+    /* Pin the reset checkbox at the top of the scrolling view (.step-view owns the
+       scroll) so the repo list scrolls UNDER it — you can reach it but not past it.
+       Opaque panel background + border hide the rows passing beneath. */
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--spectrum-global-color-gray-50);
     margin-top: 0 !important;
+    /* A touch of top padding keeps the checkbox off the scrollport edge when pinned. */
+    padding-top: var(--spectrum-global-dimension-size-100);
     margin-bottom: var(--spectrum-global-dimension-size-100);
     padding-bottom: var(--spectrum-global-dimension-size-100);
     border-bottom: 1px solid var(--spectrum-global-color-gray-200);
@@ -129,12 +138,18 @@
     /* Fixed height container prevents layout jump during animation */
 }
 
+/* The warning collapses its own height when unchecked (rather than reserving a
+   permanent empty line), reclaiming vertical space; it animates open on check. */
 .reset-warning-visible {
+    max-height: 3em;
     opacity: 1;
-    transition: opacity 0.15s ease-out;
+    overflow: hidden;
+    transition: max-height 0.15s ease-out, opacity 0.15s ease-out;
 }
 
 .reset-warning-hidden {
+    max-height: 0;
     opacity: 0;
-    transition: opacity 0.15s ease-out;
+    overflow: hidden;
+    transition: max-height 0.15s ease-out, opacity 0.15s ease-out;
 }

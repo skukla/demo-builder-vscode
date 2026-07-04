@@ -391,11 +391,7 @@ export function ResetToTemplateOption({
                 Reset to template (replaces all content)
             </Checkbox>
 
-            <View
-                marginStart="size-300"
-                minHeight="size-200"
-                UNSAFE_className="reset-warning-container"
-            >
+            <View marginStart="size-300" UNSAFE_className="reset-warning-container">
                 <Flex
                     alignItems="center"
                     gap="size-100"
