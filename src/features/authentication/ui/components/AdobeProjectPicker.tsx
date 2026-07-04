@@ -15,8 +15,11 @@
  *
  * Each row also carries a quiet trash button that requests
  * `delete-adobe-project` (native confirm + teardown happen extension-side).
- * While a delete is in flight the row is disabled with a "Deleting…" reason and
- * the trash swaps for a spinner. The refreshed list arrives via the handler's
+ * The row disables only once the handler confirms and signals
+ * `project-delete-started` (NOT at click time) — so it never signals activity
+ * while the user is still at the confirm modal, and a dismissed modal leaves the
+ * row untouched. The native progress notification owns all "deleting…" messaging;
+ * the row shows no spinner or text. The refreshed list arrives via the handler's
  * own `get-projects` push (the hook's message listener consumes it) — the
  * component never calls `refresh()` itself, so there is exactly one refresh
  * path. After any delete, single-item auto-select is suppressed so the last
@@ -30,9 +33,9 @@
  * @module features/authentication/ui/components/AdobeProjectPicker
  */
 
-import { ActionButton, ProgressCircle, Text } from '@adobe/react-spectrum';
+import { ActionButton, Text } from '@adobe/react-spectrum';
 import Delete from '@spectrum-icons/workflow/Delete';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { SelectionStepContent } from '@/core/ui/components/selection';
 import { useSelectionStep } from '@/core/ui/hooks';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -48,10 +51,9 @@ interface DeleteProjectResult {
 /** Fallback error when the handler returns a failure without a message. */
 const DELETE_FALLBACK_ERROR = 'Could not delete the project.';
 
-// Stable references for the "no delete in flight" case — inline `[]`/`{}` here
-// would create new references every render (infinite-loop gotcha).
+// Stable reference for the "no delete in flight" case — an inline `[]` here
+// would create a new reference every render (infinite-loop gotcha).
 const NO_DISABLED_IDS: string[] = [];
-const NO_DISABLED_REASONS: Record<string, string> = {};
 
 export interface AdobeProjectPickerProps {
     /** Current wizard state (provides org + cached projects + current selection). */
@@ -79,18 +81,30 @@ export function AdobeProjectPicker({
     const [deleteError, setDeleteError] = useState<string | undefined>();
     const [hasDeleted, setHasDeleted] = useState(false);
 
+    // The extension pushes `project-delete-started` only AFTER the user confirms
+    // the native modal — that is when the row disables + auto-select suppresses.
+    // Setting these at click time would signal activity during the (blocking)
+    // confirm modal and flash the row on a cancelled delete.
+    useEffect(() => {
+        const unsubscribe = webviewClient.onMessage(
+            'project-delete-started',
+            (data: unknown) => {
+                const projectId = (data as { projectId?: string })?.projectId;
+                if (projectId) {
+                    setDeletingId(projectId);
+                    setHasDeleted(true);
+                }
+            },
+        );
+        return unsubscribe;
+    }, []);
+
     const handleDelete = useCallback(
         async (project: AdobeProject): Promise<void> => {
             if (deletingId) {
                 return; // One delete at a time.
             }
-            setDeletingId(project.id);
             setDeleteError(undefined);
-            // Suppress auto-select BEFORE awaiting: the handler pushes the
-            // refreshed `get-projects` list before the request resolves, and
-            // `useSelectionStep` re-reads `autoSelectSingle` per render (it is
-            // in the message-listener effect's dependency array).
-            setHasDeleted(true);
             try {
                 const res = await webviewClient.request<DeleteProjectResult>(
                     'delete-adobe-project',
@@ -100,10 +114,9 @@ export function AdobeProjectPicker({
                         orgId: state.adobeOrg?.id,
                     },
                 );
-                if (res?.cancelled) {
-                    // User dismissed the native confirm — nothing was deleted.
-                    setHasDeleted(false);
-                } else if (res?.success) {
+                // The row only disabled if `project-delete-started` fired (i.e. the
+                // user confirmed); a cancelled delete never touched it.
+                if (res?.success) {
                     if (state.adobeProject?.id === project.id) {
                         // Mirror onSelect's dependent-state clearing: the
                         // selected project is gone, so the workspace under it is too.
@@ -113,7 +126,7 @@ export function AdobeProjectPicker({
                             workspacesCache: undefined,
                         });
                     }
-                } else {
+                } else if (!res?.cancelled) {
                     setDeleteError(res?.error ?? DELETE_FALLBACK_ERROR);
                 }
             } catch (e) {
@@ -126,10 +139,11 @@ export function AdobeProjectPicker({
     );
 
     // Row content rendered INSIDE SelectionStepContent's <Item> wrapper (which
-    // owns the key/textValue and the description/disabledReason slot): the
-    // default label Text plus the trash affordance at the row end. The trash
-    // renders ONLY on rows the extension stamped `deletable` (ownership match
-    // against the token user; missing flag fails closed → no affordance).
+    // owns the key/textValue): the default label Text plus the trash affordance
+    // at the row end. The trash renders ONLY on rows the extension stamped
+    // `deletable` (ownership match against the token user; missing flag fails
+    // closed → no affordance). During a delete the row is disabled via
+    // `disabledIds` (no spinner/text here — the progress notification messages it).
     const renderProjectRow = useCallback(
         (item: AdobeProject): React.ReactNode => {
             const title = item.title || item.name;
@@ -137,28 +151,20 @@ export function AdobeProjectPicker({
                 <>
                     <Text>{title}</Text>
                     {item.deletable === true && (
-                        deletingId === item.id ? (
-                            <ProgressCircle
-                                isIndeterminate
-                                size="S"
-                                aria-label={`Deleting project ${title}`}
-                            />
-                        ) : (
-                            <ActionButton
-                                isQuiet
-                                aria-label={`Delete project ${title}`}
-                                // Spectrum presses don't bubble to the row's
-                                // selection handler, so no propagation handling.
-                                onPress={() => void handleDelete(item)}
-                            >
-                                <Delete size="S" />
-                            </ActionButton>
-                        )
+                        <ActionButton
+                            isQuiet
+                            aria-label={`Delete project ${title}`}
+                            // Spectrum presses don't bubble to the row's
+                            // selection handler, so no propagation handling.
+                            onPress={() => void handleDelete(item)}
+                        >
+                            <Delete size="S" />
+                        </ActionButton>
                     )}
                 </>
             );
         },
-        [deletingId, handleDelete],
+        [handleDelete],
     );
 
     const {
@@ -233,9 +239,6 @@ export function AdobeProjectPicker({
                 selectedId={state.adobeProject?.id}
                 onSelect={selectItem}
                 disabledIds={deletingId ? [deletingId] : NO_DISABLED_IDS}
-                disabledReasons={
-                    deletingId ? { [deletingId]: 'Deleting…' } : NO_DISABLED_REASONS
-                }
                 labels={{
                     heading: '',
                     loadingMessage: 'Loading your Adobe projects...',

@@ -270,6 +270,12 @@ export async function handleDeleteAdobeProject(
         return { success: false, cancelled: true };
     }
 
+    // Confirmed: signal the webview that teardown is starting so the picker can
+    // disable the row. Deferring this until AFTER the modal keeps the row from
+    // signalling activity while the user is still deciding (the native modal
+    // blocks the window, so no row change is perceivable before this point).
+    await context.sendMessage('project-delete-started', { projectId });
+
     try {
         const deps = createTeardownDeps(context.authManager);
         const result = await runTeardownWithProgress(deps, { orgId, projectId, projectTitle });
