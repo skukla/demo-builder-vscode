@@ -114,19 +114,19 @@
  * it from the search/list below.
  */
 .reset-to-template-top {
-    /* Pin the reset checkbox at the top of the scrolling view (.step-view owns the
-       scroll) so the repo list scrolls UNDER it — you can reach it but not past it.
-       Opaque panel background + border hide the rows passing beneath. */
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    background: var(--spectrum-global-color-gray-50);
     margin-top: 0 !important;
-    /* A touch of top padding keeps the checkbox off the scrollport edge when pinned. */
-    padding-top: var(--spectrum-global-dimension-size-100);
     margin-bottom: var(--spectrum-global-dimension-size-100);
     padding-bottom: var(--spectrum-global-dimension-size-100);
     border-bottom: 1px solid var(--spectrum-global-color-gray-200);
+}
+
+/* Keep the reset checkbox + search bar in view by giving the repo LIST its own
+   bounded scroll: the list scrolls internally instead of the whole storefront
+   area scrolling as one block. The checkbox and search sit ABOVE this container,
+   so they stay put. The cap reserves room for the wizard chrome (header, tabs,
+   checkbox, search, footer) — tune the subtrahend if it feels tall/short. */
+.repo-selection-inline .list-refresh-container {
+    max-height: calc(100vh - 24rem);
 }
 
 /* ========== Reset Warning Animation ========== */

@@ -395,7 +395,7 @@ export function RepoSelectionInline({
     // --- `repository` phase: pick/create the repo (no app-install UI) ---------
     if (phase === 'repository') {
         return (
-            <div className="w-full relative">
+            <div className="w-full relative repo-selection-inline">
                 {repoMode === 'new' && (
                     <NewRepoForm
                         repoName={repoName}
