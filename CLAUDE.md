@@ -107,6 +107,10 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 - `eds-publish-and-config` — Helix/DA.live/Config Service auth+scoping traps · `eds-dropin-vendoring` — dropin delivery / import map / B2B template rules
 - `webview-command-handler` — add an extension↔webview message end-to-end · `wizard-step-authoring` — add/modify wizard steps and Build-Your-Project areas
 - `component-extraction-scan` — find UI markup duplicated across ≥3 sites that should be one component (inverse of the SOP God-file scan)
+- `code-duplication-scan` — find copy-paste LOGIC duplication (jscpd) that should be one shared function (logic counterpart to component-extraction-scan)
+- `dead-code-scan` — find unused exports (ts-prune) + abandonment markers; serves "no soft deprecation"
+- `circular-dependency-scan` — find import cycles (madge) and how to break them
+- `architecture-duplication-scan` — guided review for competing/parallel implementations (same job solved twice); resolve by deleting one
 
 ## Gotchas (verified, load-bearing)
 
