@@ -1,8 +1,5 @@
-import {
-    Text,
-    Form,
-} from '@adobe/react-spectrum';
-import React from 'react';
+import { Text, Form } from '@adobe/react-spectrum';
+import React, { useEffect, useState } from 'react';
 import { ConfigNavigationPanel } from '../components/ConfigNavigationPanel';
 import { ServiceGroupList } from '../components/ServiceGroupList';
 import { StoreConfigFieldRow } from '../components/StoreConfigFieldRow';
@@ -20,6 +17,11 @@ export type { ComponentConfigs } from '@/types/webview';
 export type { ServiceGroup, UniqueField } from '../hooks/useComponentConfig';
 
 export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseStepProps) {
+    // Field validity is tracked locally so the Continue gate can also fold in the
+    // step's loading states (config load + store discovery fetch) below — otherwise
+    // Continue is enabled while a background fetch is still in flight.
+    const [configValid, setConfigValid] = useState(false);
+
     const {
         isLoading,
         loadError,
@@ -34,7 +36,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
         componentConfigs: state.componentConfigs || {},
         packageConfigDefaults: state.packageConfigDefaults,
         onConfigsChange: (configs) => updateState({ componentConfigs: configs }),
-        onValidationChange: setCanProceed,
+        onValidationChange: setConfigValid,
     });
 
     const {
@@ -66,6 +68,13 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
         isFetching,
     });
 
+    // Gate Continue on BOTH field validity and the step's loading states: the config
+    // load and any in-flight store-discovery fetch. Without this a valid-looking form
+    // lets the user click Continue while stores are still loading.
+    useEffect(() => {
+        setCanProceed(configValid && !isLoading && !isFetching);
+    }, [configValid, isLoading, isFetching, setCanProceed]);
+
     /**
      * Render main content based on loading/error/data state
      * Extracts 4-branch nested ternary per SOP §5
@@ -74,9 +83,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
         if (loadError) {
             return (
                 <CenteredFeedbackContainer>
-                    <Text UNSAFE_className="text-red-700">
-                        {loadError}
-                    </Text>
+                    <Text UNSAFE_className="text-red-700">{loadError}</Text>
                 </CenteredFeedbackContainer>
             );
         }
@@ -84,10 +91,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
         if (isLoading) {
             return (
                 <CenteredFeedbackContainer>
-                    <LoadingDisplay
-                        size="L"
-                        message="Loading component configurations..."
-                    />
+                    <LoadingDisplay size="L" message="Loading component configurations..." />
                 </CenteredFeedbackContainer>
             );
         }
