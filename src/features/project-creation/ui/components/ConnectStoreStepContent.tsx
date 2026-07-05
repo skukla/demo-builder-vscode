@@ -9,11 +9,8 @@
  * but without navigation panel or two-column layout.
  */
 
-import {
-    Text,
-    Form,
-} from '@adobe/react-spectrum';
-import React, { useMemo } from 'react';
+import { Text, Form } from '@adobe/react-spectrum';
+import React, { useEffect, useMemo } from 'react';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
@@ -58,7 +55,7 @@ function filterGroupsForSection(
     section: ConnectStoreSection,
 ): ServiceGroup[] {
     if (section === 'catalog') {
-        return groups.filter(group => !CONNECTION_GROUPS.has(group.id));
+        return groups.filter((group) => !CONNECTION_GROUPS.has(group.id));
     }
 
     const keepField =
@@ -67,9 +64,12 @@ function filterGroupsForSection(
             : (key: string) => isStoreCodeField(key);
 
     return groups
-        .filter(group => CONNECTION_GROUPS.has(group.id))
-        .map(group => ({ ...group, fields: group.fields.filter(field => keepField(field.key)) }))
-        .filter(group => group.fields.length > 0);
+        .filter((group) => CONNECTION_GROUPS.has(group.id))
+        .map((group) => ({
+            ...group,
+            fields: group.fields.filter((field) => keepField(field.key)),
+        }))
+        .filter((group) => group.fields.length > 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -87,6 +87,8 @@ export interface ConnectStoreStepContentProps {
     storeDiscoveryData?: CommerceStoreStructure;
     /** Called when store structure changes — persist to wizard state */
     onStoreDiscoveryDataChange?: (data: CommerceStoreStructure | null) => void;
+    /** Called when store discovery starts/stops fetching — gates the Business Structure Continue. */
+    onStoreLoadingChange?: (loading: boolean) => void;
     /**
      * Render only one slice of the commerce config (for the Commerce tabs).
      * Absent = render all sections (legacy single-step callers unchanged).
@@ -107,6 +109,7 @@ export function ConnectStoreStepContent({
     onValidationChange,
     storeDiscoveryData,
     onStoreDiscoveryDataChange,
+    onStoreLoadingChange,
     section,
 }: ConnectStoreStepContentProps) {
     const {
@@ -155,6 +158,12 @@ export function ConnectStoreStepContent({
         isFetching,
     });
 
+    // Surface the store-discovery fetch state so the Business Structure Continue gate
+    // can block while the structure is still loading.
+    useEffect(() => {
+        onStoreLoadingChange?.(isFetching);
+    }, [isFetching, onStoreLoadingChange]);
+
     // Whether store view code is filled (gate for showing dependent groups like AEM Assets)
     const storeSelectionComplete = useMemo(() => {
         const configs = liveConfigs ?? {};
@@ -194,7 +203,7 @@ export function ConnectStoreStepContent({
     // Filter groups: non-connection groups (e.g., AEM Assets, Catalog Service)
     // are hidden until store selection is complete
     const disclosedGroups = serviceGroups.filter(
-        group => CONNECTION_GROUPS.has(group.id) || storeSelectionComplete,
+        (group) => CONNECTION_GROUPS.has(group.id) || storeSelectionComplete,
     );
 
     // When a section is requested (Commerce tabs), render only that slice.
