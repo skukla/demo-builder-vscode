@@ -106,6 +106,7 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 - `adobe-org-context` — canonical IMS org/auth model; use for ANY org guard or org-mismatch work
 - `eds-publish-and-config` — Helix/DA.live/Config Service auth+scoping traps · `eds-dropin-vendoring` — dropin delivery / import map / B2B template rules
 - `webview-command-handler` — add an extension↔webview message end-to-end · `wizard-step-authoring` — add/modify wizard steps and Build-Your-Project areas
+- `component-extraction-scan` — find UI markup duplicated across ≥3 sites that should be one component (inverse of the SOP God-file scan)
 
 ## Gotchas (verified, load-bearing)
 
