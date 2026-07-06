@@ -15,7 +15,12 @@
 import * as vscode from 'vscode';
 import { DaLiveContentOperations } from './daLiveContentOperations';
 import type { GitHubTokenService } from './githubTokenService';
-import { getCacheTTLWithJitter, isExpired, createCacheEntry, type CacheEntry } from '@/core/cache/cacheUtils';
+import {
+    getCacheTTLWithJitter,
+    isExpired,
+    createCacheEntry,
+    type CacheEntry,
+} from '@/core/cache/cacheUtils';
 import { getLogger } from '@/core/logging';
 import { runInBatches } from '@/core/utils/promiseUtils';
 import { CACHE_TTL, TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -120,6 +125,26 @@ export interface DaLiveTokenProvider {
     getAccessToken: () => Promise<string | null>;
 }
 
+/** Job name from a bulk-job response (nested `job.name` preferred, flat `name` fallback). */
+function getJobName(jobInfo?: BulkJobResponse): string | undefined {
+    return jobInfo?.job?.name || jobInfo?.name;
+}
+
+/** Job topic from a bulk-job response, falling back to a caller default. */
+function getJobTopic(jobInfo: BulkJobResponse | undefined, defaultTopic: string): string {
+    return jobInfo?.job?.topic || jobInfo?.topic || defaultTopic;
+}
+
+/** True when the legacy plaintext key store holds at least one key to migrate. */
+function hasLegacyKeys(legacyKeys?: Record<string, PersistedHelixKey>): boolean {
+    return Boolean(legacyKeys && Object.keys(legacyKeys).length > 0);
+}
+
+/** Explicit paths when provided, otherwise the site root (`/`) for a bulk operation. */
+function getPathsOrDefault(paths?: string[]): string[] {
+    return paths && paths.length > 0 ? paths : ['/'];
+}
+
 /**
  * Helix Service for admin operations
  */
@@ -160,8 +185,9 @@ export class HelixService {
 
             // One-time migration: move keys from plaintext globalState to encrypted SecretStorage
             if (legacyState) {
-                const legacyKeys = legacyState.get<Record<string, PersistedHelixKey>>(HELIX_KEYS_STATE_KEY);
-                if (legacyKeys && Object.keys(legacyKeys).length > 0) {
+                const legacyKeys =
+                    legacyState.get<Record<string, PersistedHelixKey>>(HELIX_KEYS_STATE_KEY);
+                if (hasLegacyKeys(legacyKeys)) {
                     await secretStorage.store(HELIX_KEYS_STATE_KEY, JSON.stringify(legacyKeys));
                     await legacyState.update(HELIX_KEYS_STATE_KEY, undefined);
                 }
@@ -196,7 +222,9 @@ export class HelixService {
     }
 
     /** Read a persisted key entry regardless of expiry (for old key deletion). */
-    private static async getPersistedKeyRaw(cacheKey: string): Promise<PersistedHelixKey | undefined> {
+    private static async getPersistedKeyRaw(
+        cacheKey: string,
+    ): Promise<PersistedHelixKey | undefined> {
         const keys = await HelixService.getAllPersistedKeys();
         return keys[cacheKey];
     }
@@ -246,7 +274,7 @@ export class HelixService {
                     getAccessToken: async () => {
                         throw new Error(
                             'DA.live token provider not configured. ' +
-                            'HelixService requires a DA.live token provider for content operations.',
+                                'HelixService requires a DA.live token provider for content operations.',
                         );
                     },
                 },
@@ -279,7 +307,7 @@ export class HelixService {
      * - DELETE /live + DA.live Bearer (Authorization: Bearer) → 204 SUCCESS
      */
     private async getDeleteAuthHeaders(): Promise<Record<string, string>> {
-        return { 'Authorization': `Bearer ${await this.getDaLiveToken()}` };
+        return { Authorization: `Bearer ${await this.getDaLiveToken()}` };
     }
 
     /** Capture error response body for diagnostics (403, 401, 5xx). */
@@ -307,7 +335,10 @@ export class HelixService {
     }
 
     /** Parse 202 bulk job response. */
-    private async parseBulkJobResponse(response: Response, defaultTopic: string): Promise<{ jobName?: string; jobTopic: string }> {
+    private async parseBulkJobResponse(
+        response: Response,
+        defaultTopic: string,
+    ): Promise<{ jobName?: string; jobTopic: string }> {
         let jobInfo: BulkJobResponse | undefined;
         try {
             jobInfo = await response.json();
@@ -315,8 +346,8 @@ export class HelixService {
             this.logger.warn('[Helix] Could not parse job info from 202 response');
         }
         return {
-            jobName: jobInfo?.job?.name || jobInfo?.name,
-            jobTopic: jobInfo?.job?.topic || jobInfo?.topic || defaultTopic,
+            jobName: getJobName(jobInfo),
+            jobTopic: getJobTopic(jobInfo, defaultTopic),
         };
     }
 
@@ -340,7 +371,7 @@ export class HelixService {
         if (!this.daLiveTokenProvider) {
             throw new Error(
                 'DA.live token provider not configured. ' +
-                'HelixService requires a DA.live token provider for content source operations.',
+                    'HelixService requires a DA.live token provider for content source operations.',
             );
         }
 
@@ -358,7 +389,9 @@ export class HelixService {
      */
     private async getGitHubToken(): Promise<string> {
         if (!this.githubTokenService) {
-            throw new Error('GitHub authentication required for Helix Admin API. Please log in to GitHub.');
+            throw new Error(
+                'GitHub authentication required for Helix Admin API. Please log in to GitHub.',
+            );
         }
 
         const tokenData = await this.githubTokenService.getToken();
@@ -408,7 +441,10 @@ export class HelixService {
         const resources = status.data?.resources ?? [];
         const failed = resources.filter((r) => r.status >= 400);
         if (failed.length > 0) {
-            const sample = failed.slice(0, 10).map((r) => `${r.path} → ${r.status}`).join(', ');
+            const sample = failed
+                .slice(0, 10)
+                .map((r) => `${r.path} → ${r.status}`)
+                .join(', ');
             const truncated = failed.length > 10 ? ', ...' : '';
             this.logger.error(
                 `[Helix] Bulk ${topic} job finished but ${failed.length}/${resources.length} paths failed: ${sample}${truncated}`,
@@ -437,7 +473,7 @@ export class HelixService {
     ): Promise<void> {
         // Use API key auth when provided (unpublish jobs), otherwise GitHub token
         const authHeaders: Record<string, string> = apiKey
-            ? { 'Authorization': `token ${apiKey}` }
+            ? { Authorization: `token ${apiKey}` }
             : { 'x-auth-token': await this.getGitHubToken() };
         // Job status URL format: GET /job/{org}/{site}/{ref}/{topic}/{jobId}
         const url = `${HELIX_ADMIN_URL}/job/${org}/${site}/${branch}/${topic}/${jobName}`;
@@ -448,7 +484,9 @@ export class HelixService {
         while (true) {
             // Check timeout
             if (Date.now() - startTime > HelixService.JOB_TIMEOUT_MS) {
-                throw new Error(`Bulk ${topic} job timed out after ${HelixService.JOB_TIMEOUT_MS / 1000} seconds`);
+                throw new Error(
+                    `Bulk ${topic} job timed out after ${HelixService.JOB_TIMEOUT_MS / 1000} seconds`,
+                );
             }
 
             try {
@@ -462,14 +500,17 @@ export class HelixService {
                     // Job endpoint may not exist immediately, retry
                     if (response.status === 404) {
                         this.logger.debug(`[Helix] Job not found yet, retrying...`);
-                        await new Promise(resolve => setTimeout(resolve, HelixService.JOB_POLL_INTERVAL_MS));
+                        await new Promise((resolve) =>
+                            setTimeout(resolve, HelixService.JOB_POLL_INTERVAL_MS),
+                        );
                         continue;
                     }
-                    throw new Error(`Job status check failed: ${response.status} ${response.statusText}`);
+                    throw new Error(
+                        `Job status check failed: ${response.status} ${response.statusText}`,
+                    );
                 }
 
                 const status: JobStatusResponse = await response.json();
-
 
                 // Report progress if available
                 if (status.progress && onProgress) {
@@ -477,7 +518,11 @@ export class HelixService {
                 }
 
                 // Check job state - handle both 'stopped' and 'finished' states
-                if (status.state === 'stopped' || status.state === 'finished' || status.status === 'finished') {
+                if (
+                    status.state === 'stopped' ||
+                    status.state === 'finished' ||
+                    status.status === 'finished'
+                ) {
                     // Job-level failure (e.g. job machinery never dispatched)
                     if (status.error) {
                         throw new Error(`Bulk ${topic} job failed: ${status.error}`);
@@ -487,14 +532,20 @@ export class HelixService {
                 }
 
                 // Job still running, wait and poll again
-                this.logger.debug(`[Helix] Job state: ${status.state || status.status}, progress: ${status.progress?.processed ?? status.processed ?? '?'}/${status.progress?.total ?? status.total ?? '?'}`);
-                await new Promise(resolve => setTimeout(resolve, HelixService.JOB_POLL_INTERVAL_MS));
+                this.logger.debug(
+                    `[Helix] Job state: ${status.state || status.status}, progress: ${status.progress?.processed ?? status.processed ?? '?'}/${status.progress?.total ?? status.total ?? '?'}`,
+                );
+                await new Promise((resolve) =>
+                    setTimeout(resolve, HelixService.JOB_POLL_INTERVAL_MS),
+                );
             } catch (error) {
                 const errorMessage = (error as Error).message;
                 // Timeout errors should be retried
                 if (errorMessage.includes('timed out') || errorMessage.includes('timeout')) {
                     this.logger.debug(`[Helix] Job status request timed out, retrying...`);
-                    await new Promise(resolve => setTimeout(resolve, HelixService.JOB_POLL_INTERVAL_MS));
+                    await new Promise((resolve) =>
+                        setTimeout(resolve, HelixService.JOB_POLL_INTERVAL_MS),
+                    );
                     continue;
                 }
                 throw error;
@@ -541,7 +592,9 @@ export class HelixService {
         });
 
         if (response.status === 401) {
-            throw new Error('GitHub authentication failed. Please ensure you have write access to the repository.');
+            throw new Error(
+                'GitHub authentication failed. Please ensure you have write access to the repository.',
+            );
         }
 
         if (response.status === 403) {
@@ -590,7 +643,9 @@ export class HelixService {
         });
 
         if (response.status === 401) {
-            throw new Error('GitHub authentication failed. Please ensure you have write access to the repository.');
+            throw new Error(
+                'GitHub authentication failed. Please ensure you have write access to the repository.',
+            );
         }
 
         if (response.status === 403) {
@@ -616,10 +671,7 @@ export class HelixService {
      * @param site - Site/repository name
      * @returns The API key value, or null if creation failed
      */
-    async createAdminApiKey(
-        org: string,
-        site: string,
-    ): Promise<string | null> {
+    async createAdminApiKey(org: string, site: string): Promise<string | null> {
         const cacheKey = `${org}/${site}`;
 
         // 1. Check in-memory cache (fast path)
@@ -651,7 +703,7 @@ export class HelixService {
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${imsToken}`,
+                    Authorization: `Bearer ${imsToken}`,
                     'content-type': 'application/json',
                 },
                 body: JSON.stringify({
@@ -671,7 +723,9 @@ export class HelixService {
             const keyId = data.id as string | undefined;
 
             if (keyValue) {
-                this.logger.info(`[Helix] Admin API Key created (id=${keyId}, expires=${data.expiration})`);
+                this.logger.info(
+                    `[Helix] Admin API Key created (id=${keyId}, expires=${data.expiration})`,
+                );
                 const jitteredTtl = getCacheTTLWithJitter(CACHE_TTL.LONG);
                 HelixService.apiKeyCache.set(cacheKey, createCacheEntry(keyValue, jitteredTtl));
 
@@ -731,14 +785,18 @@ export class HelixService {
             const imsToken = await this.getDaLiveToken();
             const response = await fetch(url, {
                 method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${imsToken}` },
+                headers: { Authorization: `Bearer ${imsToken}` },
                 signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
             });
             if (response.ok || response.status === 404) {
-                this.logger.debug(`[Helix] Admin API key deleted for ${cacheKey} (id=${persisted.id}, status=${response.status})`);
+                this.logger.debug(
+                    `[Helix] Admin API key deleted for ${cacheKey} (id=${persisted.id}, status=${response.status})`,
+                );
                 return { success: true };
             }
-            this.logger.debug(`[Helix] Admin API key deletion returned ${response.status} for ${cacheKey}`);
+            this.logger.debug(
+                `[Helix] Admin API key deletion returned ${response.status} for ${cacheKey}`,
+            );
             return { success: false, error: `DELETE returned ${response.status}` };
         } catch (error) {
             const message = (error as Error).message;
@@ -766,16 +824,22 @@ export class HelixService {
             const imsToken = await this.getDaLiveToken();
             const response = await fetch(url, {
                 method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${imsToken}` },
+                headers: { Authorization: `Bearer ${imsToken}` },
                 signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
             });
             if (response.ok || response.status === 404) {
-                this.logger.debug(`[Helix] Old API key deleted (id=${persisted.id}, status=${response.status})`);
+                this.logger.debug(
+                    `[Helix] Old API key deleted (id=${persisted.id}, status=${response.status})`,
+                );
             } else {
-                this.logger.debug(`[Helix] Old API key deletion returned ${response.status}, continuing`);
+                this.logger.debug(
+                    `[Helix] Old API key deletion returned ${response.status}, continuing`,
+                );
             }
         } catch (error) {
-            this.logger.debug(`[Helix] Old API key deletion failed: ${(error as Error).message}, continuing`);
+            this.logger.debug(
+                `[Helix] Old API key deletion failed: ${(error as Error).message}, continuing`,
+            );
         }
     }
 
@@ -818,15 +882,17 @@ export class HelixService {
         }
         if (response.status === 429) {
             if (retryCount >= HELIX_RATE_LIMIT_MAX_RETRIES) {
-                throw new Error(`Rate limited after ${retryCount} retries: ${partition} ${cleanPath}`);
+                throw new Error(
+                    `Rate limited after ${retryCount} retries: ${partition} ${cleanPath}`,
+                );
             }
             const retryAfter = parseInt(response.headers.get('retry-after') || '1', 10);
             const waitMs = Math.min(retryAfter * 1000, 30000);
             this.logger.warn(
                 `[Helix] Rate limited on ${partition} ${cleanPath}, ` +
-                `retrying after ${retryAfter}s (attempt ${retryCount + 1}/${HELIX_RATE_LIMIT_MAX_RETRIES})`,
+                    `retrying after ${retryAfter}s (attempt ${retryCount + 1}/${HELIX_RATE_LIMIT_MAX_RETRIES})`,
             );
-            await new Promise(resolve => setTimeout(resolve, waitMs));
+            await new Promise((resolve) => setTimeout(resolve, waitMs));
             return this.deleteResource(partition, org, site, path, branch, retryCount + 1);
         }
         if (response.status === 204 || response.status === 404) {
@@ -915,19 +981,24 @@ export class HelixService {
 
         // Delete live and preview CDN entries in batches to respect rate limits
         const liveResults = await runInBatches(
-            webPaths, HELIX_DELETE_BATCH_SIZE,
-            async path => (await this.deleteResource('live', org, site, path, branch)).success,
+            webPaths,
+            HELIX_DELETE_BATCH_SIZE,
+            async (path) => (await this.deleteResource('live', org, site, path, branch)).success,
         );
         const liveCount = liveResults.filter(Boolean).length;
 
-        const previewResults = await runInBatches(
-            webPaths, HELIX_DELETE_BATCH_SIZE,
-            path => this.deletePreview(org, site, path, branch),
+        const previewResults = await runInBatches(webPaths, HELIX_DELETE_BATCH_SIZE, (path) =>
+            this.deletePreview(org, site, path, branch),
         );
         const previewCount = previewResults.filter(Boolean).length;
 
-        this.logger.info(`[Helix] Unpublish complete: ${liveCount}/${webPaths.length} live, ${previewCount}/${webPaths.length} preview`);
-        return { success: liveCount > 0 || previewCount > 0, count: Math.max(liveCount, previewCount) };
+        this.logger.info(
+            `[Helix] Unpublish complete: ${liveCount}/${webPaths.length} live, ${previewCount}/${webPaths.length} preview`,
+        );
+        return {
+            success: liveCount > 0 || previewCount > 0,
+            count: Math.max(liveCount, previewCount),
+        };
     }
 
     /**
@@ -981,9 +1052,11 @@ export class HelixService {
         const url = `${HELIX_ADMIN_URL}/preview/${org}/${site}/${branch}/*`;
 
         // Use explicit paths if provided, otherwise default to root
-        const pathsToProcess = paths && paths.length > 0 ? paths : ['/'];
+        const pathsToProcess = getPathsOrDefault(paths);
 
-        this.logger.debug(`[Helix] Previewing all content (bulk): ${url} - ${pathsToProcess.length} paths`);
+        this.logger.debug(
+            `[Helix] Previewing all content (bulk): ${url} - ${pathsToProcess.length} paths`,
+        );
 
         // Bulk API requires JSON body with paths array
         const response = await fetch(url, {
@@ -1001,7 +1074,9 @@ export class HelixService {
         });
 
         if (response.status === 401) {
-            throw new Error('GitHub authentication failed. Please ensure you have write access to the repository.');
+            throw new Error(
+                'GitHub authentication failed. Please ensure you have write access to the repository.',
+            );
         }
 
         if (response.status === 403) {
@@ -1016,8 +1091,12 @@ export class HelixService {
             } catch {
                 // Ignore parse errors
             }
-            this.logger.error(`[Helix] Bulk preview returned 400 Bad Request. Response: ${errorBody || 'empty'}`);
-            throw new Error(`Failed to preview all content: 400 Bad Request - ${errorBody || 'Invalid request'}`);
+            this.logger.error(
+                `[Helix] Bulk preview returned 400 Bad Request. Response: ${errorBody || 'empty'}`,
+            );
+            throw new Error(
+                `Failed to preview all content: 400 Bad Request - ${errorBody || 'Invalid request'}`,
+            );
         }
 
         // 202 = Bulk preview scheduled (async job created)
@@ -1027,14 +1106,7 @@ export class HelixService {
             const { jobName, jobTopic } = await this.parseBulkJobResponse(response, 'preview');
 
             if (jobName) {
-                await this.pollJobCompletion(
-                    org,
-                    site,
-                    branch,
-                    jobName,
-                    jobTopic,
-                    onProgress,
-                );
+                await this.pollJobCompletion(org, site, branch, jobName, jobTopic, onProgress);
             } else {
                 // No job info, wait a reasonable time for the operation
                 this.logger.warn('[Helix] No job info in response, assuming operation completed');
@@ -1084,9 +1156,11 @@ export class HelixService {
         const url = `${HELIX_ADMIN_URL}/live/${org}/${site}/${branch}/*`;
 
         // Use explicit paths if provided, otherwise default to root
-        const pathsToProcess = paths && paths.length > 0 ? paths : ['/'];
+        const pathsToProcess = getPathsOrDefault(paths);
 
-        this.logger.debug(`[Helix] Publishing all content (bulk): ${url} - ${pathsToProcess.length} paths`);
+        this.logger.debug(
+            `[Helix] Publishing all content (bulk): ${url} - ${pathsToProcess.length} paths`,
+        );
 
         // Bulk API requires JSON body with paths array
         const response = await fetch(url, {
@@ -1104,7 +1178,9 @@ export class HelixService {
         });
 
         if (response.status === 401) {
-            throw new Error('GitHub authentication failed. Please ensure you have write access to the repository.');
+            throw new Error(
+                'GitHub authentication failed. Please ensure you have write access to the repository.',
+            );
         }
 
         if (response.status === 403) {
@@ -1119,8 +1195,12 @@ export class HelixService {
             } catch {
                 // Ignore parse errors
             }
-            this.logger.error(`[Helix] Bulk publish returned 400 Bad Request. Response: ${errorBody || 'empty'}`);
-            throw new Error(`Failed to publish all content: 400 Bad Request - ${errorBody || 'Invalid request'}`);
+            this.logger.error(
+                `[Helix] Bulk publish returned 400 Bad Request. Response: ${errorBody || 'empty'}`,
+            );
+            throw new Error(
+                `Failed to publish all content: 400 Bad Request - ${errorBody || 'Invalid request'}`,
+            );
         }
 
         // 202 = Bulk publish scheduled (async job created)
@@ -1130,14 +1210,7 @@ export class HelixService {
             const { jobName, jobTopic } = await this.parseBulkJobResponse(response, 'live');
 
             if (jobName) {
-                await this.pollJobCompletion(
-                    org,
-                    site,
-                    branch,
-                    jobName,
-                    jobTopic,
-                    onProgress,
-                );
+                await this.pollJobCompletion(org, site, branch, jobName, jobTopic, onProgress);
             } else {
                 // No job info, assume operation completed
                 this.logger.warn('[Helix] No job info in response, assuming operation completed');
@@ -1282,7 +1355,7 @@ export class HelixService {
         daLiveOrg?: string,
         daLiveSite?: string,
         onProgress?: (info: {
-            phase: typeof HelixService.PublishPhases[keyof typeof HelixService.PublishPhases];
+            phase: (typeof HelixService.PublishPhases)[keyof typeof HelixService.PublishPhases];
             message: string;
             current?: number;
             total?: number;
@@ -1295,7 +1368,9 @@ export class HelixService {
         const contentOrg = daLiveOrg || githubOrg;
         const contentSite = daLiveSite || githubSite;
 
-        this.logger.info(`[Helix] Publishing all content from DA.live: ${contentOrg}/${contentSite}`);
+        this.logger.info(
+            `[Helix] Publishing all content from DA.live: ${contentOrg}/${contentSite}`,
+        );
         this.logger.info(`[Helix] Target GitHub repo: ${repoFullName}`);
 
         // Report: Discovering content (still needed to get page count for progress)
@@ -1320,8 +1395,16 @@ export class HelixService {
             await this.publishAllSiteContentBulk(githubOrg, githubSite, branch, pages, onProgress);
         } catch (error) {
             // Bulk API is a fast path — any failure falls back to reliable page-by-page
-            this.logger.warn(`[Helix] Bulk publish failed: ${(error as Error).message}, falling back to page-by-page`);
-            await this.publishAllSiteContentPageByPage(githubOrg, githubSite, branch, pages, onProgress);
+            this.logger.warn(
+                `[Helix] Bulk publish failed: ${(error as Error).message}, falling back to page-by-page`,
+            );
+            await this.publishAllSiteContentPageByPage(
+                githubOrg,
+                githubSite,
+                branch,
+                pages,
+                onProgress,
+            );
         }
     }
 
@@ -1334,7 +1417,7 @@ export class HelixService {
         branch: string,
         pages: string[],
         onProgress?: (info: {
-            phase: typeof HelixService.PublishPhases[keyof typeof HelixService.PublishPhases];
+            phase: (typeof HelixService.PublishPhases)[keyof typeof HelixService.PublishPhases];
             message: string;
             current?: number;
             total?: number;
@@ -1409,7 +1492,7 @@ export class HelixService {
         branch: string,
         pages: string[],
         onProgress?: (info: {
-            phase: typeof HelixService.PublishPhases[keyof typeof HelixService.PublishPhases];
+            phase: (typeof HelixService.PublishPhases)[keyof typeof HelixService.PublishPhases];
             message: string;
             current?: number;
             total?: number;
@@ -1449,7 +1532,9 @@ export class HelixService {
             }
         }
 
-        this.logger.info(`[Helix] Successfully published ${publishedCount}/${pages.length} pages (${skippedCount} skipped)`);
+        this.logger.info(
+            `[Helix] Successfully published ${publishedCount}/${pages.length} pages (${skippedCount} skipped)`,
+        );
 
         // Report completion
         onProgress?.({
@@ -1508,7 +1593,9 @@ export class HelixService {
 
         // 401 is authentication failure
         if (response.status === 401) {
-            throw new Error('GitHub authentication failed. Please ensure you have write access to the repository.');
+            throw new Error(
+                'GitHub authentication failed. Please ensure you have write access to the repository.',
+            );
         }
 
         // 403 is access denied
@@ -1564,7 +1651,9 @@ export class HelixService {
         });
 
         if (response.status === 401) {
-            throw new Error('GitHub authentication failed. Please ensure you have write access to the repository.');
+            throw new Error(
+                'GitHub authentication failed. Please ensure you have write access to the repository.',
+            );
         }
 
         if (response.status === 403) {
