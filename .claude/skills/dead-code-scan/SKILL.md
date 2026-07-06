@@ -1,0 +1,72 @@
+---
+name: dead-code-scan
+description: Find dead code — unused exports, unimported files, and self-declared abandonment markers (deprecated/legacy/superseded stubs). Use when reviewing for cruft, right after superseding an implementation, or when asked "is this still used?" / "can I delete this?". Serves the "no soft deprecation" rule — obsolete code gets deleted, not stubbed.
+---
+
+# Dead-Code Scan
+
+Detect code that nothing reaches: exports no one imports, symbols left over after a
+supersession, and comments that admit the code is obsolete. This repo's rule is **no soft
+deprecation** — when something is obsolete you DELETE it, you never leave a `(Deprecated)`
+stub or accepted-but-ignored path. This scan finds those stubs so they can go. It does NOT
+overlap `/sop-scan` (God files, oversized components, complexity) — cross-reference that.
+
+## When to use
+- Reviewing the codebase for cruft, or before a cleanup pass.
+- Right after superseding an implementation — hunt the leftovers of the old one.
+- Answering "is this export still used?" / "can I delete this file safely?".
+
+## When NOT to use
+- File-size / complexity / mixed-pattern smells — that is `/sop-scan`.
+- A symbol you already know is a live entry point or DI/config registration.
+
+## Procedure
+
+1. **Shortlist** the two mechanical signals:
+   ```bash
+   bash .claude/skills/dead-code-scan/scan.sh src
+   ```
+   Section 1 = ts-prune unused exports (filtered to `src/`). Section 2 = abandonment
+   markers. Treat both as candidates, not verdicts.
+
+2. **Triage ts-prune FALSE POSITIVES** — these are live despite showing "unused":
+   - **Entry points** — `extension.ts`, `mcp-server.ts` (VS Code / MCP call them).
+   - **Dynamic-import / DI-registered / config-driven-registered** symbols — referenced
+     by string id or wired through a registry, so no static import exists.
+   - **`(used in module)`** — referenced internally, never imported elsewhere. The fix is
+     to DROP the `export` keyword (make it local), not delete the symbol.
+
+3. **Confirm before deleting** a genuine candidate:
+   - `grep -rn '<SymbolName>' src` — verify zero real references (mind re-exports).
+   - `git log -p -S '<SymbolName>' -- <file>` — see why it landed; a recent supersession
+     confirms it is a leftover.
+   - The repo is PUBLIC — never paste secrets/tokens into notes or commits.
+
+4. **Delete outright** — remove the symbol/file and its dead imports, and any test that
+   only covered it. No `(Deprecated)` stub, no commented-out block.
+
+## Heuristics
+- An abandonment marker (`// deprecated`, `legacyFoo`) is itself the bug: delete the code
+  it labels, don't keep the label.
+- Un-export before delete: an internal-only export narrows to local scope cleanly.
+- One real reference (even a test-only one that tests nothing else) means NOT dead — decide
+  whether the reference itself should go.
+
+## Output format
+```
+## Dead-code candidates
+### Unused exports (confirmed)
+- src/features/x/foo.ts:12 — bar  (delete: 0 refs, superseded by baz in <commit>)
+- src/core/util/qux.ts:3 — helper  (used in module → un-export, keep)
+### Abandonment markers
+- src/features/y/old.ts:40 — "// legacy path, no longer used" → delete block
+### False positives (live — do not touch)
+- src/extension.ts:8 — activate  (entry point)
+```
+
+## Worked example (this repo)
+After the keyed App Builder model superseded the slice-1 singular one, ts-prune surfaced the
+old singular exports (`addAppComponent`, `DeployAppCommand`) as unused while the marker grep
+caught the "superseded" comments left beside them. Triage confirmed no live callers; the
+resolution under "no soft deprecation" is to delete the singular symbols and their tests, not
+leave them as ignored stubs — the scan re-run then shows them gone.
