@@ -1,5 +1,17 @@
 # Project-Specific Skills: Candidates + Design Learnings
 
+> **Status: COMPLETE (2026-07-06).** The §6 build order is fully executed.
+> Built (each one commit): ranks 1–4 `adobe-org-context` / `eds-publish-and-config` /
+> `eds-dropin-vendoring` / `webview-command-handler` / `wizard-step-authoring`; the 5-skill
+> code-health scan family (`component-extraction-scan`, `code-duplication-scan`, `dead-code-scan`,
+> `circular-dependency-scan`, `architecture-duplication-scan`); rank 5 `spectrum-webview-ui`
+> (`9c4925d9`); rank 7 `worktree-setup` (`2c623187`); rank 6 `decompose-god-file` (`4e9a8ce2`).
+> Merge-items folded: whole-repo/match-CI lint → `gate` (`f6d847ff`); release cut verified covered
+> by `cut-release`. Router entries added to root `CLAUDE.md`; `.claude/skills/` un-gitignored (now
+> shared via git). 8 migrated memories pruned. Ranks 8–10 (`add-mcp-tool`, `add-prerequisite`,
+> `jest-debugging`) stay deferred/don't-build per the §2 table. Loop candidates (§5) remain future
+> work. Moved to `.rptc/complete/` on retirement.
+
 **Date**: 2026-07-03
 **Inputs**: (a) codebase/documentation scan for skill candidates (sources: `.rptc/sop/`,
 `docs/patterns|systems|development/`, all CLAUDE.md files, project memory, last 60 commits,
