@@ -67,6 +67,21 @@ gate: jest <suites>/<tests> ✓ · tsc ✓ · eslint ✓ (N files)
 If anything fails, show the specific failure (failing test name + assertion, tsc error
 line, or eslint rule + location) and stop for a fix — do not claim green.
 
+## 6. Before pushing a PR — widen to match CI (the scoped gate is NOT enough)
+
+The steps above lint **changed files only**. CI (the "Typecheck · Lint · Test" job) runs
+`npm run lint` = `eslint "src/**/*.{ts,tsx}" "tests/**/*.{ts,tsx}"` over the **whole repo** and
+fails on ANY error (warnings allowed; one `error` exits 1). A PR can pass the scoped gate yet
+fail CI on a pre-existing error in a file you never touched — and CI tests the **merge against
+base**, so errors inherited from the base branch or sibling worktree work surface too. Before
+pushing, match CI exactly:
+
+```bash
+npm run lint                                  # whole repo — the one that's easy to miss
+npx tsc --noEmit
+npx jest --no-coverage 2>&1 > /tmp/gate-jest.txt   # full suite; never pipe through tail
+```
+
 ## Notes
 - This is the inner loop. For agent-driven review use `/rptc:verify`; to ship use `/rptc:commit`.
 - Never commit without explicit user approval; no Co-Authored-By footer (project convention).
