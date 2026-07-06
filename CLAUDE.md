@@ -113,6 +113,7 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 - `dead-code-scan` — find unused exports (ts-prune) + abandonment markers; serves "no soft deprecation"
 - `circular-dependency-scan` — find import cycles (madge) and how to break them
 - `architecture-duplication-scan` — guided review for competing/parallel implementations (same job solved twice); resolve by deleting one
+- `decompose-god-file` — split an oversized multi-responsibility file into single-responsibility units without breaking its public API (the fix to the scan skills' find)
 
 ## Gotchas (verified, load-bearing)
 
