@@ -103,6 +103,7 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 ## Project Skills (`.claude/skills/` — tracked; bodies load on invocation)
 
 - `gate` — inner-loop quality gate (scoped jest + tsc + eslint) · `cut-release` — VSIX beta release
+- `worktree-setup` — create/relocate a worktree correctly + copy the gitignored .claude config (hooks, settings.local.json) that doesn't travel via git + start the preview loop
 - `adobe-org-context` — canonical IMS org/auth model; use for ANY org guard or org-mismatch work
 - `eds-publish-and-config` — Helix/DA.live/Config Service auth+scoping traps · `eds-dropin-vendoring` — dropin delivery / import map / B2B template rules
 - `webview-command-handler` — add an extension↔webview message end-to-end · `wizard-step-authoring` — add/modify wizard steps and Build-Your-Project areas
