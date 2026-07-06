@@ -63,6 +63,33 @@ export interface DaLiveServiceCardProps {
     availableOrgs?: readonly string[];
 }
 
+/** Authenticated view: a compact "Connected" pill, or the verified org with a Change action. */
+function renderAuthenticatedView(
+    compact: boolean,
+    verifiedOrg: string | undefined,
+    onReset: () => void,
+): React.ReactElement {
+    if (compact) {
+        return (
+            <Flex alignItems="center" gap="size-100">
+                <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
+                <Text UNSAFE_className="status-text">Connected</Text>
+            </Flex>
+        );
+    }
+    return (
+        <Flex alignItems="center" justifyContent="space-between">
+            <Flex alignItems="center" gap="size-100">
+                <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
+                <Text UNSAFE_className="status-text">{verifiedOrg || 'Connected'}</Text>
+            </Flex>
+            <button className="service-action-link" onClick={onReset}>
+                Change
+            </button>
+        </Flex>
+    );
+}
+
 /**
  * DaLiveServiceCard Component
  *
@@ -115,7 +142,7 @@ export function DaLiveServiceCard({
     // at mount), default to the personal account. An explicit user pick is
     // always a valid option, so this never clobbers it.
     useEffect(() => {
-        if (githubUser && !namespaceOptions.some(o => o.key === selectedNamespace)) {
+        if (githubUser && !namespaceOptions.some((o) => o.key === selectedNamespace)) {
             setSelectedNamespace(githubUser);
         }
     }, [githubUser, namespaceOptions, selectedNamespace]);
@@ -137,17 +164,12 @@ export function DaLiveServiceCard({
     };
 
     return (
-        <div
-            className="service-card"
-            data-connected={isAuthenticated ? 'true' : 'false'}
-        >
+        <div className="service-card" data-connected={isAuthenticated ? 'true' : 'false'}>
             <div className="service-card-header">
                 <div className="service-icon dalive-icon">DA</div>
                 <div className="service-card-title">DA.live</div>
             </div>
-            <div className="service-card-description">
-                Content authoring and management
-            </div>
+            <div className="service-card-description">Content authoring and management</div>
             <div className="service-card-status">
                 {isLoading ? (
                     <Flex alignItems="center" gap="size-100">
@@ -176,9 +198,7 @@ export function DaLiveServiceCard({
                             onChange={(e) => setTokenValue(e.target.value)}
                             className="service-input"
                         />
-                        {error && (
-                            <Text UNSAFE_className="status-text-error">{error}</Text>
-                        )}
+                        {error && <Text UNSAFE_className="status-text-error">{error}</Text>}
                         <Flex justifyContent="space-between" alignItems="center">
                             <Flex gap="size-100">
                                 <button
@@ -188,10 +208,7 @@ export function DaLiveServiceCard({
                                 >
                                     Verify
                                 </button>
-                                <button
-                                    className="service-action-link"
-                                    onClick={handleCancel}
-                                >
+                                <button className="service-action-link" onClick={handleCancel}>
                                     Cancel
                                 </button>
                             </Flex>
@@ -218,24 +235,7 @@ export function DaLiveServiceCard({
                         </Flex>
                     </div>
                 ) : isAuthenticated ? (
-                    compact ? (
-                        <Flex alignItems="center" gap="size-100">
-                            <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
-                            <Text UNSAFE_className="status-text">Connected</Text>
-                        </Flex>
-                    ) : (
-                        <Flex alignItems="center" justifyContent="space-between">
-                            <Flex alignItems="center" gap="size-100">
-                                <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
-                                <Text UNSAFE_className="status-text">
-                                    {verifiedOrg || 'Connected'}
-                                </Text>
-                            </Flex>
-                            <button className="service-action-link" onClick={onReset}>
-                                Change
-                            </button>
-                        </Flex>
-                    )
+                    renderAuthenticatedView(compact, verifiedOrg, onReset)
                 ) : error ? (
                     <Flex direction="column" gap="size-100">
                         <Flex alignItems="center" gap="size-100">
