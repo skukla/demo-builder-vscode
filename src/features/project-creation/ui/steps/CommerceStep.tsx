@@ -115,7 +115,7 @@ export function CommerceStep({
     });
 
     const pkg = useMemo(
-        () => packages.find(p => p.id === state.selectedPackage),
+        () => packages.find((p) => p.id === state.selectedPackage),
         [packages, state.selectedPackage],
     );
 
@@ -204,6 +204,13 @@ export function CommerceStep({
         [updateState],
     );
 
+    // Persist the store-discovery fetch state so the Business Structure Continue gate
+    // stays blocked while the structure loads.
+    const handleStoreLoadingChange = useCallback(
+        (loading: boolean) => updateState({ commerceStoreLoading: loading }),
+        [updateState],
+    );
+
     // Continue gate derives from persisted state (primitive boolean only). The
     // step's BuildYourProjectStep parent owns the REAL per-sub-step gate via the
     // footer; this NO-OP-backed call is harmless (parent passes a no-op setter).
@@ -225,21 +232,29 @@ export function CommerceStep({
                 packageConfigDefaults={state.packageConfigDefaults}
                 adobeOrg={state.adobeOrg}
                 onComponentConfigsChange={handleComponentConfigsChange}
-                onValidationChange={valid => updateState({ commerceConnectValid: valid })}
+                onValidationChange={(valid) => updateState({ commerceConnectValid: valid })}
                 storeDiscoveryData={state.storeDiscoveryData}
-                onStoreDiscoveryDataChange={data =>
+                onStoreDiscoveryDataChange={(data) =>
                     updateState({ storeDiscoveryData: data ?? undefined })
                 }
+                onStoreLoadingChange={handleStoreLoadingChange}
             />
         ),
-        [activeStep, configStackId, state, handleComponentConfigsChange, updateState],
+        [
+            activeStep,
+            configStackId,
+            state,
+            handleComponentConfigsChange,
+            handleStoreLoadingChange,
+            updateState,
+        ],
     );
 
     // Step models drive the VerticalStepList (status/lock only — the active highlight is
     // the local activeStep, passed separately).
     const tabModels = useMemo<StepTab[]>(
         () =>
-            sectionStates.map(sec => ({
+            sectionStates.map((sec) => ({
                 id: sec.id,
                 title: SECTION_TITLES[sec.id],
                 status: sec.status,
@@ -286,7 +301,7 @@ export function CommerceStep({
                 <VerticalStepList
                     steps={tabModels}
                     activeId={activeStep}
-                    onSelect={id => setActiveStep(id as CommerceSectionId)}
+                    onSelect={(id) => setActiveStep(id as CommerceSectionId)}
                 />
             </div>
             <div className="step-view">

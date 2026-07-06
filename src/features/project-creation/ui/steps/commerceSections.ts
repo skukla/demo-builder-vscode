@@ -107,12 +107,12 @@ export function resolveStackForBackend(
     const allowed = new Set(allowedStackIds(pkg));
     const candidates = stacks
         .filter(
-            s =>
+            (s) =>
                 allowed.has(s.id) &&
                 s.backend === backend &&
                 (frontend === undefined || s.frontend === frontend),
         )
-        .map(s => s.id);
+        .map((s) => s.id);
 
     if (candidates.length === 1) {
         return { stackId: candidates[0], candidates, ambiguous: false };
@@ -137,7 +137,7 @@ export function provisionalStackForBackend(
     const { candidates } = resolveStackForBackend(stacks, pkg, backend);
     if (candidates.length === 0) return null;
     const preferred = stacks.find(
-        s => candidates.includes(s.id) && s.frontend === PREFERRED_FRONTEND,
+        (s) => candidates.includes(s.id) && s.frontend === PREFERRED_FRONTEND,
     );
     return preferred?.id ?? candidates[0];
 }
@@ -235,9 +235,9 @@ export function commerceSectionStates(
  * @returns the id of the section to open
  */
 export function firstOpenSection(sectionStates: CommerceSectionState[]): CommerceSectionId {
-    const current = sectionStates.find(s => s.status === 'current');
+    const current = sectionStates.find((s) => s.status === 'current');
     if (current) return current.id;
-    const openable = sectionStates.find(s => s.status !== 'done' && s.status !== 'locked');
+    const openable = sectionStates.find((s) => s.status !== 'done' && s.status !== 'locked');
     if (openable) return openable.id;
     return sectionStates[sectionStates.length - 1].id;
 }
@@ -254,7 +254,7 @@ export function nextSubStep(
     sectionStates: CommerceSectionState[],
     current: CommerceSectionId,
 ): CommerceSectionId | null {
-    const idx = sectionStates.findIndex(s => s.id === current);
+    const idx = sectionStates.findIndex((s) => s.id === current);
     if (idx < 0 || idx >= sectionStates.length - 1) return null;
     return sectionStates[idx + 1].id;
 }
@@ -271,7 +271,7 @@ export function prevSubStep(
     sectionStates: CommerceSectionState[],
     current: CommerceSectionId,
 ): CommerceSectionId | null {
-    const idx = sectionStates.findIndex(s => s.id === current);
+    const idx = sectionStates.findIndex((s) => s.id === current);
     if (idx <= 0) return null;
     return sectionStates[idx - 1].id;
 }
@@ -300,7 +300,10 @@ export function isCommerceStepComplete(
         case 'connection':
             return state.commerceConnectValid === true;
         case 'business-structure':
-            return state.commerceStoreViewChosen === true;
+            // Not done while store discovery is still fetching the structure — a
+            // persisted/auto-detected store-view choice must not unblock Continue
+            // before the structure the user is confirming has loaded.
+            return state.commerceStoreViewChosen === true && state.commerceStoreLoading !== true;
         case 'catalog':
             return true;
     }
