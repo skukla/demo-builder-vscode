@@ -24,6 +24,7 @@ import {
     getRetryDelay,
     normalizePath,
 } from './daLiveConstants';
+import { transformHtmlForDaLive, buildSourceUrl, resolveDaPath } from './daLiveContentHelpers';
 import { hasWriteAccess } from './daLiveOrgOperations';
 import { convertSpreadsheetJsonToHtml } from './daLiveSpreadsheetUtils';
 import { addContentResult, addReferenceResult, type PatchReport } from './patchReportHelper';
@@ -358,94 +359,6 @@ export class DaLiveContentOperations {
     }
 
     /**
-     * Transform plain HTML content for DA.live source upload
-     *
-     * Converts relative media URLs to absolute URLs pointing to the source CDN.
-     * This follows BYOM (Bring Your Own Markup) best practices:
-     * - Image URLs must be accessible by Edge Delivery Services
-     * - During preview, Admin API downloads images from these URLs
-     * - Images are then stored in Media Bus with hash-based URLs
-     *
-     * Also preserves empty structural divs that are important for EDS blocks:
-     * - Header block expects 3 sections (brand, sections, tools)
-     * - Empty divs are placeholders for dynamic content (search, cart, wishlist)
-     * - DA.live/Helix may strip empty elements, so we add placeholders
-     *
-     * @param html - Plain HTML content from aem.live .plain.html endpoint
-     * @param sourceBaseUrl - Base URL for the source CDN (e.g., "https://main--site--org.aem.live")
-     * @returns Document HTML formatted for DA.live with absolute image URLs
-     */
-    private transformHtmlForDaLive(html: string, sourceBaseUrl: string): string {
-        let transformed = html;
-
-        // Convert relative media URLs to absolute URLs pointing to source CDN
-        // Pattern: ./media_<hash>.<ext> or /media_<hash>.<ext>
-        // The Admin API will download these during preview and store in Media Bus
-
-        // Handle ./media_xxx URLs (most common in .plain.html)
-        transformed = transformed.replace(
-            /(['"])\.\/media_([a-f0-9]+\.[a-z0-9]+)(\?[^'"]*)?(['"])/gi,
-            (_match, openQuote, mediaPath, queryParams, closeQuote) => {
-                // Preserve query params as they may contain optimization hints
-                const fullPath = queryParams
-                    ? `media_${mediaPath}${queryParams}`
-                    : `media_${mediaPath}`;
-                return `${openQuote}${sourceBaseUrl}/${fullPath}${closeQuote}`;
-            },
-        );
-
-        // Handle /media_xxx URLs (absolute paths without domain)
-        transformed = transformed.replace(
-            /(['"])\/media_([a-f0-9]+\.[a-z0-9]+)(\?[^'"]*)?(['"])/gi,
-            (_match, openQuote, mediaPath, queryParams, closeQuote) => {
-                const fullPath = queryParams
-                    ? `media_${mediaPath}${queryParams}`
-                    : `media_${mediaPath}`;
-                return `${openQuote}${sourceBaseUrl}/${fullPath}${closeQuote}`;
-            },
-        );
-
-        // Preserve empty structural divs by adding a paragraph with non-breaking space
-        // DA.live/Helix strips completely empty elements during processing
-        // These empty divs are important for EDS blocks (e.g., header expects 3 sections)
-        // Pattern: <div></div> or <div> </div> (with only whitespace)
-        // Using <p>&nbsp;</p> which DA.live preserves during round-trip conversion
-        transformed = transformed.replace(/<div>(\s*)<\/div>/gi, '<div><p>&nbsp;</p></div>');
-
-        // Wrap in expected document structure
-        // DA.live expects: <body><header></header><main>{content}</main><footer></footer></body>
-        return `<body><header></header><main>${transformed}</main><footer></footer></body>`;
-    }
-
-    /**
-     * Build the source URL for fetching content
-     */
-    private buildSourceUrl(sourceBaseUrl: string, sourcePath: string, isHtmlPath: boolean): string {
-        if (!isHtmlPath) {
-            return `${sourceBaseUrl}${sourcePath}`;
-        }
-        if (sourcePath === '/' || sourcePath.endsWith('/')) {
-            return `${sourceBaseUrl}${sourcePath}index.plain.html`;
-        }
-        return `${sourceBaseUrl}${sourcePath}.plain.html`;
-    }
-
-    /**
-     * Resolve the DA.live destination path with proper file extension
-     */
-    private resolveDaPath(destPath: string, isHtml: boolean): string {
-        let daPath = normalizePath(destPath);
-        if (isHtml && !daPath.endsWith('.html')) {
-            if (daPath === '' || daPath.endsWith('/')) {
-                daPath = `${daPath}index.html`;
-            } else {
-                daPath = `${daPath}.html`;
-            }
-        }
-        return daPath;
-    }
-
-    /**
      * Process HTML content: apply patches and transform for DA.live.
      *
      * When `patchReport` is supplied, each content-patch result (applied or
@@ -497,7 +410,7 @@ export class DaLiveContentOperations {
             }
         }
 
-        const transformedHtml = this.transformHtmlForDaLive(htmlText, sourceBaseUrl);
+        const transformedHtml = transformHtmlForDaLive(htmlText, sourceBaseUrl);
         return new Blob([transformedHtml], { type: 'text/html' });
     }
 
@@ -531,7 +444,7 @@ export class DaLiveContentOperations {
         }
 
         const isHtmlPath = !sourcePath.match(/\.[a-z0-9]+$/i) || sourcePath.endsWith('.html');
-        const sourceUrl = this.buildSourceUrl(sourceBaseUrl, sourcePath, isHtmlPath);
+        const sourceUrl = buildSourceUrl(sourceBaseUrl, sourcePath, isHtmlPath);
 
         for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
             try {
@@ -550,7 +463,7 @@ export class DaLiveContentOperations {
 
                 const contentType = sourceResponse.headers.get('content-type') || '';
                 const isHtml = contentType.includes('text/html') || isHtmlPath;
-                const daPath = this.resolveDaPath(destPath, isHtml);
+                const daPath = resolveDaPath(destPath, isHtml);
 
                 const contentBlob = isHtml
                     ? await this.processHtmlContent(
@@ -2414,7 +2327,7 @@ export class DaLiveContentOperations {
             const token = await this.getImsToken();
             for (const { path: authPath, blockClass } of missingAuthPages) {
                 try {
-                    const daPath = this.resolveDaPath(authPath, true);
+                    const daPath = resolveDaPath(authPath, true);
                     const stubHtml = [
                         '<body><header></header><main><div>',
                         `<div class="${blockClass}"><div><div></div></div></div>`,
