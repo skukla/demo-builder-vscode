@@ -17,8 +17,6 @@
  * `storefrontSyncService.ts` and `helixApiClient.ts`.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
 import {
     DA_LIVE_BASE_URL,
     MAX_RETRY_ATTEMPTS,
@@ -26,7 +24,6 @@ import {
     getRetryDelay,
     normalizePath,
 } from './daLiveConstants';
-import { getMimeType } from './daLiveMimeTypes';
 import { hasWriteAccess } from './daLiveOrgOperations';
 import { convertSpreadsheetJsonToHtml } from './daLiveSpreadsheetUtils';
 import { addContentResult, addReferenceResult, type PatchReport } from './patchReportHelper';
@@ -63,13 +60,12 @@ const CONTENT_COPY_BATCH_SIZE = 5;
  * @returns Filtered paths with product overlays removed
  */
 export function filterProductOverlays(paths: string[]): string[] {
-    return paths.filter(path => {
+    return paths.filter((path) => {
         // Check if this is a product path
         if (path.includes('/products/')) {
             // Keep /products/default and anything under it
             // e.g., /products/default, /products/default/something
-            return path.endsWith('/products/default') ||
-                   path.includes('/products/default/');
+            return path.endsWith('/products/default') || path.includes('/products/default/');
         }
         // Keep all non-product paths unchanged
         return true;
@@ -143,9 +139,9 @@ export function createDaLiveTokenProvider(authManager?: AuthManagerLike | null):
  * @param authService - Any object with getAccessToken (e.g., DaLiveAuthService)
  * @returns TokenProvider that delegates to the auth service
  */
-export function createDaLiveServiceTokenProvider(
-    authService: { getAccessToken(): Promise<string | null> },
-): TokenProvider {
+export function createDaLiveServiceTokenProvider(authService: {
+    getAccessToken(): Promise<string | null>;
+}): TokenProvider {
     return {
         getAccessToken: () => authService.getAccessToken(),
     };
@@ -193,7 +189,8 @@ export function extractReferencedPaths(html: string, sourceBaseUrl: string): str
 
         // Skip media, static assets, icons, and catalog product overlays.
         if (/\.(png|jpe?g|gif|svg|webp|ico|css|js|json|pdf|mp4|woff2?|ttf)$/i.test(href)) return;
-        if (href.includes('/media_') || href.startsWith('/icons/') || href.startsWith('/styles/')) return;
+        if (href.includes('/media_') || href.startsWith('/icons/') || href.startsWith('/styles/'))
+            return;
         if (href.startsWith('/products/')) return;
 
         // Match the enumerated path shape (extension-free).
@@ -212,7 +209,8 @@ export function extractReferencedPaths(html: string, sourceBaseUrl: string): str
     //    `<div class="fragment"><div><div>/customer/nav</div></div></div>`. Scope the
     //    match to fragment blocks (not any bare-path leaf) so it stays precise to the
     //    convention and doesn't over-discover stray paths elsewhere in content.
-    const fragmentPattern = /class=["'][^"']*\bfragment\b[^"']*["'][\s\S]*?>\s*(\/[a-z0-9][^<>\s"']*)\s*</gi;
+    const fragmentPattern =
+        /class=["'][^"']*\bfragment\b[^"']*["'][\s\S]*?>\s*(\/[a-z0-9][^<>\s"']*)\s*</gi;
     while ((match = fragmentPattern.exec(html)) !== null) consider(match[1]);
 
     return [...refs];
@@ -321,7 +319,13 @@ export class DaLiveContentOperations {
                 } else {
                     // Copy individual file
                     const destPath = entry.path.replace(source.path, destination.path);
-                    const success = await this.copySingleFile(token, source, entry.path, destination, destPath);
+                    const success = await this.copySingleFile(
+                        token,
+                        source,
+                        entry.path,
+                        destination,
+                        destPath,
+                    );
                     if (success) {
                         copiedFiles.push(destPath);
                     } else {
@@ -383,7 +387,9 @@ export class DaLiveContentOperations {
             /(['"])\.\/media_([a-f0-9]+\.[a-z0-9]+)(\?[^'"]*)?(['"])/gi,
             (_match, openQuote, mediaPath, queryParams, closeQuote) => {
                 // Preserve query params as they may contain optimization hints
-                const fullPath = queryParams ? `media_${mediaPath}${queryParams}` : `media_${mediaPath}`;
+                const fullPath = queryParams
+                    ? `media_${mediaPath}${queryParams}`
+                    : `media_${mediaPath}`;
                 return `${openQuote}${sourceBaseUrl}/${fullPath}${closeQuote}`;
             },
         );
@@ -392,7 +398,9 @@ export class DaLiveContentOperations {
         transformed = transformed.replace(
             /(['"])\/media_([a-f0-9]+\.[a-z0-9]+)(\?[^'"]*)?(['"])/gi,
             (_match, openQuote, mediaPath, queryParams, closeQuote) => {
-                const fullPath = queryParams ? `media_${mediaPath}${queryParams}` : `media_${mediaPath}`;
+                const fullPath = queryParams
+                    ? `media_${mediaPath}${queryParams}`
+                    : `media_${mediaPath}`;
                 return `${openQuote}${sourceBaseUrl}/${fullPath}${closeQuote}`;
             },
         );
@@ -402,10 +410,7 @@ export class DaLiveContentOperations {
         // These empty divs are important for EDS blocks (e.g., header expects 3 sections)
         // Pattern: <div></div> or <div> </div> (with only whitespace)
         // Using <p>&nbsp;</p> which DA.live preserves during round-trip conversion
-        transformed = transformed.replace(
-            /<div>(\s*)<\/div>/gi,
-            '<div><p>&nbsp;</p></div>',
-        );
+        transformed = transformed.replace(/<div>(\s*)<\/div>/gi, '<div><p>&nbsp;</p></div>');
 
         // Wrap in expected document structure
         // DA.live expects: <body><header></header><main>{content}</main><footer></footer></body>
@@ -473,7 +478,11 @@ export class DaLiveContentOperations {
         if (contentPatchIds && contentPatchIds.length > 0) {
             const { applyContentPatches } = await import('./contentPatchRegistry');
             const { html: patchedHtml, results } = await applyContentPatches(
-                htmlText, sourcePath, contentPatchIds, this.logger, contentPatchSource,
+                htmlText,
+                sourcePath,
+                contentPatchIds,
+                this.logger,
+                contentPatchSource,
             );
             htmlText = patchedHtml;
 
@@ -481,7 +490,9 @@ export class DaLiveContentOperations {
                 if (patchReport) {
                     addContentResult(patchReport, result);
                 } else if (!result.applied && result.reason) {
-                    this.logger.debug(`[DA.live] Content patch '${result.patchId}' not applied to ${sourcePath}: ${result.reason}`);
+                    this.logger.debug(
+                        `[DA.live] Content patch '${result.patchId}' not applied to ${sourcePath}: ${result.reason}`,
+                    );
                 }
             }
         }
@@ -531,7 +542,9 @@ export class DaLiveContentOperations {
                 if (!sourceResponse.ok) {
                     // 404 is expected for blocks without doc pages on the CDN — log at debug
                     const logLevel = sourceResponse.status === 404 ? 'debug' : 'warn';
-                    this.logger[logLevel](`[DA.live] Failed to fetch source ${sourcePath}: ${sourceResponse.status}`);
+                    this.logger[logLevel](
+                        `[DA.live] Failed to fetch source ${sourcePath}: ${sourceResponse.status}`,
+                    );
                     return false;
                 }
 
@@ -540,7 +553,15 @@ export class DaLiveContentOperations {
                 const daPath = this.resolveDaPath(destPath, isHtml);
 
                 const contentBlob = isHtml
-                    ? await this.processHtmlContent(sourceResponse, sourcePath, sourceBaseUrl, contentPatchIds, contentPatchSource, patchReport, discoveredPaths)
+                    ? await this.processHtmlContent(
+                          sourceResponse,
+                          sourcePath,
+                          sourceBaseUrl,
+                          contentPatchIds,
+                          contentPatchSource,
+                          patchReport,
+                          discoveredPaths,
+                      )
                     : await sourceResponse.blob();
 
                 const destUrl = `${DA_LIVE_BASE_URL}/source/${destination.org}/${destination.site}/${daPath}`;
@@ -561,8 +582,11 @@ export class DaLiveContentOperations {
                     throw new DaLiveAuthError('DA.live token expired during content copy');
                 }
 
-                if (RETRYABLE_STATUS_CODES.includes(response.status) && attempt < MAX_RETRY_ATTEMPTS) {
-                    await new Promise(resolve => setTimeout(resolve, getRetryDelay(attempt)));
+                if (
+                    RETRYABLE_STATUS_CODES.includes(response.status) &&
+                    attempt < MAX_RETRY_ATTEMPTS
+                ) {
+                    await new Promise((resolve) => setTimeout(resolve, getRetryDelay(attempt)));
                     continue;
                 }
 
@@ -574,14 +598,16 @@ export class DaLiveContentOperations {
                     // Ignore if response body can't be read
                 }
 
-                this.logger.warn(`[DA.live] Copy failed for ${destPath}: ${response.status}${errorDetail}`);
+                this.logger.warn(
+                    `[DA.live] Copy failed for ${destPath}: ${response.status}${errorDetail}`,
+                );
                 return false;
             } catch (error) {
                 // Auth errors must propagate immediately — never retry or swallow
                 if (error instanceof DaLiveAuthError) throw error;
 
                 if (attempt < MAX_RETRY_ATTEMPTS) {
-                    await new Promise(resolve => setTimeout(resolve, getRetryDelay(attempt)));
+                    await new Promise((resolve) => setTimeout(resolve, getRetryDelay(attempt)));
                     continue;
                 }
                 this.logger.error(`[DA.live] Copy error for ${destPath}`, error as Error);
@@ -639,7 +665,9 @@ export class DaLiveContentOperations {
             });
 
             if (!sourceResponse.ok) {
-                this.logger.warn(`[DA.live] Failed to fetch spreadsheet JSON ${sourcePath}: ${sourceResponse.status}`);
+                this.logger.warn(
+                    `[DA.live] Failed to fetch spreadsheet JSON ${sourcePath}: ${sourceResponse.status}`,
+                );
                 return false;
             }
 
@@ -676,7 +704,9 @@ export class DaLiveContentOperations {
                 throw new DaLiveAuthError('DA.live token expired during spreadsheet copy');
             }
 
-            this.logger.warn(`[DA.live] Failed to upload spreadsheet ${destPath}: ${response.status}`);
+            this.logger.warn(
+                `[DA.live] Failed to upload spreadsheet ${destPath}: ${response.status}`,
+            );
             return false;
         } catch (error) {
             if (error instanceof DaLiveAuthError) throw error;
@@ -718,9 +748,17 @@ export class DaLiveContentOperations {
         const resultPath = `/${normalized}`;
         if (response.ok) return { success: true, path: resultPath };
         if (response.status === 409) {
-            return { success: false, path: resultPath, error: 'Document already exists. Use overwrite option to replace.' };
+            return {
+                success: false,
+                path: resultPath,
+                error: 'Document already exists. Use overwrite option to replace.',
+            };
         }
-        return { success: false, path: resultPath, error: `Failed to create source: ${response.status} ${response.statusText}` };
+        return {
+            success: false,
+            path: resultPath,
+            error: `Failed to create source: ${response.status} ${response.statusText}`,
+        };
     }
 
     /**
@@ -751,7 +789,10 @@ export class DaLiveContentOperations {
                 return { success: true };
             }
 
-            return { success: false, error: `Failed to delete: ${response.status} ${response.statusText}` };
+            return {
+                success: false,
+                error: `Failed to delete: ${response.status} ${response.statusText}`,
+            };
         } catch (error) {
             return { success: false, error: (error as Error).message };
         }
@@ -776,8 +817,10 @@ export class DaLiveContentOperations {
      * @returns success or failure with status detail
      */
     async copyDaLiveSite(
-        srcOrg: string, srcSite: string,
-        destOrg: string, destSite: string,
+        srcOrg: string,
+        srcSite: string,
+        destOrg: string,
+        destSite: string,
     ): Promise<{ success: true } | { success: false; error: string; status?: number }> {
         const token = await this.getImsToken();
         const url = `${DA_LIVE_BASE_URL}/copy/${srcOrg}/${srcSite}/`;
@@ -829,12 +872,18 @@ export class DaLiveContentOperations {
             });
 
             if (response.ok || response.status === 404) {
-                this.logger.debug(`[DA.live] Site root deleted for ${org}/${site} (status=${response.status})`);
+                this.logger.debug(
+                    `[DA.live] Site root deleted for ${org}/${site} (status=${response.status})`,
+                );
             } else {
-                this.logger.debug(`[DA.live] Site root deletion returned ${response.status} for ${org}/${site}`);
+                this.logger.debug(
+                    `[DA.live] Site root deletion returned ${response.status} for ${org}/${site}`,
+                );
             }
         } catch (error) {
-            this.logger.debug(`[DA.live] Site root deletion failed for ${org}/${site}: ${(error as Error).message}`);
+            this.logger.debug(
+                `[DA.live] Site root deletion failed for ${org}/${site}: ${(error as Error).message}`,
+            );
         }
     }
 
@@ -868,8 +917,7 @@ export class DaLiveContentOperations {
         // listDirectory and deleteSource already prepend org/site into the URL,
         // so we must strip the prefix to avoid doubling it.
         const pathPrefix = `/${org}/${site}`;
-        const stripPrefix = (entryPath: string): string =>
-            entryPath.replace(pathPrefix, '') || '/';
+        const stripPrefix = (entryPath: string): string => entryPath.replace(pathPrefix, '') || '/';
 
         // Phase 1: Walk the tree and collect all relative paths
         const collectPaths = async (dirPath: string): Promise<void> => {
@@ -898,19 +946,23 @@ export class DaLiveContentOperations {
                 return { success: true, deletedCount: 0, deletedPaths: [] };
             }
 
-            this.logger.info(`[DA.live] Found ${filePaths.length} files and ${dirPaths.length} directories to delete`);
+            this.logger.info(
+                `[DA.live] Found ${filePaths.length} files and ${dirPaths.length} directories to delete`,
+            );
 
             // Phase 2: Delete files in parallel batches
             let deletedCount = 0;
             for (let i = 0; i < filePaths.length; i += CONTENT_COPY_BATCH_SIZE) {
                 const batch = filePaths.slice(i, i + CONTENT_COPY_BATCH_SIZE);
-                await Promise.all(batch.map(async (filePath) => {
-                    const result = await this.deleteSource(org, site, filePath);
-                    if (result.success) {
-                        deletedCount++;
-                        onProgress?.({ deleted: deletedCount, current: filePath });
-                    }
-                }));
+                await Promise.all(
+                    batch.map(async (filePath) => {
+                        const result = await this.deleteSource(org, site, filePath);
+                        if (result.success) {
+                            deletedCount++;
+                            onProgress?.({ deleted: deletedCount, current: filePath });
+                        }
+                    }),
+                );
             }
 
             // Phase 3: Delete empty directories (deepest first — already ordered by collectPaths)
@@ -924,8 +976,15 @@ export class DaLiveContentOperations {
             this.logger.info(`[DA.live] Deleted ${deletedCount} files from ${org}/${site}`);
             return { success: true, deletedCount, deletedPaths: filePaths };
         } catch (error) {
-            this.logger.error(`[DA.live] Failed to delete site content: ${(error as Error).message}`);
-            return { success: false, deletedCount: filePaths.length, deletedPaths: filePaths, error: (error as Error).message };
+            this.logger.error(
+                `[DA.live] Failed to delete site content: ${(error as Error).message}`,
+            );
+            return {
+                success: false,
+                deletedCount: filePaths.length,
+                deletedPaths: filePaths,
+                error: (error as Error).message,
+            };
         }
     }
 
@@ -973,9 +1032,12 @@ export class DaLiveContentOperations {
         const url = `${DA_LIVE_BASE_URL}/source/${org}/${site}/${jsonPath}`;
 
         const formData = new FormData();
-        formData.append('data', new Blob([JSON.stringify(spreadsheetJson)], {
-            type: 'application/json',
-        }));
+        formData.append(
+            'data',
+            new Blob([JSON.stringify(spreadsheetJson)], {
+                type: 'application/json',
+            }),
+        );
         if (options.overwrite) formData.append('overwrite', 'true');
 
         const response = await this.fetchWithRetry(url, {
@@ -987,9 +1049,17 @@ export class DaLiveContentOperations {
         const resultPath = `/${jsonPath}`;
         if (response.ok) return { success: true, path: resultPath };
         if (response.status === 409) {
-            return { success: false, path: resultPath, error: 'Document already exists. Use overwrite option to replace.' };
+            return {
+                success: false,
+                path: resultPath,
+                error: 'Document already exists. Use overwrite option to replace.',
+            };
         }
-        return { success: false, path: resultPath, error: `Failed to create spreadsheet: ${response.status} ${response.statusText}` };
+        return {
+            success: false,
+            path: resultPath,
+            error: `Failed to create spreadsheet: ${response.status} ${response.statusText}`,
+        };
     }
 
     /**
@@ -1015,12 +1085,20 @@ export class DaLiveContentOperations {
         site: string,
         templateOwner: string,
         templateRepo: string,
-        getFileContent: (owner: string, repo: string, path: string) => Promise<{ content: string; sha: string } | null>,
+        getFileContent: (
+            owner: string,
+            repo: string,
+            path: string
+        ) => Promise<{ content: string; sha: string } | null>,
         libraryContentSources?: Array<{ org: string; site: string }>,
         installedBlockIds?: string[],
     ): Promise<{ success: boolean; blocksCount: number; paths: string[]; error?: string }> {
         try {
-            const componentDef = await getFileContent(templateOwner, templateRepo, 'component-definition.json');
+            const componentDef = await getFileContent(
+                templateOwner,
+                templateRepo,
+                'component-definition.json',
+            );
 
             if (!componentDef?.content) {
                 this.logger.debug('[DA.live] No component-definition.json in template');
@@ -1033,8 +1111,14 @@ export class DaLiveContentOperations {
             // Scan ALL groups (not just 'blocks') so entries in other groups
             // like 'product' (product-teaser) are included in the library.
             const blocks = (parsed.groups ?? []).flatMap(
-                (g: { components?: Array<{ title: string; id: string; plugins?: { da?: { unsafeHTML?: string } } }> }) =>
-                    (g.components ?? []).map(c => ({
+                (g: {
+                    components?: Array<{
+                        title: string;
+                        id: string;
+                        plugins?: { da?: { unsafeHTML?: string } };
+                    }>;
+                }) =>
+                    (g.components ?? []).map((c) => ({
                         title: c.title,
                         id: c.id,
                         exampleHtml: c.plugins?.da?.unsafeHTML,
@@ -1046,9 +1130,17 @@ export class DaLiveContentOperations {
                 return { success: true, blocksCount: 0, paths: [] };
             }
 
-            return await this.createBlockLibrary(org, site, blocks, libraryContentSources, installedBlockIds);
+            return await this.createBlockLibrary(
+                org,
+                site,
+                blocks,
+                libraryContentSources,
+                installedBlockIds,
+            );
         } catch (error) {
-            this.logger.warn(`[DA.live] Block library from template failed: ${(error as Error).message}`);
+            this.logger.warn(
+                `[DA.live] Block library from template failed: ${(error as Error).message}`,
+            );
             return { success: false, blocksCount: 0, paths: [], error: (error as Error).message };
         }
     }
@@ -1081,7 +1173,10 @@ export class DaLiveContentOperations {
         org: string,
         site: string,
         block: { blockId: string; title: string },
-    ): Promise<{ status: 'created' | 'appended' | 'skipped-duplicate'; siteConfigRegistered: boolean }> {
+    ): Promise<{
+        status: 'created' | 'appended' | 'skipped-duplicate';
+        siteConfigRegistered: boolean;
+    }> {
         const token = await this.getImsToken();
         const sheetPath = '.da/library/blocks.json';
         const sheetUrl = `${DA_LIVE_BASE_URL}/source/${org}/${site}/${sheetPath}`;
@@ -1092,7 +1187,7 @@ export class DaLiveContentOperations {
         const rows = existingRows ?? [];
 
         // Step 2: idempotency check.
-        if (rows.some(r => r.name === block.title)) {
+        if (rows.some((r) => r.name === block.title)) {
             // Still re-register the site config — caller may be repairing a config
             // drift even when the row already exists.
             const configRegistered = await this.registerBlocksLibrarySection(org, site);
@@ -1116,7 +1211,9 @@ export class DaLiveContentOperations {
             { overwrite: true },
         );
         if (!writeResult.success) {
-            throw new Error(`Failed to write block library sheet: ${writeResult.error ?? 'unknown error'}`);
+            throw new Error(
+                `Failed to write block library sheet: ${writeResult.error ?? 'unknown error'}`,
+            );
         }
 
         // Step 4: register the "Blocks" section (idempotent on DA.live's side).
@@ -1227,7 +1324,7 @@ export class DaLiveContentOperations {
 
         const suffix = `/.da/library/blocks/${blockId}`;
         const remaining = existingRows.filter(
-            r => !(typeof r.path === 'string' && r.path.endsWith(suffix)),
+            (r) => !(typeof r.path === 'string' && r.path.endsWith(suffix)),
         );
         if (remaining.length === existingRows.length) {
             return 'absent'; // no matching row — nothing to rewrite
@@ -1242,7 +1339,9 @@ export class DaLiveContentOperations {
             { overwrite: true },
         );
         if (!writeResult.success) {
-            throw new Error(`Failed to rewrite block library sheet: ${writeResult.error ?? 'unknown error'}`);
+            throw new Error(
+                `Failed to rewrite block library sheet: ${writeResult.error ?? 'unknown error'}`,
+            );
         }
         return 'removed';
     }
@@ -1266,7 +1365,7 @@ export class DaLiveContentOperations {
         if (!response.ok) {
             throw this.createErrorFromResponse(response, 'read block library sheet');
         }
-        const sheet = await response.json() as {
+        const sheet = (await response.json()) as {
             data?: { data?: Array<Record<string, string>> };
         };
         return sheet?.data?.data ?? [];
@@ -1287,7 +1386,9 @@ export class DaLiveContentOperations {
             },
         ]);
         if (!result.success) {
-            this.logger.warn(`[DA.live] Failed to register Blocks library section: ${result.error}`);
+            this.logger.warn(
+                `[DA.live] Failed to register Blocks library section: ${result.error}`,
+            );
             return false;
         }
         return true;
@@ -1325,7 +1426,13 @@ export class DaLiveContentOperations {
             // unsafeHTML. Uses the public CDN (.plain.html) to avoid requiring
             // DA.live API auth on third-party source orgs.
             if (libraryContentSources?.length) {
-                await this.copyBlockDocPagesFromSources(org, site, blocks, libraryContentSources, installedBlockIds);
+                await this.copyBlockDocPagesFromSources(
+                    org,
+                    site,
+                    blocks,
+                    libraryContentSources,
+                    installedBlockIds,
+                );
             }
 
             // Generate stub doc pages for any blocks still without documentation.
@@ -1338,10 +1445,12 @@ export class DaLiveContentOperations {
 
             // Check which blocks have documentation pages (including newly created ones)
             const existingBlockIds = await this.getBlocksWithDocs(org, site, blocks);
-            const verifiedBlocks = blocks.filter(b => existingBlockIds.includes(b.id));
+            const verifiedBlocks = blocks.filter((b) => existingBlockIds.includes(b.id));
 
             if (verifiedBlocks.length === 0) {
-                this.logger.info(`[DA.live] No blocks with documentation pages found in ${org}/${site}`);
+                this.logger.info(
+                    `[DA.live] No blocks with documentation pages found in ${org}/${site}`,
+                );
                 return { success: true, blocksCount: 0, paths: [] };
             }
 
@@ -1370,18 +1479,27 @@ export class DaLiveContentOperations {
 
             // Create single spreadsheet with all verified blocks
             const blocksResult = await this.createJsonSpreadsheet(
-                org, site, '.da/library/blocks',
+                org,
+                site,
+                '.da/library/blocks',
                 ['name', 'path'],
-                verifiedBlocks.map(b => ({ name: b.title, path: `${contentBase}/${b.id}` })),
+                verifiedBlocks.map((b) => ({ name: b.title, path: `${contentBase}/${b.id}` })),
                 { overwrite: true },
             );
             if (!blocksResult.success) {
-                return { success: false, blocksCount: 0, paths: [], error: 'Failed to create /.da/library/blocks.json' };
+                return {
+                    success: false,
+                    blocksCount: 0,
+                    paths: [],
+                    error: 'Failed to create /.da/library/blocks.json',
+                };
             }
 
             paths.push('.da/library/blocks.json');
 
-            this.logger.info(`[DA.live] Block library created: ${verifiedBlocks.length}/${blocks.length} blocks with docs in ${org}/${site}`);
+            this.logger.info(
+                `[DA.live] Block library created: ${verifiedBlocks.length}/${blocks.length} blocks with docs in ${org}/${site}`,
+            );
 
             // Add block doc pages to paths for publishing
             for (const blockId of existingBlockIds) {
@@ -1390,7 +1508,9 @@ export class DaLiveContentOperations {
 
             return { success: true, blocksCount: verifiedBlocks.length, paths };
         } catch (error) {
-            this.logger.error(`[DA.live] Block library creation failed: ${(error as Error).message}`);
+            this.logger.error(
+                `[DA.live] Block library creation failed: ${(error as Error).message}`,
+            );
             return { success: false, blocksCount: 0, paths: [], error: (error as Error).message };
         }
     }
@@ -1424,18 +1544,23 @@ export class DaLiveContentOperations {
         try {
             const docHtml = `<body><header></header><main><div>${block.exampleHtml}</div></main><footer></footer></body>`;
             const result = await this.createSource(
-                org, site,
+                org,
+                site,
                 `.da/library/blocks/${block.id}.html`,
                 docHtml,
                 { overwrite: true },
             );
             if (!result.success) {
-                this.logger.warn(`[DA.live] Failed to upsert doc page for ${block.id}: ${result.error}`);
+                this.logger.warn(
+                    `[DA.live] Failed to upsert doc page for ${block.id}: ${result.error}`,
+                );
                 return 'failed';
             }
             return 'written';
         } catch (error) {
-            this.logger.warn(`[DA.live] Failed to upsert doc page for ${block.id}: ${(error as Error).message}`);
+            this.logger.warn(
+                `[DA.live] Failed to upsert doc page for ${block.id}: ${(error as Error).message}`,
+            );
             return 'failed';
         }
     }
@@ -1457,44 +1582,53 @@ export class DaLiveContentOperations {
         site: string,
         blocks: Array<{ title: string; id: string; exampleHtml?: string }>,
     ): Promise<void> {
-        const blocksWithHtml = blocks.filter(b => b.exampleHtml);
+        const blocksWithHtml = blocks.filter((b) => b.exampleHtml);
         if (blocksWithHtml.length === 0) return;
 
         // Check which blocks already have doc pages (e.g., copied from content source)
         const existingIds = new Set(await this.getBlocksWithDocs(org, site, blocksWithHtml));
-        const missing = blocksWithHtml.filter(b => !existingIds.has(b.id));
+        const missing = blocksWithHtml.filter((b) => !existingIds.has(b.id));
 
         if (missing.length === 0) {
             this.logger.debug('[DA.live] All blocks with exampleHtml already have doc pages');
             return;
         }
 
-        this.logger.info(`[DA.live] Creating ${missing.length} block doc pages (${existingIds.size} already exist)`);
+        this.logger.info(
+            `[DA.live] Creating ${missing.length} block doc pages (${existingIds.size} already exist)`,
+        );
 
         // Create doc pages in parallel batches to match content copy performance pattern
         for (let i = 0; i < missing.length; i += CONTENT_COPY_BATCH_SIZE) {
             const batch = missing.slice(i, i + CONTENT_COPY_BATCH_SIZE);
-            await Promise.all(batch.map(async (block) => {
-                try {
-                    // Wrap exampleHtml in document structure expected by DA.live.
-                    // Block must be inside a section <div> — DA.live treats direct
-                    // children of <main> as sections, not blocks. This matches the
-                    // format produced by .plain.html (content source copy path).
-                    const docHtml = `<body><header></header><main><div>${block.exampleHtml}</div></main><footer></footer></body>`;
-                    const result = await this.createSource(
-                        org, site,
-                        `.da/library/blocks/${block.id}.html`,
-                        docHtml,
-                    );
-                    if (result.success) {
-                        this.logger.debug(`[DA.live] Created doc page for block: ${block.id}`);
-                    } else {
-                        this.logger.warn(`[DA.live] Failed to create doc page for ${block.id}: ${result.error}`);
+            await Promise.all(
+                batch.map(async (block) => {
+                    try {
+                        // Wrap exampleHtml in document structure expected by DA.live.
+                        // Block must be inside a section <div> — DA.live treats direct
+                        // children of <main> as sections, not blocks. This matches the
+                        // format produced by .plain.html (content source copy path).
+                        const docHtml = `<body><header></header><main><div>${block.exampleHtml}</div></main><footer></footer></body>`;
+                        const result = await this.createSource(
+                            org,
+                            site,
+                            `.da/library/blocks/${block.id}.html`,
+                            docHtml,
+                        );
+                        if (result.success) {
+                            this.logger.debug(`[DA.live] Created doc page for block: ${block.id}`);
+                        } else {
+                            this.logger.warn(
+                                `[DA.live] Failed to create doc page for ${block.id}: ${result.error}`,
+                            );
+                        }
+                    } catch (error) {
+                        this.logger.warn(
+                            `[DA.live] Failed to create doc page for ${block.id}: ${(error as Error).message}`,
+                        );
                     }
-                } catch (error) {
-                    this.logger.warn(`[DA.live] Failed to create doc page for ${block.id}: ${(error as Error).message}`);
-                }
-            }));
+                }),
+            );
         }
     }
 
@@ -1523,21 +1657,21 @@ export class DaLiveContentOperations {
     ): Promise<void> {
         // Only need CDN copy for blocks WITHOUT unsafeHTML —
         // blocks WITH unsafeHTML are handled by ensureBlockDocPages
-        let blocksNeedingCdnCopy = blocks.filter(b => !b.exampleHtml);
+        let blocksNeedingCdnCopy = blocks.filter((b) => !b.exampleHtml);
 
         // When installedBlockIds is provided, only attempt CDN copy for blocks
         // installed by block collections. Native template blocks won't have doc
         // pages on library content sources, so attempting them produces 404 spam.
         if (installedBlockIds?.length) {
             const installedSet = new Set(installedBlockIds);
-            blocksNeedingCdnCopy = blocksNeedingCdnCopy.filter(b => installedSet.has(b.id));
+            blocksNeedingCdnCopy = blocksNeedingCdnCopy.filter((b) => installedSet.has(b.id));
         }
         if (blocksNeedingCdnCopy.length === 0) return;
 
         // Check which blocks already have doc pages (e.g., copied by copyContent
         // from an owned org). Only CDN-fetch the ones still missing.
         const existingIds = new Set(await this.getBlocksWithDocs(org, site, blocksNeedingCdnCopy));
-        const missing = blocksNeedingCdnCopy.filter(b => !existingIds.has(b.id));
+        const missing = blocksNeedingCdnCopy.filter((b) => !existingIds.has(b.id));
         if (missing.length === 0) return;
 
         const token = await this.getImsToken();
@@ -1547,8 +1681,11 @@ export class DaLiveContentOperations {
             const docPath = `/.da/library/blocks/${block.id}`;
             for (const source of contentSources) {
                 const success = await this.copySingleFile(
-                    token, source, docPath,
-                    { org, site }, docPath,
+                    token,
+                    source,
+                    docPath,
+                    { org, site },
+                    docPath,
                 );
                 if (success) {
                     copiedCount++;
@@ -1558,7 +1695,9 @@ export class DaLiveContentOperations {
         }
 
         if (copiedCount > 0) {
-            this.logger.info(`[DA.live] Copied ${copiedCount} block doc pages from CDN (${existingIds.size} already existed)`);
+            this.logger.info(
+                `[DA.live] Copied ${copiedCount} block doc pages from CDN (${existingIds.size} already existed)`,
+            );
         }
     }
 
@@ -1589,31 +1728,46 @@ export class DaLiveContentOperations {
     ): Promise<void> {
         // Only stub blocks without unsafeHTML — blocks with unsafeHTML
         // already have proper doc pages from ensureBlockDocPages
-        const candidates = blocks.filter(b => !b.exampleHtml);
+        const candidates = blocks.filter((b) => !b.exampleHtml);
         if (candidates.length === 0) return;
 
         const existingIds = new Set(await this.getBlocksWithDocs(org, site, candidates));
-        const missing = candidates.filter(b => !existingIds.has(b.id));
+        const missing = candidates.filter((b) => !existingIds.has(b.id));
         if (missing.length === 0) return;
 
-        this.logger.info(`[DA.live] Generating ${missing.length} stub doc pages for installed blocks without documentation`);
+        this.logger.info(
+            `[DA.live] Generating ${missing.length} stub doc pages for installed blocks without documentation`,
+        );
 
         // Create stub pages in parallel batches to match content copy performance pattern
         for (let i = 0; i < missing.length; i += CONTENT_COPY_BATCH_SIZE) {
             const batch = missing.slice(i, i + CONTENT_COPY_BATCH_SIZE);
-            await Promise.all(batch.map(async (block) => {
-                try {
-                    const stubHtml = `<body><header></header><main><div><div class="${block.id}"><div><div><p>${block.title}</p></div></div></div></div></main><footer></footer></body>`;
-                    const result = await this.createSource(org, site, `.da/library/blocks/${block.id}.html`, stubHtml);
-                    if (result.success) {
-                        this.logger.debug(`[DA.live] Created stub doc page for block: ${block.id}`);
-                    } else {
-                        this.logger.warn(`[DA.live] Failed to create stub doc page for ${block.id}: ${result.error}`);
+            await Promise.all(
+                batch.map(async (block) => {
+                    try {
+                        const stubHtml = `<body><header></header><main><div><div class="${block.id}"><div><div><p>${block.title}</p></div></div></div></div></main><footer></footer></body>`;
+                        const result = await this.createSource(
+                            org,
+                            site,
+                            `.da/library/blocks/${block.id}.html`,
+                            stubHtml,
+                        );
+                        if (result.success) {
+                            this.logger.debug(
+                                `[DA.live] Created stub doc page for block: ${block.id}`,
+                            );
+                        } else {
+                            this.logger.warn(
+                                `[DA.live] Failed to create stub doc page for ${block.id}: ${result.error}`,
+                            );
+                        }
+                    } catch (error) {
+                        this.logger.warn(
+                            `[DA.live] Failed to create stub doc page for ${block.id}: ${(error as Error).message}`,
+                        );
                     }
-                } catch (error) {
-                    this.logger.warn(`[DA.live] Failed to create stub doc page for ${block.id}: ${(error as Error).message}`);
-                }
-            }));
+                }),
+            );
         }
     }
 
@@ -1769,8 +1923,7 @@ export class DaLiveContentOperations {
         const pathPrefix = `/${org}/${site}`;
         const contentExtensions = new Set(['.html', '.xlsx']);
 
-        const stripPrefix = (entryPath: string): string =>
-            entryPath.replace(pathPrefix, '') || '/';
+        const stripPrefix = (entryPath: string): string => entryPath.replace(pathPrefix, '') || '/';
 
         const stripExtension = (filePath: string, ext: string): string =>
             filePath.slice(0, -ext.length);
@@ -1842,9 +1995,13 @@ export class DaLiveContentOperations {
             contentPaths = await this.getContentPathsFromDaLive(source.org, source.site);
             if (contentPaths.length > 0) {
                 usedDaLiveList = true;
-                this.logger.info(`[DA.live] Enumerated ${contentPaths.length} content files via list API`);
+                this.logger.info(
+                    `[DA.live] Enumerated ${contentPaths.length} content files via list API`,
+                );
             } else {
-                this.logger.info(`[DA.live] List API returned 0 files, falling back to content index`);
+                this.logger.info(
+                    `[DA.live] List API returned 0 files, falling back to content index`,
+                );
                 contentPaths = await this.getContentPathsFromIndex(source);
             }
         } catch {
@@ -1867,9 +2024,11 @@ export class DaLiveContentOperations {
         // which contain example HTML and should be copied from the template
         const libraryIndexPaths = ['/.da/library/blocks', '/.da/library/blocks.json'];
         const preLibraryCount = contentPaths.length;
-        contentPaths = contentPaths.filter(p => !libraryIndexPaths.includes(p));
+        contentPaths = contentPaths.filter((p) => !libraryIndexPaths.includes(p));
         if (contentPaths.length < preLibraryCount) {
-            this.logger.info(`[DA.live] Excluded library index (will be generated with correct paths)`);
+            this.logger.info(
+                `[DA.live] Excluded library index (will be generated with correct paths)`,
+            );
         }
 
         return { contentPaths, usedDaLiveList };
@@ -1979,7 +2138,9 @@ export class DaLiveContentOperations {
             if (newPaths.length === 0) break;
             for (const p of newPaths) visited.add(p);
 
-            this.logger.info(`[DA.live] Discovered ${newPaths.length} referenced document(s) not in the index (depth ${depth + 1}): ${newPaths.join(', ')}`);
+            this.logger.info(
+                `[DA.live] Discovered ${newPaths.length} referenced document(s) not in the index (depth ${depth + 1}): ${newPaths.join(', ')}`,
+            );
 
             for (let i = 0; i < newPaths.length; i += CONTENT_COPY_BATCH_SIZE) {
                 const batch = newPaths.slice(i, i + CONTENT_COPY_BATCH_SIZE);
@@ -1987,8 +2148,15 @@ export class DaLiveContentOperations {
                 const results = await Promise.all(
                     batch.map(async (sourcePath) => {
                         const success = await this.copySingleFile(
-                            token, source, sourcePath, dest, sourcePath,
-                            contentPatchIds, contentPatchSource, patchReport, discoveredPaths,
+                            token,
+                            source,
+                            sourcePath,
+                            dest,
+                            sourcePath,
+                            contentPatchIds,
+                            contentPatchSource,
+                            patchReport,
+                            discoveredPaths,
                         );
                         return { path: sourcePath, success };
                     }),
@@ -1997,7 +2165,9 @@ export class DaLiveContentOperations {
                     if (result.success) {
                         copied.push(result.path);
                     } else {
-                        this.logger.debug(`[DA.live] Discovered reference not copyable (skipped): ${result.path}`);
+                        this.logger.debug(
+                            `[DA.live] Discovered reference not copyable (skipped): ${result.path}`,
+                        );
                     }
                 }
             }
@@ -2037,7 +2207,9 @@ export class DaLiveContentOperations {
         const entryPaths: string[] = [];
         for (const authPage of RUNTIME_SURFACES.authPages) {
             try {
-                const probe = await fetch(`${baseUrl}${authPage.path}.plain.html`, { method: 'HEAD' });
+                const probe = await fetch(`${baseUrl}${authPage.path}.plain.html`, {
+                    method: 'HEAD',
+                });
                 if (probe.ok) entryPaths.push(authPage.path);
             } catch {
                 // Unreachable on the account source — skip.
@@ -2045,14 +2217,24 @@ export class DaLiveContentOperations {
         }
 
         if (entryPaths.length === 0) {
-            this.logger.warn(`[DA.live] Account-chrome overlay: no auth pages found on ${accountSource.org}/${accountSource.site}`);
+            this.logger.warn(
+                `[DA.live] Account-chrome overlay: no auth pages found on ${accountSource.org}/${accountSource.site}`,
+            );
             return { success: true, copiedFiles, failedFiles, totalFiles: 0 };
         }
 
         const token = await this.getImsToken();
         for (const path of entryPaths) {
             const ok = await this.copySingleFile(
-                token, accountSource, path, dest, path, undefined, undefined, patchReport, discoveredPaths,
+                token,
+                accountSource,
+                path,
+                dest,
+                path,
+                undefined,
+                undefined,
+                patchReport,
+                discoveredPaths,
             );
             if (ok) copiedFiles.push(path);
             else failedFiles.push({ path, error: 'Copy failed' });
@@ -2060,12 +2242,25 @@ export class DaLiveContentOperations {
 
         // Follow references (pulls /customer/nav + any sub-fragments) from the account source.
         const discovered = await this.discoverAndCopyReferences(
-            accountSource, dest, entryPaths, discoveredPaths, undefined, undefined, patchReport,
+            accountSource,
+            dest,
+            entryPaths,
+            discoveredPaths,
+            undefined,
+            undefined,
+            patchReport,
         );
         copiedFiles.push(...discovered);
 
-        this.logger.info(`[DA.live] Account-chrome overlay from ${accountSource.org}/${accountSource.site}: ${copiedFiles.join(', ') || '(none)'}`);
-        return { success: failedFiles.length === 0, copiedFiles, failedFiles, totalFiles: copiedFiles.length + failedFiles.length };
+        this.logger.info(
+            `[DA.live] Account-chrome overlay from ${accountSource.org}/${accountSource.site}: ${copiedFiles.join(', ') || '(none)'}`,
+        );
+        return {
+            success: failedFiles.length === 0,
+            copiedFiles,
+            failedFiles,
+            totalFiles: copiedFiles.length + failedFiles.length,
+        };
     }
 
     async copyContentFromSource(
@@ -2079,13 +2274,23 @@ export class DaLiveContentOperations {
         runtimeSurfaceSource?: RuntimeSurfaceSource,
     ): Promise<DaLiveCopyResult> {
         // Report initialization progress
-        progressCallback?.({ processed: 0, total: 0, percentage: 0, message: 'Enumerating source content...' });
+        progressCallback?.({
+            processed: 0,
+            total: 0,
+            percentage: 0,
+            message: 'Enumerating source content...',
+        });
 
         // Enumerate and filter source content paths (list API w/ CDN-index fallback,
         // product-overlay filter, library-index exclusion).
         const { contentPaths, usedDaLiveList } = await this.enumerateAndFilterContentPaths(source);
 
-        progressCallback?.({ processed: 0, total: 0, percentage: 0, message: 'Checking configurations...' });
+        progressCallback?.({
+            processed: 0,
+            total: 0,
+            percentage: 0,
+            message: 'Checking configurations...',
+        });
 
         // Auth pages missing from source — stubs created after the main copy loop
         const missingAuthPages: Array<{ path: string; blockClass: string }> = [];
@@ -2094,7 +2299,12 @@ export class DaLiveContentOperations {
         // be in the content index. The DA.live list API already returns
         // everything, so this is only needed for the fallback path.
         if (!usedDaLiveList) {
-            await this.backfillEssentialPaths(source, contentPaths, missingAuthPages, runtimeSurfaceSource);
+            await this.backfillEssentialPaths(
+                source,
+                contentPaths,
+                missingAuthPages,
+                runtimeSurfaceSource,
+            );
         }
 
         const copiedFiles: string[] = [];
@@ -2142,7 +2352,9 @@ export class DaLiveContentOperations {
                 }),
             );
 
-            this.logger.debug(`[DA.live] Content batch ${batchNum}: ${batch.length} files in ${formatDuration(Date.now() - batchStart)}`);
+            this.logger.debug(
+                `[DA.live] Content batch ${batchNum}: ${batch.length} files in ${formatDuration(Date.now() - batchStart)}`,
+            );
 
             // Track results
             for (const result of results) {
@@ -2153,7 +2365,9 @@ export class DaLiveContentOperations {
                 }
             }
         }
-        this.logger.debug(`[DA.live] Content copy total: ${totalFiles} files in ${formatDuration(Date.now() - contentStart)}`);
+        this.logger.debug(
+            `[DA.live] Content copy total: ${totalFiles} files in ${formatDuration(Date.now() - contentStart)}`,
+        );
 
         // Reference-following discovery: copy internal documents referenced by
         // already-copied pages but absent from the index + backfill lists (e.g.
@@ -2181,9 +2395,15 @@ export class DaLiveContentOperations {
         const copiedSet = new Set(copiedFiles);
         for (const ref of discoveredPaths) {
             if (!copiedSet.has(ref)) {
-                this.logger.warn(`[DA.live] Completeness audit — referenced document not copied: ${ref}`);
+                this.logger.warn(
+                    `[DA.live] Completeness audit — referenced document not copied: ${ref}`,
+                );
                 if (patchReport) {
-                    addReferenceResult(patchReport, ref, 'referenced by copied content but not found on source');
+                    addReferenceResult(
+                        patchReport,
+                        ref,
+                        'referenced by copied content but not found on source',
+                    );
                 }
             }
         }
@@ -2217,10 +2437,14 @@ export class DaLiveContentOperations {
                         totalFiles++;
                         this.logger.info(`[DA.live] Created stub page for ${authPath}`);
                     } else {
-                        this.logger.warn(`[DA.live] Failed to create stub for ${authPath}: ${response.status}`);
+                        this.logger.warn(
+                            `[DA.live] Failed to create stub for ${authPath}: ${response.status}`,
+                        );
                     }
                 } catch (error) {
-                    this.logger.warn(`[DA.live] Failed to create stub for ${authPath}: ${(error as Error).message}`);
+                    this.logger.warn(
+                        `[DA.live] Failed to create stub for ${authPath}: ${(error as Error).message}`,
+                    );
                 }
             }
         }
@@ -2265,7 +2489,9 @@ export class DaLiveContentOperations {
         // Collect unique media references from all content pages
         const mediaSet = new Set<string>();
 
-        this.logger.info(`[DA.live] Scanning ${contentPaths.length} content pages for media references`);
+        this.logger.info(
+            `[DA.live] Scanning ${contentPaths.length} content pages for media references`,
+        );
 
         for (const contentPath of contentPaths) {
             try {
@@ -2341,7 +2567,9 @@ export class DaLiveContentOperations {
                 }),
             );
 
-            this.logger.debug(`[DA.live] Media batch ${batchNum}: ${batch.length} files in ${formatDuration(Date.now() - batchStart)}`);
+            this.logger.debug(
+                `[DA.live] Media batch ${batchNum}: ${batch.length} files in ${formatDuration(Date.now() - batchStart)}`,
+            );
 
             // Track results
             for (const result of results) {
@@ -2352,7 +2580,9 @@ export class DaLiveContentOperations {
                 }
             }
         }
-        this.logger.debug(`[DA.live] Media copy total: ${totalFiles} files in ${formatDuration(Date.now() - mediaStart)}`);
+        this.logger.debug(
+            `[DA.live] Media copy total: ${totalFiles} files in ${formatDuration(Date.now() - mediaStart)}`,
+        );
 
         // Final progress update
         if (progressCallback) {
@@ -2369,226 +2599,6 @@ export class DaLiveContentOperations {
             failedFiles,
             totalFiles,
         };
-    }
-
-    /**
-     * Recursively collect all media file entries from a folder
-     * @param org - Organization name
-     * @param site - Site name
-     * @param path - Starting path (e.g., '/media')
-     * @returns Array of file entries (folders are traversed, not returned)
-     */
-    private async _collectMediaFiles(org: string, site: string, path: string): Promise<DaLiveEntry[]> {
-        const files: DaLiveEntry[] = [];
-
-        // listDirectory returns empty array for 404 (graceful handling)
-        const entries = await this.listDirectory(org, site, path);
-
-        for (const entry of entries) {
-            const isFolder = !entry.ext;
-
-            if (isFolder) {
-                // Recursively collect from subfolder
-                const relativePath = entry.path.replace(`/${org}/${site}`, '');
-                const subFiles = await this._collectMediaFiles(org, site, relativePath);
-                files.push(...subFiles);
-            } else {
-                // It's a file - add to collection
-                files.push(entry);
-            }
-        }
-
-        return files;
-    }
-
-    /**
-     * Copy media files from local project directory to DA.live
-     * Reads from local filesystem instead of calling DA.live API on source org.
-     *
-     * @param localProjectPath - Local project directory path
-     * @param destOrg - Destination DA.live organization
-     * @param destSite - Destination DA.live site
-     * @param progressCallback - Optional progress callback
-     * @returns Copy result with success status and file lists
-     */
-    async copyMediaFromLocalPath(
-        localProjectPath: string,
-        destOrg: string,
-        destSite: string,
-        progressCallback?: DaLiveProgressCallback,
-    ): Promise<DaLiveCopyResult> {
-        const token = await this.getImsToken();
-        const mediaDir = path.join(localProjectPath, 'media');
-
-        // Check if media directory exists
-        if (!fs.existsSync(mediaDir)) {
-            this.logger.debug('[DA.live] No local media directory found, skipping media copy');
-            return {
-                success: true,
-                copiedFiles: [],
-                failedFiles: [],
-                totalFiles: 0,
-            };
-        }
-
-        // Collect all media files recursively from local filesystem
-        const mediaFiles = this.collectLocalMediaFiles(mediaDir, mediaDir);
-
-        if (mediaFiles.length === 0) {
-            this.logger.debug('[DA.live] No media files found in local /media/ folder');
-            return {
-                success: true,
-                copiedFiles: [],
-                failedFiles: [],
-                totalFiles: 0,
-            };
-        }
-
-        this.logger.info(`[DA.live] Found ${mediaFiles.length} local media files to upload`);
-
-        const copiedFiles: string[] = [];
-        const failedFiles: { path: string; error: string }[] = [];
-        const totalFiles = mediaFiles.length;
-
-        // Upload each media file
-        for (let i = 0; i < mediaFiles.length; i++) {
-            const { localPath, relativePath } = mediaFiles[i];
-
-            // Report progress
-            if (progressCallback) {
-                progressCallback({
-                    currentFile: relativePath,
-                    processed: i,
-                    total: totalFiles,
-                    percentage: Math.round((i / totalFiles) * 100),
-                });
-            }
-
-            // Upload the file
-            const success = await this.uploadLocalFile(
-                token,
-                localPath,
-                destOrg,
-                destSite,
-                `/media${relativePath}`,
-            );
-
-            if (success) {
-                copiedFiles.push(`/media${relativePath}`);
-            } else {
-                failedFiles.push({ path: `/media${relativePath}`, error: 'Upload failed' });
-            }
-        }
-
-        // Final progress update
-        if (progressCallback) {
-            progressCallback({
-                processed: totalFiles,
-                total: totalFiles,
-                percentage: 100,
-            });
-        }
-
-        return {
-            success: failedFiles.length === 0,
-            copiedFiles,
-            failedFiles,
-            totalFiles,
-        };
-    }
-
-    /**
-     * Recursively collect all files from a local directory
-     * @param baseDir - Base directory for relative path calculation
-     * @param currentDir - Current directory being scanned
-     * @returns Array of { localPath, relativePath } for each file
-     */
-    private collectLocalMediaFiles(
-        baseDir: string,
-        currentDir: string,
-    ): Array<{ localPath: string; relativePath: string }> {
-        const files: Array<{ localPath: string; relativePath: string }> = [];
-
-        if (!fs.existsSync(currentDir)) {
-            return files;
-        }
-
-        const entries = fs.readdirSync(currentDir, { withFileTypes: true });
-
-        for (const entry of entries) {
-            const fullPath = path.join(currentDir, entry.name);
-
-            if (entry.isDirectory()) {
-                // Recursively collect from subdirectory
-                files.push(...this.collectLocalMediaFiles(baseDir, fullPath));
-            } else if (entry.isFile()) {
-                // Calculate relative path from media directory
-                const relativePath = fullPath.substring(baseDir.length).replace(/\\/g, '/');
-                files.push({ localPath: fullPath, relativePath });
-            }
-        }
-
-        return files;
-    }
-
-    /**
-     * Upload a local file to DA.live
-     */
-    private async uploadLocalFile(
-        token: string,
-        localPath: string,
-        destOrg: string,
-        destSite: string,
-        destPath: string,
-    ): Promise<boolean> {
-        for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
-            try {
-                // Read local file
-                const content = fs.readFileSync(localPath);
-                const ext = path.extname(localPath).toLowerCase();
-
-                // Determine content type based on extension
-                const contentType = getMimeType(ext);
-
-                // Normalize destination path
-                const daPath = normalizePath(destPath);
-                const destUrl = `${DA_LIVE_BASE_URL}/source/${destOrg}/${destSite}/${daPath}`;
-
-                const formData = new FormData();
-                formData.append('data', new Blob([content], { type: contentType }));
-
-                const response = await fetch(destUrl, {
-                    method: 'POST',
-                    headers: { Authorization: `Bearer ${token}` },
-                    body: formData,
-                    signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
-                });
-
-                if (response.ok) return true;
-
-                // Token expired — throw so caller can pause-and-prompt for re-auth
-                if (response.status === 401) {
-                    throw new DaLiveAuthError('DA.live token expired during media upload');
-                }
-
-                if (RETRYABLE_STATUS_CODES.includes(response.status) && attempt < MAX_RETRY_ATTEMPTS) {
-                    await new Promise(resolve => setTimeout(resolve, getRetryDelay(attempt)));
-                    continue;
-                }
-
-                this.logger.warn(`[DA.live] Upload failed for ${destPath}: ${response.status}`);
-                return false;
-            } catch (error) {
-                if (error instanceof DaLiveAuthError) throw error;
-                if (attempt < MAX_RETRY_ATTEMPTS) {
-                    await new Promise(resolve => setTimeout(resolve, getRetryDelay(attempt)));
-                    continue;
-                }
-                this.logger.error(`[DA.live] Upload error for ${destPath}`, error as Error);
-                return false;
-            }
-        }
-        return false;
     }
 
     /**
@@ -2597,27 +2607,39 @@ export class DaLiveContentOperations {
     private async fetchWithRetry(url: string, options: RequestInit): Promise<Response> {
         for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
             try {
-                const response = await fetch(url, { ...options, signal: AbortSignal.timeout(TIMEOUTS.NORMAL) });
+                const response = await fetch(url, {
+                    ...options,
+                    signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+                });
 
                 if (response.status === 429) {
                     const retryAfter = parseInt(response.headers.get('Retry-After') || '60', 10);
-                    throw new DaLiveNetworkError('Rate limited. Please wait before making more requests.', retryAfter);
+                    throw new DaLiveNetworkError(
+                        'Rate limited. Please wait before making more requests.',
+                        retryAfter,
+                    );
                 }
 
-                if (RETRYABLE_STATUS_CODES.includes(response.status) && attempt < MAX_RETRY_ATTEMPTS) {
-                    this.logger.debug(`[DA.live] Retrying after ${response.status}, attempt ${attempt}`);
-                    await new Promise(resolve => setTimeout(resolve, getRetryDelay(attempt)));
+                if (
+                    RETRYABLE_STATUS_CODES.includes(response.status) &&
+                    attempt < MAX_RETRY_ATTEMPTS
+                ) {
+                    this.logger.debug(
+                        `[DA.live] Retrying after ${response.status}, attempt ${attempt}`,
+                    );
+                    await new Promise((resolve) => setTimeout(resolve, getRetryDelay(attempt)));
                     continue;
                 }
 
                 return response;
             } catch (error) {
-                if (error instanceof DaLiveAuthError || error instanceof DaLiveNetworkError) throw error;
+                if (error instanceof DaLiveAuthError || error instanceof DaLiveNetworkError)
+                    throw error;
 
                 const errorMessage = (error as Error).message || 'Unknown error';
                 if (attempt < MAX_RETRY_ATTEMPTS && !errorMessage.includes('abort')) {
                     this.logger.debug(`[DA.live] Network error, retrying: ${errorMessage}`);
-                    await new Promise(resolve => setTimeout(resolve, getRetryDelay(attempt)));
+                    await new Promise((resolve) => setTimeout(resolve, getRetryDelay(attempt)));
                     continue;
                 }
 
@@ -2684,7 +2706,12 @@ export class DaLiveContentOperations {
         configUpdates: Record<string, string>,
         removeKeys: string[] = [],
     ): Promise<{ success: boolean; error?: string }> {
-        return this.writeMergedDataConfig(`${DA_LIVE_BASE_URL}/config/${org}/${site}`, org, configUpdates, removeKeys);
+        return this.writeMergedDataConfig(
+            `${DA_LIVE_BASE_URL}/config/${org}/${site}`,
+            org,
+            configUpdates,
+            removeKeys,
+        );
     }
 
     /**
@@ -2729,7 +2756,9 @@ export class DaLiveContentOperations {
             });
             if (getResponse.ok) {
                 existingConfig = await getResponse.json();
-                const dataSheet = existingConfig.data as { data?: Array<{ key: string; value: string }> } | undefined;
+                const dataSheet = existingConfig.data as
+                    | { data?: Array<{ key: string; value: string }> }
+                    | undefined;
                 existingRows = dataSheet?.data || [];
             } else if (getResponse.status === 404) {
                 // No existing config — safe to create fresh (no permissions to lose)
@@ -2787,7 +2816,7 @@ export class DaLiveContentOperations {
 
         // Determine which removeKeys actually exist before mutating the map.
         // Used by the no-op short-circuit below.
-        const removedAnything = removeKeys.some(key => configMap.has(key));
+        const removedAnything = removeKeys.some((key) => configMap.has(key));
 
         // Apply updates
         for (const [key, value] of Object.entries(configUpdates)) {
@@ -2838,7 +2867,9 @@ export class DaLiveContentOperations {
             });
 
             if (response.ok) {
-                this.logger.info(`[DA.live] Config applied at ${configUrl}: ${Object.keys(configUpdates).join(', ')}`);
+                this.logger.info(
+                    `[DA.live] Config applied at ${configUrl}: ${Object.keys(configUpdates).join(', ')}`,
+                );
                 return { success: true };
             }
 
