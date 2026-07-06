@@ -77,6 +77,16 @@ function getGitHubAppStatusIndicator(
     return 'empty';
 }
 
+/** True when an existing repo is selected against a loaded, non-empty repo list. */
+function isValidExistingRepoSelection(
+    repoMode: string,
+    selectedRepo: GitHubRepoItem | undefined,
+    hasLoadedOnce: boolean,
+    repos: GitHubRepoItem[],
+): selectedRepo is GitHubRepoItem {
+    return repoMode === 'existing' && Boolean(selectedRepo) && hasLoadedOnce && repos.length > 0;
+}
+
 /**
  * RepoSelectionInline Component.
  *
@@ -156,26 +166,32 @@ export function RepoSelectionInline({
         },
         validateBeforeLoad: () => {
             if (!state.edsConfig?.githubAuth?.isAuthenticated) {
-                return { valid: false, error: 'GitHub authentication required. Please go back and authenticate.' };
+                return {
+                    valid: false,
+                    error: 'GitHub authentication required. Please go back and authenticate.',
+                };
             }
             return { valid: true };
         },
     });
 
-    const updateEdsConfig = useCallback((updates: Partial<typeof edsConfig>) => {
-        updateState({
-            edsConfig: {
-                ...edsConfig,
-                accsHost: edsConfig?.accsHost || '',
-                storeViewCode: edsConfig?.storeViewCode || '',
-                customerGroup: edsConfig?.customerGroup || '',
-                repoName: edsConfig?.repoName || '',
-                daLiveOrg: edsConfig?.daLiveOrg || '',
-                daLiveSite: edsConfig?.daLiveSite || '',
-                ...updates,
-            },
-        });
-    }, [edsConfig, updateState]);
+    const updateEdsConfig = useCallback(
+        (updates: Partial<typeof edsConfig>) => {
+            updateState({
+                edsConfig: {
+                    ...edsConfig,
+                    accsHost: edsConfig?.accsHost || '',
+                    storeViewCode: edsConfig?.storeViewCode || '',
+                    customerGroup: edsConfig?.customerGroup || '',
+                    repoName: edsConfig?.repoName || '',
+                    daLiveOrg: edsConfig?.daLiveOrg || '',
+                    daLiveSite: edsConfig?.daLiveSite || '',
+                    ...updates,
+                },
+            });
+        },
+        [edsConfig, updateState],
+    );
 
     const resetLocalState = useCallback(() => {
         setRepoCreationState({ isCreating: false, isCreated: false });
@@ -186,9 +202,12 @@ export function RepoSelectionInline({
 
     const handleCreateNew = useCallback(() => {
         updateEdsConfig({
-            repoMode: 'new', repoName: '', selectedRepo: undefined,
+            repoMode: 'new',
+            repoName: '',
+            selectedRepo: undefined,
             existingRepo: undefined,
-            resetToTemplate: false, createdRepo: undefined,
+            resetToTemplate: false,
+            createdRepo: undefined,
             // Names are locked together; clear daLiveSite alongside.
             daLiveSite: '',
         });
@@ -200,18 +219,24 @@ export function RepoSelectionInline({
         resetLocalState();
     }, [updateEdsConfig, resetLocalState]);
 
-    const handleResetToTemplateChange = useCallback((isSelected: boolean) => {
-        updateEdsConfig({ resetToTemplate: isSelected });
-    }, [updateEdsConfig]);
+    const handleResetToTemplateChange = useCallback(
+        (isSelected: boolean) => {
+            updateEdsConfig({ resetToTemplate: isSelected });
+        },
+        [updateEdsConfig],
+    );
 
-    const handleRepoNameChange = useCallback((value: string) => {
-        const normalized = normalizeRepositoryName(value);
-        // DA.live site name is locked to the GitHub repo name — see backlog
-        // 2026-06-08-unify-da-site-and-repo-name for why the dual-identifier
-        // model was retired.
-        updateEdsConfig({ repoName: normalized, daLiveSite: normalized });
-        setRepoNameError(getRepositoryNameError(normalized));
-    }, [updateEdsConfig]);
+    const handleRepoNameChange = useCallback(
+        (value: string) => {
+            const normalized = normalizeRepositoryName(value);
+            // DA.live site name is locked to the GitHub repo name — see backlog
+            // 2026-06-08-unify-da-site-and-repo-name for why the dual-identifier
+            // model was retired.
+            updateEdsConfig({ repoName: normalized, daLiveSite: normalized });
+            setRepoNameError(getRepositoryNameError(normalized));
+        },
+        [updateEdsConfig],
+    );
 
     const handleRepoNameBlur = useCallback(() => {
         setRepoNameError(getRepositoryNameError(repoName));
@@ -223,13 +248,19 @@ export function RepoSelectionInline({
         lastCheckedRepo.current = repoKey;
 
         try {
-            const result = await webviewClient.request<GitHubAppCheckResult>(
-                'check-github-app', { owner, repo, lenient },
-            );
+            const result = await webviewClient.request<GitHubAppCheckResult>('check-github-app', {
+                owner,
+                repo,
+                lenient,
+            });
             setGitHubAppStatus(buildAppStatusFromResult(result));
         } catch (err) {
             console.error('[GitHub App] Check failed:', err);
-            setGitHubAppStatus({ isChecking: false, isInstalled: false, error: (err as Error).message });
+            setGitHubAppStatus({
+                isChecking: false,
+                isInstalled: false,
+                error: (err as Error).message,
+            });
         } finally {
             setIsRechecking(false);
         }
@@ -240,7 +271,11 @@ export function RepoSelectionInline({
         const templateRepo = edsConfig?.templateRepo;
 
         if (!templateOwner || !templateRepo) {
-            setRepoCreationState({ isCreating: false, isCreated: false, error: 'Template configuration not available. Please check your stack settings.' });
+            setRepoCreationState({
+                isCreating: false,
+                isCreated: false,
+                error: 'Template configuration not available. Please check your stack settings.',
+            });
             return;
         }
         if (!repoName || !isValidRepositoryName(repoName)) {
@@ -263,13 +298,26 @@ export function RepoSelectionInline({
             }
 
             updateEdsConfig({
-                createdRepo: { owner: result.data.owner, name: result.data.name, url: result.data.url, fullName: result.data.fullName },
+                createdRepo: {
+                    owner: result.data.owner,
+                    name: result.data.name,
+                    url: result.data.url,
+                    fullName: result.data.fullName,
+                },
             });
             setRepoCreationState({ isCreating: false, isCreated: true });
-            setGitHubAppStatus({ isChecking: false, isInstalled: false, installUrl: 'https://github.com/apps/aem-code-sync/installations/select_target' });
+            setGitHubAppStatus({
+                isChecking: false,
+                isInstalled: false,
+                installUrl: 'https://github.com/apps/aem-code-sync/installations/select_target',
+            });
         } catch (err) {
             console.error('[GitHub Repo] Creation failed:', err);
-            setRepoCreationState({ isCreating: false, isCreated: false, error: (err as Error).message });
+            setRepoCreationState({
+                isCreating: false,
+                isCreated: false,
+                error: (err as Error).message,
+            });
         }
     }, [repoName, edsConfig?.templateOwner, edsConfig?.templateRepo, updateEdsConfig]);
 
@@ -282,7 +330,9 @@ export function RepoSelectionInline({
         setGitHubAppStatus({ isChecking: true, isInstalled: null });
 
         const { status, failed } = await pollGitHubAppInstallation(
-            edsConfig.createdRepo.owner, edsConfig.createdRepo.name, setRecheckMessage,
+            edsConfig.createdRepo.owner,
+            edsConfig.createdRepo.name,
+            setRecheckMessage,
         );
 
         setGitHubAppStatus(status);
@@ -298,8 +348,8 @@ export function RepoSelectionInline({
 
     // Validate pre-selected repo exists in loaded repos (for import flow).
     useEffect(() => {
-        if (repoMode === 'existing' && selectedRepo && hasLoadedOnce && repos.length > 0) {
-            const repoExists = repos.some(repo => repo.id === selectedRepo.id);
+        if (isValidExistingRepoSelection(repoMode, selectedRepo, hasLoadedOnce, repos)) {
+            const repoExists = repos.some((repo) => repo.id === selectedRepo.id);
             if (!repoExists) {
                 updateEdsConfig({
                     selectedRepo: undefined,
@@ -394,7 +444,8 @@ export function RepoSelectionInline({
                                 loadingSubMessage: 'Fetching repositories with write access',
                                 errorTitle: 'Error Loading Repositories',
                                 emptyTitle: 'No Repositories Found',
-                                emptyMessage: 'No repositories found with write access. Create a new repository to get started.',
+                                emptyMessage:
+                                    'No repositories found with write access. Create a new repository to get started.',
                                 searchPlaceholder: 'Type to filter repositories...',
                                 itemNoun: 'repository',
                                 itemNounPlural: 'repositories',
@@ -405,7 +456,9 @@ export function RepoSelectionInline({
                                     {item.isPrivate && (
                                         <span className="repo-private-badge">Private</span>
                                     )}
-                                    {item.description || <span className="repo-no-description">No description</span>}
+                                    {item.description || (
+                                        <span className="repo-no-description">No description</span>
+                                    )}
                                 </Text>
                             )}
                         />
