@@ -52,6 +52,30 @@ keeps the current public API so no consumer/test changes. Then peel off config-w
 content-copy. Run `circular-dependency-scan` after each extraction. Keep the load-bearing DA.live
 scope rules intact (config site-vs-org, canvas doc path).
 
+## Slice 8 — decide the facade's fate (do NOT ship a pure pass-through)
+
+The per-slice extractions leave `DaLiveContentOperations` methods as **thin delegators** that
+forward to the extracted services. Delegators are the correct *transitional* form (they freeze the
+public API so each slice stays a 2-file, gated commit and the ~15 consumers are untouched). They are
+NOT an acceptable *end state*: a facade that only forwards is a shallow module — the exact
+indirection the structure-methodology skill and the no-soft-deprecation rule say to avoid.
+
+At slice 8, make an explicit call with the consumer data (from the structural map, §1):
+- **Multi-cluster consumers** (e.g. `edsPipeline` uses source + content-copy + block-library;
+  `edsContentSetup` similar) have a real claim on a **slim composition facade** — one construction
+  point that wires the services, a coherent "DA.live content ops" surface.
+- **Single-cluster consumers** should migrate to the specific service directly and drop the facade
+  hop: `helixService` → `DaLiveSourceOperations.listDirectory`; `mcp-server` block calls →
+  `DaLiveBlockLibraryOperations`; `edsHelpers.applySiteConfig` → `DaLiveConfigOperations`;
+  `resourceCleanupHelpers`/`cloudResourceTools`/`cleanupDaLiveSites` (`deleteAllSiteContent`) →
+  `DaLiveSourceOperations`; `storefrontNameMigration` (`copyDaLiveSite`/`deleteSiteRoot`).
+
+**Target:** no method exists purely to forward to an object a caller could reach directly. Keep the
+smallest facade that still earns its keep (composition + multi-cluster convenience), or dissolve it
+entirely if every consumer turns out to cluster cleanly. Also drop, at slice 8, the internal-only
+delegators (`createSource`/`deleteSource`/`sourceExists` etc.) once their callers have moved into the
+extracted services.
+
 ## Constraints
 
 - Structural, high blast-radius — **not** a good rider on unrelated work; own commit(s), own review.
