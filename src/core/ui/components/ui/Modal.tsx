@@ -13,6 +13,10 @@ export interface ModalProps {
     size?: 'S' | 'M' | 'L' | 'fullscreen' | 'fullscreenTakeover';
     actionButtons?: ActionButton[];
     onClose: () => void;
+    /** Label for the built-in close button (default "Close"). */
+    closeLabel?: string;
+    /** Variant for the built-in close button (default "secondary"). */
+    closeVariant?: 'primary' | 'secondary' | 'accent' | 'negative';
     children: ReactNode;
 }
 
@@ -72,6 +76,8 @@ export function Modal({
     size = 'M',
     actionButtons = [],
     onClose,
+    closeLabel = 'Close',
+    closeVariant = 'secondary',
     children,
 }: ModalProps) {
     // Map custom sizes to Dialog-compatible sizes
@@ -82,12 +88,12 @@ export function Modal({
         <Dialog size={dialogSize}>
             <Heading>{title}</Heading>
             <Divider />
-            <Content>
+            <Content UNSAFE_className="modal-content">
                 {children}
                 <div className="modal-footer-actions">
                     {/* Close/Cancel on left, primary actions on right (per Spectrum design guidelines) */}
-                    <FocusableButton variant="secondary" onPress={onClose}>
-                        Close
+                    <FocusableButton variant={closeVariant} onPress={onClose}>
+                        {closeLabel}
                     </FocusableButton>
                     {actionButtons.map((button, index) => (
                         <FocusableButton

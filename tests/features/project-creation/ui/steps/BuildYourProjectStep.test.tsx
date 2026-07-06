@@ -259,7 +259,7 @@ describe('BuildYourProjectStep — Continue gate over non-commerce areas', () =>
         const { setCanProceed } = setup({
             selectedPackage: 'citisignal',
             selectedStack: 'eds-paas',
-            // ACCS → no Sign-in sub-step, so the active step is Destination (the target gate).
+            // A deployable is selected → the Workspace sub-step is the first-open one (its gate).
             selectedBackend: 'adobe-commerce-accs',
             activeBuildArea: 'integrations',
             selectedAppBuilderComponents: ['commerce-paas-mesh'],
@@ -274,8 +274,8 @@ describe('BuildYourProjectStep — Continue gate over non-commerce areas', () =>
             selectedBackend: 'adobe-commerce-accs',
             activeBuildArea: 'integrations',
             selectedAppBuilderComponents: ['commerce-paas-mesh'],
-            // The destination gate now lives on the single Services screen: it needs a
-            // signed-in Adobe session AND a project + workspace (all set in the card).
+            // The gate now lives on the Workspace sub-step: it needs a signed-in Adobe
+            // session AND a project + workspace.
             adobeAuth: { isAuthenticated: true, isChecking: false } as WizardState['adobeAuth'],
             adobeOrg: { id: 'o', name: 'Acme' } as WizardState['adobeOrg'],
             adobeProject: { id: 'p1', name: 'proj' } as WizardState['adobeProject'],

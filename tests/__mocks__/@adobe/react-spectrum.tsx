@@ -533,6 +533,8 @@ export const ListView: React.FC<any> = ({
     // In SearchableList, children are Item elements from filteredItems.map(itemRenderer)
     const hasChildElements = React.Children.count(children) > 0;
     const renderItem = typeof children === 'function' ? children : null;
+    // Reflect the controlled selection so tests can assert the highlighted row.
+    const selectedSet = new Set<React.Key>(Array.isArray(_selectedKeys) ? _selectedKeys : []);
 
     // Render the list content
     let content: React.ReactNode;
@@ -546,6 +548,7 @@ export const ListView: React.FC<any> = ({
                     key={key}
                     role="gridcell"
                     data-key={key}
+                    aria-selected={selectedSet.has(key) || undefined}
                     onClick={() => onSelectionChange?.(new Set([key]))}
                 >
                     {child}
@@ -561,6 +564,7 @@ export const ListView: React.FC<any> = ({
                     key={key}
                     role="gridcell"
                     data-key={key}
+                    aria-selected={selectedSet.has(key) || undefined}
                     onClick={() => onSelectionChange?.(new Set([key]))}
                 >
                     {renderItem(item)}
@@ -576,6 +580,7 @@ export const ListView: React.FC<any> = ({
                     key={key}
                     role="gridcell"
                     data-key={key}
+                    aria-selected={selectedSet.has(key) || undefined}
                     onClick={() => onSelectionChange?.(new Set([key]))}
                 >
                     {item.title || item.name || item.label || String(key)}

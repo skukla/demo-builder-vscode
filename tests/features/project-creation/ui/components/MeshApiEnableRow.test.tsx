@@ -32,6 +32,12 @@ interface RowProps {
     workspaceId?: string;
     backendId?: string;
     frontendId?: string;
+    initialResult?: {
+        success: boolean;
+        error?: string;
+        code?: string;
+        data?: { apis: Array<{ code: string; name?: string }> };
+    };
 }
 
 const BASE: RowProps = {
@@ -77,7 +83,7 @@ describe('MeshApiEnableRow', () => {
             backendId: 'backend-1',
             frontendId: 'frontend-1',
         });
-        expect(screen.getByText(/checking/i)).toBeInTheDocument();
+        expect(screen.getByText(/enabling/i)).toBeInTheDocument();
     });
 
     it('renders Enabled ✓ on success with no Retry and no Change', async () => {
@@ -245,5 +251,112 @@ describe('MeshApiEnableRow', () => {
 
         expect(screen.queryByText('API access')).not.toBeInTheDocument();
         expect(mockRequest).not.toHaveBeenCalled();
+    });
+
+    describe('subscribed API names (data.apis)', () => {
+        it('renders the joined API names when the result carries data.apis', async () => {
+            mockRequest.mockResolvedValue({
+                success: true,
+                data: {
+                    apis: [
+                        { code: 'GraphQLServiceSDK', name: 'API Mesh' },
+                        { code: 'AdobeIOManagementAPISDK', name: 'I/O Management API' },
+                    ],
+                },
+            });
+
+            renderRow();
+
+            await waitFor(() => {
+                expect(screen.getByText('API Mesh · I/O Management API')).toBeInTheDocument();
+            });
+            expect(screen.queryByText('Enabled')).not.toBeInTheDocument();
+        });
+
+        it('falls back to the code for a name-less entry', async () => {
+            mockRequest.mockResolvedValue({
+                success: true,
+                data: {
+                    apis: [
+                        { code: 'GraphQLServiceSDK' },
+                        { code: 'AdobeIOManagementAPISDK', name: 'I/O Management API' },
+                    ],
+                },
+            });
+
+            renderRow();
+
+            await waitFor(() => {
+                expect(
+                    screen.getByText('GraphQLServiceSDK · I/O Management API'),
+                ).toBeInTheDocument();
+            });
+        });
+
+        it('keeps the "Enabled" fallback when data.apis is empty', async () => {
+            mockRequest.mockResolvedValue({ success: true, data: { apis: [] } });
+
+            renderRow();
+
+            await waitFor(() => {
+                expect(screen.getByText('Enabled')).toBeInTheDocument();
+            });
+        });
+    });
+
+    describe('initialResult (pre-resolved by a parent flow)', () => {
+        const APIS = [
+            { code: 'GraphQLServiceSDK', name: 'API Mesh' },
+            { code: 'AdobeIOManagementAPISDK', name: 'I/O Management API' },
+        ];
+
+        it('adopts a successful initialResult without issuing a request and renders the names', () => {
+            renderRow({ ...BASE, initialResult: { success: true, data: { apis: APIS } } });
+
+            expect(mockRequest).not.toHaveBeenCalled();
+            expect(screen.getByText('API Mesh · I/O Management API')).toBeInTheDocument();
+        });
+
+        it('renders the failed state from a failed initialResult; Retry issues a real request', async () => {
+            renderRow({ ...BASE, initialResult: { success: false, error: 'nope' } });
+
+            expect(mockRequest).not.toHaveBeenCalled();
+            expect(screen.getByText('Failed')).toBeInTheDocument();
+            expect(screen.getByText('nope')).toBeInTheDocument();
+
+            mockRequest.mockResolvedValue({ success: true });
+            fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+
+            await waitFor(() => {
+                expect(screen.getByText('Enabled')).toBeInTheDocument();
+            });
+            expect(mockRequest).toHaveBeenCalledTimes(1);
+            expect(mockRequest).toHaveBeenCalledWith(
+                'ensure-mesh-api-subscribed',
+                expect.objectContaining({ workspaceId: 'ws-1' }),
+            );
+        });
+
+        it('auto-runs normally when the run-key changes after an initialResult was consumed', async () => {
+            mockRequest.mockResolvedValue({ success: true });
+            const initialResult = { success: true, data: { apis: APIS } };
+
+            const { rerender } = renderRow({ ...BASE, initialResult });
+            expect(mockRequest).not.toHaveBeenCalled();
+
+            rerender(
+                <Provider theme={defaultTheme} colorScheme="light">
+                    <MeshApiEnableRow {...BASE} workspaceId="ws-2" initialResult={initialResult} />
+                </Provider>,
+            );
+
+            await waitFor(() => {
+                expect(mockRequest).toHaveBeenCalledWith(
+                    'ensure-mesh-api-subscribed',
+                    expect.objectContaining({ workspaceId: 'ws-2' }),
+                );
+            });
+            expect(mockRequest).toHaveBeenCalledTimes(1);
+        });
     });
 });

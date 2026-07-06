@@ -4,7 +4,7 @@
  * The Build step walks an area's sub-steps one at a time via the footer Continue/
  * Back (the linear driver), with a left VerticalStepList nav. That machinery used
  * to be Commerce-only; this registry generalizes it so any area can be sub-stepped
- * the SAME way (Commerce today, Storefront now, Integrations later) — WizardContainer
+ * the SAME way (Commerce, Storefront, and Integrations) — WizardContainer
  * and BuildYourProjectStep drive whatever `areaSubSteps(activeAreaId)` returns.
  *
  * A driver exposes the ordered sub-steps (+ status/lock/title for the nav), the
@@ -222,11 +222,23 @@ const integrationsDriver: AreaSubStepDriver = {
             subStepId as Parameters<typeof isIntegrationsStepComplete>[1],
         );
     },
-    // Integrations has no commit-gated summary — its rows derive directly from state.
-    commit() {
+    // Continue off Adobe I/O COMMITS the pending workspace default as `adobeWorkspace`.
+    commit(state, subStepId) {
+        if (subStepId === 'adobe-io') {
+            return {
+                adobeWorkspace: state.pendingAdobeWorkspace,
+                pendingAdobeWorkspace: undefined,
+            };
+        }
         return {};
     },
-    uncommit() {
+    // Back off Adobe I/O un-commits: the committed default returns to pending (Continue must
+    // re-commit it), mirroring how Commerce's Back clears the committed-step ✓.
+    uncommit(state, order, target) {
+        const ioIdx = order.indexOf('adobe-io');
+        if (ioIdx >= 0 && order.indexOf(target) < ioIdx && state.adobeWorkspace) {
+            return { adobeWorkspace: undefined, pendingAdobeWorkspace: state.adobeWorkspace };
+        }
         return {};
     },
 };
@@ -240,4 +252,14 @@ const DRIVERS: Record<string, AreaSubStepDriver> = {
 /** The sub-step driver for an area, or null for an area with no sub-steps. */
 export function areaSubSteps(areaId: string | undefined): AreaSubStepDriver | null {
     return areaId ? DRIVERS[areaId] ?? null : null;
+}
+
+/**
+ * The sub-step driver for an area that is known to have one (Commerce/Storefront/Integrations).
+ * Fails fast rather than asserting non-null, so a missing driver surfaces immediately.
+ */
+export function requireAreaSubSteps(areaId: string): AreaSubStepDriver {
+    const driver = areaSubSteps(areaId);
+    if (!driver) throw new Error(`No sub-step driver registered for area "${areaId}"`);
+    return driver;
 }

@@ -307,4 +307,11 @@ export const CACHE_TTL = {
 
     /** Long-lived cache: rarely changing data (1 hour) */
     LONG: 3600000,
+
+    /**
+     * Org entitled-services catalog (`getServicesForOrg`) — 5 minutes.
+     * The catalog is identical for every workspace in an org and changes rarely,
+     * so a short session TTL avoids refetching the whole catalog on each commit.
+     */
+    ORG_SERVICES: 5 * 60 * 1000,
 } as const;

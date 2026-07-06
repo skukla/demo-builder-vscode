@@ -18,17 +18,29 @@
  * @module features/project-creation/ui/components/MeshIntegrationCard
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useProjectCreationPhases } from '../hooks/useProjectCreationPhases';
 import { getStackById } from '../hooks/useSelectedStack';
 import { isAdobeSignedIn } from '../steps/tileStatus';
 import { IntegrationCard, type IntegrationCardAction } from './IntegrationCard';
-import { MeshApiEnableRow } from './MeshApiEnableRow';
+import { MeshApiEnableRow, type EnsureResult } from './MeshApiEnableRow';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
+import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import {
     AdobeProjectField,
     AdobeWorkspaceField,
 } from '@/features/authentication/ui/components/AdobeEntityFields';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import type { WizardState } from '@/types/webview';
+
+/** The centered phase/error views share this height inside the card. */
+const PHASE_VIEW_HEIGHT = '220px';
+
+/** True while the centered creation phase flow is actively running. */
+function isPhaseRunning(phase: ReturnType<typeof useProjectCreationPhases>['phase']): boolean {
+    return phase === 'creating' || phase === 'workspace' || phase === 'enabling';
+}
 
 /** No-op setter for the inline AdobeAuthStep (the footer/driver owns the real gate). */
 const NOOP = (): void => {};
@@ -37,9 +49,6 @@ const MESH_NAME = 'API Mesh';
 /** The static mesh description (matches the v6 prototype). */
 export const MESH_DESCRIPTION =
     'GraphQL bridge between storefront and backend. Deploys to Adobe I/O; provides MESH_ENDPOINT.';
-
-/** Which destination field the user has explicitly reopened for editing. */
-type DestinationField = 'project' | 'workspace';
 
 export interface MeshIntegrationCardProps {
     state: WizardState;
@@ -80,12 +89,24 @@ function ChosenRow({
 interface MeshDestinationProps {
     state: WizardState;
     updateState: (updates: Partial<WizardState>) => void;
-    editing: DestinationField | null;
-    setEditing: (field: DestinationField) => void;
     projectId?: string;
     workspaceId?: string;
     projectName: string;
     workspaceName: string;
+    /** "Change" the project: reset to the fresh project picker (clears downstream). */
+    onChangeProject: () => void;
+    /** "Change" the workspace: reset to the workspace picker (clears the API row). */
+    onChangeWorkspace: () => void;
+    /** True after a "Change" on the workspace — stops it auto-re-picking Stage. */
+    suppressWorkspaceAutoSelect: boolean;
+    /** Starts the centered create-project phase flow (threaded into the project field). */
+    onCreateFlow: (name: string) => void;
+    /** A create-phase failure re-opens the project field's create panel with this error. */
+    createError?: string;
+    /** The failed create's name, so the re-opened panel is prefilled. */
+    initialCreateName?: string;
+    /** The phase flow's subscribe result — adopted by MeshApiEnableRow (no duplicate request). */
+    enableInitialResult?: EnsureResult;
 }
 
 /**
@@ -99,47 +120,142 @@ interface MeshDestinationProps {
 function MeshDestination({
     state,
     updateState,
-    editing,
-    setEditing,
     projectId,
     workspaceId,
     projectName,
     workspaceName,
+    onChangeProject,
+    onChangeWorkspace,
+    suppressWorkspaceAutoSelect,
+    onCreateFlow,
+    createError,
+    initialCreateName,
+    enableInitialResult,
 }: MeshDestinationProps): React.ReactElement {
-    const projectOpen = !projectId || editing === 'project';
-    const workspaceOpen = Boolean(projectId) && (!workspaceId || editing === 'workspace');
+    // While an entity is being picked, the card body IS that picker alone — the same
+    // "creation card" the user saw first choosing the project (just with the relevant
+    // list). Only once BOTH are committed does the card collapse to the summary rows.
+    // "Change" clears the entity + everything downstream, reopening its full-card picker.
+    if (!projectId) {
+        return (
+            <div className="int-destination">
+                <AdobeProjectField
+                    state={state}
+                    updateState={updateState}
+                    onCreateFlow={onCreateFlow}
+                    createError={createError}
+                    initialCreateName={initialCreateName}
+                />
+            </div>
+        );
+    }
+    if (!workspaceId) {
+        return (
+            <div className="int-destination">
+                <AdobeWorkspaceField
+                    state={state}
+                    updateState={updateState}
+                    suppressAutoSelect={suppressWorkspaceAutoSelect}
+                />
+            </div>
+        );
+    }
     const stack = state.selectedStack ? getStackById(state.selectedStack) : undefined;
     return (
         <div className="int-destination">
-            {projectOpen ? (
-                <AdobeProjectField state={state} updateState={updateState} />
-            ) : (
-                <ChosenRow
-                    label="Project"
-                    value={projectName}
-                    onChange={() => setEditing('project')}
-                />
-            )}
-            {projectId &&
-                (workspaceOpen ? (
-                    <AdobeWorkspaceField state={state} updateState={updateState} />
-                ) : (
-                    <ChosenRow
-                        label="Workspace"
-                        value={workspaceName}
-                        onChange={() => setEditing('workspace')}
-                    />
-                ))}
-            {workspaceId && (
-                <MeshApiEnableRow
-                    orgId={state.adobeOrg?.id}
-                    projectId={projectId}
-                    workspaceId={workspaceId}
-                    backendId={stack?.backend}
-                    frontendId={stack?.frontend}
-                />
-            )}
+            <ChosenRow label="Project" value={projectName} onChange={onChangeProject} />
+            <ChosenRow label="Workspace" value={workspaceName} onChange={onChangeWorkspace} />
+            <MeshApiEnableRow
+                orgId={state.adobeOrg?.id}
+                projectId={projectId}
+                workspaceId={workspaceId}
+                backendId={stack?.backend}
+                frontendId={stack?.frontend}
+                initialResult={enableInitialResult}
+            />
         </div>
+    );
+}
+
+/** The signed-in card body: the phase flow's centered views, or the destination fields. */
+function MeshSignedInBody({
+    phases,
+    state,
+    updateState,
+    projectId,
+    workspaceId,
+    projectName,
+    workspaceName,
+}: Omit<
+    MeshDestinationProps,
+    | 'onChangeProject'
+    | 'onChangeWorkspace'
+    | 'suppressWorkspaceAutoSelect'
+    | 'onCreateFlow'
+    | 'createError'
+    | 'initialCreateName'
+    | 'enableInitialResult'
+> & {
+    phases: ReturnType<typeof useProjectCreationPhases>;
+}): React.ReactElement {
+    // After an explicit "Change" on the workspace, stop the picker auto-re-picking
+    // Stage (it would snap shut before the user could choose). Cleared when the
+    // project changes so a NEW project still auto-selects its Stage on first load.
+    const [workspaceChanging, setWorkspaceChanging] = useState(false);
+
+    // "Change" resets that entity and everything downstream, returning the card to
+    // the original picker for it. Resetting the phase flow drops any stale subscribe
+    // result so the re-picked workspace runs its own fresh API-enable.
+    const changeProject = (): void => {
+        updateState({ adobeProject: undefined, adobeWorkspace: undefined, workspacesCache: undefined });
+        phases.reset();
+        setWorkspaceChanging(false);
+    };
+    const changeWorkspace = (): void => {
+        updateState({ adobeWorkspace: undefined, workspacesCache: undefined });
+        phases.reset();
+        setWorkspaceChanging(true);
+    };
+    if (isPhaseRunning(phases.phase)) {
+        return (
+            <CenteredFeedbackContainer height={PHASE_VIEW_HEIGHT}>
+                <LoadingDisplay
+                    size="L"
+                    message={phases.phaseMessage ?? ''}
+                    subMessage={phases.phaseSubMessage}
+                />
+            </CenteredFeedbackContainer>
+        );
+    }
+    // A create failure returns to the form (inline error); later failures get Retry.
+    if (phases.phase === 'failed' && phases.failedPhase !== 'creating') {
+        return (
+            <StatusDisplay
+                variant="error"
+                height={PHASE_VIEW_HEIGHT}
+                title="Project setup failed"
+                message={phases.error}
+                actions={[{ label: 'Retry', variant: 'accent', onPress: phases.retry }]}
+            />
+        );
+    }
+    const createFailure = phases.phase === 'failed' && phases.failedPhase === 'creating';
+    return (
+        <MeshDestination
+            state={state}
+            updateState={updateState}
+            projectId={projectId}
+            workspaceId={workspaceId}
+            projectName={projectName}
+            workspaceName={workspaceName}
+            onChangeProject={changeProject}
+            onChangeWorkspace={changeWorkspace}
+            suppressWorkspaceAutoSelect={workspaceChanging}
+            onCreateFlow={phases.start}
+            createError={createFailure ? phases.error : undefined}
+            initialCreateName={createFailure ? phases.projectName : undefined}
+            enableInitialResult={phases.enableResult}
+        />
     );
 }
 
@@ -162,16 +278,6 @@ export function MeshIntegrationCard({
     const projectName = state.adobeProject?.title || state.adobeProject?.name || '';
     const workspaceName = state.adobeWorkspace?.title || state.adobeWorkspace?.name || '';
 
-    // Which field the user reopened via "Change". A field auto-collapses once its value
-    // changes (a selection/creation committed), so only one field is open at a time.
-    const [editing, setEditing] = useState<DestinationField | null>(null);
-    useEffect(() => {
-        setEditing((e) => (e === 'project' ? null : e));
-    }, [projectId]);
-    useEffect(() => {
-        setEditing((e) => (e === 'workspace' ? null : e));
-    }, [workspaceId]);
-
     let action: IntegrationCardAction | undefined;
     if (available) {
         action = {
@@ -181,25 +287,32 @@ export function MeshIntegrationCard({
         };
     }
 
+    // The centered create-project phase flow (create → workspace → API access),
+    // rendered in place of the destination while it runs.
+    const phases = useProjectCreationPhases({ state, updateState });
+
+    // Configured once both destination entities are committed and no phase is
+    // running — that's when the card may collapse to its summary.
+    const configured =
+        selected && available && signedIn && Boolean(projectId) && Boolean(workspaceId)
+        && !isPhaseRunning(phases.phase);
+
     let config: React.ReactNode = null;
     if (selected && available) {
-        if (!signedIn) {
+        config = signedIn ? (
+            <MeshSignedInBody
+                phases={phases}
+                state={state}
+                updateState={updateState}
+                projectId={projectId}
+                workspaceId={workspaceId}
+                projectName={projectName}
+                workspaceName={workspaceName}
+            />
+        ) : (
             // Inline sign-in gate — reuses the full auth step (like Commerce's signin).
-            config = <AdobeAuthStep state={state} updateState={updateState} setCanProceed={NOOP} />;
-        } else {
-            config = (
-                <MeshDestination
-                    state={state}
-                    updateState={updateState}
-                    editing={editing}
-                    setEditing={setEditing}
-                    projectId={projectId}
-                    workspaceId={workspaceId}
-                    projectName={projectName}
-                    workspaceName={workspaceName}
-                />
-            );
-        }
+            <AdobeAuthStep state={state} updateState={updateState} setCanProceed={NOOP} />
+        );
     }
 
     return (
@@ -209,6 +322,8 @@ export function MeshIntegrationCard({
             selected={selected}
             naLabel={available ? undefined : 'N/A for this architecture'}
             action={action}
+            collapsible={configured}
+            summary={configured ? `${projectName} · ${workspaceName}` : undefined}
         >
             {config}
         </IntegrationCard>

@@ -34,7 +34,7 @@ import {
 } from '../../services/blockLibraryLoader';
 import { BlockLibrariesStepContent } from '../components/BlockLibrariesStepContent';
 import { VerticalStepList } from '../components/VerticalStepList';
-import { areaSubSteps } from './areaSubSteps';
+import { requireAreaSubSteps } from './areaSubSteps';
 import { isStorefrontConfigured } from './tileStatus';
 import { useProjectBuilder } from './useProjectBuilder';
 import { useCanProceedAll } from '@/core/ui/hooks/useCanProceed';
@@ -187,7 +187,7 @@ export function StorefrontStep({
     }, []);
 
     // --- Sub-step nav + dedicated view (shared driver) -----------------------
-    const driver = areaSubSteps('storefront')!;
+    const driver = requireAreaSubSteps('storefront');
     const subSteps = driver.subSteps(state);
     const activeStep = driver.active(state) as StorefrontSectionId;
     // Crossfade key: groups repository + code-sync so the SAME RepoSelectionInline

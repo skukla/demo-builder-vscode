@@ -37,8 +37,24 @@ jest.mock('@/features/authentication/ui/components/AdobeProjectPicker', () => ({
     ),
 }));
 jest.mock('@/features/authentication/ui/components/AdobeWorkspacePicker', () => ({
-    AdobeWorkspacePicker: ({ headerAction }: { headerAction?: React.ReactNode }) => (
-        <div data-testid="workspace-picker">{headerAction}</div>
+    AdobeWorkspacePicker: ({
+        headerAction,
+        selectedWorkspaceId,
+        onWorkspaceSelect,
+    }: {
+        headerAction?: React.ReactNode;
+        selectedWorkspaceId?: string;
+        onWorkspaceSelect?: (ws: { id: string; name: string; title?: string }) => void;
+    }) => (
+        <div data-testid="workspace-picker" data-selected={selectedWorkspaceId ?? ''}>
+            {headerAction}
+            <button
+                type="button"
+                onClick={() => onWorkspaceSelect?.({ id: 'w9', name: 'nw', title: 'New WS' })}
+            >
+                pick-ws
+            </button>
+        </div>
     ),
 }));
 
@@ -173,5 +189,66 @@ describe('AdobeWorkspaceField', () => {
                 expect.objectContaining({ adobeWorkspace: expect.objectContaining({ id: 'w9' }) }),
             ),
         );
+    });
+});
+
+describe('AdobeWorkspaceField — pending-default overrides (Adobe I/O sub-step)', () => {
+    it('threads selectedWorkspaceId + onWorkspaceSelect down to the picker', () => {
+        mockRequests();
+        const onWorkspaceSelect = jest.fn();
+        renderField(
+            <AdobeWorkspaceField
+                state={EMPTY}
+                updateState={jest.fn()}
+                selectedWorkspaceId="w-pending"
+                onWorkspaceSelect={onWorkspaceSelect}
+            />,
+        );
+
+        expect(screen.getByTestId('workspace-picker')).toHaveAttribute('data-selected', 'w-pending');
+        fireEvent.click(screen.getByRole('button', { name: 'pick-ws' }));
+        expect(onWorkspaceSelect).toHaveBeenCalledWith({ id: 'w9', name: 'nw', title: 'New WS' });
+    });
+
+    it('passes neither prop by default (mesh path unchanged)', () => {
+        mockRequests();
+        renderField(<AdobeWorkspaceField state={EMPTY} updateState={jest.fn()} />);
+        expect(screen.getByTestId('workspace-picker')).toHaveAttribute('data-selected', '');
+    });
+});
+
+describe('AdobeProjectField — external create flow (onCreateFlow)', () => {
+    it('delegates Create to onCreateFlow without issuing a request or busy state', async () => {
+        mockRequests();
+        const onCreateFlow = jest.fn();
+        renderField(
+            <AdobeProjectField state={EMPTY} updateState={jest.fn()} onCreateFlow={onCreateFlow} />,
+        );
+
+        fireEvent.click(await screen.findByRole('button', { name: 'New' }));
+        fireEvent.change(screen.getByRole('textbox'), { target: { value: 'my-demo' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+        expect(onCreateFlow).toHaveBeenCalledWith('my-demo');
+        expect(request).not.toHaveBeenCalledWith('create-adobe-project', expect.anything());
+        // Delegated create leaves the form interactive (the parent swaps the view).
+        expect(screen.getByRole('button', { name: 'Create' })).not.toBeDisabled();
+    });
+
+    it('opens directly on the create panel showing createError with the name prefilled', () => {
+        mockRequests();
+        renderField(
+            <AdobeProjectField
+                state={EMPTY}
+                updateState={jest.fn()}
+                onCreateFlow={jest.fn()}
+                createError="name taken"
+                initialCreateName="my-demo"
+            />,
+        );
+
+        expect(screen.getByRole('heading', { name: 'Create New Project' })).toBeInTheDocument();
+        expect(screen.getByRole('textbox')).toHaveValue('my-demo');
+        expect(screen.getByText('name taken')).toBeInTheDocument();
     });
 });

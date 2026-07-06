@@ -244,12 +244,15 @@ async function enumerateAccsCatalog(
         ...(configHeaders.cs ?? {}),
         'Content-Type': 'application/json',
     };
+    const endpoint = params.commerceEndpoint;
+    if (!endpoint) throw new Error('catalog prewarm requires a commerceEndpoint');
+
     const allPaths: SkuPath[] = [];
     let currentPage = 1;
     let totalPages = 1;
 
     do {
-        const response = await fetch(params.commerceEndpoint!, {
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers,
             body: JSON.stringify({

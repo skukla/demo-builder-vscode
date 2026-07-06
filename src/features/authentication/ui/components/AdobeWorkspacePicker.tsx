@@ -31,6 +31,24 @@ export interface AdobeWorkspacePickerProps {
     updateState: (updates: Partial<WizardState>) => void;
     /** Optional header action (e.g. a "New" button) rendered in the list header. */
     headerAction?: React.ReactNode;
+    /**
+     * Suppress the Stage/single auto-select. Set when the user explicitly reopened
+     * this picker via "Change" — otherwise it would instantly re-pick Stage and snap
+     * shut before they can choose a different workspace.
+     */
+    suppressAutoSelect?: boolean;
+    /**
+     * Overrides the highlighted row (defaults to `state.adobeWorkspace?.id`). The Adobe
+     * I/O sub-step passes its PENDING (uncommitted) workspace id so the highlight tracks
+     * pending, not the committed default.
+     */
+    selectedWorkspaceId?: string;
+    /**
+     * Overrides the default commit. When provided, selecting a workspace calls this
+     * (the Adobe I/O sub-step writes `pendingAdobeWorkspace`) instead of writing
+     * `state.adobeWorkspace`. Omitted on the mesh path → byte-identical default behavior.
+     */
+    onWorkspaceSelect?: (ws: { id: string; name: string; title?: string }) => void;
 }
 
 /**
@@ -43,6 +61,9 @@ export function AdobeWorkspacePicker({
     state,
     updateState,
     headerAction,
+    suppressAutoSelect = false,
+    selectedWorkspaceId,
+    onWorkspaceSelect,
 }: AdobeWorkspacePickerProps): React.ReactElement {
     const {
         items: workspaces,
@@ -67,23 +88,25 @@ export function AdobeWorkspacePicker({
         state,
         updateState,
         selectedItem: state.adobeWorkspace,
-        autoSelectSingle: true,
+        autoSelectSingle: !suppressAutoSelect,
         searchFields: ['title', 'name'],
-        // Auto-select "Stage" workspace if available and nothing selected.
-        autoSelectCustom: (items) =>
-            items.find(
-                (ws) =>
-                    ws.name?.toLowerCase().includes('stage') ||
-                    ws.title?.toLowerCase().includes('stage'),
-            ),
+        // Auto-select "Stage" workspace if available and nothing selected — unless the
+        // user reopened this picker to change it, in which case leave it to them.
+        autoSelectCustom: suppressAutoSelect
+            ? undefined
+            : (items) =>
+                  items.find(
+                      (ws) =>
+                          ws.name?.toLowerCase().includes('stage') ||
+                          ws.title?.toLowerCase().includes('stage'),
+                  ),
         onSelect: (workspace) => {
-            updateState({
-                adobeWorkspace: {
-                    id: workspace.id,
-                    name: workspace.name,
-                    title: workspace.title,
-                },
-            });
+            const ws = { id: workspace.id, name: workspace.name, title: workspace.title };
+            if (onWorkspaceSelect) {
+                onWorkspaceSelect(ws);
+            } else {
+                updateState({ adobeWorkspace: ws });
+            }
         },
         validateBeforeLoad: () => {
             if (!state.adobeProject?.id) {
@@ -110,7 +133,7 @@ export function AdobeWorkspacePicker({
             onSearchChange={setSearchQuery}
             onLoad={loadWorkspaces}
             onRefresh={refresh}
-            selectedId={state.adobeWorkspace?.id}
+            selectedId={selectedWorkspaceId ?? state.adobeWorkspace?.id}
             onSelect={selectItem}
             labels={{
                 loadingMessage: 'Loading workspaces...',

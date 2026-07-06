@@ -49,6 +49,110 @@ describe('AdobeWorkspacePicker', () => {
         jest.clearAllMocks();
     });
 
+    describe('Auto-select suppression (Change workspace)', () => {
+        it('auto-selects Stage by default (autoSelectSingle on, Stage finder present)', () => {
+            mockUseSelectionStep.mockReturnValue(createMockUseSelectionStepReturn());
+            render(
+                <Provider theme={defaultTheme}>
+                    <AdobeWorkspacePicker
+                        state={baseState as WizardState}
+                        updateState={mockUpdateState}
+                    />
+                </Provider>
+            );
+            const config = mockUseSelectionStep.mock.calls[0][0];
+            expect(config.autoSelectSingle).toBe(true);
+            expect(config.autoSelectCustom).toBeInstanceOf(Function);
+        });
+
+        it('disables auto-select when suppressAutoSelect is set', () => {
+            mockUseSelectionStep.mockReturnValue(createMockUseSelectionStepReturn());
+            render(
+                <Provider theme={defaultTheme}>
+                    <AdobeWorkspacePicker
+                        state={baseState as WizardState}
+                        updateState={mockUpdateState}
+                        suppressAutoSelect
+                    />
+                </Provider>
+            );
+            const config = mockUseSelectionStep.mock.calls[0][0];
+            expect(config.autoSelectSingle).toBe(false);
+            expect(config.autoSelectCustom).toBeUndefined();
+        });
+    });
+
+    describe('Pending-default overrides (Adobe I/O sub-step)', () => {
+        it('onWorkspaceSelect overrides the default commit — writes NOTHING to adobeWorkspace', () => {
+            mockUseSelectionStep.mockReturnValue(createMockUseSelectionStepReturn());
+            const onWorkspaceSelect = jest.fn();
+            render(
+                <Provider theme={defaultTheme}>
+                    <AdobeWorkspacePicker
+                        state={baseState as WizardState}
+                        updateState={mockUpdateState}
+                        onWorkspaceSelect={onWorkspaceSelect}
+                    />
+                </Provider>
+            );
+
+            const onSelect = mockUseSelectionStep.mock.calls[0][0].onSelect;
+            onSelect(mockWorkspaces[1]);
+
+            expect(onWorkspaceSelect).toHaveBeenCalledWith({
+                id: 'workspace2',
+                name: 'Production',
+                title: 'Production Environment',
+            });
+            expect(mockUpdateState).not.toHaveBeenCalled();
+        });
+
+        it('selectedWorkspaceId overrides the highlighted row (not state.adobeWorkspace)', () => {
+            mockUseSelectionStep.mockReturnValue(createMockUseSelectionStepReturn());
+            render(
+                <Provider theme={defaultTheme}>
+                    <AdobeWorkspacePicker
+                        state={baseState as WizardState}
+                        updateState={mockUpdateState}
+                        selectedWorkspaceId="workspace2"
+                    />
+                </Provider>
+            );
+
+            const selected = screen
+                .getAllByRole('gridcell')
+                .filter((r) => r.getAttribute('aria-selected') === 'true');
+            expect(selected).toHaveLength(1);
+            expect(selected[0]).toHaveTextContent('Production');
+        });
+
+        it('without the overrides, the default commit + highlight hold', () => {
+            mockUseSelectionStep.mockReturnValue(createMockUseSelectionStepReturn());
+            render(
+                <Provider theme={defaultTheme}>
+                    <AdobeWorkspacePicker
+                        state={
+                            { ...baseState, adobeWorkspace: mockWorkspaces[0] } as WizardState
+                        }
+                        updateState={mockUpdateState}
+                    />
+                </Provider>
+            );
+
+            const onSelect = mockUseSelectionStep.mock.calls[0][0].onSelect;
+            onSelect(mockWorkspaces[1]);
+            expect(mockUpdateState).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    adobeWorkspace: expect.objectContaining({ id: 'workspace2' }),
+                })
+            );
+            const selected = screen
+                .getAllByRole('gridcell')
+                .filter((r) => r.getAttribute('aria-selected') === 'true');
+            expect(selected[0]).toHaveTextContent('Stage');
+        });
+    });
+
     describe('Happy Path - Workspace Selection', () => {
         it('should render workspace selection UI', () => {
             mockUseSelectionStep.mockReturnValue(createMockUseSelectionStepReturn());

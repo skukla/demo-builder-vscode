@@ -52,8 +52,8 @@ function integrationAppBuilderComponent(apis: string[]): AppBuilderComponentCata
 }
 
 const SERVICES_FOR_ORG = [
-    { code: MESH, platformList: ['apiKey'], domainMandatory: true },
-    { code: MGMT, platformList: ['oauth_server_to_server'] },
+    { code: MESH, name: 'API Mesh', platformList: ['apiKey'], domainMandatory: true },
+    { code: MGMT, name: 'I/O Management API', platformList: ['oauth_server_to_server'] },
     { code: 'SomeOtherSDK', platformList: ['oauth_server_to_server'] },
 ];
 
@@ -100,6 +100,16 @@ describe('apiSubscriber', () => {
         it('should throw on an unknown API name', () => {
             expect(() => resolveServiceInfos(['NotARealSDK'], SERVICES_FOR_ORG)).toThrow(/NotARealSDK/);
         });
+
+        it('should carry the org service display name through', () => {
+            const [meshInfo] = resolveServiceInfos([MESH], SERVICES_FOR_ORG);
+            expect(meshInfo.name).toBe('API Mesh');
+        });
+
+        it('should leave name undefined when the org service has none', () => {
+            const [otherInfo] = resolveServiceInfos(['SomeOtherSDK'], SERVICES_FOR_ORG);
+            expect(otherInfo.name).toBeUndefined();
+        });
     });
 
     describe('partitionByPlatform', () => {
@@ -122,6 +132,8 @@ describe('apiSubscriber', () => {
         beforeEach(() => {
             client = {
                 getServicesForOrg: jest.fn().mockResolvedValue(SERVICES_FOR_ORG),
+                // Default: credential carries nothing yet → the subscribe paths proceed.
+                getSubscribedServiceCodes: jest.fn().mockResolvedValue([]),
                 ensureOAuthCredentialId: jest.fn().mockResolvedValue('s2s-int-id'),
                 createAdobeIdCredential: jest.fn().mockResolvedValue('apikey-int-id'),
                 subscribeOAuthServerToServerIntegrationToServices: jest.fn().mockResolvedValue(undefined),
@@ -151,6 +163,20 @@ describe('apiSubscriber', () => {
                 'ws1',
                 expect.objectContaining({ platform: 'apiKey', domain: expect.any(String) }),
             );
+        });
+
+        it('scopes the credential name to the workspace and reuses the legacy fixed name', async () => {
+            // AdobeID names are project-unique; a fixed name collides on the 2nd
+            // workspace (409). The name is workspace-scoped, with the legacy name as a
+            // reuse alias so existing single-workspace credentials are not duplicated.
+            await subscribeRequiredApis([meshAppBuilderComponent()], orgTarget, client);
+
+            const credArgs = client.createAdobeIdCredential.mock.calls[0][3] as {
+                name: string;
+                reuseNames?: string[];
+            };
+            expect(credArgs.name).toBe('demo-builder-api-mesh-ws1');
+            expect(credArgs.reuseNames).toEqual(['demo-builder-api-mesh']);
             expect(client.subscribeAdobeIdIntegrationToServices).toHaveBeenCalledWith(
                 'org1',
                 'apikey-int-id',
@@ -178,6 +204,40 @@ describe('apiSubscriber', () => {
             expect(client.subscribeAdobeIdIntegrationToServices).toHaveBeenCalled();
         });
 
+        it('skips the s2s subscribe PUT when the baseline is already subscribed', async () => {
+            (client.getSubscribedServiceCodes as jest.Mock).mockResolvedValue([MGMT, MESH]);
+
+            await subscribeRequiredApis([meshAppBuilderComponent()], orgTarget, client);
+
+            expect(client.subscribeOAuthServerToServerIntegrationToServices).not.toHaveBeenCalled();
+        });
+
+        it('skips the apiKey subscribe PUT when the mesh API is already subscribed', async () => {
+            (client.getSubscribedServiceCodes as jest.Mock).mockResolvedValue([MGMT, MESH]);
+
+            await subscribeRequiredApis([meshAppBuilderComponent()], orgTarget, client);
+
+            expect(client.subscribeAdobeIdIntegrationToServices).not.toHaveBeenCalled();
+        });
+
+        it('still subscribes when the credential is missing a required code', async () => {
+            // Has the baseline but NOT the mesh API → the apiKey path must subscribe.
+            (client.getSubscribedServiceCodes as jest.Mock).mockResolvedValue([MGMT]);
+
+            await subscribeRequiredApis([meshAppBuilderComponent()], orgTarget, client);
+
+            expect(client.subscribeAdobeIdIntegrationToServices).toHaveBeenCalled();
+        });
+
+        it('subscribes when the current subscription set is unknown ([] fail-safe)', async () => {
+            (client.getSubscribedServiceCodes as jest.Mock).mockResolvedValue([]);
+
+            await subscribeRequiredApis([meshAppBuilderComponent()], orgTarget, client);
+
+            expect(client.subscribeAdobeIdIntegrationToServices).toHaveBeenCalled();
+            expect(client.subscribeOAuthServerToServerIntegrationToServices).toHaveBeenCalled();
+        });
+
         it('should still subscribe the s2s baseline for a mesh-only set', async () => {
             await subscribeRequiredApis([meshAppBuilderComponent()], orgTarget, client);
             expect(client.subscribeOAuthServerToServerIntegrationToServices).toHaveBeenCalledWith(
@@ -203,6 +263,28 @@ describe('apiSubscriber', () => {
         it('should not create an apiKey credential when no apiKey service is required', async () => {
             await subscribeRequiredApis([integrationAppBuilderComponent(['SomeOtherSDK'])], orgTarget, client);
             expect(client.createAdobeIdCredential).not.toHaveBeenCalled();
+        });
+
+        it('should return the resolved API list (union incl. baseline) with names', async () => {
+            const result = await subscribeRequiredApis([meshAppBuilderComponent()], orgTarget, client);
+
+            expect(result).toHaveLength(2);
+            expect(result).toEqual(
+                expect.arrayContaining([
+                    { code: MGMT, name: 'I/O Management API' },
+                    { code: MESH, name: 'API Mesh' },
+                ]),
+            );
+        });
+
+        it('should return name-less entries with name undefined', async () => {
+            const result = await subscribeRequiredApis(
+                [integrationAppBuilderComponent(['SomeOtherSDK'])], orgTarget, client,
+            );
+
+            const other = result.find((api) => api.code === 'SomeOtherSDK');
+            expect(other).toBeDefined();
+            expect(other?.name).toBeUndefined();
         });
     });
 });

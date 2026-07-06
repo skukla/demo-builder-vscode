@@ -1,7 +1,7 @@
 /**
  * AdobeEntityFields — "browse or create" controls for the Adobe I/O deployment target.
  *
- * The Integrations "Destination" sub-step lets the user pick an EXISTING Adobe I/O
+ * The Integrations "Workspace" sub-step lets the user pick an EXISTING Adobe I/O
  * project/workspace OR create a NEW one in-app. The look + feel mirrors the extension's
  * existing "create GitHub repo" flow (see {@link NewRepoForm} in
  * `eds/ui/steps/repoSelectionInline.helpers`): a BROWSE list with a "New" header button
@@ -62,6 +62,7 @@ function NewAdobeEntityForm({
     contextHint,
     busy,
     error,
+    initialName,
     onBrowse,
     onCreate,
 }: {
@@ -69,10 +70,12 @@ function NewAdobeEntityForm({
     contextHint?: string;
     busy: boolean;
     error?: string;
+    /** Prefill for the name field (e.g. re-opening after an external create failure). */
+    initialName?: string;
     onBrowse: () => void;
     onCreate: (name: string) => void;
 }): React.ReactElement {
-    const [name, setName] = useState('');
+    const [name, setName] = useState(initialName ?? '');
     const trimmed = name.trim();
 
     return (
@@ -120,17 +123,37 @@ function NewButton({ onPress }: { onPress: () => void }): React.ReactElement {
     );
 }
 
+interface AdobeProjectFieldProps extends FieldProps {
+    /**
+     * When provided, Create DELEGATES to this callback instead of issuing the
+     * `create-adobe-project` request itself — the parent (e.g. the mesh card's
+     * phase flow) owns the request, progress display, and error handling.
+     */
+    onCreateFlow?: (name: string) => void;
+    /** External create error — opens the field on the create panel showing it. */
+    createError?: string;
+    /** Prefill for the create panel's name (pairs with `createError`). */
+    initialCreateName?: string;
+}
+
 /**
  * The Adobe I/O project field: browse existing projects, or create a new one in-app
  * (matching the GitHub repo browse/create flow).
  *
- * @param props - wizard state + updater
+ * @param props - wizard state + updater, plus the optional external create-flow seam
  * @returns the project browse-or-create control
  */
-export function AdobeProjectField({ state, updateState }: FieldProps): React.ReactElement {
-    const [mode, setMode] = useState<FieldMode>('browse');
+export function AdobeProjectField({
+    state,
+    updateState,
+    onCreateFlow,
+    createError,
+    initialCreateName,
+}: AdobeProjectFieldProps): React.ReactElement {
+    // An external create failure re-opens the field directly on the create panel.
+    const [mode, setMode] = useState<FieldMode>(createError ? 'create' : 'browse');
     const [busy, setBusy] = useState(false);
-    const [error, setError] = useState<string | undefined>();
+    const [error, setError] = useState<string | undefined>(createError);
 
     const browse = useCallback(() => {
         setMode('browse');
@@ -140,6 +163,13 @@ export function AdobeProjectField({ state, updateState }: FieldProps): React.Rea
     const handleCreate = useCallback(
         async (name: string): Promise<void> => {
             if (!name || busy) return;
+            if (onCreateFlow) {
+                // Parent-owned flow: hand off and stay interactive (the parent
+                // swaps this field out for its own progress view).
+                setError(undefined);
+                onCreateFlow(name);
+                return;
+            }
             setBusy(true);
             setError(undefined);
             try {
@@ -170,7 +200,7 @@ export function AdobeProjectField({ state, updateState }: FieldProps): React.Rea
                 setBusy(false);
             }
         },
-        [busy, updateState],
+        [busy, updateState, onCreateFlow],
     );
 
     if (mode === 'create') {
@@ -184,6 +214,7 @@ export function AdobeProjectField({ state, updateState }: FieldProps): React.Rea
                 }
                 busy={busy}
                 error={error}
+                initialName={initialCreateName}
                 onBrowse={browse}
                 onCreate={handleCreate}
             />
@@ -206,7 +237,20 @@ export function AdobeProjectField({ state, updateState }: FieldProps): React.Rea
  * @param props - wizard state + updater
  * @returns the workspace browse-or-create control
  */
-export function AdobeWorkspaceField({ state, updateState }: FieldProps): React.ReactElement {
+export function AdobeWorkspaceField({
+    state,
+    updateState,
+    suppressAutoSelect,
+    selectedWorkspaceId,
+    onWorkspaceSelect,
+}: FieldProps & {
+    /** Forwarded to the picker: don't auto-pick Stage when the user is changing it. */
+    suppressAutoSelect?: boolean;
+    /** Forwarded to the picker: override the highlighted row (Adobe I/O pending default). */
+    selectedWorkspaceId?: string;
+    /** Forwarded to the picker: override the default commit (Adobe I/O writes pending). */
+    onWorkspaceSelect?: (ws: { id: string; name: string; title?: string }) => void;
+}): React.ReactElement {
     const [mode, setMode] = useState<FieldMode>('browse');
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | undefined>();
@@ -270,6 +314,9 @@ export function AdobeWorkspaceField({ state, updateState }: FieldProps): React.R
             state={state}
             updateState={updateState}
             headerAction={<NewButton onPress={() => setMode('create')} />}
+            suppressAutoSelect={suppressAutoSelect}
+            selectedWorkspaceId={selectedWorkspaceId}
+            onWorkspaceSelect={onWorkspaceSelect}
         />
     );
 }

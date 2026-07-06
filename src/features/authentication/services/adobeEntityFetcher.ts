@@ -37,7 +37,7 @@ import type {
 } from './types';
 import { getLogger, StepLogger } from '@/core/logging';
 import { withOrgContext, type CommandExecutor } from '@/core/shell';
-import { formatDuration, TIMEOUTS } from '@/core/utils';
+import { CACHE_TTL, formatDuration, TIMEOUTS } from '@/core/utils';
 import { tryWithTimeout } from '@/core/utils/promiseUtils';
 import { ErrorCode } from '@/types/errorCodes';
 import { AuthError } from '@/types/errors';
@@ -66,6 +66,12 @@ export class AdobeEntityFetcher {
     private debugLogger = getLogger();
     /** Cached credential from createWorkspaceCredential — avoids re-query issues */
     private cachedCredential: WorkspaceCredential | undefined;
+    /**
+     * Per-org cache of the entitled-services catalog (see getServicesForOrg).
+     * Per-fetcher-instance: the fetcher is a session singleton (created once via
+     * ServiceLocator/AuthenticationService), so this lives for the session.
+     */
+    private servicesCache = new Map<string, { services: OrgServiceInfo[]; expiresAt: number }>();
 
     constructor(
         private commandManager: CommandExecutor,
@@ -876,12 +882,55 @@ export class AdobeEntityFetcher {
      * Each entry carries `{ code, platformList, domainMandatory?, ... }`.
      */
     async getServicesForOrg(orgId: string): Promise<OrgServiceInfo[]> {
+        // Session-TTL cache: the org's service catalog is identical for every
+        // workspace in the org and changes rarely, so avoid refetching it on every
+        // workspace commit. Return the cached list while it is still fresh.
+        const cached = this.servicesCache.get(orgId);
+        if (cached && Date.now() < cached.expiresAt) {
+            return cached.services;
+        }
+
         await this.ensureSDKReady();
         const client = this.sdkClient.getClient() as {
             getServicesForOrg: (orgId: string) => Promise<SDKResponse<OrgServiceInfo[]>>;
         };
         const response = await client.getServicesForOrg(orgId);
-        return response?.body ?? [];
+        const services = response?.body ?? [];
+
+        // Cache only a successful, non-empty fetch — never a degraded empty result,
+        // so a transient 500 → [] cannot poison the cache for the whole session.
+        if (services.length > 0) {
+            this.servicesCache.set(orgId, {
+                services,
+                expiresAt: Date.now() + CACHE_TTL.ORG_SERVICES,
+            });
+        }
+        return services;
+    }
+
+    /**
+     * The sdk codes a credential is CURRENTLY subscribed to (`getIntegration.sdkList`).
+     * Lets the subscribe paths skip the slow subscribe PUT when the required APIs are
+     * already present. Never throws — returns `[]` on any error so callers fall through
+     * to subscribing (fail-safe).
+     *
+     * @param orgId - Adobe org id
+     * @param idIntegration - the credential's integration id
+     * @returns the subscribed sdk codes, or `[]` when unknown
+     */
+    async getSubscribedServiceCodes(orgId: string, idIntegration: string): Promise<string[]> {
+        try {
+            await this.ensureSDKReady();
+            const client = this.sdkClient.getClient() as {
+                getIntegration: (orgId: string, idIntegration: string) =>
+                    Promise<SDKResponse<{ sdkList?: string[] }>>;
+            };
+            const response = await client.getIntegration(orgId, idIntegration);
+            return response?.body?.sdkList ?? [];
+        } catch (error) {
+            this.debugLogger.debug('[Entity Fetcher] getSubscribedServiceCodes failed', error);
+            return [];
+        }
     }
 
     /**
@@ -909,10 +958,15 @@ export class AdobeEntityFetcher {
             ) => Promise<SDKResponse<{ id_integration?: string; id?: string }>>;
         };
 
+        // Reuse an existing apiKey credential whose name is the requested one OR any
+        // legacy `reuseNames` alias — so a workspace that already has the old fixed-name
+        // credential is reused instead of colliding on a duplicate create.
+        const acceptableNames = new Set([input.name, ...(input.reuseNames ?? [])]);
         const existing = (await client.getCredentials(orgId, projectId, workspaceId))?.body;
         const match = existing?.find(
             (c) => (c.integration_type === 'apikey' || c.flow_type === 'adobeid')
-                && c.integration_name === input.name
+                && !!c.integration_name
+                && acceptableNames.has(c.integration_name)
                 && c.id_integration,
         );
         if (match?.id_integration) {
@@ -921,8 +975,10 @@ export class AdobeEntityFetcher {
 
         // The create response returns the integration id in `.id` (like the OAuth create),
         // NOT `.id_integration` — that field only appears on getCredentials LIST entries.
-        // Prefer id_integration when present, else fall back to id.
-        const response = await client.createAdobeIdCredential(orgId, projectId, workspaceId, input);
+        // Prefer id_integration when present, else fall back to id. `reuseNames` is a
+        // local hint, not an Adobe field — strip it from the create payload.
+        const { reuseNames: _reuseNames, ...sdkInput } = input;
+        const response = await client.createAdobeIdCredential(orgId, projectId, workspaceId, sdkInput);
         return response?.body?.id_integration ?? response?.body?.id;
     }
 

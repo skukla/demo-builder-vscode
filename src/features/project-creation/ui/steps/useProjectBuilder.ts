@@ -74,6 +74,13 @@ export interface UseProjectBuilderReturn {
     onBlockLibrariesChange: (libraries: string[]) => void;
     onCustomBlockLibrariesChange: (libs: CustomBlockLibrary[]) => void;
     onAppBuilderComponentToggle: (id: string, isSelected: boolean) => void;
+    onAddCustomAppBuilderComponent: (source: {
+        owner: string;
+        repo: string;
+        branch?: string;
+    }) => void;
+    /** Remove an added App Builder integration: clears its selection AND its source. */
+    onRemoveAppBuilderComponent: (id: string) => void;
     onOptionalDependenciesChange: (deps: string[]) => void;
 }
 
@@ -266,6 +273,38 @@ export function useProjectBuilder(
         [selectedAppBuilderComponents, selectedOptionalDependencies, updateState],
     );
 
+    const onAddCustomAppBuilderComponent = useCallback(
+        (source: { owner: string; repo: string; branch?: string }) => {
+            const id = `${source.owner}-${source.repo}`;
+            const nextComponents = withSelectedAppBuilderComponent(
+                selectedAppBuilderComponents,
+                id,
+                true,
+            );
+            updateState({
+                selectedAppBuilderComponents: nextComponents,
+                appBuilderComponentSources: {
+                    ...(state.appBuilderComponentSources ?? {}),
+                    [id]: { owner: source.owner, repo: source.repo, branch: source.branch },
+                },
+            });
+        },
+        [selectedAppBuilderComponents, state.appBuilderComponentSources, updateState],
+    );
+
+    const onRemoveAppBuilderComponent = useCallback(
+        (id: string) => {
+            const next = withSelectedAppBuilderComponent(selectedAppBuilderComponents, id, false);
+            const sources = { ...(state.appBuilderComponentSources ?? {}) };
+            delete sources[id];
+            updateState({
+                selectedAppBuilderComponents: next,
+                appBuilderComponentSources: sources,
+            });
+        },
+        [selectedAppBuilderComponents, state.appBuilderComponentSources, updateState],
+    );
+
     const onAddonsChange = useCallback(
         (addons: string[]) => updateState({ selectedAddons: addons }),
         [updateState],
@@ -302,6 +341,8 @@ export function useProjectBuilder(
         onBlockLibrariesChange,
         onCustomBlockLibrariesChange,
         onAppBuilderComponentToggle,
+        onAddCustomAppBuilderComponent,
+        onRemoveAppBuilderComponent,
         onOptionalDependenciesChange,
     };
 }

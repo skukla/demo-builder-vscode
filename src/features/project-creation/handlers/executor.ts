@@ -38,6 +38,7 @@ import { detectB2bReadiness } from '@/features/eds/services/b2bReadinessDetectio
 import { extractConfigParamsFromConfigs } from '@/features/eds/services/configGenerator';
 import { syncConfigToRemote } from '@/features/eds/services/configSyncService';
 import { TransformedComponentDefinition } from '@/types';
+import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import { AdobeConfig } from '@/types/base';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
@@ -150,6 +151,9 @@ interface ProjectCreationConfig {
     // Package/Stack selections
     selectedPackage?: string;
     selectedStack?: string;
+    // Selected App Builder integration ids (Model B deploy) + custom GitHub sources
+    selectedAppBuilderComponents?: string[];
+    appBuilderComponentSources?: Record<string, { owner: string; repo: string; branch?: string }>;
     // Selected optional addons (e.g., ['adobe-commerce-aco'])
     selectedAddons?: string[];
     // Selected block library IDs (e.g., ['isle5', 'demo-team-blocks'])
@@ -402,6 +406,12 @@ export async function executeProjectCreation(
     );
 
     // ========================================================================
+    // PHASE 3b: APP BUILDER INTEGRATIONS
+    // ========================================================================
+
+    await executeAppBuilderIntegrationsPhase(context, project, typedConfig, progressTracker);
+
+    // ========================================================================
     // PHASE 4-5: FINALIZATION
     // ========================================================================
     //
@@ -456,6 +466,61 @@ export async function executeProjectCreation(
     // `get_current_project` MCP tool. Anchoring the window to the project subdir
     // would reload the window (killing any live MCP session) and break the
     // single-home-Chat model, so it is intentionally omitted.
+}
+
+/**
+ * PHASE 3b — deploy each selected App Builder "integration" via the SHARED Model B
+ * runner ({@link addAppBuilderComponent}). Mesh-kind selections dual-flow through
+ * {@link executeMeshPhase} and are excluded here.
+ *
+ * Resolves each id to a catalog entry, else to a custom-URL entry from
+ * `appBuilderComponentSources`. When nothing resolves to `kind: 'integration'` the
+ * phase is a no-op (no permission check). Otherwise it gates on the Developer /
+ * System Admin role once, builds the runner deps once, then deploys sequentially;
+ * a failed gate or deploy throws (fails the creation flow).
+ */
+export async function executeAppBuilderIntegrationsPhase(
+    context: HandlerContext,
+    project: import('@/types').Project,
+    typedConfig: ProjectCreationConfig,
+    progressTracker: ProgressTracker,
+): Promise<void> {
+    const { getAppBuilderComponentEntry, buildCustomIntegrationEntry } = await import(
+        '@/features/project-creation/services/appBuilderComponentCatalogLoader'
+    );
+    const sources = typedConfig.appBuilderComponentSources ?? {};
+    const entries = (typedConfig.selectedAppBuilderComponents ?? [])
+        .map(id => getAppBuilderComponentEntry(id)
+            ?? (sources[id] ? buildCustomIntegrationEntry(sources[id]) : undefined))
+        .filter((entry): entry is AppBuilderComponentCatalogEntry => entry?.kind === 'integration');
+
+    if (entries.length === 0) {
+        return;
+    }
+
+    const { ServiceLocator } = await import('@/core/di');
+    const permission = await ServiceLocator.getAuthenticationService().testDeveloperPermissions();
+    if (!permission.hasPermissions) {
+        throw new Error(permission.error
+            || 'Your account lacks the Developer or System Admin role required to deploy '
+            + 'App Builder integrations. Select a different organization or contact your administrator.');
+    }
+
+    const { buildDefaultRunnerDeps, buildRunnerDepsContext } = await import(
+        '@/features/app-builder/services/appBuilderComponentRunnerDeps'
+    );
+    const { addAppBuilderComponent } = await import(
+        '@/features/app-builder/services/appBuilderComponentRunner'
+    );
+    const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project));
+
+    for (const entry of entries) {
+        progressTracker('Deploying Integrations', 70, `Deploying ${entry.name}…`);
+        const result = await addAppBuilderComponent(project, entry, deps);
+        if (!result.success) {
+            throw new Error(result.error || 'App Builder integration deployment failed');
+        }
+    }
 }
 
 // ============================================================================

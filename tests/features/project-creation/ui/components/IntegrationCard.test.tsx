@@ -101,4 +101,85 @@ describe('IntegrationCard', () => {
 
         expect(onPress).toHaveBeenCalledTimes(1);
     });
+
+    describe('secondaryAction', () => {
+        it('renders the secondary action and fires its onPress when clicked', () => {
+            const onPress = jest.fn();
+            renderWithProvider(
+                <IntegrationCard
+                    name="widget"
+                    description="App Builder app"
+                    selected
+                    action={{ label: 'Remove', onPress: jest.fn() }}
+                    secondaryAction={{ label: 'Change', onPress }}
+                />
+            );
+
+            const change = screen.getByRole('button', { name: 'Change' });
+            expect(change).toBeInTheDocument();
+            fireEvent.click(change);
+            expect(onPress).toHaveBeenCalledTimes(1);
+        });
+
+        it('renders no secondary control when secondaryAction is omitted', () => {
+            renderWithProvider(
+                <IntegrationCard
+                    name="widget"
+                    description="App Builder app"
+                    selected
+                    action={{ label: 'Remove', onPress: jest.fn() }}
+                />
+            );
+
+            expect(screen.queryByRole('button', { name: 'Change' })).not.toBeInTheDocument();
+        });
+    });
+
+    describe('collapse (configured card)', () => {
+        const configured = (
+            <IntegrationCard
+                name="API Mesh"
+                description="GraphQL bridge"
+                selected
+                collapsible
+                summary="Kukla Mesh · Stage"
+            >
+                <div data-testid="config">Config body</div>
+            </IntegrationCard>
+        );
+
+        it('shows no chevron when not collapsible', () => {
+            renderWithProvider(
+                <IntegrationCard name="API Mesh" description="GraphQL bridge" selected>
+                    <div data-testid="config">Config body</div>
+                </IntegrationCard>
+            );
+            expect(screen.queryByRole('button', { name: /collapse|expand/i })).not.toBeInTheDocument();
+            expect(screen.getByTestId('config')).toBeInTheDocument();
+        });
+
+        it('offers a Collapse chevron; collapsing hides the config and shows the summary', () => {
+            renderWithProvider(configured);
+
+            // Starts expanded: config + description visible, summary not.
+            expect(screen.getByTestId('config')).toBeInTheDocument();
+            expect(screen.getByText('GraphQL bridge')).toBeInTheDocument();
+            expect(screen.queryByText('Kukla Mesh · Stage')).not.toBeInTheDocument();
+
+            fireEvent.click(screen.getByRole('button', { name: 'Collapse API Mesh' }));
+
+            expect(screen.queryByTestId('config')).not.toBeInTheDocument();
+            expect(screen.getByText('Kukla Mesh · Stage')).toBeInTheDocument();
+            expect(screen.queryByText('GraphQL bridge')).not.toBeInTheDocument();
+        });
+
+        it('expands again via the chevron', () => {
+            renderWithProvider(configured);
+            fireEvent.click(screen.getByRole('button', { name: 'Collapse API Mesh' }));
+            fireEvent.click(screen.getByRole('button', { name: 'Expand API Mesh' }));
+
+            expect(screen.getByTestId('config')).toBeInTheDocument();
+            expect(screen.getByText('GraphQL bridge')).toBeInTheDocument();
+        });
+    });
 });

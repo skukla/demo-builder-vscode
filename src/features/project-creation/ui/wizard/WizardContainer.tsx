@@ -346,7 +346,7 @@ export function WizardContainer({
 
     // The footer Continue/Back is the single LINEAR driver: it walks an area's
     // SUB-STEPS → AREAS → wizard steps. The active area's sub-step DRIVER (Commerce /
-    // Storefront today; null for a single-view area like Integrations) generalizes the
+    // Storefront / Integrations; null for an area with no sub-steps) generalizes the
     // walk; its ordered sub-steps + the active one come from state.
     const activeDriver = onBuildStep ? areaSubSteps(activeAreaId) : null;
     const subSteps = activeDriver ? activeDriver.subSteps(state) : [];

@@ -653,13 +653,27 @@ button[class*="spectrum-Button"][disabled],
 .grid-align-end { justify-self: end !important; }
 
 /* Modal footer - separator with action buttons */
+/* The dialog's scroll region. Its bottom padding would sit BELOW the sticky footer and let
+   scrolling content bleed through that strip, so zero it — the footer owns the bottom gap. */
+.modal-content {
+    padding-bottom: 0 !important;
+}
 .modal-footer-actions {
+    /* Pin to the bottom of the dialog's scroll area so the primary action stays visible while
+       a tall body (e.g. the integration catalog grid) scrolls. With .modal-content's bottom
+       padding removed, the footer pins flush to the true bottom — no bleed-through strip. On a
+       short modal that doesn't overflow, sticky is a no-op and it sits normally. */
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 1 !important;
     margin-top: 24px !important;
     padding-top: 16px !important;
+    padding-bottom: 16px !important;
     display: flex !important;
     justify-content: flex-end !important;
     gap: 8px !important;
     border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
+    background: var(--spectrum-global-color-gray-100) !important;
 }
 
 /* Sidebar action tile — small square tile with icon above label, single
@@ -4095,7 +4109,6 @@ div[class*="spectrum"] input[type="search"] {
     margin: 0 !important;
     flex: 0 0 auto !important;
 }
-
 /* ---- VerticalStepList (.vsteplist*) — a QUIET vertical MENU on the panel's left ----
  * Matched to the right-hand summary column (.sum*) so the panel reads as a balanced
  * pair [ quiet nav | step content | quiet summary ]. NO numbered circles, NO connector
@@ -4441,6 +4454,46 @@ div[class*="spectrum"] input[type="search"] {
     flex-direction: column;
     gap: 12px;
 }
+/* Section header dividing the "add" menu (mesh + catalog + custom rows) above from the
+   ADDED integrations below — a quiet uppercase label with a rule filling the rest of the row.
+   Rendered only once at least one integration is added. */
+.int-added-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+}
+.int-added-divider::after {
+    content: '';
+    flex: 1 1 auto;
+    height: 1px;
+    background: var(--spectrum-global-color-gray-300);
+}
+.int-added-label {
+    flex: 0 0 auto;
+    font-size: var(--spectrum-global-dimension-font-size-50);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-600);
+}
+/* The ONE shared "Deploys to Adobe I/O" destination element, pinned above the cards.
+   A bordered container in the card family (mirrors .int-card) so the establish/reference
+   destination reads as a peer of the deployables it feeds. */
+.int-destination-shared {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--spectrum-global-color-gray-50);
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin-bottom: 4px;
+}
+/* The shared row's own .int-chosen carries the container's bottom padding — drop its
+   default margin so it doesn't add a phantom gap inside the bordered box. */
+.int-destination-shared > .int-chosen {
+    margin-bottom: 0;
+}
 /* Canonical page header — one tight single row (title · subtitle crumb … action),
  * the same reclaimed density on every screen. The page context (a rail, a grid) owns
  * the wayfinding, so the title stays modest and the header spends little vertical budget. */
@@ -4504,6 +4557,15 @@ div[class*="spectrum"] input[type="search"] {
 .int-card-desc {
     font-size: 12px;
     color: var(--spectrum-global-color-gray-600);
+    line-height: 1.4;
+    margin-top: 3px;
+}
+
+/* Collapsed-card summary (the committed Project · Workspace). Real content, so a
+   touch more prominent than the muted description it replaces. */
+.int-card-summary {
+    font-size: 13px;
+    color: var(--spectrum-global-color-gray-800);
     line-height: 1.4;
     margin-top: 3px;
 }
@@ -4592,11 +4654,23 @@ div[class*="spectrum"] input[type="search"] {
     font-weight: 600;
     color: var(--spectrum-global-color-gray-900);
 }
+
+/* API access lists several APIs (and later events), joined with " · ". Lighter
+   weight + slightly smaller + wrapping keeps a long list readable as a secondary
+   detail rather than a bold headline, and lets it flow to a second line instead
+   of forcing the row wide. Project/Workspace values keep the bold treatment. */
+.int-chosen-value.int-chosen-value--apis {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--spectrum-global-color-gray-800);
+    line-height: 1.4;
+    white-space: normal;
+}
 .int-chosen .spectrum-Button,
 .int-chosen button {
     margin-left: auto;
 }
-/* Simulated empty card for a future integration — a dashed sibling. */
+/* Pressable "add an integration" affordance — a dashed sibling of the mesh card. */
 .int-add-card {
     display: flex;
     flex-direction: column;
@@ -4608,13 +4682,70 @@ div[class*="spectrum"] input[type="search"] {
     border-radius: 8px;
     text-align: center;
 }
+/* Button variant: reset default button chrome and add an interactive hover. */
+button.int-add-card {
+    width: 100%;
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+    transition: border-color 130ms ease-in-out;
+}
+button.int-add-card:hover {
+    border-color: var(--spectrum-global-color-gray-600);
+}
 .int-add-card-label {
     font-size: 14px;
     font-weight: 600;
     color: var(--spectrum-global-color-gray-700);
 }
-.int-add-card-note {
-    font-size: 12px;
-    color: var(--spectrum-global-color-gray-500);
+/* The modal's "← Back" control (returns the flow to the Pre-built/Custom chooser). */
+.int-add-modal-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    padding: 0;
+    margin-bottom: 14px;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--spectrum-global-color-blue-600);
+}
+.int-add-modal-back:hover {
+    text-decoration: underline;
+}
+.int-add-choices {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+/* Empty state when a catalog filter matches nothing. */
+.int-add-empty {
+    padding: 24px 8px;
+    text-align: center;
+    color: var(--spectrum-global-color-gray-600);
+    font-size: 13px;
+}
+
+/* Catalog entries render as square tiles in the wrapping row (not full-width rows). */
+.choice-card--tile {
+    flex: 0 0 auto !important;
+    width: 168px !important;
+    min-width: 168px !important;
+    min-height: 168px !important;
+}
+.choice-card--tile .choice-card-description {
+    display: -webkit-box !important;
+    -webkit-line-clamp: 3 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+}
+.int-add-custom {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
 }
 } /* End of second @layer theme block */

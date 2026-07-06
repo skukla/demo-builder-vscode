@@ -57,6 +57,28 @@ export function getAppBuilderComponentEntry(id: string): AppBuilderComponentCata
 }
 
 /**
+ * Build a custom-URL integration entry from a user-provided GitHub source.
+ *
+ * The custom-URL door: an integration acquired by owner/repo (optionally branch)
+ * rather than from the pre-built catalog. Branch defaults to 'main'. Shared by the
+ * dashboard add-handler and the wizard creation-flow integrations phase.
+ *
+ * @param source - The GitHub source ({owner, repo, branch?})
+ * @returns A synthesized `kind: 'integration'` catalog entry
+ */
+export function buildCustomIntegrationEntry(
+    source: { owner: string; repo: string; branch?: string },
+): AppBuilderComponentCatalogEntry {
+    return {
+        id: `${source.owner}-${source.repo}`,
+        name: source.repo,
+        description: `Custom App Builder component from ${source.owner}/${source.repo}`,
+        kind: 'integration',
+        source: { owner: source.owner, repo: source.repo, branch: source.branch ?? 'main' },
+    };
+}
+
+/**
  * Resolve an App Builder component id to its GitHub source.
  *
  * @param id - The appBuilderComponent id

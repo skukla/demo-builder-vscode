@@ -13,7 +13,7 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 import { MeshIntegrationCard } from '@/features/project-creation/ui/components/MeshIntegrationCard';
@@ -30,7 +30,28 @@ jest.mock('@/features/authentication/ui/steps/AdobeAuthStep', () => ({
     AdobeAuthStep: () => <div data-testid="adobe-auth-step">Adobe Auth Step</div>,
 }));
 jest.mock('@/features/authentication/ui/components/AdobeEntityFields', () => ({
-    AdobeProjectField: () => <div data-testid="project-field">Project Field</div>,
+    AdobeProjectField: (props: {
+        onCreateFlow?: (name: string) => void;
+        createError?: string;
+        initialCreateName?: string;
+    }) => (
+        <div data-testid="project-field">
+            Project Field
+            {props.createError && <div data-testid="create-error">{props.createError}</div>}
+            {props.initialCreateName && (
+                <div data-testid="create-name">{props.initialCreateName}</div>
+            )}
+            {props.onCreateFlow && (
+                <button
+                    type="button"
+                    data-testid="create-flow"
+                    onClick={() => props.onCreateFlow?.('My Demo')}
+                >
+                    create
+                </button>
+            )}
+        </div>
+    ),
     AdobeWorkspaceField: () => <div data-testid="workspace-field">Workspace Field</div>,
 }));
 
@@ -46,18 +67,19 @@ function renderCard(overrides: {
     onToggle?: jest.Mock;
 } = {}) {
     const onToggle = overrides.onToggle ?? jest.fn();
+    const updateState = jest.fn();
     render(
         <Provider theme={defaultTheme} colorScheme="light">
             <MeshIntegrationCard
                 state={(overrides.state ?? {}) as WizardState}
-                updateState={jest.fn()}
+                updateState={updateState}
                 available={overrides.available ?? true}
                 selected={overrides.selected ?? false}
                 onToggle={onToggle}
             />
         </Provider>,
     );
-    return { onToggle };
+    return { onToggle, updateState };
 }
 
 describe('MeshIntegrationCard', () => {
@@ -102,7 +124,7 @@ describe('MeshIntegrationCard', () => {
         expect(screen.queryByTestId('workspace-field')).not.toBeInTheDocument();
     });
 
-    it('project chosen: collapses project to a ChosenRow and opens the workspace field', () => {
+    it('project chosen, no workspace: card is the workspace picker alone (no rows yet)', () => {
         renderCard({
             selected: true,
             state: {
@@ -111,12 +133,38 @@ describe('MeshIntegrationCard', () => {
             },
         });
 
-        // Project collapsed to a chosen row (value + Change), project field hidden.
-        expect(screen.queryByTestId('project-field')).not.toBeInTheDocument();
-        expect(screen.getByText('Demo Project')).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /change/i })).toBeInTheDocument();
-        // Workspace field now open.
+        // While picking the workspace the card body IS the workspace picker — the
+        // project ChosenRow (and its Change) is NOT shown yet; only the summary rows,
+        // once both are committed, bring the rows back.
         expect(screen.getByTestId('workspace-field')).toBeInTheDocument();
+        expect(screen.queryByTestId('project-field')).not.toBeInTheDocument();
+        expect(screen.queryByText('Demo Project')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /change/i })).not.toBeInTheDocument();
+    });
+
+    it('fully configured: offers a collapse chevron, folding to the Project · Workspace summary', () => {
+        renderCard({
+            selected: true,
+            state: {
+                ...SIGNED_IN,
+                adobeProject: { id: 'p1', name: 'proj', title: 'Kukla Mesh' },
+                adobeWorkspace: { id: 'w1', name: 'Stage', title: 'Stage' },
+            },
+        });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Collapse API Mesh' }));
+
+        expect(screen.getByText('Kukla Mesh · Stage')).toBeInTheDocument();
+        // Config (the destination rows) is hidden while collapsed.
+        expect(screen.queryByRole('button', { name: /change/i })).not.toBeInTheDocument();
+    });
+
+    it('not offered until a workspace is committed', () => {
+        renderCard({
+            selected: true,
+            state: { ...SIGNED_IN, adobeProject: { id: 'p1', name: 'proj', title: 'Kukla Mesh' } },
+        });
+        expect(screen.queryByRole('button', { name: /collapse api mesh/i })).not.toBeInTheDocument();
     });
 
     it('both chosen: both collapse to chosen rows (two Change controls)', () => {
@@ -136,8 +184,8 @@ describe('MeshIntegrationCard', () => {
         expect(screen.getAllByRole('button', { name: /change/i })).toHaveLength(2);
     });
 
-    it('clicking Change on a chosen project reopens the project field', () => {
-        renderCard({
+    it('Change on the project clears the project + workspace (back to the picker)', () => {
+        const { updateState } = renderCard({
             selected: true,
             state: {
                 ...SIGNED_IN,
@@ -149,7 +197,30 @@ describe('MeshIntegrationCard', () => {
         // The first Change is the project's.
         fireEvent.click(screen.getAllByRole('button', { name: /change/i })[0]);
 
-        expect(screen.getByTestId('project-field')).toBeInTheDocument();
+        expect(updateState).toHaveBeenCalledWith({
+            adobeProject: undefined,
+            adobeWorkspace: undefined,
+            workspacesCache: undefined,
+        });
+    });
+
+    it('Change on the workspace clears only the workspace (keeps the project)', () => {
+        const { updateState } = renderCard({
+            selected: true,
+            state: {
+                ...SIGNED_IN,
+                adobeProject: { id: 'p1', name: 'proj', title: 'Demo Project' },
+                adobeWorkspace: { id: 'w1', name: 'Stage', title: 'Stage' },
+            },
+        });
+
+        // The second Change is the workspace's.
+        fireEvent.click(screen.getAllByRole('button', { name: /change/i })[1]);
+
+        expect(updateState).toHaveBeenCalledWith({
+            adobeWorkspace: undefined,
+            workspacesCache: undefined,
+        });
     });
 
     it('Remove fires onToggle(false)', () => {
@@ -224,6 +295,144 @@ describe('MeshIntegrationCard', () => {
             expect(
                 within(row).queryByRole('button', { name: /change/i }),
             ).not.toBeInTheDocument();
+        });
+    });
+
+    describe('creation phase flow (centered spinner)', () => {
+        /** Per-message-type deferred router over mockRequest. */
+        function deferredRouter() {
+            const pending: Record<string, Array<(v: unknown) => void>> = {};
+            mockRequest.mockImplementation(
+                (type: string) =>
+                    new Promise((resolve) => {
+                        (pending[type] ??= []).push(resolve);
+                    }),
+            );
+            return {
+                resolve(type: string, value: unknown) {
+                    const next = pending[type]?.shift();
+                    if (!next) throw new Error(`no pending request for ${type}`);
+                    next(value);
+                },
+                requestCount(type: string) {
+                    return mockRequest.mock.calls.filter((c) => c[0] === type).length;
+                },
+            };
+        }
+
+        /** Stateful harness: updateState actually merges so commits re-render the card. */
+        function StatefulCard({ initial }: { initial: Partial<WizardState> }) {
+            const [state, setState] = React.useState(initial as WizardState);
+            const updateState = React.useCallback(
+                (u: Partial<WizardState>) => setState((s) => ({ ...s, ...u })),
+                [],
+            );
+            return (
+                <Provider theme={defaultTheme} colorScheme="light">
+                    <MeshIntegrationCard
+                        state={state}
+                        updateState={updateState}
+                        available
+                        selected
+                        onToggle={jest.fn()}
+                    />
+                </Provider>
+            );
+        }
+
+        const CREATED = {
+            success: true,
+            data: { id: 'p-new', name: 'my-demo', title: 'My Demo', org_id: 'org-1' },
+        };
+        const WORKSPACES = {
+            success: true,
+            data: [{ id: 'ws-1', name: 'Stage', title: 'Stage' }],
+        };
+        const ENABLED = {
+            success: true,
+            data: {
+                apis: [
+                    { code: 'GraphQLServiceSDK', name: 'API Mesh' },
+                    { code: 'AdobeIOManagementAPISDK', name: 'I/O Management API' },
+                ],
+            },
+        };
+
+        beforeEach(() => jest.clearAllMocks());
+
+        async function startFlow() {
+            const router = deferredRouter();
+            render(<StatefulCard initial={{ ...SIGNED_IN }} />);
+            fireEvent.click(screen.getByTestId('create-flow'));
+            return router;
+        }
+
+        it('swaps the destination for the centered spinner with the creating message', async () => {
+            await startFlow();
+
+            expect(await screen.findByText('Creating project "My Demo"…')).toBeInTheDocument();
+            expect(screen.queryByTestId('project-field')).not.toBeInTheDocument();
+        });
+
+        it('progresses through the three phase messages and lands on the committed rows', async () => {
+            const router = await startFlow();
+
+            await act(async () => router.resolve('create-adobe-project', CREATED));
+            expect(screen.getByText('Setting up workspace…')).toBeInTheDocument();
+
+            await act(async () => router.resolve('get-workspaces', WORKSPACES));
+            expect(screen.getByText('Enabling API access…')).toBeInTheDocument();
+            // Each phase also shows a sub-message naming the concrete action.
+            expect(
+                screen.getByText('Subscribing to API Mesh and the I/O Management API'),
+            ).toBeInTheDocument();
+
+            await act(async () => router.resolve('ensure-mesh-api-subscribed', ENABLED));
+            // Committed rows: project + workspace ChosenRows and the enable row.
+            expect(screen.getByText('My Demo')).toBeInTheDocument();
+            expect(screen.getByText('Stage')).toBeInTheDocument();
+            // The row adopted the phase flow's result: joined API names, no second request.
+            expect(screen.getByText('API Mesh · I/O Management API')).toBeInTheDocument();
+            expect(router.requestCount('ensure-mesh-api-subscribed')).toBe(1);
+        });
+
+        it('enabling failure shows the centered error with Retry; Retry re-issues only the enable', async () => {
+            const router = await startFlow();
+
+            await act(async () => router.resolve('create-adobe-project', CREATED));
+            await act(async () => router.resolve('get-workspaces', WORKSPACES));
+            await act(async () =>
+                router.resolve('ensure-mesh-api-subscribed', {
+                    success: false,
+                    error: 'boom',
+                }),
+            );
+
+            expect(screen.getByText('boom')).toBeInTheDocument();
+            const retry = screen.getByRole('button', { name: /retry/i });
+
+            fireEvent.click(retry);
+            expect(await screen.findByText('Enabling API access…')).toBeInTheDocument();
+            expect(router.requestCount('create-adobe-project')).toBe(1);
+            expect(router.requestCount('ensure-mesh-api-subscribed')).toBe(2);
+
+            await act(async () => router.resolve('ensure-mesh-api-subscribed', ENABLED));
+            expect(screen.getByText('API Mesh · I/O Management API')).toBeInTheDocument();
+        });
+
+        it('create failure returns to the form with the error and name preserved', async () => {
+            const router = await startFlow();
+
+            await act(async () =>
+                router.resolve('create-adobe-project', {
+                    success: false,
+                    error: 'name taken',
+                }),
+            );
+
+            expect(screen.getByTestId('project-field')).toBeInTheDocument();
+            expect(screen.getByTestId('create-error')).toHaveTextContent('name taken');
+            expect(screen.getByTestId('create-name')).toHaveTextContent('My Demo');
         });
     });
 });

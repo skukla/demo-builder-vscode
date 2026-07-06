@@ -18,15 +18,19 @@ import type * as vscode from 'vscode';
 import * as yaml from 'yaml';
 import { deriveAllowedDomain } from './allowedDomain';
 import { subscribeRequiredApis, type ApiSubscriberClient, type OrgTarget } from './apiSubscriber';
+import { createApiSubscriberClient } from './apiSubscriberClientAdapter';
 import type { AppBuilderComponentRunnerDeps } from './appBuilderComponentRunner';
 import { deployAppComponent } from './appDeployment';
 import type { MeshSubscribeTarget } from './ensureMeshApiSubscribed';
+import { ServiceLocator } from '@/core/di';
 import type { CachedOrgRef, CommandExecutor } from '@/core/shell';
 import type { ComponentManager } from '@/features/components/services/componentManager';
 import { republishStorefrontConfig } from '@/features/eds/services/storefrontRepublishService';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
+import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
+import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 import { toError } from '@/types/typeGuards';
 
@@ -94,14 +98,51 @@ export function buildDefaultRunnerDeps(ctx: RunnerDepsContext): AppBuilderCompon
             await applyOwPackage(componentPath, owPackage, logger);
             return deployAppComponent(componentPath, commandManager, logger, onProgress);
         },
-        subscribeRequiredApis: (appBuilderComponents, project) =>
-            subscribeRequiredApis(
+        // The runner's dep contract is void — swallow the returned API list.
+        subscribeRequiredApis: async (appBuilderComponents, project) => {
+            await subscribeRequiredApis(
                 appBuilderComponents,
                 subscriberTarget(project),
                 ctx.subscriberClient,
                 deriveAllowedDomain(project),
-            ),
+            );
+        },
         republishStorefront: ({ project }) =>
             republishStorefrontConfig({ project, secrets: ctx.secrets, logger: ctx.logger }),
+    };
+}
+
+/** Resolve the project's stack-filtered catalog (axis-filtered by selection). */
+function resolveCatalog(project: Project): AppBuilderComponentCatalogEntry[] {
+    return getAvailableAppBuilderComponents(
+        project.componentSelections?.backend ?? '',
+        project.componentSelections?.frontend ?? '',
+    );
+}
+
+/**
+ * Assemble the {@link RunnerDepsContext} for a host (extension) invocation. Wires
+ * the extension collaborators the runner needs: the component manager, command
+ * executor, logger, project persistence, the cached-org read, the Track A
+ * subscriber adapter, the stack-filtered catalog, and the extension secrets.
+ *
+ * Shared by the dashboard add/deploy/remove handlers AND the wizard creation-flow
+ * integrations phase (Rule of Three: identical second use → extracted here).
+ */
+export async function buildRunnerDepsContext(
+    context: HandlerContext,
+    project: Project,
+): Promise<RunnerDepsContext> {
+    const { ComponentManager } = await import('@/features/components/services/componentManager');
+    const authManager = ServiceLocator.getAuthenticationService();
+    return {
+        componentManager: new ComponentManager(context.logger),
+        commandManager: ServiceLocator.getCommandExecutor(),
+        logger: context.logger,
+        saveProject: (p: Project) => context.stateManager.saveProject(p),
+        getCachedOrganization: () => authManager.getCachedOrganization(),
+        subscriberClient: createApiSubscriberClient(authManager),
+        catalog: resolveCatalog(project),
+        secrets: context.context.secrets,
     };
 }

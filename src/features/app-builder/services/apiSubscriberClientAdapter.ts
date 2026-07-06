@@ -20,6 +20,9 @@ export function createApiSubscriberClient(service: AuthenticationService): ApiSu
     return {
         getServicesForOrg: (orgId) => service.getServicesForOrg(orgId),
 
+        getSubscribedServiceCodes: (orgId, idIntegration) =>
+            service.getSubscribedServiceCodes(orgId, idIntegration),
+
         ensureOAuthCredentialId: (target: OrgTarget) =>
             service.ensureOAuthCredentialId(target.orgId, target.projectId, target.workspaceId),
 

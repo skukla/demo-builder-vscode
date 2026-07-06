@@ -22,7 +22,7 @@ export type {
 
 export { setLoadingState } from './loadingHTML';
 
-export { TIMEOUTS } from './timeoutConfig';
+export { TIMEOUTS, CACHE_TTL } from './timeoutConfig';
 
 export { formatDuration, formatMinutes } from './timeFormatting';
 

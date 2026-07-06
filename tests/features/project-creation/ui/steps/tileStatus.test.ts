@@ -200,14 +200,46 @@ describe('isIntegrationsComplete', () => {
         expect(isIntegrationsComplete(s, packages, stacks)).toBe(false);
     });
 
-    it('is true when mesh is On with BOTH project and workspace chosen', () => {
+    it('is true when mesh is On with BOTH project and workspace chosen (signed in)', () => {
         const s = state({
             selectedPackage: 'citisignal',
             selectedStack: 'eds-paas',
             selectedAppBuilderComponents: ['commerce-paas-mesh'],
+            adobeAuth: { isAuthenticated: true, isChecking: false },
+            adobeOrg: { id: 'org-1', name: 'Acme', code: 'ACME' } as WizardState['adobeOrg'],
             adobeProject: { id: 'p1', name: 'proj' },
             adobeWorkspace: { id: 'w1', name: 'ws' },
         });
+        expect(isIntegrationsComplete(s, packages, stacks)).toBe(true);
+    });
+
+    // App Builder integration (non-mesh) on a stack with NO mesh — the generalized
+    // gate must NOT report complete just because there is no mesh: a selected
+    // integration still needs a deployment destination.
+    it('is false for a non-mesh app selection on a no-mesh stack without a destination', () => {
+        const s = state({
+            selectedPackage: 'citisignal',
+            selectedStack: 'eds-none',
+            selectedAppBuilderComponents: ['erp-sync'],
+        });
+        expect(isIntegrationsComplete(s, packages, stacks)).toBe(false);
+    });
+
+    it('is true for a non-mesh app selection once signed in with project + workspace', () => {
+        const s = state({
+            selectedPackage: 'citisignal',
+            selectedStack: 'eds-none',
+            selectedAppBuilderComponents: ['erp-sync'],
+            adobeAuth: { isAuthenticated: true, isChecking: false },
+            adobeOrg: { id: 'org-1', name: 'Acme', code: 'ACME' } as WizardState['adobeOrg'],
+            adobeProject: { id: 'p1', name: 'proj' },
+            adobeWorkspace: { id: 'w1', name: 'ws' },
+        });
+        expect(isIntegrationsComplete(s, packages, stacks)).toBe(true);
+    });
+
+    it('is true when nothing is selected on a no-mesh stack', () => {
+        const s = state({ selectedPackage: 'citisignal', selectedStack: 'eds-none' });
         expect(isIntegrationsComplete(s, packages, stacks)).toBe(true);
     });
 });

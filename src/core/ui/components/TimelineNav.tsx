@@ -110,6 +110,23 @@ export function TimelineNav({
     // Add timeline-sidebar class when in compact/sidebar mode
     const containerClass = compact ? 'timeline-container timeline-sidebar' : 'timeline-container';
 
+    // Per-step derived display state — extracted so the render map stays simple (and under
+    // the complexity limit). Exiting steps read as grayed-out 'upcoming' and are inert.
+    const stepDisplayState = (step: (typeof displaySteps)[number]) => {
+        const actualIndex = step.isExiting ? -1 : steps.findIndex((s) => s.id === step.id);
+        const status = step.isExiting ? 'upcoming' : getStepStatus(actualIndex);
+        const isCurrentWithChildren =
+            !step.isExiting && status === 'current' && (childSteps?.length ?? 0) > 0;
+        return {
+            actualIndex,
+            status,
+            isClickable: !step.isExiting && isStepClickable(actualIndex),
+            isEntering: isStepEntering(step.id),
+            isExiting: step.isExiting,
+            isCurrentWithChildren,
+        };
+    };
+
     return (
         <View
             padding={padding}
@@ -127,18 +144,17 @@ export function TimelineNav({
             <View position="relative">
                 {/* Steps */}
                 {displaySteps.map((step, displayIndex) => {
-                    // For exiting steps, use 'upcoming' status (grayed out)
-                    // For normal steps, calculate status based on position in actual steps array
-                    const actualIndex = step.isExiting ? -1 : steps.findIndex(s => s.id === step.id);
-                    const status = step.isExiting ? 'upcoming' : getStepStatus(actualIndex);
-                    const isClickable = !step.isExiting && isStepClickable(actualIndex);
-                    const isEntering = isStepEntering(step.id);
-                    const isExiting = step.isExiting;
                     // When the current step shows children, its bottom spacing moves to
                     // the children block (small gap above the first child, full step-gap
                     // below the last) so the rail rhythm stays even.
-                    const isCurrentWithChildren =
-                        !step.isExiting && status === 'current' && (childSteps?.length ?? 0) > 0;
+                    const {
+                        actualIndex,
+                        status,
+                        isClickable,
+                        isEntering,
+                        isExiting,
+                        isCurrentWithChildren,
+                    } = stepDisplayState(step);
 
                     return (
                         <View

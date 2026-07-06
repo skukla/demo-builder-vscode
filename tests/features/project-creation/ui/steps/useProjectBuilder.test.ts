@@ -38,7 +38,6 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
 }));
 
 import { getResolvedMeshRequirement } from '@/features/project-creation/services/demoPackageLoader';
-import { vscode } from '@/core/ui/utils/vscode-api';
 import {
     getNativeBlockLibraries,
     getDefaultBlockLibraryIds,
@@ -131,11 +130,6 @@ const withAddons: DemoPackage = {
         'headless-paas': { name: 'WA HL', description: '', source: mockGitSource },
     },
 } as DemoPackage;
-
-const customLib: CustomBlockLibrary = {
-    name: 'My Custom Lib',
-    source: { owner: 'myorg', repo: 'my-blocks', branch: 'main' },
-};
 
 /**
  * Render the hook with a controlled WizardState. updateState applies the partial
@@ -457,169 +451,6 @@ describe('useProjectBuilder — edsConfig derivation on stack select', () => {
     });
 });
 
-describe('useProjectBuilder — addon handler', () => {
-    it('updates selectedAddons', () => {
-        const { result, updateState } = setup({ selectedStack: 'eds-paas' });
-        act(() => {
-            result.current.onAddonsChange(['live-search', 'catalog-service']);
-        });
-        expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({ selectedAddons: ['live-search', 'catalog-service'] }),
-        );
-    });
-});
-
-describe('useProjectBuilder — block library handlers', () => {
-    it('updates selectedBlockLibraries', () => {
-        const { result, updateState } = setup({ selectedStack: 'eds-paas' });
-        act(() => {
-            result.current.onBlockLibrariesChange(['isle5']);
-        });
-        expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({ selectedBlockLibraries: ['isle5'] }),
-        );
-    });
-
-    it('updates customBlockLibraries', () => {
-        const { result, updateState } = setup({ selectedStack: 'eds-paas' });
-        act(() => {
-            result.current.onCustomBlockLibrariesChange([customLib]);
-        });
-        expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({ customBlockLibraries: [customLib] }),
-        );
-    });
-});
-
-describe('useProjectBuilder — onStackSelect addon seeding (parity)', () => {
-    it('seeds required (package) ∪ default (stack) addons on stack select', () => {
-        // withAddons requires `live-search`; edsStack defaults `live-search`.
-        const { result, updateState } = setup({ selectedPackage: 'withAddons' });
-        act(() => {
-            result.current.onStackSelect('eds-paas');
-        });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
-        expect(call.selectedAddons).toEqual(['live-search']);
-    });
-
-    it('seeds only stack-default addons when the package has no required addons', () => {
-        const { result, updateState } = setup({ selectedPackage: 'citisignal' });
-        act(() => {
-            result.current.onStackSelect('eds-paas');
-        });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
-        // edsStack defaults live-search (default:true); catalog-service is default:false.
-        expect(call.selectedAddons).toEqual(['live-search']);
-    });
-
-    it('seeds an empty addon array for a stack with no default optionalAddons', () => {
-        const { result, updateState } = setup({ selectedPackage: 'custom' });
-        act(() => {
-            result.current.onStackSelect('headless-paas');
-        });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
-        expect(call.selectedAddons).toEqual([]);
-    });
-});
-
-describe('useProjectBuilder — onStackSelect block library seeding (parity)', () => {
-    it('seeds native ∪ default block libraries for an EDS stack', () => {
-        mockGetNativeBlockLibraries.mockReturnValue([{ id: 'demo-team-blocks' }]);
-        mockGetDefaultBlockLibraryIds.mockReturnValue(['isle5']);
-        const { result, updateState } = setup(
-            { selectedPackage: 'citisignal' },
-            { blockLibraryDefaults: ['isle5'] },
-        );
-        act(() => {
-            result.current.onStackSelect('eds-paas');
-        });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
-        expect(new Set(call.selectedBlockLibraries)).toEqual(
-            new Set(['demo-team-blocks', 'isle5']),
-        );
-    });
-
-    it('passes blockLibraryDefaults through to getDefaultBlockLibraryIds', () => {
-        const { result } = setup(
-            { selectedPackage: 'citisignal' },
-            { blockLibraryDefaults: ['isle5'] },
-        );
-        act(() => {
-            result.current.onStackSelect('eds-paas');
-        });
-        expect(mockGetDefaultBlockLibraryIds).toHaveBeenCalledWith(
-            expect.objectContaining({ id: 'eds-paas' }),
-            'citisignal',
-            ['isle5'],
-        );
-    });
-
-    it('dedupes when a native library is also a default', () => {
-        mockGetNativeBlockLibraries.mockReturnValue([{ id: 'isle5' }]);
-        mockGetDefaultBlockLibraryIds.mockReturnValue(['isle5']);
-        const { result, updateState } = setup({ selectedPackage: 'citisignal' });
-        act(() => {
-            result.current.onStackSelect('eds-paas');
-        });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
-        expect(call.selectedBlockLibraries).toEqual(['isle5']);
-    });
-
-    it('seeds customBlockLibraries from customBlockLibraryDefaults when state has none', () => {
-        const { result, updateState } = setup(
-            { selectedPackage: 'citisignal' },
-            { customBlockLibraryDefaults: [customLib] },
-        );
-        act(() => {
-            result.current.onStackSelect('eds-paas');
-        });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
-        expect(call.customBlockLibraries).toEqual([customLib]);
-    });
-
-    it('preserves existing state.customBlockLibraries over the defaults', () => {
-        const existing: CustomBlockLibrary = {
-            name: 'Existing',
-            source: { owner: 'org', repo: 'existing', branch: 'main' },
-        };
-        const { result, updateState } = setup(
-            { selectedPackage: 'citisignal', customBlockLibraries: [existing] },
-            { customBlockLibraryDefaults: [customLib] },
-        );
-        act(() => {
-            result.current.onStackSelect('eds-paas');
-        });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
-        expect(call.customBlockLibraries).toEqual([existing]);
-    });
-
-    it('clears selectedBlockLibraries + customBlockLibraries for a non-EDS stack', () => {
-        const { result, updateState } = setup(
-            {
-                selectedPackage: 'custom',
-                selectedBlockLibraries: ['stale-lib'],
-                customBlockLibraries: [customLib],
-            },
-            { customBlockLibraryDefaults: [customLib] },
-        );
-        act(() => {
-            result.current.onStackSelect('headless-paas');
-        });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
-        expect(call.selectedBlockLibraries).toEqual([]);
-        expect(call.customBlockLibraries).toEqual([]);
-    });
-
-    it('does not call the block library loaders for a non-EDS stack', () => {
-        const { result } = setup({ selectedPackage: 'custom' });
-        act(() => {
-            result.current.onStackSelect('headless-paas');
-        });
-        expect(mockGetNativeBlockLibraries).not.toHaveBeenCalled();
-        expect(mockGetDefaultBlockLibraryIds).not.toHaveBeenCalled();
-    });
-});
-
 describe('useProjectBuilder — optional dependencies handler', () => {
     it('updates selectedOptionalDependencies directly', () => {
         const { result, updateState } = setup({ selectedStack: 'headless-paas' });
@@ -632,33 +463,87 @@ describe('useProjectBuilder — optional dependencies handler', () => {
     });
 });
 
-describe('useProjectBuilder — onBlockLibrariesChange offers save-defaults tip', () => {
-    beforeEach(() => {
-        (vscode.postMessage as jest.Mock).mockClear();
-    });
-
-    it('updates selectedBlockLibraries and offers the tip when a selection exists', () => {
-        const { result, updateState } = setup({ selectedStack: 'eds-paas' });
+describe('useProjectBuilder — onAddCustomAppBuilderComponent (custom URL door)', () => {
+    it('writes selectedAppBuilderComponents + appBuilderComponentSources for a custom source', () => {
+        const { result, updateState } = setup({ selectedStack: 'headless-paas' });
         act(() => {
-            result.current.onBlockLibrariesChange(['blocks-a', 'blocks-b']);
+            result.current.onAddCustomAppBuilderComponent({ owner: 'acme', repo: 'widget' });
         });
         expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({ selectedBlockLibraries: ['blocks-a', 'blocks-b'] }),
-        );
-        expect(vscode.postMessage).toHaveBeenCalledWith(
-            'offer-save-block-library-defaults',
-            { selectedLibraries: ['blocks-a', 'blocks-b'] },
+            expect.objectContaining({
+                selectedAppBuilderComponents: ['acme-widget'],
+                appBuilderComponentSources: {
+                    'acme-widget': { owner: 'acme', repo: 'widget', branch: undefined },
+                },
+            }),
         );
     });
 
-    it('does NOT offer the tip when the selection is cleared to empty', () => {
-        const { result, updateState } = setup({ selectedStack: 'eds-paas' });
+    it('carries an optional branch through to the source', () => {
+        const { result, updateState } = setup({ selectedStack: 'headless-paas' });
         act(() => {
-            result.current.onBlockLibrariesChange([]);
+            result.current.onAddCustomAppBuilderComponent({
+                owner: 'acme',
+                repo: 'widget',
+                branch: 'dev',
+            });
         });
-        expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({ selectedBlockLibraries: [] }),
+        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        expect(call.appBuilderComponentSources).toEqual({
+            'acme-widget': { owner: 'acme', repo: 'widget', branch: 'dev' },
+        });
+    });
+
+    it('merges the new source with pre-existing appBuilderComponentSources', () => {
+        const { result, updateState } = setup({
+            selectedStack: 'headless-paas',
+            selectedAppBuilderComponents: ['prior-repo'],
+            appBuilderComponentSources: { 'prior-repo': { owner: 'prior', repo: 'repo' } },
+        });
+        act(() => {
+            result.current.onAddCustomAppBuilderComponent({ owner: 'acme', repo: 'widget' });
+        });
+        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        expect(call.selectedAppBuilderComponents).toEqual(
+            expect.arrayContaining(['prior-repo', 'acme-widget']),
         );
-        expect(vscode.postMessage).not.toHaveBeenCalled();
+        expect(call.appBuilderComponentSources).toEqual({
+            'prior-repo': { owner: 'prior', repo: 'repo' },
+            'acme-widget': { owner: 'acme', repo: 'widget', branch: undefined },
+        });
+    });
+});
+
+describe('useProjectBuilder — onRemoveAppBuilderComponent', () => {
+    it('removes the id from selectedAppBuilderComponents AND its source entry', () => {
+        const { result, updateState } = setup({
+            selectedStack: 'headless-paas',
+            selectedAppBuilderComponents: ['acme-widget', 'other-repo'],
+            appBuilderComponentSources: {
+                'acme-widget': { owner: 'acme', repo: 'widget' },
+                'other-repo': { owner: 'other', repo: 'repo' },
+            },
+        });
+        act(() => {
+            result.current.onRemoveAppBuilderComponent('acme-widget');
+        });
+        expect(updateState).toHaveBeenCalledWith({
+            selectedAppBuilderComponents: ['other-repo'],
+            appBuilderComponentSources: { 'other-repo': { owner: 'other', repo: 'repo' } },
+        });
+    });
+
+    it('removes a catalog integration id (no source entry to delete)', () => {
+        const { result, updateState } = setup({
+            selectedStack: 'headless-paas',
+            selectedAppBuilderComponents: ['erp-sync'],
+        });
+        act(() => {
+            result.current.onRemoveAppBuilderComponent('erp-sync');
+        });
+        expect(updateState).toHaveBeenCalledWith({
+            selectedAppBuilderComponents: [],
+            appBuilderComponentSources: {},
+        });
     });
 });

@@ -17,7 +17,7 @@
  */
 
 import { deriveAllowedDomain } from './allowedDomain';
-import { subscribeRequiredApis } from './apiSubscriber';
+import { subscribeRequiredApis, type SubscribedApi } from './apiSubscriber';
 import { createApiSubscriberClient } from './apiSubscriberClientAdapter';
 import { subscriberTarget } from './appBuilderComponentRunnerDeps';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
@@ -47,10 +47,12 @@ export interface EnsureMeshApiSubscribedParams {
  * Subscribe the project's mesh `requiredApis` (+ baseline) before a mesh deploy.
  * No-ops gracefully when the project's backend/frontend selection resolves no
  * catalog rows (nothing to subscribe — don't block the deploy).
+ *
+ * @returns the resolved+subscribed API list (empty when the subscribe was skipped)
  */
 export async function ensureMeshApiSubscribed(
     params: EnsureMeshApiSubscribedParams,
-): Promise<void> {
+): Promise<SubscribedApi[]> {
     const { project, authService, logger } = params;
 
     const backendId = project.componentSelections?.backend ?? '';
@@ -58,7 +60,7 @@ export async function ensureMeshApiSubscribed(
     const catalog = getAvailableAppBuilderComponents(backendId, frontendId);
     if (catalog.length === 0) {
         logger.debug('[Mesh Subscribe] No appBuilderComponent catalog rows for selection — skipping subscribe');
-        return;
+        return [];
     }
 
     const client = createApiSubscriberClient(authService);
@@ -66,8 +68,9 @@ export async function ensureMeshApiSubscribed(
     const orgTarget = buildOrgTargetFromProjectAdobe(project.adobe, cachedOrg);
 
     logger.info('[Mesh Subscribe] Subscribing required APIs before mesh deploy');
-    await withOrgContext(orgTarget, () =>
+    const apis = await withOrgContext(orgTarget, () =>
         subscribeRequiredApis(catalog, subscriberTarget(project), client, deriveAllowedDomain(project)),
     );
     logger.info('[Mesh Subscribe] Required APIs subscribed');
+    return apis;
 }

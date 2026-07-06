@@ -397,6 +397,36 @@ describe('wizardHelpers - state & config', () => {
             ]);
         });
 
+        it('should carry selectedAppBuilderComponents and appBuilderComponentSources through', () => {
+            const state: WizardState = {
+                currentStep: 'review',
+                projectName: 'test-project',
+                selectedAppBuilderComponents: ['erp-sync', 'owner-custom-app'],
+                appBuilderComponentSources: {
+                    'owner-custom-app': { owner: 'owner', repo: 'custom-app', branch: 'dev' },
+                },
+            };
+
+            const config = buildProjectConfig(state);
+
+            expect(config.selectedAppBuilderComponents).toEqual(['erp-sync', 'owner-custom-app']);
+            expect(config.appBuilderComponentSources).toEqual({
+                'owner-custom-app': { owner: 'owner', repo: 'custom-app', branch: 'dev' },
+            });
+        });
+
+        it('should default selectedAppBuilderComponents and appBuilderComponentSources when absent', () => {
+            const state: WizardState = {
+                currentStep: 'review',
+                projectName: 'test-project',
+            };
+
+            const config = buildProjectConfig(state);
+
+            expect(config.selectedAppBuilderComponents).toEqual([]);
+            expect(config.appBuilderComponentSources).toEqual({});
+        });
+
         it('should default customBlockLibraries to empty array when not set', () => {
             const state: WizardState = {
                 currentStep: 'review',

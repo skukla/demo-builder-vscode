@@ -160,6 +160,8 @@ describe('buildYourProjectAreas — status', () => {
                     selectedPackage: 'citisignal',
                     selectedStack: 'eds-paas',
                     selectedAppBuilderComponents: ['commerce-paas-mesh'],
+                    adobeAuth: { isAuthenticated: true, isChecking: false },
+                    adobeOrg: { id: 'org-1', name: 'Acme', code: 'ACME' } as WizardState['adobeOrg'],
                     adobeProject: { id: 'p1', name: 'proj' },
                     adobeWorkspace: { id: 'w1', name: 'ws' },
                 }),

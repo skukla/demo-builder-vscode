@@ -467,6 +467,12 @@ export class AuthenticationService {
         return fetcher.getServicesForOrg(orgId);
     }
 
+    /** The sdk codes a credential is already subscribed to (for skip-if-subscribed). */
+    async getSubscribedServiceCodes(orgId: string, idIntegration: string): Promise<string[]> {
+        const { fetcher } = await this.ensureEntities();
+        return fetcher.getSubscribedServiceCodes(orgId, idIntegration);
+    }
+
     /** Create an apiKey/AdobeID credential; returns its `id_integration`. */
     async createAdobeIdCredential(
         orgId: string, projectId: string, workspaceId: string, input: AdobeIdCredentialInput,

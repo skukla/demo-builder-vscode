@@ -46,6 +46,11 @@ describe('handleEnsureMeshApiSubscribed', () => {
         frontendId: 'eds',
     };
 
+    const subscribedApis = [
+        { code: 'GraphQLServiceSDK', name: 'API Mesh' },
+        { code: 'AdobeIOManagementAPISDK', name: 'I/O Management API' },
+    ];
+
     beforeEach(() => {
         jest.clearAllMocks();
 
@@ -53,7 +58,7 @@ describe('handleEnsureMeshApiSubscribed', () => {
         mockValidateProjectId.mockReturnValue(undefined);
         mockValidateWorkspaceId.mockReturnValue(undefined);
         mockEnsureAuthenticated.mockResolvedValue({ authenticated: true });
-        mockEnsureMeshApiSubscribed.mockResolvedValue(undefined);
+        mockEnsureMeshApiSubscribed.mockResolvedValue(subscribedApis);
 
         mockAuthService = { getCachedOrganization: jest.fn() };
         (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthService);
@@ -119,7 +124,7 @@ describe('handleEnsureMeshApiSubscribed', () => {
     it('should call the service once with a target built from the payload and return success', async () => {
         const result = await handleEnsureMeshApiSubscribed(mockContext, validPayload);
 
-        expect(result).toEqual({ success: true });
+        expect(result).toEqual({ success: true, data: { apis: subscribedApis } });
         expect(mockEnsureMeshApiSubscribed).toHaveBeenCalledTimes(1);
         expect(mockEnsureMeshApiSubscribed).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -141,6 +146,7 @@ describe('handleEnsureMeshApiSubscribed', () => {
         expect(result.success).toBe(false);
         expect(result.error).toBe('subscribe boom');
         expect(result.code).toBe(ErrorCode.UNKNOWN);
+        expect(result.data).toBeUndefined();
     });
 
     it('condenses a verbose SDK error into a short, readable message', async () => {
@@ -166,7 +172,7 @@ describe('handleEnsureMeshApiSubscribed', () => {
             workspaceId: 'ws-1',
         });
 
-        expect(result).toEqual({ success: true });
+        expect(result).toEqual({ success: true, data: { apis: subscribedApis } });
         expect(mockEnsureMeshApiSubscribed).toHaveBeenCalledTimes(1);
         expect(mockEnsureMeshApiSubscribed).toHaveBeenCalledWith(
             expect.objectContaining({

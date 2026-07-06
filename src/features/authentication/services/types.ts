@@ -120,6 +120,8 @@ export interface WorkspaceCredential {
  */
 export interface OrgServiceInfo {
     code: string;
+    /** Human-readable service name (e.g. "API Mesh") — present in the SDK response. */
+    name?: string;
     platformList?: string[];
     domainMandatory?: boolean;
 }
@@ -130,6 +132,12 @@ export interface AdobeIdCredentialInput {
     description: string;
     platform: 'apiKey';
     domain: string;
+    /**
+     * Extra credential names that also count as "already exists" during the
+     * list-first check (e.g. a legacy fixed name to reuse instead of creating a
+     * duplicate). Not sent to Adobe — stripped before the create call.
+     */
+    reuseNames?: string[];
 }
 
 /** A single service to subscribe. Free services use null licenseConfigs/roles. */

@@ -14,6 +14,7 @@
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
 import { validateOrgId, validateProjectId, validateWorkspaceId } from '@/core/validation';
+import type { SubscribedApi } from '@/features/app-builder/services/apiSubscriber';
 import {
     ensureMeshApiSubscribed,
     type MeshSubscribeTarget,
@@ -25,6 +26,8 @@ import { toError } from '@/types/typeGuards';
 
 type EnsureMeshApiSubscribedResult = {
     success: boolean;
+    /** On success: the resolved+subscribed APIs (code + display name when known). */
+    data?: { apis: SubscribedApi[] };
     error?: string;
     code?: ErrorCode;
 };
@@ -86,13 +89,13 @@ export async function handleEnsureMeshApiSubscribed(
             componentSelections: { backend: backendId, frontend: frontendId },
         };
 
-        await ensureMeshApiSubscribed({
+        const apis = await ensureMeshApiSubscribed({
             project: target,
             authService: ServiceLocator.getAuthenticationService(),
             logger: context.logger,
         });
 
-        return { success: true };
+        return { success: true, data: { apis } };
     } catch (error) {
         context.logger.error('[API Mesh] Subscribe failed', error as Error);
         return {

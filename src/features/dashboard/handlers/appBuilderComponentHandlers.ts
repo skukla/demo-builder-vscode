@@ -26,7 +26,6 @@
 import * as vscode from 'vscode';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { ServiceLocator } from '@/core/di';
-import { createApiSubscriberClient } from '@/features/app-builder/services/apiSubscriberClientAdapter';
 import {
     addAppBuilderComponent,
     deployAppBuilderComponent,
@@ -34,10 +33,10 @@ import {
 } from '@/features/app-builder/services/appBuilderComponentRunner';
 import {
     buildDefaultRunnerDeps,
-    type RunnerDepsContext,
+    buildRunnerDepsContext,
 } from '@/features/app-builder/services/appBuilderComponentRunnerDeps';
 import {
-    getAvailableAppBuilderComponents,
+    buildCustomIntegrationEntry,
     getAppBuilderComponentEntry,
 } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 import { classifyEnvSchema } from '@/features/project-creation/services/envVarClassifier';
@@ -46,37 +45,6 @@ import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponen
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler, HandlerContext } from '@/types/handlers';
 import { toError } from '@/types/typeGuards';
-
-/** Resolve the project's stack-filtered catalog (axis-filtered by selection). */
-function resolveCatalog(project: Project): AppBuilderComponentCatalogEntry[] {
-    return getAvailableAppBuilderComponents(
-        project.componentSelections?.backend ?? '',
-        project.componentSelections?.frontend ?? '',
-    );
-}
-
-/**
- * Assemble the RunnerDepsContext for a handler invocation. Extends buildAppDeps
- * with the three D1-runner-only collaborators: the subscriber adapter (Track A),
- * the stack-filtered catalog, and the extension secrets.
- */
-async function buildRunnerDepsContext(
-    context: HandlerContext,
-    project: Project,
-): Promise<RunnerDepsContext> {
-    const { ComponentManager } = await import('@/features/components/services/componentManager');
-    const authManager = ServiceLocator.getAuthenticationService();
-    return {
-        componentManager: new ComponentManager(context.logger),
-        commandManager: ServiceLocator.getCommandExecutor(),
-        logger: context.logger,
-        saveProject: (p: Project) => context.stateManager.saveProject(p),
-        getCachedOrganization: () => authManager.getCachedOrganization(),
-        subscriberClient: createApiSubscriberClient(authManager),
-        catalog: resolveCatalog(project),
-        secrets: context.context.secrets,
-    };
-}
 
 /**
  * Run the DeployAppCommand guard order (auth → org-mismatch → App Builder
@@ -117,23 +85,12 @@ async function runGuards(context: HandlerContext, project: Project): Promise<str
     return undefined;
 }
 
-/** Build a custom-URL integration entry (the custom-URL door). */
-function customEntry(source: { owner: string; repo: string }): AppBuilderComponentCatalogEntry {
-    return {
-        id: `${source.owner}-${source.repo}`,
-        name: source.repo,
-        description: `Custom App Builder component from ${source.owner}/${source.repo}`,
-        kind: 'integration',
-        source: { owner: source.owner, repo: source.repo, branch: 'main' },
-    };
-}
-
 /** Resolve the catalog entry from an add payload (catalog id OR custom source). */
 function resolveAddEntry(
     payload: { id?: string; source?: { owner: string; repo: string } },
 ): AppBuilderComponentCatalogEntry | undefined {
     if (payload.source?.owner && payload.source?.repo) {
-        return customEntry(payload.source);
+        return buildCustomIntegrationEntry(payload.source);
     }
     if (payload.id) {
         return getAppBuilderComponentEntry(payload.id);

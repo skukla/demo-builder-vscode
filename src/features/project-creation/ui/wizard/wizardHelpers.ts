@@ -691,6 +691,8 @@ export function buildProjectConfig(
         importedMeshEndpoint,
         selectedPackage: wizardState.selectedPackage,
         selectedStack: wizardState.selectedStack,
+        selectedAppBuilderComponents: wizardState.selectedAppBuilderComponents ?? [],
+        appBuilderComponentSources: wizardState.appBuilderComponentSources ?? {},
         selectedAddons: wizardState.selectedAddons || [],
         selectedBlockLibraries: wizardState.selectedBlockLibraries || [],
         customBlockLibraries: wizardState.customBlockLibraries || [],

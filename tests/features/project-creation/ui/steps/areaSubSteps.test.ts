@@ -83,27 +83,45 @@ describe('storefront driver', () => {
 describe('integrations driver', () => {
     const driver = areaSubSteps('integrations')!;
 
-    it('is a single "deployables" screen (no sub-step tabs)', () => {
-        const s = state({ selectedAppBuilderComponents: ['commerce-paas-mesh'] });
-        expect(driver.subSteps(s).map(x => x.id)).toEqual(['deployables']);
-        expect(driver.active(s)).toBe('deployables');
-        // One sub-step → nothing to walk; Continue advances the area.
-        expect(driver.next(s)).toBeNull();
+    it('is a single "deployables" screen until a deployable is selected', () => {
+        // Nothing selected → just Services; nothing to walk.
+        const empty = state({});
+        expect(driver.subSteps(empty).map(x => x.id)).toEqual(['deployables']);
+        expect(driver.active(empty)).toBe('deployables');
+        expect(driver.next(empty)).toBeNull();
+        expect(driver.prev(empty)).toBeNull();
+    });
+
+    it('adds the "adobe-io" sub-step once a deployable is selected', () => {
+        const s = state({
+            selectedAppBuilderComponents: ['commerce-paas-mesh'],
+            activeIntegrationsStep: 'deployables',
+        });
+        expect(driver.subSteps(s).map(x => x.id)).toEqual(['deployables', 'adobe-io']);
+        // From Services, Continue walks to Adobe I/O.
+        expect(driver.next(s)).toBe('adobe-io');
         expect(driver.prev(s)).toBeNull();
     });
 
     it('uses the activeIntegrationsStep state key for active + setActive', () => {
-        const s = state({ selectedAppBuilderComponents: ['x'], activeIntegrationsStep: 'deployables' });
-        expect(driver.active(s)).toBe('deployables');
-        expect(driver.setActive('deployables')).toEqual({ activeIntegrationsStep: 'deployables' });
+        const s = state({ selectedAppBuilderComponents: ['x'], activeIntegrationsStep: 'adobe-io' });
+        expect(driver.active(s)).toBe('adobe-io');
+        expect(driver.setActive('adobe-io')).toEqual({ activeIntegrationsStep: 'adobe-io' });
+        expect(driver.prev(s)).toBe('deployables');
+        expect(driver.next(s)).toBeNull();
     });
 
-    it('gates the area on the deployables destination (project + workspace once selected)', () => {
-        // Nothing selected → complete (optional).
+    it('Services is always complete; Adobe I/O gates on project + workspace', () => {
+        // Services (deployables) is always valid.
         expect(driver.isComplete(state({}), 'deployables')).toBe(true);
-        // A deployable selected without a full destination → incomplete.
         expect(
             driver.isComplete(state({ selectedAppBuilderComponents: ['x'] }), 'deployables'),
+        ).toBe(true);
+        // Adobe I/O: nothing selected → complete (optional).
+        expect(driver.isComplete(state({}), 'adobe-io')).toBe(true);
+        // A deployable selected without a full destination → incomplete.
+        expect(
+            driver.isComplete(state({ selectedAppBuilderComponents: ['x'] }), 'adobe-io'),
         ).toBe(false);
         // Signed in + project + workspace → complete.
         expect(
@@ -115,21 +133,36 @@ describe('integrations driver', () => {
                     adobeProject: { id: 'p' },
                     adobeWorkspace: { id: 'w' },
                 } as unknown as Partial<WizardState>),
-                'deployables',
+                'adobe-io',
             ),
         ).toBe(true);
     });
 
-    it('enters at the single deployables sub-step', () => {
+    it('enters at the first-open sub-step', () => {
+        // A deployable selected but no destination → Adobe I/O is the first-open sub-step.
         const s = state({ selectedAppBuilderComponents: ['x'], selectedBackend: 'adobe-commerce-accs' });
-        expect(driver.entry(s, false)).toEqual({ activeIntegrationsStep: 'deployables' });
-        expect(driver.entry(s, true)).toEqual({ activeIntegrationsStep: 'deployables' });
+        expect(driver.entry(s, false)).toEqual({ activeIntegrationsStep: 'adobe-io' });
+        expect(driver.entry(s, true)).toEqual({ activeIntegrationsStep: 'adobe-io' });
+        // Nothing selected → only Services.
         expect(driver.entry(state({}), false)).toEqual({ activeIntegrationsStep: 'deployables' });
     });
 
-    it('has no commit-gating (no-op commit/uncommit)', () => {
-        expect(driver.commit(state({}), 'deployables')).toEqual({});
-        expect(driver.uncommit(state({}), ['deployables', 'target'], 'deployables')).toEqual({});
+    it('commits the PENDING workspace as the adobeWorkspace default on Adobe I/O Continue', () => {
+        const pending = { id: 'w-pending', name: 'Stage', title: 'Stage' };
+        expect(driver.commit(state({ pendingAdobeWorkspace: pending }), 'adobe-io')).toEqual({
+            adobeWorkspace: pending,
+            pendingAdobeWorkspace: undefined,
+        });
+        // Other sub-steps do not commit anything.
+        expect(driver.commit(state({ pendingAdobeWorkspace: pending }), 'deployables')).toEqual({});
+    });
+
+    it('un-commits the workspace back to pending on Back off Adobe I/O', () => {
+        const committed = { id: 'w', name: 'Stage', title: 'Stage' };
+        const order = ['deployables', 'adobe-io'];
+        expect(
+            driver.uncommit(state({ adobeWorkspace: committed }), order, 'deployables'),
+        ).toEqual({ adobeWorkspace: undefined, pendingAdobeWorkspace: committed });
     });
 });
 

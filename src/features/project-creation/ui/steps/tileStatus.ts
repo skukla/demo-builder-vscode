@@ -134,31 +134,31 @@ export function anyDeployableSelected(state: WizardState): boolean {
 /**
  * Whether the Integrations area is complete enough to leave.
  *
- * Integrations is conditionally required: the ONLY thing that can block Finish is
- * an API Mesh that is turned On but not yet pointed at an Adobe I/O project +
- * workspace (the Mesh tile's config fold-in). The cases:
- *  - mesh NOT available for the architecture → true (nothing to configure);
- *  - mesh available but NOT selected (Off) → true (mesh is optional);
- *  - mesh selected (On) → require BOTH `adobeProject` and `adobeWorkspace`.
+ * Integrations is conditionally required and NOT mesh-specific: any deployable —
+ * a mesh OR an App Builder integration — needs an Adobe I/O destination before
+ * Finish. Mirrors {@link isIntegrationsStepComplete}:
+ *  - nothing deployable selected → true (integrations are optional);
+ *  - a deployable selected → require Adobe sign-in AND a project AND a workspace.
  *
- * Note: this intentionally does NOT require Adobe sign-in here — the tile owns the
- * sign-in gate UX (you can't pick a project/workspace until signed in, so the
- * project/workspace check implies sign-in).
+ * Signature keeps `(state, packages, stacks)` for call-site parity; the catalog
+ * arguments are unused now that the gate is selection-driven.
  *
  * @param state - Wizard state
- * @param packages - Demo-package catalog
- * @param stacks - Stack catalog
+ * @param _packages - Demo-package catalog (unused; kept for call-site parity)
+ * @param _stacks - Stack catalog (unused; kept for call-site parity)
  * @returns true when the Integrations area imposes no outstanding requirement
  */
 export function isIntegrationsComplete(
     state: WizardState,
-    packages: DemoPackage[],
-    stacks: Stack[],
+    _packages: DemoPackage[],
+    _stacks: Stack[],
 ): boolean {
-    const meshComponent = meshComponentForStack(state, packages, stacks);
-    if (!meshComponent) return true; // No mesh for this architecture.
-    if (!isMeshSelected(state, meshComponent.id)) return true; // Mesh optional, left Off.
-    return Boolean(state.adobeProject?.id) && Boolean(state.adobeWorkspace?.id);
+    if (!anyDeployableSelected(state)) return true; // Integrations optional.
+    return (
+        isAdobeSignedIn(state) &&
+        Boolean(state.adobeProject?.id) &&
+        Boolean(state.adobeWorkspace?.id)
+    );
 }
 
 /**

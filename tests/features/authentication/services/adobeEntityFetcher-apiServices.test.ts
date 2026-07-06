@@ -37,6 +37,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
         subscribeOAuthServerToServerIntegrationToServices: jest.Mock;
         getCredentials: jest.Mock;
         createOAuthServerToServerCredential: jest.Mock;
+        getIntegration: jest.Mock;
     };
     let mockCacheManager: jest.Mocked<AuthCacheManager>;
 
@@ -52,6 +53,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
             subscribeOAuthServerToServerIntegrationToServices: jest.fn(),
             getCredentials: jest.fn(),
             createOAuthServerToServerCredential: jest.fn(),
+            getIntegration: jest.fn(),
         };
 
         mockSDKClient = {
@@ -157,6 +159,62 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
                 'org1', 'proj1', 'ws1',
                 expect.objectContaining({ name: 'demo-builder-api-mesh', platform: 'apiKey' }),
             );
+        });
+
+        it('reuses a credential matching a legacy reuseNames alias (no duplicate create)', async () => {
+            sdk.getCredentials.mockResolvedValue({
+                body: [
+                    // The workspace already has the OLD fixed-name credential.
+                    { integration_type: 'apikey', integration_name: 'demo-builder-api-mesh', id_integration: 'legacy-int' },
+                ],
+            });
+
+            const id = await fetcher.createAdobeIdCredential('org1', 'proj1', 'ws1', {
+                name: 'demo-builder-api-mesh-ws1',
+                reuseNames: ['demo-builder-api-mesh'],
+                description: 'demo cred', platform: 'apiKey', domain: 'localhost:3000',
+            });
+
+            expect(id).toBe('legacy-int');
+            expect(sdk.createAdobeIdCredential).not.toHaveBeenCalled();
+        });
+
+        it('strips reuseNames from the create payload (not an Adobe field)', async () => {
+            sdk.getCredentials.mockResolvedValue({ body: [] });
+            sdk.createAdobeIdCredential.mockResolvedValue({ body: { id: 'new-int' } });
+
+            await fetcher.createAdobeIdCredential('org1', 'proj1', 'ws1', {
+                name: 'demo-builder-api-mesh-ws1',
+                reuseNames: ['demo-builder-api-mesh'],
+                description: 'demo cred', platform: 'apiKey', domain: 'localhost:3000',
+            });
+
+            const sentInput = sdk.createAdobeIdCredential.mock.calls[0][3];
+            expect(sentInput).toEqual(
+                expect.objectContaining({ name: 'demo-builder-api-mesh-ws1', platform: 'apiKey' }),
+            );
+            expect(sentInput).not.toHaveProperty('reuseNames');
+        });
+    });
+
+    describe('getSubscribedServiceCodes', () => {
+        it('returns the credential sdkList from getIntegration', async () => {
+            sdk.getIntegration.mockResolvedValue({ body: { sdkList: ['GraphQLServiceSDK', 'AdobeIOManagementAPISDK'] } });
+
+            const codes = await fetcher.getSubscribedServiceCodes('org1', 'int-1');
+
+            expect(codes).toEqual(['GraphQLServiceSDK', 'AdobeIOManagementAPISDK']);
+            expect(sdk.getIntegration).toHaveBeenCalledWith('org1', 'int-1');
+        });
+
+        it('returns [] when sdkList is absent', async () => {
+            sdk.getIntegration.mockResolvedValue({ body: {} });
+            expect(await fetcher.getSubscribedServiceCodes('org1', 'int-1')).toEqual([]);
+        });
+
+        it('returns [] (never throws) when the SDK call fails', async () => {
+            sdk.getIntegration.mockRejectedValue(new Error('boom'));
+            expect(await fetcher.getSubscribedServiceCodes('org1', 'int-1')).toEqual([]);
         });
     });
 

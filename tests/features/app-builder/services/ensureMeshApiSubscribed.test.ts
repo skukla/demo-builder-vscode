@@ -53,13 +53,15 @@ function createProject(): Project {
 function createAuthService() {
     return {
         getServicesForOrg: jest.fn().mockResolvedValue([
-            { code: MESH, platformList: ['apiKey'], domainMandatory: true },
-            { code: MGMT, platformList: ['oauth_server_to_server'] },
+            { code: MESH, name: 'API Mesh', platformList: ['apiKey'], domainMandatory: true },
+            { code: MGMT, name: 'I/O Management API', platformList: ['oauth_server_to_server'] },
         ]),
         createAdobeIdCredential: jest.fn().mockResolvedValue('apikey-int'),
         subscribeAdobeIdIntegrationToServices: jest.fn().mockResolvedValue(undefined),
         subscribeOAuthServerToServerIntegrationToServices: jest.fn().mockResolvedValue(undefined),
         ensureOAuthCredentialId: jest.fn().mockResolvedValue('oauth-int'),
+        // Default: nothing subscribed yet → the subscribe paths proceed.
+        getSubscribedServiceCodes: jest.fn().mockResolvedValue([]),
         getCachedOrganization: jest.fn().mockReturnValue(undefined),
     };
 }
@@ -126,16 +128,35 @@ describe('ensureMeshApiSubscribed', () => {
 
         await expect(
             ensureMeshApiSubscribed({ project: createProject(), authService: authService as any, logger }),
-        ).resolves.toBeUndefined();
+        ).resolves.toEqual(expect.any(Array));
         expect(authService.subscribeOAuthServerToServerIntegrationToServices).toHaveBeenCalled();
+    });
+
+    it('returns the resolved+subscribed API list (union incl. baseline) with names', async () => {
+        const authService = createAuthService();
+
+        const result = await ensureMeshApiSubscribed({
+            project: createProject(), authService: authService as any, logger,
+        });
+
+        expect(result).toHaveLength(2);
+        expect(result).toEqual(
+            expect.arrayContaining([
+                { code: MGMT, name: 'I/O Management API' },
+                { code: MESH, name: 'API Mesh' },
+            ]),
+        );
     });
 
     it('skips gracefully when the project has no mesh catalog row', async () => {
         (getAvailableAppBuilderComponents as jest.Mock).mockReturnValue([]);
         const authService = createAuthService();
 
-        await ensureMeshApiSubscribed({ project: createProject(), authService: authService as any, logger });
+        const result = await ensureMeshApiSubscribed({
+            project: createProject(), authService: authService as any, logger,
+        });
 
+        expect(result).toEqual([]);
         expect(authService.getServicesForOrg).not.toHaveBeenCalled();
         expect(withOrgContext).not.toHaveBeenCalled();
     });

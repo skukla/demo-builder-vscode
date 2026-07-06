@@ -30,22 +30,30 @@ jest.mock('@/features/app-builder/services/appBuilderComponentRunner', () => ({
     removeAppBuilderComponent: (...a: unknown[]) => mockRemoveAppBuilderComponent(...a),
 }));
 
-// ---- runner deps factory + subscriber adapter (Track A) --------------------
+// ---- runner deps factory + context builder (both now live in runnerDeps) ---
 const mockBuildDefaultRunnerDeps = jest.fn(() => ({ catalog: [], _deps: true }));
+const mockBuildRunnerDepsContext = jest.fn(async () => ({
+    subscriberClient: { _client: true },
+    getCachedOrganization: () => undefined,
+    secrets: { _secrets: true },
+}));
 jest.mock('@/features/app-builder/services/appBuilderComponentRunnerDeps', () => ({
     buildDefaultRunnerDeps: (...a: unknown[]) => mockBuildDefaultRunnerDeps(...a),
-}));
-const mockCreateApiSubscriberClient = jest.fn(() => ({ _client: true }));
-jest.mock('@/features/app-builder/services/apiSubscriberClientAdapter', () => ({
-    createApiSubscriberClient: (...a: unknown[]) => mockCreateApiSubscriberClient(...a),
+    buildRunnerDepsContext: (...a: unknown[]) => mockBuildRunnerDepsContext(...a),
 }));
 
 // ---- catalog loader --------------------------------------------------------
 const mockGetAppBuilderComponentEntry = jest.fn();
-const mockGetAvailableAppBuilderComponents = jest.fn(() => []);
+const mockBuildCustomIntegrationEntry = jest.fn((source: { owner: string; repo: string; branch?: string }) => ({
+    id: `${source.owner}-${source.repo}`,
+    name: source.repo,
+    description: `Custom App Builder component from ${source.owner}/${source.repo}`,
+    kind: 'integration' as const,
+    source: { owner: source.owner, repo: source.repo, branch: source.branch ?? 'main' },
+}));
 jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader', () => ({
     getAppBuilderComponentEntry: (...a: unknown[]) => mockGetAppBuilderComponentEntry(...a),
-    getAvailableAppBuilderComponents: (...a: unknown[]) => mockGetAvailableAppBuilderComponents(...a),
+    buildCustomIntegrationEntry: (...a: unknown[]) => mockBuildCustomIntegrationEntry(...a),
 }));
 
 // ---- guards (mirror DeployAppCommand) --------------------------------------
@@ -108,6 +116,7 @@ describe('handleAddAppBuilderComponent', () => {
         const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
 
         expect(result.success).toBe(true);
+        expect(mockBuildRunnerDepsContext).toHaveBeenCalledWith(mockContext, mockProject);
         expect(mockBuildDefaultRunnerDeps).toHaveBeenCalledWith(
             expect.objectContaining({
                 subscriberClient: expect.anything(),
@@ -115,7 +124,6 @@ describe('handleAddAppBuilderComponent', () => {
                 secrets: expect.anything(),
             }),
         );
-        expect(mockCreateApiSubscriberClient).toHaveBeenCalled();
         expect(mockAddAppBuilderComponent).toHaveBeenCalledWith(mockProject, ERP_ENTRY, expect.anything());
     });
 
