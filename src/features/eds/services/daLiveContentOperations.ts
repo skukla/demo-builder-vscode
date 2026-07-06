@@ -17,6 +17,7 @@
  * `storefrontSyncService.ts` and `helixApiClient.ts`.
  */
 
+import { DaLiveApiClient, type TokenProvider } from './daLiveApiClient';
 import {
     DA_LIVE_BASE_URL,
     MAX_RETRY_ATTEMPTS,
@@ -87,12 +88,9 @@ export interface DaLiveContentSource {
     mediaIndexUrl?: string;
 }
 
-/**
- * Token provider interface for dependency injection
- */
-export interface TokenProvider {
-    getAccessToken(): Promise<string | null>;
-}
+// TokenProvider now lives on the shared api client; re-exported here for the
+// existing consumers that import it from this module.
+export type { TokenProvider };
 
 /**
  * Authentication manager interface for token provider creation.
@@ -221,23 +219,13 @@ export function extractReferencedPaths(html: string, sourceBaseUrl: string): str
  * DA.live Content Operations
  */
 export class DaLiveContentOperations {
+    private readonly apiClient: DaLiveApiClient;
+
     constructor(
-        private tokenProvider: TokenProvider,
+        tokenProvider: TokenProvider,
         private logger: Logger,
-    ) {}
-
-    /**
-     * Get IMS token from TokenProvider
-     * @throws DaLiveAuthError if not authenticated
-     */
-    private async getImsToken(): Promise<string> {
-        const token = await this.tokenProvider.getAccessToken();
-
-        if (!token) {
-            throw new DaLiveAuthError('Not authenticated. Please log in to Adobe.');
-        }
-
-        return token;
+    ) {
+        this.apiClient = new DaLiveApiClient(tokenProvider, logger);
     }
 
     /**
@@ -248,10 +236,10 @@ export class DaLiveContentOperations {
      * @returns Array of directory entries, empty array if path doesn't exist
      */
     async listDirectory(org: string, site: string, path: string): Promise<DaLiveEntry[]> {
-        const token = await this.getImsToken();
+        const token = await this.apiClient.getImsToken();
         const url = `${DA_LIVE_BASE_URL}/list/${org}/${site}/${normalizePath(path)}`;
 
-        const response = await this.fetchWithRetry(url, {
+        const response = await this.apiClient.fetchWithRetry(url, {
             method: 'GET',
             headers: {
                 Authorization: `Bearer ${token}`,
@@ -273,7 +261,7 @@ export class DaLiveContentOperations {
                 );
             }
 
-            throw this.createErrorFromResponse(response, 'list directory');
+            throw this.apiClient.createErrorFromResponse(response, 'list directory');
         }
 
         return response.json();
@@ -291,7 +279,7 @@ export class DaLiveContentOperations {
         destination: { org: string; site: string; path: string },
         options: { recursive?: boolean } = {},
     ): Promise<DaLiveCopyResult> {
-        const token = await this.getImsToken();
+        const token = await this.apiClient.getImsToken();
         const copiedFiles: string[] = [];
         const failedFiles: { path: string; error: string }[] = [];
 
@@ -644,7 +632,7 @@ export class DaLiveContentOperations {
         content: string,
         options: { overwrite?: boolean } = {},
     ): Promise<DaLiveSourceResult> {
-        const token = await this.getImsToken();
+        const token = await this.apiClient.getImsToken();
         const normalized = normalizePath(path);
         const url = `${DA_LIVE_BASE_URL}/source/${org}/${site}/${normalized}`;
 
@@ -652,7 +640,7 @@ export class DaLiveContentOperations {
         formData.append('data', new Blob([content], { type: 'text/html' }));
         if (options.overwrite) formData.append('overwrite', 'true');
 
-        const response = await this.fetchWithRetry(url, {
+        const response = await this.apiClient.fetchWithRetry(url, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` },
             body: formData,
@@ -686,7 +674,7 @@ export class DaLiveContentOperations {
         site: string,
         path: string,
     ): Promise<{ success: boolean; error?: string }> {
-        const token = await this.getImsToken();
+        const token = await this.apiClient.getImsToken();
         const normalized = normalizePath(path);
         const url = `${DA_LIVE_BASE_URL}/source/${org}/${site}/${normalized}`;
 
@@ -735,7 +723,7 @@ export class DaLiveContentOperations {
         destOrg: string,
         destSite: string,
     ): Promise<{ success: true } | { success: false; error: string; status?: number }> {
-        const token = await this.getImsToken();
+        const token = await this.apiClient.getImsToken();
         const url = `${DA_LIVE_BASE_URL}/copy/${srcOrg}/${srcSite}/`;
         const formData = new FormData();
         formData.append('destination', `/${destOrg}/${destSite}/`);
@@ -774,7 +762,7 @@ export class DaLiveContentOperations {
      * don't fail the overall operation.
      */
     async deleteSiteRoot(org: string, site: string): Promise<void> {
-        const token = await this.getImsToken();
+        const token = await this.apiClient.getImsToken();
         const url = `${DA_LIVE_BASE_URL}/source/${org}/${site}/`;
 
         try {
@@ -923,7 +911,7 @@ export class DaLiveContentOperations {
         rows: Array<Record<string, string>>,
         options: { overwrite?: boolean } = {},
     ): Promise<DaLiveSourceResult> {
-        const token = await this.getImsToken();
+        const token = await this.apiClient.getImsToken();
 
         // Create DA.live native JSON spreadsheet format
         const spreadsheetJson = {
@@ -953,7 +941,7 @@ export class DaLiveContentOperations {
         );
         if (options.overwrite) formData.append('overwrite', 'true');
 
-        const response = await this.fetchWithRetry(url, {
+        const response = await this.apiClient.fetchWithRetry(url, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` },
             body: formData,
@@ -1090,7 +1078,7 @@ export class DaLiveContentOperations {
         status: 'created' | 'appended' | 'skipped-duplicate';
         siteConfigRegistered: boolean;
     }> {
-        const token = await this.getImsToken();
+        const token = await this.apiClient.getImsToken();
         const sheetPath = '.da/library/blocks.json';
         const sheetUrl = `${DA_LIVE_BASE_URL}/source/${org}/${site}/${sheetPath}`;
 
@@ -1202,7 +1190,7 @@ export class DaLiveContentOperations {
      */
     private async sourceExists(org: string, site: string, path: string): Promise<boolean> {
         try {
-            const token = await this.getImsToken();
+            const token = await this.apiClient.getImsToken();
             const normalized = normalizePath(path);
             const url = `${DA_LIVE_BASE_URL}/source/${org}/${site}/${normalized}`;
             const response = await fetch(url, {
@@ -1226,7 +1214,7 @@ export class DaLiveContentOperations {
         site: string,
         blockId: string,
     ): Promise<'removed' | 'absent'> {
-        const token = await this.getImsToken();
+        const token = await this.apiClient.getImsToken();
         const sheetPath = '.da/library/blocks.json';
         const sheetUrl = `${DA_LIVE_BASE_URL}/source/${org}/${site}/${sheetPath}`;
 
@@ -1270,13 +1258,13 @@ export class DaLiveContentOperations {
         sheetUrl: string,
         token: string,
     ): Promise<Array<Record<string, string>> | null> {
-        const response = await this.fetchWithRetry(sheetUrl, {
+        const response = await this.apiClient.fetchWithRetry(sheetUrl, {
             method: 'GET',
             headers: { Authorization: `Bearer ${token}` },
         });
         if (response.status === 404) return null;
         if (!response.ok) {
-            throw this.createErrorFromResponse(response, 'read block library sheet');
+            throw this.apiClient.createErrorFromResponse(response, 'read block library sheet');
         }
         const sheet = (await response.json()) as {
             data?: { data?: Array<Record<string, string>> };
@@ -1587,7 +1575,7 @@ export class DaLiveContentOperations {
         const missing = blocksNeedingCdnCopy.filter((b) => !existingIds.has(b.id));
         if (missing.length === 0) return;
 
-        const token = await this.getImsToken();
+        const token = await this.apiClient.getImsToken();
         let copiedCount = 0;
 
         for (const block of missing) {
@@ -1700,7 +1688,7 @@ export class DaLiveContentOperations {
         site: string,
         blocks: Array<{ id: string }>,
     ): Promise<string[]> {
-        const token = await this.getImsToken();
+        const token = await this.apiClient.getImsToken();
         const existingIds: string[] = [];
 
         for (const block of blocks) {
@@ -1739,7 +1727,7 @@ export class DaLiveContentOperations {
         site: string,
         libraryEntries: Array<{ title: string; path: string }>,
     ): Promise<{ success: boolean; error?: string }> {
-        const token = await this.getImsToken();
+        const token = await this.apiClient.getImsToken();
 
         // First, get existing config to preserve other settings
         let existingConfig: Record<string, unknown> = {};
@@ -2057,7 +2045,7 @@ export class DaLiveContentOperations {
 
             for (let i = 0; i < newPaths.length; i += CONTENT_COPY_BATCH_SIZE) {
                 const batch = newPaths.slice(i, i + CONTENT_COPY_BATCH_SIZE);
-                const token = await this.getImsToken();
+                const token = await this.apiClient.getImsToken();
                 const results = await Promise.all(
                     batch.map(async (sourcePath) => {
                         const success = await this.copySingleFile(
@@ -2136,7 +2124,7 @@ export class DaLiveContentOperations {
             return { success: true, copiedFiles, failedFiles, totalFiles: 0 };
         }
 
-        const token = await this.getImsToken();
+        const token = await this.apiClient.getImsToken();
         for (const path of entryPaths) {
             const ok = await this.copySingleFile(
                 token,
@@ -2233,7 +2221,7 @@ export class DaLiveContentOperations {
         const contentStart = Date.now();
         for (let i = 0; i < contentPaths.length; i += CONTENT_COPY_BATCH_SIZE) {
             const batch = contentPaths.slice(i, i + CONTENT_COPY_BATCH_SIZE);
-            const token = await this.getImsToken();
+            const token = await this.apiClient.getImsToken();
             const batchNum = Math.floor(i / CONTENT_COPY_BATCH_SIZE) + 1;
             const batchStart = Date.now();
 
@@ -2324,7 +2312,7 @@ export class DaLiveContentOperations {
         // Create stub pages for auth pages that don't exist on source.
         // Each stub uses the correct block class so the dropin renders properly.
         if (missingAuthPages.length > 0) {
-            const token = await this.getImsToken();
+            const token = await this.apiClient.getImsToken();
             for (const { path: authPath, blockClass } of missingAuthPages) {
                 try {
                     const daPath = resolveDaPath(authPath, true);
@@ -2452,7 +2440,7 @@ export class DaLiveContentOperations {
         const mediaStart = Date.now();
         for (let i = 0; i < mediaPaths.length; i += CONTENT_COPY_BATCH_SIZE) {
             const batch = mediaPaths.slice(i, i + CONTENT_COPY_BATCH_SIZE);
-            const token = await this.getImsToken();
+            const token = await this.apiClient.getImsToken();
             const batchNum = Math.floor(i / CONTENT_COPY_BATCH_SIZE) + 1;
             const batchStart = Date.now();
 
@@ -2512,54 +2500,6 @@ export class DaLiveContentOperations {
             failedFiles,
             totalFiles,
         };
-    }
-
-    /**
-     * Fetch with retry logic and timeout
-     */
-    private async fetchWithRetry(url: string, options: RequestInit): Promise<Response> {
-        for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
-            try {
-                const response = await fetch(url, {
-                    ...options,
-                    signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
-                });
-
-                if (response.status === 429) {
-                    const retryAfter = parseInt(response.headers.get('Retry-After') || '60', 10);
-                    throw new DaLiveNetworkError(
-                        'Rate limited. Please wait before making more requests.',
-                        retryAfter,
-                    );
-                }
-
-                if (
-                    RETRYABLE_STATUS_CODES.includes(response.status) &&
-                    attempt < MAX_RETRY_ATTEMPTS
-                ) {
-                    this.logger.debug(
-                        `[DA.live] Retrying after ${response.status}, attempt ${attempt}`,
-                    );
-                    await new Promise((resolve) => setTimeout(resolve, getRetryDelay(attempt)));
-                    continue;
-                }
-
-                return response;
-            } catch (error) {
-                if (error instanceof DaLiveAuthError || error instanceof DaLiveNetworkError)
-                    throw error;
-
-                const errorMessage = (error as Error).message || 'Unknown error';
-                if (attempt < MAX_RETRY_ATTEMPTS && !errorMessage.includes('abort')) {
-                    this.logger.debug(`[DA.live] Network error, retrying: ${errorMessage}`);
-                    await new Promise((resolve) => setTimeout(resolve, getRetryDelay(attempt)));
-                    continue;
-                }
-
-                throw new DaLiveNetworkError(`Network error: ${errorMessage}`);
-            }
-        }
-        throw new DaLiveNetworkError('Max retry attempts exceeded');
     }
 
     /**
@@ -2653,7 +2593,7 @@ export class DaLiveContentOperations {
         configUpdates: Record<string, string>,
         removeKeys: string[] = [],
     ): Promise<{ success: boolean; error?: string }> {
-        const token = await this.getImsToken();
+        const token = await this.apiClient.getImsToken();
 
         // First, get existing config to preserve ALL sheets (data, permissions, etc.)
         // CRITICAL: If the GET fails, we must NOT write a skeleton config that
@@ -2794,34 +2734,5 @@ export class DaLiveContentOperations {
         } catch (error) {
             return { success: false, error: `Config API error: ${(error as Error).message}` };
         }
-    }
-
-    /**
-     * Create user-friendly error from HTTP response
-     */
-    private createErrorFromResponse(response: Response, operation: string): DaLiveError {
-        const status = response.status;
-        let message: string;
-
-        switch (status) {
-            case 401:
-                throw new DaLiveAuthError('Authentication expired. Please log in again.');
-            case 403:
-                message = `Access denied when trying to ${operation}. Check your permissions.`;
-                break;
-            case 404:
-                message = `Resource not found when trying to ${operation}.`;
-                break;
-            case 500:
-            case 502:
-            case 503:
-            case 504:
-                message = `Server error occurred while trying to ${operation}. Please try again later.`;
-                break;
-            default:
-                message = `Unexpected error (${status}) while trying to ${operation}.`;
-        }
-
-        return new DaLiveError(message, `HTTP_${status}`, status);
     }
 }
