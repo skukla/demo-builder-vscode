@@ -2,7 +2,14 @@
 
 **Filed:** 2026-06-10
 **Origin:** Audit run between Step 5a (type-system prep) and the patches-repo workstream for ADR-006. The audit launched 12 of the 17 `/sop-scan` agents against `src/features/eds/`, `src/features/updates/`, and `src/features/project-creation/handlers/executor.ts`. The one ADR-006 finding (templateUpdateChecker nesting) was fixed inline (`9b78c9dc`); this entry captures everything else the scan surfaced as **pre-existing** so it doesn't get lost.
-**Status:** Ready — self-contained cleanup batches; pick up any time the codebase wants a refresh pass without being mid-feature.
+**Status:** DONE (2026-07-06) — all four batches shipped on develop: S1 `ae786303`,
+S2 `30e07a45`, S3 `952ff367`, S4 `023cd3e7`. Full gate green (822 suites / 10169 tests).
+Two S2 findings were skipped (extracting `hasNoComponentInstances` and the isEditMode mesh-reuse
+guard loses TS flow-narrowing the blocks depend on), and the S4 `pdp404HandlerPublisher`
+`setTimeout(1000)` was skipped because it lives INSIDE the injected client-side snippet string,
+not extension code — see each commit body. `featurePackInstaller.ts` findings were moot (file
+deleted with the b2b feature-pack mechanism); the `GitHubRepoSelectionStep` chain migrated to
+`RepoSelectionInline.tsx`.
 
 ## Provenance
 
@@ -56,7 +63,11 @@ The scan also flagged two things that are intentionally out of scope:
 - **`daLiveContentOperations.ts` (2,537 lines, god-file)** — pre-existing decomposition target; carries its own architectural story (it was extracted from `DaLiveService` already). Belongs to whatever future trim cycle takes on that file; squashing it into this generic cleanup would muddy the diff.
 - **`executeEdsPipeline` complexity 27 (over 25 threshold)** — was 32 before Step 2b's `pipelineApplyBlockCodePatches` extraction (`b398388c`). Further reduction needs a structural refactor of the orchestrator (the phased-extraction sketch in the Step 2b commit message), which is a separate workstream from "swap a few helpers in."
 
-Both are tracked as part of the **structural baseline** ([`2026-05-21-structural-baseline.md`](2026-05-21-structural-baseline.md)) — that's the right home for them.
+The **structural baseline** ([`2026-05-21-structural-baseline.md`](2026-05-21-structural-baseline.md))
+will *surface* both in its measurement report, but it is measurement-only and does not own the
+remediation. The `daLiveContentOperations` god-file now has its own decomposition owner:
+[`2026-07-06-dalive-content-operations-god-file.md`](2026-07-06-dalive-content-operations-god-file.md).
+`executeEdsPipeline`'s complexity remains a structural item without a dedicated entry.
 
 ## Execution plan
 

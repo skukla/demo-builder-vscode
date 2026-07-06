@@ -185,6 +185,10 @@ Deferred items from the 2026-07-03 DX audit (`../research/dx-audit/research.md`)
 
 Numbers-first measurement pass to map the codebase's actual size, complexity, and coupling after ~1 year of AI-assisted development. **Run after Cycle D ships.** Produces a report that informs subsequent trim cycles.
 
+#### Decompose `daLiveContentOperations.ts` god-file ([`2026-07-06-dalive-content-operations-god-file.md`](2026-07-06-dalive-content-operations-god-file.md))
+
+The largest file in `src/` (2,883 lines / ~50 methods in one class), itself extracted from `DaLiveService` and still growing. Six responsibility groups (block-library ops the fattest at ~14 methods) → Facade + Specialized Services split via the `decompose-god-file` skill. Held out of the SOP-pattern burn-down (structural, own workstream). Own review; not a rider on feature work.
+
 #### Legacy / soft-deprecation cleanup ([`2026-05-21-legacy-soft-deprecation.md`](2026-05-21-legacy-soft-deprecation.md))
 
 ~30 inventoried items across `src/` — `@deprecated` JSDoc, "kept for backward compatibility" variants, deprecated API aliases. **3 zero-caller deletions are ready any time** for a small trim task. Downstream of the structural baseline (which will likely re-rank these). Full plan in batches L1–L5.
