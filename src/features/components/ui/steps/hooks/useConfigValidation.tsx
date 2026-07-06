@@ -5,7 +5,7 @@
  * from @/core/validation for URL and pattern validation.
  */
 import { useMemo } from 'react';
-import { ServiceGroup } from '../ComponentConfigStep';
+import { ServiceGroup } from '../../hooks/useComponentConfig';
 import { url, pattern } from '@/core/validation/Validator';
 import { ComponentConfigs } from '@/types/webview';
 
@@ -34,8 +34,8 @@ export function useConfigValidation(
 
                 // Required field validation
                 if (field.required) {
-                    const hasValue = field.componentIds.some(compId =>
-                        componentConfigs[compId]?.[field.key],
+                    const hasValue = field.componentIds.some(
+                        (compId) => componentConfigs[compId]?.[field.key],
                     );
 
                     if (!hasValue) {
@@ -46,8 +46,8 @@ export function useConfigValidation(
                 }
 
                 // Get first component with a value for type validation
-                const firstComponentWithValue = field.componentIds.find(compId =>
-                    componentConfigs[compId]?.[field.key],
+                const firstComponentWithValue = field.componentIds.find(
+                    (compId) => componentConfigs[compId]?.[field.key],
                 );
 
                 if (!firstComponentWithValue) {

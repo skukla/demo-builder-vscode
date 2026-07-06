@@ -31,7 +31,13 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
 // Mock demoPackageLoader to prevent JSON import issues in tests
 jest.mock('@/features/project-creation/ui/helpers/demoPackageLoader', () => {
     const testPackages = [
-        { id: 'test-package', name: 'Test Package', description: 'Test', configDefaults: {}, storefronts: {} },
+        {
+            id: 'test-package',
+            name: 'Test Package',
+            description: 'Test',
+            configDefaults: {},
+            storefronts: {},
+        },
     ];
     return {
         __esModule: true,
@@ -44,7 +50,12 @@ jest.mock('@/features/project-creation/ui/helpers/demoPackageLoader', () => {
 jest.mock('@/features/project-creation/ui/helpers/brandStackLoader', () => ({
     __esModule: true,
     loadStacks: async () => [
-        { id: 'test-stack', name: 'Test Stack', frontend: 'test-frontend', backend: 'test-backend' },
+        {
+            id: 'test-stack',
+            name: 'Test Stack',
+            frontend: 'test-frontend',
+            backend: 'test-backend',
+        },
     ],
 }));
 
@@ -73,10 +84,6 @@ jest.mock('@/features/prerequisites/ui/steps/PrerequisitesStep', () => ({
 
 // Note: ApiMeshStep was removed from the wizard - mesh deployment now uses MeshDeploymentStep
 // which is handled separately (not a wizard step). No mock needed here.
-
-jest.mock('@/features/components/ui/steps/ComponentConfigStep', () => ({
-    ComponentConfigStep: () => <div data-testid="config-step">Config Step</div>,
-}));
 
 jest.mock('@/features/project-creation/ui/steps/ReviewStep', () => ({
     ReviewStep: () => <div data-testid="review-step">Review Step</div>,
@@ -131,7 +138,9 @@ describe('WizardContainer ErrorBoundary', () => {
 
         // ErrorBoundary's default fallback shows "Something went wrong" heading
         await waitFor(() => {
-            expect(screen.getByRole('heading', { name: 'Something went wrong' })).toBeInTheDocument();
+            expect(
+                screen.getByRole('heading', { name: 'Something went wrong' })
+            ).toBeInTheDocument();
         });
     });
 
