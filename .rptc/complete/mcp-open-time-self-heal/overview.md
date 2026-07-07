@@ -5,7 +5,7 @@
 `mcp-health` OnOpenCheck at `src/features/dashboard/services/onOpenChecks/mcpHealthCheck.ts` (visible
 `warning` → regenerate → `ok`/`error`). This standalone plan is retained for history only — do NOT
 execute it; the orchestrator plan is the single source of truth.
-**Backlog item:** [`../../backlog/2026-06-20-mcp-stale-storefront-node-modules-path.md`](../../backlog/2026-06-20-mcp-stale-storefront-node-modules-path.md)
+**Backlog item:** [`../2026-06-20-mcp-stale-storefront-node-modules-path.md`](../2026-06-20-mcp-stale-storefront-node-modules-path.md)
 **Decision:** auto-regenerate on open (PM-chosen), built with transparency guardrails so it is not a
 silent background stall (cf. the dashboard org-check surprise-browser).
 

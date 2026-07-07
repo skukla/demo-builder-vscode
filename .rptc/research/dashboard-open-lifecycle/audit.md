@@ -52,9 +52,9 @@ Every on-open check sits on two axes, and the bugs are the corners that violate 
 
 ## Where the existing fixes slot in
 
-- **MCP self-heal** (`.rptc/plans/mcp-open-time-self-heal/`) = P2: turns a silent MODULE_NOT_FOUND into
+- **MCP self-heal** (`.rptc/complete/mcp-open-time-self-heal/`) = P2: turns a silent MODULE_NOT_FOUND into
   a visible, auto-healed state.
-- **Surprise-browser** (`.rptc/backlog/2026-06-20-dashboard-org-check-surprise-browser.md`) = P1: the
+- **Surprise-browser** (`.rptc/complete/2026-06-20-dashboard-org-check-surprise-browser.md`) = P1: the
   org check must use a quick non-interactive auth probe and never trigger the interactive `aio` path on
   open.
 - **Newly surfaced (fold in or file):** mesh silent-flip (P2), org-check silent hard-error (P2),

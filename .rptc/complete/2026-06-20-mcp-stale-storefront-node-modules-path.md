@@ -1,4 +1,12 @@
-# Project MCP servers fail MODULE_NOT_FOUND — `.mcp.json` points at storefront node_modules
+# ✅ SHIPPED — Project MCP servers fail MODULE_NOT_FOUND — `.mcp.json` points at storefront node_modules
+
+> **SHIPPED** (verified by re-audit 2026-07-07). The open-time self-heal landed via a generic
+> on-open-checks orchestrator: `detectMcpDrift` (`src/features/ai/mcpDriftDetector.ts`) +
+> `createMcpHealthCheck` (`src/features/dashboard/services/onOpenChecks/mcpHealthCheck.ts`) wired into
+> `handleRequestStatus` (fires after the status payload, EDS-only, per-session guard, non-fatal), with
+> visible "Updating AI configuration…" feedback on the AI Ready badge. The implementing plan
+> ([`mcp-open-time-self-heal/`](mcp-open-time-self-heal/overview.md), overview marked SUPERSEDED) moved
+> to `complete/` alongside this item.
 
 **Status:** Filed 2026-06-20 from a live AI-verify session. **Root cause CONFIRMED + remedy verified.**
 Direction chosen: **open-time self-heal** (auto-regenerate when an MCP path doesn't resolve).

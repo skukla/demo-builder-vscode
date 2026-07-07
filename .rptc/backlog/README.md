@@ -24,7 +24,7 @@ draft  →  ready  →  active  →  shipped/dropped
   └─ idea capture, may still change shape
 ```
 
-> **Index last reconciled: 2026-06-19** against `develop` + active branches. Backlog descriptions drift from reality between audits — when in doubt, trust the code and `git log`, not this file.
+> **Index last reconciled: 2026-07-07** (§C re-audited against `develop`; 3 shipped items archived). Backlog descriptions drift from reality between audits — when in doubt, trust the code and `git log`, not this file.
 
 ## Recently shipped (archived to `../complete/`)
 
@@ -89,31 +89,9 @@ with `aio-cli` (no new prereq). Extends `projectDeletionService`. Research + tea
 [`../research/delete-aio-project/research.md`](../research/delete-aio-project/research.md). Verify the
 provider-list workspace-id field empirically before building the filter step.
 
-#### Dashboard IMS org-check launches a surprise browser ([`2026-06-20-dashboard-org-check-surprise-browser.md`](2026-06-20-dashboard-org-check-surprise-browser.md))
-
-Opening the project dashboard randomly launches a browser — located 2026-06-20 to the async IMS
-org-context check (`handleRequestStatus` → `runOrgContextCheck` → `getOrganizations`). When the Console
-SDK is unavailable it drops to the `aio` CLI path, which can open a browser for interactive auth (and
-stalls 14.5s). Fix: the background check must use a quick non-interactive probe and never launch a
-browser un-prompted; separately, find why the SDK is unavailable. Subsumed by the org-context residual
-workstreams.
-
-#### Project MCP servers fail MODULE_NOT_FOUND — stale `.mcp.json` path ([`2026-06-20-mcp-stale-storefront-node-modules-path.md`](2026-06-20-mcp-stale-storefront-node-modules-path.md)) — **plan drafted: [`../plans/mcp-open-time-self-heal/`](../plans/mcp-open-time-self-heal/overview.md)**
-
-`commerce-extensibility` + `playwright` MCP servers die with MODULE_NOT_FOUND pointing at
-`components/eds-storefront/node_modules/...` — the **pre-isolation** path. `mcpConfigWriter` now anchors
-MCP args to the isolated `.demo-builder-mcp/node_modules/` dir; the failing project's `.mcp.json` looks
-generated before that change and never regenerated (storefront `npm install` aborts on b2b @dropins, so
-those packages never land in the storefront tree). Investigate the project's actual `.mcp.json`; likely
-fixed by Regenerate AI files + a drift signal (same family as skills-drift).
-
 #### Republish affected projects when an EW-URL-affecting setting changes ([`2026-06-12-republish-on-ew-url-setting-change.md`](2026-06-12-republish-on-ew-url-setting-change.md))
 
 `demoBuilder.daLive.*` settings (`ewCanvasBranch`, `authoringExperience`) only reach a project's published DA config via the Configure save path; changing them in VS Code Preferences leaves existing projects' `editor.path` stale (no `onDidChangeConfiguration` listener). Add a debounced listener that detects affected EDS projects (respecting per-project authoring overrides), prompts to confirm, then reuses `applyDaLiveOrgConfigSettings` → `republishStorefrontConfig`. Designed, decisions locked; not started. Branch exists: `feature/republish-on-ew-url-setting-change`.
-
-#### Pre-existing SOP-scan findings — code-pattern cleanup pass ([`2026-06-10-sop-pre-existing-patterns.md`](2026-06-10-sop-pre-existing-patterns.md))
-
-~20 pre-existing code-pattern violations across `helixService.ts`, `executor.ts`, `featurePackInstaller.ts`, `GitHubServiceCard.tsx`, `DaLiveServiceCard.tsx`. Verified none of the four batches (S1–S4) have shipped (e.g. duplicate `Object.keys(project.componentInstances || {})` still in `executor.ts`). Four small batches, ~2h. Behavior-preserving.
 
 #### AI Ready: surface skills drift as amber ([`2026-06-01-ai-ready-skills-drift.md`](2026-06-01-ai-ready-skills-drift.md))
 

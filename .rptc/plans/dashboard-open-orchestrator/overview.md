@@ -3,7 +3,7 @@
 **Status:** Plan drafted 2026-06-20, TDD-ready. PM chose the full coherence play (2026-06-20).
 **Research:** [`../../research/dashboard-open-lifecycle/audit.md`](../../research/dashboard-open-lifecycle/audit.md)
 **Absorbs:** [`mcp-open-time-self-heal`](../mcp-open-time-self-heal/overview.md) (becomes Step 3 here) and
-the surprise-browser fix ([`../../backlog/2026-06-20-dashboard-org-check-surprise-browser.md`](../../backlog/2026-06-20-dashboard-org-check-surprise-browser.md), becomes Step 2).
+the surprise-browser fix ([`../../complete/2026-06-20-dashboard-org-check-surprise-browser.md`](../../complete/2026-06-20-dashboard-org-check-surprise-browser.md), becomes Step 2).
 
 ## Goal
 
