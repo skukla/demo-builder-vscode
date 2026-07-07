@@ -1,5 +1,33 @@
-# App Builder app — curated template catalog
+# ✅ SHIPPED — App Builder app — curated template catalog
 
+> **Status: SHIPPED** (verified on `develop` 2026-07-07). Delivered as part of the wizard
+> **"Add-an-Integration"** feature — commit `94b633cf` ("feat(wizard): Add-an-Integration — mesh +
+> catalog + custom deployables") plus the rename `65c40b04` ("deployable → App Builder component").
+> Slice 2 of 5.
+>
+> **What landed (matches this plan):** a declarative catalog `config/app-builder-components.json`
+> (+ `.schema.json`) seeded with `commerce-paas-mesh`, `commerce-eds-mesh`, `headless-commerce-mesh`,
+> each carrying name/description/`source {owner,repo,branch}`/`requiredApis`/`envSchema`;
+> `appBuilderComponentCatalogLoader.ts` (`getAppBuilderComponentEntry` for catalog picks,
+> `buildCustomIntegrationEntry` for the slice-1 URL path — the two coexist as designed); selection UI in
+> both the wizard (`appBuilderIntegrationList.ts`, `appBuilderComponentSelectionState.ts`) and
+> dashboard/configure (`appBuilderComponentFieldModel.ts`, `appBuilderComponentStates.tsx`); a catalog
+> pick routes into the deploy set via `executor.ts` (resolve entry → permission check → deploy).
+>
+> **Open question resolved:** curated **mesh** baselines live in THIS catalog (all seed entries are
+> `kind:"mesh"`), not the mesh feature.
+>
+> **Minor deferral:** no per-entry "default node version" — only relevant to `kind:"app"` entries;
+> the seed catalog is mesh-only and the app path handles node version via the slice-1 spine.
+>
+> **Bonus (see slice 3):** the `nativeForPackages`/`onlyForPackages` package-binding *mechanism* also
+> landed here (type + `appBuilderComponentSelection.ts` scoping) but is dormant — no catalog entry binds
+> a package yet. Slice 3 remains open for activation.
+>
+> ---
+>
+> _Original plan follows._
+>
 > **Status: BLOCKED on slice 1** ([`2026-06-17-appbuilder-app-deploy-spine.md`](2026-06-17-appbuilder-app-deploy-spine.md)).
 > Slice 2 of 5. Pure addition on top of the spine — no new deploy mechanics.
 

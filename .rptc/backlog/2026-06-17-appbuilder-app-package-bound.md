@@ -1,8 +1,23 @@
 # App Builder app — package-bound apps (auto-attach to a demo template)
 
-> **Status: BLOCKED on slices 1 + 2** ([spine](2026-06-17-appbuilder-app-deploy-spine.md),
-> [catalog](2026-06-17-appbuilder-app-curated-catalog.md)). Slice 3 of 5. Mostly config once the
-> catalog exists.
+> **Status: MECHANISM LANDED (dormant) — activation remaining.** Slices 1 + 2 shipped
+> ([spine](2026-06-17-appbuilder-app-deploy-spine.md),
+> [catalog](../complete/2026-06-17-appbuilder-app-curated-catalog.md)). The binding **mechanism** came
+> in with slice 2: `src/types/appBuilderComponents.ts` declares `nativeForPackages?`/`onlyForPackages?`
+> (explicitly "mirrors block-libraries' nativeForPackages"), and
+> `src/features/project-creation/services/appBuilderComponentSelection.ts` implements the scoping
+> (`onlyForPackages` excludes the entry from non-listed packages; `nativeForPackages` → `'required'`,
+> auto-included and shown locked). **Do NOT rebuild it.**
+>
+> **Remaining (small, activation only):**
+> 1. Add `nativeForPackages` + `onlyForPackages` to `app-builder-components.schema.json` (the loader/type
+>    already support them; the schema doesn't declare them yet).
+> 2. Bind an entry in `app-builder-components.json` (e.g. `headless-commerce-mesh` →
+>    the citisignal-headless package) — the actual "auto-attach" data.
+> 3. Verify the auto-included/locked display in the review/summary surface (mirror how native block
+>    libraries render).
+>
+> Slice 3 of 5.
 
 ## Provenance
 
