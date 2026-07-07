@@ -1,13 +1,22 @@
 /**
- * DA.live Content Operations
+ * DaLiveContentOperations — composition root for the DA.live service cluster.
  *
- * Handles content-level operations for DA.live content management:
- * - Directory listing
- * - Content copy operations
- * - Source creation
- * - CitiSignal content copy workflow
+ * Constructs and wires the six single-responsibility DA.live services and
+ * presents their operations as one coherent surface, alongside the module-level
+ * TokenProvider factories (`createDaLiveTokenProvider`,
+ * `createDaLiveServiceTokenProvider`) consumers use to build one. The dependency
+ * graph it owns:
+ *   apiClient → sourceOps → { configOps, discoveryOps → copyOps } → blockLibOps
+ * so a caller gets the whole wired stack from `new DaLiveContentOperations(tp, logger)`.
  *
- * Extracted from DaLiveService for better modularity and testability.
+ * The responsibilities live in their own services — token+HTTP (DaLiveApiClient),
+ * source CRUD (DaLiveSourceOperations), config writes (DaLiveConfigOperations),
+ * content-path discovery (DaLiveContentDiscovery), content copy/overlay
+ * (DaLiveContentCopy), block-library management (DaLiveBlockLibraryOperations).
+ * This class holds no business logic of its own; its methods delegate. Full
+ * delegator-dissolution (consumers reaching the sub-services directly) was
+ * considered and deliberately declined — see
+ * `.rptc/complete/dalive-content-operations-god-file/` for the rationale.
  *
  * IMPORTANT — vscode-free invariant: this module MUST NOT import `vscode`.
  * The standalone MCP server (`src/mcp-server.ts`) constructs DaLiveContentOperations

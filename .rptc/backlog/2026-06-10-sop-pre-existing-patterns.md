@@ -65,8 +65,8 @@ The scan also flagged two things that are intentionally out of scope:
 
 The **structural baseline** ([`2026-05-21-structural-baseline.md`](2026-05-21-structural-baseline.md))
 will *surface* both in its measurement report, but it is measurement-only and does not own the
-remediation. The `daLiveContentOperations` god-file now has its own decomposition owner:
-[`2026-07-06-dalive-content-operations-god-file.md`](2026-07-06-dalive-content-operations-god-file.md).
+remediation. The `daLiveContentOperations` god-file decomposition **shipped** (2026-07-07) — see
+[`.rptc/complete/dalive-content-operations-god-file/`](../complete/dalive-content-operations-god-file/README.md).
 `executeEdsPipeline`'s complexity remains a structural item without a dedicated entry.
 
 ## Execution plan
