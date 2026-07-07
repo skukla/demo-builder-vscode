@@ -1,4 +1,14 @@
-# Harden `updateSiteConfig` — match `writeMergedDataConfig`'s sheet-preservation + 401 ownership guards
+# ✅ SHIPPED (2026-07-07) — Harden `updateSiteConfig` — match `writeMergedDataConfig`'s sheet-preservation + 401 ownership guards
+
+**Outcome:** `DaLiveConfigOperations.updateSiteConfig` and `writeMergedDataConfig` now share one hardened
+read/write path (`readConfigOrError` + `computeSheetNames` + `postSiteConfig`, all in
+`daLiveConfigOperations.ts`): fail-closed on a GET network/timeout error and on any non-404/401 status
+(no skeleton write), a `hasWriteAccess(org, token)` ownership probe on 401, and a dynamically computed
+`:names` so an existing `permissions` (or any other) sheet is preserved instead of dropped by the old
+hardcoded `['data','library']`. TDD: 5 new `updateSiteConfig` regression tests (network-error refusal,
+non-404/401 refusal, 401-no-access refusal, 401-owner fresh write, permissions-sheet preservation); the
+8 existing `applySiteConfig` tests still pass unchanged (shared-path refactor is behavior-preserving).
+This was well-positioned by the slice-4 decomposition, which co-located both methods in the new file.
 
 ## Provenance
 

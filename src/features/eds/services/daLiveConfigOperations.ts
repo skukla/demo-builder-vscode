@@ -4,8 +4,12 @@
  * The config-write cluster carved out of `DaLiveContentOperations`: updating a
  * site's block-library sheet (`updateSiteConfig`), and merging key/value rows
  * into a site's data sheet while preserving all other sheets (`applySiteConfig`
- * → `writeMergedDataConfig`). Builds on the shared `DaLiveApiClient` (token +
- * error mapping); the facade constructs one instance and delegates to it.
+ * → `writeMergedDataConfig`). Both write the SAME per-site config endpoint and
+ * share one hardened read/write discipline (`readConfigOrError` +
+ * `computeSheetNames` + `postSiteConfig`): fail closed on a read error, probe
+ * org ownership on 401, and never drop an existing sheet. Builds on the shared
+ * `DaLiveApiClient` (token + error mapping); the facade constructs one instance
+ * and delegates to it.
  *
  * Keep this module `vscode`-free (the MCP server constructs it in a separate
  * Node process).
@@ -33,6 +37,11 @@ export class DaLiveConfigOperations {
      * It handles the /.da/config file and automatically syncs to CDN.
      * This is different from creating files via /source/ endpoint.
      *
+     * Uses the same fail-closed read + 401 ownership discipline as
+     * `writeMergedDataConfig`: a transient GET error never triggers a skeleton
+     * write, and `:names` is computed dynamically so a `permissions` (or any
+     * other) sheet already on the site config is preserved, not clobbered.
+     *
      * @param org - Organization name
      * @param site - Site name
      * @param libraryEntries - Array of library entries with title and path
@@ -44,24 +53,17 @@ export class DaLiveConfigOperations {
         libraryEntries: Array<{ title: string; path: string }>,
     ): Promise<{ success: boolean; error?: string }> {
         const token = await this.apiClient.getImsToken();
+        const configUrl = `${DA_LIVE_BASE_URL}/config/${org}/${site}`;
 
-        // First, get existing config to preserve other settings
-        let existingConfig: Record<string, unknown> = {};
-        try {
-            const getResponse = await fetch(`${DA_LIVE_BASE_URL}/config/${org}/${site}`, {
-                method: 'GET',
-                headers: { Authorization: `Bearer ${token}` },
-                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
-            });
-            if (getResponse.ok) {
-                existingConfig = await getResponse.json();
-            }
-        } catch {
-            // No existing config, start fresh
+        const read = await this.readConfigOrError(configUrl, org, token);
+        if ('error' in read) {
+            return { success: false, error: read.error };
         }
+        const existingConfig = read.config;
 
-        // Build updated config with library entries
-        // Preserve existing data sheet, update library sheet
+        // Preserve the existing data sheet, (re)write the library sheet, and
+        // preserve ALL other sheets. `:names` is computed dynamically so a
+        // permissions sheet in the existing config survives the write.
         const configData = {
             ...existingConfig,
             data: (existingConfig.data as Record<string, unknown>) || {
@@ -84,40 +86,15 @@ export class DaLiveConfigOperations {
                 })),
             },
             ':version': 3,
-            ':names': ['data', 'library'],
+            ':names': this.computeSheetNames(existingConfig, ['data', 'library']),
             ':type': 'multi-sheet',
         };
 
-        // POST to /config/ API endpoint using FormData
-        // DA.live expects the config as form data with a "config" field containing JSON
-        const url = `${DA_LIVE_BASE_URL}/config/${org}/${site}`;
-        const formData = new FormData();
-        formData.append('config', JSON.stringify(configData));
-
-        try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    // Note: Don't set Content-Type - fetch sets it automatically with boundary for FormData
-                },
-                body: formData,
-                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
-            });
-
-            if (response.ok) {
-                this.logger.debug(`[DA.live] Config updated for ${org}/${site}`);
-                return { success: true };
-            }
-
-            const errorText = await response.text().catch(() => '');
-            return {
-                success: false,
-                error: `Failed to update config: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`,
-            };
-        } catch (error) {
-            return { success: false, error: `Config API error: ${(error as Error).message}` };
+        const result = await this.postSiteConfig(configUrl, token, configData);
+        if (result.success) {
+            this.logger.debug(`[DA.live] Config updated for ${org}/${site}`);
         }
+        return result;
     }
 
     /**
@@ -187,69 +164,15 @@ export class DaLiveConfigOperations {
     ): Promise<{ success: boolean; error?: string }> {
         const token = await this.apiClient.getImsToken();
 
-        // First, get existing config to preserve ALL sheets (data, permissions, etc.)
-        // CRITICAL: If the GET fails, we must NOT write a skeleton config that
-        // omits the permissions sheet — that would erase org-level permissions.
-        let existingConfig: Record<string, unknown>;
-        let existingRows: Array<{ key: string; value: string }> = [];
-
-        try {
-            const getResponse = await fetch(configUrl, {
-                method: 'GET',
-                headers: { Authorization: `Bearer ${token}` },
-                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
-            });
-            if (getResponse.ok) {
-                existingConfig = await getResponse.json();
-                const dataSheet = existingConfig.data as
-                    | { data?: Array<{ key: string; value: string }> }
-                    | undefined;
-                existingRows = dataSheet?.data || [];
-            } else if (getResponse.status === 404) {
-                // No existing config — safe to create fresh (no permissions to lose)
-                existingConfig = {
-                    ':version': 3,
-                    ':names': ['data'],
-                    ':type': 'multi-sheet',
-                };
-            } else if (getResponse.status === 401) {
-                // DA.live returns 401 (not 404) when the config has never been
-                // written. We can't safely treat 401 as "create fresh"
-                // unconditionally — the endpoint's owner-auth model means
-                // the same 401 can mean "you don't own this org," and
-                // writing skeleton config to someone else's org would erase
-                // their permissions sheet.
-                //
-                // The disambiguation is a separate write-access probe via
-                // HEAD /list/<org>/, which returns the user's permissions
-                // in the x-da-actions header. If write access is present,
-                // the user is the legitimate owner (just first-time on
-                // /config/) and creating fresh is safe. If not, we refuse.
-                const canWrite = await hasWriteAccess(org, token);
-                if (!canWrite) {
-                    return {
-                        success: false,
-                        error: `Cannot read or write to org config (401): verify DA.live ownership of "${org}".`,
-                    };
-                }
-                existingConfig = {
-                    ':version': 3,
-                    ':names': ['data'],
-                    ':type': 'multi-sheet',
-                };
-            } else {
-                return {
-                    success: false,
-                    error: `Failed to read existing config: ${getResponse.status} ${getResponse.statusText}`,
-                };
-            }
-        } catch (error) {
-            // Network/timeout error — cannot safely write without reading first
-            return {
-                success: false,
-                error: `Cannot read existing config: ${(error as Error).message}`,
-            };
+        const read = await this.readConfigOrError(configUrl, org, token);
+        if ('error' in read) {
+            return { success: false, error: read.error };
         }
+        const existingConfig = read.config;
+        const dataSheet = existingConfig.data as
+            | { data?: Array<{ key: string; value: string }> }
+            | undefined;
+        const existingRows = dataSheet?.data || [];
 
         // Convert existing rows to map for easy merging
         const configMap = new Map<string, string>();
@@ -286,7 +209,8 @@ export class DaLiveConfigOperations {
         // Convert back to rows format (key/value columns)
         const rows = Array.from(configMap.entries()).map(([key, value]) => ({ key, value }));
 
-        // Update ONLY the data sheet, preserving all other sheets (permissions, etc.)
+        // Update ONLY the data sheet, preserving all other sheets (permissions, etc.).
+        // `:names` is recomputed (never hardcoded) so no existing sheet is dropped.
         const configData = {
             ...existingConfig,
             data: {
@@ -295,9 +219,100 @@ export class DaLiveConfigOperations {
                 limit: rows.length,
                 data: rows,
             },
+            ':names': this.computeSheetNames(existingConfig, ['data']),
         };
 
-        // POST to the config API endpoint using FormData
+        const result = await this.postSiteConfig(configUrl, token, configData);
+        if (result.success) {
+            this.logger.info(
+                `[DA.live] Config applied at ${configUrl}: ${Object.keys(configUpdates).join(', ')}`,
+            );
+        }
+        return result;
+    }
+
+    /**
+     * Read the existing config with fail-closed error handling + a 401 ownership
+     * probe. Returns the existing config, or a minimal fresh skeleton for the
+     * legitimate create-fresh cases (404, or 401 where the caller owns the org),
+     * or an `error` the caller MUST surface WITHOUT writing.
+     *
+     * CRITICAL: a transient network/timeout error or an unexpected status must
+     * never fall through to a skeleton write — that would drop existing sheets
+     * (e.g. permissions). DA.live returns 401 (not 404) when a config has never
+     * been written, but the same 401 also means "you don't own this org", so the
+     * two are disambiguated by a HEAD /list/<org>/ write-access probe.
+     */
+    private async readConfigOrError(
+        configUrl: string,
+        org: string,
+        token: string,
+    ): Promise<{ config: Record<string, unknown> } | { error: string }> {
+        const freshSkeleton = (): Record<string, unknown> => ({
+            ':version': 3,
+            ':names': [],
+            ':type': 'multi-sheet',
+        });
+
+        try {
+            const getResponse = await fetch(configUrl, {
+                method: 'GET',
+                headers: { Authorization: `Bearer ${token}` },
+                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+            });
+
+            if (getResponse.ok) {
+                return { config: (await getResponse.json()) as Record<string, unknown> };
+            }
+            if (getResponse.status === 404) {
+                // No existing config — safe to create fresh (nothing to lose).
+                return { config: freshSkeleton() };
+            }
+            if (getResponse.status === 401) {
+                const canWrite = await hasWriteAccess(org, token);
+                if (!canWrite) {
+                    return {
+                        error: `Cannot read or write to config (401): verify DA.live ownership of "${org}".`,
+                    };
+                }
+                return { config: freshSkeleton() };
+            }
+            return {
+                error: `Failed to read existing config: ${getResponse.status} ${getResponse.statusText}`,
+            };
+        } catch (error) {
+            return { error: `Cannot read existing config: ${(error as Error).message}` };
+        }
+    }
+
+    /**
+     * Compute the multi-sheet `:names` listing: preserve the existing order and
+     * append any `required` sheet names not already present. Falls back to the
+     * config's non-meta top-level keys when `:names` is absent. Recomputing (vs.
+     * hardcoding) is what keeps a `permissions` sheet from being dropped.
+     */
+    private computeSheetNames(config: Record<string, unknown>, required: string[]): string[] {
+        const existing = Array.isArray(config[':names'])
+            ? (config[':names'] as string[])
+            : Object.keys(config).filter((key) => !key.startsWith(':'));
+        const names = [...existing];
+        for (const name of required) {
+            if (!names.includes(name)) {
+                names.push(name);
+            }
+        }
+        return names;
+    }
+
+    /**
+     * POST the config document to the DA.live /config/ endpoint (FormData with a
+     * single `config` field). Maps the HTTP result to `{ success, error? }`.
+     */
+    private async postSiteConfig(
+        configUrl: string,
+        token: string,
+        configData: Record<string, unknown>,
+    ): Promise<{ success: boolean; error?: string }> {
         const formData = new FormData();
         formData.append('config', JSON.stringify(configData));
 
@@ -306,22 +321,20 @@ export class DaLiveConfigOperations {
                 method: 'POST',
                 headers: {
                     Authorization: `Bearer ${token}`,
+                    // Don't set Content-Type — fetch sets the multipart boundary for FormData.
                 },
                 body: formData,
                 signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
             });
 
             if (response.ok) {
-                this.logger.info(
-                    `[DA.live] Config applied at ${configUrl}: ${Object.keys(configUpdates).join(', ')}`,
-                );
                 return { success: true };
             }
 
             const errorText = await response.text().catch(() => '');
             return {
                 success: false,
-                error: `Failed to apply config: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`,
+                error: `Failed to write config: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`,
             };
         } catch (error) {
             return { success: false, error: `Config API error: ${(error as Error).message}` };

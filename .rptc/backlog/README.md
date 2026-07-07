@@ -119,10 +119,6 @@ Spurious `400 Bad Request` from `HelixService.previewCode` when the call lands b
 
 ~20 pre-existing code-pattern violations across `helixService.ts`, `executor.ts`, `featurePackInstaller.ts`, `GitHubServiceCard.tsx`, `DaLiveServiceCard.tsx`. Verified none of the four batches (S1–S4) have shipped (e.g. duplicate `Object.keys(project.componentInstances || {})` still in `executor.ts`). Four small batches, ~2h. Behavior-preserving.
 
-#### Harden `updateSiteConfig` — sheet-preservation + 401 guards ([`2026-06-11-updatesiteconfig-weak-guards.md`](2026-06-11-updatesiteconfig-weak-guards.md))
-
-`DaLiveContentOperations.updateSiteConfig` silently "starts fresh" on any GET failure, has no 401 write-access probe, and hardcodes `:names: ['data','library']` — so a transient error or an existing `permissions` sheet can drop site-level permissions. Verified still present. Refactor to reuse the hardened `writeMergedDataConfig` discipline + regression tests.
-
 #### AI Ready: surface skills drift as amber ([`2026-06-01-ai-ready-skills-drift.md`](2026-06-01-ai-ready-skills-drift.md))
 
 New skill templates shipped by the extension never reach existing projects until "Regenerate AI Files" runs; users get no signal. Verified still pending (no `detectSkillsDrift` in `skillsWriter.ts`). Detector + a yellow "Skills outdated" branch on the AI Ready badge + list in `AiCapabilitiesModal`. First slice: missing files only.
