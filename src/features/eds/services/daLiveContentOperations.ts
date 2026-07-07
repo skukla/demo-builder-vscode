@@ -26,6 +26,7 @@ import {
     getRetryDelay,
     normalizePath,
 } from './daLiveConstants';
+import { DaLiveContentDiscovery } from './daLiveContentDiscovery';
 import { transformHtmlForDaLive, buildSourceUrl, resolveDaPath } from './daLiveContentHelpers';
 import { DaLiveSourceOperations } from './daLiveSourceOperations';
 import { convertSpreadsheetJsonToHtml } from './daLiveSpreadsheetUtils';
@@ -33,12 +34,12 @@ import { addContentResult, addReferenceResult, type PatchReport } from './patchR
 import { RUNTIME_SURFACES } from './runtimeSurfaceInventory';
 import { getRuntimeSurfaces, type RuntimeSurfaceSource } from './runtimeSurfaceResolver';
 import {
-    DaLiveError,
     DaLiveAuthError,
     type DaLiveEntry,
     type DaLiveSourceResult,
     type DaLiveCopyResult,
     type DaLiveProgressCallback,
+    type DaLiveContentSource,
 } from './types';
 import { formatDuration } from '@/core/utils/timeFormatting';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -74,23 +75,11 @@ export function filterProductOverlays(paths: string[]): string[] {
     });
 }
 
-/**
- * Content source configuration for copying content between DA.live sites
- */
-export interface DaLiveContentSource {
-    /** Source organization name */
-    org: string;
-    /** Source site name */
-    site: string;
-    /** URL to fetch content index (full-index.json) */
-    indexUrl: string;
-    /** Optional URL to fetch media index (media-index.json) */
-    mediaIndexUrl?: string;
-}
-
-// TokenProvider now lives on the shared api client; re-exported here for the
-// existing consumers that import it from this module.
+// TokenProvider now lives on the shared api client, and DaLiveContentSource on
+// the shared types module; both re-exported here for the existing consumers
+// that import them from this module.
 export type { TokenProvider };
+export type { DaLiveContentSource };
 
 /**
  * Authentication manager interface for token provider creation.
@@ -222,6 +211,7 @@ export class DaLiveContentOperations {
     private readonly apiClient: DaLiveApiClient;
     private readonly sourceOps: DaLiveSourceOperations;
     private readonly configOps: DaLiveConfigOperations;
+    private readonly discoveryOps: DaLiveContentDiscovery;
 
     constructor(
         tokenProvider: TokenProvider,
@@ -230,6 +220,7 @@ export class DaLiveContentOperations {
         this.apiClient = new DaLiveApiClient(tokenProvider, logger);
         this.sourceOps = new DaLiveSourceOperations(this.apiClient, logger);
         this.configOps = new DaLiveConfigOperations(this.apiClient, logger);
+        this.discoveryOps = new DaLiveContentDiscovery(this.sourceOps);
     }
 
     /**
@@ -1563,35 +1554,7 @@ export class DaLiveContentOperations {
      * @returns Array of content paths (extension-free, e.g. '/nav', '/about')
      */
     async getContentPathsFromDaLive(org: string, site: string): Promise<string[]> {
-        const contentPaths: string[] = [];
-        const pathPrefix = `/${org}/${site}`;
-        const contentExtensions = new Set(['.html', '.xlsx']);
-
-        const stripPrefix = (entryPath: string): string => entryPath.replace(pathPrefix, '') || '/';
-
-        const stripExtension = (filePath: string, ext: string): string =>
-            filePath.slice(0, -ext.length);
-
-        const collectPaths = async (dirPath: string): Promise<void> => {
-            const entries = await this.listDirectory(org, site, dirPath);
-
-            for (const entry of entries) {
-                if (entry.ext) {
-                    // File — include only content types
-                    if (contentExtensions.has(entry.ext)) {
-                        const relativePath = stripPrefix(entry.path);
-                        contentPaths.push(stripExtension(relativePath, entry.ext));
-                    }
-                } else {
-                    // Directory — recurse
-                    const relativePath = stripPrefix(entry.path);
-                    await collectPaths(relativePath);
-                }
-            }
-        };
-
-        await collectPaths('/');
-        return contentPaths;
+        return this.discoveryOps.getContentPathsFromDaLive(org, site);
     }
 
     /**
@@ -1605,17 +1568,7 @@ export class DaLiveContentOperations {
      * @returns Array of content paths from the index
      */
     async getContentPathsFromIndex(source: DaLiveContentSource): Promise<string[]> {
-        const indexResponse = await fetch(source.indexUrl);
-        if (!indexResponse.ok) {
-            throw new DaLiveError(
-                `Failed to fetch content index from ${source.org}/${source.site}`,
-                'INDEX_FETCH_ERROR',
-                indexResponse.status,
-            );
-        }
-
-        const indexData = await indexResponse.json();
-        return indexData.data?.map((item: { path: string }) => item.path) || [];
+        return this.discoveryOps.getContentPathsFromIndex(source);
     }
 
     /**

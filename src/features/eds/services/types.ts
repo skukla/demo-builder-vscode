@@ -171,6 +171,20 @@ export interface DaLiveEntry {
 }
 
 /**
+ * Content source configuration for copying content between DA.live sites
+ */
+export interface DaLiveContentSource {
+    /** Source organization name */
+    org: string;
+    /** Source site name */
+    site: string;
+    /** URL to fetch content index (full-index.json) */
+    indexUrl: string;
+    /** Optional URL to fetch media index (media-index.json) */
+    mediaIndexUrl?: string;
+}
+
+/**
  * Result of creating/updating source content
  */
 export interface DaLiveSourceResult {
@@ -356,11 +370,7 @@ export interface EdsProjectSetupResult {
 /**
  * Progress callback for EDS project setup
  */
-export type EdsProgressCallback = (
-    phase: EdsSetupPhase,
-    progress: number,
-    message: string,
-) => void;
+export type EdsProgressCallback = (phase: EdsSetupPhase, progress: number, message: string) => void;
 
 /**
  * Sub-progress callback for individual phase operations
@@ -421,10 +431,7 @@ export class GitHubAppNotInstalledError extends EdsProjectError {
         public readonly repo: string,
         public readonly installUrl: string,
     ) {
-        super(
-            'GitHub App not installed. Code sync requires the AEM Code Sync app.',
-            'code-sync',
-        );
+        super('GitHub App not installed. Code sync requires the AEM Code Sync app.', 'code-sync');
         this.name = 'GitHubAppNotInstalledError';
     }
 }

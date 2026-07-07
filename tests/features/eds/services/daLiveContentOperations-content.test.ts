@@ -1,8 +1,9 @@
 /**
  * DA.live Content Operations Tests - Content & Media
  *
- * Tests for DaLiveContentOperations service: getContentPathsFromIndex,
- * copyMediaFromContent, and HTML transformation for DA.live.
+ * Tests for DaLiveContentOperations service: copyMediaFromContent and HTML
+ * transformation for DA.live. (Content-path enumeration moved to
+ * daLiveContentDiscovery.test.ts.)
  */
 
 import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLiveContentOperations';
@@ -57,66 +58,6 @@ describe('DaLiveContentOperations', () => {
             text: jest.fn().mockResolvedValue(typeof body === 'string' ? body : ''),
         } as unknown as Response;
     }
-
-    describe('getContentPathsFromIndex', () => {
-        it('should fetch and return content paths from index', async () => {
-            const indexData = {
-                data: [
-                    { path: '/about' },
-                    { path: '/products' },
-                    { path: '/contact' },
-                ],
-            };
-            mockFetch.mockResolvedValueOnce(mockFetchResponse(200, indexData, 'application/json'));
-
-            const result = await service.getContentPathsFromIndex({
-                org: 'test-org',
-                site: 'test-site',
-                indexUrl: 'https://main--test-site--test-org.aem.live/full-index.json',
-            });
-
-            expect(result).toEqual(['/about', '/products', '/contact']);
-            expect(mockFetch).toHaveBeenCalledWith('https://main--test-site--test-org.aem.live/full-index.json');
-        });
-
-        it('should return empty array when index has no data', async () => {
-            const indexData = { data: [] };
-            mockFetch.mockResolvedValueOnce(mockFetchResponse(200, indexData, 'application/json'));
-
-            const result = await service.getContentPathsFromIndex({
-                org: 'test-org',
-                site: 'test-site',
-                indexUrl: 'https://main--test-site--test-org.aem.live/full-index.json',
-            });
-
-            expect(result).toEqual([]);
-        });
-
-        it('should return empty array when data property is missing', async () => {
-            const indexData = {};
-            mockFetch.mockResolvedValueOnce(mockFetchResponse(200, indexData, 'application/json'));
-
-            const result = await service.getContentPathsFromIndex({
-                org: 'test-org',
-                site: 'test-site',
-                indexUrl: 'https://main--test-site--test-org.aem.live/full-index.json',
-            });
-
-            expect(result).toEqual([]);
-        });
-
-        it('should throw error when index fetch fails', async () => {
-            mockFetch.mockResolvedValueOnce(mockFetchResponse(404));
-
-            await expect(
-                service.getContentPathsFromIndex({
-                    org: 'test-org',
-                    site: 'test-site',
-                    indexUrl: 'https://main--test-site--test-org.aem.live/full-index.json',
-                }),
-            ).rejects.toThrow('Failed to fetch content index');
-        });
-    });
 
     describe('copyMediaFromContent', () => {
         const sourceOrg = 'demo-system-stores';
