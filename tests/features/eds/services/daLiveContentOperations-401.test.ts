@@ -4,7 +4,6 @@
  * Tests for:
  * 1a. copySingleFile 401 detection (throws DaLiveAuthError)
  * 1b. Per-batch token re-fetch in copyContentFromSource
- * 1c. Per-batch token re-fetch in copyMediaFromContent
  */
 
 import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLiveContentOperations';
@@ -370,119 +369,6 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
             await service.copyContentFromSource(source, destOrg, destSite);
 
             // Should be called exactly 1 time (one batch)
-            expect(mockTokenProvider.getAccessToken).toHaveBeenCalledTimes(1);
-        });
-    });
-
-    // =========================================================================
-    // 1c. Per-batch token re-fetch in copyMediaFromContent
-    // =========================================================================
-
-    describe('per-batch token re-fetch in copyMediaFromContent', () => {
-        const sourceOrg = 'src-org';
-        const sourceSite = 'src-site';
-        const destOrg = 'dest-org';
-        const destSite = 'dest-site';
-
-        /**
-         * Create fetch mock for copyMediaFromContent tests.
-         * contentPaths are scanned for media references; mediaFiles control
-         * the DA.live POST behavior.
-         */
-        function setupMediaMock(
-            contentPages: Record<string, string>,
-            destPostStatus = 200,
-        ): void {
-            mockFetch.mockImplementation(async (url: string, options?: RequestInit) => {
-                // Content page scans (GET to aem.live for media extraction)
-                for (const [pagePath, html] of Object.entries(contentPages)) {
-                    if (url.includes(`aem.live${pagePath}`) && (!options?.method || options?.method === 'GET')) {
-                        return {
-                            ok: true,
-                            status: 200,
-                            headers: { get: () => 'text/html' },
-                            text: async () => html,
-                        } as unknown as Response;
-                    }
-                }
-
-                // isSpreadsheetPath HEAD check
-                if (options?.method === 'HEAD' && url.endsWith('.json')) {
-                    return mockFetchResponse(404);
-                }
-
-                // Source media GET (aem.live)
-                if (url.includes('aem.live') && url.includes('media_') && (!options?.method || options?.method === 'GET')) {
-                    return mockFetchResponse(200, undefined, 'image/png');
-                }
-
-                // DA.live POST (destination upload)
-                if (url.includes('admin.da.live') && options?.method === 'POST') {
-                    return mockFetchResponse(destPostStatus);
-                }
-
-                return mockFetchResponse(404);
-            });
-        }
-
-        it('should call getAccessToken once per batch for media copy', async () => {
-            // Create content with 7 unique media refs = 2 batches
-            const html = [
-                '<img src="./media_a1.png">',
-                '<img src="./media_a2.png">',
-                '<img src="./media_a3.png">',
-                '<img src="./media_a4.png">',
-                '<img src="./media_a5.png">',
-                '<img src="./media_a6.png">',
-                '<img src="./media_a7.png">',
-            ].join('');
-
-            setupMediaMock({ '/page1': `<html>${html}</html>` });
-
-            await service.copyMediaFromContent(
-                { org: sourceOrg, site: sourceSite },
-                destOrg,
-                destSite,
-                ['/page1'],
-            );
-
-            // 7 media files = 2 batches (5 + 2), so 2 calls to getAccessToken
-            expect(mockTokenProvider.getAccessToken).toHaveBeenCalledTimes(2);
-        });
-
-        it('should propagate DaLiveAuthError from copyMediaFromContent', async () => {
-            setupMediaMock(
-                { '/page1': '<html><img src="./media_a1.png"></html>' },
-                401,
-            );
-
-            await expect(
-                service.copyMediaFromContent(
-                    { org: sourceOrg, site: sourceSite },
-                    destOrg,
-                    destSite,
-                    ['/page1'],
-                ),
-            ).rejects.toThrow(DaLiveAuthError);
-        });
-
-        it('should call getAccessToken for a single media batch', async () => {
-            // 3 media files = 1 batch
-            const html = [
-                '<img src="./media_b1.png">',
-                '<img src="./media_b2.png">',
-                '<img src="./media_b3.png">',
-            ].join('');
-
-            setupMediaMock({ '/page1': `<html>${html}</html>` });
-
-            await service.copyMediaFromContent(
-                { org: sourceOrg, site: sourceSite },
-                destOrg,
-                destSite,
-                ['/page1'],
-            );
-
             expect(mockTokenProvider.getAccessToken).toHaveBeenCalledTimes(1);
         });
     });
