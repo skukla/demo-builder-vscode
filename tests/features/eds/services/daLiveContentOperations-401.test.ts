@@ -6,6 +6,7 @@
  * 1b. Per-batch token re-fetch in copyContentFromSource
  */
 
+import type { DaLiveContentDiscovery } from '@/features/eds/services/daLiveContentDiscovery';
 import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLiveContentOperations';
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Logger } from '@/types/logger';
@@ -29,6 +30,7 @@ global.fetch = mockFetch;
 
 describe('DaLiveContentOperations - 401 Token Expiration', () => {
     let service: DaLiveContentOperations;
+    let discovery: DaLiveContentDiscovery;
     let mockTokenProvider: TokenProvider;
     let mockLogger: Logger;
 
@@ -47,6 +49,7 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
         } as unknown as Logger;
 
         service = new DaLiveContentOperations(mockTokenProvider, mockLogger);
+        discovery = (service as unknown as { discoveryOps: DaLiveContentDiscovery }).discoveryOps;
     });
 
     /**
@@ -267,7 +270,7 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
         beforeEach(() => {
             // These tests focus on per-batch token behavior, not content enumeration.
             // Force fallback to CDN index so existing fetch mocks work unchanged.
-            jest.spyOn(service, 'getContentPathsFromDaLive').mockRejectedValue(new Error('Skipped'));
+            jest.spyOn(discovery, 'getContentPathsFromDaLive').mockRejectedValue(new Error('Skipped'));
         });
 
         /**
@@ -308,7 +311,7 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
             // 7 paths = 2 batches (5 + 2) with CONTENT_COPY_BATCH_SIZE = 5
             const paths = ['/p1', '/p2', '/p3', '/p4', '/p5', '/p6', '/p7'];
             // Use DA.live list directly to bypass CDN fallback (avoids auth page probing/stub creation)
-            jest.spyOn(service, 'getContentPathsFromDaLive').mockResolvedValue(paths);
+            jest.spyOn(discovery, 'getContentPathsFromDaLive').mockResolvedValue(paths);
             setupContentSourceMock(paths);
 
             await service.copyContentFromSource(source, destOrg, destSite);
@@ -326,7 +329,7 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
             // 6 paths = 2 batches (5 + 1)
             const paths = ['/p1', '/p2', '/p3', '/p4', '/p5', '/p6'];
             // Use DA.live list directly to bypass CDN fallback
-            jest.spyOn(service, 'getContentPathsFromDaLive').mockResolvedValue(paths);
+            jest.spyOn(discovery, 'getContentPathsFromDaLive').mockResolvedValue(paths);
             setupContentSourceMock(paths);
 
             await service.copyContentFromSource(source, destOrg, destSite);
@@ -363,7 +366,7 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
             // 3 paths = 1 batch
             const paths = ['/p1', '/p2', '/p3'];
             // Use DA.live list directly to bypass CDN fallback
-            jest.spyOn(service, 'getContentPathsFromDaLive').mockResolvedValue(paths);
+            jest.spyOn(discovery, 'getContentPathsFromDaLive').mockResolvedValue(paths);
             setupContentSourceMock(paths);
 
             await service.copyContentFromSource(source, destOrg, destSite);

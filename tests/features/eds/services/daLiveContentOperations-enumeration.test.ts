@@ -10,6 +10,7 @@
  * only covers spreadsheets.
  */
 
+import type { DaLiveContentDiscovery } from '@/features/eds/services/daLiveContentDiscovery';
 import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLiveContentOperations';
 import type { Logger } from '@/types/logger';
 
@@ -27,6 +28,7 @@ global.fetch = mockFetch;
 
 describe('DaLiveContentOperations - Content Enumeration', () => {
     let service: DaLiveContentOperations;
+    let discovery: DaLiveContentDiscovery;
     let mockTokenProvider: TokenProvider;
     let mockLogger: Logger;
 
@@ -45,6 +47,7 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
         } as unknown as Logger;
 
         service = new DaLiveContentOperations(mockTokenProvider, mockLogger);
+        discovery = (service as unknown as { discoveryOps: DaLiveContentDiscovery }).discoveryOps;
     });
 
     function mockFetchResponse(status: number, body?: unknown, contentType = 'text/html'): Response {
@@ -65,9 +68,9 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
     describe('copyContentFromSource - DA.live list integration', () => {
         it('should use DA.live list API and include nav/footer without essentialConfigs (regression)', async () => {
             // Spy on both enumeration methods
-            const listSpy = jest.spyOn(service, 'getContentPathsFromDaLive')
+            const listSpy = jest.spyOn(discovery, 'getContentPathsFromDaLive')
                 .mockResolvedValue(['/index', '/nav', '/footer', '/about']);
-            const indexSpy = jest.spyOn(service, 'getContentPathsFromIndex');
+            const indexSpy = jest.spyOn(discovery, 'getContentPathsFromIndex');
 
             // Mock copySingleFile responses (token + per-file copy)
             mockFetch.mockResolvedValue(mockFetchResponse(200));
@@ -92,10 +95,10 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
 
         it('should fall back to CDN index when DA.live list fails', async () => {
             // DA.live list fails (auth error)
-            jest.spyOn(service, 'getContentPathsFromDaLive')
+            jest.spyOn(discovery, 'getContentPathsFromDaLive')
                 .mockRejectedValue(new Error('Not authenticated'));
             // CDN index returns pages (but NOT nav/footer — this is the existing limitation)
-            jest.spyOn(service, 'getContentPathsFromIndex')
+            jest.spyOn(discovery, 'getContentPathsFromIndex')
                 .mockResolvedValue(['/index', '/about']);
 
             // Mock essential config HEAD checks + copy responses
@@ -120,9 +123,9 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
 
         it('should fall back to CDN index when DA.live list returns 0 files (inaccessible org)', async () => {
             // DA.live list succeeds but returns 0 files (user lacks access to source org)
-            const listSpy = jest.spyOn(service, 'getContentPathsFromDaLive')
+            const listSpy = jest.spyOn(discovery, 'getContentPathsFromDaLive')
                 .mockResolvedValue([]);
-            const indexSpy = jest.spyOn(service, 'getContentPathsFromIndex')
+            const indexSpy = jest.spyOn(discovery, 'getContentPathsFromIndex')
                 .mockResolvedValue(['/index', '/about', '/apparel']);
 
             // Mock HEAD checks + copy responses
@@ -148,7 +151,7 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
         });
 
         it('should skip essentialConfigs when DA.live list succeeds', async () => {
-            jest.spyOn(service, 'getContentPathsFromDaLive')
+            jest.spyOn(discovery, 'getContentPathsFromDaLive')
                 .mockResolvedValue(['/index', '/placeholders', '/nav']);
 
             mockFetch.mockResolvedValue(mockFetchResponse(200));
@@ -174,7 +177,7 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
         });
 
         it('should still apply product overlay filter with DA.live list', async () => {
-            jest.spyOn(service, 'getContentPathsFromDaLive')
+            jest.spyOn(discovery, 'getContentPathsFromDaLive')
                 .mockResolvedValue([
                     '/index',
                     '/products/default',
@@ -199,7 +202,7 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
         });
 
         it('should still apply library index filter with DA.live list', async () => {
-            jest.spyOn(service, 'getContentPathsFromDaLive')
+            jest.spyOn(discovery, 'getContentPathsFromDaLive')
                 .mockResolvedValue([
                     '/index',
                     '/.da/library/blocks',
@@ -224,10 +227,10 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
 
         it('should add nav/footer via CDN HEAD checks in fallback path (regression)', async () => {
             // DA.live list fails
-            jest.spyOn(service, 'getContentPathsFromDaLive')
+            jest.spyOn(discovery, 'getContentPathsFromDaLive')
                 .mockRejectedValue(new Error('Not authenticated'));
             // CDN index returns pages without nav/footer
-            jest.spyOn(service, 'getContentPathsFromIndex')
+            jest.spyOn(discovery, 'getContentPathsFromIndex')
                 .mockResolvedValue(['/index', '/about']);
 
             // URL-based mock: HEAD requests return 200 for nav/footer
@@ -268,10 +271,10 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
 
         it('should add customer auth pages via CDN HEAD checks in fallback path (regression: auth 404s)', async () => {
             // DA.live list fails — triggers CDN index fallback
-            jest.spyOn(service, 'getContentPathsFromDaLive')
+            jest.spyOn(discovery, 'getContentPathsFromDaLive')
                 .mockRejectedValue(new Error('Not authenticated'));
             // CDN index returns pages WITHOUT customer auth pages (not in sitemap)
-            jest.spyOn(service, 'getContentPathsFromIndex')
+            jest.spyOn(discovery, 'getContentPathsFromIndex')
                 .mockResolvedValue(['/index', '/about']);
 
             // URL-based mock: customer/login exists, customer/account returns 404
@@ -318,7 +321,7 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
         });
 
         it('should skip customer auth page probing when DA.live list succeeds', async () => {
-            jest.spyOn(service, 'getContentPathsFromDaLive')
+            jest.spyOn(discovery, 'getContentPathsFromDaLive')
                 .mockResolvedValue(['/index', '/customer/login', '/customer/account', '/nav']);
 
             mockFetch.mockResolvedValue(mockFetchResponse(200));
@@ -346,9 +349,9 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
 
         it('should create stub with correct block markup for create-account page (not on source)', async () => {
             // DA.live list fails — triggers CDN index fallback
-            jest.spyOn(service, 'getContentPathsFromDaLive')
+            jest.spyOn(discovery, 'getContentPathsFromDaLive')
                 .mockRejectedValue(new Error('Not authenticated'));
-            jest.spyOn(service, 'getContentPathsFromIndex')
+            jest.spyOn(discovery, 'getContentPathsFromIndex')
                 .mockResolvedValue(['/index']);
 
             const postCalls: Array<{ url: string; body: FormData | null }> = [];
@@ -396,9 +399,9 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
 
         it('should NOT create stubs for auth pages that exist on source', async () => {
             // DA.live list fails — triggers CDN index fallback
-            jest.spyOn(service, 'getContentPathsFromDaLive')
+            jest.spyOn(discovery, 'getContentPathsFromDaLive')
                 .mockRejectedValue(new Error('Not authenticated'));
-            jest.spyOn(service, 'getContentPathsFromIndex')
+            jest.spyOn(discovery, 'getContentPathsFromIndex')
                 .mockResolvedValue(['/index']);
 
             mockFetch.mockImplementation(async (url: string, options?: RequestInit) => {
