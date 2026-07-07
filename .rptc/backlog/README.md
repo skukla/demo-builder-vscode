@@ -111,10 +111,6 @@ fixed by Regenerate AI files + a drift signal (same family as skills-drift).
 
 `demoBuilder.daLive.*` settings (`ewCanvasBranch`, `authoringExperience`) only reach a project's published DA config via the Configure save path; changing them in VS Code Preferences leaves existing projects' `editor.path` stale (no `onDidChangeConfiguration` listener). Add a debounced listener that detects affected EDS projects (respecting per-project authoring overrides), prompts to confirm, then reuses `applyDaLiveOrgConfigSettings` → `republishStorefrontConfig`. Designed, decisions locked; not started. Branch exists: `feature/republish-on-ew-url-setting-change`.
 
-#### Helix `previewCode` race ([`2026-05-21-helix-previewcode-race.md`](2026-05-21-helix-previewcode-race.md))
-
-Spurious `400 Bad Request` from `HelixService.previewCode` when the call lands before Helix's code mirror has indexed a just-pushed commit. Verified still pending — `previewCode()` has no retry. Single-batch fix: retry-with-backoff on `400` only, 3 attempts (1s/3s/7s).
-
 #### Pre-existing SOP-scan findings — code-pattern cleanup pass ([`2026-06-10-sop-pre-existing-patterns.md`](2026-06-10-sop-pre-existing-patterns.md))
 
 ~20 pre-existing code-pattern violations across `helixService.ts`, `executor.ts`, `featurePackInstaller.ts`, `GitHubServiceCard.tsx`, `DaLiveServiceCard.tsx`. Verified none of the four batches (S1–S4) have shipped (e.g. duplicate `Object.keys(project.componentInstances || {})` still in `executor.ts`). Four small batches, ~2h. Behavior-preserving.

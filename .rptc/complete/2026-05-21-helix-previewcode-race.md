@@ -1,4 +1,19 @@
-# Helix `previewCode` Race — "Failed to preview code: 400 Bad Request"
+# ✅ SHIPPED (2026-07-07) — Helix `previewCode` Race — "Failed to preview code: 400 Bad Request"
+
+**Outcome:** `HelixService.previewCode` now retries on **400 only**, with backoff
+`PREVIEW_RETRY_DELAYS_MS = [1000, 3000, 7000]` (inline module const, no new abstraction) — up to 3
+retries (4 total attempts, ~11s worst case) spanning Helix's <10s mirror-indexing window. 401/403/500
+and every other non-400 status keep their immediate-throw semantics, and a fresh
+`AbortSignal.timeout(TIMEOUTS.LONG)` is issued per attempt. Call sites were NOT edited (they already
+catch the error as a non-fatal warning), as the plan predicted. New `helixService.test.ts` (7 tests):
+success-no-retry, 400→200 resolve, 400-exhaustion throw, 401/403/500 no-retry, and the fresh-signal
+guarantee; backoff is asserted by stubbing `setTimeout` to fire synchronously.
+
+**Spec reconciliation (one deviation from the letter of the plan):** the plan's Step 1 said "up to 3
+attempts" while its delay sequence (1s/3s/7s) and Risk note ("~11s worst case", "<10s catch-up") imply 3
+*retries*. A strict 3-attempts reading yields only two backoffs (~4s) — too short to span the mirror
+window. Implemented as **3 retries / 4 total attempts** to hit the stated 1s/3s/7s and 11s targets and
+actually clear the warning. The plan's "400 × 3 → throws" test became "400 × 4 → throws" accordingly.
 
 ## Provenance
 

@@ -37,6 +37,14 @@ const HELIX_ADMIN_URL = 'https://admin.hlx.page';
 const DEFAULT_BRANCH = 'main';
 
 /**
+ * Backoff (ms) before each `previewCode` retry after a 400 from Helix Admin.
+ * A 400 immediately after a push means Helix's code mirror hasn't indexed the
+ * new commit yet; it typically catches up in <10s, so 3 retries at 1s/3s/7s
+ * (~11s total) span that window. Only 400 retries — other statuses throw at once.
+ */
+const PREVIEW_RETRY_DELAYS_MS = [1000, 3000, 7000];
+
+/**
  * Max concurrent DELETE requests per batch.
  * Helix Admin API enforces 10 req/s per project — batching at 5 keeps
  * well under the limit even with sequential live + parallel preview DELETEs.
@@ -1629,6 +1637,11 @@ export class HelixService {
      * @param path - File path (e.g., '/config.json')
      * @param branch - Branch name (default: main)
      * @throws Error on access denied (403) or network error
+     *
+     * Retries on 400 only (up to {@link PREVIEW_RETRY_DELAYS_MS}.length times):
+     * a 400 right after a push means Helix's code mirror hasn't indexed the new
+     * commit yet, and it usually catches up within the backoff window. Every
+     * other status keeps its immediate-throw semantics.
      */
     async previewCode(
         org: string,
@@ -1642,29 +1655,49 @@ export class HelixService {
 
         this.logger.debug(`[Helix] Previewing code: ${url}`);
 
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'x-auth-token': githubToken,
-            },
-            signal: AbortSignal.timeout(TIMEOUTS.LONG),
-        });
+        // retryIndex 0 = initial attempt; 1..N = retries after a 400.
+        for (let retryIndex = 0; ; retryIndex++) {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'x-auth-token': githubToken,
+                },
+                // Fresh timeout signal per attempt — a reused signal from an
+                // earlier attempt could already be aborted.
+                signal: AbortSignal.timeout(TIMEOUTS.LONG),
+            });
 
-        if (response.status === 401) {
-            throw new Error(
-                'GitHub authentication failed. Please ensure you have write access to the repository.',
-            );
+            if (response.status === 401) {
+                throw new Error(
+                    'GitHub authentication failed. Please ensure you have write access to the repository.',
+                );
+            }
+
+            if (response.status === 403) {
+                throw new Error('Access denied. You do not have permission to preview this code.');
+            }
+
+            // Helix's code mirror hasn't caught up with the just-pushed commit
+            // yet. Back off and retry; the mirror typically indexes within ~10s.
+            if (response.status === 400 && retryIndex < PREVIEW_RETRY_DELAYS_MS.length) {
+                const delayMs = PREVIEW_RETRY_DELAYS_MS[retryIndex];
+                this.logger.debug(
+                    `[Helix] previewCode 400 on attempt ${retryIndex + 1} — ` +
+                        `Helix mirror not caught up, retrying in ${delayMs}ms`,
+                );
+                await new Promise((resolve) => setTimeout(resolve, delayMs));
+                continue;
+            }
+
+            if (!response.ok) {
+                throw new Error(
+                    `Failed to preview code: ${response.status} ${response.statusText}`,
+                );
+            }
+
+            this.logger.debug(`[Helix] Successfully previewed code: ${cleanPath}`);
+            return;
         }
-
-        if (response.status === 403) {
-            throw new Error('Access denied. You do not have permission to preview this code.');
-        }
-
-        if (!response.ok) {
-            throw new Error(`Failed to preview code: ${response.status} ${response.statusText}`);
-        }
-
-        this.logger.debug(`[Helix] Successfully previewed code: ${cleanPath}`);
     }
     // ==========================================================
     // Helpers
