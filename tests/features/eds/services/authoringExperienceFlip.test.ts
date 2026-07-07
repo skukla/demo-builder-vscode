@@ -1,0 +1,196 @@
+/**
+ * applyAuthoringExperienceFlip — shared authoring-experience side-effect service.
+ *
+ * Verifies the three consolidated side-effects (editor.path re-apply, Quick Edit
+ * vendoring, config.json regen) run in the right order, are gated correctly by
+ * experience, and are each individually non-fatal (a failure → 'warn', never a
+ * throw). Collaborators are mocked at their module boundaries, matching the
+ * Configure authoring-experience test's mocking style.
+ */
+
+import { applyAuthoringExperienceFlip } from '@/features/eds/services/authoringExperienceFlip';
+import * as vscode from 'vscode';
+import { COMPONENT_IDS } from '@/core/constants';
+import type { Logger } from '@/core/logging';
+import type { AuthoringExperience, Project } from '@/types';
+
+jest.mock('vscode');
+
+const mockApplyDaLiveOrgConfigSettings = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/features/eds/handlers/edsHelpers', () => ({
+    applyDaLiveOrgConfigSettings: (...args: unknown[]) => mockApplyDaLiveOrgConfigSettings(...args),
+    getDaLiveAuthService: jest.fn(() => ({})),
+}));
+
+jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+    createDaLiveServiceTokenProvider: jest.fn(() => ({})),
+    DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
+}));
+
+const mockInstallQuickEdit = jest.fn().mockResolvedValue({ installed: true });
+jest.mock('@/features/eds/services/quickEditPublisher', () => ({
+    installQuickEdit: (...args: unknown[]) => mockInstallQuickEdit(...args),
+}));
+
+const mockPreviewCode = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/features/eds/services/helixService', () => ({
+    HelixService: jest.fn().mockImplementation(() => ({ previewCode: mockPreviewCode })),
+}));
+
+const mockGitHubFileOperations = jest.fn().mockImplementation(() => ({}));
+jest.mock('@/features/eds/services/githubFileOperations', () => ({
+    GitHubFileOperations: jest
+        .fn()
+        .mockImplementation((...args) => mockGitHubFileOperations(...args)),
+}));
+
+const mockGitHubTokenService = jest.fn().mockImplementation(() => ({}));
+jest.mock('@/features/eds/services/githubTokenService', () => ({
+    GitHubTokenService: jest.fn().mockImplementation((...args) => mockGitHubTokenService(...args)),
+}));
+
+const mockRepublishStorefrontConfig = jest.fn().mockResolvedValue({ success: true });
+jest.mock('@/features/eds/services/storefrontRepublishService', () => ({
+    republishStorefrontConfig: (...args: unknown[]) => mockRepublishStorefrontConfig(...args),
+}));
+
+const NO_REPO = Symbol('no-repo');
+const NO_COORDS = Symbol('no-coords');
+
+function makeEdsProject(
+    githubRepo: string | typeof NO_REPO = 'acme-org/acme-storefront',
+    coords: 'coords' | typeof NO_COORDS = 'coords'
+): Project {
+    const repo = githubRepo === NO_REPO ? undefined : githubRepo;
+    const hasCoords = coords !== NO_COORDS;
+    return {
+        name: 'Test Project',
+        path: '/test/project',
+        componentInstances: {
+            [COMPONENT_IDS.EDS_STOREFRONT]: {
+                metadata: {
+                    ...(hasCoords ? { daLiveOrg: 'my-org', daLiveSite: 'my-site' } : {}),
+                    ...(repo ? { githubRepo: repo } : {}),
+                },
+            },
+        },
+    } as unknown as Project;
+}
+
+describe('applyAuthoringExperienceFlip', () => {
+    let mockContext: vscode.ExtensionContext;
+    let mockLogger: Logger;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockContext = {
+            secrets: { get: jest.fn(), store: jest.fn() },
+        } as unknown as vscode.ExtensionContext;
+        mockLogger = {
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+        } as unknown as Logger;
+    });
+
+    function flip(project: Project, experience: AuthoringExperience) {
+        return applyAuthoringExperienceFlip(project, experience, {
+            context: mockContext,
+            logger: mockLogger,
+        });
+    }
+
+    it('re-applies editor.path with the org/site/experience for da-live-classic', async () => {
+        const result = await flip(makeEdsProject(), 'da-live-classic');
+
+        expect(mockApplyDaLiveOrgConfigSettings).toHaveBeenCalledTimes(1);
+        expect(mockApplyDaLiveOrgConfigSettings).toHaveBeenCalledWith(
+            expect.anything(),
+            'my-org',
+            'my-site',
+            expect.anything(),
+            'da-live-classic'
+        );
+        expect(result.editorPath).toBe('ok');
+    });
+
+    it('skips editor.path when DA org/site coordinates are missing (still ok)', async () => {
+        const result = await flip(
+            makeEdsProject('acme-org/acme-storefront', NO_COORDS),
+            'da-live-classic'
+        );
+
+        expect(mockApplyDaLiveOrgConfigSettings).not.toHaveBeenCalled();
+        expect(result.editorPath).toBe('ok');
+    });
+
+    it('da-live-classic SKIPS Quick Edit + config.json regen', async () => {
+        const result = await flip(makeEdsProject(), 'da-live-classic');
+
+        expect(mockInstallQuickEdit).not.toHaveBeenCalled();
+        expect(mockRepublishStorefrontConfig).not.toHaveBeenCalled();
+        expect(result).toEqual({ editorPath: 'ok', quickEdit: 'skipped', configRegen: 'skipped' });
+    });
+
+    it('experience-workspace runs all three side-effects and returns ok', async () => {
+        const result = await flip(makeEdsProject(), 'experience-workspace');
+
+        expect(mockApplyDaLiveOrgConfigSettings).toHaveBeenCalledWith(
+            expect.anything(),
+            'my-org',
+            'my-site',
+            expect.anything(),
+            'experience-workspace'
+        );
+        const [, repoOwner, repoName] = mockInstallQuickEdit.mock.calls[0];
+        expect(repoOwner).toBe('acme-org');
+        expect(repoName).toBe('acme-storefront');
+        expect(mockPreviewCode).toHaveBeenCalledWith('acme-org', 'acme-storefront', '/*');
+        expect(mockRepublishStorefrontConfig).toHaveBeenCalledWith(
+            expect.objectContaining({ project: expect.anything() })
+        );
+        expect(result).toEqual({ editorPath: 'ok', quickEdit: 'ok', configRegen: 'ok' });
+    });
+
+    it('skips Quick Edit vendoring when no githubRepo metadata is present (still ok)', async () => {
+        const result = await flip(makeEdsProject(NO_REPO), 'experience-workspace');
+
+        expect(mockInstallQuickEdit).not.toHaveBeenCalled();
+        expect(result.quickEdit).toBe('ok');
+    });
+
+    it('editor.path failure is swallowed → warn (never throws)', async () => {
+        mockApplyDaLiveOrgConfigSettings.mockRejectedValueOnce(new Error('DA down'));
+
+        const result = await flip(makeEdsProject(), 'da-live-classic');
+
+        expect(result.editorPath).toBe('warn');
+        expect(mockLogger.warn).toHaveBeenCalled();
+    });
+
+    it('Quick Edit failure is swallowed → warn, config regen still runs', async () => {
+        mockPreviewCode.mockRejectedValueOnce(new Error('Helix down'));
+
+        const result = await flip(makeEdsProject(), 'experience-workspace');
+
+        expect(result.quickEdit).toBe('warn');
+        expect(result.configRegen).toBe('ok');
+    });
+
+    it('config.json regen !success → warn (non-fatal)', async () => {
+        mockRepublishStorefrontConfig.mockResolvedValueOnce({ success: false, error: 'boom' });
+
+        const result = await flip(makeEdsProject(), 'experience-workspace');
+
+        expect(result.configRegen).toBe('warn');
+    });
+
+    it('config.json regen thrown error → warn (non-fatal)', async () => {
+        mockRepublishStorefrontConfig.mockRejectedValueOnce(new Error('Config sync down'));
+
+        const result = await flip(makeEdsProject(), 'experience-workspace');
+
+        expect(result.configRegen).toBe('warn');
+    });
+});

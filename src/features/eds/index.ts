@@ -18,7 +18,10 @@ export { GitHubOAuthService } from './services/githubOAuthService';
 
 // DA.live Services (extracted modules - explicit dependencies, locality of behavior)
 export { DaLiveOrgOperations, type TokenProvider } from './services/daLiveOrgOperations';
-export { DaLiveContentOperations, type DaLiveContentSource } from './services/daLiveContentOperations';
+export {
+    DaLiveContentOperations,
+    type DaLiveContentSource,
+} from './services/daLiveContentOperations';
 export { DaLiveAuthService } from './services/daLiveAuthService';
 export {
     DaLiveConfigService,
@@ -39,17 +42,11 @@ export {
 } from './services/configurationService';
 
 // Config Generator (for EDS Reset)
-export {
-    generateConfigJson,
-    extractConfigParams,
-} from './services/configGenerator';
+export { generateConfigJson, extractConfigParams } from './services/configGenerator';
 export type { ConfigGeneratorParams, ConfigGeneratorResult } from './services/configGenerator';
 
 // EDS Reset Service (shared by dashboard and projects-dashboard)
-export {
-    executeEdsReset,
-    extractResetParams,
-} from './services/edsResetService';
+export { executeEdsReset, extractResetParams } from './services/edsResetService';
 export type {
     EdsResetParams,
     EdsResetProgress,
@@ -71,10 +68,7 @@ export {
 
 // EDS Project Detection (single source of truth from typeGuards)
 export { isEdsProject } from '@/types/typeGuards';
-export type {
-    StorefrontState,
-    StorefrontChanges,
-} from './services/storefrontStalenessDetector';
+export type { StorefrontState, StorefrontChanges } from './services/storefrontStalenessDetector';
 
 // Storefront Republish Service
 export {
@@ -82,21 +76,28 @@ export {
     extractRepublishParams,
     needsStorefrontRepublish,
 } from './services/storefrontRepublishService';
-export type {
-    RepublishParams,
-    RepublishResult,
-} from './services/storefrontRepublishService';
+export type { RepublishParams, RepublishResult } from './services/storefrontRepublishService';
+
+// Authoring-experience flip side-effects (shared by Configure + EW settings listener)
+export {
+    applyAuthoringExperienceFlip,
+    type FlipResult,
+    type FlipStepResult,
+    type AuthoringExperienceFlipDeps,
+} from './services/authoringExperienceFlip';
+
+// EW settings-change listener (republish affected projects on daLive setting change)
+export {
+    registerEwSettingChangeListener,
+    type EwSettingChangeListenerDeps,
+} from './services/ewSettingChangeListener';
 
 // Fstab Generator (single source of truth for fstab.yaml)
 export { generateFstabContent } from './services/fstabGenerator';
 export type { FstabConfig } from './services/fstabGenerator';
 
 // Error Formatters
-export {
-    formatGitHubError,
-    formatDaLiveError,
-    formatHelixError,
-} from './services/errorFormatters';
+export { formatGitHubError, formatDaLiveError, formatHelixError } from './services/errorFormatters';
 
 // Code Sync Errors
 export {
@@ -152,11 +153,7 @@ export type {
     DaLiveProgressCallback,
 } from './services/types';
 
-export {
-    DaLiveError,
-    DaLiveAuthError,
-    DaLiveNetworkError,
-} from './services/types';
+export { DaLiveError, DaLiveAuthError, DaLiveNetworkError } from './services/types';
 
 // Types - EDS Project
 export type {

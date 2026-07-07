@@ -78,10 +78,6 @@ Core self-heal **shipped** (see Recently shipped). Residual scope from the origi
 
 ### C. Ready to pick up (small, verified still pending)
 
-#### Republish affected projects when an EW-URL-affecting setting changes ([`2026-06-12-republish-on-ew-url-setting-change.md`](2026-06-12-republish-on-ew-url-setting-change.md))
-
-`demoBuilder.daLive.*` settings (`ewCanvasBranch`, `authoringExperience`) only reach a project's published DA config via the Configure save path; changing them in VS Code Preferences leaves existing projects' `editor.path` stale (no `onDidChangeConfiguration` listener). Add a debounced listener that detects affected EDS projects (respecting per-project authoring overrides), prompts to confirm, then reuses `applyDaLiveOrgConfigSettings` → `republishStorefrontConfig`. Designed, decisions locked; not started. Branch exists: `feature/republish-on-ew-url-setting-change`.
-
 #### AI Ready: surface skills drift as amber ([`2026-06-01-ai-ready-skills-drift.md`](2026-06-01-ai-ready-skills-drift.md))
 
 New skill templates shipped by the extension never reach existing projects until "Regenerate AI Files" runs; users get no signal. Verified still pending (no `detectSkillsDrift` in `skillsWriter.ts`). Detector + a yellow "Skills outdated" branch on the AI Ready badge + list in `AiCapabilitiesModal`. First slice: missing files only.

@@ -34,6 +34,7 @@ import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLive
 import { manageGitHubReposCommand } from '@/features/eds/commands/manageGitHubRepos';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
+import { registerEwSettingChangeListener } from '@/features/eds/services/ewSettingChangeListener';
 import { ensureHomeAiContext } from '@/features/project-creation/services/homeAiContextWriter';
 import { SidebarProvider } from '@/features/sidebar';
 import type { McpCredentialProvider } from '@/mcp-server';
@@ -55,7 +56,6 @@ export function shouldReHomeToRoot(ws: string | undefined, projectsRoot: string)
     return !!ws && ws !== projectsRoot && ws.startsWith(projectsRoot + path.sep);
 }
 
-
 let logger: Logger;
 let stateManager: StateManager;
 let autoUpdater: AutoUpdater;
@@ -67,13 +67,16 @@ let inExtensionMcpServer: InExtensionMcpServer | undefined;
 export async function activate(context: vscode.ExtensionContext) {
     // Initialize the debug logger first
     const debugLogger = initializeLogger(context);
-    
+
     // Check for pending log replay (after Extension Host restart)
     try {
         const flagFile = path.join(os.homedir(), '.demo-builder', '.pending-log-replay');
 
         // Check if flag file exists
-        const flagExists = await fs.access(flagFile).then(() => true).catch(() => false);
+        const flagExists = await fs
+            .access(flagFile)
+            .then(() => true)
+            .catch(() => false);
         if (flagExists) {
             // Read log file path from flag
             const logFilePath = await fs.readFile(flagFile, 'utf8');
@@ -87,7 +90,7 @@ export async function activate(context: vscode.ExtensionContext) {
     } catch {
         // Silently ignore errors (flag file might not exist, which is fine)
     }
-    
+
     logger = getLogger();
     const version = context.extension.packageJSON.version || '1.0.0';
     logger.debug(`[Extension] Adobe Demo Builder v${version} starting...`);
@@ -117,15 +120,11 @@ export async function activate(context: vscode.ExtensionContext) {
         // The sidebar only needs stateManager and logger to render
         const sidebarProvider = new SidebarProvider(context, stateManager, logger);
         context.subscriptions.push(
-            vscode.window.registerWebviewViewProvider(
-                sidebarProvider.viewId,
-                sidebarProvider,
-                {
-                    webviewOptions: {
-                        retainContextWhenHidden: true, // Keep state when sidebar hidden
-                    },
+            vscode.window.registerWebviewViewProvider(sidebarProvider.viewId, sidebarProvider, {
+                webviewOptions: {
+                    retainContextWhenHidden: true, // Keep state when sidebar hidden
                 },
-            ),
+            }),
         );
 
         // Register SidebarProvider with ServiceLocator (for wizard/command access)
@@ -203,7 +202,8 @@ export async function activate(context: vscode.ExtensionContext) {
         // global / by-name work. Best-effort and additive — never blocks or
         // breaks activation, and changes no navigation/workspace behavior.
         const projectsDir =
-            process.env.DEMO_BUILDER_PROJECTS_DIR ?? path.join(os.homedir(), '.demo-builder', 'projects');
+            process.env.DEMO_BUILDER_PROJECTS_DIR ??
+            path.join(os.homedir(), '.demo-builder', 'projects');
         void ensureHomeAiContext(projectsDir, path.join(context.extensionPath, 'dist'));
 
         // Register file watchers early (before loading projects)
@@ -214,7 +214,7 @@ export async function activate(context: vscode.ExtensionContext) {
         // The sidebar now serves as the main navigation hub (Mission Control)
         // Users interact with the sidebar to navigate to Projects Dashboard, project details, etc.
         // The old TreeView-based welcome/components behavior is replaced by the WebviewView sidebar
-        
+
         // Note: Controls view removed - using Status Bar + Project Dashboard instead
 
         // Register runtime toolbar commands BEFORE creating toolbar
@@ -232,7 +232,9 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.commands.registerCommand('demoBuilder.restartDemo', async () => {
                 await vscode.commands.executeCommand('demoBuilder.stopDemo');
                 // Small delay to ensure clean stop
-                await new Promise(resolve => setTimeout(resolve, TIMEOUTS.DEMO_STATUS_UPDATE_DELAY));
+                await new Promise((resolve) =>
+                    setTimeout(resolve, TIMEOUTS.DEMO_STATUS_UPDATE_DELAY),
+                );
                 await vscode.commands.executeCommand('demoBuilder.startDemo');
             }),
         );
@@ -249,11 +251,21 @@ export async function activate(context: vscode.ExtensionContext) {
         );
 
         context.subscriptions.push(
-            vscode.commands.registerCommand('demoBuilder.cleanupDaLiveSites', () => cleanupDaLiveSitesCommand(context)),
+            vscode.commands.registerCommand('demoBuilder.cleanupDaLiveSites', () =>
+                cleanupDaLiveSitesCommand(context),
+            ),
         );
 
         context.subscriptions.push(
-            vscode.commands.registerCommand('demoBuilder.manageGitHubRepos', () => manageGitHubReposCommand(context)),
+            vscode.commands.registerCommand('demoBuilder.manageGitHubRepos', () =>
+                manageGitHubReposCommand(context),
+            ),
+        );
+
+        // Republish affected EDS projects when an EW-URL-affecting daLive setting
+        // (ewCanvasBranch / authoringExperience) changes — confirm-gated, debounced.
+        context.subscriptions.push(
+            registerEwSettingChangeListener({ context, stateManager, logger }),
         );
 
         // Initialize auto-updater (but don't check yet - wait for sidebar activation)
@@ -263,7 +275,11 @@ export async function activate(context: vscode.ExtensionContext) {
         // Clean up any stale flag files from previous versions
         // (The workspace folder addition that used this flag was removed in beta.64)
         try {
-            const flagFile = path.join(os.homedir(), '.demo-builder', '.open-dashboard-after-restart');
+            const flagFile = path.join(
+                os.homedir(),
+                '.demo-builder',
+                '.open-dashboard-after-restart',
+            );
             await fs.unlink(flagFile).catch(() => {}); // Silently remove if exists
         } catch {
             // Ignore errors
@@ -287,11 +303,16 @@ export async function activate(context: vscode.ExtensionContext) {
         // build), re-home it to the projects root and bail — the post-reopen
         // activation runs the cold-start path below.
         const projectsRoot =
-            process.env.DEMO_BUILDER_PROJECTS_DIR ?? path.join(os.homedir(), '.demo-builder', 'projects');
+            process.env.DEMO_BUILDER_PROJECTS_DIR ??
+            path.join(os.homedir(), '.demo-builder', 'projects');
         const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
         if (shouldReHomeToRoot(ws, projectsRoot)) {
             await fs.mkdir(projectsRoot, { recursive: true }).catch(() => {});
-            await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(projectsRoot), false);
+            await vscode.commands.executeCommand(
+                'vscode.openFolder',
+                vscode.Uri.file(projectsRoot),
+                false,
+            );
             return;
         }
 
@@ -304,7 +325,6 @@ export async function activate(context: vscode.ExtensionContext) {
         }
 
         logger.info('[Extension] Ready');
-
     } catch (error) {
         logger.error(`Failed to activate extension: ${error}`);
         vscode.window.showErrorMessage(
@@ -347,7 +367,8 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
             return;
         }
         const projectsDir =
-            process.env.DEMO_BUILDER_PROJECTS_DIR ?? path.join(os.homedir(), '.demo-builder', 'projects');
+            process.env.DEMO_BUILDER_PROJECTS_DIR ??
+            path.join(os.homedir(), '.demo-builder', 'projects');
         // Handler-backed read/status tools dispatch through the existing handler
         // maps with a fresh headless context per call.
         const ctxFactory = () => createHeadlessHandlerContext(context, stateManager, logger);
@@ -357,7 +378,8 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
         // per call (token expiry); failures degrade to null (treated as no token).
         const credentials: McpCredentialProvider = {
             getDaLiveToken: () => getDaLiveAuthService(context).getAccessToken(),
-            getGitHubToken: async () => (await getGitHubServices(ctxFactory()).tokenService.getToken())?.token ?? null,
+            getGitHubToken: async () =>
+                (await getGitHubServices(ctxFactory()).tokenService.getToken())?.token ?? null,
         };
         // Workspace mode mismatch protection: when the workspace is a project
         // folder (set by `vscode.openFolder` during project-switch from the
@@ -374,7 +396,11 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
             projectsDir,
             logger,
             (mcpServer) => {
-                registerDescriptorTools(mcpServer, [...READ_DESCRIPTORS, ...ACTION_DESCRIPTORS], ctxFactory);
+                registerDescriptorTools(
+                    mcpServer,
+                    [...READ_DESCRIPTORS, ...ACTION_DESCRIPTORS],
+                    ctxFactory,
+                );
                 registerDiscoveryTools(mcpServer);
                 registerAuthTools(mcpServer, ctxFactory);
                 registerAdobeTools(mcpServer, ctxFactory);
@@ -385,7 +411,9 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerEdsResetTool(mcpServer, ctxFactory);
                 registerDeleteProjectTool(mcpServer, ctxFactory);
                 registerApplyUpdatesTool(mcpServer, ctxFactory);
-                registerViewTools(mcpServer, (commandId) => Promise.resolve(vscode.commands.executeCommand(commandId)));
+                registerViewTools(mcpServer, (commandId) =>
+                    Promise.resolve(vscode.commands.executeCommand(commandId)),
+                );
             },
             credentials,
             projectsRootSocketPath,
@@ -393,7 +421,10 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
         await server.start();
         inExtensionMcpServer = server;
     } catch (err) {
-        logger.error('Failed to start in-extension MCP server', err instanceof Error ? err : undefined);
+        logger.error(
+            'Failed to start in-extension MCP server',
+            err instanceof Error ? err : undefined,
+        );
     }
 }
 
