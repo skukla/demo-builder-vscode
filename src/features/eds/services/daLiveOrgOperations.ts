@@ -316,8 +316,8 @@ export class DaLiveOrgOperations {
  * already have the IMS token in hand at the call site — passing it
  * explicitly is simpler than re-fetching via `tokenProvider`. Used by
  * the list-orgs handler (to flag each org's writability) and by
- * `applyOrgConfig`'s 401-handling branch (to verify ownership before
- * creating a fresh config sheet).
+ * `DaLiveConfigOperations.writeMergedDataConfig`'s 401-handling
+ * branch (to verify ownership before creating a fresh config sheet).
  *
  * @returns `true` if the header contains "write", `false` otherwise
  *          (including network failures and non-2xx responses).
