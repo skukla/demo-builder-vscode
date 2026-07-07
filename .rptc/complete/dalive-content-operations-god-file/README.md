@@ -80,7 +80,10 @@ Revisit only if a consumer's coupling causes concrete pain (YAGNI).
 
 - **Pre-existing import cycle:** `catalogPrewarmService.ts ↔ edsPipeline.ts` (surfaced by the final
   `madge --circular src/features/eds/services/` scan). Neither is a daLive file; the decomposition
-  commits never touched either. Not introduced here — a separate `circular-dependency-scan` item.
+  commits never touched either. Not introduced here, but **fixed as a follow-up**: the shared
+  `EdsPipelineProgressCallback` type was relocated to `./types` (re-exported from `edsPipeline` for
+  API stability), so `catalogPrewarmService` no longer imports from `edsPipeline`. `madge` now reports
+  the whole `eds/services/` tree cycle-free.
 - `daLiveContentCopy.ts` (1046) and `daLiveBlockLibraryOperations.ts` (836) exceed the 400-line service
   threshold. Each is a single cohesive responsibility; further splitting (e.g. low-level copy vs. copy
   orchestration) is a possible future refinement, not required by this workstream.

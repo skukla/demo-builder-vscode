@@ -379,6 +379,16 @@ export type EdsProgressCallback = (phase: EdsSetupPhase, progress: number, messa
  */
 export type PhaseProgressCallback = (message: string) => void;
 
+/** Pipeline progress callback — callers map operations to their own phase/step scheme */
+export type EdsPipelineProgressCallback = (info: {
+    operation: string;
+    message: string;
+    subMessage?: string;
+    current?: number;
+    total?: number;
+    percentage?: number;
+}) => void;
+
 /**
  * Result of Helix 5 configuration
  */

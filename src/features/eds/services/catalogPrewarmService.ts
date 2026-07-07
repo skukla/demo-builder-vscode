@@ -34,9 +34,9 @@
  */
 
 import { extractConfigParams, generateHeaders, type ConfigGeneratorParams } from './configGenerator';
-import type { EdsPipelineProgressCallback } from './edsPipeline';
 import { derivePrepublishUrl } from './pdp404HandlerPublisher';
 import { encodeSkuForUrl, sanitizeUrlKey } from './pdpUrlEncoding';
+import type { EdsPipelineProgressCallback } from './types';
 import { runInBatches } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Project } from '@/types/base';
