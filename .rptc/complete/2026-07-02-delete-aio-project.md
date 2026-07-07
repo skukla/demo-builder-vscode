@@ -1,4 +1,23 @@
-# Delete an Adobe I/O project from the builder (with event-provider teardown)
+# ✅ SHIPPED — Delete an Adobe I/O project from the builder (with event-provider teardown)
+
+> **SHIPPED to `develop` 2026-07-07** (4 commits `2438c725`, `627b667c`, `8d892b34`, `82a40ac0`).
+> The feature was fully built + tested on `feature/delete-aio-project` (tip 2026-07-04) but had never
+> been merged — a 2026-07-07 §C re-audit surfaced the unmerged branch, which was then rebased onto
+> current `develop` (two conflicts resolved: a `webview.ts` `AdobeProject` field add, and a combine of
+> two independent `ListView` test-mock enhancements — selection reflection + disabled-key handling) and
+> fast-forward merged. Gate green (tsc, whole-repo lint, full jest; the lone failure was the pre-existing
+> flaky `processCleanup.timeout` test, which passes in isolation).
+>
+> **Delivered:** per-row delete action in `AdobeProjectPicker` (post-confirm disable, ownership-gated so
+> only projects the current token user created are deletable); Console-project teardown in the correct
+> order — event registrations → 3rd-party providers → project — via `consoleProjectTeardown.ts` +
+> `ioEventsClient.ts` + `projectOwnership.ts` + `imsTokenClaims.ts` (pre-empts the opaque 409;
+> collect-don't-throw; org-gated). Extensive tests across handler, teardown, events client, ownership,
+> and the picker delete UI.
+>
+> ---
+>
+> _Original plan follows._
 
 ## Provenance
 Scoped 2026-07-02 from the delete-aio-project research (`.rptc/research/delete-aio-project/research.md`).

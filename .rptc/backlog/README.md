@@ -78,17 +78,6 @@ Core self-heal **shipped** (see Recently shipped). Residual scope from the origi
 
 ### C. Ready to pick up (small, verified still pending)
 
-#### Delete an Adobe I/O project from the builder — event-provider teardown ([`2026-07-02-delete-aio-project.md`](2026-07-02-delete-aio-project.md))
-
-Add a per-row "Delete project" action to `AdobeProjectPicker` (strong confirm) that fully tears a Console
-project down. Load-bearing gotcha (Adobe I/O Events FAQ): a project **cannot be deleted while an event
-provider is attached to a workspace**. Teardown order: event registrations (workspace) → providers (org,
-filtered to the workspace) → project. Path is the **aio CLI** (`aio event provider/registration …`) — the
-REST provider-DELETE needs a per-workspace S2S credential we don't have; the events plugin ships bundled
-with `aio-cli` (no new prereq). Extends `projectDeletionService`. Research + teardown detail:
-[`../research/delete-aio-project/research.md`](../research/delete-aio-project/research.md). Verify the
-provider-list workspace-id field empirically before building the filter step.
-
 #### Republish affected projects when an EW-URL-affecting setting changes ([`2026-06-12-republish-on-ew-url-setting-change.md`](2026-06-12-republish-on-ew-url-setting-change.md))
 
 `demoBuilder.daLive.*` settings (`ewCanvasBranch`, `authoringExperience`) only reach a project's published DA config via the Configure save path; changing them in VS Code Preferences leaves existing projects' `editor.path` stale (no `onDidChangeConfiguration` listener). Add a debounced listener that detects affected EDS projects (respecting per-project authoring overrides), prompts to confirm, then reuses `applyDaLiveOrgConfigSettings` → `republishStorefrontConfig`. Designed, decisions locked; not started. Branch exists: `feature/republish-on-ew-url-setting-change`.
