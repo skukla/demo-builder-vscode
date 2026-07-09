@@ -1,9 +1,5 @@
 import { deployAppComponent } from '@/features/app-builder/services/appDeployment';
-import {
-    mockFs,
-    createMockCommandManager,
-    createMockLogger,
-} from './appDeployment.testUtils';
+import { mockFs, createMockCommandManager, createMockLogger } from './appDeployment.testUtils';
 
 /**
  * deployAppComponent Test Suite
@@ -35,6 +31,18 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
         LONG: 180000,
     },
+}));
+
+// Runtime credentials are fetched before the deploy (catalog repos ship no
+// .env); mock the fetch so the deploy-tail tests stay focused, keep the real
+// stderr extractor (pure function).
+jest.mock('@/features/app-builder/services/runtimeCredentials', () => ({
+    extractAioErrorDetail: jest.requireActual('@/features/app-builder/services/runtimeCredentials')
+        .extractAioErrorDetail,
+    fetchRuntimeCredentials: jest.fn().mockResolvedValue({
+        namespace: 'test-namespace',
+        auth: 'fake-test-pw-not-a-secret',
+    }),
 }));
 
 const DEPLOY_CMD = 'aio app deploy';
@@ -92,7 +100,7 @@ describe('deployAppComponent', () => {
             await deployAppComponent('/app', cm as any, logger as any);
 
             const deployCalls = cm.execute.mock.calls.filter(
-                (args: unknown[]) => args[0] === DEPLOY_CMD,
+                (args: unknown[]) => args[0] === DEPLOY_CMD
             );
             expect(deployCalls).toHaveLength(1);
         });
@@ -114,7 +122,7 @@ describe('deployAppComponent', () => {
             await deployAppComponent('/app', cm as any, logger as any);
 
             const deployCall = cm.execute.mock.calls.find(
-                (args: unknown[]) => args[0] === DEPLOY_CMD,
+                (args: unknown[]) => args[0] === DEPLOY_CMD
             );
             expect(deployCall?.[1]).toEqual(
                 expect.objectContaining({
@@ -124,8 +132,27 @@ describe('deployAppComponent', () => {
                     timeout: 180000,
                     useNodeVersion: 'auto',
                     enhancePath: true,
-                }),
+                })
             );
+        });
+
+        it('injects the workspace Runtime credentials as env on deploy AND get-url', async () => {
+            wireHappyPath();
+
+            await deployAppComponent('/app', cm as any, logger as any);
+
+            const expectedEnv = {
+                AIO_RUNTIME_NAMESPACE: 'test-namespace',
+                AIO_RUNTIME_AUTH: 'fake-test-pw-not-a-secret',
+            };
+            const deployCall = cm.execute.mock.calls.find(
+                (args: unknown[]) => args[0] === DEPLOY_CMD
+            );
+            const urlCall = cm.execute.mock.calls.find(
+                (args: unknown[]) => args[0] === GET_URL_CMD
+            );
+            expect(deployCall?.[1]).toEqual(expect.objectContaining({ env: expectedEnv }));
+            expect(urlCall?.[1]).toEqual(expect.objectContaining({ env: expectedEnv }));
         });
 
         it('should invoke onProgress', async () => {
@@ -155,7 +182,8 @@ describe('deployAppComponent', () => {
             await deployAppComponent('/app', cm as any, logger as any);
 
             const getUrlCalls = cm.execute.mock.calls.filter(
-                (args: unknown[]) => typeof args[0] === 'string' && (args[0] as string).includes('get-url'),
+                (args: unknown[]) =>
+                    typeof args[0] === 'string' && (args[0] as string).includes('get-url')
             );
             expect(getUrlCalls).toHaveLength(0);
         });

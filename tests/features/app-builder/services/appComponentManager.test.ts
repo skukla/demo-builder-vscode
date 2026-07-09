@@ -21,13 +21,21 @@ jest.setTimeout(5000);
 
 // withOrgContext records the target then runs the callback (no global mutation),
 // exactly like projectResetService-meshContext.test.ts.
-const mockWithOrgContext = jest.fn(
-    (_target: unknown, fn: () => Promise<unknown>) => fn(),
-);
+const mockWithOrgContext = jest.fn((_target: unknown, fn: () => Promise<unknown>) => fn());
 jest.mock('@/core/shell', () => ({
     ...jest.requireActual('@/core/shell'),
-    withOrgContext: (target: unknown, fn: () => Promise<unknown>) =>
-        mockWithOrgContext(target, fn),
+    withOrgContext: (target: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(target, fn),
+}));
+
+// The undeploy fetches workspace Runtime credentials first (same contract as
+// the deploy); mock the fetch so these tests stay focused on remove semantics.
+jest.mock('@/features/app-builder/services/runtimeCredentials', () => ({
+    extractAioErrorDetail: jest.requireActual('@/features/app-builder/services/runtimeCredentials')
+        .extractAioErrorDetail,
+    fetchRuntimeCredentials: jest.fn().mockResolvedValue({
+        namespace: 'test-namespace',
+        auth: 'fake-test-pw-not-a-secret',
+    }),
 }));
 
 // =============================================================================
@@ -90,18 +98,21 @@ function createLogger() {
     return { info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn() };
 }
 
-function createDeps(overrides: Partial<{
-    componentManager: ComponentManagerLike;
-    commandManager: CommandManagerLike;
-    saveProject: jest.Mock;
-    getCachedOrganization: jest.Mock;
-}> = {}) {
+function createDeps(
+    overrides: Partial<{
+        componentManager: ComponentManagerLike;
+        commandManager: CommandManagerLike;
+        saveProject: jest.Mock;
+        getCachedOrganization: jest.Mock;
+    }> = {}
+) {
     return {
         componentManager: overrides.componentManager ?? createComponentManager(),
         commandManager: overrides.commandManager ?? createCommandManager(),
         logger: createLogger(),
         saveProject: overrides.saveProject ?? jest.fn().mockResolvedValue(undefined),
-        getCachedOrganization: overrides.getCachedOrganization ?? jest.fn().mockReturnValue(undefined),
+        getCachedOrganization:
+            overrides.getCachedOrganization ?? jest.fn().mockReturnValue(undefined),
     };
 }
 
@@ -117,12 +128,19 @@ function createProject(overrides: Partial<Project> = {}): Project {
         // Pre-seed a sibling mesh + frontend instance: add/remove MUST leave these alone.
         componentInstances: {
             'commerce-mesh': {
-                id: 'commerce-mesh', name: 'Mesh', type: 'dependency',
-                subType: 'mesh', status: 'ready', path: '/proj/components/commerce-mesh',
+                id: 'commerce-mesh',
+                name: 'Mesh',
+                type: 'dependency',
+                subType: 'mesh',
+                status: 'ready',
+                path: '/proj/components/commerce-mesh',
             } as never,
-            'citisignal': {
-                id: 'citisignal', name: 'Frontend', type: 'frontend',
-                status: 'ready', path: '/proj/components/citisignal',
+            citisignal: {
+                id: 'citisignal',
+                name: 'Frontend',
+                type: 'frontend',
+                status: 'ready',
+                path: '/proj/components/citisignal',
             } as never,
         },
         ...overrides,
@@ -131,9 +149,7 @@ function createProject(overrides: Partial<Project> = {}): Project {
 
 beforeEach(() => {
     jest.clearAllMocks();
-    mockWithOrgContext.mockImplementation(
-        (_target: unknown, fn: () => Promise<unknown>) => fn(),
-    );
+    mockWithOrgContext.mockImplementation((_target: unknown, fn: () => Promise<unknown>) => fn());
 });
 
 // =============================================================================
@@ -196,8 +212,12 @@ describe('addAppComponent', () => {
         const project = createProject({
             componentInstances: {
                 'existing-app': {
-                    id: 'existing-app', name: 'Existing', type: 'app-builder',
-                    subType: 'app', status: 'ready', path: '/proj/components/existing-app',
+                    id: 'existing-app',
+                    name: 'Existing',
+                    type: 'app-builder',
+                    subType: 'app',
+                    status: 'ready',
+                    path: '/proj/components/existing-app',
                 } as never,
             },
         });
@@ -229,9 +249,11 @@ describe('addAppComponent', () => {
         const def = deps.componentManager.installComponent.mock.calls[0][1];
         expect(def.subType).toBe('app');
         // Stored URL is the CANONICAL form (never the raw input) — see injection hardening below.
-        expect(def.source).toEqual(expect.objectContaining({ type: 'git', url: 'https://github.com/acme/my-app.git' }));
+        expect(def.source).toEqual(
+            expect.objectContaining({ type: 'git', url: 'https://github.com/acme/my-app.git' })
+        );
         expect(def.configuration).toEqual(
-            expect.objectContaining({ requiresDeployment: true, deploymentTarget: 'adobe-io' }),
+            expect.objectContaining({ requiresDeployment: true, deploymentTarget: 'adobe-io' })
         );
     });
 
@@ -267,7 +289,7 @@ describe('addAppComponent', () => {
         expect(project.componentSelections?.appBuilder).toEqual([result.appId]);
         // Exactly one app-subType instance present.
         const apps = Object.values(project.componentInstances ?? {}).filter(
-            (c) => (c as { subType?: string }).subType === 'app',
+            (c) => (c as { subType?: string }).subType === 'app'
         );
         expect(apps).toHaveLength(1);
     });
@@ -294,7 +316,10 @@ describe('addAppComponent', () => {
 
     it('returns failure (and does not persist) when installComponent fails', async () => {
         const componentManager = createComponentManager();
-        componentManager.installComponent.mockResolvedValue({ success: false, error: 'clone failed' });
+        componentManager.installComponent.mockResolvedValue({
+            success: false,
+            error: 'clone failed',
+        });
         const deps = createDeps({ componentManager });
         const project = createProject();
 
@@ -342,7 +367,11 @@ describe('addAppComponent', () => {
         const project = createProject();
         const deps = createDeps();
 
-        const result = await addAppComponent(project, 'https://user:pass@github.com/acme/my-app', deps);
+        const result = await addAppComponent(
+            project,
+            'https://user:pass@github.com/acme/my-app',
+            deps
+        );
 
         // Either rejected outright, or canonicalized without the userinfo — never stored with creds.
         if (result.success) {
@@ -364,12 +393,20 @@ describe('removeAppComponent', () => {
         return createProject({
             componentInstances: {
                 'commerce-mesh': {
-                    id: 'commerce-mesh', name: 'Mesh', type: 'dependency',
-                    subType: 'mesh', status: 'ready', path: '/proj/components/commerce-mesh',
+                    id: 'commerce-mesh',
+                    name: 'Mesh',
+                    type: 'dependency',
+                    subType: 'mesh',
+                    status: 'ready',
+                    path: '/proj/components/commerce-mesh',
                 } as never,
                 'my-app': {
-                    id: 'my-app', name: 'My App', type: 'app-builder',
-                    subType: 'app', status: 'ready', path: '/proj/components/my-app',
+                    id: 'my-app',
+                    name: 'My App',
+                    type: 'app-builder',
+                    subType: 'app',
+                    status: 'ready',
+                    path: '/proj/components/my-app',
                 } as never,
             },
             componentSelections: { appBuilder: ['my-app'] },
@@ -396,8 +433,8 @@ describe('removeAppComponent', () => {
         await removeAppComponent(project, deps);
 
         expect(mockWithOrgContext).toHaveBeenCalledTimes(1);
-        const undeployCall = deps.commandManager.execute.mock.calls.find(
-            (c) => String(c[0]).includes('app undeploy'),
+        const undeployCall = deps.commandManager.execute.mock.calls.find((c) =>
+            String(c[0]).includes('app undeploy')
         );
         expect(undeployCall).toBeDefined();
     });
@@ -414,7 +451,7 @@ describe('removeAppComponent', () => {
                 projectId: 'proj-456',
                 workspaceId: 'ws-789',
             }),
-            expect.any(Function),
+            expect.any(Function)
         );
     });
 
@@ -422,7 +459,9 @@ describe('removeAppComponent', () => {
         const project = projectWithApp();
         const deps = createDeps({
             getCachedOrganization: jest.fn().mockReturnValue({
-                id: 'org-123', code: 'CODE@AdobeOrg', name: 'Acme Inc',
+                id: 'org-123',
+                code: 'CODE@AdobeOrg',
+                name: 'Acme Inc',
             }),
         });
 
@@ -434,7 +473,7 @@ describe('removeAppComponent', () => {
                 orgCode: 'CODE@AdobeOrg',
                 orgName: 'Acme Inc',
             }),
-            expect.any(Function),
+            expect.any(Function)
         );
     });
 
@@ -444,15 +483,15 @@ describe('removeAppComponent', () => {
 
         await removeAppComponent(project, deps);
 
-        const undeployCall = deps.commandManager.execute.mock.calls.find(
-            (c) => String(c[0]).includes('app undeploy'),
+        const undeployCall = deps.commandManager.execute.mock.calls.find((c) =>
+            String(c[0]).includes('app undeploy')
         );
         expect(undeployCall?.[1]).toEqual(
             expect.objectContaining({
                 cwd: '/proj/components/my-app',
                 useNodeVersion: 'auto',
                 enhancePath: true,
-            }),
+            })
         );
     });
 

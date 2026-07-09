@@ -17,7 +17,13 @@
  * - normalizeRepositoryName to derive a safe component id from the repo name.
  */
 
-import { buildOrgTargetFromProjectAdobe, withOrgContext, type CachedOrgRef , CommandExecutor } from '@/core/shell';
+import { extractAioErrorDetail, fetchRuntimeCredentials } from './runtimeCredentials';
+import {
+    buildOrgTargetFromProjectAdobe,
+    withOrgContext,
+    type CachedOrgRef,
+    CommandExecutor,
+} from '@/core/shell';
 import { parseGitHubUrl } from '@/core/utils/githubUrlParser';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { normalizeRepositoryName, validateURL } from '@/core/validation';
@@ -76,10 +82,14 @@ function resolvePublicRepo(
 
     const parsed = parseGitHubUrl(gitUrl);
     if (!parsed) {
-        return { error: 'App URL must be a public GitHub repository (https://github.com/owner/repo).' };
+        return {
+            error: 'App URL must be a public GitHub repository (https://github.com/owner/repo).',
+        };
     }
     if (!GITHUB_NAME.test(parsed.owner) || !GITHUB_NAME.test(parsed.repo)) {
-        return { error: 'App URL must be a public GitHub repository (https://github.com/owner/repo).' };
+        return {
+            error: 'App URL must be a public GitHub repository (https://github.com/owner/repo).',
+        };
     }
     return {
         owner: parsed.owner,
@@ -157,18 +167,26 @@ async function undeployApp(
 ): Promise<string | undefined> {
     const target = buildOrgTargetFromProjectAdobe(project.adobe, deps.getCachedOrganization());
     try {
-        const result = await withOrgContext(target, () =>
-            deps.commandManager.execute('aio app undeploy', {
+        const result = await withOrgContext(target, async () => {
+            // Same Runtime-credential contract as the deploy: catalog repos
+            // ship no .env, so without these the undeploy always fails with
+            // "missing Adobe I/O Runtime namespace".
+            const creds = await fetchRuntimeCredentials(deps.commandManager, deps.logger, 'auto');
+            return deps.commandManager.execute('aio app undeploy', {
                 cwd: appPath,
                 useNodeVersion: 'auto',
                 enhancePath: true,
                 streaming: true,
                 shell: true,
                 timeout: TIMEOUTS.LONG,
-            }),
-        );
+                env: { AIO_RUNTIME_NAMESPACE: creds.namespace, AIO_RUNTIME_AUTH: creds.auth },
+            });
+        });
         if (result.code !== 0) {
-            const detail = result.stderr?.trim() || result.stdout?.trim() ||
+            const detail =
+                extractAioErrorDetail(result.stderr) ||
+                result.stderr?.trim() ||
+                result.stdout?.trim() ||
                 `aio app undeploy exited with code ${result.code}`;
             return `App undeploy reported a problem: ${detail}`;
         }
@@ -191,9 +209,7 @@ export async function removeAppComponent(
         return { success: true };
     }
 
-    const undeployWarning = app.path
-        ? await undeployApp(project, app.path, deps)
-        : undefined;
+    const undeployWarning = app.path ? await undeployApp(project, app.path, deps) : undefined;
     if (undeployWarning) {
         deps.logger.warn(`[App Builder] ${undeployWarning}`);
     }
@@ -203,8 +219,9 @@ export async function removeAppComponent(
     project.appState = undefined;
     project.appStatusSummary = undefined;
     if (project.componentSelections?.appBuilder) {
-        project.componentSelections.appBuilder =
-            project.componentSelections.appBuilder.filter((id) => id !== app.id);
+        project.componentSelections.appBuilder = project.componentSelections.appBuilder.filter(
+            (id) => id !== app.id,
+        );
     }
 
     await deps.saveProject(project);

@@ -52,6 +52,15 @@ what prevents double-deploys. Custom-URL entries synthesize via
   `{licenseConfigs: null, roles: null}`; product-profile services fail — surface the
   Developer Console fallback, don't guess license shapes.
 
+## Runtime credentials (deploy/undeploy)
+
+`withOrgContext` targets CONSOLE ops only. `aio app deploy`/`undeploy` additionally need
+RUNTIME credentials or they die with "missing Adobe I/O Runtime namespace" (catalog repos
+ship no `.env`). `fetchRuntimeCredentials` (`runtimeCredentials.ts`) downloads the
+targeted workspace's JSON and injects `AIO_RUNTIME_NAMESPACE`/`AIO_RUNTIME_AUTH`
+per-invocation — reuse it for any new `aio app` command. Also: oclif writes spinner
+frames to STDERR; use `extractAioErrorDetail` or the surfaced error is a spinner line.
+
 ## The guard chain
 
 Every mutation runs `runGuards` (`appBuilderComponentHandlers.ts`, exported):

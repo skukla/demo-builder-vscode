@@ -18,6 +18,7 @@
  * primary `url`. We never throw on a parseable-but-unexpected shape.
  */
 
+import { extractAioErrorDetail, fetchRuntimeCredentials } from './runtimeCredentials';
 import type { AppDeploymentResult } from './types';
 import type { CommandExecutor } from '@/core/shell';
 import { buildComponent } from '@/core/shell/buildComponent';
@@ -73,7 +74,7 @@ function parseGetUrlOutput(stdout: string | undefined): AppDeploymentResult['dat
     const deployedUrls = flattenUrls(parsed);
     // Prefer a "web" URL as primary; otherwise fall back to the first URL.
     const webKey = Object.keys(deployedUrls).find((k) => k.startsWith('web/'));
-    const url = webKey ? deployedUrls[webKey] : Object.values(deployedUrls)[0] ?? '';
+    const url = webKey ? deployedUrls[webKey] : (Object.values(deployedUrls)[0] ?? '');
     return { url, deployedUrls };
 }
 
@@ -101,6 +102,22 @@ export async function deployAppComponent(
             onProgress,
         );
 
+        // Catalog app repos ship no .env, and withOrgContext only targets
+        // Console ops — `aio app deploy` additionally needs RUNTIME credentials
+        // or it dies with "missing Adobe I/O Runtime namespace". Fetch them
+        // from the targeted workspace and inject per-invocation (execa merges
+        // env, so only the two vars are passed; the auth value is never logged).
+        onProgress?.('Deploying App Builder app...', 'Resolving Runtime credentials');
+        const runtimeCreds = await fetchRuntimeCredentials(
+            commandManager,
+            logger,
+            APP_NODE_VERSION,
+        );
+        const runtimeEnv = {
+            AIO_RUNTIME_NAMESPACE: runtimeCreds.namespace,
+            AIO_RUNTIME_AUTH: runtimeCreds.auth,
+        };
+
         onProgress?.('Deploying App Builder app...', 'Running aio app deploy');
 
         const deployResult = await commandManager.execute('aio app deploy', {
@@ -110,10 +127,16 @@ export async function deployAppComponent(
             timeout: TIMEOUTS.LONG,
             useNodeVersion: APP_NODE_VERSION,
             enhancePath: true,
+            env: runtimeEnv,
         });
 
         if (deployResult.code !== 0) {
-            const detail = deployResult.stderr?.trim() || deployResult.stdout?.trim() ||
+            // oclif writes spinner frames to stderr — extract the real
+            // `› Error:` line instead of surfacing "- Building actions...".
+            const detail =
+                extractAioErrorDetail(deployResult.stderr) ||
+                deployResult.stderr?.trim() ||
+                deployResult.stdout?.trim() ||
                 `aio app deploy exited with code ${deployResult.code}`;
             throw new Error(`App deployment failed: ${detail}`);
         }
@@ -126,6 +149,7 @@ export async function deployAppComponent(
             timeout: TIMEOUTS.LONG,
             useNodeVersion: APP_NODE_VERSION,
             enhancePath: true,
+            env: runtimeEnv,
         });
 
         if (urlResult.code !== 0) {
