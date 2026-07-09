@@ -148,9 +148,20 @@ When Claude Code starts a session in a Demo Builder project:
 4. The in-extension server `accept`s that connection and serves the full tool
    catalog over it.
 
-If VS Code isn't running (no server listening), the proxy simply can't connect —
-the agent sees the `demo-builder` server as unavailable, which is the correct
-behavior (the tools genuinely need the live extension).
+When the entry carries **no** `DEMO_BUILDER_MCP_SOCKET` — the global
+`~/.claude.json` entry written by the **Demo Builder: Register Global MCP**
+command — the proxy resolves its own target
+(`src/features/ai/server/mcpSocketDiscovery.ts`): the cwd-derived socket if its
+file exists, else a newest-mtime-first liveness sweep of the socket directory
+that connects to a running extension window (several open windows tiebreak to
+the most recently started one). This is what makes genuinely global ops
+(`create_project`, `list_projects`) reachable from an arbitrary cwd.
+
+If VS Code isn't running (no server listening), a socket-pinned proxy simply
+can't connect — the agent sees the `demo-builder` server as unavailable, which
+is the correct behavior (the tools genuinely need the live extension). In
+discovery mode the proxy instead fails fast with guidance ("open Demo Builder in
+VS Code first") rather than spending the retry window.
 
 ---
 
@@ -377,6 +388,13 @@ config when a project is created (and on "Regenerate AI files"):
   shell metacharacters.
 - All three are added to the project's **`.gitignore`** — they contain
   machine-specific absolute paths and must not be committed.
+
+Additionally, the **Demo Builder: Register Global MCP** palette command
+(`src/features/project-creation/services/globalMcpRegistration.ts`) upserts a
+`demo-builder` entry into the user-scope `~/.claude.json` — same command/args
+but **no** socket env, so the proxy discovers a running window at launch (see
+§5). Explicit opt-in only; it merge-preserves everything else in the file and
+refuses to overwrite a malformed one.
 
 Cursor and Codex read `.mcp.json` natively, so no per-tool config files are
 written.

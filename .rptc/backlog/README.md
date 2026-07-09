@@ -78,9 +78,10 @@ Core self-heal **shipped** (see Recently shipped). Residual scope from the origi
 
 ### C. Ready to pick up (small, verified still pending)
 
-#### Workspace-independent entry point for global MCP ops ([`2026-05-30-global-mcp-entry-point.md`](2026-05-30-global-mcp-entry-point.md))
-
-Invoking a genuinely global op (`create_project`, `list_projects`) when the user is not inside a project workspace has no socket to reach (the in-extension server is per-workspace). Proposed: proxy discovery mode for the stdio↔socket forwarder + a global `~/.claude.json` entry. Deferred — multi-window semantics unresolved.
+*(empty — the last §C item, the global-MCP entry point, shipped 2026-07-09; see
+[`../complete/2026-07-09-global-mcp-entry-point/`](../complete/2026-07-09-global-mcp-entry-point/overview.md):
+proxy socket discovery + the "Register Global MCP" command, multi-window
+tiebreak = most recently started window.)*
 
 ### D. Deferred by design (gated on an external condition)
 

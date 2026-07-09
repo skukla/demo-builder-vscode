@@ -6,9 +6,12 @@
  * Unix domain socket.
  *
  * Socket path: from DEMO_BUILDER_MCP_SOCKET if set (written into a project's
- * `.mcp.json`), else derived from the current working directory (so a single
- * global `~/.claude.json` registration works for any project the agent is
- * launched in).
+ * `.mcp.json`), else derived from the current working directory, else DISCOVERED
+ * — a newest-first liveness sweep of the socket directory that connects to a
+ * running extension window (so a single global `~/.claude.json` registration
+ * works from any cwd; several open windows tiebreak to the most recently
+ * started one). When nothing is live, the proxy fails FAST with guidance
+ * instead of burning the retry window. See mcpSocketDiscovery.ts.
  *
  * RELOAD RESILIENCE: a VS Code window reload tears down the extension host —
  * the in-extension server closes its socket and re-listens ~seconds later on
@@ -29,16 +32,18 @@
  */
 
 import * as net from 'net';
-import { LineBuffer, classifyHandshake, isInitResponse } from '@/features/ai/server/mcpProxyFraming';
+import {
+    LineBuffer,
+    classifyHandshake,
+    isInitResponse,
+} from '@/features/ai/server/mcpProxyFraming';
 import { isRetryableConnectError } from '@/features/ai/server/mcpProxyRetry';
-import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
+import { resolveProxyTarget } from '@/features/ai/server/mcpSocketDiscovery';
 
-const socketPath = process.env.DEMO_BUILDER_MCP_SOCKET || resolveMcpSocketPath(process.cwd());
-
-// Surface the target socket on raw stderr (this process has no logger). The
-// inspector captures this tail on failure, letting the proxy's target socket be
-// compared against the server's bound socket ([MCP] … listening on <path>).
-process.stderr.write(`Demo Builder MCP proxy target socket: ${socketPath}\n`);
+// Resolved by main() before the first connect(); every connect()/reconnect
+// thereafter targets this one path (a window reload re-binds the SAME path,
+// so reload resilience is unaffected by how the path was found).
+let socketPath = '';
 
 // Per-drop reconnect window (~23s total). Long enough to ride out a window
 // reload, short enough to fail clearly when VS Code has actually closed.
@@ -144,7 +149,7 @@ function connect(attempt: number, isReconnect: boolean): void {
         if (retryable) {
             process.stderr.write(
                 'Demo Builder MCP server is not running. Open this project in VS Code ' +
-                '(the Demo Builder extension hosts the MCP server), then retry.\n',
+                    '(the Demo Builder extension hosts the MCP server), then retry.\n',
             );
         } else {
             process.stderr.write(`Demo Builder MCP proxy error: ${err.message}\n`);
@@ -166,4 +171,24 @@ function connect(attempt: number, isReconnect: boolean): void {
     });
 }
 
-connect(0, false);
+async function main(): Promise<void> {
+    const target = await resolveProxyTarget(process.env.DEMO_BUILDER_MCP_SOCKET, process.cwd());
+    if ('guidance' in target) {
+        // Nothing to connect to anywhere — fail fast and friendly rather than
+        // spinning through the retry window against a socket that can't exist.
+        process.stderr.write(`${target.guidance}\n`);
+        process.exit(1);
+    }
+    socketPath = target.socketPath;
+
+    // Surface the target socket on raw stderr (this process has no logger). The
+    // inspector captures this tail on failure, letting the proxy's target socket
+    // be compared against the server's bound socket ([MCP] … listening on <path>).
+    process.stderr.write(
+        `Demo Builder MCP proxy target socket: ${socketPath} (via ${target.via})\n`,
+    );
+
+    connect(0, false);
+}
+
+void main();

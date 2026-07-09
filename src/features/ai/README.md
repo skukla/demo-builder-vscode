@@ -131,7 +131,7 @@ There is nothing to enable in `mcp-server.ts` for this — it is governed by the
 
 ### How the two levers combine with project-scoping
 
-Global registration (`~/.claude.json`) is a manual opt-in, not the default (see *Global MCP registration* below). The default is per-project `.mcp.json`. The net effect:
+Global registration (`~/.claude.json`) is a manual opt-in via the **Demo Builder: Register Global MCP** command — its entry carries no pinned socket, so the proxy discovers a running extension window at launch (`server/mcpSocketDiscovery.ts`; enables `create_project`/`list_projects` from an arbitrary cwd). The default is per-project `.mcp.json`. The net effect:
 
 - **Project scope** keeps the server out of unrelated Claude sessions entirely (the tools load only in a demo-project directory).
 - **Deferred loading** trims the in-session static cost where the server *is* active.
@@ -146,7 +146,7 @@ Global registration (`~/.claude.json`) is a manual opt-in, not the default (see 
 - **`verify-ai-setup` handler** (`aiHandlers.ts`): returns `AiVerificationResult` so the AI dashboard can render the AI-readiness badge from a single round-trip.
 - **`Open in Claude Code` command** (`src/commands/openInClaude.ts`): launches the Claude Code CLI in a VS Code integrated terminal placed as a tab in the active editor group (next to Project Dashboard). Spawn: `claude --continue -- '<prompt>'` (race-free — claude receives the prompt as a launch argument and auto-submits). Reuse: when a live "Claude Code" terminal exists, the existing session is focused and the prompt is injected via bracketed paste (CSI 200~ / 201~), which pre-fills the input for the user to send. The clipboard is always written too as a silent fallback (with a once-ever tip toast). The earlier "extension" surface — URI-launching the Claude Code VS Code extension — was retired: the extension's URI handler opens a new chat on every launch (no public API to inject a prompt into the live chat), so the wand's "pick a prompt, drop it into the conversation" model can't work there. Dispatched from the dashboard tile, the project-card kebab menu, the wand QuickPick prompt rows (with workspace anchor + pending-prompt mechanism), and the activation handler that replays pending launches.
 - **`copyAiPrompt` handler** (`aiHandlers.ts`): writes a prompt body to the clipboard via `vscode.env.clipboard.writeText` and shows a confirmation toast. Used by the kebab "Copy prompt" action on each prompt card. Logs the prompt name only — never the body.
-- **Project creation** (`projectFinalizationService.ts`): `generateAIContextFiles()` runs all three writers after project setup completes. Also runs as the post-step of `Demo Builder: Check for Updates` when an Adobe MCP package update is applied. The per-project `.mcp.json` written during project creation exposes the tools in-project and only loads them where relevant — there is no global (`~/.claude.json`) registration, since the MCP server is hosted in-extension per project.
+- **Project creation** (`projectFinalizationService.ts`): `generateAIContextFiles()` runs all three writers after project setup completes. Also runs as the post-step of `Demo Builder: Check for Updates` when an Adobe MCP package update is applied. The per-project `.mcp.json` written during project creation exposes the tools in-project and only loads them where relevant; global (`~/.claude.json`) registration is never automatic — it exists only as the explicit **Demo Builder: Register Global MCP** opt-in (see above).
 
 ---
 

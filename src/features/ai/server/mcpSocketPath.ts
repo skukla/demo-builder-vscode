@@ -24,12 +24,15 @@ export function mcpSocketDir(): string {
  * Deterministic and collision-free per workspace.
  *
  * @param workspacePath Absolute path of the project/workspace folder.
+ * @param socketDir     Directory holding the sockets — defaults to
+ *                      `mcpSocketDir()`; injectable so discovery tests can use
+ *                      an isolated temp directory.
  */
-export function resolveMcpSocketPath(workspacePath: string): string {
+export function resolveMcpSocketPath(workspacePath: string, socketDir?: string): string {
     const hash = crypto
         .createHash('sha256')
         .update(path.resolve(workspacePath))
         .digest('hex')
         .slice(0, 16);
-    return path.join(mcpSocketDir(), `${hash}.sock`);
+    return path.join(socketDir ?? mcpSocketDir(), `${hash}.sock`);
 }

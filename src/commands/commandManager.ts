@@ -27,6 +27,7 @@ import { SyncStorefrontCommand } from '@/features/lifecycle/commands/syncStorefr
 import { ViewStatusCommand } from '@/features/lifecycle/commands/viewStatus';
 import { DeployMeshCommand } from '@/features/mesh/commands/deployMesh';
 import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
+import { registerGlobalMcp } from '@/features/project-creation/services/globalMcpRegistration';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
 import { Project } from '@/types';
@@ -39,11 +40,7 @@ export class CommandManager {
     private commands: Map<string, vscode.Disposable>;
     public createProjectWebview!: CreateProjectWebviewCommand;
 
-    constructor(
-        context: vscode.ExtensionContext,
-        stateManager: StateManager,
-        logger: Logger,
-    ) {
+    constructor(context: vscode.ExtensionContext, stateManager: StateManager, logger: Logger) {
         this.context = context;
         this.stateManager = stateManager;
         this.logger = logger;
@@ -51,7 +48,6 @@ export class CommandManager {
     }
 
     public registerCommands(): void {
-
         // Projects List (Home screen)
         const projectsList = new ShowProjectsListCommand(
             this.context,
@@ -83,7 +79,9 @@ export class CommandManager {
             // Port conflicts are automatically handled during project creation
             // (see executeProjectCreation in createProjectWebview.ts)
             // args[0] may contain { importedSettings, sourceDescription } when launched from Import
-            const options = args[0] as Parameters<typeof this.createProjectWebview.execute>[0] | undefined;
+            const options = args[0] as
+                | Parameters<typeof this.createProjectWebview.execute>[0]
+                | undefined;
             await this.createProjectWebview.execute(options);
             // Wizard progress now renders inside the wizard webview's left
             // column; no sidebar reveal needed.
@@ -97,7 +95,11 @@ export class CommandManager {
         );
         this.registerCommand('demoBuilder.showProjectDashboard', async () => {
             // Clear projects list context to show components tree in sidebar
-            await vscode.commands.executeCommand('setContext', 'demoBuilder.showingProjectsList', false);
+            await vscode.commands.executeCommand(
+                'setContext',
+                'demoBuilder.showingProjectsList',
+                false,
+            );
             // Update sidebar context
             if (ServiceLocator.isSidebarInitialized()) {
                 const sidebarProvider = ServiceLocator.getSidebarProvider();
@@ -145,19 +147,11 @@ export class CommandManager {
         });
 
         // Start Demo
-        const startDemo = new StartDemoCommand(
-            this.context,
-            this.stateManager,
-            this.logger,
-        );
+        const startDemo = new StartDemoCommand(this.context, this.stateManager, this.logger);
         this.registerCommand('demoBuilder.startDemo', () => startDemo.execute());
 
         // Stop Demo
-        const stopDemo = new StopDemoCommand(
-            this.context,
-            this.stateManager,
-            this.logger,
-        );
+        const stopDemo = new StopDemoCommand(this.context, this.stateManager, this.logger);
         this.registerCommand('demoBuilder.stopDemo', () => stopDemo.execute());
 
         // Delete Project
@@ -169,19 +163,11 @@ export class CommandManager {
         this.registerCommand('demoBuilder.deleteProject', () => deleteProject.execute());
 
         // View Status
-        const viewStatus = new ViewStatusCommand(
-            this.context,
-            this.stateManager,
-            this.logger,
-        );
+        const viewStatus = new ViewStatusCommand(this.context, this.stateManager, this.logger);
         this.registerCommand('demoBuilder.viewStatus', () => viewStatus.execute());
 
         // Configure (Legacy - command palette)
-        const configure = new ConfigureCommand(
-            this.context,
-            this.stateManager,
-            this.logger,
-        );
+        const configure = new ConfigureCommand(this.context, this.stateManager, this.logger);
         this.registerCommand('demoBuilder.configure', () => configure.execute());
 
         // Configure Project (Webview)
@@ -195,19 +181,11 @@ export class CommandManager {
         });
 
         // Deploy Mesh
-        const deployMesh = new DeployMeshCommand(
-            this.context,
-            this.stateManager,
-            this.logger,
-        );
+        const deployMesh = new DeployMeshCommand(this.context, this.stateManager, this.logger);
         this.registerCommand('demoBuilder.deployMesh', () => deployMesh.execute());
 
         // Deploy App Builder app (sibling of deployMesh; dashboard-driven)
-        const deployApp = new DeployAppCommand(
-            this.context,
-            this.stateManager,
-            this.logger,
-        );
+        const deployApp = new DeployAppCommand(this.context, this.stateManager, this.logger);
         this.registerCommand('demoBuilder.deployApp', () => deployApp.execute());
 
         // Sync Storefront (EDS projects only — runs the same flow as the MCP
@@ -228,34 +206,24 @@ export class CommandManager {
             this.stateManager,
             this.logger,
         );
-        this.registerCommand('demoBuilder.refreshBlockLibrary', () => refreshBlockLibrary.execute());
+        this.registerCommand('demoBuilder.refreshBlockLibrary', () =>
+            refreshBlockLibrary.execute(),
+        );
 
         // Check Updates
-        const checkUpdates = new CheckUpdatesCommand(
-            this.context,
-            this.stateManager,
-            this.logger,
-        );
+        const checkUpdates = new CheckUpdatesCommand(this.context, this.stateManager, this.logger);
         this.registerCommand('demoBuilder.checkForUpdates', () => checkUpdates.execute());
 
         // Open in Claude Code (CLI) — URI launch when the Claude Code extension is
         // installed; terminal launch otherwise. Pathway driven by `demoBuilder.ai.harness`.
-        const openInClaude = new OpenInClaudeCommand(
-            this.context,
-            this.stateManager,
-            this.logger,
-        );
+        const openInClaude = new OpenInClaudeCommand(this.context, this.stateManager, this.logger);
         this.registerCommand('demoBuilder.openInClaude', async (...args: unknown[]) => {
             const project = args[0] as Project | undefined;
             await openInClaude.execute(project);
         });
 
         // AI — harness-agnostic prompt library webview (create/edit/delete/pin).
-        const openAi = new ShowAiCommand(
-            this.context,
-            this.stateManager,
-            this.logger,
-        );
+        const openAi = new ShowAiCommand(this.context, this.stateManager, this.logger);
         this.registerCommand('demoBuilder.openAi', async () => {
             await openAi.execute();
         });
@@ -317,11 +285,7 @@ export class CommandManager {
 
         // Reset All (Development only)
         if (this.context.extensionMode === vscode.ExtensionMode.Development) {
-            const resetAll = new ResetAllCommand(
-                this.context,
-                this.stateManager,
-                this.logger,
-            );
+            const resetAll = new ResetAllCommand(this.context, this.stateManager, this.logger);
             this.registerCommand('demoBuilder.resetAll', () => resetAll.execute());
 
             // Scoped: reset only AI onboarding state (flags + AI settings).
@@ -332,15 +296,38 @@ export class CommandManager {
                 this.stateManager,
                 this.logger,
             );
-            this.registerCommand(
-                'demoBuilder.resetAiOnboarding',
-                () => resetAiOnboarding.execute(),
+            this.registerCommand('demoBuilder.resetAiOnboarding', () =>
+                resetAiOnboarding.execute(),
             );
         }
 
         // Diagnostics
         const diagnostics = new DiagnosticsCommand();
         this.registerCommand('demoBuilder.diagnostics', () => diagnostics.execute());
+
+        // Global MCP registration (~/.claude.json) — explicit opt-in. The entry
+        // points at the proxy with no pinned socket, so it discovers a running
+        // extension window from any cwd (global ops like create_project work
+        // without an open project). Per-project .mcp.json remains the default.
+        this.registerCommand('demoBuilder.registerGlobalMcp', async () => {
+            try {
+                const configPath = await registerGlobalMcp(
+                    path.join(this.context.extensionPath, 'dist'),
+                );
+                this.logger.info(`[MCP] global registration written to ${configPath}`);
+                void vscode.window.showInformationMessage(
+                    'Demo Builder MCP registered globally in ~/.claude.json. ' +
+                        'Claude Code can now reach a running Demo Builder window from any directory.',
+                );
+            } catch (error) {
+                this.logger.error('[MCP] global registration failed', error as Error);
+                void vscode.window.showErrorMessage(
+                    `Could not register the global MCP entry: ${
+                        error instanceof Error ? error.message : String(error)
+                    }`,
+                );
+            }
+        });
 
         // One-shot storefront name migration (heals pre-`164fd251` storefronts
         // without requiring a destructive reset).
@@ -349,9 +336,8 @@ export class CommandManager {
             this.stateManager,
             this.logger,
         );
-        this.registerCommand(
-            'demoBuilder.migrateStorefrontNames',
-            () => migrateStorefrontNames.execute(),
+        this.registerCommand('demoBuilder.migrateStorefrontNames', () =>
+            migrateStorefrontNames.execute(),
         );
 
         // Set Recommended Zoom (120% for better visibility during demos)
@@ -360,7 +346,10 @@ export class CommandManager {
             await config.update('zoomLevel', 1, vscode.ConfigurationTarget.Global);
             await this.applyConfiguredZoomLevel(config);
             // Use status bar message for auto-dismiss (3 seconds)
-            vscode.window.setStatusBarMessage('$(check) Zoom set to 120% for optimal demo visibility', 3000);
+            vscode.window.setStatusBarMessage(
+                '$(check) Zoom set to 120% for optimal demo visibility',
+                3000,
+            );
         });
 
         // Reset Zoom (back to 100%)
@@ -408,7 +397,9 @@ export class CommandManager {
                 const component = project.componentInstances[componentId];
 
                 if (!component.path) {
-                    vscode.window.showErrorMessage(`Component ${component.name} has no local files`);
+                    vscode.window.showErrorMessage(
+                        `Component ${component.name} has no local files`,
+                    );
                     return;
                 }
 
@@ -424,23 +415,33 @@ export class CommandManager {
                 try {
                     const readmePath = path.join(component.path, 'README.md');
                     await fsPromises.access(readmePath);
-                    await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(readmePath));
+                    await vscode.commands.executeCommand(
+                        'vscode.open',
+                        vscode.Uri.file(readmePath),
+                    );
                 } catch {
                     // No README, try package.json
                     try {
                         const packagePath = path.join(component.path, 'package.json');
                         await fsPromises.access(packagePath);
-                        await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(packagePath));
+                        await vscode.commands.executeCommand(
+                            'vscode.open',
+                            vscode.Uri.file(packagePath),
+                        );
                     } catch {
                         // No package.json either, just reveal the folder
-                        this.logger.debug(`[OpenComponent] No README or package.json found for ${componentId}`);
+                        this.logger.debug(
+                            `[OpenComponent] No README or package.json found for ${componentId}`,
+                        );
                     }
                 }
 
                 this.logger.info(`[OpenComponent] Opened ${component.name} in Explorer`);
             } catch (error) {
                 this.logger.error('[OpenComponent] Failed to open component', error as Error);
-                vscode.window.showErrorMessage(`Failed to open component: ${error instanceof Error ? error.message : String(error)}`);
+                vscode.window.showErrorMessage(
+                    `Failed to open component: ${error instanceof Error ? error.message : String(error)}`,
+                );
             }
         });
     }
@@ -469,7 +470,7 @@ export class CommandManager {
     }
 
     public dispose(): void {
-        this.commands.forEach(disposable => disposable.dispose());
+        this.commands.forEach((disposable) => disposable.dispose());
         this.commands.clear();
     }
 }

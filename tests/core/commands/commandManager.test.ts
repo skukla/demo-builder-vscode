@@ -19,7 +19,7 @@ jest.mock('vscode');
 
 // Mock all command classes with proper implementations
 jest.mock('@/features/projects-dashboard/commands/showProjectsList', () => {
-    const MockShowProjectsListCommand = jest.fn().mockImplementation(function(this: any) {
+    const MockShowProjectsListCommand = jest.fn().mockImplementation(function (this: any) {
         this.execute = jest.fn().mockResolvedValue(undefined);
     });
     (MockShowProjectsListCommand as any).disposeActivePanel = jest.fn();
@@ -31,7 +31,7 @@ jest.mock('@/features/projects-dashboard/commands/showProjectsList', () => {
 jest.mock('@/features/project-creation/commands/createProject');
 jest.mock('@/features/dashboard/commands/showDashboard');
 jest.mock('@/features/dashboard/commands/configure', () => {
-    const MockConfigureProjectWebviewCommand = jest.fn().mockImplementation(function(this: any) {
+    const MockConfigureProjectWebviewCommand = jest.fn().mockImplementation(function (this: any) {
         this.execute = jest.fn().mockResolvedValue(undefined);
     });
     (MockConfigureProjectWebviewCommand as any).disposeActivePanel = jest.fn();
@@ -41,7 +41,7 @@ jest.mock('@/features/dashboard/commands/configure', () => {
     };
 });
 jest.mock('@/features/dashboard/commands/openAi', () => {
-    const MockShowAiCommand = jest.fn().mockImplementation(function(this: any) {
+    const MockShowAiCommand = jest.fn().mockImplementation(function (this: any) {
         this.execute = jest.fn().mockResolvedValue(undefined);
     });
     (MockShowAiCommand as any).disposeActivePanel = jest.fn();
@@ -51,13 +51,13 @@ jest.mock('@/features/dashboard/commands/openAi', () => {
     };
 });
 jest.mock('@/commands/showPromptsPicker', () => {
-    const MockShowPromptsPickerCommand = jest.fn().mockImplementation(function(this: any) {
+    const MockShowPromptsPickerCommand = jest.fn().mockImplementation(function (this: any) {
         this.execute = jest.fn().mockResolvedValue(undefined);
     });
     return { ShowPromptsPickerCommand: MockShowPromptsPickerCommand };
 });
 jest.mock('@/commands/openInClaude', () => {
-    const MockOpenInClaudeCommand = jest.fn().mockImplementation(function(this: any) {
+    const MockOpenInClaudeCommand = jest.fn().mockImplementation(function (this: any) {
         this.execute = jest.fn().mockResolvedValue(undefined);
     });
     return { OpenInClaudeCommand: MockOpenInClaudeCommand };
@@ -124,11 +124,7 @@ describe('CommandManager', () => {
         (vscode.commands.registerCommand as jest.Mock) = jest.fn().mockReturnValue(mockDisposable);
 
         // Create command manager
-        commandManager = new CommandManager(
-            mockContext,
-            mockStateManager,
-            mockLogger
-        );
+        commandManager = new CommandManager(mockContext, mockStateManager, mockLogger);
     });
 
     describe('Command Registration', () => {
@@ -149,11 +145,11 @@ describe('CommandManager', () => {
             );
         });
 
-        it('should register all 28 commands (29 total, but resetAll only in dev mode)', () => {
+        it('should register all 29 commands (30 total, but resetAll only in dev mode)', () => {
             commandManager.registerCommands();
 
-            // Verify registerCommand was called 29 times (resetAll excluded - dev mode only)
-            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(29);
+            // Verify registerCommand was called 30 times (resetAll excluded - dev mode only)
+            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(30);
 
             // Verify all commands are registered (in order of registration)
             const expectedCommands = [
@@ -179,6 +175,7 @@ describe('CommandManager', () => {
                 'demoBuilder.showPromptsPicker',
                 'demoBuilder.openModernizationAgent',
                 'demoBuilder.diagnostics',
+                'demoBuilder.registerGlobalMcp',
                 'demoBuilder.migrateStorefrontNames',
                 'demoBuilder.setRecommendedZoom',
                 'demoBuilder.resetZoom',
@@ -189,7 +186,7 @@ describe('CommandManager', () => {
                 // Note: resetAll not included - only registers in Development mode
             ];
 
-            expectedCommands.forEach(commandId => {
+            expectedCommands.forEach((commandId) => {
                 expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
                     commandId,
                     expect.any(Function)
@@ -202,15 +199,16 @@ describe('CommandManager', () => {
 
             expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
                 'demoBuilder.openAi',
-                expect.any(Function),
+                expect.any(Function)
             );
         });
 
         it('invokes ShowAiCommand.execute (the prompt library) with no arg', async () => {
             commandManager.registerCommands();
 
-            const openAiHandler = (vscode.commands.registerCommand as jest.Mock).mock.calls
-                .find(call => call[0] === 'demoBuilder.openAi')?.[1];
+            const openAiHandler = (vscode.commands.registerCommand as jest.Mock).mock.calls.find(
+                (call) => call[0] === 'demoBuilder.openAi'
+            )?.[1];
             expect(openAiHandler).toBeDefined();
 
             const ShowAiCmd = require('@/features/dashboard/commands/openAi').ShowAiCommand;
@@ -221,7 +219,6 @@ describe('CommandManager', () => {
 
             expect(aiInstance.execute).toHaveBeenCalledWith();
         });
-
     });
 
     describe('Zoom commands', () => {
@@ -241,8 +238,9 @@ describe('CommandManager', () => {
 
         const invokeZoomCommand = async (commandId: string): Promise<void> => {
             commandManager.registerCommands();
-            const handler = (vscode.commands.registerCommand as jest.Mock).mock.calls
-                .find(call => call[0] === commandId)?.[1];
+            const handler = (vscode.commands.registerCommand as jest.Mock).mock.calls.find(
+                (call) => call[0] === commandId
+            )?.[1];
             expect(handler).toBeDefined();
             await handler();
         };
@@ -256,7 +254,7 @@ describe('CommandManager', () => {
                 expect(mockConfig.update).toHaveBeenCalledWith(
                     'zoomLevel',
                     1,
-                    vscode.ConfigurationTarget.Global,
+                    vscode.ConfigurationTarget.Global
                 );
             });
 
@@ -268,7 +266,7 @@ describe('CommandManager', () => {
                 await invokeZoomCommand('demoBuilder.setRecommendedZoom');
 
                 expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-                    'workbench.action.zoomReset',
+                    'workbench.action.zoomReset'
                 );
             });
 
@@ -280,7 +278,7 @@ describe('CommandManager', () => {
                 await invokeZoomCommand('demoBuilder.setRecommendedZoom');
 
                 expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
-                    'workbench.action.zoomReset',
+                    'workbench.action.zoomReset'
                 );
             });
 
@@ -291,7 +289,7 @@ describe('CommandManager', () => {
                 await invokeZoomCommand('demoBuilder.setRecommendedZoom');
 
                 expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-                    'workbench.action.zoomReset',
+                    'workbench.action.zoomReset'
                 );
             });
         });
@@ -305,7 +303,7 @@ describe('CommandManager', () => {
                 expect(mockConfig.update).toHaveBeenCalledWith(
                     'zoomLevel',
                     0,
-                    vscode.ConfigurationTarget.Global,
+                    vscode.ConfigurationTarget.Global
                 );
             });
 
@@ -315,7 +313,7 @@ describe('CommandManager', () => {
                 await invokeZoomCommand('demoBuilder.resetZoom');
 
                 expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-                    'workbench.action.zoomReset',
+                    'workbench.action.zoomReset'
                 );
             });
 
@@ -325,7 +323,7 @@ describe('CommandManager', () => {
                 await invokeZoomCommand('demoBuilder.resetZoom');
 
                 expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
-                    'workbench.action.zoomReset',
+                    'workbench.action.zoomReset'
                 );
             });
         });
@@ -335,8 +333,9 @@ describe('CommandManager', () => {
         it('should route the ai target to demoBuilder.openAiExperience (chat-first)', async () => {
             commandManager.registerCommands();
 
-            const navigateHandler = (vscode.commands.registerCommand as jest.Mock).mock.calls
-                .find(call => call[0] === 'demoBuilder.navigate')?.[1];
+            const navigateHandler = (vscode.commands.registerCommand as jest.Mock).mock.calls.find(
+                (call) => call[0] === 'demoBuilder.navigate'
+            )?.[1];
             expect(navigateHandler).toBeDefined();
 
             (vscode.commands.executeCommand as jest.Mock).mockClear();
@@ -346,17 +345,21 @@ describe('CommandManager', () => {
             // Chat-first: navigate('ai') opens the AI experience directly.
             // The prompt manager (openAi) stays reachable via the prompt picker's
             // "Manage prompts…" row.
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openAiExperience');
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                'demoBuilder.openAiExperience'
+            );
         });
 
         it('should warn on unknown target (legacy ai-setup is no longer routed)', async () => {
             commandManager.registerCommands();
 
-            const navigateHandler = (vscode.commands.registerCommand as jest.Mock).mock.calls
-                .find(call => call[0] === 'demoBuilder.navigate')?.[1];
+            const navigateHandler = (vscode.commands.registerCommand as jest.Mock).mock.calls.find(
+                (call) => call[0] === 'demoBuilder.navigate'
+            )?.[1];
             expect(navigateHandler).toBeDefined();
 
-            const ConfigureCmd = require('@/features/dashboard/commands/configure').ConfigureProjectWebviewCommand;
+            const ConfigureCmd =
+                require('@/features/dashboard/commands/configure').ConfigureProjectWebviewCommand;
             const ShowAiCmd = require('@/features/dashboard/commands/openAi').ShowAiCommand;
 
             const configureInstance = ConfigureCmd.mock.instances[0];
@@ -383,8 +386,9 @@ describe('CommandManager', () => {
             commandManager.registerCommands();
 
             // Get the showProjectsList command handler
-            const projectsListHandler = (vscode.commands.registerCommand as jest.Mock).mock.calls
-                .find(call => call[0] === 'demoBuilder.showProjectsList')?.[1];
+            const projectsListHandler = (
+                vscode.commands.registerCommand as jest.Mock
+            ).mock.calls.find((call) => call[0] === 'demoBuilder.showProjectsList')?.[1];
 
             expect(projectsListHandler).toBeDefined();
 

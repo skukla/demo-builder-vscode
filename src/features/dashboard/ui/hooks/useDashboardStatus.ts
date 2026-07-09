@@ -615,7 +615,8 @@ export function useDashboardStatus(
     // Global MCP registration (~/.claude.json) is an optional convenience for
     // cross-directory discovery, not a readiness requirement — the per-project
     // .mcp.json is written at creation and is sufficient. So it does NOT gate
-    // this badge; the AI Configuration tab surfaces a Register button separately.
+    // this badge; the "Demo Builder: Register Global MCP" command is the
+    // explicit opt-in.
     const aiReady = useMemo<AiReadyState>(() => {
         // The mcp-health check is visibly self-healing stale MCP paths — telegraph
         // it on the badge (P2) so the work isn't silent. Overrides the verify state

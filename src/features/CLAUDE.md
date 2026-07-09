@@ -89,7 +89,7 @@ features/my-feature/
 **Responsibilities:**
 - Verifying project AI context files — feeds the Project Dashboard's "AI Ready" health badge (via `useDashboardStatus`)
 - Providing the skills inventory rendered by the dashboard's "View Skills" capability surface (`AiSkillsModal`), plus the project-MCP / session-MCP inventory used by health diagnostics
-- In-extension MCP server for AI agent tool access via Claude Code (CLI), reached through the per-project `.mcp.json` (which points at the `dist/mcp-proxy.js` stdio↔socket forwarder); the former standalone process and global `~/.claude.json` registration are retired
+- In-extension MCP server for AI agent tool access via Claude Code (CLI), reached through the per-project `.mcp.json` (which points at the `dist/mcp-proxy.js` stdio↔socket forwarder); the former standalone process is retired. Global `~/.claude.json` registration is an explicit opt-in ("Demo Builder: Register Global MCP") whose entry has no pinned socket — the proxy discovers a running extension window at launch (`server/mcpSocketDiscovery.ts`, newest live socket wins), enabling global ops from any cwd
 
 **Path Alias**: `@/features/ai`
 
