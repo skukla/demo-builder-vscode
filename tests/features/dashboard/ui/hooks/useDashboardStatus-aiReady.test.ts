@@ -116,6 +116,50 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
         expect(result.current.aiReady).toEqual({ label: 'AI', color: 'green', text: 'Ready' });
     });
 
+    it('telegraphs a regenerate in flight and clears the stale flag on success', async () => {
+        const { result } = renderHook(() => useDashboardStatus());
+
+        // Healthy verify, then the freshness check flags stale → yellow.
+        act(() => {
+            deliverAiVerify(mocks, buildVerifyResponse());
+            mocks.state.orgHandler?.({
+                checkId: 'ai-context-freshness',
+                status: 'warning',
+                message: 'AI files out of date',
+            });
+        });
+        expect(result.current.aiReady.text).toBe('AI files out of date');
+
+        // Click "Regenerate AI files": the badge telegraphs the in-flight run
+        // (otherwise the click reads as a dead link for up to a minute) …
+        let resolveRegen: (v: unknown) => void = () => undefined;
+        mocks.mockRequest.mockImplementation((type: string) => {
+            if (type === 'regenerate-ai-files') {
+                return new Promise((resolve) => {
+                    resolveRegen = resolve;
+                });
+            }
+            return Promise.resolve({ success: true });
+        });
+        let done: Promise<void> | undefined;
+        act(() => {
+            done = result.current.regenerateAiFiles();
+        });
+        expect(result.current.aiReady).toEqual({
+            label: 'AI',
+            color: 'blue',
+            text: 'Regenerating AI files…',
+        });
+
+        // … and on success the stale flag clears WITHOUT waiting for the on-open
+        // check to re-run (it only re-runs on dashboard reopen).
+        await act(async () => {
+            resolveRegen({ success: true });
+            await done;
+        });
+        expect(result.current.aiReady.text).not.toBe('AI files out of date');
+    });
+
     it('returns green Ready when all signals pass', () => {
         const { result } = renderHook(() => useDashboardStatus());
         deliverAiVerify(mocks, buildVerifyResponse());

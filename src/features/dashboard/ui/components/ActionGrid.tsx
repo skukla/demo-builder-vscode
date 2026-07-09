@@ -28,14 +28,7 @@
  * @module features/dashboard/ui/components/ActionGrid
  */
 
-import {
-    ActionButton,
-    Item,
-    Menu,
-    MenuTrigger,
-    Text,
-} from '@adobe/react-spectrum';
-import Delete from '@spectrum-icons/workflow/Delete';
+import { ActionButton, Item, Menu, MenuTrigger, Text } from '@adobe/react-spectrum';
 import Edit from '@spectrum-icons/workflow/Edit';
 import Globe from '@spectrum-icons/workflow/Globe';
 import More from '@spectrum-icons/workflow/More';
@@ -55,7 +48,8 @@ type OverflowKey =
     | 'refreshBlockLibrary'
     | 'republishContent'
     | 'devConsole'
-    | 'reset';
+    | 'reset'
+    | 'delete';
 
 /** Human-readable label per authoring experience. */
 const EXPERIENCE_LABEL: Record<AuthoringExperience, string> = {
@@ -182,6 +176,9 @@ export function ActionGrid({
                 return;
             case 'reset' satisfies OverflowKey:
                 handleResetProject();
+                return;
+            case 'delete' satisfies OverflowKey:
+                handleDeleteProject();
                 return;
         }
     };
@@ -334,22 +331,16 @@ export function ActionGrid({
                                 ) : null}
                                 <Item key="devConsole">Dev Console</Item>
                                 <Item key="reset">Reset</Item>
+                                {/* Destructive — LAST, per overflow-menu convention.
+                                    The confirm dialog behind handleDeleteProject
+                                    remains the real safety net. */}
+                                <Item key="delete" textValue="Delete">
+                                    <Text UNSAFE_className="menu-item-destructive">Delete</Text>
+                                </Item>
                             </Menu>
                         </MenuTrigger>
                     </div>
                 </div>
-            </div>
-
-            {/* Delete footer — isolated and destructive */}
-            <div className="dashboard-zone-footer" data-zone="delete">
-                <ActionButton
-                    onPress={handleDeleteProject}
-                    isQuiet
-                    UNSAFE_className="dashboard-action-button dashboard-action-button--destructive"
-                >
-                    <Delete size="L" />
-                    <Text UNSAFE_className="icon-label">Delete</Text>
-                </ActionButton>
             </div>
         </div>
     );

@@ -30,11 +30,7 @@ jest.mock('@adobe/react-spectrum', () => ({
                 if (!child) return null;
                 const key = child.key ?? child.props?.['data-key'];
                 return (
-                    <button
-                        key={key}
-                        role="menuitem"
-                        onClick={() => onAction?.(key)}
-                    >
+                    <button key={key} role="menuitem" onClick={() => onAction?.(key)}>
                         {child.props?.children}
                     </button>
                 );
@@ -207,14 +203,18 @@ describe('ActionGrid', () => {
 
             const openButton = screen.getByText('Open in Browser').closest('button');
             // Mock renders UNSAFE_className as a lowercase attribute
-            expect(openButton?.getAttribute('unsafe_classname')).toContain('dashboard-action-button--hero');
+            expect(openButton?.getAttribute('unsafe_classname')).toContain(
+                'dashboard-action-button--hero'
+            );
         });
 
         it('should mark the Author button with the hero accent modifier class', () => {
             render(<ActionGrid {...edsProps} />);
 
             const authorButton = screen.getByText('Author in DA.live Classic').closest('button');
-            expect(authorButton?.getAttribute('unsafe_classname')).toContain('dashboard-action-button--hero');
+            expect(authorButton?.getAttribute('unsafe_classname')).toContain(
+                'dashboard-action-button--hero'
+            );
         });
 
         it('should not render Start/Stop in the primary cluster for EDS projects', () => {
@@ -257,7 +257,9 @@ describe('ActionGrid', () => {
             const { container } = render(<ActionGrid {...edsProps} />);
 
             const storefront = getZone(container, 'storefront');
-            expect(within(storefront).queryByText('Author in DA.live Classic')).not.toBeInTheDocument();
+            expect(
+                within(storefront).queryByText('Author in DA.live Classic')
+            ).not.toBeInTheDocument();
         });
 
         it('should not render Sync Storefront for non-EDS projects', () => {
@@ -341,12 +343,13 @@ describe('ActionGrid', () => {
             expect(within(menu).getByText('Export')).toBeInTheDocument();
         });
 
-        it('should expose Reset as the last overflow item', () => {
+        it('should expose Delete as the LAST overflow item (destructive-last convention)', () => {
             const { container } = render(<ActionGrid {...defaultProps} />);
 
             const menu = container.querySelector('[role="menu"]') as HTMLElement;
             const items = within(menu).getAllByRole('menuitem');
-            expect(items[items.length - 1]).toHaveTextContent('Reset');
+            expect(items[items.length - 1]).toHaveTextContent('Delete');
+            expect(items[items.length - 2]).toHaveTextContent('Reset');
         });
 
         it('should call handleCopyPath when Copy Path clicked', async () => {
@@ -450,27 +453,28 @@ describe('ActionGrid', () => {
         });
     });
 
-    describe('Delete Footer (isolated)', () => {
-        it('should render Delete outside all action zones', () => {
+    describe('Delete (destructive, in the More overflow)', () => {
+        it('renders NO isolated delete footer zone (Delete moved into More)', () => {
             const { container } = render(<ActionGrid {...defaultProps} />);
 
-            const deleteFooter = getZone(container, 'delete');
-            expect(deleteFooter).toBeInTheDocument();
-            expect(within(deleteFooter).getByText('Delete')).toBeInTheDocument();
+            expect(container.querySelector('[data-zone="delete"]')).not.toBeInTheDocument();
         });
 
-        it('should not place Delete inside the build zone', () => {
+        it('renders Delete inside the overflow menu, not as a tile', () => {
             const { container } = render(<ActionGrid {...defaultProps} />);
 
-            const build = getZone(container, 'build');
-            expect(within(build).queryByText('Delete')).not.toBeInTheDocument();
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).getByText('Delete')).toBeInTheDocument();
+            // Not a standalone action tile anywhere outside the menu.
+            expect(screen.getByText('Delete').closest('[role="menu"]')).toBe(menu);
         });
 
-        it('should mark Delete with the destructive modifier class', () => {
+        it('marks the Delete menu item with the destructive text class', () => {
             render(<ActionGrid {...defaultProps} />);
 
-            const deleteButton = screen.getByText('Delete').closest('button');
-            expect(deleteButton?.getAttribute('unsafe_classname')).toContain('dashboard-action-button--destructive');
+            expect(screen.getByText('Delete').getAttribute('unsafe_classname')).toContain(
+                'menu-item-destructive'
+            );
         });
 
         it('should call handleDeleteProject when Delete clicked', async () => {

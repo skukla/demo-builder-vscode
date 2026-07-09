@@ -92,6 +92,7 @@ export interface AiReadyState {
         | 'Setup incomplete'
         | 'Broken'
         | 'Updating AI configuration…'
+        | 'Regenerating AI files…'
         | 'AI files out of date';
 }
 
@@ -252,6 +253,11 @@ export function useDashboardStatus(
     const [verifyResult, setVerifyResult] = useState<VerifyAiSetupResponse | null>(null);
     const [verifyFailed, setVerifyFailed] = useState(false);
     const [aiBusy, setAiBusy] = useState(false);
+    // True only while a REGENERATE is in flight (aiBusy also covers verifies).
+    // Drives the badge's "Regenerating AI files…" telegraph — without it the
+    // click on "Regenerate AI files" is invisible for the whole (up to ~1 min)
+    // run and reads as a dead link.
+    const [aiRegenerating, setAiRegenerating] = useState(false);
     const [aiRegenProgress, setAiRegenProgress] = useState<AiRegenerateProgress | null>(null);
     // Gate the "Checking Adobe organization…" indicator to a minimum visible
     // duration so a fast check is still perceived before the banner shows.
@@ -471,11 +477,25 @@ export function useDashboardStatus(
     const regenerateAiFiles = useCallback(async (): Promise<void> => {
         setAiRegenProgress(null);
         setAiBusy(true);
+        setAiRegenerating(true);
         try {
-            await webviewClient.request('regenerate-ai-files', {});
+            const result = await webviewClient.request<{ success?: boolean }>(
+                'regenerate-ai-files',
+                {},
+            );
+            if (result?.success !== false) {
+                // The handler persisted a fresh aiContextVersion stamp, but
+                // `aiContextStale` is fed by the ON-OPEN freshness check, which
+                // does not re-run here — without this clear, a successful
+                // regenerate leaves the badge stuck on "AI files out of date"
+                // until the dashboard reopens. The reRunnable check re-confirms
+                // on next open.
+                setAiContextStale(false);
+            }
             await runVerify();
         } finally {
             setAiBusy(false);
+            setAiRegenerating(false);
             setAiRegenProgress(null);
         }
     }, [runVerify]);
@@ -618,6 +638,12 @@ export function useDashboardStatus(
     // this badge; the "Demo Builder: Register Global MCP" command is the
     // explicit opt-in.
     const aiReady = useMemo<AiReadyState>(() => {
+        // A user-initiated regenerate is in flight (up to ~1 min with the tooling
+        // install) — telegraph it, or the "Regenerate AI files" click reads as a
+        // dead link. Highest precedence: it IS the current activity.
+        if (aiRegenerating) {
+            return { label: 'AI', color: 'blue', text: 'Regenerating AI files…' };
+        }
         // The mcp-health check is visibly self-healing stale MCP paths — telegraph
         // it on the badge (P2) so the work isn't silent. Overrides the verify state
         // until the heal resolves (ok → verify-driven badge; error → falls back to
@@ -655,7 +681,7 @@ export function useDashboardStatus(
         }
 
         return { label: 'AI', color: 'green', text: 'Ready' };
-    }, [verifyResult, verifyFailed, mcpHealing, aiContextStale]);
+    }, [verifyResult, verifyFailed, mcpHealing, aiContextStale, aiRegenerating]);
 
     // Capability lists for the "View AI Capabilities" surface.
     const inventory = verifyResult?.inventory;

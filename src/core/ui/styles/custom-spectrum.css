@@ -2050,6 +2050,13 @@ button[class*="spectrum-Button"][disabled],
     gap: 6px !important;
 }
 
+/* Fixed label column so the stacked badges' VALUE texts align vertically.
+   80px clears the widest label (FRONTEND/API MESH/IMS ORG at 11px uppercase);
+   scoped to the masthead stack — other StatusCard uses keep natural widths. */
+.dashboard-status-badges .status-label {
+    min-width: 80px !important;
+}
+
 /* Dashboard status badges - match card grid style */
 .dashboard-status-badge .status-label,
 .dashboard-status-badge .status-text {
@@ -2181,12 +2188,9 @@ button[class*="spectrum-Button"][disabled],
     gap: var(--dashboard-tile-gap);
 }
 
-/* Delete footer — separated from the action zones with a divider + spacing */
-.dashboard-zone-footer {
-    display: flex;
-    margin-top: 8px;
-    padding-top: 16px;
-    border-top: 1px solid var(--spectrum-global-color-gray-300);
+/* Destructive overflow-menu entry (Delete lives at the bottom of "More"). */
+.menu-item-destructive {
+    color: var(--spectrum-global-color-red-600) !important;
 }
 
 /* ===========================================
@@ -2253,21 +2257,6 @@ button[class*="spectrum-Button"][disabled],
     color: var(--spectrum-global-color-blue-700) !important;
 }
 
-/* Destructive — isolate Delete visually with a negative accent */
-.dashboard-action-button--destructive {
-    border-color: var(--spectrum-global-color-red-400) !important;
-}
-
-.dashboard-action-button--destructive:hover,
-.dashboard-action-button--destructive:focus {
-    background: var(--spectrum-global-color-red-100) !important;
-    border-color: var(--spectrum-global-color-red-500) !important;
-}
-
-.dashboard-action-button--destructive svg,
-.dashboard-action-button--destructive .icon-label {
-    color: var(--spectrum-global-color-red-600) !important;
-}
 
 .dashboard-action-button:hover,
 .dashboard-action-button:focus {
