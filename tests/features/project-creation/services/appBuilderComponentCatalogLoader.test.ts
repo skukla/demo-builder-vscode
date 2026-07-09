@@ -22,28 +22,53 @@ const CONFIG_DIR = path.join(__dirname, '../../../../src/features/project-creati
 describe('appBuilderComponentCatalogLoader', () => {
     describe('getAvailableAppBuilderComponents (backend/frontend filter)', () => {
         it('returns the PaaS mesh for an EDS + PaaS selection', () => {
-            const result = getAvailableAppBuilderComponents('adobe-commerce-paas', 'eds-storefront');
-            const ids = result.map(d => d.id);
+            const result = getAvailableAppBuilderComponents(
+                'adobe-commerce-paas',
+                'eds-storefront'
+            );
+            const ids = result.map((d) => d.id);
             expect(ids).toContain('commerce-paas-mesh');
             expect(ids).not.toContain('commerce-eds-mesh');
         });
 
         it('returns the ACCS mesh for an EDS + ACCS selection', () => {
-            const result = getAvailableAppBuilderComponents('adobe-commerce-accs', 'eds-storefront');
-            const ids = result.map(d => d.id);
+            const result = getAvailableAppBuilderComponents(
+                'adobe-commerce-accs',
+                'eds-storefront'
+            );
+            const ids = result.map((d) => d.id);
             expect(ids).toContain('commerce-eds-mesh');
             expect(ids).not.toContain('commerce-paas-mesh');
         });
 
         it('returns the headless mesh for a headless frontend (either backend)', () => {
-            const paas = getAvailableAppBuilderComponents('adobe-commerce-paas', 'headless').map(d => d.id);
-            const accs = getAvailableAppBuilderComponents('adobe-commerce-accs', 'headless').map(d => d.id);
+            const paas = getAvailableAppBuilderComponents('adobe-commerce-paas', 'headless').map(
+                (d) => d.id
+            );
+            const accs = getAvailableAppBuilderComponents('adobe-commerce-accs', 'headless').map(
+                (d) => d.id
+            );
             expect(paas).toContain('headless-commerce-mesh');
             expect(accs).toContain('headless-commerce-mesh');
         });
 
-        it('returns [] for an unmatched backend/frontend combo', () => {
-            expect(getAvailableAppBuilderComponents('unknown-backend', 'unknown-frontend')).toEqual([]);
+        it('returns the blank shell on every backend/frontend combo (no axis restrictions)', () => {
+            for (const [backend, frontend] of [
+                ['adobe-commerce-paas', 'eds-storefront'],
+                ['adobe-commerce-accs', 'eds-storefront'],
+                ['adobe-commerce-paas', 'headless'],
+                ['adobe-commerce-accs', 'headless'],
+            ]) {
+                const ids = getAvailableAppBuilderComponents(backend, frontend).map((d) => d.id);
+                expect(ids).toContain('app-builder-shell');
+            }
+        });
+
+        it('returns only axis-unrestricted entries for an unmatched backend/frontend combo', () => {
+            const ids = getAvailableAppBuilderComponents('unknown-backend', 'unknown-frontend').map(
+                (d) => d.id
+            );
+            expect(ids).toEqual(['app-builder-shell']);
         });
     });
 
@@ -63,7 +88,7 @@ describe('appBuilderComponentCatalogLoader', () => {
         it('returns the {owner, repo, branch} source for a seeded entry', () => {
             const source = getAppBuilderComponentSource('commerce-paas-mesh');
             expect(source).toEqual(
-                expect.objectContaining({ owner: 'skukla', repo: 'commerce-paas-mesh' }),
+                expect.objectContaining({ owner: 'skukla', repo: 'commerce-paas-mesh' })
             );
         });
 
@@ -92,10 +117,10 @@ describe('appBuilderComponentCatalogLoader', () => {
 
     describe('seed catalog ↔ schema validity', () => {
         const catalog = JSON.parse(
-            fs.readFileSync(path.join(CONFIG_DIR, 'app-builder-components.json'), 'utf-8'),
+            fs.readFileSync(path.join(CONFIG_DIR, 'app-builder-components.json'), 'utf-8')
         );
         const schema = JSON.parse(
-            fs.readFileSync(path.join(CONFIG_DIR, 'app-builder-components.schema.json'), 'utf-8'),
+            fs.readFileSync(path.join(CONFIG_DIR, 'app-builder-components.schema.json'), 'utf-8')
         );
 
         it('declares the schema reference and a version', () => {
@@ -123,19 +148,37 @@ describe('appBuilderComponentCatalogLoader', () => {
             }
         });
 
-        it('seeds exactly the three meshes with the spike-mapped sources', () => {
+        it('seeds the three meshes (spike-mapped sources) plus the blank shell integration', () => {
             const byId = Object.fromEntries(
-                catalog.appBuilderComponents.map((d: { id: string }) => [d.id, d]),
+                catalog.appBuilderComponents.map((d: { id: string }) => [d.id, d])
             );
             expect(byId['commerce-paas-mesh'].source.repo).toBe('commerce-paas-mesh');
             expect(byId['commerce-eds-mesh'].source.repo).toBe('commerce-eds-mesh');
             expect(byId['headless-commerce-mesh'].source.repo).toBe('headless-commerce-mesh');
+            expect(byId['app-builder-shell'].source.repo).toBe('app-builder-shell');
+            expect(byId['app-builder-shell'].kind).toBe('integration');
+        });
+
+        it('the shell integration is unrestricted: no axis filters, no APIs, no env schema', () => {
+            const shell = catalog.appBuilderComponents.find(
+                (d: { id: string }) => d.id === 'app-builder-shell'
+            );
+            // Omitted axes mean "available on every stack"; APIs arrive at
+            // runtime (plan step 3), not from the catalog.
+            expect(shell.compatibleBackends).toBeUndefined();
+            expect(shell.compatibleFrontends).toBeUndefined();
+            expect(shell.requiredApis).toBeUndefined();
+            expect(shell.envSchema).toBeUndefined();
         });
     });
 
     describe('load-bearing mesh API + env contracts (steps 04 + 07)', () => {
         it('every mesh entry requires GraphQLServiceSDK and provides MESH_ENDPOINT', () => {
-            for (const id of ['commerce-paas-mesh', 'commerce-eds-mesh', 'headless-commerce-mesh']) {
+            for (const id of [
+                'commerce-paas-mesh',
+                'commerce-eds-mesh',
+                'headless-commerce-mesh',
+            ]) {
                 const entry = getAppBuilderComponentEntry(id);
                 expect(entry?.requiredApis).toContain('GraphQLServiceSDK');
                 expect(entry?.providesEnvVars).toContain('MESH_ENDPOINT');

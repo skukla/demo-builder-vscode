@@ -23,7 +23,7 @@ import type { DemoPackage, GitSource } from '@/types/demoPackages';
 // against the shipped seed catalog.
 jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader', () => {
     const actual = jest.requireActual(
-        '@/features/project-creation/services/appBuilderComponentCatalogLoader',
+        '@/features/project-creation/services/appBuilderComponentCatalogLoader'
     );
     return {
         ...actual,
@@ -69,21 +69,24 @@ describe('getSelectableAppBuilderComponents (real seed catalog)', () => {
             const result = getSelectableAppBuilderComponents(
                 makePackage(),
                 EDS_PAAS.backend,
-                EDS_PAAS.frontend,
+                EDS_PAAS.frontend
             );
-            const ids = result.map(d => d.id);
+            const ids = result.map((d) => d.id);
             expect(ids).toContain('commerce-paas-mesh');
             expect(ids).not.toContain('commerce-eds-mesh');
             expect(ids).not.toContain('headless-commerce-mesh');
         });
 
-        it('returns [] when no catalog entry matches the axis (Edge)', () => {
+        it('returns only axis-unrestricted entries when no axis matches (Edge)', () => {
             const result = getSelectableAppBuilderComponents(
                 makePackage(),
                 'unknown-backend',
-                'unknown-frontend',
+                'unknown-frontend'
             );
-            expect(result).toEqual([]);
+            // The blank shell declares no compatibleBackends/Frontends, so it is
+            // available on every stack — including this degenerate one.
+            expect(result.map((e) => e.id)).toEqual(['app-builder-shell']);
+            expect(result[0].requirement).toBe('optional');
         });
     });
 
@@ -92,9 +95,9 @@ describe('getSelectableAppBuilderComponents (real seed catalog)', () => {
             const result = getSelectableAppBuilderComponents(
                 makePackage({ requiresMesh: 'optional' }),
                 EDS_PAAS.backend,
-                EDS_PAAS.frontend,
+                EDS_PAAS.frontend
             );
-            const mesh = result.find(d => d.id === 'commerce-paas-mesh');
+            const mesh = result.find((d) => d.id === 'commerce-paas-mesh');
             expect(mesh?.requirement).toBe('optional');
         });
 
@@ -102,9 +105,9 @@ describe('getSelectableAppBuilderComponents (real seed catalog)', () => {
             const result = getSelectableAppBuilderComponents(
                 makePackage({ requiresMesh: true }),
                 EDS_PAAS.backend,
-                EDS_PAAS.frontend,
+                EDS_PAAS.frontend
             );
-            const mesh = result.find(d => d.id === 'commerce-paas-mesh');
+            const mesh = result.find((d) => d.id === 'commerce-paas-mesh');
             expect(mesh?.requirement).toBe('required');
         });
 
@@ -112,9 +115,9 @@ describe('getSelectableAppBuilderComponents (real seed catalog)', () => {
             const result = getSelectableAppBuilderComponents(
                 makePackage(),
                 EDS_PAAS.backend,
-                EDS_PAAS.frontend,
+                EDS_PAAS.frontend
             );
-            const mesh = result.find(d => d.id === 'commerce-paas-mesh');
+            const mesh = result.find((d) => d.id === 'commerce-paas-mesh');
             // No package requirement and no native scoping → user-toggleable.
             expect(mesh?.requirement).toBe('optional');
         });
@@ -142,7 +145,7 @@ describe('getSelectableAppBuilderComponents (package scoping, mocked catalog)', 
 
     const mockGetAvailable = catalogLoader.getAvailableAppBuilderComponents as jest.Mock;
     const realGetAvailable = jest.requireActual(
-        '@/features/project-creation/services/appBuilderComponentCatalogLoader',
+        '@/features/project-creation/services/appBuilderComponentCatalogLoader'
     ).getAvailableAppBuilderComponents;
 
     afterEach(() => {
@@ -153,23 +156,35 @@ describe('getSelectableAppBuilderComponents (package scoping, mocked catalog)', 
     it("marks a nativeForPackages entry as 'required' for that package", () => {
         mockGetAvailable.mockReturnValue([nativeEntry]);
 
-        const result = getSelectableAppBuilderComponents(makePackage({ id: 'citisignal' }), 'b', 'f');
-        const entry = result.find(d => d.id === 'native-thing');
+        const result = getSelectableAppBuilderComponents(
+            makePackage({ id: 'citisignal' }),
+            'b',
+            'f'
+        );
+        const entry = result.find((d) => d.id === 'native-thing');
         expect(entry?.requirement).toBe('required');
     });
 
     it('excludes an entry restricted to OTHER packages via onlyForPackages', () => {
         mockGetAvailable.mockReturnValue([restrictedEntry]);
 
-        const result = getSelectableAppBuilderComponents(makePackage({ id: 'citisignal' }), 'b', 'f');
-        expect(result.map(d => d.id)).not.toContain('buildright-only');
+        const result = getSelectableAppBuilderComponents(
+            makePackage({ id: 'citisignal' }),
+            'b',
+            'f'
+        );
+        expect(result.map((d) => d.id)).not.toContain('buildright-only');
     });
 
     it("includes an onlyForPackages entry for its OWN package (as 'optional')", () => {
         mockGetAvailable.mockReturnValue([restrictedEntry]);
 
-        const result = getSelectableAppBuilderComponents(makePackage({ id: 'buildright' }), 'b', 'f');
-        const entry = result.find(d => d.id === 'buildright-only');
+        const result = getSelectableAppBuilderComponents(
+            makePackage({ id: 'buildright' }),
+            'b',
+            'f'
+        );
+        const entry = result.find((d) => d.id === 'buildright-only');
         expect(entry?.requirement).toBe('optional');
     });
 });

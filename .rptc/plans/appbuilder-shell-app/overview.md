@@ -55,8 +55,14 @@ This exposes one real capability gap and one tooling gap:
       isolated tools dir; `AI_CONTEXT_VERSION` bumped to 2 so existing mesh/headless
       projects flag "AI files out of date" and receive the tooling on regenerate.
       Playwright stays EDS-gated.
-- [ ] **Step 2 — Shell template repo + catalog entry** (`step-02.md`): minimal deployable
-      app repo seeded for AI-first development; `app-builder-shell` catalog entry.
+- [x] **Step 2 — Shell template repo + catalog entry** (`step-02.md`): catalog entry +
+      tests landed; shell content authored and committed locally (scratchpad) — **repo
+      creation pending Steve** (`gh repo create` of a PUBLIC repo is blocked in auto mode;
+      run: `gh repo create skukla/app-builder-shell --public --source <scratchpad>/app-builder-shell --push`).
+      Found+fixed a real regression the unrestricted entry exposed:
+      `ensureMeshApiSubscribed` treated "any catalog row matches the axes" as "a mesh
+      needs subscribing" — now filters `kind === 'mesh'` (the shell matches every axis,
+      including the empty selections in tests).
 - [ ] **Step 3 — Runtime API access MCP tools** (`step-03.md`): `list_console_apis` +
       `add_console_apis`, reusing `apiSubscriber` under org-context + role gates; persist
       ad-hoc APIs so reconciliation never strips them.

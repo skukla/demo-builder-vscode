@@ -43,9 +43,23 @@ function createProject(): Project {
         status: 'ready',
         created: new Date(),
         lastModified: new Date(),
-        adobe: { organization: 'org-1', projectId: 'proj-1', workspace: 'ws-1', authenticated: true },
+        adobe: {
+            organization: 'org-1',
+            projectId: 'proj-1',
+            workspace: 'ws-1',
+            authenticated: true,
+        },
         componentSelections: { backend: 'adobe-commerce-paas', frontend: 'eds-storefront' },
-        componentInstances: { 'eds-storefront': { id: 'eds-storefront', name: 'EDS', type: 'frontend', path: '/p/f', status: 'ready', port: 3000 } as any },
+        componentInstances: {
+            'eds-storefront': {
+                id: 'eds-storefront',
+                name: 'EDS',
+                type: 'frontend',
+                path: '/p/f',
+                status: 'ready',
+                port: 3000,
+            } as any,
+        },
         componentConfigs: {},
     };
 }
@@ -71,54 +85,87 @@ describe('ensureMeshApiSubscribed', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        logger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as jest.Mocked<Logger>;
-        (withOrgContext as jest.Mock).mockImplementation((_t: unknown, fn: () => Promise<unknown>) => fn());
+        logger = {
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            trace: jest.fn(),
+        } as jest.Mocked<Logger>;
+        (withOrgContext as jest.Mock).mockImplementation(
+            (_t: unknown, fn: () => Promise<unknown>) => fn()
+        );
         (getAvailableAppBuilderComponents as jest.Mock).mockReturnValue([
-            { id: 'commerce-paas-mesh', name: 'Mesh', requiredApis: [MESH] },
+            { id: 'commerce-paas-mesh', name: 'Mesh', kind: 'mesh', requiredApis: [MESH] },
         ]);
     });
 
     it('subscribes the API Mesh apiKey service with the derived localhost domain', async () => {
         const authService = createAuthService();
 
-        await ensureMeshApiSubscribed({ project: createProject(), authService: authService as any, logger });
+        await ensureMeshApiSubscribed({
+            project: createProject(),
+            authService: authService as any,
+            logger,
+        });
 
         expect(authService.createAdobeIdCredential).toHaveBeenCalledWith(
-            'org-1', 'proj-1', 'ws-1',
-            expect.objectContaining({ platform: 'apiKey', domain: 'localhost:3000' }),
+            'org-1',
+            'proj-1',
+            'ws-1',
+            expect.objectContaining({ platform: 'apiKey', domain: 'localhost:3000' })
         );
         expect(authService.subscribeAdobeIdIntegrationToServices).toHaveBeenCalledWith(
-            'org-1', 'apikey-int', expect.arrayContaining([expect.objectContaining({ sdkCode: MESH })]),
+            'org-1',
+            'apikey-int',
+            expect.arrayContaining([expect.objectContaining({ sdkCode: MESH })])
         );
     });
 
     it('subscribes the baseline AdobeIOManagementAPISDK via the S2S path', async () => {
         const authService = createAuthService();
 
-        await ensureMeshApiSubscribed({ project: createProject(), authService: authService as any, logger });
+        await ensureMeshApiSubscribed({
+            project: createProject(),
+            authService: authService as any,
+            logger,
+        });
 
         expect(authService.ensureOAuthCredentialId).toHaveBeenCalledWith('org-1', 'proj-1', 'ws-1');
         expect(authService.subscribeOAuthServerToServerIntegrationToServices).toHaveBeenCalledWith(
-            'org-1', 'oauth-int', expect.arrayContaining([expect.objectContaining({ sdkCode: MGMT })]),
+            'org-1',
+            'oauth-int',
+            expect.arrayContaining([expect.objectContaining({ sdkCode: MGMT })])
         );
     });
 
     it('resolves requiredApis from the project catalog selection', async () => {
         const authService = createAuthService();
 
-        await ensureMeshApiSubscribed({ project: createProject(), authService: authService as any, logger });
+        await ensureMeshApiSubscribed({
+            project: createProject(),
+            authService: authService as any,
+            logger,
+        });
 
-        expect(getAvailableAppBuilderComponents).toHaveBeenCalledWith('adobe-commerce-paas', 'eds-storefront');
+        expect(getAvailableAppBuilderComponents).toHaveBeenCalledWith(
+            'adobe-commerce-paas',
+            'eds-storefront'
+        );
     });
 
     it('runs the subscribe inside withOrgContext (org-targeted, no aio console select)', async () => {
         const authService = createAuthService();
 
-        await ensureMeshApiSubscribed({ project: createProject(), authService: authService as any, logger });
+        await ensureMeshApiSubscribed({
+            project: createProject(),
+            authService: authService as any,
+            logger,
+        });
 
         expect(withOrgContext).toHaveBeenCalledWith(
             expect.objectContaining({ orgId: 'org-1' }),
-            expect.any(Function),
+            expect.any(Function)
         );
     });
 
@@ -127,7 +174,11 @@ describe('ensureMeshApiSubscribed', () => {
         authService.ensureOAuthCredentialId.mockResolvedValue('existing-int');
 
         await expect(
-            ensureMeshApiSubscribed({ project: createProject(), authService: authService as any, logger }),
+            ensureMeshApiSubscribed({
+                project: createProject(),
+                authService: authService as any,
+                logger,
+            })
         ).resolves.toEqual(expect.any(Array));
         expect(authService.subscribeOAuthServerToServerIntegrationToServices).toHaveBeenCalled();
     });
@@ -136,7 +187,9 @@ describe('ensureMeshApiSubscribed', () => {
         const authService = createAuthService();
 
         const result = await ensureMeshApiSubscribed({
-            project: createProject(), authService: authService as any, logger,
+            project: createProject(),
+            authService: authService as any,
+            logger,
         });
 
         expect(result).toHaveLength(2);
@@ -144,7 +197,7 @@ describe('ensureMeshApiSubscribed', () => {
             expect.arrayContaining([
                 { code: MGMT, name: 'I/O Management API' },
                 { code: MESH, name: 'API Mesh' },
-            ]),
+            ])
         );
     });
 
@@ -153,7 +206,29 @@ describe('ensureMeshApiSubscribed', () => {
         const authService = createAuthService();
 
         const result = await ensureMeshApiSubscribed({
-            project: createProject(), authService: authService as any, logger,
+            project: createProject(),
+            authService: authService as any,
+            logger,
+        });
+
+        expect(result).toEqual([]);
+        expect(authService.getServicesForOrg).not.toHaveBeenCalled();
+        expect(withOrgContext).not.toHaveBeenCalled();
+    });
+
+    it('skips when only non-mesh entries match the axes (e.g. the unrestricted blank shell)', async () => {
+        // This is the MESH pre-deploy subscribe: an axis-unrestricted
+        // kind:'integration' entry (app-builder-shell) matching the selection
+        // must not resurrect the subscribe when no mesh entry matches.
+        (getAvailableAppBuilderComponents as jest.Mock).mockReturnValue([
+            { id: 'app-builder-shell', name: 'Shell', kind: 'integration' },
+        ]);
+        const authService = createAuthService();
+
+        const result = await ensureMeshApiSubscribed({
+            project: createProject(),
+            authService: authService as any,
+            logger,
         });
 
         expect(result).toEqual([]);

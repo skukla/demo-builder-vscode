@@ -46,7 +46,9 @@ export interface EnsureMeshApiSubscribedParams {
 /**
  * Subscribe the project's mesh `requiredApis` (+ baseline) before a mesh deploy.
  * No-ops gracefully when the project's backend/frontend selection resolves no
- * catalog rows (nothing to subscribe — don't block the deploy).
+ * MESH catalog rows (nothing to subscribe — don't block the deploy). The kind
+ * filter matters: axis-unrestricted non-mesh entries (the blank shell) match
+ * every selection, and this is specifically the mesh pre-deploy subscribe.
  *
  * @returns the resolved+subscribed API list (empty when the subscribe was skipped)
  */
@@ -57,9 +59,11 @@ export async function ensureMeshApiSubscribed(
 
     const backendId = project.componentSelections?.backend ?? '';
     const frontendId = project.componentSelections?.frontend ?? '';
-    const catalog = getAvailableAppBuilderComponents(backendId, frontendId);
+    const catalog = getAvailableAppBuilderComponents(backendId, frontendId).filter(
+        (entry) => entry.kind === 'mesh',
+    );
     if (catalog.length === 0) {
-        logger.debug('[Mesh Subscribe] No appBuilderComponent catalog rows for selection — skipping subscribe');
+        logger.debug('[Mesh Subscribe] No mesh catalog rows for selection — skipping subscribe');
         return [];
     }
 
@@ -69,7 +73,12 @@ export async function ensureMeshApiSubscribed(
 
     logger.info('[Mesh Subscribe] Subscribing required APIs before mesh deploy');
     const apis = await withOrgContext(orgTarget, () =>
-        subscribeRequiredApis(catalog, subscriberTarget(project), client, deriveAllowedDomain(project)),
+        subscribeRequiredApis(
+            catalog,
+            subscriberTarget(project),
+            client,
+            deriveAllowedDomain(project),
+        ),
     );
     logger.info('[Mesh Subscribe] Required APIs subscribed');
     return apis;
