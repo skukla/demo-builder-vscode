@@ -78,10 +78,6 @@ Core self-heal **shipped** (see Recently shipped). Residual scope from the origi
 
 ### C. Ready to pick up (small, verified still pending)
 
-#### Sync Storefront — auto-resolve managed-file conflicts ([`2026-06-11-sync-storefront-auto-resolve-managed-conflicts.md`](2026-06-11-sync-storefront-auto-resolve-managed-conflicts.md))
-
-When ALL conflicting files are Demo-Builder-managed (`config.json`, `fstab.yaml`, …), auto-resolve to the remote authoritative copy; only surface the manual merge editor when the user's own content conflicts. Verified still pending (no managed-file predicate in `syncStorefront.ts`). **Highest-risk line: rebase inverts ours/theirs** (take remote = `--ours` mid-rebase). Rare edge.
-
 #### Workspace-independent entry point for global MCP ops ([`2026-05-30-global-mcp-entry-point.md`](2026-05-30-global-mcp-entry-point.md))
 
 Invoking a genuinely global op (`create_project`, `list_projects`) when the user is not inside a project workspace has no socket to reach (the in-extension server is per-workspace). Proposed: proxy discovery mode for the stdio↔socket forwarder + a global `~/.claude.json` entry. Deferred — multi-window semantics unresolved.

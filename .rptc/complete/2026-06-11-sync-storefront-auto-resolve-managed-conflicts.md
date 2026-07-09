@@ -1,5 +1,51 @@
 # Sync Storefront — auto-resolve managed-file merge conflicts
 
+## ✅ SHIPPED (2026-07-09) — F5 repro PASSED, merged to develop
+
+Built 2026-07-08 (TDD, full gate green); the merge was gated on a live F5 reproduction of the highest-risk
+line (the rebase ours/theirs direction). **Repro run 2026-07-09 on `b2b-tester`: the auto-resolve took the
+REMOTE copy (`--ours` direction correct), no conflict modal appeared, and the config-only commit's empty
+rebase was skipped cleanly.** Also folded in a fix for a coupled UX bug found during the repro: the
+"Committing changes…" progress spinner was held open by a confirmation dialog awaited inside `withProgress`
+(`reportSyncResult` now runs after the progress closes). Merged to develop 2026-07-09. Repro steps kept below
+for reference.
+
+**What shipped on the branch**
+- `managedStorefrontFiles.ts` — `isManagedStorefrontFile(rel)`; exact-match set `{config.json, fstab.yaml}`
+  (root-level only; grounded in what `configSyncService`/`fstabGenerator` push), conservative `false` default.
+- `syncStorefront.ts` — in `handlePushRejected`, after `attemptRebase → 'conflicts'` and BEFORE the manual
+  prompt: classify via `listConflictedFilesRel`; if `.every(isManagedStorefrontFile)` → `autoResolveManagedConflicts`
+  (`git checkout --ours -- <file>` + `add` per file → `git -c core.editor=true rebase --continue`, with a
+  `--skip` fallback when `--ours` empties the replayed commit; on any failure `safeAbortRebase` + error, no push).
+  Success toast notes "Resolved a configuration update automatically." Mixed/unknown → existing manual flow.
+- Tests: direction guard (asserts `--ours`, not `--theirs`), all-managed, mixed→manual, unknown→manual,
+  empty-commit→skip, failure→abort. 22 tests, gate green.
+
+**F5 repro the merge is gated on** (do this in the Extension Dev Host):
+1. Open a project with an EDS storefront. In `<storefront>` (the nested repo), make a LOCAL commit that changes
+   `config.json` (e.g. edit a value + `git commit -am`).
+2. On the SAME branch on GitHub, make a DIFFERENT change to `config.json` (web UI or another clone + push) so
+   both sides diverge on `config.json` → a guaranteed rebase conflict.
+3. Run **Sync Storefront**. Expected: NO conflict prompt appears; it finishes with the toast noting a config
+   update was resolved automatically.
+4. **CRITICAL ASSERTION:** open `<storefront>/config.json` — it must now hold the REMOTE (GitHub) value, NOT
+   your local edit. If it holds the LOCAL value, the ours/theirs direction is inverted — STOP, flip
+   `--ours`↔`--theirs` in `autoResolveManagedConflicts`, and re-repro. (A wrong direction silently ships stale
+   config — the whole reason this is repro-gated.)
+5. Empty-commit path: since step 1's commit changed ONLY `config.json`, confirm the sync completes cleanly and
+   doesn't hang on a "no changes / did you forget to git add" rebase state (the `--skip` fallback should cover it).
+6. Mixed fallback: repeat with BOTH `config.json` AND a user file (e.g. a block `.js`) diverging — confirm the
+   manual Source-Control conflict prompt DOES appear (no auto-resolve).
+7. Multi-commit re-conflict: make 2+ local commits that each touch `config.json`, diverge remote. The 2nd
+   `rebase --continue` re-conflicts → the code must ABORT (not `--skip`) and show "Could not automatically
+   resolve…" with your local changes intact (safe dead-end; the empty-commit `--skip` regex only matches
+   git's genuine "no changes/did you forget" message, so a real re-conflict rethrows → abort). NOTE: a unit
+   test for this path was written but removed — its mock's synchronous `execFile` callback tripped a
+   jest-runner hang (production `execFile` is async, so it's a test-harness artifact, not a code defect); the
+   safe-abort behaviour is still covered by the `checkout --ours` failure test, and this repro exercises it live.
+
+Only after 4–7 pass: move this file to `.rptc/complete/` and merge the branch to develop.
+
 ## Provenance
 
 Deferred 2026-06-11 during the Sync Storefront conflict-visibility fix
