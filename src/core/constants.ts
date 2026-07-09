@@ -27,7 +27,9 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // v2: Developer Agent tooling (commerce-extensibility MCP + integration-starter-kit
 // skills) un-gated from EDS-only to all App Builder-adjacent projects — existing
 // mesh/headless projects need a regenerate to receive it.
-export const AI_CONTEXT_VERSION = 2;
+// v3: extend-app-builder-app skill + AGENTS.md "Adding Adobe API Access" section
+// (the list_console_apis / add_console_apis loop) for App Builder-adjacent projects.
+export const AI_CONTEXT_VERSION = 3;
 
 /**
  * Component IDs for standardized component instance access

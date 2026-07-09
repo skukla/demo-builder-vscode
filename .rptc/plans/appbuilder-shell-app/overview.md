@@ -70,10 +70,15 @@ This exposes one real capability gap and one tooling gap:
       unioned into both reconcile call sites (runner deps + mesh pre-deploy).
       `list_console_apis` flags managed codes from the union (no live credential
       read — avoids a write-on-read via ensureOAuthCredentialId).
-- [ ] **Step 4 — AI guidance + end-to-end verification** (`step-04.md`): teach the flow
-      (AGENTS.md section + skill) and walk the Firefly use case live.
-- [ ] **Step 5 — Backlog corrections from the slice-3 research** (`step-05.md`): rescope
-      the package-bound item; prune the stale persistence item.
+- [~] **Step 4 — AI guidance + end-to-end verification** (`step-04.md`): guidance DONE
+      (pending commit) — `extend-app-builder-app.md` skill (conditional on
+      `projectNeedsAppBuilderTooling`), AGENTS.md "Adding Adobe API Access" section,
+      `AI_CONTEXT_VERSION` → 3. **Live Firefly walkthrough remains** (needs Steve's F5
+      window; checklist in step-04.md).
+- [x] **Step 5 — Backlog corrections from the slice-3 research** (`step-05.md`): DONE —
+      package-bound item rewritten (gated, corrected facts, real scope), persistence item
+      pruned to rehydration + the ReviewStep visibility bug, backlog README synced, and
+      the two binding fields declared in `app-builder-components.schema.json`.
 
 ## Open decisions (settle before step 2/3 execution)
 

@@ -1,81 +1,64 @@
 # App Builder app — package-bound apps (auto-attach to a demo template)
 
-> **Status: MECHANISM LANDED (dormant) — activation remaining.** Slices 1 + 2 shipped
-> ([spine](2026-06-17-appbuilder-app-deploy-spine.md),
-> [catalog](../complete/2026-06-17-appbuilder-app-curated-catalog.md)). The binding **mechanism** came
-> in with slice 2: `src/types/appBuilderComponents.ts` declares `nativeForPackages?`/`onlyForPackages?`
-> (explicitly "mirrors block-libraries' nativeForPackages"), and
-> `src/features/project-creation/services/appBuilderComponentSelection.ts` implements the scoping
-> (`onlyForPackages` excludes the entry from non-listed packages; `nativeForPackages` → `'required'`,
-> auto-included and shown locked). **Do NOT rebuild it.**
->
-> **Remaining (small, activation only):**
-> 1. Add `nativeForPackages` + `onlyForPackages` to `app-builder-components.schema.json` (the loader/type
->    already support them; the schema doesn't declare them yet).
-> 2. Bind an entry in `app-builder-components.json` (e.g. `headless-commerce-mesh` →
->    the citisignal-headless package) — the actual "auto-attach" data.
-> 3. Verify the auto-included/locked display in the review/summary surface (mirror how native block
->    libraries render).
->
-> Slice 3 of 5.
+> **Status: GATED on the first real package-bound integration.** Rewritten 2026-07-09
+> after a three-agent staleness audit
+> (`.rptc/research/appbuilder-slice3-staleness/research.md`) — the original "small,
+> activation only" framing was wrong in both directions. Slice 3 of 5.
 
-## Provenance
+## What the audit established (verified on `develop`, 2026-07-09)
 
-Designed 2026-06-17 alongside the App Builder app-structure research
-([`../research/app-builder-app-structure/research.md`](../research/app-builder-app-structure/research.md)).
-Use case 3 from the design conversation: an app **purpose-built to support a specific demo template**
-(e.g. the citisignal headless template), auto-included when that template is chosen.
+**Mechanism (accurate, keep):** `nativeForPackages?`/`onlyForPackages?` exist on the
+catalog entry type (`src/types/appBuilderComponents.ts`) and the scoping is implemented +
+tested (`appBuilderComponentSelection.ts`): `onlyForPackages` excludes (LIVE on the
+mesh-tile path via `tileStatus.ts`), `nativeForPackages` → `requirement: 'required'`
+(annotation only). The schema now declares both fields — cosmetic anyway (no Ajv for this
+config; the loader is a plain cast).
 
-## Goal / scope
+**Stale claims (corrected):**
+- `citisignal-headless` is NOT a package id. Packages: `isle5`, `custom`, `citisignal`,
+  `buildright`; "CitiSignal Headless" is storefront `headless-paas` inside `citisignal`.
+  Scoping matches PACKAGE id.
+- Binding `headless-commerce-mesh` would be behaviorally redundant: it already resolves
+  `'required'` via the mesh-kind rule (`requiresMesh: true` on the storefront), and
+  required-mesh auto-include already works via the dual-flow legacy path.
+- "Auto-included and shown locked" is dead code beyond the annotation:
+  `computeSelectedAppBuilderComponents` (the union) has zero production callers;
+  `AppBuilderComponentsStepContent` (the locked renderer) is mounted nowhere (its caller
+  `ProjectBuilderStep` is gone). `WelcomeStep` clears `selectedAppBuilderComponents`
+  citing a re-seed that was never implemented. The live `IntegrationsStep` /
+  `AddIntegrationModal` have no requirement handling.
+- Summary/Review visibility must be BUILT, not "verified" — see the rewritten
+  `2026-06-21-appbuilder-component-first-class-persistence.md` item (ReviewStep bug).
 
-Associate an App Builder app (a catalog entry from slice 2) with a demo package/stack so it is
-**auto-attached** when the user picks that package — the same way block libraries bind to packages
-via `nativeForPackages`.
+## Gate
 
-**In scope:**
-- An association field on the app catalog entry (mirror `block-libraries.json` `nativeForPackages` /
-  `onlyForPackages` in `src/features/project-creation/config/block-libraries.json`).
-- Auto-include the bound app in the install/deploy set when its package is selected
-  (`demo-packages.json` → stack → component resolution in `executor.ts loadComponentDefinitions`).
-- The bound app still deploys through the slice-1 spine; binding only changes *selection*, not
-  mechanics.
+Pick this up only when a real `kind: 'integration'` catalog entry purpose-built for a
+specific demo package exists. Likely sources: an app grown from the **blank shell**
+lineage (`.rptc/plans/appbuilder-shell-app/` — shipped 2026-07-09), slice 4
+scaffold-and-author output, or the BuildRight rebuild.
 
-**Out of scope:**
-- New deploy mechanics or catalog mechanics (slices 1–2 own them).
-- App-only projects (slice 5).
+## Real remaining scope (when the gate opens)
 
-## UX / interaction
+1. Binding data on the entry: `nativeForPackages: ["<package-id>"]`.
+2. **Seeding**: union required ids into `selectedAppBuilderComponents` on stack select
+   (mirror `resolveBlockLibrarySeed` in `useProjectBuilder.ts`); fix the WelcomeStep
+   clear/re-seed contract. `computeSelectedAppBuilderComponents` is exactly this union —
+   wire it or delete it.
+3. **Locked UI** in the live IntegrationsStep/AddIntegrationModal. Design decision:
+   single annotated list (the orphaned `AppBuilderComponentsStepContent` shape) vs block
+   libraries' two-list split (`getNativeBlockLibraries` — natives leave the picker).
+   Removability: default "shown as included, not removable" (matches native libraries).
+4. **Visibility**: integrations row in `BuildYourProjectSummary` + the ReviewStep fix.
+5. Decide the two dead pieces' fate (wire-when-activating vs delete now per
+   no-soft-deprecation).
 
-Minimal — a package-bound app shows as **auto-included** in the review/summary surfaces. Reuse the
-existing native-block-library display (how `nativeForPackages` libraries render as included). No design
-pass needed; mirror that pattern. Settle one behavior/copy point in planning: is a bound app removable,
-or shown as fixed? Default to "shown as included," matching native block libraries.
-
-## Reuse / refactor-for-reuse
-
-- Reuse the block-library `nativeForPackages` / `onlyForPackages` association resolution rather than
-  inventing a binding mechanism.
-- Reuse slice-1 deploy + slice-2 catalog **unchanged**; this slice changes selection only.
-
-## Execution plan (high level)
-
-1. Add the package-association field to the catalog/registry entry.
-2. Resolve bound apps into the install set during package selection (parallel to how
-   `nativeForPackages` block libraries resolve).
-3. Show the bound app in the review/summary surfaces as auto-included (not user-removable, or
-   removable with a clear signal — settle in planning).
-
-## Constraints / risk
-
-- Reuse the block-library association resolution rather than inventing a new binding mechanism.
-- Be explicit about whether a package-bound app is removable; default to "shown as included," matching
-  how native block libraries behave.
+Note: package-bound components are DERIVABLE from the package id — binding sidesteps the
+persistence gap that free-form selections have.
 
 ## Kickoff prompt
 
-`/rptc:feat "Add package-bound App Builder apps (slice 3). Associate a catalog app with a demo
-package/stack via a nativeForPackages-style field (mirror block-libraries.json); auto-include the
-bound app in the install/deploy set when its package is selected, deploying through the slice-1 spine.
-Binding changes selection only, not deploy mechanics. See
-.rptc/backlog/2026-06-17-appbuilder-app-package-bound.md and
-.rptc/research/app-builder-app-structure/research.md."`
+"Activate package-bound App Builder apps (slice 3). Read
+`.rptc/backlog/2026-06-17-appbuilder-app-package-bound.md` (rewritten 2026-07-09) and
+`.rptc/research/appbuilder-slice3-staleness/research.md` FIRST — the mechanism exists but
+the auto-include seeding, locked UI, and summary visibility do not. Requires a real
+package-bound `kind: 'integration'` entry to bind."

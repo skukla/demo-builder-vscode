@@ -33,6 +33,7 @@ import commerceBlockMapperContent from '../templates/skills/commerce-block-mappe
 import connectAuthenticatedSiteContent from '../templates/skills/connect-authenticated-site.md';
 import createEdsProjectContent from '../templates/skills/create-eds-project.md';
 import demoDataInjectorContent from '../templates/skills/demo-data-injector.md';
+import extendAppBuilderAppContent from '../templates/skills/extend-app-builder-app.md';
 import headerNavFooterContent from '../templates/skills/header-nav-footer.md';
 import refineVisualMatchContent from '../templates/skills/refine-visual-match.md';
 import registerCustomBlockContent from '../templates/skills/register-custom-block.md';
@@ -151,8 +152,11 @@ export async function writeSkillFiles(
     // with or without a storefront) also get the Developer Agent's
     // integration-starter-kit skills, sourced from the isolated MCP tools dir
     // (`.demo-builder-mcp/` — installed by installAiDefaultsMcpTools before
-    // this writer runs, on both the creation and regenerate paths).
+    // this writer runs, on both the creation and regenerate paths) — plus the
+    // extend-app-builder-app skill teaching the runtime API-access loop
+    // (list_console_apis → confirm → add_console_apis → build → deploy).
     // copyAdobeSkillBundle skips silently when the package isn't there.
+    const written = DEMO_BUILDER_SKILLS.map(({ filename }) => filename);
     if (projectNeedsAppBuilderTooling(project)) {
         await copyAdobeSkillBundle(
             resolveMcpToolsDir(projectPath),
@@ -160,12 +164,14 @@ export async function writeSkillFiles(
             'appbuilder',
             skillsDir,
         );
+        await writeSkill('extend-app-builder-app.md', extendAppBuilderAppContent);
+        written.push('extend-app-builder-app.md');
     }
 
     // Summary for the handler boundary to log (Adobe bundle skills are copied
-    // into subdirectories and aren't included here — only the always-written
+    // into subdirectories and aren't included here — only the written
     // Demo-Builder skill filenames).
-    return { written: DEMO_BUILDER_SKILLS.map(({ filename }) => filename) };
+    return { written };
 }
 
 // ─── Private helpers ──────────────────────────────────────────────────────────

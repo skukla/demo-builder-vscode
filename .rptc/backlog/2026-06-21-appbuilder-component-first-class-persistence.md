@@ -1,31 +1,55 @@
-# App Builder component — first-class persistence & provisioning
+# App Builder component — edit-mode rehydration (+ ReviewStep visibility bug)
 
-> Date prefix = deferral snapshot (scoped during Slice 2 "Project Builder" implementation, 2026-06-21).
+> Date prefix = original deferral snapshot (Slice 2, 2026-06-21). **Rewritten 2026-07-09**
+> after the slice-3 staleness research (`.rptc/research/appbuilder-slice3-staleness/research.md`)
+> found two of the original three claims already resolved on `develop`.
 
-## Provenance
+## Resolved since the original filing (do NOT redo)
 
-Deferred out of **Slice 2 — two-column "Project Builder" wizard step** (plan: `quiet-orbiting-sutherland`, branch `feature/project-builder-ux`). Slice 2 moved stack + component + block-library selection out of `ArchitectureModal` into the new `project-builder` wizard step (`src/features/project-creation/ui/builder/`) and retired `ArchitectureModal`/`useModalState`. Slice 2 was **selection-only**; the three gaps below were left for later because they are coupled facets of making `selectedAppBuilderComponents` a first-class persisted/provisioned field, and today nothing exercises that path (the catalog is meshes-only, and meshes route through the dual-flow into `components.dependencies`, which "D3" removes).
+- **`buildProjectConfig` serialization** — EXISTS: `wizardHelpers.ts` serializes both
+  `selectedAppBuilderComponents` and `appBuilderComponentSources`.
+- **Custom-URL creation-side provisioning** — EXISTS: creation Phase 3b
+  (`executor.ts` `executeAppBuilderIntegrationsPhase`) provisions custom-URL entries via
+  `buildCustomIntegrationEntry`; the custom door was REBUILT as `CustomIntegrationRow`
+  (live in `integrationsStepBodies.tsx`). The old `showCustomDoor={false}` mechanism is
+  obsolete — `ProjectBuilderStep` no longer exists and `AppBuilderComponentsStepContent`
+  is production-dead (see the slice-3 item for its disposition).
 
-## Goal / Scope
+## Remaining scope
 
-Make `selectedAppBuilderComponents` a first-class persisted + provisioned field, removing the transitional mesh dual-flow. Three coupled gaps:
-
-1. **Edit-mode rehydration** of `selectedAppBuilderComponents` / `selectedOptionalDependencies` in `buildEditModeState`. Coupled to #3 — you cannot rehydrate what was never serialized. Required meshes re-derive from the stack, so today only an *optional, non-stack-native* mesh selection is lost on edit (rare). Low user impact until non-mesh components exist.
-
-2. **Custom-URL creation-side provisioning** (`onAddCustomAppBuilderComponent`). Needs #3 **plus** creation-side clone/provision of an arbitrary GitHub repo as an App Builder component (the D1/D2 runner is wired to the dashboard, not to creation). A real feature, not wiring. **Slice 2 HID the inert custom-URL door** via `AppBuilderComponentsStepContent`'s `showCustomDoor` prop (the builder passes `showCustomDoor={false}`; default stays `true` for any other caller). Re-enable the door (`showCustomDoor` back to default / drop the override in `ProjectBuilderStep`) when this provisioning lands.
-
-3. **`buildProjectConfig` serialization** of `selectedAppBuilderComponents`. Dead data until creation consumes non-mesh components.
-
-## Execution plan
-
-Land together with the **D3 dual-flow removal** (the mesh ↔ `selectedOptionalDependencies` mirror-write in `appBuilderComponentSelectionState.ts` + `useProjectBuilder.onAppBuilderComponentToggle`, locked by `tests/features/project-creation/ui/wizard/useWizardState-dualFlow.test.tsx`). Order: (3) serialize → (1) rehydrate → (2) provision + re-enable door. Each phase TDD; keep the dual-flow regression green until D3 actually removes it.
+1. **Edit-mode rehydration** (the one surviving original claim, deepened): `useWizardState`
+   `buildEditModeState` rehydrates neither `selectedAppBuilderComponents`,
+   `appBuilderComponentSources`, nor `selectedOptionalDependencies` — and the saved
+   project record stores none of them (`ImportedSettings` has no fields; the persisted
+   `Project` carries only the runner's deploy-state map `project.appBuilderComponents`),
+   so there is nothing to rehydrate FROM. Fixing this means persisting the selections (or
+   re-deriving them from `project.appBuilderComponents` + package binding).
+   Design note from the research: package-BOUND components are derivable from the package
+   id and need no persistence — only free-form selections have this gap.
+2. **ReviewStep App Builder row reads the wrong field** (live user-visible bug,
+   independent of the rest): `reviewStepHelpers.tsx` reads `components.appBuilder`, which
+   the wizard hardcodes to `[]` — even a user-selected catalog integration is invisible on
+   Review. Should read `selectedAppBuilderComponents` (and show custom sources).
+   Small enough to fix standalone; also `BuildYourProjectSummary` shows only an API Mesh
+   row (`buildSummary.ts` `integrationsSummaryGroup`) — non-mesh integrations never appear.
+3. **D3 dual-flow removal** (unchanged): the mesh ↔ `selectedOptionalDependencies`
+   mirror-write in `appBuilderComponentSelectionState.ts` + `useProjectBuilder`, locked by
+   `useWizardState-dualFlow.test.tsx`. Do NOT remove before creation consumes mesh ids
+   from `selectedAppBuilderComponents`; the auth/IO step gating depends on
+   `hasMeshInDependencies` (now in `src/core/constants.ts`, consumed by
+   `wizardHelpers.ts` step filtering and `storefrontSetupHandlers.ts`).
 
 ## Constraints
 
-- Repo is PUBLIC: route any per-component secret through user-scoped VS Code settings; never bundle as constants/fixtures.
-- Do NOT remove the dual-flow mirror-write before creation actually consumes `selectedAppBuilderComponents` — the Adobe-auth/IO step gating depends on it (`useWizardState.ts` `hasMeshInDependencies`).
-- Files <500 lines, functions <50.
+- Repo is PUBLIC: route any per-component secret through user-scoped VS Code settings.
+- Keep the dual-flow regression test green until D3 actually removes the mirror-write.
 
 ## Kickoff prompt
 
-"Resume the deferred App Builder component first-class persistence work (`.rptc/backlog/2026-06-21-appbuilder-component-first-class-persistence.md`). Land it WITH the D3 dual-flow removal: serialize `selectedAppBuilderComponents` in `buildProjectConfig`, rehydrate it (and `selectedOptionalDependencies`) in `buildEditModeState`, add creation-side provisioning for custom-URL components, then re-enable the custom door (`showCustomDoor`) in `ProjectBuilderStep`/`AppBuilderComponentsStepContent`. Strict TDD; keep the dual-flow regression test green until D3 removes the mirror-write."
+"Resume the App Builder persistence remainder
+(`.rptc/backlog/2026-06-21-appbuilder-component-first-class-persistence.md` — rewritten
+2026-07-09; serialization + custom-URL provisioning are DONE, don't redo). Scope: fix the
+ReviewStep/BuildYourProjectSummary integration visibility (reads always-empty
+`components.appBuilder`), then edit-mode rehydration of `selectedAppBuilderComponents` /
+`appBuilderComponentSources` / `selectedOptionalDependencies` (requires persisting or
+re-deriving them), landed WITH the D3 dual-flow removal. Strict TDD."

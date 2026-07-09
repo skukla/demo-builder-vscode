@@ -9,7 +9,10 @@
 
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
-import { generateAgentsMd, writeAgentsMd } from '@/features/project-creation/services/aiContextWriter';
+import {
+    generateAgentsMd,
+    writeAgentsMd,
+} from '@/features/project-creation/services/aiContextWriter';
 import type { Project, ComponentInstance } from '@/types/base';
 import type { Stack } from '@/types/stacks';
 
@@ -91,7 +94,12 @@ function makeHeadlessProject(overrides: Partial<Project> = {}): Project {
 
 const STACKS: Stack[] = [
     makeStack({ id: 'eds-paas', name: 'Edge Delivery + PaaS' }),
-    makeStack({ id: 'headless-paas', name: 'Headless + PaaS', frontend: 'headless', backend: 'adobe-commerce-paas' }),
+    makeStack({
+        id: 'headless-paas',
+        name: 'Headless + PaaS',
+        frontend: 'headless',
+        backend: 'adobe-commerce-paas',
+    }),
 ];
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -329,6 +337,23 @@ describe('aiContextWriter', () => {
 
                 expect(result).toContain('Try asking Claude');
             });
+
+            it('includes the Adding Adobe API Access section for App Builder-adjacent projects', () => {
+                // EDS storefront satisfies projectNeedsAppBuilderTooling.
+                const result = generateAgentsMd(makeEdsProject(), STACKS);
+
+                expect(result).toContain('## Adding Adobe API Access');
+                expect(result).toContain('list_console_apis');
+                expect(result).toContain('add_console_apis');
+                expect(result).toContain('extend-app-builder-app');
+            });
+
+            it('omits the Adding Adobe API Access section for bare projects', () => {
+                // No storefront, mesh, or app-builder component.
+                const result = generateAgentsMd(makeHeadlessProject(), STACKS);
+
+                expect(result).not.toContain('## Adding Adobe API Access');
+            });
         });
     });
 
@@ -339,9 +364,7 @@ describe('aiContextWriter', () => {
 
         function captureWritten(filePath: string): string {
             const writeFileMock = fsPromises.writeFile as jest.Mock;
-            const call = writeFileMock.mock.calls.find(
-                ([p]: [string]) => p === filePath,
-            );
+            const call = writeFileMock.mock.calls.find(([p]: [string]) => p === filePath);
             if (!call) {
                 throw new Error(`No writeFile call found for path: ${filePath}`);
             }
@@ -369,7 +392,9 @@ describe('aiContextWriter', () => {
             const project = makeEdsProject();
             await writeAgentsMd('/projects/test-project', project, STACKS);
 
-            const content = captureWritten(path.join('/projects/test-project', '.claude', 'CLAUDE.md'));
+            const content = captureWritten(
+                path.join('/projects/test-project', '.claude', 'CLAUDE.md')
+            );
             expect(content.trim()).toBe('see @AGENTS.md');
         });
 
@@ -379,9 +404,7 @@ describe('aiContextWriter', () => {
 
             const mkdirMock = fsPromises.mkdir as jest.Mock;
             const claudeDir = path.join('/projects/test-project', '.claude');
-            const mkdirCall = mkdirMock.mock.calls.find(
-                ([dir]: [string]) => dir === claudeDir,
-            );
+            const mkdirCall = mkdirMock.mock.calls.find(([dir]: [string]) => dir === claudeDir);
             expect(mkdirCall).toBeDefined();
         });
 
