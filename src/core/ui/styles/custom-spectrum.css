@@ -2034,14 +2034,13 @@ button[class*="spectrum-Button"][disabled],
     gap: 8px !important;
 }
 
-/* Badges in a single horizontal row (wrap only if the band is too narrow) so they
-   use the masthead's width instead of stacking into three rows. */
+/* Badges STACKED one per line (2026-07-09, reversing the earlier inline row):
+   mixed-length statuses read as a scannable column. */
 .dashboard-status-badges {
     display: flex !important;
-    flex-flow: row wrap !important;
-    align-items: center !important;
-    column-gap: 28px !important;
-    row-gap: 4px !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    row-gap: 8px !important;
 }
 
 /* Each badge is a self-contained inline unit: dot · label · value (· action). */
