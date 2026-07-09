@@ -7,8 +7,15 @@ export interface BlockLibrary {
     type: 'standalone' | 'storefront';
     source: AddonSource;
     stackTypes: string[];
+    /** Package IDs this library is NATIVE to: always included AND locked (not deselectable). */
     nativeForPackages?: string[];
     onlyForPackages?: string[];
+    /**
+     * Package IDs this library is pre-selected for by DEFAULT: seeded checked on
+     * stack select but stays in the selectable list (user can deselect) — unlike
+     * nativeForPackages' locked inclusion.
+     */
+    defaultForPackages?: string[];
     default?: boolean;
     /** DA.live content source containing block documentation pages (.da/library/blocks/) */
     contentSource?: { org: string; site: string };

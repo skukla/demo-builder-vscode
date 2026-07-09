@@ -30,6 +30,7 @@ jest.mock('@/features/project-creation/services/demoPackageLoader', () => ({
 jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
     getNativeBlockLibraries: jest.fn(() => []),
     getDefaultBlockLibraryIds: jest.fn(() => []),
+    getPackageDefaultBlockLibraryIds: jest.fn(() => []),
 }));
 
 // onBlockLibrariesChange posts the one-time "save defaults" tip offer.
@@ -166,7 +167,7 @@ function setup(initial: Partial<WizardState> = {}, extras: SetupExtras = {}) {
                 blockLibraryDefaults,
                 customBlockLibraryDefaults,
             }),
-        { initialProps: { state: stateRef.current } },
+        { initialProps: { state: stateRef.current } }
     );
 
     return { result, rerender, updateState, stateRef };
@@ -190,7 +191,7 @@ describe('useProjectBuilder — mesh dual-flow mirror-write', () => {
         expect(updateState).toHaveBeenCalledWith(
             expect.objectContaining({
                 selectedAppBuilderComponents: ['headless-commerce-mesh'],
-            }),
+            })
         );
     });
 
@@ -202,7 +203,7 @@ describe('useProjectBuilder — mesh dual-flow mirror-write', () => {
         expect(updateState).toHaveBeenCalledWith(
             expect.objectContaining({
                 selectedOptionalDependencies: [COMPONENT_IDS.HEADLESS_COMMERCE_MESH],
-            }),
+            })
         );
     });
 
@@ -216,7 +217,7 @@ describe('useProjectBuilder — mesh dual-flow mirror-write', () => {
             result.current.onAppBuilderComponentToggle('headless-commerce-mesh', false);
         });
         expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({ selectedAppBuilderComponents: [] }),
+            expect.objectContaining({ selectedAppBuilderComponents: [] })
         );
     });
 
@@ -230,7 +231,7 @@ describe('useProjectBuilder — mesh dual-flow mirror-write', () => {
             result.current.onAppBuilderComponentToggle('headless-commerce-mesh', false);
         });
         expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({ selectedOptionalDependencies: [] }),
+            expect.objectContaining({ selectedOptionalDependencies: [] })
         );
     });
 
@@ -257,7 +258,7 @@ describe('useProjectBuilder — mesh dual-flow mirror-write', () => {
         });
         const call = updateState.mock.calls[0][0] as Partial<WizardState>;
         expect(call.selectedOptionalDependencies).toEqual(
-            expect.arrayContaining(['some-other-dep', COMPONENT_IDS.HEADLESS_COMMERCE_MESH]),
+            expect.arrayContaining(['some-other-dep', COMPONENT_IDS.HEADLESS_COMMERCE_MESH])
         );
     });
 });
@@ -283,7 +284,7 @@ describe('useProjectBuilder — non-mesh isolation', () => {
         expect(updateState).toHaveBeenCalledWith(
             expect.objectContaining({
                 selectedAppBuilderComponents: ['some-non-mesh-component'],
-            }),
+            })
         );
     });
 
@@ -311,7 +312,7 @@ describe('useProjectBuilder — mesh mapping coverage', () => {
         expect(updateState).toHaveBeenCalledWith(
             expect.objectContaining({
                 selectedOptionalDependencies: [COMPONENT_IDS.EDS_COMMERCE_MESH],
-            }),
+            })
         );
     });
 
@@ -323,7 +324,7 @@ describe('useProjectBuilder — mesh mapping coverage', () => {
         expect(updateState).toHaveBeenCalledWith(
             expect.objectContaining({
                 selectedOptionalDependencies: [COMPONENT_IDS.EDS_ACCS_MESH],
-            }),
+            })
         );
     });
 
@@ -337,7 +338,7 @@ describe('useProjectBuilder — mesh mapping coverage', () => {
         });
         const call = updateState.mock.calls[0][0] as Partial<WizardState>;
         expect(call.selectedAppBuilderComponents).toEqual(
-            expect.arrayContaining(['some-non-mesh-component', 'headless-commerce-mesh']),
+            expect.arrayContaining(['some-non-mesh-component', 'headless-commerce-mesh'])
         );
     });
 });
@@ -349,7 +350,7 @@ describe('useProjectBuilder — onStackSelect mesh reset (cross-package leak gua
             result.current.onStackSelect('headless-paas');
         });
         expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({ selectedStack: 'headless-paas' }),
+            expect.objectContaining({ selectedStack: 'headless-paas' })
         );
     });
 
@@ -365,7 +366,7 @@ describe('useProjectBuilder — onStackSelect mesh reset (cross-package leak gua
         expect(updateState).toHaveBeenCalledWith(
             expect.objectContaining({
                 selectedOptionalDependencies: [COMPONENT_IDS.HEADLESS_COMMERCE_MESH],
-            }),
+            })
         );
     });
 
@@ -379,7 +380,7 @@ describe('useProjectBuilder — onStackSelect mesh reset (cross-package leak gua
             result.current.onStackSelect('headless-paas');
         });
         expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({ selectedOptionalDependencies: [] }),
+            expect.objectContaining({ selectedOptionalDependencies: [] })
         );
     });
 });
@@ -418,7 +419,7 @@ describe('useProjectBuilder — onArchitectureChange threading', () => {
             result.current.onStackSelect('headless-paas');
         });
         expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({ selectedStack: 'headless-paas' }),
+            expect.objectContaining({ selectedStack: 'headless-paas' })
         );
     });
 });
@@ -434,7 +435,7 @@ describe('useProjectBuilder — edsConfig derivation on stack select', () => {
             expect.objectContaining({
                 templateOwner: 'skukla',
                 templateRepo: 'citisignal-eds',
-            }),
+            })
         );
     });
 
@@ -458,7 +459,7 @@ describe('useProjectBuilder — optional dependencies handler', () => {
             result.current.onOptionalDependenciesChange(['some-dep']);
         });
         expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({ selectedOptionalDependencies: ['some-dep'] }),
+            expect.objectContaining({ selectedOptionalDependencies: ['some-dep'] })
         );
     });
 });
@@ -475,7 +476,7 @@ describe('useProjectBuilder — onAddCustomAppBuilderComponent (custom URL door)
                 appBuilderComponentSources: {
                     'acme-widget': { owner: 'acme', repo: 'widget', branch: undefined },
                 },
-            }),
+            })
         );
     });
 
@@ -505,7 +506,7 @@ describe('useProjectBuilder — onAddCustomAppBuilderComponent (custom URL door)
         });
         const call = updateState.mock.calls[0][0] as Partial<WizardState>;
         expect(call.selectedAppBuilderComponents).toEqual(
-            expect.arrayContaining(['prior-repo', 'acme-widget']),
+            expect.arrayContaining(['prior-repo', 'acme-widget'])
         );
         expect(call.appBuilderComponentSources).toEqual({
             'prior-repo': { owner: 'prior', repo: 'repo' },

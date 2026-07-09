@@ -15,6 +15,7 @@ import {
     getAvailableBlockLibraries,
     getNativeBlockLibraries,
     getDefaultBlockLibraryIds,
+    getPackageDefaultBlockLibraryIds,
     getBlockLibrarySource,
     getBlockLibraryContentSource,
     getBlockLibraryName,
@@ -44,7 +45,7 @@ describe('blockLibraryLoader', () => {
             const libs = getAvailableBlockLibraries(edsStack, 'custom');
 
             expect(libs.length).toBeGreaterThan(0);
-            libs.forEach(lib => {
+            libs.forEach((lib) => {
                 expect(lib.stackTypes).toContain('eds-storefront');
             });
         });
@@ -59,19 +60,22 @@ describe('blockLibraryLoader', () => {
             expect(libs).toHaveLength(0);
         });
 
-        it('should not include native libraries in available list (CitiSignal blocks native to CitiSignal)', () => {
+        it('keeps package-DEFAULT libraries in the available list (demo-team-blocks default for CitiSignal, deselectable)', () => {
+            // demo-team-blocks moved from nativeForPackages (locked) to
+            // defaultForPackages (pre-selected but deselectable) for citisignal
+            // — so it stays selectable here.
             const edsStack = makeStack();
             const libs = getAvailableBlockLibraries(edsStack, 'citisignal');
 
-            const citisignalLib = libs.find(l => l.id === 'demo-team-blocks');
-            expect(citisignalLib).toBeUndefined();
+            const citisignalLib = libs.find((l) => l.id === 'demo-team-blocks');
+            expect(citisignalLib).toBeDefined();
         });
 
         it('should include CitiSignal blocks for non-CitiSignal packages', () => {
             const edsStack = makeStack();
             const libs = getAvailableBlockLibraries(edsStack, 'custom');
 
-            const citisignalLib = libs.find(l => l.id === 'demo-team-blocks');
+            const citisignalLib = libs.find((l) => l.id === 'demo-team-blocks');
             expect(citisignalLib).toBeDefined();
             expect(citisignalLib?.type).toBe('storefront');
         });
@@ -80,7 +84,7 @@ describe('blockLibraryLoader', () => {
             const edsStack = makeStack();
             const libs = getAvailableBlockLibraries(edsStack, 'buildright');
 
-            const buildrightLib = libs.find(l => l.id === 'buildright-blocks');
+            const buildrightLib = libs.find((l) => l.id === 'buildright-blocks');
             expect(buildrightLib).toBeUndefined();
         });
 
@@ -89,7 +93,7 @@ describe('blockLibraryLoader', () => {
 
             for (const pkg of ['citisignal', 'buildright', 'custom']) {
                 const libs = getAvailableBlockLibraries(edsStack, pkg);
-                const isle5 = libs.find(l => l.id === 'isle5');
+                const isle5 = libs.find((l) => l.id === 'isle5');
                 expect(isle5).toBeDefined();
                 expect(isle5?.type).toBe('standalone');
             }
@@ -99,7 +103,7 @@ describe('blockLibraryLoader', () => {
             const edsStack = makeStack();
             const libs = getAvailableBlockLibraries(edsStack, 'isle5');
 
-            const isle5 = libs.find(l => l.id === 'isle5');
+            const isle5 = libs.find((l) => l.id === 'isle5');
             expect(isle5).toBeUndefined();
         });
 
@@ -117,7 +121,7 @@ describe('blockLibraryLoader', () => {
             const libs = getAvailableBlockLibraries(edsStack, 'custom');
 
             // BuildRight blocks are pinned to buildright only
-            const buildrightLib = libs.find(l => l.id === 'buildright-blocks');
+            const buildrightLib = libs.find((l) => l.id === 'buildright-blocks');
             expect(buildrightLib).toBeUndefined();
         });
 
@@ -129,23 +133,22 @@ describe('blockLibraryLoader', () => {
             expect(libs).toHaveLength(2);
         });
 
-        it('should return 1 library for CitiSignal on EDS', () => {
+        it('should return 2 libraries for CitiSignal on EDS', () => {
             const edsStack = makeStack();
             const libs = getAvailableBlockLibraries(edsStack, 'citisignal');
 
-            // CitiSignal sees: isle5 (not demo-team-blocks — native, not buildright-blocks — pinned)
-            expect(libs).toHaveLength(1);
-            expect(libs[0].id).toBe('isle5');
+            // CitiSignal sees: demo-team-blocks (package-DEFAULT, deselectable) +
+            // isle5 (not buildright-blocks — pinned to buildright)
+            expect(libs.map((l) => l.id).sort()).toEqual(['demo-team-blocks', 'isle5']);
         });
     });
 
     describe('getNativeBlockLibraries', () => {
-        it('should return demo-team-blocks as native for CitiSignal package', () => {
+        it('demo-team-blocks is NOT native for CitiSignal (moved to defaultForPackages)', () => {
             const edsStack = makeStack();
             const natives = getNativeBlockLibraries(edsStack, 'citisignal');
 
-            expect(natives).toHaveLength(1);
-            expect(natives[0].id).toBe('demo-team-blocks');
+            expect(natives).toHaveLength(0);
         });
 
         it('should return buildright-blocks as native for BuildRight package', () => {
@@ -232,13 +235,25 @@ describe('blockLibraryLoader', () => {
 
         it('filters out native libraries even when userDefaults includes them', () => {
             const edsStack = makeStack();
-            const userDefaults = ['isle5', 'demo-team-blocks'];
-            // CitiSignal package should not see demo-team-blocks (it's native to citisignal,
-            // auto-installed via the native path, not exposed as a checkbox).
-            const defaults = getDefaultBlockLibraryIds(edsStack, 'citisignal', userDefaults);
+            const userDefaults = ['isle5', 'buildright-blocks'];
+            // BuildRight package should not see buildright-blocks as a checkbox
+            // default (it's native to buildright — auto-installed via the
+            // native path, not exposed as a checkbox).
+            const defaults = getDefaultBlockLibraryIds(edsStack, 'buildright', userDefaults);
 
             expect(defaults).toContain('isle5');
-            expect(defaults).not.toContain('demo-team-blocks');
+            expect(defaults).not.toContain('buildright-blocks');
+        });
+
+        it('demo-team-blocks IS a checkbox default for CitiSignal when userDefaults opts in', () => {
+            // Since the move to defaultForPackages it is selectable for citisignal,
+            // so a user opt-in can also cover it.
+            const edsStack = makeStack();
+            const defaults = getDefaultBlockLibraryIds(edsStack, 'citisignal', [
+                'demo-team-blocks',
+            ]);
+
+            expect(defaults).toContain('demo-team-blocks');
         });
 
         it('when explicitly opted in via userDefaults, isle5 IS pre-selected for non-isle5 packages', () => {
@@ -250,6 +265,26 @@ describe('blockLibraryLoader', () => {
             const defaults = getDefaultBlockLibraryIds(edsStack, 'custom', ['isle5']);
 
             expect(defaults).toContain('isle5');
+        });
+    });
+
+    describe('getPackageDefaultBlockLibraryIds (pre-selected but deselectable)', () => {
+        it('returns demo-team-blocks for CitiSignal (seeded checked, user can uncheck)', () => {
+            const edsStack = makeStack();
+            expect(getPackageDefaultBlockLibraryIds(edsStack, 'citisignal')).toEqual([
+                'demo-team-blocks',
+            ]);
+        });
+
+        it('returns [] for packages the library does not default to', () => {
+            const edsStack = makeStack();
+            expect(getPackageDefaultBlockLibraryIds(edsStack, 'custom')).toEqual([]);
+            expect(getPackageDefaultBlockLibraryIds(edsStack, 'isle5')).toEqual([]);
+        });
+
+        it('returns [] for non-EDS stacks', () => {
+            const headlessStack = makeStack({ id: 'headless-paas', frontend: 'headless' });
+            expect(getPackageDefaultBlockLibraryIds(headlessStack, 'citisignal')).toEqual([]);
         });
     });
 
@@ -354,18 +389,18 @@ describe('blockLibraryLoader', () => {
         // Load both config files once for this describe block
         const projectRoot = path.resolve(__dirname, '../../../../');
         const packageJson = JSON.parse(
-            fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf-8'),
+            fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf-8')
         );
         const blockLibrariesJson = JSON.parse(
             fs.readFileSync(
                 path.join(projectRoot, 'src/features/project-creation/config/block-libraries.json'),
-                'utf-8',
-            ),
+                'utf-8'
+            )
         );
 
         // Extract the settings schema from package.json
         const blockLibSection = packageJson.contributes.configuration.find(
-            (s: { title: string }) => s.title === 'Block Libraries',
+            (s: { title: string }) => s.title === 'Block Libraries'
         );
         const settingSchema = blockLibSection?.properties?.['demoBuilder.blockLibraries.defaults'];
         const enumValues: string[] = settingSchema?.items?.enum ?? [];
@@ -387,8 +422,8 @@ describe('blockLibraryLoader', () => {
         // because they would mislead users into selecting them for incompatible brands.
         // Note: matches production blockLibraryLoader logic — presence of onlyForPackages (even [])
         // marks a library as brand-scoped, consistent with isBlockLibraryAvailableForPackage.
-        const globalLibraries = libraries.filter(l => !l.onlyForPackages);
-        const globalLibraryIds = globalLibraries.map(l => l.id);
+        const globalLibraries = libraries.filter((l) => !l.onlyForPackages);
+        const globalLibraryIds = globalLibraries.map((l) => l.id);
 
         it('should only include global (non-brand-scoped) library IDs in the settings enum', () => {
             // Use order-independent comparison: both arrays must contain the same IDs.
@@ -398,9 +433,7 @@ describe('blockLibraryLoader', () => {
         });
 
         it('should not include brand-scoped libraries (onlyForPackages) in the settings enum', () => {
-            const brandScopedIds = libraries
-                .filter(l => l.onlyForPackages)
-                .map(l => l.id);
+            const brandScopedIds = libraries.filter((l) => l.onlyForPackages).map((l) => l.id);
             for (const id of brandScopedIds) {
                 expect(enumValues).not.toContain(id);
             }
@@ -413,7 +446,7 @@ describe('blockLibraryLoader', () => {
         it('should include each global library name in its enumDescription', () => {
             // Order-independent: verify each global library has some enumDescription containing its name.
             globalLibraries.forEach((lib) => {
-                expect(enumDescriptions.some(d => d.includes(lib.name))).toBe(true);
+                expect(enumDescriptions.some((d) => d.includes(lib.name))).toBe(true);
             });
         });
 
@@ -425,7 +458,8 @@ describe('blockLibraryLoader', () => {
         });
 
         it('should have demoBuilder.blockLibraries.custom setting in package.json', () => {
-            const customSetting = blockLibSection?.properties?.['demoBuilder.blockLibraries.custom'];
+            const customSetting =
+                blockLibSection?.properties?.['demoBuilder.blockLibraries.custom'];
             expect(customSetting).toBeDefined();
             expect(customSetting.type).toBe('array');
             expect(customSetting.default).toEqual([]);

@@ -27,11 +27,8 @@ const config = blockLibrariesConfig as unknown as BlockLibrariesConfig;
  * @param packageId - The selected package ID (e.g., "citisignal")
  * @returns Array of available block libraries
  */
-export function getAvailableBlockLibraries(
-    stack: Stack,
-    packageId: string,
-): BlockLibrary[] {
-    return config.libraries.filter(lib => {
+export function getAvailableBlockLibraries(stack: Stack, packageId: string): BlockLibrary[] {
+    return config.libraries.filter((lib) => {
         if (!lib.stackTypes.includes(stack.frontend)) return false;
         if (lib.nativeForPackages?.includes(packageId)) return false;
         if (lib.onlyForPackages && !lib.onlyForPackages.includes(packageId)) return false;
@@ -50,14 +47,27 @@ export function getAvailableBlockLibraries(
  * @param packageId - The selected package ID
  * @returns Array of native block libraries (empty if none)
  */
-export function getNativeBlockLibraries(
-    stack: Stack,
-    packageId: string,
-): BlockLibrary[] {
-    return config.libraries.filter(lib => {
+export function getNativeBlockLibraries(stack: Stack, packageId: string): BlockLibrary[] {
+    return config.libraries.filter((lib) => {
         if (!lib.stackTypes.includes(stack.frontend)) return false;
         return lib.nativeForPackages?.includes(packageId) ?? false;
     });
+}
+
+/**
+ * Get the IDs of SELECTABLE libraries that are package-default for `packageId`
+ * (`defaultForPackages`): seeded pre-checked on stack select, but the user can
+ * deselect them — unlike natives, they stay in the selectable list. E.g. the
+ * Demo Team blocks default-on for the CitiSignal hybrid package.
+ *
+ * @param stack - The selected stack object
+ * @param packageId - The selected package ID
+ * @returns Array of library IDs to seed as selected
+ */
+export function getPackageDefaultBlockLibraryIds(stack: Stack, packageId: string): string[] {
+    return getAvailableBlockLibraries(stack, packageId)
+        .filter((lib) => lib.defaultForPackages?.includes(packageId) ?? false)
+        .map((lib) => lib.id);
 }
 
 /**
@@ -88,13 +98,9 @@ export function getDefaultBlockLibraryIds(
 ): string[] {
     const available = getAvailableBlockLibraries(stack, packageId);
     if (userDefaults) {
-        return available
-            .filter(lib => userDefaults.includes(lib.id))
-            .map(lib => lib.id);
+        return available.filter((lib) => userDefaults.includes(lib.id)).map((lib) => lib.id);
     }
-    return available
-        .filter(lib => lib.default)
-        .map(lib => lib.id);
+    return available.filter((lib) => lib.default).map((lib) => lib.id);
 }
 
 /**
@@ -109,7 +115,7 @@ export function getDefaultBlockLibraryIds(
  * @returns True if the library may be installed for this package
  */
 export function isBlockLibraryAvailableForPackage(libraryId: string, packageId: string): boolean {
-    const lib = config.libraries.find(l => l.id === libraryId);
+    const lib = config.libraries.find((l) => l.id === libraryId);
     if (!lib) return false;
     if (lib.onlyForPackages && !lib.onlyForPackages.includes(packageId)) return false;
     return true;
@@ -122,7 +128,7 @@ export function isBlockLibraryAvailableForPackage(libraryId: string, packageId: 
  * @returns The AddonSource, or undefined if the library doesn't exist
  */
 export function getBlockLibrarySource(libraryId: string): AddonSource | undefined {
-    const lib = config.libraries.find(l => l.id === libraryId);
+    const lib = config.libraries.find((l) => l.id === libraryId);
     return lib?.source;
 }
 
@@ -136,8 +142,10 @@ export function getBlockLibrarySource(libraryId: string): AddonSource | undefine
  * @param libraryId - The block library ID (e.g., "demo-team-blocks")
  * @returns The content source {org, site}, or undefined if not configured
  */
-export function getBlockLibraryContentSource(libraryId: string): { org: string; site: string } | undefined {
-    const lib = config.libraries.find(l => l.id === libraryId);
+export function getBlockLibraryContentSource(
+    libraryId: string,
+): { org: string; site: string } | undefined {
+    const lib = config.libraries.find((l) => l.id === libraryId);
     return lib?.contentSource;
 }
 
@@ -148,6 +156,6 @@ export function getBlockLibraryContentSource(libraryId: string): { org: string; 
  * @returns The library name, or the ID as fallback
  */
 export function getBlockLibraryName(libraryId: string): string {
-    const lib = config.libraries.find(l => l.id === libraryId);
+    const lib = config.libraries.find((l) => l.id === libraryId);
     return lib?.name ?? libraryId;
 }

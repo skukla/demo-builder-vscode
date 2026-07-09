@@ -25,6 +25,7 @@ import { useCallback } from 'react';
 import {
     getNativeBlockLibraries,
     getDefaultBlockLibraryIds,
+    getPackageDefaultBlockLibraryIds,
 } from '../../services/blockLibraryLoader';
 import { getResolvedMeshRequirement } from '../../services/demoPackageLoader';
 import {
@@ -142,7 +143,9 @@ function buildEdsConfigUpdate(
  */
 function resolveDefaultAddons(pkg: DemoPackage | undefined, stackObj: Stack | undefined): string[] {
     const requiredAddons = pkg ? getRequiredAddons(pkg) : [];
-    const defaultAddons = (stackObj?.optionalAddons || []).filter(a => a.default).map(a => a.id);
+    const defaultAddons = (stackObj?.optionalAddons || [])
+        .filter((a) => a.default)
+        .map((a) => a.id);
     return [...new Set([...requiredAddons, ...defaultAddons])];
 }
 
@@ -169,11 +172,18 @@ function resolveBlockLibrarySeed(
         return { blockLibraries: [], customLibraries: [] };
     }
     const defaults = getDefaultBlockLibraryIds(stackObj, packageId, blockLibraryDefaults);
-    const nativeIds = getNativeBlockLibraries(stackObj, packageId).map(l => l.id);
-    const customLibraries = (stateCustomLibraries && stateCustomLibraries.length > 0)
-        ? stateCustomLibraries
-        : (customBlockLibraryDefaults ?? []);
-    return { blockLibraries: [...new Set([...nativeIds, ...defaults])], customLibraries };
+    const nativeIds = getNativeBlockLibraries(stackObj, packageId).map((l) => l.id);
+    // Package-declared defaults (defaultForPackages): seeded checked but
+    // DESELECTABLE — they stay in the selectable list, unlike locked natives.
+    const packageDefaults = getPackageDefaultBlockLibraryIds(stackObj, packageId);
+    const customLibraries =
+        stateCustomLibraries && stateCustomLibraries.length > 0
+            ? stateCustomLibraries
+            : (customBlockLibraryDefaults ?? []);
+    return {
+        blockLibraries: [...new Set([...nativeIds, ...packageDefaults, ...defaults])],
+        customLibraries,
+    };
 }
 
 /**
@@ -189,7 +199,13 @@ export function useProjectBuilder(
     updateState: (partial: Partial<WizardState>) => void,
     deps: UseProjectBuilderDeps,
 ): UseProjectBuilderReturn {
-    const { packages, stacks, onArchitectureChange, blockLibraryDefaults, customBlockLibraryDefaults } = deps;
+    const {
+        packages,
+        stacks,
+        onArchitectureChange,
+        blockLibraryDefaults,
+        customBlockLibraryDefaults,
+    } = deps;
     const selectedPackage = state.selectedPackage;
     const stateCustomBlockLibraries = state.customBlockLibraries;
     const selectedStack = state.selectedStack;
@@ -198,8 +214,8 @@ export function useProjectBuilder(
 
     const onStackSelect = useCallback(
         (stackId: string) => {
-            const selectedStackObj = stacks.find(s => s.id === stackId);
-            const currentPkg = packages.find(p => p.id === selectedPackage);
+            const selectedStackObj = stacks.find((s) => s.id === stackId);
+            const currentPkg = packages.find((p) => p.id === selectedPackage);
             const meshDeps = resolveMeshOptionalDeps(currentPkg, stackId, selectedStackObj);
             const edsConfig = buildEdsConfigUpdate(
                 currentPkg,
@@ -263,7 +279,7 @@ export function useProjectBuilder(
 
             const nextOptionalDeps = isSelected
                 ? [...new Set([...selectedOptionalDependencies, ...meshComponentIds])]
-                : selectedOptionalDependencies.filter(dep => !meshComponentIds.includes(dep));
+                : selectedOptionalDependencies.filter((dep) => !meshComponentIds.includes(dep));
 
             updateState({
                 selectedAppBuilderComponents: nextComponents,

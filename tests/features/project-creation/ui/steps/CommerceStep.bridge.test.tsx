@@ -50,6 +50,7 @@ jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
     getAvailableBlockLibraries: jest.fn(() => []),
     getNativeBlockLibraries: jest.fn(() => []),
     getDefaultBlockLibraryIds: jest.fn(() => []),
+    getPackageDefaultBlockLibraryIds: jest.fn(() => []),
 }));
 
 jest.mock('@/features/project-creation/services/demoPackageLoader', () => ({

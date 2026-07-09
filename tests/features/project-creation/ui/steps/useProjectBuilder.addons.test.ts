@@ -29,6 +29,7 @@ jest.mock('@/features/project-creation/services/demoPackageLoader', () => ({
 jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
     getNativeBlockLibraries: jest.fn(() => []),
     getDefaultBlockLibraryIds: jest.fn(() => []),
+    getPackageDefaultBlockLibraryIds: jest.fn(() => []),
 }));
 
 // onBlockLibrariesChange posts the one-time "save defaults" tip offer.
