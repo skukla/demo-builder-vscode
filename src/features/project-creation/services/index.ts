@@ -35,3 +35,5 @@ export {
     installAiDefaultsMcpTools,
     type InstallAiDefaultsResult,
 } from './aiDefaultsInstaller';
+
+export { projectNeedsAppBuilderTooling, aiDefaultsEntryApplies } from './aiToolingGate';

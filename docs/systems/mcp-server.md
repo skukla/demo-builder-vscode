@@ -379,8 +379,11 @@ config when a project is created (and on "Regenerate AI files"):
   ```
   The `node` path is resolved robustly (`which node` → `realpath`, handling
   fnm/nvm shims) because VS Code's `process.execPath` is the Electron binary, not
-  a usable Node. The ai-defaults MCPs (Adobe App Builder + Playwright) are appended
-  for EDS storefront projects, anchored to the per-project isolated MCP tools dir
+  a usable Node. The ai-defaults MCPs are appended per each entry's `requires`
+  gate (aiToolingGate.ts): the Commerce Extensibility Developer Agent for any
+  App Builder-adjacent project (EDS storefront, mesh, or attached App Builder
+  component), Playwright for EDS storefronts only. Anchored to the per-project
+  isolated MCP tools dir
   (`<project>/.demo-builder-mcp/node_modules/`) — decoupled from the storefront's
   own `node_modules` so they install even when the storefront's `npm install` can't.
 - **`.claude/settings.json`** — a `PostToolUse` git-sync hook for EDS projects

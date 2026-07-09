@@ -14,7 +14,6 @@
 
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { COMPONENT_IDS } from '@/core/constants';
 import { sanitizeErrorForLogging } from '@/core/validation';
 import {
     clearMcpCache,
@@ -25,6 +24,7 @@ import {
 import {
     generateAIContextFiles,
     installAiDefaultsMcpTools,
+    projectNeedsAppBuilderTooling,
 } from '@/features/project-creation/services';
 import type { AiPrompt, Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
@@ -188,13 +188,13 @@ export async function handleRegenerateAiFiles(context: HandlerContext): Promise<
 
     // Reuse the wizard's `creationProgress` channel so the AI Capabilities modal
     // can render per-step LoadingDisplay instead of a static spinner. Steps:
-    //   1. Installing storefront dependencies  (EDS only — the long pole)
+    //   1. Installing AI tooling               (App Builder-adjacent projects — the long pole)
     //   2. Writing AGENTS.md                   ┐
     //   3. Writing MCP configuration           │ emitted from generateAIContextFiles
     //   4. Writing skills                      ┘ via the onProgress tracker below
     //   5. Finalizing                          (clearMcpCache)
-    const storefrontPath = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.path;
-    const totalSteps = storefrontPath ? 5 : 4;
+    const needsAiTooling = projectNeedsAppBuilderTooling(project);
+    const totalSteps = needsAiTooling ? 5 : 4;
     let stepNumber = 0;
     const emit = (currentOperation: string, message?: string): void => {
         stepNumber++;
@@ -207,15 +207,15 @@ export async function handleRegenerateAiFiles(context: HandlerContext): Promise<
         });
     };
 
-    if (storefrontPath) {
-        emit('Installing storefront dependencies', 'This can take up to a minute');
+    if (needsAiTooling) {
+        emit('Installing AI tooling', 'This can take up to a minute');
         // MCP tools install into the per-project isolated dir (keyed to
         // project.path), decoupled from the storefront manifest.
-        const installResult = await installAiDefaultsMcpTools(project.path);
+        const installResult = await installAiDefaultsMcpTools(project.path, project);
         if (!installResult.success) {
             return {
                 success: false,
-                error: `Failed to install storefront AI dependencies: ${installResult.error ?? 'unknown error'}`,
+                error: `Failed to install AI tooling dependencies: ${installResult.error ?? 'unknown error'}`,
             };
         }
     }

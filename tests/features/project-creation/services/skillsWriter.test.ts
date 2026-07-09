@@ -84,10 +84,14 @@ function writtenContent(filePattern: string): string | undefined {
 
 // ─── Adobe skill bundle mock helpers ─────────────────────────────────────────
 
-const ADOBE_BUNDLE_RELATIVE = 'node_modules/@adobe-commerce/commerce-extensibility-tools/dist/aem-boilerplate-commerce/skills';
+const ADOBE_BUNDLE_RELATIVE =
+    'node_modules/@adobe-commerce/commerce-extensibility-tools/dist/aem-boilerplate-commerce/skills';
 const EDS_STOREFRONT_BUNDLE_PATH = `/projects/test/components/eds-storefront/${ADOBE_BUNDLE_RELATIVE}`;
 
-function makeDirent(name: string, isDirectory: boolean): { name: string; isDirectory: () => boolean } {
+function makeDirent(
+    name: string,
+    isDirectory: boolean
+): { name: string; isDirectory: () => boolean } {
     return { name, isDirectory: () => isDirectory };
 }
 
@@ -103,14 +107,14 @@ function mockAdobeSkillBundle(skillFiles: Record<string, string[]>): void {
 
     readdirMock.mockImplementation(async (dirPath: string) => {
         if (dirPath === EDS_STOREFRONT_BUNDLE_PATH) {
-            return Object.keys(skillFiles).map(name => makeDirent(name, true));
+            return Object.keys(skillFiles).map((name) => makeDirent(name, true));
         }
         // Skill folder contents
-        const skillName = Object.keys(skillFiles).find(name =>
-            dirPath === path.join(EDS_STOREFRONT_BUNDLE_PATH, name),
+        const skillName = Object.keys(skillFiles).find(
+            (name) => dirPath === path.join(EDS_STOREFRONT_BUNDLE_PATH, name)
         );
         if (skillName) {
-            return skillFiles[skillName].map(filename => makeDirent(filename, false));
+            return skillFiles[skillName].map((filename) => makeDirent(filename, false));
         }
         const err = Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
         throw err;
@@ -146,49 +150,49 @@ describe('skillsWriter', () => {
         it('writes add-component.md for EDS projects', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some(p => p.endsWith('add-component.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('add-component.md'))).toBe(true);
         });
 
         it('writes add-component.md for headless projects', async () => {
             await writeSkillFiles('/projects/test', makeHeadlessProject());
 
-            expect(writtenFiles().some(p => p.endsWith('add-component.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('add-component.md'))).toBe(true);
         });
 
         it('writes sync-changes.md for EDS projects', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some(p => p.endsWith('sync-changes.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('sync-changes.md'))).toBe(true);
         });
 
         it('writes sync-changes.md for headless projects', async () => {
             await writeSkillFiles('/projects/test', makeHeadlessProject());
 
-            expect(writtenFiles().some(p => p.endsWith('sync-changes.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('sync-changes.md'))).toBe(true);
         });
 
         it('writes update-credentials.md for EDS projects', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some(p => p.endsWith('update-credentials.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('update-credentials.md'))).toBe(true);
         });
 
         it('writes update-credentials.md for headless projects', async () => {
             await writeSkillFiles('/projects/test', makeHeadlessProject());
 
-            expect(writtenFiles().some(p => p.endsWith('update-credentials.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('update-credentials.md'))).toBe(true);
         });
 
         it('writes create-eds-project.md for EDS projects', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some(p => p.endsWith('create-eds-project.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('create-eds-project.md'))).toBe(true);
         });
 
         it('writes create-eds-project.md for headless projects', async () => {
             await writeSkillFiles('/projects/test', makeHeadlessProject());
 
-            expect(writtenFiles().some(p => p.endsWith('create-eds-project.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('create-eds-project.md'))).toBe(true);
         });
 
         it('writes exactly twelve skill files when the Adobe skill bundle is not present', async () => {
@@ -201,49 +205,51 @@ describe('skillsWriter', () => {
         it('writes scrape-reference-site.md for EDS projects', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some(p => p.endsWith('scrape-reference-site.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('scrape-reference-site.md'))).toBe(true);
         });
 
         it('writes connect-authenticated-site.md for EDS projects', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some(p => p.endsWith('connect-authenticated-site.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('connect-authenticated-site.md'))).toBe(
+                true
+            );
         });
 
         it('writes commerce-block-mapper.md for EDS projects', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some(p => p.endsWith('commerce-block-mapper.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('commerce-block-mapper.md'))).toBe(true);
         });
 
         it('writes demo-data-injector.md for EDS projects', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some(p => p.endsWith('demo-data-injector.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('demo-data-injector.md'))).toBe(true);
         });
 
         it('writes header-nav-footer.md for EDS projects', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some(p => p.endsWith('header-nav-footer.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('header-nav-footer.md'))).toBe(true);
         });
 
         it('writes refine-visual-match.md for EDS projects', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some(p => p.endsWith('refine-visual-match.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('refine-visual-match.md'))).toBe(true);
         });
 
         it('writes register-custom-block.md for EDS projects', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some(p => p.endsWith('register-custom-block.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('register-custom-block.md'))).toBe(true);
         });
 
         it('writes remove-custom-block.md for EDS projects', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some(p => p.endsWith('remove-custom-block.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('remove-custom-block.md'))).toBe(true);
         });
 
         it('each written skill file is non-empty and starts with YAML frontmatter or an H1', async () => {
@@ -319,61 +325,61 @@ describe('skillsWriter', () => {
         it('does not write add-block.md (Adobe extensibility tools provide this)', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some(p => p.endsWith('add-block.md'))).toBe(false);
+            expect(writtenFiles().some((p) => p.endsWith('add-block.md'))).toBe(false);
         });
 
         it('does not write add-custom-block.md', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some(p => p.endsWith('add-custom-block.md'))).toBe(false);
+            expect(writtenFiles().some((p) => p.endsWith('add-custom-block.md'))).toBe(false);
         });
 
         it('does not write create-block.md', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some(p => p.endsWith('create-block.md'))).toBe(false);
+            expect(writtenFiles().some((p) => p.endsWith('create-block.md'))).toBe(false);
         });
 
         it('does not write configure-eds.md', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some(p => p.endsWith('configure-eds.md'))).toBe(false);
+            expect(writtenFiles().some((p) => p.endsWith('configure-eds.md'))).toBe(false);
         });
 
         it('does not write edit-block-library.md', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some(p => p.endsWith('edit-block-library.md'))).toBe(false);
+            expect(writtenFiles().some((p) => p.endsWith('edit-block-library.md'))).toBe(false);
         });
 
         it('does not write modify-content.md', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some(p => p.endsWith('modify-content.md'))).toBe(false);
+            expect(writtenFiles().some((p) => p.endsWith('modify-content.md'))).toBe(false);
         });
 
         it('does not write update-styles.md', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some(p => p.endsWith('update-styles.md'))).toBe(false);
+            expect(writtenFiles().some((p) => p.endsWith('update-styles.md'))).toBe(false);
         });
 
         it('does not write use-da-live-mcp.md (DA.live MCP comes from Claude Code session)', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some(p => p.endsWith('use-da-live-mcp.md'))).toBe(false);
+            expect(writtenFiles().some((p) => p.endsWith('use-da-live-mcp.md'))).toBe(false);
         });
 
         it('does not write use-aem-content-mcp.md', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some(p => p.endsWith('use-aem-content-mcp.md'))).toBe(false);
+            expect(writtenFiles().some((p) => p.endsWith('use-aem-content-mcp.md'))).toBe(false);
         });
 
         it('does not write use-commerce-dev-mcp.md', async () => {
             await writeSkillFiles('/projects/test', makeHeadlessProject());
 
-            expect(writtenFiles().some(p => p.endsWith('use-commerce-dev-mcp.md'))).toBe(false);
+            expect(writtenFiles().some((p) => p.endsWith('use-commerce-dev-mcp.md'))).toBe(false);
         });
     });
 
@@ -382,7 +388,9 @@ describe('skillsWriter', () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
             const files = writtenFiles();
-            const nonSkillFiles = files.filter(p => !p.startsWith('/projects/test/.claude/skills/'));
+            const nonSkillFiles = files.filter(
+                (p) => !p.startsWith('/projects/test/.claude/skills/')
+            );
             expect(nonSkillFiles).toHaveLength(0);
         });
 
@@ -391,9 +399,7 @@ describe('skillsWriter', () => {
 
             const mkdirMock = fsPromises.mkdir as jest.Mock;
             const skillsDir = path.join('/projects/test', '.claude', 'skills');
-            const mkdirCall = mkdirMock.mock.calls.find(
-                ([dir]: [string]) => dir === skillsDir,
-            );
+            const mkdirCall = mkdirMock.mock.calls.find(([dir]: [string]) => dir === skillsDir);
             expect(mkdirCall).toBeDefined();
         });
     });
@@ -402,16 +408,18 @@ describe('skillsWriter', () => {
         it('copies each skill folder from the bundle to .claude/skills/<prefix>-<skill>/', async () => {
             mockAdobeSkillBundle({
                 'block-developer': ['SKILL.md'],
-                'tester': ['SKILL.md'],
+                tester: ['SKILL.md'],
             });
 
             await writeSkillFiles('/projects/test', makeEdsProject());
 
             const files = writtenFiles();
-            expect(files).toEqual(expect.arrayContaining([
-                '/projects/test/.claude/skills/aem-block-developer/SKILL.md',
-                '/projects/test/.claude/skills/aem-tester/SKILL.md',
-            ]));
+            expect(files).toEqual(
+                expect.arrayContaining([
+                    '/projects/test/.claude/skills/aem-block-developer/SKILL.md',
+                    '/projects/test/.claude/skills/aem-tester/SKILL.md',
+                ])
+            );
         });
 
         it('rewrites the `name:` frontmatter field to match the prefixed folder name', async () => {
@@ -419,7 +427,9 @@ describe('skillsWriter', () => {
 
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            const content = writtenContentForPath('/projects/test/.claude/skills/aem-block-developer/SKILL.md');
+            const content = writtenContentForPath(
+                '/projects/test/.claude/skills/aem-block-developer/SKILL.md'
+            );
             expect(content).toMatch(/^---\n[\s\S]*?\bname:\s*aem-block-developer\b[\s\S]*?\n---/);
             // The original `name: block-developer` is gone
             expect(content).not.toMatch(/^---\n[\s\S]*?\bname:\s*block-developer\s*$/m);
@@ -430,7 +440,9 @@ describe('skillsWriter', () => {
 
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            const content = writtenContentForPath('/projects/test/.claude/skills/aem-block-developer/SKILL.md');
+            const content = writtenContentForPath(
+                '/projects/test/.claude/skills/aem-block-developer/SKILL.md'
+            );
             expect(content).toContain('# block-developer');
             expect(content).toContain('Body for block-developer.');
         });
@@ -440,7 +452,9 @@ describe('skillsWriter', () => {
 
             await writeSkillFiles('/projects/test', makeEdsProject());
 
-            const content = writtenContentForPath('/projects/test/.claude/skills/aem-block-developer/helper.ts');
+            const content = writtenContentForPath(
+                '/projects/test/.claude/skills/aem-block-developer/helper.ts'
+            );
             expect(content).toBe('content of helper.ts');
         });
 
@@ -450,20 +464,24 @@ describe('skillsWriter', () => {
             await writeSkillFiles('/projects/test', makeHeadlessProject());
 
             const files = writtenFiles();
-            expect(files.some(p => p.includes('/.claude/skills/aem-'))).toBe(false);
+            expect(files.some((p) => p.includes('/.claude/skills/aem-'))).toBe(false);
         });
 
         it('skips gracefully when the Adobe package is not yet installed (ENOENT)', async () => {
             mockMissingAdobeBundle();
 
-            await expect(writeSkillFiles('/projects/test', makeEdsProject())).resolves.toMatchObject({
+            await expect(
+                writeSkillFiles('/projects/test', makeEdsProject())
+            ).resolves.toMatchObject({
                 written: expect.any(Array),
             });
 
             const files = writtenFiles();
-            expect(files.some(p => p.includes('/.claude/skills/aem-'))).toBe(false);
+            expect(files.some((p) => p.includes('/.claude/skills/aem-'))).toBe(false);
             // Demo-Builder skills still written: 3 lifecycle + create-eds-project + 6 EDS-scraping + register-custom-block + remove-custom-block = 12
-            expect(files.filter(p => p.startsWith('/projects/test/.claude/skills/'))).toHaveLength(12);
+            expect(
+                files.filter((p) => p.startsWith('/projects/test/.claude/skills/'))
+            ).toHaveLength(12);
         });
 
         it('still writes the three Demo-Builder lifecycle skills when copying the Adobe bundle', async () => {
@@ -472,9 +490,79 @@ describe('skillsWriter', () => {
             await writeSkillFiles('/projects/test', makeEdsProject());
 
             const files = writtenFiles();
-            expect(files.some(p => p.endsWith('add-component.md'))).toBe(true);
-            expect(files.some(p => p.endsWith('sync-changes.md'))).toBe(true);
-            expect(files.some(p => p.endsWith('update-credentials.md'))).toBe(true);
+            expect(files.some((p) => p.endsWith('add-component.md'))).toBe(true);
+            expect(files.some((p) => p.endsWith('sync-changes.md'))).toBe(true);
+            expect(files.some((p) => p.endsWith('update-credentials.md'))).toBe(true);
+        });
+    });
+
+    describe('integration-starter-kit bundle (App Builder-adjacent projects)', () => {
+        const TOOLS_ISK_PATH =
+            '/projects/headless-project/.demo-builder-mcp/node_modules/@adobe-commerce/commerce-extensibility-tools/dist/integration-starter-kit/skills';
+
+        function makeMeshProject(): Project {
+            return makeHeadlessProject({
+                componentInstances: {
+                    'headless-commerce-mesh': {
+                        id: 'headless-commerce-mesh',
+                        name: 'Headless Commerce Mesh',
+                        status: 'ready',
+                        path: '/projects/headless-project/components/headless-commerce-mesh',
+                    } as ComponentInstance,
+                },
+            });
+        }
+
+        function mockIskBundle(skillNames: string[]): void {
+            const readdirMock = fsPromises.readdir as jest.Mock;
+            const readFileMock = fsPromises.readFile as jest.Mock;
+            readdirMock.mockImplementation(async (dirPath: string) => {
+                if (dirPath === TOOLS_ISK_PATH) {
+                    return skillNames.map((name) => makeDirent(name, true));
+                }
+                if (skillNames.some((name) => dirPath === path.join(TOOLS_ISK_PATH, name))) {
+                    return [makeDirent('SKILL.md', false)];
+                }
+                throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+            });
+            readFileMock.mockImplementation(async (filePath: string) => {
+                const skillName = path.basename(path.dirname(filePath));
+                return `---\nname: ${skillName}\ndescription: ISK skill ${skillName}\n---\n\n# ${skillName}\n`;
+            });
+        }
+
+        it('copies the integration-starter-kit skills (appbuilder- prefix) for a mesh project without a storefront', async () => {
+            mockIskBundle(['architect', 'developer']);
+
+            await writeSkillFiles('/projects/headless-project', makeMeshProject());
+
+            const files = writtenFiles();
+            expect(files).toEqual(
+                expect.arrayContaining([
+                    '/projects/headless-project/.claude/skills/appbuilder-architect/SKILL.md',
+                    '/projects/headless-project/.claude/skills/appbuilder-developer/SKILL.md',
+                ])
+            );
+        });
+
+        it('does NOT copy the integration-starter-kit skills for a bare project', async () => {
+            mockIskBundle(['architect']);
+
+            await writeSkillFiles('/projects/headless-project', makeHeadlessProject());
+
+            const files = writtenFiles();
+            expect(files.some((p) => p.includes('/.claude/skills/appbuilder-'))).toBe(false);
+        });
+
+        it('skips gracefully when the tooling package is not installed (ENOENT)', async () => {
+            mockMissingAdobeBundle();
+
+            await expect(
+                writeSkillFiles('/projects/headless-project', makeMeshProject())
+            ).resolves.toMatchObject({ written: expect.any(Array) });
+
+            const files = writtenFiles();
+            expect(files.some((p) => p.includes('/.claude/skills/appbuilder-'))).toBe(false);
         });
     });
 
@@ -491,7 +579,7 @@ describe('skillsWriter', () => {
                     'update-credentials.md',
                     'create-eds-project.md',
                     'register-custom-block.md',
-                ]),
+                ])
             );
             // Twelve Demo-Builder skills are always written.
             expect(summary.written).toHaveLength(12);

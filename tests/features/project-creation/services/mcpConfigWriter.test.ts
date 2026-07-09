@@ -178,7 +178,7 @@ describe('MCP config content', () => {
         expect(entry.args[0]).not.toContain(EDS_STOREFRONT_PATH);
     });
 
-    it('omits ai-defaults MCP entries for headless projects (no storefront, package never installed)', async () => {
+    it('omits ai-defaults MCP entries for bare projects (no storefront, mesh, or app-builder component)', async () => {
         const project = makeHeadlessProject();
         await writeMcpConfigs('/projects/headless-project', project, EXTENSION_DIST);
 
@@ -188,6 +188,26 @@ describe('MCP config content', () => {
 
         expect(config.mcpServers['commerce-extensibility']).toBeUndefined();
         expect(Object.keys(config.mcpServers)).toEqual(['demo-builder']);
+    });
+
+    it('includes the Developer Agent MCP (but NOT Playwright) for mesh projects without a storefront', async () => {
+        const project = makeHeadlessProject({
+            componentInstances: {
+                'headless-commerce-mesh': {
+                    name: 'Headless Commerce Mesh',
+                    status: 'ready',
+                    path: '/projects/headless-project/components/headless-commerce-mesh',
+                },
+            },
+        } as Partial<Project>);
+        await writeMcpConfigs('/projects/headless-project', project, EXTENSION_DIST);
+
+        const config = captureWrittenConfig('.claude/mcp.json') as {
+            mcpServers: Record<string, unknown>;
+        };
+
+        expect(config.mcpServers['commerce-extensibility']).toBeDefined();
+        expect(config.mcpServers['playwright']).toBeUndefined();
     });
 
     it('writes the same ai-defaults entries to both .claude/mcp.json and .mcp.json', async () => {

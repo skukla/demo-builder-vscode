@@ -24,7 +24,10 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
  * generated; the dashboard's on-open freshness check flags a project stale when
  * its stamp is older than this constant and offers to regenerate.
  */
-export const AI_CONTEXT_VERSION = 1;
+// v2: Developer Agent tooling (commerce-extensibility MCP + integration-starter-kit
+// skills) un-gated from EDS-only to all App Builder-adjacent projects — existing
+// mesh/headless projects need a regenerate to receive it.
+export const AI_CONTEXT_VERSION = 2;
 
 /**
  * Component IDs for standardized component instance access

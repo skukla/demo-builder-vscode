@@ -8,7 +8,10 @@
  * optional AI tooling couldn't install. Non-EDS projects skip it entirely.
  */
 
-import { installAllComponents, type InstallationContext } from '@/features/project-creation/services/componentInstallationOrchestrator';
+import {
+    installAllComponents,
+    type InstallationContext,
+} from '@/features/project-creation/services/componentInstallationOrchestrator';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Logger } from '@/core/logging';
 import type { Project } from '@/types';
@@ -27,9 +30,14 @@ jest.mock('@/features/project-creation/services/aiDefaultsInstaller', () => ({
 }));
 
 function makeContext(componentInstances: Record<string, { path: string }>): InstallationContext {
-    const logger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() } as unknown as Logger;
+    const logger = {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+    } as unknown as Logger;
     const componentDefinitions = new Map(
-        Object.keys(componentInstances).map((compId) => [compId, { definition: { name: compId } }]),
+        Object.keys(componentInstances).map((compId) => [compId, { definition: { name: compId } }])
     );
     return {
         project: { name: 'Test', path: '/proj', componentInstances } as unknown as Project,
@@ -47,24 +55,49 @@ describe('installAllComponents — isolated MCP-tools install contract', () => {
 
     it('installs MCP tools into the isolated dir (by project.path) for EDS projects', async () => {
         mockInstallAiDefaultsMcpTools.mockResolvedValue({ success: true });
-        const ctx = makeContext({ [COMPONENT_IDS.EDS_STOREFRONT]: { path: '/proj/components/eds-storefront' } });
+        const ctx = makeContext({
+            [COMPONENT_IDS.EDS_STOREFRONT]: { path: '/proj/components/eds-storefront' },
+        });
 
         await installAllComponents(ctx);
 
-        expect(mockInstallAiDefaultsMcpTools).toHaveBeenCalledWith('/proj');
+        expect(mockInstallAiDefaultsMcpTools).toHaveBeenCalledWith(
+            '/proj',
+            expect.objectContaining({ path: '/proj' })
+        );
+    });
+
+    it('installs MCP tools for mesh projects too (App Builder-adjacent, no storefront)', async () => {
+        mockInstallAiDefaultsMcpTools.mockResolvedValue({ success: true });
+        const ctx = makeContext({
+            [COMPONENT_IDS.HEADLESS_COMMERCE_MESH]: { path: '/proj/components/mesh' },
+        });
+
+        await installAllComponents(ctx);
+
+        expect(mockInstallAiDefaultsMcpTools).toHaveBeenCalledWith(
+            '/proj',
+            expect.objectContaining({ path: '/proj' })
+        );
     });
 
     it('does NOT abort creation when the MCP-tools install fails (non-fatal)', async () => {
         mockInstallAiDefaultsMcpTools.mockResolvedValue({ success: false, error: 'npm boom' });
-        const ctx = makeContext({ [COMPONENT_IDS.EDS_STOREFRONT]: { path: '/proj/components/eds-storefront' } });
+        const ctx = makeContext({
+            [COMPONENT_IDS.EDS_STOREFRONT]: { path: '/proj/components/eds-storefront' },
+        });
 
         await expect(installAllComponents(ctx)).resolves.toBeUndefined();
-        expect((ctx.logger.warn as jest.Mock)).toHaveBeenCalledWith(expect.stringContaining('non-fatal'));
+        expect(ctx.logger.warn as jest.Mock).toHaveBeenCalledWith(
+            expect.stringContaining('non-fatal')
+        );
     });
 
-    it('skips the MCP-tools install for non-EDS (headless) projects', async () => {
+    it('skips the MCP-tools install when no storefront, mesh, or app-builder component exists', async () => {
         mockInstallAiDefaultsMcpTools.mockResolvedValue({ success: true });
-        const ctx = makeContext({ 'citisignal-nextjs': { path: '/proj/components/citisignal-nextjs' } });
+        const ctx = makeContext({
+            'citisignal-nextjs': { path: '/proj/components/citisignal-nextjs' },
+        });
 
         await installAllComponents(ctx);
 

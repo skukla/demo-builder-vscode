@@ -427,8 +427,12 @@ describe('aiHandlers — setup & verification', () => {
             const result = await handleRegenerateAiFiles(context);
 
             // MCP tools install into the per-project isolated dir, keyed to
-            // project.path — decoupled from the storefront manifest.
-            expect(installAiDefaultsMcpTools).toHaveBeenCalledWith(PROJECT_WITH_STOREFRONT.path);
+            // project.path — decoupled from the storefront manifest. The project
+            // record rides along so the installer can filter entries by `requires`.
+            expect(installAiDefaultsMcpTools).toHaveBeenCalledWith(
+                PROJECT_WITH_STOREFRONT.path,
+                PROJECT_WITH_STOREFRONT
+            );
             // Order matters: the install must complete before context files are written
             // (so .mcp.json's isolated-dir-anchored paths resolve to real files).
             const installCallOrder = (installAiDefaultsMcpTools as jest.Mock).mock
@@ -439,7 +443,7 @@ describe('aiHandlers — setup & verification', () => {
             expect(result).toEqual({ success: true });
         });
 
-        it('does NOT run the storefront install for headless projects (no EDS Storefront)', async () => {
+        it('does NOT run the tooling install for bare projects (no storefront, mesh, or app-builder component)', async () => {
             (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
 
             const context = createMockContext({
@@ -454,6 +458,9 @@ describe('aiHandlers — setup & verification', () => {
             expect(installAiDefaultsMcpTools).not.toHaveBeenCalled();
             expect(generateAIContextFiles).toHaveBeenCalled();
         });
+
+        // The mesh-project (no storefront) tooling-install case lives in
+        // aiHandlers-toolingGate.test.ts.
 
         it('returns the installer error and skips generateAIContextFiles when the storefront install fails', async () => {
             (installAiDefaultsMcpTools as jest.Mock).mockResolvedValue({
@@ -499,7 +506,7 @@ describe('aiHandlers — setup & verification', () => {
         // finalize step directly; the three writer steps are emitted from inside
         // generateAIContextFiles via an `onProgress` tracker the handler supplies.
         describe('progress reporting', () => {
-            it('emits an install-deps creationProgress message before installing the storefront (EDS)', async () => {
+            it('emits an install-tooling creationProgress message before installing (EDS)', async () => {
                 (installAiDefaultsMcpTools as jest.Mock).mockResolvedValue({ success: true });
                 (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
 
@@ -517,7 +524,7 @@ describe('aiHandlers — setup & verification', () => {
                 );
                 expect(installCalls.length).toBeGreaterThan(0);
                 expect(installCalls[0][1]).toMatchObject({
-                    currentOperation: 'Installing storefront dependencies',
+                    currentOperation: 'Installing AI tooling',
                 });
             });
 

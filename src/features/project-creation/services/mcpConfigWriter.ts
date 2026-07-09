@@ -24,6 +24,7 @@ import * as path from 'path';
 import { promisify } from 'util';
 import aiDefaultsConfig from '../config/ai-defaults.json';
 import { resolveMcpToolsDir } from './aiDefaultsInstaller';
+import { aiDefaultsEntryApplies } from './aiToolingGate';
 import { COMPONENT_IDS } from '@/core/constants';
 import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
 import type { AiDefaults } from '@/types/aiDefaults';
@@ -325,20 +326,17 @@ async function buildMcpConfig(
     // storefront manifest, whose own `npm install` can abort on b2b @dropins.
     // Claude Code spawns each MCP with cwd = wherever it was launched
     // (= project.path, not the tools dir), so relative `node_modules/...` refs
-    // would not resolve; anchor each declared arg to the isolated dir. The EDS
-    // gate stays — headless projects (no storefront) get no MCP tooling, so
-    // skip the entries entirely.
-    const storefrontPath = resolveStorefrontPath(project);
-    if (storefrontPath) {
-        const toolsDir = resolveMcpToolsDir(project.path);
-        for (const entry of aiDefaults.mcpServers) {
-            mcpServers[entry.id] = {
-                command: entry.command,
-                args: entry.args.map((arg) =>
-                    path.isAbsolute(arg) ? arg : path.join(toolsDir, arg),
-                ),
-            };
-        }
+    // would not resolve; anchor each declared arg to the isolated dir. Each
+    // entry gates itself via its `requires` field: the Developer Agent tooling
+    // applies to any App Builder-adjacent project (storefront, mesh, or
+    // attached component); Playwright stays storefront-only.
+    const toolsDir = resolveMcpToolsDir(project.path);
+    for (const entry of aiDefaults.mcpServers) {
+        if (!aiDefaultsEntryApplies(entry, project)) continue;
+        mcpServers[entry.id] = {
+            command: entry.command,
+            args: entry.args.map((arg) => (path.isAbsolute(arg) ? arg : path.join(toolsDir, arg))),
+        };
     }
 
     return { mcpServers };

@@ -40,6 +40,8 @@ import removeCustomBlockContent from '../templates/skills/remove-custom-block.md
 import scrapeReferenceSiteContent from '../templates/skills/scrape-reference-site.md';
 import syncChangesContent from '../templates/skills/sync-changes.md';
 import updateCredentialsContent from '../templates/skills/update-credentials.md';
+import { resolveMcpToolsDir } from './aiDefaultsInstaller';
+import { projectNeedsAppBuilderTooling } from './aiToolingGate';
 import componentsConfig from '@/features/components/config/components.json';
 import type { Project } from '@/types/base';
 import type { RawComponentDefinition, RawComponentRegistry } from '@/types/components';
@@ -145,6 +147,21 @@ export async function writeSkillFiles(
         );
     }
 
+    // App Builder-adjacent projects (mesh or attached App Builder component,
+    // with or without a storefront) also get the Developer Agent's
+    // integration-starter-kit skills, sourced from the isolated MCP tools dir
+    // (`.demo-builder-mcp/` — installed by installAiDefaultsMcpTools before
+    // this writer runs, on both the creation and regenerate paths).
+    // copyAdobeSkillBundle skips silently when the package isn't there.
+    if (projectNeedsAppBuilderTooling(project)) {
+        await copyAdobeSkillBundle(
+            resolveMcpToolsDir(projectPath),
+            path.join('integration-starter-kit', 'skills'),
+            'appbuilder',
+            skillsDir,
+        );
+    }
+
     // Summary for the handler boundary to log (Adobe bundle skills are copied
     // into subdirectories and aren't included here — only the always-written
     // Demo-Builder skill filenames).
@@ -154,7 +171,10 @@ export async function writeSkillFiles(
 // ─── Private helpers ──────────────────────────────────────────────────────────
 
 function lookupComponentDefinition(compId: string): RawComponentDefinition | undefined {
-    const registry = components as unknown as Record<string, Record<string, RawComponentDefinition>>;
+    const registry = components as unknown as Record<
+        string,
+        Record<string, RawComponentDefinition>
+    >;
     for (const category of COMPONENT_CATEGORIES) {
         const group = registry[category];
         if (group && typeof group === 'object' && compId in group) {
@@ -213,9 +233,7 @@ async function copySkillFolder(
         }
 
         const raw = await fsPromises.readFile(sourcePath, 'utf-8');
-        const content = entry.name.endsWith('.md')
-            ? rewriteNameFrontmatter(raw, newName)
-            : raw;
+        const content = entry.name.endsWith('.md') ? rewriteNameFrontmatter(raw, newName) : raw;
         await fsPromises.writeFile(targetPath, content, 'utf-8');
     }
 }
@@ -233,7 +251,7 @@ function rewriteNameFrontmatter(content: string, newName: string): string {
     let parsed: Record<string, unknown>;
     try {
         const result = yaml.parse(frontmatterRaw) as unknown;
-        parsed = (result && typeof result === 'object' ? (result as Record<string, unknown>) : {});
+        parsed = result && typeof result === 'object' ? (result as Record<string, unknown>) : {};
     } catch {
         return content;
     }
