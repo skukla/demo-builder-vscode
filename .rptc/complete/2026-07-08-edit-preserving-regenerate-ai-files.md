@@ -1,4 +1,18 @@
-# Make "Regenerate AI Files" edit-preserving (stop clobbering user AI edits)
+# ✅ SHIPPED (2026-07-08) — Make "Regenerate AI Files" edit-preserving
+
+> **Shipped:** `.claude/settings.json` is now MERGED, not overwritten — user hooks / permissions /
+> env survive a regenerate; our git-sync hook is matched by its `"AI: sync files"` signature so it
+> refreshes (no duplicate) and a non-EDS regen drops only our entry (`mergeClaudeSettings` +
+> `readExistingSettings` in `mcpConfigWriter.ts`). `AGENTS.md` — a fully-generated file that must
+> reflect current project state — now carries a "GENERATED — do not edit" banner rather than a managed
+> region (a managed region for a fully-generated file buys little; the banner sets expectations). MCP
+> configs stay clean overwrites (machine-owned, by design).
+>
+> **Deferred (optional future):** relaxing the AI-context-freshness check + `mcpHealthCheck` from the
+> badge-click gate to silent auto-heal, now that the highest-impact clobber (settings.json) is gone.
+> Skills stay extension-owned overwrites. Re-file from here if the auto-heal relaxation is wanted.
+>
+> ---
 
 **Filed:** 2026-07-08 · **Status:** Ready — small-to-medium, own workstream.
 **Origin:** surfaced by the code review of the AI-context-freshness feature (shipped 2026-07-08).

@@ -78,10 +78,6 @@ Core self-heal **shipped** (see Recently shipped). Residual scope from the origi
 
 ### C. Ready to pick up (small, verified still pending)
 
-#### Make "Regenerate AI Files" edit-preserving ([`2026-07-08-edit-preserving-regenerate-ai-files.md`](2026-07-08-edit-preserving-regenerate-ai-files.md))
-
-`generateAIContextFiles` overwrites the whole AI bundle unconditionally — clobbering user edits to `.claude/settings.json` (hooks/permissions), `AGENTS.md` prose, and shipped skills. MERGE settings.json + give AGENTS.md a managed region so user content survives; keep the machine-owned MCP configs as clean overwrites. Then the AI-context-freshness check (shipped 2026-07-08) could relax from badge-click to auto-heal. Surfaced by that feature's code review.
-
 #### Sync Storefront — auto-resolve managed-file conflicts ([`2026-06-11-sync-storefront-auto-resolve-managed-conflicts.md`](2026-06-11-sync-storefront-auto-resolve-managed-conflicts.md))
 
 When ALL conflicting files are Demo-Builder-managed (`config.json`, `fstab.yaml`, …), auto-resolve to the remote authoritative copy; only surface the manual merge editor when the user's own content conflicts. Verified still pending (no managed-file predicate in `syncStorefront.ts`). **Highest-risk line: rebase inverts ours/theirs** (take remote = `--ours` mid-rebase). Rare edge.

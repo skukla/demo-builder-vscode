@@ -92,12 +92,18 @@ export async function writeMcpConfigs(
     await writeJson(path.join(projectPath, '.claude', 'mcp.json'), mcpConfig);
     await writeJson(path.join(projectPath, '.mcp.json'), mcpConfig);
 
-    const claudeSettings = generateClaudeSettings(project, nodePath);
-    await writeJson(path.join(projectPath, '.claude', 'settings.json'), claudeSettings);
+    // Edit-preserving: MERGE our git-sync hook into any existing settings.json
+    // instead of overwriting it, so a regenerate never wipes the user's own
+    // hooks / permissions / env. Our entry is identified by its stable git-sync
+    // signature, so a path change refreshes it (no duplicate) and a non-EDS
+    // project just drops it (keeping the user's content).
+    const settingsPath = path.join(projectPath, '.claude', 'settings.json');
+    const existingSettings = await readExistingSettings(settingsPath);
+    const desiredSettings = generateClaudeSettings(project, nodePath);
+    await writeJson(settingsPath, mergeClaudeSettings(existingSettings, desiredSettings));
 
     await ensureMcpFilesGitignored(projectPath);
 }
-
 
 /**
  * Generate .claude/settings.json with PostToolUse git sync hook.
@@ -130,6 +136,76 @@ export function generateClaudeSettings(project: Project, nodePath: string): Clau
             ],
         },
     };
+}
+
+/**
+ * Stable signature of the Demo-Builder git-sync PostToolUse hook — the commit
+ * message it always emits. Used to find (and refresh, not duplicate) our own
+ * entry among a user's `.claude/settings.json` PostToolUse hooks without a
+ * separate marker field (the Claude Code hook schema has none).
+ */
+const GIT_SYNC_SIGNATURE = 'AI: sync files';
+
+/** True when a PostToolUse entry is the Demo-Builder git-sync hook. */
+function isGitSyncHook(entry: PostToolUseHook | undefined): boolean {
+    // Guard the shape — this parses a user-authored file; a malformed entry must
+    // not throw and abort the whole regenerate.
+    const hooks = Array.isArray(entry?.hooks) ? entry.hooks : [];
+    return hooks.some(
+        (h) => typeof h?.command === 'string' && h.command.includes(GIT_SYNC_SIGNATURE),
+    );
+}
+
+/**
+ * Read + parse an existing `.claude/settings.json`. Returns `{}` when the file
+ * is absent or unparseable — a broken file can't be merged into, and Claude Code
+ * couldn't read it either, so a fresh write is the safe recovery.
+ */
+async function readExistingSettings(filePath: string): Promise<Record<string, unknown>> {
+    try {
+        const parsed = JSON.parse(await fsPromises.readFile(filePath, 'utf-8'));
+        return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {};
+    } catch {
+        return {};
+    }
+}
+
+/**
+ * Merge the Demo-Builder git-sync hook into an existing settings.json,
+ * preserving everything the user owns (permissions, env, other hook types, and
+ * their own PostToolUse hooks). Our git-sync entry is dropped-then-re-added so a
+ * changed storefront path refreshes it rather than duplicating; when `desired`
+ * carries no git-sync hook (non-EDS / unsafe path) ours is simply removed and the
+ * rest of the user's settings survive (vs the old wholesale overwrite with `{}`).
+ */
+export function mergeClaudeSettings(
+    existing: Record<string, unknown>,
+    desired: ClaudeSettings,
+): Record<string, unknown> {
+    const merged: Record<string, unknown> = { ...existing };
+
+    const existingHooks = { ...((existing.hooks as Record<string, unknown>) ?? {}) };
+    const existingPostToolUse = Array.isArray(existingHooks.PostToolUse)
+        ? (existingHooks.PostToolUse as PostToolUseHook[])
+        : [];
+
+    // Keep the user's own PostToolUse hooks; drop any prior git-sync entry.
+    const userPostToolUse = existingPostToolUse.filter((entry) => !isGitSyncHook(entry));
+    const desiredGitSync = (desired.hooks?.PostToolUse ?? []).filter(isGitSyncHook);
+    const nextPostToolUse = [...userPostToolUse, ...desiredGitSync];
+
+    if (nextPostToolUse.length > 0) {
+        existingHooks.PostToolUse = nextPostToolUse;
+    } else {
+        delete existingHooks.PostToolUse;
+    }
+
+    if (Object.keys(existingHooks).length > 0) {
+        merged.hooks = existingHooks;
+    } else {
+        delete merged.hooks;
+    }
+    return merged;
 }
 
 /**
@@ -258,7 +334,7 @@ async function buildMcpConfig(
         for (const entry of aiDefaults.mcpServers) {
             mcpServers[entry.id] = {
                 command: entry.command,
-                args: entry.args.map(arg =>
+                args: entry.args.map((arg) =>
                     path.isAbsolute(arg) ? arg : path.join(toolsDir, arg),
                 ),
             };
@@ -352,7 +428,7 @@ function buildGitSyncCommand(storefrontPath: string, nodePath: string): string {
         buildToolFileExtraction(nodePath) +
         `if [[ "$TOOL_FILE" == ${quoted}* ]]; then ` +
         `git -C ${quoted} add -A && ` +
-        `git -C ${quoted} commit -m "AI: sync files" && ` +
+        `git -C ${quoted} commit -m "${GIT_SYNC_SIGNATURE}" && ` +
         `git -C ${quoted} push; fi`
     );
 }
@@ -405,7 +481,7 @@ export function buildHomeGitSyncCommand(projectsRoot: string, nodePath: string):
         `case "$TOP" in ${quotedRoot}/*) ;; *) exit 0 ;; esac; ` +
         `git -C "$TOP" remote get-url origin >/dev/null 2>&1 || exit 0; ` +
         `git -C "$TOP" add -A && ` +
-        `git -C "$TOP" commit -m "AI: sync files" && ` +
+        `git -C "$TOP" commit -m "${GIT_SYNC_SIGNATURE}" && ` +
         `git -C "$TOP" push`
     );
 }
@@ -434,14 +510,13 @@ async function ensureMcpFilesGitignored(projectPath: string): Promise<void> {
         // File may not exist yet — start empty
     }
 
-    const toAdd = MCP_GITIGNORE_ENTRIES.filter(entry =>
-        !existing.split('\n').some(line => line.trim() === entry),
+    const toAdd = MCP_GITIGNORE_ENTRIES.filter(
+        (entry) => !existing.split('\n').some((line) => line.trim() === entry),
     );
 
     if (toAdd.length === 0) return;
 
-    const section = '\n# MCP config files (generated by Demo Builder)\n' +
-        toAdd.join('\n') + '\n';
+    const section = '\n# MCP config files (generated by Demo Builder)\n' + toAdd.join('\n') + '\n';
     try {
         await fsPromises.appendFile(gitignorePath, section, 'utf-8');
     } catch (err) {
@@ -449,8 +524,8 @@ async function ensureMcpFilesGitignored(projectPath: string): Promise<void> {
         // MCP config files are not gitignored.
         process.stderr.write(
             `[Demo Builder] WARNING: Could not update .gitignore — MCP config files ` +
-            `(${toAdd.join(', ')}) may be accidentally committed. Error: ` +
-            `${err instanceof Error ? err.message : String(err)}\n`,
+                `(${toAdd.join(', ')}) may be accidentally committed. Error: ` +
+                `${err instanceof Error ? err.message : String(err)}\n`,
         );
     }
 }

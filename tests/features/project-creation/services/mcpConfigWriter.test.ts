@@ -104,14 +104,16 @@ describe('MCP config content', () => {
         const project = makeEdsProject();
         await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
-        const config = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, Record<string, unknown>> };
+        const config = captureWrittenConfig('.claude/mcp.json') as {
+            mcpServers: Record<string, Record<string, unknown>>;
+        };
         const command = config.mcpServers['demo-builder'].command as string;
 
         expect(config.mcpServers['demo-builder']).toBeDefined();
         expect(path.isAbsolute(command)).toBe(true);
         expect(path.basename(command)).toMatch(/^node(\.exe)?$/);
         expect((config.mcpServers['demo-builder'].args as string[]).join(' ')).toContain(
-            `${EXTENSION_DIST}/mcp-proxy.js`,
+            `${EXTENSION_DIST}/mcp-proxy.js`
         );
     });
 
@@ -126,11 +128,13 @@ describe('MCP config content', () => {
         const project = makeEdsProject(); // project.path = '/projects/test-project'
         await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
-        const config = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, Record<string, unknown>> };
+        const config = captureWrittenConfig('.claude/mcp.json') as {
+            mcpServers: Record<string, Record<string, unknown>>;
+        };
         const env = config.mcpServers['demo-builder'].env as Record<string, string> | undefined;
 
         const rootSocket = resolveMcpSocketPath(path.dirname(project.path)); // '/projects'
-        const projectSocket = resolveMcpSocketPath(project.path);            // '/projects/test-project'
+        const projectSocket = resolveMcpSocketPath(project.path); // '/projects/test-project'
 
         expect(env?.['DEMO_BUILDER_MCP_SOCKET']).toBe(rootSocket);
         expect(env?.['DEMO_BUILDER_MCP_SOCKET']).not.toBe(projectSocket);
@@ -142,13 +146,17 @@ describe('MCP config content', () => {
         const project = makeEdsProject();
         await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
-        const config = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, unknown> };
+        const config = captureWrittenConfig('.claude/mcp.json') as {
+            mcpServers: Record<string, unknown>;
+        };
         // ai-defaults.json ships with the Adobe App Builder MCP as `commerce-extensibility`
         // and Playwright MCP as `playwright` (for the EDS site-scraping skills).
         // If/when more defaults are added, this test should reflect them.
-        expect(Object.keys(config.mcpServers).sort()).toEqual(
-            ['commerce-extensibility', 'demo-builder', 'playwright'],
-        );
+        expect(Object.keys(config.mcpServers).sort()).toEqual([
+            'commerce-extensibility',
+            'demo-builder',
+            'playwright',
+        ]);
     });
 
     it('anchors the Adobe App Builder MCP args to the isolated .demo-builder-mcp dir so Claude Code (cwd=project.path) can spawn it', async () => {
@@ -174,7 +182,9 @@ describe('MCP config content', () => {
         const project = makeHeadlessProject();
         await writeMcpConfigs('/projects/headless-project', project, EXTENSION_DIST);
 
-        const config = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, unknown> };
+        const config = captureWrittenConfig('.claude/mcp.json') as {
+            mcpServers: Record<string, unknown>;
+        };
 
         expect(config.mcpServers['commerce-extensibility']).toBeUndefined();
         expect(Object.keys(config.mcpServers)).toEqual(['demo-builder']);
@@ -184,17 +194,25 @@ describe('MCP config content', () => {
         const project = makeEdsProject();
         await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
-        const claudeConfig = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, unknown> };
-        const rootConfig = captureWrittenConfig('.mcp.json') as { mcpServers: Record<string, unknown> };
+        const claudeConfig = captureWrittenConfig('.claude/mcp.json') as {
+            mcpServers: Record<string, unknown>;
+        };
+        const rootConfig = captureWrittenConfig('.mcp.json') as {
+            mcpServers: Record<string, unknown>;
+        };
 
-        expect(rootConfig.mcpServers['commerce-extensibility']).toEqual(claudeConfig.mcpServers['commerce-extensibility']);
+        expect(rootConfig.mcpServers['commerce-extensibility']).toEqual(
+            claudeConfig.mcpServers['commerce-extensibility']
+        );
     });
 
     it('does not write external MCP entries (da-live, adobe-commerce-dev, aem-content, aem-eds)', async () => {
         const project = makeEdsProject();
         await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
-        const config = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, unknown> };
+        const config = captureWrittenConfig('.claude/mcp.json') as {
+            mcpServers: Record<string, unknown>;
+        };
 
         expect(config.mcpServers['da-live']).toBeUndefined();
         expect(config.mcpServers['adobe-commerce-dev']).toBeUndefined();
@@ -287,7 +305,9 @@ describe('generateClaudeSettings', () => {
     describe('PostToolUse hook hardening', () => {
         it('extracts the tool input with a single node -e invocation (no jq/python3/grep cascade)', () => {
             const project = makeEdsProject();
-            const command = generateClaudeSettings(project, NODE_PATH).hooks?.['PostToolUse']?.[0]?.hooks?.[0]?.command ?? '';
+            const command =
+                generateClaudeSettings(project, NODE_PATH).hooks?.['PostToolUse']?.[0]?.hooks?.[0]
+                    ?.command ?? '';
 
             // Parses via the resolved node binary, reading the env var directly.
             expect(command).toContain(`TOOL_FILE=$("${NODE_PATH}" -e '`);
@@ -330,7 +350,9 @@ describe('generateClaudeSettings', () => {
                 },
             });
 
-            const command = generateClaudeSettings(project, NODE_PATH).hooks?.['PostToolUse']?.[0]?.hooks?.[0]?.command ?? '';
+            const command =
+                generateClaudeSettings(project, NODE_PATH).hooks?.['PostToolUse']?.[0]?.hooks?.[0]
+                    ?.command ?? '';
             expect(command).toContain(`"${pathWithSpaces}"`);
         });
 
@@ -372,7 +394,9 @@ describe('buildHomeGitSyncCommand', () => {
     it('resolves the enclosing git repo via rev-parse --show-toplevel', () => {
         const command = buildHomeGitSyncCommand(HOME_ROOT, NODE_PATH);
         expect(command).toContain('rev-parse --show-toplevel');
-        expect(command).toContain('TOP=$(git -C "$(dirname "$TOOL_FILE")" rev-parse --show-toplevel 2>/dev/null) || exit 0');
+        expect(command).toContain(
+            'TOP=$(git -C "$(dirname "$TOOL_FILE")" rev-parse --show-toplevel 2>/dev/null) || exit 0'
+        );
     });
 
     it('applies the root-scope case guard with the quoted projects root (subpath only)', () => {
@@ -491,7 +515,7 @@ describe('writeMcpConfigs', () => {
 
         const writeFileMock = fsPromises.writeFile as jest.Mock;
         const claudeMcpCall = writeFileMock.mock.calls.find(([p]: [string]) =>
-            p.includes('.claude/mcp.json'),
+            p.includes('.claude/mcp.json')
         );
         const content = claudeMcpCall?.[1] as string;
 
@@ -503,8 +527,12 @@ describe('writeMcpConfigs', () => {
         const project = makeEdsProject();
         await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
-        const claudeConfig = captureWrittenConfig('.claude/mcp.json') as { mcpServers: Record<string, unknown> };
-        const rootConfig = captureWrittenConfig('.mcp.json') as { mcpServers: Record<string, unknown> };
+        const claudeConfig = captureWrittenConfig('.claude/mcp.json') as {
+            mcpServers: Record<string, unknown>;
+        };
+        const rootConfig = captureWrittenConfig('.mcp.json') as {
+            mcpServers: Record<string, unknown>;
+        };
 
         expect(Object.keys(rootConfig.mcpServers)).toEqual(Object.keys(claudeConfig.mcpServers));
     });
@@ -526,7 +554,9 @@ describe('writeMcpConfigs', () => {
         await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
         const appendFileMock = fsPromises.appendFile as jest.Mock;
-        const appended = appendFileMock.mock.calls.map(([, content]: [string, string]) => content).join('');
+        const appended = appendFileMock.mock.calls
+            .map(([, content]: [string, string]) => content)
+            .join('');
         expect(appended).not.toContain('.cursor/mcp.json');
     });
 
@@ -535,13 +565,20 @@ describe('writeMcpConfigs', () => {
         await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
 
         const appendFileMock = fsPromises.appendFile as jest.Mock;
-        const appended = appendFileMock.mock.calls.map(([, content]: [string, string]) => content).join('');
+        const appended = appendFileMock.mock.calls
+            .map(([, content]: [string, string]) => content)
+            .join('');
         expect(appended).not.toContain('.codex/mcp.json');
     });
 
     it('does not append gitignore entries that are already present (idempotent)', async () => {
         const existingGitignore = '.mcp.json\n.claude/mcp.json\n.claude/settings.json\n';
-        (fsPromises.readFile as jest.Mock).mockResolvedValueOnce(existingGitignore);
+        // Key by path: the writer now reads settings.json (to merge) before .gitignore,
+        // so a one-shot mock would feed the wrong read.
+        (fsPromises.readFile as jest.Mock).mockImplementation(async (p: string) => {
+            if (String(p).endsWith('.gitignore')) return existingGitignore;
+            throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+        });
 
         const project = makeEdsProject();
         await writeMcpConfigs('/projects/test', project, EXTENSION_DIST);
