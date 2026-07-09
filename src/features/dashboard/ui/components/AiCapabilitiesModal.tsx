@@ -133,20 +133,23 @@ export function AiCapabilitiesModal({
                         )}
                     </Flex>
                 ) : (
-                    <Flex direction="column" gap="size-300">
-                        <Text UNSAFE_className="text-sm text-gray-600">
-                            What the AI can do in this project.
-                        </Text>
+                    /* ONE scroll region for everything beneath the modal heading —
+                       MCP servers and skills scroll together; the frame stays put. */
+                    <div className="ai-capabilities-body">
+                        <Flex direction="column" gap="size-300">
+                            <Flex direction="column" gap="size-150">
+                                <Heading
+                                    level={4}
+                                    UNSAFE_className="text-sm font-semibold text-gray-800 m-0"
+                                >
+                                    MCP servers
+                                </Heading>
+                                <AiMcpsList mcps={mcps} hasError={hasMcpsError} />
+                            </Flex>
 
-                        <Flex direction="column" gap="size-150">
-                            <Heading level={4} UNSAFE_className="text-sm font-semibold text-gray-800 m-0">
-                                MCP servers
-                            </Heading>
-                            <AiMcpsList mcps={mcps} hasError={hasMcpsError} />
+                            <AiSkillsList skills={skills} hasError={hasSkillsError} />
                         </Flex>
-
-                        <AiSkillsList skills={skills} hasError={hasSkillsError} />
-                    </Flex>
+                    </div>
                 )}
             </View>
         </Modal>

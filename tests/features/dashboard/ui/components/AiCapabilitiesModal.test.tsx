@@ -87,9 +87,13 @@ describe('AiCapabilitiesModal', () => {
         expect(screen.getByText('Sync changes')).toBeInTheDocument();
     });
 
-    it('frames the surface as capability discovery, not a health check', () => {
+    it('frames the surface via its section anchors alone (no subtitle line)', () => {
         renderModal({ skills: SKILLS, mcps: MCPS });
-        expect(screen.getByText(/what the ai can do/i)).toBeInTheDocument();
+        // The "What the AI can do…" subtitle was removed (2026-07-09) — the
+        // title + section headings carry the framing.
+        expect(screen.queryByText(/what the ai can do/i)).not.toBeInTheDocument();
+        expect(screen.getByText('MCP servers')).toBeInTheDocument();
+        expect(screen.getByTestId('ai-skills-summary')).toBeInTheDocument();
     });
 
     it('shows a plain-language empty state for skills when none are installed', () => {
