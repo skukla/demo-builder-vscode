@@ -90,7 +90,7 @@ export function BuildYourProjectStep({
     );
 
     // Active area: the persisted one if it's still visible, else the first visible.
-    const activeArea = areas.find(a => a.id === state.activeBuildArea) ?? areas[0];
+    const activeArea = areas.find((a) => a.id === state.activeBuildArea) ?? areas[0];
 
     // Continue gate over the CURRENT step. Areas — and, within a sub-stepped area,
     // SUB-STEPS — are walked one at a time via the wizard's Continue/Back, so gating
@@ -104,7 +104,13 @@ export function BuildYourProjectStep({
     const driver = areaSubSteps(activeAreaId);
     let canLeaveArea: boolean;
     if (driver) {
-        canLeaveArea = driver.isComplete(state, driver.active(state));
+        // An inner disclosure stage awaiting commit (e.g. Adobe I/O's pending
+        // project pick) also enables Continue — pressing it advances WITHIN the
+        // sub-step (advanceWithin) rather than leaving the area, so this does
+        // not weaken the leave gate. isComplete stays the rail-✓/final gate.
+        canLeaveArea =
+            driver.isComplete(state, driver.active(state)) ||
+            Boolean(driver.advanceWithin?.(state));
     } else {
         canLeaveArea = activeArea?.status === 'completed';
     }
@@ -117,7 +123,7 @@ export function BuildYourProjectStep({
     // The Build step owns ONE two-column [ active area body | unified "Your project"
     // summary ]. The summary aggregates every VISIBLE area's group (commerce/
     // storefront/integrations) so it persists across area switches — the v6 model.
-    const visibleAreaIds = areas.map(a => a.id);
+    const visibleAreaIds = areas.map((a) => a.id);
     const summaryGroups = buildSummaryGroups(state, visibleAreaIds, packages, stacks);
     const archLabel = architectureLabel(state, stacks);
 
@@ -157,10 +163,7 @@ interface ActiveAreaContext {
 }
 
 /** Render the body component for the active area id (existing components, reused). */
-function renderActiveArea(
-    areaId: string | undefined,
-    ctx: ActiveAreaContext,
-): React.ReactNode {
+function renderActiveArea(areaId: string | undefined, ctx: ActiveAreaContext): React.ReactNode {
     switch (areaId) {
         case 'storefront':
             return (
@@ -174,11 +177,7 @@ function renderActiveArea(
             );
         case 'integrations':
             return (
-                <IntegrationsStep
-                    {...ctx.bodyProps}
-                    packages={ctx.packages}
-                    stacks={ctx.stacks}
-                />
+                <IntegrationsStep {...ctx.bodyProps} packages={ctx.packages} stacks={ctx.stacks} />
             );
         case 'commerce':
         default:

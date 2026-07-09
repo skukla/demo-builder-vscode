@@ -92,6 +92,7 @@ export interface WizardState {
     adobeProject?: AdobeProject; // Renamed for consistency
     adobeWorkspace?: Workspace; // New field for workspace
     pendingAdobeWorkspace?: Workspace; // Transient — the highlighted-but-uncommitted workspace default; committed to `adobeWorkspace` by the Adobe I/O sub-step's Continue
+    pendingAdobeProject?: AdobeProject; // Transient — the highlighted-but-uncommitted project pick; committed to `adobeProject` by the Adobe I/O sub-step's Continue
     commerceConfig?: WizardCommerceConfig; // Wizard-specific commerce config (simplified)
     creationProgress?: CreationProgress;
     projectSearchFilter?: string; // Filter persistence for project selection

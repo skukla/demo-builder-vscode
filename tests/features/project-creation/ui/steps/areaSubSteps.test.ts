@@ -188,14 +188,16 @@ describe('integrations driver', () => {
             });
         });
 
-        it('retreats workspace picker → project selection (clears project + pending + cache)', () => {
+        it('retreats workspace picker → project selection (project stays highlighted as pending)', () => {
+            const project = { id: 'p' };
             const s = state({
                 ...onAdobeIo,
-                adobeProject: { id: 'p' },
+                adobeProject: project,
                 pendingAdobeWorkspace: { id: 'w', name: 'Stage' },
             });
             expect(driver.retreatWithin!(s)).toEqual({
                 adobeProject: undefined,
+                pendingAdobeProject: project,
                 pendingAdobeWorkspace: undefined,
                 workspacesCache: undefined,
             });
@@ -212,6 +214,44 @@ describe('integrations driver', () => {
                 adobeProject: { id: 'p' },
             });
             expect(driver.retreatWithin!(s)).toBeNull();
+        });
+    });
+
+    describe('advanceWithin (Continue commits the pending project pick, stays on adobe-io)', () => {
+        const onAdobeIo = {
+            selectedAppBuilderComponents: ['x'],
+            activeIntegrationsStep: 'adobe-io' as const,
+        };
+
+        it('commits pendingAdobeProject and clears workspace state (fresh workspace view)', () => {
+            const pending = { id: 'p', name: 'My Project' };
+            const s = state({ ...onAdobeIo, pendingAdobeProject: pending });
+            expect(driver.advanceWithin!(s)).toEqual({
+                adobeProject: pending,
+                pendingAdobeProject: undefined,
+                adobeWorkspace: undefined,
+                pendingAdobeWorkspace: undefined,
+                workspacesCache: undefined,
+            });
+        });
+
+        it('returns null once the project is committed (Continue commits workspace/leaves)', () => {
+            const s = state({
+                ...onAdobeIo,
+                adobeProject: { id: 'p' },
+                pendingAdobeWorkspace: { id: 'w', name: 'Stage' },
+            });
+            expect(driver.advanceWithin!(s)).toBeNull();
+        });
+
+        it('returns null with no pending pick, and off the adobe-io sub-step', () => {
+            expect(driver.advanceWithin!(state(onAdobeIo))).toBeNull();
+            const s = state({
+                selectedAppBuilderComponents: ['x'],
+                activeIntegrationsStep: 'deployables',
+                pendingAdobeProject: { id: 'p' },
+            });
+            expect(driver.advanceWithin!(s)).toBeNull();
         });
     });
 });

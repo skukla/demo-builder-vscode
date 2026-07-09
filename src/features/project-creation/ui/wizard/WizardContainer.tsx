@@ -394,7 +394,14 @@ export function WizardContainer({
     // at its first sub-step) → next wizard step. Pressing Continue COMMITS the current
     // sub-step via the driver (Commerce's commit-gated ✓; a no-op for areas without it),
     // so an auto-detected value never shows ✓ on form validity alone.
+    const innerAdvance = activeDriver?.advanceWithin?.(state) ?? null;
     const handleNext = () => {
+        // Inner disclosure stage first (e.g. Adobe I/O: Continue commits the
+        // pending project pick and reveals the workspace view, staying put).
+        if (innerAdvance) {
+            updateState(innerAdvance);
+            return;
+        }
         const commit: Partial<WizardState> =
             activeDriver && activeSub ? activeDriver.commit(state, activeSub) : {};
         if (activeDriver && nextSub) {

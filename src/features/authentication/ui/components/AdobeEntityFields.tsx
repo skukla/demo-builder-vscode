@@ -79,7 +79,12 @@ function NewAdobeEntityForm({
     const trimmed = name.trim();
 
     return (
-        <View backgroundColor="gray-50" borderRadius="medium" padding="size-300" position="relative">
+        <View
+            backgroundColor="gray-50"
+            borderRadius="medium"
+            padding="size-300"
+            position="relative"
+        >
             <Heading level={3} margin={0} marginBottom="size-200">{`Create New ${noun}`}</Heading>
 
             <TextField
@@ -134,6 +139,10 @@ interface AdobeProjectFieldProps extends FieldProps {
     createError?: string;
     /** Prefill for the create panel's name (pairs with `createError`). */
     initialCreateName?: string;
+    /** Forwarded to the picker: override the highlighted row (Adobe I/O pending pick). */
+    selectedProjectId?: string;
+    /** Forwarded to the picker: override the default commit (Adobe I/O writes pending). */
+    onProjectSelect?: (project: AdobeProject) => void;
 }
 
 /**
@@ -149,6 +158,8 @@ export function AdobeProjectField({
     onCreateFlow,
     createError,
     initialCreateName,
+    selectedProjectId,
+    onProjectSelect,
 }: AdobeProjectFieldProps): React.ReactElement {
     // An external create failure re-opens the field directly on the create panel.
     const [mode, setMode] = useState<FieldMode>(createError ? 'create' : 'browse');
@@ -226,6 +237,8 @@ export function AdobeProjectField({
             state={state}
             updateState={updateState}
             headerAction={<NewButton onPress={() => setMode('create')} />}
+            selectedProjectId={selectedProjectId}
+            onProjectSelect={onProjectSelect}
         />
     );
 }

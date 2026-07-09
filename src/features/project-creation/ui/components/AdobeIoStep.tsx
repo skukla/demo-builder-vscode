@@ -98,6 +98,11 @@ function DisclosureBody({ state, updateState, phases }: BodyProps): React.ReactE
                     onCreateFlow={phases.start}
                     createError={createFailure ? phases.error : undefined}
                     initialCreateName={createFailure ? phases.projectName : undefined}
+                    // Pending-selection model: a click highlights the row; the
+                    // sub-step's Continue commits it (advanceWithin in the
+                    // integrations driver) and reveals the workspace view.
+                    selectedProjectId={state.pendingAdobeProject?.id}
+                    onProjectSelect={(p) => updateState({ pendingAdobeProject: p })}
                 />
             </div>
         );
@@ -108,9 +113,9 @@ function DisclosureBody({ state, updateState, phases }: BodyProps): React.ReactE
                 <AdobeWorkspaceField
                     state={state}
                     updateState={updateState}
-                    // No Stage/single auto-pick here: workspace choice is deliberate
-                    // (it decides where the app deploys), so the user must check one.
-                    suppressAutoSelect
+                    // Stage (or a single workspace) pre-selects as the PENDING
+                    // default — Continue commits it. The pending model is what
+                    // keeps the pre-pick from advancing anything by itself.
                     selectedWorkspaceId={state.pendingAdobeWorkspace?.id}
                     onWorkspaceSelect={(ws) => updateState({ pendingAdobeWorkspace: ws })}
                 />
@@ -122,6 +127,7 @@ function DisclosureBody({ state, updateState, phases }: BodyProps): React.ReactE
     const changeProject = (): void => {
         updateState({
             adobeProject: undefined,
+            pendingAdobeProject: undefined,
             adobeWorkspace: undefined,
             pendingAdobeWorkspace: undefined,
             workspacesCache: undefined,

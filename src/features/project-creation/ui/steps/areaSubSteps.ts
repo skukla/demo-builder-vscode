@@ -74,6 +74,13 @@ export interface AreaSubStepDriver {
      * `state` (called during render for the Back-enabled check).
      */
     retreatWithin?(state: WizardState): Partial<WizardState> | null;
+    /**
+     * Advance WITHIN the active sub-step: commit the current inner disclosure
+     * stage (e.g. Adobe I/O's pending project pick) and stay on the sub-step.
+     * Returns the state update, or null when there is no inner stage to commit
+     * — Continue then falls through to `next()`. Pure over `state`.
+     */
+    advanceWithin?(state: WizardState): Partial<WizardState> | null;
 }
 
 // --- generic helpers over an ordered {id, status} list -----------------------
@@ -259,9 +266,26 @@ const integrationsDriver: AreaSubStepDriver = {
             return { adobeWorkspace: undefined, pendingAdobeWorkspace: state.adobeWorkspace };
         }
         if (state.adobeProject?.id) {
-            // Workspace picker → project selection.
+            // Workspace picker → project selection; the committed project stays
+            // highlighted as the pending pick (Continue re-commits it).
             return {
                 adobeProject: undefined,
+                pendingAdobeProject: state.adobeProject,
+                pendingAdobeWorkspace: undefined,
+                workspacesCache: undefined,
+            };
+        }
+        return null;
+    },
+    // Continue on the Adobe I/O PROJECT view commits the pending pick and stays on
+    // the sub-step (revealing the workspace view) — the user clicks, then Continues.
+    advanceWithin(state) {
+        if (integrationsDriver.active(state) !== 'adobe-io') return null;
+        if (state.pendingAdobeProject?.id && !state.adobeProject?.id) {
+            return {
+                adobeProject: state.pendingAdobeProject,
+                pendingAdobeProject: undefined,
+                adobeWorkspace: undefined,
                 pendingAdobeWorkspace: undefined,
                 workspacesCache: undefined,
             };

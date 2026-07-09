@@ -62,6 +62,15 @@ export interface AdobeProjectPickerProps {
     updateState: (updates: Partial<WizardState>) => void;
     /** Optional header action (e.g. a "New" button) rendered in the list header. */
     headerAction?: React.ReactNode;
+    /** Override the highlighted row (Adobe I/O pending-selection model). */
+    selectedProjectId?: string;
+    /**
+     * Override the default commit: receive the clicked project INSTEAD of
+     * writing `adobeProject` (Adobe I/O writes a pending pick that its
+     * Continue commits). Also suppresses the single-item auto-select — a
+     * pending model wants a deliberate click.
+     */
+    onProjectSelect?: (project: AdobeProject) => void;
 }
 
 /**
@@ -74,6 +83,8 @@ export function AdobeProjectPicker({
     state,
     updateState,
     headerAction,
+    selectedProjectId,
+    onProjectSelect,
 }: AdobeProjectPickerProps): React.ReactElement {
     // Delete affordance state: the in-flight row, an inline failure message,
     // and whether ANY delete has happened (suppresses single-item auto-select).
@@ -86,16 +97,13 @@ export function AdobeProjectPicker({
     // Setting these at click time would signal activity during the (blocking)
     // confirm modal and flash the row on a cancelled delete.
     useEffect(() => {
-        const unsubscribe = webviewClient.onMessage(
-            'project-delete-started',
-            (data: unknown) => {
-                const projectId = (data as { projectId?: string })?.projectId;
-                if (projectId) {
-                    setDeletingId(projectId);
-                    setHasDeleted(true);
-                }
-            },
-        );
+        const unsubscribe = webviewClient.onMessage('project-delete-started', (data: unknown) => {
+            const projectId = (data as { projectId?: string })?.projectId;
+            if (projectId) {
+                setDeletingId(projectId);
+                setHasDeleted(true);
+            }
+        });
         return unsubscribe;
     }, []);
 
@@ -189,21 +197,28 @@ export function AdobeProjectPicker({
         selectedItem: state.adobeProject,
         searchFilterKey: 'projectSearchFilter',
         // After a delete, never auto-select the last remaining project — the
-        // user is curating the list, not picking from it.
-        autoSelectSingle: !hasDeleted,
+        // user is curating the list, not picking from it. A pending-selection
+        // caller (onProjectSelect) never auto-selects: the pick must be a
+        // deliberate click, committed by that flow's Continue.
+        autoSelectSingle: !hasDeleted && !onProjectSelect,
         searchFields: ['title', 'name', 'description'],
         // Thread the wizard-selected org into get-projects so the handler can
         // establish org-context targeting (the handler consumes payload.orgId).
         messagePayload: { orgId: state.adobeOrg?.id },
         onSelect: (project) => {
+            const picked = {
+                id: project.id,
+                name: project.name,
+                title: project.title,
+                description: project.description,
+                org_id: project.org_id, // Numeric org ID for Adobe Console URLs
+            };
+            if (onProjectSelect) {
+                onProjectSelect(picked);
+                return;
+            }
             updateState({
-                adobeProject: {
-                    id: project.id,
-                    name: project.name,
-                    title: project.title,
-                    description: project.description,
-                    org_id: project.org_id, // Numeric org ID for Adobe Console URLs
-                },
+                adobeProject: picked,
                 // Clear dependent state when parent selection changes so the
                 // workspace re-loads (and re-auto-selects Stage) for the new project.
                 adobeWorkspace: undefined,
@@ -236,7 +251,7 @@ export function AdobeProjectPicker({
                 onSearchChange={setSearchQuery}
                 onLoad={loadProjects}
                 onRefresh={refresh}
-                selectedId={state.adobeProject?.id}
+                selectedId={selectedProjectId ?? state.adobeProject?.id}
                 onSelect={selectItem}
                 disabledIds={deletingId ? [deletingId] : NO_DISABLED_IDS}
                 labels={{
@@ -263,9 +278,7 @@ export function AdobeProjectPicker({
                     ) : null
                 }
             />
-            {deleteError ? (
-                <Text UNSAFE_className="text-red-600">{deleteError}</Text>
-            ) : null}
+            {deleteError ? <Text UNSAFE_className="text-red-600">{deleteError}</Text> : null}
         </>
     );
 }
