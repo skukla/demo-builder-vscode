@@ -72,7 +72,7 @@
     },
     {
       "id": "app-builder-shell",
-      "name": "App Builder App (blank shell)",
+      "name": "App Builder App",
       "description": "A minimal App Builder app to build out with AI — starts from a working deploy, then grows into whatever your demo needs",
       "kind": "integration",
       "source": {
