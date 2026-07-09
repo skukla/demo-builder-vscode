@@ -15,6 +15,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
+import { sanitizeErrorForLogging } from '@/core/validation';
 import {
     clearMcpCache,
     inspectAllServers,
@@ -83,9 +84,16 @@ export function logAiVerification(context: HandlerContext, result: AiVerificatio
                 `[AI Verify] mcp ${entry.id}: ok (${entry.tools?.length ?? 0} tools)`,
             );
         } else {
-            context.logger.warn(
-                `[AI Verify] mcp ${entry.id}: ${entry.status}\n${entry.error ?? ''}`,
-            );
+            // Redact per line: `warn` bypasses the redactor, and a user-added
+            // third-party server may echo a credential-bearing env to stderr on a
+            // crash. Sanitize line-by-line (not the whole tail) because
+            // sanitizeErrorForLogging keeps only the first line — mapping it over
+            // each line preserves the multi-line socket/connect diagnostic.
+            const safeError = (entry.error ?? '')
+                .split('\n')
+                .map((line) => sanitizeErrorForLogging(line))
+                .join('\n');
+            context.logger.warn(`[AI Verify] mcp ${entry.id}: ${entry.status}\n${safeError}`);
         }
     }
     if (inventory.mcpsError) {

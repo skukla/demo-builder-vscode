@@ -37,6 +37,8 @@ jest.mock('@/core/base', () => ({
 // Mock validateURL (transitive dependency)
 jest.mock('@/core/validation', () => ({
     validateURL: jest.fn(),
+    // Real redactor — logAiVerification sanitizes the MCP stderr tail through it.
+    sanitizeErrorForLogging: jest.requireActual('@/core/validation').sanitizeErrorForLogging,
 }));
 
 // Mock AI feature barrel

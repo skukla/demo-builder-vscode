@@ -1,3 +1,17 @@
+# ✅ SHIPPED (2026-07-08) — Sanitize the MCP stderr tail before logging it in AI verification
+
+> `logAiVerification` (`aiHandlers.ts`) now redacts each failed MCP server's stderr tail before the
+> `warn` log: `entry.error` is sanitized **line-by-line** through `sanitizeErrorForLogging` — mapped
+> over lines because that function keeps only the first line, so per-line application preserves the
+> multi-line socket/connect diagnostic. A user-injected `SECRET=…` env echoed on a crash is now
+> redacted. Note (differs slightly from this doc's optimistic assumption): the CWE-200 file-path
+> pattern also redacts the machine socket path to `<path>/` — the connect-error TYPE (ENOENT/
+> ECONNREFUSED) and multi-line structure survive, which is the load-bearing signal; the exact path is
+> deterministic/reconstructible. Tests: `aiHandlers.logAiVerification.test.ts` (planted-secret redacted,
+> multi-line preserved) + the updated observability test.
+>
+> ---
+
 # Sanitize the MCP stderr tail before logging it in AI verification
 
 ## Provenance

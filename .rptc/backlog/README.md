@@ -86,10 +86,6 @@ When ALL conflicting files are Demo-Builder-managed (`config.json`, `fstab.yaml`
 
 Invoking a genuinely global op (`create_project`, `list_projects`) when the user is not inside a project workspace has no socket to reach (the in-extension server is per-workspace). Proposed: proxy discovery mode for the stdio↔socket forwarder + a global `~/.claude.json` entry. Deferred — multi-window semantics unresolved.
 
-#### Sanitize MCP stderr tail in AI-verification log ([`2026-06-11-sanitize-mcp-stderr-in-verify-log.md`](2026-06-11-sanitize-mcp-stderr-in-verify-log.md))
-
-`handleVerifyAiSetup` (`aiHandlers.ts`) logs each MCP server's stderr tail via `warn`, bypassing `sanitizeErrorForLogging`. Safe for extension-generated servers; a footgun if a user hand-adds a credential-bearing third-party MCP server. Verified still using unsanitized `.warn`. Low priority — no active leak.
-
 ### D. Deferred by design (gated on an external condition)
 
 #### Retire `legacyLookupKey` infrastructure — DA/repo unification cleanup ([`2026-06-08-rename-existing-da-content-to-repo-name.md`](2026-06-08-rename-existing-da-content-to-repo-name.md))

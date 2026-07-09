@@ -214,7 +214,7 @@ describe('aiHandlers — setup & verification', () => {
             );
         });
 
-        it('warns with the captured stderr tail for a non-ok mcp entry (timeout)', async () => {
+        it('warns with the redacted stderr tail for a non-ok mcp entry (timeout)', async () => {
             const STDERR_TAIL =
                 'Demo Builder MCP proxy target socket: /tmp/x.sock\nError: connect ENOENT';
             (verifyAiSetup as jest.Mock).mockResolvedValue(
@@ -232,7 +232,10 @@ describe('aiHandlers — setup & verification', () => {
 
             const warnArgs = (context.logger.warn as jest.Mock).mock.calls.flat().join('\n');
             expect(warnArgs).toContain('[AI Verify] mcp demo-builder: timeout');
-            expect(warnArgs).toContain(STDERR_TAIL);
+            // The connect-error diagnostic survives redaction (multi-line preserved)...
+            expect(warnArgs).toContain('connect ENOENT');
+            // ...but the machine socket path is redacted (CWE-200 file-path pattern).
+            expect(warnArgs).not.toContain('/tmp/x.sock');
         });
 
         it('warns when inventory.mcpsError is present', async () => {
