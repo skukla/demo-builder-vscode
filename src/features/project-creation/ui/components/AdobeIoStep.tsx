@@ -108,6 +108,9 @@ function DisclosureBody({ state, updateState, phases }: BodyProps): React.ReactE
                 <AdobeWorkspaceField
                     state={state}
                     updateState={updateState}
+                    // No Stage/single auto-pick here: workspace choice is deliberate
+                    // (it decides where the app deploys), so the user must check one.
+                    suppressAutoSelect
                     selectedWorkspaceId={state.pendingAdobeWorkspace?.id}
                     onWorkspaceSelect={(ws) => updateState({ pendingAdobeWorkspace: ws })}
                 />

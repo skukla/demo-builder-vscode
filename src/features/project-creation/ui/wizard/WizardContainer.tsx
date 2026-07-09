@@ -1,14 +1,11 @@
-import {
-    View,
-    Flex,
-    Heading,
-    Button,
-    Text,
-} from '@adobe/react-spectrum';
+import { View, Flex, Heading, Button, Text } from '@adobe/react-spectrum';
 import React, { useEffect, useRef, useState } from 'react';
 import { loadStacks } from '../helpers/brandStackLoader';
 import { getSelectablePackages } from '../helpers/demoPackageLoader';
-import { filterComponentConfigsForStackChange, buildStackChangeStateReset } from '../helpers/stackHelpers';
+import {
+    filterComponentConfigsForStackChange,
+    buildStackChangeStateReset,
+} from '../helpers/stackHelpers';
 import {
     useWizardState,
     useWizardNavigation,
@@ -84,7 +81,9 @@ export function WizardContainer({
     // The Project Builder step pre-selects built-in libs (`blockLibraryDefaults`)
     // and seeds the custom block-library checkboxes (`customBlockLibraryDefaults`).
     const [blockLibraryDefaults, setBlockLibraryDefaults] = useState(initialBlockLibraryDefaults);
-    const [customBlockLibraryDefaults, setCustomBlockLibraryDefaults] = useState(initialCustomBlockLibraryDefaults);
+    const [customBlockLibraryDefaults, setCustomBlockLibraryDefaults] = useState(
+        initialCustomBlockLibraryDefaults,
+    );
 
     useEffect(() => {
         const unsubDefaults = vscode.onMessage(
@@ -99,7 +98,10 @@ export function WizardContainer({
                 setCustomBlockLibraryDefaults(data.customBlockLibraryDefaults);
             },
         );
-        return () => { unsubDefaults(); unsubCustom(); };
+        return () => {
+            unsubDefaults();
+            unsubCustom();
+        };
     }, []);
 
     // Packages and stacks - loaded once on mount
@@ -148,19 +150,17 @@ export function WizardContainer({
     // settings change mid-session. The modal re-initializes from defaults
     // on open, but the brand tile renders state.customBlockLibraries.
     useEffect(() => {
-        const filtered = filterRemovedCustomLibraries(state.customBlockLibraries, customBlockLibraryDefaults);
+        const filtered = filterRemovedCustomLibraries(
+            state.customBlockLibraries,
+            customBlockLibraryDefaults,
+        );
         if (filtered.length !== (state.customBlockLibraries?.length ?? 0)) {
             updateState({ customBlockLibraries: filtered });
         }
     }, [customBlockLibraryDefaults, state.customBlockLibraries, updateState]);
 
     // Navigation hook
-    const {
-        goNext,
-        goBack,
-        handleCancel,
-        getCurrentStepIndex,
-    } = useWizardNavigation({
+    const { goNext, goBack, handleCancel, getCurrentStepIndex } = useWizardNavigation({
         state,
         setState,
         WIZARD_STEPS,
@@ -180,8 +180,8 @@ export function WizardContainer({
     // Focus trap for keyboard navigation (replaces manual implementation)
     const wizardContainerRef = useFocusTrap<HTMLDivElement>({
         enabled: true,
-        autoFocus: false,  // Wizard steps manage their own focus
-        containFocus: true,  // Prevent escape (WCAG 2.1 AA)
+        autoFocus: false, // Wizard steps manage their own focus
+        containFocus: true, // Prevent escape (WCAG 2.1 AA)
     });
 
     // Ref for step content area (to focus first element when step changes)
@@ -197,7 +197,7 @@ export function WizardContainer({
             setAnimationDirection(getNavigationDirection(targetIndex, currentIndex));
             setIsTransitioning(true);
             setTimeout(() => {
-                setState(prev => ({ ...prev, currentStep: step }));
+                setState((prev) => ({ ...prev, currentStep: step }));
                 setIsTransitioning(false);
             }, TIMEOUTS.STEP_TRANSITION);
         },
@@ -230,8 +230,8 @@ export function WizardContainer({
         log.info(`Architecture changed: ${oldStackId} → ${newStackId}`);
 
         // Find the old and new stack definitions
-        const oldStack = stacks?.find(s => s.id === oldStackId);
-        const newStack = stacks?.find(s => s.id === newStackId);
+        const oldStack = stacks?.find((s) => s.id === oldStackId);
+        const newStack = stacks?.find((s) => s.id === newStackId);
 
         if (!newStack) {
             log.warn(`New stack not found: ${newStackId}`);
@@ -245,7 +245,9 @@ export function WizardContainer({
             state.componentConfigs || {},
         );
 
-        log.info(`Retained configs for components: ${Object.keys(filteredConfigs).join(', ') || 'none'}`);
+        log.info(
+            `Retained configs for components: ${Object.keys(filteredConfigs).join(', ') || 'none'}`,
+        );
 
         // Stack change resets all steps except welcome (user must re-traverse)
         // Consistent behavior across all wizard modes (create, import, edit)
@@ -254,7 +256,7 @@ export function WizardContainer({
         // Update state with filtered configs
         // Clear EDS-specific state since it's architecture-dependent
         // Preserve: projectName, selectedBrand, Adobe auth/org (still valid)
-        setState(prev => ({
+        setState((prev) => ({
             ...prev,
             componentConfigs: filteredConfigs,
             // Clear architecture-dependent EDS state/caches AND the cached config-tile
@@ -285,7 +287,13 @@ export function WizardContainer({
                     />
                 );
             case 'prerequisites':
-                return <PrerequisitesStep {...props} componentsData={componentsData?.data as Record<string, unknown>} currentStep={state.currentStep} />;
+                return (
+                    <PrerequisitesStep
+                        {...props}
+                        componentsData={componentsData?.data as Record<string, unknown>}
+                        currentStep={state.currentStep}
+                    />
+                );
             // Collapsed builder step. The shell routes the active area to the
             // existing Commerce / Storefront / Integrations bodies and owns the
             // Continue gate over all required areas.
@@ -303,9 +311,26 @@ export function WizardContainer({
             case 'storefront-setup':
                 return <StorefrontSetupStep {...props} />;
             case 'review':
-                return <ReviewStep state={state} updateState={updateState} setCanProceed={setCanProceed} componentsData={componentsData?.data} packages={packages} stacks={stacks} />;
+                return (
+                    <ReviewStep
+                        state={state}
+                        updateState={updateState}
+                        setCanProceed={setCanProceed}
+                        componentsData={componentsData?.data}
+                        packages={packages}
+                        stacks={stacks}
+                    />
+                );
             case 'create-project':
-                return <ProjectCreationStep state={state} updateState={updateState} onBack={goBack} importedSettings={importedSettings} packages={packages} />;
+                return (
+                    <ProjectCreationStep
+                        state={state}
+                        updateState={updateState}
+                        onBack={goBack}
+                        importedSettings={importedSettings}
+                        packages={packages}
+                    />
+                );
             default:
                 return null;
         }
@@ -326,7 +351,7 @@ export function WizardContainer({
     const currentStepName = WIZARD_STEPS[currentStepIndex]?.name;
 
     // Timeline state — derived from local wizard state, no sidebar messaging.
-    const timelineSteps: TimelineStep[] = WIZARD_STEPS.map(s => ({ id: s.id, name: s.name }));
+    const timelineSteps: TimelineStep[] = WIZARD_STEPS.map((s) => ({ id: s.id, name: s.name }));
     const completedStepIndices = getCompletedStepIndices(completedSteps, WIZARD_STEPS);
     const confirmedStepIndices = getCompletedStepIndices(confirmedSteps, WIZARD_STEPS);
     const isEditMode = (state.wizardMode ?? 'create') !== 'create';
@@ -338,11 +363,11 @@ export function WizardContainer({
     const onBuildStep = state.currentStep === 'build-your-project';
     const buildAreas = onBuildStep ? buildYourProjectAreas(state, stacks) : [];
     const activeAreaId = state.activeBuildArea ?? buildAreas[0]?.id;
-    const activeAreaIndex = buildAreas.findIndex(a => a.id === activeAreaId);
+    const activeAreaIndex = buildAreas.findIndex((a) => a.id === activeAreaId);
 
     // Rail children: the areas under the (current) Build step, with per-area status.
-    const buildChildSteps: TimelineStep[] = buildAreas.map(a => ({ id: a.id, name: a.label }));
-    const buildChildStatusById = Object.fromEntries(buildAreas.map(a => [a.id, a.status]));
+    const buildChildSteps: TimelineStep[] = buildAreas.map((a) => ({ id: a.id, name: a.label }));
+    const buildChildStatusById = Object.fromEntries(buildAreas.map((a) => [a.id, a.status]));
 
     // The footer Continue/Back is the single LINEAR driver: it walks an area's
     // SUB-STEPS → AREAS → wizard steps. The active area's sub-step DRIVER (Commerce /
@@ -360,7 +385,7 @@ export function WizardContainer({
 
     /** Jump to a REACHED rail area (at or before the active one); forward stays gated to Continue. */
     const handleAreaClick = (areaId: string): void => {
-        const idx = buildAreas.findIndex(a => a.id === areaId);
+        const idx = buildAreas.findIndex((a) => a.id === areaId);
         if (idx < 0 || idx > activeAreaIndex) return;
         updateState({ activeBuildArea: buildAreas[idx].id, ...areaEntry(areaId, false) });
     };
@@ -386,13 +411,20 @@ export function WizardContainer({
         }
         void goNext();
     };
-    // Back: previous sub-step (within the active area) → previous visible area (entering
-    // it at its LAST sub-step) → previous wizard step.
+    // Back: inner disclosure stage (within the active sub-step, e.g. Adobe I/O's
+    // workspace view → project selection) → previous sub-step (within the active
+    // area) → previous visible area (entering it at its LAST sub-step) → previous
+    // wizard step.
+    const innerRetreat = activeDriver?.retreatWithin?.(state) ?? null;
     const handleBack = () => {
+        if (innerRetreat) {
+            updateState(innerRetreat);
+            return;
+        }
         if (activeDriver && prevSub) {
             // Match the main timeline: stepping BACK un-commits the target sub-step and
             // everything after it (driver no-op when there's no commit-gating).
-            const order = subSteps.map(s => s.id);
+            const order = subSteps.map((s) => s.id);
             updateState({
                 ...activeDriver.setActive(prevSub),
                 ...activeDriver.uncommit(state, order, prevSub),
@@ -407,12 +439,13 @@ export function WizardContainer({
         goBack();
     };
 
-    // Back is available when there is a previous wizard step, a previous area, OR a
-    // previous sub-step within the active area.
+    // Back is available when there is a previous wizard step, a previous area, a
+    // previous sub-step within the active area, OR an inner disclosure stage to retreat.
     const canGoBack =
         currentStepIndex > 0 ||
         (onBuildStep && activeAreaIndex > 0) ||
-        Boolean(prevSub);
+        Boolean(prevSub) ||
+        Boolean(innerRetreat);
 
     const handleTimelineStepClick = (targetIndex: number) => {
         const targetStep = WIZARD_STEPS[targetIndex];
@@ -421,7 +454,7 @@ export function WizardContainer({
         setAnimationDirection(getNavigationDirection(targetIndex, currentStepIndex));
         setIsTransitioning(true);
         setTimeout(() => {
-            setState(prev => ({ ...prev, currentStep: targetStep.id }));
+            setState((prev) => ({ ...prev, currentStep: targetStep.id }));
             setIsTransitioning(false);
         }, TIMEOUTS.STEP_TRANSITION);
     };
@@ -523,14 +556,19 @@ export function WizardContainer({
                                         onPress={handleNext}
                                         isDisabled={!canProceed || isConfirmingSelection}
                                     >
-                                        {getNextButtonText(isConfirmingSelection, currentStepIndex, WIZARD_STEPS.length, state.wizardMode, state.currentStep)}
+                                        {getNextButtonText(
+                                            isConfirmingSelection,
+                                            currentStepIndex,
+                                            WIZARD_STEPS.length,
+                                            state.wizardMode,
+                                            state.currentStep,
+                                        )}
                                     </Button>
                                 </Flex>
                             }
                             constrainWidth={true}
                         />
                     )}
-
                 </div>
             </div>
 

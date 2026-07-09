@@ -66,27 +66,35 @@ export interface AreaSubStepDriver {
     commit(state: WizardState, subStepId: string): Partial<WizardState>;
     /** Un-commit `target` + everything after it on Back; no-op when unused. */
     uncommit(state: WizardState, order: string[], target: string): Partial<WizardState>;
+    /**
+     * Retreat WITHIN the active sub-step (a sub-step with its own progressive
+     * disclosure, e.g. Adobe I/O's project → workspace → summary). Returns the
+     * state update for one inner step back, or null when the sub-step has no
+     * inner stage to retreat — Back then falls through to `prev()`. Pure over
+     * `state` (called during render for the Back-enabled check).
+     */
+    retreatWithin?(state: WizardState): Partial<WizardState> | null;
 }
 
 // --- generic helpers over an ordered {id, status} list -----------------------
 
 /** The sub-step to open first: the first `current`, else first openable, else last. */
 function firstOpen(steps: AreaSubStep[]): string {
-    const current = steps.find(s => s.status === 'current');
+    const current = steps.find((s) => s.status === 'current');
     if (current) return current.id;
-    const openable = steps.find(s => s.status !== 'done' && s.status !== 'locked');
+    const openable = steps.find((s) => s.status !== 'done' && s.status !== 'locked');
     return (openable ?? steps[steps.length - 1]).id;
 }
 
 /** The next sub-step id in display order after `current`, or null at the end. */
 function nextOf(steps: AreaSubStep[], current: string): string | null {
-    const idx = steps.findIndex(s => s.id === current);
+    const idx = steps.findIndex((s) => s.id === current);
     return idx >= 0 && idx < steps.length - 1 ? steps[idx + 1].id : null;
 }
 
 /** The previous sub-step id in display order before `current`, or null at the start. */
 function prevOf(steps: AreaSubStep[], current: string): string | null {
-    const idx = steps.findIndex(s => s.id === current);
+    const idx = steps.findIndex((s) => s.id === current);
     return idx > 0 ? steps[idx - 1].id : null;
 }
 
@@ -98,7 +106,7 @@ function commerceContext(state: WizardState): CommerceSectionContext {
 
 const commerceDriver: AreaSubStepDriver = {
     subSteps(state) {
-        return commerceSectionStates(state, commerceContext(state)).map(s => ({
+        return commerceSectionStates(state, commerceContext(state)).map((s) => ({
             id: s.id,
             title: SECTION_TITLES[s.id],
             status: s.status,
@@ -151,7 +159,7 @@ const commerceDriver: AreaSubStepDriver = {
 
 const storefrontDriver: AreaSubStepDriver = {
     subSteps(state) {
-        return storefrontSectionStates(state).map(s => ({
+        return storefrontSectionStates(state).map((s) => ({
             id: s.id,
             title: STOREFRONT_SECTION_TITLES[s.id],
             status: s.status,
@@ -192,7 +200,7 @@ const storefrontDriver: AreaSubStepDriver = {
 
 const integrationsDriver: AreaSubStepDriver = {
     subSteps(state) {
-        return integrationsSectionStates(state).map(s => ({
+        return integrationsSectionStates(state).map((s) => ({
             id: s.id,
             title: INTEGRATIONS_SECTION_TITLES[s.id],
             status: s.status,
@@ -241,6 +249,25 @@ const integrationsDriver: AreaSubStepDriver = {
         }
         return {};
     },
+    // Adobe I/O's body is a progressive disclosure (project → workspace → summary);
+    // Back walks that inner stack BEFORE leaving the sub-step, so the workspace view
+    // returns to project selection, not to Services.
+    retreatWithin(state) {
+        if (integrationsDriver.active(state) !== 'adobe-io') return null;
+        if (state.adobeWorkspace) {
+            // Summary → workspace picker; keep the choice highlighted as pending.
+            return { adobeWorkspace: undefined, pendingAdobeWorkspace: state.adobeWorkspace };
+        }
+        if (state.adobeProject?.id) {
+            // Workspace picker → project selection.
+            return {
+                adobeProject: undefined,
+                pendingAdobeWorkspace: undefined,
+                workspacesCache: undefined,
+            };
+        }
+        return null;
+    },
 };
 
 const DRIVERS: Record<string, AreaSubStepDriver> = {
@@ -251,7 +278,7 @@ const DRIVERS: Record<string, AreaSubStepDriver> = {
 
 /** The sub-step driver for an area, or null for an area with no sub-steps. */
 export function areaSubSteps(areaId: string | undefined): AreaSubStepDriver | null {
-    return areaId ? DRIVERS[areaId] ?? null : null;
+    return areaId ? (DRIVERS[areaId] ?? null) : null;
 }
 
 /**
