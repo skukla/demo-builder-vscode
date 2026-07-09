@@ -34,7 +34,10 @@ import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { StorefrontSetupStep } from '@/features/eds/ui/steps/StorefrontSetupStep';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
-import { areaSubSteps } from '@/features/project-creation/ui/steps/areaSubSteps';
+import {
+    areaSubSteps,
+    type AreaSubStepDriver,
+} from '@/features/project-creation/ui/steps/areaSubSteps';
 import { buildYourProjectAreas } from '@/features/project-creation/ui/steps/buildYourProjectAreas';
 import { BuildYourProjectStep } from '@/features/project-creation/ui/steps/BuildYourProjectStep';
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
@@ -65,6 +68,22 @@ interface WizardContainerProps {
     blockLibraryDefaults?: string[];
     /** Custom block libraries from VS Code settings */
     customBlockLibraryDefaults?: CustomBlockLibrary[];
+}
+
+/**
+ * The active sub-step's INNER disclosure moves (e.g. Adobe I/O's project →
+ * workspace → summary): the state update Back/Continue applies while STAYING
+ * on the sub-step, or null when there is no inner stage. Extracted so the
+ * container body stays under the complexity budget.
+ */
+function driverInnerMoves(
+    driver: AreaSubStepDriver | null,
+    state: WizardState,
+): { innerRetreat: Partial<WizardState> | null; innerAdvance: Partial<WizardState> | null } {
+    return {
+        innerRetreat: driver?.retreatWithin?.(state) ?? null,
+        innerAdvance: driver?.advanceWithin?.(state) ?? null,
+    };
 }
 
 export function WizardContainer({
@@ -394,7 +413,7 @@ export function WizardContainer({
     // at its first sub-step) → next wizard step. Pressing Continue COMMITS the current
     // sub-step via the driver (Commerce's commit-gated ✓; a no-op for areas without it),
     // so an auto-detected value never shows ✓ on form validity alone.
-    const innerAdvance = activeDriver?.advanceWithin?.(state) ?? null;
+    const { innerRetreat, innerAdvance } = driverInnerMoves(activeDriver, state);
     const handleNext = () => {
         // Inner disclosure stage first (e.g. Adobe I/O: Continue commits the
         // pending project pick and reveals the workspace view, staying put).
@@ -422,7 +441,6 @@ export function WizardContainer({
     // workspace view → project selection) → previous sub-step (within the active
     // area) → previous visible area (entering it at its LAST sub-step) → previous
     // wizard step.
-    const innerRetreat = activeDriver?.retreatWithin?.(state) ?? null;
     const handleBack = () => {
         if (innerRetreat) {
             updateState(innerRetreat);

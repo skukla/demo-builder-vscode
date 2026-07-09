@@ -2193,6 +2193,33 @@ button[class*="spectrum-Button"][disabled],
     color: var(--spectrum-global-color-red-600) !important;
 }
 
+/* AI Capabilities — flat skills list. Fixed height so expanding nothing:
+   every skill is visible and the LIST scrolls while the modal frame stays
+   put (the accordions it replaces resized the dialog and made it jump). */
+.ai-skills-scroll {
+    max-height: 280px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-right: 8px; /* keep the scrollbar off the text */
+}
+
+/* Sticky, high-contrast group headers — readable at a glance and they pin to
+   the top of the scroll region while their group's skills scroll under. */
+.ai-skills-group-header {
+    position: sticky;
+    top: 0;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--spectrum-global-color-gray-800);
+    background: var(--spectrum-global-color-gray-100);
+    padding: 4px 0;
+    margin-bottom: 4px;
+}
+
 /* ===========================================
    Dashboard Action Buttons - Spectrum Style
    Matches project-card-spectrum patterns

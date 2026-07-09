@@ -7,7 +7,7 @@
  * independently. There is no outer toggle.
  */
 
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import React from 'react';
 import { AiSkillsList } from '@/features/dashboard/ui/components/AiSkillsList';
@@ -22,7 +22,7 @@ function renderList(props: Partial<React.ComponentProps<typeof AiSkillsList>> = 
     return render(
         <Provider theme={defaultTheme}>
             <AiSkillsList skills={props.skills ?? []} hasError={props.hasError} />
-        </Provider>,
+        </Provider>
     );
 }
 
@@ -70,7 +70,7 @@ describe('AiSkillsList', () => {
             });
 
             const rows = screen.getAllByTestId(/^ai-skills-group-/);
-            const ids = rows.map(r => r.getAttribute('data-testid'));
+            const ids = rows.map((r) => r.getAttribute('data-testid'));
             expect(ids).toEqual([
                 'ai-skills-group-demo-builder',
                 'ai-skills-group-adobe',
@@ -86,34 +86,20 @@ describe('AiSkillsList', () => {
             expect(screen.queryByTestId('ai-skills-group-unknown')).not.toBeInTheDocument();
         });
 
-        it('does not render skill names until a group is expanded', () => {
+        it('renders ALL skill names at rest (flat list — no expansion, no modal jump)', () => {
             renderList({
                 skills: [
                     makeSkill('add-component', 'demo-builder'),
                     makeSkill('aem-tester', 'adobe'),
                 ],
             });
-            expect(screen.queryByText('add-component')).not.toBeInTheDocument();
-            expect(screen.queryByText('aem-tester')).not.toBeInTheDocument();
+            expect(screen.getByText('add-component')).toBeInTheDocument();
+            expect(screen.getByText('aem-tester')).toBeInTheDocument();
         });
     });
 
-    describe('Per-group expansion', () => {
-        it('reveals skill names when a group is clicked', () => {
-            renderList({
-                skills: [
-                    makeSkill('zeta', 'demo-builder'),
-                    makeSkill('alpha', 'demo-builder'),
-                ],
-            });
-
-            fireEvent.click(screen.getByTestId('ai-skills-group-demo-builder'));
-
-            expect(screen.getByText('alpha')).toBeInTheDocument();
-            expect(screen.getByText('zeta')).toBeInTheDocument();
-        });
-
-        it('sorts skills alphabetically within an expanded group', () => {
+    describe('Flat grouped list', () => {
+        it('sorts skills alphabetically within a group', () => {
             renderList({
                 skills: [
                     makeSkill('zeta', 'demo-builder'),
@@ -122,38 +108,31 @@ describe('AiSkillsList', () => {
                 ],
             });
 
-            fireEvent.click(screen.getByTestId('ai-skills-group-demo-builder'));
-
-            const rows = screen.getAllByTestId('ai-skill-row').map(r => r.textContent);
+            const rows = screen.getAllByTestId('ai-skill-row').map((r) => r.textContent);
             expect(rows).toEqual(['alpha', 'beta', 'zeta']);
         });
 
-        it('hides skill names when the group is clicked again', () => {
-            renderList({ skills: [makeSkill('add-component', 'demo-builder')] });
-
-            const groupToggle = screen.getByTestId('ai-skills-group-demo-builder');
-            fireEvent.click(groupToggle);
-            expect(screen.getByText('add-component')).toBeInTheDocument();
-
-            fireEvent.click(groupToggle);
-            expect(screen.queryByText('add-component')).not.toBeInTheDocument();
-        });
-
-        it('expands groups independently', () => {
+        it('renders each group header with its label and count', () => {
             renderList({
                 skills: [
                     makeSkill('add-component', 'demo-builder'),
+                    makeSkill('sync-changes', 'demo-builder'),
                     makeSkill('aem-tester', 'adobe'),
                 ],
             });
 
-            fireEvent.click(screen.getByTestId('ai-skills-group-demo-builder'));
-            expect(screen.getByText('add-component')).toBeInTheDocument();
-            expect(screen.queryByText('aem-tester')).not.toBeInTheDocument();
+            expect(screen.getByTestId('ai-skills-group-demo-builder')).toHaveTextContent(
+                'Demo Builder · 2'
+            );
+            expect(screen.getByTestId('ai-skills-group-adobe')).toHaveTextContent('Adobe AEM · 1');
+        });
 
-            fireEvent.click(screen.getByTestId('ai-skills-group-adobe'));
-            expect(screen.getByText('add-component')).toBeInTheDocument();
-            expect(screen.getByText('aem-tester')).toBeInTheDocument();
+        it('marks headers with the sticky readable-header class', () => {
+            renderList({ skills: [makeSkill('add-component', 'demo-builder')] });
+
+            expect(screen.getByTestId('ai-skills-group-demo-builder')).toHaveClass(
+                'ai-skills-group-header'
+            );
         });
     });
 
