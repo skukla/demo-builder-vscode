@@ -19,7 +19,10 @@
  * services subscribe with `{ licenseConfigs:null, roles:null }`.
  */
 
-import type { OrgServiceInfo, ServiceSubscriptionInfo } from '@/features/authentication/services/types';
+import type {
+    OrgServiceInfo,
+    ServiceSubscriptionInfo,
+} from '@/features/authentication/services/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
 /** Baseline API always subscribed (free; needed for `aio app` operations). */
@@ -64,7 +67,9 @@ export interface ApiSubscriberClient {
     ensureOAuthCredentialId(target: OrgTarget): Promise<string>;
     /** Create the apiKey credential; return its `id_integration`. */
     createAdobeIdCredential(
-        orgId: string, projectId: string, workspaceId: string,
+        orgId: string,
+        projectId: string,
+        workspaceId: string,
         input: {
             name: string;
             description: string;
@@ -72,19 +77,31 @@ export interface ApiSubscriberClient {
             domain: string;
             /** Extra names that count as an existing match (e.g. a legacy fixed name). */
             reuseNames?: string[];
-        },
+        }
     ): Promise<string>;
     subscribeOAuthServerToServerIntegrationToServices(
-        orgId: string, idIntegration: string, serviceInfo: ServiceSubscriptionInfo[],
+        orgId: string,
+        idIntegration: string,
+        serviceInfo: ServiceSubscriptionInfo[]
     ): Promise<void>;
     subscribeAdobeIdIntegrationToServices(
-        orgId: string, idIntegration: string, serviceInfo: ServiceSubscriptionInfo[],
+        orgId: string,
+        idIntegration: string,
+        serviceInfo: ServiceSubscriptionInfo[]
     ): Promise<void>;
 }
 
-/** Union of every appBuilderComponent's `requiredApis` + the baseline; deduped. */
-export function computeRequiredApis(appBuilderComponents: AppBuilderComponentCatalogEntry[]): string[] {
-    const apis = new Set<string>([BASELINE_API]);
+/**
+ * Union of every appBuilderComponent's `requiredApis` + the baseline + any
+ * runtime-added extras (`Project.additionalConsoleApis`); deduped. Extras MUST
+ * ride every reconcile — the subscribe PUTs the full union, so omitting them
+ * once would strip an AI-added subscription.
+ */
+export function computeRequiredApis(
+    appBuilderComponents: AppBuilderComponentCatalogEntry[],
+    extraApis: string[] = [],
+): string[] {
+    const apis = new Set<string>([BASELINE_API, ...extraApis]);
     for (const appBuilderComponent of appBuilderComponents) {
         for (const api of appBuilderComponent.requiredApis ?? []) {
             apis.add(api);
@@ -155,7 +172,9 @@ async function subscribeOAuthServices(
         return;
     }
     await client.subscribeOAuthServerToServerIntegrationToServices(
-        target.orgId, idIntegration, services.map(toServiceSubscriptionInfo),
+        target.orgId,
+        idIntegration,
+        services.map(toServiceSubscriptionInfo),
     );
 }
 
@@ -169,7 +188,9 @@ async function subscribeApiKeyServices(
         return;
     }
     const idIntegration = await client.createAdobeIdCredential(
-        target.orgId, target.projectId, target.workspaceId,
+        target.orgId,
+        target.projectId,
+        target.workspaceId,
         {
             // AdobeID credential names are unique per PROJECT, so a fixed name
             // collides on the 2nd workspace (409 duplicate). Scope it to the
@@ -186,7 +207,9 @@ async function subscribeApiKeyServices(
         return;
     }
     await client.subscribeAdobeIdIntegrationToServices(
-        target.orgId, idIntegration, services.map(toServiceSubscriptionInfo),
+        target.orgId,
+        idIntegration,
+        services.map(toServiceSubscriptionInfo),
     );
 }
 
@@ -203,8 +226,9 @@ export async function subscribeRequiredApis(
     target: OrgTarget,
     client: ApiSubscriberClient,
     domain: string = DEFAULT_DOMAIN,
+    extraApis: string[] = [],
 ): Promise<SubscribedApi[]> {
-    const requiredApis = computeRequiredApis(appBuilderComponents);
+    const requiredApis = computeRequiredApis(appBuilderComponents, extraApis);
     const servicesForOrg = await client.getServicesForOrg(target.orgId);
     const services = resolveServiceInfos(requiredApis, servicesForOrg);
     const { apiKey, oauthS2S } = partitionByPlatform(services);

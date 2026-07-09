@@ -52,11 +52,17 @@ export interface RunnerDepsContext {
  * to the derived name so two integrations never share `application`/`dx-excshell-1`.
  * Best-effort: an absent/unparseable config is left untouched (deploy surfaces it).
  */
-async function applyOwPackage(componentPath: string, owPackage: string, logger: Logger): Promise<void> {
+async function applyOwPackage(
+    componentPath: string,
+    owPackage: string,
+    logger: Logger,
+): Promise<void> {
     const configPath = path.join(componentPath, 'app.config.yaml');
     try {
         const raw = await fsPromises.readFile(configPath, 'utf-8');
-        const doc = yaml.parse(raw) as { application?: { runtimeManifest?: { packages?: Record<string, unknown> } } };
+        const doc = yaml.parse(raw) as {
+            application?: { runtimeManifest?: { packages?: Record<string, unknown> } };
+        };
         const manifest = doc?.application?.runtimeManifest;
         const packages = manifest?.packages;
         if (!manifest || !packages || Object.keys(packages).length === 0) {
@@ -70,7 +76,9 @@ async function applyOwPackage(componentPath: string, owPackage: string, logger: 
         await fsPromises.writeFile(configPath, yaml.stringify(doc), 'utf-8');
         logger.debug(`[AppBuilderComponent Runner] applied ow.package "${owPackage}"`);
     } catch (error) {
-        logger.warn(`[AppBuilderComponent Runner] could not apply ow.package: ${toError(error).message}`);
+        logger.warn(
+            `[AppBuilderComponent Runner] could not apply ow.package: ${toError(error).message}`,
+        );
     }
 }
 
@@ -105,6 +113,9 @@ export function buildDefaultRunnerDeps(ctx: RunnerDepsContext): AppBuilderCompon
                 subscriberTarget(project),
                 ctx.subscriberClient,
                 deriveAllowedDomain(project),
+                // Runtime-added APIs (add_console_apis) must ride every
+                // reconcile or the full-union PUT strips them.
+                project.additionalConsoleApis ?? [],
             );
         },
         republishStorefront: ({ project }) =>

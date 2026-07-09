@@ -149,6 +149,14 @@ export interface Project {
      * See docs/architecture/adr/011-app-builder-appBuilderComponents.md.
      */
     appBuilderComponents?: Record<string, AppBuilderComponentState>;
+    /**
+     * Adobe API sdk codes added at runtime (the `add_console_apis` MCP tool),
+     * beyond any catalog entry's `requiredApis`. Persisted so every subsequent
+     * subscription reconcile includes them in the union — the Console
+     * subscribe PUTs the full list, so an unpersisted ad-hoc API would be
+     * silently dropped on the next component add/remove.
+     */
+    additionalConsoleApis?: string[];
     /** User-saved AI prompts */
     aiPrompts?: AiPrompt[];
     /**

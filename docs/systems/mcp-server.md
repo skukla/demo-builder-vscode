@@ -269,9 +269,15 @@ used while assembling a `create_project` call.
 
 ### Descriptor-driven tools — `readDescriptors.ts` / `actionDescriptors.ts` (via `toolDescriptors.ts`)
 Thin tools declared as data and dispatched to existing handler maps:
-- Reads: `verify_ai_setup`, `list_ai_prompts`, `check_mesh`.
+- Reads: `verify_ai_setup`, `list_ai_prompts`, `check_mesh`, `list_console_apis`
+  (the org's subscribable Adobe services, flagging ones the reconcile union
+  already manages).
 - Actions: `regenerate_ai_files`, `start_demo`, `stop_demo`, `save_ai_prompt`,
-  `delete_ai_prompt`, `delete_mesh`.
+  `delete_ai_prompt`, `delete_mesh`, `add_console_apis` (runtime API
+  subscription on the demo workspace credential — reuses `apiSubscriber` under
+  the auth → org-mismatch → developer-role guard chain; added codes persist in
+  `Project.additionalConsoleApis` and ride every later reconcile union, since
+  the Console subscribe PUTs the full list).
 
 ### Project lifecycle
 | Tool | File | Notes |

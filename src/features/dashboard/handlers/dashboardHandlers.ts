@@ -34,6 +34,10 @@ import {
     handleVerifyAppBuilderComponent,
 } from '@/features/dashboard/handlers/appBuilderComponentHandlers';
 import {
+    handleAddConsoleApis,
+    handleListConsoleApis,
+} from '@/features/dashboard/handlers/consoleApiHandlers';
+import {
     runOnOpenChecks,
     orgContextCheck,
     createMcpHealthCheck,
@@ -897,6 +901,10 @@ export const dashboardHandlers = defineHandlers({
     redeployAppBuilderComponent: handleRedeployAppBuilderComponent,
     removeAppBuilderComponent: handleRemoveAppBuilderComponent,
     verifyAppBuilderComponent: handleVerifyAppBuilderComponent,
+
+    // Console API access (runtime API subscription — list_console_apis / add_console_apis)
+    listConsoleApis: handleListConsoleApis,
+    addConsoleApis: handleAddConsoleApis,
 
     // EDS storefront sync
     syncStorefront: handleSyncStorefront,

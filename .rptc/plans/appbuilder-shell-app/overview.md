@@ -63,9 +63,13 @@ This exposes one real capability gap and one tooling gap:
       `ensureMeshApiSubscribed` treated "any catalog row matches the axes" as "a mesh
       needs subscribing" — now filters `kind === 'mesh'` (the shell matches every axis,
       including the empty selections in tests).
-- [ ] **Step 3 — Runtime API access MCP tools** (`step-03.md`): `list_console_apis` +
-      `add_console_apis`, reusing `apiSubscriber` under org-context + role gates; persist
-      ad-hoc APIs so reconciliation never strips them.
+- [x] **Step 3 — Runtime API access MCP tools** (`step-03.md`): DONE (pending commit).
+      `consoleApiHandlers.ts` (dashboard handler map) + read/action descriptor rows;
+      reuses `subscribeRequiredApis` under the exported `runGuards` chain;
+      `Project.additionalConsoleApis` persists AFTER a successful subscribe and is
+      unioned into both reconcile call sites (runner deps + mesh pre-deploy).
+      `list_console_apis` flags managed codes from the union (no live credential
+      read — avoids a write-on-read via ensureOAuthCredentialId).
 - [ ] **Step 4 — AI guidance + end-to-end verification** (`step-04.md`): teach the flow
       (AGENTS.md section + skill) and walk the Firefly use case live.
 - [ ] **Step 5 — Backlog corrections from the slice-3 research** (`step-05.md`): rescope

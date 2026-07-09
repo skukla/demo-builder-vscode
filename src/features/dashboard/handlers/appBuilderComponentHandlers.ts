@@ -50,8 +50,14 @@ import { toError } from '@/types/typeGuards';
  * Run the DeployAppCommand guard order (auth → org-mismatch → App Builder
  * permission). Returns an error string on the first failure (caller aborts
  * WITHOUT calling the runner); undefined when all guards pass.
+ *
+ * Exported for the console-API handlers (consoleApiHandlers.ts), which need
+ * the identical chain before touching Developer Console credentials.
  */
-async function runGuards(context: HandlerContext, project: Project): Promise<string | undefined> {
+export async function runGuards(
+    context: HandlerContext,
+    project: Project,
+): Promise<string | undefined> {
     const authManager = ServiceLocator.getAuthenticationService();
 
     const authResult = await ensureAdobeIOAuth({
@@ -86,9 +92,10 @@ async function runGuards(context: HandlerContext, project: Project): Promise<str
 }
 
 /** Resolve the catalog entry from an add payload (catalog id OR custom source). */
-function resolveAddEntry(
-    payload: { id?: string; source?: { owner: string; repo: string } },
-): AppBuilderComponentCatalogEntry | undefined {
+function resolveAddEntry(payload: {
+    id?: string;
+    source?: { owner: string; repo: string };
+}): AppBuilderComponentCatalogEntry | undefined {
     if (payload.source?.owner && payload.source?.repo) {
         return buildCustomIntegrationEntry(payload.source);
     }
@@ -115,7 +122,9 @@ async function postRowStatus(
     status: 'deploying' | 'deployed' | 'error' | 'not-deployed',
     message?: string,
 ): Promise<void> {
-    const { ProjectDashboardWebviewCommand } = await import('@/features/dashboard/commands/showDashboard');
+    const { ProjectDashboardWebviewCommand } = await import(
+        '@/features/dashboard/commands/showDashboard'
+    );
     await ProjectDashboardWebviewCommand.sendAppBuilderComponentStatusUpdate(id, status, message);
 }
 
@@ -134,7 +143,11 @@ export const handleAddAppBuilderComponent: MessageHandler<{
 
     const entry = resolveAddEntry(payload ?? {});
     if (!entry) {
-        return { success: false, error: 'Unknown appBuilderComponent', code: ErrorCode.CONFIG_INVALID };
+        return {
+            success: false,
+            error: 'Unknown appBuilderComponent',
+            code: ErrorCode.CONFIG_INVALID,
+        };
     }
 
     const guardError = await runGuards(context, project);
@@ -163,7 +176,11 @@ export const handleAddAppBuilderComponent: MessageHandler<{
 /** Shared deploy/redeploy: guards → D1 deployAppBuilderComponent {id}. */
 async function deployById(context: HandlerContext, id: string | undefined) {
     if (!id) {
-        return { success: false, error: 'AppBuilderComponent id is required', code: ErrorCode.CONFIG_INVALID };
+        return {
+            success: false,
+            error: 'AppBuilderComponent id is required',
+            code: ErrorCode.CONFIG_INVALID,
+        };
     }
     const project = await context.stateManager.getCurrentProject();
     if (!project) {
@@ -180,22 +197,35 @@ async function deployById(context: HandlerContext, id: string | undefined) {
     const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project));
     const result = await deployAppBuilderComponent(project, id, deps);
     const status = result.success ? 'deployed' : 'error';
-    await postRowStatus(id, status, result.success ? undefined : (result.error || 'Deployment failed'));
+    await postRowStatus(
+        id,
+        status,
+        result.success ? undefined : result.error || 'Deployment failed',
+    );
     return result.success ? { success: true } : { success: false, error: result.error };
 }
 
 /** Handle 'deployAppBuilderComponent' — deploy the given appBuilderComponent's tail. */
-export const handleDeployAppBuilderComponent: MessageHandler<{ id?: string }> = (context, payload) =>
-    deployById(context, payload?.id);
+export const handleDeployAppBuilderComponent: MessageHandler<{ id?: string }> = (
+    context,
+    payload,
+) => deployById(context, payload?.id);
 
 /** Redeploy is the same path (idempotent re-run of the deploy tail). */
 export const handleRedeployAppBuilderComponent = handleDeployAppBuilderComponent;
 
 /** Handle 'removeAppBuilderComponent' — guards → D1 removeAppBuilderComponent {id} (confirm is UI-side). */
-export const handleRemoveAppBuilderComponent: MessageHandler<{ id?: string }> = async (context, payload) => {
+export const handleRemoveAppBuilderComponent: MessageHandler<{ id?: string }> = async (
+    context,
+    payload,
+) => {
     const id = payload?.id;
     if (!id) {
-        return { success: false, error: 'AppBuilderComponent id is required', code: ErrorCode.CONFIG_INVALID };
+        return {
+            success: false,
+            error: 'AppBuilderComponent id is required',
+            code: ErrorCode.CONFIG_INVALID,
+        };
     }
     const project = await context.stateManager.getCurrentProject();
     if (!project) {
@@ -219,10 +249,17 @@ export const handleRemoveAppBuilderComponent: MessageHandler<{ id?: string }> = 
  * to confirm the project's org is reachable, then posts a typed `deployed` or
  * `error` row status (P2: always a typed outcome, never a silent flip).
  */
-export const handleVerifyAppBuilderComponent: MessageHandler<{ id?: string }> = async (context, payload) => {
+export const handleVerifyAppBuilderComponent: MessageHandler<{ id?: string }> = async (
+    context,
+    payload,
+) => {
     const id = payload?.id;
     if (!id) {
-        return { success: false, error: 'AppBuilderComponent id is required', code: ErrorCode.CONFIG_INVALID };
+        return {
+            success: false,
+            error: 'AppBuilderComponent id is required',
+            code: ErrorCode.CONFIG_INVALID,
+        };
     }
     const project = await context.stateManager.getCurrentProject();
     if (!project) {

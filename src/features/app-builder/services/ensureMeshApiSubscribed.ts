@@ -35,6 +35,7 @@ export interface MeshSubscribeTarget {
     adobe?: Pick<AdobeConfig, 'organization' | 'projectId' | 'workspace'>;
     componentSelections?: Pick<NonNullable<Project['componentSelections']>, 'backend' | 'frontend'>;
     componentInstances?: Project['componentInstances'];
+    additionalConsoleApis?: Project['additionalConsoleApis'];
 }
 
 export interface EnsureMeshApiSubscribedParams {
@@ -78,6 +79,7 @@ export async function ensureMeshApiSubscribed(
             subscriberTarget(project),
             client,
             deriveAllowedDomain(project),
+            project.additionalConsoleApis ?? [],
         ),
     );
     logger.info('[Mesh Subscribe] Required APIs subscribed');

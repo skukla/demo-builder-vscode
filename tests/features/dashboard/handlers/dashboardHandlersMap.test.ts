@@ -119,7 +119,7 @@ describe('dashboardHandlers', () => {
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers);
 
-            // Then: Exactly 29 handlers
+            // Then: Exactly 31 handlers
             // 1 init (requestStatus only; no 'ready') + 2 lifecycle + 6 navigation +
             // 1 mesh + 1 syncStorefront + 1 refreshBlockLibrary + 2 auth
             // (reAuthenticate + switchOrg) + 1 project + 1 reset = 16, plus the 4
@@ -127,9 +127,10 @@ describe('dashboardHandlers', () => {
             // renameProject) = 20, plus the 4 App Builder actions (addApp,
             // deployApp, redeployApp, removeApp) = 24, plus the 5 appBuilderComponent
             // (integrations list) actions (addAppBuilderComponent, deployAppBuilderComponent,
-            // redeployAppBuilderComponent, removeAppBuilderComponent, verifyAppBuilderComponent) = 29.
+            // redeployAppBuilderComponent, removeAppBuilderComponent, verifyAppBuilderComponent) = 29,
+            // plus the 2 console-API actions (listConsoleApis, addConsoleApis) = 31.
             // setAuthoringExperience lives in the Configure webview, not this map.
-            expect(types).toHaveLength(29);
+            expect(types).toHaveLength(31);
         });
 
         it('should have handlers as functions', () => {
