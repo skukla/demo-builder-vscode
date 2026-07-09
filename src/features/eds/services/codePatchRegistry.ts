@@ -73,6 +73,14 @@ export interface CodePatchResult {
     patchId: string;
     target: string;
     applied: boolean;
+    /**
+     * True when the target already contained the replacement (a previous
+     * create/reset applied this patch — common when a create reuses an
+     * existing repo). Counted as success: the desired end state exists and
+     * the content was left untouched. Distinguished from a fresh apply so
+     * logs/reports can say so.
+     */
+    alreadyApplied?: boolean;
     reason?: string;
 }
 
@@ -119,10 +127,8 @@ export async function getCodePatches(
         return [];
     }
 
-    const patchMap = new Map(allPatches.map(p => [p.id, p]));
-    return patchIds
-        .map(id => patchMap.get(id))
-        .filter((p): p is CodePatch => p !== undefined);
+    const patchMap = new Map(allPatches.map((p) => [p.id, p]));
+    return patchIds.map((id) => patchMap.get(id)).filter((p): p is CodePatch => p !== undefined);
 }
 
 /**
@@ -167,8 +173,8 @@ export async function applyCodePatches(
     }
 
     // Some IDs returned, some didn't — warn + record per-ID failure for the missing ones.
-    const foundIds = new Set(patches.map(p => p.id));
-    const unknownIds = patchIds.filter(id => !foundIds.has(id));
+    const foundIds = new Set(patches.map((p) => p.id));
+    const unknownIds = patchIds.filter((id) => !foundIds.has(id));
     if (unknownIds.length > 0) {
         logger.warn(`[CodePatch] Unknown patch IDs: ${unknownIds.join(', ')}`);
         for (const id of unknownIds) {
@@ -213,11 +219,23 @@ function tryApplyOne(
     }
 
     if (!content.includes(patch.precondition)) {
+        // The precondition being gone BECAUSE the replacement is in place is
+        // success, not drift — a create over an existing repo re-runs patches
+        // that a previous create/reset already applied.
+        if (content.includes(patch.replacement)) {
+            logger.info(`[CodePatch] '${patch.id}' already applied to ${patch.target} — skipping`);
+            return {
+                patchId: patch.id,
+                target: patch.target,
+                applied: true,
+                alreadyApplied: true,
+            };
+        }
         return {
             patchId: patch.id,
             target: patch.target,
             applied: false,
-            reason: 'Precondition not found (file may already be patched or has changed)',
+            reason: 'Precondition not found (target has changed — possible template/library drift)',
         };
     }
 

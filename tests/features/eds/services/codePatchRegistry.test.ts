@@ -77,8 +77,20 @@ describe('getCodePatches', () => {
 
     it('fetches external patches and filters by requested IDs', async () => {
         mockExternalLedger([
-            { id: 'patch-a', target: 'blocks/header/header.js', description: 'A', precondition: 'foo', replacement: 'bar' },
-            { id: 'patch-b', target: 'blocks/footer/footer.js', description: 'B', precondition: 'baz', replacement: 'qux' },
+            {
+                id: 'patch-a',
+                target: 'blocks/header/header.js',
+                description: 'A',
+                precondition: 'foo',
+                replacement: 'bar',
+            },
+            {
+                id: 'patch-b',
+                target: 'blocks/footer/footer.js',
+                description: 'B',
+                precondition: 'baz',
+                replacement: 'qux',
+            },
         ]);
 
         const patches = await getCodePatches(['patch-a'], SOURCE, mockLogger);
@@ -89,7 +101,13 @@ describe('getCodePatches', () => {
 
     it('filters out unknown IDs (returns only known ones)', async () => {
         mockExternalLedger([
-            { id: 'patch-a', target: 'a.js', description: 'A', precondition: 'foo', replacement: 'bar' },
+            {
+                id: 'patch-a',
+                target: 'a.js',
+                description: 'A',
+                precondition: 'foo',
+                replacement: 'bar',
+            },
         ]);
 
         const patches = await getCodePatches(['patch-a', 'unknown-patch'], SOURCE, mockLogger);
@@ -99,13 +117,15 @@ describe('getCodePatches', () => {
     });
 
     it('returns empty array when external fetch fails (HTTP error)', async () => {
-        global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 404, statusText: 'Not Found' });
+        global.fetch = jest
+            .fn()
+            .mockResolvedValue({ ok: false, status: 404, statusText: 'Not Found' });
 
         const patches = await getCodePatches(['patch-a'], SOURCE, mockLogger);
 
         expect(patches).toEqual([]);
         expect(mockLogger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('External fetch failed'),
+            expect.stringContaining('External fetch failed')
         );
     });
 
@@ -115,9 +135,7 @@ describe('getCodePatches', () => {
         const patches = await getCodePatches(['patch-a'], SOURCE, mockLogger);
 
         expect(patches).toEqual([]);
-        expect(mockLogger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('Network down'),
-        );
+        expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Network down'));
     });
 
     it('fetches from the canonical eds-demo-patches code-patches.json URL', async () => {
@@ -127,7 +145,7 @@ describe('getCodePatches', () => {
 
         expect(fetchMock).toHaveBeenCalledWith(
             'https://raw.githubusercontent.com/skukla/eds-demo-patches/main/citisignal/code-patches.json',
-            expect.any(Object),
+            expect.any(Object)
         );
     });
 });
@@ -149,10 +167,18 @@ describe('applyCodePatches — happy path', () => {
         ]);
 
         const files = new Map<string, string>([
-            ['blocks/header/header.js', `function decorate() { const navTools = nav.querySelector('.nav-tools'); }`],
+            [
+                'blocks/header/header.js',
+                `function decorate() { const navTools = nav.querySelector('.nav-tools'); }`,
+            ],
         ]);
 
-        const results = await applyCodePatches(files, ['header-nav-tools-defensive'], SOURCE, mockLogger);
+        const results = await applyCodePatches(
+            files,
+            ['header-nav-tools-defensive'],
+            SOURCE,
+            mockLogger
+        );
 
         expect(results).toHaveLength(1);
         expect(results[0]).toEqual({
@@ -160,7 +186,9 @@ describe('applyCodePatches — happy path', () => {
             target: 'blocks/header/header.js',
             applied: true,
         });
-        expect(files.get('blocks/header/header.js')).toContain('if (!navTools) navTools = document.createElement');
+        expect(files.get('blocks/header/header.js')).toContain(
+            'if (!navTools) navTools = document.createElement'
+        );
     });
 
     it('returns empty results when patchIds is empty', async () => {
@@ -168,6 +196,55 @@ describe('applyCodePatches — happy path', () => {
         const results = await applyCodePatches(files, [], SOURCE, mockLogger);
         expect(results).toEqual([]);
         expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it('reports applied:true + alreadyApplied when the replacement is already in place', async () => {
+        // Re-running create/reset over a repo whose blocks were patched on a
+        // previous run: the precondition is gone BECAUSE the patch is in place.
+        // That is success (the desired end state exists), not a warning.
+        mockExternalLedger([
+            {
+                id: 'header-nav-tools-defensive',
+                target: 'blocks/header/header.js',
+                description: 'Tolerate missing nav-tools',
+                precondition: `const navTools = nav.querySelector('.nav-tools');`,
+                replacement: `let navTools = nav.querySelector('.nav-tools');\n  if (!navTools) navTools = document.createElement('div');`,
+            },
+        ]);
+
+        const patchedContent = `function decorate() { let navTools = nav.querySelector('.nav-tools');\n  if (!navTools) navTools = document.createElement('div'); }`;
+        const files = new Map<string, string>([['blocks/header/header.js', patchedContent]]);
+
+        const results = await applyCodePatches(
+            files,
+            ['header-nav-tools-defensive'],
+            SOURCE,
+            mockLogger
+        );
+
+        expect(results).toHaveLength(1);
+        expect(results[0]).toEqual({
+            patchId: 'header-nav-tools-defensive',
+            target: 'blocks/header/header.js',
+            applied: true,
+            alreadyApplied: true,
+        });
+        // Content untouched — no double-application.
+        expect(files.get('blocks/header/header.js')).toBe(patchedContent);
+    });
+
+    it('does NOT report alreadyApplied when the precondition is still present (normal apply wins)', async () => {
+        // Degenerate file containing BOTH strings: the precondition must be
+        // replaced (normal apply), not skipped.
+        mockExternalLedger([
+            { id: 'p', target: 'a.js', description: 'D', precondition: 'OLD', replacement: 'NEW' },
+        ]);
+        const files = new Map<string, string>([['a.js', 'NEW then OLD']]);
+
+        const results = await applyCodePatches(files, ['p'], SOURCE, mockLogger);
+
+        expect(results[0]).toEqual({ patchId: 'p', target: 'a.js', applied: true });
+        expect(files.get('a.js')).toBe('NEW then NEW');
     });
 });
 
@@ -178,7 +255,13 @@ describe('applyCodePatches — happy path', () => {
 describe('applyCodePatches — failure cases', () => {
     it('returns applied:false with reason when precondition does not match', async () => {
         mockExternalLedger([
-            { id: 'p', target: 'a.js', description: 'D', precondition: 'NOT_THERE', replacement: 'X' },
+            {
+                id: 'p',
+                target: 'a.js',
+                description: 'D',
+                precondition: 'NOT_THERE',
+                replacement: 'X',
+            },
         ]);
         const files = new Map<string, string>([['a.js', 'some other content']]);
 
@@ -192,7 +275,13 @@ describe('applyCodePatches — failure cases', () => {
 
     it('returns applied:false with reason when target file not in working set', async () => {
         mockExternalLedger([
-            { id: 'p', target: 'missing.js', description: 'D', precondition: 'X', replacement: 'Y' },
+            {
+                id: 'p',
+                target: 'missing.js',
+                description: 'D',
+                precondition: 'X',
+                replacement: 'Y',
+            },
         ]);
         const files = new Map<string, string>();
 
@@ -204,26 +293,36 @@ describe('applyCodePatches — failure cases', () => {
     });
 
     it('records non-applied result for each requested ID when external fetch fails', async () => {
-        global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 503, statusText: 'Service Unavailable' });
+        global.fetch = jest
+            .fn()
+            .mockResolvedValue({ ok: false, status: 503, statusText: 'Service Unavailable' });
         const files = new Map<string, string>();
 
         const results = await applyCodePatches(files, ['p-a', 'p-b'], SOURCE, mockLogger);
 
         expect(results).toHaveLength(2);
-        expect(results.every(r => r.applied === false)).toBe(true);
-        expect(results.every(r => r.reason!.includes('unavailable') || r.reason!.includes('fetch'))).toBe(true);
+        expect(results.every((r) => r.applied === false)).toBe(true);
+        expect(
+            results.every((r) => r.reason!.includes('unavailable') || r.reason!.includes('fetch'))
+        ).toBe(true);
     });
 
     it('warns about and records non-applied result for unknown patch IDs', async () => {
         mockExternalLedger([
-            { id: 'known', target: 'a.js', description: 'D', precondition: 'foo', replacement: 'bar' },
+            {
+                id: 'known',
+                target: 'a.js',
+                description: 'D',
+                precondition: 'foo',
+                replacement: 'bar',
+            },
         ]);
         const files = new Map<string, string>([['a.js', 'foo']]);
 
         const results = await applyCodePatches(files, ['known', 'unknown'], SOURCE, mockLogger);
 
         expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('unknown'));
-        const unknownResult = results.find(r => r.patchId === 'unknown');
+        const unknownResult = results.find((r) => r.patchId === 'unknown');
         expect(unknownResult).toBeDefined();
         expect(unknownResult!.applied).toBe(false);
         expect(unknownResult!.reason).toContain('not in external ledger');
@@ -244,7 +343,7 @@ describe('applyCodePatches — composition', () => {
 
         const results = await applyCodePatches(files, ['p1', 'p2'], SOURCE, mockLogger);
 
-        expect(results.every(r => r.applied)).toBe(true);
+        expect(results.every((r) => r.applied)).toBe(true);
         expect(files.get('a.js')).toBe('ONE and TWO');
     });
 });
@@ -254,7 +353,7 @@ describe('applyCodePatches — composition', () => {
 // ==========================================================================
 
 describe('applyCodePatches — idempotency', () => {
-    it('is idempotent: re-running on an already-patched file reports precondition-not-found', async () => {
+    it('is idempotent: re-running on an already-patched file reports success (alreadyApplied), untouched', async () => {
         const patch: CodePatch = {
             id: 'p',
             target: 'a.js',
@@ -268,12 +367,16 @@ describe('applyCodePatches — idempotency', () => {
         const files = new Map<string, string>([['a.js', 'this is OLD content']]);
         const first = await applyCodePatches(files, ['p'], SOURCE, mockLogger);
         expect(first[0].applied).toBe(true);
+        expect(first[0].alreadyApplied).toBeUndefined();
         expect(files.get('a.js')).toBe('this is NEW content');
 
-        // Second apply on the now-patched content: precondition no longer present
+        // Second apply on the now-patched content: the replacement is in place,
+        // so this is success — NOT a "didn't apply" warning (the b2b-tester
+        // false-positive: create over an existing repo re-runs prior patches).
         const second = await applyCodePatches(files, ['p'], SOURCE, mockLogger);
-        expect(second[0].applied).toBe(false);
-        expect(second[0].reason).toContain('Precondition not found');
+        expect(second[0].applied).toBe(true);
+        expect(second[0].alreadyApplied).toBe(true);
+        expect(files.get('a.js')).toBe('this is NEW content');
     });
 });
 
@@ -313,9 +416,9 @@ describe('applyCodePatches — critical flag', () => {
         ]);
         const files = new Map<string, string>([['a.js', 'something else']]);
 
-        await expect(applyCodePatches(files, ['must-apply'], SOURCE, mockLogger))
-            .rejects
-            .toBeInstanceOf(CodePatchCriticalError);
+        await expect(
+            applyCodePatches(files, ['must-apply'], SOURCE, mockLogger)
+        ).rejects.toBeInstanceOf(CodePatchCriticalError);
     });
 
     it('throws CodePatchCriticalError when a critical:true patch target file is missing', async () => {
@@ -331,22 +434,26 @@ describe('applyCodePatches — critical flag', () => {
         ]);
         const files = new Map<string, string>();
 
-        await expect(applyCodePatches(files, ['must-apply'], SOURCE, mockLogger))
-            .rejects
-            .toBeInstanceOf(CodePatchCriticalError);
+        await expect(
+            applyCodePatches(files, ['must-apply'], SOURCE, mockLogger)
+        ).rejects.toBeInstanceOf(CodePatchCriticalError);
     });
 
     it('does not throw for non-critical failures (default behavior — proceed and warn)', async () => {
         mockExternalLedger([
-            { id: 'p', target: 'a.js', description: '', precondition: 'NOT_THERE', replacement: 'X' },
+            {
+                id: 'p',
+                target: 'a.js',
+                description: '',
+                precondition: 'NOT_THERE',
+                replacement: 'X',
+            },
         ]);
         const files = new Map<string, string>([['a.js', 'something else']]);
 
-        await expect(applyCodePatches(files, ['p'], SOURCE, mockLogger))
-            .resolves
-            .toEqual([
-                expect.objectContaining({ patchId: 'p', applied: false }),
-            ]);
+        await expect(applyCodePatches(files, ['p'], SOURCE, mockLogger)).resolves.toEqual([
+            expect.objectContaining({ patchId: 'p', applied: false }),
+        ]);
     });
 });
 
@@ -383,7 +490,9 @@ describe('per-source caching', () => {
 
     it('evicts failed promise from cache so the next call retries', async () => {
         // First call fails
-        global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 503, statusText: 'Service Unavailable' });
+        global.fetch = jest
+            .fn()
+            .mockResolvedValue({ ok: false, status: 503, statusText: 'Service Unavailable' });
         const source: CodePatchSource = {
             owner: 'retry-owner',
             repo: 'retry-repo',
