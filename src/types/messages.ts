@@ -213,6 +213,7 @@ export const CHECK_IDS = {
     MESH_VERIFY: 'mesh-verify',
     MCP_HEALTH: 'mcp-health',
     AI_VERIFY: 'ai-verify',
+    AI_CONTEXT_FRESHNESS: 'ai-context-freshness',
 } as const;
 
 export type CheckId = (typeof CHECK_IDS)[keyof typeof CHECK_IDS];

@@ -111,6 +111,9 @@ export async function renameProjectCore(
                     '@/features/project-creation/services/projectFinalizationService'
                 );
                 await generateAIContextFiles(project.path, project, context.context.extensionPath);
+                // Persist the freshness stamp generateAIContextFiles set on `project`
+                // (aiContextVersion), else the on-open freshness check re-fires forever.
+                await context.stateManager.saveProjectConfigOnly(project);
             } catch (regenError) {
                 context.logger.warn(
                     `[Rename] AI context regeneration failed for "${newName}" — MCP/AI configs `

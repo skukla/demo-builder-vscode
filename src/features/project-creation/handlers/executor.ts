@@ -504,6 +504,9 @@ export async function executeProjectCreation(
     // Phase 6: Generate AI context files (non-blocking — failure does not abort project creation)
     try {
         await generateAIContextFiles(projectPath, project, context.context.extensionPath);
+        // Persist the freshness stamp generateAIContextFiles set on `project`
+        // (aiContextVersion), else the on-open freshness check re-fires forever.
+        await context.stateManager.saveProjectConfigOnly(project);
     } catch (err) {
         context.logger.warn(
             '[Project Creation] Failed to generate AI context files',

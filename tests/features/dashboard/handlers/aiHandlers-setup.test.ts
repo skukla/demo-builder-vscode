@@ -120,7 +120,7 @@ describe('aiHandlers — setup & verification', () => {
 
             expect(verifyAiSetup).toHaveBeenCalledWith(
                 '/projects/test',
-                expect.stringContaining('mock/extension/path'),
+                expect.stringContaining('mock/extension/path')
             );
             expect(result).toMatchObject({
                 success: true,
@@ -156,8 +156,17 @@ describe('aiHandlers — setup & verification', () => {
                 { name: 'mcp-config', status: 'ok' },
             ],
             inventory: {
-                skills: [{ name: 'add-component', description: null, path: '/p', source: 'demo-builder' }],
-                mcps: [{ id: 'demo-builder', status: 'ok', tools: [{ name: 't', description: 'd' }] }],
+                skills: [
+                    {
+                        name: 'add-component',
+                        description: null,
+                        path: '/p',
+                        source: 'demo-builder',
+                    },
+                ],
+                mcps: [
+                    { id: 'demo-builder', status: 'ok', tools: [{ name: 't', description: 'd' }] },
+                ],
                 sessionMcps: [],
             },
             ...overrides,
@@ -170,7 +179,7 @@ describe('aiHandlers — setup & verification', () => {
             await handleVerifyAiSetup(context);
 
             expect(context.logger.info).toHaveBeenCalledWith(
-                expect.stringContaining('[AI Verify] Verifying AI setup: /projects/test'),
+                expect.stringContaining('[AI Verify] Verifying AI setup: /projects/test')
             );
         });
 
@@ -181,7 +190,7 @@ describe('aiHandlers — setup & verification', () => {
             await handleVerifyAiSetup(context);
 
             expect(context.logger.info).toHaveBeenCalledWith(
-                expect.stringContaining('[AI Verify] skills: 1 found'),
+                expect.stringContaining('[AI Verify] skills: 1 found')
             );
         });
 
@@ -194,19 +203,20 @@ describe('aiHandlers — setup & verification', () => {
                         mcps: [],
                         sessionMcps: [],
                     },
-                }),
+                })
             );
 
             const context = createMockContext();
             await handleVerifyAiSetup(context);
 
             expect(context.logger.warn).toHaveBeenCalledWith(
-                expect.stringContaining('EACCES reading skills dir'),
+                expect.stringContaining('EACCES reading skills dir')
             );
         });
 
         it('warns with the captured stderr tail for a non-ok mcp entry (timeout)', async () => {
-            const STDERR_TAIL = 'Demo Builder MCP proxy target socket: /tmp/x.sock\nError: connect ENOENT';
+            const STDERR_TAIL =
+                'Demo Builder MCP proxy target socket: /tmp/x.sock\nError: connect ENOENT';
             (verifyAiSetup as jest.Mock).mockResolvedValue(
                 makeResult({
                     inventory: {
@@ -214,7 +224,7 @@ describe('aiHandlers — setup & verification', () => {
                         mcps: [{ id: 'demo-builder', status: 'timeout', error: STDERR_TAIL }],
                         sessionMcps: [],
                     },
-                }),
+                })
             );
 
             const context = createMockContext();
@@ -234,14 +244,14 @@ describe('aiHandlers — setup & verification', () => {
                         mcpsError: 'inspection rejected: spawn failed',
                         sessionMcps: [],
                     },
-                }),
+                })
             );
 
             const context = createMockContext();
             await handleVerifyAiSetup(context);
 
             expect(context.logger.warn).toHaveBeenCalledWith(
-                expect.stringContaining('inspection rejected: spawn failed'),
+                expect.stringContaining('inspection rejected: spawn failed')
             );
         });
 
@@ -344,6 +354,7 @@ describe('aiHandlers — setup & verification', () => {
             const context = createMockContext({
                 stateManager: {
                     getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
+                    saveProjectConfigOnly: jest.fn(),
                 } as unknown as HandlerContext['stateManager'],
             });
 
@@ -357,8 +368,32 @@ describe('aiHandlers — setup & verification', () => {
                 '/projects/test',
                 PROJECT_HEADLESS,
                 '/mock/extension/path',
-                expect.any(Function),
+                expect.any(Function)
             );
+            expect(result).toEqual({ success: true });
+        });
+
+        it('persists the (stamped) project via saveProjectConfigOnly after regenerating', async () => {
+            (generateAIContextFiles as jest.Mock).mockResolvedValue({ skills: [] });
+
+            const saveProjectConfigOnly = jest.fn().mockResolvedValue(undefined);
+            const context = createMockContext({
+                stateManager: {
+                    getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
+                    saveProjectConfigOnly,
+                } as unknown as HandlerContext['stateManager'],
+            });
+
+            const result = await handleRegenerateAiFiles(context);
+
+            // The generate stamps AI_CONTEXT_VERSION onto the SAME project object;
+            // the handler then persists it so the on-open freshness check clears.
+            expect(saveProjectConfigOnly).toHaveBeenCalledTimes(1);
+            expect(saveProjectConfigOnly).toHaveBeenCalledWith(PROJECT_HEADLESS);
+            // Order: persist must run AFTER the writers (so the stamp is set first).
+            const generateOrder = (generateAIContextFiles as jest.Mock).mock.invocationCallOrder[0];
+            const saveOrder = saveProjectConfigOnly.mock.invocationCallOrder[0];
+            expect(generateOrder).toBeLessThan(saveOrder);
             expect(result).toEqual({ success: true });
         });
 
@@ -382,6 +417,7 @@ describe('aiHandlers — setup & verification', () => {
             const context = createMockContext({
                 stateManager: {
                     getCurrentProject: jest.fn().mockResolvedValue(PROJECT_WITH_STOREFRONT),
+                    saveProjectConfigOnly: jest.fn(),
                 } as unknown as HandlerContext['stateManager'],
             });
 
@@ -392,8 +428,10 @@ describe('aiHandlers — setup & verification', () => {
             expect(installAiDefaultsMcpTools).toHaveBeenCalledWith(PROJECT_WITH_STOREFRONT.path);
             // Order matters: the install must complete before context files are written
             // (so .mcp.json's isolated-dir-anchored paths resolve to real files).
-            const installCallOrder = (installAiDefaultsMcpTools as jest.Mock).mock.invocationCallOrder[0];
-            const generateCallOrder = (generateAIContextFiles as jest.Mock).mock.invocationCallOrder[0];
+            const installCallOrder = (installAiDefaultsMcpTools as jest.Mock).mock
+                .invocationCallOrder[0];
+            const generateCallOrder = (generateAIContextFiles as jest.Mock).mock
+                .invocationCallOrder[0];
             expect(installCallOrder).toBeLessThan(generateCallOrder);
             expect(result).toEqual({ success: true });
         });
@@ -404,6 +442,7 @@ describe('aiHandlers — setup & verification', () => {
             const context = createMockContext({
                 stateManager: {
                     getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
+                    saveProjectConfigOnly: jest.fn(),
                 } as unknown as HandlerContext['stateManager'],
             });
 
@@ -422,6 +461,7 @@ describe('aiHandlers — setup & verification', () => {
             const context = createMockContext({
                 stateManager: {
                     getCurrentProject: jest.fn().mockResolvedValue(PROJECT_WITH_STOREFRONT),
+                    saveProjectConfigOnly: jest.fn(),
                 } as unknown as HandlerContext['stateManager'],
             });
 
@@ -441,6 +481,7 @@ describe('aiHandlers — setup & verification', () => {
             const context = createMockContext({
                 stateManager: {
                     getCurrentProject: jest.fn().mockResolvedValue(PROJECT_WITH_STOREFRONT),
+                    saveProjectConfigOnly: jest.fn(),
                 } as unknown as HandlerContext['stateManager'],
             });
 
@@ -462,13 +503,14 @@ describe('aiHandlers — setup & verification', () => {
                 const context = createMockContext({
                     stateManager: {
                         getCurrentProject: jest.fn().mockResolvedValue(PROJECT_WITH_STOREFRONT),
+                        saveProjectConfigOnly: jest.fn(),
                     } as unknown as HandlerContext['stateManager'],
                 });
 
                 await handleRegenerateAiFiles(context);
 
                 const installCalls = (context.sendMessage as jest.Mock).mock.calls.filter(
-                    ([type]) => type === 'creationProgress',
+                    ([type]) => type === 'creationProgress'
                 );
                 expect(installCalls.length).toBeGreaterThan(0);
                 expect(installCalls[0][1]).toMatchObject({
@@ -483,6 +525,7 @@ describe('aiHandlers — setup & verification', () => {
                 const context = createMockContext({
                     stateManager: {
                         getCurrentProject: jest.fn().mockResolvedValue(PROJECT_WITH_STOREFRONT),
+                        saveProjectConfigOnly: jest.fn(),
                     } as unknown as HandlerContext['stateManager'],
                 });
 
@@ -500,6 +543,7 @@ describe('aiHandlers — setup & verification', () => {
                 const context = createMockContext({
                     stateManager: {
                         getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
+                        saveProjectConfigOnly: jest.fn(),
                     } as unknown as HandlerContext['stateManager'],
                 });
 
@@ -519,6 +563,7 @@ describe('aiHandlers — setup & verification', () => {
                 const context = createMockContext({
                     stateManager: {
                         getCurrentProject: jest.fn().mockResolvedValue(PROJECT_WITH_STOREFRONT),
+                        saveProjectConfigOnly: jest.fn(),
                     } as unknown as HandlerContext['stateManager'],
                 });
 
@@ -528,7 +573,7 @@ describe('aiHandlers — setup & verification', () => {
                     '/projects/test',
                     PROJECT_WITH_STOREFRONT,
                     '/mock/extension/path',
-                    expect.any(Function),
+                    expect.any(Function)
                 );
             });
         });
@@ -540,13 +585,14 @@ describe('aiHandlers — setup & verification', () => {
                 const context = createMockContext({
                     stateManager: {
                         getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
+                        saveProjectConfigOnly: jest.fn(),
                     } as unknown as HandlerContext['stateManager'],
                 });
 
                 await handleRegenerateAiFiles(context);
 
                 expect(context.logger.info).toHaveBeenCalledWith(
-                    expect.stringContaining('[AI Verify] Regenerating AI files'),
+                    expect.stringContaining('[AI Verify] Regenerating AI files')
                 );
             });
 
@@ -558,6 +604,7 @@ describe('aiHandlers — setup & verification', () => {
                 const context = createMockContext({
                     stateManager: {
                         getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
+                        saveProjectConfigOnly: jest.fn(),
                     } as unknown as HandlerContext['stateManager'],
                 });
 
@@ -570,5 +617,4 @@ describe('aiHandlers — setup & verification', () => {
             });
         });
     });
-
 });

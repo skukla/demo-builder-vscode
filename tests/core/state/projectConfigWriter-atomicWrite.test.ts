@@ -66,10 +66,7 @@ describe('ProjectConfigWriter atomic writes', () => {
             const tempPath = `${manifestPath}.tmp`;
 
             // Verify temp file write was called
-            expect(mockFs.writeFile).toHaveBeenCalledWith(
-                tempPath,
-                expect.any(String),
-            );
+            expect(mockFs.writeFile).toHaveBeenCalledWith(tempPath, expect.any(String));
 
             // Verify rename was called to atomically move temp to final
             expect(mockFs.rename).toHaveBeenCalledWith(tempPath, manifestPath);
@@ -87,7 +84,9 @@ describe('ProjectConfigWriter atomic writes', () => {
             mockFs.writeFile.mockRejectedValue(writeError);
 
             // When: Saving project config
-            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow('Disk full');
+            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow(
+                'Disk full'
+            );
 
             // Then: Should attempt to clean up temp file
             const manifestPath = path.join(project.path, '.demo-builder.json');
@@ -102,7 +101,9 @@ describe('ProjectConfigWriter atomic writes', () => {
             mockFs.rename.mockRejectedValue(renameError);
 
             // When: Saving project config
-            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow('Cross-device link');
+            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow(
+                'Cross-device link'
+            );
 
             // Then: Should attempt to clean up temp file
             const manifestPath = path.join(project.path, '.demo-builder.json');
@@ -119,7 +120,9 @@ describe('ProjectConfigWriter atomic writes', () => {
 
             // When: Saving project config
             // Then: Should throw the ORIGINAL error, not the cleanup error
-            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow('Original write error');
+            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow(
+                'Original write error'
+            );
 
             // Verify cleanup was attempted (even though it failed)
             expect(mockFs.unlink).toHaveBeenCalled();
@@ -127,7 +130,7 @@ describe('ProjectConfigWriter atomic writes', () => {
             // Verify error was logged
             expect(mockLogger.error).toHaveBeenCalledWith(
                 'Failed to update project manifest',
-                originalError,
+                originalError
             );
         });
 
@@ -144,8 +147,8 @@ describe('ProjectConfigWriter atomic writes', () => {
             await writer.saveProjectConfig(project, project.path);
 
             // Then: Written content should be valid JSON with expected structure
-            const writeCall = mockFs.writeFile.mock.calls.find(
-                (call) => call[0].toString().endsWith('.tmp'),
+            const writeCall = mockFs.writeFile.mock.calls.find((call) =>
+                call[0].toString().endsWith('.tmp')
             );
             expect(writeCall).toBeDefined();
 
@@ -170,8 +173,8 @@ describe('ProjectConfigWriter atomic writes', () => {
             await writer.saveProjectConfig(project, project.path);
 
             // Then: Written content should include selectedAddons
-            const writeCall = mockFs.writeFile.mock.calls.find(
-                (call) => call[0].toString().endsWith('.tmp'),
+            const writeCall = mockFs.writeFile.mock.calls.find((call) =>
+                call[0].toString().endsWith('.tmp')
             );
             expect(writeCall).toBeDefined();
 
@@ -190,7 +193,11 @@ describe('ProjectConfigWriter atomic writes', () => {
                 customBlockLibraries: [
                     {
                         name: 'my-blocks',
-                        source: { type: 'git', url: 'https://github.com/user/blocks', branch: 'main' },
+                        source: {
+                            type: 'git',
+                            url: 'https://github.com/user/blocks',
+                            branch: 'main',
+                        },
                     },
                 ],
             });
@@ -199,8 +206,8 @@ describe('ProjectConfigWriter atomic writes', () => {
             await writer.saveProjectConfig(project, project.path);
 
             // Then: Written content should include customBlockLibraries
-            const writeCall = mockFs.writeFile.mock.calls.find(
-                (call) => call[0].toString().endsWith('.tmp'),
+            const writeCall = mockFs.writeFile.mock.calls.find((call) =>
+                call[0].toString().endsWith('.tmp')
             );
             expect(writeCall).toBeDefined();
 
@@ -230,8 +237,8 @@ describe('ProjectConfigWriter atomic writes', () => {
 
             await writer.saveProjectConfig(project, project.path);
 
-            const writeCall = mockFs.writeFile.mock.calls.find(
-                (call) => call[0].toString().endsWith('.tmp'),
+            const writeCall = mockFs.writeFile.mock.calls.find((call) =>
+                call[0].toString().endsWith('.tmp')
             );
             expect(writeCall).toBeDefined();
             const parsed = JSON.parse(writeCall![1] as string);
@@ -245,8 +252,8 @@ describe('ProjectConfigWriter atomic writes', () => {
             const project = createTestProject({ name: 'no-prompts' });
             await writer.saveProjectConfig(project, project.path);
 
-            const writeCall = mockFs.writeFile.mock.calls.find(
-                (call) => call[0].toString().endsWith('.tmp'),
+            const writeCall = mockFs.writeFile.mock.calls.find((call) =>
+                call[0].toString().endsWith('.tmp')
             );
             const parsed = JSON.parse(writeCall![1] as string);
             expect(parsed.aiPrompts).toBeUndefined();
@@ -256,11 +263,25 @@ describe('ProjectConfigWriter atomic writes', () => {
             const project = createTestProject({ name: 'empty-prompts', aiPrompts: [] });
             await writer.saveProjectConfig(project, project.path);
 
-            const writeCall = mockFs.writeFile.mock.calls.find(
-                (call) => call[0].toString().endsWith('.tmp'),
+            const writeCall = mockFs.writeFile.mock.calls.find((call) =>
+                call[0].toString().endsWith('.tmp')
             );
             const parsed = JSON.parse(writeCall![1] as string);
             expect(parsed.aiPrompts).toBeUndefined();
+        });
+
+        // AI-context freshness stamp: the version of the AI bundle that was last
+        // generated into this project. Persisted so the on-open freshness check
+        // can compare it against the current AI_CONTEXT_VERSION constant.
+        it('should include aiContextVersion in manifest when set', async () => {
+            const project = createTestProject({ name: 'stamped', aiContextVersion: 3 });
+            await writer.saveProjectConfig(project, project.path);
+
+            const writeCall = mockFs.writeFile.mock.calls.find((call) =>
+                call[0].toString().endsWith('.tmp')
+            );
+            const parsed = JSON.parse(writeCall![1] as string);
+            expect(parsed.aiContextVersion).toBe(3);
         });
     });
 });

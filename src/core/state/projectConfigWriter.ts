@@ -12,7 +12,6 @@ import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 import { getComponentIds } from '@/types/typeGuards';
 
-
 export class ProjectConfigWriter {
     private logger: Logger;
 
@@ -46,7 +45,10 @@ export class ProjectConfigWriter {
         try {
             await fs.mkdir(project.path, { recursive: true });
         } catch (error) {
-            this.logger.error('Failed to create project directory', error instanceof Error ? error : undefined);
+            this.logger.error(
+                'Failed to create project directory',
+                error instanceof Error ? error : undefined,
+            );
             throw error;
         }
 
@@ -91,6 +93,7 @@ export class ProjectConfigWriter {
                 componentInstances: project.componentInstances,
                 componentConfigs: project.componentConfigs,
                 componentVersions: project.componentVersions,
+                aiContextVersion: project.aiContextVersion,
                 meshState: project.meshState,
                 edsStorefrontState: project.edsStorefrontState,
                 edsStorefrontStatusSummary: project.edsStorefrontStatusSummary,
@@ -123,7 +126,10 @@ export class ProjectConfigWriter {
             // Atomic write (temp file + rename) via the shared helper.
             await writeFileAtomic(manifestPath, JSON.stringify(manifest, null, 2));
         } catch (error) {
-            this.logger.error('Failed to update project manifest', error instanceof Error ? error : undefined);
+            this.logger.error(
+                'Failed to update project manifest',
+                error instanceof Error ? error : undefined,
+            );
             throw error;
         }
     }
@@ -144,13 +150,16 @@ export class ProjectConfigWriter {
             `COMMERCE_STORE_CODE=${project.commerce?.instance.storeCode || ''}`,
             `COMMERCE_STORE_VIEW=${project.commerce?.instance.storeView || ''}`,
             '',
-            '# Note: Component-specific environment variables are stored in each component\'s .env file',
+            "# Note: Component-specific environment variables are stored in each component's .env file",
         ].join('\n');
 
         try {
             await fs.writeFile(envPath, envContent);
         } catch (error) {
-            this.logger.error('Failed to create .env file', error instanceof Error ? error : undefined);
+            this.logger.error(
+                'Failed to create .env file',
+                error instanceof Error ? error : undefined,
+            );
             throw error;
         }
     }

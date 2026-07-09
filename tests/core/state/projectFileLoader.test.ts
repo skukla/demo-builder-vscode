@@ -58,6 +58,26 @@ describe('ProjectFileLoader — legacy appBuilderComponent migration', () => {
         expect(project!.appBuilderComponents?.mesh?.endpoint).toBe('https://mesh/graphql');
     });
 
+    it('loads aiContextVersion from the manifest into the project', async () => {
+        primeFsWithManifest({ name: 'stamped-demo', aiContextVersion: 2 });
+
+        const loader = new ProjectFileLoader(makeLogger());
+        const project = await loader.loadProject(PROJECT_PATH, () => []);
+
+        expect(project).not.toBeNull();
+        expect(project!.aiContextVersion).toBe(2);
+    });
+
+    it('leaves aiContextVersion undefined when the manifest omits it', async () => {
+        primeFsWithManifest({ name: 'unstamped-demo' });
+
+        const loader = new ProjectFileLoader(makeLogger());
+        const project = await loader.loadProject(PROJECT_PATH, () => []);
+
+        expect(project).not.toBeNull();
+        expect(project!.aiContextVersion).toBeUndefined();
+    });
+
     it('does not write the manifest file during load (read-only migration in D1)', async () => {
         primeFsWithManifest({
             name: 'legacy-demo',

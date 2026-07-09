@@ -59,6 +59,7 @@ export interface ProjectManifest {
     selectedBlockLibraries?: string[];
     customBlockLibraries?: CustomBlockLibrary[];
     aiPrompts?: AiPrompt[];
+    aiContextVersion?: number;
     pinned?: boolean;
 }
 
@@ -122,6 +123,7 @@ export class ProjectFileLoader {
                 selectedBlockLibraries: manifest.selectedBlockLibraries,
                 customBlockLibraries: manifest.customBlockLibraries,
                 aiPrompts: manifest.aiPrompts,
+                aiContextVersion: manifest.aiContextVersion,
                 pinned: manifest.pinned,
             };
 
@@ -136,15 +138,22 @@ export class ProjectFileLoader {
             return project;
         } catch (error) {
             // Check if this is an expected "not found" error (e.g., project was deleted)
-            const isNotFound = error instanceof Error &&
-                (error.message.includes('ENOENT') || (error as NodeJS.ErrnoException).code === 'ENOENT');
+            const isNotFound =
+                error instanceof Error &&
+                (error.message.includes('ENOENT') ||
+                    (error as NodeJS.ErrnoException).code === 'ENOENT');
 
             if (isNotFound) {
                 // Project directory doesn't exist - expected after deletion, log at debug
-                this.logger.debug(`[ProjectFileLoader] Project not found at ${projectPath} (deleted or moved)`);
+                this.logger.debug(
+                    `[ProjectFileLoader] Project not found at ${projectPath} (deleted or moved)`,
+                );
             } else {
                 // Unexpected error - log at error level
-                this.logger.error(`Failed to load project from ${projectPath}`, error instanceof Error ? error : undefined);
+                this.logger.error(
+                    `Failed to load project from ${projectPath}`,
+                    error instanceof Error ? error : undefined,
+                );
             }
             return null;
         }
@@ -202,7 +211,10 @@ export class ProjectFileLoader {
 
         // For each discovered component not in manifest, ensure it has a path
         for (const componentId of Object.keys(discoveredComponents)) {
-            if (mergedComponentInstances[componentId] && !mergedComponentInstances[componentId].path) {
+            if (
+                mergedComponentInstances[componentId] &&
+                !mergedComponentInstances[componentId].path
+            ) {
                 mergedComponentInstances[componentId].path = discoveredComponents[componentId].path;
             }
         }
@@ -213,14 +225,17 @@ export class ProjectFileLoader {
         for (const componentId of Object.keys(discoveredComponents)) {
             // Check if the merged componentInstance has version data (from recent installation)
             const instanceVersion = mergedComponentInstances[componentId]?.version;
-            
+
             if (!mergedComponentVersions[componentId]) {
                 // Component exists on disk but has no version tracking in project file
                 mergedComponentVersions[componentId] = {
                     version: instanceVersion || 'unknown',
                     lastUpdated: new Date().toISOString(),
                 };
-            } else if (instanceVersion && instanceVersion !== mergedComponentVersions[componentId].version) {
+            } else if (
+                instanceVersion &&
+                instanceVersion !== mergedComponentVersions[componentId].version
+            ) {
                 // Component version was updated (e.g., during project edit) - prefer the fresh instance version
                 mergedComponentVersions[componentId] = {
                     version: instanceVersion,
@@ -248,7 +263,7 @@ export class ProjectFileLoader {
             try {
                 const projectTerminalName = `${project.name} - Frontend`;
                 const terminals = terminalProvider();
-                const hasProjectTerminal = terminals.some(t => t.name === projectTerminalName);
+                const hasProjectTerminal = terminals.some((t) => t.name === projectTerminalName);
 
                 if (hasProjectTerminal) {
                     // This project's demo is running, update status
@@ -260,7 +275,10 @@ export class ProjectFileLoader {
                     frontendComponent.status = 'ready';
                 }
             } catch (error) {
-                this.logger.error('Error detecting demo status', error instanceof Error ? error : undefined);
+                this.logger.error(
+                    'Error detecting demo status',
+                    error instanceof Error ? error : undefined,
+                );
             }
         }
     }

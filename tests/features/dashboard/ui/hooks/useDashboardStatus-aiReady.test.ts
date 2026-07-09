@@ -55,7 +55,7 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
 
     it('does NOT pull verify-ai-setup on mount (the orchestrator pushes it)', () => {
         renderHook(() => useDashboardStatus());
-        const requestedTypes = mocks.mockRequest.mock.calls.map(c => c[0]);
+        const requestedTypes = mocks.mockRequest.mock.calls.map((c) => c[0]);
         expect(requestedTypes).not.toContain('verify-ai-setup');
     });
 
@@ -64,7 +64,11 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
 
         // mcp-health drift → visible "Updating AI configuration…" (overrides verify).
         act(() => {
-            mocks.state.orgHandler?.({ checkId: 'mcp-health', status: 'warning', message: 'Updating AI configuration…' });
+            mocks.state.orgHandler?.({
+                checkId: 'mcp-health',
+                status: 'warning',
+                message: 'Updating AI configuration…',
+            });
         });
         expect(result.current.aiReady).toEqual({
             label: 'AI',
@@ -79,6 +83,39 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
         expect(result.current.aiReady.text).not.toBe('Updating AI configuration…');
     });
 
+    it('flips the AI badge to yellow "AI files out of date" when the freshness check reports stale', () => {
+        const { result } = renderHook(() => useDashboardStatus());
+
+        // Files verify healthy → green Ready.
+        act(() => {
+            deliverAiVerify(mocks, buildVerifyResponse());
+        });
+        expect(result.current.aiReady).toEqual({ label: 'AI', color: 'green', text: 'Ready' });
+
+        // Freshness check reports the bundle is older than the extension → yellow
+        // "AI files out of date" (which surfaces the Regenerate action). No prompt,
+        // no "Updating" state — this is detect-only.
+        act(() => {
+            mocks.state.orgHandler?.({
+                checkId: 'ai-context-freshness',
+                status: 'warning',
+                message: 'AI files out of date',
+            });
+        });
+        expect(result.current.aiReady).toEqual({
+            label: 'AI',
+            color: 'yellow',
+            text: 'AI files out of date',
+        });
+
+        // reRunnable: after Regenerate persists a fresh stamp, the next run reports
+        // ok → the badge clears back to Ready.
+        act(() => {
+            mocks.state.orgHandler?.({ checkId: 'ai-context-freshness', status: 'ok' });
+        });
+        expect(result.current.aiReady).toEqual({ label: 'AI', color: 'green', text: 'Ready' });
+    });
+
     it('returns green Ready when all signals pass', () => {
         const { result } = renderHook(() => useDashboardStatus());
         deliverAiVerify(mocks, buildVerifyResponse());
@@ -91,23 +128,37 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
 
     it('returns yellow Setup incomplete when inventory mcpsError is set (files OK)', () => {
         const { result } = renderHook(() => useDashboardStatus());
-        deliverAiVerify(mocks, buildVerifyResponse({ inventory: { mcpsError: 'mcp inspector failed' } }));
+        deliverAiVerify(
+            mocks,
+            buildVerifyResponse({ inventory: { mcpsError: 'mcp inspector failed' } })
+        );
         expect(result.current.aiReady.color).toBe('yellow');
         expect(result.current.aiReady.text).toBe('Setup incomplete');
     });
 
     it('returns yellow Setup incomplete when inventory skillsError is set (files OK)', () => {
         const { result } = renderHook(() => useDashboardStatus());
-        deliverAiVerify(mocks, buildVerifyResponse({ inventory: { skillsError: 'skill inspector failed' } }));
+        deliverAiVerify(
+            mocks,
+            buildVerifyResponse({ inventory: { skillsError: 'skill inspector failed' } })
+        );
         expect(result.current.aiReady.color).toBe('yellow');
         expect(result.current.aiReady.text).toBe('Setup incomplete');
     });
 
     it('returns red Broken when AGENTS.md check fails', () => {
         const { result } = renderHook(() => useDashboardStatus());
-        deliverAiVerify(mocks, buildVerifyResponse({
-            checks: [failCheck('AGENTS.md'), okCheck('.claude/mcp.json'), okCheck('mcp-binary'), okCheck('skill-files')],
-        }));
+        deliverAiVerify(
+            mocks,
+            buildVerifyResponse({
+                checks: [
+                    failCheck('AGENTS.md'),
+                    okCheck('.claude/mcp.json'),
+                    okCheck('mcp-binary'),
+                    okCheck('skill-files'),
+                ],
+            })
+        );
         expect(result.current.aiReady).toEqual({
             label: 'AI',
             color: 'red',
@@ -117,31 +168,50 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
 
     it('returns red Broken when mcp.json check has error status', () => {
         const { result } = renderHook(() => useDashboardStatus());
-        deliverAiVerify(mocks, buildVerifyResponse({
-            checks: [
-                okCheck('AGENTS.md'),
-                { name: '.claude/mcp.json', status: 'error', message: 'Invalid JSON' },
-                okCheck('mcp-binary'),
-                okCheck('skill-files'),
-            ],
-        }));
+        deliverAiVerify(
+            mocks,
+            buildVerifyResponse({
+                checks: [
+                    okCheck('AGENTS.md'),
+                    { name: '.claude/mcp.json', status: 'error', message: 'Invalid JSON' },
+                    okCheck('mcp-binary'),
+                    okCheck('skill-files'),
+                ],
+            })
+        );
         expect(result.current.aiReady.color).toBe('red');
         expect(result.current.aiReady.text).toBe('Broken');
     });
 
     it('returns red Broken when mcp-binary check fails', () => {
         const { result } = renderHook(() => useDashboardStatus());
-        deliverAiVerify(mocks, buildVerifyResponse({
-            checks: [okCheck('AGENTS.md'), okCheck('.claude/mcp.json'), failCheck('mcp-binary'), okCheck('skill-files')],
-        }));
+        deliverAiVerify(
+            mocks,
+            buildVerifyResponse({
+                checks: [
+                    okCheck('AGENTS.md'),
+                    okCheck('.claude/mcp.json'),
+                    failCheck('mcp-binary'),
+                    okCheck('skill-files'),
+                ],
+            })
+        );
         expect(result.current.aiReady.color).toBe('red');
     });
 
     it('returns red Broken when skill-files check fails', () => {
         const { result } = renderHook(() => useDashboardStatus());
-        deliverAiVerify(mocks, buildVerifyResponse({
-            checks: [okCheck('AGENTS.md'), okCheck('.claude/mcp.json'), okCheck('mcp-binary'), failCheck('skill-files')],
-        }));
+        deliverAiVerify(
+            mocks,
+            buildVerifyResponse({
+                checks: [
+                    okCheck('AGENTS.md'),
+                    okCheck('.claude/mcp.json'),
+                    okCheck('mcp-binary'),
+                    failCheck('skill-files'),
+                ],
+            })
+        );
         expect(result.current.aiReady.color).toBe('red');
     });
 
@@ -155,7 +225,12 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
 
     it('exposes the skills inventory via aiSkills', () => {
         const skills = [
-            { name: 'Add a component', description: 'Adds a component', path: '/p/add.md', source: 'demo-builder' },
+            {
+                name: 'Add a component',
+                description: 'Adds a component',
+                path: '/p/add.md',
+                source: 'demo-builder',
+            },
         ];
         const { result } = renderHook(() => useDashboardStatus());
         deliverAiVerify(mocks, buildVerifyResponse({ inventory: { skills } }));
@@ -166,7 +241,10 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
 
     it('flags aiSkillsError when the skill inspector errored', () => {
         const { result } = renderHook(() => useDashboardStatus());
-        deliverAiVerify(mocks, buildVerifyResponse({ inventory: { skillsError: 'skill inspector failed' } }));
+        deliverAiVerify(
+            mocks,
+            buildVerifyResponse({ inventory: { skillsError: 'skill inspector failed' } })
+        );
         expect(result.current.aiSkillsError).toBe(true);
     });
 
@@ -191,7 +269,10 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
 
     it('flags aiMcpsError when the MCP inspector errored', () => {
         const { result } = renderHook(() => useDashboardStatus());
-        deliverAiVerify(mocks, buildVerifyResponse({ inventory: { mcpsError: 'mcp inspector failed' } }));
+        deliverAiVerify(
+            mocks,
+            buildVerifyResponse({ inventory: { mcpsError: 'mcp inspector failed' } })
+        );
         expect(result.current.aiMcpsError).toBe(true);
     });
 
@@ -205,7 +286,7 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
         mocks.mockRequest.mockImplementation((type: string) =>
             type === 'regenerate-ai-files'
                 ? Promise.resolve({ success: true })
-                : Promise.resolve(buildVerifyResponse()),
+                : Promise.resolve(buildVerifyResponse())
         );
         const { result } = renderHook(() => useDashboardStatus());
 
@@ -213,7 +294,7 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
             await result.current.regenerateAiFiles();
         });
 
-        const types = mocks.mockRequest.mock.calls.map(c => c[0]);
+        const types = mocks.mockRequest.mock.calls.map((c) => c[0]);
         expect(types).toContain('regenerate-ai-files');
         expect(types).toContain('verify-ai-setup');
     });

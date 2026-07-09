@@ -1,4 +1,11 @@
-# AI Ready: surface skills drift as amber
+# ✅ SUPERSEDED / SHIPPED (2026-07-08) — AI Ready: surface skills drift as amber
+
+> Subsumed by the broader **AI-context freshness check** (shipped 2026-07-08,
+> `.rptc/complete/ai-context-freshness/`). Rather than a skills-only detector + amber badge, the shipped
+> feature stamps an `AI_CONTEXT_VERSION` into the manifest and, on dashboard open, flips the AI badge to
+> "AI files out of date" when the project's stamp is older than the extension — covering skills drift AND
+> mcp-config / AGENTS drift in one check, with the existing "Regenerate AI files" action as the remedy.
+> The original skills-only plan below is kept for context.
 
 **Filed:** 2026-06-01
 **Origin:** AI Chat session reported `register-custom-block` missing from `.claude/skills/`.

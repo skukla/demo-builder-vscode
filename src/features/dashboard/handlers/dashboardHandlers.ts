@@ -15,14 +15,17 @@ import {
     sendDemoStatusUpdate,
 } from './meshStatusHelpers';
 import { BaseWebviewCommand } from '@/core/base';
-import { COMPONENT_IDS } from '@/core/constants';
+import { AI_CONTEXT_VERSION, COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
 import { openInIncognito } from '@/core/utils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateURL } from '@/core/validation';
 import { verifyAiSetup } from '@/features/ai';
 import { detectMcpDrift } from '@/features/ai/mcpDriftDetector';
-import { handleRegenerateAiFiles, logAiVerification } from '@/features/dashboard/handlers/aiHandlers';
+import {
+    handleRegenerateAiFiles,
+    logAiVerification,
+} from '@/features/dashboard/handlers/aiHandlers';
 import {
     handleAddAppBuilderComponent,
     handleDeployAppBuilderComponent,
@@ -30,12 +33,19 @@ import {
     handleRemoveAppBuilderComponent,
     handleVerifyAppBuilderComponent,
 } from '@/features/dashboard/handlers/appBuilderComponentHandlers';
-import { runOnOpenChecks, orgContextCheck, createMcpHealthCheck, createMeshVerifyCheck, createAiVerifyCheck } from '@/features/dashboard/services/onOpenChecks';
+import {
+    runOnOpenChecks,
+    orgContextCheck,
+    createMcpHealthCheck,
+    createMeshVerifyCheck,
+    createAiVerifyCheck,
+    createAiContextFreshnessCheck,
+} from '@/features/dashboard/services/onOpenChecks';
 import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
 import type { Project } from '@/types';
 import { ErrorCode } from '@/types/errorCodes';
-import { MessageHandler , defineHandlers, HandlerContext } from '@/types/handlers';
+import { MessageHandler, defineHandlers, HandlerContext } from '@/types/handlers';
 import { getMeshComponentInstance, getProjectFrontendPort, isEdsProject } from '@/types/typeGuards';
 
 /**
@@ -60,7 +70,8 @@ export const handleRequestStatus: MessageHandler = async (context) => {
     }
 
     const meshComponent = getMeshComponentInstance(project);
-    const frontendConfigChanged = project.status === 'running' ? detectFrontendChanges(project) : false;
+    const frontendConfigChanged =
+        project.status === 'running' ? detectFrontendChanges(project) : false;
 
     context.logger.debug(`[Dashboard] Status request: mesh=${meshComponent?.status || 'none'}`);
 
@@ -146,6 +157,11 @@ export const handleRequestStatus: MessageHandler = async (context) => {
             detectDrift: detectMcpDrift,
             heal: () => handleRegenerateAiFiles(context),
         }),
+        // ai-context-freshness (all projects): stamp-vs-constant staleness. Detect-only
+        // per the OnOpenCheck P1 contract — a stale project flips the AI badge to
+        // "AI files out of date", surfacing the existing "Regenerate AI files" action
+        // (the user's explicit click is the remediation; no on-open prompt or heal).
+        createAiContextFreshnessCheck({ currentVersion: AI_CONTEXT_VERSION }),
         createAiVerifyCheck({
             verify: async (p) => {
                 // dist path resolved lazily (inside the check) — server-side only.
@@ -159,11 +175,13 @@ export const handleRequestStatus: MessageHandler = async (context) => {
     if (shouldVerifyMesh) {
         // Single lazy import (resolved once) shared by both injected fns.
         const meshVerifier = await import('@/features/mesh/services/meshVerifier');
-        checks.push(createMeshVerifyCheck({
-            verify: (p) => meshVerifier.verifyMeshDeployment(p),
-            syncMeshStatus: (p, r) => meshVerifier.syncMeshStatus(p, r),
-            markDirty: (key) => context.stateManager.markDirty(key),
-        }));
+        checks.push(
+            createMeshVerifyCheck({
+                verify: (p) => meshVerifier.verifyMeshDeployment(p),
+                syncMeshStatus: (p, r) => meshVerifier.syncMeshStatus(p, r),
+                markDirty: (key) => context.stateManager.markDirty(key),
+            }),
+        );
     }
 
     void runOnOpenChecks(
@@ -234,7 +252,10 @@ export const handleOpenLiveSite: MessageHandler = async (context, data) => {
     try {
         validateURL(url);
     } catch (validationError) {
-        context.logger.error('[Dashboard] Live site URL validation failed', validationError as Error);
+        context.logger.error(
+            '[Dashboard] Live site URL validation failed',
+            validationError as Error,
+        );
         return { success: false, error: 'Invalid URL', code: ErrorCode.CONFIG_INVALID };
     }
 
@@ -250,7 +271,9 @@ export const handleOpenLiveSite: MessageHandler = async (context, data) => {
             // Open in incognito mode for clean demo experience (no cached content/cookies)
             // Falls back to normal browser if incognito mode is not available
             const openedIncognito = await openInIncognito(url);
-            context.logger.debug(`[Dashboard] Opening live site: ${url} (incognito: ${openedIncognito})`);
+            context.logger.debug(
+                `[Dashboard] Opening live site: ${url} (incognito: ${openedIncognito})`,
+            );
         },
     );
 
@@ -327,7 +350,11 @@ async function buildAppDeps(context: HandlerContext) {
 export const handleAddApp: MessageHandler<{ gitUrl?: string }> = async (context, data) => {
     const gitUrl = data?.gitUrl;
     if (!gitUrl) {
-        return { success: false, error: 'A public GitHub repository URL is required', code: ErrorCode.CONFIG_INVALID };
+        return {
+            success: false,
+            error: 'A public GitHub repository URL is required',
+            code: ErrorCode.CONFIG_INVALID,
+        };
     }
 
     const project = await context.stateManager.getCurrentProject();
@@ -367,7 +394,9 @@ export const handleRemoveApp: MessageHandler = async (context) => {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
-    const { removeAppComponent } = await import('@/features/app-builder/services/appComponentManager');
+    const { removeAppComponent } = await import(
+        '@/features/app-builder/services/appComponentManager'
+    );
     const result = await removeAppComponent(project, await buildAppDeps(context));
     return result.success ? { success: true } : { success: false, error: result.error };
 };
@@ -422,13 +451,22 @@ export const handleOpenDevConsole: MessageHandler = async (context) => {
     if (hasAdobeWorkspaceContext(project)) {
         // Validate Adobe IDs before URL construction (security: prevents URL injection)
         try {
-            const { validateOrgId, validateProjectId, validateWorkspaceId } = await import('@/core/validation');
+            const { validateOrgId, validateProjectId, validateWorkspaceId } = await import(
+                '@/core/validation'
+            );
             validateOrgId(project.adobe.organization);
             validateProjectId(project.adobe.projectId);
             validateWorkspaceId(project.adobe.workspace);
         } catch (validationError) {
-            context.logger.error('[Dev Console] Adobe ID validation failed', validationError as Error);
-            return { success: false, error: 'Invalid Adobe resource ID', code: ErrorCode.CONFIG_INVALID };
+            context.logger.error(
+                '[Dev Console] Adobe ID validation failed',
+                validationError as Error,
+            );
+            return {
+                success: false,
+                error: 'Invalid Adobe resource ID',
+                code: ErrorCode.CONFIG_INVALID,
+            };
         }
 
         // Direct link to workspace
@@ -441,8 +479,15 @@ export const handleOpenDevConsole: MessageHandler = async (context) => {
             validateOrgId(project.adobe.organization);
             validateProjectId(project.adobe.projectId);
         } catch (validationError) {
-            context.logger.error('[Dev Console] Adobe ID validation failed', validationError as Error);
-            return { success: false, error: 'Invalid Adobe resource ID', code: ErrorCode.CONFIG_INVALID };
+            context.logger.error(
+                '[Dev Console] Adobe ID validation failed',
+                validationError as Error,
+            );
+            return {
+                success: false,
+                error: 'Invalid Adobe resource ID',
+                code: ErrorCode.CONFIG_INVALID,
+            };
         }
 
         // Fallback: project overview
@@ -497,7 +542,9 @@ export const handleNavigateBack: MessageHandler = async (context) => {
         try {
             // Dispose Dashboard panel before opening Projects List
             // This prevents the blank webview issue during transition
-            const dashboardPanel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');
+            const dashboardPanel = BaseWebviewCommand.getActivePanel(
+                'demoBuilder.projectDashboard',
+            );
             if (dashboardPanel) {
                 try {
                     dashboardPanel.dispose();
@@ -548,7 +595,9 @@ export const handleResetProject: MessageHandler = async (context) => {
         });
     }
 
-    const { resetProjectWithUI } = await import('@/features/lifecycle/services/projectResetService');
+    const { resetProjectWithUI } = await import(
+        '@/features/lifecycle/services/projectResetService'
+    );
     return resetProjectWithUI({
         project,
         context,
@@ -610,8 +659,13 @@ export const handleRepublishContent: MessageHandler = async (context) => {
     const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
 
     if (!repoFullName) {
-        vscode.window.showErrorMessage('Repository information not found. Republish is only available for EDS projects.');
-        return { success: false, error: 'Repository information not found. Republish is only available for EDS projects.' };
+        vscode.window.showErrorMessage(
+            'Repository information not found. Republish is only available for EDS projects.',
+        );
+        return {
+            success: false,
+            error: 'Repository information not found. Republish is only available for EDS projects.',
+        };
     }
 
     const [repoOwner, repoName] = repoFullName.split('/');
@@ -634,8 +688,9 @@ export const handleRepublishContent: MessageHandler = async (context) => {
                 context.logger.info(`[Dashboard] Republishing content for ${repoFullName}`);
 
                 progress.report({ message: 'Checking authentication...' });
-                const { ensureDaLiveAuth, getDaLiveAuthService, getGitHubServices } =
-                    await import('@/features/eds/handlers/edsHelpers');
+                const { ensureDaLiveAuth, getDaLiveAuthService, getGitHubServices } = await import(
+                    '@/features/eds/handlers/edsHelpers'
+                );
                 const daLiveAuthResult = await ensureDaLiveAuth(context, '[Dashboard]');
 
                 if (!daLiveAuthResult.authenticated) {
@@ -651,7 +706,9 @@ export const handleRepublishContent: MessageHandler = async (context) => {
                 const { tokenService: githubTokenService } = getGitHubServices(context);
 
                 progress.report({ message: 'Republishing content...' });
-                const { republishStorefrontContent } = await import('@/features/eds/services/storefrontRepublishService');
+                const { republishStorefrontContent } = await import(
+                    '@/features/eds/services/storefrontRepublishService'
+                );
                 const contentResult = await republishStorefrontContent({
                     project,
                     repoOwner,
@@ -669,7 +726,9 @@ export const handleRepublishContent: MessageHandler = async (context) => {
                     return { success: false, error: contentResult.error };
                 }
                 if (!contentResult.cdnVerified) {
-                    context.logger.warn('[Dashboard] CDN verification timed out - content may still be propagating');
+                    context.logger.warn(
+                        '[Dashboard] CDN verification timed out - content may still be propagating',
+                    );
                 }
 
                 context.logger.info(`[Dashboard] Content republished for ${repoFullName}`);
@@ -800,7 +859,6 @@ export const handleSwitchOrg: MessageHandler = async (context) => {
 // Handler Map Export (Step 3: Handler Registry Simplification)
 // ============================================================================
 
-
 /**
  * Dashboard feature handler map
  * Maps message types to handler functions for the Project Dashboard
@@ -810,55 +868,55 @@ export const handleSwitchOrg: MessageHandler = async (context) => {
 export const dashboardHandlers = defineHandlers({
     // Initialization handlers (init is delivered by BaseWebviewCommand on handshake;
     // no 'ready' handler — see note on handleRequestStatus)
-    'requestStatus': handleRequestStatus,
+    requestStatus: handleRequestStatus,
 
     // Demo lifecycle handlers
-    'startDemo': handleStartDemo,
-    'stopDemo': handleStopDemo,
+    startDemo: handleStartDemo,
+    stopDemo: handleStopDemo,
 
     // Navigation handlers
-    'openBrowser': handleOpenBrowser,
-    'openLiveSite': handleOpenLiveSite,
-    'openDaLive': handleOpenDaLive,
-    'configure': handleConfigure,
-    'openDevConsole': handleOpenDevConsole,
-    'navigateBack': handleNavigateBack,
+    openBrowser: handleOpenBrowser,
+    openLiveSite: handleOpenLiveSite,
+    openDaLive: handleOpenDaLive,
+    configure: handleConfigure,
+    openDevConsole: handleOpenDevConsole,
+    navigateBack: handleNavigateBack,
 
     // Mesh handlers
-    'deployMesh': handleDeployMesh,
+    deployMesh: handleDeployMesh,
 
     // App Builder app handlers
-    'addApp': handleAddApp,
-    'deployApp': handleDeployApp,
-    'redeployApp': handleRedeployApp,
-    'removeApp': handleRemoveApp,
+    addApp: handleAddApp,
+    deployApp: handleDeployApp,
+    redeployApp: handleRedeployApp,
+    removeApp: handleRemoveApp,
 
     // AppBuilderComponent (integrations list) handlers — live D1 runner wiring
-    'addAppBuilderComponent': handleAddAppBuilderComponent,
-    'deployAppBuilderComponent': handleDeployAppBuilderComponent,
-    'redeployAppBuilderComponent': handleRedeployAppBuilderComponent,
-    'removeAppBuilderComponent': handleRemoveAppBuilderComponent,
-    'verifyAppBuilderComponent': handleVerifyAppBuilderComponent,
+    addAppBuilderComponent: handleAddAppBuilderComponent,
+    deployAppBuilderComponent: handleDeployAppBuilderComponent,
+    redeployAppBuilderComponent: handleRedeployAppBuilderComponent,
+    removeAppBuilderComponent: handleRemoveAppBuilderComponent,
+    verifyAppBuilderComponent: handleVerifyAppBuilderComponent,
 
     // EDS storefront sync
-    'syncStorefront': handleSyncStorefront,
+    syncStorefront: handleSyncStorefront,
 
     // EDS block library refresh (re-sync DA.live library from component-definition.json)
-    'refreshBlockLibrary': handleRefreshBlockLibrary,
+    refreshBlockLibrary: handleRefreshBlockLibrary,
 
     // Authentication handlers
-    'reAuthenticate': handleReAuthenticate,
-    'switchOrg': handleSwitchOrg,
+    reAuthenticate: handleReAuthenticate,
+    switchOrg: handleSwitchOrg,
 
     // Project management handlers
-    'deleteProject': handleDeleteProject,
-    'renameProject': handleRenameProject,
-    'copyPath': handleCopyPath,
-    'exportProject': handleExportProject,
+    deleteProject: handleDeleteProject,
+    renameProject: handleRenameProject,
+    copyPath: handleCopyPath,
+    exportProject: handleExportProject,
 
     // EDS content republish (re-push DA.live content to CDN)
-    'republishContent': handleRepublishContent,
+    republishContent: handleRepublishContent,
 
     // Project reset handler
-    'resetProject': handleResetProject,
+    resetProject: handleResetProject,
 });

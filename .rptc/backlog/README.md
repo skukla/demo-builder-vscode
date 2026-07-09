@@ -78,9 +78,9 @@ Core self-heal **shipped** (see Recently shipped). Residual scope from the origi
 
 ### C. Ready to pick up (small, verified still pending)
 
-#### AI Ready: surface skills drift as amber ([`2026-06-01-ai-ready-skills-drift.md`](2026-06-01-ai-ready-skills-drift.md))
+#### Make "Regenerate AI Files" edit-preserving ([`2026-07-08-edit-preserving-regenerate-ai-files.md`](2026-07-08-edit-preserving-regenerate-ai-files.md))
 
-New skill templates shipped by the extension never reach existing projects until "Regenerate AI Files" runs; users get no signal. Verified still pending (no `detectSkillsDrift` in `skillsWriter.ts`). Detector + a yellow "Skills outdated" branch on the AI Ready badge + list in `AiCapabilitiesModal`. First slice: missing files only.
+`generateAIContextFiles` overwrites the whole AI bundle unconditionally — clobbering user edits to `.claude/settings.json` (hooks/permissions), `AGENTS.md` prose, and shipped skills. MERGE settings.json + give AGENTS.md a managed region so user content survives; keep the machine-owned MCP configs as clean overwrites. Then the AI-context-freshness check (shipped 2026-07-08) could relax from badge-click to auto-heal. Surfaced by that feature's code review.
 
 #### Sync Storefront — auto-resolve managed-file conflicts ([`2026-06-11-sync-storefront-auto-resolve-managed-conflicts.md`](2026-06-11-sync-storefront-auto-resolve-managed-conflicts.md))
 

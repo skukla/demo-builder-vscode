@@ -377,6 +377,9 @@ export async function performAdobeMcpUpdates(
                         throw new Error(`npm update failed: ${result.stderr || result.stdout}`);
                     }
                     await generateAIContextFiles(project.path, project, ctx.extensionPath);
+                    // Persist the freshness stamp generateAIContextFiles set on `project`
+                    // (aiContextVersion), else the on-open freshness check re-fires forever.
+                    await ctx.stateManager.saveProjectConfigOnly(project);
                     successCount++;
                     ctx.logger.info(`[Updates] Updated ${packageName} in ${project.name} → ${latestVersion}`);
                 } catch (error) {

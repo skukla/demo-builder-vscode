@@ -15,6 +15,18 @@ export const LAST_UPDATE_CHECK_VERSION = 'lastUpdateCheckVersion';
 export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 
 /**
+ * Current version of the AI context bundle (skills, AGENTS.md/CLAUDE.md, MCP
+ * config, settings) the extension generates into each project.
+ *
+ * Hand-bump this integer whenever any AI-context template/skill changes — see
+ * skillsWriter / aiContextWriter / mcpConfigWriter. It is stamped into the
+ * project manifest (`Project.aiContextVersion`) each time the bundle is
+ * generated; the dashboard's on-open freshness check flags a project stale when
+ * its stamp is older than this constant and offers to regenerate.
+ */
+export const AI_CONTEXT_VERSION = 1;
+
+/**
  * Component IDs for standardized component instance access
  *
  * These IDs match the component definitions in templates/components.json

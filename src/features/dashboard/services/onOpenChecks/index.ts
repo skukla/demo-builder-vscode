@@ -23,6 +23,10 @@ export {
     type AiVerifyCheckData,
     type AiVerifyCheckDeps,
 } from './aiVerifyCheck';
+export {
+    createAiContextFreshnessCheck,
+    type AiContextFreshnessCheckDeps,
+} from './aiContextFreshnessCheck';
 export type {
     CheckStatus,
     CheckOutcome,
