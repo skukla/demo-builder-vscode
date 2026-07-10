@@ -15,7 +15,10 @@ import { AuthenticationService } from '@/features/authentication';
 // Prerequisites checking is handled by PrerequisitesManager
 import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 // Handler utilities and handlers
-import { projectCreationHandlers, needsProgressCallback } from '@/features/project-creation/handlers';
+import {
+    projectCreationHandlers,
+    needsProgressCallback,
+} from '@/features/project-creation/handlers';
 import {
     formatGroupName as formatGroupNameHelper,
     getEndpoint as getEndpointHelper,
@@ -99,8 +102,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     private stepLogger: StepLogger | null = null;
     private stepLoggerInitPromise: Promise<StepLogger> | null = null;
     private templatesPath: string;
-    private importedSettings: SettingsFile | null = null;  // Settings imported from file or copied from project
-    private editProject: EditProjectConfig | null = null;  // Configuration for editing existing project
+    private importedSettings: SettingsFile | null = null; // Settings imported from file or copied from project
+    private editProject: EditProjectConfig | null = null; // Configuration for editing existing project
 
     // Shared state object (passed by reference to handlers for automatic synchronization)
     private sharedState: SharedState;
@@ -130,7 +133,14 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         this.progressUnifier = new ProgressUnifier(logger);
 
         // Store templates path for lazy initialization
-        this.templatesPath = path.join(context.extensionPath, 'src', 'core', 'logging', 'config', 'logging.json');
+        this.templatesPath = path.join(
+            context.extensionPath,
+            'src',
+            'core',
+            'logging',
+            'config',
+            'logging.json',
+        );
 
         // Initialize shared state object (passed by reference to handlers)
         this.sharedState = {
@@ -147,7 +157,14 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
         // Load API services configuration into shared state
         try {
-            const apiServicesPath = path.join(context.extensionPath, 'src', 'features', 'project-creation', 'config', 'api-services.json');
+            const apiServicesPath = path.join(
+                context.extensionPath,
+                'src',
+                'features',
+                'project-creation',
+                'config',
+                'api-services.json',
+            );
             if (fs.existsSync(apiServicesPath)) {
                 const servicesContent = fs.readFileSync(apiServicesPath, 'utf8');
                 const apiServicesConfig = parseJSON<Record<string, unknown>>(servicesContent);
@@ -179,7 +196,14 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             // Try to load wizard steps for better step names
             let wizardSteps: { id: string; name: string; [key: string]: unknown }[] | undefined;
             try {
-                const stepsPath = path.join(this.context.extensionPath, 'src', 'features', 'project-creation', 'config', 'wizard-steps.json');
+                const stepsPath = path.join(
+                    this.context.extensionPath,
+                    'src',
+                    'features',
+                    'project-creation',
+                    'config',
+                    'wizard-steps.json',
+                );
                 if (fs.existsSync(stepsPath)) {
                     const stepsContent = fs.readFileSync(stepsPath, 'utf8');
                     const stepsConfig = parseJSON<{ steps: unknown[] }>(stepsContent);
@@ -194,7 +218,11 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 this.logger.debug('Could not load wizard steps for logging, using defaults');
             }
 
-            const stepLogger = await StepLogger.create(this.logger, wizardSteps, this.templatesPath);
+            const stepLogger = await StepLogger.create(
+                this.logger,
+                wizardSteps,
+                this.templatesPath,
+            );
             this.stepLogger = stepLogger;
             return stepLogger;
         })();
@@ -208,7 +236,13 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     }
 
     protected getWebviewTitle(): string {
-        return 'Create Demo Project';
+        // editProject is set in execute() before the panel/loading state exist,
+        // so edit mode is identified from the first pixel (tab + loading header).
+        return this.editProject ? 'Edit Project' : 'Create Demo Project';
+    }
+
+    protected getLoadingHeader(): { title: string; subtitle?: string } {
+        return { title: this.getWebviewTitle(), subtitle: this.editProject?.projectName };
     }
 
     protected async getWebviewContent(): Promise<string> {
@@ -240,13 +274,24 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         // Load component defaults from defaults.json
         let componentDefaults: ComponentDefaults | null = null;
         try {
-            const defaultsPath = path.join(this.context.extensionPath, 'src', 'features', 'project-creation', 'config', 'defaults.json');
+            const defaultsPath = path.join(
+                this.context.extensionPath,
+                'src',
+                'features',
+                'project-creation',
+                'config',
+                'defaults.json',
+            );
             if (fs.existsSync(defaultsPath)) {
                 const defaultsContent = fs.readFileSync(defaultsPath, 'utf8');
-                const defaults = parseJSON<{ componentSelection: ComponentDefaults }>(defaultsContent);
+                const defaults = parseJSON<{ componentSelection: ComponentDefaults }>(
+                    defaultsContent,
+                );
                 if (defaults) {
                     componentDefaults = defaults.componentSelection;
-                    this.logger.debug(`Loaded component defaults: ${formatComponentDefaults(componentDefaults)}`);
+                    this.logger.debug(
+                        `Loaded component defaults: ${formatComponentDefaults(componentDefaults)}`,
+                    );
                 }
             }
         } catch (error) {
@@ -256,7 +301,14 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         // Load wizard steps configuration
         let wizardSteps: WizardStep[] | null = null;
         try {
-            const stepsPath = path.join(this.context.extensionPath, 'src', 'features', 'project-creation', 'config', 'wizard-steps.json');
+            const stepsPath = path.join(
+                this.context.extensionPath,
+                'src',
+                'features',
+                'project-creation',
+                'config',
+                'wizard-steps.json',
+            );
             if (fs.existsSync(stepsPath)) {
                 const stepsContent = fs.readFileSync(stepsPath, 'utf8');
                 const stepsConfig = parseJSON<{ steps: WizardStep[] }>(stepsContent);
@@ -264,9 +316,15 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     wizardSteps = stepsConfig.steps;
                     // Extract step IDs for logging (show first 3 + count of remaining)
                     const stepCount = wizardSteps?.length ?? 0;
-                    const stepPreview = wizardSteps?.slice(0, 3).map((s) => s.id).join(', ') ?? '';
+                    const stepPreview =
+                        wizardSteps
+                            ?.slice(0, 3)
+                            .map((s) => s.id)
+                            .join(', ') ?? '';
                     const remainingCount = stepCount > 3 ? ` ... (and ${stepCount - 3} more)` : '';
-                    this.logger.debug(`Loaded ${stepCount} wizard steps: ${stepPreview}${remainingCount}`);
+                    this.logger.debug(
+                        `Loaded ${stepCount} wizard steps: ${stepPreview}${remainingCount}`,
+                    );
                 }
             }
         } catch (error) {
@@ -275,7 +333,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
         // Get existing project names for duplicate validation
         const allProjects = await this.stateManager.getAllProjects();
-        const existingProjectNames = allProjects.map(p => p.name);
+        const existingProjectNames = allProjects.map((p) => p.name);
 
         // Get view mode setting
         const config = vscode.workspace.getConfiguration('demoBuilder');
@@ -291,18 +349,23 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
         // Debug: Log EDS config being sent to webview
         if (this.editProject?.settings?.edsConfig) {
-            this.logger.debug(`[getInitialData] Sending edsConfig to webview: ${JSON.stringify({
-                githubOwner: this.editProject.settings.edsConfig.githubOwner,
-                repoName: this.editProject.settings.edsConfig.repoName,
-                daLiveOrg: this.editProject.settings.edsConfig.daLiveOrg,
-                daLiveSite: this.editProject.settings.edsConfig.daLiveSite,
-            })}`);
+            this.logger.debug(
+                `[getInitialData] Sending edsConfig to webview: ${JSON.stringify({
+                    githubOwner: this.editProject.settings.edsConfig.githubOwner,
+                    repoName: this.editProject.settings.edsConfig.repoName,
+                    daLiveOrg: this.editProject.settings.edsConfig.daLiveOrg,
+                    daLiveSite: this.editProject.settings.edsConfig.daLiveSite,
+                })}`,
+            );
         } else if (this.editProject) {
             this.logger.debug('[getInitialData] editProject exists but NO edsConfig');
         }
 
         return {
-            theme: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+            theme:
+                vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark
+                    ? 'dark'
+                    : 'light',
             workspacePath: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
             componentDefaults,
             wizardSteps,
@@ -316,7 +379,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     }
 
     protected getLoadingMessage(): string {
-        return 'Loading Project Creation Wizard...';
+        return this.editProject
+            ? 'Loading Project Editor...'
+            : 'Loading Project Creation Wizard...';
     }
 
     /**
@@ -367,11 +432,16 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
             showOneTimeTip(this.context.globalState, {
                 stateKey: 'blockLibraries.defaultsTipShown',
-                message: 'Tip: Save your block library selections as defaults for future EDS projects.',
+                message:
+                    'Tip: Save your block library selections as defaults for future EDS projects.',
                 actions: ['Save as Defaults', 'Open Settings'],
                 onAction: (selection) => {
                     if (selection === 'Save as Defaults') {
-                        config.update('blockLibraries.defaults', selectedLibraries, vscode.ConfigurationTarget.Global);
+                        config.update(
+                            'blockLibraries.defaults',
+                            selectedLibraries,
+                            vscode.ConfigurationTarget.Global,
+                        );
                     } else if (selection === 'Open Settings') {
                         vscode.commands.executeCommand(
                             'workbench.action.openSettings',
@@ -409,12 +479,17 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 // Special case: create-api-mesh needs progress updates
                 comm.onStreaming(messageType, async (data: unknown) => {
                     const onProgress = (message: string, subMessage?: string) => {
-                        comm.sendMessage('api-mesh-progress', { message, subMessage }).catch(err => {
-                            this.logger.warn('[API Mesh] Failed to send progress update', err);
-                        });
+                        comm.sendMessage('api-mesh-progress', { message, subMessage }).catch(
+                            (err) => {
+                                this.logger.warn('[API Mesh] Failed to send progress update', err);
+                            },
+                        );
                     };
                     const context = await this.createHandlerContext();
-                    return dispatchHandler(projectCreationHandlers, context, messageType, { ...(data as object), onProgress });
+                    return dispatchHandler(projectCreationHandlers, context, messageType, {
+                        ...(data as object),
+                        onProgress,
+                    });
                 });
             } else {
                 // Standard handler registration (all other handlers)
@@ -432,7 +507,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 const updated = parseCustomBlockLibrarySettings(
                     config.get<string[]>('blockLibraries.custom', []),
                 );
-                this.sendMessage('customBlockLibraryDefaultsUpdated', { customBlockLibraryDefaults: updated });
+                this.sendMessage('customBlockLibraryDefaultsUpdated', {
+                    customBlockLibraryDefaults: updated,
+                });
             }
             if (e.affectsConfiguration('demoBuilder.blockLibraries.defaults')) {
                 const config = vscode.workspace.getConfiguration('demoBuilder');
@@ -464,17 +541,20 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         editProject?: EditProjectConfig;
     }): Promise<void> {
         try {
-
             // Store imported settings for use in getInitialData
             this.importedSettings = options?.importedSettings ?? null;
             if (this.importedSettings) {
-                this.logger.debug(`[Project Creation] Loading wizard with imported settings from: ${options?.sourceDescription ?? 'unknown source'}`);
+                this.logger.debug(
+                    `[Project Creation] Loading wizard with imported settings from: ${options?.sourceDescription ?? 'unknown source'}`,
+                );
             }
 
             // Store edit project config for use in getInitialData
             this.editProject = options?.editProject ?? null;
             if (this.editProject) {
-                this.logger.debug(`[Project Creation] Loading wizard in edit mode for project: ${this.editProject.projectName}`);
+                this.logger.debug(
+                    `[Project Creation] Loading wizard in edit mode for project: ${this.editProject.projectName}`,
+                );
 
                 // Populate sharedState with existing component selection for prerequisites check
                 // This ensures Node version requirements are known based on project's components
@@ -486,7 +566,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                         dependencies: selections.dependencies ?? [],
                         integrations: selections.integrations ?? [],
                     };
-                    this.logger.debug(`[Project Creation] Loaded component selection for edit mode: frontend=${selections.frontend}, backend=${selections.backend}`);
+                    this.logger.debug(
+                        `[Project Creation] Loaded component selection for edit mode: frontend=${selections.frontend}, backend=${selections.backend}`,
+                    );
                 }
             }
 
@@ -495,6 +577,12 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
             // Create or reveal panel
             await this.createOrRevealPanel();
+
+            // Singleton reuse: a revealed pre-existing panel keeps its old tab
+            // title — refresh it so create↔edit transitions retitle the tab.
+            if (this.panel) {
+                this.panel.title = this.getWebviewTitle();
+            }
 
             // Initialize communication only if not already initialized
             // (singleton pattern: panel might already exist with active communication)
@@ -507,7 +595,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
             // End webview transition (wizard successfully opened)
             BaseWebviewCommand.endWebviewTransition();
-
         } catch (error) {
             // Ensure transition is ended even on error
             BaseWebviewCommand.endWebviewTransition();
@@ -559,18 +646,21 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
      * 2. Call aio api-mesh:describe (official Adobe method, ~3s)
      * 3. Construct from meshId as reliable fallback
      */
-    private async _getEndpoint(
-        meshId: string,
-        cachedEndpoint?: string,
-    ): Promise<string> {
+    private async _getEndpoint(meshId: string, cachedEndpoint?: string): Promise<string> {
         const commandManager = ServiceLocator.getCommandExecutor();
-        return getEndpointHelper(meshId, cachedEndpoint, commandManager, this.logger, this.debugLogger);
+        return getEndpointHelper(
+            meshId,
+            cachedEndpoint,
+            commandManager,
+            this.logger,
+            this.debugLogger,
+        );
     }
 
     // Validation
 
     // Project creation with timeout and cancellation support
-    
+
     // Actual project creation logic (extracted for testability)
 
     /**
@@ -579,7 +669,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     private _formatGroupName(group: string): string {
         return formatGroupNameHelper(group);
     }
-    
+
     /**
      * Deploy mesh component from cloned repository
      * Reads mesh.json from component path and deploys it to Adobe I/O

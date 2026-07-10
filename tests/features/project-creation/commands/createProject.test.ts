@@ -92,12 +92,41 @@ function createWizardCommand(): CreateProjectWebviewCommand {
     const mockStateManager = createMockStateManager();
     const mockLogger = createMockLogger();
 
-    return new CreateProjectWebviewCommand(
-        mockContext,
-        mockStateManager,
-        mockLogger
-    );
+    return new CreateProjectWebviewCommand(mockContext, mockStateManager, mockLogger);
 }
+
+describe('CreateProjectWebviewCommand - Edit-mode identity', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('titles the panel "Create Demo Project" in create mode', () => {
+        const command = createWizardCommand();
+
+        expect((command as any).getWebviewTitle()).toBe('Create Demo Project');
+        expect((command as any).getLoadingMessage()).toBe('Loading Project Creation Wizard...');
+        expect((command as any).getLoadingHeader()).toEqual({
+            title: 'Create Demo Project',
+            subtitle: undefined,
+        });
+    });
+
+    it('titles the panel "Edit Project" with the project name while editing', () => {
+        const command = createWizardCommand();
+        (command as any).editProject = {
+            projectPath: '/p',
+            projectName: 'b2b-tester',
+            settings: {},
+        };
+
+        expect((command as any).getWebviewTitle()).toBe('Edit Project');
+        expect((command as any).getLoadingMessage()).toBe('Loading Project Editor...');
+        expect((command as any).getLoadingHeader()).toEqual({
+            title: 'Edit Project',
+            subtitle: 'b2b-tester',
+        });
+    });
+});
 
 describe('CreateProjectWebviewCommand - Bundle Loading', () => {
     beforeEach(() => {
