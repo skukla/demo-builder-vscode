@@ -2,10 +2,10 @@
  * StoreConfigFieldRow Component Tests
  *
  * Focus: the website-code branch's loading treatment. While discovery runs (the
- * initial detect OR any Re-detect), the large centered spinner (LoadingDisplay)
- * stands in for the whole store-selection row. On success the populated dropdowns
- * ARE the result — there is NO separate "Store structure detected" confirmation.
- * The spinner box reserves ~the dropdowns' height so the swap doesn't jump.
+ * initial detect OR any Re-detect), a compact spinner+label (LoadingDisplay)
+ * anchored under the connection fields stands in for the store-selection row.
+ * On success the populated dropdowns ARE the result — there is NO separate
+ * "Store structure detected" confirmation.
  *
  * StoreSelectionRow and ConfigFieldRenderer are mocked so these tests assert the
  * branching/footprint contract of StoreConfigFieldRow itself, not Spectrum
@@ -81,7 +81,7 @@ function buildProps(overrides: Partial<Parameters<typeof StoreConfigFieldRow>[0]
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('StoreConfigFieldRow — website-code branch (spinner replaces the row)', () => {
-    it('shows the large centered spinner while detecting (no dropdowns/Re-detect)', () => {
+    it('shows the compact spinner+label while detecting (no dropdowns/Re-detect)', () => {
         render(<StoreConfigFieldRow {...buildProps({ isFetching: true, hasStoreData: false })} />);
 
         expect(screen.getByText('Detecting store structure…')).toBeInTheDocument();
@@ -111,11 +111,13 @@ describe('StoreConfigFieldRow — website-code branch (spinner replaces the row)
 
     it('spinner gives way to the populated dropdowns on success (row swap, no success line)', () => {
         const { rerender } = render(
-            <StoreConfigFieldRow {...buildProps({ isFetching: true, hasStoreData: false })} />,
+            <StoreConfigFieldRow {...buildProps({ isFetching: true, hasStoreData: false })} />
         );
         expect(screen.getByText('Detecting store structure…')).toBeInTheDocument();
 
-        rerender(<StoreConfigFieldRow {...buildProps({ isFetching: false, hasStoreData: true })} />);
+        rerender(
+            <StoreConfigFieldRow {...buildProps({ isFetching: false, hasStoreData: true })} />
+        );
         expect(screen.queryByText('Detecting store structure…')).not.toBeInTheDocument();
         expect(screen.getByTestId('store-selection-row')).toBeInTheDocument();
     });
@@ -124,7 +126,7 @@ describe('StoreConfigFieldRow — website-code branch (spinner replaces the row)
         render(
             <StoreConfigFieldRow
                 {...buildProps({ fetchError: 'Discovery failed', hasStoreData: false })}
-            />,
+            />
         );
 
         expect(screen.getByText('Discovery failed')).toBeInTheDocument();
@@ -155,7 +157,7 @@ describe('StoreConfigFieldRow — GraphQL endpoint is a connection field (no rev
                     autoDetectKey: undefined,
                     isStoreGroup: (id: string) => id === 'adobe-commerce',
                 })}
-            />,
+            />
         );
 
         expect(screen.getByTestId(`config-field-${PAAS_GRAPHQL_ENDPOINT}`)).toBeInTheDocument();

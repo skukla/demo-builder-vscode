@@ -22,7 +22,6 @@ import type { StoreListItem } from '../hooks/useStoreDiscovery';
 import { ConfigFieldRenderer } from './ConfigFieldRenderer';
 import { StoreSelectionRow } from './StoreSelectionRow';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
-import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 
 export interface StoreConfigFieldRowProps {
     field: UniqueField;
@@ -89,17 +88,18 @@ export function StoreConfigFieldRow({
     if (isWebsiteCodeField(field.key)) {
         /*
          * Store selection — one loading treatment, used for the INITIAL detect AND
-         * any Re-detect: the large centered spinner (LoadingDisplay) stands in for
-         * the whole row while discovery runs, centered in the content area via
-         * CenteredFeedbackContainer (the same loader the component uses for "Loading
-         * component configurations…"). On success the populated dropdowns ARE the
-         * result (no separate "detected" confirmation). The fetchError branch keeps
-         * its fallback inputs.
+         * any Re-detect: a compact spinner+label row anchored directly under the
+         * connection fields (NOT vertically centered in a tall band — centering
+         * put the spinner at the fold and its label below it at short viewports).
+         * On success the populated dropdowns ARE the result (no separate
+         * "detected" confirmation). The fetchError branch keeps its fallback inputs.
          */
         if (fetchError) {
             return (
                 <div>
-                    <Text UNSAFE_className="text-red-700" marginBottom="size-200">{fetchError}</Text>
+                    <Text UNSAFE_className="text-red-700" marginBottom="size-200">
+                        {fetchError}
+                    </Text>
                     <ConfigFieldRenderer {...fieldProps} />
                 </div>
             );
@@ -107,9 +107,9 @@ export function StoreConfigFieldRow({
 
         if (isFetching || !hasStoreData) {
             return (
-                <CenteredFeedbackContainer>
-                    <LoadingDisplay size="L" message="Detecting store structure…" />
-                </CenteredFeedbackContainer>
+                <Flex marginTop="size-300" marginBottom="size-300" justifyContent="center">
+                    <LoadingDisplay size="M" message="Detecting store structure…" />
+                </Flex>
             );
         }
 
