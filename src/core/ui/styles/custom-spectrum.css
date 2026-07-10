@@ -2016,7 +2016,6 @@ button[class*="spectrum-Button"][disabled],
     --dashboard-tile-gap: 16px;
     /* Extra breathing room between the Primary and Storefront clusters in row 1
        so they read as two distinct groups rather than one row of four. */
-    --dashboard-cluster-gap: 40px;
 }
 
 /* Status header spans the standard content band (its padded container), badges
@@ -2155,11 +2154,13 @@ button[class*="spectrum-Button"][disabled],
 }
 
 /* The action row lays its groups (Primary + Storefront + Build) side by side.
-   Wraps only if the viewport is too narrow. */
+   Wraps only if the viewport is too narrow. Inter-group gap EQUALS the tile
+   gap (2026-07-09): with the zone headings gone, the row reads as one even
+   strip — grouping semantics are not communicated visually. */
 .dashboard-zone-row {
     display: flex;
     flex-flow: row wrap;
-    gap: var(--dashboard-cluster-gap);
+    gap: var(--dashboard-tile-gap);
     align-items: flex-start;
 }
 
@@ -2167,15 +2168,6 @@ button[class*="spectrum-Button"][disabled],
     display: flex;
     flex-direction: column;
     gap: 8px;
-}
-
-/* Zone heading — small uppercase label matching status-badge typography */
-.dashboard-zone-label {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--spectrum-global-color-gray-700);
 }
 
 /* Each zone lays its tiles out in a horizontal row, wrapping only if the
@@ -2250,6 +2242,15 @@ button[class*="spectrum-Button"][disabled],
     align-items: center !important;
     gap: 6px !important;
     cursor: pointer !important;
+}
+
+/* Labels clamp to two lines so a long label can never stretch a tile past its
+   square (the aspect-ratio is the uniform height; content overflow beats it). */
+.dashboard-action-button .icon-label {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 /* Scale icons proportionally to the smaller tile */

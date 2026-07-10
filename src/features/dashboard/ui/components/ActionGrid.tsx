@@ -2,7 +2,7 @@
  * ActionGrid Component
  *
  * Displays the project dashboard actions as small, grouped, prioritized tiles
- * organized into labeled zones:
+ * grouped into zones (no visible headings — spacing + tile labels carry the grouping):
  *  - Primary zone (accent): Start/Stop (non-EDS, mutually exclusive), Open in
  *    Browser, and Author in DA.live (EDS only). These are the surfaces you
  *    use the project through — see it as a customer, edit it as a creator.
@@ -51,8 +51,18 @@ type OverflowKey =
     | 'reset'
     | 'delete';
 
-/** Human-readable label per authoring experience. */
+/**
+ * Tile label per authoring experience. "EW" keeps the Author tile at two
+ * lines (the audience — Adobe demo engineers — knows the shorthand); the
+ * full name rides on the button's aria-label for hover/screen readers.
+ */
 const EXPERIENCE_LABEL: Record<AuthoringExperience, string> = {
+    'da-live-classic': 'DA.live Classic',
+    'experience-workspace': 'EW',
+};
+
+/** Full name per authoring experience — the accessible label. */
+const EXPERIENCE_FULL_NAME: Record<AuthoringExperience, string> = {
     'da-live-classic': 'DA.live Classic',
     'experience-workspace': 'Experience Workspace',
 };
@@ -119,7 +129,7 @@ export interface ActionGridProps {
 }
 
 /**
- * Action grid displaying dashboard control tiles grouped into labeled zones.
+ * Action grid displaying dashboard control tiles grouped into zones (spacing-only, no headings).
  *
  * Tiles are conditionally rendered/disabled based on project type and state.
  *
@@ -195,7 +205,6 @@ export function ActionGrid({
                     lives here for non-EDS projects as their lifecycle
                     equivalent. */}
                 <div className="dashboard-zone-section" data-zone="primary">
-                    <span className="dashboard-zone-label">Primary</span>
                     <div className="dashboard-zone-grid">
                         {!isEds && !isRunning && (
                             <ActionButton
@@ -251,6 +260,7 @@ export function ActionGrid({
                                 isQuiet
                                 isDisabled={isOpeningBrowser}
                                 UNSAFE_className="dashboard-action-button dashboard-action-button--hero"
+                                aria-label={`Author in ${EXPERIENCE_FULL_NAME[authoringExperience]}`}
                             >
                                 <Edit size="L" />
                                 <Text UNSAFE_className="icon-label">
@@ -266,7 +276,6 @@ export function ActionGrid({
                     storefront-related actions are visually grouped. */}
                 {isEds && handleSyncStorefront && (
                     <div className="dashboard-zone-section" data-zone="storefront">
-                        <span className="dashboard-zone-label">Storefront</span>
                         <div className="dashboard-zone-grid">
                             <ActionButton
                                 onPress={handleSyncStorefront}
@@ -284,7 +293,6 @@ export function ActionGrid({
                     row as Primary + Storefront so the action groups read as a single
                     bar; tiles pack left within the group. */}
                 <div className="dashboard-zone-section" data-zone="build">
-                    <span className="dashboard-zone-label">Build</span>
                     <div className="dashboard-zone-grid">
                         {hasMesh && (
                             <ActionButton

@@ -146,11 +146,12 @@ describe('ActionGrid', () => {
     });
 
     describe('Primary Cluster', () => {
-        it('should label the primary cluster "Primary"', () => {
+        it('renders NO visible zone heading (grouping is structural, via spacing)', () => {
             const { container } = render(<ActionGrid {...defaultProps} />);
 
             const primary = getZone(container, 'primary');
-            expect(within(primary).getByText('Primary')).toBeInTheDocument();
+            expect(primary).toBeInTheDocument();
+            expect(within(primary).queryByText('Primary')).not.toBeInTheDocument();
         });
 
         it('should place Start in the primary cluster when not running (non-EDS)', () => {
@@ -187,7 +188,12 @@ describe('ActionGrid', () => {
         it('should label the Author button from the resolved experience (EW)', () => {
             render(<ActionGrid {...edsProps} authoringExperience="experience-workspace" />);
 
-            expect(screen.getByText('Author in Experience Workspace')).toBeInTheDocument();
+            // Display text is the short "EW" (two-line tile); the full name
+            // rides on the accessible label.
+            const author = screen.getByRole('button', {
+                name: 'Author in Experience Workspace',
+            });
+            expect(author).toHaveTextContent('Author in EW');
             expect(screen.queryByText('Author in DA.live Classic')).not.toBeInTheDocument();
         });
 
@@ -239,11 +245,11 @@ describe('ActionGrid', () => {
             expect(getZone(container, 'storefront')).toBeInTheDocument();
         });
 
-        it('should label the storefront zone "Storefront"', () => {
+        it('renders NO visible zone heading (tile labels carry the meaning)', () => {
             const { container } = render(<ActionGrid {...edsProps} />);
 
             const storefront = getZone(container, 'storefront');
-            expect(within(storefront).getByText('Storefront')).toBeInTheDocument();
+            expect(within(storefront).queryByText('Storefront')).not.toBeInTheDocument();
         });
 
         it('should place Sync Storefront in the storefront zone', () => {
@@ -278,11 +284,11 @@ describe('ActionGrid', () => {
     });
 
     describe('Build Zone', () => {
-        it('should label the build zone "Build"', () => {
+        it('renders NO visible zone heading (grouping is structural, via spacing)', () => {
             const { container } = render(<ActionGrid {...defaultProps} />);
 
             const build = getZone(container, 'build');
-            expect(within(build).getByText('Build')).toBeInTheDocument();
+            expect(within(build).queryByText('Build')).not.toBeInTheDocument();
         });
 
         it('should place Configure in the build zone', () => {
@@ -623,7 +629,9 @@ describe('ActionGrid', () => {
         it('labels the Author button for the resolved experience (EW)', () => {
             render(<ActionGrid {...edsProps} authoringExperience="experience-workspace" />);
 
-            expect(screen.getByText('Author in Experience Workspace')).toBeInTheDocument();
+            expect(
+                screen.getByRole('button', { name: 'Author in Experience Workspace' })
+            ).toHaveTextContent('Author in EW');
         });
 
         it('renders no authoring-experience flip/switch control (relocated to Configure)', () => {
