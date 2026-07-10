@@ -174,12 +174,15 @@ export async function activate(context: vscode.ExtensionContext) {
             return;
         }
 
-        // Auto-zoom for optimal demo visibility (per-window, not global)
+        // Auto zoom-reset on load — OPT-IN (default false, flipped 2026-07-09):
+        // silently changing window zoom at activation surprises users and can
+        // undo a presenter's deliberate Set Recommended Zoom right before a
+        // demo. Zoom changes are user-initiated via the Set Recommended Zoom /
+        // Reset Zoom commands unless this setting is explicitly enabled.
         const demoBuilderConfig = vscode.workspace.getConfiguration('demoBuilder');
-        const autoZoomEnabled = demoBuilderConfig.get<boolean>('autoZoom', true);
+        const autoZoomEnabled = demoBuilderConfig.get<boolean>('autoZoom', false);
 
         if (autoZoomEnabled) {
-            // Reset zoom to 100% for consistent demo experience
             await vscode.commands.executeCommand('workbench.action.zoomReset');
         }
 

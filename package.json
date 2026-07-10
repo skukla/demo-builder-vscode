@@ -139,8 +139,8 @@
           },
           "demoBuilder.autoZoom": {
             "type": "boolean",
-            "default": true,
-            "description": "Reset zoom to 100% on extension load for consistent demo experience"
+            "default": false,
+            "description": "Reset zoom to 100% on extension load for consistent demo experience (off by default — zoom changes are user-initiated via the Set Recommended Zoom / Reset Zoom commands)"
           },
           "demoBuilder.updateChannel": {
             "type": "string",
