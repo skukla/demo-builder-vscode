@@ -160,9 +160,9 @@ export function ProjectDashboardScreen({
         handleOpenDaLive,
         handleOpenAdminPanel,
         handleConfigure,
+        handleEditProject,
         handleOpenDevConsole,
         handleDeleteProject,
-        handleCopyPath,
         handleExportProject,
         handleRepublishContent,
         handleResetProject,
@@ -330,8 +330,8 @@ export function ProjectDashboardScreen({
                                 }
                                 handleConfigure={handleConfigure}
                                 handleOpenDevConsole={handleOpenDevConsole}
+                                handleEditProject={handleEditProject}
                                 handleRename={openRenameDialog}
-                                handleCopyPath={handleCopyPath}
                                 handleExportProject={handleExportProject}
                                 handleResetProject={handleResetProject}
                                 handleDeleteProject={handleDeleteProject}

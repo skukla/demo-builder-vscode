@@ -101,7 +101,7 @@ describe('ActionGrid', () => {
         handleOpenDevConsole: jest.fn(),
         handleDeleteProject: jest.fn(),
         handleRename: jest.fn(),
-        handleCopyPath: jest.fn(),
+        handleEditProject: jest.fn(),
         handleExportProject: jest.fn(),
         handleResetProject: jest.fn(),
     };
@@ -376,13 +376,6 @@ describe('ActionGrid', () => {
             expect(defaultProps.handleOpenDevConsole).toHaveBeenCalled();
         });
 
-        it('should expose Copy Path in the overflow menu', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).getByText('Copy Path')).toBeInTheDocument();
-        });
-
         it('should expose Export in the overflow menu', () => {
             const { container } = render(<ActionGrid {...defaultProps} />);
 
@@ -397,15 +390,6 @@ describe('ActionGrid', () => {
             const items = within(menu).getAllByRole('menuitem');
             expect(items[items.length - 1]).toHaveTextContent('Delete');
             expect(items[items.length - 2]).toHaveTextContent('Reset');
-        });
-
-        it('should call handleCopyPath when Copy Path clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} />);
-
-            await user.click(screen.getByText('Copy Path'));
-
-            expect(defaultProps.handleCopyPath).toHaveBeenCalled();
         });
 
         it('should call handleExportProject when Export clicked', async () => {
@@ -464,6 +448,46 @@ describe('ActionGrid', () => {
             await user.click(screen.getByText('Rename'));
 
             expect(defaultProps.handleRename).toHaveBeenCalled();
+        });
+    });
+
+    describe('Overflow Menu - Edit Gating', () => {
+        it('should show Edit for a stopped non-EDS project', () => {
+            const { container } = render(<ActionGrid {...defaultProps} isRunning={false} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).getByText('Edit')).toBeInTheDocument();
+        });
+
+        it('should hide Edit for a running non-EDS project', () => {
+            const { container } = render(<ActionGrid {...defaultProps} isRunning={true} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).queryByText('Edit')).not.toBeInTheDocument();
+        });
+
+        it('should show Edit for an EDS project even when running', () => {
+            const { container } = render(<ActionGrid {...edsProps} isRunning={true} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).getByText('Edit')).toBeInTheDocument();
+        });
+
+        it('should hide Edit when no handleEditProject is provided', () => {
+            const { handleEditProject: _handleEditProject, ...noEdit } = defaultProps;
+            const { container } = render(<ActionGrid {...noEdit} isRunning={false} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).queryByText('Edit')).not.toBeInTheDocument();
+        });
+
+        it('should call handleEditProject when Edit clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(<ActionGrid {...defaultProps} isRunning={false} />);
+
+            await user.click(screen.getByText('Edit'));
+
+            expect(defaultProps.handleEditProject).toHaveBeenCalled();
         });
     });
 

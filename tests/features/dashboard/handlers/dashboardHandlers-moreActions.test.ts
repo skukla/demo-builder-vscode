@@ -1,9 +1,8 @@
 /**
  * Dashboard Handlers - More-Menu Action Tests
  *
- * Tests for the new dashboard "More" overflow handlers that resolve the current
+ * Tests for the dashboard "More" overflow handlers that resolve the current
  * project via getCurrentProject() (NOT a projectPath payload):
- * - handleCopyPath: copy current project path to clipboard
  * - handleExportProject: export current project settings (reuses exportProjectSettings)
  * - handleRepublishContent: republish EDS content (reuses republishStorefrontContent)
  * - handleRenameProject: rename current project (reuses shared rename core)
@@ -18,24 +17,28 @@ jest.setTimeout(5000);
 // Mock Setup - All mocks must be defined before imports
 // =============================================================================
 
-jest.mock('vscode', () => ({
-    commands: {
-        executeCommand: jest.fn().mockResolvedValue(undefined),
-    },
-    window: {
-        activeColorTheme: { kind: 1 },
-        showInformationMessage: jest.fn(),
-        showErrorMessage: jest.fn(),
-        withProgress: jest.fn(),
-    },
-    ColorThemeKind: { Dark: 2, Light: 1 },
-    ProgressLocation: { Notification: 15 },
-    env: {
-        clipboard: { writeText: jest.fn().mockResolvedValue(undefined) },
-        openExternal: jest.fn(),
-    },
-    Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
-}), { virtual: true });
+jest.mock(
+    'vscode',
+    () => ({
+        commands: {
+            executeCommand: jest.fn().mockResolvedValue(undefined),
+        },
+        window: {
+            activeColorTheme: { kind: 1 },
+            showInformationMessage: jest.fn(),
+            showErrorMessage: jest.fn(),
+            withProgress: jest.fn(),
+        },
+        ColorThemeKind: { Dark: 2, Light: 1 },
+        ProgressLocation: { Notification: 15 },
+        env: {
+            clipboard: { writeText: jest.fn().mockResolvedValue(undefined) },
+            openExternal: jest.fn(),
+        },
+        Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
+    }),
+    { virtual: true }
+);
 
 jest.mock('@/features/mesh/services/stalenessDetector');
 jest.mock('@/features/authentication');
@@ -67,9 +70,7 @@ jest.mock('@/features/projects-dashboard/services/projectDeletionService', () =>
 // Imports under test
 // =============================================================================
 
-import * as vscode from 'vscode';
 import {
-    handleCopyPath,
     handleExportProject,
     handleRenameProject,
 } from '@/features/dashboard/handlers/dashboardHandlers';
@@ -114,38 +115,6 @@ function createMockContext(project: Project | undefined): HandlerContext {
 // Tests
 // =============================================================================
 
-describe('handleCopyPath', () => {
-    beforeEach(() => jest.clearAllMocks());
-
-    it('should write the current project path to the clipboard', async () => {
-        const project = createMockProject({ path: '/my/project/path' });
-        const context = createMockContext(project);
-
-        const result = await handleCopyPath(context);
-
-        expect(result.success).toBe(true);
-        expect((vscode.env.clipboard.writeText as jest.Mock)).toHaveBeenCalledWith('/my/project/path');
-    });
-
-    it('should show an information toast on success', async () => {
-        const project = createMockProject();
-        const context = createMockContext(project);
-
-        await handleCopyPath(context);
-
-        expect((vscode.window.showInformationMessage as jest.Mock)).toHaveBeenCalled();
-    });
-
-    it('should return error when no current project', async () => {
-        const context = createMockContext(undefined);
-
-        const result = await handleCopyPath(context);
-
-        expect(result.success).toBe(false);
-        expect((vscode.env.clipboard.writeText as jest.Mock)).not.toHaveBeenCalled();
-    });
-});
-
 describe('handleExportProject', () => {
     beforeEach(() => jest.clearAllMocks());
 
@@ -156,7 +125,7 @@ describe('handleExportProject', () => {
         const result = await handleExportProject(context);
 
         expect(result.success).toBe(true);
-        expect((exportProjectSettings as jest.Mock)).toHaveBeenCalledWith(context, project);
+        expect(exportProjectSettings as jest.Mock).toHaveBeenCalledWith(context, project);
     });
 
     it('should return error when no current project', async () => {
@@ -165,7 +134,7 @@ describe('handleExportProject', () => {
         const result = await handleExportProject(context);
 
         expect(result.success).toBe(false);
-        expect((exportProjectSettings as jest.Mock)).not.toHaveBeenCalled();
+        expect(exportProjectSettings as jest.Mock).not.toHaveBeenCalled();
     });
 });
 
@@ -227,8 +196,8 @@ describe('handleRenameProject', () => {
 
         // Re-runs status so the dashboard title refreshes (title is driven by the
         // status payload's name, not a separate init).
-        expect((context.panel!.webview.postMessage as jest.Mock)).toHaveBeenCalledWith(
-            expect.objectContaining({ type: 'statusUpdate' }),
+        expect(context.panel!.webview.postMessage as jest.Mock).toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'statusUpdate' })
         );
     });
 
@@ -239,8 +208,8 @@ describe('handleRenameProject', () => {
 
         await handleRenameProject(context, { newName: 'renamed' });
 
-        expect((context.panel!.webview.postMessage as jest.Mock)).not.toHaveBeenCalledWith(
-            expect.objectContaining({ type: 'statusUpdate' }),
+        expect(context.panel!.webview.postMessage as jest.Mock).not.toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'statusUpdate' })
         );
     });
 });

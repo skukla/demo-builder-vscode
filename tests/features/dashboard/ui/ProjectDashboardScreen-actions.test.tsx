@@ -15,7 +15,9 @@ jest.mock('@/features/projects-dashboard/ui/components/RenameProjectDialog', () 
             <button data-testid="rename-dialog-confirm" onClick={() => onRename('renamed-project')}>
                 Confirm Rename
             </button>
-            <button data-testid="rename-dialog-cancel" onClick={onClose}>Cancel</button>
+            <button data-testid="rename-dialog-cancel" onClick={onClose}>
+                Cancel
+            </button>
         </div>
     ),
 }));
@@ -171,13 +173,13 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
             expect(ctx.mockPostMessage).toHaveBeenCalledWith('deleteProject');
         });
 
-        it('should send copyPath message when Copy Path clicked', async () => {
+        it('should send editProject message when Edit clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderDashboard();
 
-            await user.click(screen.getByText('Copy Path'));
+            await user.click(screen.getByText('Edit'));
 
-            expect(ctx.mockPostMessage).toHaveBeenCalledWith('copyPath');
+            expect(ctx.mockPostMessage).toHaveBeenCalledWith('editProject');
         });
 
         it('should send exportProject message when Export clicked', async () => {
@@ -234,7 +236,9 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
             await user.click(screen.getByText('Rename'));
             await user.click(screen.getByTestId('rename-dialog-confirm'));
 
-            expect(ctx.mockPostMessage).toHaveBeenCalledWith('renameProject', { newName: 'renamed-project' });
+            expect(ctx.mockPostMessage).toHaveBeenCalledWith('renameProject', {
+                newName: 'renamed-project',
+            });
         });
 
         it('should close the rename dialog on cancel', async () => {

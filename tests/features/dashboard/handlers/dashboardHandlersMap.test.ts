@@ -92,14 +92,16 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'resetProject')).toBe(true);
         });
 
-        it('should include the new More-menu action handlers', () => {
+        it('should include the More-menu action handlers', () => {
             // Given: dashboardHandlers object
-            // When: Checking for the new More-menu message types
-            // Then: copyPath, exportProject, republishContent, renameProject present
-            expect(hasHandler(dashboardHandlers, 'copyPath')).toBe(true);
+            // When: Checking for the More-menu message types
+            // Then: editProject, exportProject, republishContent, renameProject
+            // present (copyPath removed — Copy Path lives on the project-card kebab)
+            expect(hasHandler(dashboardHandlers, 'editProject')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'exportProject')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'republishContent')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'renameProject')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'copyPath')).toBe(false);
         });
 
         it('does not register a setAuthoringExperience handler (relocated to Configure)', () => {
@@ -125,11 +127,12 @@ describe('dashboardHandlers', () => {
             // (openBrowser, openLiveSite, openDaLive, openAdminPanel, configure,
             // openDevConsole, navigateBack) + 1 mesh + 1 syncStorefront +
             // 1 refreshBlockLibrary + 2 auth (reAuthenticate + switchOrg) +
-            // 1 project + 1 reset = 17, plus the 4 More-menu actions (copyPath,
-            // exportProject, republishContent, renameProject) = 21, plus the 4
-            // App Builder actions (addApp, deployApp, redeployApp, removeApp) = 25,
-            // plus the 5 appBuilderComponent (integrations list) actions
-            // (addAppBuilderComponent, deployAppBuilderComponent,
+            // 1 project + 1 reset = 17, plus the 4 More-menu actions
+            // (editProject, exportProject, republishContent, renameProject) = 21
+            // (copyPath removed — Copy Path lives on the project-card kebab),
+            // plus the 4 App Builder actions (addApp, deployApp, redeployApp,
+            // removeApp) = 25, plus the 5 appBuilderComponent (integrations list)
+            // actions (addAppBuilderComponent, deployAppBuilderComponent,
             // redeployAppBuilderComponent, removeAppBuilderComponent,
             // verifyAppBuilderComponent) = 30, plus the 2 console-API actions
             // (listConsoleApis, addConsoleApis) = 32.

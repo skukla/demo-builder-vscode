@@ -12,7 +12,7 @@ The dashboard is designed for at-a-glance status monitoring and one-click action
 - **Mesh Status Monitoring**: Async mesh status checking with auth-aware prompts
 - **Adobe Context Display**: Show organization, project, and workspace
 - **Quick Actions**: Start, Stop, Open Browser, Admin Panel (always visible; opens the admin URL — derived from the ACCS tenant endpoint for SaaS, user-supplied `ADOBE_COMMERCE_ADMIN_URL` for PaaS — or routes to Configure), Deploy Mesh (shown conditionally when project includes a mesh component), Configure
-- **More Menu (overflow)**: Rename (non-EDS: stopped only), Copy Path, Export, Refresh Block Library (EDS), Republish Content (EDS), Dev Console, Reset
+- **More Menu (overflow)**: Edit + Rename (non-EDS: stopped only), Export, Refresh Block Library (EDS), Republish Content (EDS), Dev Console, Reset (Copy Path lives on the project-card kebab)
 - **Focus Retention**: Maintain webview focus for in-place actions (Start/Stop)
 - **Change Detection**: Detect frontend config changes requiring restart
 - **Re-Authentication**: Handle lost Adobe access with browser auth flow
@@ -131,7 +131,6 @@ These back the dashboard "More" overflow items. All resolve the project via
 - **handleRenameProject** — validates `{newName}`, delegates to the shared
   `renameProjectCore` (folder rename + path updates + recent-projects + save),
   then re-sends `init` so the dashboard title refreshes.
-- **handleCopyPath** — copy the current project's folder path to the clipboard.
 - **handleExportProject** — export project settings to a file (reuses
   `exportProjectSettings`).
 - **handleRepublishContent** — republish DA.live content to the CDN (EDS-only).
@@ -341,8 +340,8 @@ if (meshComponent && meshComponent.status !== 'deploying' && meshComponent.statu
 - `deployMesh` - Deploy API mesh
 - `addApp` / `deployApp` / `redeployApp` / `removeApp` - Manage the project's App Builder app
 - `openDevConsole` - Open Adobe Developer Console
+- `editProject` - Open the wizard in edit mode for the current project (shared `extractSettingsFromProject`)
 - `renameProject` - Rename current project (delegates to shared `renameProjectCore`)
-- `copyPath` - Copy project folder path to clipboard
 - `exportProject` - Export project settings to a file
 - `republishContent` - Republish DA.live content to the CDN (EDS-only)
 - `resetProject` - Reset project state
@@ -469,7 +468,7 @@ if (!verification.exists) {
 - [ ] Configure button works
 - [ ] Developer Console link works
 - [ ] More menu: Rename works (folder renamed, title updates; hidden while a non-EDS demo runs)
-- [ ] More menu: Copy Path copies the project path to the clipboard
+- [ ] More menu: Edit opens the wizard in edit mode
 - [ ] More menu: Export writes project settings to a file
 - [ ] More menu: Republish Content works (EDS projects only)
 - [ ] More menu: Reset works

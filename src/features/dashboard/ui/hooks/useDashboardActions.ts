@@ -51,12 +51,12 @@ export interface UseDashboardActionsReturn {
     handleOpenAdminPanel: () => void;
     /** Open configure screen */
     handleConfigure: () => void;
+    /** Open the wizard in edit mode for the current project */
+    handleEditProject: () => void;
     /** Open Adobe Developer Console */
     handleOpenDevConsole: () => void;
     /** Delete the project */
     handleDeleteProject: () => void;
-    /** Copy the project's folder path to the clipboard */
-    handleCopyPath: () => void;
     /** Export the project's settings to a file */
     handleExportProject: () => void;
     /** Republish DA.live content to CDN (EDS projects only) */
@@ -142,16 +142,16 @@ export function useDashboardActions({
         webviewClient.postMessage('configure');
     }, []);
 
+    const handleEditProject = useCallback(() => {
+        webviewClient.postMessage('editProject');
+    }, []);
+
     const handleOpenDevConsole = useCallback(() => {
         webviewClient.postMessage('openDevConsole');
     }, []);
 
     const handleDeleteProject = useCallback(() => {
         webviewClient.postMessage('deleteProject');
-    }, []);
-
-    const handleCopyPath = useCallback(() => {
-        webviewClient.postMessage('copyPath');
     }, []);
 
     const handleExportProject = useCallback(() => {
@@ -193,9 +193,9 @@ export function useDashboardActions({
         handleOpenDaLive,
         handleOpenAdminPanel,
         handleConfigure,
+        handleEditProject,
         handleOpenDevConsole,
         handleDeleteProject,
-        handleCopyPath,
         handleExportProject,
         handleRepublishContent,
         handleResetProject,

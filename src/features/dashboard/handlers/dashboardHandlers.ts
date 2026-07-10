@@ -375,6 +375,35 @@ export const handleConfigure: MessageHandler = async () => {
 };
 
 /**
+ * Handle 'editProject' message - Open the wizard in edit mode for the current project
+ *
+ * Mirrors the projects-home kebab's Edit action, resolved via getCurrentProject()
+ * (the dashboard always operates on the current project). Reuses the shared
+ * extractSettingsFromProject so both entry points feed the wizard identically.
+ */
+export const handleEditProject: MessageHandler = async (context) => {
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
+    }
+
+    const { extractSettingsFromProject } = await import('@/features/projects-dashboard/services');
+    // Include secrets — this is a local edit of the user's own project.
+    const settings = extractSettingsFromProject(project, true);
+
+    context.logger.info(`Opening edit wizard for project: ${project.name}`);
+    await vscode.commands.executeCommand('demoBuilder.createProject', {
+        editProject: {
+            projectPath: project.path,
+            projectName: project.name,
+            settings,
+        },
+    });
+
+    return { success: true };
+};
+
+/**
  * Handle 'deployMesh' message - Deploy API mesh
  */
 export const handleDeployMesh: MessageHandler = async () => {
@@ -664,25 +693,6 @@ export const handleResetProject: MessageHandler = async (context) => {
         context,
         logPrefix: '[Dashboard]',
     });
-};
-
-/**
- * Handle 'copyPath' message - Copy the current project's folder path to clipboard
- */
-export const handleCopyPath: MessageHandler = async (context) => {
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) {
-        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
-    }
-
-    try {
-        await vscode.env.clipboard.writeText(project.path);
-        vscode.window.showInformationMessage('Project path copied to clipboard');
-        return { success: true };
-    } catch (error) {
-        context.logger.error('[Dashboard] Failed to copy project path', error as Error);
-        return { success: false, error: 'Failed to copy project path' };
-    }
 };
 
 /**
@@ -976,8 +986,8 @@ export const dashboardHandlers = defineHandlers({
 
     // Project management handlers
     deleteProject: handleDeleteProject,
+    editProject: handleEditProject,
     renameProject: handleRenameProject,
-    copyPath: handleCopyPath,
     exportProject: handleExportProject,
 
     // EDS content republish (re-push DA.live content to CDN)

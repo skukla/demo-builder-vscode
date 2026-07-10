@@ -14,8 +14,10 @@
  *    Primary so storefront ops are visually adjacent to the storefront
  *    authoring surface.
  *  - Build zone: Deploy Mesh (when hasMesh), Configure, and a "More"
- *    overflow menu holding Components, Refresh Block Library (EDS only),
- *    and Dev Console. (Logs moved to the sidebar Logs utility.)
+ *    overflow menu holding Edit + Rename (EDS always, non-EDS while stopped),
+ *    Export, Refresh Block Library + Republish Content (EDS only),
+ *    Dev Console, Reset, and Delete (destructive, last). (Logs moved to the
+ *    sidebar Logs utility; Copy Path lives on the project-card kebab.)
  *  - Delete footer: isolated below the zones, destructive styling.
  *
  * Gating is behavioral, not displayed: Author in DA.live and Sync Storefront
@@ -47,8 +49,8 @@ import type { AuthoringExperience } from '@/types/base';
 
 /** Overflow menu item keys. */
 type OverflowKey =
+    | 'edit'
     | 'rename'
-    | 'copyPath'
     | 'export'
     | 'refreshBlockLibrary'
     | 'republishContent'
@@ -121,12 +123,16 @@ export interface ActionGridProps {
     /** Handler for Dev Console button (overflow menu) */
     handleOpenDevConsole: () => void;
     /**
+     * Handler for the Edit overflow item. Opens the wizard in edit mode for
+     * the current project. Optional — gated like the kebab's Edit action
+     * (EDS always; non-EDS only while stopped).
+     */
+    handleEditProject?: () => void;
+    /**
      * Handler for the Rename overflow item. Opens the rename dialog (owned by
      * ProjectDashboardScreen). Optional — gated like the kebab's Edit action.
      */
     handleRename?: () => void;
-    /** Handler for the Copy Path overflow item */
-    handleCopyPath: () => void;
     /** Handler for the Export overflow item */
     handleExportProject: () => void;
     /** Handler for the Reset overflow item (always shown, last in the menu) */
@@ -163,22 +169,23 @@ export function ActionGrid({
     handleRepublishContent,
     handleConfigure,
     handleOpenDevConsole,
+    handleEditProject,
     handleRename,
-    handleCopyPath,
     handleExportProject,
     handleResetProject,
     handleDeleteProject,
 }: ActionGridProps): React.ReactElement {
-    // Rename gating mirrors the kebab's Edit: non-EDS only while stopped, EDS always.
+    // Edit/Rename gating mirrors the kebab's Edit: non-EDS only while stopped, EDS always.
+    const canEdit = Boolean(handleEditProject) && (isEds || !isRunning);
     const canRename = Boolean(handleRename) && (isEds || !isRunning);
 
     const handleOverflowAction = (key: React.Key): void => {
         switch (key) {
+            case 'edit' satisfies OverflowKey:
+                handleEditProject?.();
+                return;
             case 'rename' satisfies OverflowKey:
                 handleRename?.();
-                return;
-            case 'copyPath' satisfies OverflowKey:
-                handleCopyPath();
                 return;
             case 'export' satisfies OverflowKey:
                 handleExportProject();
@@ -348,8 +355,8 @@ export function ActionGrid({
                                 <Text UNSAFE_className="icon-label">More</Text>
                             </ActionButton>
                             <Menu onAction={handleOverflowAction}>
+                                {canEdit ? <Item key="edit">Edit</Item> : null}
                                 {canRename ? <Item key="rename">Rename</Item> : null}
-                                <Item key="copyPath">Copy Path</Item>
                                 <Item key="export">Export</Item>
                                 {isEds && handleRefreshBlockLibrary ? (
                                     <Item key="refreshBlockLibrary">Refresh Block Library</Item>

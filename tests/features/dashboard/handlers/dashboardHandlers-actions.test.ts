@@ -11,6 +11,7 @@ import * as vscode from 'vscode';
 import {
     handleConfigure,
     handleDeleteProject,
+    handleEditProject,
     handleOpenAdminPanel,
     handleOpenBrowser,
 } from '@/features/dashboard/handlers/dashboardHandlers';
@@ -63,6 +64,14 @@ jest.mock('@/core/validation', () => ({
 // Mock projectDeletionService to avoid deep dependency chain
 jest.mock('@/features/projects-dashboard/services/projectDeletionService', () => ({
     deleteProject: jest.fn().mockResolvedValue({ success: true }),
+}));
+
+// Mock the projects-dashboard services barrel (dynamic-imported by the edit/
+// rename/export handlers) to avoid its deep dependency chain
+jest.mock('@/features/projects-dashboard/services', () => ({
+    extractSettingsFromProject: jest.fn(() => ({ selectedPackage: 'citisignal' })),
+    renameProjectCore: jest.fn().mockResolvedValue({ success: true }),
+    exportProjectSettings: jest.fn().mockResolvedValue({ success: true }),
 }));
 
 describe('Dashboard Action Handlers', () => {
@@ -189,6 +198,37 @@ describe('Dashboard Action Handlers', () => {
 
             expect(result).toEqual({ success: true });
             expect(mockUriParse).toHaveBeenCalledWith('http://localhost:8080');
+        });
+    });
+
+    describe('handleEditProject', () => {
+        it('should open the wizard in edit mode for the current project', async () => {
+            const { mockContext, mockProject } = setupMocks();
+            const {
+                extractSettingsFromProject,
+            } = require('@/features/projects-dashboard/services');
+
+            const result = await handleEditProject(mockContext);
+
+            expect(result).toEqual({ success: true });
+            expect(extractSettingsFromProject).toHaveBeenCalledWith(mockProject, true);
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.createProject', {
+                editProject: {
+                    projectPath: mockProject.path,
+                    projectName: mockProject.name,
+                    settings: { selectedPackage: 'citisignal' },
+                },
+            });
+        });
+
+        it('should return error when no project available', async () => {
+            const { mockContext } = setupMocks();
+            mockContext.stateManager.getCurrentProject = jest.fn().mockResolvedValue(null);
+
+            const result = await handleEditProject(mockContext);
+
+            expect(result.success).toBe(false);
+            expect(mockExecuteCommand).not.toHaveBeenCalled();
         });
     });
 
