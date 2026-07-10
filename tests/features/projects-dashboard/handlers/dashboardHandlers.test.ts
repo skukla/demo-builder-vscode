@@ -11,6 +11,8 @@ import {
     handleCopyProjectPath,
     handleOpenAiForProject,
     handleOpenAdminPanel,
+    handleOpenLiveSite,
+    handleOpenDaLive,
 } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { createMockProject, createMockProjects, createMockHandlerContext } from '../testUtils';
 
@@ -557,7 +559,7 @@ describe('dashboardHandlers', () => {
             expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
         });
 
-        it('returns error when project cannot be loaded', async () => {
+        it('rejects a path outside the projects directory before loading', async () => {
             const context = makeContext([]);
             const vscode = require('vscode');
 
@@ -566,8 +568,52 @@ describe('dashboardHandlers', () => {
             });
 
             expect(result.success).toBe(false);
+            expect(result.error).toMatch(/invalid project path/i);
+            expect(context.stateManager.saveProject).not.toHaveBeenCalled();
+            expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+        });
+
+        it('returns error when project cannot be loaded', async () => {
+            const context = makeContext([]);
+            const vscode = require('vscode');
+
+            const result = await handleOpenAiForProject(context, {
+                projectPath: path.join(os.homedir(), '.demo-builder', 'projects', 'nonexistent'),
+            });
+
+            expect(result.success).toBe(false);
             expect(result.error).toMatch(/not found/i);
             expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('handleOpenLiveSite / handleOpenDaLive — path guard', () => {
+        it('handleOpenLiveSite rejects a path outside the projects directory', async () => {
+            const context = createMockHandlerContext([]);
+            const vscode = require('vscode');
+
+            const result = await handleOpenLiveSite(context as any, {
+                projectPath: '/nonexistent/path',
+            });
+
+            expect(result.success).toBe(false);
+            expect(result.error).toMatch(/invalid project path/i);
+            expect(context.stateManager.loadProjectFromPath).not.toHaveBeenCalled();
+            expect(vscode.env.openExternal).not.toHaveBeenCalled();
+        });
+
+        it('handleOpenDaLive rejects a path outside the projects directory', async () => {
+            const context = createMockHandlerContext([]);
+            const vscode = require('vscode');
+
+            const result = await handleOpenDaLive(context as any, {
+                projectPath: '/nonexistent/path',
+            });
+
+            expect(result.success).toBe(false);
+            expect(result.error).toMatch(/invalid project path/i);
+            expect(context.stateManager.loadProjectFromPath).not.toHaveBeenCalled();
+            expect(vscode.env.openExternal).not.toHaveBeenCalled();
         });
     });
 

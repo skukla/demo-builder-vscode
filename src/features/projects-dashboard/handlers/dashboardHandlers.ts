@@ -655,6 +655,14 @@ export const handleOpenAiForProject: MessageHandler<{ projectPath: string }> = a
         return { success: false, error: 'Project path is required' };
     }
 
+    // SECURITY: Validate path is within demo-builder projects directory
+    // (this handler persists the loaded project as the current pointer).
+    try {
+        validateProjectPath(payload.projectPath);
+    } catch {
+        return { success: false, error: 'Invalid project path' };
+    }
+
     const project = await context.stateManager.loadProjectFromPath(payload.projectPath, undefined, {
         persistAfterLoad: false,
     });
@@ -682,6 +690,13 @@ export const handleOpenLiveSite: MessageHandler<{ projectPath: string }> = async
 ): Promise<HandlerResponse> => {
     if (!payload?.projectPath) {
         return { success: false, error: 'Project path is required' };
+    }
+
+    // SECURITY: Validate path is within demo-builder projects directory
+    try {
+        validateProjectPath(payload.projectPath);
+    } catch {
+        return { success: false, error: 'Invalid project path' };
     }
 
     const project = await context.stateManager.loadProjectFromPath(payload.projectPath, undefined, {
@@ -730,6 +745,13 @@ export const handleOpenDaLive: MessageHandler<{ projectPath: string }> = async (
 ): Promise<HandlerResponse> => {
     if (!payload?.projectPath) {
         return { success: false, error: 'Project path is required' };
+    }
+
+    // SECURITY: Validate path is within demo-builder projects directory
+    try {
+        validateProjectPath(payload.projectPath);
+    } catch {
+        return { success: false, error: 'Invalid project path' };
     }
 
     const project = await context.stateManager.loadProjectFromPath(payload.projectPath, undefined, {
