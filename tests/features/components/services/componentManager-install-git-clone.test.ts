@@ -23,7 +23,7 @@ import {
     createMockLogger,
     createMockProject,
     mockSuccessfulExecution,
-    mockFileExists
+    mockFileExists,
 } from './testHelpers';
 
 // Mock ServiceLocator
@@ -65,8 +65,8 @@ describe('ComponentManager - Installation (Git Clone)', () => {
                 source: {
                     type: 'git',
                     url: 'https://github.com/test/repo.git',
-                    branch: 'main'
-                }
+                    branch: 'main',
+                },
             };
 
             const result = await componentManager.installComponent(mockProject, componentDef);
@@ -87,9 +87,9 @@ describe('ComponentManager - Installation (Git Clone)', () => {
                     type: 'git',
                     url: 'https://github.com/test/repo.git',
                     gitOptions: {
-                        shallow: true
-                    }
-                }
+                        shallow: true,
+                    },
+                },
             };
 
             await componentManager.installComponent(mockProject, componentDef);
@@ -109,15 +109,78 @@ describe('ComponentManager - Installation (Git Clone)', () => {
                     type: 'git',
                     url: 'https://github.com/test/repo.git',
                     gitOptions: {
-                        tag: 'v1.0.0'
-                    }
-                }
+                        tag: 'v1.0.0',
+                    },
+                },
             };
 
             await componentManager.installComponent(mockProject, componentDef);
 
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
-                expect.stringContaining('--branch v1.0.0'),
+                expect.stringContaining('--branch "v1.0.0"'),
+                expect.any(Object)
+            );
+        });
+
+        it('should quote the branch in the clone command', async () => {
+            const componentDef: TransformedComponentDefinition = {
+                id: 'test-component',
+                name: 'Test Component',
+                type: 'frontend',
+                source: {
+                    type: 'git',
+                    url: 'https://github.com/test/repo.git',
+                    branch: 'feature/x-1.0',
+                },
+            };
+
+            await componentManager.installComponent(mockProject, componentDef);
+
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
+                expect.stringContaining('-b "feature/x-1.0"'),
+                expect.any(Object)
+            );
+        });
+
+        it('should reject a branch carrying shell metacharacters before any clone runs', async () => {
+            // Double quotes do NOT stop $() expansion in the shell — the ref must
+            // be charset-validated before interpolation, not just quoted.
+            const componentDef: TransformedComponentDefinition = {
+                id: 'test-component',
+                name: 'Test Component',
+                type: 'frontend',
+                source: {
+                    type: 'git',
+                    url: 'https://github.com/test/repo.git',
+                    branch: 'main$(touch /tmp/pwned)',
+                },
+            };
+
+            const result = await componentManager.installComponent(mockProject, componentDef);
+
+            expect(result.success).toBe(false);
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalledWith(
+                expect.stringContaining('git clone'),
+                expect.any(Object)
+            );
+        });
+
+        it('should reject a clone URL carrying shell metacharacters before any clone runs', async () => {
+            const componentDef: TransformedComponentDefinition = {
+                id: 'test-component',
+                name: 'Test Component',
+                type: 'frontend',
+                source: {
+                    type: 'git',
+                    url: 'https://github.com/test/repo$(id).git',
+                },
+            };
+
+            const result = await componentManager.installComponent(mockProject, componentDef);
+
+            expect(result.success).toBe(false);
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalledWith(
+                expect.stringContaining('git clone'),
                 expect.any(Object)
             );
         });
@@ -129,8 +192,8 @@ describe('ComponentManager - Installation (Git Clone)', () => {
                 type: 'frontend',
                 source: {
                     type: 'git',
-                    url: 'https://github.com/test/repo.git'
-                }
+                    url: 'https://github.com/test/repo.git',
+                },
             };
 
             (mockCommandExecutor.execute as jest.Mock).mockImplementation((cmd: string) => {
@@ -139,14 +202,14 @@ describe('ComponentManager - Installation (Git Clone)', () => {
                         stdout: 'abc123def456',
                         stderr: '',
                         code: 0,
-                        duration: 10
+                        duration: 10,
                     });
                 }
                 return Promise.resolve({
                     stdout: '',
                     stderr: '',
                     code: 0,
-                    duration: 10
+                    duration: 10,
                 });
             });
 
@@ -168,16 +231,16 @@ describe('ComponentManager - Installation (Git Clone)', () => {
                 type: 'frontend',
                 source: {
                     type: 'git',
-                    url: 'https://github.com/test/repo.git'
-                }
+                    url: 'https://github.com/test/repo.git',
+                },
             };
 
             await componentManager.installComponent(mockProject, componentDef);
 
-            expect(fs.rm).toHaveBeenCalledWith(
-                expect.any(String),
-                { recursive: true, force: true }
-            );
+            expect(fs.rm).toHaveBeenCalledWith(expect.any(String), {
+                recursive: true,
+                force: true,
+            });
         });
     });
 
@@ -191,15 +254,15 @@ describe('ComponentManager - Installation (Git Clone)', () => {
                     type: 'git',
                     url: 'https://github.com/test/repo.git',
                     timeouts: {
-                        clone: 60000
-                    }
-                }
+                        clone: 60000,
+                    },
+                },
             };
 
             await componentManager.installComponent(mockProject, componentDef);
 
-            const cloneCall = (mockCommandExecutor.execute as jest.Mock).mock.calls.find(
-                call => call[0].includes('git clone')
+            const cloneCall = (mockCommandExecutor.execute as jest.Mock).mock.calls.find((call) =>
+                call[0].includes('git clone')
             );
             expect(cloneCall[1].timeout).toBe(60000);
         });
@@ -213,14 +276,14 @@ describe('ComponentManager - Installation (Git Clone)', () => {
                         stdout: '',
                         stderr: 'Repository not found',
                         code: 128,
-                        duration: 10
+                        duration: 10,
                     });
                 }
                 return Promise.resolve({
                     stdout: '',
                     stderr: '',
                     code: 0,
-                    duration: 10
+                    duration: 10,
                 });
             });
 
@@ -230,8 +293,8 @@ describe('ComponentManager - Installation (Git Clone)', () => {
                 type: 'frontend',
                 source: {
                     type: 'git',
-                    url: 'https://github.com/test/invalid.git'
-                }
+                    url: 'https://github.com/test/invalid.git',
+                },
             };
 
             const result = await componentManager.installComponent(mockProject, componentDef);
@@ -246,9 +309,9 @@ describe('ComponentManager - Installation (Git Clone)', () => {
                 name: 'Test Component',
                 type: 'frontend',
                 source: {
-                    type: 'git'
+                    type: 'git',
                     // Missing url
-                }
+                },
             };
 
             const result = await componentManager.installComponent(mockProject, componentDef);
