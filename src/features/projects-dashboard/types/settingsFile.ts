@@ -103,6 +103,19 @@ export interface SettingsFile {
     installedBlockLibraries?: InstalledBlockLibrary[];
     /** EDS configuration (for Edge Delivery Services stacks) */
     edsConfig?: SettingsEdsConfig;
+    /**
+     * Custom GitHub sources for selected App Builder integrations, keyed by
+     * integration id (custom-URL entries only). Carried so edit mode can
+     * round-trip custom integrations.
+     */
+    appBuilderComponentSources?: Record<string, { owner: string; repo: string; branch?: string }>;
+    /**
+     * Adobe Console API sdk codes subscribed beyond catalog `requiredApis`
+     * (wizard free picks + runtime `add_console_apis` additions). Seeds the
+     * wizard's reserved `selectedConsoleApis['__existing__']` key in edit mode
+     * so existing picks survive a rebuild.
+     */
+    additionalConsoleApis?: string[];
 }
 
 /** Current schema version */

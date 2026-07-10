@@ -149,6 +149,21 @@ function resolveDefaultAddons(pkg: DemoPackage | undefined, stackObj: Stack | un
     return [...new Set([...requiredAddons, ...defaultAddons])];
 }
 
+/**
+ * Drop an integration's free Console-API picks from the keyed map.
+ * Returns the map without the key, or undefined when there is nothing to drop
+ * (so callers can skip the state write entirely — no churn).
+ */
+function consoleApisWithoutKey(
+    apis: Record<string, string[]> | undefined,
+    id: string,
+): Record<string, string[]> | undefined {
+    if (!apis || !(id in apis)) return undefined;
+    const next = { ...apis };
+    delete next[id];
+    return next;
+}
+
 /** The block-library selections seeded on a stack change. */
 interface BlockLibrarySeed {
     blockLibraries: string[];
@@ -270,10 +285,19 @@ export function useProjectBuilder(
                 id,
                 isSelected,
             );
+            const update: Partial<WizardState> = {
+                selectedAppBuilderComponents: nextComponents,
+            };
+            // Toggle-off also drops the integration's free Console-API picks so
+            // stale picks never survive a re-add or serialize into creation.
+            if (!isSelected) {
+                const nextApis = consoleApisWithoutKey(state.selectedConsoleApis, id);
+                if (nextApis !== undefined) update.selectedConsoleApis = nextApis;
+            }
 
             const meshComponentIds = meshAppBuilderComponentToComponentIds(id);
             if (meshComponentIds.length === 0) {
-                updateState({ selectedAppBuilderComponents: nextComponents });
+                updateState(update);
                 return;
             }
 
@@ -282,11 +306,16 @@ export function useProjectBuilder(
                 : selectedOptionalDependencies.filter((dep) => !meshComponentIds.includes(dep));
 
             updateState({
-                selectedAppBuilderComponents: nextComponents,
+                ...update,
                 selectedOptionalDependencies: nextOptionalDeps,
             });
         },
-        [selectedAppBuilderComponents, selectedOptionalDependencies, updateState],
+        [
+            selectedAppBuilderComponents,
+            selectedOptionalDependencies,
+            state.selectedConsoleApis,
+            updateState,
+        ],
     );
 
     const onAddCustomAppBuilderComponent = useCallback(
@@ -313,12 +342,22 @@ export function useProjectBuilder(
             const next = withSelectedAppBuilderComponent(selectedAppBuilderComponents, id, false);
             const sources = { ...(state.appBuilderComponentSources ?? {}) };
             delete sources[id];
-            updateState({
+            const update: Partial<WizardState> = {
                 selectedAppBuilderComponents: next,
                 appBuilderComponentSources: sources,
-            });
+            };
+            // Remove is state cleanup only: the integration's free Console-API
+            // picks go with it (its selection keys already do).
+            const nextApis = consoleApisWithoutKey(state.selectedConsoleApis, id);
+            if (nextApis !== undefined) update.selectedConsoleApis = nextApis;
+            updateState(update);
         },
-        [selectedAppBuilderComponents, state.appBuilderComponentSources, updateState],
+        [
+            selectedAppBuilderComponents,
+            state.appBuilderComponentSources,
+            state.selectedConsoleApis,
+            updateState,
+        ],
     );
 
     const onAddonsChange = useCallback(

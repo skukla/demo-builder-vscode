@@ -1,45 +1,42 @@
 /**
- * IntegrationsStep — the Integrations area body (two sub-steps: Services → Adobe I/O).
+ * IntegrationsStep — the Integrations area body: RESULTS ONLY.
  *
- * Mirrors Commerce/Storefront: a left {@link VerticalStepList} rail over a dedicated view of
- * the active sub-step's body, driven by the shared {@link areaSubSteps} provider (the active
- * sub-step is `state.activeIntegrationsStep`).
- *   - Services (`deployables`) — the deployable type-rows ({@link DeployablesBody}: API Mesh,
- *     Integration Catalog, Custom Integration) plus the added-integration cards. The Catalog
- *     row's Add opens the browse modal ({@link AddIntegrationModal}, a Services action mounted
- *     only on this sub-step); the Custom row adds inline. The stack's API Mesh renders as a
- *     selection-aware card ({@link MeshIntegrationCard}); availability requires a `kind:
- *     "mesh"` App Builder component to apply to the current package + stack
- *     ({@link meshComponentForStack}). Add/Remove uses the mesh dual-flow
- *     ({@link useProjectBuilder.onAppBuilderComponentToggle}).
- *   - Adobe I/O (`adobe-io`) — the shared Adobe I/O project + workspace
- *     ({@link AdobeIoStep}). Appears in the rail only once a deployable is selected.
+ * The center column is one collapsed {@link IntegrationResultRow} per configured
+ * integration (resolved purely from wizard state by {@link resolveIntegrationRows},
+ * so a PACKAGE-SEEDED mesh — selected via the dependency mirror key only — surfaces
+ * automatically as a needs-setup row), an empty state when nothing is configured,
+ * and one accent "Add Integration" launchpad. ALL configuration lives in the
+ * {@link AddIntegrationFlowModal} journey: the Add button opens it in `add` mode;
+ * a row's Set up / Change opens it in `destination` mode. There is NO sub-step
+ * rail — the Build step's footer owns the Continue gate.
  *
- * The Build step owns the Continue/Finish gate via the shared driver; this body gets a NO-OP
- * `setCanProceed`.
+ * Remove routing: a mesh row routes through the mesh dual-flow toggle
+ * ({@link useProjectBuilder.onAppBuilderComponentToggle}, clearing BOTH selection
+ * keys); every other row routes through `onRemoveAppBuilderComponent` (selection +
+ * source + API picks). The mesh row embeds {@link MeshApiEnableRow} so API
+ * enablement runs on the RESULT ROW once the shared destination commits.
  *
  * @module features/project-creation/ui/steps/IntegrationsStep
  */
 
+import { Button } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo, useState } from 'react';
 import { getAvailableAppBuilderComponents } from '../../services/appBuilderComponentCatalogLoader';
-import { AddIntegrationModal } from '../components/AddIntegrationModal';
-import { AdobeIoStep } from '../components/AdobeIoStep';
-import { resolveSelectedIntegrations } from '../components/appBuilderIntegrationList';
-import { VerticalStepList } from '../components/VerticalStepList';
-import { getStackById } from '../hooks/useSelectedStack';
-import { requireAreaSubSteps } from './areaSubSteps';
-import { DeployablesBody } from './integrationsStepBodies';
-import { isMeshSelected, meshComponentForStack } from './tileStatus';
+import {
+    AddIntegrationFlowModal,
+    IntegrationResultRow,
+    MeshApiEnableRow,
+    resolveIntegrationRows,
+    type FlowMode,
+    type IntegrationRow,
+} from '../components/integration-flow';
+import { meshComponentForStack } from './tileStatus';
 import { useProjectBuilder } from './useProjectBuilder';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
-import type { IntegrationsSectionId } from '@/types/webview';
+import type { WizardState } from '@/types/webview';
 import type { BaseStepProps } from '@/types/wizard';
-
-/** Stable empty defaults (avoids the infinite-re-render gotcha). */
-const EMPTY_INTEGRATION_IDS: string[] = [];
 
 /** Stable empty defaults for catalog props (avoids the infinite-re-render gotcha). */
 const EMPTY_PACKAGES: DemoPackage[] = [];
@@ -52,8 +49,29 @@ export interface IntegrationsStepProps extends BaseStepProps {
     stacks?: Stack[];
 }
 
+/** The committed "Project · Workspace" reference, or undefined until both commit. */
+function destinationLabelFor(state: WizardState): string | undefined {
+    const project = state.adobeProject;
+    const workspace = state.adobeWorkspace;
+    if (!project?.id || !workspace?.id) return undefined;
+    return `${project.title ?? project.name} · ${workspace.title ?? workspace.name}`;
+}
+
+/** The zero-rows empty state (copy only; the Add button renders regardless). */
+function EmptyState(): React.ReactElement {
+    return (
+        <div className="int-results-empty">
+            <div className="int-results-empty-title">No integrations yet.</div>
+            <div className="int-results-empty-copy">
+                Add an API Mesh, a pre-built integration, or your own App Builder app — each deploys
+                to a shared Adobe I/O project and workspace.
+            </div>
+        </div>
+    );
+}
+
 /**
- * The Integrations area body: the [ rail | active sub-step body ] row.
+ * The Integrations area body: result rows + the Add Integration launchpad.
  *
  * @param props - Standard step props plus the package + stack catalog
  * @returns The Integrations surface
@@ -64,98 +82,106 @@ export function IntegrationsStep({
     packages = EMPTY_PACKAGES,
     stacks = EMPTY_STACKS,
 }: IntegrationsStepProps): React.ReactElement {
-    const { onAppBuilderComponentToggle, onAddCustomAppBuilderComponent, onRemoveAppBuilderComponent } =
-        useProjectBuilder(state, updateState, { packages, stacks });
+    const builder = useProjectBuilder(state, updateState, { packages, stacks });
+    const { onAppBuilderComponentToggle, onRemoveAppBuilderComponent } = builder;
 
-    // The Integration Catalog modal: opened by the Catalog row's Add or a card's "Change".
-    // Decoupled from the persistent list so the growing library gets its own surface. Change
-    // reopens the catalog WITHOUT removing first, so the integration's tile stays checked and
-    // the user can toggle it off / pick another.
+    // The one modal, opened in 'add' (launchpad) or 'destination' (row Set up/Change) mode.
     const [modalOpen, setModalOpen] = useState(false);
-    const onOpenCatalog = useCallback((): void => setModalOpen(true), []);
+    const [mode, setMode] = useState<FlowMode>('add');
+    const openAdd = useCallback((): void => {
+        setMode('add');
+        setModalOpen(true);
+    }, []);
+    const openDestination = useCallback((): void => {
+        setMode('destination');
+        setModalOpen(true);
+    }, []);
+    const closeModal = useCallback((): void => setModalOpen(false), []);
 
     const meshComponent = useMemo(
         () => meshComponentForStack(state, packages, stacks),
         [state, packages, stacks],
     );
-    const available = meshComponent !== undefined;
-    const selected = available ? isMeshSelected(state, meshComponent.id) : false;
 
-    const onMeshToggle = (next: boolean): void => {
-        if (available && meshComponent) {
-            onAppBuilderComponentToggle(meshComponent.id, next);
-        }
-    };
+    // The selected stack (prop catalog) — drives the integration catalog + mesh
+    // enablement axes. The pre-built catalog is empty when no stack is committed.
+    const stack = useMemo(
+        () => stacks.find((candidate) => candidate.id === state.selectedStack),
+        [stacks, state.selectedStack],
+    );
+    const catalog = useMemo<AppBuilderComponentCatalogEntry[]>(
+        () =>
+            getAvailableAppBuilderComponents(stack?.backend ?? '', stack?.frontend ?? '').filter(
+                (entry) => entry.kind === 'integration',
+            ),
+        [stack],
+    );
 
-    // The pre-built integration catalog for the selected stack (empty when no stack).
-    const integrationCatalog = useMemo<AppBuilderComponentCatalogEntry[]>(() => {
-        const stack = state.selectedStack ? getStackById(state.selectedStack) : undefined;
-        return getAvailableAppBuilderComponents(stack?.backend ?? '', stack?.frontend ?? '').filter(
-            entry => entry.kind === 'integration',
-        );
-    }, [state.selectedStack]);
+    const rows = useMemo(
+        () => resolveIntegrationRows(state, meshComponent, catalog),
+        [state, meshComponent, catalog],
+    );
+    const destinationLabel = destinationLabelFor(state);
 
-    // The added integrations, resolved to render descriptors for their own cards.
-    const integrations = useMemo(() => resolveSelectedIntegrations(state), [state]);
-
-    // Currently-selected integration ids: catalog integrations + custom-URL adds.
-    const selectedIntegrationIds = useMemo<string[]>(() => {
-        const selectedIds = state.selectedAppBuilderComponents ?? EMPTY_INTEGRATION_IDS;
-        const sources = state.appBuilderComponentSources ?? {};
-        return selectedIds.filter(
-            id => id in sources || integrationCatalog.some(entry => entry.id === id),
-        );
-    }, [state.selectedAppBuilderComponents, state.appBuilderComponentSources, integrationCatalog]);
-
-    // Sub-step rail + active view (shared driver). The active one is
-    // `state.activeIntegrationsStep`, pinned on area entry by WizardContainer.
-    const driver = requireAreaSubSteps('integrations');
-    const subSteps = driver.subSteps(state);
-    const activeStep = driver.active(state) as IntegrationsSectionId;
-    const onServices = activeStep === 'deployables';
+    const onRemoveRow = useCallback(
+        (row: IntegrationRow): void => {
+            // Mesh removal MUST route through the dual-flow toggle so the legacy
+            // dependency mirror key clears with the selection.
+            if (row.kind === 'mesh' && meshComponent) {
+                onAppBuilderComponentToggle(meshComponent.id, false);
+                return;
+            }
+            onRemoveAppBuilderComponent(row.id);
+        },
+        [meshComponent, onAppBuilderComponentToggle, onRemoveAppBuilderComponent],
+    );
 
     return (
         <div className="commerce-body">
             <div className="step-nav">
                 <div className="step-nav-area">Integrations</div>
-                <VerticalStepList
-                    steps={subSteps}
-                    activeId={activeStep}
-                    onSelect={id => updateState(driver.setActive(id))}
-                />
             </div>
             <div className="step-view">
-                <div className="step-view-anim" key={activeStep}>
-                    {onServices ? (
-                        <DeployablesBody
-                            state={state}
-                            updateState={updateState}
-                            meshAvailable={available}
-                            meshSelected={selected}
-                            onMeshToggle={onMeshToggle}
-                            onOpenCatalog={onOpenCatalog}
-                            catalogEmpty={integrationCatalog.length === 0}
-                            onAddCustom={onAddCustomAppBuilderComponent}
-                            selectedIntegrationIds={selectedIntegrationIds}
-                            integrations={integrations}
-                            onRemoveIntegration={onRemoveAppBuilderComponent}
-                            onChangeIntegration={onOpenCatalog}
+                <div className="step-view-anim int-results">
+                    {rows.length === 0 && <EmptyState />}
+                    {rows.map((row) => (
+                        <IntegrationResultRow
+                            key={row.id}
+                            row={row}
+                            destinationLabel={destinationLabel}
+                            onSetUpDestination={openDestination}
+                            onChangeDestination={openDestination}
+                            onRemove={() => onRemoveRow(row)}
+                            meshEnableSlot={
+                                row.kind === 'mesh' ? (
+                                    <MeshApiEnableRow
+                                        orgId={state.adobeOrg?.id}
+                                        projectId={state.adobeProject?.id}
+                                        workspaceId={state.adobeWorkspace?.id}
+                                        backendId={stack?.backend}
+                                        frontendId={stack?.frontend}
+                                    />
+                                ) : undefined
+                            }
                         />
-                    ) : (
-                        <AdobeIoStep state={state} updateState={updateState} />
-                    )}
+                    ))}
+                    <div className="int-results-add">
+                        <Button variant="accent" onPress={openAdd}>
+                            Add Integration
+                        </Button>
+                    </div>
                 </div>
             </div>
-            {/* The modal is a Services action; keep it mounted only on that sub-step. */}
-            {onServices && (
-                <AddIntegrationModal
-                    isOpen={modalOpen}
-                    onClose={() => setModalOpen(false)}
-                    catalog={integrationCatalog}
-                    selectedIds={selectedIntegrationIds}
-                    onToggleCatalog={onAppBuilderComponentToggle}
-                />
-            )}
+            <AddIntegrationFlowModal
+                isOpen={modalOpen}
+                onClose={closeModal}
+                mode={mode}
+                state={state}
+                updateState={updateState}
+                meshComponent={meshComponent}
+                catalog={catalog}
+                builder={builder}
+            />
         </div>
     );
 }

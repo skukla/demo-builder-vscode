@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Rebuilt wizard Integrations area.** The center column now shows only your configured integrations — one summary row each — plus an **Add Integration** button. Adding is one guided modal journey: pick the kind (API Mesh, a catalog integration, or your own GitHub repo), sign in and choose the shared Adobe project/workspace the first time anything needs it (later adds just show "Deploys to …" with Change), and — for App Builder integrations — pick the Adobe APIs your app needs (required ones are locked in; the rest are searchable with suggestions). Rows show setup state, destination, and API counts; the project summary column now lists every integration. Editing an existing project seeds the rows from the project, including custom integrations and previously added APIs, which formerly vanished on edit.
+- **Manage APIs from the dashboard.** Deployed App Builder integrations gain a "Manage APIs" action that lists your org's Adobe APIs (already-granted ones locked) and adds new ones to the workspace credential.
 - **Open Admin Panel.** A new dashboard tile and a project-card menu item open the project's Commerce Admin Panel. SaaS (ACCS) projects derive the URL automatically from the tenant endpoint; PaaS projects supply it via the new optional **Admin Panel URL** field on the Configure screen (`ADOBE_COMMERCE_ADMIN_URL`, which also overrides the derived URL when set). Clicking without a resolvable URL prompts with an "Open Configure" shortcut.
 
 ## [1.0.0-beta.121] - 2026-06-19

@@ -1,5 +1,12 @@
 # Step 6 — API assignment UI in the Integrations sub-steps
 
+> **ABSORBED (2026-07-10)** by `.rptc/plans/integrations-flow-redesign/` — kept as
+> history. The work items below reference components deleted by that redesign
+> (`AddIntegrationModal`, `AppBuilderIntegrationCard`, the Integrations sub-steps).
+> What shipped: wizard facet = `ApiAccessStage` in the Add Integration modal journey;
+> dashboard parity = `ManageApisModal`; auth gating resolved by construction (the API
+> stage follows the in-modal sign-in/destination stages).
+
 ## Goal
 
 Users assign Adobe APIs to an App Builder integration in the wizard itself (and from the

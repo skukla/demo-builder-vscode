@@ -38,6 +38,12 @@ export interface AppBuilderComponentCatalogEntry {
     compatibleFrontends?: string[];
     /** Adobe API names to subscribe on the workspace (e.g. "GraphQLServiceSDK"). */
     requiredApis?: string[];
+    /**
+     * Adobe API sdkCodes to SUGGEST (unchecked, listed first) in the wizard's
+     * API-access stage — curated "you probably want these" picks. Distinct from
+     * requiredApis (auto-subscribed + locked). Omitted = no Suggested group.
+     */
+    suggestedApis?: string[];
     /** Env-var names this appBuilderComponent provides to consumers (e.g. "MESH_ENDPOINT"). */
     providesEnvVars?: string[];
     /** The appBuilderComponent's own env-var schema (inputs it needs). */

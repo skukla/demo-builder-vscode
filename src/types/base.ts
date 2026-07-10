@@ -157,6 +157,13 @@ export interface Project {
      * silently dropped on the next component add/remove.
      */
     additionalConsoleApis?: string[];
+    /**
+     * Custom GitHub sources for selected App Builder integrations, keyed by
+     * integration id (custom-URL entries only; catalog entries resolve from
+     * config and carry no source here). Persisted at creation so edit mode can
+     * round-trip custom integrations via `extractSettingsFromProject`.
+     */
+    appBuilderComponentSources?: Record<string, { owner: string; repo: string; branch?: string }>;
     /** User-saved AI prompts */
     aiPrompts?: AiPrompt[];
     /**

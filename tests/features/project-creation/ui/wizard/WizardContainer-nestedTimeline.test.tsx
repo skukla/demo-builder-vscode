@@ -11,6 +11,11 @@
  *   - Back mirrors: previous sub-step → previous area (its LAST sub-step) →
  *     previous wizard step.
  *
+ * Integrations is a NULL-DRIVER area (no sub-steps — a results-only view): the
+ * walk crosses it as ONE Continue/Back stop. There is no inner-disclosure
+ * machinery (advanceWithin/retreatWithin were deleted with the old Adobe I/O
+ * sub-step), so `canGoBack` derives purely from wizard step / area / sub-step.
+ *
  * The build areas are NOT a timeline sub-nav, so <TimelineNav> receives NO
  * build-area child props.
  *
@@ -84,7 +89,7 @@ function renderOnBuildStep() {
         <WizardContainer
             componentDefaults={createMockComponentDefaults()}
             wizardSteps={buildFirstSteps}
-        />,
+        />
     );
 }
 
@@ -98,7 +103,7 @@ const COMMERCE_SUBSTEPS = 4;
 /** Click Continue n times (each is a separate await for state to settle). */
 async function clickContinue(
     user: ReturnType<typeof userEvent.setup>,
-    times: number,
+    times: number
 ): Promise<void> {
     for (let i = 0; i < times; i++) {
         await user.click(getContinue());
@@ -194,11 +199,36 @@ describe('WizardContainer — sub-step → area → wizard-step progression', ()
         await clickContinue(user, COMMERCE_SUBSTEPS);
         expect(screen.getByTestId('build-your-project-step')).toBeInTheDocument();
 
-        // integrations is the LAST area (single sub-step) → Continue advances to review.
+        // integrations is the LAST area (null driver — no sub-steps) → Continue
+        // advances the wizard step to review.
         await user.click(getContinue());
-        await waitFor(() => {
-            expect(screen.getByTestId('review-step')).toBeInTheDocument();
-        }, { timeout: 1000 });
+        await waitFor(
+            () => {
+                expect(screen.getByTestId('review-step')).toBeInTheDocument();
+            },
+            { timeout: 1000 }
+        );
+    });
+
+    it('Back from the integrations area (null driver) returns to the previous area', async () => {
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+        renderOnBuildStep();
+        await screen.findByTestId('build-your-project-step');
+
+        // Walk onto the integrations area (all Commerce sub-steps, then the area hop).
+        await clickContinue(user, COMMERCE_SUBSTEPS);
+        expect(timelineProps.last?.activeChildId).toBe('integrations');
+
+        // With no sub-steps and no inner-disclosure stage, Back is still available
+        // (a previous AREA exists) and returns to Commerce — entered at its LAST
+        // sub-step — while staying on the build wizard step.
+        const back = getBack();
+        expect(back).toBeInTheDocument();
+        await user.click(back!);
+        await flush();
+        expect(timelineProps.last?.activeChildId).toBe('commerce');
+        expect(screen.getByTestId('build-your-project-step')).toBeInTheDocument();
+        expect(screen.queryByTestId('review-step')).not.toBeInTheDocument();
     });
 
     it('Back steps a Commerce SUB-STEP back (currentStep unchanged)', async () => {
@@ -231,7 +261,7 @@ describe('WizardContainer — sub-step → area → wizard-step progression', ()
                     { id: 'review', name: 'Review', enabled: true },
                     { id: 'create-project', name: 'Create Project', enabled: true },
                 ]}
-            />,
+            />
         );
 
         // welcome → build-your-project
@@ -243,9 +273,12 @@ describe('WizardContainer — sub-step → area → wizard-step progression', ()
         expect(back).toBeInTheDocument();
         await user.click(back!);
 
-        await waitFor(() => {
-            expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
-        }, { timeout: 1000 });
+        await waitFor(
+            () => {
+                expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
+            },
+            { timeout: 1000 }
+        );
         expect(screen.queryByTestId('build-your-project-step')).not.toBeInTheDocument();
     });
 

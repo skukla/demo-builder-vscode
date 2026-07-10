@@ -67,28 +67,12 @@ export function meshComponentForStack(
     packages: DemoPackage[],
     stacks: Stack[],
 ): SelectableAppBuilderComponent | undefined {
-    const pkg = packages.find(p => p.id === state.selectedPackage);
-    const stack = stacks.find(s => s.id === state.selectedStack);
+    const pkg = packages.find((p) => p.id === state.selectedPackage);
+    const stack = stacks.find((s) => s.id === state.selectedStack);
     if (!pkg || !stack) return undefined;
     return getSelectableAppBuilderComponents(pkg, stack.backend, stack.frontend).find(
-        c => c.kind === 'mesh',
+        (c) => c.kind === 'mesh',
     );
-}
-
-/**
- * Whether an API Mesh component is available for the current package + stack.
- *
- * @param state - Wizard state
- * @param packages - Demo-package catalog
- * @param stacks - Stack catalog
- * @returns true when a `kind: "mesh"` component applies to this architecture
- */
-export function meshAvailable(
-    state: WizardState,
-    packages: DemoPackage[],
-    stacks: Stack[],
-): boolean {
-    return meshComponentForStack(state, packages, stacks) !== undefined;
 }
 
 /**
@@ -108,7 +92,7 @@ export function isMeshSelected(state: WizardState, meshComponentId: string): boo
     if (selectedComponents.includes(meshComponentId)) return true;
     const legacyIds = meshAppBuilderComponentToComponentIds(meshComponentId);
     const selectedDeps = state.selectedOptionalDependencies ?? [];
-    return legacyIds.some(id => selectedDeps.includes(id));
+    return legacyIds.some((id) => selectedDeps.includes(id));
 }
 
 /**

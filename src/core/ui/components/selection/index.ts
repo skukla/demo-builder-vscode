@@ -5,6 +5,11 @@
  */
 
 export {
+    ApiAccessPicker,
+    type ApiAccessOption,
+    type ApiAccessPickerProps,
+} from './ApiAccessPicker';
+export {
     SelectionStepContent,
     type SelectableItem,
     type SelectionLabels,

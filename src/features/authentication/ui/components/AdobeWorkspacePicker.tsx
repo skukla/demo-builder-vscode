@@ -38,14 +38,15 @@ export interface AdobeWorkspacePickerProps {
      */
     suppressAutoSelect?: boolean;
     /**
-     * Overrides the highlighted row (defaults to `state.adobeWorkspace?.id`). The Adobe
-     * I/O sub-step passes its PENDING (uncommitted) workspace id so the highlight tracks
-     * pending, not the committed default.
+     * Overrides the highlighted row (defaults to `state.adobeWorkspace?.id`). The
+     * Add-Integration flow's DestinationStage passes its MODAL-LOCAL draft pending
+     * workspace id so the highlight tracks the uncommitted pick, not the committed
+     * default.
      */
     selectedWorkspaceId?: string;
     /**
      * Overrides the default commit. When provided, selecting a workspace calls this
-     * (the Adobe I/O sub-step writes `pendingAdobeWorkspace`) instead of writing
+     * (DestinationStage writes its modal-local draft pending) instead of writing
      * `state.adobeWorkspace`. Omitted on the mesh path → byte-identical default behavior.
      */
     onWorkspaceSelect?: (ws: { id: string; name: string; title?: string }) => void;

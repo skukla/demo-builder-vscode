@@ -24,6 +24,9 @@ silently if you don't know them. Learned the hard way shipping the blank shell
   (`citisignal`, `isle5`, …), never storefront/stack ids. The auto-include side is
   dormant — see `.rptc/backlog/2026-06-17-appbuilder-app-package-bound.md` before
   touching it.
+- `suggestedApis?: string[]` (optional): SDK codes the Add Integration flow's API-access
+  picker lists under a "Suggested" group. Curation only — unlike `requiredApis`, suggested
+  codes are NOT auto-subscribed; only user-selected picks join the union.
 
 ## The spine (what happens on add/deploy)
 
@@ -44,9 +47,14 @@ what prevents double-deploys. Custom-URL entries synthesize via
   reconcile is silently stripped. If you add a new source of subscribed APIs, it must be
   persisted and unioned at EVERY call site: the runner deps wrapper
   (`appBuilderComponentRunnerDeps.ts`) and `ensureMeshApiSubscribed`.
-- `additionalConsoleApis` is written by the `add_console_apis` MCP handler
-  (`consoleApiHandlers.ts`), **only after a successful subscribe** — never persist an
-  unverified code (it would poison every later reconcile with an unentitled service).
+- `additionalConsoleApis` has TWO writers with different verification points:
+  the `add_console_apis` MCP handler (`consoleApiHandlers.ts`) writes **only after a
+  successful subscribe**; the wizard writes it PRE-subscribe (per-integration
+  `selectedConsoleApis` picks → `unionConsoleApiPicks` in `wizardHelpers.ts` →
+  `buildInitialProject`), where it's safe because the picks come from the live org
+  entitlement list (`list-org-console-apis`), are charset-filtered at serialization, and
+  creation Phase 3b subscribes the union immediately after (an unentitled code fails the
+  phase loudly). Never add a third writer that persists an unverified, unsubscribed code.
 - Two credential paths by `platformList`: `apiKey` (AdobeID credential, workspace-scoped
   name) vs `oauth_server_to_server`. Free services subscribe with
   `{licenseConfigs: null, roles: null}`; product-profile services fail — surface the

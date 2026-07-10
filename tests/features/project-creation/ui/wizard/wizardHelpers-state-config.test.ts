@@ -382,7 +382,11 @@ describe('wizardHelpers - state & config', () => {
                 customBlockLibraries: [
                     {
                         name: 'my-blocks',
-                        source: { type: 'git', url: 'https://github.com/user/blocks', branch: 'main' },
+                        source: {
+                            type: 'git',
+                            url: 'https://github.com/user/blocks',
+                            branch: 'main',
+                        },
                     },
                 ],
             };
@@ -460,6 +464,103 @@ describe('wizardHelpers - state & config', () => {
             expect(config.edsConfig?.templateOwner).toBeUndefined();
             expect(config.edsConfig?.templateRepo).toBeUndefined();
             expect(config.edsConfig?.contentSource).toBeUndefined();
+        });
+    });
+
+    describe('buildProjectConfig - additionalConsoleApis', () => {
+        const baseState = (selectedConsoleApis?: Record<string, string[]>): WizardState => ({
+            currentStep: 'review',
+            projectName: 'test-project',
+            selectedConsoleApis,
+        });
+
+        it('should union free API picks across integration ids', () => {
+            const config = buildProjectConfig(
+                baseState({
+                    'erp-sync': ['AssetComputeSDK'],
+                    'owner-custom-app': ['CCAPI'],
+                })
+            );
+
+            expect(config.additionalConsoleApis).toEqual(['AssetComputeSDK', 'CCAPI']);
+        });
+
+        it('should dedupe codes picked under multiple integrations', () => {
+            const config = buildProjectConfig(
+                baseState({
+                    'erp-sync': ['CCAPI', 'AssetComputeSDK'],
+                    'owner-custom-app': ['CCAPI'],
+                })
+            );
+
+            expect(config.additionalConsoleApis).toEqual(['AssetComputeSDK', 'CCAPI']);
+        });
+
+        it('should sort the union alphabetically', () => {
+            const config = buildProjectConfig(
+                baseState({
+                    'erp-sync': ['ZTargetSDK', 'AssetComputeSDK'],
+                    'owner-custom-app': ['McDataServicesSdk'],
+                })
+            );
+
+            expect(config.additionalConsoleApis).toEqual([
+                'AssetComputeSDK',
+                'McDataServicesSdk',
+                'ZTargetSDK',
+            ]);
+        });
+
+        it('should include the reserved __existing__ key values in the union', () => {
+            const config = buildProjectConfig(
+                baseState({
+                    __existing__: ['CCAPI', 'AdobeIOEventsSDK'],
+                    'erp-sync': ['AssetComputeSDK', 'CCAPI'],
+                })
+            );
+
+            expect(config.additionalConsoleApis).toEqual([
+                'AdobeIOEventsSDK',
+                'AssetComputeSDK',
+                'CCAPI',
+            ]);
+        });
+
+        it('should omit the field when selectedConsoleApis is absent', () => {
+            const config = buildProjectConfig(baseState(undefined));
+
+            expect(config.additionalConsoleApis).toBeUndefined();
+        });
+
+        it('should omit the field when selectedConsoleApis is an empty object', () => {
+            const config = buildProjectConfig(baseState({}));
+
+            expect(config.additionalConsoleApis).toBeUndefined();
+        });
+
+        it('should omit the field when every integration has an empty picks array', () => {
+            const config = buildProjectConfig(
+                baseState({ 'erp-sync': [], 'owner-custom-app': [] })
+            );
+
+            expect(config.additionalConsoleApis).toBeUndefined();
+        });
+
+        it('should drop codes outside the SDK-code charset (boundary parity with addConsoleApis)', () => {
+            const config = buildProjectConfig(
+                baseState({
+                    'erp-sync': ['AnalyticsSDK', 'bad code!', 'x$(id)'],
+                    __existing__: ['CampaignSDK', 'nope;rm'],
+                })
+            );
+
+            expect(config.additionalConsoleApis).toEqual(['AnalyticsSDK', 'CampaignSDK']);
+        });
+
+        it('should omit the field when all codes are invalid', () => {
+            const config = buildProjectConfig(baseState({ 'erp-sync': ['$(evil)', ''] }));
+
+            expect(config.additionalConsoleApis).toBeUndefined();
         });
     });
 });

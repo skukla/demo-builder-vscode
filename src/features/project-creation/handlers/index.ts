@@ -15,3 +15,4 @@ export * from './validateHandler';
 export * from './createHandler';
 export * from './executor';
 export * from './checkGitHubAppHandler';
+export * from './consoleApiHandlers';

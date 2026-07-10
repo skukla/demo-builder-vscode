@@ -4,8 +4,10 @@
  * The Build step walks an area's sub-steps one at a time via the footer Continue/
  * Back (the linear driver), with a left VerticalStepList nav. That machinery used
  * to be Commerce-only; this registry generalizes it so any area can be sub-stepped
- * the SAME way (Commerce, Storefront, and Integrations) — WizardContainer
- * and BuildYourProjectStep drive whatever `areaSubSteps(activeAreaId)` returns.
+ * the SAME way (Commerce and Storefront) — WizardContainer and BuildYourProjectStep
+ * drive whatever `areaSubSteps(activeAreaId)` returns. Integrations has NO driver
+ * (null): it is a results-only view whose Continue gate is the BuildYourProjectStep
+ * area-status fallback.
  *
  * A driver exposes the ordered sub-steps (+ status/lock/title for the nav), the
  * active sub-step (from the area's own state key), next/prev for the walk, the
@@ -21,11 +23,6 @@ import {
     SECTION_TITLES,
     type CommerceSectionContext,
 } from './commerceSections';
-import {
-    integrationsSectionStates,
-    isIntegrationsStepComplete,
-    INTEGRATIONS_SECTION_TITLES,
-} from './integrationsSections';
 import {
     storefrontSectionStates,
     isStorefrontStepComplete,
@@ -66,21 +63,6 @@ export interface AreaSubStepDriver {
     commit(state: WizardState, subStepId: string): Partial<WizardState>;
     /** Un-commit `target` + everything after it on Back; no-op when unused. */
     uncommit(state: WizardState, order: string[], target: string): Partial<WizardState>;
-    /**
-     * Retreat WITHIN the active sub-step (a sub-step with its own progressive
-     * disclosure, e.g. Adobe I/O's project → workspace → summary). Returns the
-     * state update for one inner step back, or null when the sub-step has no
-     * inner stage to retreat — Back then falls through to `prev()`. Pure over
-     * `state` (called during render for the Back-enabled check).
-     */
-    retreatWithin?(state: WizardState): Partial<WizardState> | null;
-    /**
-     * Advance WITHIN the active sub-step: commit the current inner disclosure
-     * stage (e.g. Adobe I/O's pending project pick) and stay on the sub-step.
-     * Returns the state update, or null when there is no inner stage to commit
-     * — Continue then falls through to `next()`. Pure over `state`.
-     */
-    advanceWithin?(state: WizardState): Partial<WizardState> | null;
 }
 
 // --- generic helpers over an ordered {id, status} list -----------------------
@@ -205,108 +187,21 @@ const storefrontDriver: AreaSubStepDriver = {
     },
 };
 
-const integrationsDriver: AreaSubStepDriver = {
-    subSteps(state) {
-        return integrationsSectionStates(state).map((s) => ({
-            id: s.id,
-            title: INTEGRATIONS_SECTION_TITLES[s.id],
-            status: s.status,
-            lockReason: s.lockReason,
-        }));
-    },
-    active(state) {
-        return state.activeIntegrationsStep ?? firstOpen(integrationsDriver.subSteps(state));
-    },
-    setActive(id) {
-        return { activeIntegrationsStep: id as WizardState['activeIntegrationsStep'] };
-    },
-    next(state) {
-        return nextOf(integrationsDriver.subSteps(state), integrationsDriver.active(state));
-    },
-    prev(state) {
-        return prevOf(integrationsDriver.subSteps(state), integrationsDriver.active(state));
-    },
-    entry(state, atEnd) {
-        const steps = integrationsDriver.subSteps(state);
-        const id = atEnd ? steps[steps.length - 1]?.id : firstOpen(steps);
-        return id ? { activeIntegrationsStep: id as WizardState['activeIntegrationsStep'] } : {};
-    },
-    isComplete(state, subStepId) {
-        return isIntegrationsStepComplete(
-            state,
-            subStepId as Parameters<typeof isIntegrationsStepComplete>[1],
-        );
-    },
-    // Continue off Adobe I/O COMMITS the pending workspace default as `adobeWorkspace`.
-    commit(state, subStepId) {
-        if (subStepId === 'adobe-io') {
-            return {
-                adobeWorkspace: state.pendingAdobeWorkspace,
-                pendingAdobeWorkspace: undefined,
-            };
-        }
-        return {};
-    },
-    // Back off Adobe I/O un-commits: the committed default returns to pending (Continue must
-    // re-commit it), mirroring how Commerce's Back clears the committed-step ✓.
-    uncommit(state, order, target) {
-        const ioIdx = order.indexOf('adobe-io');
-        if (ioIdx >= 0 && order.indexOf(target) < ioIdx && state.adobeWorkspace) {
-            return { adobeWorkspace: undefined, pendingAdobeWorkspace: state.adobeWorkspace };
-        }
-        return {};
-    },
-    // Adobe I/O's body is a progressive disclosure (project → workspace → summary);
-    // Back walks that inner stack BEFORE leaving the sub-step, so the workspace view
-    // returns to project selection, not to Services.
-    retreatWithin(state) {
-        if (integrationsDriver.active(state) !== 'adobe-io') return null;
-        if (state.adobeWorkspace) {
-            // Summary → workspace picker; keep the choice highlighted as pending.
-            return { adobeWorkspace: undefined, pendingAdobeWorkspace: state.adobeWorkspace };
-        }
-        if (state.adobeProject?.id) {
-            // Workspace picker → project selection; the committed project stays
-            // highlighted as the pending pick (Continue re-commits it).
-            return {
-                adobeProject: undefined,
-                pendingAdobeProject: state.adobeProject,
-                pendingAdobeWorkspace: undefined,
-                workspacesCache: undefined,
-            };
-        }
-        return null;
-    },
-    // Continue on the Adobe I/O PROJECT view commits the pending pick and stays on
-    // the sub-step (revealing the workspace view) — the user clicks, then Continues.
-    advanceWithin(state) {
-        if (integrationsDriver.active(state) !== 'adobe-io') return null;
-        if (state.pendingAdobeProject?.id && !state.adobeProject?.id) {
-            return {
-                adobeProject: state.pendingAdobeProject,
-                pendingAdobeProject: undefined,
-                adobeWorkspace: undefined,
-                pendingAdobeWorkspace: undefined,
-                workspacesCache: undefined,
-            };
-        }
-        return null;
-    },
-};
-
 const DRIVERS: Record<string, AreaSubStepDriver> = {
     commerce: commerceDriver,
     storefront: storefrontDriver,
-    integrations: integrationsDriver,
 };
 
-/** The sub-step driver for an area, or null for an area with no sub-steps. */
+/**
+ * The sub-step driver for an area, or null for an area with no sub-steps
+ * (e.g. Integrations — a single results-only view).
+ */
 export function areaSubSteps(areaId: string | undefined): AreaSubStepDriver | null {
     return areaId ? (DRIVERS[areaId] ?? null) : null;
 }
 
 /**
- * The sub-step driver for an area that is known to have one (Commerce/Storefront/Integrations).
+ * The sub-step driver for an area that is known to have one (Commerce/Storefront).
  * Fails fast rather than asserting non-null, so a missing driver surfaces immediately.
  */
 export function requireAreaSubSteps(areaId: string): AreaSubStepDriver {

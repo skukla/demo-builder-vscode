@@ -4472,61 +4472,6 @@ div[class*="spectrum"] input[type="search"] {
     animation: sum-check-in var(--db-motion-base) var(--db-motion-ease);
 }
 
-/* --------------------------------------------------------------------------
- * Integrations area — deployable card GRID + "add" affordance.
- *
- * A responsive tile grid matching the projects-home card grid (.project-card-spectrum
- * / .projects-grid): gray-50 tiles, 8px radius, name + muted description + a footer
- * row (status pill + action). Paired with a dashed SIMULATED empty tile (same size)
- * for a future integration. Pills reuse .int-pill-*; the Deployment-target sub-step
- * uses the standard config-section-header + Spectrum primitives (no bespoke type).
- * No JS motion — the reduced-motion reset covers it.
- * ------------------------------------------------------------------------ */
-.int-deployables {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-/* Section header dividing the "add" menu (mesh + catalog + custom rows) above from the
-   ADDED integrations below — a quiet uppercase label with a rule filling the rest of the row.
-   Rendered only once at least one integration is added. */
-.int-added-divider {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-top: 8px;
-}
-.int-added-divider::after {
-    content: '';
-    flex: 1 1 auto;
-    height: 1px;
-    background: var(--spectrum-global-color-gray-300);
-}
-.int-added-label {
-    flex: 0 0 auto;
-    font-size: var(--spectrum-global-dimension-font-size-50);
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--spectrum-global-color-gray-600);
-}
-/* The ONE shared "Deploys to Adobe I/O" destination element, pinned above the cards.
-   A bordered container in the card family (mirrors .int-card) so the establish/reference
-   destination reads as a peer of the deployables it feeds. */
-.int-destination-shared {
-    width: 100%;
-    box-sizing: border-box;
-    background: var(--spectrum-global-color-gray-50);
-    border: 1px solid var(--spectrum-global-color-gray-300);
-    border-radius: 8px;
-    padding: 16px 18px;
-    margin-bottom: 4px;
-}
-/* The shared row's own .int-chosen carries the container's bottom padding — drop its
-   default margin so it doesn't add a phantom gap inside the bordered box. */
-.int-destination-shared > .int-chosen {
-    margin-bottom: 0;
-}
 /* Canonical page header — one tight single row (title · subtitle crumb … action),
  * the same reclaimed density on every screen. The page context (a rail, a grid) owns
  * the wayfinding, so the title stays modest and the header spends little vertical budget. */
@@ -4544,24 +4489,6 @@ div[class*="spectrum"] input[type="search"] {
     margin-top: var(--spectrum-global-dimension-size-75) !important;
 }
 
-.int-card {
-    background: var(--spectrum-global-color-gray-50);
-    border: 1px solid var(--spectrum-global-color-gray-300);
-    border-radius: 8px;
-    padding: 16px 18px;
-    transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
-}
-/* Selected — the Commerce choice-card language: blue border + tint + a ✓ badge. */
-.int-card[data-selected="true"] {
-    border-color: var(--spectrum-global-color-blue-400);
-    box-shadow: 0 0 0 1px var(--spectrum-global-color-blue-400);
-    background: var(--spectrum-global-color-blue-100);
-}
-.int-card-head {
-    display: flex;
-    align-items: flex-start;
-    gap: 11px;
-}
 /* The ONE selection checkmark, shared across every "pick this" card in the wizard
    (package cards, backend cards, block-library cards, integration cards). */
 .selection-check {
@@ -4576,51 +4503,6 @@ div[class*="spectrum"] input[type="search"] {
     position: absolute;
     top: var(--spectrum-global-dimension-size-200);
     right: var(--spectrum-global-dimension-size-200);
-}
-.int-card-headings {
-    flex: 1;
-    min-width: 0;
-}
-.int-card-name {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--spectrum-global-color-gray-900);
-    line-height: 1.3;
-}
-.int-card-desc {
-    font-size: 12px;
-    color: var(--spectrum-global-color-gray-600);
-    line-height: 1.4;
-    margin-top: 3px;
-}
-
-/* Collapsed-card summary (the committed Project · Workspace). Real content, so a
-   touch more prominent than the muted description it replaces. */
-.int-card-summary {
-    font-size: 13px;
-    color: var(--spectrum-global-color-gray-800);
-    line-height: 1.4;
-    margin-top: 3px;
-}
-.int-card-actions {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.int-card-na {
-    font-size: 11px;
-    padding: 3px 10px;
-    border-radius: 999px;
-    background: var(--spectrum-global-color-gray-200);
-    color: var(--spectrum-global-color-gray-600);
-    white-space: nowrap;
-}
-/* Config revealed inline under a selected card (destination sign-in + fields). */
-.int-card-config {
-    margin-top: 14px;
-    padding-top: 14px;
-    border-top: 1px solid var(--spectrum-global-color-gray-300);
 }
 /* A committed destination choice, collapsed to one compact line + "Change". */
 .int-chosen {
@@ -4703,65 +4585,6 @@ div[class*="spectrum"] input[type="search"] {
 .int-chosen button {
     margin-left: auto;
 }
-/* Pressable "add an integration" affordance — a dashed sibling of the mesh card. */
-.int-add-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    padding: 16px;
-    border: 1px dashed var(--spectrum-global-color-gray-400);
-    border-radius: 8px;
-    text-align: center;
-}
-/* Button variant: reset default button chrome and add an interactive hover. */
-button.int-add-card {
-    width: 100%;
-    background: transparent;
-    font: inherit;
-    cursor: pointer;
-    transition: border-color 130ms ease-in-out;
-}
-button.int-add-card:hover {
-    border-color: var(--spectrum-global-color-gray-600);
-}
-.int-add-card-label {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--spectrum-global-color-gray-700);
-}
-/* The modal's "← Back" control (returns the flow to the Pre-built/Custom chooser). */
-.int-add-modal-back {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    background: none;
-    border: none;
-    padding: 0;
-    margin-bottom: 14px;
-    font: inherit;
-    font-size: 13px;
-    cursor: pointer;
-    color: var(--spectrum-global-color-blue-600);
-}
-.int-add-modal-back:hover {
-    text-decoration: underline;
-}
-.int-add-choices {
-    display: flex;
-    flex-direction: row;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-/* Empty state when a catalog filter matches nothing. */
-.int-add-empty {
-    padding: 24px 8px;
-    text-align: center;
-    color: var(--spectrum-global-color-gray-600);
-    font-size: 13px;
-}
-
 /* Catalog entries render as square tiles in the wrapping row (not full-width rows). */
 .choice-card--tile {
     flex: 0 0 auto !important;
@@ -4775,10 +4598,268 @@ button.int-add-card:hover {
     -webkit-box-orient: vertical !important;
     overflow: hidden !important;
 }
-.int-add-custom {
+/* --------------------------------------------------------------------------
+ * Integrations — results-only center column (.int-results / .int-row-*)
+ * + the one-modal Add Integration journey (.intflow-*).
+ *
+ * Dark-minimal wizard language: plain divs, gray-50 surfaces, quiet gray-300
+ * borders, 8px radius — the wizard card-family language carried into this anatomy.
+ * The Modal's .modal-content owns scrolling and its footer is sticky; the
+ * stage body only reserves height so stage swaps don't jump the footer.
+ * ------------------------------------------------------------------------ */
+
+/* ---- Center column: the result-row list + Add launchpad ---- */
+.int-results {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    max-width: 720px;
+}
+.int-results-empty {
+    padding: 24px 4px 8px;
+}
+.int-results-empty-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-800);
+}
+.int-results-empty-copy {
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-600);
+    max-width: 52ch;
+}
+.int-results-add {
+    margin-top: 4px;
+}
+
+/* ---- One collapsed result row (card family: gray-50, gray-300, radius 8) ---- */
+.int-row {
+    background: var(--spectrum-global-color-gray-50);
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 8px;
+    padding: 14px 18px;
+}
+.int-row-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.int-row-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-900);
+    line-height: 1.3;
+}
+.int-row-source {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+    line-height: 1.4;
+    margin-top: 2px;
+}
+/* The destination line: reference text left, the quiet Set up / Change right. */
+.int-row-destination {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--spectrum-global-color-gray-200);
+}
+.int-row-dest-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 13px;
+    color: var(--spectrum-global-color-gray-800);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.int-row-apis {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+    margin-top: 6px;
+}
+/* The mesh row's embedded API-access enablement (.int-chosen is a shared style
+   with its own bottom margin — inside a row the row's padding owns the gap). */
+.int-row .int-chosen {
+    margin-top: 10px;
+    margin-bottom: 0;
+}
+.int-row .int-enable-error {
+    margin-bottom: 0;
+}
+
+/* ---- Flow modal: stage body + per-stage layouts ---- */
+/* Reserve stage height so Back/Continue don't jump between short and tall
+   stages; the Modal's .modal-content scrolls and its footer stays sticky. */
+.intflow-stage-body {
+    min-height: 360px;
+    display: flex;
+    flex-direction: column;
+}
+.intflow-stage-lead {
+    margin: 0 0 12px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-700);
+}
+/* Kind picker: the three choice tiles in one wrapping row. */
+.intflow-kind-choices {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+/* Catalog stage: search header over the wrapping tile gallery. */
+.intflow-catalog {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.intflow-choices {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.intflow-empty {
+    padding: 24px 8px;
+    text-align: center;
+    color: var(--spectrum-global-color-gray-600);
+    font-size: 13px;
+}
+/* Custom stage: the lead sentence + URL field. */
+.intflow-custom {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
     align-items: flex-start;
+    max-width: 480px;
+}
+
+/* ---- Destination stages (sign-in / project / workspace / summary) ---- */
+.intflow-destination {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.intflow-dest-summary {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+}
+/* A committed choice, collapsed to one compact line (the .int-chosen language). */
+.intflow-chosen {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 48px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 8px;
+    background: var(--spectrum-global-color-gray-50);
+}
+.intflow-chosen-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: var(--spectrum-global-color-green-500);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+}
+.intflow-chosen-label {
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-600);
+}
+.intflow-chosen-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-900);
+}
+
+/* ---- API-access stage: helper + grouped, searchable checkbox list ---- */
+.intflow-api-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.intflow-api-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.intflow-api-helper {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-600);
+    max-width: 60ch;
+}
+.intflow-api-group {
+    margin-top: 8px;
+}
+/* Quiet sentence-case group titles (the .ai-skills-group-header register):
+   hierarchy is stage > group > names, so groups stay small and muted. */
+.intflow-api-group-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-600);
+    padding: 4px 0;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-200);
+}
+.intflow-api-group-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.intflow-api-row {
+    padding: 2px 0;
+}
+/* Display name primary, code secondary gray — names first, codes for the curious. */
+.intflow-api-name {
+    font-size: 13px;
+    color: var(--spectrum-global-color-gray-900);
+}
+.intflow-api-code {
+    margin-left: 8px;
+    font-size: 11px;
+    color: var(--spectrum-global-color-gray-600);
+}
+.intflow-api-empty {
+    padding: 24px 8px;
+    text-align: center;
+    color: var(--spectrum-global-color-gray-600);
+    font-size: 13px;
+}
+/* Non-blocking fetch failure: inline error + Retry (Continue never gates on it). */
+.intflow-api-error {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--spectrum-global-color-red-400);
+    border-radius: 8px;
+}
+.intflow-api-error-message {
+    flex: 1 1 auto;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--spectrum-global-color-red-600);
+    overflow-wrap: anywhere;
 }
 } /* End of second @layer theme block */

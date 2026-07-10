@@ -4,10 +4,7 @@ import { BrandGallery } from '../components/BrandGallery';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import {
-    normalizeProjectName,
-    getProjectNameError,
-} from '@/core/validation/normalizers';
+import { normalizeProjectName, getProjectNameError } from '@/core/validation/normalizers';
 import { DemoPackage } from '@/types/demoPackages';
 import { Stack } from '@/types/stacks';
 import { BaseStepProps } from '@/types/wizard';
@@ -22,7 +19,15 @@ interface WelcomeStepProps extends BaseStepProps {
     stacks?: Stack[];
 }
 
-export function WelcomeStep({ state, updateState, setCanProceed, existingProjectNames = [], initialViewMode: _initialViewMode, packages, stacks }: WelcomeStepProps) {
+export function WelcomeStep({
+    state,
+    updateState,
+    setCanProceed,
+    existingProjectNames = [],
+    initialViewMode: _initialViewMode,
+    packages,
+    stacks,
+}: WelcomeStepProps) {
     const defaultProjectName = 'my-commerce-demo';
     const selectableDefaultProps = useSelectableDefault();
 
@@ -32,10 +37,13 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
 
     // Validate project name using shared validation function
     // In edit mode, allow the original project name (user is keeping it)
-    const validateProjectName = useCallback((value: string): string | undefined => {
-        const allowedName = state.wizardMode === 'edit' ? state.editOriginalName : undefined;
-        return getProjectNameError(value, existingProjectNames, allowedName);
-    }, [existingProjectNames, state.wizardMode, state.editOriginalName]);
+    const validateProjectName = useCallback(
+        (value: string): string | undefined => {
+            const allowedName = state.wizardMode === 'edit' ? state.editOriginalName : undefined;
+            return getProjectNameError(value, existingProjectNames, allowedName);
+        },
+        [existingProjectNames, state.wizardMode, state.editOriginalName],
+    );
 
     /**
      * Get validation state for project name field
@@ -76,15 +84,19 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
         (packageId: string) => {
             if (packageId !== state.selectedPackage) {
                 // Find the package to get its configDefaults
-                const pkg = packages?.find(p => p.id === packageId);
+                const pkg = packages?.find((p) => p.id === packageId);
                 updateState({
                     selectedPackage: packageId,
                     selectedStack: undefined,
                     // Clear architecture-derived selections so a new package
                     // never inherits the previous package's mesh deps/components
                     // (the Project Builder re-seeds them on stack select).
+                    // API picks are keyed by integration id — orphaned picks
+                    // would otherwise serialize into the new project's
+                    // subscribe union, so they clear together.
                     selectedOptionalDependencies: [],
                     selectedAppBuilderComponents: [],
+                    selectedConsoleApis: undefined,
                     packageConfigDefaults: pkg?.configDefaults,
                 });
             }
@@ -94,18 +106,22 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
 
     useEffect(() => {
         const isProjectNameValid =
-            state.projectName.length >= 3 &&
-            validateProjectName(state.projectName) === undefined;
+            state.projectName.length >= 3 && validateProjectName(state.projectName) === undefined;
 
         // Package selection only — the architecture (stack) is chosen on the
         // Project Builder step that follows. Legacy mode (no packages) is
         // unaffected (templates optional).
-        const isPackageValid = hasPackages && hasStacks
-            ? Boolean(state.selectedPackage)
-            : true;
+        const isPackageValid = hasPackages && hasStacks ? Boolean(state.selectedPackage) : true;
 
         setCanProceed(isProjectNameValid && isPackageValid);
-    }, [state.projectName, state.selectedPackage, setCanProceed, validateProjectName, hasPackages, hasStacks]);
+    }, [
+        state.projectName,
+        state.selectedPackage,
+        setCanProceed,
+        validateProjectName,
+        hasPackages,
+        hasStacks,
+    ]);
 
     // Derive package config defaults from package (edit mode fix)
     // When editing a project, selectedPackage is pre-set but packageConfigDefaults is not.
@@ -116,10 +132,11 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
         if (!state.selectedPackage || !packages || packages.length === 0) return;
 
         // Skip if packageConfigDefaults is already set
-        if (state.packageConfigDefaults && Object.keys(state.packageConfigDefaults).length > 0) return;
+        if (state.packageConfigDefaults && Object.keys(state.packageConfigDefaults).length > 0)
+            return;
 
         // Look up package to get its configDefaults
-        const pkg = packages.find(p => p.id === state.selectedPackage);
+        const pkg = packages.find((p) => p.id === state.selectedPackage);
         if (!pkg?.configDefaults) return;
 
         // Set packageConfigDefaults (store codes, etc.)
@@ -139,7 +156,7 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
         if (!state.selectedPackage || !packages || packages.length === 0) return;
 
         // Look up storefront config from package
-        const pkg = packages.find(p => p.id === state.selectedPackage);
+        const pkg = packages.find((p) => p.id === state.selectedPackage);
         const storefront = pkg?.storefronts?.[state.selectedStack];
         if (!storefront) return;
 

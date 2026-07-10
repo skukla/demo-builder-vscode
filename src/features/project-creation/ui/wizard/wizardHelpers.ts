@@ -26,10 +26,8 @@ export function filterRemovedCustomLibraries(
     if (!selected?.length) return [];
     if (!defaults) return selected;
 
-    const validKeys = new Set(
-        defaults.map(d => `${d.source.owner}/${d.source.repo}`),
-    );
-    return selected.filter(lib => validKeys.has(`${lib.source.owner}/${lib.source.repo}`));
+    const validKeys = new Set(defaults.map((d) => `${d.source.owner}/${d.source.repo}`));
+    return selected.filter((lib) => validKeys.has(`${lib.source.owner}/${lib.source.repo}`));
 }
 
 /**
@@ -110,20 +108,20 @@ export function filterStepsByComponents(
     selectedComponents: ComponentSelection | undefined,
 ): Array<{ id: WizardStep; name: string; description?: string }> {
     return allSteps
-        .filter(step => {
+        .filter((step) => {
             // Disabled steps never shown
             if (!step.enabled) return false;
 
             // requiredComponents: ALL must be selected (AND logic)
             if (step.requiredComponents && step.requiredComponents.length > 0) {
-                return step.requiredComponents.every(componentId =>
+                return step.requiredComponents.every((componentId) =>
                     isComponentSelected(componentId, selectedComponents),
                 );
             }
 
             // requiredAny: ANY must be selected (OR logic)
             if (step.requiredAny && step.requiredAny.length > 0) {
-                return step.requiredAny.some(componentId =>
+                return step.requiredAny.some((componentId) =>
                     isComponentSelected(componentId, selectedComponents),
                 );
             }
@@ -131,7 +129,7 @@ export function filterStepsByComponents(
             // No requirements = always shown (backward compatible)
             return true;
         })
-        .map(step => ({
+        .map((step) => ({
             id: step.id as WizardStep,
             name: step.name,
             description: step.description,
@@ -174,7 +172,7 @@ export function filterCompletedStepsForBackwardNav(
     // Shared with the Commerce sub-steps — same drop-target-and-after semantics.
     return clearCompletedFrom(
         completedSteps,
-        wizardSteps.map(ws => ws.id),
+        wizardSteps.map((ws) => ws.id),
         targetStep,
         targetIndex,
     );
@@ -197,7 +195,7 @@ export interface AdobeStepIndices {
  */
 export function getAdobeStepIndices(wizardSteps: WizardStepConfig[]): AdobeStepIndices {
     return {
-        buildStepIndex: wizardSteps.findIndex(s => s.id === 'build-your-project'),
+        buildStepIndex: wizardSteps.findIndex((s) => s.id === 'build-your-project'),
     };
 }
 
@@ -277,6 +275,10 @@ export interface ImportedSettings {
     customBlockLibraries?: CustomBlockLibrary[];
     /** EDS configuration (for Edge Delivery Services stacks) */
     edsConfig?: SettingsEdsConfig;
+    /** Custom GitHub sources for App Builder integrations, keyed by integration id */
+    appBuilderComponentSources?: Record<string, { owner: string; repo: string; branch?: string }>;
+    /** Console API sdk codes subscribed beyond catalog requiredApis (seeds `selectedConsoleApis['__existing__']` in edit mode) */
+    additionalConsoleApis?: string[];
 }
 
 /**
@@ -366,10 +368,7 @@ export function initializeAdobeContextFromImport(
  * @param existingNames - List of existing project names
  * @returns Unique project name
  */
-export function generateUniqueProjectName(
-    baseName: string,
-    existingNames: string[],
-): string {
+export function generateUniqueProjectName(baseName: string, existingNames: string[]): string {
     if (!existingNames.includes(baseName)) {
         return baseName;
     }
@@ -400,10 +399,7 @@ export function initializeProjectName(
     existingNames: string[],
 ): string {
     if (importedSettings?.source?.project) {
-        return generateUniqueProjectName(
-            importedSettings.source.project,
-            existingNames,
-        );
+        return generateUniqueProjectName(importedSettings.source.project, existingNames);
     }
     return '';
 }
@@ -417,7 +413,7 @@ export function initializeProjectName(
 export function getFirstEnabledStep(
     wizardSteps: Array<{ id: string; enabled: boolean }> | undefined,
 ): WizardStep {
-    const enabledSteps = wizardSteps?.filter(step => step.enabled) || [];
+    const enabledSteps = wizardSteps?.filter((step) => step.enabled) || [];
     return (enabledSteps.length > 0 ? enabledSteps[0].id : 'welcome') as WizardStep;
 }
 
@@ -438,10 +434,7 @@ export function getFirstEnabledStep(
  */
 const STEPS_WITH_OWN_FOOTER = new Set(['mesh-deployment']);
 
-export function shouldShowWizardFooter(
-    isLastStep: boolean,
-    currentStep: string,
-): boolean {
+export function shouldShowWizardFooter(isLastStep: boolean, currentStep: string): boolean {
     return !isLastStep && !STEPS_WITH_OWN_FOOTER.has(currentStep);
 }
 
@@ -454,9 +447,12 @@ export function shouldShowWizardFooter(
  */
 export function getWizardTitle(wizardMode?: WizardMode): string {
     switch (wizardMode) {
-        case 'edit': return 'Edit Project';
-        case 'import': return 'Import Project';
-        default: return 'Create Demo Project';
+        case 'edit':
+            return 'Edit Project';
+        case 'import':
+            return 'Import Project';
+        default:
+            return 'Create Demo Project';
     }
 }
 
@@ -514,7 +510,7 @@ export function getCompletedStepIndices(
     completedSteps: WizardStep[],
     wizardSteps: Array<{ id: WizardStep; name: string }>,
 ): number[] {
-    return completedSteps.map(stepId => wizardSteps.findIndex(ws => ws.id === stepId));
+    return completedSteps.map((stepId) => wizardSteps.findIndex((ws) => ws.id === stepId));
 }
 
 /**
@@ -524,14 +520,20 @@ export function getCompletedStepIndices(
  * `wizardSteps.filter(step => step.enabled).map(step => ({ id: step.id as WizardStep, name: step.name }))`
  */
 export function getEnabledWizardSteps(
-    wizardSteps: Array<{ id: string; name: string; description?: string; enabled: boolean }> | undefined,
+    wizardSteps:
+        | Array<{ id: string; name: string; description?: string; enabled: boolean }>
+        | undefined,
 ): Array<{ id: WizardStep; name: string; description?: string }> {
     if (!wizardSteps || wizardSteps.length === 0) {
         return [];
     }
     return wizardSteps
-        .filter(step => step.enabled)
-        .map(step => ({ id: step.id as WizardStep, name: step.name, description: step.description }));
+        .filter((step) => step.enabled)
+        .map((step) => ({
+            id: step.id as WizardStep,
+            name: step.name,
+            description: step.description,
+        }));
 }
 
 // ============================================================================
@@ -559,15 +561,18 @@ function validateStackPackageConfig(
     if (wizardState.selectedStack && !wizardState.selectedPackage) {
         console.warn(
             '[Demo Builder] Incomplete configuration: architecture is selected but brand/package is missing. ' +
-            'This may result in missing storefront data.',
+                'This may result in missing storefront data.',
         );
         // eslint-disable-next-line no-console
-        console.log('[buildProjectConfig] Validation warning - selectedStack without selectedPackage:', {
-            selectedPackage: wizardState.selectedPackage,
-            selectedStack: wizardState.selectedStack,
-            hasPackages: !!packages,
-            packagesCount: packages?.length || 0,
-        });
+        console.log(
+            '[buildProjectConfig] Validation warning - selectedStack without selectedPackage:',
+            {
+                selectedPackage: wizardState.selectedPackage,
+                selectedStack: wizardState.selectedStack,
+                hasPackages: !!packages,
+                packagesCount: packages?.length || 0,
+            },
+        );
     }
 }
 
@@ -579,7 +584,7 @@ function resolveFrontendSourceFromPackage(
     if (!packages || !wizardState.selectedStack || !wizardState.selectedPackage) {
         return undefined;
     }
-    const pkg = packages.find(p => p.id === wizardState.selectedPackage);
+    const pkg = packages.find((p) => p.id === wizardState.selectedPackage);
     return pkg?.storefronts?.[wizardState.selectedStack]?.source;
 }
 
@@ -591,7 +596,7 @@ function validateStackLookup(
     if (wizardState.selectedStack && !stack) {
         console.warn(
             `[Demo Builder] Configuration warning: selected architecture '${wizardState.selectedStack}' not found. ` +
-            'Components may be missing from project.',
+                'Components may be missing from project.',
         );
         // eslint-disable-next-line no-console
         console.log('[buildProjectConfig] Validation warning - stack lookup failed:', {
@@ -635,6 +640,31 @@ function buildProjectEdsConfig(wizardState: WizardState) {
 }
 
 /**
+ * SDK-code charset — boundary parity with the dashboard's addConsoleApis
+ * handler; codes outside it never reach the manifest or the subscribe union.
+ */
+const SDK_CODE_RE = /^[A-Za-z0-9_-]+$/;
+
+/**
+ * Sorted, deduped union of all per-integration free Console API picks
+ * (including the reserved `__existing__` edit-mode key). Codes outside the
+ * SDK charset are dropped at this boundary. Returns undefined when nothing
+ * valid is picked so the serialized config omits the field.
+ */
+function unionConsoleApiPicks(
+    selectedConsoleApis: Record<string, string[]> | undefined,
+): string[] | undefined {
+    const union = [
+        ...new Set(
+            Object.values(selectedConsoleApis ?? {})
+                .flat()
+                .filter((code) => SDK_CODE_RE.test(code)),
+        ),
+    ].sort();
+    return union.length > 0 ? union : undefined;
+}
+
+/**
  * Build project configuration from wizard state for project creation
  *
  * @param wizardState - Current wizard state
@@ -675,16 +705,18 @@ export function buildProjectConfig(
             workspaceName: wizardState.adobeWorkspace?.name,
             workspaceTitle: wizardState.adobeWorkspace?.title,
         },
-        components: stack ? {
-            frontend: stack.frontend,
-            backend: stack.backend,
-            dependencies: [
-                ...(stack.dependencies || []),
-                ...(wizardState.selectedOptionalDependencies || []),
-            ],
-            integrations: [],
-            appBuilder: [],
-        } : undefined,
+        components: stack
+            ? {
+                  frontend: stack.frontend,
+                  backend: stack.backend,
+                  dependencies: [
+                      ...(stack.dependencies || []),
+                      ...(wizardState.selectedOptionalDependencies || []),
+                  ],
+                  integrations: [],
+                  appBuilder: [],
+              }
+            : undefined,
         apiMesh: wizardState.apiMesh,
         componentConfigs: wizardState.componentConfigs,
         importedWorkspaceId: importedSettings?.adobe?.workspaceId,
@@ -693,6 +725,7 @@ export function buildProjectConfig(
         selectedStack: wizardState.selectedStack,
         selectedAppBuilderComponents: wizardState.selectedAppBuilderComponents ?? [],
         appBuilderComponentSources: wizardState.appBuilderComponentSources ?? {},
+        additionalConsoleApis: unionConsoleApiPicks(wizardState.selectedConsoleApis),
         selectedAddons: wizardState.selectedAddons || [],
         selectedBlockLibraries: wizardState.selectedBlockLibraries || [],
         customBlockLibraries: wizardState.customBlockLibraries || [],

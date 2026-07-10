@@ -33,10 +33,15 @@ describe('WelcomeStep - Package + Stack Selection', () => {
             icon: 'default',
             configDefaults: {},
             storefronts: {
-                'headless': {
+                headless: {
                     name: 'Default Headless',
                     description: 'Default NextJS storefront',
-                    source: { type: 'git', url: 'https://github.com/test/default', branch: 'main', gitOptions: { shallow: true } },
+                    source: {
+                        type: 'git',
+                        url: 'https://github.com/test/default',
+                        branch: 'main',
+                        gitOptions: { shallow: true },
+                    },
                 },
             },
         },
@@ -52,10 +57,15 @@ describe('WelcomeStep - Package + Stack Selection', () => {
                 ADOBE_COMMERCE_STORE_VIEW_CODE: 'citisignal_us',
             },
             storefronts: {
-                'headless': {
+                headless: {
                     name: 'CitiSignal Headless',
                     description: 'CitiSignal NextJS storefront',
-                    source: { type: 'git', url: 'https://github.com/test/citisignal', branch: 'main', gitOptions: { shallow: true } },
+                    source: {
+                        type: 'git',
+                        url: 'https://github.com/test/citisignal',
+                        branch: 'main',
+                        gitOptions: { shallow: true },
+                    },
                 },
             },
         },
@@ -234,7 +244,7 @@ describe('WelcomeStep - Package + Stack Selection', () => {
 
             // When: Package cards are rendered and a package is clicked
             const packageCards = screen.getAllByTestId('package-card');
-            const citisignalCard = packageCards.find(card =>
+            const citisignalCard = packageCards.find((card) =>
                 card.textContent?.includes('CitiSignal')
             );
             citisignalCard?.click();
@@ -242,6 +252,46 @@ describe('WelcomeStep - Package + Stack Selection', () => {
             // Then: updateState should be called with selectedPackage
             expect(mockUpdateState).toHaveBeenCalledWith(
                 expect.objectContaining({ selectedPackage: 'citisignal' })
+            );
+        });
+
+        it('should clear integration selections AND their API picks on a package change', () => {
+            // Given: a different package is already selected with integrations + picks
+            const stateWithSelections = {
+                ...baseState,
+                projectName: 'valid-project',
+                selectedPackage: 'other-brand',
+                selectedStack: 'headless-paas',
+                selectedAppBuilderComponents: ['erp-sync'],
+                selectedConsoleApis: { 'erp-sync': ['AnalyticsSDK'] },
+            };
+
+            renderWithProvider(
+                <WelcomeStep
+                    state={stateWithSelections as WizardState}
+                    updateState={mockUpdateState}
+                    onNext={mockOnNext}
+                    onBack={mockOnBack}
+                    setCanProceed={mockSetCanProceed}
+                    packages={mockPackages}
+                    stacks={mockStacks}
+                />
+            );
+
+            const packageCards = screen.getAllByTestId('package-card');
+            const citisignalCard = packageCards.find((card) =>
+                card.textContent?.includes('CitiSignal')
+            );
+            citisignalCard?.click();
+
+            // Then: orphaned API picks never survive a package change (they would
+            // otherwise silently serialize into the new project's subscribe union)
+            expect(mockUpdateState).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    selectedPackage: 'citisignal',
+                    selectedAppBuilderComponents: [],
+                    selectedConsoleApis: undefined,
+                })
             );
         });
 

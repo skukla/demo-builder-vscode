@@ -5,7 +5,10 @@
  * Verifies all required handlers are registered and accessible.
  */
 
-import { projectCreationHandlers, needsProgressCallback } from '@/features/project-creation/handlers';
+import {
+    projectCreationHandlers,
+    needsProgressCallback,
+} from '@/features/project-creation/handlers';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers';
 
 describe('projectCreationHandlers', () => {
@@ -58,6 +61,19 @@ describe('projectCreationHandlers', () => {
         it('should register EDS handlers', () => {
             expect(hasHandler(projectCreationHandlers, 'check-github-auth')).toBe(true);
             expect(hasHandler(projectCreationHandlers, 'check-dalive-auth')).toBe(true);
+        });
+
+        it('should register the console API handler', () => {
+            expect(hasHandler(projectCreationHandlers, 'list-org-console-apis')).toBe(true);
+        });
+
+        it('should export the console API handler from the barrel', async () => {
+            const barrel = await import('@/features/project-creation/handlers');
+            const exported = (barrel as Record<string, unknown>).handleListOrgConsoleApis;
+            expect(typeof exported).toBe('function');
+            expect(
+                (projectCreationHandlers as Record<string, unknown>)['list-org-console-apis']
+            ).toBe(exported);
         });
     });
 

@@ -26,13 +26,19 @@
  */
 
 import { useCallback, useRef, useState } from 'react';
-import type { EnsureResult } from '../components/MeshApiEnableRow';
+import type { EnsureResult } from '../components/integration-flow';
 import { getStackById } from './useSelectedStack';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import type { AdobeProject, WizardState, Workspace } from '@/types/webview';
 
 /** The flow's state machine. */
-export type ProjectCreationPhase = 'idle' | 'creating' | 'workspace' | 'enabling' | 'failed' | 'done';
+export type ProjectCreationPhase =
+    | 'idle'
+    | 'creating'
+    | 'workspace'
+    | 'enabling'
+    | 'failed'
+    | 'done';
 
 /** The phases that actually run work (and can therefore fail). */
 export type ProjectCreationActivePhase = 'creating' | 'workspace' | 'enabling';
@@ -81,9 +87,8 @@ export interface UseProjectCreationPhasesResult {
 /** Stage-named workspace first (case-insensitive), else the first (covers "single"). */
 function pickWorkspace(workspaces: Workspace[]): Workspace {
     const stage = workspaces.find(
-        ws =>
-            ws.name?.toLowerCase().includes('stage') ||
-            ws.title?.toLowerCase().includes('stage'),
+        (ws) =>
+            ws.name?.toLowerCase().includes('stage') || ws.title?.toLowerCase().includes('stage'),
     );
     return stage ?? workspaces[0];
 }
@@ -211,8 +216,7 @@ export function useProjectCreationPhases({
                 if (!workspaces || workspaces.length === 0) {
                     fail(
                         'workspace',
-                        (!res?.success && res?.error) ||
-                            'No workspaces found in the new project.',
+                        (!res?.success && res?.error) || 'No workspaces found in the new project.',
                     );
                     return;
                 }

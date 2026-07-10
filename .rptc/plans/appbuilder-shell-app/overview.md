@@ -79,11 +79,14 @@ This exposes one real capability gap and one tooling gap:
       package-bound item rewritten (gated, corrected facts, real scope), persistence item
       pruned to rehydration + the ReviewStep visibility bug, backlog README synced, and
       the two binding fields declared in `app-builder-components.schema.json`.
-- [ ] **Step 6 — API assignment UI in the Integrations sub-steps** (`step-06.md`, added
-      2026-07-09 at Steve's direction): wizard facet + dashboard "Manage APIs" backed by
-      the step-3 handlers and `additionalConsoleApis` (UI + serialization only — the
-      subscribe union is already wired). Sequence AFTER the step-4 live walkthrough;
-      settle the auth-gating decision there.
+- [x] **Step 6 — API assignment UI in the Integrations sub-steps** (`step-06.md`, added
+      2026-07-09 at Steve's direction): **ABSORBED 2026-07-10 by
+      `.rptc/plans/integrations-flow-redesign/`** — the wizard facet shipped as the
+      `ApiAccessStage` in the Add Integration modal journey (not inside the since-deleted
+      `AddIntegrationModal`); dashboard "Manage APIs" shipped as `ManageApisModal`;
+      serialization runs `selectedConsoleApis` → `unionConsoleApiPicks` →
+      `additionalConsoleApis`. The open auth-gating decision resolved by construction:
+      the API stage follows the in-modal sign-in/destination stages.
 
 ## Open decisions (settle before step 2/3 execution)
 

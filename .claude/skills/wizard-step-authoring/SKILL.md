@@ -1,6 +1,6 @@
 ---
 name: wizard-step-authoring
-description: Add or modify a wizard step, a Build-Your-Project area, or a sub-step inside an area (v6 nested builder). Use when touching wizard-steps.json, buildYourProjectAreas.ts, commerceSections/storefrontSections/integrationsSections, areaSubSteps.ts, an area body (*Step.tsx), or step order/lock/Continue logic.
+description: Add or modify a wizard step, a Build-Your-Project area, or a sub-step inside an area (v6 nested builder). Use when touching wizard-steps.json, buildYourProjectAreas.ts, commerceSections/storefrontSections, areaSubSteps.ts, an area body (*Step.tsx), the integration-flow module, or step order/lock/Continue logic.
 ---
 # Author a Wizard Step or Build-Your-Project Area
 
@@ -13,13 +13,13 @@ description: Add or modify a wizard step, a Build-Your-Project area, or a sub-st
 1. Pick the level. The v6 structure has three tiers, each with its own home:
    - **Top-level wizard step** (rare): `src/features/project-creation/config/wizard-steps.json` — the canonical step order; one `build-your-project` entry covers all builder content.
    - **Area** inside Build Your Project: `BUILD_AREA_DESCRIPTORS` in `src/features/project-creation/ui/steps/buildYourProjectAreas.ts` — array order IS the canonical display order; visibility via an optional `StepCondition` reusing `filterStepsForStack` (`../wizard/stepFiltering.ts`), e.g. storefront's `stackRequiresAny: ['requiresGitHub','requiresDaLive']`.
-   - **Sub-step** inside an area: the area's `*Sections.ts` (`commerceSections.ts`, `storefrontSections.ts`, `integrationsSections.ts`) + its driver in `areaSubSteps.ts`.
+   - **Sub-step** inside an area: the area's `*Sections.ts` (`commerceSections.ts`, `storefrontSections.ts`) + its driver in `areaSubSteps.ts`. An area may also have NO driver at all (`areaSubSteps(areaId)` → null): Integrations is a single results-only view whose guided configuration lives in a modal journey (`ui/components/integration-flow/` — 4-export deep module), gated by the area-status fallback instead of sub-steps.
 2. Top-level step only: add the entry to `wizard-steps.json` with an optional `condition`, and give the step component `BaseStepProps` (`{ state, updateState, setCanProceed }` — `src/types/wizard.ts`).
 3. New area: add its descriptor to `BUILD_AREA_DESCRIPTORS`, add a completion predicate in `tileStatus.ts` and map it in `statusForArea`, create the area body in `ui/steps/` from the bundled [step-skeleton.tsx](step-skeleton.tsx), and if it has sub-steps register a driver in `areaSubSteps.ts`'s `DRIVERS` map.
-4. New sub-step: add the id, `SECTION_TITLES` entry, and section-state logic (status vocabulary `'current' | 'done' | 'upcoming' | 'locked'` + `lockReason`) to the area's `*Sections.ts`; the driver in `areaSubSteps.ts` picks it up via `subSteps()/active()/next()/isComplete()/commit()`. Commit/uncommit is Commerce's commit-gated summary ✓ only — Storefront/Integrations use no-ops.
+4. New sub-step: add the id, `SECTION_TITLES` entry, and section-state logic (status vocabulary `'current' | 'done' | 'upcoming' | 'locked'` + `lockReason`) to the area's `*Sections.ts`; the driver in `areaSubSteps.ts` picks it up via `subSteps()/active()/next()/isComplete()/commit()`. Commit/uncommit is Commerce's commit-gated summary ✓ only — Storefront uses no-ops; Integrations has no driver.
 5. Selections go through `useProjectBuilder.ts` — the selection hub. Consume its handlers (`onStackSelect`, `onAppBuilderComponentToggle`, ...) rather than writing parallel state paths; it owns the mesh dual-flow mirror-write and the stack-change reset.
 6. Follow Backend Call on Continue (`docs/patterns/selection-pattern.md` + its checklist): selection handlers are UI-only `updateState` calls; backend `request`s happen at the Continue commitment point with a loading overlay and error handling there.
-7. Continue gating lives in the `*Sections.ts` predicates (`is<Area>StepComplete`), driven through the driver's `isComplete` — the Build step owns the footer gate, so area bodies typically receive a NO-OP `setCanProceed` (see `IntegrationsStep.tsx` header). Don't add local can-proceed state in the body.
+7. Continue gating lives in the `*Sections.ts` predicates (`is<Area>StepComplete`), driven through the driver's `isComplete`; for a driverless area the gate is `statusForArea` → the `tileStatus.ts` completion predicate (Integrations: `isIntegrationsComplete`). The Build step owns the footer gate, so area bodies receive a NO-OP `setCanProceed`. Don't add local can-proceed state in the body.
 
 ## Gotchas
 - Inline `[]`/`{}` defaults passed into hooks with effect deps create new references every render → infinite re-render loop. Use module-level constants (`EMPTY_PACKAGES`/`EMPTY_STACKS` in `IntegrationsStep.tsx`).

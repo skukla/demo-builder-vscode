@@ -47,16 +47,6 @@ export type CommerceSectionId =
  */
 export type StorefrontSectionId = 'accounts' | 'repository' | 'code-sync' | 'block-libraries';
 
-/**
- * The ordered Integrations sub-step ids within the build step's Integrations area:
- * the deployables list (mesh + addable integrations), then the shared Adobe I/O
- * project + workspace (sign-in → project → workspace pick). `adobe-io` is conditional — it
- * appears only once a deployable is selected. Defined here so
- * `WizardState.activeIntegrationsStep` can reference it; the pure section logic lives in
- * `ui/steps/integrationsSections.ts`.
- */
-export type IntegrationsSectionId = 'deployables' | 'adobe-io';
-
 export interface WizardState {
     currentStep: WizardStep;
     projectName: string;
@@ -68,6 +58,7 @@ export interface WizardState {
     selectedOptionalDependencies?: string[]; // Selected optional dependency IDs (e.g., mesh component IDs from stack.optionalDependencies)
     selectedAppBuilderComponents?: string[]; // Selected catalog appBuilderComponent IDs (D2; intent the dashboard reads). Mesh dual-flows through selectedOptionalDependencies for step-filtering — see appBuilderComponentSelectionState.ts
     appBuilderComponentSources?: Record<string, { owner: string; repo: string; branch?: string }>; // Maps a selected integration id → its custom GitHub source (for custom-URL entries; catalog entries resolve from config and need no source here)
+    selectedConsoleApis?: Record<string, string[]>; // Free Console API picks (sdk codes) per integration id. Locked/required codes are derived at render time, never stored. Reserved key '__existing__' carries a project's pre-existing additionalConsoleApis in edit mode (joins the serialization union, never shown per-row).
     customBlockLibraries?: CustomBlockLibrary[]; // Custom block libraries added by URL
     packageConfigDefaults?: Record<string, string>; // Package-specific config defaults (e.g., store codes)
     components?: ComponentSelection;
@@ -86,13 +77,10 @@ export interface WizardState {
     activeCommerceStep?: CommerceSectionId; // Active Commerce sub-step within the build step (footer Continue/Back walks sub-steps → areas → wizard steps)
     committedCommerceSteps?: CommerceSectionId[]; // Commerce sub-steps the user has pressed Continue past — gates the summary ✓ (a valid form alone does NOT mark a row done)
     activeStorefrontStep?: StorefrontSectionId; // Active Storefront sub-step within the build step (same footer-driven walk as Commerce)
-    activeIntegrationsStep?: IntegrationsSectionId; // Active Integrations sub-step within the build step (same footer-driven walk; 'adobe-io' appears once a deployable is selected)
     adobeAuth: AdobeAuthState;
     adobeOrg?: Organization; // Renamed for consistency
     adobeProject?: AdobeProject; // Renamed for consistency
     adobeWorkspace?: Workspace; // New field for workspace
-    pendingAdobeWorkspace?: Workspace; // Transient — the highlighted-but-uncommitted workspace default; committed to `adobeWorkspace` by the Adobe I/O sub-step's Continue
-    pendingAdobeProject?: AdobeProject; // Transient — the highlighted-but-uncommitted project pick; committed to `adobeProject` by the Adobe I/O sub-step's Continue
     commerceConfig?: WizardCommerceConfig; // Wizard-specific commerce config (simplified)
     creationProgress?: CreationProgress;
     projectSearchFilter?: string; // Filter persistence for project selection

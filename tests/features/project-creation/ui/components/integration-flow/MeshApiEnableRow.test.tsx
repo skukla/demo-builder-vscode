@@ -24,7 +24,7 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
     },
 }));
 
-import { MeshApiEnableRow } from '@/features/project-creation/ui/components/MeshApiEnableRow';
+import { MeshApiEnableRow } from '@/features/project-creation/ui/components/integration-flow/MeshApiEnableRow';
 
 interface RowProps {
     orgId?: string;
@@ -52,14 +52,14 @@ function renderRow(props: RowProps = BASE) {
     return render(
         <Provider theme={defaultTheme} colorScheme="light">
             <MeshApiEnableRow {...props} />
-        </Provider>,
+        </Provider>
     );
 }
 
 /** A promise whose resolution we control (for ordering races). */
 function deferred<T>() {
     let resolve!: (value: T) => void;
-    const promise = new Promise<T>(res => {
+    const promise = new Promise<T>((res) => {
         resolve = res;
     });
     return { promise, resolve };
@@ -118,7 +118,7 @@ describe('MeshApiEnableRow', () => {
         expect(mockRequest).toHaveBeenCalledTimes(1);
         expect(mockRequest).toHaveBeenCalledWith(
             'ensure-mesh-api-subscribed',
-            expect.objectContaining({ workspaceId: 'ws-1' }),
+            expect.objectContaining({ workspaceId: 'ws-1' })
         );
     });
 
@@ -155,13 +155,13 @@ describe('MeshApiEnableRow', () => {
         rerender(
             <Provider theme={defaultTheme} colorScheme="light">
                 <MeshApiEnableRow {...BASE} workspaceId="ws-2" />
-            </Provider>,
+            </Provider>
         );
 
         await waitFor(() => {
             expect(mockRequest).toHaveBeenCalledWith(
                 'ensure-mesh-api-subscribed',
-                expect.objectContaining({ workspaceId: 'ws-2' }),
+                expect.objectContaining({ workspaceId: 'ws-2' })
             );
         });
         expect(mockRequest).toHaveBeenCalledTimes(2);
@@ -182,7 +182,7 @@ describe('MeshApiEnableRow', () => {
         rerender(
             <Provider theme={defaultTheme} colorScheme="light">
                 <MeshApiEnableRow {...BASE} />
-            </Provider>,
+            </Provider>
         );
 
         expect(mockRequest).toHaveBeenCalledTimes(1);
@@ -203,7 +203,7 @@ describe('MeshApiEnableRow', () => {
         rerender(
             <Provider theme={defaultTheme} colorScheme="light">
                 <MeshApiEnableRow {...BASE} backendId="backend-2" frontendId="frontend-2" />
-            </Provider>,
+            </Provider>
         );
 
         await waitFor(() => {
@@ -213,7 +213,7 @@ describe('MeshApiEnableRow', () => {
                     workspaceId: 'ws-1',
                     backendId: 'backend-2',
                     frontendId: 'frontend-2',
-                }),
+                })
             );
         });
         expect(mockRequest).toHaveBeenCalledTimes(2);
@@ -229,7 +229,7 @@ describe('MeshApiEnableRow', () => {
         rerender(
             <Provider theme={defaultTheme} colorScheme="light">
                 <MeshApiEnableRow {...BASE} workspaceId="ws-2" />
-            </Provider>,
+            </Provider>
         );
 
         // The NEW workspace resolves first → Enabled.
@@ -288,7 +288,7 @@ describe('MeshApiEnableRow', () => {
 
             await waitFor(() => {
                 expect(
-                    screen.getByText('GraphQLServiceSDK · I/O Management API'),
+                    screen.getByText('GraphQLServiceSDK · I/O Management API')
                 ).toBeInTheDocument();
             });
         });
@@ -333,7 +333,7 @@ describe('MeshApiEnableRow', () => {
             expect(mockRequest).toHaveBeenCalledTimes(1);
             expect(mockRequest).toHaveBeenCalledWith(
                 'ensure-mesh-api-subscribed',
-                expect.objectContaining({ workspaceId: 'ws-1' }),
+                expect.objectContaining({ workspaceId: 'ws-1' })
             );
         });
 
@@ -347,13 +347,13 @@ describe('MeshApiEnableRow', () => {
             rerender(
                 <Provider theme={defaultTheme} colorScheme="light">
                     <MeshApiEnableRow {...BASE} workspaceId="ws-2" initialResult={initialResult} />
-                </Provider>,
+                </Provider>
             );
 
             await waitFor(() => {
                 expect(mockRequest).toHaveBeenCalledWith(
                     'ensure-mesh-api-subscribed',
-                    expect.objectContaining({ workspaceId: 'ws-2' }),
+                    expect.objectContaining({ workspaceId: 'ws-2' })
                 );
             });
             expect(mockRequest).toHaveBeenCalledTimes(1);

@@ -67,7 +67,9 @@ interface UseWizardStateReturn {
     /** Full component data with envVars from backend */
     componentsData: { success: boolean; type: string; data: ComponentsData } | null;
     /** Set components data */
-    setComponentsData: React.Dispatch<React.SetStateAction<{ success: boolean; type: string; data: ComponentsData } | null>>;
+    setComponentsData: React.Dispatch<
+        React.SetStateAction<{ success: boolean; type: string; data: ComponentsData } | null>
+    >;
 }
 
 /**
@@ -90,27 +92,35 @@ function buildEditModeEdsConfig(
         repoName: repo,
         daLiveOrg: edsConfig.daLiveOrg || '',
         daLiveSite: site,
-        githubAuth: hasGithub ? {
-            isAuthenticated: false,
-            isChecking: true,
-            user: { login: owner },
-        } : undefined,
-        daLiveAuth: hasDaLive ? {
-            isAuthenticated: false,
-            isChecking: true,
-        } : undefined,
+        githubAuth: hasGithub
+            ? {
+                  isAuthenticated: false,
+                  isChecking: true,
+                  user: { login: owner },
+              }
+            : undefined,
+        daLiveAuth: hasDaLive
+            ? {
+                  isAuthenticated: false,
+                  isChecking: true,
+              }
+            : undefined,
         repoUrl: edsConfig.repoUrl,
         repoMode: hasGithub ? 'existing' : undefined,
-        selectedRepo: hasGithub ? {
-            id: `${owner}/${repo}`,
-            name: repo,
-            fullName: `${owner}/${repo}`,
-            htmlUrl: `https://github.com/${owner}/${repo}`,
-        } : undefined,
-        selectedSite: site ? {
-            id: site,
-            name: site,
-        } : undefined,
+        selectedRepo: hasGithub
+            ? {
+                  id: `${owner}/${repo}`,
+                  name: repo,
+                  fullName: `${owner}/${repo}`,
+                  htmlUrl: `https://github.com/${owner}/${repo}`,
+              }
+            : undefined,
+        selectedSite: site
+            ? {
+                  id: site,
+                  name: site,
+              }
+            : undefined,
     };
 }
 
@@ -134,26 +144,34 @@ function buildImportModeEdsConfig(
         repoName: repo,
         daLiveOrg: edsConfig.daLiveOrg || '',
         daLiveSite: site,
-        githubAuth: hasGithub ? {
-            isAuthenticated: true,
-            user: { login: owner },
-        } : undefined,
-        daLiveAuth: hasDaLive ? {
-            isAuthenticated: true,
-            org: edsConfig.daLiveOrg,
-        } : undefined,
+        githubAuth: hasGithub
+            ? {
+                  isAuthenticated: true,
+                  user: { login: owner },
+              }
+            : undefined,
+        daLiveAuth: hasDaLive
+            ? {
+                  isAuthenticated: true,
+                  org: edsConfig.daLiveOrg,
+              }
+            : undefined,
         repoUrl: edsConfig.repoUrl,
         repoMode: hasGithub ? 'existing' : undefined,
-        selectedRepo: hasGithub ? {
-            id: `${owner}/${repo}`,
-            name: repo,
-            fullName: `${owner}/${repo}`,
-            htmlUrl: `https://github.com/${owner}/${repo}`,
-        } : undefined,
-        selectedSite: site ? {
-            id: site,
-            name: site,
-        } : undefined,
+        selectedRepo: hasGithub
+            ? {
+                  id: `${owner}/${repo}`,
+                  name: repo,
+                  fullName: `${owner}/${repo}`,
+                  htmlUrl: `https://github.com/${owner}/${repo}`,
+              }
+            : undefined,
+        selectedSite: site
+            ? {
+                  id: site,
+                  name: site,
+              }
+            : undefined,
     };
 }
 
@@ -161,13 +179,40 @@ function buildImportModeEdsConfig(
 function buildEditModeAdobeContext(adobe: ImportedSettings['adobe']) {
     return {
         org: adobe?.orgId ? { id: adobe.orgId, code: '', name: adobe.orgName || '' } : undefined,
-        project: adobe?.projectId ? { id: adobe.projectId, name: adobe.projectName || '', title: adobe.projectTitle } : undefined,
-        workspace: adobe?.workspaceId ? { id: adobe.workspaceId, name: adobe.workspaceName || '', title: adobe.workspaceTitle } : undefined,
+        project: adobe?.projectId
+            ? { id: adobe.projectId, name: adobe.projectName || '', title: adobe.projectTitle }
+            : undefined,
+        workspace: adobe?.workspaceId
+            ? {
+                  id: adobe.workspaceId,
+                  name: adobe.workspaceName || '',
+                  title: adobe.workspaceTitle,
+              }
+            : undefined,
+    };
+}
+
+/**
+ * Seed the wizard's App Builder integration state from a project's extracted
+ * settings so integration rows survive an edit rebuild:
+ * - `selections.appBuilder` → `selectedAppBuilderComponents` (the row ids)
+ * - `appBuilderComponentSources` → custom-URL sources (else custom rows vanish)
+ * - flat `additionalConsoleApis` → `selectedConsoleApis['__existing__']`
+ *   (reserved key: joins the serialization union, never shown per-row)
+ */
+function buildEditModeIntegrationState(editSettings: ImportedSettings): Partial<WizardState> {
+    const existingApis = editSettings.additionalConsoleApis;
+    return {
+        selectedAppBuilderComponents: editSettings.selections?.appBuilder,
+        appBuilderComponentSources: editSettings.appBuilderComponentSources,
+        selectedConsoleApis: existingApis?.length ? { __existing__: existingApis } : undefined,
     };
 }
 
 /** Build component selection from edit settings */
-function buildEditModeComponents(selections: ImportedSettings['selections']): ComponentSelection | undefined {
+function buildEditModeComponents(
+    selections: ImportedSettings['selections'],
+): ComponentSelection | undefined {
     if (!selections) return undefined;
     return {
         frontend: selections.frontend,
@@ -179,10 +224,7 @@ function buildEditModeComponents(selections: ImportedSettings['selections']): Co
 }
 
 /** Initialize wizard state for edit mode */
-function buildEditModeState(
-    firstStep: WizardStep,
-    editProject: EditProjectConfig,
-): WizardState {
+function buildEditModeState(firstStep: WizardStep, editProject: EditProjectConfig): WizardState {
     const editSettings = editProject.settings;
     log.info('Initializing wizard in edit mode', {
         projectName: editProject.projectName,
@@ -223,6 +265,7 @@ function buildEditModeState(
         selectedAddons: editSettings.selectedAddons,
         selectedBlockLibraries: editSettings.selectedBlockLibraries,
         customBlockLibraries: editSettings.customBlockLibraries,
+        ...buildEditModeIntegrationState(editSettings),
         edsConfig: editSettings.edsConfig
             ? buildEditModeEdsConfig(editSettings.edsConfig)
             : undefined,
@@ -302,7 +345,13 @@ export function useWizardState({
 }: UseWizardStateProps): UseWizardStateReturn {
     // Main wizard state (declared before WIZARD_STEPS so we can use selectedStack)
     const [state, setState] = useState<WizardState>(() =>
-        computeInitialState(wizardSteps, editProject, importedSettings, componentDefaults, existingProjectNames || []),
+        computeInitialState(
+            wizardSteps,
+            editProject,
+            importedSettings,
+            componentDefaults,
+            existingProjectNames || [],
+        ),
     );
 
     // Filter steps based on enabled flag AND stack conditions
@@ -314,13 +363,13 @@ export function useWizardState({
 
         // Step 2: Look up the selected Stack object from the stacks array
         const selectedStack = state.selectedStack
-            ? stacks?.find(s => s.id === state.selectedStack)
+            ? stacks?.find((s) => s.id === state.selectedStack)
             : undefined;
 
         // Step 3: Convert to format expected by filterStepsForStack
-        const stepsWithConditions: WizardStepWithCondition[] = enabledSteps.map(step => {
+        const stepsWithConditions: WizardStepWithCondition[] = enabledSteps.map((step) => {
             // Find the original step config to get the condition
-            const originalStep = wizardSteps?.find(ws => ws.id === step.id);
+            const originalStep = wizardSteps?.find((ws) => ws.id === step.id);
             return {
                 id: step.id,
                 name: step.name,
@@ -337,17 +386,12 @@ export function useWizardState({
             isEditMode: !!editProject,
         });
 
-        return filteredSteps.map(step => ({
+        return filteredSteps.map((step) => ({
             id: step.id as WizardStep,
             name: step.name,
             description: step.description,
         }));
-    }, [
-        wizardSteps,
-        stacks,
-        state.selectedStack,
-        editProject,
-    ]);
+    }, [wizardSteps, stacks, state.selectedStack, editProject]);
 
     // Step completion tracking
     // Neither import mode nor edit mode pre-marks steps as completed
@@ -374,7 +418,8 @@ export function useWizardState({
         // Only act if:
         // 1. We've seen an org before (not first-time setting)
         // 2. The org actually changed to a DIFFERENT value
-        const orgActuallyChanged = hasSeenOrgRef.current &&
+        const orgActuallyChanged =
+            hasSeenOrgRef.current &&
             prevOrgId !== undefined &&
             currentOrgId !== undefined &&
             prevOrgId !== currentOrgId;
@@ -387,13 +432,15 @@ export function useWizardState({
                 // (Mesh) tile, so resetting that step forces the user to re-traverse
                 // project/workspace selection (and any org-credentialed commerce area).
                 const orgDependentSteps: WizardStep[] = ['build-your-project'];
-                setCompletedSteps(prev =>
-                    prev.filter(stepId => !orgDependentSteps.includes(stepId)),
+                setCompletedSteps((prev) =>
+                    prev.filter((stepId) => !orgDependentSteps.includes(stepId)),
                 );
-                setConfirmedSteps(prev =>
-                    prev.filter(stepId => !orgDependentSteps.includes(stepId)),
+                setConfirmedSteps((prev) =>
+                    prev.filter((stepId) => !orgDependentSteps.includes(stepId)),
                 );
-                log.info(`Org changed (${prevOrgId} → ${currentOrgId}), updated org-dependent steps`);
+                log.info(
+                    `Org changed (${prevOrgId} → ${currentOrgId}), updated org-dependent steps`,
+                );
             }
         }
 
@@ -403,7 +450,13 @@ export function useWizardState({
         }
         // Update ref for next comparison
         prevOrgIdRef.current = currentOrgId;
-    }, [state.adobeOrg?.id, state.wizardMode, state.adobeProject?.id, state.adobeWorkspace?.id, WIZARD_STEPS]);
+    }, [
+        state.adobeOrg?.id,
+        state.wizardMode,
+        state.adobeProject?.id,
+        state.adobeWorkspace?.id,
+        WIZARD_STEPS,
+    ]);
 
     // Transition/animation state
     const [animationDirection, setAnimationDirection] = useState<'forward' | 'backward'>('forward');
@@ -424,7 +477,7 @@ export function useWizardState({
     // IMPORTANT: Must be memoized to prevent infinite loops in child components
     // that depend on updateState in their useEffect dependency arrays
     const updateState = useCallback((updates: Partial<WizardState>) => {
-        setState(prev => ({ ...prev, ...updates }));
+        setState((prev) => ({ ...prev, ...updates }));
     }, []);
 
     return {

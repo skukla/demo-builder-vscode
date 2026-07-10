@@ -17,7 +17,6 @@ import {
     isIntegrationsComplete,
     isMeshSelected,
     isStorefrontConfigured,
-    meshAvailable,
     meshComponentForStack,
 } from '@/features/project-creation/ui/steps/tileStatus';
 import type { DemoPackage } from '@/types/demoPackages';
@@ -36,13 +35,13 @@ describe('isCommerceConfigured', () => {
     it('is false when a stack is selected but the connect form is not valid', () => {
         expect(isCommerceConfigured(state({ selectedStack: 'eds-paas' }))).toBe(false);
         expect(
-            isCommerceConfigured(state({ selectedStack: 'eds-paas', commerceConnectValid: false })),
+            isCommerceConfigured(state({ selectedStack: 'eds-paas', commerceConnectValid: false }))
         ).toBe(false);
     });
 
     it('is true when a stack is selected AND the connect form is valid', () => {
         expect(
-            isCommerceConfigured(state({ selectedStack: 'eds-paas', commerceConnectValid: true })),
+            isCommerceConfigured(state({ selectedStack: 'eds-paas', commerceConnectValid: true }))
         ).toBe(true);
     });
 });
@@ -59,8 +58,8 @@ describe('isStorefrontConfigured', () => {
                 state({
                     edsConfig: { daLiveAuth: { isAuthenticated: true } },
                     storefrontRepoValid: true,
-                }),
-            ),
+                })
+            )
         ).toBe(false);
     });
 
@@ -70,8 +69,8 @@ describe('isStorefrontConfigured', () => {
                 state({
                     edsConfig: { githubAuth: { isAuthenticated: true } },
                     storefrontRepoValid: true,
-                }),
-            ),
+                })
+            )
         ).toBe(false);
     });
 
@@ -79,27 +78,39 @@ describe('isStorefrontConfigured', () => {
         expect(isStorefrontConfigured(state({ edsConfig: authed }))).toBe(false);
         expect(
             isStorefrontConfigured(
-                state({ edsConfig: authed, storefrontRepoValid: false, storefrontCodeSyncValid: true }),
-            ),
+                state({
+                    edsConfig: authed,
+                    storefrontRepoValid: false,
+                    storefrontCodeSyncValid: true,
+                })
+            )
         ).toBe(false);
     });
 
     it('is false when the repo is valid but code-sync is not', () => {
         expect(
-            isStorefrontConfigured(state({ edsConfig: authed, storefrontRepoValid: true })),
+            isStorefrontConfigured(state({ edsConfig: authed, storefrontRepoValid: true }))
         ).toBe(false);
         expect(
             isStorefrontConfigured(
-                state({ edsConfig: authed, storefrontRepoValid: true, storefrontCodeSyncValid: false }),
-            ),
+                state({
+                    edsConfig: authed,
+                    storefrontRepoValid: true,
+                    storefrontCodeSyncValid: false,
+                })
+            )
         ).toBe(false);
     });
 
     it('is true when GitHub + DA.live authed AND repo + code-sync are valid', () => {
         expect(
             isStorefrontConfigured(
-                state({ edsConfig: authed, storefrontRepoValid: true, storefrontCodeSyncValid: true }),
-            ),
+                state({
+                    edsConfig: authed,
+                    storefrontRepoValid: true,
+                    storefrontCodeSyncValid: true,
+                })
+            )
         ).toBe(true);
     });
 });
@@ -125,24 +136,22 @@ const nonMeshStack = {
 } as unknown as Stack;
 const stacks = [meshStack, nonMeshStack] as Stack[];
 
-describe('meshComponentForStack / meshAvailable', () => {
+describe('meshComponentForStack', () => {
     it('resolves the mesh component for an eds-storefront + PaaS stack', () => {
         const s = state({ selectedPackage: 'citisignal', selectedStack: 'eds-paas' });
         const mesh = meshComponentForStack(s, packages, stacks);
         expect(mesh?.id).toBe('commerce-paas-mesh');
         expect(mesh?.kind).toBe('mesh');
-        expect(meshAvailable(s, packages, stacks)).toBe(true);
     });
 
-    it('is unavailable on a stack whose backend has no mesh component', () => {
+    it('resolves nothing on a stack whose backend has no mesh component', () => {
         const s = state({ selectedPackage: 'citisignal', selectedStack: 'eds-none' });
         expect(meshComponentForStack(s, packages, stacks)).toBeUndefined();
-        expect(meshAvailable(s, packages, stacks)).toBe(false);
     });
 
-    it('is unavailable when no stack is committed', () => {
+    it('resolves nothing when no stack is committed', () => {
         const s = state({ selectedPackage: 'citisignal' });
-        expect(meshAvailable(s, packages, stacks)).toBe(false);
+        expect(meshComponentForStack(s, packages, stacks)).toBeUndefined();
     });
 });
 
@@ -155,8 +164,8 @@ describe('isMeshSelected', () => {
         expect(
             isMeshSelected(
                 state({ selectedAppBuilderComponents: ['commerce-paas-mesh'] }),
-                'commerce-paas-mesh',
-            ),
+                'commerce-paas-mesh'
+            )
         ).toBe(true);
     });
 
@@ -164,8 +173,8 @@ describe('isMeshSelected', () => {
         expect(
             isMeshSelected(
                 state({ selectedOptionalDependencies: ['eds-commerce-mesh'] }),
-                'commerce-paas-mesh',
-            ),
+                'commerce-paas-mesh'
+            )
         ).toBe(true);
     });
 });
@@ -252,20 +261,24 @@ describe('isAdobeSignedIn', () => {
     });
 
     it('is false when authenticated but no org is selected', () => {
-        expect(isAdobeSignedIn(state({ adobeAuth: { isAuthenticated: true, isChecking: false } }))).toBe(
-            false,
-        );
+        expect(
+            isAdobeSignedIn(state({ adobeAuth: { isAuthenticated: true, isChecking: false } }))
+        ).toBe(false);
     });
 
     it('is false when an org is selected but not authenticated', () => {
         expect(
-            isAdobeSignedIn(state({ adobeAuth: { isAuthenticated: false, isChecking: false }, adobeOrg: org })),
+            isAdobeSignedIn(
+                state({ adobeAuth: { isAuthenticated: false, isChecking: false }, adobeOrg: org })
+            )
         ).toBe(false);
     });
 
     it('is true when authenticated AND an org is selected', () => {
         expect(
-            isAdobeSignedIn(state({ adobeAuth: { isAuthenticated: true, isChecking: false }, adobeOrg: org })),
+            isAdobeSignedIn(
+                state({ adobeAuth: { isAuthenticated: true, isChecking: false }, adobeOrg: org })
+            )
         ).toBe(true);
     });
 });
@@ -274,19 +287,21 @@ describe('anyDeployableSelected', () => {
     it('is false when nothing is selected', () => {
         expect(anyDeployableSelected(state({}))).toBe(false);
         expect(
-            anyDeployableSelected(state({ selectedAppBuilderComponents: [], selectedOptionalDependencies: [] })),
+            anyDeployableSelected(
+                state({ selectedAppBuilderComponents: [], selectedOptionalDependencies: [] })
+            )
         ).toBe(false);
     });
 
     it('is true when a catalog component is selected', () => {
         expect(
-            anyDeployableSelected(state({ selectedAppBuilderComponents: ['commerce-paas-mesh'] })),
+            anyDeployableSelected(state({ selectedAppBuilderComponents: ['commerce-paas-mesh'] }))
         ).toBe(true);
     });
 
     it('is true when a mesh dual-flows via selectedOptionalDependencies', () => {
         expect(
-            anyDeployableSelected(state({ selectedOptionalDependencies: ['eds-commerce-mesh'] })),
+            anyDeployableSelected(state({ selectedOptionalDependencies: ['eds-commerce-mesh'] }))
         ).toBe(true);
     });
 });

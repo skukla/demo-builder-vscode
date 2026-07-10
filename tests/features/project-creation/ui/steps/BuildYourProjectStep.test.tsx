@@ -108,7 +108,7 @@ function setup(initial: Partial<WizardState> = {}) {
                 stacks={STACKS}
                 packages={PACKAGES}
             />
-        </Provider>,
+        </Provider>
     );
     return { ...utils, setCanProceed, updateState };
 }
@@ -245,7 +245,12 @@ describe('BuildYourProjectStep — Continue gate over non-commerce areas', () =>
         expect(setCanProceed).toHaveBeenLastCalledWith(true);
     });
 
-    it('is true when the active area is integrations with the Mesh left Off (optional)', () => {
+    // Integrations has NO sub-step driver (results-only area): its Continue gate is
+    // the area-status fallback — `activeArea.status === 'completed'`, which is
+    // isIntegrationsComplete (optional when nothing deployable is selected; blocked
+    // when a deployable is selected without a committed destination).
+
+    it('is true when the active area is integrations with nothing selected (optional)', () => {
         const { setCanProceed } = setup({
             selectedPackage: 'citisignal',
             selectedStack: 'eds-paas',
@@ -255,27 +260,25 @@ describe('BuildYourProjectStep — Continue gate over non-commerce areas', () =>
         expect(setCanProceed).toHaveBeenLastCalledWith(true);
     });
 
-    it('is false when integrations has the Mesh On but no project/workspace (blocks Finish)', () => {
+    it('is false with a deployable selected but no committed destination (blocks Continue)', () => {
         const { setCanProceed } = setup({
             selectedPackage: 'citisignal',
             selectedStack: 'eds-paas',
-            // A deployable is selected → the Workspace sub-step is the first-open one (its gate).
             selectedBackend: 'adobe-commerce-accs',
             activeBuildArea: 'integrations',
             selectedAppBuilderComponents: ['commerce-paas-mesh'],
+            // No adobeProject/adobeWorkspace → area status is not 'completed'.
         });
         expect(setCanProceed).toHaveBeenLastCalledWith(false);
     });
 
-    it('is true when integrations has the Mesh On, signed in, with BOTH project + workspace set', () => {
+    it('is true with a deployable selected, signed in, and the destination committed', () => {
         const { setCanProceed } = setup({
             selectedPackage: 'citisignal',
             selectedStack: 'eds-paas',
             selectedBackend: 'adobe-commerce-accs',
             activeBuildArea: 'integrations',
             selectedAppBuilderComponents: ['commerce-paas-mesh'],
-            // The gate now lives on the Workspace sub-step: it needs a signed-in Adobe
-            // session AND a project + workspace.
             adobeAuth: { isAuthenticated: true, isChecking: false } as WizardState['adobeAuth'],
             adobeOrg: { id: 'o', name: 'Acme' } as WizardState['adobeOrg'],
             adobeProject: { id: 'p1', name: 'proj' } as WizardState['adobeProject'],
@@ -286,7 +289,7 @@ describe('BuildYourProjectStep — Continue gate over non-commerce areas', () =>
 });
 
 describe('BuildYourProjectStep — body receives a NO-OP setCanProceed', () => {
-    it('does not hand the body the step\'s real setCanProceed', () => {
+    it("does not hand the body the step's real setCanProceed", () => {
         const { setCanProceed } = setup({ selectedStack: 'eds-paas' });
         expect(capturedSetCanProceed.commerce).toBeDefined();
         expect(capturedSetCanProceed.commerce).not.toBe(setCanProceed);

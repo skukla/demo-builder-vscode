@@ -5,7 +5,11 @@
  * Used for import/export functionality to share settings between projects.
  */
 
-import { SETTINGS_FILE_VERSION, type SettingsFile, type SettingsEdsConfig } from '@/features/projects-dashboard/types/settingsFile';
+import {
+    SETTINGS_FILE_VERSION,
+    type SettingsFile,
+    type SettingsEdsConfig,
+} from '@/features/projects-dashboard/types/settingsFile';
 import type { Project } from '@/types/base';
 
 /**
@@ -95,10 +99,7 @@ export function isNewerVersion(settings: SettingsFile): boolean {
  * @param includeSecrets - Whether to include secret values (default: true for local copy)
  * @returns SettingsFile with extracted settings
  */
-export function extractSettingsFromProject(
-    project: Project,
-    includeSecrets = true,
-): SettingsFile {
+export function extractSettingsFromProject(project: Project, includeSecrets = true): SettingsFile {
     // Extract EDS config from eds-storefront component metadata (if present)
     let edsConfig: SettingsEdsConfig | undefined;
     const edsStorefront = project.componentInstances?.['eds-storefront'];
@@ -149,6 +150,10 @@ export function extractSettingsFromProject(
         installedBlockLibraries: project.installedBlockLibraries,
         // EDS configuration (for Edge Delivery Services stacks)
         edsConfig,
+        // App Builder integration round-trip: custom-URL sources + Console API
+        // picks beyond requiredApis (both otherwise vanish in edit mode)
+        appBuilderComponentSources: project.appBuilderComponentSources,
+        additionalConsoleApis: project.additionalConsoleApis,
     };
 }
 

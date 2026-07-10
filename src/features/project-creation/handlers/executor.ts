@@ -28,6 +28,10 @@ import {
     type ComponentDefinitionEntry,
     type MeshApiConfig,
 } from '../services';
+import {
+    getAppBuilderComponentEntry,
+    buildCustomIntegrationEntry,
+} from '../services/appBuilderComponentCatalogLoader';
 import { ProgressTracker } from './shared';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { COMPONENT_IDS } from '@/core/constants';
@@ -176,6 +180,9 @@ interface ProjectCreationConfig {
     // Selected App Builder integration ids (Model B deploy) + custom GitHub sources
     selectedAppBuilderComponents?: string[];
     appBuilderComponentSources?: Record<string, { owner: string; repo: string; branch?: string }>;
+    // Free Console API picks (union across integrations) — persisted on the Project
+    // so Phase 3b's subscribe union covers them
+    additionalConsoleApis?: string[];
     // Selected optional addons (e.g., ['adobe-commerce-aco'])
     selectedAddons?: string[];
     // Selected block library IDs (e.g., ['isle5', 'demo-team-blocks'])
@@ -249,6 +256,82 @@ interface ProjectCreationConfig {
 /**
  * Actual project creation logic (extracted for testability)
  */
+/** A defined record only when it has at least one entry (else undefined, so the manifest omits it). */
+function nonEmptyRecord<T>(record: Record<string, T> | undefined): Record<string, T> | undefined {
+    return record && Object.keys(record).length > 0 ? record : undefined;
+}
+
+/** A defined array only when it has at least one item (else undefined, so the manifest omits it). */
+function nonEmptyArray<T>(items: T[] | undefined): T[] | undefined {
+    return items && items.length > 0 ? items : undefined;
+}
+
+/**
+ * Selected App Builder integration ids for `componentSelections.appBuilder`.
+ *
+ * Excludes mesh-kind ids (they dual-flow through `components.dependencies` and
+ * are installed by the mesh phase — the mirrored dependency id can DIFFER from
+ * the appBuilder id, e.g. commerce-paas-mesh → eds-commerce-mesh, so exclusion
+ * keys on the catalog kind, not id identity) plus anything literally riding
+ * dependencies, so reset/edit flows never see the same component under two
+ * categories. Falls back to the legacy `components.appBuilder` list when no
+ * Model B selection is present.
+ */
+function selectedAppBuilderIds(typedConfig: ProjectCreationConfig): string[] {
+    const dependencies = typedConfig.components?.dependencies ?? [];
+    const ids = typedConfig.selectedAppBuilderComponents?.length
+        ? typedConfig.selectedAppBuilderComponents
+        : (typedConfig.components?.appBuilder ?? []);
+    return ids.filter(
+        (id) => !dependencies.includes(id) && getAppBuilderComponentEntry(id)?.kind !== 'mesh',
+    );
+}
+
+/**
+ * Assemble the initial Project persisted through creation. Runs BEFORE Phase 3b
+ * (`executeAppBuilderIntegrationsPhase`), so everything Phase 3b reads off the
+ * Project — notably `additionalConsoleApis` for the subscribe union — must be
+ * written here. `appBuilderComponentSources` and `componentSelections.appBuilder`
+ * persist the integration selections so edit mode can round-trip them.
+ */
+export function buildInitialProject(
+    typedConfig: ProjectCreationConfig,
+    projectPath: string,
+    existingProject?: import('@/types').Project,
+): import('@/types').Project {
+    return {
+        name: typedConfig.projectName,
+        created: existingProject?.created || new Date(), // Preserve original creation date in edit mode
+        lastModified: new Date(),
+        path: projectPath,
+        status: 'created',
+        adobe: typedConfig.adobe,
+        componentInstances: {},
+        componentSelections: {
+            frontend: typedConfig.components?.frontend,
+            backend: typedConfig.components?.backend,
+            dependencies: typedConfig.components?.dependencies || [],
+            integrations: typedConfig.components?.integrations || [],
+            appBuilder: selectedAppBuilderIds(typedConfig),
+        },
+        componentConfigs: (typedConfig.componentConfigs || {}) as Record<
+            string,
+            Record<string, string | number | boolean | undefined>
+        >,
+        selectedPackage: typedConfig.selectedPackage,
+        selectedStack: typedConfig.selectedStack,
+        selectedAddons: typedConfig.selectedAddons,
+        selectedBlockLibraries: typedConfig.selectedBlockLibraries,
+        customBlockLibraries: typedConfig.customBlockLibraries,
+        appBuilderComponentSources: nonEmptyRecord(typedConfig.appBuilderComponentSources),
+        additionalConsoleApis: nonEmptyArray(typedConfig.additionalConsoleApis),
+        // Note: componentVersions, meshState, etc. are NOT preserved during edit
+        // - componentVersions: Regenerated from fresh component installation
+        // - meshState: Must be clean slate - old sourceHash won't match fresh files
+        // - frontendEnvState: Only valid if demo is running (cleared during edit)
+    };
+}
+
 export async function executeProjectCreation(
     context: HandlerContext,
     config: Record<string, unknown>,
@@ -315,35 +398,11 @@ export async function executeProjectCreation(
 
     progressTracker('Setting Up Project', 15, 'Initializing project configuration...');
 
-    const project: import('@/types').Project = {
-        name: typedConfig.projectName,
-        created: existingProject?.created || new Date(), // Preserve original creation date in edit mode
-        lastModified: new Date(),
-        path: projectPath,
-        status: 'created',
-        adobe: typedConfig.adobe,
-        componentInstances: {},
-        componentSelections: {
-            frontend: typedConfig.components?.frontend,
-            backend: typedConfig.components?.backend,
-            dependencies: typedConfig.components?.dependencies || [],
-            integrations: typedConfig.components?.integrations || [],
-            appBuilder: typedConfig.components?.appBuilder || [],
-        },
-        componentConfigs: (typedConfig.componentConfigs || {}) as Record<
-            string,
-            Record<string, string | number | boolean | undefined>
-        >,
-        selectedPackage: typedConfig.selectedPackage,
-        selectedStack: typedConfig.selectedStack,
-        selectedAddons: typedConfig.selectedAddons,
-        selectedBlockLibraries: typedConfig.selectedBlockLibraries,
-        customBlockLibraries: typedConfig.customBlockLibraries,
-        // Note: componentVersions, meshState, etc. are NOT preserved during edit
-        // - componentVersions: Regenerated from fresh component installation
-        // - meshState: Must be clean slate - old sourceHash won't match fresh files
-        // - frontendEnvState: Only valid if demo is running (cleared during edit)
-    };
+    const project: import('@/types').Project = buildInitialProject(
+        typedConfig,
+        projectPath,
+        existingProject,
+    );
 
     context.logger.debug(
         '[Project Creation] Deferring project state save until after installation',
@@ -545,9 +604,6 @@ export async function executeAppBuilderIntegrationsPhase(
     typedConfig: ProjectCreationConfig,
     progressTracker: ProgressTracker,
 ): Promise<void> {
-    const { getAppBuilderComponentEntry, buildCustomIntegrationEntry } = await import(
-        '@/features/project-creation/services/appBuilderComponentCatalogLoader'
-    );
     const sources = typedConfig.appBuilderComponentSources ?? {};
     const entries = (typedConfig.selectedAppBuilderComponents ?? [])
         .map(

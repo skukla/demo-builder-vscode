@@ -15,6 +15,7 @@ import {
     getAppBuilderComponentSource,
     getAppBuilderComponentEnvSchema,
     getAppBuilderComponentName,
+    buildCustomIntegrationEntry,
 } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 
 const CONFIG_DIR = path.join(__dirname, '../../../../src/features/project-creation/config');
@@ -115,6 +116,67 @@ describe('appBuilderComponentCatalogLoader', () => {
         });
     });
 
+    describe('buildCustomIntegrationEntry (shell-injection + traversal gate)', () => {
+        // owner/repo/branch are interpolated into a shell-executed `git clone`
+        // downstream (componentInstallation) and into componentDef.id (a path
+        // segment) — the entry builder is the extension-side chokepoint that
+        // must reject anything outside the safe charset, mirroring the
+        // dashboard's resolvePublicRepo gate.
+        it('builds a valid entry with the default branch', () => {
+            const entry = buildCustomIntegrationEntry({ owner: 'acme-co', repo: 'my.app_2' });
+
+            expect(entry.id).toBe('acme-co-my.app_2');
+            expect(entry.kind).toBe('integration');
+            expect(entry.source).toEqual({ owner: 'acme-co', repo: 'my.app_2', branch: 'main' });
+        });
+
+        it('accepts a branch with slashes, dots, and hyphens', () => {
+            const entry = buildCustomIntegrationEntry({
+                owner: 'acme',
+                repo: 'app',
+                branch: 'feature/x-1.0',
+            });
+
+            expect(entry.source.branch).toBe('feature/x-1.0');
+        });
+
+        it('rejects an owner carrying shell metacharacters', () => {
+            expect(() =>
+                buildCustomIntegrationEntry({ owner: 'o$(touch pwned)', repo: 'repo' })
+            ).toThrow(/invalid/i);
+        });
+
+        it('rejects a repo carrying shell metacharacters', () => {
+            expect(() =>
+                buildCustomIntegrationEntry({ owner: 'acme', repo: 'repo;rm -rf ~' })
+            ).toThrow(/invalid/i);
+            expect(() => buildCustomIntegrationEntry({ owner: 'acme', repo: 'repo`id`' })).toThrow(
+                /invalid/i
+            );
+        });
+
+        it('rejects dot-only names (path traversal via componentDef.id)', () => {
+            expect(() => buildCustomIntegrationEntry({ owner: '..', repo: 'repo' })).toThrow(
+                /invalid/i
+            );
+            expect(() => buildCustomIntegrationEntry({ owner: '.', repo: 'repo' })).toThrow(
+                /invalid/i
+            );
+            expect(() => buildCustomIntegrationEntry({ owner: 'acme', repo: '..' })).toThrow(
+                /invalid/i
+            );
+        });
+
+        it('rejects a branch carrying shell metacharacters or dot-dot', () => {
+            expect(() =>
+                buildCustomIntegrationEntry({ owner: 'acme', repo: 'app', branch: 'x$(id)' })
+            ).toThrow(/invalid/i);
+            expect(() =>
+                buildCustomIntegrationEntry({ owner: 'acme', repo: 'app', branch: 'a/../b' })
+            ).toThrow(/invalid/i);
+        });
+    });
+
     describe('seed catalog ↔ schema validity', () => {
         const catalog = JSON.parse(
             fs.readFileSync(path.join(CONFIG_DIR, 'app-builder-components.json'), 'utf-8')
@@ -157,6 +219,29 @@ describe('appBuilderComponentCatalogLoader', () => {
             expect(byId['headless-commerce-mesh'].source.repo).toBe('headless-commerce-mesh');
             expect(byId['app-builder-shell'].source.repo).toBe('app-builder-shell');
             expect(byId['app-builder-shell'].kind).toBe('integration');
+        });
+
+        it('documents the OPTIONAL suggestedApis field (wizard API-access stage suggestions)', () => {
+            const suggestedApis = schema.definitions.appBuilderComponent.properties.suggestedApis;
+            expect(suggestedApis).toBeDefined();
+            expect(suggestedApis.type).toBe('array');
+            expect(suggestedApis.items).toEqual({ type: 'string' });
+            // Optional — additive on entries, never required.
+            expect(schema.definitions.appBuilderComponent.required).not.toContain('suggestedApis');
+        });
+
+        it('any declared suggestedApis is a string array; the shell ships WITHOUT suggestions', () => {
+            for (const entry of catalog.appBuilderComponents) {
+                if (entry.suggestedApis !== undefined) {
+                    expect(Array.isArray(entry.suggestedApis)).toBe(true);
+                    for (const code of entry.suggestedApis) {
+                        expect(typeof code).toBe('string');
+                    }
+                }
+            }
+            // Mechanism only for now: the shell entry declares no suggestions.
+            // (Typed accessor pins the field on AppBuilderComponentCatalogEntry.)
+            expect(getAppBuilderComponentEntry('app-builder-shell')?.suggestedApis).toBeUndefined();
         });
 
         it('the shell integration is unrestricted: no axis filters, no APIs, no env schema', () => {

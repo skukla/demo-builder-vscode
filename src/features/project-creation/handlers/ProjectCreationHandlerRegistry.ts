@@ -5,8 +5,11 @@
  * Used by createProject command for message dispatch.
  */
 
-
+import { handleListOrgConsoleApis } from './consoleApiHandlers';
 import * as creation from './';
+// Direct module import (NOT the './' barrel): the barrel re-exports this
+// registry first, so a barrel-first load would evaluate this map before the
+// barrel's consoleApiHandlers re-export exists — capturing `undefined`.
 import * as authentication from '@/features/authentication';
 import * as components from '@/features/components/handlers/componentHandlers';
 import * as eds from '@/features/eds/handlers';
@@ -23,16 +26,16 @@ import { defineHandlers } from '@/types/handlers';
  */
 export const projectCreationHandlers = defineHandlers({
     // Lifecycle handlers
-    'ready': lifecycle.handleReady,
-    'cancel': lifecycle.handleCancel,
-    'openProject': lifecycle.handleOpenProject,
-    'browseFiles': lifecycle.handleBrowseFiles,
-    'log': lifecycle.handleLog,
+    ready: lifecycle.handleReady,
+    cancel: lifecycle.handleCancel,
+    openProject: lifecycle.handleOpenProject,
+    browseFiles: lifecycle.handleBrowseFiles,
+    log: lifecycle.handleLog,
     'cancel-project-creation': lifecycle.handleCancelProjectCreation,
     'cancel-mesh-creation': lifecycle.handleCancelMeshCreation,
     'cancel-auth-polling': lifecycle.handleCancelAuthPolling,
     'open-adobe-console': lifecycle.handleOpenAdobeConsole,
-    'openExternal': lifecycle.handleOpenExternal,
+    openExternal: lifecycle.handleOpenExternal,
 
     // Prerequisite handlers
     'check-prerequisites': prerequisites.handleCheckPrerequisites,
@@ -42,16 +45,16 @@ export const projectCreationHandlers = defineHandlers({
     // Component handlers
     'update-component-selection': components.handleUpdateComponentSelection,
     'update-components-data': components.handleUpdateComponentsData,
-    'loadComponents': components.handleLoadComponents,
+    loadComponents: components.handleLoadComponents,
     'get-components-data': components.handleGetComponentsData,
-    'checkCompatibility': components.handleCheckCompatibility,
-    'loadDependencies': components.handleLoadDependencies,
-    'loadPreset': components.handleLoadPreset,
-    'validateSelection': components.handleValidateSelection,
+    checkCompatibility: components.handleCheckCompatibility,
+    loadDependencies: components.handleLoadDependencies,
+    loadPreset: components.handleLoadPreset,
+    validateSelection: components.handleValidateSelection,
 
     // Authentication handlers
     'check-auth': authentication.handleCheckAuth,
-    'authenticate': authentication.handleAuthenticate,
+    authenticate: authentication.handleAuthenticate,
 
     // Re-detect Adobe context after an external auth/org change
     're-detect-context': authentication.handleReDetectContext,
@@ -107,6 +110,9 @@ export const projectCreationHandlers = defineHandlers({
     'storefront-setup-resume': eds.handleResumeStorefrontSetup,
 
     // Project creation handlers
-    'validate': creation.handleValidate,
+    validate: creation.handleValidate,
     'create-project': creation.handleCreateProject,
+
+    // Console API handlers (org entitlements for the Add Integration modal)
+    'list-org-console-apis': handleListOrgConsoleApis,
 });

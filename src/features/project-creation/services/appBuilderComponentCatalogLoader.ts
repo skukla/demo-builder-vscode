@@ -40,7 +40,7 @@ export function getAvailableAppBuilderComponents(
     frontendId: string,
 ): AppBuilderComponentCatalogEntry[] {
     return config.appBuilderComponents.filter(
-        entry =>
+        (entry) =>
             fitsAxis(entry.compatibleBackends, backendId) &&
             fitsAxis(entry.compatibleFrontends, frontendId),
     );
@@ -52,8 +52,33 @@ export function getAvailableAppBuilderComponents(
  * @param id - The appBuilderComponent id (e.g. "commerce-paas-mesh")
  * @returns The entry, or undefined if unknown
  */
-export function getAppBuilderComponentEntry(id: string): AppBuilderComponentCatalogEntry | undefined {
-    return config.appBuilderComponents.find(entry => entry.id === id);
+export function getAppBuilderComponentEntry(
+    id: string,
+): AppBuilderComponentCatalogEntry | undefined {
+    return config.appBuilderComponents.find((entry) => entry.id === id);
+}
+
+/**
+ * GitHub owner/repo charset — mirrors the dashboard's resolvePublicRepo gate
+ * (appComponentManager). owner/repo are interpolated into a shell-executed
+ * `git clone` and into componentDef.id (a path segment), so shell
+ * metacharacters and dot-only names are rejected fail-fast. Sources can arrive
+ * from imported settings files, not just the UI, so the gate lives here.
+ */
+const GITHUB_NAME = /^[A-Za-z0-9._-]+$/;
+/** Safe git ref charset (branch names may contain slashes; `..` is rejected separately). */
+const GIT_REF = /^[A-Za-z0-9._/-]+$/;
+
+function assertGitHubName(value: string, label: string): void {
+    if (!GITHUB_NAME.test(value) || value === '.' || value === '..') {
+        throw new Error(`Invalid GitHub ${label}: "${value}"`);
+    }
+}
+
+function assertGitRef(value: string): void {
+    if (!GIT_REF.test(value) || value.includes('..')) {
+        throw new Error(`Invalid git branch: "${value}"`);
+    }
 }
 
 /**
@@ -65,10 +90,19 @@ export function getAppBuilderComponentEntry(id: string): AppBuilderComponentCata
  *
  * @param source - The GitHub source ({owner, repo, branch?})
  * @returns A synthesized `kind: 'integration'` catalog entry
+ * @throws When owner/repo/branch fall outside the safe charsets (shell-injection
+ *         and path-traversal gate — see GITHUB_NAME/GIT_REF above)
  */
-export function buildCustomIntegrationEntry(
-    source: { owner: string; repo: string; branch?: string },
-): AppBuilderComponentCatalogEntry {
+export function buildCustomIntegrationEntry(source: {
+    owner: string;
+    repo: string;
+    branch?: string;
+}): AppBuilderComponentCatalogEntry {
+    assertGitHubName(source.owner, 'owner');
+    assertGitHubName(source.repo, 'repo');
+    if (source.branch !== undefined) {
+        assertGitRef(source.branch);
+    }
     return {
         id: `${source.owner}-${source.repo}`,
         name: source.repo,

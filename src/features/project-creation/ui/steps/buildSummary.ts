@@ -5,18 +5,17 @@
  * {@link BuildYourProjectSummary}) fed by these pure functions. Each area
  * contributes a {@link SummaryGroup}; a shared {@link architectureLabel} derives
  * the read-only stack line. Aggregation includes only the VISIBLE areas and drops
- * groups with no rows (e.g. Integrations until its slice fills it in).
+ * groups with no rows (e.g. Integrations with nothing configured yet).
  *
  * @module features/project-creation/ui/steps/buildSummary
  */
 
-import type {
-    SummaryRow,
-    SummaryGroup,
-} from '../components/BuildYourProjectSummary';
+import { getAvailableAppBuilderComponents } from '../../services/appBuilderComponentCatalogLoader';
+import type { SummaryRow, SummaryGroup } from '../components/BuildYourProjectSummary';
+import { resolveIntegrationRows } from '../components/integration-flow';
 import { commerceSectionStates, ROW_LABELS } from './commerceSections';
 import { STOREFRONT_SECTION_TITLES } from './storefrontSections';
-import { isAdobeSignedIn, isMeshSelected, meshComponentForStack } from './tileStatus';
+import { isAdobeSignedIn, meshComponentForStack } from './tileStatus';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import type { WizardState } from '@/types/webview';
@@ -30,7 +29,7 @@ const ACCS_BACKEND = 'adobe-commerce-accs';
 
 /** Resolve the selected Stack object from the catalog (the persisted value is an id). */
 function selectedStackObject(state: WizardState, stacks: Stack[]): Stack | undefined {
-    return state.selectedStack ? stacks.find(s => s.id === state.selectedStack) : undefined;
+    return state.selectedStack ? stacks.find((s) => s.id === state.selectedStack) : undefined;
 }
 
 /**
@@ -53,7 +52,7 @@ export function commerceSummaryGroup(state: WizardState): SummaryGroup {
     const signedIn = isAdobeSignedIn(state);
     const sectionStates = commerceSectionStates(state, { isAccs, signedIn });
     const committed = new Set(state.committedCommerceSteps ?? []);
-    const rows: SummaryRow[] = sectionStates.map(s => {
+    const rows: SummaryRow[] = sectionStates.map((s) => {
         const done = s.status === 'done' && committed.has(s.id);
         return { label: ROW_LABELS[s.id], value: done ? s.value : undefined, done };
     });
@@ -106,10 +105,11 @@ export function storefrontSummaryGroup(state: WizardState): SummaryGroup {
 }
 
 /**
- * The Integrations group. Contributes an "API Mesh" row only when a mesh component
- * applies to the current package + stack ({@link meshComponentForStack}); the row
- * shows ✓ + "On" when the mesh is selected, else "Off". On a non-mesh architecture
- * it returns NO rows so aggregation drops the empty Integrations group entirely.
+ * The Integrations group: one row per CONFIGURED integration, mirroring the
+ * center column ({@link resolveIntegrationRows} — mesh via the both-key check,
+ * then catalog, then custom). A row reads "Ready" ✓ once the shared Adobe
+ * project + workspace destination is committed, "Needs setup" until then.
+ * With nothing configured the group has no rows, so aggregation drops it.
  */
 export function integrationsSummaryGroup(
     state: WizardState,
@@ -117,15 +117,16 @@ export function integrationsSummaryGroup(
     stacks: Stack[],
 ): SummaryGroup {
     const meshComponent = meshComponentForStack(state, packages, stacks);
-    if (!meshComponent) return { heading: 'Integrations', rows: [] };
-    const selected = isMeshSelected(state, meshComponent.id);
-    const rows: SummaryRow[] = [
-        {
-            label: 'API Mesh',
-            value: selected ? 'On' : undefined,
-            done: selected,
-        },
-    ];
+    const stack = selectedStackObject(state, stacks);
+    const catalog = getAvailableAppBuilderComponents(
+        stack?.backend ?? '',
+        stack?.frontend ?? '',
+    ).filter((entry) => entry.kind === 'integration');
+    const rows: SummaryRow[] = resolveIntegrationRows(state, meshComponent, catalog).map((row) => ({
+        label: row.name,
+        value: row.needsSetup ? 'Needs setup' : 'Ready',
+        done: !row.needsSetup,
+    }));
     return { heading: 'Integrations', rows };
 }
 
@@ -164,6 +165,6 @@ export function buildSummaryGroups(
     stacks: Stack[] = EMPTY_STACKS,
 ): SummaryGroup[] {
     return visibleAreaIds
-        .map(id => groupForArea(id, state, packages, stacks))
+        .map((id) => groupForArea(id, state, packages, stacks))
         .filter((g): g is SummaryGroup => g !== null && g.rows.length > 0);
 }

@@ -15,7 +15,8 @@
  * for Commerce that is the ACTIVE SUB-STEP's done-condition (Backend chosen / signed
  * in / connect valid / store view chosen / catalog always — via
  * {@link isCommerceStepComplete}); other areas gate on area completion (storefront
- * required when visible; integrations optional always passes). Because navigation is
+ * required when visible; integrations optional unless a selected deployable lacks
+ * its committed destination). Because navigation is
  * linear, per-step gating enforces the all-required rule overall. Each body still persists its own validity
  * verdict to wizard state (`commerceConnectValid` / `storefrontRepoValid` /
  * edsConfig auth), which feeds {@link buildYourProjectAreas}'s status — so the gate
@@ -95,25 +96,16 @@ export function BuildYourProjectStep({
     // Continue gate over the CURRENT step. Areas — and, within a sub-stepped area,
     // SUB-STEPS — are walked one at a time via the wizard's Continue/Back, so gating
     // the active step enforces the all-required rule linearly. A sub-stepped area
-    // (Commerce / Storefront / Integrations) gates on its ACTIVE SUB-STEP's
-    // done-condition via the shared driver (Integrations' "Deployment target" sub-step
-    // blocks until project + workspace are chosen; its "Deployables" sub-step always
-    // passes); any other single-view area gates on area completion. Primitive boolean
-    // only (re-render-loop guard).
+    // (Commerce / Storefront) gates on its ACTIVE SUB-STEP's done-condition via the
+    // shared driver; a NULL-driver area (Integrations — results-only) gates on area
+    // completion (`status === 'completed'`, i.e. isIntegrationsComplete: optional
+    // when nothing deployable is selected, blocked when a deployable lacks its
+    // committed destination). Primitive boolean only (re-render-loop guard).
     const activeAreaId = activeArea?.id;
     const driver = areaSubSteps(activeAreaId);
-    let canLeaveArea: boolean;
-    if (driver) {
-        // An inner disclosure stage awaiting commit (e.g. Adobe I/O's pending
-        // project pick) also enables Continue — pressing it advances WITHIN the
-        // sub-step (advanceWithin) rather than leaving the area, so this does
-        // not weaken the leave gate. isComplete stays the rail-✓/final gate.
-        canLeaveArea =
-            driver.isComplete(state, driver.active(state)) ||
-            Boolean(driver.advanceWithin?.(state));
-    } else {
-        canLeaveArea = activeArea?.status === 'completed';
-    }
+    const canLeaveArea = driver
+        ? driver.isComplete(state, driver.active(state))
+        : activeArea?.status === 'completed';
     useCanProceedAll([canLeaveArea], setCanProceed);
 
     // Body props shared by every area. The active body gets a NO-OP setCanProceed

@@ -1,9 +1,9 @@
 /**
- * MeshApiEnableRow — the self-contained "API access" provisioning row for the mesh card.
+ * MeshApiEnableRow — the self-contained "API access" provisioning row for the mesh row.
  *
- * Rendered inside the {@link MeshIntegrationCard} destination (after a workspace
+ * Embedded in the mesh {@link IntegrationResultRow} (once the shared destination
  * commits), it auto-runs the shipped, idempotent `ensure-mesh-api-subscribed`
- * request so the card's ✓ genuinely means "provisioned" and a subscribe/permission
+ * request so the row's ✓ genuinely means "provisioned" and a subscribe/permission
  * failure surfaces here — at selection time — instead of deep in project creation.
  *
  * Behavior:
@@ -20,9 +20,9 @@
  *     adopted once instead of auto-running — no duplicate request; Retry and any
  *     later run-key change issue real requests.
  *
- * Visual parity: mirrors the `.int-chosen` markup used by the card's ChosenRow.
+ * Visual parity: shares the `.int-chosen` row markup used across the module.
  *
- * @module features/project-creation/ui/components/MeshApiEnableRow
+ * @module features/project-creation/ui/components/integration-flow/MeshApiEnableRow
  */
 
 import { ActionButton, ProgressCircle } from '@adobe/react-spectrum';
@@ -67,7 +67,7 @@ type EnableStatus = 'running' | 'enabled' | 'failed';
 function statusText(status: EnableStatus, apis?: SubscribedApi[]): string {
     if (status === 'enabled') {
         if (apis && apis.length > 0) {
-            return apis.map(api => api.name ?? api.code).join(' · ');
+            return apis.map((api) => api.name ?? api.code).join(' · ');
         }
         return 'Enabled';
     }
@@ -78,7 +78,13 @@ function statusText(status: EnableStatus, apis?: SubscribedApi[]): string {
 }
 
 /** The leading status glyph/spinner (mirrors the ChosenRow check). */
-function StatusIcon({ status, label }: { status: EnableStatus; label: string }): React.ReactElement {
+function StatusIcon({
+    status,
+    label,
+}: {
+    status: EnableStatus;
+    label: string;
+}): React.ReactElement {
     if (status === 'enabled') {
         return (
             <span className="int-chosen-check" aria-hidden="true">
@@ -150,7 +156,7 @@ export function MeshApiEnableRow({
                 backendId,
                 frontendId,
             })
-            .then(result => {
+            .then((result) => {
                 if (token.cancelled) return;
                 applyResult(result);
             })

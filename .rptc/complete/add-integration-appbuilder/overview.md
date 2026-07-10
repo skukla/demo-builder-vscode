@@ -1,5 +1,10 @@
 # Plan: "Add an Integration" modal catalog + App Builder app as a wizard integration
 
+> **SHIPPED, then SUPERSEDED (2026-07-10)** by `.rptc/plans/integrations-flow-redesign/`:
+> the components this plan built (`AddIntegrationModal`, `AppBuilderIntegrationCard`,
+> `DeployablesBody`/`integrationsStepBodies`) were replaced by the `integration-flow/`
+> module (AddIntegrationFlowModal journey + result rows). Kept as history.
+
 Worktree: `demo-builder-vscode.worktrees/feature/add-integration-appbuilder`
 (branch `feature/add-integration-appbuilder` off `feature/mesh-card-creation-ux` @ b1a5211d).
 
