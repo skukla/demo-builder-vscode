@@ -31,12 +31,20 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
 
 jest.mock('@adobe/react-spectrum', () => ({
     View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-    Flex: ({ children, ...props }: any) => <div style={{ display: 'flex' }} {...props}>{children}</div>,
+    Flex: ({ children, ...props }: any) => (
+        <div style={{ display: 'flex' }} {...props}>
+            {children}
+        </div>
+    ),
     Button: ({ children, onPress, isDisabled, variant, ...props }: any) => (
-        <button onClick={onPress} disabled={isDisabled} data-variant={variant} {...props}>{children}</button>
+        <button onClick={onPress} disabled={isDisabled} data-variant={variant} {...props}>
+            {children}
+        </button>
     ),
     Link: ({ children, onPress, href, ...props }: any) => (
-        <a onClick={onPress} href={href} {...props}>{children}</a>
+        <a onClick={onPress} href={href} {...props}>
+            {children}
+        </a>
     ),
     ProgressCircle: ({ ...props }: any) => <div data-testid="progress-circle" {...props} />,
     Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
@@ -48,7 +56,9 @@ jest.mock('@/core/ui/components/feedback', () => ({
         <div data-testid={`status-card-${label}`} data-color={color}>
             {label}: {status}
             {action && (
-                <a data-testid={action.testId} onClick={action.onPress}>{action.label}</a>
+                <a data-testid={action.testId} onClick={action.onPress}>
+                    {action.label}
+                </a>
             )}
         </div>
     ),
@@ -59,7 +69,9 @@ function getClient() {
     return webviewClient as { postMessage: jest.Mock };
 }
 
-function row(overrides: Partial<IdentifiedAppBuilderComponent> = {}): IdentifiedAppBuilderComponent {
+function row(
+    overrides: Partial<IdentifiedAppBuilderComponent> = {}
+): IdentifiedAppBuilderComponent {
     return {
         id: 'erp-sync',
         kind: 'integration',
@@ -76,24 +88,37 @@ beforeEach(() => {
 describe('AppBuilderComponentRow', () => {
     describe('not-deployed state', () => {
         it('renders a Deploy CTA', () => {
-            render(<AppBuilderComponentRow appBuilderComponent={row({ status: 'not-deployed' })} />);
+            render(
+                <AppBuilderComponentRow appBuilderComponent={row({ status: 'not-deployed' })} />
+            );
 
             expect(screen.getByRole('button', { name: /deploy/i })).toBeInTheDocument();
         });
 
         it('posts deployAppBuilderComponent with the row id when Deploy is pressed', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<AppBuilderComponentRow appBuilderComponent={row({ id: 'erp-sync', status: 'not-deployed' })} />);
+            render(
+                <AppBuilderComponentRow
+                    appBuilderComponent={row({ id: 'erp-sync', status: 'not-deployed' })}
+                />
+            );
 
             await user.click(screen.getByRole('button', { name: /deploy/i }));
 
-            expect(getClient().postMessage).toHaveBeenCalledWith('deployAppBuilderComponent', { id: 'erp-sync' });
+            expect(getClient().postMessage).toHaveBeenCalledWith('deployAppBuilderComponent', {
+                id: 'erp-sync',
+            });
         });
     });
 
     describe('deploying state', () => {
         it('shows a spinner and the live message', () => {
-            render(<AppBuilderComponentRow appBuilderComponent={row({ status: 'deploying' })} message="Cloning repo" />);
+            render(
+                <AppBuilderComponentRow
+                    appBuilderComponent={row({ status: 'deploying' })}
+                    message="Cloning repo"
+                />
+            );
 
             expect(screen.getByTestId('progress-circle')).toBeInTheDocument();
             expect(screen.getByText(/cloning repo/i)).toBeInTheDocument();
@@ -111,7 +136,10 @@ describe('AppBuilderComponentRow', () => {
             id: 'erp-sync',
             status: 'deployed',
             url: 'https://erp.example.com',
-            deployedUrls: { 'web/app': 'https://erp.example.com', 'runtime/api': 'https://rt.example.com/api' },
+            deployedUrls: {
+                'web/app': 'https://erp.example.com',
+                'runtime/api': 'https://rt.example.com/api',
+            },
         });
 
         it('renders the deployedUrls as quiet links', () => {
@@ -135,7 +163,9 @@ describe('AppBuilderComponentRow', () => {
 
             await user.click(screen.getByRole('button', { name: /redeploy/i }));
 
-            expect(getClient().postMessage).toHaveBeenCalledWith('redeployAppBuilderComponent', { id: 'erp-sync' });
+            expect(getClient().postMessage).toHaveBeenCalledWith('redeployAppBuilderComponent', {
+                id: 'erp-sync',
+            });
         });
 
         it('bubbles Remove up via onRemove (so the list can confirm) and does NOT post directly', async () => {
@@ -147,7 +177,10 @@ describe('AppBuilderComponentRow', () => {
 
             expect(onRemove).toHaveBeenCalledTimes(1);
             // The row never tears down on its own — the confirm guard lives in the list.
-            expect(getClient().postMessage).not.toHaveBeenCalledWith('removeAppBuilderComponent', expect.anything());
+            expect(getClient().postMessage).not.toHaveBeenCalledWith(
+                'removeAppBuilderComponent',
+                expect.anything()
+            );
         });
 
         it('exposes a per-row Verify action that posts verifyAppBuilderComponent with the id', async () => {
@@ -157,13 +190,98 @@ describe('AppBuilderComponentRow', () => {
             const verify = screen.getByText(/verify/i);
             await user.click(verify);
 
-            expect(getClient().postMessage).toHaveBeenCalledWith('verifyAppBuilderComponent', { id: 'erp-sync' });
+            expect(getClient().postMessage).toHaveBeenCalledWith('verifyAppBuilderComponent', {
+                id: 'erp-sync',
+            });
+        });
+    });
+
+    describe('Manage APIs action (Step 11 — dashboard API-access parity)', () => {
+        const deployed = row({
+            id: 'erp-sync',
+            status: 'deployed',
+            url: 'https://erp.example.com',
+        });
+
+        it('renders a Manage APIs action when deployed', () => {
+            render(
+                <AppBuilderComponentRow
+                    appBuilderComponent={deployed}
+                    onRemove={jest.fn()}
+                    onManageApis={jest.fn()}
+                />
+            );
+
+            expect(screen.getByRole('button', { name: /manage apis/i })).toBeInTheDocument();
+        });
+
+        it('renders a Manage APIs action when stale (still deployed, drift-flagged)', () => {
+            render(
+                <AppBuilderComponentRow
+                    appBuilderComponent={row({ status: 'stale', url: 'https://erp.example.com' })}
+                    onRemove={jest.fn()}
+                    onManageApis={jest.fn()}
+                />
+            );
+
+            expect(screen.getByRole('button', { name: /manage apis/i })).toBeInTheDocument();
+        });
+
+        it('offers no Manage APIs action while not-deployed, deploying, or errored', () => {
+            const { rerender } = render(
+                <AppBuilderComponentRow
+                    appBuilderComponent={row({ status: 'not-deployed' })}
+                    onRemove={jest.fn()}
+                    onManageApis={jest.fn()}
+                />
+            );
+            expect(screen.queryByRole('button', { name: /manage apis/i })).not.toBeInTheDocument();
+
+            rerender(
+                <AppBuilderComponentRow
+                    appBuilderComponent={row({ status: 'deploying' })}
+                    onRemove={jest.fn()}
+                    onManageApis={jest.fn()}
+                />
+            );
+            expect(screen.queryByRole('button', { name: /manage apis/i })).not.toBeInTheDocument();
+
+            rerender(
+                <AppBuilderComponentRow
+                    appBuilderComponent={row({ status: 'error' })}
+                    onRemove={jest.fn()}
+                    onManageApis={jest.fn()}
+                />
+            );
+            expect(screen.queryByRole('button', { name: /manage apis/i })).not.toBeInTheDocument();
+        });
+
+        it('bubbles Manage APIs up via onManageApis (the list hosts the shared modal) without posting', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            const onManageApis = jest.fn();
+            render(
+                <AppBuilderComponentRow
+                    appBuilderComponent={deployed}
+                    onRemove={jest.fn()}
+                    onManageApis={onManageApis}
+                />
+            );
+
+            await user.click(screen.getByRole('button', { name: /manage apis/i }));
+
+            expect(onManageApis).toHaveBeenCalledTimes(1);
+            expect(getClient().postMessage).not.toHaveBeenCalled();
         });
     });
 
     describe('error state', () => {
         it('shows the message and a Retry button', () => {
-            render(<AppBuilderComponentRow appBuilderComponent={row({ status: 'error' })} message="deploy boom" />);
+            render(
+                <AppBuilderComponentRow
+                    appBuilderComponent={row({ status: 'error' })}
+                    message="deploy boom"
+                />
+            );
 
             expect(screen.getByText(/deploy boom/i)).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
@@ -171,11 +289,18 @@ describe('AppBuilderComponentRow', () => {
 
         it('posts deployAppBuilderComponent with the id when Retry is pressed', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<AppBuilderComponentRow appBuilderComponent={row({ id: 'erp-sync', status: 'error' })} message="boom" />);
+            render(
+                <AppBuilderComponentRow
+                    appBuilderComponent={row({ id: 'erp-sync', status: 'error' })}
+                    message="boom"
+                />
+            );
 
             await user.click(screen.getByRole('button', { name: /retry/i }));
 
-            expect(getClient().postMessage).toHaveBeenCalledWith('deployAppBuilderComponent', { id: 'erp-sync' });
+            expect(getClient().postMessage).toHaveBeenCalledWith('deployAppBuilderComponent', {
+                id: 'erp-sync',
+            });
         });
     });
 });

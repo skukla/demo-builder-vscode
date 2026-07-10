@@ -8,7 +8,8 @@
  *   - not-deployed : Deploy   → deployAppBuilderComponent   {id}
  *   - deploying    : spinner + message
  *   - deployed     : Redeploy → redeployAppBuilderComponent {id}; Remove → removeAppBuilderComponent {id};
- *                    Verify (StatusCard.action, on-demand) → verifyAppBuilderComponent {id}
+ *                    Verify (StatusCard.action, on-demand) → verifyAppBuilderComponent {id};
+ *                    Manage APIs → bubbles up via onManageApis (the list hosts the shared modal)
  *   - error        : Retry    → deployAppBuilderComponent   {id}
  *
  * @module features/dashboard/ui/components/AppBuilderComponentRow
@@ -32,6 +33,12 @@ export interface AppBuilderComponentRowProps {
      * list always supplies it.
      */
     onRemove: () => void;
+    /**
+     * Manage-APIs intent handler (deployed/stale only). Like Remove, the row
+     * never opens UI on its own — the list hosts the ONE shared
+     * {@link ManageApisModal}, so the click bubbles up with this row's id.
+     */
+    onManageApis: () => void;
 }
 
 /** A persisted `stale` status renders as deployed (still up; just drift-flagged). */
@@ -45,7 +52,12 @@ function isDeployedView(status: string): boolean {
  * `status` widens to a string here so the live `appBuilderComponentStatusUpdate`
  * 'deploying' transition (not part of the persisted union) renders too.
  */
-export function AppBuilderComponentRow({ appBuilderComponent, message, onRemove }: AppBuilderComponentRowProps) {
+export function AppBuilderComponentRow({
+    appBuilderComponent,
+    message,
+    onRemove,
+    onManageApis,
+}: AppBuilderComponentRowProps) {
     const { id } = appBuilderComponent;
     const status: string = appBuilderComponent.status;
 
@@ -54,12 +66,20 @@ export function AppBuilderComponentRow({ appBuilderComponent, message, onRemove 
             {status === 'deploying' && <DeployingState message={message} />}
             {isDeployedView(status) && (
                 <DeployedState
-                    view={{ label: id, url: appBuilderComponent.url, deployedUrls: appBuilderComponent.deployedUrls }}
-                    onRedeploy={() => webviewClient.postMessage('redeployAppBuilderComponent', { id })}
+                    view={{
+                        label: id,
+                        url: appBuilderComponent.url,
+                        deployedUrls: appBuilderComponent.deployedUrls,
+                    }}
+                    onRedeploy={() =>
+                        webviewClient.postMessage('redeployAppBuilderComponent', { id })
+                    }
                     onRemove={onRemove}
+                    onManageApis={onManageApis}
                     verifyAction={{
                         label: 'Verify',
-                        onPress: () => webviewClient.postMessage('verifyAppBuilderComponent', { id }),
+                        onPress: () =>
+                            webviewClient.postMessage('verifyAppBuilderComponent', { id }),
                         testId: `appBuilderComponent-verify-${id}`,
                     }}
                 />
@@ -75,7 +95,9 @@ export function AppBuilderComponentRow({ appBuilderComponent, message, onRemove 
                 <Flex>
                     <Button
                         variant="primary"
-                        onPress={() => webviewClient.postMessage('deployAppBuilderComponent', { id })}
+                        onPress={() =>
+                            webviewClient.postMessage('deployAppBuilderComponent', { id })
+                        }
                     >
                         Deploy
                     </Button>

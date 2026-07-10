@@ -16,6 +16,7 @@ import { View, Flex, Heading, Button, TextField, Text } from '@adobe/react-spect
 import React, { useState } from 'react';
 import { AppBuilderComponentRemoveDialog } from './AppBuilderComponentRemoveDialog';
 import { AppBuilderComponentRow } from './AppBuilderComponentRow';
+import { ManageApisModal } from './ManageApisModal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { parseGitHubUrl } from '@/core/utils/githubUrlParser';
 import { listAppBuilderComponents } from '@/features/app-builder/services/appBuilderComponentState';
@@ -43,7 +44,9 @@ function AddAppBuilderComponentPicker({ catalog }: { catalog: AppBuilderComponen
                     <Button
                         key={entry.id}
                         variant="secondary"
-                        onPress={() => webviewClient.postMessage('addAppBuilderComponent', { id: entry.id })}
+                        onPress={() =>
+                            webviewClient.postMessage('addAppBuilderComponent', { id: entry.id })
+                        }
                     >
                         {entry.name}
                     </Button>
@@ -62,7 +65,8 @@ function AddAppBuilderComponentPicker({ catalog }: { catalog: AppBuilderComponen
                     variant="primary"
                     isDisabled={!parsed}
                     onPress={() =>
-                        parsed && webviewClient.postMessage('addAppBuilderComponent', {
+                        parsed &&
+                        webviewClient.postMessage('addAppBuilderComponent', {
                             source: { owner: parsed.owner, repo: parsed.repo },
                         })
                     }
@@ -80,6 +84,9 @@ export function AppBuilderComponentsList({ project, catalog }: AppBuilderCompone
     // One dialog instance for the whole list; the pending id identifies the row
     // awaiting confirmation (avoids a per-row dialog + cross-row state leak).
     const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
+    // Same single-shared-modal pattern for Manage APIs: one instance for the
+    // whole list, keyed by the row id whose API access is being managed.
+    const [manageApisId, setManageApisId] = useState<string | null>(null);
 
     const integrations = listAppBuilderComponents(project).filter((d) => d.kind === 'integration');
 
@@ -101,6 +108,7 @@ export function AppBuilderComponentsList({ project, catalog }: AppBuilderCompone
                         key={appBuilderComponent.id}
                         appBuilderComponent={appBuilderComponent}
                         onRemove={() => setPendingRemoveId(appBuilderComponent.id)}
+                        onManageApis={() => setManageApisId(appBuilderComponent.id)}
                     />
                 ))}
             </Flex>
@@ -110,6 +118,12 @@ export function AppBuilderComponentsList({ project, catalog }: AppBuilderCompone
                 appBuilderComponentId={pendingRemoveId ?? ''}
                 onConfirm={confirmRemove}
                 onClose={closeRemoveDialog}
+            />
+
+            <ManageApisModal
+                isOpen={manageApisId !== null}
+                componentName={manageApisId ?? ''}
+                onClose={() => setManageApisId(null)}
             />
 
             {showPicker ? (

@@ -58,17 +58,26 @@ export function DeployedState({
     onRedeploy,
     onRemove,
     verifyAction,
+    onManageApis,
 }: {
     view: DeployedView;
     onRedeploy: () => void;
     onRemove: () => void;
     verifyAction?: StatusCardAction;
+    /** Opens the shared Manage-APIs modal (row consumer only; the card omits it). */
+    onManageApis?: () => void;
 }) {
     const urls = resolveUrls(view);
 
     return (
         <Flex direction="column" gap="size-150">
-            <StatusCard label={view.label} status="Deployed" color="green" size="S" action={verifyAction} />
+            <StatusCard
+                label={view.label}
+                status="Deployed"
+                color="green"
+                size="S"
+                action={verifyAction}
+            />
             <Flex direction="column" gap="size-50">
                 {Object.entries(urls).map(([name, url]) => (
                     <Link
@@ -84,8 +93,17 @@ export function DeployedState({
                 ))}
             </Flex>
             <Flex gap="size-150">
-                <Button variant="secondary" onPress={onRedeploy}>Redeploy</Button>
-                <Button variant="secondary" onPress={onRemove}>Remove</Button>
+                <Button variant="secondary" onPress={onRedeploy}>
+                    Redeploy
+                </Button>
+                {onManageApis && (
+                    <Button variant="secondary" onPress={onManageApis}>
+                        Manage APIs
+                    </Button>
+                )}
+                <Button variant="secondary" onPress={onRemove}>
+                    Remove
+                </Button>
             </Flex>
         </Flex>
     );
@@ -103,9 +121,16 @@ export function ErrorState({
 }) {
     return (
         <Flex direction="column" gap="size-150">
-            <StatusCard label={label} status={message || 'Deployment failed'} color="red" size="S" />
+            <StatusCard
+                label={label}
+                status={message || 'Deployment failed'}
+                color="red"
+                size="S"
+            />
             <Flex>
-                <Button variant="primary" onPress={onRetry}>Retry</Button>
+                <Button variant="primary" onPress={onRetry}>
+                    Retry
+                </Button>
             </Flex>
         </Flex>
     );

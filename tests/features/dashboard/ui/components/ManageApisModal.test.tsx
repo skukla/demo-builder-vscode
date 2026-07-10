@@ -1,0 +1,268 @@
+/**
+ * ManageApisModal Tests (Integrations redesign — Step 11: dashboard "Manage APIs" parity)
+ *
+ * The dashboard's live API-access modal for a DEPLOYED App Builder integration:
+ *   - opens → fetches the org entitlement list ONCE via `listConsoleApis`
+ *     (entries carry a `managed` flag → rendered as the picker's `locked`);
+ *   - free picks accumulate in local state; Apply posts `addConsoleApis`
+ *     with ONLY the newly picked codes (dashboard semantics: posts IMMEDIATELY);
+ *   - success closes the modal; failure shows an inline error and stays open;
+ *   - adds are additive — there is NO removal affordance anywhere.
+ *
+ * Uses the REAL Modal + ApiAccessPicker (the integration surface under test)
+ * over the shared Spectrum mock; only the webview client is mocked.
+ *
+ * Strict TDD: written BEFORE the component exists.
+ */
+
+import React from 'react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
+import { Provider, defaultTheme } from '@adobe/react-spectrum';
+import { ManageApisModal } from '@/features/dashboard/ui/components/ManageApisModal';
+import '@testing-library/jest-dom';
+
+jest.mock('@/core/ui/utils/WebviewClient', () => ({
+    webviewClient: {
+        postMessage: jest.fn(),
+        onMessage: jest.fn(() => jest.fn()),
+        request: jest.fn(),
+    },
+}));
+
+function getClient() {
+    const { webviewClient } = jest.requireMock('@/core/ui/utils/WebviewClient') as {
+        webviewClient: { request: jest.Mock; postMessage: jest.Mock };
+    };
+    return webviewClient;
+}
+
+/** The org list as `listConsoleApis` reports it: `managed` = covered by the reconcile union. */
+const ORG_APIS = [
+    { code: 'GraphQLServiceSDK', name: 'API Mesh', managed: true },
+    { code: 'AssetsSDK', name: 'AEM Assets', managed: false },
+    { code: 'FireflySDK', name: 'Firefly Services', managed: false },
+];
+
+type RequestImpl = (type: string, payload?: unknown) => Promise<unknown>;
+
+/** Default happy-path request routing; override per test for pending/failure shapes. */
+function mockRequest(impl?: RequestImpl) {
+    getClient().request.mockImplementation(
+        impl ??
+            ((type: string) => {
+                if (type === 'listConsoleApis') {
+                    return Promise.resolve({ success: true, data: { apis: ORG_APIS } });
+                }
+                return Promise.resolve({ success: true });
+            })
+    );
+}
+
+/** Flush the microtask queue inside act so request promises settle into state. */
+async function flush() {
+    await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+    });
+}
+
+function renderModal(props: Partial<React.ComponentProps<typeof ManageApisModal>> = {}) {
+    const onClose = jest.fn();
+    const result = render(
+        <Provider theme={defaultTheme}>
+            <ManageApisModal isOpen componentName="erp-sync" onClose={onClose} {...props} />
+        </Provider>
+    );
+    return { onClose, ...result };
+}
+
+/** The checkbox input rendered for a given API display name (shared-mock shape). */
+function checkboxFor(name: string): HTMLInputElement {
+    const label = screen.getByText(name).closest('label');
+    if (!label) throw new Error(`No checkbox label found for "${name}"`);
+    return label.querySelector('input[type="checkbox"]') as HTMLInputElement;
+}
+
+/** The modal's footer Apply action (Modal renders div[role=button] actions). */
+function applyButton(): HTMLElement {
+    return screen.getByRole('button', { name: /^apply/i });
+}
+
+beforeEach(() => {
+    jest.clearAllMocks();
+});
+
+describe('ManageApisModal', () => {
+    describe('open/close lifecycle', () => {
+        it('renders nothing and does NOT fetch while closed', () => {
+            mockRequest();
+            renderModal({ isOpen: false });
+
+            expect(screen.queryByText('Manage APIs')).not.toBeInTheDocument();
+            expect(getClient().request).not.toHaveBeenCalled();
+        });
+
+        it('fetches the org API list exactly once when opened', async () => {
+            mockRequest();
+            const { rerender, onClose } = renderModal();
+            await flush();
+
+            expect(getClient().request).toHaveBeenCalledWith('listConsoleApis');
+            expect(getClient().request).toHaveBeenCalledTimes(1);
+
+            // A re-render while open must NOT refetch.
+            rerender(
+                <Provider theme={defaultTheme}>
+                    <ManageApisModal isOpen componentName="erp-sync" onClose={onClose} />
+                </Provider>
+            );
+            await flush();
+            expect(getClient().request).toHaveBeenCalledTimes(1);
+        });
+
+        it('Cancel closes without posting addConsoleApis', async () => {
+            mockRequest();
+            const { onClose } = renderModal();
+            await flush();
+
+            fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
+
+            expect(onClose).toHaveBeenCalledTimes(1);
+            expect(getClient().request).not.toHaveBeenCalledWith(
+                'addConsoleApis',
+                expect.anything()
+            );
+        });
+    });
+
+    describe('list fetch states', () => {
+        it('shows a compact loading state while the fetch is pending', () => {
+            mockRequest(() => new Promise(() => {}));
+            renderModal();
+
+            expect(screen.getByText(/loading adobe apis/i)).toBeInTheDocument();
+        });
+
+        it('shows an inline error when the fetch reports failure — modal stays open', async () => {
+            mockRequest((type) =>
+                type === 'listConsoleApis'
+                    ? Promise.resolve({ success: false, error: 'org unavailable' })
+                    : Promise.resolve({ success: true })
+            );
+            const { onClose } = renderModal();
+            await flush();
+
+            expect(screen.getByText(/org unavailable/i)).toBeInTheDocument();
+            expect(onClose).not.toHaveBeenCalled();
+        });
+
+        it('shows an inline error when the fetch rejects', async () => {
+            mockRequest(() => Promise.reject(new Error('network down')));
+            renderModal();
+            await flush();
+
+            expect(screen.getByText(/network down/i)).toBeInTheDocument();
+        });
+    });
+
+    describe('picker semantics', () => {
+        it('renders managed entries locked (checked + disabled) and free entries toggleable', async () => {
+            mockRequest();
+            renderModal();
+            await flush();
+
+            const managed = checkboxFor('API Mesh');
+            expect(managed).toBeChecked();
+            expect(managed).toBeDisabled();
+
+            const free = checkboxFor('Firefly Services');
+            expect(free).not.toBeChecked();
+            expect(free).not.toBeDisabled();
+        });
+
+        it('offers no removal affordance anywhere (adds are additive)', async () => {
+            mockRequest();
+            renderModal();
+            await flush();
+
+            expect(screen.queryByRole('button', { name: /remove/i })).not.toBeInTheDocument();
+            // The helper copy states the additive contract explicitly.
+            expect(screen.getByText(/additive/i)).toBeInTheDocument();
+        });
+    });
+
+    describe('Apply', () => {
+        it('is disabled until at least one NEW pick is made', async () => {
+            mockRequest();
+            renderModal();
+            await flush();
+
+            expect(applyButton()).toHaveAttribute('aria-disabled', 'true');
+
+            fireEvent.click(checkboxFor('Firefly Services'));
+
+            expect(applyButton()).toHaveAttribute('aria-disabled', 'false');
+        });
+
+        it('posts addConsoleApis with ONLY the newly picked codes', async () => {
+            mockRequest();
+            renderModal();
+            await flush();
+
+            fireEvent.click(checkboxFor('Firefly Services'));
+            fireEvent.click(applyButton());
+            await flush();
+
+            // Exact payload: the new free pick only — never the managed codes.
+            expect(getClient().request).toHaveBeenCalledWith('addConsoleApis', {
+                apis: ['FireflySDK'],
+            });
+        });
+
+        it('shows a busy state while the subscribe is in flight', async () => {
+            mockRequest((type) =>
+                type === 'listConsoleApis'
+                    ? Promise.resolve({ success: true, data: { apis: ORG_APIS } })
+                    : new Promise(() => {})
+            );
+            renderModal();
+            await flush();
+
+            fireEvent.click(checkboxFor('Firefly Services'));
+            fireEvent.click(applyButton());
+            await flush();
+
+            const busy = screen.getByRole('button', { name: /applying/i });
+            expect(busy).toHaveAttribute('aria-disabled', 'true');
+        });
+
+        it('closes the modal on success', async () => {
+            mockRequest();
+            const { onClose } = renderModal();
+            await flush();
+
+            fireEvent.click(checkboxFor('Firefly Services'));
+            fireEvent.click(applyButton());
+            await flush();
+
+            expect(onClose).toHaveBeenCalledTimes(1);
+        });
+
+        it('shows an inline error and stays open when the subscribe fails', async () => {
+            mockRequest((type) =>
+                type === 'listConsoleApis'
+                    ? Promise.resolve({ success: true, data: { apis: ORG_APIS } })
+                    : Promise.resolve({ success: false, error: 'needs a product profile' })
+            );
+            const { onClose } = renderModal();
+            await flush();
+
+            fireEvent.click(checkboxFor('Firefly Services'));
+            fireEvent.click(applyButton());
+            await flush();
+
+            expect(screen.getByText(/needs a product profile/i)).toBeInTheDocument();
+            expect(onClose).not.toHaveBeenCalled();
+        });
+    });
+});

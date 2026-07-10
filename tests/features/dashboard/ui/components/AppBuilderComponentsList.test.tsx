@@ -29,20 +29,45 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
 
 jest.mock('@adobe/react-spectrum', () => ({
     View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-    Flex: ({ children, ...props }: any) => <div style={{ display: 'flex' }} {...props}>{children}</div>,
+    Flex: ({ children, ...props }: any) => (
+        <div style={{ display: 'flex' }} {...props}>
+            {children}
+        </div>
+    ),
     Heading: ({ children, ...props }: any) => <h3 {...props}>{children}</h3>,
     Button: ({ children, onPress, isDisabled, variant, ...props }: any) => (
-        <button onClick={onPress} disabled={isDisabled} data-variant={variant} {...props}>{children}</button>
+        <button onClick={onPress} disabled={isDisabled} data-variant={variant} {...props}>
+            {children}
+        </button>
     ),
     TextField: ({ label, value, onChange, ...props }: any) => (
-        <input aria-label={label} value={value ?? ''} onChange={(e) => onChange?.(e.target.value)} {...props} />
+        <input
+            aria-label={label}
+            value={value ?? ''}
+            onChange={(e) => onChange?.(e.target.value)}
+            {...props}
+        />
     ),
     Link: ({ children, onPress, href, ...props }: any) => (
-        <a onClick={onPress} href={href} {...props}>{children}</a>
+        <a onClick={onPress} href={href} {...props}>
+            {children}
+        </a>
     ),
     ProgressCircle: ({ ...props }: any) => <div data-testid="progress-circle" {...props} />,
     Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
     DialogContainer: ({ children }: any) => <div data-testid="dialog-container">{children}</div>,
+}));
+
+// The Manage-APIs modal has its own suite; here a stub proves the LIST's
+// single-shared-instance wiring (open-for-id / close), mirroring the remove dialog.
+jest.mock('@/features/dashboard/ui/components/ManageApisModal', () => ({
+    ManageApisModal: ({ isOpen, componentName, onClose }: any) =>
+        isOpen ? (
+            <div data-testid="manage-apis-modal">
+                managing: {componentName}
+                <button onClick={onClose}>close-manage-apis</button>
+            </div>
+        ) : null,
 }));
 
 jest.mock('@/core/ui/components/ui/Modal', () => ({
@@ -52,7 +77,12 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
             {children}
             <button onClick={onClose}>Close</button>
             {actionButtons.map((b: any, i: number) => (
-                <button key={i} onClick={b.onPress} data-variant={b.variant} disabled={b.isDisabled}>
+                <button
+                    key={i}
+                    onClick={b.onPress}
+                    data-variant={b.variant}
+                    disabled={b.isDisabled}
+                >
                     {b.label}
                 </button>
             ))}
@@ -64,7 +94,11 @@ jest.mock('@/core/ui/components/feedback', () => ({
     StatusCard: ({ label, status, color, action }: any) => (
         <div data-testid={`status-card-${label}`} data-color={color}>
             {label}: {status}
-            {action && <a data-testid={action.testId} onClick={action.onPress}>{action.label}</a>}
+            {action && (
+                <a data-testid={action.testId} onClick={action.onPress}>
+                    {action.label}
+                </a>
+            )}
         </div>
     ),
 }));
@@ -106,8 +140,17 @@ beforeEach(() => {
 describe('AppBuilderComponentsList', () => {
     it('renders one row per integration and EXCLUDES the mesh', () => {
         const project = projectWith({
-            'erp-sync': { kind: 'integration', status: 'deployed', source: { owner: 'acme', repo: 'erp-sync' } },
-            'commerce-paas-mesh': { kind: 'mesh', status: 'deployed', source: { owner: 'acme', repo: 'mesh' }, endpoint: 'https://m' },
+            'erp-sync': {
+                kind: 'integration',
+                status: 'deployed',
+                source: { owner: 'acme', repo: 'erp-sync' },
+            },
+            'commerce-paas-mesh': {
+                kind: 'mesh',
+                status: 'deployed',
+                source: { owner: 'acme', repo: 'mesh' },
+                endpoint: 'https://m',
+            },
         });
 
         render(<AppBuilderComponentsList project={project} catalog={CATALOG} />);
@@ -120,19 +163,30 @@ describe('AppBuilderComponentsList', () => {
 
     it('shows an empty-state Add prompt when there are no integrations', () => {
         const project = projectWith({
-            'commerce-paas-mesh': { kind: 'mesh', status: 'deployed', source: { owner: 'acme', repo: 'mesh' }, endpoint: 'https://m' },
+            'commerce-paas-mesh': {
+                kind: 'mesh',
+                status: 'deployed',
+                source: { owner: 'acme', repo: 'mesh' },
+                endpoint: 'https://m',
+            },
         });
 
         render(<AppBuilderComponentsList project={project} catalog={CATALOG} />);
 
-        expect(screen.getByRole('button', { name: /add an App Builder component/i })).toBeInTheDocument();
+        expect(
+            screen.getByRole('button', { name: /add an App Builder component/i })
+        ).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /redeploy/i })).not.toBeInTheDocument();
     });
 
     describe('remove confirmation guard', () => {
         function deployedProject(): Project {
             return projectWith({
-                'erp-sync': { kind: 'integration', status: 'deployed', source: { owner: 'acme', repo: 'erp-sync' } },
+                'erp-sync': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'acme', repo: 'erp-sync' },
+                },
             });
         }
 
@@ -145,7 +199,10 @@ describe('AppBuilderComponentsList', () => {
             // The dialog is now open …
             expect(screen.getByRole('dialog')).toBeInTheDocument();
             // … and NOTHING was torn down yet.
-            expect(getClient().postMessage).not.toHaveBeenCalledWith('removeAppBuilderComponent', expect.anything());
+            expect(getClient().postMessage).not.toHaveBeenCalledWith(
+                'removeAppBuilderComponent',
+                expect.anything()
+            );
         });
 
         it('posts removeAppBuilderComponent with the row id when the dialog is confirmed', async () => {
@@ -157,7 +214,9 @@ describe('AppBuilderComponentsList', () => {
             const dialog = screen.getByRole('dialog');
             await user.click(within(dialog).getByRole('button', { name: /^remove$/i }));
 
-            expect(getClient().postMessage).toHaveBeenCalledWith('removeAppBuilderComponent', { id: 'erp-sync' });
+            expect(getClient().postMessage).toHaveBeenCalledWith('removeAppBuilderComponent', {
+                id: 'erp-sync',
+            });
         });
 
         it('SAFETY: cancelling the dialog never posts removeAppBuilderComponent', async () => {
@@ -168,7 +227,57 @@ describe('AppBuilderComponentsList', () => {
             const dialog = screen.getByRole('dialog');
             await user.click(within(dialog).getByRole('button', { name: /close/i }));
 
-            expect(getClient().postMessage).not.toHaveBeenCalledWith('removeAppBuilderComponent', expect.anything());
+            expect(getClient().postMessage).not.toHaveBeenCalledWith(
+                'removeAppBuilderComponent',
+                expect.anything()
+            );
+        });
+    });
+
+    describe('Manage APIs shared modal (Step 11)', () => {
+        function twoDeployed(): Project {
+            return projectWith({
+                'erp-sync': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'acme', repo: 'erp-sync' },
+                },
+                'firefly-shell': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'acme', repo: 'firefly-shell' },
+                },
+            });
+        }
+
+        it('renders the shared modal closed by default', () => {
+            render(<AppBuilderComponentsList project={twoDeployed()} catalog={CATALOG} />);
+
+            expect(screen.queryByTestId('manage-apis-modal')).not.toBeInTheDocument();
+        });
+
+        it('opens the ONE shared modal scoped to the clicked row id', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(<AppBuilderComponentsList project={twoDeployed()} catalog={CATALOG} />);
+
+            const buttons = screen.getAllByRole('button', { name: /manage apis/i });
+            expect(buttons).toHaveLength(2);
+            await user.click(buttons[1]);
+
+            // A single shared instance (no per-row modal), scoped to the clicked id.
+            const modals = screen.getAllByTestId('manage-apis-modal');
+            expect(modals).toHaveLength(1);
+            expect(modals[0]).toHaveTextContent('firefly-shell');
+        });
+
+        it('clears the modal when its onClose fires', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(<AppBuilderComponentsList project={twoDeployed()} catalog={CATALOG} />);
+
+            await user.click(screen.getAllByRole('button', { name: /manage apis/i })[0]);
+            await user.click(screen.getByRole('button', { name: /close-manage-apis/i }));
+
+            expect(screen.queryByTestId('manage-apis-modal')).not.toBeInTheDocument();
         });
     });
 
@@ -190,7 +299,9 @@ describe('AppBuilderComponentsList', () => {
             await user.click(screen.getByRole('button', { name: /add an App Builder component/i }));
             await user.click(screen.getByRole('button', { name: /ERP Sync/i }));
 
-            expect(getClient().postMessage).toHaveBeenCalledWith('addAppBuilderComponent', { id: 'erp-sync' });
+            expect(getClient().postMessage).toHaveBeenCalledWith('addAppBuilderComponent', {
+                id: 'erp-sync',
+            });
         });
 
         it('posts addAppBuilderComponent with a parsed custom source when a GitHub URL is entered', async () => {
