@@ -19,10 +19,7 @@ import { ContentWithSidebar, PageHeader, PageFooter } from '@/core/ui/components
 import { NavigationPanel, NavigationSection } from '@/core/ui/components/navigation';
 import { useFocusTrap } from '@/core/ui/hooks';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import {
-    normalizeProjectName,
-    getProjectNameError,
-} from '@/core/validation/normalizers';
+import { normalizeProjectName, getProjectNameError } from '@/core/validation/normalizers';
 import { url, pattern, normalizeUrl } from '@/core/validation/Validator';
 import { PAAS_URL, PAAS_GRAPHQL_ENDPOINT } from '@/features/components/config/envVarKeys';
 import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelpers';
@@ -93,7 +90,6 @@ interface ServiceGroup {
     fields: UniqueField[];
 }
 
-
 interface SaveConfigurationResponse {
     success: boolean;
     error?: string;
@@ -112,13 +108,13 @@ function toNavigationSection(
     group: ServiceGroup,
     isFieldComplete: (field: UniqueField) => boolean,
 ): NavigationSection {
-    const requiredFields = group.fields.filter(f => f.required);
-    const completedFields = requiredFields.filter(f => isFieldComplete(f));
+    const requiredFields = group.fields.filter((f) => f.required);
+    const completedFields = requiredFields.filter((f) => isFieldComplete(f));
 
     return {
         id: group.id,
         label: group.label,
-        fields: group.fields.map(f => ({
+        fields: group.fields.map((f) => ({
             key: f.key,
             label: f.label,
             isComplete: isFieldComplete(f),
@@ -156,7 +152,10 @@ interface AuthoringExperienceFieldProps {
  * Configure footer's Save), not an on-the-fly action — so it lives here rather
  * than on the dashboard/kebab action surfaces.
  */
-function AuthoringExperienceField({ value, onChange }: AuthoringExperienceFieldProps): React.ReactElement {
+function AuthoringExperienceField({
+    value,
+    onChange,
+}: AuthoringExperienceFieldProps): React.ReactElement {
     // aria-label (not label): the "Authoring" section heading already names this,
     // so a visible RadioGroup label would be a redundant subheading.
     return (
@@ -275,34 +274,37 @@ export function ConfigureScreen({
      * Get value from componentConfigs for validation purposes
      * Mirrors getFieldValue logic to ensure consistency between display and validation
      */
-    const getValueFromConfigs = useCallback((field: UniqueField): string | number | boolean | undefined => {
-        // Check field's specific componentIds first
-        for (const componentId of field.componentIds) {
-            const value = componentConfigs[componentId]?.[field.key];
-            if (value !== undefined && value !== '') {
-                return value;
-            }
-        }
-
-        // Check any component (for shared env vars) - consistent with getFieldValue
-        for (const [componentId, config] of Object.entries(componentConfigs)) {
-            if (!field.componentIds.includes(componentId)) {
-                const value = config[field.key];
+    const getValueFromConfigs = useCallback(
+        (field: UniqueField): string | number | boolean | undefined => {
+            // Check field's specific componentIds first
+            for (const componentId of field.componentIds) {
+                const value = componentConfigs[componentId]?.[field.key];
                 if (value !== undefined && value !== '') {
                     return value;
                 }
             }
-        }
 
-        return undefined;
-    }, [componentConfigs]);
+            // Check any component (for shared env vars) - consistent with getFieldValue
+            for (const [componentId, config] of Object.entries(componentConfigs)) {
+                if (!field.componentIds.includes(componentId)) {
+                    const value = config[field.key];
+                    if (value !== undefined && value !== '') {
+                        return value;
+                    }
+                }
+            }
+
+            return undefined;
+        },
+        [componentConfigs],
+    );
 
     // Validate all fields
     useEffect(() => {
         const errors: Record<string, string> = {};
 
-        serviceGroups.forEach(group => {
-            group.fields.forEach(field => {
+        serviceGroups.forEach((group) => {
+            group.fields.forEach((field) => {
                 const isDeferredField = field.key === 'MESH_ENDPOINT';
 
                 // Get value using same logic as display (getFieldValue)
@@ -327,7 +329,11 @@ export function ConfigureScreen({
 
                 // Pattern validation using core validator
                 // Only validate if there's an actual value (not default)
-                if (field.validation?.pattern && hasValueInConfig && typeof valueInConfig === 'string') {
+                if (
+                    field.validation?.pattern &&
+                    hasValueInConfig &&
+                    typeof valueInConfig === 'string'
+                ) {
                     const patternValidator = pattern(
                         new RegExp(field.validation.pattern),
                         field.validation.message || 'Invalid format',
@@ -343,124 +349,142 @@ export function ConfigureScreen({
         setValidationErrors(errors);
     }, [componentConfigs, serviceGroups, getValueFromConfigs]);
 
-    const updateField = useCallback((field: UniqueField, value: string | boolean) => {
-        setTouchedFields(prev => new Set(prev).add(field.key));
+    const updateField = useCallback(
+        (field: UniqueField, value: string | boolean) => {
+            setTouchedFields((prev) => new Set(prev).add(field.key));
 
-        setComponentConfigs(prev => {
-            const newConfigs = { ...prev };
+            setComponentConfigs((prev) => {
+                const newConfigs = { ...prev };
 
-            field.componentIds.forEach(componentId => {
-                if (!newConfigs[componentId]) {
-                    newConfigs[componentId] = {};
+                field.componentIds.forEach((componentId) => {
+                    if (!newConfigs[componentId]) {
+                        newConfigs[componentId] = {};
+                    }
+                    newConfigs[componentId][field.key] = value;
+                });
+
+                // Linked field: PAAS_URL → PAAS_GRAPHQL_ENDPOINT
+                // Only auto-derive if GraphQL hasn't been manually touched
+                if (field.key === PAAS_URL && typeof value === 'string') {
+                    const graphqlKey = PAAS_GRAPHQL_ENDPOINT;
+                    if (!touchedFields.has(graphqlKey)) {
+                        const derivedGraphql = deriveGraphqlEndpoint(value);
+                        field.componentIds.forEach((componentId) => {
+                            if (newConfigs[componentId]) {
+                                newConfigs[componentId][graphqlKey] = derivedGraphql;
+                            }
+                        });
+                    }
                 }
-                newConfigs[componentId][field.key] = value;
+
+                return newConfigs;
             });
-
-            // Linked field: PAAS_URL → PAAS_GRAPHQL_ENDPOINT
-            // Only auto-derive if GraphQL hasn't been manually touched
-            if (field.key === PAAS_URL && typeof value === 'string') {
-                const graphqlKey = PAAS_GRAPHQL_ENDPOINT;
-                if (!touchedFields.has(graphqlKey)) {
-                    const derivedGraphql = deriveGraphqlEndpoint(value);
-                    field.componentIds.forEach(componentId => {
-                        if (newConfigs[componentId]) {
-                            newConfigs[componentId][graphqlKey] = derivedGraphql;
-                        }
-                    });
-                }
-            }
-
-            return newConfigs;
-        });
-    }, [touchedFields]);
+        },
+        [touchedFields],
+    );
 
     // Stage an App Builder component's bucket-3 value into componentConfigs[appBuilderComponentId].
     // Text values flow through save-configuration → .env unchanged. Secret values
     // ride the SAME payload transiently, but the backend (splitAppBuilderComponentSecrets)
     // extracts them to SecretStorage and strips them BEFORE anything reaches the
     // .env/manifest — so they never persist outside SecretStorage.
-    const stageAppBuilderComponentValue = useCallback((appBuilderComponentId: string, varName: string, value: string) => {
-        setComponentConfigs(prev => ({
-            ...prev,
-            [appBuilderComponentId]: { ...(prev[appBuilderComponentId] ?? {}), [varName]: value },
-        }));
-    }, []);
+    const stageAppBuilderComponentValue = useCallback(
+        (appBuilderComponentId: string, varName: string, value: string) => {
+            setComponentConfigs((prev) => ({
+                ...prev,
+                [appBuilderComponentId]: {
+                    ...(prev[appBuilderComponentId] ?? {}),
+                    [varName]: value,
+                },
+            }));
+        },
+        [],
+    );
 
     /**
      * Normalize URL field on blur - removes trailing slashes for visual feedback.
      * Backend also normalizes when writing .env files (safety net).
      */
-    const normalizeUrlField = useCallback((field: UniqueField) => {
-        if (field.type !== 'url') return;
+    const normalizeUrlField = useCallback(
+        (field: UniqueField) => {
+            if (field.type !== 'url') return;
 
-        // Find current value
-        let currentValue: string | undefined;
-        for (const componentId of field.componentIds) {
-            const value = componentConfigs[componentId]?.[field.key];
-            if (value !== undefined && value !== '' && typeof value === 'string') {
-                currentValue = value;
-                break;
-            }
-        }
-
-        if (!currentValue) return;
-
-        // Normalize and update if changed
-        const normalized = normalizeUrl(currentValue);
-        if (normalized !== currentValue) {
-            setComponentConfigs(prev => {
-                const newConfigs = { ...prev };
-                field.componentIds.forEach(componentId => {
-                    if (!newConfigs[componentId]) newConfigs[componentId] = {};
-                    newConfigs[componentId][field.key] = normalized;
-                });
-                return newConfigs;
-            });
-        }
-    }, [componentConfigs]);
-
-    const getFieldValue = useCallback((field: UniqueField): string | boolean | undefined => {
-        // Special handling for MESH_ENDPOINT - read from meshState (authoritative)
-        if (field.key === 'MESH_ENDPOINT' && project.meshState?.endpoint) {
-            return project.meshState.endpoint;
-        }
-
-        // If user explicitly touched this field, only look in the field's componentIds
-        // This ensures user edits (including clearing) are respected over values in other components
-        if (touchedFields.has(field.key)) {
+            // Find current value
+            let currentValue: string | undefined;
             for (const componentId of field.componentIds) {
                 const value = componentConfigs[componentId]?.[field.key];
-                if (value !== undefined && value !== '') {
-                    return typeof value === 'number' ? String(value) : value;
+                if (value !== undefined && value !== '' && typeof value === 'string') {
+                    currentValue = value;
+                    break;
                 }
             }
-            // User cleared the field - respect their intent, don't fall back to defaults
+
+            if (!currentValue) return;
+
+            // Normalize and update if changed
+            const normalized = normalizeUrl(currentValue);
+            if (normalized !== currentValue) {
+                setComponentConfigs((prev) => {
+                    const newConfigs = { ...prev };
+                    field.componentIds.forEach((componentId) => {
+                        if (!newConfigs[componentId]) newConfigs[componentId] = {};
+                        newConfigs[componentId][field.key] = normalized;
+                    });
+                    return newConfigs;
+                });
+            }
+        },
+        [componentConfigs],
+    );
+
+    const getFieldValue = useCallback(
+        (field: UniqueField): string | boolean | undefined => {
+            // Special handling for MESH_ENDPOINT - read from meshState (authoritative)
+            if (field.key === 'MESH_ENDPOINT' && project.meshState?.endpoint) {
+                return project.meshState.endpoint;
+            }
+
+            // If user explicitly touched this field, only look in the field's componentIds
+            // This ensures user edits (including clearing) are respected over values in other components
+            if (touchedFields.has(field.key)) {
+                for (const componentId of field.componentIds) {
+                    const value = componentConfigs[componentId]?.[field.key];
+                    if (value !== undefined && value !== '') {
+                        return typeof value === 'number' ? String(value) : value;
+                    }
+                }
+                // User cleared the field - respect their intent, don't fall back to defaults
+                return '';
+            }
+
+            // For untouched fields, use shared lookup logic (includes other components)
+            const value = getValueFromConfigs(field);
+            if (value !== undefined && value !== '') {
+                // Convert numbers to strings for display
+                return typeof value === 'number' ? String(value) : value;
+            }
+
+            // Fall back to field default only for untouched fields
+            if (field.default !== undefined && field.default !== '') {
+                return field.default;
+            }
+
             return '';
-        }
+        },
+        [componentConfigs, getValueFromConfigs, project, touchedFields],
+    );
 
-        // For untouched fields, use shared lookup logic (includes other components)
-        const value = getValueFromConfigs(field);
-        if (value !== undefined && value !== '') {
-            // Convert numbers to strings for display
-            return typeof value === 'number' ? String(value) : value;
-        }
-
-        // Fall back to field default only for untouched fields
-        if (field.default !== undefined && field.default !== '') {
-            return field.default;
-        }
-
-        return '';
-    }, [componentConfigs, getValueFromConfigs, project, touchedFields]);
-
-    const isFieldComplete = useCallback((field: UniqueField): boolean => {
-        const value = getFieldValue(field);
-        return value !== undefined && value !== '';
-    }, [getFieldValue]);
+    const isFieldComplete = useCallback(
+        (field: UniqueField): boolean => {
+            const value = getFieldValue(field);
+            return value !== undefined && value !== '';
+        },
+        [getFieldValue],
+    );
 
     // Navigation sections for NavigationPanel
     const navigationSections = useMemo<NavigationSection[]>(() => {
-        const sections = serviceGroups.map(group => toNavigationSection(group, isFieldComplete));
+        const sections = serviceGroups.map((group) => toNavigationSection(group, isFieldComplete));
         // Mirror the left-column "Authoring" section in the right-column nav (EDS
         // only). It has no navigable fields — it's a single radio — so the field
         // list is empty and it always reads complete.
@@ -477,26 +501,29 @@ export function ConfigureScreen({
         return sections;
     }, [serviceGroups, isFieldComplete, isEds]);
 
-    const toggleNavSection = useCallback((sectionId: string) => {
-        const wasExpanded = expandedNavSections.has(sectionId);
+    const toggleNavSection = useCallback(
+        (sectionId: string) => {
+            const wasExpanded = expandedNavSections.has(sectionId);
 
-        setExpandedNavSections(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(sectionId)) {
-                newSet.delete(sectionId);
-            } else {
-                newSet.add(sectionId);
-            }
-            return newSet;
-        });
+            setExpandedNavSections((prev) => {
+                const newSet = new Set(prev);
+                if (newSet.has(sectionId)) {
+                    newSet.delete(sectionId);
+                } else {
+                    newSet.add(sectionId);
+                }
+                return newSet;
+            });
 
-        if (!wasExpanded) {
-            const element = document.getElementById(`section-${sectionId}`);
-            if (element) {
-                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (!wasExpanded) {
+                const element = document.getElementById(`section-${sectionId}`);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
             }
-        }
-    }, [expandedNavSections]);
+        },
+        [expandedNavSections],
+    );
 
     const navigateToField = useCallback((fieldKey: string) => {
         const fieldElement = document.getElementById(`field-${fieldKey}`);
@@ -512,14 +539,18 @@ export function ConfigureScreen({
         setIsSaving(true);
         try {
             // Include projectName if it changed
-            const newProjectName = projectName.trim() !== project.name ? projectName.trim() : undefined;
+            const newProjectName =
+                projectName.trim() !== project.name ? projectName.trim() : undefined;
             // The authoring-experience preference is EDS-only; for non-EDS projects
             // it is omitted entirely so the payload shape is unchanged.
-            const result = await webviewClient.request<SaveConfigurationResponse>('save-configuration', {
-                componentConfigs,
-                newProjectName,
-                ...(isEds ? { authoringExperience } : {}),
-            });
+            const result = await webviewClient.request<SaveConfigurationResponse>(
+                'save-configuration',
+                {
+                    componentConfigs,
+                    newProjectName,
+                    ...(isEds ? { authoringExperience } : {}),
+                },
+            );
             if (!result.success) {
                 throw new Error(result.error || 'Failed to save configuration');
             }
@@ -582,32 +613,27 @@ export function ConfigureScreen({
     ) : null;
 
     return (
-        <div
-            ref={containerRef}
-            className="container-configure"
-        >
+        <div ref={containerRef} className="container-configure">
             <View width="100%" height="100%">
-            <div className="content-area">
-                {/* Header */}
-                <PageHeader
-                    title="Configure Project"
-                    subtitle={projectName}
-                />
+                <div className="content-area">
+                    {/* Header */}
+                    <PageHeader title="Configure Project" subtitle={projectName} />
 
-                {/* Content */}
-                <ContentWithSidebar
-                    sidebarContentWidth="300px"
-                    sidebar={
-                        <NavigationPanel
-                            sections={navigationSections}
-                            activeSection={activeSection}
-                            activeField={activeField}
-                            expandedSections={expandedNavSections}
-                            onToggleSection={toggleNavSection}
-                            onNavigateToField={navigateToField}
-                        />
-                    }
-                >
+                    {/* Content */}
+                    <ContentWithSidebar
+                        sidebarContentWidth="300px"
+                        className="configure-content-layout"
+                        sidebar={
+                            <NavigationPanel
+                                sections={navigationSections}
+                                activeSection={activeSection}
+                                activeField={activeField}
+                                expandedSections={expandedNavSections}
+                                onToggleSection={toggleNavSection}
+                                onNavigateToField={navigateToField}
+                            />
+                        }
+                    >
                         <div className="flex-column h-full">
                             <Form UNSAFE_className="container-form">
                                 {/* Project Name Field */}
@@ -622,7 +648,10 @@ export function ConfigureScreen({
                                         onChange={handleProjectNameChange}
                                         isRequired
                                         width="100%"
-                                        validationState={getValidationState(!!projectNameError, projectNameTouched)}
+                                        validationState={getValidationState(
+                                            !!projectNameError,
+                                            projectNameTouched,
+                                        )}
                                         errorMessage={projectNameError}
                                         description="Lowercase letters, numbers, and hyphens only. Must start with a letter."
                                     />
@@ -645,7 +674,7 @@ export function ConfigureScreen({
                                                 label={group.label}
                                                 showDivider={index > 0}
                                             >
-                                                {group.fields.map(field => (
+                                                {group.fields.map((field) => (
                                                     <StoreConfigFieldRow
                                                         key={field.key}
                                                         field={field}
@@ -674,31 +703,31 @@ export function ConfigureScreen({
                                 )}
                             </Form>
                         </div>
-                </ContentWithSidebar>
+                    </ContentWithSidebar>
 
-                {/* Footer */}
-                <PageFooter
-                    leftContent={
-                        <Button
-                            variant="secondary"
-                            onPress={handleCancel}
-                            isQuiet
-                            isDisabled={isSaving || isDeploying}
-                        >
-                            Close
-                        </Button>
-                    }
-                    rightContent={
-                        <Button
-                            variant="accent"
-                            onPress={handleSave}
-                            isDisabled={!canSave || isSaving || isDeploying}
-                        >
-                            {getSaveButtonLabel(isSaving, isDeploying)}
-                        </Button>
-                    }
-                />
-            </div>
+                    {/* Footer */}
+                    <PageFooter
+                        leftContent={
+                            <Button
+                                variant="secondary"
+                                onPress={handleCancel}
+                                isQuiet
+                                isDisabled={isSaving || isDeploying}
+                            >
+                                Close
+                            </Button>
+                        }
+                        rightContent={
+                            <Button
+                                variant="accent"
+                                onPress={handleSave}
+                                isDisabled={!canSave || isSaving || isDeploying}
+                            >
+                                {getSaveButtonLabel(isSaving, isDeploying)}
+                            </Button>
+                        }
+                    />
+                </div>
             </View>
         </div>
     );

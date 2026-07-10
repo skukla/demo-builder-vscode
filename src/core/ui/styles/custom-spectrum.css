@@ -903,6 +903,12 @@ button[class*="spectrum-Button"][disabled],
     .two-column-layout {
         flex-direction: column !important;
         align-items: stretch !important;
+        /* Stacked columns are flex 0-0-auto (content height), which unbounds
+           any inner flex-1 scroll region (e.g. Configure's .container-form) —
+           the container itself must scroll or tall content paints past the
+           page footer with no way to reach it. Inert where the container is
+           height:auto in normal flow (no bounded height → no scrollbar). */
+        overflow-y: auto !important;
     }
     .two-column-layout-left {
         max-width: none !important;
@@ -914,6 +920,13 @@ button[class*="spectrum-Button"][disabled],
         min-width: 0 !important;
         border-left: none !important;
         border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
+    }
+    /* Configure's sidebar is a jump-nav ("Sections"); stacked below the form
+       it's worse than useless — hide it. Scoped: other ContentWithSidebar
+       consumers (dashboard status panel, project picker summary) carry real
+       content and keep their stacked sidebar. */
+    .configure-content-layout .two-column-layout-right {
+        display: none !important;
     }
 }
 
