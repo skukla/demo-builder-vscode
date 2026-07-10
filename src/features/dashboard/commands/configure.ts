@@ -99,6 +99,13 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         return 'Loading project configuration...';
     }
 
+    /** Project name captured in execute() so the loading screen can show it. */
+    private loadingProjectName?: string;
+
+    protected getLoadingHeader(): { title: string; subtitle?: string } {
+        return { title: this.getWebviewTitle(), subtitle: this.loadingProjectName };
+    }
+
     public async execute(): Promise<void> {
         try {
             // Get current project
@@ -107,6 +114,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 await this.showWarning('No project found to configure.');
                 return;
             }
+            this.loadingProjectName = project.name;
 
             // Create or reveal the webview panel
             await this.createOrRevealPanel();

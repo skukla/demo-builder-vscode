@@ -20,7 +20,7 @@ export type {
     ExecutionContext,
 } from './progressUnifier';
 
-export { setLoadingState } from './loadingHTML';
+export { setLoadingState, type LoadingHeader } from './loadingHTML';
 
 export { TIMEOUTS, CACHE_TTL } from './timeoutConfig';
 

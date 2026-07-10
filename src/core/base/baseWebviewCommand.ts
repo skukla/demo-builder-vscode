@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import { BaseCommand } from './baseCommand';
 import { WebviewPanelManager } from './webviewPanelManager';
 import { WebviewCommunicationManager, createWebviewCommunication } from '@/core/communication';
-import { setLoadingState, TIMEOUTS } from '@/core/utils';
+import { setLoadingState, TIMEOUTS, type LoadingHeader } from '@/core/utils';
 
 /**
  * Base class for commands that use webviews with robust communication
@@ -122,8 +122,10 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         const webviewId = this.getWebviewId();
         const activePanel = WebviewPanelManager.getActivePanel(webviewId);
         try {
-            return (activePanel !== undefined && activePanel.visible) ||
-                   (this.panel !== undefined && this.panel.visible);
+            return (
+                (activePanel !== undefined && activePanel.visible) ||
+                (this.panel !== undefined && this.panel.visible)
+            );
         } catch {
             // Panel was disposed - accessing .visible throws "Webview is disposed"
             return false;
@@ -169,6 +171,15 @@ export abstract class BaseWebviewCommand extends BaseCommand {
     protected abstract getLoadingMessage(): string;
 
     /**
+     * Page identity (title + optional subtitle) shown on the loading screen so
+     * the user sees WHAT is loading, not an anonymous spinner. Defaults to the
+     * panel title; override to add context (e.g. the project name).
+     */
+    protected getLoadingHeader(): LoadingHeader | undefined {
+        return { title: this.getWebviewTitle() };
+    }
+
+    /**
      * Create or reveal the webview panel (singleton per webview type)
      */
     protected async createOrRevealPanel(): Promise<vscode.WebviewPanel> {
@@ -190,13 +201,17 @@ export abstract class BaseWebviewCommand extends BaseCommand {
                 existingPanel.reveal();
                 this.panel = existingPanel;
                 // Reuse existing comm manager if available
-                const existingCommManager = WebviewPanelManager.getActiveCommunicationManager(webviewId);
+                const existingCommManager =
+                    WebviewPanelManager.getActiveCommunicationManager(webviewId);
                 if (existingCommManager) {
                     this.communicationManager = existingCommManager;
                     // Send fresh initial data when revealing existing panel
                     // This ensures the webview shows current state, not stale cached state
                     const initialData = await this.getInitialData();
-                    await this.communicationManager.sendMessage('init', initialData as import('@/types/messages').MessagePayload | undefined);
+                    await this.communicationManager.sendMessage(
+                        'init',
+                        initialData as import('@/types/messages').MessagePayload | undefined,
+                    );
                 }
                 return existingPanel;
             } catch {
@@ -245,7 +260,9 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         // GUARD: Dispose any existing communication manager to prevent duplicate listeners
         // This can happen if the panel was revealed but comm manager was somehow orphaned
         if (this.communicationManager) {
-            this.logger.warn(`[BaseWebviewCommand] Disposing orphaned comm manager before creating new one`);
+            this.logger.warn(
+                `[BaseWebviewCommand] Disposing orphaned comm manager before creating new one`,
+            );
             this.communicationManager.dispose();
             this.communicationManager = undefined;
         }
@@ -256,6 +273,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
             () => this.getWebviewContent(),
             this.getLoadingMessage(),
             this.logger,
+            this.getLoadingHeader(),
         );
 
         // Create communication manager
@@ -279,7 +297,10 @@ export abstract class BaseWebviewCommand extends BaseCommand {
 
         // Send initial data
         const initialData = await this.getInitialData();
-        await this.communicationManager.sendMessage('init', initialData as import('@/types/messages').MessagePayload | undefined);
+        await this.communicationManager.sendMessage(
+            'init',
+            initialData as import('@/types/messages').MessagePayload | undefined,
+        );
 
         return this.communicationManager;
     }
@@ -309,7 +330,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         });
 
         // Theme change handler
-        const themeListener = vscode.window.onDidChangeActiveColorTheme(theme => {
+        const themeListener = vscode.window.onDidChangeActiveColorTheme((theme) => {
             const themeMode = theme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
             this.communicationManager?.sendMessage('theme-changed', { theme: themeMode });
         });
@@ -344,7 +365,10 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         }
 
         try {
-            await this.communicationManager.sendMessage(type, payload as import('@/types/messages').MessagePayload | undefined);
+            await this.communicationManager.sendMessage(
+                type,
+                payload as import('@/types/messages').MessagePayload | undefined,
+            );
         } catch (error) {
             this.logger.error(`Failed to send message '${type}':`, error as Error);
             throw error;
@@ -360,7 +384,10 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         }
 
         try {
-            return await this.communicationManager.request<T>(type, payload as import('@/types/messages').MessagePayload | undefined);
+            return await this.communicationManager.request<T>(
+                type,
+                payload as import('@/types/messages').MessagePayload | undefined,
+            );
         } catch (error) {
             this.logger.error(`Request '${type}' failed:`, error as Error);
             throw error;
