@@ -33,7 +33,7 @@ describe('ProjectDashboardScreen - Live Authoring Experience', () => {
         });
 
         await waitFor(() => {
-            expect(screen.getByText(/Author in Experience Workspace/i)).toBeInTheDocument();
+            expect(screen.getByText(/Author in EW/i)).toBeInTheDocument();
         });
         expect(screen.queryByText(/Author in DA\.live Classic/i)).not.toBeInTheDocument();
     });
@@ -46,7 +46,7 @@ describe('ProjectDashboardScreen - Live Authoring Experience', () => {
         });
 
         await waitFor(() => {
-            expect(screen.getByText(/Author in Experience Workspace/i)).toBeInTheDocument();
+            expect(screen.getByText(/Author in EW/i)).toBeInTheDocument();
         });
     });
 });
