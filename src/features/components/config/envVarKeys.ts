@@ -13,6 +13,12 @@
 // ==========================================================
 
 export const PAAS_URL = 'ADOBE_COMMERCE_URL';
+/**
+ * User-supplied Admin Panel link — a PaaS Configure field (PaaS admin paths are
+ * custom, not derivable). SaaS projects derive theirs from ACCS_GRAPHQL_ENDPOINT
+ * instead (see deriveAccsAdminUrl); an explicit value anywhere still wins.
+ */
+export const ADMIN_PANEL_URL = 'ADOBE_COMMERCE_ADMIN_URL';
 export const PAAS_GRAPHQL_ENDPOINT = 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT';
 export const PAAS_ADMIN_USERNAME = 'ADOBE_COMMERCE_ADMIN_USERNAME';
 export const PAAS_ADMIN_PASSWORD = 'ADOBE_COMMERCE_ADMIN_PASSWORD';
@@ -40,4 +46,3 @@ export const ACCS_CATALOG_SERVICE_ENDPOINT = 'ACCS_CATALOG_SERVICE_ENDPOINT';
 export const CATALOG_API_KEY = 'ADOBE_CATALOG_API_KEY';
 export const CATALOG_SERVICE_ENDPOINT = 'ADOBE_CATALOG_SERVICE_ENDPOINT';
 export const PAAS_CATALOG_SERVICE_ENDPOINT = 'PAAS_CATALOG_SERVICE_ENDPOINT';
-

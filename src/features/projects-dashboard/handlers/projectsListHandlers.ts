@@ -20,6 +20,7 @@ import {
     handleOpenBrowser,
     handleOpenLiveSite,
     handleOpenDaLive,
+    handleOpenAdminPanel,
     handleResetProject,
     handleRepublishContent,
     handleEditProject,
@@ -41,52 +42,53 @@ import { defineHandlers } from '@/types/handlers';
  */
 export const projectsListHandlers = defineHandlers({
     // Project loading handlers
-    'getProjects': handleGetProjects,
+    getProjects: handleGetProjects,
 
     // Project selection handler
-    'selectProject': handleSelectProject,
+    selectProject: handleSelectProject,
 
     // Project creation handler
-    'createProject': handleCreateProject,
+    createProject: handleCreateProject,
 
     // Settings import/export/copy handlers
-    'importFromFile': handleImportFromFile,
-    'copyFromExisting': handleCopyFromExisting,
-    'exportProject': handleExportProject,
+    importFromFile: handleImportFromFile,
+    copyFromExisting: handleCopyFromExisting,
+    exportProject: handleExportProject,
 
     // Project deletion handler
-    'deleteProject': handleDeleteProject,
+    deleteProject: handleDeleteProject,
 
     // Demo control handlers
-    'startDemo': handleStartDemo,
-    'stopDemo': handleStopDemo,
-    'openBrowser': handleOpenBrowser,
-    'openLiveSite': handleOpenLiveSite,
-    'openDaLive': handleOpenDaLive,
+    startDemo: handleStartDemo,
+    stopDemo: handleStopDemo,
+    openBrowser: handleOpenBrowser,
+    openLiveSite: handleOpenLiveSite,
+    openDaLive: handleOpenDaLive,
+    openAdminPanel: handleOpenAdminPanel,
 
     // Project reset handler
-    'resetProject': handleResetProject,
-    'republishContent': handleRepublishContent,
+    resetProject: handleResetProject,
+    republishContent: handleRepublishContent,
 
     // Project edit handler
-    'editProject': handleEditProject,
+    editProject: handleEditProject,
 
     // Project rename handler
-    'renameProject': handleRenameProject,
+    renameProject: handleRenameProject,
 
     // Utility handlers (help, settings)
-    'openHelp': handleOpenHelp,
-    'openSettings': handleOpenSettings,
+    openHelp: handleOpenHelp,
+    openSettings: handleOpenSettings,
 
     // View mode override (session persistence)
-    'setViewModeOverride': handleSetViewModeOverride,
+    setViewModeOverride: handleSetViewModeOverride,
 
     // Project folder actions
     'copy-project-path': handleCopyProjectPath,
 
     // Open AI surface for a specific project (E3)
-    'openAi': handleOpenAiForProject,
+    openAi: handleOpenAiForProject,
 
     // Pin / unpin a project — pinned projects sort first on the dashboard
-    'setProjectPinned': handleSetProjectPinned,
+    setProjectPinned: handleSetProjectPinned,
 });

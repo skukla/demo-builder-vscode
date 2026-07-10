@@ -72,12 +72,46 @@ export interface ServiceGroupResult<T> {
  * `.filter(group => group.fields.length > 0)` in both consumers.
  */
 export const SERVICE_GROUP_DEFINITIONS: ServiceGroupDef[] = [
-    { id: 'accs', label: 'Adobe Commerce Cloud Service', order: 1, fieldOrder: [K.ACCS_GRAPHQL_ENDPOINT, K.ACCS_WEBSITE_CODE, K.ACCS_STORE_CODE, K.ACCS_STORE_VIEW_CODE] },
-    { id: 'adobe-commerce', label: 'Adobe Commerce', order: 2, fieldOrder: [K.PAAS_URL, K.PAAS_GRAPHQL_ENDPOINT, K.PAAS_ADMIN_USERNAME, K.PAAS_ADMIN_PASSWORD, K.PAAS_WEBSITE_CODE, K.PAAS_STORE_CODE, K.PAAS_STORE_VIEW_CODE] },
-    { id: 'catalog-service', label: 'Catalog Service', order: 3, fieldOrder: [K.CATALOG_SERVICE_ENDPOINT, K.PAAS_ENVIRONMENT_ID, K.CATALOG_API_KEY] },
+    {
+        id: 'accs',
+        label: 'Adobe Commerce Cloud Service',
+        order: 1,
+        fieldOrder: [
+            K.ACCS_GRAPHQL_ENDPOINT,
+            K.ACCS_WEBSITE_CODE,
+            K.ACCS_STORE_CODE,
+            K.ACCS_STORE_VIEW_CODE,
+        ],
+    },
+    {
+        id: 'adobe-commerce',
+        label: 'Adobe Commerce',
+        order: 2,
+        fieldOrder: [
+            K.PAAS_URL,
+            K.ADMIN_PANEL_URL,
+            K.PAAS_GRAPHQL_ENDPOINT,
+            K.PAAS_ADMIN_USERNAME,
+            K.PAAS_ADMIN_PASSWORD,
+            K.PAAS_WEBSITE_CODE,
+            K.PAAS_STORE_CODE,
+            K.PAAS_STORE_VIEW_CODE,
+        ],
+    },
+    {
+        id: 'catalog-service',
+        label: 'Catalog Service',
+        order: 3,
+        fieldOrder: [K.CATALOG_SERVICE_ENDPOINT, K.PAAS_ENVIRONMENT_ID, K.CATALOG_API_KEY],
+    },
     { id: 'mesh', label: 'API Mesh', order: 4 },
     { id: 'adobe-assets', label: 'Adobe Assets', order: 5 },
-    { id: 'adobe-commerce-aco', label: 'Adobe Commerce Optimizer', order: 6, fieldOrder: ['ACO_API_URL', 'ACO_API_KEY', 'ACO_TENANT_ID', 'ACO_ENVIRONMENT_ID'] },
+    {
+        id: 'adobe-commerce-aco',
+        label: 'Adobe Commerce Optimizer',
+        order: 6,
+        fieldOrder: ['ACO_API_URL', 'ACO_API_KEY', 'ACO_TENANT_ID', 'ACO_ENVIRONMENT_ID'],
+    },
     { id: 'experience-platform', label: 'Experience Platform', order: 8 },
     { id: 'other', label: 'Additional Settings', order: 99 },
 ];
@@ -88,9 +122,7 @@ export function toServiceGroupWithSortedFields<T extends FieldWithKey>(
 ): ServiceGroupResult<T> {
     const fields = groups[def.id] || [];
 
-    const sortedFields = def.fieldOrder
-        ? sortByFieldOrder(fields, def.fieldOrder)
-        : fields;
+    const sortedFields = def.fieldOrder ? sortByFieldOrder(fields, def.fieldOrder) : fields;
 
     return {
         id: def.id,

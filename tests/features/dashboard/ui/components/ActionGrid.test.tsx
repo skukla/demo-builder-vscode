@@ -95,6 +95,7 @@ describe('ActionGrid', () => {
         handleStartDemo: jest.fn(),
         handleStopDemo: jest.fn(),
         handleOpenBrowser: jest.fn(),
+        handleOpenAdminPanel: jest.fn(),
         handleDeployMesh: jest.fn(),
         handleConfigure: jest.fn(),
         handleOpenDevConsole: jest.fn(),
@@ -229,6 +230,46 @@ describe('ActionGrid', () => {
             const primary = getZone(container, 'primary');
             expect(within(primary).queryByText('Start')).not.toBeInTheDocument();
             expect(within(primary).queryByText('Stop')).not.toBeInTheDocument();
+        });
+    });
+
+    describe('Admin Panel Tile', () => {
+        it('should place Admin Panel in the primary cluster (non-EDS)', () => {
+            const { container } = render(<ActionGrid {...defaultProps} />);
+
+            const primary = getZone(container, 'primary');
+            expect(within(primary).getByText('Admin Panel')).toBeInTheDocument();
+        });
+
+        it('should place Admin Panel in the primary cluster for EDS projects', () => {
+            const { container } = render(<ActionGrid {...edsProps} />);
+
+            const primary = getZone(container, 'primary');
+            expect(within(primary).getByText('Admin Panel')).toBeInTheDocument();
+        });
+
+        it('should mark the Admin Panel tile with the hero accent modifier class', () => {
+            render(<ActionGrid {...defaultProps} />);
+
+            const adminButton = screen.getByText('Admin Panel').closest('button');
+            expect(adminButton?.getAttribute('unsafe_classname')).toContain(
+                'dashboard-action-button--hero'
+            );
+        });
+
+        it('should not disable Admin Panel while isOpeningBrowser (resolves backend-side)', () => {
+            render(<ActionGrid {...defaultProps} isOpeningBrowser={true} />);
+
+            expect(screen.getByText('Admin Panel').closest('button')).not.toBeDisabled();
+        });
+
+        it('should call handleOpenAdminPanel when Admin Panel clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(<ActionGrid {...defaultProps} />);
+
+            await user.click(screen.getByText('Admin Panel'));
+
+            expect(defaultProps.handleOpenAdminPanel).toHaveBeenCalled();
         });
     });
 

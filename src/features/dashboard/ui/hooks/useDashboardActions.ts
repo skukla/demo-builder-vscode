@@ -47,6 +47,8 @@ export interface UseDashboardActionsReturn {
     handleOpenLiveSite: () => void;
     /** Open DA.live for authoring (EDS projects) */
     handleOpenDaLive: () => void;
+    /** Open the Commerce admin panel (URL resolved backend-side) */
+    handleOpenAdminPanel: () => void;
     /** Open configure screen */
     handleConfigure: () => void;
     /** Open Adobe Developer Console */
@@ -132,6 +134,10 @@ export function useDashboardActions({
         setTimeout(() => setIsOpeningBrowser(false), FRONTEND_TIMEOUTS.DOUBLE_CLICK_PREVENTION);
     }, [isOpeningBrowser, setIsOpeningBrowser, edsDaLiveUrl]);
 
+    const handleOpenAdminPanel = useCallback(() => {
+        webviewClient.postMessage('openAdminPanel');
+    }, []);
+
     const handleConfigure = useCallback(() => {
         webviewClient.postMessage('configure');
     }, []);
@@ -185,6 +191,7 @@ export function useDashboardActions({
         handleOpenBrowser,
         handleOpenLiveSite,
         handleOpenDaLive,
+        handleOpenAdminPanel,
         handleConfigure,
         handleOpenDevConsole,
         handleDeleteProject,

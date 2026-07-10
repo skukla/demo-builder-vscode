@@ -100,7 +100,7 @@
                     "ADOBE_COMMERCE_ENVIRONMENT_ID",
                     "ADOBE_CATALOG_API_KEY"
                 ],
-                "optionalEnvVars": []
+                "optionalEnvVars": ["ADOBE_COMMERCE_ADMIN_URL"]
             }
         },
         "adobe-commerce-accs": {
@@ -594,6 +594,14 @@
             "required": true,
             "placeholder": "default",
             "description": "Typically 'default' unless you have a custom store view setup",
+            "group": "adobe-commerce"
+        },
+        "ADOBE_COMMERCE_ADMIN_URL": {
+            "label": "Admin Panel URL",
+            "type": "url",
+            "required": false,
+            "placeholder": "https://your-instance.adobedemo.com/admin",
+            "description": "Link to this project's Commerce Admin Panel (opened from the dashboard)",
             "group": "adobe-commerce"
         },
         "ADOBE_COMMERCE_URL": {

@@ -21,7 +21,15 @@
  * - Edit is always available (no need to stop first)
  */
 
-import { Text, ActionButton, MenuTrigger, Menu, Section, SubmenuTrigger, Item } from '@adobe/react-spectrum';
+import {
+    Text,
+    ActionButton,
+    MenuTrigger,
+    Menu,
+    Section,
+    SubmenuTrigger,
+    Item,
+} from '@adobe/react-spectrum';
 import Copy from '@spectrum-icons/workflow/Copy';
 import Delete from '@spectrum-icons/workflow/Delete';
 import Edit from '@spectrum-icons/workflow/Edit';
@@ -36,6 +44,7 @@ import Play from '@spectrum-icons/workflow/Play';
 import Rename from '@spectrum-icons/workflow/Rename';
 import Revert from '@spectrum-icons/workflow/Revert';
 import Stop from '@spectrum-icons/workflow/Stop';
+import UserAdmin from '@spectrum-icons/workflow/UserAdmin';
 import React, { useCallback, useMemo } from 'react';
 import type { AuthoringExperience, Project } from '@/types/base';
 import { isEdsProject } from '@/types/typeGuards';
@@ -79,6 +88,7 @@ export interface ProjectActions {
     onOpenBrowser?: (project: Project) => void;
     onOpenLiveSite?: (project: Project) => void;
     onOpenDaLive?: (project: Project) => void;
+    onOpenAdminPanel?: (project: Project) => void;
     onResetProject?: (project: Project) => void;
     onRepublishContent?: (project: Project) => void;
     onEdit?: (project: Project) => void;
@@ -107,6 +117,7 @@ const ICON_MAP: Record<string, React.ReactElement> = {
     republish: <Globe size="S" />,
     export: <Export size="S" />,
     ai: <MagicWand size="S" />,
+    admin: <UserAdmin size="S" />,
     more: <More size="S" />,
     pinOn: <PinOn size="S" />,
     pinOff: <PinOff size="S" />,
@@ -146,6 +157,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         onOpenBrowser,
         onOpenLiveSite,
         onOpenDaLive,
+        onOpenAdminPanel,
         onResetProject,
         onRepublishContent,
         onEdit,
@@ -167,26 +179,49 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     // Action dispatch map - avoids a large switch statement. Each key maps to
     // the callback that handles it. The "more" submenu trigger has no entry
     // (it only opens the submenu), so dispatching it is a harmless no-op.
-    const actionMap = useMemo<Record<string, ((p: Project) => void) | undefined>>(() => ({
-        start: onStartDemo,
-        stop: onStopDemo,
-        open: onOpenBrowser,
-        openLive: onOpenLiveSite,
-        openDaLive: onOpenDaLive,
-        resetProject: onResetProject,
-        republishContent: onRepublishContent,
-        edit: onEdit,
-        rename: onRename,
-        copyPath: onCopyPath,
-        export: onExport,
-        openAi: onOpenAi,
-        pinToggle: onPinToggle,
-        delete: onDelete,
-    }), [onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename, onCopyPath, onExport, onOpenAi, onPinToggle, onDelete]);
+    const actionMap = useMemo<Record<string, ((p: Project) => void) | undefined>>(
+        () => ({
+            start: onStartDemo,
+            stop: onStopDemo,
+            open: onOpenBrowser,
+            openLive: onOpenLiveSite,
+            openDaLive: onOpenDaLive,
+            openAdminPanel: onOpenAdminPanel,
+            resetProject: onResetProject,
+            republishContent: onRepublishContent,
+            edit: onEdit,
+            rename: onRename,
+            copyPath: onCopyPath,
+            export: onExport,
+            openAi: onOpenAi,
+            pinToggle: onPinToggle,
+            delete: onDelete,
+        }),
+        [
+            onStartDemo,
+            onStopDemo,
+            onOpenBrowser,
+            onOpenLiveSite,
+            onOpenDaLive,
+            onOpenAdminPanel,
+            onResetProject,
+            onRepublishContent,
+            onEdit,
+            onRename,
+            onCopyPath,
+            onExport,
+            onOpenAi,
+            onPinToggle,
+            onDelete,
+        ],
+    );
 
-    const handleMenuAction = useCallback((key: React.Key) => {
-        actionMap[String(key)]?.(project);
-    }, [project, actionMap]);
+    const handleMenuAction = useCallback(
+        (key: React.Key) => {
+            actionMap[String(key)]?.(project);
+        },
+        [project, actionMap],
+    );
 
     // Stop click propagation to prevent triggering parent selection
     const handleMenuClick = useCallback((e: React.MouseEvent) => {
@@ -223,13 +258,17 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                 use.push({ key: 'open', label: 'Open in Browser', icon: 'globe' });
             }
         }
+        // Admin Panel is backend-side, so it applies to every project type.
+        if (onOpenAdminPanel) {
+            use.push({ key: 'openAdminPanel', label: 'Open Admin Panel', icon: 'admin' });
+        }
         if (onOpenAi) {
             use.push({ key: 'openAi', label: 'Open AI', icon: 'ai' });
         }
 
         // MANAGE — project-entry actions
         // Edit needs the demo stopped for non-EDS; EDS has no running state.
-        if (isEds ? onEdit : (!isRunning && onEdit)) {
+        if (isEds ? onEdit : !isRunning && onEdit) {
             manage.push({ key: 'edit', label: 'Edit', icon: 'edit' });
         }
         if (onRename) {
@@ -258,10 +297,34 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         }
 
         return { use, manage, more };
-    }, [isEds, isRunning, project.pinned, experience, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename, onCopyPath, onExport, onOpenAi, onPinToggle]);
+    }, [
+        isEds,
+        isRunning,
+        project.pinned,
+        experience,
+        onStartDemo,
+        onStopDemo,
+        onOpenBrowser,
+        onOpenLiveSite,
+        onOpenDaLive,
+        onOpenAdminPanel,
+        onResetProject,
+        onRepublishContent,
+        onEdit,
+        onRename,
+        onCopyPath,
+        onExport,
+        onOpenAi,
+        onPinToggle,
+    ]);
 
     // Nothing to show — render no trigger at all.
-    if (groups.use.length === 0 && groups.manage.length === 0 && groups.more.length === 0 && !onDelete) {
+    if (
+        groups.use.length === 0 &&
+        groups.manage.length === 0 &&
+        groups.more.length === 0 &&
+        !onDelete
+    ) {
         return null;
     }
 
@@ -280,11 +343,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- click handled by child MenuTrigger/ActionButton which provides keyboard support
         <div onClick={handleMenuClick}>
             <MenuTrigger>
-                <ActionButton
-                    isQuiet
-                    aria-label="More actions"
-                    UNSAFE_className={className}
-                >
+                <ActionButton isQuiet aria-label="More actions" UNSAFE_className={className}>
                     <MoreSmallListVert size="S" />
                 </ActionButton>
                 <Menu onAction={handleMenuAction}>
@@ -306,9 +365,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                                 <More size="S" />
                                 <Text>More</Text>
                             </Item>
-                            <Menu onAction={handleMenuAction}>
-                                {groups.more.map(renderItem)}
-                            </Menu>
+                            <Menu onAction={handleMenuAction}>{groups.more.map(renderItem)}</Menu>
                         </SubmenuTrigger>
                     ) : null}
 

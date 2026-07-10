@@ -47,6 +47,7 @@ describe('dashboardHandlers', () => {
             // Then: Navigation handlers present
             expect(hasHandler(dashboardHandlers, 'openBrowser')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'openLiveSite')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'openAdminPanel')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'configure')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'openDevConsole')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'navigateBack')).toBe(true);
@@ -114,23 +115,26 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'verifyAppBuilderComponent')).toBe(true);
         });
 
-        it('should have exactly 29 handlers', () => {
+        it('should have exactly 32 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers);
 
-            // Then: Exactly 31 handlers
-            // 1 init (requestStatus only; no 'ready') + 2 lifecycle + 6 navigation +
-            // 1 mesh + 1 syncStorefront + 1 refreshBlockLibrary + 2 auth
-            // (reAuthenticate + switchOrg) + 1 project + 1 reset = 16, plus the 4
-            // More-menu actions (copyPath, exportProject, republishContent,
-            // renameProject) = 20, plus the 4 App Builder actions (addApp,
-            // deployApp, redeployApp, removeApp) = 24, plus the 5 appBuilderComponent
-            // (integrations list) actions (addAppBuilderComponent, deployAppBuilderComponent,
-            // redeployAppBuilderComponent, removeAppBuilderComponent, verifyAppBuilderComponent) = 29,
-            // plus the 2 console-API actions (listConsoleApis, addConsoleApis) = 31.
+            // Then: Exactly 32 handlers
+            // 1 init (requestStatus only; no 'ready') + 2 lifecycle + 7 navigation
+            // (openBrowser, openLiveSite, openDaLive, openAdminPanel, configure,
+            // openDevConsole, navigateBack) + 1 mesh + 1 syncStorefront +
+            // 1 refreshBlockLibrary + 2 auth (reAuthenticate + switchOrg) +
+            // 1 project + 1 reset = 17, plus the 4 More-menu actions (copyPath,
+            // exportProject, republishContent, renameProject) = 21, plus the 4
+            // App Builder actions (addApp, deployApp, redeployApp, removeApp) = 25,
+            // plus the 5 appBuilderComponent (integrations list) actions
+            // (addAppBuilderComponent, deployAppBuilderComponent,
+            // redeployAppBuilderComponent, removeAppBuilderComponent,
+            // verifyAppBuilderComponent) = 30, plus the 2 console-API actions
+            // (listConsoleApis, addConsoleApis) = 32.
             // setAuthoringExperience lives in the Configure webview, not this map.
-            expect(types).toHaveLength(31);
+            expect(types).toHaveLength(32);
         });
 
         it('should have handlers as functions', () => {

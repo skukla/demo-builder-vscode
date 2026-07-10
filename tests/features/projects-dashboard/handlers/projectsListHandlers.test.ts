@@ -105,13 +105,17 @@ describe('projectsListHandlers', () => {
             expect(hasHandler(projectsListHandlers, 'openAi')).toBe(true);
         });
 
+        it('should include openAdminPanel handler', () => {
+            expect(hasHandler(projectsListHandlers, 'openAdminPanel')).toBe(true);
+        });
+
         it('does not register a setAuthoringExperience handler (relocated to Configure)', () => {
             expect(hasHandler(projectsListHandlers, 'setAuthoringExperience')).toBe(false);
         });
 
-        it('should have exactly 22 handlers', () => {
+        it('should have exactly 23 handlers', () => {
             const types = getRegisteredTypes(projectsListHandlers);
-            expect(types).toHaveLength(22);
+            expect(types).toHaveLength(23);
         });
 
         it('should have handlers as functions', () => {

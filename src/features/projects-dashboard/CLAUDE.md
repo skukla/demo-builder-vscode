@@ -120,7 +120,7 @@ Object literal handler map for the Projects List view, used with `dispatchHandle
 
 **File:** `handlers/projectsListHandlers.ts`
 
-**Registered Handlers:**
+**Registered Handlers** (core three; the full map — 23 keys covering lifecycle, open-in-browser/DA.live/admin-panel, rename/export/delete, pinning, and utilities — lives in `handlers/projectsListHandlers.ts`):
 - `getProjects` - Load all projects
 - `selectProject` - Select a project. Sets the persisted current-project pointer and surfaces the project dashboard webview in-place — **no workspace anchoring, no reload** (always-root home model). `forceNewWindow=true` opens a new window, which home-on-launch (`shouldReHomeToRoot`) re-homes back to the projects root.
 - `createProject` - Trigger project creation wizard
@@ -166,12 +166,14 @@ const result = await handleCreateProject(context);
 
 ## Message Types
 
+Core messages (non-exhaustive — the handler map in `handlers/projectsListHandlers.ts` is the source of truth; most kebab actions take `{ projectPath }`):
+
 | Message | Direction | Payload | Response |
 |---------|-----------|---------|----------|
 | `getProjects` | UI → Extension | - | `{ success, data: { projects } }` |
 | `selectProject` | UI → Extension | `{ projectPath }` | `{ success, data: { project } }` |
 | `createProject` | UI → Extension | - | `{ success }` |
-| `openDocs` | UI → Extension | - | `{ success }` |
+| `openAdminPanel` | UI → Extension | `{ projectPath }` | `{ success }` (opens the admin URL — derived for SaaS, `ADOBE_COMMERCE_ADMIN_URL` field for PaaS — or prompts "Open Configure") |
 | `openHelp` | UI → Extension | - | `{ success }` |
 | `openSettings` | UI → Extension | - | `{ success }` |
 | `projectsUpdated` | Extension → UI | `{ projects }` | - |

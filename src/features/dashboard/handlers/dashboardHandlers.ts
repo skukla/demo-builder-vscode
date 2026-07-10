@@ -50,7 +50,12 @@ import { deleteProject } from '@/features/projects-dashboard/services/projectDel
 import type { Project } from '@/types';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler, defineHandlers, HandlerContext } from '@/types/handlers';
-import { getMeshComponentInstance, getProjectFrontendPort, isEdsProject } from '@/types/typeGuards';
+import {
+    getAdminPanelUrl,
+    getMeshComponentInstance,
+    getProjectFrontendPort,
+    isEdsProject,
+} from '@/types/typeGuards';
 
 /**
  * Handle 'requestStatus' message - Send current project status
@@ -305,6 +310,58 @@ export const handleOpenDaLive: MessageHandler = async (context, data) => {
 
     await vscode.env.openExternal(vscode.Uri.parse(payload.url));
     context.logger.debug(`[Dashboard] Opening DA.live: ${payload.url}`);
+
+    return { success: true };
+};
+
+/**
+ * Handle 'openAdminPanel' message - Open the Commerce admin panel in the browser
+ *
+ * The admin URL resolves via getAdminPanelUrl: an explicit
+ * ADOBE_COMMERCE_ADMIN_URL (PaaS Configure field / override) wins, otherwise
+ * SaaS projects derive it from the ACCS tenant endpoint. When unresolvable,
+ * a notification offers a jump to Configure instead of failing.
+ */
+export const handleOpenAdminPanel: MessageHandler = async (context) => {
+    const project = await context.stateManager.getCurrentProject();
+    const url = getAdminPanelUrl(project);
+
+    if (!url) {
+        // Fire-and-forget — the notification must not block the handler response.
+        void vscode.window
+            .showInformationMessage('No Admin Panel URL is set for this project.', 'Open Configure')
+            .then((selection) => {
+                if (selection === 'Open Configure') {
+                    // Returned (not voided) so a rejection reaches the handler below.
+                    return vscode.commands.executeCommand('demoBuilder.configureProject');
+                }
+                return undefined;
+            })
+            .then(undefined, (error) => {
+                context.logger.error(
+                    '[Dashboard] Failed to open Configure from admin-panel prompt',
+                    error as Error,
+                );
+            });
+        return { success: true };
+    }
+
+    // Validate URL before opening (security: prevents malicious URL injection).
+    // http is allowed alongside https — the Configure field accepts both, and the
+    // localhost/private-IP blocks still apply (mirrors configureHandlers).
+    try {
+        validateURL(url, ['https', 'http']);
+    } catch (validationError) {
+        context.logger.error(
+            '[Dashboard] Admin panel URL validation failed',
+            validationError as Error,
+        );
+        return { success: false, error: 'Invalid URL', code: ErrorCode.CONFIG_INVALID };
+    }
+
+    // No URL in the log — the stored value is user-supplied and may embed credentials.
+    context.logger.debug('[Dashboard] Opening admin panel');
+    await vscode.env.openExternal(vscode.Uri.parse(url));
 
     return { success: true };
 };
@@ -882,6 +939,7 @@ export const dashboardHandlers = defineHandlers({
     openBrowser: handleOpenBrowser,
     openLiveSite: handleOpenLiveSite,
     openDaLive: handleOpenDaLive,
+    openAdminPanel: handleOpenAdminPanel,
     configure: handleConfigure,
     openDevConsole: handleOpenDevConsole,
     navigateBack: handleNavigateBack,

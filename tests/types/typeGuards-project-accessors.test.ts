@@ -19,11 +19,11 @@ import {
     isEdsProject,
     getEdsLiveUrl,
     getEdsPreviewUrl,
+    getAdminPanelUrl,
 } from '@/types/typeGuards';
 import { Project } from '@/types/base';
 
 describe('typeGuards - Project Accessors', () => {
-
     // =================================================================
     // getComponentVersion Tests (SOP §4 compliance - Step 4)
     // =================================================================
@@ -32,8 +32,8 @@ describe('typeGuards - Project Accessors', () => {
         it('should return version when component exists', () => {
             const project = {
                 componentVersions: {
-                    'headless': { version: '1.2.3' }
-                }
+                    headless: { version: '1.2.3' },
+                },
             } as Project;
             expect(getComponentVersion(project, 'headless')).toBe('1.2.3');
         });
@@ -49,8 +49,8 @@ describe('typeGuards - Project Accessors', () => {
         it('should return undefined when component not found', () => {
             const project = {
                 componentVersions: {
-                    'other-component': { version: '1.0.0' }
-                }
+                    'other-component': { version: '1.0.0' },
+                },
             } as Project;
             expect(getComponentVersion(project, 'headless')).toBeUndefined();
         });
@@ -69,8 +69,8 @@ describe('typeGuards - Project Accessors', () => {
         it('should return port when frontend component exists', () => {
             const project = {
                 componentInstances: {
-                    'headless': { type: 'frontend', port: 3000 }
-                }
+                    headless: { type: 'frontend', port: 3000 },
+                },
             } as Project;
             expect(getProjectFrontendPort(project)).toBe(3000);
         });
@@ -86,8 +86,8 @@ describe('typeGuards - Project Accessors', () => {
         it('should return undefined when frontend component not found', () => {
             const project = {
                 componentInstances: {
-                    'other-component': { port: 8080 }
-                }
+                    'other-component': { port: 8080 },
+                },
             } as Project;
             expect(getProjectFrontendPort(project)).toBeUndefined();
         });
@@ -105,8 +105,8 @@ describe('typeGuards - Project Accessors', () => {
     describe('getComponentIds', () => {
         it('should return component IDs when instances exist', () => {
             const instances = {
-                'headless': { status: 'running' },
-                'commerce-mesh': { status: 'deployed' }
+                headless: { status: 'running' },
+                'commerce-mesh': { status: 'deployed' },
             } as Record<string, any>;
             expect(getComponentIds(instances)).toEqual(['headless', 'commerce-mesh']);
         });
@@ -131,7 +131,7 @@ describe('typeGuards - Project Accessors', () => {
     describe('getComponentConfigPort', () => {
         it('should return port when component config exists', () => {
             const configs = {
-                'headless': { PORT: 3000 }
+                headless: { PORT: 3000 },
             };
             expect(getComponentConfigPort(configs, 'headless')).toBe(3000);
         });
@@ -142,14 +142,14 @@ describe('typeGuards - Project Accessors', () => {
 
         it('should return undefined when component not found', () => {
             const configs = {
-                'other-component': { PORT: 8080 }
+                'other-component': { PORT: 8080 },
             };
             expect(getComponentConfigPort(configs, 'headless')).toBeUndefined();
         });
 
         it('should return undefined when PORT not set', () => {
             const configs = {
-                'headless': { OTHER_PROP: 'value' }
+                headless: { OTHER_PROP: 'value' },
             };
             expect(getComponentConfigPort(configs, 'headless')).toBeUndefined();
         });
@@ -311,6 +311,104 @@ describe('typeGuards - Project Accessors', () => {
                 selectedStack: 'eds-dalive',
             } as Project;
             expect(getEdsLiveUrl(project)).toBeUndefined();
+        });
+    });
+
+    // =================================================================
+    // getAdminPanelUrl Tests (SOP §4 compliance - admin URL access)
+    // =================================================================
+
+    describe('getAdminPanelUrl', () => {
+        it('should return admin URL stored under the backend component config', () => {
+            const project = {
+                componentSelections: { backend: 'adobe-commerce-paas' },
+                componentConfigs: {
+                    'adobe-commerce-paas': {
+                        ADOBE_COMMERCE_ADMIN_URL: 'https://my-store.adobedemo.com/admin',
+                    },
+                },
+            } as unknown as Project;
+            expect(getAdminPanelUrl(project)).toBe('https://my-store.adobedemo.com/admin');
+        });
+
+        it('should return admin URL stored under any other component config', () => {
+            const project = {
+                componentConfigs: {
+                    headless: {
+                        ADOBE_COMMERCE_ADMIN_URL: 'https://other.adobedemo.com/admin',
+                    },
+                },
+            } as unknown as Project;
+            expect(getAdminPanelUrl(project)).toBe('https://other.adobedemo.com/admin');
+        });
+
+        it('should return undefined for undefined project', () => {
+            expect(getAdminPanelUrl(undefined)).toBeUndefined();
+        });
+
+        it('should return undefined for null project', () => {
+            expect(getAdminPanelUrl(null)).toBeUndefined();
+        });
+
+        it('should return undefined when the key is absent from all configs', () => {
+            const project = {
+                componentConfigs: {
+                    'adobe-commerce-paas': { ADOBE_COMMERCE_URL: 'https://my-store.adobedemo.com' },
+                },
+            } as unknown as Project;
+            expect(getAdminPanelUrl(project)).toBeUndefined();
+        });
+
+        it('should return undefined when the stored value is an empty string', () => {
+            const project = {
+                componentConfigs: {
+                    'adobe-commerce-paas': { ADOBE_COMMERCE_ADMIN_URL: '' },
+                },
+            } as unknown as Project;
+            expect(getAdminPanelUrl(project)).toBeUndefined();
+        });
+
+        it('should return undefined when componentConfigs is undefined', () => {
+            const project = {} as Project;
+            expect(getAdminPanelUrl(project)).toBeUndefined();
+        });
+
+        it('should derive the SaaS admin URL from the ACCS GraphQL endpoint when no explicit URL is set', () => {
+            const project = {
+                componentConfigs: {
+                    'adobe-commerce-accs': {
+                        ACCS_GRAPHQL_ENDPOINT:
+                            'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql',
+                    },
+                },
+            } as unknown as Project;
+            expect(getAdminPanelUrl(project)).toBe(
+                'https://na1-sandbox.admin.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/admin/admin/dashboard/'
+            );
+        });
+
+        it('should prefer an explicit admin URL over the derived ACCS one', () => {
+            const project = {
+                componentConfigs: {
+                    'adobe-commerce-accs': {
+                        ACCS_GRAPHQL_ENDPOINT:
+                            'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql',
+                        ADOBE_COMMERCE_ADMIN_URL: 'https://custom.example.com/admin',
+                    },
+                },
+            } as unknown as Project;
+            expect(getAdminPanelUrl(project)).toBe('https://custom.example.com/admin');
+        });
+
+        it('should return undefined when the ACCS endpoint is not derivable', () => {
+            const project = {
+                componentConfigs: {
+                    'adobe-commerce-accs': {
+                        ACCS_GRAPHQL_ENDPOINT: 'https://my-own-host.example.com/graphql',
+                    },
+                },
+            } as unknown as Project;
+            expect(getAdminPanelUrl(project)).toBeUndefined();
         });
     });
 

@@ -56,7 +56,7 @@ describe('useDashboardActions', () => {
 
     const renderActionsHook = (
         isOpeningBrowser = false,
-        extra: { edsLiveUrl?: string; edsDaLiveUrl?: string } = {},
+        extra: { edsLiveUrl?: string; edsDaLiveUrl?: string } = {}
     ) => {
         return renderHook(() =>
             useDashboardActions({
@@ -241,6 +241,16 @@ describe('useDashboardActions', () => {
             expect(mockRequest).toHaveBeenCalledWith('switchOrg');
         });
 
+        it('should send openAdminPanel message', () => {
+            const { result } = renderActionsHook();
+
+            act(() => {
+                result.current.handleOpenAdminPanel();
+            });
+
+            expect(mockPostMessage).toHaveBeenCalledWith('openAdminPanel');
+        });
+
         it('should send copyPath message', () => {
             const { result } = renderActionsHook();
 
@@ -290,7 +300,7 @@ describe('useDashboardActions', () => {
             const { result } = renderActionsHook();
 
             expect(
-                (result.current as Record<string, unknown>).handleSetAuthoringExperience,
+                (result.current as Record<string, unknown>).handleSetAuthoringExperience
             ).toBeUndefined();
         });
     });

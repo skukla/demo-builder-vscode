@@ -5,11 +5,13 @@
  * Used when receiving data from external sources (webview, JSON, CLI output).
  */
 
-import {
-    Project,
-    ComponentInstance,
-} from './index';
+import { Project, ComponentInstance } from './index';
 import { COMPONENT_IDS } from '@/core/constants';
+import { ADMIN_PANEL_URL, ACCS_GRAPHQL_ENDPOINT } from '@/features/components/config/envVarKeys';
+import {
+    deriveAccsAdminUrl,
+    lookupComponentConfigValue,
+} from '@/features/components/services/envVarHelpers';
 
 /**
  * isRecord - Type guard for Record<string, unknown>
@@ -22,16 +24,13 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
  * isStringArray - Type guard for string[]
  */
 export function isStringArray(value: unknown): value is string[] {
-    return Array.isArray(value) && value.every(item => typeof item === 'string');
+    return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
 
 /**
  * hasProperty - Type guard to check if object has property
  */
-export function hasProperty<K extends string>(
-    obj: unknown,
-    key: K,
-): obj is Record<K, unknown> {
+export function hasProperty<K extends string>(obj: unknown, key: K): obj is Record<K, unknown> {
     return isRecord(obj) && key in obj;
 }
 
@@ -91,9 +90,7 @@ export function toError(error: unknown): Error {
  * @param obj - Object to check (can be undefined/null)
  * @returns true if object has at least one enumerable property
  */
-export function hasEntries<T extends Record<string, unknown>>(
-    obj: T | undefined | null,
-): obj is T {
+export function hasEntries<T extends Record<string, unknown>>(obj: T | undefined | null): obj is T {
     if (!obj) return false;
     return Object.keys(obj).length > 0;
 }
@@ -194,7 +191,7 @@ export function getComponentInstancesByType(
     type: string | undefined,
 ): ComponentInstance[] {
     if (!project?.componentInstances || type === undefined) return [];
-    return Object.values(project.componentInstances).filter(c => c.type === type);
+    return Object.values(project.componentInstances).filter((c) => c.type === type);
 }
 
 /**
@@ -334,6 +331,29 @@ export function getEdsLiveUrl(project: Project | undefined | null): string | und
 }
 
 /**
+ * Get the user-supplied Commerce Admin Panel URL for a project
+ *
+ * The admin URL cannot be derived from any stored config, so the user provides
+ * it via the optional ADOBE_COMMERCE_ADMIN_URL field (Configure screen). Values
+ * live in componentConfigs under whichever component declared the field.
+ *
+ * SOP §4: Extracted config lookup to named getter
+ *
+ * Resolution order: an explicit ADOBE_COMMERCE_ADMIN_URL (user-supplied, PaaS
+ * Configure field or manual override) wins; otherwise SaaS projects derive the
+ * admin URL from their ACCS tenant endpoint (api → admin host swap).
+ *
+ * @param project - The project (can be undefined/null)
+ * @returns The admin panel URL, or undefined if not set and not derivable
+ */
+export function getAdminPanelUrl(project: Project | undefined | null): string | undefined {
+    const configs = project?.componentConfigs ?? {};
+    const explicit = lookupComponentConfigValue(configs, ADMIN_PANEL_URL);
+    if (explicit) return explicit;
+    return deriveAccsAdminUrl(lookupComponentConfigValue(configs, ACCS_GRAPHQL_ENDPOINT));
+}
+
+/**
  * Get the preview URL for an EDS project
  *
  * The preview URL is stored in the COMPONENT_IDS.EDS_STOREFRONT component instance metadata.
@@ -432,7 +452,7 @@ export function getComponentInstancesBySubType(
     subType: string | undefined,
 ): ComponentInstance[] {
     if (!project?.componentInstances || subType === undefined) return [];
-    return Object.values(project.componentInstances).filter(c => c.subType === subType);
+    return Object.values(project.componentInstances).filter((c) => c.subType === subType);
 }
 
 /**
@@ -462,9 +482,7 @@ export function getMeshComponentInstance(
  * @param project - The project to search (can be undefined/null)
  * @returns The mesh component ID, or undefined if no mesh installed
  */
-export function getMeshComponentId(
-    project: Project | undefined | null,
-): string | undefined {
+export function getMeshComponentId(project: Project | undefined | null): string | undefined {
     return getMeshComponentInstance(project)?.id;
 }
 
@@ -486,9 +504,7 @@ export function hasMeshComponent(project: Project | undefined | null): boolean {
  * @param project - The project to check (can be undefined/null)
  * @returns The mesh endpoint URL, or undefined if not available
  */
-export function getMeshEndpointUrl(
-    project: Project | undefined | null,
-): string | undefined {
+export function getMeshEndpointUrl(project: Project | undefined | null): string | undefined {
     return project?.meshState?.endpoint;
 }
 

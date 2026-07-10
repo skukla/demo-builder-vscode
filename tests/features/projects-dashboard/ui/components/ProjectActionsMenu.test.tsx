@@ -14,7 +14,7 @@ const renderWithProvider = (ui: React.ReactElement) => {
     return render(
         <Provider theme={defaultTheme} colorScheme="light">
             {ui}
-        </Provider>,
+        </Provider>
     );
 };
 
@@ -41,7 +41,7 @@ const edsProject = (name = 'EDS Project') =>
  */
 const edsProjectWithExperience = (
     experience: 'da-live-classic' | 'experience-workspace',
-    name = 'EDS Project',
+    name = 'EDS Project'
 ) =>
     createMockProject({
         name,
@@ -53,14 +53,20 @@ describe('ProjectActionsMenu', () => {
     describe('rendering and gating', () => {
         it('renders the kebab trigger when at least one action is wired', () => {
             renderWithProvider(
-                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} actions={{ onDelete: jest.fn() }} />,
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={{ onDelete: jest.fn() }}
+                />
             );
             expect(screen.getByLabelText('More actions')).toBeInTheDocument();
         });
 
         it('renders no items for callbacks that are absent', () => {
             renderWithProvider(
-                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} actions={{ onDelete: jest.fn() }} />,
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={{ onDelete: jest.fn() }}
+                />
             );
             openMenu();
 
@@ -88,7 +94,11 @@ describe('ProjectActionsMenu', () => {
         it('heads a "Use" section holding Start Demo and Open AI (non-EDS, stopped)', () => {
             const actions: ProjectActions = { onStartDemo: jest.fn(), onOpenAi: jest.fn() };
             renderWithProvider(
-                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} isRunning={false} actions={actions} />,
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    isRunning={false}
+                    actions={actions}
+                />
             );
             openMenu();
 
@@ -104,7 +114,11 @@ describe('ProjectActionsMenu', () => {
                 onOpenBrowser: jest.fn(),
             };
             renderWithProvider(
-                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} isRunning actions={actions} />,
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    isRunning
+                    actions={actions}
+                />
             );
             openMenu();
 
@@ -123,7 +137,10 @@ describe('ProjectActionsMenu', () => {
                 onResetProject: jest.fn(),
             };
             renderWithProvider(
-                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} actions={actions} />,
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={actions}
+                />
             );
             openMenu();
 
@@ -140,7 +157,7 @@ describe('ProjectActionsMenu', () => {
                 <ProjectActionsMenu
                     project={createMockProject({ name: 'Test' })}
                     actions={{ onResetProject: jest.fn(), onCopyPath: jest.fn() }}
-                />,
+                />
             );
             openMenu();
 
@@ -151,7 +168,9 @@ describe('ProjectActionsMenu', () => {
 
         it('flips the pin label to Unpin when the project is pinned', () => {
             const project = createMockProject({ name: 'Test', pinned: true } as any);
-            renderWithProvider(<ProjectActionsMenu project={project} actions={{ onPinToggle: jest.fn() }} />);
+            renderWithProvider(
+                <ProjectActionsMenu project={project} actions={{ onPinToggle: jest.fn() }} />
+            );
             openMenu();
 
             expect(screen.getByText('Unpin')).toBeInTheDocument();
@@ -166,7 +185,10 @@ describe('ProjectActionsMenu', () => {
                 onExport: jest.fn(),
             };
             renderWithProvider(
-                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} actions={actions} />,
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={actions}
+                />
             );
             openMenu();
 
@@ -189,7 +211,10 @@ describe('ProjectActionsMenu', () => {
         });
 
         it('includes Republish Content in the submenu for EDS projects', () => {
-            const actions: ProjectActions = { onRepublishContent: jest.fn(), onCopyPath: jest.fn() };
+            const actions: ProjectActions = {
+                onRepublishContent: jest.fn(),
+                onCopyPath: jest.fn(),
+            };
             renderWithProvider(<ProjectActionsMenu project={edsProject()} actions={actions} />);
             openMenu();
 
@@ -197,9 +222,15 @@ describe('ProjectActionsMenu', () => {
         });
 
         it('omits Republish Content for non-EDS projects even when wired', () => {
-            const actions: ProjectActions = { onRepublishContent: jest.fn(), onCopyPath: jest.fn() };
+            const actions: ProjectActions = {
+                onRepublishContent: jest.fn(),
+                onCopyPath: jest.fn(),
+            };
             renderWithProvider(
-                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} actions={actions} />,
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={actions}
+                />
             );
             openMenu();
 
@@ -221,7 +252,10 @@ describe('ProjectActionsMenu', () => {
                 onDelete: jest.fn(),
             };
             renderWithProvider(
-                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} actions={actions} />,
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={actions}
+                />
             );
             openMenu();
 
@@ -232,7 +266,10 @@ describe('ProjectActionsMenu', () => {
         it('keeps Delete out of the More… submenu', () => {
             const actions: ProjectActions = { onCopyPath: jest.fn(), onDelete: jest.fn() };
             renderWithProvider(
-                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} actions={actions} />,
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={actions}
+                />
             );
             openMenu();
 
@@ -250,7 +287,10 @@ describe('ProjectActionsMenu', () => {
                 onOpenDaLive: jest.fn(),
             };
             renderWithProvider(
-                <ProjectActionsMenu project={edsProjectWithExperience('da-live-classic')} actions={actions} />,
+                <ProjectActionsMenu
+                    project={edsProjectWithExperience('da-live-classic')}
+                    actions={actions}
+                />
             );
             openMenu();
 
@@ -270,7 +310,7 @@ describe('ProjectActionsMenu', () => {
                 <ProjectActionsMenu
                     project={edsProjectWithExperience('da-live-classic')}
                     actions={{ onOpenDaLive: jest.fn() }}
-                />,
+                />
             );
             openMenu();
 
@@ -283,7 +323,7 @@ describe('ProjectActionsMenu', () => {
                 <ProjectActionsMenu
                     project={edsProjectWithExperience('experience-workspace')}
                     actions={{ onOpenDaLive: jest.fn() }}
-                />,
+                />
             );
             openMenu();
 
@@ -299,7 +339,10 @@ describe('ProjectActionsMenu', () => {
                 onRename: jest.fn(),
             };
             renderWithProvider(
-                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} actions={actions} />,
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={actions}
+                />
             );
             openMenu();
 
@@ -312,7 +355,7 @@ describe('ProjectActionsMenu', () => {
                 <ProjectActionsMenu
                     project={edsProjectWithExperience('da-live-classic')}
                     actions={{ onOpenDaLive: jest.fn() }}
-                />,
+                />
             );
             openMenu();
 
@@ -324,7 +367,10 @@ describe('ProjectActionsMenu', () => {
     describe('Open AI action', () => {
         it('renders Open AI in the USE group when wired', () => {
             renderWithProvider(
-                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} actions={{ onOpenAi: jest.fn() }} />,
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={{ onOpenAi: jest.fn() }}
+                />
             );
             openMenu();
 
@@ -335,7 +381,10 @@ describe('ProjectActionsMenu', () => {
 
         it('does not render Open AI when the callback is omitted', () => {
             renderWithProvider(
-                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} actions={{ onDelete: jest.fn() }} />,
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={{ onDelete: jest.fn() }}
+                />
             );
             openMenu();
 
@@ -355,10 +404,66 @@ describe('ProjectActionsMenu', () => {
         });
 
         it('renders Open AI for EDS projects as well', () => {
-            renderWithProvider(<ProjectActionsMenu project={edsProject()} actions={{ onOpenAi: jest.fn() }} />);
+            renderWithProvider(
+                <ProjectActionsMenu project={edsProject()} actions={{ onOpenAi: jest.fn() }} />
+            );
             openMenu();
 
             expect(screen.getByText('Open AI')).toBeInTheDocument();
+        });
+    });
+
+    describe('Open Admin Panel action', () => {
+        it('renders Open Admin Panel in the USE group when wired (non-EDS)', () => {
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={{ onOpenAdminPanel: jest.fn() }}
+                />
+            );
+            openMenu();
+
+            // Top-level USE item, not a submenu entry.
+            expect(screen.getByText('Open Admin Panel')).toBeInTheDocument();
+            expect(screen.queryByTestId('spectrum-submenu')).not.toBeInTheDocument();
+        });
+
+        it('renders Open Admin Panel for EDS projects as well (no type gating)', () => {
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={edsProject()}
+                    actions={{ onOpenAdminPanel: jest.fn() }}
+                />
+            );
+            openMenu();
+
+            expect(screen.getByText('Open Admin Panel')).toBeInTheDocument();
+        });
+
+        it('does not render Open Admin Panel when the callback is omitted', () => {
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={{ onDelete: jest.fn() }}
+                />
+            );
+            openMenu();
+
+            expect(screen.queryByText('Open Admin Panel')).not.toBeInTheDocument();
+        });
+
+        it('invokes onOpenAdminPanel with the project when selected', () => {
+            const project = createMockProject({ name: 'Admin Target' });
+            const onOpenAdminPanel = jest.fn();
+            renderWithProvider(
+                <ProjectActionsMenu project={project} actions={{ onOpenAdminPanel }} />
+            );
+            openMenu();
+
+            screen.getByText('Open Admin Panel').click();
+
+            expect(onOpenAdminPanel).toHaveBeenCalledWith(project);
+            expect(onOpenAdminPanel).toHaveBeenCalledTimes(1);
         });
     });
 });

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Open Admin Panel.** A new dashboard tile and a project-card menu item open the project's Commerce Admin Panel. SaaS (ACCS) projects derive the URL automatically from the tenant endpoint; PaaS projects supply it via the new optional **Admin Panel URL** field on the Configure screen (`ADOBE_COMMERCE_ADMIN_URL`, which also overrides the derived URL when set). Clicking without a resolvable URL prompts with an "Open Configure" shortcut.
+
 ## [1.0.0-beta.121] - 2026-06-19
 
 ### Added

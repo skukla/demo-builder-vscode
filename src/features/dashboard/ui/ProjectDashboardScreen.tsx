@@ -61,7 +61,6 @@ interface ProjectDashboardScreenProps {
     appBuilderComponentCatalog?: AppBuilderComponentCatalogEntry[];
 }
 
-
 /**
  * Project dashboard screen component
  *
@@ -73,14 +72,26 @@ interface ProjectDashboardScreenProps {
  *
  * @param props - Component props
  */
-export function ProjectDashboardScreen({ project, hasMesh = false, brandName, stackName, isEds = false, edsLiveUrl, edsDaLiveUrl, authoringExperience, initialMeshStatus, initialEdsStorefrontStatus, hasAdobeContext }: ProjectDashboardScreenProps) {
+export function ProjectDashboardScreen({
+    project,
+    hasMesh = false,
+    brandName,
+    stackName,
+    isEds = false,
+    edsLiveUrl,
+    edsDaLiveUrl,
+    authoringExperience,
+    initialMeshStatus,
+    initialEdsStorefrontStatus,
+    hasAdobeContext,
+}: ProjectDashboardScreenProps) {
     // Capture isEds on first render and never change it (project type doesn't change)
     const isEdsRef = useRef(isEds);
     if (isEds && !isEdsRef.current) {
         isEdsRef.current = true;
     }
     const isEdsStable = isEdsRef.current;
-    
+
     // Capture the EDS live (published) URL on first render and preserve it — the
     // live site URL doesn't change during a dashboard session.
     const edsLiveUrlRef = useRef(edsLiveUrl);
@@ -107,7 +118,8 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
     // State for browser opening (passed to actions hook)
     const [isOpeningBrowser, setIsOpeningBrowser] = useState(false);
     const [showCapabilities, setShowCapabilities] = useState(false);
-    const { showRenameDialog, openRenameDialog, closeRenameDialog, confirmRename } = useRenameDialog();
+    const { showRenameDialog, openRenameDialog, closeRenameDialog, confirmRename } =
+        useRenameDialog();
 
     // Status management via extracted hook
     const {
@@ -131,7 +143,10 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
         aiBusy,
         aiRegenProgress,
         regenerateAiFiles,
-    } = useDashboardStatus({ hasMesh, initialMeshStatus, initialEdsStorefrontStatus, hasAdobeContext }, isEdsStable);
+    } = useDashboardStatus(
+        { hasMesh, initialMeshStatus, initialEdsStorefrontStatus, hasAdobeContext },
+        isEdsStable,
+    );
 
     // Action handlers via extracted hook
     const {
@@ -143,6 +158,7 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
         handleOpenBrowser,
         handleOpenLiveSite,
         handleOpenDaLive,
+        handleOpenAdminPanel,
         handleConfigure,
         handleOpenDevConsole,
         handleDeleteProject,
@@ -165,7 +181,7 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
     const containerRef = useFocusTrap<HTMLDivElement>({
         enabled: true,
         autoFocus: false,
-        containFocus: true,  // Prevent focus escape (WCAG 2.1 AA)
+        containFocus: true, // Prevent focus escape (WCAG 2.1 AA)
     });
 
     // Timer for initial focus (with automatic cleanup on unmount)
@@ -175,7 +191,9 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
     useEffect(() => {
         if (projectStatus) {
             focusTimer.set(() => {
-                const firstButton = document.querySelector('.dashboard-action-button') as HTMLElement;
+                const firstButton = document.querySelector(
+                    '.dashboard-action-button',
+                ) as HTMLElement;
                 if (firstButton) {
                     firstButton.focus();
                 }
@@ -188,15 +206,21 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
     // onMessage returns an unsubscribe fn used for cleanup. Only ever moves the
     // value to a new defined value (never clears it), preserving the prop seed.
     useEffect(() => {
-        const unsubscribe = webviewClient.onMessage('authoringExperienceUpdate', (data: unknown) => {
-            const payload = data as { authoringExperience?: AuthoringExperience; edsDaLiveUrl?: string };
-            if (payload.authoringExperience) {
-                setLiveAuthoringExperience(payload.authoringExperience);
-            }
-            if (payload.edsDaLiveUrl) {
-                setLiveEdsDaLiveUrl(payload.edsDaLiveUrl);
-            }
-        });
+        const unsubscribe = webviewClient.onMessage(
+            'authoringExperienceUpdate',
+            (data: unknown) => {
+                const payload = data as {
+                    authoringExperience?: AuthoringExperience;
+                    edsDaLiveUrl?: string;
+                };
+                if (payload.authoringExperience) {
+                    setLiveAuthoringExperience(payload.authoringExperience);
+                }
+                if (payload.edsDaLiveUrl) {
+                    setLiveEdsDaLiveUrl(payload.edsDaLiveUrl);
+                }
+            },
+        );
         return unsubscribe;
     }, []);
 
@@ -244,11 +268,7 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
         <div ref={containerRef} className="dashboard-left">
             <PageLayout
                 header={
-                    <PageHeader
-                        title={displayName}
-                        subtitle={brandStackSubtitle}
-                        constrainWidth
-                    />
+                    <PageHeader title={displayName} subtitle={brandStackSubtitle} constrainWidth />
                 }
                 backgroundColor="var(--spectrum-global-color-gray-50)"
             >
@@ -264,7 +284,9 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
                                 imsOrgDisplay={imsOrgDisplay}
                                 orgCheckState={orgCheckState}
                                 onReAuthenticate={handleReAuthenticate}
-                                onRegenerateAi={() => { void regenerateAiFiles(); }}
+                                onRegenerateAi={() => {
+                                    void regenerateAiFiles();
+                                }}
                                 onViewCapabilities={() => setShowCapabilities(true)}
                                 onNavigateBack={handleNavigateBack}
                             />
@@ -297,10 +319,15 @@ export function ProjectDashboardScreen({ project, hasMesh = false, brandName, st
                                 handleOpenLiveSite={handleOpenLiveSite}
                                 handleOpenDaLive={handleOpenDaLive}
                                 authoringExperience={liveAuthoringExperience}
+                                handleOpenAdminPanel={handleOpenAdminPanel}
                                 handleDeployMesh={handleDeployMesh}
                                 handleSyncStorefront={handleSyncStorefront}
-                                handleRefreshBlockLibrary={isEdsStable ? handleRefreshBlockLibrary : undefined}
-                                handleRepublishContent={isEdsStable ? handleRepublishContent : undefined}
+                                handleRefreshBlockLibrary={
+                                    isEdsStable ? handleRefreshBlockLibrary : undefined
+                                }
+                                handleRepublishContent={
+                                    isEdsStable ? handleRepublishContent : undefined
+                                }
                                 handleConfigure={handleConfigure}
                                 handleOpenDevConsole={handleOpenDevConsole}
                                 handleRename={openRenameDialog}

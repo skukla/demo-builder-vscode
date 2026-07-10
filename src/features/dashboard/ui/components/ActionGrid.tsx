@@ -4,8 +4,12 @@
  * Displays the project dashboard actions as small, grouped, prioritized tiles
  * grouped into zones (no visible headings — spacing + tile labels carry the grouping):
  *  - Primary zone (accent): Start/Stop (non-EDS, mutually exclusive), Open in
- *    Browser, and Author in DA.live (EDS only). These are the surfaces you
- *    use the project through — see it as a customer, edit it as a creator.
+ *    Browser, Author in DA.live (EDS only), and Admin Panel (all project
+ *    types, always visible — resolved backend-side on click: derived from the
+ *    ACCS tenant endpoint for SaaS, or the optional ADOBE_COMMERCE_ADMIN_URL
+ *    field for PaaS/override). These are the surfaces you use
+ *    the project through — see it as a customer, edit it as a creator,
+ *    manage it as an admin.
  *  - Storefront zone (EDS only): Sync Storefront. Sits on row 1 next to
  *    Primary so storefront ops are visually adjacent to the storefront
  *    authoring surface.
@@ -37,6 +41,7 @@ import PublishCheck from '@spectrum-icons/workflow/PublishCheck';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import Settings from '@spectrum-icons/workflow/Settings';
 import StopCircle from '@spectrum-icons/workflow/StopCircle';
+import UserAdmin from '@spectrum-icons/workflow/UserAdmin';
 import React from 'react';
 import type { AuthoringExperience } from '@/types/base';
 
@@ -101,6 +106,8 @@ export interface ActionGridProps {
     handleOpenDaLive?: () => void;
     /** Resolved authoring experience — drives the Author label (EDS only) */
     authoringExperience?: AuthoringExperience;
+    /** Handler for the Admin Panel button (URL resolved backend-side) */
+    handleOpenAdminPanel: () => void;
     /** Handler for Deploy Mesh button */
     handleDeployMesh: () => void;
     /** Handler for Sync Storefront button (EDS projects only) */
@@ -149,6 +156,7 @@ export function ActionGrid({
     handleOpenLiveSite,
     handleOpenDaLive,
     authoringExperience = 'da-live-classic',
+    handleOpenAdminPanel,
     handleDeployMesh,
     handleSyncStorefront,
     handleRefreshBlockLibrary,
@@ -268,6 +276,18 @@ export function ActionGrid({
                                 </Text>
                             </ActionButton>
                         )}
+
+                        {/* Admin Panel — always visible; the URL (optional
+                            ADOBE_COMMERCE_ADMIN_URL) resolves backend-side, so no
+                            isOpeningBrowser gating here. */}
+                        <ActionButton
+                            onPress={handleOpenAdminPanel}
+                            isQuiet
+                            UNSAFE_className="dashboard-action-button dashboard-action-button--hero"
+                        >
+                            <UserAdmin size="L" />
+                            <Text UNSAFE_className="icon-label">Admin Panel</Text>
+                        </ActionButton>
                     </div>
                 </div>
 

@@ -11,7 +11,7 @@ The dashboard is designed for at-a-glance status monitoring and one-click action
 - **Real-Time Status Display**: Show demo status (ready, starting, running, stopping)
 - **Mesh Status Monitoring**: Async mesh status checking with auth-aware prompts
 - **Adobe Context Display**: Show organization, project, and workspace
-- **Quick Actions**: Start, Stop, Open Browser, Deploy Mesh (shown conditionally when project includes a mesh component), Configure
+- **Quick Actions**: Start, Stop, Open Browser, Admin Panel (always visible; opens the admin URL — derived from the ACCS tenant endpoint for SaaS, user-supplied `ADOBE_COMMERCE_ADMIN_URL` for PaaS — or routes to Configure), Deploy Mesh (shown conditionally when project includes a mesh component), Configure
 - **More Menu (overflow)**: Rename (non-EDS: stopped only), Copy Path, Export, Refresh Block Library (EDS), Republish Content (EDS), Dev Console, Reset
 - **Focus Retention**: Maintain webview focus for in-place actions (Start/Stop)
 - **Change Detection**: Detect frontend config changes requiring restart
@@ -336,6 +336,7 @@ if (meshComponent && meshComponent.status !== 'deploying' && meshComponent.statu
 - `startDemo` - Start demo server
 - `stopDemo` - Stop demo server
 - `openBrowser` - Open demo in browser
+- `openAdminPanel` - Open the Commerce Admin Panel (derived for SaaS, `ADOBE_COMMERCE_ADMIN_URL` field for PaaS; prompts "Open Configure" when unresolvable)
 - `configure` - Open configuration UI
 - `deployMesh` - Deploy API mesh
 - `addApp` / `deployApp` / `redeployApp` / `removeApp` - Manage the project's App Builder app
