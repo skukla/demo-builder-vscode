@@ -88,14 +88,13 @@ describe('blockLibraryLoader', () => {
             expect(buildrightLib).toBeUndefined();
         });
 
-        it('should include isle5 as available for non-Isle5 packages', () => {
+        it('should NOT offer isle5 to non-Isle5 packages (pinned via onlyForPackages)', () => {
             const edsStack = makeStack();
 
             for (const pkg of ['citisignal', 'buildright', 'custom']) {
                 const libs = getAvailableBlockLibraries(edsStack, pkg);
                 const isle5 = libs.find((l) => l.id === 'isle5');
-                expect(isle5).toBeDefined();
-                expect(isle5?.type).toBe('standalone');
+                expect(isle5).toBeUndefined();
             }
         });
 
@@ -125,21 +124,21 @@ describe('blockLibraryLoader', () => {
             expect(buildrightLib).toBeUndefined();
         });
 
-        it('should return 2 libraries for Custom package on EDS', () => {
+        it('should return only demo-team-blocks for Custom package on EDS', () => {
             const edsStack = makeStack();
             const libs = getAvailableBlockLibraries(edsStack, 'custom');
 
-            // Custom sees: demo-team-blocks, isle5 (not buildright-blocks — pinned to buildright)
-            expect(libs).toHaveLength(2);
+            // Custom sees demo-team-blocks only (isle5 and buildright-blocks
+            // are pinned to their own hidden packages via onlyForPackages)
+            expect(libs.map((l) => l.id)).toEqual(['demo-team-blocks']);
         });
 
-        it('should return 2 libraries for CitiSignal on EDS', () => {
+        it('should return only demo-team-blocks for CitiSignal on EDS', () => {
             const edsStack = makeStack();
             const libs = getAvailableBlockLibraries(edsStack, 'citisignal');
 
-            // CitiSignal sees: demo-team-blocks (package-DEFAULT, deselectable) +
-            // isle5 (not buildright-blocks — pinned to buildright)
-            expect(libs.map((l) => l.id).sort()).toEqual(['demo-team-blocks', 'isle5']);
+            // CitiSignal sees demo-team-blocks only (package-DEFAULT, deselectable)
+            expect(libs.map((l) => l.id)).toEqual(['demo-team-blocks']);
         });
     });
 
@@ -233,15 +232,15 @@ describe('blockLibraryLoader', () => {
             expect(defaults).toContain('demo-team-blocks');
         });
 
-        it('filters out native libraries even when userDefaults includes them', () => {
+        it('filters out native and package-pinned libraries even when userDefaults includes them', () => {
             const edsStack = makeStack();
             const userDefaults = ['isle5', 'buildright-blocks'];
-            // BuildRight package should not see buildright-blocks as a checkbox
-            // default (it's native to buildright — auto-installed via the
-            // native path, not exposed as a checkbox).
+            // BuildRight package should see neither: buildright-blocks is native
+            // (auto-installed, not a checkbox) and isle5 is pinned to the isle5
+            // package via onlyForPackages.
             const defaults = getDefaultBlockLibraryIds(edsStack, 'buildright', userDefaults);
 
-            expect(defaults).toContain('isle5');
+            expect(defaults).not.toContain('isle5');
             expect(defaults).not.toContain('buildright-blocks');
         });
 
@@ -256,15 +255,14 @@ describe('blockLibraryLoader', () => {
             expect(defaults).toContain('demo-team-blocks');
         });
 
-        it('when explicitly opted in via userDefaults, isle5 IS pre-selected for non-isle5 packages', () => {
-            // Validates the user-opt-in path: a user who sets
-            // `demoBuilder.blockLibraries.defaults` = ['isle5'] in VS Code still
-            // gets isle5 pre-checked on Custom/CitiSignal/etc. demos. Native-path
-            // auto-install for the isle5 package itself remains separate.
+        it('ignores a stale isle5 userDefault for non-isle5 packages (pinned via onlyForPackages)', () => {
+            // A leftover `demoBuilder.blockLibraries.defaults` = ['isle5'] setting
+            // (the enum no longer offers it) must not pre-check isle5 on other
+            // packages — it is only available for the isle5 package itself.
             const edsStack = makeStack();
             const defaults = getDefaultBlockLibraryIds(edsStack, 'custom', ['isle5']);
 
-            expect(defaults).toContain('isle5');
+            expect(defaults).not.toContain('isle5');
         });
     });
 
@@ -276,9 +274,15 @@ describe('blockLibraryLoader', () => {
             ]);
         });
 
+        it('returns demo-team-blocks for Custom (both hybrid packages seed it)', () => {
+            const edsStack = makeStack();
+            expect(getPackageDefaultBlockLibraryIds(edsStack, 'custom')).toEqual([
+                'demo-team-blocks',
+            ]);
+        });
+
         it('returns [] for packages the library does not default to', () => {
             const edsStack = makeStack();
-            expect(getPackageDefaultBlockLibraryIds(edsStack, 'custom')).toEqual([]);
             expect(getPackageDefaultBlockLibraryIds(edsStack, 'isle5')).toEqual([]);
         });
 
@@ -362,10 +366,10 @@ describe('blockLibraryLoader', () => {
             expect(isBlockLibraryAvailableForPackage('buildright-blocks', 'buildright')).toBe(true);
         });
 
-        it('should return true for isle5 for any package (no onlyForPackages)', () => {
+        it('should return true for isle5 only for the isle5 package (onlyForPackages)', () => {
             expect(isBlockLibraryAvailableForPackage('isle5', 'isle5')).toBe(true);
-            expect(isBlockLibraryAvailableForPackage('isle5', 'buildright')).toBe(true);
-            expect(isBlockLibraryAvailableForPackage('isle5', 'citisignal')).toBe(true);
+            expect(isBlockLibraryAvailableForPackage('isle5', 'buildright')).toBe(false);
+            expect(isBlockLibraryAvailableForPackage('isle5', 'citisignal')).toBe(false);
         });
 
         it('should return false for unknown library', () => {

@@ -203,12 +203,10 @@
             "items": {
               "type": "string",
               "enum": [
-                "demo-team-blocks",
-                "isle5"
+                "demo-team-blocks"
               ],
               "enumDescriptions": [
-                "Demo Team Block Collection — general-purpose blocks built by the Demo Team, usable in any EDS storefront",
-                "Isle5 Block Collection — custom EDS blocks: hero, carousel, newsletter, store locator, and more"
+                "Demo Team Block Collection — general-purpose blocks built by the Demo Team, usable in any EDS storefront"
               ]
             },
             "uniqueItems": true,
