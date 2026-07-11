@@ -6,7 +6,7 @@
  * Remove fired straight away; this dialog adds the missing confirm so a cloud
  * teardown is never one stray click away (research B-6).
  *
- * Controlled + presentational, mirroring {@link DashboardRenameDialog}: the
+ * Controlled + presentational: the
  * DialogContainer is the always-mounted modal host; the confirm Modal renders
  * only while `isOpen`. It does NOT post — its consumer ({@link AppBuilderComponentsList})
  * wires `onConfirm` to post `removeAppBuilderComponent {id}`, so the cancel path is a

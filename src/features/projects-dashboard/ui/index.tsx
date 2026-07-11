@@ -5,11 +5,9 @@
  * Renders the main dashboard with project cards.
  */
 
-import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { ProjectActions } from './components/ProjectActionsMenu';
-import { RenameProjectDialog } from './components/RenameProjectDialog';
 import { ProjectsDashboard } from './ProjectsDashboard';
 import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -33,7 +31,6 @@ const ProjectsDashboardApp: React.FC = () => {
     const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
     const [initialViewMode, setInitialViewMode] = useState<'cards' | 'rows'>('cards');
     const [runningProjectPath, setRunningProjectPath] = useState<string | undefined>(undefined);
-    const [projectToRename, setProjectToRename] = useState<Project | null>(null);
     // Track whether initial fetch was triggered (prevent StrictMode double-fetch)
     const initialFetchTriggeredRef = useRef(false);
 
@@ -335,42 +332,31 @@ const ProjectsDashboardApp: React.FC = () => {
         }
     }, []);
 
-    // Handle rename project - opens dialog
-    const handleRenameProject = useCallback((project: Project) => {
-        setProjectToRename(project);
-    }, []);
-
-    // Handle rename dialog confirmation
-    const handleRenameConfirm = useCallback(
-        async (newName: string) => {
-            if (!projectToRename) return;
-
+    // Inline rename commit (the card's InlineRenameField): post the rename,
+    // refresh the list on success, or hand the error back for inline display.
+    const handleRenameSubmit = useCallback(
+        async (project: Project, newName: string): Promise<string | null> => {
             try {
                 const response = await webviewClient.request<{
                     success: boolean;
+                    error?: string;
                     data?: { success: boolean; newName: string };
                 }>('renameProject', {
-                    projectPath: projectToRename.path,
+                    projectPath: project.path,
                     newName,
                 });
-
-                // Refresh projects list if rename was successful
                 if (response?.success && response.data?.success) {
                     fetchProjects(true);
+                    return null;
                 }
+                return response?.error ?? 'Rename failed';
             } catch (error) {
                 console.error('Failed to rename project:', error);
-            } finally {
-                setProjectToRename(null);
+                return error instanceof Error ? error.message : 'Rename failed';
             }
         },
-        [projectToRename, fetchProjects],
+        [fetchProjects],
     );
-
-    // Handle rename dialog close
-    const handleRenameClose = useCallback(() => {
-        setProjectToRename(null);
-    }, []);
 
     // Handle copy project path
     const handleCopyPath = useCallback(async (project: Project) => {
@@ -437,7 +423,7 @@ const ProjectsDashboardApp: React.FC = () => {
             onResetProject: handleResetProject,
             onRepublishContent: handleRepublishContent,
             onEdit: handleEditProject,
-            onRename: handleRenameProject,
+            onRenameSubmit: handleRenameSubmit,
             onCopyPath: handleCopyPath,
             onExport: handleExportProject,
             onOpenAi: handleOpenAiForProject,
@@ -454,7 +440,7 @@ const ProjectsDashboardApp: React.FC = () => {
             handleResetProject,
             handleRepublishContent,
             handleEditProject,
-            handleRenameProject,
+            handleRenameSubmit,
             handleCopyPath,
             handleExportProject,
             handleOpenAiForProject,
@@ -464,35 +450,21 @@ const ProjectsDashboardApp: React.FC = () => {
     );
 
     return (
-        <>
-            <ProjectsDashboard
-                projects={projects}
-                runningProjectPath={runningProjectPath}
-                onSelectProject={handleSelectProject}
-                onCreateProject={handleCreateProject}
-                onCopyFromExisting={handleCopyFromExisting}
-                onImportFromFile={handleImportFromFile}
-                actions={projectActions}
-                isLoading={isLoading}
-                isRefreshing={isRefreshing}
-                onRefresh={handleRefresh}
-                hasLoadedOnce={hasLoadedOnce}
-                initialViewMode={initialViewMode}
-                onViewModeOverride={handleViewModeOverride}
-            />
-
-            {/* Rename Project Dialog */}
-            <DialogContainer onDismiss={handleRenameClose}>
-                {projectToRename && (
-                    <RenameProjectDialog
-                        project={projectToRename}
-                        existingProjectNames={projects.map((p) => p.name)}
-                        onRename={handleRenameConfirm}
-                        onClose={handleRenameClose}
-                    />
-                )}
-            </DialogContainer>
-        </>
+        <ProjectsDashboard
+            projects={projects}
+            runningProjectPath={runningProjectPath}
+            onSelectProject={handleSelectProject}
+            onCreateProject={handleCreateProject}
+            onCopyFromExisting={handleCopyFromExisting}
+            onImportFromFile={handleImportFromFile}
+            actions={projectActions}
+            isLoading={isLoading}
+            isRefreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            hasLoadedOnce={hasLoadedOnce}
+            initialViewMode={initialViewMode}
+            onViewModeOverride={handleViewModeOverride}
+        />
     );
 };
 

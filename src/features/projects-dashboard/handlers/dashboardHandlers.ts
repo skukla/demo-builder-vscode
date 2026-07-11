@@ -67,13 +67,6 @@ export const handleGetProjects: MessageHandler = async (
             }
         }
 
-        // Enrich projects with the resolved authoring experience so the card
-        // grid can render the Author label + flip control without importing the
-        // resolver or `vscode` into the webview (presentational UI).
-        for (const project of projects) {
-            project.resolvedAuthoringExperience = resolveProjectAuthoringExperience(project);
-        }
-
         // Enrich projects with mesh staleness status (full fidelity check)
         for (const project of projects) {
             const meshComponent = getMeshComponentInstance(project);
@@ -1140,6 +1133,6 @@ export const handleSetProjectPinned: MessageHandler<{
 
 // The per-project authoring-experience control is a setup-time preference set
 // in the Configure webview (EDS-only radio group with an explicit Save), not an
-// on-the-fly action. The handler that flipped it from this surface was removed;
-// the dynamic "Author in X" label still reflects `resolvedAuthoringExperience`
-// (enriched in handleGetProjects).
+// on-the-fly action. The handler that flipped it from this surface was removed,
+// and menu/tile labels are STATIC ("Author Content") — the resolved experience
+// only decides WHERE the Author action opens (resolved at open time).

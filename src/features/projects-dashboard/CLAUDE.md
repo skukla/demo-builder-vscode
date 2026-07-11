@@ -231,5 +231,5 @@ See [ADR-004](../../../docs/architecture/adr/004-claude-code-harness.md#amendmen
 ## Related Features
 
 - **sidebar** - Provides navigation context (utility bar only in project contexts; no back link — see sidebar/CLAUDE.md)
-- **dashboard** - Project detail view shown when project card is clicked. Shares `renameProjectCore` (`services/projectRenameService.ts` — folder rename + path updates + recent-projects + save) with the project dashboard's Rename action; both the projects-list kebab and the dashboard "More" menu delegate to it.
+- **dashboard** - Project detail view shown when project card is clicked. Shares `renameProjectCore` (`services/projectRenameService.ts` — folder rename + path updates + recent-projects + save) with the project dashboard; both surfaces rename IN PLACE via the shared `InlineRenameField` (`@/core/ui/components/forms`) — the card name's hover pencil here, the dashboard title's pencil there. No menu Rename items, no dialogs.
 - **project-creation** - Wizard triggered by "+ New" button

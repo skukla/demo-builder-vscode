@@ -37,8 +37,8 @@ export interface BackButtonConfig {
 }
 
 export interface PageHeaderProps {
-    /** Main title displayed as H1 */
-    title: string;
+    /** Main title displayed as H1 (a node allows e.g. an inline-rename field) */
+    title: React.ReactNode;
     /** Optional subtitle displayed as H3 with gray styling (typically step name) */
     subtitle?: string;
     /** Optional description text displayed below subtitle (typically step description) */
@@ -120,11 +120,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             paddingY="size-200"
             UNSAFE_className={cn('border-b', 'bg-gray-75', 'page-header', className)}
         >
-            {constrainWidth ? (
-                <div className="page-container">{headerContent}</div>
-            ) : (
-                headerContent
-            )}
+            {constrainWidth ? <div className="page-container">{headerContent}</div> : headerContent}
         </View>
     );
 };

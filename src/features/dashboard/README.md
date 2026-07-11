@@ -11,8 +11,8 @@ The dashboard is designed for at-a-glance status monitoring and one-click action
 - **Real-Time Status Display**: Show demo status (ready, starting, running, stopping)
 - **Mesh Status Monitoring**: Async mesh status checking with auth-aware prompts
 - **Adobe Context Display**: Show organization, project, and workspace
-- **Quick Actions**: Start, Stop, Open Browser, Admin Panel (always visible; opens the admin URL — derived from the ACCS tenant endpoint for SaaS, user-supplied `ADOBE_COMMERCE_ADMIN_URL` for PaaS — or routes to Configure), Deploy Mesh (shown conditionally when project includes a mesh component), Configure
-- **More Menu (overflow)**: Edit + Rename (non-EDS: stopped only), Export, Refresh Block Library (EDS), Republish Content (EDS), Dev Console, Reset (Copy Path lives on the project-card kebab)
+- **Quick Actions**: Start, Stop, Open Browser, Author Content (EDS only), Manage Commerce (always visible; opens the Commerce admin URL — derived from the ACCS tenant endpoint for SaaS, user-supplied `ADOBE_COMMERCE_ADMIN_URL` for PaaS — or routes to Configure), Deploy Mesh (shown conditionally when project includes a mesh component), Configure
+- **More Menu (overflow)**: Edit (non-EDS: stopped only), Export, Refresh Block Library (EDS), Republish Content (EDS), Dev Console, Reset (Copy Path lives on the project-card kebab; Rename is inline on the dashboard title)
 - **Focus Retention**: Maintain webview focus for in-place actions (Start/Stop)
 - **Change Detection**: Detect frontend config changes requiring restart
 - **Re-Authentication**: Handle lost Adobe access with browser auth flow
@@ -467,7 +467,7 @@ if (!verification.exists) {
 - [ ] Deploy Mesh button works
 - [ ] Configure button works
 - [ ] Developer Console link works
-- [ ] More menu: Rename works (folder renamed, title updates; hidden while a non-EDS demo runs)
+- [ ] Title inline rename works (hover pencil → edit → folder renamed, title refreshes; pencil hidden while running)
 - [ ] More menu: Edit opens the wizard in edit mode
 - [ ] More menu: Export writes project settings to a file
 - [ ] More menu: Republish Content works (EDS projects only)

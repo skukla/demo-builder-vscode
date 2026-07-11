@@ -14,7 +14,7 @@ import { getEwCanvasBranch, resolveProjectAuthoringExperience } from '@/features
 import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 import { loadDemoPackages } from '@/features/project-creation/services/demoPackageLoader';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
-import { AuthoringExperience, Project, ComponentInstance } from '@/types';
+import { Project, ComponentInstance } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { DemoPackage } from '@/types/demoPackages';
@@ -127,7 +127,6 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         isEds: boolean;
         edsLiveUrl?: string;
         edsDaLiveUrl?: string;
-        authoringExperience?: AuthoringExperience;
         initialEdsStorefrontStatus?: string;
         hasAdobeContext: boolean;
         initialApp?: {
@@ -197,7 +196,6 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
             isEds,
             edsLiveUrl,
             edsDaLiveUrl,
-            authoringExperience,
             initialEdsStorefrontStatus,
             hasAdobeContext,
             initialApp,
@@ -378,21 +376,17 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
     }
 
     /**
-     * Public method to push a live authoring-experience update (called by the
-     * Configure save handler). Updates an already-open dashboard's Author tile
-     * label + DA URL instantly — no reopen required. No-op if no dashboard is
-     * open. Modeled on sendMeshStatusUpdate.
+     * Public method to push the live DA URL after an authoring-experience flip
+     * (called by the Configure save handler) — no reopen required. The Author
+     * tile label is STATIC ("Author Content"), so only the URL rides on the
+     * message. No-op if no dashboard is open. Modeled on sendMeshStatusUpdate.
      */
-    public static async sendAuthoringExperienceUpdate(
-        authoringExperience: AuthoringExperience,
-        edsDaLiveUrl?: string,
-    ): Promise<void> {
+    public static async sendAuthoringExperienceUpdate(edsDaLiveUrl?: string): Promise<void> {
         const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');
         if (panel) {
             await panel.webview.postMessage({
                 type: 'authoringExperienceUpdate',
                 payload: {
-                    authoringExperience,
                     edsDaLiveUrl,
                 },
             });

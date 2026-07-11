@@ -12,6 +12,7 @@ import { Flex, Text } from '@adobe/react-spectrum';
 import PinOn from '@spectrum-icons/workflow/PinOn';
 import React, { useCallback, useMemo } from 'react';
 import { ProjectActionsMenu, type ProjectActions } from './ProjectActionsMenu';
+import { InlineRenameField } from '@/core/ui/components/forms';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { getBrandStackSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import {
@@ -82,8 +83,12 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     const isEds = isEdsProject(project);
     const port = getFrontendPort(project);
     // EDS projects use storefront status; non-EDS use demo running status
-    const statusText = isEds ? getStorefrontStatusText(project) : getStatusText(project.status, port, false);
-    const statusVariant = isEds ? getStorefrontStatusVariant(project) : getStatusVariant(project.status, false);
+    const statusText = isEds
+        ? getStorefrontStatusText(project)
+        : getStatusText(project.status, port, false);
+    const statusVariant = isEds
+        ? getStorefrontStatusVariant(project)
+        : getStatusVariant(project.status, false);
     const brandStackSummary = useMemo(() => getBrandStackSummary(project), [project]);
     const meshText = getMeshStatusText(project);
     const meshVariant = getMeshStatusVariant(project);
@@ -116,9 +121,19 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                             <PinOn size="XS" />
                         </span>
                     )}
-                    <Text UNSAFE_className="project-card-spectrum-name">
-                        {project.name}
-                    </Text>
+                    {/* Rename-in-place: the pencil (hover-revealed) swaps the name
+                        for an input; hidden while running (backend rejects) or
+                        when the rename callback isn't wired. */}
+                    <InlineRenameField
+                        name={project.name}
+                        textClassName="project-card-spectrum-name"
+                        disabled={isRunning || !actions.onRenameSubmit}
+                        onRename={(newName) =>
+                            actions.onRenameSubmit
+                                ? actions.onRenameSubmit(project, newName)
+                                : Promise.resolve(null)
+                        }
+                    />
                 </Flex>
                 <ProjectActionsMenu
                     project={project}
@@ -130,26 +145,20 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
 
             {/* Brand & Stack Summary */}
             {brandStackSummary && (
-                <Text UNSAFE_className="project-card-spectrum-components">
-                    {brandStackSummary}
-                </Text>
+                <Text UNSAFE_className="project-card-spectrum-components">{brandStackSummary}</Text>
             )}
 
             {/* Status Row */}
             <Flex alignItems="center" gap="size-100" marginTop="auto">
                 <StatusDot variant={statusVariant} size={6} />
-                <Text UNSAFE_className="project-card-spectrum-status">
-                    {statusText}
-                </Text>
+                <Text UNSAFE_className="project-card-spectrum-status">{statusText}</Text>
             </Flex>
 
             {/* Mesh Status Row */}
             {meshText && meshVariant && (
                 <Flex alignItems="center" gap="size-100">
                     <StatusDot variant={meshVariant} size={6} />
-                    <Text UNSAFE_className="project-card-spectrum-status">
-                        {meshText}
-                    </Text>
+                    <Text UNSAFE_className="project-card-spectrum-status">{meshText}</Text>
                 </Flex>
             )}
         </div>

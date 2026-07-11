@@ -11,6 +11,7 @@ import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import PinOn from '@spectrum-icons/workflow/PinOn';
 import React, { useCallback, useMemo } from 'react';
 import { ProjectActionsMenu, type ProjectActions } from './ProjectActionsMenu';
+import { InlineRenameField } from '@/core/ui/components/forms';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { getComponentSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import {
@@ -107,9 +108,18 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
                             <PinOn size="XS" />
                         </span>
                     )}
-                    <Text UNSAFE_className="project-row-name">
-                        {project.name}
-                    </Text>
+                    {/* Rename-in-place, matching the card grid: hover pencil,
+                        hidden while running or when the callback isn't wired. */}
+                    <InlineRenameField
+                        name={project.name}
+                        textClassName="project-row-name"
+                        disabled={isRunning || !actions.onRenameSubmit}
+                        onRename={(newName) =>
+                            actions.onRenameSubmit
+                                ? actions.onRenameSubmit(project, newName)
+                                : Promise.resolve(null)
+                        }
+                    />
                     {componentSummary && (
                         <Text UNSAFE_className="project-row-components">
                             {componentSummary}

@@ -5,10 +5,12 @@
  * ProjectRow.
  *
  * Actions are grouped into labeled sections rather than a flat list:
- * - USE: open/run the demo (Start/Stop or Open in Browser, Author in DA.live, Open AI).
- * - MANAGE: project-entry actions (Edit, Rename, Pin/Unpin, Reset).
+ * - USE: open/run the demo (Start/Stop or Open in Browser, Author Content,
+ *   Manage Commerce, Open AI).
+ * - MANAGE: project-entry actions (Edit, Pin/Unpin, Reset).
  * - More…: a submenu for low-frequency actions (Copy Path, Export, and — for
- *   EDS — Republish Content).
+ *   EDS — Republish Content). There is NO Rename item: renaming happens
+ *   in place on the card name / dashboard title (InlineRenameField).
  * - Delete sits alone in a trailing un-headed section, isolated from the rest.
  *
  * Empty groups render nothing (no orphaned heading). Gating is unchanged from
@@ -41,22 +43,12 @@ import MoreSmallListVert from '@spectrum-icons/workflow/MoreSmallListVert';
 import PinOff from '@spectrum-icons/workflow/PinOff';
 import PinOn from '@spectrum-icons/workflow/PinOn';
 import Play from '@spectrum-icons/workflow/Play';
-import Rename from '@spectrum-icons/workflow/Rename';
 import Revert from '@spectrum-icons/workflow/Revert';
 import Stop from '@spectrum-icons/workflow/Stop';
 import UserAdmin from '@spectrum-icons/workflow/UserAdmin';
 import React, { useCallback, useMemo } from 'react';
-import type { AuthoringExperience, Project } from '@/types/base';
+import type { Project } from '@/types/base';
 import { isEdsProject } from '@/types/typeGuards';
-
-/** Default authoring experience when the backend view model omits it. */
-const DEFAULT_AUTHORING_EXPERIENCE: AuthoringExperience = 'da-live-classic';
-
-/** Human-readable label per authoring experience (for the Author item). */
-const EXPERIENCE_LABEL: Record<AuthoringExperience, string> = {
-    'da-live-classic': 'DA.live Classic',
-    'experience-workspace': 'Experience Workspace',
-};
 
 /** Menu item configuration */
 interface MenuItem {
@@ -92,7 +84,12 @@ export interface ProjectActions {
     onResetProject?: (project: Project) => void;
     onRepublishContent?: (project: Project) => void;
     onEdit?: (project: Project) => void;
-    onRename?: (project: Project) => void;
+    /**
+     * Commit an inline rename (consumed by the CARD's InlineRenameField, not
+     * by this menu): resolve null on success or an error message to show
+     * inline. There is deliberately no menu Rename item.
+     */
+    onRenameSubmit?: (project: Project, newName: string) => Promise<string | null>;
     onCopyPath?: (project: Project) => void;
     onExport?: (project: Project) => void;
     onOpenAi?: (project: Project) => void;
@@ -111,7 +108,6 @@ const ICON_MAP: Record<string, React.ReactElement> = {
     globe: <Globe size="S" />,
     dalive: <Edit size="S" />,
     edit: <Edit size="S" />,
-    rename: <Rename size="S" />,
     copy: <Copy size="S" />,
     reset: <Revert size="S" />,
     republish: <Globe size="S" />,
@@ -161,7 +157,6 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         onResetProject,
         onRepublishContent,
         onEdit,
-        onRename,
         onCopyPath,
         onExport,
         onOpenAi,
@@ -170,11 +165,6 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     } = actions;
 
     const isEds = isEdsProject(project);
-
-    // Resolved authoring experience rides in the view model (computed backend-side).
-    // Drives the dynamic "Author in X" label only — the flip control was relocated
-    // to the Configure webview (setup-time preference with an explicit Save).
-    const experience = project.resolvedAuthoringExperience ?? DEFAULT_AUTHORING_EXPERIENCE;
 
     // Action dispatch map - avoids a large switch statement. Each key maps to
     // the callback that handles it. The "more" submenu trigger has no entry
@@ -190,7 +180,6 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             resetProject: onResetProject,
             republishContent: onRepublishContent,
             edit: onEdit,
-            rename: onRename,
             copyPath: onCopyPath,
             export: onExport,
             openAi: onOpenAi,
@@ -207,7 +196,6 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             onResetProject,
             onRepublishContent,
             onEdit,
-            onRename,
             onCopyPath,
             onExport,
             onOpenAi,
@@ -241,11 +229,9 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                 use.push({ key: 'openLive', label: 'Open in Browser', icon: 'globe' });
             }
             if (onOpenDaLive) {
-                use.push({
-                    key: 'openDaLive',
-                    label: `Author in ${EXPERIENCE_LABEL[experience]}`,
-                    icon: 'dalive',
-                });
+                // Static label — the resolved authoring experience still decides
+                // WHERE the action opens (backend-side), not the menu text.
+                use.push({ key: 'openDaLive', label: 'Author Content', icon: 'dalive' });
             }
         } else {
             if (isRunning && onStopDemo) {
@@ -258,9 +244,9 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                 use.push({ key: 'open', label: 'Open in Browser', icon: 'globe' });
             }
         }
-        // Admin Panel is backend-side, so it applies to every project type.
+        // Manage Commerce's admin-URL resolution is backend-side, so it applies to every project type.
         if (onOpenAdminPanel) {
-            use.push({ key: 'openAdminPanel', label: 'Open Admin Panel', icon: 'admin' });
+            use.push({ key: 'openAdminPanel', label: 'Manage Commerce', icon: 'admin' });
         }
         if (onOpenAi) {
             use.push({ key: 'openAi', label: 'Open AI', icon: 'ai' });
@@ -270,9 +256,6 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         // Edit needs the demo stopped for non-EDS; EDS has no running state.
         if (isEds ? onEdit : !isRunning && onEdit) {
             manage.push({ key: 'edit', label: 'Edit', icon: 'edit' });
-        }
-        if (onRename) {
-            manage.push({ key: 'rename', label: 'Rename', icon: 'rename' });
         }
         if (onPinToggle) {
             manage.push({
@@ -285,7 +268,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             manage.push({ key: 'resetProject', label: 'Reset', icon: 'reset' });
         }
 
-        // More… — low-frequency actions, tucked into a submenu
+        // More… — low-frequency actions, tucked into a submenu.
         if (onCopyPath) {
             more.push({ key: 'copyPath', label: 'Copy Path', icon: 'copy' });
         }
@@ -301,7 +284,6 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         isEds,
         isRunning,
         project.pinned,
-        experience,
         onStartDemo,
         onStopDemo,
         onOpenBrowser,
@@ -311,7 +293,6 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         onResetProject,
         onRepublishContent,
         onEdit,
-        onRename,
         onCopyPath,
         onExport,
         onOpenAi,

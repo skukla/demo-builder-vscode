@@ -100,7 +100,6 @@ describe('ActionGrid', () => {
         handleConfigure: jest.fn(),
         handleOpenDevConsole: jest.fn(),
         handleDeleteProject: jest.fn(),
-        handleRename: jest.fn(),
         handleEditProject: jest.fn(),
         handleExportProject: jest.fn(),
         handleResetProject: jest.fn(),
@@ -183,26 +182,22 @@ describe('ActionGrid', () => {
             const { container } = render(<ActionGrid {...edsProps} />);
 
             const primary = getZone(container, 'primary');
-            expect(within(primary).getByText('Author in DA.live Classic')).toBeInTheDocument();
+            expect(within(primary).getByText('Author Content')).toBeInTheDocument();
         });
 
-        it('should label the Author button from the resolved experience (EW)', () => {
+        it('labels the Author button "Author Content" regardless of the resolved experience', () => {
             render(<ActionGrid {...edsProps} authoringExperience="experience-workspace" />);
 
-            // Display text is the short "EW" (two-line tile); the full name
-            // rides on the accessible label.
-            const author = screen.getByRole('button', {
-                name: 'Author in Experience Workspace',
-            });
-            expect(author).toHaveTextContent('Author in EW');
-            expect(screen.queryByText('Author in DA.live Classic')).not.toBeInTheDocument();
+            // Static label — the resolved experience still decides WHERE the
+            // action opens (backend-side), not the tile text.
+            expect(screen.getByRole('button', { name: 'Author Content' })).toBeInTheDocument();
+            expect(screen.queryByText(/Author in/)).not.toBeInTheDocument();
         });
 
         it('should not render an Author button for non-EDS projects', () => {
             render(<ActionGrid {...defaultProps} />);
 
-            expect(screen.queryByText('Author in DA.live Classic')).not.toBeInTheDocument();
-            expect(screen.queryByText('Author in Experience Workspace')).not.toBeInTheDocument();
+            expect(screen.queryByText('Author Content')).not.toBeInTheDocument();
         });
 
         it('should mark primary tiles with the hero accent modifier class', () => {
@@ -218,7 +213,7 @@ describe('ActionGrid', () => {
         it('should mark the Author button with the hero accent modifier class', () => {
             render(<ActionGrid {...edsProps} />);
 
-            const authorButton = screen.getByText('Author in DA.live Classic').closest('button');
+            const authorButton = screen.getByText('Author Content').closest('button');
             expect(authorButton?.getAttribute('unsafe_classname')).toContain(
                 'dashboard-action-button--hero'
             );
@@ -233,41 +228,41 @@ describe('ActionGrid', () => {
         });
     });
 
-    describe('Admin Panel Tile', () => {
-        it('should place Admin Panel in the primary cluster (non-EDS)', () => {
+    describe('Manage Commerce Tile', () => {
+        it('should place Manage Commerce in the primary cluster (non-EDS)', () => {
             const { container } = render(<ActionGrid {...defaultProps} />);
 
             const primary = getZone(container, 'primary');
-            expect(within(primary).getByText('Admin Panel')).toBeInTheDocument();
+            expect(within(primary).getByText('Manage Commerce')).toBeInTheDocument();
         });
 
-        it('should place Admin Panel in the primary cluster for EDS projects', () => {
+        it('should place Manage Commerce in the primary cluster for EDS projects', () => {
             const { container } = render(<ActionGrid {...edsProps} />);
 
             const primary = getZone(container, 'primary');
-            expect(within(primary).getByText('Admin Panel')).toBeInTheDocument();
+            expect(within(primary).getByText('Manage Commerce')).toBeInTheDocument();
         });
 
-        it('should mark the Admin Panel tile with the hero accent modifier class', () => {
+        it('should mark the Manage Commerce tile with the hero accent modifier class', () => {
             render(<ActionGrid {...defaultProps} />);
 
-            const adminButton = screen.getByText('Admin Panel').closest('button');
+            const adminButton = screen.getByText('Manage Commerce').closest('button');
             expect(adminButton?.getAttribute('unsafe_classname')).toContain(
                 'dashboard-action-button--hero'
             );
         });
 
-        it('should not disable Admin Panel while isOpeningBrowser (resolves backend-side)', () => {
+        it('should not disable Manage Commerce while isOpeningBrowser (resolves backend-side)', () => {
             render(<ActionGrid {...defaultProps} isOpeningBrowser={true} />);
 
-            expect(screen.getByText('Admin Panel').closest('button')).not.toBeDisabled();
+            expect(screen.getByText('Manage Commerce').closest('button')).not.toBeDisabled();
         });
 
-        it('should call handleOpenAdminPanel when Admin Panel clicked', async () => {
+        it('should call handleOpenAdminPanel when Manage Commerce clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...defaultProps} />);
 
-            await user.click(screen.getByText('Admin Panel'));
+            await user.click(screen.getByText('Manage Commerce'));
 
             expect(defaultProps.handleOpenAdminPanel).toHaveBeenCalled();
         });
@@ -304,9 +299,7 @@ describe('ActionGrid', () => {
             const { container } = render(<ActionGrid {...edsProps} />);
 
             const storefront = getZone(container, 'storefront');
-            expect(
-                within(storefront).queryByText('Author in DA.live Classic')
-            ).not.toBeInTheDocument();
+            expect(within(storefront).queryByText('Author Content')).not.toBeInTheDocument();
         });
 
         it('should not render Sync Storefront for non-EDS projects', () => {
@@ -411,43 +404,13 @@ describe('ActionGrid', () => {
         });
     });
 
-    describe('Overflow Menu - Rename Gating', () => {
-        it('should show Rename for a stopped non-EDS project', () => {
+    describe('Overflow Menu - No Rename item', () => {
+        it('offers no Rename anywhere — renaming is inline on the dashboard title', () => {
             const { container } = render(<ActionGrid {...defaultProps} isRunning={false} />);
 
             const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).getByText('Rename')).toBeInTheDocument();
-        });
-
-        it('should hide Rename for a running non-EDS project', () => {
-            const { container } = render(<ActionGrid {...defaultProps} isRunning={true} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
             expect(within(menu).queryByText('Rename')).not.toBeInTheDocument();
-        });
-
-        it('should show Rename for an EDS project even when running', () => {
-            const { container } = render(<ActionGrid {...edsProps} isRunning={true} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).getByText('Rename')).toBeInTheDocument();
-        });
-
-        it('should hide Rename when no handleRename is provided', () => {
-            const { handleRename: _handleRename, ...noRename } = defaultProps;
-            const { container } = render(<ActionGrid {...noRename} isRunning={false} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).queryByText('Rename')).not.toBeInTheDocument();
-        });
-
-        it('should call handleRename when Rename clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} isRunning={false} />);
-
-            await user.click(screen.getByText('Rename'));
-
-            expect(defaultProps.handleRename).toHaveBeenCalled();
+            expect(screen.queryByText('Rename')).not.toBeInTheDocument();
         });
     });
 
@@ -686,17 +649,17 @@ describe('ActionGrid', () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...edsProps} />);
 
-            await user.click(screen.getByText('Author in DA.live Classic'));
+            await user.click(screen.getByText('Author Content'));
 
             expect(edsProps.handleOpenDaLive).toHaveBeenCalled();
         });
 
-        it('labels the Author button for the resolved experience (EW)', () => {
+        it('keeps the static "Author Content" label for the EW experience too', () => {
             render(<ActionGrid {...edsProps} authoringExperience="experience-workspace" />);
 
-            expect(
-                screen.getByRole('button', { name: 'Author in Experience Workspace' })
-            ).toHaveTextContent('Author in EW');
+            expect(screen.getByRole('button', { name: 'Author Content' })).toHaveTextContent(
+                'Author Content'
+            );
         });
 
         it('renders no authoring-experience flip/switch control (relocated to Configure)', () => {

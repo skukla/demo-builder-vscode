@@ -121,14 +121,6 @@ export interface Project {
     };
     // EDS Storefront status summary for card grid display
     edsStorefrontStatusSummary?: 'published' | 'stale' | 'update-declined' | 'not-published';
-    /**
-     * Resolved AEM authoring experience for the projects-list card grid.
-     *
-     * UI-only enrichment computed backend-side (via resolveProjectAuthoringExperience)
-     * so the webview stays presentational — it never imports the resolver or
-     * `vscode`. Drives the "Author in …" label and the kebab flip control.
-     */
-    resolvedAuthoringExperience?: AuthoringExperience;
     // Frontend config state (tracks changes since demo started)
     frontendEnvState?: {
         envVars: Record<string, string>;

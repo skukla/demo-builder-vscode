@@ -19,7 +19,7 @@ import { AppBuilderComponentRemoveDialog } from '@/features/dashboard/ui/compone
 import '@testing-library/jest-dom';
 
 // DialogContainer is the modal host; render its children inline for assertions.
-// Modal is the shared confirm shell reused by RenameProjectDialog.
+// Modal is the shared confirm shell.
 jest.mock('@adobe/react-spectrum', () => ({
     DialogContainer: ({ children }: any) => <div data-testid="dialog-container">{children}</div>,
     Flex: ({ children, ...props }: any) => <div style={{ display: 'flex' }} {...props}>{children}</div>,

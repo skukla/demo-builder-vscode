@@ -12,19 +12,19 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ActionGrid } from './components/ActionGrid';
 import { AiCapabilitiesModal } from './components/AiCapabilitiesModal';
 import type { AppCardState } from './components/AppBuilderCard';
-import { DashboardRenameDialog } from './components/DashboardRenameDialog';
 import { DashboardStatusHeader } from './components/DashboardStatusHeader';
 import { OrgContextNotice } from './components/OrgContextNotice';
 import { isStartActionDisabled } from './dashboardPredicates';
 import { useDashboardActions } from './hooks/useDashboardActions';
 import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
-import { useRenameDialog } from './hooks/useRenameDialog';
+import { useInlineRename } from './hooks/useInlineRename';
+import { InlineRenameField } from '@/core/ui/components/forms';
 import { PageLayout, PageHeader, ControlPanelLayout } from '@/core/ui/components/layout';
 import { useFocusTrap, useSingleTimer } from '@/core/ui/hooks';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import type { AuthoringExperience, AppBuilderComponentState } from '@/types/base';
+import type { AppBuilderComponentState } from '@/types/base';
 
 /**
  * Props for the ProjectDashboardScreen component
@@ -45,8 +45,6 @@ interface ProjectDashboardScreenProps {
     edsLiveUrl?: string;
     /** DA.live authoring URL for EDS projects */
     edsDaLiveUrl?: string;
-    /** Resolved authoring experience (drives the Author label + flip target) */
-    authoringExperience?: AuthoringExperience;
     /** Initial mesh status from card grid computation (avoids loading flash) */
     initialMeshStatus?: string;
     /** Initial EDS storefront status (for dynamic status display) */
@@ -80,7 +78,6 @@ export function ProjectDashboardScreen({
     isEds = false,
     edsLiveUrl,
     edsDaLiveUrl,
-    authoringExperience,
     initialMeshStatus,
     initialEdsStorefrontStatus,
     hasAdobeContext,
@@ -100,10 +97,11 @@ export function ProjectDashboardScreen({
     }
     const edsLiveUrlStable = edsLiveUrlRef.current;
 
-    // Authoring experience + DA.live URL are LIVE: a Configure save can flip the
-    // experience while the dashboard is open, so they're state (seeded from the
-    // open-time props) updated by the `authoringExperienceUpdate` message below.
-    const [liveAuthoringExperience, setLiveAuthoringExperience] = useState(authoringExperience);
+    // The DA.live URL is LIVE: a Configure save can flip the authoring
+    // experience while the dashboard is open, so it's state (seeded from the
+    // open-time prop) updated by the `authoringExperienceUpdate` message below.
+    // The experience itself no longer drives any dashboard UI — the Author
+    // tile label is static ("Author Content"); the backend resolves the target.
     const [liveEdsDaLiveUrl, setLiveEdsDaLiveUrl] = useState(edsDaLiveUrl);
 
     // Tracks whether the user has attempted a forced org switch this session.
@@ -118,8 +116,8 @@ export function ProjectDashboardScreen({
     // State for browser opening (passed to actions hook)
     const [isOpeningBrowser, setIsOpeningBrowser] = useState(false);
     const [showCapabilities, setShowCapabilities] = useState(false);
-    const { showRenameDialog, openRenameDialog, closeRenameDialog, confirmRename } =
-        useRenameDialog();
+    // Inline title rename commit (null = success; string = inline error).
+    const renameInline = useInlineRename();
 
     // Status management via extracted hook
     const {
@@ -209,13 +207,7 @@ export function ProjectDashboardScreen({
         const unsubscribe = webviewClient.onMessage(
             'authoringExperienceUpdate',
             (data: unknown) => {
-                const payload = data as {
-                    authoringExperience?: AuthoringExperience;
-                    edsDaLiveUrl?: string;
-                };
-                if (payload.authoringExperience) {
-                    setLiveAuthoringExperience(payload.authoringExperience);
-                }
+                const payload = data as { edsDaLiveUrl?: string };
                 if (payload.edsDaLiveUrl) {
                     setLiveEdsDaLiveUrl(payload.edsDaLiveUrl);
                 }
@@ -268,7 +260,20 @@ export function ProjectDashboardScreen({
         <div ref={containerRef} className="dashboard-left">
             <PageLayout
                 header={
-                    <PageHeader title={displayName} subtitle={brandStackSubtitle} constrainWidth />
+                    <PageHeader
+                        // Rename-in-place: the title carries a hover-revealed
+                        // pencil; commit posts renameProject (backend re-sends
+                        // status so the title refreshes). Hidden while running.
+                        title={
+                            <InlineRenameField
+                                name={displayName}
+                                disabled={isRunning}
+                                onRename={renameInline}
+                            />
+                        }
+                        subtitle={brandStackSubtitle}
+                        constrainWidth
+                    />
                 }
                 backgroundColor="var(--spectrum-global-color-gray-50)"
             >
@@ -318,7 +323,6 @@ export function ProjectDashboardScreen({
                                 handleOpenBrowser={handleOpenBrowser}
                                 handleOpenLiveSite={handleOpenLiveSite}
                                 handleOpenDaLive={handleOpenDaLive}
-                                authoringExperience={liveAuthoringExperience}
                                 handleOpenAdminPanel={handleOpenAdminPanel}
                                 handleDeployMesh={handleDeployMesh}
                                 handleSyncStorefront={handleSyncStorefront}
@@ -331,7 +335,6 @@ export function ProjectDashboardScreen({
                                 handleConfigure={handleConfigure}
                                 handleOpenDevConsole={handleOpenDevConsole}
                                 handleEditProject={handleEditProject}
-                                handleRename={openRenameDialog}
                                 handleExportProject={handleExportProject}
                                 handleResetProject={handleResetProject}
                                 handleDeleteProject={handleDeleteProject}
@@ -340,17 +343,6 @@ export function ProjectDashboardScreen({
                     }
                 />
             </PageLayout>
-
-            {/* Rename dialog — opened from the More menu's Rename item. On confirm
-                we post renameProject; the backend re-sends init so the title
-                refreshes. The dialog reuses the projects-list component. */}
-            <DashboardRenameDialog
-                isOpen={showRenameDialog}
-                projectName={displayName}
-                projectPath={project?.path}
-                onRename={confirmRename}
-                onClose={closeRenameDialog}
-            />
 
             {/* Capability catalog — reached from the "View AI Capabilities" link,
                 NOT the health badge. Two sections (skills + MCP servers) plus a

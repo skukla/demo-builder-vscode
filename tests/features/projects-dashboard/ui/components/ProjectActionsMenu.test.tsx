@@ -35,19 +35,11 @@ const edsProject = (name = 'EDS Project') =>
     createMockProject({ name, selectedStack: 'eds-dalive' } as any);
 
 /**
- * An EDS project carrying a resolved authoring experience in its view model.
- * The backend stamps `resolvedAuthoringExperience` so the UI stays presentational
- * (no resolver / vscode in the webview).
+ * An EDS project (the resolved authoring experience no longer rides in the
+ * view model — the Author label is static and the backend resolves the target).
  */
-const edsProjectWithExperience = (
-    experience: 'da-live-classic' | 'experience-workspace',
-    name = 'EDS Project'
-) =>
-    createMockProject({
-        name,
-        selectedStack: 'eds-dalive',
-        resolvedAuthoringExperience: experience,
-    } as any);
+const edsProjectWithExperience = (_experience: 'da-live-classic' | 'experience-workspace', name = 'EDS Project') =>
+    createMockProject({ name, selectedStack: 'eds-dalive' } as any);
 
 describe('ProjectActionsMenu', () => {
     describe('rendering and gating', () => {
@@ -129,10 +121,9 @@ describe('ProjectActionsMenu', () => {
     });
 
     describe('MANAGE group', () => {
-        it('heads a "Manage" section with Edit, Rename, Pin, Reset in order', () => {
+        it('heads a "Manage" section with Edit, Pin, Reset in order (no Rename — inline rename owns it)', () => {
             const actions: ProjectActions = {
                 onEdit: jest.fn(),
-                onRename: jest.fn(),
                 onPinToggle: jest.fn(),
                 onResetProject: jest.fn(),
             };
@@ -145,11 +136,14 @@ describe('ProjectActionsMenu', () => {
             openMenu();
 
             expect(screen.getByText('Manage')).toBeInTheDocument();
+            expect(screen.queryByText('Rename')).not.toBeInTheDocument();
             const labels = menuItemLabels();
-            const renameIdx = labels.findIndex((l) => l.includes('Rename'));
+            const editIdx = labels.findIndex((l) => l.includes('Edit'));
+            const pinIdx = labels.findIndex((l) => l.includes('Pin'));
             const resetIdx = labels.findIndex((l) => l.includes('Reset'));
-            expect(renameIdx).toBeGreaterThanOrEqual(0);
-            expect(renameIdx).toBeLessThan(resetIdx);
+            expect(editIdx).toBeGreaterThanOrEqual(0);
+            expect(editIdx).toBeLessThan(pinIdx);
+            expect(pinIdx).toBeLessThan(resetIdx);
         });
 
         it('keeps Reset a normal Manage action, not in the submenu', () => {
@@ -198,6 +192,25 @@ describe('ProjectActionsMenu', () => {
             expect(inSubmenu.getByText('Export')).toBeInTheDocument();
         });
 
+        it('offers NO Rename item anywhere — inline rename on the card owns it', () => {
+            const actions: ProjectActions = {
+                onEdit: jest.fn(),
+                onCopyPath: jest.fn(),
+                onExport: jest.fn(),
+                onDelete: jest.fn(),
+            };
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={actions}
+                />
+            );
+            openMenu();
+
+            expect(screen.queryByText('Rename')).not.toBeInTheDocument();
+            expect(within(submenu()).queryByText('Rename')).not.toBeInTheDocument();
+        });
+
         it('invokes a submenu action with the project when selected', () => {
             const project = createMockProject({ name: 'Test' });
             const onCopyPath = jest.fn();
@@ -244,7 +257,6 @@ describe('ProjectActionsMenu', () => {
                 onStartDemo: jest.fn(),
                 onOpenAi: jest.fn(),
                 onEdit: jest.fn(),
-                onRename: jest.fn(),
                 onPinToggle: jest.fn(),
                 onResetProject: jest.fn(),
                 onCopyPath: jest.fn(),
@@ -297,15 +309,15 @@ describe('ProjectActionsMenu', () => {
             expect(screen.queryByText('Start Demo')).not.toBeInTheDocument();
             expect(screen.queryByText('Stop Demo')).not.toBeInTheDocument();
             expect(screen.getByText('Open in Browser')).toBeInTheDocument();
-            expect(screen.getByText('Author in DA.live Classic')).toBeInTheDocument();
+            expect(screen.getByText('Author Content')).toBeInTheDocument();
         });
     });
 
-    describe('Authoring experience label', () => {
-        // The authoring-experience FLIP control was relocated to the Configure
-        // webview (setup-time preference with an explicit Save). The dynamic
-        // "Author in X" label STAYS here — it reflects the resolved experience.
-        it('labels Author with DA.live Classic when the resolved experience is UE', () => {
+    describe('Author Content label', () => {
+        // The label is STATIC ("Author Content") — the resolved authoring
+        // experience still decides WHERE the action opens (backend-side), it
+        // just no longer varies the menu text.
+        it('labels the Author item "Author Content" for a DA.live Classic project', () => {
             renderWithProvider(
                 <ProjectActionsMenu
                     project={edsProjectWithExperience('da-live-classic')}
@@ -314,11 +326,11 @@ describe('ProjectActionsMenu', () => {
             );
             openMenu();
 
-            expect(screen.getByText('Author in DA.live Classic')).toBeInTheDocument();
-            expect(screen.queryByText('Author in Experience Workspace')).not.toBeInTheDocument();
+            expect(screen.getByText('Author Content')).toBeInTheDocument();
+            expect(screen.queryByText(/Author in/)).not.toBeInTheDocument();
         });
 
-        it('labels Author with Experience Workspace when the resolved experience is EW', () => {
+        it('labels the Author item "Author Content" for an Experience Workspace project too', () => {
             renderWithProvider(
                 <ProjectActionsMenu
                     project={edsProjectWithExperience('experience-workspace')}
@@ -327,8 +339,8 @@ describe('ProjectActionsMenu', () => {
             );
             openMenu();
 
-            expect(screen.getByText('Author in Experience Workspace')).toBeInTheDocument();
-            expect(screen.queryByText('Author in DA.live Classic')).not.toBeInTheDocument();
+            expect(screen.getByText('Author Content')).toBeInTheDocument();
+            expect(screen.queryByText(/Author in/)).not.toBeInTheDocument();
         });
 
         it('shows no Author item for non-EDS projects', () => {
@@ -336,7 +348,7 @@ describe('ProjectActionsMenu', () => {
             // (so the kebab still renders), it does not appear.
             const actions: ProjectActions = {
                 onOpenDaLive: jest.fn(),
-                onRename: jest.fn(),
+                onEdit: jest.fn(),
             };
             renderWithProvider(
                 <ProjectActionsMenu
@@ -346,8 +358,7 @@ describe('ProjectActionsMenu', () => {
             );
             openMenu();
 
-            expect(screen.queryByText('Author in DA.live Classic')).not.toBeInTheDocument();
-            expect(screen.queryByText('Author in Experience Workspace')).not.toBeInTheDocument();
+            expect(screen.queryByText('Author Content')).not.toBeInTheDocument();
         });
 
         it('renders no flip/switch control (relocated to Configure)', () => {
@@ -413,8 +424,8 @@ describe('ProjectActionsMenu', () => {
         });
     });
 
-    describe('Open Admin Panel action', () => {
-        it('renders Open Admin Panel in the USE group when wired (non-EDS)', () => {
+    describe('Manage Commerce action', () => {
+        it('renders Manage Commerce in the USE group when wired (non-EDS)', () => {
             renderWithProvider(
                 <ProjectActionsMenu
                     project={createMockProject({ name: 'Test' })}
@@ -424,11 +435,11 @@ describe('ProjectActionsMenu', () => {
             openMenu();
 
             // Top-level USE item, not a submenu entry.
-            expect(screen.getByText('Open Admin Panel')).toBeInTheDocument();
+            expect(screen.getByText('Manage Commerce')).toBeInTheDocument();
             expect(screen.queryByTestId('spectrum-submenu')).not.toBeInTheDocument();
         });
 
-        it('renders Open Admin Panel for EDS projects as well (no type gating)', () => {
+        it('renders Manage Commerce for EDS projects as well (no type gating)', () => {
             renderWithProvider(
                 <ProjectActionsMenu
                     project={edsProject()}
@@ -437,10 +448,10 @@ describe('ProjectActionsMenu', () => {
             );
             openMenu();
 
-            expect(screen.getByText('Open Admin Panel')).toBeInTheDocument();
+            expect(screen.getByText('Manage Commerce')).toBeInTheDocument();
         });
 
-        it('does not render Open Admin Panel when the callback is omitted', () => {
+        it('does not render Manage Commerce when the callback is omitted', () => {
             renderWithProvider(
                 <ProjectActionsMenu
                     project={createMockProject({ name: 'Test' })}
@@ -449,7 +460,7 @@ describe('ProjectActionsMenu', () => {
             );
             openMenu();
 
-            expect(screen.queryByText('Open Admin Panel')).not.toBeInTheDocument();
+            expect(screen.queryByText('Manage Commerce')).not.toBeInTheDocument();
         });
 
         it('invokes onOpenAdminPanel with the project when selected', () => {
@@ -460,7 +471,7 @@ describe('ProjectActionsMenu', () => {
             );
             openMenu();
 
-            screen.getByText('Open Admin Panel').click();
+            screen.getByText('Manage Commerce').click();
 
             expect(onOpenAdminPanel).toHaveBeenCalledWith(project);
             expect(onOpenAdminPanel).toHaveBeenCalledTimes(1);

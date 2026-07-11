@@ -4,7 +4,7 @@
  * Displays the project dashboard actions as small, grouped, prioritized tiles
  * grouped into zones (no visible headings — spacing + tile labels carry the grouping):
  *  - Primary zone (accent): Start/Stop (non-EDS, mutually exclusive), Open in
- *    Browser, Author in DA.live (EDS only), and Admin Panel (all project
+ *    Browser, Author Content (EDS only), and Manage Commerce (all project
  *    types, always visible — resolved backend-side on click: derived from the
  *    ACCS tenant endpoint for SaaS, or the optional ADOBE_COMMERCE_ADMIN_URL
  *    field for PaaS/override). These are the surfaces you use
@@ -14,13 +14,14 @@
  *    Primary so storefront ops are visually adjacent to the storefront
  *    authoring surface.
  *  - Build zone: Deploy Mesh (when hasMesh), Configure, and a "More"
- *    overflow menu holding Edit + Rename (EDS always, non-EDS while stopped),
+ *    overflow menu holding Edit (EDS always, non-EDS while stopped),
  *    Export, Refresh Block Library + Republish Content (EDS only),
  *    Dev Console, Reset, and Delete (destructive, last). (Logs moved to the
- *    sidebar Logs utility; Copy Path lives on the project-card kebab.)
+ *    sidebar Logs utility; Copy Path lives on the project-card kebab; Rename
+ *    is inline on the dashboard title / project card name.)
  *  - Delete footer: isolated below the zones, destructive styling.
  *
- * Gating is behavioral, not displayed: Author in DA.live and Sync Storefront
+ * Gating is behavioral, not displayed: Author Content and Sync Storefront
  * render only for EDS projects; Start/Stop only for non-EDS; Deploy Mesh only
  * when hasMesh.
  *
@@ -45,34 +46,16 @@ import Settings from '@spectrum-icons/workflow/Settings';
 import StopCircle from '@spectrum-icons/workflow/StopCircle';
 import UserAdmin from '@spectrum-icons/workflow/UserAdmin';
 import React from 'react';
-import type { AuthoringExperience } from '@/types/base';
 
 /** Overflow menu item keys. */
 type OverflowKey =
     | 'edit'
-    | 'rename'
     | 'export'
     | 'refreshBlockLibrary'
     | 'republishContent'
     | 'devConsole'
     | 'reset'
     | 'delete';
-
-/**
- * Tile label per authoring experience. "EW" keeps the Author tile at two
- * lines (the audience — Adobe demo engineers — knows the shorthand); the
- * full name rides on the button's aria-label for hover/screen readers.
- */
-const EXPERIENCE_LABEL: Record<AuthoringExperience, string> = {
-    'da-live-classic': 'DA.live Classic',
-    'experience-workspace': 'EW',
-};
-
-/** Full name per authoring experience — the accessible label. */
-const EXPERIENCE_FULL_NAME: Record<AuthoringExperience, string> = {
-    'da-live-classic': 'DA.live Classic',
-    'experience-workspace': 'Experience Workspace',
-};
 
 /**
  * Props for the ActionGrid component
@@ -106,9 +89,7 @@ export interface ActionGridProps {
     handleOpenLiveSite?: () => void;
     /** Handler for Open DA.live button (EDS only) */
     handleOpenDaLive?: () => void;
-    /** Resolved authoring experience — drives the Author label (EDS only) */
-    authoringExperience?: AuthoringExperience;
-    /** Handler for the Admin Panel button (URL resolved backend-side) */
+    /** Handler for the Manage Commerce button (admin URL resolved backend-side) */
     handleOpenAdminPanel: () => void;
     /** Handler for Deploy Mesh button */
     handleDeployMesh: () => void;
@@ -128,11 +109,6 @@ export interface ActionGridProps {
      * (EDS always; non-EDS only while stopped).
      */
     handleEditProject?: () => void;
-    /**
-     * Handler for the Rename overflow item. Opens the rename dialog (owned by
-     * ProjectDashboardScreen). Optional — gated like the kebab's Edit action.
-     */
-    handleRename?: () => void;
     /** Handler for the Export overflow item */
     handleExportProject: () => void;
     /** Handler for the Reset overflow item (always shown, last in the menu) */
@@ -161,7 +137,6 @@ export function ActionGrid({
     handleOpenBrowser,
     handleOpenLiveSite,
     handleOpenDaLive,
-    authoringExperience = 'da-live-classic',
     handleOpenAdminPanel,
     handleDeployMesh,
     handleSyncStorefront,
@@ -170,22 +145,17 @@ export function ActionGrid({
     handleConfigure,
     handleOpenDevConsole,
     handleEditProject,
-    handleRename,
     handleExportProject,
     handleResetProject,
     handleDeleteProject,
 }: ActionGridProps): React.ReactElement {
-    // Edit/Rename gating mirrors the kebab's Edit: non-EDS only while stopped, EDS always.
+    // Edit gating mirrors the kebab's Edit: non-EDS only while stopped, EDS always.
     const canEdit = Boolean(handleEditProject) && (isEds || !isRunning);
-    const canRename = Boolean(handleRename) && (isEds || !isRunning);
 
     const handleOverflowAction = (key: React.Key): void => {
         switch (key) {
             case 'edit' satisfies OverflowKey:
                 handleEditProject?.();
-                return;
-            case 'rename' satisfies OverflowKey:
-                handleRename?.();
                 return;
             case 'export' satisfies OverflowKey:
                 handleExportProject();
@@ -216,7 +186,7 @@ export function ActionGrid({
             <div className="dashboard-zone-row">
                 {/* Primary zone — the surfaces you use the project through:
                     see it as a customer (Open in Browser) and edit it as a
-                    creator (Author in DA.live, EDS only). Start/Stop also
+                    creator (Author Content, EDS only). Start/Stop also
                     lives here for non-EDS projects as their lifecycle
                     equivalent. */}
                 <div className="dashboard-zone-section" data-zone="primary">
@@ -267,24 +237,22 @@ export function ActionGrid({
                             </ActionButton>
                         )}
 
-                        {/* Author — EDS only. Labeled from the resolved authoring
-                            experience (Universal Editor / Experience Workspace). */}
+                        {/* Author — EDS only. Static label: the resolved authoring
+                            experience decides WHERE this opens (backend-side),
+                            not the tile text. */}
                         {isEds && (
                             <ActionButton
                                 onPress={handleOpenDaLive}
                                 isQuiet
                                 isDisabled={isOpeningBrowser}
                                 UNSAFE_className="dashboard-action-button dashboard-action-button--hero"
-                                aria-label={`Author in ${EXPERIENCE_FULL_NAME[authoringExperience]}`}
                             >
                                 <Edit size="L" />
-                                <Text UNSAFE_className="icon-label">
-                                    Author in {EXPERIENCE_LABEL[authoringExperience]}
-                                </Text>
+                                <Text UNSAFE_className="icon-label">Author Content</Text>
                             </ActionButton>
                         )}
 
-                        {/* Admin Panel — always visible; the URL (optional
+                        {/* Manage Commerce — always visible; the admin URL (optional
                             ADOBE_COMMERCE_ADMIN_URL) resolves backend-side, so no
                             isOpeningBrowser gating here. */}
                         <ActionButton
@@ -293,7 +261,7 @@ export function ActionGrid({
                             UNSAFE_className="dashboard-action-button dashboard-action-button--hero"
                         >
                             <UserAdmin size="L" />
-                            <Text UNSAFE_className="icon-label">Admin Panel</Text>
+                            <Text UNSAFE_className="icon-label">Manage Commerce</Text>
                         </ActionButton>
                     </div>
                 </div>
@@ -356,7 +324,6 @@ export function ActionGrid({
                             </ActionButton>
                             <Menu onAction={handleOverflowAction}>
                                 {canEdit ? <Item key="edit">Edit</Item> : null}
-                                {canRename ? <Item key="rename">Rename</Item> : null}
                                 <Item key="export">Export</Item>
                                 {isEds && handleRefreshBlockLibrary ? (
                                     <Item key="refreshBlockLibrary">Refresh Block Library</Item>

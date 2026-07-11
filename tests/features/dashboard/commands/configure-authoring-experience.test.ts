@@ -94,8 +94,9 @@ jest.mock('@/features/eds/services/githubTokenService', () => ({
     GitHubTokenService: jest.fn().mockImplementation((...args) => mockGitHubTokenService(...args)),
 }));
 
-// Dashboard live-update push — the save handler posts the new authoring label +
-// DA URL to an already-open dashboard immediately after the metadata save.
+// Dashboard live-update push — the save handler posts the new DA URL to an
+// already-open dashboard immediately after the metadata save (the tile label
+// is static; only the URL is live).
 const mockSendAuthoringExperienceUpdate = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     ProjectDashboardWebviewCommand: {
@@ -260,7 +261,6 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
 
         expect(mockSendAuthoringExperienceUpdate).toHaveBeenCalledTimes(1);
         expect(mockSendAuthoringExperienceUpdate).toHaveBeenCalledWith(
-            'experience-workspace',
             'https://da.live/canvas#/my-org/my-site/index'
         );
     });

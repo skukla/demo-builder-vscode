@@ -150,16 +150,16 @@ describe('ProjectDashboardWebviewCommand - sendAuthoringExperienceUpdate', () =>
         jest.restoreAllMocks();
     });
 
-    it('posts an authoringExperienceUpdate message to the active panel', async () => {
+    it('posts an authoringExperienceUpdate message carrying just the new DA URL', async () => {
         // Given: An active dashboard panel
         const mockPostMessage = jest.fn().mockResolvedValue(true);
         jest.spyOn(BaseWebviewCommand, 'getActivePanel').mockReturnValue({
             webview: { postMessage: mockPostMessage },
         } as unknown as vscode.WebviewPanel);
 
-        // When: An authoring-experience update is sent
+        // When: An authoring-experience flip pushes its update (the tile label
+        // is static — only the live DA URL rides on the message now)
         await ProjectDashboardWebviewCommand.sendAuthoringExperienceUpdate(
-            'experience-workspace',
             'https://da.live/canvas#/my-org/my-site/index',
         );
 
@@ -168,7 +168,6 @@ describe('ProjectDashboardWebviewCommand - sendAuthoringExperienceUpdate', () =>
         expect(mockPostMessage).toHaveBeenCalledWith({
             type: 'authoringExperienceUpdate',
             payload: {
-                authoringExperience: 'experience-workspace',
                 edsDaLiveUrl: 'https://da.live/canvas#/my-org/my-site/index',
             },
         });
@@ -180,7 +179,7 @@ describe('ProjectDashboardWebviewCommand - sendAuthoringExperienceUpdate', () =>
 
         // When/Then: Sending does not throw
         await expect(
-            ProjectDashboardWebviewCommand.sendAuthoringExperienceUpdate('da-live-classic'),
+            ProjectDashboardWebviewCommand.sendAuthoringExperienceUpdate('https://da.live/x'),
         ).resolves.toBeUndefined();
     });
 });

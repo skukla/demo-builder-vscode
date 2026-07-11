@@ -322,7 +322,6 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                                 getEwCanvasBranch(),
                             );
                             await ProjectDashboardWebviewCommand.sendAuthoringExperienceUpdate(
-                                data.authoringExperience,
                                 edsDaLiveUrl,
                             );
                         } catch (error) {
