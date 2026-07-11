@@ -26,6 +26,42 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         type: 'startDemo',
     },
     {
+        tool: 'deploy_integration',
+        description:
+            'Deploy (or redeploy — idempotent) one App Builder integration on the current ' +
+            'project by its id (from get_project). Runs the guard chain and deploys under the ' +
+            "project's Adobe org context. For the API Mesh, use deploy_mesh instead.",
+        map: dashboardHandlers,
+        type: 'deployAppBuilderComponent',
+        inputSchema: {
+            id: z.string().describe('The integration id to deploy (from get_project)'),
+        },
+    },
+    {
+        tool: 'redeploy_integration',
+        description:
+            'Redeploy one App Builder integration by its id (idempotent re-run of its deploy). ' +
+            'Same effect as deploy_integration; named for the "redeploy my integration" ask.',
+        map: dashboardHandlers,
+        type: 'redeployAppBuilderComponent',
+        inputSchema: {
+            id: z.string().describe('The integration id to redeploy (from get_project)'),
+        },
+    },
+    {
+        tool: 'remove_integration',
+        description:
+            'Remove one App Builder integration by its id. DESTRUCTIVE: undeploys it remotely ' +
+            '(aio app undeploy / api-mesh:delete), deletes its local files, and republishes the ' +
+            'storefront without it. Confirm the id with the user first.',
+        map: dashboardHandlers,
+        type: 'removeAppBuilderComponent',
+        confirm: true,
+        inputSchema: {
+            id: z.string().describe('The integration id to remove (from get_project)'),
+        },
+    },
+    {
         tool: 'stop_demo',
         description: "Stop the current project's running demo server",
         map: dashboardHandlers,

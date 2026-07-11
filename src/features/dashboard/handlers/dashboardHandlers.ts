@@ -19,7 +19,12 @@ import { AI_CONTEXT_VERSION, COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
 import { openInIncognito } from '@/core/utils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { validateURL } from '@/core/validation';
+import {
+    validateURL,
+    validateOrgId,
+    validateProjectId,
+    validateWorkspaceId,
+} from '@/core/validation';
 import { verifyAiSetup } from '@/features/ai';
 import { detectMcpDrift } from '@/features/ai/mcpDriftDetector';
 import {
@@ -45,6 +50,10 @@ import {
     createAiVerifyCheck,
     createAiContextFreshnessCheck,
 } from '@/features/dashboard/services/onOpenChecks';
+import {
+    getEwCanvasBranch,
+    resolveProjectAuthoringExperience,
+} from '@/features/eds/handlers/edsHelpers';
 import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
 import type { Project } from '@/types';
@@ -52,6 +61,8 @@ import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler, defineHandlers, HandlerContext } from '@/types/handlers';
 import {
     getAdminPanelUrl,
+    getEdsDaLiveUrl,
+    getEdsLiveUrl,
     getMeshComponentInstance,
     getProjectFrontendPort,
     isEdsProject,
@@ -600,6 +611,78 @@ export const handleOpenDevConsole: MessageHandler = async (context) => {
 };
 
 /**
+ * Build the Developer Console deep link for a project (workspace → project →
+ * generic). Mirrors {@link handleOpenDevConsole}'s branching but, being a READ,
+ * falls back to the generic console URL on a malformed id instead of erroring.
+ */
+function resolveDevConsoleUrl(
+    project: Project | undefined | null,
+    context: HandlerContext,
+): string {
+    const generic = 'https://developer.adobe.com/console';
+    try {
+        if (hasAdobeWorkspaceContext(project)) {
+            validateOrgId(project.adobe.organization);
+            validateProjectId(project.adobe.projectId);
+            validateWorkspaceId(project.adobe.workspace);
+            return `https://developer.adobe.com/console/projects/${project.adobe.organization}/${project.adobe.projectId}/workspaces/${project.adobe.workspace}/details`;
+        }
+        if (hasAdobeProjectContext(project)) {
+            validateOrgId(project.adobe.organization);
+            validateProjectId(project.adobe.projectId);
+            return `https://developer.adobe.com/console/projects/${project.adobe.organization}/${project.adobe.projectId}/overview`;
+        }
+    } catch {
+        context.logger.warn(
+            '[Get URLs] Dev Console id validation failed; using the generic console URL',
+        );
+    }
+    return generic;
+}
+
+/**
+ * Handle 'getProjectUrls' message - Return the project's useful URLs as DATA.
+ *
+ * The read behind the get_project_urls MCP tool. Computes each URL from the
+ * SAME getters the open-in-browser handlers use, so an agent gets what a click
+ * would open without the browser side effect. Absent URLs are omitted (the
+ * getters return undefined). Deliberately pure: it never opens a browser and
+ * never runs the admin-panel "Open Configure" prompt — an unresolvable admin
+ * URL is simply omitted.
+ */
+export const handleGetProjectUrls: MessageHandler = async (context) => {
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
+    }
+
+    const urls: Record<string, string> = {};
+
+    // Local dev storefront — present only while the demo is running (port assigned).
+    const frontendPort = getProjectFrontendPort(project);
+    if (frontendPort) urls.storefront = `http://localhost:${frontendPort}`;
+
+    // EDS live site + DA.live authoring (undefined for non-EDS projects).
+    const liveSite = getEdsLiveUrl(project);
+    if (liveSite) urls.liveSite = liveSite;
+    const daLive = getEdsDaLiveUrl(
+        project,
+        resolveProjectAuthoringExperience(project),
+        getEwCanvasBranch(),
+    );
+    if (daLive) urls.daLive = daLive;
+
+    // Commerce admin — the pure getter (explicit field or derived ACCS URL); no prompt.
+    const commerceAdmin = getAdminPanelUrl(project);
+    if (commerceAdmin) urls.commerceAdmin = commerceAdmin;
+
+    // Developer Console — always resolvable (deep link or generic fallback).
+    urls.devConsole = resolveDevConsoleUrl(project, context);
+
+    return { success: true, data: { urls } };
+};
+
+/**
  * Handle 'deleteProject' message - Delete current project
  *
  * Uses projectDeletionService for unified delete experience including EDS cleanup.
@@ -952,6 +1035,7 @@ export const dashboardHandlers = defineHandlers({
     openAdminPanel: handleOpenAdminPanel,
     configure: handleConfigure,
     openDevConsole: handleOpenDevConsole,
+    getProjectUrls: handleGetProjectUrls,
     navigateBack: handleNavigateBack,
 
     // Mesh handlers

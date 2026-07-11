@@ -271,12 +271,20 @@ used while assembling a `create_project` call.
 Thin tools declared as data and dispatched to existing handler maps:
 - Reads: `verify_ai_setup`, `list_ai_prompts`, `check_mesh`, `list_console_apis`
   (the org's subscribable Adobe services, flagging ones the reconcile union
-  already manages).
+  already manages), `get_project_urls` (the project's useful URLs as data — local
+  storefront, EDS live site + DA.live authoring, Commerce admin, Developer Console
+  deep link — computed from the same getters the open-in-browser handlers use, but
+  WITHOUT opening a browser or running the admin-panel "Open Configure" prompt;
+  absent URLs are omitted).
 - Actions: `regenerate_ai_files`, `start_demo`, `stop_demo`, `rename_project`
   (current-project rename via the shared `renameProjectCore` — folder, saved
   state, and the project's baked MCP/AI configs move together; agents must use
   this instead of shell `mv`, which strands the extension's paths),
-  `save_ai_prompt`, `delete_ai_prompt`, `delete_mesh`, `add_console_apis` (runtime API
+  `deploy_integration` / `redeploy_integration` (deploy one App Builder integration
+  by id — idempotent, guard-chained, org-context-targeted; the API Mesh has its own
+  `check_mesh` / `delete_mesh`), `remove_integration` (confirm-gated — remote
+  undeploy + local cleanup + storefront republish), `save_ai_prompt`, `delete_ai_prompt`,
+  `delete_mesh`, `add_console_apis` (runtime API
   subscription on the demo workspace credential — reuses `apiSubscriber` under
   the auth → org-mismatch → developer-role guard chain; added codes persist in
   `Project.additionalConsoleApis` and ride every later reconcile union, since

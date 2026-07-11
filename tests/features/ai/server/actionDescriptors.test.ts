@@ -37,4 +37,33 @@ describe('ACTION_DESCRIPTORS', () => {
         // Rename is reversible (rename back) — NOT confirm-gated, unlike delete_*.
         expect(d!.confirm).toBeUndefined();
     });
+
+    describe('App Builder integration deploy/redeploy/remove', () => {
+        it('deploy_integration dispatches to deployAppBuilderComponent with an id, no confirm', () => {
+            const d = row('deploy_integration');
+            expect(d).toBeDefined();
+            expect(d!.map).toBe(dashboardHandlers);
+            expect(d!.type).toBe('deployAppBuilderComponent');
+            expect(Object.keys(d!.inputSchema ?? {})).toContain('id');
+            expect(d!.confirm).toBeUndefined();
+        });
+
+        it('redeploy_integration dispatches to redeployAppBuilderComponent with an id, no confirm', () => {
+            const d = row('redeploy_integration');
+            expect(d).toBeDefined();
+            expect(d!.map).toBe(dashboardHandlers);
+            expect(d!.type).toBe('redeployAppBuilderComponent');
+            expect(Object.keys(d!.inputSchema ?? {})).toContain('id');
+            expect(d!.confirm).toBeUndefined();
+        });
+
+        it('remove_integration is confirm-gated (remote undeploy) with an id', () => {
+            const d = row('remove_integration');
+            expect(d).toBeDefined();
+            expect(d!.map).toBe(dashboardHandlers);
+            expect(d!.type).toBe('removeAppBuilderComponent');
+            expect(Object.keys(d!.inputSchema ?? {})).toContain('id');
+            expect(d!.confirm).toBe(true);
+        });
+    });
 });

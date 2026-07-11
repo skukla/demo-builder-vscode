@@ -45,4 +45,13 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         map: dashboardHandlers,
         type: 'listConsoleApis',
     },
+    {
+        tool: 'get_project_urls',
+        description:
+            "The current project's useful URLs as data (no browser opened): local storefront " +
+            '(while running), EDS live site + DA.live authoring, Commerce admin, and the Developer ' +
+            'Console deep link. Absent URLs are omitted.',
+        map: dashboardHandlers,
+        type: 'getProjectUrls',
+    },
 ];

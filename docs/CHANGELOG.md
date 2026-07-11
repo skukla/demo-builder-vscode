@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **More agent tools (MCP).** `get_project_urls` returns the project's useful URLs
+  as data — local storefront, EDS live site + DA.live authoring, Commerce admin, and
+  the Developer Console deep link — so an agent can answer "what's the URL" without a
+  browser opening. `deploy_integration` / `redeploy_integration` / `remove_integration`
+  let an agent deploy, redeploy, or remove one App Builder integration by id
+  (remove is confirm-gated — it undeploys remotely).
 - **Rebuilt wizard Integrations area.** The center column now shows only your configured integrations — one summary row each — plus an **Add Integration** button. Adding is one guided modal journey: pick the kind (API Mesh, a catalog integration, or your own GitHub repo), sign in and choose the shared Adobe project/workspace the first time anything needs it (later adds just show "Deploys to …" with Change), and finish on an **API Access** stage that closes every journey — a searchable picker of your org's Adobe APIs beside a summary column showing what's applied (required APIs are granted automatically and listed there as facts) and what you've selected. For API Mesh the required APIs are enabled on the workspace right in the modal (spinner → ✓, with Retry on failure). Rows show setup state, destination, and API counts; the project summary column now lists every integration. Editing an existing project seeds the rows from the project, including custom integrations and previously added APIs, which formerly vanished on edit.
 - **Manage APIs from the dashboard.** Deployed App Builder integrations gain a "Manage APIs" action that lists your org's Adobe APIs (already-granted ones locked) and adds new ones to the workspace credential.
 - **Manage Commerce.** A new dashboard tile and a project-card menu item open the project's Commerce Admin Panel. SaaS (ACCS) projects derive the URL automatically from the tenant endpoint; PaaS projects supply it via the new optional **Admin Panel URL** field on the Configure screen (`ADOBE_COMMERCE_ADMIN_URL`, which also overrides the derived URL when set). Clicking without a resolvable URL prompts with an "Open Configure" shortcut.
