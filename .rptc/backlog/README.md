@@ -80,10 +80,14 @@ Core self-heal **shipped** (see Recently shipped). Residual scope from the origi
 
 ### C. Ready to pick up (small, verified still pending)
 
-*(empty — the last §C item, the global-MCP entry point, shipped 2026-07-09; see
-[`../complete/2026-07-09-global-mcp-entry-point/`](../complete/2026-07-09-global-mcp-entry-point/overview.md):
-proxy socket discovery + the "Register Global MCP" command, multi-window
-tiebreak = most recently started window.)*
+#### MCP affordance coverage — close the agent-tool gaps ([`2026-07-11-mcp-affordance-coverage.md`](2026-07-11-mcp-affordance-coverage.md))
+
+From the 2026-07-11 audit (research in `.rptc/research/mcp-affordance-coverage/`),
+prompted by the `rename_project` gap (shipped same day). Five gaps in priority order:
+`get_project_urls` + `export_project_settings` reads (small, can ship together),
+`deploy_mesh` headless action (the check/delete/deploy asymmetry), App Builder
+deploy/redeploy/remove descriptor rows (headless-verify first), `refresh_block_library`.
+No new generated skills — every gap is tier-1 (a tool), per the validated tiering.
 
 ### D. Deferred by design (gated on an external condition)
 
