@@ -184,6 +184,7 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
     const commitSelection = useCallback((): void => {
         if (draft.kind === 'mesh' && meshComponent) {
             builder.onAppBuilderComponentToggle(meshComponent.id, true);
+            mergeSelectedApis(meshComponent.id);
             return;
         }
         if (draft.kind === 'catalog' && draft.catalogId) {

@@ -1,11 +1,13 @@
 /**
  * KindStage — the Add Integration flow's kind picker (stage id `'kind'`).
  *
- * Presentational: three {@link ChoiceCard} tiles (API Mesh · Integration Catalog ·
- * Custom Integration). The mesh tile renders ONLY when offered — the picker HIDES mesh
- * when the stack lacks it or it is already added (no disabled tile; see
- * {@link import('../flowStages').meshKindOffered}). The catalog tile is disabled with a
- * "None available yet" note when the catalog is empty. The selected tile reflects `kind`.
+ * Presentational: three equal-width {@link ChoiceCard}s in one row (API Mesh ·
+ * Integration Catalog · Custom Integration) — the default row variant, NOT the catalog
+ * gallery's small square tiles: with only three known kinds the cards stretch to fill
+ * the modal's width. The mesh card renders ONLY when offered — the picker HIDES mesh
+ * when the stack lacks it or it is already added (no disabled card; see
+ * {@link import('../flowStages').meshKindOffered}). The catalog card is disabled with a
+ * "None available yet" note when the catalog is empty. The selected card reflects `kind`.
  *
  * @module features/project-creation/ui/components/integration-flow/stages/KindStage
  */
@@ -42,7 +44,6 @@ export function KindStage({
         <div className="intflow-kind-choices">
             {meshOffered ? (
                 <ChoiceCard
-                    variant="tile"
                     name="API Mesh"
                     description="Combine your Commerce and other APIs behind a single GraphQL endpoint."
                     selected={kind === 'mesh'}
@@ -50,7 +51,6 @@ export function KindStage({
                 />
             ) : null}
             <ChoiceCard
-                variant="tile"
                 name="Integration Catalog"
                 description="Pick a pre-built App Builder integration."
                 selected={kind === 'catalog'}
@@ -59,7 +59,6 @@ export function KindStage({
                 onSelect={() => onPickKind('catalog')}
             />
             <ChoiceCard
-                variant="tile"
                 name="Custom Integration"
                 description="Add your own App Builder app from a public GitHub repository."
                 selected={kind === 'custom'}

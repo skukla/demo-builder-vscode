@@ -4615,8 +4615,20 @@ div[class*="spectrum"] input[type="search"] {
     gap: 12px;
     max-width: 720px;
 }
+/* Empty state escapes the row-width cap so it centers in the full view. */
+.int-results--empty {
+    max-width: none;
+}
+/* Empty state: one centered unit (title, copy, Add button) filling the view —
+   a left-anchored fragment in the dark expanse reads as unfinished. */
 .int-results-empty {
-    padding: 24px 4px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: min(420px, 50vh);
+    width: 100%;
 }
 .int-results-empty-title {
     font-size: 14px;
@@ -4624,11 +4636,14 @@ div[class*="spectrum"] input[type="search"] {
     color: var(--spectrum-global-color-gray-800);
 }
 .int-results-empty-copy {
-    margin-top: 4px;
+    margin-top: 6px;
     font-size: 12px;
     line-height: 1.5;
     color: var(--spectrum-global-color-gray-600);
     max-width: 52ch;
+}
+.int-results-empty-action {
+    margin-top: 20px;
 }
 .int-results-add {
     margin-top: 4px;
@@ -4706,12 +4721,15 @@ div[class*="spectrum"] input[type="search"] {
     line-height: 1.5;
     color: var(--spectrum-global-color-gray-700);
 }
-/* Kind picker: the three choice tiles in one wrapping row. */
+/* Kind picker: the (at most) three kind cards stretch equal-width across the
+   modal row (default .choice-card flex: 1 1 0 / min-width 240px — NOT the
+   catalog gallery's 168px tiles), wrapping only when the modal is narrow. */
 .intflow-kind-choices {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
     gap: 12px;
+    align-items: stretch;
 }
 /* Catalog stage: search header over the wrapping tile gallery. */
 .intflow-catalog {
@@ -4791,11 +4809,90 @@ div[class*="spectrum"] input[type="search"] {
     color: var(--spectrum-global-color-gray-900);
 }
 
-/* ---- API-access stage: helper + grouped, searchable checkbox list ---- */
+/* ---- API-access stage: two-column (the builder's center-work/right-summary
+   grammar). Center = the filterable free-API picker; right = the "API Access"
+   summary panel owning the facts (Applied: required/enable state · Selected:
+   the free picks). Wraps to a single column when the modal is narrow. ---- */
 .intflow-api-stage {
     display: flex;
     flex-direction: column;
     gap: 12px;
+}
+.intflow-api-columns {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: flex-start;
+}
+.intflow-api-main {
+    flex: 1 1 380px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.intflow-api-summary {
+    flex: 0 1 260px;
+    min-width: 220px;
+    box-sizing: border-box;
+    padding: 14px 16px;
+    background: var(--spectrum-global-color-gray-50);
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.intflow-api-summary-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-600);
+}
+.intflow-api-summary-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.intflow-api-summary-heading {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-600);
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-200);
+}
+.intflow-api-summary-item {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--spectrum-global-color-gray-800);
+}
+.intflow-api-summary-empty {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+}
+/* The mesh enable row rides in the summary's Applied slot: drop its standalone
+   row chrome and label (the panel's headings carry the context), let the ✓ +
+   API names wrap within the narrow column. */
+.intflow-api-summary .int-chosen {
+    min-height: 0;
+    padding: 0;
+    margin-bottom: 0;
+    border: none;
+    background: none;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+}
+.intflow-api-summary .int-chosen-label {
+    display: none;
+}
+.intflow-api-summary .int-chosen-value {
+    white-space: normal;
+    font-size: 13px;
 }
 .intflow-api-picker {
     display: flex;

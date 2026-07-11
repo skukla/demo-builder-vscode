@@ -48,24 +48,25 @@ const ADD: FlowMode = 'add';
 const DEST: FlowMode = 'destination';
 
 describe('deriveStageOrder — add mode', () => {
-    it('mesh, signed in, destination uncommitted → kind + full dest, no source/apis', () => {
+    it('mesh, signed in, destination uncommitted → kind + full dest + api-access (enable runs in-modal)', () => {
         expect(deriveStageOrder(draft({ kind: 'mesh' }), slice(), ADD)).toEqual([
             'kind',
             'dest-project',
             'dest-workspace',
+            'api-access',
         ]);
     });
 
     it('mesh, signed out, uncommitted → inserts dest-signin before dest-project', () => {
         expect(
             deriveStageOrder(draft({ kind: 'mesh' }), slice({ isSignedIn: false }), ADD)
-        ).toEqual(['kind', 'dest-signin', 'dest-project', 'dest-workspace']);
+        ).toEqual(['kind', 'dest-signin', 'dest-project', 'dest-workspace', 'api-access']);
     });
 
-    it('mesh, destination committed (later add) → dest collapses to dest-summary', () => {
+    it('mesh, destination committed (later add) → dest collapses to dest-summary + api-access', () => {
         expect(
             deriveStageOrder(draft({ kind: 'mesh' }), slice({ destinationCommitted: true }), ADD)
-        ).toEqual(['kind', 'dest-summary']);
+        ).toEqual(['kind', 'dest-summary', 'api-access']);
     });
 
     it('catalog, signed in, uncommitted → source-catalog + full dest + api-access', () => {
@@ -211,8 +212,14 @@ describe('nextStage', () => {
         expect(nextStage('api-access', draft({ kind: 'catalog' }), slice(), ADD)).toBeNull();
     });
 
-    it('mesh last stage (dest-workspace) → null', () => {
-        expect(nextStage('dest-workspace', draft({ kind: 'mesh' }), slice(), ADD)).toBeNull();
+    it('mesh dest-workspace → api-access (the in-modal enable stage)', () => {
+        expect(nextStage('dest-workspace', draft({ kind: 'mesh' }), slice(), ADD)).toBe(
+            'api-access'
+        );
+    });
+
+    it('mesh last stage (api-access) → null', () => {
+        expect(nextStage('api-access', draft({ kind: 'mesh' }), slice(), ADD)).toBeNull();
     });
 
     it('destination mode last stage → null', () => {
@@ -350,8 +357,11 @@ describe('canContinue', () => {
         expect(canContinue('dest-summary', draft(), slice())).toBe(true);
     });
 
-    it('api-access never blocks, even with no picks', () => {
+    it('api-access never blocks on picks, but waits while an enable run is in flight', () => {
         expect(canContinue('api-access', draft(), slice())).toBe(true);
+        // The mesh enable stage reports through phaseRunning; the picker path
+        // never sets it, so catalog/custom adds are unaffected.
+        expect(canContinue('api-access', draft(), slice({ phaseRunning: true }))).toBe(false);
     });
 });
 
@@ -363,15 +373,16 @@ describe('continueLabel', () => {
         'dest-workspace',
         'api-access',
     ];
-    const meshOrder: FlowStageId[] = ['kind', 'dest-project', 'dest-workspace'];
+    const meshOrder: FlowStageId[] = ['kind', 'dest-project', 'dest-workspace', 'api-access'];
     const destOrder: FlowStageId[] = ['dest-project', 'dest-workspace'];
 
     it('last stage in add mode → "Add Integration"', () => {
         expect(continueLabel('api-access', catalogOrder, ADD)).toBe('Add Integration');
     });
 
-    it('mesh last stage (dest-workspace) in add mode → "Add Integration"', () => {
-        expect(continueLabel('dest-workspace', meshOrder, ADD)).toBe('Add Integration');
+    it('mesh last stage (api-access) in add mode → "Add Integration"; dest-workspace is now mid-walk', () => {
+        expect(continueLabel('api-access', meshOrder, ADD)).toBe('Add Integration');
+        expect(continueLabel('dest-workspace', meshOrder, ADD)).toBe('Continue');
     });
 
     it('last stage in destination mode → "Save"', () => {

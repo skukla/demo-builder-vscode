@@ -1,10 +1,14 @@
 /**
  * MeshApiEnableRow — the self-contained "API access" provisioning row for the mesh row.
  *
- * Embedded in the mesh {@link IntegrationResultRow} (once the shared destination
- * commits), it auto-runs the shipped, idempotent `ensure-mesh-api-subscribed`
- * request so the row's ✓ genuinely means "provisioned" and a subscribe/permission
- * failure surfaces here — at selection time — instead of deep in project creation.
+ * Rendered in TWO places: the Add Integration modal's mesh api-access stage
+ * (as the API Access summary column's Applied section via `appliedSlot`,
+ * reporting through `onResult`/`onRunningChange`)
+ * and the mesh {@link IntegrationResultRow} (adopting the modal's outcome via
+ * `initialResult`, or auto-running for a mesh that never walked the modal). It
+ * runs the shipped, idempotent `ensure-mesh-api-subscribed` request so the ✓
+ * genuinely means "provisioned" and a subscribe/permission failure surfaces at
+ * selection time instead of deep in project creation.
  *
  * Behavior:
  *   - runs once per payload (a ref holds the last-issued composite key of all
@@ -59,6 +63,19 @@ export interface MeshApiEnableRowProps {
      * auto-runs normally; Retry always issues a real request.
      */
     initialResult?: EnsureResult;
+    /**
+     * Reports every applied result — a run's resolution (including a rejected
+     * request, synthesized as `{success: false, error}`) or an adopted
+     * initialResult. Lets the Add Integration modal capture the outcome and
+     * hand it to the result row as `initialResult`.
+     */
+    onResult?: (result: EnsureResult) => void;
+    /**
+     * Reports run-in-flight transitions: true when a request is issued, false
+     * when a result is applied. Wired to the flow's phaseRunning so the modal
+     * footer waits for the enable to settle (success OR failure).
+     */
+    onRunningChange?: (running: boolean) => void;
 }
 
 type EnableStatus = 'running' | 'enabled' | 'failed';
@@ -116,20 +133,34 @@ export function MeshApiEnableRow({
     frontendId,
     label = 'API access',
     initialResult,
+    onResult,
+    onRunningChange,
 }: MeshApiEnableRowProps): React.ReactElement | null {
     const [status, setStatus] = useState<EnableStatus>('running');
     const [error, setError] = useState<string | undefined>(undefined);
     const [apis, setApis] = useState<SubscribedApi[] | undefined>(undefined);
+
+    // Callback refs keep `run`/`applyResult` stable even when a parent passes
+    // inline callbacks (an identity change must not re-issue the request).
+    const onResultRef = useRef(onResult);
+    onResultRef.current = onResult;
+    const onRunningChangeRef = useRef(onRunningChange);
+    onRunningChangeRef.current = onRunningChange;
 
     // The composite payload key a request was last issued for (dedupes re-renders;
     // re-issues once whenever ANY payload field changes).
     const lastRunKey = useRef<string | undefined>(undefined);
     // The current run's cancellation token; a stale resolve checks its own token.
     const activeToken = useRef<{ cancelled: boolean } | null>(null);
+    // Whether a request is currently in flight — the unmount cleanup must
+    // release the parent's phaseRunning gate (Back mid-enable would otherwise
+    // strand it true and deadlock later stages' Continue).
+    const inFlight = useRef(false);
     // Whether a provided initialResult was already adopted (adopt at most once).
     const initialResultConsumed = useRef(false);
 
     const applyResult = useCallback((result: EnsureResult): void => {
+        inFlight.current = false;
         if (result.success) {
             setStatus('enabled');
             setApis(result.data?.apis);
@@ -137,6 +168,8 @@ export function MeshApiEnableRow({
             setStatus('failed');
             setError(result.error);
         }
+        onResultRef.current?.(result);
+        onRunningChangeRef.current?.(false);
     }, []);
 
     const run = useCallback((): void => {
@@ -147,6 +180,8 @@ export function MeshApiEnableRow({
         setStatus('running');
         setError(undefined);
         setApis(undefined);
+        inFlight.current = true;
+        onRunningChangeRef.current?.(true);
 
         webviewClient
             .request<EnsureResult>('ensure-mesh-api-subscribed', {
@@ -162,8 +197,10 @@ export function MeshApiEnableRow({
             })
             .catch((err: unknown) => {
                 if (token.cancelled) return;
-                setStatus('failed');
-                setError(err instanceof Error ? err.message : String(err));
+                applyResult({
+                    success: false,
+                    error: err instanceof Error ? err.message : String(err),
+                });
             });
     }, [orgId, projectId, workspaceId, backendId, frontendId, applyResult]);
 
@@ -182,6 +219,12 @@ export function MeshApiEnableRow({
         run();
         return () => {
             if (activeToken.current) activeToken.current.cancelled = true;
+            // Unmounting (or re-keying) mid-flight: the cancelled resolve will
+            // never call applyResult, so release the running gate here.
+            if (inFlight.current) {
+                inFlight.current = false;
+                onRunningChangeRef.current?.(false);
+            }
         };
     }, [orgId, projectId, workspaceId, backendId, frontendId, initialResult, applyResult, run]);
 

@@ -322,3 +322,70 @@ describe('IntegrationsStep — Remove routing', () => {
         });
     });
 });
+
+describe('IntegrationsStep — in-modal mesh enable hand-off', () => {
+    /** Hosts the step over REAL useState so the modal's finish commits re-render rows. */
+    function StatefulStep(): React.ReactElement {
+        const [state, setState] = React.useState<WizardState>(() =>
+            baseState({ ...SIGNED_IN, ...COMMITTED_DEST })
+        );
+        const updateState = React.useCallback(
+            (partial: Partial<WizardState>) => setState((current) => ({ ...current, ...partial })),
+            []
+        );
+        return (
+            <Provider theme={defaultTheme}>
+                <IntegrationsStep
+                    state={state}
+                    updateState={updateState}
+                    setCanProceed={jest.fn()}
+                    packages={packages}
+                    stacks={stacks}
+                />
+            </Provider>
+        );
+    }
+
+    it('the mesh row adopts the modal enable result instead of re-running', async () => {
+        mockRequest.mockResolvedValue({
+            success: true,
+            data: { apis: [{ code: 'GraphQLServiceSDK', name: 'Mesh Gateway' }] },
+        });
+        render(<StatefulStep />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Add Integration' }));
+        const dialog = screen.getByRole('dialog');
+        fireEvent.click(within(dialog).getByRole('button', { name: /API Mesh/ }));
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Continue' }));
+        // Committed destination → the summary stage → Continue enters the enable stage,
+        // which runs against the destination + the stack's mesh axes.
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Continue' }));
+        await waitFor(() => {
+            expect(mockRequest).toHaveBeenCalledWith(
+                'ensure-mesh-api-subscribed',
+                expect.objectContaining({
+                    workspaceId: 'ws-1',
+                    backendId: 'adobe-commerce-paas',
+                    frontendId: 'eds-storefront',
+                })
+            );
+        });
+        await waitFor(() => {
+            expect(within(dialog).getByRole('button', { name: 'Add Integration' })).toHaveAttribute(
+                'aria-disabled',
+                'false'
+            );
+        });
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Add Integration' }));
+
+        // The result row shows the modal's outcome without a SECOND enable request
+        // (the picker's list-org-console-apis fetch is separate and expected).
+        await waitFor(() => {
+            expect(within(row(MESH_NAME)).getByText('Mesh Gateway')).toBeInTheDocument();
+        });
+        const ensureCalls = mockRequest.mock.calls.filter(
+            ([type]) => type === 'ensure-mesh-api-subscribed'
+        );
+        expect(ensureCalls).toHaveLength(1);
+    });
+});

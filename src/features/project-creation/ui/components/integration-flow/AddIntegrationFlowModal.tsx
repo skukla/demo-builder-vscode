@@ -9,6 +9,12 @@
  * reset-on-open seam: reopening mounts a fresh hook at the first stage. Cancel
  * discards the draft; a destination committed mid-flow survives by design.
  *
+ * The org console-API list is PREFETCHED at the journey level
+ * ({@link useOrgConsoleApis}) the moment the integration pick is known — so
+ * the api-access stage's picker is usually ready on arrival (one spinner max:
+ * the mesh enable's) and the fetch is issued BEFORE the enable, never starved
+ * behind its 180s Adobe-session budget.
+ *
  * @module features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal
  */
 
@@ -18,12 +24,14 @@ import type { SelectableAppBuilderComponent } from '../../../services/appBuilder
 import { isMeshSelected } from '../../steps/tileStatus';
 import type { UseProjectBuilderReturn } from '../../steps/useProjectBuilder';
 import { meshKindOffered, type FlowDraft, type FlowMode } from './flowStages';
+import { MeshApiEnableRow, type EnsureResult } from './MeshApiEnableRow';
 import { ApiAccessStage } from './stages/ApiAccessStage';
 import { CatalogStage } from './stages/CatalogStage';
 import { CustomStage } from './stages/CustomStage';
 import { DestinationStage } from './stages/DestinationStage';
 import { KindStage } from './stages/KindStage';
 import { useIntegrationFlow, type UseIntegrationFlowReturn } from './useIntegrationFlow';
+import { useOrgConsoleApis, type OrgConsoleApisState } from './useOrgConsoleApis';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { WizardState } from '@/types/webview';
@@ -61,18 +69,37 @@ export interface AddIntegrationFlowModalProps {
         UseProjectBuilderReturn,
         'onAppBuilderComponentToggle' | 'onAddCustomAppBuilderComponent'
     >;
+    /** The selected stack's backend id — the mesh enable's backend axis. */
+    meshBackendId?: string;
+    /** The selected stack's frontend id — the mesh enable's frontend axis. */
+    meshFrontendId?: string;
+    /**
+     * Receives the in-modal mesh enable outcome so the host can hand it to the
+     * mesh result row as `initialResult` (adopted once — no duplicate request).
+     */
+    onMeshEnableResult?: (result: EnsureResult) => void;
 }
 
 type JourneyProps = Omit<AddIntegrationFlowModalProps, 'isOpen'>;
 
-/** The API stage's ids: the draft's pick (catalog id or custom `owner-repo`) first. */
-function apiComponentIds(draft: FlowDraft, selectedIds: string[]): string[] {
-    let pickId: string | undefined;
-    if (draft.kind === 'catalog') pickId = draft.catalogId;
+/** The draft's picked integration id (mesh/catalog id or custom `owner-repo`), if known. */
+function resolvePickId(draft: FlowDraft, meshId?: string): string | undefined {
+    if (draft.kind === 'mesh') return meshId;
+    if (draft.kind === 'catalog') return draft.catalogId;
     if (draft.kind === 'custom' && draft.customSource) {
-        pickId = `${draft.customSource.owner}-${draft.customSource.repo}`;
+        return `${draft.customSource.owner}-${draft.customSource.repo}`;
     }
-    if (!pickId) return selectedIds;
+    return undefined;
+}
+
+/** The prefetch ids: the pick first, or undefined while no pick exists (no fetch). */
+function apiComponentIds(
+    draft: FlowDraft,
+    selectedIds: string[],
+    meshId?: string,
+): string[] | undefined {
+    const pickId = resolvePickId(draft, meshId);
+    if (!pickId) return undefined;
     return [pickId, ...selectedIds.filter((id) => id !== pickId)];
 }
 
@@ -80,9 +107,11 @@ function apiComponentIds(draft: FlowDraft, selectedIds: string[]): string[] {
 function StageBody({
     flow,
     props,
+    orgApis,
 }: {
     flow: UseIntegrationFlowReturn;
     props: JourneyProps;
+    orgApis: OrgConsoleApisState;
 }): React.ReactElement {
     const { stage, draft } = flow;
     const { state, updateState, meshComponent, catalog } = props;
@@ -124,10 +153,36 @@ function StageBody({
         );
     }
     if (stage === 'api-access') {
+        if (draft.kind === 'mesh') {
+            // Mesh: the shared two-column stage with the auto-running ENABLE
+            // as the summary's Applied slot (provisions the required set now —
+            // onRunningChange drives phaseRunning so the footer waits; a
+            // failure shows ⚠ + Retry, and creation re-ensures idempotently).
+            // Free picks merge under the mesh id on finish (union-subscribed).
+            return (
+                <ApiAccessStage
+                    orgApis={orgApis}
+                    suggested={meshComponent?.suggestedApis}
+                    selected={draft.selectedApis}
+                    onToggle={flow.toggleApi}
+                    appliedSlot={
+                        <MeshApiEnableRow
+                            orgId={state.adobeOrg?.id}
+                            projectId={state.adobeProject?.id}
+                            workspaceId={state.adobeWorkspace?.id}
+                            backendId={props.meshBackendId}
+                            frontendId={props.meshFrontendId}
+                            onResult={props.onMeshEnableResult}
+                            onRunningChange={flow.setPhaseRunning}
+                        />
+                    }
+                />
+            );
+        }
         const entry = catalog.find((candidate) => candidate.id === draft.catalogId);
         return (
             <ApiAccessStage
-                componentIds={apiComponentIds(draft, selectedIds)}
+                orgApis={orgApis}
                 suggested={draft.kind === 'catalog' ? entry?.suggestedApis : undefined}
                 selected={draft.selectedApis}
                 onToggle={flow.toggleApi}
@@ -153,6 +208,12 @@ function StageBody({
 function FlowJourney(props: JourneyProps): React.ReactElement {
     // JourneyProps is structurally UseIntegrationFlowArgs — the hook takes it whole.
     const flow = useIntegrationFlow(props);
+    // PREFETCH the org APIs the moment the pick is known (mesh: at the kind
+    // pick) — ready before the api-access stage, never behind the mesh enable.
+    const selectedIds = props.state.selectedAppBuilderComponents ?? EMPTY_IDS;
+    const orgApis = useOrgConsoleApis(
+        apiComponentIds(flow.draft, selectedIds, props.meshComponent?.id),
+    );
     return (
         <Modal
             title={TITLES[props.mode]}
@@ -175,7 +236,7 @@ function FlowJourney(props: JourneyProps): React.ReactElement {
             ]}
         >
             <div className="intflow-stage-body">
-                <StageBody flow={flow} props={props} />
+                <StageBody flow={flow} props={props} orgApis={orgApis} />
             </div>
         </Modal>
     );

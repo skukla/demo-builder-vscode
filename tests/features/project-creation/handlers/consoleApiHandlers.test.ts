@@ -37,14 +37,23 @@ jest.mock('@/core/di/serviceLocator', () => ({
     },
 }));
 
-/** Minimal wizard catalog: one entry with requiredApis, one without. */
-const CATALOG: Record<string, { id: string; name: string; requiredApis?: string[] }> = {
+/** Minimal wizard catalog: one entry with requiredApis, one without, one mesh. */
+const CATALOG: Record<
+    string,
+    { id: string; name: string; kind?: string; requiredApis?: string[] }
+> = {
     'commerce-events': {
         id: 'commerce-events',
         name: 'Commerce Events',
         requiredApis: ['FireflyAPISDK'],
     },
     'free-integration': { id: 'free-integration', name: 'Free Integration' },
+    'commerce-paas-mesh': {
+        id: 'commerce-paas-mesh',
+        name: 'Commerce PaaS API Mesh',
+        kind: 'mesh',
+        requiredApis: ['GraphQLServiceSDK'],
+    },
 };
 
 const ORG_SERVICES = [
@@ -99,6 +108,14 @@ describe('handleListOrgConsoleApis', () => {
 
             const apis = apisOf(result);
             expect(apis.find((a) => a.code === 'FireflyAPISDK')?.locked).toBe(true);
+        });
+
+        it('locks the requiredApis of a MESH catalog id (the mesh api-access picker path)', async () => {
+            const result = await handleListOrgConsoleApis(makeContext(), {
+                componentIds: ['commerce-paas-mesh'],
+            });
+
+            expect(apisOf(result).find((a) => a.code === 'GraphQLServiceSDK')?.locked).toBe(true);
         });
 
         it('leaves org services outside the required union unlocked', async () => {

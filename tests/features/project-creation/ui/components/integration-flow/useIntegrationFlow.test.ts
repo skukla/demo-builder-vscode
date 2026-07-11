@@ -207,13 +207,18 @@ describe('useIntegrationFlow — footer surfaces', () => {
         expect(s.result.current.continueLabel).toBe('Continue');
     });
 
-    it('labels the last add-mode stage Add Integration', () => {
+    it('labels the last add-mode stage (api-access — mesh included) Add Integration', () => {
         const s = setup();
         pickKindAndContinue(s, 'mesh');
         act(() => s.result.current.setPendingProject(PROJECT));
         act(() => s.result.current.onContinue());
         s.sync();
         expect(s.result.current.stage).toBe('dest-workspace');
+        expect(s.result.current.continueLabel).toBe('Continue');
+        act(() => s.result.current.setPendingWorkspace(WORKSPACE));
+        act(() => s.result.current.onContinue());
+        s.sync();
+        expect(s.result.current.stage).toBe('api-access');
         expect(s.result.current.continueLabel).toBe('Add Integration');
     });
 
@@ -332,10 +337,15 @@ describe('useIntegrationFlow — dest-workspace Continue and mesh finish', () =>
         expect(s.updateState).toHaveBeenCalledWith({ adobeWorkspace: WORKSPACE });
     });
 
-    it('finishes the mesh add: toggle handler receives (meshId, true) and the modal closes', () => {
+    it('finishes the mesh add from api-access: toggle handler receives (meshId, true) and the modal closes', () => {
         const s = setup();
         walkMeshToDestWorkspace(s);
         act(() => s.result.current.setPendingWorkspace(WORKSPACE));
+        act(() => s.result.current.onContinue());
+        // The workspace Continue advances to the in-modal enable stage — no finish yet.
+        expect(s.builder.onAppBuilderComponentToggle).not.toHaveBeenCalled();
+        s.sync();
+        expect(s.result.current.stage).toBe('api-access');
         act(() => s.result.current.onContinue());
         expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith(
             'headless-commerce-mesh',
@@ -344,21 +354,44 @@ describe('useIntegrationFlow — dest-workspace Continue and mesh finish', () =>
         expect(s.onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('never writes selectedConsoleApis for a mesh finish', () => {
+    it('a pick-less mesh finish writes no selectedConsoleApis', () => {
         const s = setup();
         walkMeshToDestWorkspace(s);
         act(() => s.result.current.setPendingWorkspace(WORKSPACE));
         act(() => s.result.current.onContinue());
+        s.sync();
+        act(() => s.result.current.onContinue());
+        expect(s.onClose).toHaveBeenCalledTimes(1);
         const wroteApis = s.updateState.mock.calls.some(
             ([partial]) => 'selectedConsoleApis' in (partial as Partial<WizardState>)
         );
         expect(wroteApis).toBe(false);
     });
 
-    it('finishes a later-add mesh from dest-summary (destination already committed)', () => {
+    it('merges mesh free picks under the mesh id on finish', () => {
+        const s = setup();
+        walkMeshToDestWorkspace(s);
+        act(() => s.result.current.setPendingWorkspace(WORKSPACE));
+        act(() => s.result.current.onContinue());
+        s.sync();
+        expect(s.result.current.stage).toBe('api-access');
+        act(() => s.result.current.toggleApi('AnalyticsSDK'));
+        act(() => s.result.current.onContinue());
+        expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith(
+            'headless-commerce-mesh',
+            true
+        );
+        expect(s.updateState).toHaveBeenCalledWith({
+            selectedConsoleApis: { 'headless-commerce-mesh': ['AnalyticsSDK'] },
+        });
+    });
+
+    it('finishes a later-add mesh from dest-summary → api-access (destination already committed)', () => {
         const s = setup({ initial: { adobeProject: PROJECT, adobeWorkspace: WORKSPACE } });
         pickKindAndContinue(s, 'mesh');
         expect(s.result.current.stage).toBe('dest-summary');
+        act(() => s.result.current.onContinue());
+        expect(s.result.current.stage).toBe('api-access');
         act(() => s.result.current.onContinue());
         expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith(
             'headless-commerce-mesh',

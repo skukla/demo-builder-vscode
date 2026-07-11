@@ -38,6 +38,8 @@ interface RowProps {
         code?: string;
         data?: { apis: Array<{ code: string; name?: string }> };
     };
+    onResult?: (result: { success: boolean }) => void;
+    onRunningChange?: (running: boolean) => void;
 }
 
 const BASE: RowProps = {
@@ -357,6 +359,80 @@ describe('MeshApiEnableRow', () => {
                 );
             });
             expect(mockRequest).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('parent-flow callbacks (onResult / onRunningChange)', () => {
+        it('reports running=true at run start, then the result and running=false on success', async () => {
+            const result = { success: true, data: { apis: [{ code: 'API1', name: 'API One' }] } };
+            mockRequest.mockResolvedValue(result);
+            const onResult = jest.fn();
+            const onRunningChange = jest.fn();
+
+            renderRow({ ...BASE, onResult, onRunningChange });
+            expect(onRunningChange).toHaveBeenCalledWith(true);
+
+            await waitFor(() => {
+                expect(onResult).toHaveBeenCalledWith(result);
+            });
+            expect(onRunningChange).toHaveBeenLastCalledWith(false);
+        });
+
+        it('reports a failed result too, and Retry re-reports running=true', async () => {
+            const failure = { success: false, error: 'boom' };
+            mockRequest.mockResolvedValue(failure);
+            const onResult = jest.fn();
+            const onRunningChange = jest.fn();
+
+            renderRow({ ...BASE, onResult, onRunningChange });
+            await waitFor(() => {
+                expect(onResult).toHaveBeenCalledWith(failure);
+            });
+            expect(onRunningChange).toHaveBeenLastCalledWith(false);
+
+            onRunningChange.mockClear();
+            fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+            expect(onRunningChange).toHaveBeenCalledWith(true);
+        });
+
+        it('reports a rejected request as a failed result with the error message', async () => {
+            mockRequest.mockRejectedValue(new Error('network down'));
+            const onResult = jest.fn();
+            const onRunningChange = jest.fn();
+
+            renderRow({ ...BASE, onResult, onRunningChange });
+            await waitFor(() => {
+                expect(onResult).toHaveBeenCalledWith({ success: false, error: 'network down' });
+            });
+            expect(onRunningChange).toHaveBeenLastCalledWith(false);
+        });
+
+        it('unmounting mid-flight reports running=false (Back must not strand phaseRunning)', () => {
+            mockRequest.mockReturnValue(new Promise(() => {})); // never resolves
+            const onRunningChange = jest.fn();
+
+            const { unmount } = render(
+                <Provider theme={defaultTheme} colorScheme="light">
+                    <MeshApiEnableRow {...BASE} onRunningChange={onRunningChange} />
+                </Provider>
+            );
+            expect(onRunningChange).toHaveBeenLastCalledWith(true);
+
+            // Back navigates away mid-enable → the row unmounts. The flow's
+            // phaseRunning gate must be released or later stages deadlock.
+            unmount();
+            expect(onRunningChange).toHaveBeenLastCalledWith(false);
+        });
+
+        it('adopting an initialResult reports it via onResult without a running phase', () => {
+            const initialResult = { success: true, data: { apis: [{ code: 'API1' }] } };
+            const onResult = jest.fn();
+            const onRunningChange = jest.fn();
+
+            renderRow({ ...BASE, initialResult, onResult, onRunningChange });
+            expect(mockRequest).not.toHaveBeenCalled();
+            expect(onResult).toHaveBeenCalledWith(initialResult);
+            expect(onRunningChange).not.toHaveBeenCalledWith(true);
         });
     });
 });

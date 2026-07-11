@@ -1,32 +1,28 @@
 /**
  * ApiAccessStage Tests (Add Integration flow — API-access stage)
  *
- * Wires the shared ApiAccessPicker into the wizard: fetches the org's console APIs
- * once per mount via 'list-org-console-apis' { componentIds }, shows a COMPACT
- * loading state (not a tall centered band), an inline error + Retry on failure,
- * and the grouped picker (with the add-later guidance copy) on success. It NEVER
- * blocks the footer — there is no canProceed wiring.
+ * PRESENTATIONAL two-column stage (the builder's center-work/right-summary
+ * grammar): the center column renders the journey-prefetched org APIs
+ * ({@link useOrgConsoleApis} owns the fetch at the JOURNEY level — see its own
+ * suite) as a filterable picker of FREE APIs only; the right "API Access"
+ * summary column owns the facts — Applied (locked/required APIs, or a caller
+ * `appliedSlot` such as the mesh enable row) and Selected (free picks by
+ * display name). Loading row while the prefetch is pending; inline error +
+ * Retry (the journey's retry) on failure. It NEVER blocks the footer.
  *
- * `webviewClient.request` is mocked at the module boundary; the REAL ApiAccessPicker
- * renders (it is pure), so locked/toggle behavior is exercised end-to-end.
+ * The REAL ApiAccessPicker renders (it is pure), so grouping/toggle behavior
+ * is exercised end-to-end.
  *
  * @jest-environment jsdom
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 
-const mockRequest = jest.fn();
-
-jest.mock('@/core/ui/utils/vscode-api', () => ({
-    webviewClient: {
-        request: (...args: unknown[]) => mockRequest(...args),
-    },
-}));
-
 import { ApiAccessStage } from '@/features/project-creation/ui/components/integration-flow/stages/ApiAccessStage';
+import type { OrgConsoleApisState } from '@/features/project-creation/ui/components/integration-flow/useOrgConsoleApis';
 
 const APIS = [
     { code: 'GraphQLServiceSDK', name: 'API Mesh', locked: true },
@@ -34,7 +30,15 @@ const APIS = [
     { code: 'TargetSDK', name: 'Adobe Target', locked: false },
 ];
 
-const COMPONENT_IDS = ['app-builder-shell'];
+function orgApis(overrides: Partial<OrgConsoleApisState> = {}): OrgConsoleApisState {
+    return {
+        status: 'ready',
+        apis: APIS,
+        error: undefined,
+        retry: jest.fn(),
+        ...overrides,
+    };
+}
 
 type Props = React.ComponentProps<typeof ApiAccessStage>;
 
@@ -43,10 +47,11 @@ function renderStage(props: Partial<Props> = {}): { onToggle: jest.Mock } {
     render(
         <Provider theme={defaultTheme} colorScheme="light">
             <ApiAccessStage
-                componentIds={props.componentIds ?? COMPONENT_IDS}
+                orgApis={props.orgApis ?? orgApis()}
                 suggested={props.suggested}
                 selected={props.selected ?? []}
                 onToggle={onToggle}
+                appliedSlot={props.appliedSlot}
             />
         </Provider>
     );
@@ -54,67 +59,51 @@ function renderStage(props: Partial<Props> = {}): { onToggle: jest.Mock } {
 }
 
 describe('ApiAccessStage', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-    });
-
-    it('issues exactly one list-org-console-apis request on mount with the componentIds', () => {
-        mockRequest.mockReturnValue(new Promise(() => {})); // stays in flight
-
-        renderStage();
-
-        expect(mockRequest).toHaveBeenCalledTimes(1);
-        expect(mockRequest).toHaveBeenCalledWith('list-org-console-apis', {
-            componentIds: COMPONENT_IDS,
-        });
-    });
-
-    it('shows a compact loading state while the request is in flight', () => {
-        mockRequest.mockReturnValue(new Promise(() => {}));
-
-        renderStage();
+    it('shows a compact loading state while the prefetch is pending', () => {
+        renderStage({ orgApis: orgApis({ status: 'loading', apis: [] }) });
 
         expect(screen.getByRole('progressbar')).toBeInTheDocument();
         expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     });
 
-    it('renders the picker with the returned APIs on success (locked checked + disabled)', async () => {
-        mockRequest.mockResolvedValue({ success: true, data: { apis: APIS } });
-
+    it('renders FREE APIs as checkboxes and locked APIs in the summary Applied section', () => {
         renderStage();
 
-        await waitFor(() => {
-            expect(screen.getByText('API Mesh')).toBeInTheDocument();
-        });
-        expect(screen.getByText('Adobe Analytics')).toBeInTheDocument();
-        const locked = screen
-            .getByText('API Mesh')
-            .closest('label')
-            ?.querySelector('input[type="checkbox"]') as HTMLInputElement;
-        expect(locked).toBeChecked();
-        expect(locked).toBeDisabled();
+        // The free API is a toggleable row; the locked one is NOT in the list…
+        expect(screen.getByText('Adobe Analytics').closest('label')).not.toBeNull();
+        expect(screen.getByText('API Mesh').closest('label')).toBeNull();
+        // …it lives in the right summary column as a fact.
+        const applied = screen.getByTestId('api-summary-applied');
+        expect(within(applied).getByText('API Mesh')).toBeInTheDocument();
     });
 
-    it('renders the add-later guidance copy with the picker', async () => {
-        mockRequest.mockResolvedValue({ success: true, data: { apis: APIS } });
+    it('shows selected picks by display name in the summary Selected section', () => {
+        renderStage({ selected: ['AnalyticsSDK'] });
 
+        const selectedSection = screen.getByTestId('api-summary-selected');
+        expect(within(selectedSection).getByText('Adobe Analytics')).toBeInTheDocument();
+        expect(within(selectedSection).queryByText('Adobe Target')).not.toBeInTheDocument();
+    });
+
+    it('an appliedSlot replaces the locked list in the Applied section', () => {
+        renderStage({ appliedSlot: <div data-testid="enable-slot">enable row</div> });
+
+        const applied = screen.getByTestId('api-summary-applied');
+        expect(within(applied).getByTestId('enable-slot')).toBeInTheDocument();
+        expect(within(applied).queryByText('API Mesh')).not.toBeInTheDocument();
+    });
+
+    it('renders the add-later guidance copy with the picker', () => {
         renderStage();
 
-        await waitFor(() => {
-            expect(screen.getByText(/add(ed)? .*later/i)).toBeInTheDocument();
-        });
+        expect(screen.getByText(/add(ed)? .*later/i)).toBeInTheDocument();
         expect(screen.getByText(/dashboard/i)).toBeInTheDocument();
         expect(screen.getByText(/asking the AI/i)).toBeInTheDocument();
     });
 
-    it('toggling an unlocked API passes the code through onToggle', async () => {
-        mockRequest.mockResolvedValue({ success: true, data: { apis: APIS } });
-
+    it('toggling an unlocked API passes the code through onToggle', () => {
         const { onToggle } = renderStage();
 
-        await waitFor(() => {
-            expect(screen.getByText('Adobe Analytics')).toBeInTheDocument();
-        });
         const checkbox = screen
             .getByText('Adobe Analytics')
             .closest('label')
@@ -123,44 +112,15 @@ describe('ApiAccessStage', () => {
         expect(onToggle).toHaveBeenCalledWith('AnalyticsSDK');
     });
 
-    it('handler failure shows the inline error with a Retry button (no picker)', async () => {
-        mockRequest.mockResolvedValue({ success: false, error: 'org listing failed' });
-
-        renderStage();
-
-        await waitFor(() => {
-            expect(screen.getByText('org listing failed')).toBeInTheDocument();
+    it('error state shows the inline message with a Retry wired to the journey retry', () => {
+        const retry = jest.fn();
+        renderStage({
+            orgApis: orgApis({ status: 'error', apis: [], error: 'org listing failed', retry }),
         });
-        expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+
+        expect(screen.getByText('org listing failed')).toBeInTheDocument();
         expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
-    });
-
-    it('a transport rejection also lands in the inline error state', async () => {
-        mockRequest.mockRejectedValue(new Error('socket closed'));
-
-        renderStage();
-
-        await waitFor(() => {
-            expect(screen.getByText('socket closed')).toBeInTheDocument();
-        });
-        expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
-    });
-
-    it('Retry refetches and renders the picker on success', async () => {
-        mockRequest.mockResolvedValueOnce({ success: false, error: 'nope' });
-
-        renderStage();
-
-        await waitFor(() => {
-            expect(screen.getByText('nope')).toBeInTheDocument();
-        });
-
-        mockRequest.mockResolvedValueOnce({ success: true, data: { apis: APIS } });
         fireEvent.click(screen.getByRole('button', { name: /retry/i }));
-
-        await waitFor(() => {
-            expect(screen.getByText('Adobe Analytics')).toBeInTheDocument();
-        });
-        expect(mockRequest).toHaveBeenCalledTimes(2);
+        expect(retry).toHaveBeenCalledTimes(1);
     });
 });

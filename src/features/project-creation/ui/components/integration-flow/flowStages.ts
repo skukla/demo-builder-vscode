@@ -95,8 +95,7 @@ export function deriveStageOrder(
         slice.destinationCommitted && !draft.changingDestination
             ? ['dest-summary']
             : destinationStages(slice);
-    const apis: FlowStageId[] = draft.kind === 'mesh' ? [] : ['api-access'];
-    return ['kind', ...sourceStages(draft.kind), ...dest, ...apis];
+    return ['kind', ...sourceStages(draft.kind), ...dest, 'api-access'];
 }
 
 /** Nearest canonical predecessor of `stage` that survives in `order`, or null. */
@@ -155,7 +154,10 @@ const CONTINUE_GATES: Record<FlowStageId, (draft: FlowDraft, slice: FlowStateSli
     'dest-workspace': (draft, slice) =>
         (draft.pendingWorkspace !== undefined || slice.workspaceCommitted) && !slice.phaseRunning,
     'dest-summary': () => true,
-    'api-access': () => true,
+    // Picks never block; the mesh enable stage sets phaseRunning while its
+    // subscribe request is in flight (success OR failure re-enables — a failed
+    // enable shows Retry and creation re-ensures idempotently).
+    'api-access': (_draft, slice) => !slice.phaseRunning,
 };
 
 export function canContinue(

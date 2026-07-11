@@ -13,8 +13,12 @@
  * Remove routing: a mesh row routes through the mesh dual-flow toggle
  * ({@link useProjectBuilder.onAppBuilderComponentToggle}, clearing BOTH selection
  * keys); every other row routes through `onRemoveAppBuilderComponent` (selection +
- * source + API picks). The mesh row embeds {@link MeshApiEnableRow} so API
- * enablement runs on the RESULT ROW once the shared destination commits.
+ * source + API picks). Mesh API enablement runs INSIDE the modal journey (its
+ * api-access stage); the outcome lands here via `onMeshEnableResult` and the mesh
+ * row's embedded {@link MeshApiEnableRow} adopts it as `initialResult` (no
+ * duplicate request). A mesh that never walked the modal enable — package-seeded
+ * "Set up" or edit seeding — still auto-runs on the row once the destination
+ * commits.
  *
  * @module features/project-creation/ui/steps/IntegrationsStep
  */
@@ -27,6 +31,7 @@ import {
     IntegrationResultRow,
     MeshApiEnableRow,
     resolveIntegrationRows,
+    type EnsureResult,
     type FlowMode,
     type IntegrationRow,
 } from '../components/integration-flow';
@@ -58,13 +63,18 @@ function destinationLabelFor(state: WizardState): string | undefined {
 }
 
 /** The zero-rows empty state (copy only; the Add button renders regardless). */
-function EmptyState(): React.ReactElement {
+function EmptyState({ onAdd }: { onAdd: () => void }): React.ReactElement {
     return (
         <div className="int-results-empty">
             <div className="int-results-empty-title">No integrations yet.</div>
             <div className="int-results-empty-copy">
                 Add an API Mesh, a pre-built integration, or your own App Builder app — each deploys
                 to a shared Adobe I/O project and workspace.
+            </div>
+            <div className="int-results-empty-action">
+                <Button variant="accent" onPress={onAdd}>
+                    Add Integration
+                </Button>
             </div>
         </div>
     );
@@ -97,6 +107,10 @@ export function IntegrationsStep({
         setModalOpen(true);
     }, []);
     const closeModal = useCallback((): void => setModalOpen(false), []);
+
+    // The modal's in-flow mesh enable outcome; the mesh row adopts it as
+    // `initialResult` so it renders the result instead of re-running.
+    const [meshEnableResult, setMeshEnableResult] = useState<EnsureResult | undefined>(undefined);
 
     const meshComponent = useMemo(
         () => meshComponentForStack(state, packages, stacks),
@@ -142,8 +156,14 @@ export function IntegrationsStep({
                 <div className="step-nav-area">Integrations</div>
             </div>
             <div className="step-view">
-                <div className="step-view-anim int-results">
-                    {rows.length === 0 && <EmptyState />}
+                <div
+                    className={
+                        rows.length === 0
+                            ? 'step-view-anim int-results int-results--empty'
+                            : 'step-view-anim int-results'
+                    }
+                >
+                    {rows.length === 0 && <EmptyState onAdd={openAdd} />}
                     {rows.map((row) => (
                         <IntegrationResultRow
                             key={row.id}
@@ -160,16 +180,19 @@ export function IntegrationsStep({
                                         workspaceId={state.adobeWorkspace?.id}
                                         backendId={stack?.backend}
                                         frontendId={stack?.frontend}
+                                        initialResult={meshEnableResult}
                                     />
                                 ) : undefined
                             }
                         />
                     ))}
-                    <div className="int-results-add">
-                        <Button variant="accent" onPress={openAdd}>
-                            Add Integration
-                        </Button>
-                    </div>
+                    {rows.length > 0 && (
+                        <div className="int-results-add">
+                            <Button variant="accent" onPress={openAdd}>
+                                Add Integration
+                            </Button>
+                        </div>
+                    )}
                 </div>
             </div>
             <AddIntegrationFlowModal
@@ -181,6 +204,9 @@ export function IntegrationsStep({
                 meshComponent={meshComponent}
                 catalog={catalog}
                 builder={builder}
+                meshBackendId={stack?.backend}
+                meshFrontendId={stack?.frontend}
+                onMeshEnableResult={setMeshEnableResult}
             />
         </div>
     );
