@@ -5,6 +5,7 @@
  */
 
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
+import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 
 function row(tool: string) {
@@ -25,5 +26,15 @@ describe('ACTION_DESCRIPTORS', () => {
         for (const d of ACTION_DESCRIPTORS.filter((r) => r.tool.startsWith('delete_'))) {
             expect(d.confirm).toBe(true);
         }
+    });
+
+    it('exposes rename_project dispatching to the current-project rename handler', () => {
+        const d = row('rename_project');
+        expect(d).toBeDefined();
+        expect(d!.map).toBe(dashboardHandlers);
+        expect(d!.type).toBe('renameProject');
+        expect(Object.keys(d!.inputSchema ?? {})).toContain('newName');
+        // Rename is reversible (rename back) — NOT confirm-gated, unlike delete_*.
+        expect(d!.confirm).toBeUndefined();
     });
 });

@@ -32,6 +32,21 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         type: 'stopDemo',
     },
     {
+        tool: 'rename_project',
+        description:
+            'Rename the current project — the folder on disk, saved state, and the ' +
+            "project's MCP/AI configs all move together. Rejected while the demo is " +
+            'running. Never rename a project folder with shell commands; always use this.',
+        map: dashboardHandlers,
+        type: 'renameProject',
+        inputSchema: {
+            newName: z
+                .string()
+                .min(1)
+                .describe('New project name (letters, digits, hyphens, underscores only)'),
+        },
+    },
+    {
         tool: 'save_ai_prompt',
         description: 'Create or update a saved AI prompt',
         map: aiHandlers,
