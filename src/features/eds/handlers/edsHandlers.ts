@@ -34,6 +34,7 @@ import {
     handleVerifyGitHubRepo,
     handleCreateGitHubRepo,
 } from './edsGitHubHandlers';
+import { handleRefreshBlockLibraryHeadless } from './refreshBlockLibraryHandler';
 import {
     handleStartStorefrontSetup,
     handleCancelStorefrontSetup,
@@ -111,7 +112,7 @@ export async function handleValidateAccsCredentials(
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Store': storeViewCode,
+                Store: storeViewCode,
             },
             body: JSON.stringify({
                 query: '{ __typename }',
@@ -138,9 +139,10 @@ export async function handleValidateAccsCredentials(
         }
     } catch (error) {
         const msg = (error as Error).message;
-        const errorMessage = msg.includes('abort') || msg.includes('timeout')
-            ? 'Connection timed out. Check the Commerce URL and try again.'
-            : 'Connection failed. Check the Commerce URL and try again.';
+        const errorMessage =
+            msg.includes('abort') || msg.includes('timeout')
+                ? 'Connection timed out. Check the Commerce URL and try again.'
+                : 'Connection failed. Check the Commerce URL and try again.';
 
         context.logger.error('[EDS] ACCS validation error:', error as Error);
         await context.sendMessage('accs-validation-result', {
@@ -164,7 +166,8 @@ interface AccsDiscoveryService {
 
 /** Get all configured discovery services from VS Code settings */
 function getDiscoveryServices(): AccsDiscoveryService[] {
-    return vscode.workspace.getConfiguration('demoBuilder.accsDiscovery')
+    return vscode.workspace
+        .getConfiguration('demoBuilder.accsDiscovery')
         .get<AccsDiscoveryService[]>('services', []);
 }
 
@@ -214,7 +217,9 @@ export async function handleDiscoverStoreStructure(
         return { success: false, error: 'Missing required parameters' };
     }
 
-    context.logger.info(`[EDS] Discovering store structure (${payload.backendType}): ${payload.baseUrl}`);
+    context.logger.info(
+        `[EDS] Discovering store structure (${payload.backendType}): ${payload.baseUrl}`,
+    );
 
     try {
         validateURL(payload.baseUrl, ['https']);
@@ -253,7 +258,7 @@ export async function handleDiscoverStoreStructure(
         if (result.success) {
             context.logger.info(
                 `[EDS] Store discovery successful: ${result.data.websites.length} websites, ` +
-                `${result.data.storeGroups.length} store groups, ${result.data.storeViews.length} store views`,
+                    `${result.data.storeGroups.length} store groups, ${result.data.storeViews.length} store views`,
             );
         } else {
             context.logger.warn(`[EDS] Store discovery failed: ${result.error}`);
@@ -323,7 +328,7 @@ async function buildAccsDiscoveryParams(
     // Observability only — never log the token value itself.
     context.logger.info(
         `[Store Discovery] IMS token: valid=${inspection.valid}, ` +
-        `expiresIn=${inspection.expiresIn}min, present=${!!imsToken}`,
+            `expiresIn=${inspection.expiresIn}min, present=${!!imsToken}`,
     );
     if (!imsToken) {
         await context.sendMessage('store-discovery-result', {
@@ -335,7 +340,7 @@ async function buildAccsDiscoveryParams(
 
     params.imsToken = imsToken;
     const service = payload.orgId
-        ? (services.find(s => s.orgId === payload.orgId) ?? services[0])
+        ? (services.find((s) => s.orgId === payload.orgId) ?? services[0])
         : services[0];
     try {
         validateURL(service.serviceUrl, ['https']);
@@ -403,4 +408,7 @@ export const edsHandlers = defineHandlers({
     'storefront-setup-start': handleStartStorefrontSetup,
     'storefront-setup-cancel': handleCancelStorefrontSetup,
     'storefront-setup-resume': handleResumeStorefrontSetup,
+
+    // Agent-facing: headless block-library rebuild behind the refresh_block_library MCP tool
+    'refresh-block-library': handleRefreshBlockLibraryHeadless,
 });

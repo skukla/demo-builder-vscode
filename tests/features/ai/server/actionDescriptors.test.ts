@@ -7,12 +7,35 @@
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
+import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 
 function row(tool: string) {
     return ACTION_DESCRIPTORS.find((d) => d.tool === tool);
 }
 
 describe('ACTION_DESCRIPTORS', () => {
+    it('exposes deploy_mesh dispatching to deploy-api-mesh, no arg, no confirm', () => {
+        const d = row('deploy_mesh');
+        expect(d).toBeDefined();
+        expect(d!.map).toBe(meshHandlers);
+        expect(d!.type).toBe('deploy-api-mesh');
+        // Deploy targets the current project's mesh — no input args.
+        expect(d!.inputSchema).toBeUndefined();
+        // Deploy is idempotent/reversible (redeploy) — NOT confirm-gated.
+        expect(d!.confirm).toBeUndefined();
+    });
+
+    it('exposes refresh_block_library dispatching to refresh-block-library, no arg, no confirm', () => {
+        const d = row('refresh_block_library');
+        expect(d).toBeDefined();
+        expect(d!.map).toBe(edsHandlers);
+        expect(d!.type).toBe('refresh-block-library');
+        // Targets the current project's library — no input args.
+        expect(d!.inputSchema).toBeUndefined();
+        // Rebuild is idempotent/reversible (re-run) — NOT confirm-gated.
+        expect(d!.confirm).toBeUndefined();
+    });
+
     it('exposes delete_mesh as a confirm-gated row dispatching to delete-api-mesh', () => {
         const d = row('delete_mesh');
         expect(d).toBeDefined();

@@ -82,13 +82,13 @@ Core self-heal **shipped** (see Recently shipped). Residual scope from the origi
 
 #### MCP affordance coverage — close the agent-tool gaps ([`2026-07-11-mcp-affordance-coverage.md`](2026-07-11-mcp-affordance-coverage.md))
 
-**Partial** — items 1 & 4 shipped 2026-07-11 (`get_project_urls` read + the
-`deploy_integration`/`redeploy_integration`/`remove_integration` action rows). Remaining:
-`deploy_mesh` (item 3 — highest value; needs the shared deploy-core extraction from
-DeployMeshCommand), `export_project_settings` (item 2 — REDESIGN to a write-a-file action:
-the serializer's `includeSecrets` is metadata-only, so returning JSON would leak secrets into
-agent context), and `refresh_block_library` (item 5 — same command-core lift, lowest). The
-item carries the sharpened scope + findings.
+**Partial** — items 1, 3, 4, 5 shipped 2026-07-11 (`get_project_urls` read; the
+`deploy_integration`/`redeploy_integration`/`remove_integration` action rows; `deploy_mesh`
+and `refresh_block_library`, each via a shared UI-free core extracted from its command).
+Remaining: `export_project_settings` (item 2 — REDESIGN to a write-a-file action: the
+serializer's `includeSecrets` is metadata-only, so returning JSON would leak secrets into
+agent context; write to a path-validated file and return only `{ path, includesSecrets }`).
+The item carries the sharpened scope + findings.
 
 ### D. Deferred by design (gated on an external condition)
 

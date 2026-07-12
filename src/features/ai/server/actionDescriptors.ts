@@ -10,6 +10,7 @@ import { z } from 'zod';
 import type { ToolDescriptor } from './toolDescriptors';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
+import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 
 export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
@@ -108,6 +109,26 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         type: 'delete-ai-prompt',
         confirm: true,
         inputSchema: { promptId: z.string().describe('Id of the prompt to delete') },
+    },
+    {
+        tool: 'deploy_mesh',
+        description:
+            "Deploy (or redeploy — idempotent) the current project's API Mesh. Runs the guard " +
+            "chain (auth, org, developer permission) and deploys under the project's Adobe org " +
+            'context, then persists the mesh endpoint. Use this rather than deploy_integration ' +
+            'for the mesh.',
+        map: meshHandlers,
+        type: 'deploy-api-mesh',
+    },
+    {
+        tool: 'refresh_block_library',
+        description:
+            "Rebuild the current EDS project's DA.live authoring block library from its " +
+            'component-definition.json (destructive full re-sync — use after hand-editing ' +
+            'component-definition.json outside the promote flow). EDS projects only; returns the ' +
+            'rebuilt library paths.',
+        map: edsHandlers,
+        type: 'refresh-block-library',
     },
     {
         tool: 'delete_mesh',

@@ -282,8 +282,14 @@ Thin tools declared as data and dispatched to existing handler maps:
   this instead of shell `mv`, which strands the extension's paths),
   `deploy_integration` / `redeploy_integration` (deploy one App Builder integration
   by id — idempotent, guard-chained, org-context-targeted; the API Mesh has its own
-  `check_mesh` / `delete_mesh`), `remove_integration` (confirm-gated — remote
-  undeploy + local cleanup + storefront republish), `save_ai_prompt`, `delete_ai_prompt`,
+  `deploy_mesh` / `check_mesh` / `delete_mesh`), `remove_integration` (confirm-gated — remote
+  undeploy + local cleanup + storefront republish), `deploy_mesh` (deploy or redeploy
+  the current project's API Mesh — same guard chain and org targeting as the dashboard
+  Deploy button, sharing the UI-free `deployMeshHeadless` core; persists the mesh
+  endpoint), `refresh_block_library` (EDS-only — destructive rebuild of the DA.live
+  authoring block library from the project's `component-definition.json`, sharing the
+  UI-free `refreshBlockLibraryHeadless` core with the dashboard kebab; returns the
+  rebuilt library paths), `save_ai_prompt`, `delete_ai_prompt`,
   `delete_mesh`, `add_console_apis` (runtime API
   subscription on the demo workspace credential — reuses `apiSubscriber` under
   the auth → org-mismatch → developer-role guard chain; added codes persist in

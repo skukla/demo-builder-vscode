@@ -29,16 +29,17 @@ describe('meshHandlers', () => {
             expect(hasHandler(meshHandlers, 'check-api-mesh')).toBe(true);
             expect(hasHandler(meshHandlers, 'create-api-mesh')).toBe(true);
             expect(hasHandler(meshHandlers, 'delete-api-mesh')).toBe(true);
+            expect(hasHandler(meshHandlers, 'deploy-api-mesh')).toBe(true);
             expect(hasHandler(meshHandlers, 'ensure-mesh-api-subscribed')).toBe(true);
         });
 
-        it('should have exactly 4 handlers', () => {
+        it('should have exactly 5 handlers', () => {
             // Given: meshHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(meshHandlers);
 
-            // Then: Exactly 4 handlers
-            expect(types).toHaveLength(4);
+            // Then: check/create/delete/deploy/ensure-subscribe = 5
+            expect(types).toHaveLength(5);
         });
 
         it('should have handlers as functions', () => {

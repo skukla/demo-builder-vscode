@@ -63,13 +63,21 @@ describe('edsHandlers', () => {
             expect(hasHandler(edsHandlers, 'storefront-setup-resume')).toBe(true);
         });
 
-        it('should have exactly 19 handlers', () => {
+        it('should include the agent-facing refresh-block-library handler', () => {
+            // Given: edsHandlers object
+            // When: Checking for the headless block-library rebuild type
+            // Then: Present (behind the refresh_block_library MCP tool)
+            expect(hasHandler(edsHandlers, 'refresh-block-library')).toBe(true);
+        });
+
+        it('should have exactly 20 handlers', () => {
             // Given: edsHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(edsHandlers);
 
-            // Then: Exactly 19 handlers (6 GitHub + 8 DA.live + 2 ACCS/Store + 3 Storefront Setup)
-            expect(types).toHaveLength(19);
+            // Then: Exactly 20 handlers (6 GitHub + 8 DA.live + 2 ACCS/Store +
+            // 3 Storefront Setup + 1 refresh-block-library)
+            expect(types).toHaveLength(20);
         });
 
         it('should have handlers as functions', () => {
