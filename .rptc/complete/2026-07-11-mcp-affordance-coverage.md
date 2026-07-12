@@ -1,7 +1,6 @@
 # MCP affordance coverage — close the agent-tool gaps
 
-**Status**: partial — items 1, 3, 4, 5 shipped 2026-07-11 (`feature/mcp-affordance-coverage`);
-only item 2 (`export_project_settings`) remains, pending its write-a-file redesign.
+**Status**: COMPLETE — all five items shipped 2026-07-11 (`feature/mcp-affordance-coverage`).
 
 ## Provenance
 
@@ -33,6 +32,16 @@ shipped the same day; this item covers the remaining gaps the audit found.
   (`eds/handlers/refreshBlockLibraryHandler.ts`, wired as `refresh-block-library` in `edsHandlers`)
   runs it headlessly and returns the real result (not the old "dispatched" shim). ACTION_DESCRIPTORS
   row `refresh_block_library` (EDS-only, no arg, no confirm). Command's 3 tests kept green.
+- **`export_project_settings`** (action, item 2 — the redesign) — new headless
+  `exportProjectSettingsToFile(project, { path?, includeSecrets? })` in `settingsTransferService.ts`
+  writes the settings JSON (secrets by default) to a target validated by `assertPathInsideSync`
+  (must be inside the project dir — traversal/arbitrary-overwrite rejected; default
+  `<project>/<name>.demo-builder.json`) and returns only `{ path, includesSecrets }`. Confirmed the
+  original leak finding: `extractSettingsFromProject`'s `includeSecrets` is metadata-only, so the
+  serialized `configs` always carries secrets — hence secrets go to the FILE, never the response.
+  `handleExportProjectSettings` (dashboard map type `exportProjectSettings`) is the dialog-free
+  sibling of the UI `exportProject` (save-dialog, left untouched). ACTION_DESCRIPTORS row
+  `export_project_settings` (optional `path`/`includeSecrets`, no confirm — idempotent local backup).
 
 ## Goal / Scope
 
@@ -41,20 +50,11 @@ perform, per the validated tiering: tool descriptions are the affordance layer; 
 sections are cross-tool loops; generated skills are multi-step-with-traps only. **No new
 generated skills** — the audit confirmed every gap is a single tool once it exists.
 
-Remaining items (only item 2 is left; 3 and 5 shipped — see "Shipped 2026-07-11" above):
-
-2. **`export_project_settings`** — **redesign REQUIRED** (was scoped as a trivial read; it
-   is not). Discovery: `extractSettingsFromProject`'s `includeSecrets` flag is
-   **metadata-only** — it sets `settings.includesSecrets` but does NOT redact; `configs:
-   project.componentConfigs` is always included verbatim. So a read tool returning that JSON
-   would leak secrets (API keys, tokens) into the agent's context (public repo — see
-   `[[feedback_secrets_in_public_repo]]`). Correct shape: a **write-a-file ACTION**, not a
-   read — write `createExportSettings(project, version, includeSecrets ?? true)` to a
-   path (agent-provided or a safe default under the project dir), validate the path
-   (`PathSafetyValidator` — no traversal/overwrite of arbitrary files), and return
-   `{ path, includesSecrets }` only. Secrets go to disk, never into the response. Default
-   `includeSecrets: true` (a local backup, like the webview export). This is the safe way to
-   "sidestep the save dialog" without the secret-in-context leak.
+Nothing remains — all five items shipped (see "Shipped 2026-07-11" above). Item 2's
+write-a-file redesign confirmed the leak finding it was scoped from: `extractSettingsFromProject`'s
+`includeSecrets` is metadata-only (never redacts `configs`), so `export_project_settings` writes
+secrets to a path-validated file and returns only `{ path, includesSecrets }` — see
+`[[feedback_secrets_in_public_repo]]`.
 
 (Item 4's optional follow-up — extending the generated `extend-app-builder-app` skill to teach
 `deploy_integration`/`remove_integration` — was NOT done: the tools self-describe and are
@@ -72,9 +72,6 @@ unless existing projects' generated context should proactively teach the loop.)
 
 ## Kickoff prompt
 
-> Continue the MCP affordance-coverage backlog item
-> (`.rptc/backlog/2026-07-11-mcp-affordance-coverage.md`). Items 1, 3, 4, 5 shipped; only
-> item 2 (`export_project_settings`) remains. It needs the write-a-file ACTION redesign to
-> avoid the secret-in-context leak — read the finding above first: return `{ path,
-> includesSecrets }` only, write the settings JSON (with secrets) to a path-validated file,
-> never into the response. Follow `.claude/skills/mcp-tool-authoring`.
+> COMPLETE — no work remains. This item shipped all five MCP affordance tools
+> (`get_project_urls`, `deploy_mesh`, `deploy_integration`/`redeploy_integration`/`remove_integration`,
+> `refresh_block_library`, `export_project_settings`). Ready to archive to `.rptc/complete/`.

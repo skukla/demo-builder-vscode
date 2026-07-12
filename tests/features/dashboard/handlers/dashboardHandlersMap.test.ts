@@ -118,12 +118,18 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'verifyAppBuilderComponent')).toBe(true);
         });
 
-        it('should have exactly 33 handlers', () => {
+        it('registers the headless exportProjectSettings handler (export_project_settings tool)', () => {
+            // Distinct from the UI 'exportProject' (save-dialog) More-menu action:
+            // this is the path-based, dialog-free variant the agent tool dispatches.
+            expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
+        });
+
+        it('should have exactly 34 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers);
 
-            // Then: Exactly 33 handlers
+            // Then: Exactly 34 handlers
             // 1 init (requestStatus only; no 'ready') + 2 lifecycle + 8 navigation
             // (openBrowser, openLiveSite, openDaLive, openAdminPanel, configure,
             // openDevConsole, getProjectUrls, navigateBack) + 1 mesh + 1
@@ -136,9 +142,10 @@ describe('dashboardHandlers', () => {
             // actions (addAppBuilderComponent, deployAppBuilderComponent,
             // redeployAppBuilderComponent, removeAppBuilderComponent,
             // verifyAppBuilderComponent) = 31, plus the 2 console-API actions
-            // (listConsoleApis, addConsoleApis) = 33.
+            // (listConsoleApis, addConsoleApis) = 33, plus the headless
+            // exportProjectSettings (export_project_settings MCP tool) = 34.
             // setAuthoringExperience lives in the Configure webview, not this map.
-            expect(types).toHaveLength(33);
+            expect(types).toHaveLength(34);
         });
 
         it('should have handlers as functions', () => {

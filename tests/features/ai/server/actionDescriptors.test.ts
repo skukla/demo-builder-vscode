@@ -25,6 +25,19 @@ describe('ACTION_DESCRIPTORS', () => {
         expect(d!.confirm).toBeUndefined();
     });
 
+    it('exposes export_project_settings dispatching to exportProjectSettings, optional args, no confirm', () => {
+        const d = row('export_project_settings');
+        expect(d).toBeDefined();
+        expect(d!.map).toBe(dashboardHandlers);
+        expect(d!.type).toBe('exportProjectSettings');
+        // Optional path + includeSecrets inputs.
+        const keys = Object.keys(d!.inputSchema ?? {});
+        expect(keys).toContain('path');
+        expect(keys).toContain('includeSecrets');
+        // Writing a local settings backup is idempotent — NOT confirm-gated.
+        expect(d!.confirm).toBeUndefined();
+    });
+
     it('exposes refresh_block_library dispatching to refresh-block-library, no arg, no confirm', () => {
         const d = row('refresh_block_library');
         expect(d).toBeDefined();

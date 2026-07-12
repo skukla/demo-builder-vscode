@@ -37,6 +37,7 @@ Verified merged to `develop` and moved out of `.rptc/plans/` during the 2026-06-
 - **Unify mesh deploy pipeline** — dashboard deploy delegates to the shared deploy core. (PR #52, `d7f993e2`, `b2f21a57`)
 - **PDP reversible SKU encoding (ADR-007)** — Helix-safe `_HH` encoding for PDP URLs. (merge `fb978281`)
 - **Experience Workspace default authoring** — per-project authoring experience as a Configure setting. (merge `92101734`)
+- **MCP affordance coverage** — all five agent-tool gaps closed 2026-07-11: `get_project_urls`, `deploy_mesh`, `deploy_integration`/`redeploy_integration`/`remove_integration`, `refresh_block_library`, and `export_project_settings` (write-a-file action; secrets to disk, not the response). ([`../complete/2026-07-11-mcp-affordance-coverage.md`](../complete/2026-07-11-mcp-affordance-coverage.md))
 
 Also resolved since last index (were listed as pending): **jest worker force-exit** (`.unref()` now on the mesh timeout), **oversized test-file splits** (`35418a26`, `4fd26bf7` — `blockCollectionHelpers.test.ts` now 530 lines), **regenerate-AI-files progress** (`creationProgress` wired into `aiHandlers.ts`), **B2B feature-pack dropin delivery** (shipped via the hybrid CitiSignal package), **logs-toggle → sidebar**. The **DaLive permission-log "typo"** was a false positive — current code logs the owner correctly.
 
@@ -77,18 +78,6 @@ Reframe `prerequisites.json` from "project prerequisites" to two tiers (extensio
 #### Adobe org-context — residual workstreams ([`2026-06-15-adobe-org-context-self-heal-consolidation.md`](2026-06-15-adobe-org-context-self-heal-consolidation.md))
 
 Core self-heal **shipped** (see Recently shipped). Residual scope from the original consolidation, **verify against current code before picking up**: (B) concurrency safety — re-pin under an exclusive lock spanning select→command and/or per-project `aio` config isolation; (C) human org-picker (real `get-organizations`/`select-org`) + typed non-retryable `ORG_MISMATCH` for agents + AGENTS.md/skills guidance. Was the FIX-FIRST gate for the App-Builder-deployable + workspace work; the gate is cleared now that the self-heal landed.
-
-### C. Ready to pick up (small, verified still pending)
-
-#### MCP affordance coverage — close the agent-tool gaps ([`2026-07-11-mcp-affordance-coverage.md`](2026-07-11-mcp-affordance-coverage.md))
-
-**Partial** — items 1, 3, 4, 5 shipped 2026-07-11 (`get_project_urls` read; the
-`deploy_integration`/`redeploy_integration`/`remove_integration` action rows; `deploy_mesh`
-and `refresh_block_library`, each via a shared UI-free core extracted from its command).
-Remaining: `export_project_settings` (item 2 — REDESIGN to a write-a-file action: the
-serializer's `includeSecrets` is metadata-only, so returning JSON would leak secrets into
-agent context; write to a path-validated file and return only `{ path, includesSecrets }`).
-The item carries the sharpened scope + findings.
 
 ### D. Deferred by design (gated on an external condition)
 

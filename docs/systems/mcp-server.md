@@ -289,7 +289,12 @@ Thin tools declared as data and dispatched to existing handler maps:
   endpoint), `refresh_block_library` (EDS-only — destructive rebuild of the DA.live
   authoring block library from the project's `component-definition.json`, sharing the
   UI-free `refreshBlockLibraryHeadless` core with the dashboard kebab; returns the
-  rebuilt library paths), `save_ai_prompt`, `delete_ai_prompt`,
+  rebuilt library paths), `export_project_settings` (write the project's settings
+  JSON to a path-validated file inside the project dir via
+  `exportProjectSettingsToFile` — the dialog-free sibling of the UI `exportProject`
+  save-dialog action; **secrets go to the FILE only**, the response returns just
+  `{ path, includesSecrets }`, never secret values; `includeSecrets` defaults to
+  true), `save_ai_prompt`, `delete_ai_prompt`,
   `delete_mesh`, `add_console_apis` (runtime API
   subscription on the demo workspace credential — reuses `apiSubscriber` under
   the auth → org-mismatch → developer-role guard chain; added codes persist in

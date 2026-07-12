@@ -121,6 +121,30 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         type: 'deploy-api-mesh',
     },
     {
+        tool: 'export_project_settings',
+        description:
+            "Export the current project's settings to a JSON file on disk (folder, saved state, " +
+            'component configs, and — by default — secrets). Secrets are written to the FILE only; ' +
+            'the response returns just { path, includesSecrets }, never the secret values. The ' +
+            'target must be inside the project directory (defaults to ' +
+            '<project>/<name>.demo-builder.json). Pass includeSecrets:false for a secret-free copy.',
+        map: dashboardHandlers,
+        type: 'exportProjectSettings',
+        inputSchema: {
+            path: z
+                .string()
+                .optional()
+                .describe(
+                    'Target file (relative to the project dir, or absolute inside it). ' +
+                        'Omit for <project>/<name>.demo-builder.json.',
+                ),
+            includeSecrets: z
+                .boolean()
+                .optional()
+                .describe('Write secrets to the file (default true — a full local backup).'),
+        },
+    },
+    {
         tool: 'refresh_block_library',
         description:
             "Rebuild the current EDS project's DA.live authoring block library from its " +

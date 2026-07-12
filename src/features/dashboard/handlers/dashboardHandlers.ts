@@ -929,6 +929,41 @@ export const handleRenameProject: MessageHandler<{ newName: string }> = async (c
 };
 
 /**
+ * Handle 'exportProjectSettings' message — write the current project's settings
+ * to a JSON file on disk (the headless entry behind the export_project_settings
+ * MCP tool). Secrets go to the FILE only; the response carries just the path and
+ * the includes-secrets flag, never the secret values. The target must resolve
+ * inside the project directory. `includeSecrets` defaults to true (a local backup).
+ */
+export const handleExportProjectSettings: MessageHandler<{
+    path?: string;
+    includeSecrets?: boolean;
+}> = async (context, data) => {
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
+    }
+
+    const { exportProjectSettingsToFile } = await import('@/features/projects-dashboard/services');
+    try {
+        const result = await exportProjectSettingsToFile(project, {
+            path: data?.path,
+            includeSecrets: data?.includeSecrets,
+        });
+        return { success: true, data: result };
+    } catch (error) {
+        context.logger.error(
+            '[Dashboard] Failed to export project settings',
+            error instanceof Error ? error : undefined,
+        );
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to export project settings',
+        };
+    }
+};
+
+/**
  * Handle 'reAuthenticate' message - Re-authenticate with Adobe
  *
  * Called when user clicks "Sign in" link after session expired (needs-auth status).
@@ -1072,6 +1107,7 @@ export const dashboardHandlers = defineHandlers({
     deleteProject: handleDeleteProject,
     editProject: handleEditProject,
     renameProject: handleRenameProject,
+    exportProjectSettings: handleExportProjectSettings,
     exportProject: handleExportProject,
 
     // EDS content republish (re-push DA.live content to CDN)
