@@ -60,11 +60,11 @@ committed via the "Start from scratch" (`kind: 'blank'`) card. `IntegrationKind`
 (no source stage); the modal threads a `blankComponent`; `commitSelection` toggles it.
 
 ### Layer 3 — Promote a custom app to a repo (new capability, larger)
-A per-integration **dashboard action** (alongside deploy / redeploy / remove) on a deployed custom
-app that started from the shell: publish/export its local files to a **new GitHub repo**, so it can
-later be imported as a "Custom app → import repo". Turns an in-project build into a reusable
-artifact. Depends on the shell build-out story maturing; scope the git-publish mechanics (repo
-create, push, auth) when picked up.
+**Scoped out to its own item:** [`2026-07-13-promote-app-to-repo.md`](2026-07-13-promote-app-to-repo.md).
+A per-integration dashboard action on a shell-built custom app that creates a new GitHub repo and
+pushes the app's local files (fresh history, secrets excluded), so it can later be imported as
+"Import a repo". Reuses the existing GitHub plumbing; the real forks are public-vs-private and
+secrets hygiene. Gated on the shell build-out maturing.
 
 ## Constraints
 - Required-API auto-subscribe at deploy is unchanged — determinism means the user never *picks*

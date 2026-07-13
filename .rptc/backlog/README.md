@@ -64,7 +64,11 @@ Five sequenced slices; **slice 1 gates the rest**:
 
 #### Deterministic integrations + custom-app lifecycle ([`2026-07-13-deterministic-integrations.md`](2026-07-13-deterministic-integrations.md))
 
-Integrations are deterministic units — adding one adds exactly that thing, no optional-API bolt-ons. **Layer 1** (near-term): remove the API-access step from the Add-Integration flow entirely; required APIs auto-subscribe at deploy; optional API access lives only in the dashboard Manage APIs (add + remove, already built). **Layer 2**: regroup the kind picker into API Mesh · Pre-built integration · Custom app (blank shell | import repo), moving the shell out of the catalog. **Layer 3** (larger): promote a shell-built custom app to a GitHub repo ("save it") for later import — bridging blank-shell and import-repo. Supersedes the earlier kind-aware/surface-aware API-access item. User-confirmed 2026-07-13.
+Integrations are deterministic units — adding one adds exactly that thing, no optional-API bolt-ons. **Layer 1 ✅** (`48f637d3`, `5aa064c8`): API-access step is informational (no picker); required APIs auto-subscribe at deploy; the mesh enable runs in the modal on Add; optional API access lives only in dashboard Manage APIs. **Layer 2 ✅** (`69ea4831`): kind picker regrouped into 4 flat cards (API Mesh · Pre-built integration · Start from scratch · Import a repo), shell out of the catalog. **Layer 3** → split to [`2026-07-13-promote-app-to-repo.md`](2026-07-13-promote-app-to-repo.md). Supersedes the earlier kind-aware item. User-confirmed 2026-07-13.
+
+#### Promote a shell-built custom app to a repo ([`2026-07-13-promote-app-to-repo.md`](2026-07-13-promote-app-to-repo.md))
+
+Layer 3 of deterministic-integrations, scoped out. A dashboard action on a blank-shell-built custom app that creates a new GitHub repo (owner picker via `getUserOrgs`) and pushes the app's local dir (fresh history, `.env`/secrets excluded), recording the repo on the component — so it can later be imported via "Import a repo". Reuses `GitHubRepoOperations` / `GitHubTokenService` / the deploy-action pattern. Real forks: public-vs-private repo, secrets hygiene (non-negotiable). Gated on the shell build-out maturing.
 
 #### Hybrid storefront — Tier 2 (B2B+B2C in one site) ([`hybrid-storefront-model/`](../plans/hybrid-storefront-model/overview.md) — still in `.rptc/plans/`)
 
