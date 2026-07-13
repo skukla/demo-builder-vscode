@@ -403,7 +403,11 @@
             "required": true,
             "placeholder": "https://na1-sandbox.api.commerce.adobe.com/{env-id}/graphql",
             "description": "Full GraphQL endpoint URL for your ACCS instance. Find it at `https://experience.adobe.com/#/commerce/cloud-service/instances`",
-            "group": "accs"
+            "group": "accs",
+            "validation": {
+                "pattern": "/graphql/?$",
+                "message": "Enter the full GraphQL endpoint URL — it must end in /graphql (store detection needs this)."
+            }
         },
         "ACCS_WEBSITE_CODE": {
             "label": "Website Code",
