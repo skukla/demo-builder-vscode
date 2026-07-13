@@ -96,3 +96,33 @@ describe('useWizardState - edit-mode App Builder seeding', () => {
         expect(state.selectedConsoleApis).toBeUndefined();
     });
 });
+
+describe('useWizardState - edit-mode backend seeding', () => {
+    it('seeds selectedBackend from selections.backend so the Backend cards pre-select (SaaS)', () => {
+        const state = renderWizardState(
+            makeEditProject({ selections: { backend: 'adobe-commerce-accs' } })
+        );
+
+        expect(state.selectedBackend).toBe('adobe-commerce-accs');
+    });
+
+    it('seeds the PaaS backend id too', () => {
+        const state = renderWizardState(
+            makeEditProject({ selections: { backend: 'adobe-commerce-paas' } })
+        );
+
+        expect(state.selectedBackend).toBe('adobe-commerce-paas');
+    });
+
+    it('leaves selectedBackend unset when selections carry no backend', () => {
+        const state = renderWizardState(makeEditProject({ selections: {} }));
+
+        expect(state.selectedBackend).toBeUndefined();
+    });
+
+    it('leaves selectedBackend unset in create mode', () => {
+        const state = renderWizardState(undefined);
+
+        expect(state.selectedBackend).toBeUndefined();
+    });
+});
