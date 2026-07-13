@@ -1,14 +1,13 @@
 /**
- * MeshApiEnableRow — the self-contained "API access" provisioning row for the mesh row.
+ * MeshApiEnableRow — the "API access" status row on the mesh {@link IntegrationResultRow}.
  *
- * Rendered in TWO places: the Add Integration modal's mesh api-access stage
- * (as the API Access summary column's Applied section via `appliedSlot`,
- * reporting through `onResult`/`onRunningChange`)
- * and the mesh {@link IntegrationResultRow} (adopting the modal's outcome via
- * `initialResult`, or auto-running for a mesh that never walked the modal). It
- * runs the shipped, idempotent `ensure-mesh-api-subscribed` request so the ✓
- * genuinely means "provisioned" and a subscribe/permission failure surfaces at
- * selection time instead of deep in project creation.
+ * The provisioning ITSELF now runs in the Add Integration modal on Add (see
+ * useIntegrationFlow — a complete "add + enable" action). This row ADOPTS that
+ * outcome via `initialResult` (shows the finished ✓ without re-running). It only
+ * auto-runs the idempotent `ensure-mesh-api-subscribed` request as a fallback —
+ * a mesh that never walked the modal (e.g. an existing mesh loaded in Edit) — so
+ * the ✓ genuinely means "provisioned". `onResult`/`onRunningChange` remain for a
+ * consumer that wants to observe an auto-run.
  *
  * Behavior:
  *   - runs once per payload (a ref holds the last-issued composite key of all

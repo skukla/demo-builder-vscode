@@ -22,6 +22,7 @@ import type { SelectableAppBuilderComponent } from '../../../services/appBuilder
 import { isMeshSelected } from '../../steps/tileStatus';
 import type { UseProjectBuilderReturn } from '../../steps/useProjectBuilder';
 import { meshKindOffered, type FlowMode } from './flowStages';
+import type { EnsureResult } from './MeshApiEnableRow';
 import { ApiAccessStage } from './stages/ApiAccessStage';
 import { CatalogStage } from './stages/CatalogStage';
 import { CustomStage } from './stages/CustomStage';
@@ -60,11 +61,16 @@ export interface AddIntegrationFlowModalProps {
     meshComponent?: SelectableAppBuilderComponent;
     /** The addable catalog entries (kind picker count, catalog + API stages). */
     catalog: AppBuilderComponentCatalogEntry[];
+    /** Selected stack backend/frontend ids — the mesh-enable payload run on Add. */
+    backendId?: string;
+    frontendId?: string;
     /** The unchanged useProjectBuilder handlers the finish commits route through. */
     builder: Pick<
         UseProjectBuilderReturn,
         'onAppBuilderComponentToggle' | 'onAddCustomAppBuilderComponent'
     >;
+    /** The mesh-enable outcome, captured on Add so the result row adopts it (no re-run). */
+    onMeshEnableResult?: (result: EnsureResult) => void;
 }
 
 type JourneyProps = Omit<AddIntegrationFlowModalProps, 'isOpen'>;
@@ -121,7 +127,16 @@ function StageBody({
         // subscribed automatically at deploy. Custom apps declare none up front —
         // they note that more APIs are granted as the app is built.
         if (draft.kind === 'mesh') {
-            return <ApiAccessStage required={meshComponent?.requiredApis} />;
+            return (
+                <>
+                    <ApiAccessStage required={meshComponent?.requiredApis} />
+                    {flow.enableError && (
+                        <div className="intflow-api-info-error" role="alert">
+                            {flow.enableError} — press Add Integration to try again.
+                        </div>
+                    )}
+                </>
+            );
         }
         const entry = catalog.find((candidate) => candidate.id === draft.catalogId);
         return (

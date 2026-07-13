@@ -24,6 +24,21 @@ import type { SelectableAppBuilderComponent } from '@/features/project-creation/
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AdobeProject, WizardState, Workspace } from '@/types/webview';
 
+/** The mesh enable (ensure-mesh-api-subscribed) runs on Add via webviewClient. */
+const mockMeshRequest = jest.fn();
+jest.mock('@/core/ui/utils/vscode-api', () => ({
+    webviewClient: {
+        request: (...args: unknown[]) => mockMeshRequest(...args),
+        postMessage: jest.fn(),
+        onMessage: jest.fn(() => () => {}),
+    },
+}));
+
+beforeEach(() => {
+    mockMeshRequest.mockReset();
+    mockMeshRequest.mockResolvedValue({ success: true, data: { apis: [] } });
+});
+
 /** Stable empty catalog (module-level — avoids new-reference hook churn). */
 const EMPTY_CATALOG: AppBuilderComponentCatalogEntry[] = [];
 
@@ -338,16 +353,23 @@ describe('useIntegrationFlow — dest-workspace Continue and mesh finish', () =>
         expect(s.updateState).toHaveBeenCalledWith({ adobeWorkspace: WORKSPACE });
     });
 
-    it('finishes the mesh add from api-access: toggle handler receives (meshId, true) and the modal closes', () => {
+    it('finishes the mesh add: Add runs the enable, then toggle (meshId, true) + close', async () => {
         const s = setup();
         walkMeshToDestWorkspace(s);
         act(() => s.result.current.setPendingWorkspace(WORKSPACE));
         act(() => s.result.current.onContinue());
-        // The workspace Continue advances to the in-modal enable stage — no finish yet.
+        // The workspace Continue advances to the informational api-access step — no finish yet.
         expect(s.builder.onAppBuilderComponentToggle).not.toHaveBeenCalled();
         s.sync();
         expect(s.result.current.stage).toBe('api-access');
-        act(() => s.result.current.onContinue());
+        // Add runs the mesh enable (async), then commits + closes on success.
+        await act(async () => {
+            s.result.current.onContinue();
+        });
+        expect(mockMeshRequest).toHaveBeenCalledWith(
+            'ensure-mesh-api-subscribed',
+            expect.anything()
+        );
         expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith(
             'headless-commerce-mesh',
             true
@@ -355,13 +377,15 @@ describe('useIntegrationFlow — dest-workspace Continue and mesh finish', () =>
         expect(s.onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('a pick-less mesh finish writes no selectedConsoleApis', () => {
+    it('a pick-less mesh finish writes no selectedConsoleApis', async () => {
         const s = setup();
         walkMeshToDestWorkspace(s);
         act(() => s.result.current.setPendingWorkspace(WORKSPACE));
         act(() => s.result.current.onContinue());
         s.sync();
-        act(() => s.result.current.onContinue());
+        await act(async () => {
+            s.result.current.onContinue();
+        });
         expect(s.onClose).toHaveBeenCalledTimes(1);
         const wroteApis = s.updateState.mock.calls.some(
             ([partial]) => 'selectedConsoleApis' in (partial as Partial<WizardState>)
@@ -369,13 +393,28 @@ describe('useIntegrationFlow — dest-workspace Continue and mesh finish', () =>
         expect(wroteApis).toBe(false);
     });
 
-    it('finishes a later-add mesh from dest-summary → api-access (destination already committed)', () => {
+    it('a failed mesh enable keeps the modal open (no commit, no close)', async () => {
+        mockMeshRequest.mockResolvedValue({ success: false, error: 'nope' });
+        const s = setup({ initial: { adobeProject: PROJECT, adobeWorkspace: WORKSPACE } });
+        pickKindAndContinue(s, 'mesh');
+        act(() => s.result.current.onContinue()); // → api-access
+        await act(async () => {
+            s.result.current.onContinue();
+        });
+        expect(s.result.current.enableError).toBe('nope');
+        expect(s.builder.onAppBuilderComponentToggle).not.toHaveBeenCalled();
+        expect(s.onClose).not.toHaveBeenCalled();
+    });
+
+    it('finishes a later-add mesh from dest-summary → api-access (destination already committed)', async () => {
         const s = setup({ initial: { adobeProject: PROJECT, adobeWorkspace: WORKSPACE } });
         pickKindAndContinue(s, 'mesh');
         expect(s.result.current.stage).toBe('dest-summary');
         act(() => s.result.current.onContinue());
         expect(s.result.current.stage).toBe('api-access');
-        act(() => s.result.current.onContinue());
+        await act(async () => {
+            s.result.current.onContinue();
+        });
         expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith(
             'headless-commerce-mesh',
             true

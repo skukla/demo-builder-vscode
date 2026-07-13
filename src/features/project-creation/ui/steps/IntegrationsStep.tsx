@@ -31,6 +31,7 @@ import {
     IntegrationResultRow,
     MeshApiEnableRow,
     resolveIntegrationRows,
+    type EnsureResult,
     type FlowMode,
     type IntegrationRow,
 } from '../components/integration-flow';
@@ -97,6 +98,9 @@ export function IntegrationsStep({
     // The one modal, opened in 'add' (launchpad) or 'destination' (row Set up/Change) mode.
     const [modalOpen, setModalOpen] = useState(false);
     const [mode, setMode] = useState<FlowMode>('add');
+    // The mesh enable runs on Add IN the modal; its outcome is adopted by the mesh
+    // result row (initialResult) so the row shows the finished ✓ instead of re-running.
+    const [meshEnableResult, setMeshEnableResult] = useState<EnsureResult | undefined>(undefined);
     const openAdd = useCallback((): void => {
         setMode('add');
         setModalOpen(true);
@@ -175,6 +179,7 @@ export function IntegrationsStep({
                                         workspaceId={state.adobeWorkspace?.id}
                                         backendId={stack?.backend}
                                         frontendId={stack?.frontend}
+                                        initialResult={meshEnableResult}
                                     />
                                 ) : undefined
                             }
@@ -197,7 +202,10 @@ export function IntegrationsStep({
                 updateState={updateState}
                 meshComponent={meshComponent}
                 catalog={catalog}
+                backendId={stack?.backend}
+                frontendId={stack?.frontend}
                 builder={builder}
+                onMeshEnableResult={setMeshEnableResult}
             />
         </div>
     );

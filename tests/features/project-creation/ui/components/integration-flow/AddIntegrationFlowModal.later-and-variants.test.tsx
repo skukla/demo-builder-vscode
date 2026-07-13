@@ -299,7 +299,7 @@ beforeEach(() => {
 
 // --- tests -----------------------------------------------------------------------
 describe('AddIntegrationFlowModal — later add (destination committed)', () => {
-    it('mesh later-add walks summary → api-access (no provisioning) → finish (no state writes)', async () => {
+    it('mesh later-add: informational step, then Add runs the enable in the modal → finish', async () => {
         const { builder, updateSpy, onClose } = renderModal({ initial: COMMITTED_DEST });
         click(/API Mesh/);
         click('Continue');
@@ -307,14 +307,23 @@ describe('AddIntegrationFlowModal — later add (destination committed)', () => 
         expect(screen.getByText('Stage')).toBeInTheDocument();
         click('Continue');
         await waitForApiAccessStep();
-        // Informational step — nothing is provisioned.
+        // Nothing provisioned until Add is pressed.
         expect(mockRequest).not.toHaveBeenCalledWith(
             'ensure-mesh-api-subscribed',
             expect.anything()
         );
         expectEnabled('Add Integration');
         click('Add Integration');
-        expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('commerce-mesh', true);
+        // The enable runs in the modal, then commit + close.
+        await waitFor(() =>
+            expect(mockRequest).toHaveBeenCalledWith(
+                'ensure-mesh-api-subscribed',
+                expect.anything()
+            )
+        );
+        await waitFor(() =>
+            expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('commerce-mesh', true)
+        );
         expect(updateSpy).not.toHaveBeenCalled();
         expect(onClose).toHaveBeenCalledTimes(1);
     });

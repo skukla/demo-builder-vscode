@@ -4937,6 +4937,13 @@ div[class*="spectrum"] input[type="search"] {
     line-height: 1.5;
     color: var(--spectrum-global-color-gray-600);
 }
+/* Mesh enable failure on Add — the modal stays open and Add becomes a retry. */
+.intflow-api-info-error {
+    margin: 12px 0 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-red-600);
+}
 .intflow-api-picker {
     display: flex;
     flex-direction: column;

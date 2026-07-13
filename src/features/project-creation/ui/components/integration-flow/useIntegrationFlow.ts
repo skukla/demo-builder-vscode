@@ -41,6 +41,8 @@ import {
     type FlowStateSlice,
     type IntegrationKind,
 } from './flowStages';
+import type { EnsureResult } from './MeshApiEnableRow';
+import { webviewClient } from '@/core/ui/utils/vscode-api';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AdobeProject, WizardState, Workspace } from '@/types/webview';
 
@@ -56,11 +58,16 @@ export interface UseIntegrationFlowArgs {
     meshComponent?: SelectableAppBuilderComponent;
     /** The addable catalog entries (threaded to the source/API stages by the modal). */
     catalog: AppBuilderComponentCatalogEntry[];
+    /** Selected stack backend/frontend ids — the mesh-enable payload on finish. */
+    backendId?: string;
+    frontendId?: string;
     /** The unchanged useProjectBuilder handlers the finish commits route through. */
     builder: Pick<
         UseProjectBuilderReturn,
         'onAppBuilderComponentToggle' | 'onAddCustomAppBuilderComponent'
     >;
+    /** The mesh-enable outcome, captured on Add so the result row adopts it (no re-run). */
+    onMeshEnableResult?: (result: EnsureResult) => void;
     onClose: () => void;
 }
 
@@ -82,6 +89,10 @@ export interface UseIntegrationFlowReturn {
     changeDestination: () => void;
     /** DestinationStage reports its create/workspace phase activity through this. */
     setPhaseRunning: (running: boolean) => void;
+    /** True while the mesh API enable runs on Add (footer shows "Enabling…"). */
+    enabling: boolean;
+    /** The last enable failure message (shown in the modal; Add becomes Retry). */
+    enableError?: string;
 }
 
 /** The draft every journey starts from (and resets to after a finish). */
@@ -131,9 +142,14 @@ function initialStageFor(
  */
 export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegrationFlowReturn {
     const { state, updateState, mode, meshComponent, builder, onClose } = args;
+    const { backendId, frontendId, onMeshEnableResult } = args;
 
     const [draft, setDraft] = useState<FlowDraft>(createInitialDraft);
     const [phaseRunning, setPhaseRunning] = useState(false);
+    // The mesh API enable runs on Add (in the modal): footer shows "Enabling…"
+    // and a failure keeps the modal open with an inline error + Retry.
+    const [enabling, setEnabling] = useState(false);
+    const [enableError, setEnableError] = useState<string | undefined>(undefined);
     // The stored stage id is the only walked state; the DISPLAYED stage is
     // derived — when the stored stage vanishes from the order (e.g. dest-signin
     // after a mid-flow sign-in), the flowStages clamp resolves the survivor.
@@ -180,26 +196,87 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
         }
     }, [draft, meshComponent, builder]);
 
-    const finishFlow = useCallback((): void => {
-        if (mode === 'add') commitSelection();
+    /**
+     * Provision the mesh API access on Add — the enable runs HERE, in the modal,
+     * so "Add Integration" is a complete action (progress in the footer, a failure
+     * keeps the modal open with Retry). The captured result flows to the result
+     * row (via onMeshEnableResult) so it shows the finished ✓ instead of re-running.
+     */
+    const enableMeshApi = useCallback(async (): Promise<EnsureResult> => {
+        try {
+            return await webviewClient.request<EnsureResult>('ensure-mesh-api-subscribed', {
+                orgId: state.adobeOrg?.id,
+                projectId: state.adobeProject?.id,
+                workspaceId: state.adobeWorkspace?.id,
+                backendId,
+                frontendId,
+            });
+        } catch (err) {
+            return { success: false, error: err instanceof Error ? err.message : String(err) };
+        }
+    }, [
+        state.adobeOrg?.id,
+        state.adobeProject?.id,
+        state.adobeWorkspace?.id,
+        backendId,
+        frontendId,
+    ]);
+
+    const finishFlow = useCallback(async (): Promise<void> => {
+        if (mode !== 'add') {
+            onClose();
+            return;
+        }
+        // Mesh: run the enable in the modal on Add. Commit + close only on success;
+        // a failure stays open (Add becomes Retry). Non-mesh adds commit immediately.
+        if (draft.kind === 'mesh' && meshComponent) {
+            setEnabling(true);
+            setEnableError(undefined);
+            const result = await enableMeshApi();
+            setEnabling(false);
+            if (!result.success) {
+                setEnableError(result.error ?? 'Could not enable API access.');
+                return;
+            }
+            onMeshEnableResult?.(result);
+        }
+        commitSelection();
         // No draft reset here: the modal shell's conditional mount unmounts the
         // journey on close, so reopening mounts a fresh hook (the reset seam).
         onClose();
-    }, [mode, commitSelection, onClose]);
+    }, [
+        mode,
+        draft.kind,
+        meshComponent,
+        enableMeshApi,
+        onMeshEnableResult,
+        commitSelection,
+        onClose,
+    ]);
 
     const onContinue = useCallback((): void => {
-        if (!canContinueGate(stage, draft, slice)) return;
+        if (enabling || !canContinueGate(stage, draft, slice)) return;
         if (stage === 'dest-project') commitProjectIfChanged();
         if (stage === 'dest-workspace' && draft.pendingWorkspace) {
             updateState({ adobeWorkspace: draft.pendingWorkspace });
         }
         if (order[order.length - 1] === stage) {
-            finishFlow();
+            void finishFlow();
             return;
         }
         const next = nextStage(stage, draft, slice, mode);
         if (next) setStoredStage(next);
-    }, [stage, draft, slice, order, mode, commitProjectIfChanged, updateState, finishFlow]);
+    }, [
+        enabling,
+        stage,
+        draft,
+        slice,
+        order,
+        mode,
+        commitProjectIfChanged,
+        updateState,
+        finishFlow,
+    ]);
 
     const onBack = useCallback((): void => {
         const previous = prevStage(stage, draft, slice, mode);
@@ -238,9 +315,11 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
     return {
         stage,
         draft,
-        canContinue: canContinueGate(stage, draft, slice),
-        canGoBack: prevStage(stage, draft, slice, mode) !== null,
-        continueLabel: continueLabelFor(stage, order, mode),
+        // Disabled while the enable runs; Back also blocked (canGoBack) so the
+        // user can't leave mid-provision.
+        canContinue: !enabling && canContinueGate(stage, draft, slice),
+        canGoBack: !enabling && prevStage(stage, draft, slice, mode) !== null,
+        continueLabel: enabling ? 'Enabling…' : continueLabelFor(stage, order, mode),
         onContinue,
         onBack,
         pickKind,
@@ -250,5 +329,7 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
         setPendingWorkspace,
         changeDestination,
         setPhaseRunning,
+        enabling,
+        enableError,
     };
 }
