@@ -80,14 +80,13 @@ export interface UseIntegrationFlowReturn {
     setPendingWorkspace: (workspace: Workspace | undefined) => void;
     /** Re-expands the dest stages from the later-add summary ("Change"). */
     changeDestination: () => void;
-    toggleApi: (code: string) => void;
     /** DestinationStage reports its create/workspace phase activity through this. */
     setPhaseRunning: (running: boolean) => void;
 }
 
 /** The draft every journey starts from (and resets to after a finish). */
 function createInitialDraft(): FlowDraft {
-    return { changingDestination: false, selectedApis: [] };
+    return { changingDestination: false };
 }
 
 /** Derive the narrow read-only slice flowStages consumes from wizard state. */
@@ -121,13 +120,6 @@ function initialStageFor(
         computeSlice(state, meshComponent, false),
         mode,
     )[0];
-}
-
-/** Immutable membership toggle for the draft's free API picks. */
-function toggledApis(selected: string[], code: string): string[] {
-    return selected.includes(code)
-        ? selected.filter((existing) => existing !== code)
-        : [...selected, code];
 }
 
 /**
@@ -169,35 +161,24 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
         });
     }, [draft.pendingProject, state.adobeProject?.id, updateState]);
 
-    /** Merge the free API picks under the integration's id (only when any exist). */
-    const mergeSelectedApis = useCallback(
-        (id: string): void => {
-            if (draft.selectedApis.length === 0) return;
-            updateState({
-                selectedConsoleApis: { ...state.selectedConsoleApis, [id]: draft.selectedApis },
-            });
-        },
-        [draft.selectedApis, state.selectedConsoleApis, updateState],
-    );
-
-    /** Route the add-mode finish through the unchanged useProjectBuilder handlers. */
+    /**
+     * Route the add-mode finish through the unchanged useProjectBuilder handlers.
+     * API access is deterministic — the integration's required APIs subscribe at
+     * deploy; there are no per-add optional picks to merge here.
+     */
     const commitSelection = useCallback((): void => {
         if (draft.kind === 'mesh' && meshComponent) {
             builder.onAppBuilderComponentToggle(meshComponent.id, true);
-            mergeSelectedApis(meshComponent.id);
             return;
         }
         if (draft.kind === 'catalog' && draft.catalogId) {
             builder.onAppBuilderComponentToggle(draft.catalogId, true);
-            mergeSelectedApis(draft.catalogId);
             return;
         }
         if (draft.kind === 'custom' && draft.customSource) {
-            const { owner, repo } = draft.customSource;
             builder.onAddCustomAppBuilderComponent(draft.customSource);
-            mergeSelectedApis(`${owner}-${repo}`);
         }
-    }, [draft, meshComponent, builder, mergeSelectedApis]);
+    }, [draft, meshComponent, builder]);
 
     const finishFlow = useCallback((): void => {
         if (mode === 'add') commitSelection();
@@ -254,13 +235,6 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
         setStoredStage(slice.isSignedIn ? 'dest-project' : 'dest-signin');
     }, [slice.isSignedIn]);
 
-    const toggleApi = useCallback((code: string): void => {
-        setDraft((current) => ({
-            ...current,
-            selectedApis: toggledApis(current.selectedApis, code),
-        }));
-    }, []);
-
     return {
         stage,
         draft,
@@ -275,7 +249,6 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
         setPendingProject,
         setPendingWorkspace,
         changeDestination,
-        toggleApi,
         setPhaseRunning,
     };
 }

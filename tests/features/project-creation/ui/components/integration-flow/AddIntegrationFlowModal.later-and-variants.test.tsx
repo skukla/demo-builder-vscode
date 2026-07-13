@@ -285,9 +285,9 @@ function walkCatalogPastPick(): void {
     click('Continue');
 }
 
-async function waitForApiPicker(): Promise<void> {
+async function waitForApiAccessStep(): Promise<void> {
     await waitFor(() => {
-        expect(screen.getByText('Adobe Analytics')).toBeInTheDocument();
+        expect(screen.getByTestId('api-access-included')).toBeInTheDocument();
     });
 }
 
@@ -306,8 +306,8 @@ describe('AddIntegrationFlowModal — later add (destination committed)', () => 
         expect(screen.getByText('Demo Project')).toBeInTheDocument();
         expect(screen.getByText('Stage')).toBeInTheDocument();
         click('Continue');
-        await waitForApiPicker();
-        // Selection never provisions — the enable is out of this stage.
+        await waitForApiAccessStep();
+        // Informational step — nothing is provisioned.
         expect(mockRequest).not.toHaveBeenCalledWith(
             'ensure-mesh-api-subscribed',
             expect.anything()
@@ -324,7 +324,7 @@ describe('AddIntegrationFlowModal — later add (destination committed)', () => 
         walkCatalogPastPick();
         expect(screen.getByText('Demo Project')).toBeInTheDocument();
         click('Continue');
-        await waitForApiPicker();
+        await waitForApiAccessStep();
         click('Add Integration');
         expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('erp-sync', true);
         expect(onClose).toHaveBeenCalledTimes(1);
@@ -351,45 +351,32 @@ describe('AddIntegrationFlowModal — catalog first-add walk', () => {
         expectEnabled('Continue');
     });
 
-    it('walks the dest stages then fetches api-access with the pick + selected ids', async () => {
+    it('walks the dest stages then reaches the informational api-access step (no fetch)', async () => {
         renderModal({ initial: { selectedAppBuilderComponents: ['other-app'] } });
         walkCatalogPastPick();
         click('pick-project');
         click('Continue');
         click('pick-ws');
         click('Continue');
-        await waitForApiPicker();
-        expect(mockRequest).toHaveBeenCalledTimes(1);
-        expect(mockRequest).toHaveBeenCalledWith(
+        await waitForApiAccessStep();
+        // Deterministic — no org-API list is fetched anymore.
+        expect(mockRequest).not.toHaveBeenCalledWith(
             'list-org-console-apis',
-            { componentIds: ['erp-sync', 'other-app'] },
-            expect.any(Number)
+            expect.anything(),
+            expect.anything()
         );
     });
 
-    it("renders the Suggested group from the picked entry's suggestedApis", async () => {
-        renderModal({ initial: COMMITTED_DEST });
+    it('a catalog finish writes no selectedConsoleApis (deterministic API access)', async () => {
+        const { builder, updateSpy } = renderModal({ initial: COMMITTED_DEST });
         walkCatalogPastPick();
         click('Continue');
-        await waitForApiPicker();
-        expect(screen.getByText('Suggested')).toBeInTheDocument();
-        expect(screen.getByText('Adobe Campaign')).toBeInTheDocument();
-    });
-
-    it('merges the toggled free APIs keyed by the entry id on finish', async () => {
-        const { updateSpy } = renderModal({ initial: COMMITTED_DEST });
-        walkCatalogPastPick();
-        click('Continue');
-        await waitForApiPicker();
-        const checkbox = screen
-            .getByText('Adobe Analytics')
-            .closest('label')
-            ?.querySelector('input[type="checkbox"]') as HTMLInputElement;
-        fireEvent.click(checkbox);
+        await waitForApiAccessStep();
         click('Add Integration');
-        expect(updateSpy).toHaveBeenCalledWith({
-            selectedConsoleApis: { 'erp-sync': ['AnalyticsSDK'] },
-        });
+        expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('erp-sync', true);
+        expect(updateSpy).not.toHaveBeenCalledWith(
+            expect.objectContaining({ selectedConsoleApis: expect.anything() })
+        );
     });
 });
 
@@ -439,12 +426,10 @@ describe('AddIntegrationFlowModal — custom integration', () => {
         click('Continue');
         expect(screen.getByText('Demo Project')).toBeInTheDocument();
         click('Continue');
-        await waitForApiPicker();
-        expect(mockRequest).toHaveBeenCalledWith(
-            'list-org-console-apis',
-            { componentIds: ['acme-widget'] },
-            expect.any(Number)
-        );
+        await waitForApiAccessStep();
+        // Custom app: the informational step notes that more APIs are granted as
+        // it's built (via Manage APIs) — no fetch, no picker.
+        expect(screen.getByText(/as you build it/i)).toBeInTheDocument();
         click('Add Integration');
         expect(builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith({
             owner: 'acme',

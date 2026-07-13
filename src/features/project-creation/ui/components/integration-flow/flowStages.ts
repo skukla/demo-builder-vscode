@@ -35,7 +35,6 @@ export interface FlowDraft {
     pendingProject?: AdobeProject;
     pendingWorkspace?: Workspace;
     changingDestination: boolean;
-    selectedApis: string[];
 }
 
 /** Narrow read-only view of wizard state; the caller computes these booleans. */
@@ -154,10 +153,9 @@ const CONTINUE_GATES: Record<FlowStageId, (draft: FlowDraft, slice: FlowStateSli
     'dest-workspace': (draft, slice) =>
         (draft.pendingWorkspace !== undefined || slice.workspaceCommitted) && !slice.phaseRunning,
     'dest-summary': () => true,
-    // Picks never block; the mesh enable stage sets phaseRunning while its
-    // subscribe request is in flight (success OR failure re-enables — a failed
-    // enable shows Retry and creation re-ensures idempotently).
-    'api-access': (_draft, slice) => !slice.phaseRunning,
+    // Informational only — shows the API access this integration grants (always
+    // on, subscribed at deploy). Nothing to select, so it never blocks.
+    'api-access': () => true,
 };
 
 export function canContinue(

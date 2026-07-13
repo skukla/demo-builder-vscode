@@ -62,9 +62,9 @@ Five sequenced slices; **slice 1 gates the rest**:
 4. **Scaffold-and-author — blocked on 1** ([`2026-06-17-appbuilder-app-scaffold-author.md`](2026-06-17-appbuilder-app-scaffold-author.md)). `aio app init` + AI authoring; the only slice with real new surface (code home + repo-creation decision). Needs a design pass before its plan locks.
 5. **App-only / no-storefront project — partial on 1, parallel** ([`2026-06-17-appbuilder-app-only-project.md`](2026-06-17-appbuilder-app-only-project.md)). Frontend-optional stack schema work; heaviest, least-coupled slice.
 
-#### Kind-aware API-access step in Add Integration ([`2026-07-13-kind-aware-api-access.md`](2026-07-13-kind-aware-api-access.md))
+#### Deterministic integrations + custom-app lifecycle ([`2026-07-13-deterministic-integrations.md`](2026-07-13-deterministic-integrations.md))
 
-The Add-Integration API-access step is uniform (Required + open "add more APIs" browse list) where it should be **surface-aware** — branch on the declared API surface, NOT `kind`: mesh → informational only (just `GraphQLServiceSDK`, auto at deploy — the browse list is un-actionable for a mesh); declares `requiredApis`/`suggestedApis` → Required + Suggested with the full list behind an "advanced" disclosure; declares neither (the blank `app-builder-shell` AND custom `owner-repo` apps) → the full picker as the primary surface. Deferred behind the product-grouping/gating picker improvements landing first (same branch). User-endorsed 2026-07-13.
+Integrations are deterministic units — adding one adds exactly that thing, no optional-API bolt-ons. **Layer 1** (near-term): remove the API-access step from the Add-Integration flow entirely; required APIs auto-subscribe at deploy; optional API access lives only in the dashboard Manage APIs (add + remove, already built). **Layer 2**: regroup the kind picker into API Mesh · Pre-built integration · Custom app (blank shell | import repo), moving the shell out of the catalog. **Layer 3** (larger): promote a shell-built custom app to a GitHub repo ("save it") for later import — bridging blank-shell and import-repo. Supersedes the earlier kind-aware/surface-aware API-access item. User-confirmed 2026-07-13.
 
 #### Hybrid storefront — Tier 2 (B2B+B2C in one site) ([`hybrid-storefront-model/`](../plans/hybrid-storefront-model/overview.md) — still in `.rptc/plans/`)
 

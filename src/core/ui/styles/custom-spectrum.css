@@ -4912,6 +4912,31 @@ div[class*="spectrum"] input[type="search"] {
     padding: 2px 6px;
     border-radius: 4px;
 }
+/* Informational API-access step (deterministic integrations): read-only facts,
+   left-aligned in the content band — no picker, no side panel. */
+.intflow-api-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 520px;
+}
+.intflow-api-info-head {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--spectrum-global-color-gray-900);
+}
+.intflow-api-info-sub {
+    margin: 0 0 4px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-700);
+}
+.intflow-api-info-note {
+    margin: 8px 0 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-600);
+}
 .intflow-api-picker {
     display: flex;
     flex-direction: column;

@@ -9,11 +9,9 @@
  * reset-on-open seam: reopening mounts a fresh hook at the first stage. Cancel
  * discards the draft; a destination committed mid-flow survives by design.
  *
- * The org console-API list is PREFETCHED at the journey level
- * ({@link useOrgConsoleApis}) the moment the integration pick is known — so
- * the api-access stage's picker is usually ready on arrival (one spinner max:
- * the mesh enable's) and the fetch is issued BEFORE the enable, never starved
- * behind its 180s Adobe-session budget.
+ * The api-access stage is INFORMATIONAL (see {@link ApiAccessStage}): integrations
+ * are deterministic, so it shows the API access an integration grants (always on,
+ * subscribed at deploy) from static data — no org fetch, no selection.
  *
  * @module features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal
  */
@@ -23,14 +21,13 @@ import React from 'react';
 import type { SelectableAppBuilderComponent } from '../../../services/appBuilderComponentSelection';
 import { isMeshSelected } from '../../steps/tileStatus';
 import type { UseProjectBuilderReturn } from '../../steps/useProjectBuilder';
-import { meshKindOffered, type FlowDraft, type FlowMode } from './flowStages';
+import { meshKindOffered, type FlowMode } from './flowStages';
 import { ApiAccessStage } from './stages/ApiAccessStage';
 import { CatalogStage } from './stages/CatalogStage';
 import { CustomStage } from './stages/CustomStage';
 import { DestinationStage } from './stages/DestinationStage';
 import { KindStage } from './stages/KindStage';
 import { useIntegrationFlow, type UseIntegrationFlowReturn } from './useIntegrationFlow';
-import { useOrgConsoleApis, type OrgConsoleApisState } from './useOrgConsoleApis';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { WizardState } from '@/types/webview';
@@ -72,36 +69,13 @@ export interface AddIntegrationFlowModalProps {
 
 type JourneyProps = Omit<AddIntegrationFlowModalProps, 'isOpen'>;
 
-/** The draft's picked integration id (mesh/catalog id or custom `owner-repo`), if known. */
-function resolvePickId(draft: FlowDraft, meshId?: string): string | undefined {
-    if (draft.kind === 'mesh') return meshId;
-    if (draft.kind === 'catalog') return draft.catalogId;
-    if (draft.kind === 'custom' && draft.customSource) {
-        return `${draft.customSource.owner}-${draft.customSource.repo}`;
-    }
-    return undefined;
-}
-
-/** The prefetch ids: the pick first, or undefined while no pick exists (no fetch). */
-function apiComponentIds(
-    draft: FlowDraft,
-    selectedIds: string[],
-    meshId?: string,
-): string[] | undefined {
-    const pickId = resolvePickId(draft, meshId);
-    if (!pickId) return undefined;
-    return [pickId, ...selectedIds.filter((id) => id !== pickId)];
-}
-
 /** Renders the stage body the hook's current stage asks for. */
 function StageBody({
     flow,
     props,
-    orgApis,
 }: {
     flow: UseIntegrationFlowReturn;
     props: JourneyProps;
-    orgApis: OrgConsoleApisState;
 }): React.ReactElement {
     const { stage, draft } = flow;
     const { state, updateState, meshComponent, catalog } = props;
@@ -143,30 +117,17 @@ function StageBody({
         );
     }
     if (stage === 'api-access') {
+        // Informational only: the integration's required APIs (mesh/catalog) are
+        // subscribed automatically at deploy. Custom apps declare none up front —
+        // they note that more APIs are granted as the app is built.
         if (draft.kind === 'mesh') {
-            // Mesh: selection only — the required set (`requiredApis`) shows as the
-            // Included facts, free picks are optional. NOTHING is provisioned here;
-            // the required APIs are subscribed at deploy (ensureMeshApiSubscribed)
-            // and the free picks union-subscribe on finish. The mesh result row runs
-            // the enable AFTER Add, so provisioning stays out of selection.
-            return (
-                <ApiAccessStage
-                    orgApis={orgApis}
-                    required={meshComponent?.requiredApis}
-                    suggested={meshComponent?.suggestedApis}
-                    selected={draft.selectedApis}
-                    onToggle={flow.toggleApi}
-                />
-            );
+            return <ApiAccessStage required={meshComponent?.requiredApis} />;
         }
         const entry = catalog.find((candidate) => candidate.id === draft.catalogId);
         return (
             <ApiAccessStage
-                orgApis={orgApis}
                 required={draft.kind === 'catalog' ? entry?.requiredApis : undefined}
-                suggested={draft.kind === 'catalog' ? entry?.suggestedApis : undefined}
-                selected={draft.selectedApis}
-                onToggle={flow.toggleApi}
+                custom={draft.kind === 'custom'}
             />
         );
     }
@@ -189,12 +150,6 @@ function StageBody({
 function FlowJourney(props: JourneyProps): React.ReactElement {
     // JourneyProps is structurally UseIntegrationFlowArgs — the hook takes it whole.
     const flow = useIntegrationFlow(props);
-    // PREFETCH the org APIs the moment the pick is known (mesh: at the kind
-    // pick) — ready before the api-access stage, never behind the mesh enable.
-    const selectedIds = props.state.selectedAppBuilderComponents ?? EMPTY_IDS;
-    const orgApis = useOrgConsoleApis(
-        apiComponentIds(flow.draft, selectedIds, props.meshComponent?.id),
-    );
     return (
         <Modal
             title={TITLES[props.mode]}
@@ -217,7 +172,7 @@ function FlowJourney(props: JourneyProps): React.ReactElement {
             ]}
         >
             <div className="intflow-stage-body">
-                <StageBody flow={flow} props={props} orgApis={orgApis} />
+                <StageBody flow={flow} props={props} />
             </div>
         </Modal>
     );

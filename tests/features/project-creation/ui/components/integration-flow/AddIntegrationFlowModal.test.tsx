@@ -273,9 +273,11 @@ function walkMeshToProject(): void {
     click('Continue');
 }
 
-async function waitForApiPicker(): Promise<void> {
+async function waitForApiAccessStep(): Promise<void> {
+    // The step is informational + static (no fetch), so it appears as soon as the
+    // walk reaches it.
     await waitFor(() => {
-        expect(screen.getByText('Adobe Analytics')).toBeInTheDocument();
+        expect(screen.getByTestId('api-access-included')).toBeInTheDocument();
     });
 }
 
@@ -342,7 +344,7 @@ describe('AddIntegrationFlowModal — kind stage', () => {
 });
 
 describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
-    it('walks kind → project → workspace → api-access (Included, no provisioning), then finishes', async () => {
+    it('walks kind → project → workspace → api-access (informational), then finishes', async () => {
         const { builder, updateSpy, onClose } = renderModal();
         walkMeshToProject();
         expect(screen.getByTestId('project-field')).toBeInTheDocument();
@@ -359,108 +361,53 @@ describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
         expect(updateSpy).toHaveBeenCalledWith({
             adobeWorkspace: { id: 'w-picked', name: 'Stage', title: 'Stage' },
         });
-        // api-access: the required API shows in the Included summary; selection
-        // NEVER provisions (no ensure-mesh-api-subscribed here).
-        await waitForApiPicker();
-        const included = screen.getByTestId('api-summary-included');
-        // Included shows the curated SHORT label for the required API, not the
-        // org list's verbose name ("Mesh Gateway") — stable + instant.
+        // api-access: informational only — the mesh's required API + baseline show
+        // as "always on"; nothing is provisioned or selected here.
+        await waitForApiAccessStep();
+        const included = screen.getByTestId('api-access-included');
         expect(within(included).getByText('API Mesh')).toBeInTheDocument();
+        expect(within(included).getByText('I/O Management API')).toBeInTheDocument();
         expect(mockRequest).not.toHaveBeenCalledWith(
             'ensure-mesh-api-subscribed',
             expect.anything()
         );
-        // The footer is not gated by any enable — Add is ready immediately.
+        // The footer is not gated by anything — Add is ready immediately.
         expectEnabled('Add Integration');
         click('Add Integration');
         expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('commerce-mesh', true);
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('prefetches the org APIs at the kind pick and NEVER provisions during selection', async () => {
+    it('the mesh api-access stage is informational: facts only, no picker, no fetch', async () => {
         renderModal({ initial: COMMITTED_DEST });
         click(/API Mesh/);
-        await waitFor(() => {
-            expect(mockRequest).toHaveBeenCalledWith(
-                'list-org-console-apis',
-                { componentIds: ['commerce-mesh'] },
-                expect.any(Number)
-            );
-        });
+        click('Continue'); // kind → dest-summary
+        click('Continue'); // dest-summary → api-access
+        await waitForApiAccessStep();
+        // No org-API fetch, no checkboxes, no provisioning.
         expect(mockRequest).not.toHaveBeenCalledWith(
-            'ensure-mesh-api-subscribed',
-            expect.anything()
-        );
-
-        click('Continue');
-        click('Continue');
-        await waitForApiPicker();
-        // The list resolved during the walk — no center loading spinner remains.
-        expect(screen.queryByText('Loading Adobe APIs…')).not.toBeInTheDocument();
-        expect(
-            mockRequest.mock.calls.filter(([type]) => type === 'list-org-console-apis')
-        ).toHaveLength(1);
-        // Still no provisioning after reaching (and standing on) the stage.
-        expect(mockRequest).not.toHaveBeenCalledWith(
-            'ensure-mesh-api-subscribed',
-            expect.anything()
-        );
-    });
-
-    it('the mesh api-access stage: free picks in the list, required in the Included summary', async () => {
-        renderModal({ initial: COMMITTED_DEST });
-        click(/API Mesh/);
-        click('Continue');
-        click('Continue');
-        await waitForApiPicker();
-        expect(mockRequest).toHaveBeenCalledWith(
             'list-org-console-apis',
-            { componentIds: ['commerce-mesh'] },
-            expect.any(Number)
+            expect.anything(),
+            expect.anything()
         );
-        // Locked (required) API is NOT a checkbox — it lives in the Included
-        // summary under its curated short label; free APIs are checkboxes.
-        expect(screen.queryByText('API Mesh')?.closest('label') ?? null).toBeNull();
-        expect(screen.getByText('Adobe Analytics').closest('label')).not.toBeNull();
-        const included = screen.getByTestId('api-summary-included');
+        expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+        const included = screen.getByTestId('api-access-included');
         expect(within(included).getByText('API Mesh')).toBeInTheDocument();
+        expect(within(included).getByText('I/O Management API')).toBeInTheDocument();
     });
 
-    it('the Included summary renders even if the org list errors (timeout-resilient)', async () => {
-        mockRequest.mockImplementation((type: unknown) =>
-            type === 'list-org-console-apis'
-                ? Promise.resolve({ success: false, error: 'list timed out' })
-                : Promise.resolve({ success: true, data: { apis: APIS } })
-        );
-        renderModal({ initial: COMMITTED_DEST });
-        click(/API Mesh/);
-        click('Continue');
-        click('Continue');
-        // The left degrades to an inline error…
-        await waitFor(() => expect(screen.getByText('list timed out')).toBeInTheDocument());
-        // …but Included shows the curated short label instantly — never the raw
-        // sdkCode, so there's no code→name swap when the list eventually lands.
-        const included = screen.getByTestId('api-summary-included');
-        expect(within(included).getByText('API Mesh')).toBeInTheDocument();
-    });
-
-    it('merges toggled mesh free picks under the mesh id on finish', async () => {
+    it('a mesh finish writes no selectedConsoleApis (deterministic API access)', async () => {
         const { builder, updateSpy } = renderModal({ initial: COMMITTED_DEST });
         click(/API Mesh/);
-        click('Continue');
-        click('Continue');
-        await waitForApiPicker();
-        const checkbox = screen
-            .getByText('Adobe Analytics')
-            .closest('label')
-            ?.querySelector('input[type="checkbox"]') as HTMLInputElement;
-        fireEvent.click(checkbox);
+        click('Continue'); // kind → dest-summary
+        click('Continue'); // dest-summary → api-access
+        await waitForApiAccessStep();
         expectEnabled('Add Integration');
         click('Add Integration');
         expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('commerce-mesh', true);
-        expect(updateSpy).toHaveBeenCalledWith({
-            selectedConsoleApis: { 'commerce-mesh': ['AnalyticsSDK'] },
-        });
+        expect(updateSpy).not.toHaveBeenCalledWith(
+            expect.objectContaining({ selectedConsoleApis: expect.anything() })
+        );
     });
 
     it('Back from dest-project returns to the kind stage', () => {

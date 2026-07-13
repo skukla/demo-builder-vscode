@@ -5,8 +5,9 @@
  * stage order (flowStages), keeps a modal-local FlowDraft, commits the shared
  * Adobe I/O destination on the dest-stage Continues, and on the LAST stage
  * finishes through the UNCHANGED useProjectBuilder handlers (mesh/catalog
- * toggle, custom add) plus the keyed selectedConsoleApis merge. Cancel is the
- * modal closing without onContinue — draft mutations never write wizard state.
+ * toggle, custom add). API access is deterministic — no per-integration API
+ * picks are merged. Cancel is the modal closing without onContinue — draft
+ * mutations never write wizard state.
  *
  * @jest-environment jsdom
  */
@@ -368,24 +369,6 @@ describe('useIntegrationFlow — dest-workspace Continue and mesh finish', () =>
         expect(wroteApis).toBe(false);
     });
 
-    it('merges mesh free picks under the mesh id on finish', () => {
-        const s = setup();
-        walkMeshToDestWorkspace(s);
-        act(() => s.result.current.setPendingWorkspace(WORKSPACE));
-        act(() => s.result.current.onContinue());
-        s.sync();
-        expect(s.result.current.stage).toBe('api-access');
-        act(() => s.result.current.toggleApi('AnalyticsSDK'));
-        act(() => s.result.current.onContinue());
-        expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith(
-            'headless-commerce-mesh',
-            true
-        );
-        expect(s.updateState).toHaveBeenCalledWith({
-            selectedConsoleApis: { 'headless-commerce-mesh': ['AnalyticsSDK'] },
-        });
-    });
-
     it('finishes a later-add mesh from dest-summary → api-access (destination already committed)', () => {
         const s = setup({ initial: { adobeProject: PROJECT, adobeWorkspace: WORKSPACE } });
         pickKindAndContinue(s, 'mesh');
@@ -401,7 +384,7 @@ describe('useIntegrationFlow — dest-workspace Continue and mesh finish', () =>
     });
 });
 
-describe('useIntegrationFlow — catalog/custom finish and API merge', () => {
+describe('useIntegrationFlow — catalog/custom finish (deterministic, no API picks)', () => {
     const COMMITTED_DEST: Partial<WizardState> = {
         adobeProject: PROJECT,
         adobeWorkspace: WORKSPACE,
@@ -414,46 +397,17 @@ describe('useIntegrationFlow — catalog/custom finish and API merge', () => {
         expect(s.result.current.stage).toBe('api-access');
     }
 
-    it('finishes a catalog add: toggle + keyed selectedConsoleApis merge', () => {
-        const s = setup({ initial: COMMITTED_DEST });
-        walkCatalogToApiAccess(s);
-        act(() => s.result.current.toggleApi('CampaignSDK'));
-        act(() => s.result.current.onContinue());
-        expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('erp-sync', true);
-        expect(s.updateState).toHaveBeenCalledWith({
-            selectedConsoleApis: { 'erp-sync': ['CampaignSDK'] },
-        });
-        expect(s.onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('preserves other integrations existing picks in the merge', () => {
-        const s = setup({
-            initial: {
-                ...COMMITTED_DEST,
-                selectedConsoleApis: { 'other-app': ['AssetsSDK'] },
-            },
-        });
-        walkCatalogToApiAccess(s);
-        act(() => s.result.current.toggleApi('CampaignSDK'));
-        act(() => s.result.current.onContinue());
-        expect(s.updateState).toHaveBeenCalledWith({
-            selectedConsoleApis: {
-                'other-app': ['AssetsSDK'],
-                'erp-sync': ['CampaignSDK'],
-            },
-        });
-    });
-
-    it('skips the selectedConsoleApis merge when no APIs were picked', () => {
+    it('finishes a catalog add: adds the component and writes NO selectedConsoleApis', () => {
         const s = setup({ initial: COMMITTED_DEST });
         walkCatalogToApiAccess(s);
         act(() => s.result.current.onContinue());
         expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('erp-sync', true);
+        // API access is deterministic — the add flow never merges per-integration APIs.
         expect(s.updateState).not.toHaveBeenCalled();
         expect(s.onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('finishes a custom add: onAddCustomAppBuilderComponent + merge keyed by owner-repo', () => {
+    it('finishes a custom add: onAddCustomAppBuilderComponent, no API write', () => {
         const s = setup({ initial: COMMITTED_DEST });
         pickKindAndContinue(s, 'custom');
         expect(s.result.current.stage).toBe('source-custom');
@@ -461,15 +415,14 @@ describe('useIntegrationFlow — catalog/custom finish and API merge', () => {
         act(() => s.result.current.onContinue());
         expect(s.result.current.stage).toBe('dest-summary');
         act(() => s.result.current.onContinue());
-        act(() => s.result.current.toggleApi('CampaignSDK'));
+        expect(s.result.current.stage).toBe('api-access');
         act(() => s.result.current.onContinue());
         expect(s.builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith({
             owner: 'acme',
             repo: 'widget',
         });
-        expect(s.updateState).toHaveBeenCalledWith({
-            selectedConsoleApis: { 'acme-widget': ['CampaignSDK'] },
-        });
+        expect(s.updateState).not.toHaveBeenCalled();
+        expect(s.onClose).toHaveBeenCalledTimes(1);
     });
 
     it('clears the draft source when setCustomSource receives undefined (cleared/invalid URL)', () => {
@@ -490,19 +443,8 @@ describe('useIntegrationFlow — catalog/custom finish and API merge', () => {
         // AddIntegrationFlowModal reopen test). The hook itself only closes.
         const s = setup({ initial: COMMITTED_DEST });
         walkCatalogToApiAccess(s);
-        act(() => s.result.current.toggleApi('CampaignSDK'));
         act(() => s.result.current.onContinue());
         expect(s.onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('toggleApi toggles membership (add then remove)', () => {
-        const s = setup();
-        act(() => s.result.current.toggleApi('CampaignSDK'));
-        expect(s.result.current.draft.selectedApis).toEqual(['CampaignSDK']);
-        act(() => s.result.current.toggleApi('AssetsSDK'));
-        expect(s.result.current.draft.selectedApis).toEqual(['CampaignSDK', 'AssetsSDK']);
-        act(() => s.result.current.toggleApi('CampaignSDK'));
-        expect(s.result.current.draft.selectedApis).toEqual(['AssetsSDK']);
     });
 });
 
@@ -561,7 +503,6 @@ describe('useIntegrationFlow — cancel path (draft-only, no commits)', () => {
         act(() => s.result.current.setCustomSource({ owner: 'acme', repo: 'widget' }));
         act(() => s.result.current.setPendingProject(PROJECT));
         act(() => s.result.current.setPendingWorkspace(WORKSPACE));
-        act(() => s.result.current.toggleApi('CampaignSDK'));
         expect(s.updateState).not.toHaveBeenCalled();
         expect(s.builder.onAppBuilderComponentToggle).not.toHaveBeenCalled();
         expect(s.builder.onAddCustomAppBuilderComponent).not.toHaveBeenCalled();

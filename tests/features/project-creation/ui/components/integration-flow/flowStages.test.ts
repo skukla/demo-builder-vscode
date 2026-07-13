@@ -25,7 +25,6 @@ import {
 function draft(overrides: Partial<FlowDraft> = {}): FlowDraft {
     return {
         changingDestination: false,
-        selectedApis: [],
         ...overrides,
     };
 }
@@ -357,11 +356,11 @@ describe('canContinue', () => {
         expect(canContinue('dest-summary', draft(), slice())).toBe(true);
     });
 
-    it('api-access never blocks on picks, but waits while an enable run is in flight', () => {
+    it('api-access is informational — never blocks (nothing to select or provision)', () => {
         expect(canContinue('api-access', draft(), slice())).toBe(true);
-        // The mesh enable stage reports through phaseRunning; the picker path
-        // never sets it, so catalog/custom adds are unaffected.
-        expect(canContinue('api-access', draft(), slice({ phaseRunning: true }))).toBe(false);
+        // No provisioning happens here anymore, so an in-flight phase elsewhere
+        // doesn't gate this step either.
+        expect(canContinue('api-access', draft(), slice({ phaseRunning: true }))).toBe(true);
     });
 });
 

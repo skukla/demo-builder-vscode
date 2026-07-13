@@ -1,220 +1,84 @@
 /**
- * ApiAccessStage — the API-access stage of the Add Integration flow.
+ * ApiAccessStage — the API-access step of the Add Integration flow.
  *
- * A lean two-column stage. Selection ≠ provisioning: this screen only chooses
- * APIs; nothing is subscribed here (that happens at deploy). The two columns each
- * have ONE job:
- *   - LEFT (browse): the filterable {@link ApiAccessPicker} of the org's
- *     subscribable APIs — pickable ones as checkboxes, profile-bound ones
- *     delineated (disabled) — plus a compact loading row and an inline error +
- *     Retry. Loads independently; a slow/failed org fetch degrades HERE only.
- *   - RIGHT ("Included"): the one thing the list can't show — the integration's
- *     REQUIRED APIs. Sourced from the CATALOG (`required` codes), so it renders
- *     INSTANTLY and stays populated even when the org list is slow or times out.
- *     Names are enriched from the org list when it lands; the code is the fallback.
+ * INFORMATIONAL, not interactive. Integrations are deterministic: their API
+ * access is fixed and subscribed automatically at deploy, so this step only
+ * TELLS the user what the integration grants — it never asks them to pick.
  *
- * There is NO live "enable" here and NO Selected mirror: the user's picks are the
- * checked rows in the list (with an at-a-glance "N added" count). The stage NEVER
- * blocks the flow's Continue.
+ * Shows the always-on set as facts: the integration's required APIs (from the
+ * catalog, resolved to short labels) plus the baseline Adobe I/O access that
+ * every App Builder integration gets. It renders instantly from static data (no
+ * org-API fetch, no loading, no timeout). A custom app — whose API surface isn't
+ * known up front — additionally notes that more APIs are granted as it's built,
+ * from the dashboard's Manage APIs.
  *
  * @module features/project-creation/ui/components/integration-flow/stages/ApiAccessStage
  */
 
-import { ActionButton } from '@adobe/react-spectrum';
 import React from 'react';
-import type { OrgConsoleApisState } from '../useOrgConsoleApis';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
-import { ApiAccessPicker, type ApiAccessOption } from '@/core/ui/components/selection';
 
-/** The picker's guidance line — the add-later escape hatch (the header says the rest). */
-const API_ACCESS_HELPER = 'You can also add APIs later from the dashboard or by asking the AI.';
+/** The baseline Adobe I/O API every App Builder integration subscribes at deploy. */
+const BASELINE_CODE = 'AdobeIOManagementAPISDK';
 
 /**
- * Short, stable display names for the small set of APIs we mark REQUIRED, shown
- * in the Included panel. The org list's real name is often verbose ("API Mesh
- * for Adobe Developer App Builder") AND absent while it loads — so the panel
- * would flash the raw sdkCode, then a 3-line name. A curated short label renders
- * instantly and never changes. Only required codes need an entry; anything
- * missing falls back to the org name, then the code (graceful, self-healing).
+ * Short, stable display names for the small set of APIs shown here. The org
+ * list's real names are verbose ("API Mesh for Adobe Developer App Builder");
+ * these are the friendly, instant labels. A code with no entry falls back to
+ * itself (still readable — these are curated required/baseline codes).
  */
-const REQUIRED_API_SHORT_NAMES: Record<string, string> = {
+const API_LABELS: Record<string, string> = {
     GraphQLServiceSDK: 'API Mesh',
+    [BASELINE_CODE]: 'I/O Management API',
 };
+
+export interface ApiAccessStageProps {
+    /** The integration's REQUIRED API sdk codes (catalog `requiredApis`). */
+    required?: string[];
+    /** A custom app (blank shell or imported repo) — note the build-time grants. */
+    custom?: boolean;
+}
 
 /** Stable empty default so an omitted `required` never churns identity. */
 const NO_REQUIRED: string[] = [];
 
-export interface ApiAccessStageProps {
-    /** The journey-prefetched org APIs (status + rows + retry). */
-    orgApis: OrgConsoleApisState;
-    /**
-     * The integration's REQUIRED API sdk codes (from the catalog). Rendered as
-     * the Included facts INSTANTLY — independent of the org fetch — so a slow or
-     * timed-out list never leaves the screen blank.
-     */
-    required?: string[];
-    /** Curated suggestion codes (catalog `suggestedApis`) for the picked entry. */
-    suggested?: string[];
-    /** The user's free picks for THIS integration (draft-local). */
-    selected: string[];
-    /** Toggle a free pick by code. */
-    onToggle: (code: string) => void;
-}
-
-/** The center column: loading row → inline error + Retry → the free-API picker. */
-function CenterColumn({
-    orgApis,
-    freeApis,
-    suggested,
-    selected,
-    onToggle,
-}: {
-    orgApis: OrgConsoleApisState;
-    freeApis: ApiAccessOption[];
-    suggested?: string[];
-    selected: string[];
-    onToggle: (code: string) => void;
-}): React.ReactElement {
-    if (orgApis.status === 'loading') {
-        return <LoadingDisplay size="M" message="Loading Adobe APIs…" />;
-    }
-    if (orgApis.status === 'error') {
-        return (
-            <div className="intflow-api-error" role="alert">
-                <span className="intflow-api-error-message">{orgApis.error}</span>
-                <ActionButton isQuiet onPress={orgApis.retry}>
-                    Retry
-                </ActionButton>
-            </div>
-        );
-    }
-    return (
-        <>
-            <div className="intflow-api-browse-head">
-                <span>Add more APIs (optional)</span>
-                {selected.length > 0 && (
-                    <span className="intflow-api-added">· {selected.length} added</span>
-                )}
-            </div>
-            <ApiAccessPicker
-                apis={freeApis}
-                suggested={suggested}
-                selected={selected}
-                onToggle={onToggle}
-                helperText={API_ACCESS_HELPER}
-            />
-        </>
-    );
-}
-
 /**
- * The right "Included" column — everything this integration will carry.
+ * The informational API-access step: the always-on APIs this integration grants.
  *
- * Two tiers:
- *   - ALWAYS ON: the union of the catalog `required` codes (known INSTANTLY, so
- *     the panel renders before the org list lands) and every `locked` row the org
- *     list reports (the reconcile union: baseline `AdobeIOManagementAPISDK` +
- *     required + any selected project component). Rendered as facts (green ✓).
- *   - ADDED: the user's optional picks (`selected`), each with an inline × to
- *     remove it (calls `onToggle`) — so Included is both the "what you're
- *     committing" summary and the un-pick surface, not just a count.
- *
- * Names resolve short-label → org name → code. Never blocks on the fetch.
- */
-function IncludedColumn({
-    required,
-    allApis,
-    selected,
-    onToggle,
-}: {
-    required: string[];
-    allApis: ApiAccessOption[];
-    selected: string[];
-    onToggle: (code: string) => void;
-}): React.ReactElement | null {
-    const lockedCodes = allApis.filter((api) => api.locked).map((api) => api.code);
-    // Required first (instant, keeps the integration's headline API on top), then
-    // any locked codes the org list adds (baseline, project mesh). De-duped, order-stable.
-    const alwaysOn = [...new Set([...required, ...lockedCodes])];
-    // Picks are non-locked by construction, but guard against overlap anyway.
-    const added = selected.filter((code) => !alwaysOn.includes(code));
-    if (alwaysOn.length === 0 && added.length === 0) return null;
-    const nameFor = (code: string): string =>
-        REQUIRED_API_SHORT_NAMES[code] ?? allApis.find((api) => api.code === code)?.name ?? code;
-    return (
-        <aside className="intflow-api-summary" data-testid="api-access-summary">
-            <div className="intflow-api-summary-title">Included</div>
-            {alwaysOn.length > 0 && (
-                <div className="intflow-api-summary-section" data-testid="api-summary-included">
-                    {alwaysOn.map((code) => (
-                        <div key={code} className="intflow-api-summary-item">
-                            <span className="int-chosen-check" aria-hidden="true">
-                                ✓
-                            </span>
-                            <span className="intflow-api-summary-name">{nameFor(code)}</span>
-                            <span className="intflow-api-tag">Always on</span>
-                        </div>
-                    ))}
-                </div>
-            )}
-            {added.length > 0 && (
-                <div className="intflow-api-summary-section" data-testid="api-summary-added">
-                    <div className="intflow-api-summary-subhead">Added</div>
-                    {added.map((code) => (
-                        <div key={code} className="intflow-api-summary-item">
-                            <span className="intflow-api-summary-name">{nameFor(code)}</span>
-                            <button
-                                type="button"
-                                className="intflow-api-summary-remove"
-                                aria-label={`Remove ${nameFor(code)}`}
-                                onClick={() => onToggle(code)}
-                            >
-                                ×
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </aside>
-    );
-}
-
-/**
- * The two-column API-access stage body.
- *
- * @param props - the prefetched org APIs, the catalog required codes, curated
- *   suggestions, and the picks + toggle
- * @returns the center picker column + the right Included column
+ * @param props - the catalog required codes and whether this is a custom app
+ * @returns the read-only "API access included" panel
  */
 export function ApiAccessStage({
-    orgApis,
     required = NO_REQUIRED,
-    suggested,
-    selected,
-    onToggle,
+    custom = false,
 }: ApiAccessStageProps): React.ReactElement {
-    // Non-locked APIs go to the picker (which delineates profile-bound). Locked
-    // ones are the required set — shown in the Included column, not the list.
-    const freeApis = orgApis.apis.filter((api) => !api.locked);
+    const labelFor = (code: string): string => API_LABELS[code] ?? code;
+    // Required first (the integration's headline API on top), baseline always
+    // included after. De-duped so a required code that IS the baseline shows once.
+    const codes = [...new Set([...required, BASELINE_CODE])];
     return (
-        <div className="intflow-api-stage" data-testid="api-access-stage">
-            <div className="intflow-api-columns">
-                <div className="intflow-api-main">
-                    <CenterColumn
-                        orgApis={orgApis}
-                        freeApis={freeApis}
-                        suggested={suggested}
-                        selected={selected}
-                        onToggle={onToggle}
-                    />
-                </div>
-                <IncludedColumn
-                    required={required}
-                    allApis={orgApis.apis}
-                    selected={selected}
-                    onToggle={onToggle}
-                />
+        <div className="intflow-api-info" data-testid="api-access-stage">
+            <div className="intflow-api-info-head">API access included</div>
+            <p className="intflow-api-info-sub">
+                These Adobe APIs are granted automatically when this integration deploys — nothing
+                to configure.
+            </p>
+            <div className="intflow-api-summary-section" data-testid="api-access-included">
+                {codes.map((code) => (
+                    <div key={code} className="intflow-api-summary-item">
+                        <span className="int-chosen-check" aria-hidden="true">
+                            ✓
+                        </span>
+                        <span className="intflow-api-summary-name">{labelFor(code)}</span>
+                        <span className="intflow-api-tag">Always on</span>
+                    </div>
+                ))}
             </div>
+            {custom && (
+                <p className="intflow-api-info-note">
+                    This is a custom app — grant whatever additional Adobe APIs it needs as you
+                    build it, anytime from the dashboard (Manage APIs) or by asking the AI.
+                </p>
+            )}
         </div>
     );
 }
