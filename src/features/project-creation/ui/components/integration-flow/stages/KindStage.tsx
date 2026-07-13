@@ -1,13 +1,17 @@
 /**
  * KindStage — the Add Integration flow's kind picker (stage id `'kind'`).
  *
- * Presentational: three equal-width {@link ChoiceCard}s in one row (API Mesh ·
- * Integration Catalog · Custom Integration) — the default row variant, NOT the catalog
- * gallery's small square tiles: with only three known kinds the cards stretch to fill
- * the modal's width. The mesh card renders ONLY when offered — the picker HIDES mesh
- * when the stack lacks it or it is already added (no disabled card; see
- * {@link import('../flowStages').meshKindOffered}). The catalog card is disabled with a
- * "None available yet" note when the catalog is empty. The selected card reflects `kind`.
+ * Presentational {@link ChoiceCard}s in one row, grouped by how much we know
+ * about the integration:
+ *   - **API Mesh** — the data layer (rendered ONLY when offered; HIDDEN when the
+ *     stack lacks it or it's already added — see {@link import('../flowStages').meshKindOffered}).
+ *   - **Pre-built integration** — a finished catalog app (disabled with "None
+ *     available yet" when the finished catalog is empty).
+ *   - **Start from scratch** — a blank app you build out with AI (the shell).
+ *   - **Import a repo** — bring your own App Builder app from a GitHub URL.
+ *
+ * The last two are the two "custom app" flavors, presented as flat sibling cards.
+ * The selected card reflects `kind`.
  *
  * @module features/project-creation/ui/components/integration-flow/stages/KindStage
  */
@@ -51,15 +55,21 @@ export function KindStage({
                 />
             ) : null}
             <ChoiceCard
-                name="Integration Catalog"
-                description="Pick a pre-built App Builder integration."
+                name="Pre-built integration"
+                description="Pick a finished App Builder integration from the catalog."
                 selected={kind === 'catalog'}
                 disabled={catalogEmpty}
                 note={catalogEmpty ? 'None available yet' : undefined}
                 onSelect={() => onPickKind('catalog')}
             />
             <ChoiceCard
-                name="Custom Integration"
+                name="Start from scratch"
+                description="Begin with a blank App Builder app and build it out with AI."
+                selected={kind === 'blank'}
+                onSelect={() => onPickKind('blank')}
+            />
+            <ChoiceCard
+                name="Import a repo"
                 description="Add your own App Builder app from a public GitHub repository."
                 selected={kind === 'custom'}
                 onSelect={() => onPickKind('custom')}

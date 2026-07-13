@@ -13,7 +13,7 @@
 
 import type { AdobeProject, Workspace } from '@/types/webview';
 
-export type IntegrationKind = 'mesh' | 'catalog' | 'custom';
+export type IntegrationKind = 'mesh' | 'catalog' | 'blank' | 'custom';
 
 export type FlowMode = 'add' | 'destination';
 

@@ -279,7 +279,7 @@ function walkMeshToProject(): void {
 
 /** kind → source-catalog → pick ERP → Continue (next stage depends on state). */
 function walkCatalogPastPick(): void {
-    click(/Integration Catalog/);
+    click(/Pre-built integration/);
     click('Continue');
     click(/ERP Sync/);
     click('Continue');
@@ -351,7 +351,7 @@ describe('AddIntegrationFlowModal — later add (destination committed)', () => 
 describe('AddIntegrationFlowModal — catalog first-add walk', () => {
     it('gates Continue on the catalog stage until an entry is picked', () => {
         renderModal();
-        click(/Integration Catalog/);
+        click(/Pre-built integration/);
         click('Continue');
         expect(button(/ERP Sync/)).toBeInTheDocument();
         expect(button(/CRM Connect/)).toBeInTheDocument();
@@ -401,7 +401,7 @@ describe('AddIntegrationFlowModal — signed-out routing', () => {
 describe('AddIntegrationFlowModal — custom integration', () => {
     it('gates Continue until a valid URL and flags duplicates', () => {
         renderModal({ initial: { selectedAppBuilderComponents: ['acme-widget'] } });
-        click(/Custom Integration/);
+        click(/Import a repo/);
         click('Continue');
         const input = screen.getByPlaceholderText('https://github.com/owner/repo');
         fireEvent.change(input, { target: { value: 'https://github.com/acme/widget' } });
@@ -413,7 +413,7 @@ describe('AddIntegrationFlowModal — custom integration', () => {
 
     it('disables Continue again when a previously valid URL is cleared or invalidated', () => {
         renderModal({ initial: COMMITTED_DEST });
-        click(/Custom Integration/);
+        click(/Import a repo/);
         click('Continue');
         const input = screen.getByPlaceholderText('https://github.com/owner/repo');
         fireEvent.change(input, { target: { value: 'https://github.com/acme/widget' } });
@@ -428,7 +428,7 @@ describe('AddIntegrationFlowModal — custom integration', () => {
 
     it('finishes a custom add through onAddCustomAppBuilderComponent', async () => {
         const { builder, onClose } = renderModal({ initial: COMMITTED_DEST });
-        click(/Custom Integration/);
+        click(/Import a repo/);
         click('Continue');
         const input = screen.getByPlaceholderText('https://github.com/owner/repo');
         fireEvent.change(input, { target: { value: 'https://github.com/acme/widget' } });
@@ -479,13 +479,13 @@ describe('AddIntegrationFlowModal — cancel & reopen', () => {
 
     it('reopening starts a fresh journey at the kind stage', () => {
         const { setOpen } = renderModal();
-        click(/Integration Catalog/);
+        click(/Pre-built integration/);
         click('Continue');
         expect(button(/ERP Sync/)).toBeInTheDocument();
         setOpen(false);
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
         setOpen(true);
-        expect(button(/Integration Catalog/)).toBeInTheDocument();
+        expect(button(/Pre-built integration/)).toBeInTheDocument();
         expectDisabled('Continue');
     });
 });

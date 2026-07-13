@@ -1,10 +1,11 @@
 /**
  * KindStage Tests (Add Integration flow — kind picker stage)
  *
- * Presentational stage: three choice tiles (API Mesh · Integration Catalog · Custom
- * Integration). Mesh renders ONLY when offered (hidden — never a disabled tile — when the
- * stack lacks mesh or it is already added). The catalog tile is disabled with a
- * "None available yet" note when the catalog is empty. The selected tile reflects `kind`.
+ * Presentational: four flat choice tiles (API Mesh · Pre-built integration ·
+ * Start from scratch · Import a repo). Mesh renders ONLY when offered (hidden —
+ * never a disabled tile — when the stack lacks mesh or it's already added). The
+ * pre-built catalog tile is disabled with a "None available yet" note when the
+ * finished catalog is empty. The selected tile reflects `kind`.
  *
  * @jest-environment jsdom
  */
@@ -30,74 +31,65 @@ function renderStage(props: Partial<Props> = {}): { onPickKind: jest.Mock } {
 }
 
 describe('KindStage', () => {
-    it('renders the Integration Catalog and Custom Integration tiles', () => {
+    it('renders the four kind tiles when mesh is offered', () => {
         renderStage();
-        expect(screen.getByRole('button', { name: /Integration Catalog/ })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /Custom Integration/ })).toBeInTheDocument();
-    });
-
-    it('renders the API Mesh tile when mesh is offered', () => {
-        renderStage({ meshOffered: true });
         expect(screen.getByRole('button', { name: /API Mesh/ })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Pre-built integration/ })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Start from scratch/ })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Import a repo/ })).toBeInTheDocument();
     });
 
-    it('hides the API Mesh tile entirely when mesh is not offered', () => {
+    it('hides (not disables) the API Mesh tile when not offered', () => {
         renderStage({ meshOffered: false });
         expect(screen.queryByRole('button', { name: /API Mesh/ })).not.toBeInTheDocument();
+        // The other three still render.
+        expect(screen.getByRole('button', { name: /Start from scratch/ })).toBeInTheDocument();
     });
 
-    it('hides (not disables) the mesh tile when not offered', () => {
-        renderStage({ meshOffered: false });
-        expect(screen.queryByRole('button', { name: /API Mesh/ })).not.toBeInTheDocument();
-    });
-
-    it('disables the catalog tile with a "None available yet" note when the catalog is empty', () => {
+    it('disables the pre-built tile with a "None available yet" note when the catalog is empty', () => {
         renderStage({ catalogCount: 0 });
-        expect(screen.getByRole('button', { name: /Integration Catalog/ })).toBeDisabled();
+        expect(screen.getByRole('button', { name: /Pre-built integration/ })).toBeDisabled();
         expect(screen.getByText('None available yet')).toBeInTheDocument();
+        // Start from scratch and Import a repo are never gated on the catalog.
+        expect(screen.getByRole('button', { name: /Start from scratch/ })).toBeEnabled();
+        expect(screen.getByRole('button', { name: /Import a repo/ })).toBeEnabled();
     });
 
-    it('enables the catalog tile (no note) when the catalog has entries', () => {
+    it('enables the pre-built tile (no note) when the catalog has entries', () => {
         renderStage({ catalogCount: 2 });
-        expect(screen.getByRole('button', { name: /Integration Catalog/ })).toBeEnabled();
+        expect(screen.getByRole('button', { name: /Pre-built integration/ })).toBeEnabled();
         expect(screen.queryByText('None available yet')).not.toBeInTheDocument();
     });
 
-    it('clicking API Mesh calls onPickKind("mesh")', () => {
+    it('each tile fires onPickKind with its kind', () => {
         const { onPickKind } = renderStage();
         fireEvent.click(screen.getByRole('button', { name: /API Mesh/ }));
-        expect(onPickKind).toHaveBeenCalledWith('mesh');
+        fireEvent.click(screen.getByRole('button', { name: /Pre-built integration/ }));
+        fireEvent.click(screen.getByRole('button', { name: /Start from scratch/ }));
+        fireEvent.click(screen.getByRole('button', { name: /Import a repo/ }));
+        expect(onPickKind).toHaveBeenNthCalledWith(1, 'mesh');
+        expect(onPickKind).toHaveBeenNthCalledWith(2, 'catalog');
+        expect(onPickKind).toHaveBeenNthCalledWith(3, 'blank');
+        expect(onPickKind).toHaveBeenNthCalledWith(4, 'custom');
     });
 
-    it('clicking Integration Catalog calls onPickKind("catalog")', () => {
-        const { onPickKind } = renderStage();
-        fireEvent.click(screen.getByRole('button', { name: /Integration Catalog/ }));
-        expect(onPickKind).toHaveBeenCalledWith('catalog');
-    });
-
-    it('clicking Custom Integration calls onPickKind("custom")', () => {
-        const { onPickKind } = renderStage();
-        fireEvent.click(screen.getByRole('button', { name: /Custom Integration/ }));
-        expect(onPickKind).toHaveBeenCalledWith('custom');
-    });
-
-    it('a disabled catalog tile does not fire onPickKind', () => {
+    it('a disabled pre-built tile does not fire onPickKind', () => {
         const { onPickKind } = renderStage({ catalogCount: 0 });
-        fireEvent.click(screen.getByRole('button', { name: /Integration Catalog/ }));
+        fireEvent.click(screen.getByRole('button', { name: /Pre-built integration/ }));
         expect(onPickKind).not.toHaveBeenCalled();
     });
 
-    it('marks the tile matching `kind` as selected and the others as not', () => {
-        renderStage({ kind: 'custom' });
-        expect(screen.getByRole('button', { name: /Custom Integration/ })).toHaveAttribute(
+    it('marks the tile matching `kind` selected and the others not', () => {
+        renderStage({ kind: 'blank' });
+        expect(screen.getByRole('button', { name: /Start from scratch/ })).toHaveAttribute(
             'data-selected',
             'true'
         );
-        expect(screen.getByRole('button', { name: /API Mesh/ })).toHaveAttribute(
+        expect(screen.getByRole('button', { name: /Import a repo/ })).toHaveAttribute(
             'data-selected',
             'false'
         );
-        expect(screen.getByRole('button', { name: /Integration Catalog/ })).toHaveAttribute(
+        expect(screen.getByRole('button', { name: /API Mesh/ })).toHaveAttribute(
             'data-selected',
             'false'
         );
@@ -105,17 +97,13 @@ describe('KindStage', () => {
 
     it('marks no tile selected when `kind` is undefined', () => {
         renderStage({ kind: undefined });
-        expect(screen.getByRole('button', { name: /API Mesh/ })).toHaveAttribute(
-            'data-selected',
-            'false'
-        );
-        expect(screen.getByRole('button', { name: /Integration Catalog/ })).toHaveAttribute(
-            'data-selected',
-            'false'
-        );
-        expect(screen.getByRole('button', { name: /Custom Integration/ })).toHaveAttribute(
-            'data-selected',
-            'false'
-        );
+        for (const name of [
+            /API Mesh/,
+            /Pre-built integration/,
+            /Start from scratch/,
+            /Import a repo/,
+        ]) {
+            expect(screen.getByRole('button', { name })).toHaveAttribute('data-selected', 'false');
+        }
     });
 });

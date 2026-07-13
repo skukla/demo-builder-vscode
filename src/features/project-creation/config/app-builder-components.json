@@ -75,6 +75,7 @@
       "name": "App Builder App",
       "description": "A minimal App Builder app to build out with AI — starts from a working deploy, then grows into whatever your demo needs",
       "kind": "integration",
+      "blank": true,
       "source": {
         "owner": "skukla",
         "repo": "app-builder-shell",

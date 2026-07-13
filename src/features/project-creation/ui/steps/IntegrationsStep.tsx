@@ -122,12 +122,23 @@ export function IntegrationsStep({
         () => stacks.find((candidate) => candidate.id === state.selectedStack),
         [stacks, state.selectedStack],
     );
-    const catalog = useMemo<AppBuilderComponentCatalogEntry[]>(
+    // Integration-kind entries, split: the FINISHED catalog (the "Pre-built
+    // integration" gallery) vs. the blank starter app (the "Start from scratch"
+    // card) — the blank is NOT a pre-built integration and never shows in the gallery.
+    const integrationEntries = useMemo<AppBuilderComponentCatalogEntry[]>(
         () =>
             getAvailableAppBuilderComponents(stack?.backend ?? '', stack?.frontend ?? '').filter(
                 (entry) => entry.kind === 'integration',
             ),
         [stack],
+    );
+    const catalog = useMemo(
+        () => integrationEntries.filter((entry) => !entry.blank),
+        [integrationEntries],
+    );
+    const blankComponent = useMemo(
+        () => integrationEntries.find((entry) => entry.blank),
+        [integrationEntries],
     );
 
     const rows = useMemo(
@@ -202,6 +213,7 @@ export function IntegrationsStep({
                 updateState={updateState}
                 meshComponent={meshComponent}
                 catalog={catalog}
+                blankComponent={blankComponent}
                 backendId={stack?.backend}
                 frontendId={stack?.frontend}
                 builder={builder}

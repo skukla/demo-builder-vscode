@@ -30,6 +30,12 @@ export interface AppBuilderComponentCatalogEntry {
     name: string;
     description: string;
     kind: AppBuilderComponentKind;
+    /**
+     * A blank/starter app (the "start from scratch" custom-app path), NOT a
+     * finished pre-built integration. Excluded from the catalog gallery and
+     * reached via the kind picker's "Start from scratch" card instead.
+     */
+    blank?: boolean;
     /** Pre-built source repo (owner/repo/branch). */
     source: AddonSource;
     /** Backend ids this appBuilderComponent fits (omitted/empty = any backend). */

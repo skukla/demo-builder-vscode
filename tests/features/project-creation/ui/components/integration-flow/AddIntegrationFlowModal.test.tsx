@@ -305,7 +305,7 @@ describe('AddIntegrationFlowModal — host & shell', () => {
         expect(screen.getByRole('heading', { name: 'Deployment Destination' })).toBeInTheDocument();
         expect(screen.getByTestId('project-field')).toBeInTheDocument();
         expect(
-            screen.queryByRole('button', { name: /Integration Catalog/ })
+            screen.queryByRole('button', { name: /Pre-built integration/ })
         ).not.toBeInTheDocument();
     });
 
@@ -337,7 +337,7 @@ describe('AddIntegrationFlowModal — kind stage', () => {
         renderModal();
         expectDisabled('Back');
         expectDisabled('Continue');
-        click(/Custom Integration/);
+        click(/Import a repo/);
         expectEnabled('Continue');
         expectDisabled('Back');
     });

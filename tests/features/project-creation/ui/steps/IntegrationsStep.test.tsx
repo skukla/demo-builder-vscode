@@ -159,8 +159,8 @@ describe('IntegrationsStep — results-only layout', () => {
 
     it('does not render the old deployable type-rows', () => {
         renderStep(baseState());
-        expect(screen.queryByText('Integration Catalog')).not.toBeInTheDocument();
-        expect(screen.queryByText('Custom Integration')).not.toBeInTheDocument();
+        expect(screen.queryByText('Pre-built integration')).not.toBeInTheDocument();
+        expect(screen.queryByText('Import a repo')).not.toBeInTheDocument();
         expect(screen.queryByText('API Mesh')).not.toBeInTheDocument();
     });
 
@@ -251,7 +251,7 @@ describe('IntegrationsStep — modal wiring', () => {
         ).toBeInTheDocument();
         // The kind picker renders inside the journey.
         expect(
-            within(dialog).getByRole('button', { name: /Integration Catalog/ })
+            within(dialog).getByRole('button', { name: /Pre-built integration/ })
         ).toBeInTheDocument();
     });
 

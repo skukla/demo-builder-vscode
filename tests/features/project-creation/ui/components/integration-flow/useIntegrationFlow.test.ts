@@ -42,6 +42,16 @@ beforeEach(() => {
 /** Stable empty catalog (module-level — avoids new-reference hook churn). */
 const EMPTY_CATALOG: AppBuilderComponentCatalogEntry[] = [];
 
+/** The blank starter app the "Start from scratch" kind commits. */
+const BLANK_COMPONENT: AppBuilderComponentCatalogEntry = {
+    id: 'app-builder-shell',
+    name: 'App Builder App',
+    description: 'A blank App Builder app to build out with AI',
+    kind: 'integration',
+    blank: true,
+    source: { owner: 'skukla', repo: 'app-builder-shell', branch: 'main' },
+};
+
 const MESH_COMPONENT = {
     id: 'headless-commerce-mesh',
     name: 'API Mesh',
@@ -118,6 +128,7 @@ function setup(options: SetupOptions = {}): Setup {
                 mode,
                 meshComponent,
                 catalog: EMPTY_CATALOG,
+                blankComponent: BLANK_COMPONENT,
                 builder,
                 onClose,
             } as UseIntegrationFlowArgs),
@@ -129,7 +140,7 @@ function setup(options: SetupOptions = {}): Setup {
 }
 
 /** Pick a kind on the kind stage and Continue past it. */
-function pickKindAndContinue(s: Setup, kind: 'mesh' | 'catalog' | 'custom'): void {
+function pickKindAndContinue(s: Setup, kind: 'mesh' | 'catalog' | 'blank' | 'custom'): void {
     act(() => s.result.current.pickKind(kind));
     act(() => s.result.current.onContinue());
 }
@@ -443,6 +454,22 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
         expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('erp-sync', true);
         // API access is deterministic — the add flow never merges per-integration APIs.
         expect(s.updateState).not.toHaveBeenCalled();
+        expect(s.onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('finishes a "start from scratch" add: commits the blank shell component', () => {
+        const s = setup({ initial: COMMITTED_DEST });
+        // Blank has no source stage — kind pick goes straight to the destination.
+        pickKindAndContinue(s, 'blank');
+        expect(s.result.current.stage).toBe('dest-summary');
+        act(() => s.result.current.onContinue()); // dest-summary → api-access
+        expect(s.result.current.stage).toBe('api-access');
+        act(() => s.result.current.onContinue()); // finish
+        expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith(
+            'app-builder-shell',
+            true
+        );
+        expect(s.builder.onAddCustomAppBuilderComponent).not.toHaveBeenCalled();
         expect(s.onClose).toHaveBeenCalledTimes(1);
     });
 

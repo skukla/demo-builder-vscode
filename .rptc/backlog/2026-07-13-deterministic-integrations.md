@@ -34,7 +34,7 @@ start blank (shell)  →  build via AI  →  PROMOTE TO REPO ("save it")  →  i
 
 ## Three layers of work (different sizes)
 
-### Layer 1 — Deterministic simplification (near-term, contained)
+### Layer 1 — Deterministic simplification — ✅ SHIPPED (`48f637d3`; enable-in-modal `5aa064c8`)
 Remove the **API-access step from the Add-Integration flow entirely**, for every kind. Integrations
 add atomically. Required APIs still auto-subscribe at deploy (`ensureMeshApiSubscribed` /
 `subscribeRequiredApis`) — the user never picks them. Optional API access lives ONLY in the
@@ -52,12 +52,12 @@ dashboard **Manage APIs** modal (which now does add + remove).
 - **Drop** `suggestedApis` display (pick-and-choose contradicts determinism; dormant anyway) — the
   catalog field can stay unread or be removed with its consumers.
 
-### Layer 2 — Regroup the kind picker (UI/flow)
-`KindStage` offers **API Mesh · Pre-built integration · Custom app**. The catalog card lists only
-*finished* apps — the `app-builder-shell` moves OUT of the catalog into **Custom app → start
-blank**. Custom app is a two-option choice: **Start blank** (seeds the shell entry, no source URL)
-or **Import a repo** (today's `source-custom` URL path). Update `IntegrationKind` and the
-source-stage derivation accordingly.
+### Layer 2 — Regroup the kind picker (UI/flow) — ✅ SHIPPED
+`KindStage` offers **4 flat cards**: API Mesh · Pre-built integration · Start from scratch · Import
+a repo (the user picked flat over a Custom-app sub-step). The catalog gallery lists only *finished*
+apps — `app-builder-shell` carries a `blank: true` marker, is excluded from the gallery, and is
+committed via the "Start from scratch" (`kind: 'blank'`) card. `IntegrationKind` gained `'blank'`
+(no source stage); the modal threads a `blankComponent`; `commitSelection` toggles it.
 
 ### Layer 3 — Promote a custom app to a repo (new capability, larger)
 A per-integration **dashboard action** (alongside deploy / redeploy / remove) on a deployed custom

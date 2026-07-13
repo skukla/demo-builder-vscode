@@ -58,6 +58,8 @@ export interface UseIntegrationFlowArgs {
     meshComponent?: SelectableAppBuilderComponent;
     /** The addable catalog entries (threaded to the source/API stages by the modal). */
     catalog: AppBuilderComponentCatalogEntry[];
+    /** The blank starter app the "Start from scratch" kind commits, if any. */
+    blankComponent?: AppBuilderComponentCatalogEntry;
     /** Selected stack backend/frontend ids — the mesh-enable payload on finish. */
     backendId?: string;
     frontendId?: string;
@@ -142,7 +144,7 @@ function initialStageFor(
  */
 export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegrationFlowReturn {
     const { state, updateState, mode, meshComponent, builder, onClose } = args;
-    const { backendId, frontendId, onMeshEnableResult } = args;
+    const { blankComponent, backendId, frontendId, onMeshEnableResult } = args;
 
     const [draft, setDraft] = useState<FlowDraft>(createInitialDraft);
     const [phaseRunning, setPhaseRunning] = useState(false);
@@ -191,10 +193,16 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
             builder.onAppBuilderComponentToggle(draft.catalogId, true);
             return;
         }
+        // "Start from scratch" adds the blank starter app (the shell) like a
+        // catalog pick — it's a custom app that begins empty and grows via AI.
+        if (draft.kind === 'blank' && blankComponent) {
+            builder.onAppBuilderComponentToggle(blankComponent.id, true);
+            return;
+        }
         if (draft.kind === 'custom' && draft.customSource) {
             builder.onAddCustomAppBuilderComponent(draft.customSource);
         }
-    }, [draft, meshComponent, builder]);
+    }, [draft, meshComponent, blankComponent, builder]);
 
     /**
      * Provision the mesh API access on Add — the enable runs HERE, in the modal,

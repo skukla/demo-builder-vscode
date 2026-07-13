@@ -59,8 +59,10 @@ export interface AddIntegrationFlowModalProps {
     updateState: (updates: Partial<WizardState>) => void;
     /** The stack's mesh catalog entry (tileStatus.meshComponentForStack), if any. */
     meshComponent?: SelectableAppBuilderComponent;
-    /** The addable catalog entries (kind picker count, catalog + API stages). */
+    /** The FINISHED catalog entries (kind picker count, catalog + API stages). */
     catalog: AppBuilderComponentCatalogEntry[];
+    /** The blank starter app (the "Start from scratch" kind seeds it), if any. */
+    blankComponent?: AppBuilderComponentCatalogEntry;
     /** Selected stack backend/frontend ids — the mesh-enable payload run on Add. */
     backendId?: string;
     frontendId?: string;
@@ -139,10 +141,12 @@ function StageBody({
             );
         }
         const entry = catalog.find((candidate) => candidate.id === draft.catalogId);
+        // Blank (shell) and imported repos are both custom apps — their API surface
+        // isn't known up front, so note that APIs are granted as the app is built.
         return (
             <ApiAccessStage
                 required={draft.kind === 'catalog' ? entry?.requiredApis : undefined}
-                custom={draft.kind === 'custom'}
+                custom={draft.kind === 'custom' || draft.kind === 'blank'}
             />
         );
     }
