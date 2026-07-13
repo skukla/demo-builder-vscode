@@ -14,6 +14,7 @@ import React, { useCallback, useMemo } from 'react';
 import { ProjectActionsMenu, type ProjectActions } from './ProjectActionsMenu';
 import { InlineRenameField } from '@/core/ui/components/forms';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
+import { normalizeProjectName } from '@/core/validation/normalizers';
 import { getBrandStackSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import {
     getStatusText,
@@ -128,6 +129,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                         name={project.name}
                         textClassName="project-card-spectrum-name"
                         disabled={isRunning || !actions.onRenameSubmit}
+                        normalize={normalizeProjectName}
                         onRename={(newName) =>
                             actions.onRenameSubmit
                                 ? actions.onRenameSubmit(project, newName)

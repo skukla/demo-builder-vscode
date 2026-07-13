@@ -23,6 +23,7 @@ import { PageLayout, PageHeader, ControlPanelLayout } from '@/core/ui/components
 import { useFocusTrap, useSingleTimer } from '@/core/ui/hooks';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { normalizeProjectName } from '@/core/validation/normalizers';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
 
@@ -268,6 +269,7 @@ export function ProjectDashboardScreen({
                             <InlineRenameField
                                 name={displayName}
                                 disabled={isRunning}
+                                normalize={normalizeProjectName}
                                 onRename={renameInline}
                             />
                         }

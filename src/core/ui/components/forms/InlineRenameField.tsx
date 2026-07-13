@@ -25,6 +25,9 @@ import Edit from '@spectrum-icons/workflow/Edit';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { cn } from '@/core/ui/utils/classNames';
 
+/** Identity default: without a normalizer the field stores raw keystrokes. */
+const IDENTITY = (raw: string): string => raw;
+
 export interface InlineRenameFieldProps {
     /** The committed name (display mode). */
     name: string;
@@ -34,6 +37,12 @@ export interface InlineRenameFieldProps {
     disabled?: boolean;
     /** Class applied to the display-mode text (caller owns typography). */
     textClassName?: string;
+    /**
+     * Transform each keystroke as it's typed (e.g. project renames pass
+     * `normalizeProjectName` so spaces → hyphens live, matching the create flow).
+     * Omitted ⇒ raw input (the component stays name-agnostic).
+     */
+    normalize?: (raw: string) => string;
 }
 
 /**
@@ -47,6 +56,7 @@ export function InlineRenameField({
     onRename,
     disabled = false,
     textClassName,
+    normalize = IDENTITY,
 }: InlineRenameFieldProps): React.ReactElement {
     const [editing, setEditing] = useState(false);
     const [value, setValue] = useState('');
@@ -152,7 +162,7 @@ export function InlineRenameField({
                 aria-label="New project name"
                 value={value}
                 disabled={busy}
-                onChange={(event) => setValue(event.target.value)}
+                onChange={(event) => setValue(normalize(event.target.value))}
                 onKeyDown={(event) => {
                     if (event.key === 'Enter') void commit();
                     if (event.key === 'Escape') exitEdit();

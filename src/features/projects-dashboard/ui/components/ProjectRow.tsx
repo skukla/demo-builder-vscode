@@ -13,6 +13,7 @@ import React, { useCallback, useMemo } from 'react';
 import { ProjectActionsMenu, type ProjectActions } from './ProjectActionsMenu';
 import { InlineRenameField } from '@/core/ui/components/forms';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
+import { normalizeProjectName } from '@/core/validation/normalizers';
 import { getComponentSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import {
     getStatusText,
@@ -76,8 +77,12 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
     const isEds = isEdsProject(project);
     const port = getFrontendPort(project);
     // EDS projects use storefront status; non-EDS use demo running status
-    const statusText = isEds ? getStorefrontStatusText(project) : getStatusText(project.status, port, false);
-    const statusVariant = isEds ? getStorefrontStatusVariant(project) : getStatusVariant(project.status, false);
+    const statusText = isEds
+        ? getStorefrontStatusText(project)
+        : getStatusText(project.status, port, false);
+    const statusVariant = isEds
+        ? getStorefrontStatusVariant(project)
+        : getStatusVariant(project.status, false);
     const componentSummary = useMemo(() => getComponentSummary(project), [project]);
 
     const ariaLabel = `${project.name}, ${statusText}${componentSummary ? `, ${componentSummary}` : ''}`;
@@ -114,6 +119,7 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
                         name={project.name}
                         textClassName="project-row-name"
                         disabled={isRunning || !actions.onRenameSubmit}
+                        normalize={normalizeProjectName}
                         onRename={(newName) =>
                             actions.onRenameSubmit
                                 ? actions.onRenameSubmit(project, newName)
@@ -121,9 +127,7 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
                         }
                     />
                     {componentSummary && (
-                        <Text UNSAFE_className="project-row-components">
-                            {componentSummary}
-                        </Text>
+                        <Text UNSAFE_className="project-row-components">{componentSummary}</Text>
                     )}
                 </Flex>
 
@@ -135,9 +139,7 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
                         actions={actions}
                         className="project-row-menu-button"
                     />
-                    <Text UNSAFE_className="project-row-status">
-                        {statusText}
-                    </Text>
+                    <Text UNSAFE_className="project-row-status">{statusText}</Text>
                     <ChevronRight size="S" UNSAFE_className="project-row-chevron" />
                 </Flex>
             </Flex>

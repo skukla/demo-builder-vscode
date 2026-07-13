@@ -327,7 +327,9 @@ describe('ProjectCard', () => {
             fireEvent.keyDown(input, { key: 'Enter' });
 
             await screen.findByText('Old Name'); // back to display mode
-            expect(onRenameSubmit).toHaveBeenCalledWith(project, 'New Name');
+            // Card wires normalizeProjectName → spaces become hyphens, lowercased,
+            // matching the create-flow project-name affordance.
+            expect(onRenameSubmit).toHaveBeenCalledWith(project, 'new-name');
         });
 
         it('never opens the project while interacting with the rename editor', () => {

@@ -40,6 +40,7 @@ function renderField(props: Partial<Props> = {}): {
                     onRename={onRename}
                     disabled={props.disabled}
                     textClassName={props.textClassName}
+                    normalize={props.normalize}
                 />
             </div>
         </Provider>
@@ -132,6 +133,37 @@ describe('InlineRenameField', () => {
             fireEvent.keyDown(input, { key: 'Enter' });
             expect(onRename).not.toHaveBeenCalled();
             expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+        });
+    });
+
+    describe('normalize', () => {
+        // Reuse the create-flow normalizer: spaces → hyphens, lowercase, etc.
+        const normalize = (raw: string): string =>
+            raw
+                .toLowerCase()
+                .replace(/[\s_]+/g, '-')
+                .replace(/[^a-z0-9-]/g, '');
+
+        it('transforms typed input live so a space becomes a hyphen', () => {
+            renderField({ normalize });
+            const input = enterEditMode();
+            fireEvent.change(input, { target: { value: 'My New Name' } });
+            expect(input.value).toBe('my-new-name');
+        });
+
+        it('commits the normalized value, not the raw keystrokes', async () => {
+            const { onRename } = renderField({ normalize });
+            const input = enterEditMode();
+            fireEvent.change(input, { target: { value: 'Cool Demo!' } });
+            fireEvent.keyDown(input, { key: 'Enter' });
+            await waitFor(() => expect(onRename).toHaveBeenCalledWith('cool-demo'));
+        });
+
+        it('leaves input untouched when no normalize is supplied (generic default)', () => {
+            renderField();
+            const input = enterEditMode();
+            fireEvent.change(input, { target: { value: 'My New Name' } });
+            expect(input.value).toBe('My New Name');
         });
     });
 

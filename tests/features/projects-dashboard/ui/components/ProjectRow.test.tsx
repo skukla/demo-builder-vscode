@@ -66,7 +66,8 @@ describe('ProjectRow — inline rename', () => {
         fireEvent.keyDown(input, { key: 'Enter' });
 
         await screen.findByText('Old Row'); // back to display mode
-        expect(onRenameSubmit).toHaveBeenCalledWith(project, 'New Row');
+        // Row wires normalizeProjectName → spaces→hyphens, lowercased (create-flow parity).
+        expect(onRenameSubmit).toHaveBeenCalledWith(project, 'new-row');
     });
 
     it('never opens the project while interacting with the rename editor', () => {
