@@ -30,11 +30,12 @@ import {
 } from '@/features/app-builder/services/apiSubscriber';
 import { createApiSubscriberClient } from '@/features/app-builder/services/apiSubscriberClientAdapter';
 import { subscriberTarget } from '@/features/app-builder/services/appBuilderComponentRunnerDeps';
+import { buildApiAccessCatalog } from '@/features/authentication/services/apiAccessCatalog';
 import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
-import type { MessageHandler } from '@/types/handlers';
+import type { HandlerContext, MessageHandler } from '@/types/handlers';
 import { toError } from '@/types/typeGuards';
 
 /** Adobe sdk codes are alphanumeric (e.g. GraphQLServiceSDK); tolerate _ and -. */
@@ -74,17 +75,17 @@ export const handleListConsoleApis: MessageHandler = async (context) => {
     try {
         const client = createApiSubscriberClient(ServiceLocator.getAuthenticationService());
         const services = await client.getServicesForOrg(orgId);
-        const managed = new Set(
-            computeRequiredApis(resolveProjectCatalog(project), project.additionalConsoleApis ?? []),
-        );
+        // `managed` = ALWAYS-ON only (baseline + catalog required, NO extras) — these
+        // are locked, non-removable. The optional extras are returned as `added`
+        // (checked + removable in the modal). Both survive the noise filter.
+        const added = project.additionalConsoleApis ?? [];
+        const managed = new Set(computeRequiredApis(resolveProjectCatalog(project), []));
+        const rows = buildApiAccessCatalog(services, new Set([...managed, ...added]));
         return {
             success: true,
             data: {
-                apis: services.map((s) => ({
-                    code: s.code,
-                    name: s.name,
-                    managed: managed.has(s.code),
-                })),
+                apis: rows.map((row) => ({ ...row, managed: managed.has(row.code) })),
+                added,
             },
         };
     } catch (err) {
@@ -92,50 +93,41 @@ export const handleListConsoleApis: MessageHandler = async (context) => {
     }
 };
 
-/**
- * Handle 'addConsoleApis' — subscribe the given sdk codes on the demo
- * workspace credential (full-union reconcile) and persist them so later
- * reconciles keep them.
- */
-export const handleAddConsoleApis: MessageHandler<{ apis?: string[] }> = async (
-    context,
-    payload,
-) => {
-    const apis = payload?.apis;
-    if (!Array.isArray(apis) || apis.length === 0 || !apis.every((a) => typeof a === 'string')) {
-        return {
-            success: false,
-            error: 'apis must be a non-empty array of Adobe sdk codes',
-            code: ErrorCode.CONFIG_INVALID,
-        };
+/** Validate a list of sdk codes; returns an error message or undefined. */
+function validateSdkCodes(
+    apis: unknown,
+    { allowEmpty }: { allowEmpty: boolean },
+): string | undefined {
+    if (!Array.isArray(apis) || !apis.every((a) => typeof a === 'string')) {
+        return 'apis must be an array of Adobe sdk codes';
+    }
+    if (apis.length === 0 && !allowEmpty) {
+        return 'apis must be a non-empty array of Adobe sdk codes';
     }
     const invalid = apis.filter((a) => !SDK_CODE_RE.test(a));
-    if (invalid.length > 0) {
-        return {
-            success: false,
-            error: `Invalid sdk code(s): ${invalid.join(', ')}`,
-            code: ErrorCode.CONFIG_INVALID,
-        };
-    }
+    return invalid.length > 0 ? `Invalid sdk code(s): ${invalid.join(', ')}` : undefined;
+}
 
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) {
-        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
-    }
-
-    const guardError = await runGuards(context, project);
-    if (guardError) {
-        return { success: false, error: guardError };
-    }
-
+/**
+ * Reconcile the project's OPTIONAL extras to `desiredExtras`: subscribe the full
+ * union (baseline + catalog required + desired) and persist `additionalConsoleApis`.
+ * Shared by add (union) and set (exact). Because the subscribe PUTs
+ * `computeRequiredApis(catalog, desired)`, always-on codes are always re-included
+ * and any extra NOT in `desired` is dropped — so a shorter `desired` removes.
+ * Persist happens only AFTER a successful subscribe (a failed reconcile must not
+ * poison later ones).
+ */
+async function reconcileExtras(
+    context: HandlerContext,
+    project: Project,
+    desiredExtras: string[],
+): Promise<{ success: boolean; error?: string; data?: { subscribed: unknown } }> {
     const authService = ServiceLocator.getAuthenticationService();
     const client = createApiSubscriberClient(authService);
-    const merged = [...new Set([...(project.additionalConsoleApis ?? []), ...apis])];
     const orgTarget = buildOrgTargetFromProjectAdobe(
         project.adobe,
         authService.getCachedOrganization(),
     );
-
     try {
         const subscribed = await withOrgContext(orgTarget, () =>
             subscribeRequiredApis(
@@ -143,18 +135,11 @@ export const handleAddConsoleApis: MessageHandler<{ apis?: string[] }> = async (
                 subscriberTarget(project),
                 client,
                 deriveAllowedDomain(project),
-                merged,
+                desiredExtras,
             ),
         );
-
-        // Persist AFTER the subscribe succeeds — a failed subscribe must not
-        // poison every later reconcile with an unknown/unentitled code.
-        project.additionalConsoleApis = merged;
+        project.additionalConsoleApis = desiredExtras;
         await context.stateManager.saveProject(project);
-
-        context.logger.info(
-            `[Console APIs] Added ${apis.join(', ')} (union now ${merged.length} extras)`,
-        );
         return { success: true, data: { subscribed } };
     } catch (err) {
         return {
@@ -164,4 +149,73 @@ export const handleAddConsoleApis: MessageHandler<{ apis?: string[] }> = async (
                 'product profile, add it in the Adobe Developer Console (Project → Workspace → Add API).',
         };
     }
+}
+
+/**
+ * Handle 'addConsoleApis' — additively subscribe the given sdk codes (union with
+ * the existing extras). The MCP `add_console_apis` tool path.
+ */
+export const handleAddConsoleApis: MessageHandler<{ apis?: string[] }> = async (
+    context,
+    payload,
+) => {
+    const apis = payload?.apis;
+    const codeError = validateSdkCodes(apis, { allowEmpty: false });
+    if (codeError) {
+        return { success: false, error: codeError, code: ErrorCode.CONFIG_INVALID };
+    }
+
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
+    }
+    const guardError = await runGuards(context, project);
+    if (guardError) {
+        return { success: false, error: guardError };
+    }
+
+    const merged = [...new Set([...(project.additionalConsoleApis ?? []), ...(apis as string[])])];
+    const result = await reconcileExtras(context, project, merged);
+    if (result.success) {
+        context.logger.info(
+            `[Console APIs] Added ${(apis as string[]).join(', ')} (union now ${merged.length} extras)`,
+        );
+    }
+    return result;
+};
+
+/**
+ * Handle 'setConsoleApis' — set the OPTIONAL extras to EXACTLY the given list
+ * (empty allowed). Adds and REMOVES: anything dropped from the list is
+ * unsubscribed on the next reconcile PUT. The dashboard Manage-APIs path.
+ * Always-on codes (baseline + catalog required) can't be removed — the subscribe
+ * union re-includes them regardless of `apis`.
+ */
+export const handleSetConsoleApis: MessageHandler<{ apis?: string[] }> = async (
+    context,
+    payload,
+) => {
+    const apis = payload?.apis;
+    const codeError = validateSdkCodes(apis, { allowEmpty: true });
+    if (codeError) {
+        return { success: false, error: codeError, code: ErrorCode.CONFIG_INVALID };
+    }
+
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
+    }
+    const guardError = await runGuards(context, project);
+    if (guardError) {
+        return { success: false, error: guardError };
+    }
+
+    const desired = [...new Set(apis as string[])];
+    const result = await reconcileExtras(context, project, desired);
+    if (result.success) {
+        context.logger.info(
+            `[Console APIs] Set extras to ${desired.length}: ${desired.join(', ')}`,
+        );
+    }
+    return result;
 };

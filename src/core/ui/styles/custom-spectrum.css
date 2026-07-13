@@ -4843,6 +4843,12 @@ div[class*="spectrum"] input[type="search"] {
     display: flex;
     flex-direction: column;
     gap: 14px;
+    /* Stay visible while the API list scrolls. The modal's scroll region is
+       .modal-content (its footer pins the same way); align-self keeps the panel
+       its own height so it can pin instead of stretching the whole column. */
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
 }
 .intflow-api-summary-title {
     font-size: 11px;
@@ -4856,48 +4862,78 @@ div[class*="spectrum"] input[type="search"] {
     flex-direction: column;
     gap: 6px;
 }
-.intflow-api-summary-heading {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--spectrum-global-color-gray-600);
-    padding-bottom: 4px;
-    border-bottom: 1px solid var(--spectrum-global-color-gray-200);
-}
 .intflow-api-summary-item {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 8px;
     font-size: 13px;
     color: var(--spectrum-global-color-gray-800);
 }
-.intflow-api-summary-empty {
-    font-size: 12px;
-    color: var(--spectrum-global-color-gray-600);
+/* "Added" sub-heading — the user's optional picks below the always-on facts. */
+.intflow-api-summary-subhead {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-500);
+    margin-bottom: 2px;
 }
-/* The mesh enable row rides in the summary's Applied slot: drop its standalone
-   row chrome and label (the panel's headings carry the context), let the ✓ +
-   API names wrap within the narrow column. */
-.intflow-api-summary .int-chosen {
-    min-height: 0;
-    padding: 0;
-    margin-bottom: 0;
+/* Inline remove (×) for an added pick — quiet until hover, right-aligned. */
+.intflow-api-summary-remove {
+    flex: 0 0 auto;
+    appearance: none;
     border: none;
     background: none;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 8px;
+    cursor: pointer;
+    padding: 0 2px;
+    font-size: 16px;
+    line-height: 1;
+    color: var(--spectrum-global-color-gray-500);
 }
-.intflow-api-summary .int-chosen-label {
-    display: none;
+.intflow-api-summary-remove:hover {
+    color: var(--spectrum-global-color-red-600);
 }
-.intflow-api-summary .int-chosen-value {
-    white-space: normal;
-    font-size: 13px;
+/* The required-API name takes the row; the tag it pushes to the right edge. */
+.intflow-api-summary-name {
+    flex: 1;
+    min-width: 0;
+}
+/* "Always on" status pill — quiet uppercase micro-tag, the visual stand-in for
+   the old "comes with this integration, always on" footnote. */
+.intflow-api-tag {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-700);
+    background: var(--spectrum-global-color-gray-200);
+    padding: 2px 6px;
+    border-radius: 4px;
 }
 .intflow-api-picker {
     display: flex;
     flex-direction: column;
     gap: 8px;
+}
+/* Left browse-column header + at-a-glance picks count (Selected has no mirror). */
+.intflow-api-browse-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-600);
+    margin-bottom: 6px;
+}
+.intflow-api-added {
+    text-transform: none;
+    letter-spacing: normal;
+    font-weight: 600;
+    color: var(--spectrum-global-color-blue-600);
 }
 .intflow-api-helper {
     margin: 0;
@@ -4919,13 +4955,54 @@ div[class*="spectrum"] input[type="search"] {
     margin-bottom: 4px;
     border-bottom: 1px solid var(--spectrum-global-color-gray-200);
 }
+/* Reason line under a group title (e.g. the profile-bound "unavailable" group). */
+.intflow-api-group-note {
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--spectrum-global-color-gray-600);
+    margin: -2px 0 6px;
+    max-width: 60ch;
+}
 .intflow-api-group-list {
     display: flex;
     flex-direction: column;
     gap: 2px;
 }
+/* Product-family filter chips (the dev-console "Filter by product" row) — one
+   click narrows "All available" to a family. Wrap on a narrow modal. */
+.intflow-api-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 2px 0 4px;
+}
+.intflow-api-chip {
+    appearance: none;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1.2;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    background: var(--spectrum-global-color-gray-50);
+    color: var(--spectrum-global-color-gray-700);
+}
+.intflow-api-chip:hover {
+    border-color: var(--spectrum-global-color-gray-400);
+    background: var(--spectrum-global-color-gray-100);
+}
+.intflow-api-chip[data-active] {
+    border-color: var(--spectrum-global-color-blue-500);
+    background: var(--spectrum-global-color-blue-500);
+    color: var(--spectrum-global-color-static-white, #fff);
+}
 .intflow-api-row {
     padding: 2px 0;
+}
+/* Profile-bound (unavailable) rows: disabled + dimmed so they read as "exists,
+   but not one-click here" rather than a pickable option. */
+.intflow-api-row[data-unavailable] .intflow-api-name {
+    color: var(--spectrum-global-color-gray-500);
 }
 /* Display name primary, code secondary gray — names first, codes for the curious. */
 .intflow-api-name {

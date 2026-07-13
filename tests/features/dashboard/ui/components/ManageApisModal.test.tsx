@@ -3,9 +3,9 @@
  *
  * The dashboard's live API-access modal for a DEPLOYED App Builder integration:
  *   - opens → fetches the org entitlement list ONCE via `listConsoleApis`
- *     (entries carry a `managed` flag → rendered as the picker's `locked`);
- *   - free picks accumulate in local state; Apply posts `addConsoleApis`
- *     with ONLY the newly picked codes (dashboard semantics: posts IMMEDIATELY);
+ *     (managed = always-on → `locked`; `added` = current extras → checked+removable);
+ *   - check adds, uncheck removes; Apply posts `setConsoleApis` with the FULL
+ *     desired optional set (dashboard semantics: posts IMMEDIATELY);
  *   - success closes the modal; failure shows an inline error and stays open;
  *   - adds are additive — there is NO removal affordance anywhere.
  *
@@ -120,7 +120,7 @@ describe('ManageApisModal', () => {
             expect(getClient().request).toHaveBeenCalledTimes(1);
         });
 
-        it('Cancel closes without posting addConsoleApis', async () => {
+        it('Cancel closes without posting setConsoleApis', async () => {
             mockRequest();
             const { onClose } = renderModal();
             await flush();
@@ -129,7 +129,7 @@ describe('ManageApisModal', () => {
 
             expect(onClose).toHaveBeenCalledTimes(1);
             expect(getClient().request).not.toHaveBeenCalledWith(
-                'addConsoleApis',
+                'setConsoleApis',
                 expect.anything()
             );
         });
@@ -180,14 +180,24 @@ describe('ManageApisModal', () => {
             expect(free).not.toBeDisabled();
         });
 
-        it('offers no removal affordance anywhere (adds are additive)', async () => {
-            mockRequest();
+        it('seeds previously-added APIs checked + removable (uncheck to remove)', async () => {
+            mockRequest((type) =>
+                type === 'listConsoleApis'
+                    ? Promise.resolve({
+                          success: true,
+                          data: { apis: ORG_APIS, added: ['FireflySDK'] },
+                      })
+                    : Promise.resolve({ success: true })
+            );
             renderModal();
             await flush();
 
-            expect(screen.queryByRole('button', { name: /remove/i })).not.toBeInTheDocument();
-            // The helper copy states the additive contract explicitly.
-            expect(screen.getByText(/additive/i)).toBeInTheDocument();
+            const added = checkboxFor('Firefly Services');
+            expect(added).toBeChecked(); // seeded from `added`
+            expect(added).not.toBeDisabled(); // removable (not managed/locked)
+            // Managed rows are still locked; only the always-on ones can't change.
+            expect(checkboxFor('API Mesh')).toBeDisabled();
+            expect(screen.getByText(/uncheck to remove/i)).toBeInTheDocument();
         });
     });
 
@@ -204,7 +214,7 @@ describe('ManageApisModal', () => {
             expect(applyButton()).toHaveAttribute('aria-disabled', 'false');
         });
 
-        it('posts addConsoleApis with ONLY the newly picked codes', async () => {
+        it('posts setConsoleApis with the FULL desired optional set on add', async () => {
             mockRequest();
             renderModal();
             await flush();
@@ -213,10 +223,46 @@ describe('ManageApisModal', () => {
             fireEvent.click(applyButton());
             await flush();
 
-            // Exact payload: the new free pick only — never the managed codes.
-            expect(getClient().request).toHaveBeenCalledWith('addConsoleApis', {
+            expect(getClient().request).toHaveBeenCalledWith('setConsoleApis', {
                 apis: ['FireflySDK'],
             });
+        });
+
+        it('removing a previously-added API posts setConsoleApis WITHOUT it', async () => {
+            mockRequest((type) =>
+                type === 'listConsoleApis'
+                    ? Promise.resolve({
+                          success: true,
+                          data: { apis: ORG_APIS, added: ['FireflySDK', 'AssetsSDK'] },
+                      })
+                    : Promise.resolve({ success: true })
+            );
+            renderModal();
+            await flush();
+
+            fireEvent.click(checkboxFor('Firefly Services')); // uncheck → remove
+            fireEvent.click(applyButton());
+            await flush();
+
+            expect(getClient().request).toHaveBeenCalledWith('setConsoleApis', {
+                apis: ['AssetsSDK'],
+            });
+        });
+
+        it('stays disabled when reopened with existing added APIs and nothing changes', async () => {
+            mockRequest((type) =>
+                type === 'listConsoleApis'
+                    ? Promise.resolve({
+                          success: true,
+                          data: { apis: ORG_APIS, added: ['FireflySDK'] },
+                      })
+                    : Promise.resolve({ success: true })
+            );
+            renderModal();
+            await flush();
+
+            // No edit yet → Apply is a no-op.
+            expect(applyButton()).toHaveAttribute('aria-disabled', 'true');
         });
 
         it('shows a busy state while the subscribe is in flight', async () => {

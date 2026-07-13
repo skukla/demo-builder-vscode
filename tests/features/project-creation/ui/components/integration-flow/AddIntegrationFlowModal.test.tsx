@@ -86,6 +86,7 @@ const MESH = {
     name: 'API Mesh',
     description: 'Mesh for the stack',
     kind: 'mesh',
+    requiredApis: ['GraphQLServiceSDK'],
     source: { owner: 'adobe', repo: 'commerce-mesh', branch: 'main' },
     requirement: 'optional',
 } as unknown as SelectableAppBuilderComponent;
@@ -341,8 +342,8 @@ describe('AddIntegrationFlowModal — kind stage', () => {
 });
 
 describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
-    it('walks kind → project → workspace → in-modal API enable, then finishes through the mesh toggle', async () => {
-        const { builder, updateSpy, onClose, onMeshEnableResult } = renderModal();
+    it('walks kind → project → workspace → api-access (Included, no provisioning), then finishes', async () => {
+        const { builder, updateSpy, onClose } = renderModal();
         walkMeshToProject();
         expect(screen.getByTestId('project-field')).toBeInTheDocument();
         click('pick-project');
@@ -358,60 +359,33 @@ describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
         expect(updateSpy).toHaveBeenCalledWith({
             adobeWorkspace: { id: 'w-picked', name: 'Stage', title: 'Stage' },
         });
-        // The api-access stage runs the idempotent enable INSIDE the modal,
-        // against the just-committed destination + the stack's mesh axes.
-        await waitFor(() => {
-            expect(mockRequest).toHaveBeenCalledWith('ensure-mesh-api-subscribed', {
-                orgId: 'org-1',
-                projectId: 'p-picked',
-                workspaceId: 'w-picked',
-                backendId: 'backend-1',
-                frontendId: 'frontend-1',
-            });
-        });
-        // The outcome is handed up so the result row can adopt it (no re-run).
-        await waitFor(() => {
-            expect(onMeshEnableResult).toHaveBeenCalledWith({
-                success: true,
-                data: { apis: APIS },
-            });
-        });
-        await waitFor(() => expectEnabled('Add Integration'));
+        // api-access: the required API shows in the Included summary; selection
+        // NEVER provisions (no ensure-mesh-api-subscribed here).
+        await waitForApiPicker();
+        const included = screen.getByTestId('api-summary-included');
+        // Included shows the curated SHORT label for the required API, not the
+        // org list's verbose name ("Mesh Gateway") — stable + instant.
+        expect(within(included).getByText('API Mesh')).toBeInTheDocument();
+        expect(mockRequest).not.toHaveBeenCalledWith(
+            'ensure-mesh-api-subscribed',
+            expect.anything()
+        );
+        // The footer is not gated by any enable — Add is ready immediately.
+        expectEnabled('Add Integration');
         click('Add Integration');
         expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('commerce-mesh', true);
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('the footer waits for the enable to settle (disabled while running)', async () => {
-        let resolveEnable!: (value: unknown) => void;
-        mockRequest.mockReturnValue(
-            new Promise((res) => {
-                resolveEnable = res;
-            })
-        );
-        renderModal();
-        walkMeshToProject();
-        click('pick-project');
-        click('Continue');
-        click('pick-ws');
-        click('Continue');
-        await waitFor(() => expect(mockRequest).toHaveBeenCalled());
-        expectDisabled('Add Integration');
-        resolveEnable({ success: true, data: { apis: APIS } });
-        await waitFor(() => expectEnabled('Add Integration'));
-    });
-
-    it('PREFETCHES the org APIs at the kind pick — picker ready at api-access, one spinner max', async () => {
-        // The fetch fires the moment the pick is known, BEFORE the enable ever
-        // starts — it can't starve behind the enable's 180s Adobe-session
-        // budget, and by api-access the picker is ready (the only remaining
-        // loading state is the summary's enable row).
+    it('prefetches the org APIs at the kind pick and NEVER provisions during selection', async () => {
         renderModal({ initial: COMMITTED_DEST });
         click(/API Mesh/);
         await waitFor(() => {
-            expect(mockRequest).toHaveBeenCalledWith('list-org-console-apis', {
-                componentIds: ['commerce-mesh'],
-            });
+            expect(mockRequest).toHaveBeenCalledWith(
+                'list-org-console-apis',
+                { componentIds: ['commerce-mesh'] },
+                expect.any(Number)
+            );
         });
         expect(mockRequest).not.toHaveBeenCalledWith(
             'ensure-mesh-api-subscribed',
@@ -426,38 +400,48 @@ describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
         expect(
             mockRequest.mock.calls.filter(([type]) => type === 'list-org-console-apis')
         ).toHaveLength(1);
+        // Still no provisioning after reaching (and standing on) the stage.
+        expect(mockRequest).not.toHaveBeenCalledWith(
+            'ensure-mesh-api-subscribed',
+            expect.anything()
+        );
     });
 
-    it('a failed enable still loads the picker (locked display is independent)', async () => {
+    it('the mesh api-access stage: free picks in the list, required in the Included summary', async () => {
+        renderModal({ initial: COMMITTED_DEST });
+        click(/API Mesh/);
+        click('Continue');
+        click('Continue');
+        await waitForApiPicker();
+        expect(mockRequest).toHaveBeenCalledWith(
+            'list-org-console-apis',
+            { componentIds: ['commerce-mesh'] },
+            expect.any(Number)
+        );
+        // Locked (required) API is NOT a checkbox — it lives in the Included
+        // summary under its curated short label; free APIs are checkboxes.
+        expect(screen.queryByText('API Mesh')?.closest('label') ?? null).toBeNull();
+        expect(screen.getByText('Adobe Analytics').closest('label')).not.toBeNull();
+        const included = screen.getByTestId('api-summary-included');
+        expect(within(included).getByText('API Mesh')).toBeInTheDocument();
+    });
+
+    it('the Included summary renders even if the org list errors (timeout-resilient)', async () => {
         mockRequest.mockImplementation((type: unknown) =>
-            type === 'ensure-mesh-api-subscribed'
-                ? Promise.resolve({ success: false, error: 'no permissions' })
+            type === 'list-org-console-apis'
+                ? Promise.resolve({ success: false, error: 'list timed out' })
                 : Promise.resolve({ success: true, data: { apis: APIS } })
         );
         renderModal({ initial: COMMITTED_DEST });
         click(/API Mesh/);
         click('Continue');
         click('Continue');
-        await waitForApiPicker();
-        expect(screen.getByText('Failed')).toBeInTheDocument();
-    });
-
-    it('the mesh api-access stage is two-column: free picks center, enable row in the summary', async () => {
-        renderModal({ initial: COMMITTED_DEST });
-        click(/API Mesh/);
-        click('Continue');
-        click('Continue');
-        await waitForApiPicker();
-        // The picker fetch carries the mesh id so its requiredApis come back locked…
-        expect(mockRequest).toHaveBeenCalledWith('list-org-console-apis', {
-            componentIds: ['commerce-mesh'],
-        });
-        // …and locked APIs are NOT checkboxes: the required set lives in the
-        // summary column, whose Applied section is the live enable row.
-        expect(screen.queryByText('Mesh Gateway')?.closest('label') ?? null).toBeNull();
-        expect(screen.getByText('Adobe Analytics').closest('label')).not.toBeNull();
-        const applied = screen.getByTestId('api-summary-applied');
-        expect(within(applied).getByText('API ACCESS', { exact: false })).toBeInTheDocument();
+        // The left degrades to an inline error…
+        await waitFor(() => expect(screen.getByText('list timed out')).toBeInTheDocument());
+        // …but Included shows the curated short label instantly — never the raw
+        // sdkCode, so there's no code→name swap when the list eventually lands.
+        const included = screen.getByTestId('api-summary-included');
+        expect(within(included).getByText('API Mesh')).toBeInTheDocument();
     });
 
     it('merges toggled mesh free picks under the mesh id on finish', async () => {
@@ -471,34 +455,12 @@ describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
             .closest('label')
             ?.querySelector('input[type="checkbox"]') as HTMLInputElement;
         fireEvent.click(checkbox);
-        await waitFor(() => expectEnabled('Add Integration'));
+        expectEnabled('Add Integration');
         click('Add Integration');
         expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('commerce-mesh', true);
         expect(updateSpy).toHaveBeenCalledWith({
             selectedConsoleApis: { 'commerce-mesh': ['AnalyticsSDK'] },
         });
-    });
-
-    it('a failed enable re-enables the footer (creation re-ensures idempotently)', async () => {
-        // Only the ENABLE fails — the picker fetch succeeds (separate concerns).
-        mockRequest.mockImplementation((type: unknown) =>
-            type === 'ensure-mesh-api-subscribed'
-                ? Promise.resolve({ success: false, error: 'no permissions' })
-                : Promise.resolve({ success: true, data: { apis: APIS } })
-        );
-        const { onMeshEnableResult } = renderModal();
-        walkMeshToProject();
-        click('pick-project');
-        click('Continue');
-        click('pick-ws');
-        click('Continue');
-        await waitFor(() => expectEnabled('Add Integration'));
-        expect(onMeshEnableResult).toHaveBeenCalledWith({
-            success: false,
-            error: 'no permissions',
-        });
-        expect(screen.getByText('Failed')).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
     });
 
     it('Back from dest-project returns to the kind stage', () => {

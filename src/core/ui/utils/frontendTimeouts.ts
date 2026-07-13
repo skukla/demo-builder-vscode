@@ -101,4 +101,13 @@ export const FRONTEND_TIMEOUTS = {
      * Used by WebviewClient for extension communication.
      */
     REQUEST_TIMEOUT: 30000,
+
+    /**
+     * Timeout for `list-org-console-apis` (the Add Integration API-access list).
+     * The org-services catalog fetch (`getServicesForOrg`) can be slow on large
+     * orgs — well past the 30s default. The list is non-blocking (the stage stays
+     * usable and required APIs render regardless), so a generous budget just lets
+     * the optional list arrive instead of timing out.
+     */
+    ORG_APIS_REQUEST_TIMEOUT: 90000,
 } as const;

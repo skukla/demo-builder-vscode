@@ -5,14 +5,13 @@
  * IMMEDIATELY).
  *
  * On open it fetches the org's entitlement list ONCE via the existing
- * `listConsoleApis` handler; entries flagged `managed` (already covered by the
- * reconcile union — catalog requiredApis + baseline + previously-added extras)
- * render as the shared picker's `locked` rows. Free picks accumulate locally;
- * Apply posts `addConsoleApis` with ONLY the new codes (the handler unions and
- * persists them). Success closes; failure shows an inline error and stays open.
- *
- * Adds are additive-by-union — removal is a separate design and has NO
- * affordance here.
+ * `listConsoleApis` handler. Entries flagged `managed` (ALWAYS-ON — catalog
+ * requiredApis + baseline) render as the shared picker's `locked` rows. The
+ * project's current OPTIONAL extras (`added`) seed `selected` so they render
+ * checked + removable. Check adds, uncheck removes; Apply posts `setConsoleApis`
+ * with the FULL desired optional set (the handler subscribes the reconcile union
+ * and unsubscribes anything dropped). Success closes; failure shows an inline
+ * error and stays open. Apply is disabled until the set changes.
  *
  * Hosting mirrors {@link AppBuilderComponentRemoveDialog}: an always-mounted
  * DialogContainer with the Modal rendered only while `isOpen`; the list owns
@@ -26,6 +25,7 @@ import React, { useEffect, useState } from 'react';
 import { ApiAccessPicker, type ApiAccessOption } from '@/core/ui/components/selection';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import type { CloudGrouping } from '@/types/adobeApis';
 
 /** One org service as the `listConsoleApis` handler reports it. */
 interface ConsoleApiEntry {
@@ -33,15 +33,22 @@ interface ConsoleApiEntry {
     name: string;
     /** Already covered by the reconcile union → rendered locked. */
     managed: boolean;
+    /** Blocked by a missing product profile → rendered disabled. */
+    requiresProfile?: boolean;
+    /** Needs Adobe review/approval → rendered disabled. */
+    requiresReview?: boolean;
+    /** Product family (Console "Filter by product") for the picker's sub-headers. */
+    group?: CloudGrouping;
 }
 
 interface ListConsoleApisResponse {
     success?: boolean;
-    data?: { apis: ConsoleApiEntry[] };
+    /** `added` = the project's current OPTIONAL extras (checked + removable). */
+    data?: { apis: ConsoleApiEntry[]; added?: string[] };
     error?: string;
 }
 
-interface AddConsoleApisResponse {
+interface SetConsoleApisResponse {
     success?: boolean;
     error?: string;
 }
@@ -57,8 +64,8 @@ export interface ManageApisModalProps {
 
 /** No suggested group here — the dashboard has no catalog context for the row. */
 const HELPER_TEXT =
-    'Adding APIs is additive — locked entries are already subscribed, and ' +
-    'removing API access is not supported here.';
+    'Check to add an API, uncheck to remove one. Locked entries are always-on and ' +
+    'can’t be removed.';
 
 function toMessage(err: unknown): string {
     return err instanceof Error ? err.message : String(err);
@@ -111,8 +118,11 @@ export function ManageApisModal({
     const [apis, setApis] = useState<ApiAccessOption[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
-    /** NEW free picks only — managed codes are locked and never enter this list. */
+    /** The OPTIONAL extras: seeded from the project's existing added set, then
+        edited (check adds, uncheck removes). Managed codes are locked, never here. */
     const [selected, setSelected] = useState<string[]>([]);
+    /** The set as loaded — Apply is a no-op (disabled) until this changes. */
+    const [initial, setInitial] = useState<string[]>([]);
     const [isApplying, setIsApplying] = useState(false);
     const [applyError, setApplyError] = useState<string | null>(null);
 
@@ -122,6 +132,7 @@ export function ManageApisModal({
         let cancelled = false;
         setApis([]);
         setSelected([]);
+        setInitial([]);
         setLoadError(null);
         setApplyError(null);
         setIsLoading(true);
@@ -135,8 +146,14 @@ export function ManageApisModal({
                             code: api.code,
                             name: api.name,
                             locked: api.managed,
+                            requiresProfile: api.requiresProfile,
+                            requiresReview: api.requiresReview,
+                            group: api.group,
                         })),
                     );
+                    const added = res.data.added ?? [];
+                    setSelected(added);
+                    setInitial(added);
                 } else {
                     setLoadError(res?.error ?? 'Could not load Adobe APIs.');
                 }
@@ -158,18 +175,24 @@ export function ManageApisModal({
         );
     };
 
+    // Dirty = the optional set differs from what was loaded (add OR remove).
+    const isDirty =
+        selected.length !== initial.length || selected.some((code) => !initial.includes(code));
+
     const handleApply = async (): Promise<void> => {
-        if (selected.length === 0 || isApplying) return;
+        if (!isDirty || isApplying) return;
         setIsApplying(true);
         setApplyError(null);
         try {
-            const res = await webviewClient.request<AddConsoleApisResponse>('addConsoleApis', {
+            // setConsoleApis SETS the extras to exactly `selected` — unchecked codes
+            // are removed (unsubscribed on the reconcile PUT).
+            const res = await webviewClient.request<SetConsoleApisResponse>('setConsoleApis', {
                 apis: selected,
             });
             if (res?.success) {
                 onClose();
             } else {
-                setApplyError(res?.error ?? 'Could not add API access.');
+                setApplyError(res?.error ?? 'Could not update API access.');
             }
         } catch (err) {
             setApplyError(toMessage(err));
@@ -193,13 +216,13 @@ export function ManageApisModal({
                             onPress: () => {
                                 void handleApply();
                             },
-                            isDisabled: selected.length === 0 || isApplying,
+                            isDisabled: !isDirty || isApplying,
                         },
                     ]}
                 >
                     <Flex direction="column" gap="size-150">
                         <Text>
-                            Add Adobe API access for <strong>{componentName}</strong>.
+                            Manage Adobe API access for <strong>{componentName}</strong>.
                         </Text>
                         <ManageApisBody
                             isLoading={isLoading}

@@ -346,7 +346,7 @@ describe('IntegrationsStep — in-modal mesh enable hand-off', () => {
         );
     }
 
-    it('the mesh row adopts the modal enable result instead of re-running', async () => {
+    it('the mesh result row runs the enable AFTER add — never during selection', async () => {
         mockRequest.mockResolvedValue({
             success: true,
             data: { apis: [{ code: 'GraphQLServiceSDK', name: 'Mesh Gateway' }] },
@@ -357,9 +357,23 @@ describe('IntegrationsStep — in-modal mesh enable hand-off', () => {
         const dialog = screen.getByRole('dialog');
         fireEvent.click(within(dialog).getByRole('button', { name: /API Mesh/ }));
         fireEvent.click(within(dialog).getByRole('button', { name: 'Continue' }));
-        // Committed destination → the summary stage → Continue enters the enable stage,
-        // which runs against the destination + the stack's mesh axes.
+        // Committed destination → summary → api-access. Selection NEVER provisions.
         fireEvent.click(within(dialog).getByRole('button', { name: 'Continue' }));
+        await waitFor(() => {
+            expect(within(dialog).getByRole('button', { name: 'Add Integration' })).toHaveAttribute(
+                'aria-disabled',
+                'false'
+            );
+        });
+        expect(mockRequest).not.toHaveBeenCalledWith(
+            'ensure-mesh-api-subscribed',
+            expect.anything()
+        );
+
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Add Integration' }));
+
+        // The result row runs the enable post-add (against the stack's mesh axes)
+        // and shows its outcome — exactly once.
         await waitFor(() => {
             expect(mockRequest).toHaveBeenCalledWith(
                 'ensure-mesh-api-subscribed',
@@ -370,16 +384,6 @@ describe('IntegrationsStep — in-modal mesh enable hand-off', () => {
                 })
             );
         });
-        await waitFor(() => {
-            expect(within(dialog).getByRole('button', { name: 'Add Integration' })).toHaveAttribute(
-                'aria-disabled',
-                'false'
-            );
-        });
-        fireEvent.click(within(dialog).getByRole('button', { name: 'Add Integration' }));
-
-        // The result row shows the modal's outcome without a SECOND enable request
-        // (the picker's list-org-console-apis fetch is separate and expected).
         await waitFor(() => {
             expect(within(row(MESH_NAME)).getByText('Mesh Gateway')).toBeInTheDocument();
         });

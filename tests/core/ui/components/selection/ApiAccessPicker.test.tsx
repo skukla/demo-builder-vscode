@@ -22,6 +22,9 @@ interface ApiOption {
     code: string;
     name: string;
     locked: boolean;
+    requiresProfile?: boolean;
+    requiresReview?: boolean;
+    group?: { code: string; name: string };
 }
 
 /** Seven services (> the search threshold of 5), one locked, unsorted on purpose. */
@@ -172,6 +175,182 @@ describe('ApiAccessPicker', () => {
         it('hides the search field at or below the threshold (5 items)', () => {
             renderPicker({ apis: APIS.slice(0, 5) });
             expect(screen.queryByTestId('spectrum-searchfield')).not.toBeInTheDocument();
+        });
+    });
+
+    describe('product-profile gating', () => {
+        const WITH_PROFILE: ApiOption[] = [
+            { code: 'TargetSDK', name: 'Adobe Target', locked: false },
+            { code: 'AnalyticsSDK', name: 'Adobe Analytics', locked: false, requiresProfile: true },
+            { code: 'AssetsSDK', name: 'AEM Assets', locked: false },
+            { code: 'CampaignSDK', name: 'Adobe Campaign', locked: false },
+            { code: 'CloudManagerSDK', name: 'Cloud Manager', locked: false },
+            { code: 'AudienceManagerSDK', name: 'Audience Manager', locked: false },
+        ];
+
+        it('groups profile-bound APIs under a distinct "Requires a product profile" group', () => {
+            const { container } = renderPicker({ apis: WITH_PROFILE });
+            const group = container.querySelector('[data-group="unavailable"]');
+            expect(group).not.toBeNull();
+            expect(group?.textContent).toContain('Adobe Analytics');
+        });
+
+        it('renders profile-bound rows disabled and unchecked', () => {
+            renderPicker({ apis: WITH_PROFILE });
+            const cb = checkboxFor('Adobe Analytics');
+            expect(cb).toBeDisabled();
+            expect(cb).not.toBeChecked();
+        });
+
+        it('shows the reason (product profile) for the unavailable group', () => {
+            const { container } = renderPicker({ apis: WITH_PROFILE });
+            const group = container.querySelector('[data-group="unavailable"]');
+            expect(group?.textContent).toMatch(/product profile/i);
+            expect(group?.querySelector('.intflow-api-group-note')).not.toBeNull();
+        });
+
+        it('clicking a profile-bound API never calls onToggle', () => {
+            const { onToggle } = renderPicker({ apis: WITH_PROFILE });
+            fireEvent.click(checkboxFor('Adobe Analytics'));
+            expect(onToggle).not.toHaveBeenCalled();
+        });
+
+        it('keeps profile-bound APIs out of the pickable All-available group', () => {
+            const { container } = renderPicker({ apis: WITH_PROFILE });
+            const allGroup = container.querySelector('[data-group="all"]');
+            const names = Array.from(allGroup?.querySelectorAll('.intflow-api-name') ?? []).map(
+                (el) => el.textContent
+            );
+            expect(names).not.toContain('Adobe Analytics');
+        });
+    });
+
+    describe('product-family filter chips (All available)', () => {
+        const EC = { code: 'marketing_cloud', name: 'Experience Cloud' };
+        const AEP = { code: 'experience_platform', name: 'Adobe Experience Platform' };
+        const WITH_FAMILY: ApiOption[] = [
+            { code: 'TargetSDK', name: 'Adobe Target', locked: false, group: EC },
+            { code: 'MeshSDK', name: 'API Mesh', locked: false, group: AEP },
+            { code: 'CampaignSDK', name: 'Adobe Campaign', locked: false, group: EC },
+            { code: 'PlatformSDK', name: 'AEP Query', locked: false, group: AEP },
+            { code: 'LooseSDK', name: 'Ungrouped Thing', locked: false },
+            { code: 'MoreSDK', name: 'More Filler', locked: false, group: EC },
+        ];
+
+        function chipLabels(container: HTMLElement): (string | null)[] {
+            return Array.from(container.querySelectorAll('.intflow-api-chip')).map(
+                (el) => el.textContent
+            );
+        }
+
+        it('renders a chip per family: All first, families alphabetical, Other last', () => {
+            const { container } = renderPicker({ apis: WITH_FAMILY });
+            expect(chipLabels(container)).toEqual([
+                'All',
+                'Adobe Experience Platform',
+                'Experience Cloud',
+                'Other',
+            ]);
+        });
+
+        it('shows every family in All available by default (no chip active)', () => {
+            const { container } = renderPicker({ apis: WITH_FAMILY });
+            const names = Array.from(
+                container.querySelectorAll('[data-group="all"] .intflow-api-name')
+            ).map((el) => el.textContent);
+            expect(names).toContain('API Mesh'); // AEP
+            expect(names).toContain('Adobe Target'); // EC
+            expect(names).toContain('Ungrouped Thing'); // Other
+        });
+
+        it('clicking a family chip filters All available to that family', () => {
+            const { container } = renderPicker({ apis: WITH_FAMILY });
+            fireEvent.click(screen.getByRole('button', { name: 'Adobe Experience Platform' }));
+            const names = Array.from(
+                container.querySelectorAll('[data-group="all"] .intflow-api-name')
+            ).map((el) => el.textContent);
+            expect(names).toEqual(['AEP Query', 'API Mesh']); // AEP only, alphabetical
+        });
+
+        it('marks the active chip pressed', () => {
+            renderPicker({ apis: WITH_FAMILY });
+            const chip = screen.getByRole('button', { name: 'Experience Cloud' });
+            expect(chip).toHaveAttribute('aria-pressed', 'false');
+            fireEvent.click(chip);
+            expect(chip).toHaveAttribute('aria-pressed', 'true');
+        });
+
+        it('renders no chip row when fewer than two families are present', () => {
+            const { container } = renderPicker(); // APIS carry no group
+            expect(container.querySelector('.intflow-api-chips')).toBeNull();
+        });
+
+        it('still toggles a pickable row after filtering to its family', () => {
+            const { onToggle } = renderPicker({ apis: WITH_FAMILY });
+            fireEvent.click(screen.getByRole('button', { name: 'Adobe Experience Platform' }));
+            fireEvent.click(checkboxFor('API Mesh'));
+            expect(onToggle).toHaveBeenCalledWith('MeshSDK');
+        });
+    });
+
+    describe('secondary code text', () => {
+        const MIXED: ApiOption[] = [
+            { code: 'GraphQLServiceSDK', name: 'API Mesh', locked: false },
+            {
+                code: 'nogw-4011f358-2edb-4b01-acb8-3c84e0cbb299',
+                name: 'Edge Delivery Services',
+                locked: false,
+            },
+            { code: 'AEM Assets Author API', name: 'AEM Assets Author API', locked: false },
+        ];
+
+        it('shows a meaningful sdk code but hides GUID and name-equal codes', () => {
+            const { container } = renderPicker({ apis: MIXED });
+            const codes = Array.from(container.querySelectorAll('.intflow-api-code')).map(
+                (el) => el.textContent
+            );
+            expect(codes).toEqual(['GraphQLServiceSDK']);
+        });
+    });
+
+    describe('Adobe-review gating', () => {
+        const WITH_REVIEW: ApiOption[] = [
+            { code: 'TargetSDK', name: 'Adobe Target', locked: false },
+            {
+                code: 'AdobeCommerceWithAdobeID',
+                name: 'Commerce w/ Adobe ID',
+                locked: false,
+                requiresReview: true,
+            },
+            { code: 'AssetsSDK', name: 'AEM Assets', locked: false },
+            { code: 'CampaignSDK', name: 'Adobe Campaign', locked: false },
+            { code: 'CloudManagerSDK', name: 'Cloud Manager', locked: false },
+            { code: 'AudienceManagerSDK', name: 'Audience Manager', locked: false },
+        ];
+
+        it('groups review-gated APIs under "Requires Adobe review"', () => {
+            const { container } = renderPicker({ apis: WITH_REVIEW });
+            const group = container.querySelector('[data-group="review"]');
+            expect(group).not.toBeNull();
+            expect(group?.textContent).toContain('Commerce w/ Adobe ID');
+            expect(group?.querySelector('.intflow-api-group-note')).not.toBeNull();
+        });
+
+        it('renders review-gated rows disabled and never toggles them', () => {
+            const { onToggle } = renderPicker({ apis: WITH_REVIEW });
+            const cb = checkboxFor('Commerce w/ Adobe ID');
+            expect(cb).toBeDisabled();
+            fireEvent.click(cb);
+            expect(onToggle).not.toHaveBeenCalled();
+        });
+
+        it('keeps review-gated APIs out of the pickable All-available group', () => {
+            const { container } = renderPicker({ apis: WITH_REVIEW });
+            const allGroup = container.querySelector('[data-group="all"]');
+            const names = Array.from(allGroup?.querySelectorAll('.intflow-api-name') ?? []).map(
+                (el) => el.textContent
+            );
+            expect(names).not.toContain('Commerce w/ Adobe ID');
         });
     });
 

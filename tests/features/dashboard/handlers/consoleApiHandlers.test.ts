@@ -11,9 +11,11 @@
 import {
     handleAddConsoleApis,
     handleListConsoleApis,
+    handleSetConsoleApis,
 } from '@/features/dashboard/handlers/consoleApiHandlers';
 import { runGuards } from '@/features/dashboard/handlers/appBuilderComponentHandlers';
 import { subscribeRequiredApis } from '@/features/app-builder/services/apiSubscriber';
+import { createApiSubscriberClient } from '@/features/app-builder/services/apiSubscriberClientAdapter';
 import { withOrgContext } from '@/core/shell';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -82,16 +84,22 @@ function makeContext(project: Record<string, unknown> | null): HandlerContext {
 describe('handleListConsoleApis', () => {
     beforeEach(() => jest.clearAllMocks());
 
-    it('returns the org services with managed flags (baseline + extras managed)', async () => {
+    it('flags only ALWAYS-ON as managed; returns optional extras as `added`', async () => {
         const context = makeContext(makeProject({ additionalConsoleApis: ['FireflyAPISDK'] }));
 
         const result = await handleListConsoleApis(context, undefined);
 
         expect(result.success).toBe(true);
-        const apis = (result.data as { apis: Array<{ code: string; managed: boolean }> }).apis;
-        expect(apis.find((a) => a.code === 'AdobeIOManagementAPISDK')?.managed).toBe(true);
-        expect(apis.find((a) => a.code === 'FireflyAPISDK')?.managed).toBe(true);
-        expect(apis.find((a) => a.code === 'GraphQLServiceSDK')?.managed).toBe(false);
+        const data = result.data as {
+            apis: Array<{ code: string; managed: boolean }>;
+            added: string[];
+        };
+        // Baseline is always-on (managed, locked). The extra is NOT managed —
+        // it's `added` (checked + removable), so the user can uncheck it.
+        expect(data.apis.find((a) => a.code === 'AdobeIOManagementAPISDK')?.managed).toBe(true);
+        expect(data.apis.find((a) => a.code === 'FireflyAPISDK')?.managed).toBe(false);
+        expect(data.apis.find((a) => a.code === 'GraphQLServiceSDK')?.managed).toBe(false);
+        expect(data.added).toEqual(['FireflyAPISDK']);
     });
 
     it('fails without a project', async () => {
@@ -112,6 +120,22 @@ describe('handleListConsoleApis', () => {
         (runGuards as jest.Mock).mockResolvedValueOnce('Adobe sign-in required.');
         const result = await handleListConsoleApis(makeContext(makeProject()), undefined);
         expect(result).toEqual({ success: false, error: 'Adobe sign-in required.' });
+    });
+
+    it('cleans the catalog the same way as the wizard (drops noise, carries product family)', async () => {
+        const EC = { code: 'marketing_cloud', name: 'Experience Cloud' };
+        (createApiSubscriberClient as jest.Mock).mockReturnValueOnce({
+            getServicesForOrg: jest.fn().mockResolvedValue([
+                { code: 'FireflyAPISDK', name: 'Firefly', enabled: true, cloudGrouping: EC },
+                { code: 'OldThing', name: 'Old', enabled: false, disabledReasons: ['DEPRECATED'] },
+            ]),
+        });
+
+        const result = await handleListConsoleApis(makeContext(makeProject()), undefined);
+
+        const apis = (result.data as { apis: Array<{ code: string; group?: unknown }> }).apis;
+        expect(apis.map((a) => a.code)).toEqual(['FireflyAPISDK']); // DEPRECATED dropped
+        expect(apis[0].group).toEqual(EC);
     });
 });
 
@@ -180,6 +204,75 @@ describe('handleAddConsoleApis', () => {
             apis: ['FireflyAPISDK'],
         });
 
+        expect(result.success).toBe(false);
+        expect(subscribeRequiredApis).not.toHaveBeenCalled();
+    });
+});
+
+describe('handleSetConsoleApis', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    it('sets the extras to EXACTLY the given list (add + remove) and persists', async () => {
+        // Starts with two extras; setting to one REMOVES the other.
+        const project = makeProject({ additionalConsoleApis: ['KeepSDK', 'DropSDK'] });
+        const context = makeContext(project);
+
+        const result = await handleSetConsoleApis(context, { apis: ['KeepSDK', 'NewSDK'] });
+
+        expect(result.success).toBe(true);
+        // Reconcile PUT is the exact desired extras — DropSDK is gone (unsubscribed).
+        expect(subscribeRequiredApis).toHaveBeenCalledWith(
+            [],
+            { orgId: 'org-1', projectId: 'p-1', workspaceId: 'w-1' },
+            expect.anything(),
+            'localhost:3000',
+            ['KeepSDK', 'NewSDK']
+        );
+        expect(project.additionalConsoleApis).toEqual(['KeepSDK', 'NewSDK']);
+        expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
+    });
+
+    it('accepts an EMPTY list (remove all extras)', async () => {
+        const project = makeProject({ additionalConsoleApis: ['DropSDK'] });
+        const context = makeContext(project);
+
+        const result = await handleSetConsoleApis(context, { apis: [] });
+
+        expect(result.success).toBe(true);
+        expect(subscribeRequiredApis).toHaveBeenCalledWith(
+            [],
+            expect.anything(),
+            expect.anything(),
+            'localhost:3000',
+            []
+        );
+        expect(project.additionalConsoleApis).toEqual([]);
+    });
+
+    it('rejects a non-array / invalid-code payload', async () => {
+        const context = makeContext(makeProject());
+        for (const payload of [undefined, { apis: 'x' }, { apis: [42] }, { apis: ['Bad;rm'] }]) {
+            const result = await handleSetConsoleApis(context, payload as never);
+            expect(result.success).toBe(false);
+        }
+        expect(subscribeRequiredApis).not.toHaveBeenCalled();
+    });
+
+    it('does NOT persist when the subscribe fails', async () => {
+        (subscribeRequiredApis as jest.Mock).mockRejectedValueOnce(new Error('boom'));
+        const project = makeProject({ additionalConsoleApis: ['OldSDK'] });
+        const context = makeContext(project);
+
+        const result = await handleSetConsoleApis(context, { apis: ['NewSDK'] });
+
+        expect(result.success).toBe(false);
+        expect(project.additionalConsoleApis).toEqual(['OldSDK']); // unchanged
+        expect(context.stateManager.saveProject).not.toHaveBeenCalled();
+    });
+
+    it('aborts on a guard failure before subscribing', async () => {
+        (runGuards as jest.Mock).mockResolvedValueOnce('role required');
+        const result = await handleSetConsoleApis(makeContext(makeProject()), { apis: ['X'] });
         expect(result.success).toBe(false);
         expect(subscribeRequiredApis).not.toHaveBeenCalled();
     });

@@ -31,7 +31,6 @@ import {
     IntegrationResultRow,
     MeshApiEnableRow,
     resolveIntegrationRows,
-    type EnsureResult,
     type FlowMode,
     type IntegrationRow,
 } from '../components/integration-flow';
@@ -108,10 +107,6 @@ export function IntegrationsStep({
     }, []);
     const closeModal = useCallback((): void => setModalOpen(false), []);
 
-    // The modal's in-flow mesh enable outcome; the mesh row adopts it as
-    // `initialResult` so it renders the result instead of re-running.
-    const [meshEnableResult, setMeshEnableResult] = useState<EnsureResult | undefined>(undefined);
-
     const meshComponent = useMemo(
         () => meshComponentForStack(state, packages, stacks),
         [state, packages, stacks],
@@ -180,7 +175,6 @@ export function IntegrationsStep({
                                         workspaceId={state.adobeWorkspace?.id}
                                         backendId={stack?.backend}
                                         frontendId={stack?.frontend}
-                                        initialResult={meshEnableResult}
                                     />
                                 ) : undefined
                             }
@@ -204,9 +198,6 @@ export function IntegrationsStep({
                 meshComponent={meshComponent}
                 catalog={catalog}
                 builder={builder}
-                meshBackendId={stack?.backend}
-                meshFrontendId={stack?.frontend}
-                onMeshEnableResult={setMeshEnableResult}
             />
         </div>
     );

@@ -41,6 +41,7 @@ import {
 import {
     handleAddConsoleApis,
     handleListConsoleApis,
+    handleSetConsoleApis,
 } from '@/features/dashboard/handlers/consoleApiHandlers';
 import {
     runOnOpenChecks,
@@ -1092,6 +1093,7 @@ export const dashboardHandlers = defineHandlers({
     // Console API access (runtime API subscription — list_console_apis / add_console_apis)
     listConsoleApis: handleListConsoleApis,
     addConsoleApis: handleAddConsoleApis,
+    setConsoleApis: handleSetConsoleApis,
 
     // EDS storefront sync
     syncStorefront: handleSyncStorefront,

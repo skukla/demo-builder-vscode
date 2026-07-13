@@ -50,9 +50,11 @@ describe('useOrgConsoleApis', () => {
             expect(result.current.status).toBe('ready');
         });
         expect(mockRequest).toHaveBeenCalledTimes(1);
-        expect(mockRequest).toHaveBeenCalledWith('list-org-console-apis', {
-            componentIds: ['commerce-mesh'],
-        });
+        expect(mockRequest).toHaveBeenCalledWith(
+            'list-org-console-apis',
+            { componentIds: ['commerce-mesh'] },
+            expect.any(Number)
+        );
         expect(result.current.apis).toEqual(APIS);
     });
 
@@ -75,9 +77,11 @@ describe('useOrgConsoleApis', () => {
         await waitFor(() => expect(result.current.status).toBe('ready'));
         rerender({ ids: ['crm-connect'] });
         await waitFor(() => {
-            expect(mockRequest).toHaveBeenCalledWith('list-org-console-apis', {
-                componentIds: ['crm-connect'],
-            });
+            expect(mockRequest).toHaveBeenCalledWith(
+                'list-org-console-apis',
+                { componentIds: ['crm-connect'] },
+                expect.any(Number)
+            );
         });
         expect(mockRequest).toHaveBeenCalledTimes(2);
     });

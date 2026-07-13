@@ -18,6 +18,7 @@ import { getAppBuilderComponentEntry } from '../services/appBuilderComponentCata
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { computeRequiredApis } from '@/features/app-builder/services/apiSubscriber';
 import { createApiSubscriberClient } from '@/features/app-builder/services/apiSubscriberClientAdapter';
+import { buildApiAccessCatalog } from '@/features/authentication/services/apiAccessCatalog';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { MessageHandler } from '@/types/handlers';
 import { toError } from '@/types/typeGuards';
@@ -51,14 +52,13 @@ export const handleListOrgConsoleApis: MessageHandler<{ componentIds?: string[] 
     try {
         const client = createApiSubscriberClient(authService);
         const services = await client.getServicesForOrg(org.id);
+        // Clean the raw catalog (dedupe, drop deprecated/unsupported noise, classify
+        // review/profile gating, carry product families); `locked` codes always survive.
+        const rows = buildApiAccessCatalog(services, locked);
         return {
             success: true,
             data: {
-                apis: services.map((s) => ({
-                    code: s.code,
-                    name: s.name,
-                    locked: locked.has(s.code),
-                })),
+                apis: rows.map((row) => ({ ...row, locked: locked.has(row.code) })),
             },
         };
     } catch (err) {

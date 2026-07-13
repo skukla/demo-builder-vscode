@@ -57,9 +57,17 @@ const CATALOG: Record<
 };
 
 const ORG_SERVICES = [
-    { code: 'AdobeIOManagementAPISDK', name: 'I/O Management API' },
-    { code: 'FireflyAPISDK', name: 'Firefly Services' },
-    { code: 'GraphQLServiceSDK', name: 'API Mesh' },
+    { code: 'AdobeIOManagementAPISDK', name: 'I/O Management API', enabled: true },
+    { code: 'FireflyAPISDK', name: 'Firefly Services', enabled: true },
+    { code: 'GraphQLServiceSDK', name: 'API Mesh', enabled: true },
+    // Profile-bound: entitled, but disabled because the user lacks a product
+    // profile — the accurate signal (NOT licenseConfigs, which is empty here).
+    {
+        code: 'AdobeAnalytics',
+        name: 'Adobe Analytics',
+        enabled: false,
+        disabledReasons: ['USER_MISSING_PRODUCT_PROFILES'],
+    },
 ];
 
 function makeContext(): HandlerContext {
@@ -69,7 +77,14 @@ function makeContext(): HandlerContext {
     } as unknown as HandlerContext;
 }
 
-type ApiRow = { code: string; name?: string; locked: boolean };
+type ApiRow = {
+    code: string;
+    name?: string;
+    locked: boolean;
+    requiresProfile: boolean;
+    requiresReview: boolean;
+    group?: { code: string; name: string };
+};
 
 function apisOf(result: { data?: unknown }): ApiRow[] {
     return (result.data as { apis: ApiRow[] }).apis;
@@ -89,15 +104,18 @@ describe('handleListOrgConsoleApis', () => {
     });
 
     describe('happy path', () => {
-        it('returns the org services as {code, name, locked} rows', async () => {
+        it('returns the org services as {code, name, locked, gating} rows', async () => {
             const result = await handleListOrgConsoleApis(makeContext(), { componentIds: [] });
 
             expect(result.success).toBe(true);
-            expect(apisOf(result)).toHaveLength(3);
+            expect(apisOf(result)).toHaveLength(4);
             expect(apisOf(result)[0]).toEqual({
                 code: 'AdobeIOManagementAPISDK',
                 name: 'I/O Management API',
                 locked: true,
+                requiresProfile: false,
+                requiresReview: false,
+                group: undefined,
             });
         });
 
@@ -196,8 +214,95 @@ describe('handleListOrgConsoleApis', () => {
             });
 
             const apis = apisOf(result);
-            expect(apis).toHaveLength(3);
+            expect(apis).toHaveLength(4);
             expect(apis.filter((a) => a.code === 'FireflyAPISDK')).toHaveLength(1);
+        });
+    });
+
+    describe('product-profile gating', () => {
+        it('flags a disabled USER_MISSING_PRODUCT_PROFILES service as requiresProfile', async () => {
+            const result = await handleListOrgConsoleApis(makeContext(), { componentIds: [] });
+
+            expect(apisOf(result).find((a) => a.code === 'AdobeAnalytics')?.requiresProfile).toBe(
+                true
+            );
+        });
+
+        it('leaves usable free services as requiresProfile false', async () => {
+            const result = await handleListOrgConsoleApis(makeContext(), { componentIds: [] });
+
+            const apis = apisOf(result);
+            expect(apis.find((a) => a.code === 'FireflyAPISDK')?.requiresProfile).toBe(false);
+            expect(apis.find((a) => a.code === 'GraphQLServiceSDK')?.requiresProfile).toBe(false);
+        });
+    });
+
+    describe('catalog cleaning (entitlement + gating + product family)', () => {
+        it('drops disabled noise (deprecated / unsupported) and dedupes duplicate codes', async () => {
+            mockGetServicesForOrg.mockResolvedValue([
+                { code: 'FireflyAPISDK', name: 'Firefly', enabled: true },
+                { code: 'OldThing', name: 'Old', enabled: false, disabledReasons: ['DEPRECATED'] },
+                // duplicate code: disabled variant must lose to the enabled one
+                {
+                    code: 'FireflyAPISDK',
+                    name: 'Firefly (dupe)',
+                    enabled: false,
+                    disabledReasons: ['EXCEPTION'],
+                },
+            ]);
+
+            const apis = apisOf(
+                await handleListOrgConsoleApis(makeContext(), { componentIds: [] })
+            );
+            expect(apis.map((a) => a.code)).toEqual(['FireflyAPISDK']);
+        });
+
+        it('flags requiresReview from requiresApproval', async () => {
+            mockGetServicesForOrg.mockResolvedValue([
+                {
+                    code: 'AdobeCommerceWithAdobeID',
+                    name: 'Commerce w/ Adobe ID',
+                    enabled: true,
+                    requiresApproval: true,
+                },
+            ]);
+
+            const apis = apisOf(
+                await handleListOrgConsoleApis(makeContext(), { componentIds: [] })
+            );
+            expect(apis[0]).toMatchObject({
+                code: 'AdobeCommerceWithAdobeID',
+                requiresReview: true,
+            });
+        });
+
+        it('carries the product family (cloudGrouping) through as group', async () => {
+            const EC = { code: 'marketing_cloud', name: 'Experience Cloud' };
+            mockGetServicesForOrg.mockResolvedValue([
+                { code: 'ACCS-REST-API', name: 'Adobe Commerce', enabled: true, cloudGrouping: EC },
+            ]);
+
+            const apis = apisOf(
+                await handleListOrgConsoleApis(makeContext(), { componentIds: [] })
+            );
+            expect(apis[0].group).toEqual(EC);
+        });
+
+        it('keeps a locked code even if the catalog marks it disabled', async () => {
+            mockGetServicesForOrg.mockResolvedValue([
+                {
+                    code: 'AdobeIOManagementAPISDK',
+                    name: 'I/O Mgmt',
+                    enabled: false,
+                    disabledReasons: ['EXCEPTION'],
+                },
+            ]);
+
+            // baseline locks AdobeIOManagementAPISDK → it must survive the noise filter.
+            const apis = apisOf(
+                await handleListOrgConsoleApis(makeContext(), { componentIds: [] })
+            );
+            expect(apis.find((a) => a.code === 'AdobeIOManagementAPISDK')?.locked).toBe(true);
         });
     });
 

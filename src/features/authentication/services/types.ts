@@ -5,6 +5,8 @@
  * in src/core/ui/types/index.ts and re-exported here for backward compatibility.
  */
 
+import type { CloudGrouping } from '@/types/adobeApis';
+
 // Re-export Adobe entity types from centralized location for backward compatibility
 export type {
     Organization as AdobeOrg,
@@ -24,7 +26,7 @@ export interface RawAdobeProject {
     name: string;
     title: string;
     description?: string;
-    type?: string;  // Project type from Adobe API
+    type?: string; // Project type from Adobe API
     org_id?: string;
     /** Creator's IMS user id (`<GUID>@<authsrc>.e`) — present on Console list/detail responses */
     who_created?: string;
@@ -40,27 +42,31 @@ export interface RawAdobeWorkspace {
 
 export interface AdobeContext {
     org?: string | { id: string; name: string; code: string };
-    project?: string | {
-        id: string;
-        name: string;
-        title?: string;
-        description?: string;
-        type?: string;
-        org_id?: string;
-    };
+    project?:
+        | string
+        | {
+              id: string;
+              name: string;
+              title?: string;
+              description?: string;
+              type?: string;
+              org_id?: string;
+          };
     workspace?: string | { id: string; name: string; title?: string };
 }
 
 export interface AdobeConsoleWhereResponse {
     org?: string | { id: string; name: string; code: string };
-    project?: string | {
-        id: string;
-        name: string;
-        title?: string;
-        description?: string;
-        type?: string;
-        org_id?: string;
-    };
+    project?:
+        | string
+        | {
+              id: string;
+              name: string;
+              title?: string;
+              description?: string;
+              type?: string;
+              org_id?: string;
+          };
     workspace?: string | { id: string; name: string; title?: string };
 }
 
@@ -136,6 +142,32 @@ export interface OrgServiceInfo {
     name?: string;
     platformList?: string[];
     domainMandatory?: boolean;
+    /**
+     * Product profiles the service offers. Used for the subscribe payload
+     * (`licenseConfigs: null` for the free path). NOT a reliable "requires a
+     * profile" signal — the accurate signal is `enabled: false` +
+     * `disabledReasons` containing `USER_MISSING_PRODUCT_PROFILES` (see
+     * `apiAccessCatalog.ts`).
+     */
+    licenseConfigs?: unknown[];
+    /** Roles the service exposes; present alongside licenseConfigs for profile-bound services. */
+    roles?: unknown[];
+    /**
+     * Whether the service is currently usable by this org+user. `getServicesForOrg`
+     * returns the whole entitled catalog (~90 rows) with disabled duplicates and
+     * deprecated entries; `enabled` is the real "can self-serve subscribe" gate.
+     */
+    enabled?: boolean;
+    /** True when Adobe must approve access first — the "Requires Adobe review" badge. */
+    requiresApproval?: boolean;
+    /** Reason codes when `enabled` is false (e.g. `USER_MISSING_PRODUCT_PROFILES`, `DEPRECATED`). */
+    disabledReasons?: string[];
+    /**
+     * Product family the service belongs to (Console's "Filter by product":
+     * Experience Cloud, Adobe Experience Platform, Adobe Services, …). Drives the
+     * picker's "All available" product sub-headers.
+     */
+    cloudGrouping?: CloudGrouping;
 }
 
 /** Input to `createAdobeIdCredential` (apiKey path). `domain` mandatory for API Mesh. */
@@ -175,4 +207,3 @@ export interface CacheEntry<T> {
     data: T;
     expiry: number;
 }
-

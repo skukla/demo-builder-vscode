@@ -86,6 +86,7 @@ const MESH = {
     name: 'API Mesh',
     description: 'Mesh for the stack',
     kind: 'mesh',
+    requiredApis: ['GraphQLServiceSDK'],
     source: { owner: 'adobe', repo: 'commerce-mesh', branch: 'main' },
     requirement: 'optional',
 } as unknown as SelectableAppBuilderComponent;
@@ -298,20 +299,20 @@ beforeEach(() => {
 
 // --- tests -----------------------------------------------------------------------
 describe('AddIntegrationFlowModal — later add (destination committed)', () => {
-    it('mesh later-add walks summary → in-modal API enable → finish (no state writes)', async () => {
+    it('mesh later-add walks summary → api-access (no provisioning) → finish (no state writes)', async () => {
         const { builder, updateSpy, onClose } = renderModal({ initial: COMMITTED_DEST });
         click(/API Mesh/);
         click('Continue');
         expect(screen.getByText('Demo Project')).toBeInTheDocument();
         expect(screen.getByText('Stage')).toBeInTheDocument();
         click('Continue');
-        await waitFor(() => {
-            expect(mockRequest).toHaveBeenCalledWith(
-                'ensure-mesh-api-subscribed',
-                expect.objectContaining({ projectId: 'proj-1', workspaceId: 'ws-1' })
-            );
-        });
-        await waitFor(() => expectEnabled('Add Integration'));
+        await waitForApiPicker();
+        // Selection never provisions — the enable is out of this stage.
+        expect(mockRequest).not.toHaveBeenCalledWith(
+            'ensure-mesh-api-subscribed',
+            expect.anything()
+        );
+        expectEnabled('Add Integration');
         click('Add Integration');
         expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('commerce-mesh', true);
         expect(updateSpy).not.toHaveBeenCalled();
@@ -359,9 +360,11 @@ describe('AddIntegrationFlowModal — catalog first-add walk', () => {
         click('Continue');
         await waitForApiPicker();
         expect(mockRequest).toHaveBeenCalledTimes(1);
-        expect(mockRequest).toHaveBeenCalledWith('list-org-console-apis', {
-            componentIds: ['erp-sync', 'other-app'],
-        });
+        expect(mockRequest).toHaveBeenCalledWith(
+            'list-org-console-apis',
+            { componentIds: ['erp-sync', 'other-app'] },
+            expect.any(Number)
+        );
     });
 
     it("renders the Suggested group from the picked entry's suggestedApis", async () => {
@@ -437,9 +440,11 @@ describe('AddIntegrationFlowModal — custom integration', () => {
         expect(screen.getByText('Demo Project')).toBeInTheDocument();
         click('Continue');
         await waitForApiPicker();
-        expect(mockRequest).toHaveBeenCalledWith('list-org-console-apis', {
-            componentIds: ['acme-widget'],
-        });
+        expect(mockRequest).toHaveBeenCalledWith(
+            'list-org-console-apis',
+            { componentIds: ['acme-widget'] },
+            expect.any(Number)
+        );
         click('Add Integration');
         expect(builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith({
             owner: 'acme',

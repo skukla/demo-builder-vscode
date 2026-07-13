@@ -24,7 +24,6 @@ import type { SelectableAppBuilderComponent } from '../../../services/appBuilder
 import { isMeshSelected } from '../../steps/tileStatus';
 import type { UseProjectBuilderReturn } from '../../steps/useProjectBuilder';
 import { meshKindOffered, type FlowDraft, type FlowMode } from './flowStages';
-import { MeshApiEnableRow, type EnsureResult } from './MeshApiEnableRow';
 import { ApiAccessStage } from './stages/ApiAccessStage';
 import { CatalogStage } from './stages/CatalogStage';
 import { CustomStage } from './stages/CustomStage';
@@ -69,15 +68,6 @@ export interface AddIntegrationFlowModalProps {
         UseProjectBuilderReturn,
         'onAppBuilderComponentToggle' | 'onAddCustomAppBuilderComponent'
     >;
-    /** The selected stack's backend id — the mesh enable's backend axis. */
-    meshBackendId?: string;
-    /** The selected stack's frontend id — the mesh enable's frontend axis. */
-    meshFrontendId?: string;
-    /**
-     * Receives the in-modal mesh enable outcome so the host can hand it to the
-     * mesh result row as `initialResult` (adopted once — no duplicate request).
-     */
-    onMeshEnableResult?: (result: EnsureResult) => void;
 }
 
 type JourneyProps = Omit<AddIntegrationFlowModalProps, 'isOpen'>;
@@ -154,28 +144,18 @@ function StageBody({
     }
     if (stage === 'api-access') {
         if (draft.kind === 'mesh') {
-            // Mesh: the shared two-column stage with the auto-running ENABLE
-            // as the summary's Applied slot (provisions the required set now —
-            // onRunningChange drives phaseRunning so the footer waits; a
-            // failure shows ⚠ + Retry, and creation re-ensures idempotently).
-            // Free picks merge under the mesh id on finish (union-subscribed).
+            // Mesh: selection only — the required set (`requiredApis`) shows as the
+            // Included facts, free picks are optional. NOTHING is provisioned here;
+            // the required APIs are subscribed at deploy (ensureMeshApiSubscribed)
+            // and the free picks union-subscribe on finish. The mesh result row runs
+            // the enable AFTER Add, so provisioning stays out of selection.
             return (
                 <ApiAccessStage
                     orgApis={orgApis}
+                    required={meshComponent?.requiredApis}
                     suggested={meshComponent?.suggestedApis}
                     selected={draft.selectedApis}
                     onToggle={flow.toggleApi}
-                    appliedSlot={
-                        <MeshApiEnableRow
-                            orgId={state.adobeOrg?.id}
-                            projectId={state.adobeProject?.id}
-                            workspaceId={state.adobeWorkspace?.id}
-                            backendId={props.meshBackendId}
-                            frontendId={props.meshFrontendId}
-                            onResult={props.onMeshEnableResult}
-                            onRunningChange={flow.setPhaseRunning}
-                        />
-                    }
                 />
             );
         }
@@ -183,6 +163,7 @@ function StageBody({
         return (
             <ApiAccessStage
                 orgApis={orgApis}
+                required={draft.kind === 'catalog' ? entry?.requiredApis : undefined}
                 suggested={draft.kind === 'catalog' ? entry?.suggestedApis : undefined}
                 selected={draft.selectedApis}
                 onToggle={flow.toggleApi}

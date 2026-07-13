@@ -17,6 +17,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ApiAccessOption } from '@/core/ui/components/selection';
+import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 
 /** The `list-org-console-apis` handler response envelope. */
@@ -64,7 +65,11 @@ export function useOrgConsoleApis(componentIds: string[] | undefined): OrgConsol
         setStatus('loading');
         setError(undefined);
         webviewClient
-            .request<ListApisResult>('list-org-console-apis', { componentIds: ids })
+            .request<ListApisResult>(
+                'list-org-console-apis',
+                { componentIds: ids },
+                FRONTEND_TIMEOUTS.ORG_APIS_REQUEST_TIMEOUT,
+            )
             .then((result) => {
                 if (token.cancelled) return;
                 if (result.success && result.data) {
