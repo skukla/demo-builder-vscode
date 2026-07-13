@@ -131,7 +131,10 @@ function StageBody({
         if (draft.kind === 'mesh') {
             return (
                 <>
-                    <ApiAccessStage required={meshComponent?.requiredApis} />
+                    <ApiAccessStage
+                        required={meshComponent?.requiredApis}
+                        enabling={flow.enabling}
+                    />
                     {flow.enableError && (
                         <div className="intflow-api-info-error" role="alert">
                             {flow.enableError} — press Add Integration to try again.

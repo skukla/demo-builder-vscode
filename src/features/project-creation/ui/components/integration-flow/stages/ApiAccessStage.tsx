@@ -12,9 +12,14 @@
  * known up front — additionally notes that more APIs are granted as it's built,
  * from the dashboard's Manage APIs.
  *
+ * While the mesh enable runs on Add (`enabling`), each row flips from a ✓ "Always
+ * on" fact to a live spinner + "Enabling…" — so the panel shows the provisioning
+ * happening, not just a hung footer button.
+ *
  * @module features/project-creation/ui/components/integration-flow/stages/ApiAccessStage
  */
 
+import { ProgressCircle } from '@adobe/react-spectrum';
 import React from 'react';
 
 /** The baseline Adobe I/O API every App Builder integration subscribes at deploy. */
@@ -36,6 +41,8 @@ export interface ApiAccessStageProps {
     required?: string[];
     /** A custom app (blank shell or imported repo) — note the build-time grants. */
     custom?: boolean;
+    /** The mesh enable is running on Add — show each API as live "Enabling…". */
+    enabling?: boolean;
 }
 
 /** Stable empty default so an omitted `required` never churns identity. */
@@ -50,6 +57,7 @@ const NO_REQUIRED: string[] = [];
 export function ApiAccessStage({
     required = NO_REQUIRED,
     custom = false,
+    enabling = false,
 }: ApiAccessStageProps): React.ReactElement {
     const labelFor = (code: string): string => API_LABELS[code] ?? code;
     // Required first (the integration's headline API on top), baseline always
@@ -59,17 +67,34 @@ export function ApiAccessStage({
         <div className="intflow-api-info" data-testid="api-access-stage">
             <div className="intflow-api-info-head">API access included</div>
             <p className="intflow-api-info-sub">
-                These Adobe APIs are granted automatically when this integration deploys — nothing
-                to configure.
+                {enabling
+                    ? 'Enabling API access on your workspace…'
+                    : 'These Adobe APIs are granted automatically when this integration deploys — nothing to configure.'}
             </p>
             <div className="intflow-api-summary-section" data-testid="api-access-included">
                 {codes.map((code) => (
                     <div key={code} className="intflow-api-summary-item">
-                        <span className="int-chosen-check" aria-hidden="true">
-                            ✓
-                        </span>
+                        {enabling ? (
+                            <ProgressCircle
+                                size="S"
+                                isIndeterminate
+                                aria-label={`Enabling ${labelFor(code)}`}
+                            />
+                        ) : (
+                            <span className="int-chosen-check" aria-hidden="true">
+                                ✓
+                            </span>
+                        )}
                         <span className="intflow-api-summary-name">{labelFor(code)}</span>
-                        <span className="intflow-api-tag">Always on</span>
+                        <span
+                            className={
+                                enabling
+                                    ? 'intflow-api-tag intflow-api-tag--enabling'
+                                    : 'intflow-api-tag'
+                            }
+                        >
+                            {enabling ? 'Enabling…' : 'Always on'}
+                        </span>
                     </div>
                 ))}
             </div>

@@ -4724,12 +4724,18 @@ div[class*="spectrum"] input[type="search"] {
 /* Kind picker: the (at most) three kind cards stretch equal-width across the
    modal row (default .choice-card flex: 1 1 0 / min-width 240px — NOT the
    catalog gallery's 168px tiles), wrapping only when the modal is narrow. */
+/* Kind picker: a balanced 2-column grid (4 cards → 2×2) rather than a flex row
+   that wraps the 4th card full-width. Equal-height rows via the grid. */
 .intflow-kind-choices {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 12px;
     align-items: stretch;
+}
+/* Mesh not offered → only three cards; a single row reads better than a 2×2
+   with a lonely half-width tile. */
+.intflow-kind-choices--three {
+    grid-template-columns: repeat(3, 1fr);
 }
 /* Catalog stage: search header over the wrapping tile gallery. */
 .intflow-catalog {
@@ -4911,6 +4917,11 @@ div[class*="spectrum"] input[type="search"] {
     background: var(--spectrum-global-color-gray-200);
     padding: 2px 6px;
     border-radius: 4px;
+}
+/* Live "Enabling…" state while the mesh subscribe runs on Add. */
+.intflow-api-tag--enabling {
+    color: var(--spectrum-global-color-blue-600);
+    background: var(--spectrum-global-color-blue-100);
 }
 /* Informational API-access step (deterministic integrations): read-only facts,
    left-aligned in the content band — no picker, no side panel. */

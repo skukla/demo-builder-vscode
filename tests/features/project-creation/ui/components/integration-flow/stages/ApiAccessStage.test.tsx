@@ -22,7 +22,11 @@ type Props = React.ComponentProps<typeof ApiAccessStage>;
 function renderStage(props: Partial<Props> = {}) {
     render(
         <Provider theme={defaultTheme} colorScheme="light">
-            <ApiAccessStage required={props.required} custom={props.custom} />
+            <ApiAccessStage
+                required={props.required}
+                custom={props.custom}
+                enabling={props.enabling}
+            />
         </Provider>
     );
 }
@@ -72,6 +76,16 @@ describe('ApiAccessStage (informational)', () => {
     it('falls back to the raw code when no short label exists', () => {
         renderStage({ required: ['SomeOtherSDK'] });
         expect(includedNames()).toEqual(['SomeOtherSDK', 'I/O Management API']);
+    });
+
+    it('shows live "Enabling…" per row (spinner) while the enable runs, not a static ✓', () => {
+        renderStage({ required: ['GraphQLServiceSDK'], enabling: true });
+
+        const section = screen.getByTestId('api-access-included');
+        expect(within(section).getAllByText('Enabling…')).toHaveLength(2); // mesh + baseline
+        expect(within(section).queryByText('Always on')).not.toBeInTheDocument();
+        expect(within(section).getAllByRole('progressbar').length).toBeGreaterThan(0);
+        expect(screen.getByText(/Enabling API access/i)).toBeInTheDocument();
     });
 
     it('shows the build-time note only for a custom app', () => {
