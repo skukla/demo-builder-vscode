@@ -18,6 +18,7 @@
 
 import {
     installSmart404Handler,
+    buildSmart404Snippet,
 } from '@/features/eds/services/pdp404HandlerPublisher';
 
 const mockLogger = {
@@ -49,13 +50,15 @@ describe('installSmart404Handler', () => {
             getFileContent: jest.fn().mockImplementation((_o, _r, path) => {
                 if (path === 'head.html') {
                     return Promise.resolve({
-                        content: '<meta charset="UTF-8">\n<script nonce="aem" type="importmap">{}</script>\n<title>placeholder</title>\n',
+                        content:
+                            '<meta charset="UTF-8">\n<script nonce="aem" type="importmap">{}</script>\n<title>placeholder</title>\n',
                         sha: 'head-sha',
                     });
                 }
                 if (path === '404.html') {
                     return Promise.resolve({
-                        content: '<!DOCTYPE html><html><head><script nonce="aem">w.x=1;</script></head><body></body></html>',
+                        content:
+                            '<!DOCTYPE html><html><head><script nonce="aem">w.x=1;</script></head><body></body></html>',
                         sha: '404-sha',
                     });
                 }
@@ -74,17 +77,27 @@ describe('installSmart404Handler', () => {
     it('installs the snippet on the happy path', async () => {
         const result = await installSmart404Handler(
             mockGithub as never,
-            repoOwner, repoName, overlayUrl, mockLogger as never,
-            daLiveOrg, daLiveSite,
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger as never,
+            daLiveOrg,
+            daLiveSite
         );
 
         expect(result).toEqual({ installed: true });
-        expect(mockGithub.getFileContent).toHaveBeenCalledWith(repoOwner, repoName, 'scripts/delayed.js');
+        expect(mockGithub.getFileContent).toHaveBeenCalledWith(
+            repoOwner,
+            repoName,
+            'scripts/delayed.js'
+        );
         expect(mockGithub.createOrUpdateFile).toHaveBeenCalledWith(
-            repoOwner, repoName, 'scripts/delayed.js',
+            repoOwner,
+            repoName,
+            'scripts/delayed.js',
             expect.stringContaining('Smart 404 PDP rebuild'),
             expect.any(String),
-            'existing-file-sha',
+            'existing-file-sha'
         );
     });
 
@@ -96,12 +109,16 @@ describe('installSmart404Handler', () => {
         // before any 404 paint.
         await installSmart404Handler(
             mockGithub as never,
-            repoOwner, repoName, overlayUrl, mockLogger as never,
-            daLiveOrg, daLiveSite,
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger as never,
+            daLiveOrg,
+            daLiveSite
         );
 
         expect(mockGithub.getFileContent).toHaveBeenCalledWith(repoOwner, repoName, 'head.html');
-        const headCall = mockGithub.createOrUpdateFile.mock.calls.find(c => c[2] === 'head.html');
+        const headCall = mockGithub.createOrUpdateFile.mock.calls.find((c) => c[2] === 'head.html');
         expect(headCall).toBeDefined();
         const headContent = headCall![3] as string;
         // Snippet preserved through to the commit
@@ -152,11 +169,15 @@ describe('installSmart404Handler', () => {
 
         await installSmart404Handler(
             mockGithub as never,
-            repoOwner, repoName, overlayUrl, mockLogger as never,
-            daLiveOrg, daLiveSite,
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger as never,
+            daLiveOrg,
+            daLiveSite
         );
 
-        const headCall = mockGithub.createOrUpdateFile.mock.calls.find(c => c[2] === 'head.html');
+        const headCall = mockGithub.createOrUpdateFile.mock.calls.find((c) => c[2] === 'head.html');
         const headContent = headCall![3] as string;
         expect(headContent).toContain('nonce="future-rotated-nonce"');
         expect(headContent).not.toContain('nonce="aem"');
@@ -178,7 +199,8 @@ describe('installSmart404Handler', () => {
             }
             if (path === '404.html') {
                 return Promise.resolve({
-                    content: '<!DOCTYPE html><html><head><title>Page not found</title><script nonce="aem">window.isErrorPage = true;</script></head><body><h1>404</h1></body></html>',
+                    content:
+                        '<!DOCTYPE html><html><head><title>Page not found</title><script nonce="aem">window.isErrorPage = true;</script></head><body><h1>404</h1></body></html>',
                     sha: '404-sha',
                 });
             }
@@ -190,12 +212,18 @@ describe('installSmart404Handler', () => {
 
         await installSmart404Handler(
             mockGithub as never,
-            repoOwner, repoName, overlayUrl, mockLogger as never,
-            daLiveOrg, daLiveSite,
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger as never,
+            daLiveOrg,
+            daLiveSite
         );
 
         expect(mockGithub.getFileContent).toHaveBeenCalledWith(repoOwner, repoName, '404.html');
-        const fourOhFourCall = mockGithub.createOrUpdateFile.mock.calls.find(c => c[2] === '404.html');
+        const fourOhFourCall = mockGithub.createOrUpdateFile.mock.calls.find(
+            (c) => c[2] === '404.html'
+        );
         expect(fourOhFourCall).toBeDefined();
         const fourOhFourContent = fourOhFourCall![3] as string;
         // Snippet present
@@ -215,7 +243,8 @@ describe('installSmart404Handler', () => {
         mockGithub.getFileContent.mockImplementation((_o, _r, path) => {
             if (path === '404.html') {
                 return Promise.resolve({
-                    content: '<!DOCTYPE html><html><head>\n<!-- === Smart 404 PDP eager redirect (Demo Builder) === -->\n<script nonce="aem">existing</script>\n</head></html>',
+                    content:
+                        '<!DOCTYPE html><html><head>\n<!-- === Smart 404 PDP eager redirect (Demo Builder) === -->\n<script nonce="aem">existing</script>\n</head></html>',
                     sha: '404-sha',
                 });
             }
@@ -233,11 +262,17 @@ describe('installSmart404Handler', () => {
 
         await installSmart404Handler(
             mockGithub as never,
-            repoOwner, repoName, overlayUrl, mockLogger as never,
-            daLiveOrg, daLiveSite,
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger as never,
+            daLiveOrg,
+            daLiveSite
         );
 
-        const fourOhFourCommits = mockGithub.createOrUpdateFile.mock.calls.filter(c => c[2] === '404.html');
+        const fourOhFourCommits = mockGithub.createOrUpdateFile.mock.calls.filter(
+            (c) => c[2] === '404.html'
+        );
         expect(fourOhFourCommits).toHaveLength(0);
     });
 
@@ -253,8 +288,12 @@ describe('installSmart404Handler', () => {
 
         const result = await installSmart404Handler(
             mockGithub as never,
-            repoOwner, repoName, overlayUrl, mockLogger as never,
-            daLiveOrg, daLiveSite,
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger as never,
+            daLiveOrg,
+            daLiveSite
         );
 
         expect(result).toEqual({ installed: true });
@@ -279,12 +318,18 @@ describe('installSmart404Handler', () => {
 
         const result = await installSmart404Handler(
             mockGithub as never,
-            repoOwner, repoName, overlayUrl, mockLogger as never,
-            daLiveOrg, daLiveSite,
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger as never,
+            daLiveOrg,
+            daLiveSite
         );
 
         expect(result).toEqual({ installed: true });
-        const headCommits = mockGithub.createOrUpdateFile.mock.calls.filter(c => c[2] === 'head.html');
+        const headCommits = mockGithub.createOrUpdateFile.mock.calls.filter(
+            (c) => c[2] === 'head.html'
+        );
         expect(headCommits).toHaveLength(0);
     });
 
@@ -294,7 +339,8 @@ describe('installSmart404Handler', () => {
         mockGithub.getFileContent.mockImplementation((_o, _r, path) => {
             if (path === 'head.html') {
                 return Promise.resolve({
-                    content: '<meta charset="UTF-8">\n<!-- === Smart 404 PDP eager redirect (Demo Builder) === -->\n<script>existing</script>\n',
+                    content:
+                        '<meta charset="UTF-8">\n<!-- === Smart 404 PDP eager redirect (Demo Builder) === -->\n<script>existing</script>\n',
                     sha: 'head-sha',
                 });
             }
@@ -306,11 +352,17 @@ describe('installSmart404Handler', () => {
 
         await installSmart404Handler(
             mockGithub as never,
-            repoOwner, repoName, overlayUrl, mockLogger as never,
-            daLiveOrg, daLiveSite,
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger as never,
+            daLiveOrg,
+            daLiveSite
         );
 
-        const headCommits = mockGithub.createOrUpdateFile.mock.calls.filter(c => c[2] === 'head.html');
+        const headCommits = mockGithub.createOrUpdateFile.mock.calls.filter(
+            (c) => c[2] === 'head.html'
+        );
         expect(headCommits).toHaveLength(0);
     });
 
@@ -328,8 +380,12 @@ describe('installSmart404Handler', () => {
 
         const result = await installSmart404Handler(
             mockGithub as never,
-            repoOwner, repoName, overlayUrl, mockLogger as never,
-            daLiveOrg, daLiveSite,
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger as never,
+            daLiveOrg,
+            daLiveSite
         );
 
         expect(result).toEqual({ installed: true });
@@ -346,21 +402,31 @@ describe('installSmart404Handler', () => {
 
         const result = await installSmart404Handler(
             mockGithub as never,
-            repoOwner, repoName, overlayUrl, mockLogger as never,
-            daLiveOrg, daLiveSite,
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger as never,
+            daLiveOrg,
+            daLiveSite
         );
 
         // delayed.js install still succeeds → installed=true
         expect(result).toEqual({ installed: true });
-        const headCommits = mockGithub.createOrUpdateFile.mock.calls.filter(c => c[2] === 'head.html');
+        const headCommits = mockGithub.createOrUpdateFile.mock.calls.filter(
+            (c) => c[2] === 'head.html'
+        );
         expect(headCommits).toHaveLength(0);
     });
 
     it('appends the snippet to the existing delayed.js content (preserves prior content)', async () => {
         await installSmart404Handler(
             mockGithub as never,
-            repoOwner, repoName, overlayUrl, mockLogger as never,
-            daLiveOrg, daLiveSite,
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger as never,
+            daLiveOrg,
+            daLiveSite
         );
 
         const writtenContent = mockGithub.createOrUpdateFile.mock.calls[0][3] as string;
@@ -372,8 +438,12 @@ describe('installSmart404Handler', () => {
     it('skips when BYOM is disabled (overlayUrl is undefined)', async () => {
         const result = await installSmart404Handler(
             mockGithub as never,
-            repoOwner, repoName, undefined, mockLogger as never,
-            daLiveOrg, daLiveSite,
+            repoOwner,
+            repoName,
+            undefined,
+            mockLogger as never,
+            daLiveOrg,
+            daLiveSite
         );
 
         expect(result).toEqual({ installed: false, reason: 'BYOM disabled' });
@@ -384,8 +454,12 @@ describe('installSmart404Handler', () => {
     it('skips when the overlay URL cannot be parsed', async () => {
         const result = await installSmart404Handler(
             mockGithub as never,
-            repoOwner, repoName, 'not-a-url', mockLogger as never,
-            daLiveOrg, daLiveSite,
+            repoOwner,
+            repoName,
+            'not-a-url',
+            mockLogger as never,
+            daLiveOrg,
+            daLiveSite
         );
 
         expect(result.installed).toBe(false);
@@ -396,10 +470,12 @@ describe('installSmart404Handler', () => {
     it('skips when the overlay URL is the wrong shape', async () => {
         const result = await installSmart404Handler(
             mockGithub as never,
-            repoOwner, repoName,
+            repoOwner,
+            repoName,
             'https://example.com/api/v1/web/accs-discovery/discover-stores',
             mockLogger as never,
-            daLiveOrg, daLiveSite,
+            daLiveOrg,
+            daLiveSite
         );
 
         expect(result.installed).toBe(false);
@@ -410,8 +486,12 @@ describe('installSmart404Handler', () => {
         mockGithub.getFileContent.mockResolvedValue(null);
         const result = await installSmart404Handler(
             mockGithub as never,
-            repoOwner, repoName, overlayUrl, mockLogger as never,
-            daLiveOrg, daLiveSite,
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger as never,
+            daLiveOrg,
+            daLiveSite
         );
 
         expect(result.installed).toBe(false);
@@ -423,13 +503,18 @@ describe('installSmart404Handler', () => {
         // Lets the step run safely on every create/edit/reset without
         // piling up duplicate snippets in delayed.js.
         mockGithub.getFileContent.mockResolvedValue({
-            content: 'existing stuff\n// === Smart 404 PDP rebuild (Demo Builder) ===\n// snippet body...\n',
+            content:
+                'existing stuff\n// === Smart 404 PDP rebuild (Demo Builder) ===\n// snippet body...\n',
             sha: 'sha-already-installed',
         });
         const result = await installSmart404Handler(
             mockGithub as never,
-            repoOwner, repoName, overlayUrl, mockLogger as never,
-            daLiveOrg, daLiveSite,
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger as never,
+            daLiveOrg,
+            daLiveSite
         );
 
         expect(result.installed).toBe(false);
@@ -437,12 +522,85 @@ describe('installSmart404Handler', () => {
         expect(mockGithub.createOrUpdateFile).not.toHaveBeenCalled();
     });
 
+    it('re-vendors in place when a stale (full-marker) block is present, so behavior fixes ship on reset', async () => {
+        // A storefront vendored an OLDER snippet (both markers, outdated body).
+        // The installer must REPLACE the block between the markers with the
+        // current snippet — not skip — so behavior changes like the
+        // missing-SKU → native /404 redirect reach existing storefronts on reset.
+        mockGithub.getFileContent.mockResolvedValue({
+            content:
+                'prior stuff\n' +
+                '// === Smart 404 PDP rebuild (Demo Builder) ===\n' +
+                '// OUTDATED snippet body that must be replaced\n' +
+                '// === end Smart 404 PDP rebuild ===\n' +
+                'trailing stuff\n',
+            sha: 'stale-sha',
+        });
+
+        const result = await installSmart404Handler(
+            mockGithub as never,
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger as never,
+            daLiveOrg,
+            daLiveSite
+        );
+
+        expect(result).toEqual({ installed: true });
+        const delayedCall = mockGithub.createOrUpdateFile.mock.calls.find(
+            (c) => c[2] === 'scripts/delayed.js'
+        );
+        expect(delayedCall).toBeDefined();
+        const written = delayedCall![3] as string;
+        // Stale body gone; current snippet (with the /404 redirect) in place.
+        expect(written).not.toContain('OUTDATED snippet body');
+        expect(written).toContain("window.location.replace('/404')");
+        // Surrounding content preserved, single block (not duplicated).
+        expect(written).toContain('prior stuff');
+        expect(written).toContain('trailing stuff');
+        expect(written.match(/=== Smart 404 PDP rebuild \(Demo Builder\) ===/g)).toHaveLength(1);
+    });
+
+    it('skips the commit when the vendored block is already byte-identical (no churn)', async () => {
+        // A no-op reset (snippet unchanged) must not rewrite delayed.js.
+        const currentBlock = buildSmart404Snippet(
+            'https://example.adobeioruntime.net/api/v1/web/accs-discovery/prepublish-pdp',
+            daLiveOrg,
+            daLiveSite
+        );
+        mockGithub.getFileContent.mockResolvedValue({
+            content: `// existing\n${currentBlock}`,
+            sha: 'current-sha',
+        });
+
+        const result = await installSmart404Handler(
+            mockGithub as never,
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger as never,
+            daLiveOrg,
+            daLiveSite
+        );
+
+        expect(result).toEqual({ installed: false, reason: 'already installed' });
+        const delayedCommits = mockGithub.createOrUpdateFile.mock.calls.filter(
+            (c) => c[2] === 'scripts/delayed.js'
+        );
+        expect(delayedCommits).toHaveLength(0);
+    });
+
     it('skips gracefully when the GitHub commit fails', async () => {
         mockGithub.createOrUpdateFile.mockRejectedValue(new Error('GitHub 422 conflict'));
         const result = await installSmart404Handler(
             mockGithub as never,
-            repoOwner, repoName, overlayUrl, mockLogger as never,
-            daLiveOrg, daLiveSite,
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger as never,
+            daLiveOrg,
+            daLiveSite
         );
 
         expect(result.installed).toBe(false);
@@ -453,8 +611,12 @@ describe('installSmart404Handler', () => {
     it('passes the storefront org and site through to the vendored snippet', async () => {
         await installSmart404Handler(
             mockGithub as never,
-            repoOwner, repoName, overlayUrl, mockLogger as never,
-            'custom-org', 'custom-site',
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger as never,
+            'custom-org',
+            'custom-site'
         );
 
         const writtenContent = mockGithub.createOrUpdateFile.mock.calls[0][3] as string;

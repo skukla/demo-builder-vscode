@@ -24,21 +24,22 @@ describe('derivePrepublishUrl', () => {
     it('rewrites /render-pdp to /prepublish-pdp at the end of the path', () => {
         const overlay = 'https://example.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp';
         expect(derivePrepublishUrl(overlay)).toBe(
-            'https://example.adobeioruntime.net/api/v1/web/accs-discovery/prepublish-pdp',
+            'https://example.adobeioruntime.net/api/v1/web/accs-discovery/prepublish-pdp'
         );
     });
 
     it('strips the ?org=&site= query the overlay URL carries', () => {
-        const overlay = 'https://example.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp?org=skukla&site=citisignal-b2b';
+        const overlay =
+            'https://example.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp?org=skukla&site=citisignal-b2b';
         expect(derivePrepublishUrl(overlay)).toBe(
-            'https://example.adobeioruntime.net/api/v1/web/accs-discovery/prepublish-pdp',
+            'https://example.adobeioruntime.net/api/v1/web/accs-discovery/prepublish-pdp'
         );
     });
 
     it('handles a trailing slash on /render-pdp/', () => {
         const overlay = 'https://example.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp/';
         expect(derivePrepublishUrl(overlay)).toBe(
-            'https://example.adobeioruntime.net/api/v1/web/accs-discovery/prepublish-pdp',
+            'https://example.adobeioruntime.net/api/v1/web/accs-discovery/prepublish-pdp'
         );
     });
 
@@ -48,7 +49,9 @@ describe('derivePrepublishUrl', () => {
     });
 
     it('returns undefined when the path does not end with /render-pdp', () => {
-        expect(derivePrepublishUrl('https://example.com/api/v1/web/accs-discovery/discover-stores')).toBeUndefined();
+        expect(
+            derivePrepublishUrl('https://example.com/api/v1/web/accs-discovery/discover-stores')
+        ).toBeUndefined();
         expect(derivePrepublishUrl('https://example.com/render-pdp/extra-segment')).toBeUndefined();
     });
 
@@ -59,7 +62,8 @@ describe('derivePrepublishUrl', () => {
 });
 
 describe('buildSmart404Snippet', () => {
-    const triggerUrl = 'https://example.adobeioruntime.net/api/v1/web/accs-discovery/prepublish-pdp';
+    const triggerUrl =
+        'https://example.adobeioruntime.net/api/v1/web/accs-discovery/prepublish-pdp';
 
     it('substitutes the trigger URL, org, and site into the template', () => {
         const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
@@ -94,7 +98,7 @@ describe('buildSmart404Snippet', () => {
         const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
         expect(snippet).toContain('([^/]+)');
         const m = '/products/cmlodestar/yale_20unoplus-series_20a'.match(
-            /^\/products\/([^/]+)\/([^/]+)$/,
+            /^\/products\/([^/]+)\/([^/]+)$/
         );
         expect(m?.[2]).toBe('yale_20unoplus-series_20a');
     });
@@ -225,12 +229,17 @@ describe('buildSmart404Snippet', () => {
         expect(snippet).toContain('var(--type-body-1-default-font,1.25rem/1.5 sans-serif)');
     });
 
-    it('surfaces a fallback message when the action fails after retry', () => {
-        // If the user is left staring at "Loading product…" forever,
-        // that's worse than the original 404. After the retry path
-        // exhausts, swap to an explicit failure message.
+    it('redirects to the storefront native /404 when the action fails after retry', () => {
+        // A SKU with no publishable PDP (deleted, renamed, or never
+        // existed in Commerce) exhausts the retry path. The honest UX is
+        // the storefront's native /404 via a full redirect — so the URL
+        // bar, history, and bookmarks reflect reality — NOT a custom
+        // in-place "Product not available" message that implies the
+        // product page exists.
         const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
-        expect(snippet).toContain('Product not available');
+        expect(snippet).toContain("window.location.replace('/404')");
+        // The old custom in-place failure message is gone.
+        expect(snippet).not.toContain('Product not available');
     });
 
     it('retries the action call once with backoff on 5xx (covers I/O Runtime cold start)', () => {
@@ -276,7 +285,8 @@ describe('extractCspNonce', () => {
     });
 
     it('matches nonce on any nonced script regardless of other attributes', () => {
-        expect(extractCspNonce('<script type="importmap" nonce="aem" id="x">{}</script>')).toBe('aem');
+        expect(extractCspNonce('<script type="importmap" nonce="aem" id="x">{}</script>')).toBe(
+            'aem'
+        );
     });
 });
-

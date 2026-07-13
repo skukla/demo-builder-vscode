@@ -30,7 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Rename projects in place.** Hover a project's name — on its card (or row) in the projects list, or in the project dashboard title — and a pencil appears; click it, type, press Enter. Errors (name taken, invalid characters, demo running) show inline next to the field. The Rename menu items and their dialogs are gone: one rename affordance, where the name lives.
 - **Simpler action names.** The authoring action is now **Author Content** everywhere (previously "Author in DA.live Classic" / "Author in Experience Workspace" — your configured authoring experience still decides where it opens), and the Commerce admin action is **Manage Commerce** (previously "Admin Panel" / "Open Admin Panel").
 
-## [1.0.0-beta.121] - 2026-06-19
+### Fixed
+
+- **Deleted-product pages show the real 404 instead of an empty product page.** When a shopper opens a product URL whose SKU no longer exists in Commerce, the storefront now lands on its own **native /404** rather than a blank product-details block. Two layers cooperate: the shared `prepublish-pdp` action checks Commerce before publishing and refuses to publish a page for a missing SKU (so no empty page gets cached), and the storefront's smart-404 snippet redirects to `/404` when publishing is refused. The existence check fails open — an infra hiccup never turns a real product into a 404. Existing storefronts pick up the updated snippet on their next reset (the installer now re-vendors the snippet in place instead of skipping when an older copy is present). Note: a product deleted *after* its page was already published/pre-warmed still serves the cached page until unpublished — tracked separately.
 
 ### Added
 

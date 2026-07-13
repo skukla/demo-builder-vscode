@@ -186,7 +186,6 @@ ${SMART_404_MARKER_START}
   const TEXT = 'font:var(--type-body-1-default-font,1.25rem/1.5 sans-serif);color:var(--color-brand-500,#454545);';
   const ANIM = '<style>@keyframes smart404Spin{to{transform:rotate(360deg)}}</style>';
   const LOADING_HTML = \`<div style="\${WRAP}"><div style="\${SPIN}"></div><div style="\${TEXT}">Loading product…</div></div>\${ANIM}\`;
-  const ERROR_HTML = \`<div style="\${WRAP}"><div style="\${TEXT}">Product not available.</div></div>\`;
   if (mainEl) {
     mainEl.className = '';
     mainEl.innerHTML = LOADING_HTML;
@@ -222,9 +221,13 @@ ${SMART_404_MARKER_START}
       window.location.replace(\`\${lc}\${sep}\${RETRY_FLAG}=1\`);
       return;
     }
-    // Action failed after retry. Surface the failure to the user
-    // instead of leaving "Loading product…" hanging forever.
-    if (mainEl) mainEl.innerHTML = ERROR_HTML;
+    // Action failed after retry — the SKU has no publishable PDP
+    // (deleted, renamed, or never existed in Commerce). The honest UX
+    // is the storefront's native /404, not a custom in-place message
+    // that implies the product page exists. A full redirect makes the
+    // URL bar, history, and bookmarks all reflect reality. /404 does not
+    // match the PDP pattern, so this never loops.
+    window.location.replace('/404');
   })();
 }());
 ${SMART_404_MARKER_END}
@@ -244,10 +247,32 @@ const TRIGGER_URL_MAX_LENGTH = 2048;
  * returns the snippet ready to be appended to `delayed.js`.
  */
 export function buildSmart404Snippet(triggerUrl: string, org: string, site: string): string {
-    return SMART_404_SNIPPET_TEMPLATE
-        .replace(/__TRIGGER_URL__/g, triggerUrl)
+    return SMART_404_SNIPPET_TEMPLATE.replace(/__TRIGGER_URL__/g, triggerUrl)
         .replace(/__ORG__/g, encodeURIComponent(org))
         .replace(/__SITE__/g, encodeURIComponent(site));
+}
+
+/**
+ * Replace the marker-bounded block in `content` with the corresponding block
+ * from `freshFull` (a freshly built snippet). Content outside the block —
+ * including whitespace around it — is preserved. Returns `null` when both
+ * markers aren't present in `content`, so the caller leaves the file untouched
+ * rather than risk duplicating a malformed (half-marked) block.
+ */
+function replaceMarkedBlock(
+    content: string,
+    startMarker: string,
+    endMarker: string,
+    freshFull: string,
+): string | null {
+    const startIdx = content.indexOf(startMarker);
+    const endIdx = content.indexOf(endMarker);
+    if (startIdx === -1 || endIdx === -1) return null;
+    const blockEnd = endIdx + endMarker.length;
+    const freshStart = freshFull.indexOf(startMarker);
+    const freshEnd = freshFull.indexOf(endMarker) + endMarker.length;
+    const freshBlock = freshFull.slice(freshStart, freshEnd);
+    return content.slice(0, startIdx) + freshBlock + content.slice(blockEnd);
 }
 
 /**
@@ -332,7 +357,9 @@ export async function installSmart404Handler(
 
     const triggerUrl = derivePrepublishUrl(overlayUrl);
     if (!triggerUrl) {
-        logger.warn('[PDP404] Could not derive prepublish-pdp URL from overlay URL — skipping smart 404 install');
+        logger.warn(
+            '[PDP404] Could not derive prepublish-pdp URL from overlay URL — skipping smart 404 install',
+        );
         return { installed: false, reason: 'invalid overlay URL' };
     }
 
@@ -346,16 +373,30 @@ export async function installSmart404Handler(
         return { installed: false, reason: 'delayed.js missing' };
     }
 
-    // Idempotent: if the marker is already present, do nothing. Lets the
-    // step run on every create/edit/reset without piling up duplicate
-    // snippets.
-    if (existing.content.includes(SMART_404_MARKER_START)) {
-        logger.info('[PDP404] Smart 404 snippet already present in delayed.js — skipping');
-        return { installed: false, reason: 'already installed' };
-    }
-
     const snippet = buildSmart404Snippet(triggerUrl, daLiveOrg, daLiveSite);
-    const newContent = existing.content + snippet;
+
+    // Vendor the snippet. When a prior block is already present, RE-VENDOR it
+    // in place (replace between the markers) instead of skipping — so snippet
+    // behavior changes (e.g. the missing-SKU → native /404 redirect) reach
+    // existing storefronts on their next reset. The commit is skipped only when
+    // the rebuilt block is byte-identical, keeping no-op resets churn-free.
+    let newContent: string;
+    if (existing.content.includes(SMART_404_MARKER_START)) {
+        const replaced = replaceMarkedBlock(
+            existing.content,
+            SMART_404_MARKER_START,
+            SMART_404_MARKER_END,
+            snippet,
+        );
+        if (replaced === null || replaced === existing.content) {
+            logger.info('[PDP404] Smart 404 snippet already current in delayed.js — skipping');
+            return { installed: false, reason: 'already installed' };
+        }
+        newContent = replaced;
+        logger.info('[PDP404] Re-vendoring updated smart 404 snippet into delayed.js');
+    } else {
+        newContent = existing.content + snippet;
+    }
 
     try {
         await githubFileOps.createOrUpdateFile(
@@ -366,7 +407,9 @@ export async function installSmart404Handler(
             'chore(demo-builder): vendor smart 404 PDP handler into delayed.js',
             existing.sha,
         );
-        logger.info(`[PDP404] Vendored smart 404 snippet into scripts/delayed.js (${repoOwner}/${repoName})`);
+        logger.info(
+            `[PDP404] Vendored smart 404 snippet into scripts/delayed.js (${repoOwner}/${repoName})`,
+        );
     } catch (error) {
         const reason = (error as Error).message ?? 'unknown';
         logger.warn(`[PDP404] GitHub commit failed: ${reason} — skipping smart 404 install`);
@@ -429,7 +472,9 @@ async function installSmart404On404HtmlFile(
     }
     const nonce = extractCspNonce(existing.content);
     if (!nonce) {
-        logger.warn('[PDP404] 404.html has no nonced script tag — skipping eager redirect on 404.html (delayed.js fallback still active)');
+        logger.warn(
+            '[PDP404] 404.html has no nonced script tag — skipping eager redirect on 404.html (delayed.js fallback still active)',
+        );
         return;
     }
     const snippet = SMART_404_HEAD_SNIPPET_TEMPLATE.replace(/__NONCE__/g, nonce);
@@ -437,9 +482,10 @@ async function installSmart404On404HtmlFile(
     // before any body paint. If </head> is missing for any reason,
     // append at the end as a safe fallback.
     const headClose = existing.content.lastIndexOf('</head>');
-    const newContent = headClose >= 0
-        ? existing.content.slice(0, headClose) + snippet + existing.content.slice(headClose)
-        : existing.content + snippet;
+    const newContent =
+        headClose >= 0
+            ? existing.content.slice(0, headClose) + snippet + existing.content.slice(headClose)
+            : existing.content + snippet;
     try {
         await githubFileOps.createOrUpdateFile(
             repoOwner,
@@ -449,10 +495,14 @@ async function installSmart404On404HtmlFile(
             'chore(demo-builder): vendor smart 404 eager redirect into 404.html',
             existing.sha,
         );
-        logger.info(`[PDP404] Vendored eager redirect into 404.html (${repoOwner}/${repoName}, nonce="${nonce}")`);
+        logger.info(
+            `[PDP404] Vendored eager redirect into 404.html (${repoOwner}/${repoName}, nonce="${nonce}")`,
+        );
     } catch (error) {
         const reason = (error as Error).message ?? 'unknown';
-        logger.warn(`[PDP404] 404.html commit failed: ${reason} — eager redirect not installed on 404.html (delayed.js fallback still active)`);
+        logger.warn(
+            `[PDP404] 404.html commit failed: ${reason} — eager redirect not installed on 404.html (delayed.js fallback still active)`,
+        );
     }
 }
 
@@ -478,7 +528,9 @@ async function installSmart404HeadRedirect(
     // ship a snippet that will be silently blocked.
     const nonce = extractCspNonce(existing.content);
     if (!nonce) {
-        logger.warn('[PDP404] head.html has no nonced script tag — skipping eager redirect (delayed.js fallback still active)');
+        logger.warn(
+            '[PDP404] head.html has no nonced script tag — skipping eager redirect (delayed.js fallback still active)',
+        );
         return;
     }
     const snippet = SMART_404_HEAD_SNIPPET_TEMPLATE.replace(/__NONCE__/g, nonce);
@@ -491,9 +543,13 @@ async function installSmart404HeadRedirect(
             'chore(demo-builder): vendor smart 404 eager redirect into head.html',
             existing.sha,
         );
-        logger.info(`[PDP404] Vendored eager redirect into head.html (${repoOwner}/${repoName}, nonce="${nonce}")`);
+        logger.info(
+            `[PDP404] Vendored eager redirect into head.html (${repoOwner}/${repoName}, nonce="${nonce}")`,
+        );
     } catch (error) {
         const reason = (error as Error).message ?? 'unknown';
-        logger.warn(`[PDP404] head.html commit failed: ${reason} — eager redirect not installed (delayed.js fallback still active)`);
+        logger.warn(
+            `[PDP404] head.html commit failed: ${reason} — eager redirect not installed (delayed.js fallback still active)`,
+        );
     }
 }
