@@ -11,6 +11,7 @@ import {
     createProjectListResult,
     mockOrg,
 } from './authenticationService.testUtils';
+import { getActiveOrgContext } from '@/features/authentication/services/orgContextEnv';
 
 /**
  * AuthenticationService - Context Validation and SDK Test Suite
@@ -21,7 +22,7 @@ import {
  * - Developer permissions testing (testDeveloperPermissions)
  * - Integration scenarios with caching
  *
- * Total tests: 5
+ * Total tests: 6
  */
 
 // Only mock external dependencies
@@ -62,14 +63,23 @@ describe('AuthenticationService - Context Validation and SDK', () => {
         } as any;
 
         // Mock constructors
-        (AdobeSDKClient as jest.MockedClass<typeof AdobeSDKClient>).mockImplementation(() => mockSDKClient);
+        (AdobeSDKClient as jest.MockedClass<typeof AdobeSDKClient>).mockImplementation(
+            () => mockSDKClient
+        );
         (createEntityServices as jest.Mock).mockReturnValue({
-            fetcher: { getOrganizations: jest.fn().mockResolvedValue([mockOrg]) },
+            fetcher: {
+                getOrganizations: jest.fn().mockResolvedValue([mockOrg]),
+                getOrganizationsSdkOnly: jest.fn().mockResolvedValue([mockOrg]),
+            },
             resolver: {},
             selector: {},
         });
 
-        authService = new AuthenticationService('/mock/extension/path', mockLogger, mockCommandExecutor);
+        authService = new AuthenticationService(
+            '/mock/extension/path',
+            mockLogger,
+            mockCommandExecutor
+        );
     });
 
     describe('SDK management', () => {
@@ -106,6 +116,25 @@ describe('AuthenticationService - Context Validation and SDK', () => {
                 'aio app list --json',
                 expect.any(Object)
             );
+        });
+
+        it('targets the developer-permission probe at the token org (withOrgContext)', async () => {
+            // Cache miss → token org resolved via getOrganizationsSdkOnly()[0]. The
+            // `aio app list` probe must run under THAT org's context, not the
+            // ambient (possibly stale) CLI selection.
+            let activeDuringProbe: { orgId?: string } | undefined;
+            mockCommandExecutor.execute.mockImplementation(async () => {
+                activeDuringProbe = getActiveOrgContext();
+                return createSuccessResult(JSON.stringify([]));
+            });
+
+            await authService.testDeveloperPermissions();
+
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
+                'aio app list --json',
+                expect.any(Object)
+            );
+            expect(activeDuringProbe?.orgId).toBe(mockOrg.id);
         });
     });
 

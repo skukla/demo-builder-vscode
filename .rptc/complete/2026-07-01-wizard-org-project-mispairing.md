@@ -1,5 +1,20 @@
 # Wizard auth step: displayed project can mispair with the token org
 
+## Status: SHIPPED 2026-07-13
+
+Fixed on `fix/wizard-org-context-followups`. On code inspection the mispairing had **no user
+impact** — `useAuthStatus.ts:194` already discards the project (`adobeProject: undefined`) and
+`AdobeAuthStep` renders only the org — but the fix is still worth it as hygiene + it delivered the
+genuinely-valuable (c) hardening:
+- **Defensive project omit** — `getAuthContext` no longer calls `getCurrentProject()` on cache-miss,
+  so the freshly-resolved token org is never paired with a stale (possibly foreign-org) CLI console
+  project. (`authenticationHandlers.ts`)
+- **`testDeveloperPermissions` token-org targeting (research point c)** — the `AuthenticationService`
+  facade now resolves the token org (`getCachedOrganization()` → `getOrganizationsSdkOnly()[0]`,
+  SDK-only for perf) and runs the `aio app list` probe inside `withOrgContext`, so a stale ambient
+  CLI selection can't make the probe check the wrong org. Fails open (no org → prior behavior).
+  (`authenticationService.ts`) — the `withOrgContext` code/name enrichment was already built.
+
 ## Provenance
 Phase 4 code-review of `fix/wizard-org-mismatch` (Finding 2, confidence ~80). The primary fix made
 `getAuthContext` source the displayed **org** from the token (`getOrganizations()[0]`) — but left

@@ -38,6 +38,7 @@ Verified merged to `develop` and moved out of `.rptc/plans/` during the 2026-06-
 - **PDP reversible SKU encoding (ADR-007)** — Helix-safe `_HH` encoding for PDP URLs. (merge `fb978281`)
 - **Experience Workspace default authoring** — per-project authoring experience as a Configure setting. (merge `92101734`)
 - **MCP affordance coverage** — all five agent-tool gaps closed 2026-07-11: `get_project_urls`, `deploy_mesh`, `deploy_integration`/`redeploy_integration`/`remove_integration`, `refresh_block_library`, and `export_project_settings` (write-a-file action; secrets to disk, not the response). ([`../complete/2026-07-11-mcp-affordance-coverage.md`](../complete/2026-07-11-mcp-affordance-coverage.md))
+- **Wizard org-context follow-ups** — 2026-07-13. Shipped the real residual: `testDeveloperPermissions` now targets the token org via `withOrgContext` + a defensive project omit on auth cache-miss ([`../complete/2026-07-01-wizard-org-project-mispairing.md`](../complete/2026-07-01-wizard-org-project-mispairing.md)). The multi-org guard item was **closed as overtaken** — its premise contradicts the canonical single-reachable-org model ([`../complete/2026-07-01-wizard-multi-org-selection-guard.md`](../complete/2026-07-01-wizard-multi-org-selection-guard.md)).
 
 Also resolved since last index (were listed as pending): **jest worker force-exit** (`.unref()` now on the mesh timeout), **oversized test-file splits** (`35418a26`, `4fd26bf7` — `blockCollectionHelpers.test.ts` now 530 lines), **regenerate-AI-files progress** (`creationProgress` wired into `aiHandlers.ts`), **B2B feature-pack dropin delivery** (shipped via the hybrid CitiSignal package), **logs-toggle → sidebar**. The **DaLive permission-log "typo"** was a false positive — current code logs the owner correctly.
 
@@ -133,11 +134,3 @@ Numbers-first measurement pass to map the codebase's actual size, complexity, an
 
 ⚠️ **Mostly resolved** — `blockCollectionHelpers.test.ts` and the priority files were split (`35418a26`, `4fd26bf7`). Re-audit current `max-lines` warnings before treating this as active; keep only if any of the original 7 files still exceed 500 lines.
 
-#### Wizard org-context follow-ups (from the `fix/wizard-org-mismatch` review)
-
-Two non-blocking correctness follow-ups deferred out of the org-mismatch fix (which landed the core
-token-org scoping). Both are constrained to the user's own org memberships (no cross-tenant exposure);
-diagnosis in [`../research/wizard-org-mismatch/research.md`](../research/wizard-org-mismatch/research.md).
-
-- **Org/project mispairing on the auth step** ([`2026-07-01-wizard-org-project-mispairing.md`](2026-07-01-wizard-org-project-mispairing.md)) — the displayed org is now token-sourced but `currentProject` still comes from the stale CLI console; self-heals downstream. Also folds in the `withOrgContext` code/name + `testDeveloperPermissions` org-targeting hardening.
-- **Multi-org selection guard** ([`2026-07-01-wizard-multi-org-selection-guard.md`](2026-07-01-wizard-multi-org-selection-guard.md)) — `getOrganizations()[0]` is arbitrary for multi-org users; add a `detectProjectOrgMismatch`/`ensureOrgContext` guard before "Connected" (keep the forced-login recovery model, no in-app picker).

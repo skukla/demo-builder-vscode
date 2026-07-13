@@ -1,16 +1,31 @@
 import * as path from 'path';
 import { isValidTokenResponse } from './authPredicates';
+import { withOrgContext, type OrgContextTarget } from './orgContextEnv';
 import { getLogger, StepLogger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS, CACHE_TTL } from '@/core/utils/timeoutConfig';
-import { createEntityServices, type EntityServices } from '@/features/authentication/services/adobeEntityService';
+import {
+    createEntityServices,
+    type EntityServices,
+} from '@/features/authentication/services/adobeEntityService';
 import { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import { AuthenticationErrorFormatter } from '@/features/authentication/services/authenticationErrorFormatter';
 import { OrganizationValidator } from '@/features/authentication/services/organizationValidator';
 import { withTiming } from '@/features/authentication/services/performanceTracker';
 import { TokenManager } from '@/features/authentication/services/tokenManager';
-import type { AdobeOrg, AdobeProject, AdobeWorkspace, AdobeContext, AuthTokenValidation, WorkspaceCredential, WorkspaceS2SCredentialIds, AdobeIdCredentialInput, OrgServiceInfo, ServiceSubscriptionInfo } from '@/features/authentication/services/types';
+import type {
+    AdobeOrg,
+    AdobeProject,
+    AdobeWorkspace,
+    AdobeContext,
+    AuthTokenValidation,
+    WorkspaceCredential,
+    WorkspaceS2SCredentialIds,
+    AdobeIdCredentialInput,
+    OrgServiceInfo,
+    ServiceSubscriptionInfo,
+} from '@/features/authentication/services/types';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -37,7 +52,14 @@ export class AuthenticationService {
         this.logger = logger;
 
         // Store templates path for lazy initialization
-        this.templatesPath = path.join(extensionPath, 'src', 'core', 'logging', 'config', 'logging.json');
+        this.templatesPath = path.join(
+            extensionPath,
+            'src',
+            'core',
+            'logging',
+            'config',
+            'logging.json',
+        );
 
         // Initialize all submodules
         this.cacheManager = new AuthCacheManager();
@@ -71,7 +93,7 @@ export class AuthenticationService {
             this.logger,
             undefined,
             this.templatesPath,
-        ).then(stepLogger => {
+        ).then((stepLogger) => {
             this.stepLogger = stepLogger;
 
             // Initialize entity services now that stepLogger is ready
@@ -163,7 +185,9 @@ export class AuthenticationService {
             try {
                 this.debugLogger.debug('[Auth] Checking authentication status');
                 const stepLogger = await this.ensureStepLogger();
-                stepLogger.logTemplate('adobe-auth', 'operations.checking', { item: 'authentication status' });
+                stepLogger.logTemplate('adobe-auth', 'operations.checking', {
+                    item: 'authentication status',
+                });
 
                 const isValid = await this.tokenManager.isTokenValid();
 
@@ -175,7 +199,9 @@ export class AuthenticationService {
                     this.cacheManager.setCachedAuthStatus(true);
                     return true;
                 } else {
-                    this.logger.info('[Auth] Not authenticated with Adobe. Please click "Log in to Adobe" to authenticate.');
+                    this.logger.info(
+                        '[Auth] Not authenticated with Adobe. Please click "Log in to Adobe" to authenticate.',
+                    );
                     stepLogger.logTemplate('adobe-auth', 'statuses.not-authenticated', {});
                     this.cacheManager.setCachedAuthStatus(false);
                     return false;
@@ -192,7 +218,10 @@ export class AuthenticationService {
                 this.debugLogger.debug(formatted.technical);
 
                 const stepLogger = await this.ensureStepLogger();
-                stepLogger.logTemplate('adobe-auth', 'error', { item: 'Authentication check', error: formatted.title });
+                stepLogger.logTemplate('adobe-auth', 'error', {
+                    item: 'Authentication check',
+                    error: formatted.title,
+                });
 
                 this.cacheManager.setCachedAuthStatus(false, CACHE_TTL.SHORT);
                 return false;
@@ -213,7 +242,9 @@ export class AuthenticationService {
                 if (force) {
                     this.cacheManager.clearAll();
                     this.sdkClient.clear();
-                    this.debugLogger.debug('[Auth] Cleared caches before forced login (Adobe CLI will clear console context)');
+                    this.debugLogger.debug(
+                        '[Auth] Cleared caches before forced login (Adobe CLI will clear console context)',
+                    );
                 }
 
                 const loginCommand = force ? 'aio auth login -f' : 'aio auth login';
@@ -222,23 +253,22 @@ export class AuthenticationService {
                 stepLogger.logTemplate('adobe-auth', 'statuses.browser-opened', {});
                 stepLogger.logTemplate('adobe-auth', 'operations.waiting-authentication', {});
 
-                const result = await this.commandManager.execute(
-                    loginCommand,
-                    { encoding: 'utf8', timeout: TIMEOUTS.AUTH.BROWSER },
-                ).catch(error => {
-                    this.debugLogger.error('[Auth] Login command failed', error);
-                    const formatted = AuthenticationErrorFormatter.formatError(error, {
-                        operation: 'browser-auth',
-                        timeout: TIMEOUTS.AUTH.BROWSER,
+                const result = await this.commandManager
+                    .execute(loginCommand, { encoding: 'utf8', timeout: TIMEOUTS.AUTH.BROWSER })
+                    .catch((error) => {
+                        this.debugLogger.error('[Auth] Login command failed', error);
+                        const formatted = AuthenticationErrorFormatter.formatError(error, {
+                            operation: 'browser-auth',
+                            timeout: TIMEOUTS.AUTH.BROWSER,
+                        });
+                        this.logger.error(`[Auth] ${formatted.message}`);
+                        this.debugLogger.debug(formatted.technical);
+                        stepLogger.logTemplate('adobe-auth', 'error', {
+                            item: 'Authentication',
+                            error: formatted.title,
+                        });
+                        return null;
                     });
-                    this.logger.error(`[Auth] ${formatted.message}`);
-                    this.debugLogger.debug(formatted.technical);
-                    stepLogger.logTemplate('adobe-auth', 'error', {
-                        item: 'Authentication',
-                        error: formatted.title,
-                    });
-                    return null;
-                });
 
                 if (result && result.code === 0) {
                     this.debugLogger.debug('[Auth] Login command completed successfully');
@@ -246,10 +276,16 @@ export class AuthenticationService {
 
                     if (isValidTokenResponse(token)) {
                         this.debugLogger.debug('[Auth] Adobe CLI login successful (exit code 0)');
-                        stepLogger.logTemplate('adobe-auth', 'statuses.authentication-complete', {});
+                        stepLogger.logTemplate(
+                            'adobe-auth',
+                            'statuses.authentication-complete',
+                            {},
+                        );
 
                         this.sdkClient.clear();
-                        this.debugLogger.debug('[Auth] Cleared SDK client to force re-init with new token');
+                        this.debugLogger.debug(
+                            '[Auth] Cleared SDK client to force re-init with new token',
+                        );
 
                         if (!force) {
                             this.cacheManager.clearAuthStatusCache();
@@ -262,23 +298,35 @@ export class AuthenticationService {
                             // the cache's short TTL — keeping the wizard on the wrong org.
                             this.cacheManager.setCachedOrganization(undefined);
                             this.cacheManager.clearOrgListCache();
-                            this.debugLogger.debug('[Auth] Cleared auth, validation, token inspection, and org caches after login');
+                            this.debugLogger.debug(
+                                '[Auth] Cleared auth, validation, token inspection, and org caches after login',
+                            );
                         }
 
                         return true;
                     } else {
-                        this.debugLogger.warn('[Auth] Command succeeded but no valid token in output');
-                        this.debugLogger.debug(`[Auth] Output length: ${result.stdout?.length}, first 100 chars: ${result.stdout?.substring(0, 100)}`);
+                        this.debugLogger.warn(
+                            '[Auth] Command succeeded but no valid token in output',
+                        );
+                        this.debugLogger.debug(
+                            `[Auth] Output length: ${result.stdout?.length}, first 100 chars: ${result.stdout?.substring(0, 100)}`,
+                        );
                     }
 
                     if (!force) {
-                        this.debugLogger.debug('[Auth] Retrying with force flag to ensure fresh authentication');
-                        stepLogger.logTemplate('adobe-auth', 'operations.retrying', { item: 'authentication with fresh login' });
+                        this.debugLogger.debug(
+                            '[Auth] Retrying with force flag to ensure fresh authentication',
+                        );
+                        stepLogger.logTemplate('adobe-auth', 'operations.retrying', {
+                            item: 'authentication with fresh login',
+                        });
                         return await this.login(true);
                     }
                 } else {
                     const exitCode = result?.code ?? 'unknown';
-                    this.debugLogger.debug(`[Auth] Login command failed with exit code: ${exitCode}`);
+                    this.debugLogger.debug(
+                        `[Auth] Login command failed with exit code: ${exitCode}`,
+                    );
                 }
 
                 return false;
@@ -295,10 +343,7 @@ export class AuthenticationService {
      */
     async logout(): Promise<void> {
         try {
-            await this.commandManager.execute(
-                'aio auth logout',
-                { encoding: 'utf8' },
-            );
+            await this.commandManager.execute('aio auth logout', { encoding: 'utf8' });
 
             // Clear all caches after logout
             this.cacheManager.clearAll(); // Includes token inspection cache
@@ -361,7 +406,18 @@ export class AuthenticationService {
      * These permissions are required to create and manage App Builder projects
      */
     async testDeveloperPermissions(): Promise<{ hasPermissions: boolean; error?: string }> {
-        return this.organizationValidator.testDeveloperPermissions();
+        // Target the probe at the token's reachable org so a stale ambient CLI
+        // selection can't make the underlying `aio app list` check a DIFFERENT
+        // org. Token org = the cached org (already the token org after auth) or,
+        // on a cache miss, getOrganizationsSdkOnly()[0] — SDK-only so the quick
+        // check never stalls on `aio console org list`. ID-only targeting is a
+        // fine fallback (buildAioConsoleEnv tolerates the missing code/name).
+        const org = this.getCachedOrganization() ?? (await this.getOrganizationsSdkOnly())[0];
+        if (!org?.id) {
+            return this.organizationValidator.testDeveloperPermissions();
+        }
+        const target: OrgContextTarget = { orgId: org.id, orgCode: org.code, orgName: org.name };
+        return withOrgContext(target, () => this.organizationValidator.testDeveloperPermissions());
     }
 
     // Entity Service Methods - Delegating to EntityService
@@ -409,7 +465,10 @@ export class AuthenticationService {
      * Get workspaces. `target` threads the selected org + project (webview state) so the
      * fetch targets them instead of the stale in-memory cache.
      */
-    async getWorkspaces(target?: { orgId?: string; projectId?: string }): Promise<AdobeWorkspace[]> {
+    async getWorkspaces(target?: {
+        orgId?: string;
+        projectId?: string;
+    }): Promise<AdobeWorkspace[]> {
         return withTiming('getWorkspaces', async () => {
             const { fetcher } = await this.ensureEntities();
             return fetcher.getWorkspaces(target);
@@ -430,7 +489,10 @@ export class AuthenticationService {
      * Create an OAuth S2S credential on the current workspace.
      * Returns the new credential with client_id, or undefined on failure.
      */
-    async createWorkspaceCredential(name: string, description: string): Promise<WorkspaceCredential | undefined> {
+    async createWorkspaceCredential(
+        name: string,
+        description: string,
+    ): Promise<WorkspaceCredential | undefined> {
         const { fetcher } = await this.ensureEntities();
         return fetcher.createWorkspaceCredential(name, description);
     }
@@ -475,7 +537,10 @@ export class AuthenticationService {
 
     /** Create an apiKey/AdobeID credential; returns its `id_integration`. */
     async createAdobeIdCredential(
-        orgId: string, projectId: string, workspaceId: string, input: AdobeIdCredentialInput,
+        orgId: string,
+        projectId: string,
+        workspaceId: string,
+        input: AdobeIdCredentialInput,
     ): Promise<string | undefined> {
         const { fetcher } = await this.ensureEntities();
         return fetcher.createAdobeIdCredential(orgId, projectId, workspaceId, input);
@@ -483,7 +548,9 @@ export class AuthenticationService {
 
     /** Subscribe apiKey/AdobeID services onto an AdobeID credential. */
     async subscribeAdobeIdIntegrationToServices(
-        orgId: string, idIntegration: string, serviceInfo: ServiceSubscriptionInfo[],
+        orgId: string,
+        idIntegration: string,
+        serviceInfo: ServiceSubscriptionInfo[],
     ): Promise<void> {
         const { fetcher } = await this.ensureEntities();
         return fetcher.subscribeAdobeIdIntegrationToServices(orgId, idIntegration, serviceInfo);
@@ -491,14 +558,24 @@ export class AuthenticationService {
 
     /** Subscribe OAuth-S2S services onto an S2S credential. */
     async subscribeOAuthServerToServerIntegrationToServices(
-        orgId: string, idIntegration: string, serviceInfo: ServiceSubscriptionInfo[],
+        orgId: string,
+        idIntegration: string,
+        serviceInfo: ServiceSubscriptionInfo[],
     ): Promise<void> {
         const { fetcher } = await this.ensureEntities();
-        return fetcher.subscribeOAuthServerToServerIntegrationToServices(orgId, idIntegration, serviceInfo);
+        return fetcher.subscribeOAuthServerToServerIntegrationToServices(
+            orgId,
+            idIntegration,
+            serviceInfo,
+        );
     }
 
     /** Ensure the shared S2S credential exists; returns its `id_integration`. */
-    async ensureOAuthCredentialId(orgId: string, projectId: string, workspaceId: string): Promise<string> {
+    async ensureOAuthCredentialId(
+        orgId: string,
+        projectId: string,
+        workspaceId: string,
+    ): Promise<string> {
         const { fetcher } = await this.ensureEntities();
         return fetcher.ensureOAuthCredentialId(orgId, projectId, workspaceId);
     }
@@ -507,7 +584,9 @@ export class AuthenticationService {
 
     /** Get the workspace's existing S2S credential ids, or undefined when none. */
     async getWorkspaceS2SCredential(
-        orgId: string, projectId: string, workspaceId: string,
+        orgId: string,
+        projectId: string,
+        workspaceId: string,
     ): Promise<WorkspaceS2SCredentialIds | undefined> {
         const { fetcher } = await this.ensureEntities();
         return fetcher.getWorkspaceS2SCredential(orgId, projectId, workspaceId);
@@ -515,7 +594,9 @@ export class AuthenticationService {
 
     /** Create the shared S2S credential on the workspace; returns its ids. */
     async createWorkspaceS2SCredentialFor(
-        orgId: string, projectId: string, workspaceId: string,
+        orgId: string,
+        projectId: string,
+        workspaceId: string,
     ): Promise<WorkspaceS2SCredentialIds> {
         const { fetcher } = await this.ensureEntities();
         return fetcher.createWorkspaceS2SCredentialFor(orgId, projectId, workspaceId);
@@ -651,18 +732,19 @@ export class AuthenticationService {
      * }
      * ```
      */
-    async loginAndRestoreProjectContext(adobeContext: {
-        organization?: string;
-        projectId?: string;
-        workspace?: string;
-    }, force = false): Promise<boolean> {
+    async loginAndRestoreProjectContext(
+        adobeContext: {
+            organization?: string;
+            projectId?: string;
+            workspace?: string;
+        },
+        force = false,
+    ): Promise<boolean> {
         return withTiming('loginAndRestoreProjectContext', async () => {
             const debugLogger = getLogger();
 
             try {
-                debugLogger.debug(
-                    `[Auth] Starting login and context restoration (force=${force})`,
-                );
+                debugLogger.debug(`[Auth] Starting login and context restoration (force=${force})`);
                 const loginSuccess = await this.login(force);
                 if (!loginSuccess) {
                     debugLogger.warn('[Auth] Login failed or was cancelled');
@@ -675,9 +757,9 @@ export class AuthenticationService {
                 // invocation via `withOrgContext` using `adobeContext`. The login
                 // itself is all this method needs to perform.
                 debugLogger.debug(
-                    `[Auth] Login complete; context (${adobeContext.organization ?? '-'}/`
-                    + `${adobeContext.projectId ?? '-'}/${adobeContext.workspace ?? '-'}) `
-                    + 'will be targeted per-op via env, not pinned to the global',
+                    `[Auth] Login complete; context (${adobeContext.organization ?? '-'}/` +
+                        `${adobeContext.projectId ?? '-'}/${adobeContext.workspace ?? '-'}) ` +
+                        'will be targeted per-op via env, not pinned to the global',
                 );
                 return true;
             } catch (error) {
@@ -686,5 +768,4 @@ export class AuthenticationService {
             }
         });
     }
-
 }

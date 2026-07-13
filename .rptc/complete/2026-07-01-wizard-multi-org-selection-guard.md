@@ -1,5 +1,19 @@
 # Wizard: multi-org users need an explicit org guard, not `getOrganizations()[0]`
 
+## Status: CLOSED — overtaken 2026-07-13
+
+Closed without code change after inspection (2026-07-13). The premise **contradicts the now-canonical
+org model**: the codebase's own `detectProjectOrgMismatch` header states `getOrganizations()[0]` is
+"the token's **SINGLE** reachable org" (an IMS token is org-bound; every other org 403s), and the
+`.claude/skills/adobe-org-context` skill says the same — so `[0]` is not an arbitrary pick from many,
+it's the one reachable org. The `length === 1 ? … : …` line is defensive logging only. Separately,
+the primary `fix/wizard-org-mismatch` already made the wizard's displayed org **token-sourced**, so
+the "display-vs-token divergence" this item wanted to guard no longer exists in the create wizard
+(which also has no existing project org for `detectProjectOrgMismatch` to compare against). If a
+multi-org reality ever emerges where `getOrganizations()` genuinely returns several orgs, reopen with
+that evidence. The one real residual from this cluster (the `testDeveloperPermissions` org-targeting)
+shipped via [[2026-07-01-wizard-org-project-mispairing]].
+
 ## Provenance
 Phase 4 security + code review of `fix/wizard-org-mismatch` (security ~30; not a vuln). The primary
 fix uses `getOrganizations()[0]` as "the org" — the same convention `detectProjectOrgMismatch` already
