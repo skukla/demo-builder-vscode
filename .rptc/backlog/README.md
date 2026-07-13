@@ -62,6 +62,10 @@ Five sequenced slices; **slice 1 gates the rest**:
 4. **Scaffold-and-author — blocked on 1** ([`2026-06-17-appbuilder-app-scaffold-author.md`](2026-06-17-appbuilder-app-scaffold-author.md)). `aio app init` + AI authoring; the only slice with real new surface (code home + repo-creation decision). Needs a design pass before its plan locks.
 5. **App-only / no-storefront project — partial on 1, parallel** ([`2026-06-17-appbuilder-app-only-project.md`](2026-06-17-appbuilder-app-only-project.md)). Frontend-optional stack schema work; heaviest, least-coupled slice.
 
+#### Kind-aware API-access step in Add Integration ([`2026-07-13-kind-aware-api-access.md`](2026-07-13-kind-aware-api-access.md))
+
+The Add-Integration API-access step is uniform (Required + open "add more APIs" browse list) where it should be **surface-aware** — branch on the declared API surface, NOT `kind`: mesh → informational only (just `GraphQLServiceSDK`, auto at deploy — the browse list is un-actionable for a mesh); declares `requiredApis`/`suggestedApis` → Required + Suggested with the full list behind an "advanced" disclosure; declares neither (the blank `app-builder-shell` AND custom `owner-repo` apps) → the full picker as the primary surface. Deferred behind the product-grouping/gating picker improvements landing first (same branch). User-endorsed 2026-07-13.
+
 #### Hybrid storefront — Tier 2 (B2B+B2C in one site) ([`hybrid-storefront-model/`](../plans/hybrid-storefront-model/overview.md) — still in `.rptc/plans/`)
 
 One CitiSignal storefront serves both B2C individuals and B2B company accounts by customer type at login, on the `boilerplate-b2b-template` base with branding as an overlay (no fork). **Functionally complete** on `develop` — hybrid merge (`b9c31575`), B2B-readiness detection (`24656460`, `c3cd0bbd`), account-chrome overlay, config-flag injection (ADR-009, `bd90c96d`). **⛔ Gated on live login-UX verification**: confirm an individual customer sees no B2B nav rows, a company user does, and B2C is not regressed. The one plan dir that legitimately stays active. Step checks in [`step-02.md`](../plans/hybrid-storefront-model/step-02.md).
