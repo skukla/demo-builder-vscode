@@ -71,6 +71,16 @@ const MESH_COMPONENT = {
 const PROJECT: AdobeProject = { id: 'proj-1', name: 'proj-one', title: 'Project One' };
 const OTHER_PROJECT: AdobeProject = { id: 'proj-2', name: 'proj-two', title: 'Project Two' };
 const WORKSPACE: Workspace = { id: 'ws-1', name: 'Stage', title: 'Stage' };
+/**
+ * A committed shared destination WITH an existing integration referencing it — the
+ * realistic "later add" state. A committed destination alone (no integration) is a
+ * clean slate that re-walks the picker, so later-add tests must include one.
+ */
+const LATER_ADD: Partial<WizardState> = {
+    adobeProject: PROJECT,
+    adobeWorkspace: WORKSPACE,
+    selectedAppBuilderComponents: ['existing-integration'],
+};
 /** The baseline API sdk code the enable subscribes (for progress-tick tests). */
 const MGMT = 'AdobeIOManagementAPISDK';
 
@@ -420,7 +430,7 @@ describe('useIntegrationFlow — dest-workspace Continue and mesh finish', () =>
 
     it('a failed mesh enable keeps the modal open (no commit, no close)', async () => {
         mockMeshRequest.mockResolvedValue({ success: false, error: 'nope' });
-        const s = setup({ initial: { adobeProject: PROJECT, adobeWorkspace: WORKSPACE } });
+        const s = setup({ initial: LATER_ADD });
         pickKindAndContinue(s, 'mesh');
         act(() => s.result.current.onContinue()); // → api-access
         await finishMesh(s);
@@ -432,7 +442,7 @@ describe('useIntegrationFlow — dest-workspace Continue and mesh finish', () =>
     });
 
     it('finishes a later-add mesh from dest-summary → api-access (destination already committed)', async () => {
-        const s = setup({ initial: { adobeProject: PROJECT, adobeWorkspace: WORKSPACE } });
+        const s = setup({ initial: LATER_ADD });
         pickKindAndContinue(s, 'mesh');
         expect(s.result.current.stage).toBe('dest-summary');
         act(() => s.result.current.onContinue());
@@ -446,11 +456,6 @@ describe('useIntegrationFlow — dest-workspace Continue and mesh finish', () =>
 });
 
 describe('useIntegrationFlow — catalog/custom finish (deterministic, no API picks)', () => {
-    const COMMITTED_DEST: Partial<WizardState> = {
-        adobeProject: PROJECT,
-        adobeWorkspace: WORKSPACE,
-    };
-
     function walkCatalogToApiAccess(s: Setup, catalogId = 'erp-sync'): void {
         walkCatalogToDestProject(s, catalogId);
         expect(s.result.current.stage).toBe('dest-summary');
@@ -459,7 +464,7 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
     }
 
     it('finishes a catalog add: adds the component and writes NO selectedConsoleApis', () => {
-        const s = setup({ initial: COMMITTED_DEST });
+        const s = setup({ initial: LATER_ADD });
         walkCatalogToApiAccess(s);
         act(() => s.result.current.onContinue());
         expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('erp-sync', true);
@@ -469,7 +474,7 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
     });
 
     it('build custom HOLDS on Done, Back un-confirms to revise, Done commits + closes', () => {
-        const s = setup({ initial: COMMITTED_DEST });
+        const s = setup({ initial: LATER_ADD });
         pickKindAndContinue(s, 'blank'); // blank has no source stage → straight to dest
         expect(s.result.current.stage).toBe('dest-summary');
         act(() => s.result.current.onContinue()); // → api-access
@@ -495,7 +500,7 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
     });
 
     it('a "build custom" finish writes the picked APIs to selectedConsoleApis[shellId]', () => {
-        const s = setup({ initial: COMMITTED_DEST });
+        const s = setup({ initial: LATER_ADD });
         pickKindAndContinue(s, 'blank');
         act(() => s.result.current.onContinue()); // dest-summary → api-access
         act(() => s.result.current.toggleApi('FireflyServicesSDK')); // the user knows this up front
@@ -507,7 +512,7 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
     });
 
     it('a custom (import) finish commits the repo AND keys the picks under owner-repo', () => {
-        const s = setup({ initial: COMMITTED_DEST });
+        const s = setup({ initial: LATER_ADD });
         pickKindAndContinue(s, 'custom');
         act(() => s.result.current.setCustomSource({ owner: 'acme', repo: 'widget' }));
         act(() => s.result.current.onContinue()); // → dest-summary
@@ -526,7 +531,7 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
     });
 
     it('clears the draft source when setCustomSource receives undefined (cleared/invalid URL)', () => {
-        const s = setup({ initial: COMMITTED_DEST });
+        const s = setup({ initial: LATER_ADD });
         pickKindAndContinue(s, 'custom');
         act(() => s.result.current.setCustomSource({ owner: 'acme', repo: 'widget' }));
         expect(s.result.current.canContinue).toBe(true);
@@ -576,7 +581,7 @@ describe('useIntegrationFlow — destination mode', () => {
 
 describe('useIntegrationFlow — changingDestination', () => {
     it('changeDestination re-expands the dest stages at dest-project and flags the draft', () => {
-        const s = setup({ initial: { adobeProject: PROJECT, adobeWorkspace: WORKSPACE } });
+        const s = setup({ initial: LATER_ADD });
         pickKindAndContinue(s, 'mesh');
         expect(s.result.current.stage).toBe('dest-summary');
         act(() => s.result.current.changeDestination());

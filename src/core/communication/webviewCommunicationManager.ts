@@ -41,6 +41,7 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     // Data loading (wizard UI)
     'get-projects': TIMEOUTS.NORMAL,                 // 30s - fetch project list from Adobe
     'get-workspaces': TIMEOUTS.NORMAL,               // 30s - fetch workspace list from Adobe
+    'list-org-console-apis': TIMEOUTS.LONG,          // 180s - full org services catalog (getServicesForOrg); same slow call the mesh subscribe path budgets for
 
     // Project/workspace selection (validate reachability + ack; no global aio mutation)
     'select-project': TIMEOUTS.NORMAL,               // 30s - validate project reachable, then ack

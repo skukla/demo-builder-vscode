@@ -14,8 +14,9 @@
  */
 
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import React, { useEffect, useState } from 'react';
-import { LoadingDisplay } from '@/core/ui/components/feedback';
+import React, { useCallback, useEffect, useState } from 'react';
+import { LoadingDisplay, StatusDisplay } from '@/core/ui/components/feedback';
+import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { ApiAccessPicker, type ApiAccessOption } from '@/core/ui/components/selection';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 
@@ -49,6 +50,9 @@ const NO_SELECTED: string[] = [];
 
 const HELPER = 'Pick the Adobe APIs this app needs — change them anytime in Manage APIs.';
 
+/** Centered loading/error views share this height (matches the destination step). */
+const PICKER_VIEW_HEIGHT = '220px';
+
 /**
  * The interactive API-access step for custom/import apps.
  *
@@ -64,6 +68,10 @@ export function ApiPickerStage({
     const [apis, setApis] = useState<ApiAccessOption[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | undefined>(undefined);
+    const [reloadKey, setReloadKey] = useState(0);
+
+    /** Re-fire the list (from the error view's Retry). */
+    const retry = useCallback(() => setReloadKey((key) => key + 1), []);
 
     useEffect(() => {
         let cancelled = false;
@@ -85,7 +93,7 @@ export function ApiPickerStage({
         return () => {
             cancelled = true;
         };
-    }, [componentIds]);
+    }, [componentIds, reloadKey]);
 
     return (
         <div className="intflow-api-info" data-testid="api-picker-stage">
@@ -97,6 +105,7 @@ export function ApiPickerStage({
                 apis={apis}
                 selected={selected}
                 onToggle={onToggle}
+                onRetry={retry}
             />
         </div>
     );
@@ -109,12 +118,15 @@ interface PickerBodyProps {
     apis: ApiAccessOption[];
     selected: string[];
     onToggle: (code: string) => void;
+    onRetry: () => void;
 }
 
 /**
  * The api-access body, resolved by state precedence: loading → error →
  * confirmation summary (the Done hold) → the interactive picker. Early returns
- * keep the JSX free of long `&&` guard chains.
+ * keep the JSX free of long `&&` guard chains. Loading and error reuse the
+ * centered feedback views of the sibling destination step (a retryable failure,
+ * not dead-end red text).
  */
 function PickerBody({
     loading,
@@ -123,15 +135,24 @@ function PickerBody({
     apis,
     selected,
     onToggle,
+    onRetry,
 }: PickerBodyProps): React.ReactElement {
     if (loading) {
-        return <LoadingDisplay size="M" message="Loading Adobe APIs…" />;
+        return (
+            <CenteredFeedbackContainer height={PICKER_VIEW_HEIGHT}>
+                <LoadingDisplay size="L" message="Loading Adobe APIs…" />
+            </CenteredFeedbackContainer>
+        );
     }
     if (error) {
         return (
-            <div className="intflow-api-info-error" role="alert">
-                {error}
-            </div>
+            <StatusDisplay
+                variant="error"
+                height={PICKER_VIEW_HEIGHT}
+                title="Couldn't load Adobe APIs"
+                message={error}
+                actions={[{ label: 'Retry', variant: 'accent', onPress: onRetry }]}
+            />
         );
     }
     if (confirmed) {

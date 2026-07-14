@@ -77,6 +77,26 @@ describe('ApiPickerStage', () => {
         expect(screen.queryByText('Firefly Services')).not.toBeInTheDocument();
     });
 
+    it('offers a Retry on failure that re-fetches and recovers', async () => {
+        // A timed-out or failed list is recoverable: the error view shows a Retry that
+        // re-fires list-org-console-apis. The first call fails; the retry hits the
+        // beforeEach success default and the picker renders.
+        mockRequest.mockResolvedValueOnce({
+            success: false,
+            error: 'Request timeout: list-org-console-apis',
+        });
+        renderStage();
+        await waitFor(() =>
+            expect(screen.getByText(/Request timeout/i)).toBeInTheDocument()
+        );
+        expect(mockRequest).toHaveBeenCalledTimes(1);
+
+        fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
+
+        await waitFor(() => expect(screen.getByText('Firefly Services')).toBeInTheDocument());
+        expect(mockRequest).toHaveBeenCalledTimes(2);
+    });
+
     it('toggles a free (unlocked) pick through onToggle', async () => {
         const { onToggle } = renderStage();
         await waitFor(() => expect(screen.getByText('Firefly Services')).toBeInTheDocument());

@@ -9,6 +9,7 @@
 import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import * as vscode from 'vscode';
 import { Message } from '@/types/messages';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 // Mock VS Code API
 jest.mock('vscode');
@@ -407,6 +408,29 @@ describe('WebviewCommunicationManager - Messaging', () => {
                 call => call[0].type === '__timeout_hint__'
             );
             expect(timeoutHintCall).toBeDefined();
+        });
+
+        it('sends the LONG (180s) timeout hint for list-org-console-apis (slow org catalog fetch)', async () => {
+            // The org-services catalog fetch (getServicesForOrg) can run well past the 30s
+            // default on large orgs — the same slow call the mesh subscribe path budgets for.
+            const handler = jest.fn().mockResolvedValue({ success: true });
+            manager.on('list-org-console-apis', handler);
+
+            messageListener({
+                id: 'msg-loca',
+                type: 'list-org-console-apis',
+                payload: { componentIds: [] },
+                timestamp: Date.now(),
+                expectsResponse: true,
+            });
+
+            await Promise.resolve();
+
+            const timeoutHintCall = (mockWebview.postMessage as jest.Mock).mock.calls.find(
+                call => call[0].type === '__timeout_hint__'
+            );
+            expect(timeoutHintCall).toBeDefined();
+            expect(timeoutHintCall![0].payload.timeout).toBe(TIMEOUTS.LONG);
         });
 
         it('should not crash if timeout hint fails to send', async () => {

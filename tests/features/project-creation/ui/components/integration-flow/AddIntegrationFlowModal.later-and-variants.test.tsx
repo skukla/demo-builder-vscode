@@ -125,6 +125,10 @@ const SIGNED_OUT: Partial<WizardState> = {
 const COMMITTED_DEST: Partial<WizardState> = {
     adobeProject: PROJECT,
     adobeWorkspace: WORKSPACE,
+    // A committed shared destination co-occurs with an existing integration (later
+    // add) — required for the destination to collapse to the summary rather than
+    // re-walking the picker as a clean slate.
+    selectedAppBuilderComponents: ['existing-integration'],
 };
 
 const APIS = [

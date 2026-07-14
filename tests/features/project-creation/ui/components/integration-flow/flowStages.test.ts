@@ -64,7 +64,11 @@ describe('deriveStageOrder — add mode', () => {
 
     it('mesh, destination committed (later add) → dest collapses to dest-summary + api-access', () => {
         expect(
-            deriveStageOrder(draft({ kind: 'mesh' }), slice({ destinationCommitted: true }), ADD)
+            deriveStageOrder(
+                draft({ kind: 'mesh' }),
+                slice({ destinationCommitted: true, selectedIds: ['existing-integration'] }),
+                ADD
+            )
         ).toEqual(['kind', 'dest-summary', 'api-access']);
     });
 
@@ -93,7 +97,11 @@ describe('deriveStageOrder — add mode', () => {
 
     it('catalog, destination committed → dest-summary between source and apis', () => {
         expect(
-            deriveStageOrder(draft({ kind: 'catalog' }), slice({ destinationCommitted: true }), ADD)
+            deriveStageOrder(
+                draft({ kind: 'catalog' }),
+                slice({ destinationCommitted: true, selectedIds: ['existing-integration'] }),
+                ADD
+            )
         ).toEqual(['kind', 'source-catalog', 'dest-summary', 'api-access']);
     });
 
@@ -107,9 +115,40 @@ describe('deriveStageOrder — add mode', () => {
         ]);
     });
 
-    it('custom, destination committed → dest-summary', () => {
+    it('custom, destination committed (later add) → dest-summary', () => {
         expect(
-            deriveStageOrder(draft({ kind: 'custom' }), slice({ destinationCommitted: true }), ADD)
+            deriveStageOrder(
+                draft({ kind: 'custom' }),
+                slice({ destinationCommitted: true, selectedIds: ['existing-integration'] }),
+                ADD
+            )
+        ).toEqual(['kind', 'source-custom', 'dest-summary', 'api-access']);
+    });
+
+    it('destination committed but zero integrations → walks the picker (clean slate), not the summary', () => {
+        // After removing the last integration, the shared Adobe project/workspace stays
+        // committed but no integration references it. The next Add re-walks the picker so
+        // the user re-confirms a destination instead of silently reusing the old one.
+        expect(
+            deriveStageOrder(
+                draft({ kind: 'custom' }),
+                slice({ destinationCommitted: true, selectedIds: [], meshSelected: false }),
+                ADD
+            )
+        ).toEqual(['kind', 'source-custom', 'dest-project', 'dest-workspace', 'api-access']);
+    });
+
+    it('destination committed, a selected mesh references it (no App Builder rows) → collapses', () => {
+        // A mesh holds the shared destination via selectedOptionalDependencies, not
+        // selectedAppBuilderComponents — so selectedIds is empty yet meshSelected is true.
+        // Adding the first App Builder integration should still collapse to the summary,
+        // not re-walk the picker (the destination is genuinely referenced).
+        expect(
+            deriveStageOrder(
+                draft({ kind: 'custom' }),
+                slice({ destinationCommitted: true, selectedIds: [], meshSelected: true }),
+                ADD
+            )
         ).toEqual(['kind', 'source-custom', 'dest-summary', 'api-access']);
     });
 
@@ -256,7 +295,11 @@ describe('nextStage', () => {
             nextStage(
                 'dest-signin',
                 draft({ kind: 'custom' }),
-                slice({ isSignedIn: true, destinationCommitted: true }),
+                slice({
+                    isSignedIn: true,
+                    destinationCommitted: true,
+                    selectedIds: ['existing-integration'],
+                }),
                 ADD
             )
         ).toBe('dest-summary');
@@ -267,7 +310,7 @@ describe('nextStage', () => {
             nextStage(
                 'dest-project',
                 draft({ kind: 'catalog' }),
-                slice({ destinationCommitted: true }),
+                slice({ destinationCommitted: true, selectedIds: ['existing-integration'] }),
                 ADD
             )
         ).toBe('dest-summary');

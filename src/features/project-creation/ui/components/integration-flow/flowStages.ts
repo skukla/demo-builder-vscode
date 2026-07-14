@@ -101,13 +101,23 @@ export function deriveStageOrder(
     if (mode === 'api-edit') return ['api-access'];
     if (mode === 'destination') return destinationStages(slice);
 
-    // Collapse to just the summary only when the destination is committed AND we
-    // have a live Adobe session. A persisted project/workspace (Edit mode) makes
-    // destinationCommitted true even when signed out, but the api-access picker
-    // needs a live org — so when signed out we walk the destination stages
-    // (sign-in first) instead of skipping straight to the summary.
+    // Collapse to just the summary only when the destination is committed, we have
+    // a live Adobe session, AND something already references that shared destination.
+    // Two guards on top of destinationCommitted:
+    //   - signed out: a persisted project/workspace (Edit mode) makes
+    //     destinationCommitted true, but the api-access picker needs a live org —
+    //     so walk the destination stages (sign-in first) instead of the summary.
+    //   - nothing references it: after removing the last integration the shared
+    //     destination stays committed but is orphaned, so re-walk the picker (a
+    //     clean-slate re-confirm) rather than silently reusing it. A mesh counts as
+    //     a reference-holder — it binds the destination via selectedOptionalDependencies
+    //     (slice.meshSelected), not selectedAppBuilderComponents (slice.selectedIds).
+    const hasIntegrations = slice.selectedIds.length > 0 || slice.meshSelected;
     const dest: FlowStageId[] =
-        slice.destinationCommitted && slice.isSignedIn && !draft.changingDestination
+        slice.destinationCommitted &&
+        slice.isSignedIn &&
+        hasIntegrations &&
+        !draft.changingDestination
             ? ['dest-summary']
             : destinationStages(slice);
     return ['kind', ...sourceStages(draft.kind), ...dest, 'api-access'];

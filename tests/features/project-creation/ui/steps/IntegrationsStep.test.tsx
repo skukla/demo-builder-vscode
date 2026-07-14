@@ -368,7 +368,10 @@ describe('IntegrationsStep — in-modal mesh enable hand-off', () => {
     /** Hosts the step over REAL useState so the modal's finish commits re-render rows. */
     function StatefulStep(): React.ReactElement {
         const [state, setState] = React.useState<WizardState>(() =>
-            baseState({ ...SIGNED_IN, ...COMMITTED_DEST })
+            // An existing integration (CUSTOM_ADDED) already references the committed
+            // destination, so adding the mesh collapses to the summary rather than
+            // re-walking the picker as a clean slate.
+            baseState({ ...SIGNED_IN, ...COMMITTED_DEST, ...CUSTOM_ADDED })
         );
         const updateState = React.useCallback(
             (partial: Partial<WizardState>) => setState((current) => ({ ...current, ...partial })),

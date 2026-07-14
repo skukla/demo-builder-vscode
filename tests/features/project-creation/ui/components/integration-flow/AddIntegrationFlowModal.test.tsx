@@ -121,6 +121,11 @@ const SIGNED_IN: Partial<WizardState> = {
 const COMMITTED_DEST: Partial<WizardState> = {
     adobeProject: PROJECT,
     adobeWorkspace: WORKSPACE,
+    // A committed shared destination co-occurs with at least one existing integration
+    // (the "later add" case). Without a referencing integration the flow treats the
+    // destination as a clean slate and re-walks the picker instead of collapsing to
+    // the summary, so a later-add fixture must include one.
+    selectedAppBuilderComponents: ['existing-integration'],
 };
 
 const APIS = [
