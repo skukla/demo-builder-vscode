@@ -115,26 +115,35 @@ export class AdobeEntityFetcher {
 
         if (outcome.timedOut) {
             this.debugLogger.warn(
-                `[Entity Fetcher] SDK ${entityName} fetch exceeded `
-                + `${formatDuration(TIMEOUTS.SDK_ENTITY_FETCH)}, falling back to CLI`,
+                `[Entity Fetcher] SDK ${entityName} fetch exceeded ` +
+                    `${formatDuration(TIMEOUTS.SDK_ENTITY_FETCH)}, falling back to CLI`,
             );
             return [];
         }
 
         if (outcome.error || !outcome.result) {
-            this.debugLogger.trace(`[Entity Fetcher] SDK failed for ${entityName}, falling back to CLI:`, outcome.error);
-            this.debugLogger.warn(`[Entity Fetcher] SDK unavailable, using slower CLI fallback for ${entityName}`);
+            this.debugLogger.trace(
+                `[Entity Fetcher] SDK failed for ${entityName}, falling back to CLI:`,
+                outcome.error,
+            );
+            this.debugLogger.warn(
+                `[Entity Fetcher] SDK unavailable, using slower CLI fallback for ${entityName}`,
+            );
             return [];
         }
 
         const sdkResult = outcome.result;
         if (!sdkResult.body || !Array.isArray(sdkResult.body)) {
-            this.debugLogger.warn(`[Entity Fetcher] SDK returned an invalid ${entityName} response, falling back to CLI`);
+            this.debugLogger.warn(
+                `[Entity Fetcher] SDK returned an invalid ${entityName} response, falling back to CLI`,
+            );
             return [];
         }
 
         const mapped = mapper(sdkResult.body);
-        this.debugLogger.debug(`[Entity Fetcher] Retrieved ${mapped.length} ${entityName} via SDK in ${formatDuration(Date.now() - startTime)}`);
+        this.debugLogger.debug(
+            `[Entity Fetcher] Retrieved ${mapped.length} ${entityName} via SDK in ${formatDuration(Date.now() - startTime)}`,
+        );
         return mapped;
     }
 
@@ -155,25 +164,26 @@ export class AdobeEntityFetcher {
      * Strips CLI warning lines (prefixed with ›) that the aio CLI writes to stdout
      * alongside JSON output, which would otherwise break JSON.parse.
      */
-    private parseCLIResponse<TRaw>(
-        stdout: string,
-        stderr: string,
-        entityName: string,
-    ): TRaw[] {
+    private parseCLIResponse<TRaw>(stdout: string, stderr: string, entityName: string): TRaw[] {
         const parsed = parseJSON<TRaw[]>(stdout);
         if (parsed && Array.isArray(parsed)) return parsed;
 
         // Strip non-JSON lines from CLI output. The aio CLI mixes warnings, update
         // notices, and other noise into stdout alongside JSON. Keep only lines that
         // look like JSON content (start with [, ], {, }, or " after trimming).
-        const cleaned = stdout.split('\n')
-            .filter(line => {
+        const cleaned = stdout
+            .split('\n')
+            .filter((line) => {
                 const trimmed = line.trim();
                 if (trimmed.length === 0) return false;
                 const firstChar = trimmed[0];
-                return firstChar === '[' || firstChar === ']'
-                    || firstChar === '{' || firstChar === '}'
-                    || firstChar === '"';
+                return (
+                    firstChar === '[' ||
+                    firstChar === ']' ||
+                    firstChar === '{' ||
+                    firstChar === '}' ||
+                    firstChar === '"'
+                );
             })
             .join('\n');
         const retryParsed = parseJSON<TRaw[]>(cleaned);
@@ -181,21 +191,28 @@ export class AdobeEntityFetcher {
 
         // Some CLI versions write JSON to stderr when exit code is 2
         if (stderr) {
-            const stderrCleaned = stderr.split('\n')
-                .filter(line => {
+            const stderrCleaned = stderr
+                .split('\n')
+                .filter((line) => {
                     const trimmed = line.trim();
                     if (trimmed.length === 0) return false;
                     const firstChar = trimmed[0];
-                    return firstChar === '[' || firstChar === ']'
-                        || firstChar === '{' || firstChar === '}'
-                        || firstChar === '"';
+                    return (
+                        firstChar === '[' ||
+                        firstChar === ']' ||
+                        firstChar === '{' ||
+                        firstChar === '}' ||
+                        firstChar === '"'
+                    );
                 })
                 .join('\n');
             const stderrParsed = parseJSON<TRaw[]>(stderrCleaned);
             if (stderrParsed && Array.isArray(stderrParsed)) return stderrParsed;
 
             if (stderr.includes('401') || stderr.toLowerCase().includes('unauthorized')) {
-                throw new Error('AUTH_EXPIRED: Your Adobe I/O session has expired. Please sign in again.');
+                throw new Error(
+                    'AUTH_EXPIRED: Your Adobe I/O session has expired. Please sign in again.',
+                );
             }
             if (stderr.includes('403') || stderr.toLowerCase().includes('forbidden')) {
                 // Typed, in-app-recoverable error. NO terminal instruction — the UI
@@ -205,16 +222,21 @@ export class AdobeEntityFetcher {
                     ErrorCode.ORG_MISMATCH,
                     'Adobe CLI is targeting a different organization than this operation needs.',
                     {
-                        userMessage: 'This operation needs a different Adobe organization. '
-                            + 'Select the correct organization to continue.',
+                        userMessage:
+                            'This operation needs a different Adobe organization. ' +
+                            'Select the correct organization to continue.',
                     },
                 );
             }
         }
 
         // Log raw stdout and stderr for debugging when all parsing attempts fail
-        this.debugLogger.error(`[Entity Fetcher] Raw ${entityName} stdout (${stdout.length} chars): ${stdout.substring(0, 500)}`);
-        this.debugLogger.error(`[Entity Fetcher] Raw ${entityName} stderr (${stderr.length} chars): ${stderr.substring(0, 500)}`);
+        this.debugLogger.error(
+            `[Entity Fetcher] Raw ${entityName} stdout (${stdout.length} chars): ${stdout.substring(0, 500)}`,
+        );
+        this.debugLogger.error(
+            `[Entity Fetcher] Raw ${entityName} stderr (${stderr.length} chars): ${stderr.substring(0, 500)}`,
+        );
         throw new Error(`Invalid ${entityName} response format`);
     }
 
@@ -238,7 +260,9 @@ export class AdobeEntityFetcher {
 
         const parsed = this.parseCLIResponse<TRaw>(result.stdout, result.stderr, entityName);
         const mapped = mapper(parsed);
-        this.debugLogger.debug(`[Entity Fetcher] Retrieved ${mapped.length} ${entityName} via CLI in ${formatDuration(cliDuration)}`);
+        this.debugLogger.debug(
+            `[Entity Fetcher] Retrieved ${mapped.length} ${entityName} via CLI in ${formatDuration(cliDuration)}`,
+        );
         return mapped;
     }
 
@@ -255,15 +279,22 @@ export class AdobeEntityFetcher {
             this.stepLogger.logTemplate('adobe-auth', 'loading-organizations', {});
             await this.ensureSDKReady();
 
-            const client = this.sdkClient.getClient() as { getOrganizations: () => Promise<SDKResponse<RawAdobeOrg[]>> };
+            const client = this.sdkClient.getClient() as {
+                getOrganizations: () => Promise<SDKResponse<RawAdobeOrg[]>>;
+            };
             let mappedOrgs = await this.trySDKFetch(
                 () => client.getOrganizations(),
-                mapOrganizations, 'organizations', startTime,
+                mapOrganizations,
+                'organizations',
+                startTime,
             );
 
             if (mappedOrgs.length === 0) {
                 mappedOrgs = await this.executeCLIFallback<RawAdobeOrg, AdobeOrg>(
-                    'aio console org list --json', mapOrganizations, 'organizations', startTime,
+                    'aio console org list --json',
+                    mapOrganizations,
+                    'organizations',
+                    startTime,
                 );
             }
 
@@ -305,10 +336,14 @@ export class AdobeEntityFetcher {
         await this.ensureSDKReady();
         if (!this.sdkClient.isInitialized()) return [];
 
-        const client = this.sdkClient.getClient() as { getOrganizations: () => Promise<SDKResponse<RawAdobeOrg[]>> };
+        const client = this.sdkClient.getClient() as {
+            getOrganizations: () => Promise<SDKResponse<RawAdobeOrg[]>>;
+        };
         const mappedOrgs = await this.trySDKFetch(
             () => client.getOrganizations(),
-            mapOrganizations, 'organizations', startTime,
+            mapOrganizations,
+            'organizations',
+            startTime,
         );
 
         // Cache only a real (non-empty) result — never the degraded empty case.
@@ -357,15 +392,21 @@ export class AdobeEntityFetcher {
         if (!hasValidOrgId) {
             // Still no id (e.g. SDK not initialized, or the token has no orgs): use the CLI.
             if (this.sdkClient.isInitialized()) {
-                this.debugLogger.debug('[Entity Fetcher] SDK available but org ID is missing, using CLI');
+                this.debugLogger.debug(
+                    '[Entity Fetcher] SDK available but org ID is missing, using CLI',
+                );
             }
             return [];
         }
 
-        const client = this.sdkClient.getClient() as { getProjectsForOrg: (orgId: string) => Promise<SDKResponse<RawAdobeProject[]>> };
+        const client = this.sdkClient.getClient() as {
+            getProjectsForOrg: (orgId: string) => Promise<SDKResponse<RawAdobeProject[]>>;
+        };
         return this.trySDKFetch(
             () => client.getProjectsForOrg(effectiveOrgId),
-            mapProjects, 'projects', startTime,
+            mapProjects,
+            'projects',
+            startTime,
         );
     }
 
@@ -379,10 +420,7 @@ export class AdobeEntityFetcher {
      */
     async getProjects(options?: { silent?: boolean; orgId?: string }): Promise<AdobeProject[]> {
         if (options?.orgId) {
-            return withOrgContext(
-                { orgId: options.orgId },
-                () => this.fetchProjects(options),
-            );
+            return withOrgContext({ orgId: options.orgId }, () => this.fetchProjects(options));
         }
         return this.fetchProjects(options);
     }
@@ -391,7 +429,10 @@ export class AdobeEntityFetcher {
      * Core project-fetch logic (SDK-first with CLI fallback).
      * Wrapped by getProjects, which optionally applies org-context targeting.
      */
-    private async fetchProjects(options?: { silent?: boolean; orgId?: string }): Promise<AdobeProject[]> {
+    private async fetchProjects(options?: {
+        silent?: boolean;
+        orgId?: string;
+    }): Promise<AdobeProject[]> {
         const startTime = Date.now();
         const silent = options?.silent ?? false;
 
@@ -403,11 +444,18 @@ export class AdobeEntityFetcher {
             await this.ensureSDKReady();
             const cachedOrg = this.cacheManager.getCachedOrganization();
 
-            let mappedProjects = await this.tryFetchProjectsViaSDK(cachedOrg, startTime, options?.orgId);
+            let mappedProjects = await this.tryFetchProjectsViaSDK(
+                cachedOrg,
+                startTime,
+                options?.orgId,
+            );
 
             if (mappedProjects.length === 0) {
                 mappedProjects = await this.executeCLIFallback<RawAdobeProject, AdobeProject>(
-                    'aio console project list --json', mapProjects, 'projects', startTime,
+                    'aio console project list --json',
+                    mapProjects,
+                    'projects',
+                    startTime,
                 );
             }
 
@@ -436,7 +484,10 @@ export class AdobeEntityFetcher {
      * ("Adobe CLI is targeting a different organization"). Falls back to the cache only when
      * nothing is threaded. Mirrors getProjects' org-context targeting.
      */
-    async getWorkspaces(target?: { orgId?: string; projectId?: string }): Promise<AdobeWorkspace[]> {
+    async getWorkspaces(target?: {
+        orgId?: string;
+        projectId?: string;
+    }): Promise<AdobeWorkspace[]> {
         const cachedOrg = this.cacheManager.getCachedOrganization();
         const cachedProject = this.cacheManager.getCachedProject();
         // Prefer the threaded selection, then the cache, then the TOKEN org via the
@@ -478,18 +529,30 @@ export class AdobeEntityFetcher {
             let mappedWorkspaces: AdobeWorkspace[] = [];
 
             if (hasValidIds) {
-                const client = this.sdkClient.getClient() as { getWorkspacesForProject: (orgId: string, projectId: string) => Promise<SDKResponse<RawAdobeWorkspace[]>> };
+                const client = this.sdkClient.getClient() as {
+                    getWorkspacesForProject: (
+                        orgId: string,
+                        projectId: string
+                    ) => Promise<SDKResponse<RawAdobeWorkspace[]>>;
+                };
                 mappedWorkspaces = await this.trySDKFetch(
                     () => client.getWorkspacesForProject(orgId, projectId),
-                    mapWorkspaces, 'workspaces', startTime,
+                    mapWorkspaces,
+                    'workspaces',
+                    startTime,
                 );
             } else if (this.sdkClient.isInitialized()) {
-                this.debugLogger.debug('[Entity Fetcher] SDK available but org ID or project ID is missing, using CLI');
+                this.debugLogger.debug(
+                    '[Entity Fetcher] SDK available but org ID or project ID is missing, using CLI',
+                );
             }
 
             if (mappedWorkspaces.length === 0) {
                 mappedWorkspaces = await this.executeCLIFallback<RawAdobeWorkspace, AdobeWorkspace>(
-                    'aio console workspace list --json', mapWorkspaces, 'workspaces', startTime,
+                    'aio console workspace list --json',
+                    mapWorkspaces,
+                    'workspaces',
+                    startTime,
                 );
             }
 
@@ -516,7 +579,9 @@ export class AdobeEntityFetcher {
     async getWorkspaceCredential(): Promise<WorkspaceCredential | undefined> {
         // Check in-memory cache first (populated by createWorkspaceCredential)
         if (this.cachedCredential) {
-            this.debugLogger.debug(`[Entity Fetcher] Using cached credential: ${this.cachedCredential.name || 'unnamed'}`);
+            this.debugLogger.debug(
+                `[Entity Fetcher] Using cached credential: ${this.cachedCredential.name || 'unnamed'}`,
+            );
             return this.cachedCredential;
         }
 
@@ -532,7 +597,9 @@ export class AdobeEntityFetcher {
             const workspaceId = cachedWorkspace?.id;
 
             if (!orgId || !projectId || !workspaceId) {
-                this.debugLogger.debug('[Entity Fetcher] Cannot fetch credentials: missing org/project/workspace ID');
+                this.debugLogger.debug(
+                    '[Entity Fetcher] Cannot fetch credentials: missing org/project/workspace ID',
+                );
                 return undefined;
             }
 
@@ -542,8 +609,11 @@ export class AdobeEntityFetcher {
             }
 
             const client = this.sdkClient.getClient() as {
-                getCredentials: (orgId: string, projectId: string, workspaceId: string) =>
-                    Promise<SDKResponse<RawWorkspaceCredential[]>>;
+                getCredentials: (
+                    orgId: string,
+                    projectId: string,
+                    workspaceId: string
+                ) => Promise<SDKResponse<RawWorkspaceCredential[]>>;
             };
 
             const response = await client.getCredentials(orgId, projectId, workspaceId);
@@ -555,33 +625,55 @@ export class AdobeEntityFetcher {
             }
 
             // Log credentials for debugging
-            this.debugLogger.debug(`[Entity Fetcher] Workspace has ${credentials.length} credential(s):`);
+            this.debugLogger.debug(
+                `[Entity Fetcher] Workspace has ${credentials.length} credential(s):`,
+            );
             for (const c of credentials) {
                 const hasClientId = c.client_id ? 'present' : 'absent';
-                this.debugLogger.debug(`  - ${c.integration_name || 'unnamed'}: flow_type=${c.flow_type}, integration_type=${c.integration_type}, client_id=${hasClientId}`);
+                this.debugLogger.debug(
+                    `  - ${c.integration_name || 'unnamed'}: flow_type=${c.flow_type}, integration_type=${c.integration_type}, client_id=${hasClientId}`,
+                );
             }
 
             // Resolve client_id: prefer OAuth S2S (integration_type), fall back to any with client_id
             // Note: OAuth S2S credentials have integration_type='oauth_server_to_server' and flow_type='entp'
             const oauthS2S = credentials.find(
-                (c: RawWorkspaceCredential) => c.client_id && c.integration_type === 'oauth_server_to_server',
+                (c: RawWorkspaceCredential) =>
+                    c.client_id && c.integration_type === 'oauth_server_to_server',
             );
             if (oauthS2S?.client_id) {
-                this.debugLogger.debug(`[Entity Fetcher] Using OAuth S2S credential: ${oauthS2S.integration_name || 'unnamed'}`);
-                return { clientId: oauthS2S.client_id, name: oauthS2S.integration_name, source: 'oauth_server_to_server' };
+                this.debugLogger.debug(
+                    `[Entity Fetcher] Using OAuth S2S credential: ${oauthS2S.integration_name || 'unnamed'}`,
+                );
+                return {
+                    clientId: oauthS2S.client_id,
+                    name: oauthS2S.integration_name,
+                    source: 'oauth_server_to_server',
+                };
             }
 
             // Fall back to any credential with a client_id
             const anyCred = credentials.find((c: RawWorkspaceCredential) => !!c.client_id);
             if (anyCred?.client_id) {
-                this.debugLogger.debug(`[Entity Fetcher] Using ${anyCred.integration_type || 'unknown'} credential: ${anyCred.integration_name || 'unnamed'}`);
-                return { clientId: anyCred.client_id, name: anyCred.integration_name, source: 'apiKey' };
+                this.debugLogger.debug(
+                    `[Entity Fetcher] Using ${anyCred.integration_type || 'unknown'} credential: ${anyCred.integration_name || 'unnamed'}`,
+                );
+                return {
+                    clientId: anyCred.client_id,
+                    name: anyCred.integration_name,
+                    source: 'apiKey',
+                };
             }
 
-            this.debugLogger.debug('[Entity Fetcher] No credential with client_id found in workspace');
+            this.debugLogger.debug(
+                '[Entity Fetcher] No credential with client_id found in workspace',
+            );
             return undefined;
         } catch (error) {
-            this.debugLogger.error('[Entity Fetcher] Failed to get workspace credentials', error as Error);
+            this.debugLogger.error(
+                '[Entity Fetcher] Failed to get workspace credentials',
+                error as Error,
+            );
             return undefined;
         }
     }
@@ -598,7 +690,9 @@ export class AdobeEntityFetcher {
     ): Promise<WorkspaceCredential | undefined> {
         // Input validation — enforce constraints regardless of caller
         if (!name || name.length > 200) {
-            this.debugLogger.error('[Entity Fetcher] Invalid credential name (empty or >200 chars)');
+            this.debugLogger.error(
+                '[Entity Fetcher] Invalid credential name (empty or >200 chars)',
+            );
             return undefined;
         }
         if (description.length > 500) {
@@ -618,31 +712,46 @@ export class AdobeEntityFetcher {
             const workspaceId = cachedWorkspace?.id;
 
             if (!orgId || !projectId || !workspaceId) {
-                this.debugLogger.debug('[Entity Fetcher] Cannot create credential: missing org/project/workspace ID');
+                this.debugLogger.debug(
+                    '[Entity Fetcher] Cannot create credential: missing org/project/workspace ID',
+                );
                 return undefined;
             }
 
             if (!this.sdkClient.isInitialized()) {
-                this.debugLogger.debug('[Entity Fetcher] SDK not available for credential creation');
+                this.debugLogger.debug(
+                    '[Entity Fetcher] SDK not available for credential creation',
+                );
                 return undefined;
             }
 
             const client = this.sdkClient.getClient() as {
                 createOAuthServerToServerCredential: (
-                    orgId: string, projectId: string, workspaceId: string,
-                    name: string, description: string,
+                    orgId: string,
+                    projectId: string,
+                    workspaceId: string,
+                    name: string,
+                    description: string
                 ) => Promise<SDKResponse<{ id: string; apiKey: string; orgId: string }>>;
             };
 
-            this.debugLogger.info(`[Entity Fetcher] Creating OAuth S2S credential "${name}" on workspace ${workspaceId}`);
+            this.debugLogger.info(
+                `[Entity Fetcher] Creating OAuth S2S credential "${name}" on workspace ${workspaceId}`,
+            );
 
             const response = await client.createOAuthServerToServerCredential(
-                orgId, projectId, workspaceId, name, description,
+                orgId,
+                projectId,
+                workspaceId,
+                name,
+                description,
             );
 
             const apiKey = response?.body?.apiKey;
             if (!apiKey) {
-                this.debugLogger.error('[Entity Fetcher] Credential created but no apiKey in response');
+                this.debugLogger.error(
+                    '[Entity Fetcher] Credential created but no apiKey in response',
+                );
                 return undefined;
             }
 
@@ -663,11 +772,16 @@ export class AdobeEntityFetcher {
 
             // 409 Conflict = credential already exists — fetch and return it
             if (errorMessage.includes('409') || errorMessage.includes('Conflict')) {
-                this.debugLogger.info('[Entity Fetcher] Credential already exists, fetching existing one');
+                this.debugLogger.info(
+                    '[Entity Fetcher] Credential already exists, fetching existing one',
+                );
                 return this.getWorkspaceCredential();
             }
 
-            this.debugLogger.error('[Entity Fetcher] Failed to create workspace credential', error as Error);
+            this.debugLogger.error(
+                '[Entity Fetcher] Failed to create workspace credential',
+                error as Error,
+            );
             return undefined;
         }
     }
@@ -681,10 +795,7 @@ export class AdobeEntityFetcher {
      * failure, missing org, unavailable SDK, or any SDK error (403 permission /
      * 409 name-taken / quota), which the handler surfaces to the user.
      */
-    async createProject(
-        title: string,
-        description: string,
-    ): Promise<AdobeProject | undefined> {
+    async createProject(title: string, description: string): Promise<AdobeProject | undefined> {
         // Input validation — enforce constraints regardless of caller.
         if (!title || title.length > 200) {
             this.debugLogger.error('[Entity Fetcher] Invalid project title (empty or >200 chars)');
@@ -712,7 +823,12 @@ export class AdobeEntityFetcher {
             const client = this.sdkClient.getClient() as {
                 createFireflyProject: (
                     orgId: string,
-                    details: { name: string; title: string; description: string; who_created: string },
+                    details: {
+                        name: string;
+                        title: string;
+                        description: string;
+                        who_created: string;
+                    }
                 ) => Promise<SDKResponse<RawAdobeProject>>;
             };
 
@@ -735,7 +851,9 @@ export class AdobeEntityFetcher {
             const raw = response?.body as { id?: string; projectId?: string } | undefined;
             const projectId = raw?.id ?? raw?.projectId;
             if (!projectId) {
-                this.debugLogger.error('[Entity Fetcher] Project created but no projectId in response');
+                this.debugLogger.error(
+                    '[Entity Fetcher] Project created but no projectId in response',
+                );
                 return undefined;
             }
 
@@ -749,7 +867,17 @@ export class AdobeEntityFetcher {
             // project rather than failing the whole create.
             await this.createDefaultStageWorkspace(orgId, projectId);
 
-            return { id: projectId, name, title, description: description || undefined, org_id: orgId };
+            // Every workspace must ship a Runtime namespace so App Builder apps can
+            // deploy to it (the added Stage workspace doesn't get one automatically).
+            await this.ensureProjectWorkspacesHaveRuntime(orgId, projectId);
+
+            return {
+                id: projectId,
+                name,
+                title,
+                description: description || undefined,
+                org_id: orgId,
+            };
         } catch (error) {
             const message = (error as Error).message || '';
             if (message.includes('409') || message.includes('Conflict')) {
@@ -777,7 +905,12 @@ export class AdobeEntityFetcher {
                 createWorkspace: (
                     orgId: string,
                     projectId: string,
-                    details: { name: string; title: string; description: string; who_created: string },
+                    details: {
+                        name: string;
+                        title: string;
+                        description: string;
+                        who_created: string;
+                    }
                 ) => Promise<SDKResponse<RawAdobeWorkspace>>;
             };
             await client.createWorkspace(orgId, projectId, {
@@ -786,11 +919,92 @@ export class AdobeEntityFetcher {
                 description: '',
                 who_created: 'Demo Builder',
             });
-            this.debugLogger.info('[Entity Fetcher] Created Stage workspace (App Builder template parity)');
+            this.debugLogger.info(
+                '[Entity Fetcher] Created Stage workspace (App Builder template parity)',
+            );
         } catch (error) {
             this.debugLogger.warn(
-                '[Entity Fetcher] Could not create the Stage workspace; project has Production only: '
-                + `${(error as Error).message}`,
+                '[Entity Fetcher] Could not create the Stage workspace; project has Production only: ' +
+                    `${(error as Error).message}`,
+            );
+        }
+    }
+
+    /**
+     * Ensure EVERY workspace in a freshly-created project has an Adobe I/O Runtime
+     * namespace.
+     *
+     * The App Builder (jaeger) template provisions Runtime for the default
+     * Production workspace, but a workspace added via `createWorkspace` (our Stage —
+     * the one the picker auto-selects and deploys to) does NOT get one — so an App
+     * Builder app deployed there fails with "no Runtime namespace" (a mesh doesn't,
+     * masking it). Provision it explicitly. Best-effort: a failure logs and leaves
+     * the deploy-time pre-flight as the safety net.
+     *
+     * @param orgId - Organization AMS id.
+     * @param projectId - The just-created project's id.
+     */
+    private async ensureProjectWorkspacesHaveRuntime(
+        orgId: string,
+        projectId: string,
+    ): Promise<void> {
+        try {
+            const workspaces = await this.fetchWorkspaces(orgId, projectId);
+            for (const workspace of workspaces) {
+                if (workspace.id) {
+                    await this.ensureWorkspaceRuntimeNamespace(orgId, projectId, workspace.id);
+                }
+            }
+        } catch (error) {
+            // Best-effort: a listing failure must not fail the project create (the
+            // deploy-time pre-flight still catches a missing namespace).
+            this.debugLogger.warn(
+                `[Entity Fetcher] Could not ensure Runtime namespaces for project ${projectId}: ` +
+                    `${(error as Error).message}`,
+            );
+        }
+    }
+
+    /**
+     * Provision an Adobe I/O Runtime namespace on one workspace, idempotently.
+     *
+     * `createRuntimeNamespace` POSTs the workspace's namespace endpoint. A workspace
+     * that already has one (the template Production workspace, or a re-run) returns a
+     * 409 — treated as success, not an error. Any other failure is logged, never
+     * thrown (best-effort; the deploy-time pre-flight is the net).
+     *
+     * @param orgId - Organization AMS id.
+     * @param projectId - Project id.
+     * @param workspaceId - Workspace id to provision Runtime on.
+     */
+    async ensureWorkspaceRuntimeNamespace(
+        orgId: string,
+        projectId: string,
+        workspaceId: string,
+    ): Promise<void> {
+        try {
+            const client = this.sdkClient.getClient() as {
+                createRuntimeNamespace: (
+                    orgId: string,
+                    projectId: string,
+                    workspaceId: string
+                ) => Promise<SDKResponse<unknown>>;
+            };
+            await client.createRuntimeNamespace(orgId, projectId, workspaceId);
+            this.debugLogger.info(
+                `[Entity Fetcher] Ensured Adobe I/O Runtime namespace for workspace ${workspaceId}`,
+            );
+        } catch (error) {
+            const message = (error as Error).message || '';
+            // Already provisioned (template Production ws, or a re-run) → not an error.
+            if (/409|conflict|already\s*exist/i.test(message)) {
+                this.debugLogger.debug(
+                    `[Entity Fetcher] Runtime namespace already present for workspace ${workspaceId}`,
+                );
+                return;
+            }
+            this.debugLogger.warn(
+                `[Entity Fetcher] Could not ensure Runtime namespace for workspace ${workspaceId}: ${message}`,
             );
         }
     }
@@ -804,13 +1018,12 @@ export class AdobeEntityFetcher {
      * unavailable SDK, or any SDK error (403 permission / 409 name-taken /
      * quota), which the handler surfaces to the user.
      */
-    async createWorkspace(
-        title: string,
-        description: string,
-    ): Promise<AdobeWorkspace | undefined> {
+    async createWorkspace(title: string, description: string): Promise<AdobeWorkspace | undefined> {
         // Input validation — enforce constraints regardless of caller.
         if (!title || title.length > 200) {
-            this.debugLogger.error('[Entity Fetcher] Invalid workspace title (empty or >200 chars)');
+            this.debugLogger.error(
+                '[Entity Fetcher] Invalid workspace title (empty or >200 chars)',
+            );
             return undefined;
         }
         if (description.length > 500) {
@@ -824,7 +1037,9 @@ export class AdobeEntityFetcher {
             const orgId = this.cacheManager.getCachedOrganization()?.id;
             const projectId = this.cacheManager.getCachedProject()?.id;
             if (!orgId || !projectId) {
-                this.debugLogger.debug('[Entity Fetcher] Cannot create workspace: missing org or project ID');
+                this.debugLogger.debug(
+                    '[Entity Fetcher] Cannot create workspace: missing org or project ID',
+                );
                 return undefined;
             }
 
@@ -837,7 +1052,12 @@ export class AdobeEntityFetcher {
                 createWorkspace: (
                     orgId: string,
                     projectId: string,
-                    details: { name: string; title: string; description: string; who_created: string },
+                    details: {
+                        name: string;
+                        title: string;
+                        description: string;
+                        who_created: string;
+                    }
                 ) => Promise<SDKResponse<RawAdobeWorkspace>>;
             };
 
@@ -860,18 +1080,28 @@ export class AdobeEntityFetcher {
             const raw = response?.body as { id?: string; workspaceId?: string } | undefined;
             const workspaceId = raw?.id ?? raw?.workspaceId;
             if (!workspaceId) {
-                this.debugLogger.error('[Entity Fetcher] Workspace created but no workspaceId in response');
+                this.debugLogger.error(
+                    '[Entity Fetcher] Workspace created but no workspaceId in response',
+                );
                 return undefined;
             }
 
             this.debugLogger.info('[Entity Fetcher] Workspace created successfully');
+
+            // A user-added workspace also needs a Runtime namespace for App Builder
+            // app deploys — createWorkspace alone doesn't provision one.
+            await this.ensureWorkspaceRuntimeNamespace(orgId, projectId, workspaceId);
+
             return { id: workspaceId, name, title };
         } catch (error) {
             const message = (error as Error).message || '';
             if (message.includes('409') || message.includes('Conflict')) {
                 this.debugLogger.error('[Entity Fetcher] Workspace name already exists (409)');
             } else {
-                this.debugLogger.error('[Entity Fetcher] Failed to create workspace', error as Error);
+                this.debugLogger.error(
+                    '[Entity Fetcher] Failed to create workspace',
+                    error as Error,
+                );
             }
             return undefined;
         }
@@ -923,8 +1153,10 @@ export class AdobeEntityFetcher {
         try {
             await this.ensureSDKReady();
             const client = this.sdkClient.getClient() as {
-                getIntegration: (orgId: string, idIntegration: string) =>
-                    Promise<SDKResponse<{ sdkList?: string[] }>>;
+                getIntegration: (
+                    orgId: string,
+                    idIntegration: string
+                ) => Promise<SDKResponse<{ sdkList?: string[] }>>;
             };
             const response = await client.getIntegration(orgId, idIntegration);
             return response?.body?.sdkList ?? [];
@@ -952,10 +1184,16 @@ export class AdobeEntityFetcher {
     ): Promise<string | undefined> {
         await this.ensureSDKReady();
         const client = this.sdkClient.getClient() as {
-            getCredentials: (orgId: string, projectId: string, workspaceId: string) =>
-                Promise<SDKResponse<RawWorkspaceCredential[]>>;
+            getCredentials: (
+                orgId: string,
+                projectId: string,
+                workspaceId: string
+            ) => Promise<SDKResponse<RawWorkspaceCredential[]>>;
             createAdobeIdCredential: (
-                orgId: string, projectId: string, workspaceId: string, input: AdobeIdCredentialInput,
+                orgId: string,
+                projectId: string,
+                workspaceId: string,
+                input: AdobeIdCredentialInput
             ) => Promise<SDKResponse<{ id_integration?: string; id?: string }>>;
         };
 
@@ -965,10 +1203,11 @@ export class AdobeEntityFetcher {
         const acceptableNames = new Set([input.name, ...(input.reuseNames ?? [])]);
         const existing = (await client.getCredentials(orgId, projectId, workspaceId))?.body;
         const match = existing?.find(
-            (c) => (c.integration_type === 'apikey' || c.flow_type === 'adobeid')
-                && !!c.integration_name
-                && acceptableNames.has(c.integration_name)
-                && c.id_integration,
+            (c) =>
+                (c.integration_type === 'apikey' || c.flow_type === 'adobeid') &&
+                !!c.integration_name &&
+                acceptableNames.has(c.integration_name) &&
+                c.id_integration,
         );
         if (match?.id_integration) {
             return match.id_integration;
@@ -979,7 +1218,12 @@ export class AdobeEntityFetcher {
         // Prefer id_integration when present, else fall back to id. `reuseNames` is a
         // local hint, not an Adobe field — strip it from the create payload.
         const { reuseNames: _reuseNames, ...sdkInput } = input;
-        const response = await client.createAdobeIdCredential(orgId, projectId, workspaceId, sdkInput);
+        const response = await client.createAdobeIdCredential(
+            orgId,
+            projectId,
+            workspaceId,
+            sdkInput,
+        );
         return response?.body?.id_integration ?? response?.body?.id;
     }
 
@@ -996,7 +1240,9 @@ export class AdobeEntityFetcher {
         await this.ensureSDKReady();
         const client = this.sdkClient.getClient() as {
             subscribeAdobeIdIntegrationToServices: (
-                orgId: string, idIntegration: string, serviceInfo: ServiceSubscriptionInfo[],
+                orgId: string,
+                idIntegration: string,
+                serviceInfo: ServiceSubscriptionInfo[]
             ) => Promise<SDKResponse<unknown>>;
         };
         await client.subscribeAdobeIdIntegrationToServices(orgId, idIntegration, serviceInfo);
@@ -1015,10 +1261,16 @@ export class AdobeEntityFetcher {
         await this.ensureSDKReady();
         const client = this.sdkClient.getClient() as {
             subscribeOAuthServerToServerIntegrationToServices: (
-                orgId: string, idIntegration: string, serviceInfo: ServiceSubscriptionInfo[],
+                orgId: string,
+                idIntegration: string,
+                serviceInfo: ServiceSubscriptionInfo[]
             ) => Promise<SDKResponse<unknown>>;
         };
-        await client.subscribeOAuthServerToServerIntegrationToServices(orgId, idIntegration, serviceInfo);
+        await client.subscribeOAuthServerToServerIntegrationToServices(
+            orgId,
+            idIntegration,
+            serviceInfo,
+        );
     }
 
     /**
@@ -1038,8 +1290,11 @@ export class AdobeEntityFetcher {
         workspaceId: string,
     ): Promise<string> {
         const existing = await this.getWorkspaceS2SCredential(orgId, projectId, workspaceId);
-        return existing?.idIntegration
-            ?? (await this.createWorkspaceS2SCredentialFor(orgId, projectId, workspaceId)).idIntegration;
+        return (
+            existing?.idIntegration ??
+            (await this.createWorkspaceS2SCredentialFor(orgId, projectId, workspaceId))
+                .idIntegration
+        );
     }
 
     /**
@@ -1061,15 +1316,20 @@ export class AdobeEntityFetcher {
         await this.ensureSDKReady();
 
         if (!orgId || !projectId || !workspaceId) {
-            throw new Error('getWorkspaceS2SCredential: orgId, projectId, and workspaceId are required');
+            throw new Error(
+                'getWorkspaceS2SCredential: orgId, projectId, and workspaceId are required',
+            );
         }
         if (!this.sdkClient.isInitialized()) {
             throw new Error('getWorkspaceS2SCredential: Adobe Console SDK is not initialized');
         }
 
         const client = this.sdkClient.getClient() as {
-            getCredentials: (orgId: string, projectId: string, workspaceId: string) =>
-                Promise<SDKResponse<RawWorkspaceCredential[]>>;
+            getCredentials: (
+                orgId: string,
+                projectId: string,
+                workspaceId: string
+            ) => Promise<SDKResponse<RawWorkspaceCredential[]>>;
         };
 
         const credentials = (await client.getCredentials(orgId, projectId, workspaceId))?.body;
@@ -1102,21 +1362,32 @@ export class AdobeEntityFetcher {
         await this.ensureSDKReady();
 
         if (!orgId || !projectId || !workspaceId) {
-            throw new Error('createWorkspaceS2SCredentialFor: orgId, projectId, and workspaceId are required');
+            throw new Error(
+                'createWorkspaceS2SCredentialFor: orgId, projectId, and workspaceId are required',
+            );
         }
         if (!this.sdkClient.isInitialized()) {
-            throw new Error('createWorkspaceS2SCredentialFor: Adobe Console SDK is not initialized');
+            throw new Error(
+                'createWorkspaceS2SCredentialFor: Adobe Console SDK is not initialized',
+            );
         }
 
         const client = this.sdkClient.getClient() as {
             createOAuthServerToServerCredential: (
-                orgId: string, projectId: string, workspaceId: string,
-                name: string, description: string,
+                orgId: string,
+                projectId: string,
+                workspaceId: string,
+                name: string,
+                description: string
             ) => Promise<SDKResponse<{ id: string; apiKey: string }>>;
         };
 
         const created = await client.createOAuthServerToServerCredential(
-            orgId, projectId, workspaceId, OAUTH_CREDENTIAL_NAME, OAUTH_CREDENTIAL_DESCRIPTION,
+            orgId,
+            projectId,
+            workspaceId,
+            OAUTH_CREDENTIAL_NAME,
+            OAUTH_CREDENTIAL_DESCRIPTION,
         );
         const idIntegration = created?.body?.id;
         const clientId = created?.body?.apiKey;

@@ -26,15 +26,25 @@ describe('AdobeEntityFetcher.createProject()', () => {
     let mockStepLogger: jest.Mocked<StepLogger>;
     let createFireflyProject: jest.Mock;
     let createWorkspace: jest.Mock;
+    let getWorkspacesForProject: jest.Mock;
+    let createRuntimeNamespace: jest.Mock;
 
     const ORG = { id: 'org-123', code: 'ORG@AdobeOrg', name: 'Test Org' };
 
     beforeEach(() => {
         (getLogger as jest.Mock).mockReturnValue({
-            trace: jest.fn(), debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(),
+            trace: jest.fn(),
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
         });
         (parseJSON as jest.Mock).mockImplementation((str) => {
-            try { return JSON.parse(str); } catch { return null; }
+            try {
+                return JSON.parse(str);
+            } catch {
+                return null;
+            }
         });
 
         mockCommandExecutor = { execute: jest.fn() } as unknown as jest.Mocked<CommandExecutor>;
@@ -42,9 +52,23 @@ describe('AdobeEntityFetcher.createProject()', () => {
         createFireflyProject = jest.fn();
         // The default Stage-workspace create (App Builder template parity); resolves unless overridden.
         createWorkspace = jest.fn().mockResolvedValue({ body: { workspaceId: 'ws-stage' } });
+        // Runtime-namespace provisioning: after create, every workspace is listed and
+        // each gets a Runtime namespace (idempotent). Defaults cover Production + Stage.
+        getWorkspacesForProject = jest.fn().mockResolvedValue({
+            body: [
+                { id: 'ws-prod', name: 'Production' },
+                { id: 'ws-stage', name: 'Stage' },
+            ],
+        });
+        createRuntimeNamespace = jest.fn().mockResolvedValue({ body: {} });
         mockSDKClient = {
             isInitialized: jest.fn().mockReturnValue(true),
-            getClient: jest.fn().mockReturnValue({ createFireflyProject, createWorkspace }),
+            getClient: jest.fn().mockReturnValue({
+                createFireflyProject,
+                createWorkspace,
+                getWorkspacesForProject,
+                createRuntimeNamespace,
+            }),
             ensureInitialized: jest.fn().mockResolvedValue(true),
         } as unknown as jest.Mocked<AdobeSDKClient>;
 
@@ -54,12 +78,20 @@ describe('AdobeEntityFetcher.createProject()', () => {
         } as unknown as jest.Mocked<AuthCacheManager>;
 
         mockLogger = {
-            debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(),
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
         } as unknown as jest.Mocked<Logger>;
         mockStepLogger = { logTemplate: jest.fn() } as unknown as jest.Mocked<StepLogger>;
 
         fetcher = new AdobeEntityFetcher(
-            mockCommandExecutor, mockSDKClient, mockCacheManager, mockLogger, mockStepLogger, {},
+            mockCommandExecutor,
+            mockSDKClient,
+            mockCacheManager,
+            mockLogger,
+            mockStepLogger,
+            {}
         );
     });
 
@@ -79,7 +111,9 @@ describe('AdobeEntityFetcher.createProject()', () => {
     });
 
     it('passes the free-form title through and derives an alphanumeric name from it', async () => {
-        createFireflyProject.mockResolvedValue({ body: { id: 'p1', name: 'MyDemo', title: 'My Demo' } });
+        createFireflyProject.mockResolvedValue({
+            body: { id: 'p1', name: 'MyDemo', title: 'My Demo' },
+        });
 
         // "My Demo" has a space — Adobe rejects a spaced `name`, so it must be stripped.
         await fetcher.createProject('My Demo', 'A demo project');
@@ -90,7 +124,7 @@ describe('AdobeEntityFetcher.createProject()', () => {
                 title: 'My Demo',
                 name: expect.stringMatching(/^MyDemo[A-Za-z0-9]+$/),
                 who_created: 'Demo Builder',
-            }),
+            })
         );
     });
 
@@ -104,7 +138,7 @@ describe('AdobeEntityFetcher.createProject()', () => {
             'org-123',
             'proj-new',
             // Named exactly "Stage" — NOT the suffix-derived name — to match the convention.
-            expect.objectContaining({ name: 'Stage', title: 'Stage', who_created: 'Demo Builder' }),
+            expect.objectContaining({ name: 'Stage', title: 'Stage', who_created: 'Demo Builder' })
         );
     });
 
@@ -116,6 +150,35 @@ describe('AdobeEntityFetcher.createProject()', () => {
 
         // The project was created (Production exists); a Stage failure must not fail the create.
         expect(result).toEqual(expect.objectContaining({ id: 'proj-new', title: 'My Demo' }));
+    });
+
+    it('provisions a Runtime namespace for every workspace after create', async () => {
+        // The added Stage workspace has no Runtime namespace by default — provision one
+        // (and re-affirm Production's, idempotently) so App Builder apps can deploy.
+        createFireflyProject.mockResolvedValue({ body: { projectId: 'proj-new' } });
+
+        await fetcher.createProject('My Demo', '');
+
+        expect(createRuntimeNamespace).toHaveBeenCalledWith('org-123', 'proj-new', 'ws-prod');
+        expect(createRuntimeNamespace).toHaveBeenCalledWith('org-123', 'proj-new', 'ws-stage');
+    });
+
+    it('tolerates a 409 (namespace already present) and still returns the project', async () => {
+        createFireflyProject.mockResolvedValue({ body: { projectId: 'proj-new' } });
+        createRuntimeNamespace.mockRejectedValue(new Error('409 Conflict'));
+
+        const result = await fetcher.createProject('My Demo', '');
+
+        expect(result).toEqual(expect.objectContaining({ id: 'proj-new' }));
+    });
+
+    it('returns the project even when Runtime provisioning errors (best-effort)', async () => {
+        createFireflyProject.mockResolvedValue({ body: { projectId: 'proj-new' } });
+        createRuntimeNamespace.mockRejectedValue(new Error('500 Internal Error'));
+
+        const result = await fetcher.createProject('My Demo', '');
+
+        expect(result).toEqual(expect.objectContaining({ id: 'proj-new' }));
     });
 
     it('returns undefined for an empty name (no SDK call)', async () => {

@@ -10,8 +10,10 @@
 
 import * as fsPromises from 'fs/promises';
 import {
+    ensureWorkspaceRuntime,
     extractAioErrorDetail,
     fetchRuntimeCredentials,
+    workspaceHasRuntime,
 } from '@/features/app-builder/services/runtimeCredentials';
 import type { CommandExecutor } from '@/core/shell';
 import type { Logger } from '@/types/logger';
@@ -114,6 +116,67 @@ describe('fetchRuntimeCredentials', () => {
         await expect(fetchRuntimeCredentials(commandManager, logger, 'auto')).rejects.toThrow(
             /404 - Not Found/
         );
+    });
+});
+
+const NO_NS_JSON = JSON.stringify({
+    project: { workspace: { details: { runtime: { namespaces: [] } } } },
+});
+
+describe('workspaceHasRuntime', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        (fsPromises.mkdtemp as jest.Mock).mockResolvedValue('/tmp/db-ws-abc');
+        executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+    });
+
+    it('is true when the workspace has a Runtime namespace', async () => {
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(WORKSPACE_JSON);
+        await expect(workspaceHasRuntime(commandManager, 'auto')).resolves.toBe(true);
+    });
+
+    it('is false when the workspace has none', async () => {
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(NO_NS_JSON);
+        await expect(workspaceHasRuntime(commandManager, 'auto')).resolves.toBe(false);
+    });
+});
+
+describe('ensureWorkspaceRuntime (provision-if-missing)', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        (fsPromises.mkdtemp as jest.Mock).mockResolvedValue('/tmp/db-ws-abc');
+        executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+    });
+
+    it('does NOT provision when the workspace already has a namespace', async () => {
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(WORKSPACE_JSON);
+        const provision = jest.fn().mockResolvedValue(undefined);
+
+        await ensureWorkspaceRuntime(commandManager, logger, 'auto', provision, 0);
+
+        expect(provision).not.toHaveBeenCalled();
+    });
+
+    it('provisions once when missing, then succeeds when the re-check finds it', async () => {
+        // Absent on the first check, present after provisioning.
+        (fsPromises.readFile as jest.Mock)
+            .mockResolvedValueOnce(NO_NS_JSON)
+            .mockResolvedValue(WORKSPACE_JSON);
+        const provision = jest.fn().mockResolvedValue(undefined);
+
+        await ensureWorkspaceRuntime(commandManager, logger, 'auto', provision, 0);
+
+        expect(provision).toHaveBeenCalledTimes(1);
+    });
+
+    it('throws the provision-failed message when the namespace never appears', async () => {
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(NO_NS_JSON); // always absent
+        const provision = jest.fn().mockResolvedValue(undefined);
+
+        await expect(
+            ensureWorkspaceRuntime(commandManager, logger, 'auto', provision, 0)
+        ).rejects.toThrow(/Could not provision an Adobe I\/O Runtime namespace/);
+        expect(provision).toHaveBeenCalledTimes(1);
     });
 });
 

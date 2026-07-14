@@ -445,6 +445,14 @@ export async function executeProjectCreation(
     );
 
     // ========================================================================
+    // RUNTIME READINESS (first Adobe step — provision a Runtime namespace on the
+    // deploy workspace if it lacks one, BEFORE any deploy, so a selected/imported
+    // Runtime-less workspace is healed rather than orphaning a mesh at app-deploy)
+    // ========================================================================
+
+    await ensureWorkspaceRuntimeReady(context, typedConfig);
+
+    // ========================================================================
     // EDIT MODE: PREPARE ATOMIC COMPONENT SWAP
     // ========================================================================
     // In edit mode, install components to a temp directory first.
@@ -588,6 +596,69 @@ export async function executeProjectCreation(
 }
 
 /**
+ * The selected App Builder components that resolve to a DEPLOYABLE integration app
+ * (`kind: 'integration'`) — catalog entries or custom-URL entries. Mesh-kind
+ * selections are excluded (they dual-flow through the mesh phase). This is the set
+ * that will `aio app deploy`, so it also gates the Runtime pre-flight.
+ */
+function deployableAppIntegrationEntries(
+    typedConfig: ProjectCreationConfig,
+): AppBuilderComponentCatalogEntry[] {
+    const sources = typedConfig.appBuilderComponentSources ?? {};
+    return (typedConfig.selectedAppBuilderComponents ?? [])
+        .map(
+            (id) =>
+                getAppBuilderComponentEntry(id) ??
+                (sources[id] ? buildCustomIntegrationEntry(sources[id]) : undefined),
+        )
+        .filter((entry): entry is AppBuilderComponentCatalogEntry => entry?.kind === 'integration');
+}
+
+/**
+ * Ensure the deploy workspace has an Adobe I/O Runtime namespace, PROVISIONING one
+ * when it lacks it — the first Adobe step, before any deploy.
+ *
+ * `aio app deploy` (an App Builder app) needs a Runtime namespace; a mesh does not.
+ * A workspace WE create ships one (createProject/createWorkspace), but a pre-existing
+ * or imported workspace the user SELECTS may not — so provision it here rather than
+ * failing the deploy. Running before the mesh phase keeps the no-orphan guarantee:
+ * if provisioning genuinely can't complete, the flow stops before any mesh exists.
+ * No-op for mesh-only projects (no deployable app) or when the org/project/workspace
+ * ids are absent. Best-effort provisioning + verification (see `ensureWorkspaceRuntime`).
+ */
+async function ensureWorkspaceRuntimeReady(
+    context: HandlerContext,
+    typedConfig: ProjectCreationConfig,
+): Promise<void> {
+    if (deployableAppIntegrationEntries(typedConfig).length === 0) {
+        return;
+    }
+    const adobe = typedConfig.adobe;
+    if (!adobe?.organization || !adobe?.projectId || !adobe?.workspace) {
+        return;
+    }
+    const { ServiceLocator } = await import('@/core/di');
+    const { ensureWorkspaceRuntime } = await import(
+        '@/features/app-builder/services/runtimeCredentials'
+    );
+    const commandManager = ServiceLocator.getCommandExecutor();
+    const authService = ServiceLocator.getAuthenticationService();
+    const target = buildDeployOrgTarget(context, typedConfig);
+    context.logger.debug('[Runtime] Ensuring the workspace has an Adobe I/O Runtime namespace');
+    // The namespace check runs via CLI (needs withOrgContext targeting); the SDK
+    // `createRuntimeNamespace` provision takes explicit ids (targeting-agnostic).
+    await withOrgContext(target, () =>
+        ensureWorkspaceRuntime(commandManager, context.logger, 'auto', () =>
+            authService.ensureWorkspaceRuntimeNamespace(
+                adobe.organization as string,
+                adobe.projectId as string,
+                adobe.workspace as string,
+            ),
+        ),
+    );
+}
+
+/**
  * PHASE 3b — deploy each selected App Builder "integration" via the SHARED Model B
  * runner ({@link addAppBuilderComponent}). Mesh-kind selections dual-flow through
  * {@link executeMeshPhase} and are excluded here.
@@ -604,14 +675,7 @@ export async function executeAppBuilderIntegrationsPhase(
     typedConfig: ProjectCreationConfig,
     progressTracker: ProgressTracker,
 ): Promise<void> {
-    const sources = typedConfig.appBuilderComponentSources ?? {};
-    const entries = (typedConfig.selectedAppBuilderComponents ?? [])
-        .map(
-            (id) =>
-                getAppBuilderComponentEntry(id) ??
-                (sources[id] ? buildCustomIntegrationEntry(sources[id]) : undefined),
-        )
-        .filter((entry): entry is AppBuilderComponentCatalogEntry => entry?.kind === 'integration');
+    const entries = deployableAppIntegrationEntries(typedConfig);
 
     if (entries.length === 0) {
         return;

@@ -25,24 +25,34 @@ describe('AdobeEntityFetcher.createWorkspace()', () => {
     let mockLogger: jest.Mocked<Logger>;
     let mockStepLogger: jest.Mocked<StepLogger>;
     let createWorkspace: jest.Mock;
+    let createRuntimeNamespace: jest.Mock;
 
     const ORG = { id: 'org-123', code: 'ORG@AdobeOrg', name: 'Test Org' };
     const PROJECT = { id: 'proj-456', name: 'Test Project', title: 'Test Project' };
 
     beforeEach(() => {
         (getLogger as jest.Mock).mockReturnValue({
-            trace: jest.fn(), debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(),
+            trace: jest.fn(),
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
         });
         (parseJSON as jest.Mock).mockImplementation((str) => {
-            try { return JSON.parse(str); } catch { return null; }
+            try {
+                return JSON.parse(str);
+            } catch {
+                return null;
+            }
         });
 
         mockCommandExecutor = { execute: jest.fn() } as unknown as jest.Mocked<CommandExecutor>;
 
         createWorkspace = jest.fn();
+        createRuntimeNamespace = jest.fn().mockResolvedValue({ body: {} });
         mockSDKClient = {
             isInitialized: jest.fn().mockReturnValue(true),
-            getClient: jest.fn().mockReturnValue({ createWorkspace }),
+            getClient: jest.fn().mockReturnValue({ createWorkspace, createRuntimeNamespace }),
             ensureInitialized: jest.fn().mockResolvedValue(true),
         } as unknown as jest.Mocked<AdobeSDKClient>;
 
@@ -52,12 +62,20 @@ describe('AdobeEntityFetcher.createWorkspace()', () => {
         } as unknown as jest.Mocked<AuthCacheManager>;
 
         mockLogger = {
-            debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(),
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
         } as unknown as jest.Mocked<Logger>;
         mockStepLogger = { logTemplate: jest.fn() } as unknown as jest.Mocked<StepLogger>;
 
         fetcher = new AdobeEntityFetcher(
-            mockCommandExecutor, mockSDKClient, mockCacheManager, mockLogger, mockStepLogger, {},
+            mockCommandExecutor,
+            mockSDKClient,
+            mockCacheManager,
+            mockLogger,
+            mockStepLogger,
+            {}
         );
     });
 
@@ -86,8 +104,26 @@ describe('AdobeEntityFetcher.createWorkspace()', () => {
                 title: 'My Stage',
                 name: expect.stringMatching(/^MyStage[A-Za-z0-9]+$/),
                 who_created: 'Demo Builder',
-            }),
+            })
         );
+    });
+
+    it('provisions a Runtime namespace on the new workspace', async () => {
+        // A user-added workspace also needs Runtime for App Builder app deploys.
+        createWorkspace.mockResolvedValue({ body: { workspaceId: 'ws-new' } });
+
+        await fetcher.createWorkspace('Stage', '');
+
+        expect(createRuntimeNamespace).toHaveBeenCalledWith('org-123', 'proj-456', 'ws-new');
+    });
+
+    it('returns the workspace even when Runtime provisioning fails (best-effort)', async () => {
+        createWorkspace.mockResolvedValue({ body: { workspaceId: 'ws-new' } });
+        createRuntimeNamespace.mockRejectedValue(new Error('500 Internal Error'));
+
+        const result = await fetcher.createWorkspace('Stage', '');
+
+        expect(result).toEqual(expect.objectContaining({ id: 'ws-new' }));
     });
 
     it('returns undefined for an empty name (no SDK call)', async () => {

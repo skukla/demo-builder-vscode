@@ -602,6 +602,20 @@ export class AuthenticationService {
         return fetcher.createWorkspaceS2SCredentialFor(orgId, projectId, workspaceId);
     }
 
+    /**
+     * Provision an Adobe I/O Runtime namespace on the workspace (idempotent).
+     * App Builder app deploys need one; a workspace we did not create may lack it.
+     * Best-effort — never throws (the deploy-time ensure verifies the result).
+     */
+    async ensureWorkspaceRuntimeNamespace(
+        orgId: string,
+        projectId: string,
+        workspaceId: string,
+    ): Promise<void> {
+        const { fetcher } = await this.ensureEntities();
+        return fetcher.ensureWorkspaceRuntimeNamespace(orgId, projectId, workspaceId);
+    }
+
     /** Delete a Console project. SDK errors propagate unchanged (callers map them). */
     async deleteConsoleProject(orgId: string, projectId: string): Promise<void> {
         const { fetcher } = await this.ensureEntities();
