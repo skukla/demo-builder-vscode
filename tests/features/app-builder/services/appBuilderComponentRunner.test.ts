@@ -22,13 +22,17 @@ jest.setTimeout(5000);
 // Mocks — defined before imports
 // =============================================================================
 
-const mockWithOrgContext = jest.fn(
-    (_target: unknown, fn: () => Promise<unknown>) => fn(),
-);
+const mockWithOrgContext = jest.fn((_target: unknown, fn: () => Promise<unknown>) => fn());
 jest.mock('@/core/shell', () => ({
     ...jest.requireActual('@/core/shell'),
-    withOrgContext: (target: unknown, fn: () => Promise<unknown>) =>
-        mockWithOrgContext(target, fn),
+    withOrgContext: (target: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(target, fn),
+}));
+
+// Standalone-ness is filesystem-read at the add door; default to standalone so the
+// integration happy paths run, override to false for the rejection test.
+const mockIsStandaloneApp = jest.fn().mockResolvedValue(true);
+jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
+    isStandaloneApp: (...args: unknown[]) => mockIsStandaloneApp(...args),
 }));
 
 // =============================================================================
@@ -149,9 +153,7 @@ function createProject(overrides: Partial<Project> = {}): Project {
 
 beforeEach(() => {
     jest.clearAllMocks();
-    mockWithOrgContext.mockImplementation(
-        (_target: unknown, fn: () => Promise<unknown>) => fn(),
-    );
+    mockWithOrgContext.mockImplementation((_target: unknown, fn: () => Promise<unknown>) => fn());
 });
 
 // =============================================================================
@@ -201,10 +203,10 @@ describe('addAppBuilderComponent (mesh)', () => {
                 projectId: 'proj-456',
                 workspaceId: 'ws-789',
             }),
-            expect.any(Function),
+            expect.any(Function)
         );
         const selectCall = deps.commandManager.execute.mock.calls.find(
-            (c: unknown[]) => String(c[0]).includes('console') && String(c[0]).includes('select'),
+            (c: unknown[]) => String(c[0]).includes('console') && String(c[0]).includes('select')
         );
         expect(selectCall).toBeUndefined();
     });
@@ -228,8 +230,11 @@ describe('addAppBuilderComponent (mesh)', () => {
 
         await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
 
-        const subscribedAppBuilderComponents = deps.subscribeRequiredApis.mock.calls[0][0] as AppBuilderComponentCatalogEntry[];
-        expect(subscribedAppBuilderComponents).toEqual(expect.arrayContaining([MESH_ENTRY, INTEGRATION_ENTRY]));
+        const subscribedAppBuilderComponents = deps.subscribeRequiredApis.mock
+            .calls[0][0] as AppBuilderComponentCatalogEntry[];
+        expect(subscribedAppBuilderComponents).toEqual(
+            expect.arrayContaining([MESH_ENTRY, INTEGRATION_ENTRY])
+        );
     });
 });
 
@@ -280,13 +285,41 @@ describe('addAppBuilderComponent (integration)', () => {
         expect(deps.republishStorefront).not.toHaveBeenCalled();
     });
 
+    it('rejects a NON-standalone integration at the add door (no deploy)', async () => {
+        mockIsStandaloneApp.mockResolvedValueOnce(false);
+        const project = createProject();
+        const deps = createDeps();
+
+        const result = await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toMatch(/not a standalone App Builder app/);
+        // Cloned+installed, but never deployed (isolation could not be guaranteed).
+        expect(deps.componentManager.installComponent).toHaveBeenCalledTimes(1);
+        expect(deps.deployApp).not.toHaveBeenCalled();
+    });
+
+    it('does NOT gate the mesh on the standalone check (mesh is not app-deployed)', async () => {
+        mockIsStandaloneApp.mockResolvedValue(false);
+        const project = createProject();
+        const deps = createDeps();
+
+        const result = await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+
+        expect(result.success).toBe(true);
+        expect(deps.deployMesh).toHaveBeenCalledTimes(1);
+        mockIsStandaloneApp.mockResolvedValue(true);
+    });
+
     it('guards provider-before-consumer: a mesh-consuming integration with no mesh deployed errors', async () => {
         const project = createProject();
         const deps = createDeps();
         const consumer: AppBuilderComponentCatalogEntry = {
             ...INTEGRATION_ENTRY,
             id: 'mesh-consumer',
-            envSchema: [{ name: 'MESH_ENDPOINT', type: 'text', label: 'Mesh', providedBy: 'commerce-mesh' }],
+            envSchema: [
+                { name: 'MESH_ENDPOINT', type: 'text', label: 'Mesh', providedBy: 'commerce-mesh' },
+            ],
         };
 
         const result = await addAppBuilderComponent(project, consumer, deps as never);
@@ -324,7 +357,10 @@ describe('addAppBuilderComponent partial-failure', () => {
     it('clone failure → no deploy, no persisted entry', async () => {
         const project = createProject();
         const componentManager = createComponentManager();
-        componentManager.installComponent.mockResolvedValue({ success: false, error: 'clone failed' });
+        componentManager.installComponent.mockResolvedValue({
+            success: false,
+            error: 'clone failed',
+        });
         const deps = createDeps({ componentManager });
 
         const result = await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
@@ -344,13 +380,18 @@ describe('deployAppBuilderComponent (redeploy)', () => {
         return createProject({
             componentInstances: {
                 'commerce-mesh': {
-                    id: 'commerce-mesh', name: 'Mesh', type: 'dependency',
-                    subType: 'mesh', status: 'ready', path: '/proj/components/commerce-mesh',
+                    id: 'commerce-mesh',
+                    name: 'Mesh',
+                    type: 'dependency',
+                    subType: 'mesh',
+                    status: 'ready',
+                    path: '/proj/components/commerce-mesh',
                 } as never,
             },
             appBuilderComponents: {
                 'commerce-mesh': {
-                    kind: 'mesh', status: 'deployed',
+                    kind: 'mesh',
+                    status: 'deployed',
                     source: { owner: 'skukla', repo: 'commerce-paas-mesh' },
                     endpoint: 'https://mesh/graphql',
                     providesEnvVars: { MESH_ENDPOINT: 'https://mesh/graphql' },
@@ -386,13 +427,17 @@ describe('deployAppBuilderComponent (redeploy)', () => {
         const project = createProject({
             componentInstances: {
                 'erp-bridge': {
-                    id: 'erp-bridge', name: 'ERP', type: 'app-builder',
-                    status: 'ready', path: '/proj/components/erp-bridge',
+                    id: 'erp-bridge',
+                    name: 'ERP',
+                    type: 'app-builder',
+                    status: 'ready',
+                    path: '/proj/components/erp-bridge',
                 } as never,
             },
             appBuilderComponents: {
                 'erp-bridge': {
-                    kind: 'integration', status: 'deployed',
+                    kind: 'integration',
+                    status: 'deployed',
                     source: { owner: 'acme', repo: 'erp-bridge' },
                     url: 'https://app/api',
                 },
@@ -416,23 +461,32 @@ describe('removeAppBuilderComponent (integration)', () => {
         return createProject({
             componentInstances: {
                 'commerce-mesh': {
-                    id: 'commerce-mesh', name: 'Mesh', type: 'dependency',
-                    subType: 'mesh', status: 'ready', path: '/proj/components/commerce-mesh',
+                    id: 'commerce-mesh',
+                    name: 'Mesh',
+                    type: 'dependency',
+                    subType: 'mesh',
+                    status: 'ready',
+                    path: '/proj/components/commerce-mesh',
                 } as never,
                 'erp-bridge': {
-                    id: 'erp-bridge', name: 'ERP', type: 'app-builder',
-                    status: 'ready', path: '/proj/components/erp-bridge',
+                    id: 'erp-bridge',
+                    name: 'ERP',
+                    type: 'app-builder',
+                    status: 'ready',
+                    path: '/proj/components/erp-bridge',
                 } as never,
             },
             appBuilderComponents: {
                 'commerce-mesh': {
-                    kind: 'mesh', status: 'deployed',
+                    kind: 'mesh',
+                    status: 'deployed',
                     source: { owner: 'skukla', repo: 'commerce-paas-mesh' },
                     endpoint: 'https://mesh/graphql',
                     providesEnvVars: { MESH_ENDPOINT: 'https://mesh/graphql' },
                 },
                 'erp-bridge': {
-                    kind: 'integration', status: 'deployed',
+                    kind: 'integration',
+                    status: 'deployed',
                     source: { owner: 'acme', repo: 'erp-bridge' },
                     url: 'https://app/api',
                 },
@@ -447,12 +501,16 @@ describe('removeAppBuilderComponent (integration)', () => {
         const result = await removeAppBuilderComponent(project, 'erp-bridge', deps as never);
 
         expect(result.success).toBe(true);
-        const undeployCall = deps.commandManager.execute.mock.calls.find(
-            (c: unknown[]) => String(c[0]).includes('app undeploy'),
+        const undeployCall = deps.commandManager.execute.mock.calls.find((c: unknown[]) =>
+            String(c[0]).includes('app undeploy')
         );
         expect(undeployCall).toBeDefined();
         expect(mockWithOrgContext).toHaveBeenCalled();
-        expect(deps.componentManager.removeComponent).toHaveBeenCalledWith(project, 'erp-bridge', true);
+        expect(deps.componentManager.removeComponent).toHaveBeenCalledWith(
+            project,
+            'erp-bridge',
+            true
+        );
 
         const persisted = deps.saveProject.mock.calls.at(-1)?.[0] as Project;
         expect(persisted.appBuilderComponents?.['erp-bridge']).toBeUndefined();
@@ -475,8 +533,8 @@ describe('removeAppBuilderComponent (integration)', () => {
 
         await removeAppBuilderComponent(project, 'erp-bridge', deps as never);
 
-        const meshDeleteCall = deps.commandManager.execute.mock.calls.find(
-            (c: unknown[]) => String(c[0]).includes('api-mesh:delete'),
+        const meshDeleteCall = deps.commandManager.execute.mock.calls.find((c: unknown[]) =>
+            String(c[0]).includes('api-mesh:delete')
         );
         expect(meshDeleteCall).toBeUndefined();
     });
@@ -487,13 +545,18 @@ describe('removeAppBuilderComponent (mesh)', () => {
         return createProject({
             componentInstances: {
                 'commerce-mesh': {
-                    id: 'commerce-mesh', name: 'Mesh', type: 'dependency',
-                    subType: 'mesh', status: 'ready', path: '/proj/components/commerce-mesh',
+                    id: 'commerce-mesh',
+                    name: 'Mesh',
+                    type: 'dependency',
+                    subType: 'mesh',
+                    status: 'ready',
+                    path: '/proj/components/commerce-mesh',
                 } as never,
             },
             appBuilderComponents: {
                 'commerce-mesh': {
-                    kind: 'mesh', status: 'deployed',
+                    kind: 'mesh',
+                    status: 'deployed',
                     source: { owner: 'skukla', repo: 'commerce-paas-mesh' },
                     endpoint: 'https://mesh/graphql',
                     providesEnvVars: { MESH_ENDPOINT: 'https://mesh/graphql' },
@@ -509,8 +572,8 @@ describe('removeAppBuilderComponent (mesh)', () => {
         const result = await removeAppBuilderComponent(project, 'commerce-mesh', deps as never);
 
         expect(result.success).toBe(true);
-        const deleteCall = deps.commandManager.execute.mock.calls.find(
-            (c: unknown[]) => String(c[0]).includes('api-mesh:delete'),
+        const deleteCall = deps.commandManager.execute.mock.calls.find((c: unknown[]) =>
+            String(c[0]).includes('api-mesh:delete')
         );
         expect(deleteCall).toBeDefined();
         expect(mockWithOrgContext).toHaveBeenCalled();
@@ -537,8 +600,8 @@ describe('removeAppBuilderComponent (mesh)', () => {
 
         await removeAppBuilderComponent(project, 'commerce-mesh', deps as never);
 
-        const undeployCall = deps.commandManager.execute.mock.calls.find(
-            (c: unknown[]) => String(c[0]).includes('app undeploy'),
+        const undeployCall = deps.commandManager.execute.mock.calls.find((c: unknown[]) =>
+            String(c[0]).includes('app undeploy')
         );
         expect(undeployCall).toBeUndefined();
     });

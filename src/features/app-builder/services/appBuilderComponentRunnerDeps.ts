@@ -12,14 +12,12 @@
  * itself free of cross-feature deploy imports.
  */
 
-import { promises as fsPromises } from 'fs';
-import * as path from 'path';
 import type * as vscode from 'vscode';
-import * as yaml from 'yaml';
 import { deriveAllowedDomain } from './allowedDomain';
 import { subscribeRequiredApis, type ApiSubscriberClient, type OrgTarget } from './apiSubscriber';
 import { createApiSubscriberClient } from './apiSubscriberClientAdapter';
 import type { AppBuilderComponentRunnerDeps } from './appBuilderComponentRunner';
+import { applyIsolatedPackages } from './appConfigPackages';
 import { deployAppComponent } from './appDeployment';
 import type { MeshSubscribeTarget } from './ensureMeshApiSubscribed';
 import { ServiceLocator } from '@/core/di';
@@ -32,7 +30,6 @@ import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
-import { toError } from '@/types/typeGuards';
 
 /** Collaborators the factory needs from the host (extension) context. */
 export interface RunnerDepsContext {
@@ -48,38 +45,24 @@ export interface RunnerDepsContext {
 
 /**
  * Apply the derived distinct `ow.package` to an integration's `app.config.yaml` —
- * the prune-isolation primitive (step 05). Renames each declared runtime package
- * to the derived name so two integrations never share `application`/`dx-excshell-1`.
- * Best-effort: an absent/unparseable config is left untouched (deploy surfaces it).
+ * the prune-isolation primitive (step 05). Renames each standalone runtime package
+ * to a distinct derived name (single → `owPackage`; multi → `owPackage-<name>`) so
+ * two integrations never share `application`/`dx-excshell-1`. Deterministic and
+ * idempotent (see {@link applyIsolatedPackages}); standalone-ness is guaranteed at
+ * the add door, so a no-standalone-packages config here means aio will fail with
+ * its own error — nothing to rename.
  */
 async function applyOwPackage(
     componentPath: string,
     owPackage: string,
     logger: Logger,
 ): Promise<void> {
-    const configPath = path.join(componentPath, 'app.config.yaml');
-    try {
-        const raw = await fsPromises.readFile(configPath, 'utf-8');
-        const doc = yaml.parse(raw) as {
-            application?: { runtimeManifest?: { packages?: Record<string, unknown> } };
-        };
-        const manifest = doc?.application?.runtimeManifest;
-        const packages = manifest?.packages;
-        if (!manifest || !packages || Object.keys(packages).length === 0) {
-            return;
-        }
-        const renamed: Record<string, unknown> = {};
-        for (const value of Object.values(packages)) {
-            renamed[owPackage] = value;
-        }
-        manifest.packages = renamed;
-        await fsPromises.writeFile(configPath, yaml.stringify(doc), 'utf-8');
-        logger.debug(`[AppBuilderComponent Runner] applied ow.package "${owPackage}"`);
-    } catch (error) {
-        logger.warn(
-            `[AppBuilderComponent Runner] could not apply ow.package: ${toError(error).message}`,
-        );
-    }
+    const applied = await applyIsolatedPackages(componentPath, owPackage);
+    logger.debug(
+        applied
+            ? `[AppBuilderComponent Runner] applied ow.package "${owPackage}"`
+            : `[AppBuilderComponent Runner] no standalone packages to isolate for "${owPackage}"`,
+    );
 }
 
 /** Build the {@link OrgTarget} the subscriber needs from the project's identity. */

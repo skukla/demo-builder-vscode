@@ -25,9 +25,15 @@
  */
 
 import { setAppBuilderComponent, getProvidedEnvVars } from './appBuilderComponentState';
+import { isStandaloneApp } from './appConfigPackages';
 import { deriveOwPackage } from './owPackageName';
 import type { AppDeploymentResult } from './types';
-import { buildOrgTargetFromProjectAdobe, withOrgContext, type CachedOrgRef, type CommandExecutor } from '@/core/shell';
+import {
+    buildOrgTargetFromProjectAdobe,
+    withOrgContext,
+    type CachedOrgRef,
+    type CommandExecutor,
+} from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { ComponentManager } from '@/features/components/services/componentManager';
 import type { MeshDeploymentResult } from '@/features/mesh/services/types';
@@ -62,16 +68,25 @@ export interface AppBuilderComponentRunnerDeps {
     getCachedOrganization: () => CachedOrgRef | undefined;
     /** Mesh deploy tail (org-agnostic; the runner wraps it in withOrgContext). */
     deployMesh: (
-        componentPath: string, commandManager: CommandExecutor, logger: Logger,
-        onProgress?: (m: string, s?: string) => void, existingMeshId?: string,
+        componentPath: string,
+        commandManager: CommandExecutor,
+        logger: Logger,
+        onProgress?: (m: string, s?: string) => void,
+        existingMeshId?: string
     ) => Promise<MeshDeploymentResult>;
     /** Integration deploy tail, given a derived distinct ow.package. */
     deployApp: (
-        componentPath: string, owPackage: string, commandManager: CommandExecutor, logger: Logger,
-        onProgress?: (m: string, s?: string) => void,
+        componentPath: string,
+        owPackage: string,
+        commandManager: CommandExecutor,
+        logger: Logger,
+        onProgress?: (m: string, s?: string) => void
     ) => Promise<AppDeploymentResult>;
     /** Union-reconcile API subscriber (step 07). */
-    subscribeRequiredApis: (appBuilderComponents: AppBuilderComponentCatalogEntry[], project: Project) => Promise<void>;
+    subscribeRequiredApis: (
+        appBuilderComponents: AppBuilderComponentCatalogEntry[],
+        project: Project
+    ) => Promise<void>;
     /** Storefront config regen + republish (step 04 generalized providesEnvVars path). */
     republishStorefront: (input: RepublishInput) => Promise<{ success: boolean; error?: string }>;
     /** Every appBuilderComponent in the project's catalog (for the union subscribe). */
@@ -116,7 +131,10 @@ async function cloneAndInstall(
 }
 
 /** Guard: a mesh-consuming integration requires its provider to be deployed first. */
-function findMissingProvider(project: Project, entry: AppBuilderComponentCatalogEntry): string | undefined {
+function findMissingProvider(
+    project: Project,
+    entry: AppBuilderComponentCatalogEntry,
+): string | undefined {
     for (const envVar of entry.envSchema ?? []) {
         const provider = envVar.providedBy;
         if (provider && !project.appBuilderComponents?.[provider]) {
@@ -139,7 +157,10 @@ async function persistResult(
 }
 
 /** Republish the storefront when the project carries provided env vars (else no-op). */
-async function republishIfProvided(project: Project, deps: AppBuilderComponentRunnerDeps): Promise<void> {
+async function republishIfProvided(
+    project: Project,
+    deps: AppBuilderComponentRunnerDeps,
+): Promise<void> {
     if (Object.keys(getProvidedEnvVars(project)).length === 0) {
         return;
     }
@@ -147,7 +168,10 @@ async function republishIfProvided(project: Project, deps: AppBuilderComponentRu
 }
 
 /** Build the persisted AppBuilderComponentState from a successful mesh deploy. */
-function meshState(entry: AppBuilderComponentCatalogEntry, data: MeshDeploymentResult['data']): AppBuilderComponentState {
+function meshState(
+    entry: AppBuilderComponentCatalogEntry,
+    data: MeshDeploymentResult['data'],
+): AppBuilderComponentState {
     const endpoint = data?.endpoint ?? '';
     return {
         kind: 'mesh',
@@ -162,7 +186,10 @@ function meshState(entry: AppBuilderComponentCatalogEntry, data: MeshDeploymentR
 }
 
 /** Build the persisted AppBuilderComponentState from a successful integration deploy. */
-function integrationState(entry: AppBuilderComponentCatalogEntry, data: AppDeploymentResult['data']): AppBuilderComponentState {
+function integrationState(
+    entry: AppBuilderComponentCatalogEntry,
+    data: AppDeploymentResult['data'],
+): AppBuilderComponentState {
     return {
         kind: 'integration',
         status: 'deployed',
@@ -217,7 +244,10 @@ export async function addAppBuilderComponent(
 ): Promise<RunnerResult> {
     const missingProvider = findMissingProvider(project, entry);
     if (missingProvider) {
-        return { success: false, error: `Provider "${missingProvider}" is not deployed yet (deploy it first).` };
+        return {
+            success: false,
+            error: `Provider "${missingProvider}" is not deployed yet (deploy it first).`,
+        };
     }
 
     try {
@@ -226,6 +256,21 @@ export async function addAppBuilderComponent(
         const installed = await cloneAndInstall(project, entry, deps);
         if ('error' in installed) {
             return { success: false, error: installed.error };
+        }
+
+        // Add door: an integration MUST be a standalone action app so its deploy can
+        // be package-isolated in the shared workspace. Reject an extension-shaped or
+        // malformed repo here (before any deploy) rather than silently landing it on
+        // the shared default package where it would prune sibling integrations.
+        if (entry.kind === 'integration' && !(await isStandaloneApp(installed.path))) {
+            return {
+                success: false,
+                error:
+                    `"${entry.name}" is not a standalone App Builder app — its app.config.yaml ` +
+                    `declares no runtime packages under application.runtimeManifest. Only standalone ` +
+                    `action apps can be isolated in a shared workspace; extension apps (e.g. excshell) ` +
+                    `are not supported as integrations.`,
+            };
         }
 
         const deployed = await withOrgContext(targetFor(project, deps), () =>
@@ -280,13 +325,20 @@ export async function deployAppBuilderComponent(
 }
 
 /** Reconstruct a minimal catalog entry from persisted state (redeploy fallback). */
-function entryFromState(id: string, state: AppBuilderComponentState): AppBuilderComponentCatalogEntry {
+function entryFromState(
+    id: string,
+    state: AppBuilderComponentState,
+): AppBuilderComponentCatalogEntry {
     return {
         id,
         name: id,
         description: '',
         kind: state.kind,
-        source: { owner: state.source.owner, repo: state.source.repo, branch: state.source.branch ?? 'main' },
+        source: {
+            owner: state.source.owner,
+            repo: state.source.repo,
+            branch: state.source.branch ?? 'main',
+        },
         providesEnvVars: state.providesEnvVars ? Object.keys(state.providesEnvVars) : undefined,
     };
 }
@@ -299,9 +351,8 @@ async function teardownRemote(
     deps: AppBuilderComponentRunnerDeps,
 ): Promise<void> {
     const componentPath = project.componentInstances?.[id]?.path;
-    const command = state.kind === 'mesh'
-        ? 'aio api-mesh:delete --autoConfirmAction'
-        : 'aio app undeploy';
+    const command =
+        state.kind === 'mesh' ? 'aio api-mesh:delete --autoConfirmAction' : 'aio app undeploy';
     await withOrgContext(targetFor(project, deps), () =>
         deps.commandManager.execute(command, {
             cwd: componentPath,
@@ -329,22 +380,33 @@ export async function removeAppBuilderComponent(
         return { success: false, error: `AppBuilderComponent "${id}" not found.` };
     }
 
-    const provided = Boolean(state.providesEnvVars && Object.keys(state.providesEnvVars).length > 0);
+    const provided = Boolean(
+        state.providesEnvVars && Object.keys(state.providesEnvVars).length > 0,
+    );
 
     try {
         await teardownRemote(project, id, state, deps);
     } catch (error) {
-        deps.logger.warn(`[AppBuilderComponent Runner] remote teardown warning: ${toError(error).message}`);
+        deps.logger.warn(
+            `[AppBuilderComponent Runner] remote teardown warning: ${toError(error).message}`,
+        );
     }
 
     await deps.componentManager.removeComponent(project, id, true);
 
-    const cleared = { ...project, appBuilderComponents: { ...(project.appBuilderComponents ?? {}) } };
+    const cleared = {
+        ...project,
+        appBuilderComponents: { ...(project.appBuilderComponents ?? {}) },
+    };
     delete cleared.appBuilderComponents[id];
     await deps.saveProject(cleared);
 
     if (provided) {
-        await deps.republishStorefront({ project: cleared, secrets: deps.secrets, logger: deps.logger });
+        await deps.republishStorefront({
+            project: cleared,
+            secrets: deps.secrets,
+            logger: deps.logger,
+        });
     }
 
     return { success: true };
