@@ -4891,6 +4891,17 @@ div[class*="spectrum"] input[type="search"] {
     gap: 8px;
     max-width: 520px;
 }
+/* API-access loading/error: fill the reserved stage body and center on both axes
+   (full width — not the left-aligned .intflow-api-info band), so the spinner sits
+   in the middle of the modal rather than a small band near the top. */
+.intflow-api-center {
+    flex: 1 1 auto;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 360px;
+}
 .intflow-api-info-head {
     font-size: 15px;
     font-weight: 700;

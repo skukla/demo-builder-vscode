@@ -60,6 +60,12 @@ describe('ApiPickerStage', () => {
         expect(screen.getByText(/Loading Adobe APIs/i)).toBeInTheDocument();
     });
 
+    it('renders no redundant "API access" heading (the modal title already carries it)', async () => {
+        renderStage();
+        await waitFor(() => expect(screen.getByText('Firefly Services')).toBeInTheDocument());
+        expect(screen.queryByText('API access')).not.toBeInTheDocument();
+    });
+
     it('renders the picker with the fetched APIs once loaded', async () => {
         renderStage();
         await waitFor(() => {
@@ -86,9 +92,7 @@ describe('ApiPickerStage', () => {
             error: 'Request timeout: list-org-console-apis',
         });
         renderStage();
-        await waitFor(() =>
-            expect(screen.getByText(/Request timeout/i)).toBeInTheDocument()
-        );
+        await waitFor(() => expect(screen.getByText(/Request timeout/i)).toBeInTheDocument());
         expect(mockRequest).toHaveBeenCalledTimes(1);
 
         fireEvent.click(screen.getByRole('button', { name: /Retry/i }));

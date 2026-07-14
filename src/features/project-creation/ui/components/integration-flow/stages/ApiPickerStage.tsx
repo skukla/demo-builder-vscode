@@ -16,7 +16,6 @@
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useCallback, useEffect, useState } from 'react';
 import { LoadingDisplay, StatusDisplay } from '@/core/ui/components/feedback';
-import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { ApiAccessPicker, type ApiAccessOption } from '@/core/ui/components/selection';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 
@@ -49,9 +48,6 @@ export interface ApiPickerStageProps {
 const NO_SELECTED: string[] = [];
 
 const HELPER = 'Pick the Adobe APIs this app needs — change them anytime in Manage APIs.';
-
-/** Centered loading/error views share this height (matches the destination step). */
-const PICKER_VIEW_HEIGHT = '220px';
 
 /**
  * The interactive API-access step for custom/import apps.
@@ -95,71 +91,42 @@ export function ApiPickerStage({
         };
     }, [componentIds, reloadKey]);
 
-    return (
-        <div className="intflow-api-info" data-testid="api-picker-stage">
-            <div className="intflow-api-info-head">API access</div>
-            <PickerBody
-                loading={loading}
-                error={error}
-                confirmed={confirmed}
-                apis={apis}
-                selected={selected}
-                onToggle={onToggle}
-                onRetry={retry}
-            />
-        </div>
-    );
-}
-
-interface PickerBodyProps {
-    loading: boolean;
-    error: string | undefined;
-    confirmed: boolean;
-    apis: ApiAccessOption[];
-    selected: string[];
-    onToggle: (code: string) => void;
-    onRetry: () => void;
-}
-
-/**
- * The api-access body, resolved by state precedence: loading → error →
- * confirmation summary (the Done hold) → the interactive picker. Early returns
- * keep the JSX free of long `&&` guard chains. Loading and error reuse the
- * centered feedback views of the sibling destination step (a retryable failure,
- * not dead-end red text).
- */
-function PickerBody({
-    loading,
-    error,
-    confirmed,
-    apis,
-    selected,
-    onToggle,
-    onRetry,
-}: PickerBodyProps): React.ReactElement {
+    // Loading and error fill the reserved stage body and center on both axes —
+    // full width, not the left-aligned .intflow-api-info content band (a retryable
+    // failure, not dead-end red text). The picker/summary keep that top-aligned band.
     if (loading) {
         return (
-            <CenteredFeedbackContainer height={PICKER_VIEW_HEIGHT}>
+            <div className="intflow-api-center" data-testid="api-picker-stage">
                 <LoadingDisplay size="L" message="Loading Adobe APIs…" />
-            </CenteredFeedbackContainer>
+            </div>
         );
     }
     if (error) {
         return (
-            <StatusDisplay
-                variant="error"
-                height={PICKER_VIEW_HEIGHT}
-                title="Couldn't load Adobe APIs"
-                message={error}
-                actions={[{ label: 'Retry', variant: 'accent', onPress: onRetry }]}
-            />
+            <div className="intflow-api-center" data-testid="api-picker-stage">
+                <StatusDisplay
+                    variant="error"
+                    height="100%"
+                    title="Couldn't load Adobe APIs"
+                    message={error}
+                    actions={[{ label: 'Retry', variant: 'accent', onPress: retry }]}
+                />
+            </div>
         );
     }
-    if (confirmed) {
-        return <ConfirmedSummary apis={apis} selected={selected} />;
-    }
     return (
-        <ApiAccessPicker apis={apis} selected={selected} onToggle={onToggle} helperText={HELPER} />
+        <div className="intflow-api-info" data-testid="api-picker-stage">
+            {confirmed ? (
+                <ConfirmedSummary apis={apis} selected={selected} />
+            ) : (
+                <ApiAccessPicker
+                    apis={apis}
+                    selected={selected}
+                    onToggle={onToggle}
+                    helperText={HELPER}
+                />
+            )}
+        </div>
     );
 }
 
