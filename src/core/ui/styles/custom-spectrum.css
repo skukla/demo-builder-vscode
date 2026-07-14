@@ -4504,22 +4504,7 @@ div[class*="spectrum"] input[type="search"] {
     top: var(--spectrum-global-dimension-size-200);
     right: var(--spectrum-global-dimension-size-200);
 }
-/* A committed destination choice, collapsed to one compact line + "Change". */
-.int-chosen {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    box-sizing: border-box;
-    /* Uniform row height across Project / Workspace / API access — the quiet action
-       button (Change) sets the tallest natural height; rows without one (e.g. API access
-       once Enabled) fill to match. Failed rows may grow (wrapped error) — acceptable. */
-    min-height: 48px;
-    padding: 8px 12px;
-    margin-bottom: 12px;
-    border: 1px solid var(--spectrum-global-color-gray-300);
-    border-radius: 8px;
-    background: var(--spectrum-global-color-gray-50);
-}
+/* Status badge glyphs (✓ / ⚠) for the mesh row's quiet API-access line. */
 .int-chosen-check {
     display: inline-flex;
     align-items: center;
@@ -4547,43 +4532,37 @@ div[class*="spectrum"] input[type="search"] {
     font-size: 11px;
     font-weight: 700;
 }
-.int-chosen-label {
-    font-size: 11px;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--spectrum-global-color-gray-600);
+/* The mesh row's API-access status: a QUIET line (icon + text, optional Retry),
+   NOT a boxed panel — access is deterministic, so this is a light confirmation
+   sitting at the same level as the row's source/destination lines. */
+.int-enable-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 0 12px;
+    font-size: 13px;
+    color: var(--spectrum-global-color-gray-800);
 }
-/* The error detail for a failed enablement — rendered on its own line BELOW the
-   .int-chosen row (a sibling, not inline) so it never displaces the Retry button. */
+.int-enable-status-text {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.int-enable-status .spectrum-Button,
+.int-enable-status button {
+    flex: 0 0 auto;
+    margin-left: auto;
+}
+/* The error detail for a failed enablement — its own line BELOW the status line
+   (a sibling, not inline) so it never displaces the Retry button. */
 .int-enable-error {
     display: block;
-    margin: -6px 0 12px;
+    margin: 4px 0 0;
     padding: 0 12px;
     font-size: 12px;
     line-height: 1.4;
     color: var(--spectrum-global-color-red-600);
     overflow-wrap: anywhere;
-}
-.int-chosen-value {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--spectrum-global-color-gray-900);
-}
-
-/* API access lists several APIs (and later events), joined with " · ". Lighter
-   weight + slightly smaller + wrapping keeps a long list readable as a secondary
-   detail rather than a bold headline, and lets it flow to a second line instead
-   of forcing the row wide. Project/Workspace values keep the bold treatment. */
-.int-chosen-value.int-chosen-value--apis {
-    font-size: 12px;
-    font-weight: 400;
-    color: var(--spectrum-global-color-gray-800);
-    line-height: 1.4;
-    white-space: normal;
-}
-.int-chosen .spectrum-Button,
-.int-chosen button {
-    margin-left: auto;
 }
 /* Catalog entries render as square tiles in the wrapping row (not full-width rows). */
 .choice-card--tile {
@@ -4692,19 +4671,19 @@ div[class*="spectrum"] input[type="search"] {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+/* The API-picks line (custom/import rows): count left, the quiet Change right —
+   mirrors the destination line so the two editable lines read as a pair. */
 .int-row-apis {
-    font-size: 12px;
-    color: var(--spectrum-global-color-gray-600);
+    display: flex;
+    align-items: center;
+    gap: 10px;
     margin-top: 6px;
 }
-/* The mesh row's embedded API-access enablement (.int-chosen is a shared style
-   with its own bottom margin — inside a row the row's padding owns the gap). */
-.int-row .int-chosen {
-    margin-top: 10px;
-    margin-bottom: 0;
-}
-.int-row .int-enable-error {
-    margin-bottom: 0;
+.int-row-apis-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
 }
 
 /* ---- Flow modal: stage body + per-stage layouts ---- */
@@ -4776,7 +4755,7 @@ div[class*="spectrum"] input[type="search"] {
     align-items: flex-start;
     gap: 0;
 }
-/* A committed choice, collapsed to one compact line (the .int-chosen language). */
+/* A committed choice (project/workspace) collapsed to one compact boxed line. */
 .intflow-chosen {
     display: flex;
     align-items: center;
@@ -4899,29 +4878,10 @@ div[class*="spectrum"] input[type="search"] {
 .intflow-api-summary-remove:hover {
     color: var(--spectrum-global-color-red-600);
 }
-/* The required-API name takes the row; the tag it pushes to the right edge. */
+/* The API name takes the rest of the row after the status icon. */
 .intflow-api-summary-name {
     flex: 1;
     min-width: 0;
-}
-/* "Always on" status pill — quiet uppercase micro-tag, the visual stand-in for
-   the old "comes with this integration, always on" footnote. */
-.intflow-api-tag {
-    flex: 0 0 auto;
-    white-space: nowrap;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--spectrum-global-color-gray-700);
-    background: var(--spectrum-global-color-gray-200);
-    padding: 2px 6px;
-    border-radius: 4px;
-}
-/* Live "Enabling…" state while the mesh subscribe runs on Add. */
-.intflow-api-tag--enabling {
-    color: var(--spectrum-global-color-blue-600);
-    background: var(--spectrum-global-color-blue-100);
 }
 /* Informational API-access step (deterministic integrations): read-only facts,
    left-aligned in the content band — no picker, no side panel. */
@@ -4958,7 +4918,13 @@ div[class*="spectrum"] input[type="search"] {
 .intflow-api-picker {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
+}
+/* The shared SearchHeader ships generous size-200 (16px) margins for full-page
+   lists; inside this modal picker that pushes the actual API list below the fold.
+   Tighten them here (inline Spectrum margins need !important to lose). */
+.intflow-api-picker .search-header > div {
+    margin-bottom: 6px !important;
 }
 /* Left browse-column header + at-a-glance picks count (Selected has no mirror). */
 .intflow-api-browse-head {
@@ -4983,10 +4949,10 @@ div[class*="spectrum"] input[type="search"] {
     font-size: 12px;
     line-height: 1.5;
     color: var(--spectrum-global-color-gray-600);
-    max-width: 60ch;
+    max-width: 80ch;
 }
 .intflow-api-group {
-    margin-top: 8px;
+    margin-top: 4px;
 }
 /* Quiet sentence-case group titles (the .ai-skills-group-header register):
    hierarchy is stage > group > names, so groups stay small and muted. */
@@ -4994,8 +4960,8 @@ div[class*="spectrum"] input[type="search"] {
     font-size: 12px;
     font-weight: 600;
     color: var(--spectrum-global-color-gray-600);
-    padding: 4px 0;
-    margin-bottom: 4px;
+    padding: 2px 0;
+    margin-bottom: 2px;
     border-bottom: 1px solid var(--spectrum-global-color-gray-200);
 }
 /* Reason line under a group title (e.g. the profile-bound "unavailable" group). */
@@ -5016,15 +4982,15 @@ div[class*="spectrum"] input[type="search"] {
 .intflow-api-chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    margin: 2px 0 4px;
+    gap: 5px;
+    margin: 0 0 2px;
 }
 .intflow-api-chip {
     appearance: none;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 11.5px;
     line-height: 1.2;
-    padding: 3px 10px;
+    padding: 2px 9px;
     border-radius: 999px;
     border: 1px solid var(--spectrum-global-color-gray-300);
     background: var(--spectrum-global-color-gray-50);
@@ -5062,6 +5028,21 @@ div[class*="spectrum"] input[type="search"] {
     text-align: center;
     color: var(--spectrum-global-color-gray-600);
     font-size: 13px;
+}
+/* Quiet footnote: the already-covered (locked) APIs, demoted from checkbox rows
+   to a single reassuring line under the list so the real choices lead. Ruled off
+   the pickable groups; muted, wraps on a narrow modal. */
+.intflow-api-provided {
+    margin: 8px 0 0;
+    padding-top: 8px;
+    border-top: 1px solid var(--spectrum-global-color-gray-200);
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-600);
+}
+.intflow-api-provided-label {
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-700);
 }
 /* Non-blocking fetch failure: inline error + Retry (Continue never gates on it). */
 .intflow-api-error {

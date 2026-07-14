@@ -9,6 +9,10 @@
  * Ordering mirrors {@link handleCheckApiMesh}: validateWorkspaceId ->
  * ensureAuthenticated -> service. The org comes from the PAYLOAD (`payload.orgId`),
  * NOT `getCurrentProject()` — the wizard has no current project yet.
+ *
+ * While the subscribe runs it forwards each per-API tick to the webview as
+ * `mesh-api-subscribe-progress` ({@link MeshApiSubscribeProgress}), so the Add
+ * Integration modal can flip each API row from "Enabling…" to ✓ as it lands.
  */
 
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
@@ -31,6 +35,17 @@ type EnsureMeshApiSubscribedResult = {
     error?: string;
     code?: ErrorCode;
 };
+
+/** Extension→webview push type for each per-API subscribe tick. */
+export const MESH_API_SUBSCRIBE_PROGRESS = 'mesh-api-subscribe-progress';
+
+/** Payload of a {@link MESH_API_SUBSCRIBE_PROGRESS} message (one per API tick). */
+export interface MeshApiSubscribeProgress {
+    /** The API's sdk code (e.g. GraphQLServiceSDK). */
+    code: string;
+    /** True when this API's subscribe has landed. */
+    done: boolean;
+}
 
 type EnsureMeshApiSubscribedPayload = {
     orgId: string;
@@ -93,6 +108,12 @@ export async function handleEnsureMeshApiSubscribed(
             project: target,
             authService: ServiceLocator.getAuthenticationService(),
             logger: context.logger,
+            // Stream each API's subscribe to the modal so it telegraphs progress
+            // per row. Returning the sendMessage promise makes the subscriber AWAIT
+            // delivery before the next step — so every tick reaches the webview
+            // before this handler returns its response (no tick raced/dropped).
+            onProgress: (event: MeshApiSubscribeProgress) =>
+                context.sendMessage(MESH_API_SUBSCRIBE_PROGRESS, event),
         });
 
         return { success: true, data: { apis } };

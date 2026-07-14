@@ -3,9 +3,12 @@
  *
  * INFORMATIONAL, not interactive. Integrations are deterministic: their API
  * access is fixed and subscribed at deploy, so this step only TELLS the user
- * what the integration grants — required APIs (short labels) + the baseline
- * Adobe I/O access, each "Always on". Static (no org fetch, no picker). A custom
- * app additionally notes that more APIs are granted as it's built.
+ * what the integration will grant — required APIs (short labels) + the baseline
+ * Adobe I/O access. State lives in the row icon alone (no status word), reusing
+ * the StatusSection vocabulary: a Clock (pending) while an API is waiting to be
+ * enabled — NOT a ✓ — a spinner while its subscribe runs on Add, then a green
+ * CheckmarkCircle once granted. Static (no org fetch, no picker) — this stage is
+ * for the DETERMINISTIC mesh/catalog kinds; custom/import use the ApiPickerStage.
  *
  * @jest-environment jsdom
  */
@@ -24,19 +27,34 @@ function renderStage(props: Partial<Props> = {}) {
         <Provider theme={defaultTheme} colorScheme="light">
             <ApiAccessStage
                 required={props.required}
-                custom={props.custom}
                 enabling={props.enabling}
+                enableDone={props.enableDone}
+                enableComplete={props.enableComplete}
+                enablesOnAdd={props.enablesOnAdd}
+                alreadyEnabled={props.alreadyEnabled}
             />
         </Provider>
     );
 }
 
-/** The "Always on" rows in the Included facts section. */
+/** The API-name rows in the Included facts section. */
 function includedNames(): string[] {
     const section = screen.getByTestId('api-access-included');
     return Array.from(section.querySelectorAll('.intflow-api-summary-name')).map(
         (el) => el.textContent ?? ''
     );
+}
+
+/** Count granted rows (green CheckmarkCircle) in the Included section. */
+function grantedCount(): number {
+    const section = screen.getByTestId('api-access-included');
+    return section.querySelectorAll('.text-green-600').length;
+}
+
+/** Count pending rows (blue Clock — waiting to be enabled) in the Included section. */
+function pendingCount(): number {
+    const section = screen.getByTestId('api-access-included');
+    return section.querySelectorAll('.text-blue-600').length;
 }
 
 describe('ApiAccessStage (informational)', () => {
@@ -46,16 +64,20 @@ describe('ApiAccessStage (informational)', () => {
         expect(screen.getByTestId('api-access-stage')).toBeInTheDocument();
         expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
         expect(screen.queryByTestId('spectrum-searchfield')).not.toBeInTheDocument();
-        expect(screen.getByText(/granted automatically/i)).toBeInTheDocument();
+        expect(screen.getByText(/needs these Adobe APIs/i)).toBeInTheDocument();
     });
 
-    it('shows a required API by its short label plus the baseline, both Always on', () => {
+    it('shows a required API + baseline as PENDING (Clock), not ✓, before anything is enabled', () => {
         renderStage({ required: ['GraphQLServiceSDK'] });
 
         // GraphQLServiceSDK -> "API Mesh"; baseline -> "I/O Management API".
         expect(includedNames()).toEqual(['API Mesh', 'I/O Management API']);
+        // Nothing enabled yet → both rows pending (Clock), zero granted ✓.
+        expect(pendingCount()).toBe(2);
+        expect(grantedCount()).toBe(0);
+        // No per-row status word either.
         const section = screen.getByTestId('api-access-included');
-        expect(within(section).getAllByText('Always on')).toHaveLength(2);
+        expect(within(section).queryByText(/Always on|Enabling|Enabled/)).not.toBeInTheDocument();
     });
 
     it('lists only the baseline when the integration declares no required APIs', () => {
@@ -78,24 +100,89 @@ describe('ApiAccessStage (informational)', () => {
         expect(includedNames()).toEqual(['SomeOtherSDK', 'I/O Management API']);
     });
 
-    it('shows live "Enabling…" per row (spinner) while the enable runs, not a static ✓', () => {
+    it('swaps each pending Clock for a spinner while the enable runs — no ✓, no status word', () => {
         renderStage({ required: ['GraphQLServiceSDK'], enabling: true });
 
         const section = screen.getByTestId('api-access-included');
-        expect(within(section).getAllByText('Enabling…')).toHaveLength(2); // mesh + baseline
-        expect(within(section).queryByText('Always on')).not.toBeInTheDocument();
-        expect(within(section).getAllByRole('progressbar').length).toBeGreaterThan(0);
-        expect(screen.getByText(/Enabling API access/i)).toBeInTheDocument();
+        // Both rows spin; none pending (Clock), none granted (✓), no status word.
+        expect(within(section).getAllByRole('progressbar')).toHaveLength(2); // mesh + baseline
+        expect(pendingCount()).toBe(0);
+        expect(grantedCount()).toBe(0);
+        expect(within(section).queryByText(/Always on|Enabling|Enabled/)).not.toBeInTheDocument();
+        // The sub-header stays the stable feature description — it does NOT echo the
+        // footer button's "Enabling…" action state.
+        expect(screen.getByText(/needs these Adobe APIs/i)).toBeInTheDocument();
     });
 
-    it('shows the build-time note only for a custom app', () => {
-        renderStage({ custom: true });
-        expect(screen.getByText(/as you build it/i)).toBeInTheDocument();
-        expect(screen.getByText(/Manage APIs/i)).toBeInTheDocument();
+    it('flips a per-API row to a green ✓ once its subscribe lands, others still spinning', () => {
+        renderStage({
+            required: ['GraphQLServiceSDK'],
+            enabling: true,
+            enableDone: { AdobeIOManagementAPISDK: true },
+        });
+
+        const section = screen.getByTestId('api-access-included');
+        // Baseline landed → CheckmarkCircle; mesh still spins; neither pending.
+        expect(grantedCount()).toBe(1);
+        expect(within(section).getAllByRole('progressbar')).toHaveLength(1);
+        expect(pendingCount()).toBe(0);
+        expect(within(section).queryByText(/Always on|Enabling|Enabled/)).not.toBeInTheDocument();
     });
 
-    it('omits the custom note for a catalog/mesh integration', () => {
-        renderStage({ required: ['GraphQLServiceSDK'] });
-        expect(screen.queryByText(/as you build it/i)).not.toBeInTheDocument();
+    it('enableComplete grants EVERY row ✓, even if a progress tick was dropped', () => {
+        // The enable succeeded, but only ONE per-API tick arrived (the other was
+        // lost in transit). Completion is authoritative — both rows must show ✓,
+        // never a row stranded on pending. (Reproduces the observed bug.)
+        renderStage({
+            required: ['GraphQLServiceSDK'],
+            enableComplete: true,
+            enableDone: { GraphQLServiceSDK: true }, // baseline tick missing
+        });
+
+        expect(grantedCount()).toBe(2); // mesh + baseline both ✓
+        expect(pendingCount()).toBe(0);
+        const section = screen.getByTestId('api-access-included');
+        expect(within(section).queryByRole('progressbar')).not.toBeInTheDocument();
+    });
+
+    it('states the APIs need enabling — and that THIS step enables them (mesh, enablesOnAdd)', () => {
+        renderStage({ required: ['GraphQLServiceSDK'], enablesOnAdd: true });
+        // Action-framed, not "adding enables them": the enabling happens in this step.
+        expect(screen.getByText(/needs these Adobe APIs/i)).toBeInTheDocument();
+        expect(screen.getByText(/This step enables them/i)).toBeInTheDocument();
+        expect(
+            screen.queryByText(/granted automatically|Adding it enables/i)
+        ).not.toBeInTheDocument();
+    });
+
+    it('says APIs are enabled at deploy when the step does not enable them (catalog/custom)', () => {
+        renderStage({ required: ['GraphQLServiceSDK'] }); // enablesOnAdd defaults false
+        expect(screen.getByText(/needs these Adobe APIs/i)).toBeInTheDocument();
+        expect(screen.getByText(/when this integration deploys/i)).toBeInTheDocument();
+    });
+
+    it('marks an API already enabled by another integration as ✓, not pending', () => {
+        // The baseline is already covered by a prior integration (e.g. a mesh) — it
+        // must show ✓, never a pending Clock asking the user to add it again.
+        renderStage({
+            required: ['GraphQLServiceSDK'],
+            alreadyEnabled: ['AdobeIOManagementAPISDK'],
+        });
+
+        // Mesh API is net-new (pending Clock); the baseline is already-enabled (✓).
+        expect(pendingCount()).toBe(1);
+        expect(grantedCount()).toBe(1);
+    });
+
+    it('says "nothing new to add" when every API is already enabled by the project', () => {
+        // A catalog integration whose only API (the baseline) is already covered.
+        renderStage({ alreadyEnabled: ['AdobeIOManagementAPISDK'] });
+
+        expect(grantedCount()).toBe(1);
+        expect(pendingCount()).toBe(0);
+        expect(
+            screen.getByText(/already enabled on your workspace — nothing new to add/i)
+        ).toBeInTheDocument();
+        expect(screen.queryByText(/needs these Adobe APIs/i)).not.toBeInTheDocument();
     });
 });

@@ -216,6 +216,21 @@ describe('ensureMeshApiSubscribed', () => {
         expect(withOrgContext).not.toHaveBeenCalled();
     });
 
+    it('forwards onProgress so a caller sees each API subscribe land', async () => {
+        const authService = createAuthService();
+        const events: Array<{ code: string; done: boolean }> = [];
+
+        await ensureMeshApiSubscribed({
+            project: createProject(),
+            authService: authService as any,
+            logger,
+            onProgress: (event) => events.push(event),
+        });
+
+        expect(events).toContainEqual({ code: MGMT, done: true });
+        expect(events).toContainEqual({ code: MESH, done: true });
+    });
+
     it('skips when only non-mesh entries match the axes (e.g. the unrestricted blank shell)', async () => {
         // This is the MESH pre-deploy subscribe: an axis-unrestricted
         // kind:'integration' entry (app-builder-shell) matching the selection

@@ -24,6 +24,9 @@ const mockRequest = jest.fn();
 jest.mock('@/core/ui/utils/vscode-api', () => ({
     webviewClient: {
         request: (...args: unknown[]) => mockRequest(...args),
+        postMessage: jest.fn(),
+        // The mesh enable subscribes to per-API progress ticks; return an unsubscribe.
+        onMessage: jest.fn(() => () => {}),
     },
 }));
 
@@ -312,15 +315,18 @@ describe('AddIntegrationFlowModal — later add (destination committed)', () => 
             'ensure-mesh-api-subscribed',
             expect.anything()
         );
-        expectEnabled('Add Integration');
-        click('Add Integration');
-        // The enable runs in the modal, then commit + close.
+        expectEnabled('Add API Access');
+        click('Add API Access');
+        // The enable runs in the modal, then holds on the ✓ terminal state (Done).
         await waitFor(() =>
             expect(mockRequest).toHaveBeenCalledWith(
                 'ensure-mesh-api-subscribed',
                 expect.anything()
             )
         );
+        await waitFor(() => expectEnabled('Done'));
+        // Done → commit + close.
+        click('Done');
         await waitFor(() =>
             expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('commerce-mesh', true)
         );
@@ -426,7 +432,7 @@ describe('AddIntegrationFlowModal — custom integration', () => {
         expectDisabled('Continue');
     });
 
-    it('finishes a custom add through onAddCustomAppBuilderComponent', async () => {
+    it('holds on a ✓ confirmation, then finishes a custom add on Done', async () => {
         const { builder, onClose } = renderModal({ initial: COMMITTED_DEST });
         click(/Import a repo/);
         click('Continue');
@@ -435,15 +441,24 @@ describe('AddIntegrationFlowModal — custom integration', () => {
         click('Continue');
         expect(screen.getByText('Demo Project')).toBeInTheDocument();
         click('Continue');
-        await waitForApiAccessStep();
-        // Custom app: the informational step notes that more APIs are granted as
-        // it's built (via Manage APIs) — no fetch, no picker.
-        expect(screen.getByText(/as you build it/i)).toBeInTheDocument();
-        click('Add Integration');
-        expect(builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith({
-            owner: 'acme',
-            repo: 'widget',
-        });
+        // Custom/import gets the INTERACTIVE picker (it can add any entitled API),
+        // which fetches the org's list — not the informational deterministic panel.
+        await waitFor(() => expect(screen.getByTestId('api-picker-stage')).toBeInTheDocument());
+        expect(mockRequest).toHaveBeenCalledWith('list-org-console-apis', expect.anything());
+        // Add API Access HOLDS on an in-modal ✓ confirmation (parity with mesh) —
+        // no commit/close yet; the footer becomes Done.
+        click('Add API Access');
+        await waitFor(() => expect(screen.getByTestId('api-picker-confirmed')).toBeInTheDocument());
+        expect(builder.onAddCustomAppBuilderComponent).not.toHaveBeenCalled();
+        expect(onClose).not.toHaveBeenCalled();
+        // Done commits + closes.
+        click('Done');
+        await waitFor(() =>
+            expect(builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith({
+                owner: 'acme',
+                repo: 'widget',
+            })
+        );
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 });

@@ -21,14 +21,19 @@ import React from 'react';
 import type { SelectableAppBuilderComponent } from '../../../services/appBuilderComponentSelection';
 import { isMeshSelected } from '../../steps/tileStatus';
 import type { UseProjectBuilderReturn } from '../../steps/useProjectBuilder';
+import { enabledApisFromSelection } from './enabledApis';
 import { meshKindOffered, type FlowMode } from './flowStages';
-import type { EnsureResult } from './MeshApiEnableRow';
 import { ApiAccessStage } from './stages/ApiAccessStage';
+import { ApiPickerStage } from './stages/ApiPickerStage';
 import { CatalogStage } from './stages/CatalogStage';
 import { CustomStage } from './stages/CustomStage';
 import { DestinationStage } from './stages/DestinationStage';
 import { KindStage } from './stages/KindStage';
-import { useIntegrationFlow, type UseIntegrationFlowReturn } from './useIntegrationFlow';
+import {
+    useIntegrationFlow,
+    type ApiEditTarget,
+    type UseIntegrationFlowReturn,
+} from './useIntegrationFlow';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { WizardState } from '@/types/webview';
@@ -39,6 +44,7 @@ const EMPTY_IDS: string[] = [];
 const TITLES: Record<FlowMode, string> = {
     add: 'Add Integration',
     destination: 'Deployment Destination',
+    'api-edit': 'Edit API Access',
 };
 
 /** flow stage id → DestinationStage view, for the four destination stages. */
@@ -53,15 +59,20 @@ export interface AddIntegrationFlowModalProps {
     isOpen: boolean;
     /** Close without committing (hook cancel semantics: the draft is discarded). */
     onClose: () => void;
-    /** 'add' = full journey; 'destination' = Set up / Change on a result row. */
+    /**
+     * 'add' = full journey; 'destination' = Set up / Change on a result row;
+     * 'api-edit' = re-open the picker for an existing integration's APIs.
+     */
     mode: FlowMode;
+    /** The integration whose API picks are being re-edited (mode 'api-edit' only). */
+    editTarget?: ApiEditTarget;
     state: WizardState;
     updateState: (updates: Partial<WizardState>) => void;
     /** The stack's mesh catalog entry (tileStatus.meshComponentForStack), if any. */
     meshComponent?: SelectableAppBuilderComponent;
     /** The FINISHED catalog entries (kind picker count, catalog + API stages). */
     catalog: AppBuilderComponentCatalogEntry[];
-    /** The blank starter app (the "Start from scratch" kind seeds it), if any. */
+    /** The blank starter app (the "Build custom" kind seeds it), if any. */
     blankComponent?: AppBuilderComponentCatalogEntry;
     /** Selected stack backend/frontend ids — the mesh-enable payload run on Add. */
     backendId?: string;
@@ -71,8 +82,6 @@ export interface AddIntegrationFlowModalProps {
         UseProjectBuilderReturn,
         'onAppBuilderComponentToggle' | 'onAddCustomAppBuilderComponent'
     >;
-    /** The mesh-enable outcome, captured on Add so the result row adopts it (no re-run). */
-    onMeshEnableResult?: (result: EnsureResult) => void;
 }
 
 type JourneyProps = Omit<AddIntegrationFlowModalProps, 'isOpen'>;
@@ -125,33 +134,48 @@ function StageBody({
         );
     }
     if (stage === 'api-access') {
-        // Informational only: the integration's required APIs (mesh/catalog) are
-        // subscribed automatically at deploy. Custom apps declare none up front —
-        // they note that more APIs are granted as the app is built.
+        // API access is PROJECT-LEVEL — the APIs the integrations ALREADY in this
+        // project cover show as ✓, not as something to add again. (The integration
+        // being added isn't in selectedIds yet, so this is exactly "the others".)
+        const alreadyEnabled = enabledApisFromSelection(
+            selectedIds,
+            props.backendId,
+            props.frontendId,
+        );
         if (draft.kind === 'mesh') {
             return (
                 <>
                     <ApiAccessStage
                         required={meshComponent?.requiredApis}
                         enabling={flow.enabling}
+                        enableDone={flow.enableDone}
+                        enableComplete={flow.enableComplete}
+                        enablesOnAdd
+                        alreadyEnabled={alreadyEnabled}
                     />
                     {flow.enableError && (
                         <div className="intflow-api-info-error" role="alert">
-                            {flow.enableError} — press Add Integration to try again.
+                            {flow.enableError}
                         </div>
                     )}
                 </>
             );
         }
+        // Custom apps (blank shell / imported repo) can need ANY entitled API and
+        // the user often knows which up front — so give them the INTERACTIVE picker
+        // (already-covered APIs come back locked). Catalog stays deterministic.
+        if (draft.kind === 'blank' || draft.kind === 'custom') {
+            return (
+                <ApiPickerStage
+                    componentIds={selectedIds}
+                    selected={draft.selectedApis ?? EMPTY_IDS}
+                    onToggle={flow.toggleApi}
+                    confirmed={flow.picksConfirmed}
+                />
+            );
+        }
         const entry = catalog.find((candidate) => candidate.id === draft.catalogId);
-        // Blank (shell) and imported repos are both custom apps — their API surface
-        // isn't known up front, so note that APIs are granted as the app is built.
-        return (
-            <ApiAccessStage
-                required={draft.kind === 'catalog' ? entry?.requiredApis : undefined}
-                custom={draft.kind === 'custom' || draft.kind === 'blank'}
-            />
-        );
+        return <ApiAccessStage required={entry?.requiredApis} alreadyEnabled={alreadyEnabled} />;
     }
     return (
         <DestinationStage

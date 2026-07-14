@@ -25,6 +25,9 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
     vscode: { postMessage: jest.fn() },
     webviewClient: {
         request: (...args: unknown[]) => mockRequest(...args),
+        postMessage: jest.fn(),
+        // The mesh enable subscribes to per-API progress ticks; return an unsubscribe.
+        onMessage: jest.fn(() => () => {}),
     },
 }));
 
@@ -126,6 +129,16 @@ function row(name: string): HTMLElement {
     return screen.getByText(name).closest('.int-row') as HTMLElement;
 }
 
+/** The destination line within a row (scopes its Change/Set up away from the API line). */
+function destinationOf(rowEl: HTMLElement): HTMLElement {
+    return rowEl.querySelector('.int-row-destination') as HTMLElement;
+}
+
+/** The editable API line within a custom/import row (scopes its Change). */
+function apiLineOf(rowEl: HTMLElement): HTMLElement {
+    return rowEl.querySelector('.int-row-apis') as HTMLElement;
+}
+
 beforeEach(() => {
     jest.clearAllMocks();
     mockRequest.mockResolvedValue({ success: true, data: { apis: [] } });
@@ -190,7 +203,9 @@ describe('IntegrationsStep — result rows from state', () => {
         renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST }));
         const custom = row('widget');
         expect(within(custom).getByText('Deploys to Demo Project · Stage')).toBeInTheDocument();
-        expect(within(custom).getByRole('button', { name: 'Change' })).toBeInTheDocument();
+        expect(
+            within(destinationOf(custom)).getByRole('button', { name: 'Change' })
+        ).toBeInTheDocument();
     });
 
     it('renders a custom integration row with its source line and no API-access slot', () => {
@@ -207,17 +222,36 @@ describe('IntegrationsStep — result rows from state', () => {
         expect(within(reco).getByRole('button', { name: 'Remove' })).toBeInTheDocument();
     });
 
-    it('shows the API count line from selectedConsoleApis', () => {
+    it('renders a result row for a committed blank "Build custom" app', () => {
+        // Regression: the blank shell was resolved against the blank-FILTERED catalog,
+        // so a committed "Build custom" app produced no row.
+        renderStep(baseState({ selectedAppBuilderComponents: ['app-builder-shell'] }));
+        const blank = row('App Builder App');
+        expect(blank).not.toBeNull();
+        expect(within(blank).getByRole('button', { name: 'Remove' })).toBeInTheDocument();
+    });
+
+    it('shows the API count line from selectedConsoleApis on a custom row', () => {
+        renderStep(
+            baseState({
+                ...CUSTOM_ADDED,
+                selectedConsoleApis: { 'acme-widget': ['AnalyticsSDK', 'CampaignSDK'] },
+            })
+        );
+        expect(within(row('widget')).getByText('APIs: 2 selected')).toBeInTheDocument();
+    });
+
+    it('shows no API line on a deterministic catalog row (its APIs are fixed)', () => {
         renderStep(
             baseState({
                 selectedAppBuilderComponents: ['cat-reco'],
-                selectedConsoleApis: { 'cat-reco': ['AnalyticsSDK', 'CampaignSDK'] },
+                selectedConsoleApis: { 'cat-reco': ['AnalyticsSDK'] },
             })
         );
-        expect(within(row('Recommendations')).getByText('APIs: 2 selected')).toBeInTheDocument();
+        expect(within(row('Recommendations')).queryByText(/APIs/)).not.toBeInTheDocument();
     });
 
-    it('auto-runs the mesh API enablement once the destination is committed', async () => {
+    it('shows a static "API access enabled" for a committed mesh — never subscribes (purely visual)', () => {
         renderStep(
             baseState({
                 selectedAppBuilderComponents: [MESH_ID],
@@ -225,18 +259,13 @@ describe('IntegrationsStep — result rows from state', () => {
                 ...COMMITTED_DEST,
             })
         );
-        await waitFor(() => {
-            expect(within(row(MESH_NAME)).getByText('API access')).toBeInTheDocument();
-        });
-        expect(mockRequest).toHaveBeenCalledWith(
+        // The enable is owned by the Add modal (commits only on success); this step
+        // just displays ✓ and must NOT issue a subscribe — re-mounting (Continue to
+        // the summary and Back) would otherwise "re-enable".
+        expect(within(row(MESH_NAME)).getByText('API access enabled')).toBeInTheDocument();
+        expect(mockRequest).not.toHaveBeenCalledWith(
             'ensure-mesh-api-subscribed',
-            expect.objectContaining({
-                orgId: 'org-1',
-                projectId: 'proj-1',
-                workspaceId: 'ws-1',
-                backendId: 'adobe-commerce-paas',
-                frontendId: 'eds-storefront',
-            })
+            expect.anything()
         );
     });
 });
@@ -265,14 +294,26 @@ describe('IntegrationsStep — modal wiring', () => {
         expect(within(dialog).getByTestId('project-field')).toBeInTheDocument();
     });
 
-    it("a committed row's Change opens the modal in destination mode", () => {
+    it("a committed row's destination Change opens the modal in destination mode", () => {
         renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST, ...SIGNED_IN }));
-        fireEvent.click(within(row('widget')).getByRole('button', { name: 'Change' }));
+        fireEvent.click(
+            within(destinationOf(row('widget'))).getByRole('button', { name: 'Change' })
+        );
         const dialog = screen.getByRole('dialog');
         expect(
             within(dialog).getByRole('heading', { name: 'Deployment Destination' })
         ).toBeInTheDocument();
         expect(within(dialog).getByTestId('project-field')).toBeInTheDocument();
+    });
+
+    it("a custom row's API Change opens the modal in api-edit mode (the picker)", () => {
+        renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST, ...SIGNED_IN }));
+        fireEvent.click(within(apiLineOf(row('widget'))).getByRole('button', { name: 'Change' }));
+        const dialog = screen.getByRole('dialog');
+        expect(
+            within(dialog).getByRole('heading', { name: 'Edit API Access' })
+        ).toBeInTheDocument();
+        expect(within(dialog).getByTestId('api-picker-stage')).toBeInTheDocument();
     });
 });
 
@@ -347,10 +388,7 @@ describe('IntegrationsStep — in-modal mesh enable hand-off', () => {
     }
 
     it('the mesh result row runs the enable AFTER add — never during selection', async () => {
-        mockRequest.mockResolvedValue({
-            success: true,
-            data: { apis: [{ code: 'GraphQLServiceSDK', name: 'Mesh Gateway' }] },
-        });
+        mockRequest.mockResolvedValue({ success: true });
         render(<StatefulStep />);
 
         fireEvent.click(screen.getByRole('button', { name: 'Add Integration' }));
@@ -360,7 +398,8 @@ describe('IntegrationsStep — in-modal mesh enable hand-off', () => {
         // Committed destination → summary → api-access. Selection NEVER provisions.
         fireEvent.click(within(dialog).getByRole('button', { name: 'Continue' }));
         await waitFor(() => {
-            expect(within(dialog).getByRole('button', { name: 'Add Integration' })).toHaveAttribute(
+            // The mesh api-access footer reads "Add API Access" (its action enables the APIs).
+            expect(within(dialog).getByRole('button', { name: 'Add API Access' })).toHaveAttribute(
                 'aria-disabled',
                 'false'
             );
@@ -370,10 +409,10 @@ describe('IntegrationsStep — in-modal mesh enable hand-off', () => {
             expect.anything()
         );
 
-        fireEvent.click(within(dialog).getByRole('button', { name: 'Add Integration' }));
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Add API Access' }));
 
-        // The result row runs the enable post-add (against the stack's mesh axes)
-        // and shows its outcome — exactly once.
+        // The enable runs IN the modal on Add (against the stack's mesh axes),
+        // then the modal holds on the ✓ terminal state (footer → Done).
         await waitFor(() => {
             expect(mockRequest).toHaveBeenCalledWith(
                 'ensure-mesh-api-subscribed',
@@ -384,8 +423,14 @@ describe('IntegrationsStep — in-modal mesh enable hand-off', () => {
                 })
             );
         });
+        // Done → commit + close. The result row then ADOPTS the modal's outcome
+        // (no re-run) and shows the confirmation.
+        await waitFor(() =>
+            expect(within(dialog).getByRole('button', { name: 'Done' })).toBeInTheDocument()
+        );
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
         await waitFor(() => {
-            expect(within(row(MESH_NAME)).getByText('Mesh Gateway')).toBeInTheDocument();
+            expect(within(row(MESH_NAME)).getByText('API access enabled')).toBeInTheDocument();
         });
         const ensureCalls = mockRequest.mock.calls.filter(
             ([type]) => type === 'ensure-mesh-api-subscribed'

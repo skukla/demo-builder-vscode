@@ -48,6 +48,25 @@ export interface SubscribedApi {
     name?: string;
 }
 
+/**
+ * A per-service subscribe-progress tick, for a live status UI: `done:false` when
+ * a code's subscribe starts, `done:true` when it lands (or immediately, when it
+ * was already subscribed). The OAuth and apiKey groups run CONCURRENTLY, so ticks
+ * from the two groups interleave — a listener keys off `code`, not arrival order.
+ */
+export interface SubscribeProgress {
+    code: string;
+    done: boolean;
+}
+
+/**
+ * Optional listener the subscribe calls with each {@link SubscribeProgress} tick.
+ * May return a promise; the subscribe AWAITS it, so a listener that ships the tick
+ * over a channel (e.g. the webview) can guarantee delivery BEFORE the subscribe
+ * proceeds — no dropped ticks racing a later response.
+ */
+export type SubscribeProgressListener = (event: SubscribeProgress) => void | Promise<void>;
+
 /** The org/project/workspace the subscribe targets. */
 export interface OrgTarget {
     orgId: string;
@@ -145,6 +164,22 @@ function toServiceSubscriptionInfo(service: ServiceInfo): ServiceSubscriptionInf
 }
 
 /**
+ * Fire a `done` tick for every service in the group (no-op without a listener).
+ * AWAITS each tick so it is flushed to the listener's channel before the subscribe
+ * continues — the guarantee that makes a per-API progress stream race-proof.
+ */
+async function emitProgress(
+    services: ServiceInfo[],
+    done: boolean,
+    onProgress?: SubscribeProgressListener,
+): Promise<void> {
+    if (!onProgress) return;
+    for (const service of services) {
+        await onProgress({ code: service.sdkCode, done });
+    }
+}
+
+/**
  * True when the credential already carries every required sdk code — letting the
  * caller skip the slow subscribe PUT (~30s, sometimes minutes). Best-effort: an
  * unknown current set (`[]`) means "not sure", so we do NOT skip.
@@ -163,12 +198,15 @@ async function subscribeOAuthServices(
     services: ServiceInfo[],
     target: OrgTarget,
     client: ApiSubscriberClient,
+    onProgress?: SubscribeProgressListener,
 ): Promise<void> {
     if (services.length === 0) {
         return;
     }
+    await emitProgress(services, false, onProgress);
     const idIntegration = await client.ensureOAuthCredentialId(target);
     if (await alreadySubscribed(services, target.orgId, idIntegration, client)) {
+        await emitProgress(services, true, onProgress);
         return;
     }
     await client.subscribeOAuthServerToServerIntegrationToServices(
@@ -176,6 +214,7 @@ async function subscribeOAuthServices(
         idIntegration,
         services.map(toServiceSubscriptionInfo),
     );
+    await emitProgress(services, true, onProgress);
 }
 
 async function subscribeApiKeyServices(
@@ -183,10 +222,12 @@ async function subscribeApiKeyServices(
     target: OrgTarget,
     client: ApiSubscriberClient,
     domain: string,
+    onProgress?: SubscribeProgressListener,
 ): Promise<void> {
     if (services.length === 0) {
         return;
     }
+    await emitProgress(services, false, onProgress);
     const idIntegration = await client.createAdobeIdCredential(
         target.orgId,
         target.projectId,
@@ -204,6 +245,7 @@ async function subscribeApiKeyServices(
         },
     );
     if (await alreadySubscribed(services, target.orgId, idIntegration, client)) {
+        await emitProgress(services, true, onProgress);
         return;
     }
     await client.subscribeAdobeIdIntegrationToServices(
@@ -211,6 +253,7 @@ async function subscribeApiKeyServices(
         idIntegration,
         services.map(toServiceSubscriptionInfo),
     );
+    await emitProgress(services, true, onProgress);
 }
 
 /**
@@ -227,14 +270,22 @@ export async function subscribeRequiredApis(
     client: ApiSubscriberClient,
     domain: string = DEFAULT_DOMAIN,
     extraApis: string[] = [],
+    onProgress?: SubscribeProgressListener,
 ): Promise<SubscribedApi[]> {
     const requiredApis = computeRequiredApis(appBuilderComponents, extraApis);
     const servicesForOrg = await client.getServicesForOrg(target.orgId);
     const services = resolveServiceInfos(requiredApis, servicesForOrg);
     const { apiKey, oauthS2S } = partitionByPlatform(services);
 
-    await subscribeOAuthServices(oauthS2S, target, client);
-    await subscribeApiKeyServices(apiKey, target, client, domain);
+    // The two groups use INDEPENDENT credentials and subscribe endpoints, so run
+    // them CONCURRENTLY. The subscribe PUTs are the slow part (~30s each, Adobe-
+    // side); serial execution doubled the wall-clock on a fresh enable. Each group
+    // still awaits its own progress ticks, and Promise.all is awaited here — so
+    // every tick is still delivered before this function (and the handler) returns.
+    await Promise.all([
+        subscribeOAuthServices(oauthS2S, target, client, onProgress),
+        subscribeApiKeyServices(apiKey, target, client, domain, onProgress),
+    ]);
 
     return services.map((service) => ({ code: service.sdkCode, name: service.name }));
 }

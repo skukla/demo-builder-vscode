@@ -10,7 +10,7 @@
  */
 
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import React from 'react';
 import '@testing-library/jest-dom';
 
@@ -35,12 +35,22 @@ const CATALOG_ROW: IntegrationRow = {
     apiCount: 0,
 };
 
+const CUSTOM_ROW: IntegrationRow = {
+    id: 'acme-widget',
+    kind: 'custom',
+    name: 'widget',
+    sourceLine: 'App Builder app · acme/widget',
+    needsSetup: false,
+    apiCount: 2,
+};
+
 interface RenderOverrides {
     row?: IntegrationRow;
     destinationLabel?: string;
     onSetUpDestination?: () => void;
     onChangeDestination?: () => void;
     onRemove?: () => void;
+    onChangeApis?: () => void;
     meshEnableSlot?: React.ReactNode;
 }
 
@@ -142,16 +152,37 @@ describe('IntegrationResultRow — mesh enable slot', () => {
     });
 });
 
-describe('IntegrationResultRow — API count line', () => {
-    it('shows "APIs: {n} selected" when apiCount > 0', () => {
-        renderRow({ row: { ...CATALOG_ROW, apiCount: 3 } });
+describe('IntegrationResultRow — editable API line (custom/import rows)', () => {
+    it('shows "APIs: {n} selected" + Change for a custom row and fires onChangeApis', () => {
+        const onChangeApis = jest.fn();
+        // Committed row → the destination line ALSO shows a Change; scope to the API line.
+        renderRow({ row: { ...CUSTOM_ROW, apiCount: 2 }, destinationLabel: 'X · Y', onChangeApis });
 
-        expect(screen.getByText('APIs: 3 selected')).toBeInTheDocument();
+        const apiLine = screen
+            .getByText('APIs: 2 selected')
+            .closest('.int-row-apis') as HTMLElement;
+        within(apiLine).getByRole('button', { name: 'Change' }).click();
+        expect(onChangeApis).toHaveBeenCalledTimes(1);
     });
 
-    it('omits the APIs line when apiCount is 0', () => {
-        renderRow({ row: { ...CATALOG_ROW, apiCount: 0 } });
+    it('shows the line with "none selected" + Change even when apiCount is 0', () => {
+        const onChangeApis = jest.fn();
+        renderRow({ row: { ...CUSTOM_ROW, apiCount: 0, needsSetup: true }, onChangeApis });
 
+        expect(screen.getByText('APIs — none selected')).toBeInTheDocument();
+        // The row's destination Change is absent (needs setup shows Set up), so the
+        // only Change button is the API one.
+        fireEvent.click(screen.getByRole('button', { name: 'Change' }));
+        expect(onChangeApis).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders NO API line for a deterministic catalog/mesh row', () => {
+        renderRow({ row: { ...CATALOG_ROW, apiCount: 0 }, onChangeApis: jest.fn() });
+        expect(screen.queryByText(/APIs/)).not.toBeInTheDocument();
+    });
+
+    it('renders no API line when onChangeApis is not provided', () => {
+        renderRow({ row: { ...CUSTOM_ROW, apiCount: 2 } });
         expect(screen.queryByText(/APIs:/)).not.toBeInTheDocument();
     });
 });

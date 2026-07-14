@@ -3,9 +3,9 @@
  *
  * The SHARED grouped Adobe-API list used by the wizard's ApiAccessStage and the
  * dashboard's Manage APIs modal. Pure props — no fetching, no feature imports:
- *   - groups, in order: "Required by this integration" (locked → checked + disabled)
- *     → "Suggested" (codes ∈ suggested, hidden when none) → "All available"
- *     (the rest, alphabetical by display name);
+ *   - groups, in order: "Suggested" (codes ∈ suggested, hidden when none) → "All
+ *     available" (the rest, alphabetical by display name); locked (already-covered)
+ *     APIs collapse to a quiet footnote, not checkbox rows;
  *   - search across name + code (SearchHeader reuse, catalog threshold);
  *   - display names primary, codes secondary; optional helper copy line at top.
  *
@@ -80,27 +80,27 @@ describe('ApiAccessPicker', () => {
     });
 
     describe('grouping', () => {
-        it('renders the groups in order: Required → Suggested → All available', () => {
+        it('renders the groups in order: Suggested → All available (no locked group)', () => {
             const { container } = renderPicker({ suggested: ['AnalyticsSDK'] });
             const titles = Array.from(container.querySelectorAll('.intflow-api-group-title')).map(
                 (el) => el.textContent
             );
-            expect(titles).toEqual(['Required by this integration', 'Suggested', 'All available']);
+            expect(titles).toEqual(['Suggested', 'All available']);
         });
 
-        it('locked APIs render checked + disabled in the Required group', () => {
+        it('locked APIs are a quiet footnote, not checkbox rows', () => {
             const { container } = renderPicker();
-            const requiredGroup = container.querySelector('[data-group="required"]');
-            expect(requiredGroup?.textContent).toContain('API Mesh');
-            const locked = checkboxFor('API Mesh');
-            expect(locked).toBeChecked();
-            expect(locked).toBeDisabled();
+            // No checkbox for the locked API — it never renders as a pickable row.
+            expect(screen.queryByText('API Mesh')?.closest('label')).toBeFalsy();
+            const footnote = container.querySelector('[data-testid="api-provided-footnote"]');
+            expect(footnote?.textContent).toContain('Already provided by this project');
+            expect(footnote?.textContent).toContain('API Mesh');
         });
 
-        it('clicking a locked API never calls onToggle', () => {
-            const { onToggle } = renderPicker();
-            fireEvent.click(checkboxFor('API Mesh'));
-            expect(onToggle).not.toHaveBeenCalled();
+        it('omits the footnote entirely when nothing is locked', () => {
+            const unlockedOnly = APIS.map((api) => ({ ...api, locked: false }));
+            const { container } = renderPicker({ apis: unlockedOnly });
+            expect(container.querySelector('[data-testid="api-provided-footnote"]')).toBeNull();
         });
 
         it('hides the Suggested group when no suggestions are given', () => {
@@ -110,7 +110,7 @@ describe('ApiAccessPicker', () => {
 
         it('the Suggested group holds exactly the suggested non-locked codes', () => {
             const { container } = renderPicker({
-                // GraphQLServiceSDK is locked → stays in Required, not Suggested.
+                // GraphQLServiceSDK is locked → footnote-only, never in Suggested.
                 suggested: ['AnalyticsSDK', 'TargetSDK', 'GraphQLServiceSDK'],
             });
             const suggestedGroup = container.querySelector('[data-group="suggested"]');

@@ -65,8 +65,12 @@ describe('handleEnsureMeshApiSubscribed', () => {
 
         mockContext = {
             logger: {
-                info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(),
+                info: jest.fn(),
+                warn: jest.fn(),
+                error: jest.fn(),
+                debug: jest.fn(),
             },
+            sendMessage: jest.fn().mockResolvedValue(undefined),
         } as unknown as HandlerContext;
     });
 
@@ -134,8 +138,28 @@ describe('handleEnsureMeshApiSubscribed', () => {
                 },
                 authService: mockAuthService,
                 logger: mockContext.logger,
-            }),
+            })
         );
+    });
+
+    it('forwards each subscribe tick to the webview as mesh-api-subscribe-progress', async () => {
+        // The handler passes an onProgress that pushes to the webview; drive it.
+        mockEnsureMeshApiSubscribed.mockImplementation(async (params: any) => {
+            params.onProgress({ code: 'GraphQLServiceSDK', done: false });
+            params.onProgress({ code: 'GraphQLServiceSDK', done: true });
+            return subscribedApis;
+        });
+
+        await handleEnsureMeshApiSubscribed(mockContext, validPayload);
+
+        expect(mockContext.sendMessage).toHaveBeenCalledWith('mesh-api-subscribe-progress', {
+            code: 'GraphQLServiceSDK',
+            done: false,
+        });
+        expect(mockContext.sendMessage).toHaveBeenCalledWith('mesh-api-subscribe-progress', {
+            code: 'GraphQLServiceSDK',
+            done: true,
+        });
     });
 
     it('should return a shaped error when the service throws', async () => {
@@ -150,9 +174,10 @@ describe('handleEnsureMeshApiSubscribed', () => {
     });
 
     it('condenses a verbose SDK error into a short, readable message', async () => {
-        const rawSdk = '[CoreConsoleAPISDK:ERROR_GET_SERVICES_FOR_ORG] 500 - Internal Server Error '
-            + '({"id":"abc","messages":[{"template":"ERR_MSG_RETRY_ON_INTERNAL_ERROR",'
-            + '"message":"a very long nested json blob"}]})';
+        const rawSdk =
+            '[CoreConsoleAPISDK:ERROR_GET_SERVICES_FOR_ORG] 500 - Internal Server Error ' +
+            '({"id":"abc","messages":[{"template":"ERR_MSG_RETRY_ON_INTERNAL_ERROR",' +
+            '"message":"a very long nested json blob"}]})';
         mockEnsureMeshApiSubscribed.mockRejectedValue(new Error(rawSdk));
 
         const result = await handleEnsureMeshApiSubscribed(mockContext, validPayload);
@@ -180,7 +205,7 @@ describe('handleEnsureMeshApiSubscribed', () => {
                     adobe: { organization: 'org-1', projectId: 'proj-1', workspace: 'ws-1' },
                     componentSelections: { backend: undefined, frontend: undefined },
                 },
-            }),
+            })
         );
     });
 });

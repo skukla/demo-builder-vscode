@@ -16,7 +16,7 @@
  */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 import {
@@ -85,9 +85,7 @@ jest.mock('@/features/components/ui/components/ConfigFieldRenderer', () => ({
 
 jest.mock('@/features/components/ui/components/StoreSelectionRow', () => ({
     StoreSelectionRow: ({ group }: any) => (
-        <div data-testid={`store-selection-row-${group.id}`}>
-            Store Selection for {group.label}
-        </div>
+        <div data-testid={`store-selection-row-${group.id}`}>Store Selection for {group.label}</div>
     ),
 }));
 
@@ -145,9 +143,7 @@ function configureStoreViewFilled() {
 let ConnectStoreStepContent: any;
 
 beforeAll(async () => {
-    const mod = await import(
-        '@/features/project-creation/ui/components/ConnectStoreStepContent'
-    );
+    const mod = await import('@/features/project-creation/ui/components/ConnectStoreStepContent');
     ConnectStoreStepContent = mod.ConnectStoreStepContent;
 });
 
@@ -177,7 +173,7 @@ describe('ConnectStoreStepContent - section filtering', () => {
         mockUseStoreDiscovery.getStoreGroupItems.mockReturnValue([]);
         mockUseStoreDiscovery.getStoreViewItems.mockReturnValue([]);
         mockUseStoreDiscovery.isStoreGroup.mockImplementation(
-            (id: string) => id === 'accs' || id === 'adobe-commerce',
+            (id: string) => id === 'accs' || id === 'adobe-commerce'
         );
 
         mockLookupComponentConfigValue.mockReturnValue(undefined);
@@ -191,9 +187,7 @@ describe('ConnectStoreStepContent - section filtering', () => {
         it('should render endpoint/credential fields', () => {
             mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
 
-            renderWithProvider(
-                <ConnectStoreStepContent {...defaultProps} section="connection" />,
-            );
+            renderWithProvider(<ConnectStoreStepContent {...defaultProps} section="connection" />);
 
             expect(screen.getByTestId(`config-field-${PAAS_URL}`)).toBeInTheDocument();
             expect(screen.getByTestId(`config-field-${PAAS_ADMIN_USERNAME}`)).toBeInTheDocument();
@@ -205,13 +199,15 @@ describe('ConnectStoreStepContent - section filtering', () => {
             // Even with connection filled (cascade would otherwise be reachable)
             configurePaasConnectionFilled();
 
-            renderWithProvider(
-                <ConnectStoreStepContent {...defaultProps} section="connection" />,
-            );
+            renderWithProvider(<ConnectStoreStepContent {...defaultProps} section="connection" />);
 
-            expect(screen.queryByTestId('store-selection-row-adobe-commerce')).not.toBeInTheDocument();
+            expect(
+                screen.queryByTestId('store-selection-row-adobe-commerce')
+            ).not.toBeInTheDocument();
             expect(screen.queryByTestId(`config-field-${PAAS_STORE_CODE}`)).not.toBeInTheDocument();
-            expect(screen.queryByTestId(`config-field-${PAAS_STORE_VIEW_CODE}`)).not.toBeInTheDocument();
+            expect(
+                screen.queryByTestId(`config-field-${PAAS_STORE_VIEW_CODE}`)
+            ).not.toBeInTheDocument();
         });
 
         it('should not render the catalog/assets groups', () => {
@@ -222,12 +218,12 @@ describe('ConnectStoreStepContent - section filtering', () => {
             // Even when store selection is complete (catalog would otherwise show)
             configureStoreViewFilled();
 
-            renderWithProvider(
-                <ConnectStoreStepContent {...defaultProps} section="connection" />,
-            );
+            renderWithProvider(<ConnectStoreStepContent {...defaultProps} section="connection" />);
 
             expect(screen.queryByText('Catalog Service')).not.toBeInTheDocument();
-            expect(screen.queryByTestId('config-field-ADOBE_CATALOG_API_KEY')).not.toBeInTheDocument();
+            expect(
+                screen.queryByTestId('config-field-ADOBE_CATALOG_API_KEY')
+            ).not.toBeInTheDocument();
         });
     });
 
@@ -243,7 +239,7 @@ describe('ConnectStoreStepContent - section filtering', () => {
             mockUseStoreDiscovery.hasStoreData = true;
 
             renderWithProvider(
-                <ConnectStoreStepContent {...defaultProps} section="business-structure" />,
+                <ConnectStoreStepContent {...defaultProps} section="business-structure" />
             );
 
             expect(screen.getByTestId('store-selection-row-adobe-commerce')).toBeInTheDocument();
@@ -252,14 +248,20 @@ describe('ConnectStoreStepContent - section filtering', () => {
         it('should not render the raw connection endpoint fields', () => {
             mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
             configurePaasConnectionFilled();
+            // Store data present → the cascade renders (not the detection loader).
+            mockUseStoreDiscovery.hasStoreData = true;
 
             renderWithProvider(
-                <ConnectStoreStepContent {...defaultProps} section="business-structure" />,
+                <ConnectStoreStepContent {...defaultProps} section="business-structure" />
             );
 
             expect(screen.queryByTestId(`config-field-${PAAS_URL}`)).not.toBeInTheDocument();
-            expect(screen.queryByTestId(`config-field-${PAAS_ADMIN_USERNAME}`)).not.toBeInTheDocument();
-            expect(screen.queryByTestId(`config-field-${PAAS_ADMIN_PASSWORD}`)).not.toBeInTheDocument();
+            expect(
+                screen.queryByTestId(`config-field-${PAAS_ADMIN_USERNAME}`)
+            ).not.toBeInTheDocument();
+            expect(
+                screen.queryByTestId(`config-field-${PAAS_ADMIN_PASSWORD}`)
+            ).not.toBeInTheDocument();
         });
 
         it('should not render the catalog groups', () => {
@@ -268,12 +270,35 @@ describe('ConnectStoreStepContent - section filtering', () => {
                 catalogServiceGroup as any,
             ];
             configureStoreViewFilled();
+            mockUseStoreDiscovery.hasStoreData = true;
 
             renderWithProvider(
-                <ConnectStoreStepContent {...defaultProps} section="business-structure" />,
+                <ConnectStoreStepContent {...defaultProps} section="business-structure" />
             );
 
             expect(screen.queryByText('Catalog Service')).not.toBeInTheDocument();
+        });
+
+        it('shows the step-level "Detecting store structure…" loader (centered, like auth) while detecting', () => {
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            configurePaasConnectionFilled();
+            // Detection in flight: no store data yet.
+            mockUseStoreDiscovery.hasStoreData = false;
+            mockUseStoreDiscovery.isFetching = true;
+
+            renderWithProvider(
+                <ConnectStoreStepContent {...defaultProps} section="business-structure" />
+            );
+
+            // Same treatment as the auth step: LoadingDisplay inside CenteredFeedbackContainer.
+            const centered = screen.getByTestId('centered-feedback');
+            expect(within(centered).getByTestId('loading-display')).toHaveTextContent(
+                'Detecting store structure…'
+            );
+            // The cascade is NOT rendered while detecting (step-level loader replaces it).
+            expect(
+                screen.queryByTestId('store-selection-row-adobe-commerce')
+            ).not.toBeInTheDocument();
         });
     });
 
@@ -289,9 +314,7 @@ describe('ConnectStoreStepContent - section filtering', () => {
             ];
             configureStoreViewFilled();
 
-            renderWithProvider(
-                <ConnectStoreStepContent {...defaultProps} section="catalog" />,
-            );
+            renderWithProvider(<ConnectStoreStepContent {...defaultProps} section="catalog" />);
 
             expect(screen.getByText('Catalog Service')).toBeInTheDocument();
             expect(screen.getByTestId('config-field-ADOBE_CATALOG_API_KEY')).toBeInTheDocument();
@@ -305,9 +328,7 @@ describe('ConnectStoreStepContent - section filtering', () => {
             // store view NOT filled → gated
             mockLookupComponentConfigValue.mockReturnValue(undefined);
 
-            renderWithProvider(
-                <ConnectStoreStepContent {...defaultProps} section="catalog" />,
-            );
+            renderWithProvider(<ConnectStoreStepContent {...defaultProps} section="catalog" />);
 
             expect(screen.queryByText('Catalog Service')).not.toBeInTheDocument();
             expect(screen.getByText(/store view/i)).toBeInTheDocument();
@@ -320,12 +341,12 @@ describe('ConnectStoreStepContent - section filtering', () => {
             ];
             configureStoreViewFilled();
 
-            renderWithProvider(
-                <ConnectStoreStepContent {...defaultProps} section="catalog" />,
-            );
+            renderWithProvider(<ConnectStoreStepContent {...defaultProps} section="catalog" />);
 
             expect(screen.queryByTestId(`config-field-${PAAS_URL}`)).not.toBeInTheDocument();
-            expect(screen.queryByTestId(`config-field-${ACCS_ENDPOINT_KEY}`)).not.toBeInTheDocument();
+            expect(
+                screen.queryByTestId(`config-field-${ACCS_ENDPOINT_KEY}`)
+            ).not.toBeInTheDocument();
         });
     });
 

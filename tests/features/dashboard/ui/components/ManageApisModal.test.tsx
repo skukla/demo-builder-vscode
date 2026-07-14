@@ -166,14 +166,16 @@ describe('ManageApisModal', () => {
     });
 
     describe('picker semantics', () => {
-        it('renders managed entries locked (checked + disabled) and free entries toggleable', async () => {
+        it('lists managed entries as a footnote (not a row) and free entries toggleable', async () => {
             mockRequest();
             renderModal();
             await flush();
 
-            const managed = checkboxFor('API Mesh');
-            expect(managed).toBeChecked();
-            expect(managed).toBeDisabled();
+            // Managed/always-on APIs are context, not choices → footnote, no checkbox.
+            expect(screen.getByText('API Mesh').closest('label')).toBeFalsy();
+            const footnote = screen.getByTestId('api-provided-footnote');
+            expect(footnote.textContent).toContain('Already provided by this project');
+            expect(footnote.textContent).toContain('API Mesh');
 
             const free = checkboxFor('Firefly Services');
             expect(free).not.toBeChecked();
@@ -195,8 +197,8 @@ describe('ManageApisModal', () => {
             const added = checkboxFor('Firefly Services');
             expect(added).toBeChecked(); // seeded from `added`
             expect(added).not.toBeDisabled(); // removable (not managed/locked)
-            // Managed rows are still locked; only the always-on ones can't change.
-            expect(checkboxFor('API Mesh')).toBeDisabled();
+            // Managed APIs stay out of the pickable rows — footnote only.
+            expect(screen.getByTestId('api-provided-footnote').textContent).toContain('API Mesh');
             expect(screen.getByText(/uncheck to remove/i)).toBeInTheDocument();
         });
     });

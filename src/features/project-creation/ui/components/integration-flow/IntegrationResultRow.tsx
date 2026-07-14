@@ -4,8 +4,13 @@
  * Purely presentational over a resolved {@link IntegrationRow}: name line, quiet
  * sourceLine, the destination line (committed → "Deploys to {label}" + Change;
  * needs setup → "Deploys to — Not set" + Set up), a quiet Remove on the right,
- * an optional "APIs: {n} selected" line, and — for mesh rows only — the caller's
- * `meshEnableSlot` (a {@link MeshApiEnableRow}) below the destination line.
+ * and — for mesh rows only — the caller's `meshEnableSlot` (a
+ * {@link MeshApiEnableRow}) below the destination line.
+ *
+ * Custom/import rows (which carry FREE API picks) also get an editable API line:
+ * "APIs: {n} selected" + a quiet Change that re-opens the picker (`onChangeApis`).
+ * Mesh/catalog APIs are deterministic (never stored as picks) so those rows show
+ * no API line.
  *
  * Remove works identically in create and edit sessions (in edit, removal only
  * drops the integration from the rebuild — no remote undeploy; the dashboard
@@ -28,8 +33,15 @@ export interface IntegrationResultRowProps {
     /** Opens the modal in destination mode to change the committed destination. */
     onChangeDestination: () => void;
     onRemove: () => void;
+    /** Re-open the picker for this integration's APIs (custom/import rows only). */
+    onChangeApis?: () => void;
     /** Rendered below the destination line for mesh rows only. */
     meshEnableSlot?: React.ReactNode;
+}
+
+/** Whether a row carries editable free API picks (custom/import, not mesh/catalog). */
+function isApiEditable(kind: IntegrationRow['kind']): boolean {
+    return kind === 'blank' || kind === 'custom';
 }
 
 /** The destination line: committed reference + Change, or "Not set" + Set up. */
@@ -76,6 +88,7 @@ export function IntegrationResultRow({
     onSetUpDestination,
     onChangeDestination,
     onRemove,
+    onChangeApis,
     meshEnableSlot,
 }: IntegrationResultRowProps): React.ReactElement {
     return (
@@ -93,8 +106,17 @@ export function IntegrationResultRow({
                 onSetUpDestination={onSetUpDestination}
                 onChangeDestination={onChangeDestination}
             />
-            {row.apiCount > 0 && (
-                <div className="int-row-apis">{`APIs: ${row.apiCount} selected`}</div>
+            {isApiEditable(row.kind) && onChangeApis && (
+                <div className="int-row-apis">
+                    <span className="int-row-apis-text">
+                        {row.apiCount > 0
+                            ? `APIs: ${row.apiCount} selected`
+                            : 'APIs — none selected'}
+                    </span>
+                    <ActionButton isQuiet onPress={onChangeApis}>
+                        Change
+                    </ActionButton>
+                </div>
             )}
             {row.kind === 'mesh' && meshEnableSlot}
         </div>

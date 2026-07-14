@@ -6,12 +6,21 @@ Designed 2026-07-13 with the user while testing the Add-Integration flow. **Supe
 `2026-07-13-kind-aware-api-access.md` (the mesh-informational / catalog-advanced / custom-picker
 model) — this is simpler and resolves what that one only worked around.
 
+> **Direction change (2026-07-14):** Layer 1 originally removed the API-access picker for *every*
+> kind. That was walked back for **custom/import** — a greenfield or imported app's APIs aren't
+> declared in a catalog, so the user must pick them (the taxonomy below already says so). The
+> deterministic simplification holds for **mesh + catalog** (no picker; APIs shown, not picked);
+> custom/import ship an **interactive picker** (add + re-edit). Layer 1 and the Constraints below are
+> updated to match what shipped.
+
 ## The core insight
 
 An integration is a **deterministic unit**. Adding one should add *exactly that thing* — not "that
-thing plus some APIs you bolt on." The optional-API picker wedged into every add-journey muddies
-what an integration *is* and confuses the catalog's purpose. If you want a Mesh *and* something
-else, you add the Mesh, then add another integration.
+thing plus some APIs you bolt on." For a **finished** integration (mesh, catalog) the APIs are
+fixed/declared, so the add-journey *shows* them rather than asking the user to pick. A **custom**
+app (blank shell or imported repo) is the exception the taxonomy calls out: its APIs aren't known to
+a catalog, so the user picks them up front. If you want a Mesh *and* something else, you add the
+Mesh, then add another integration.
 
 Second insight: the **App Builder shell was mis-filed as a catalog entry.** A catalog integration
 is finished and deterministic; the shell is a *blank starting point you build out*. They are
@@ -34,29 +43,29 @@ start blank (shell)  →  build via AI  →  PROMOTE TO REPO ("save it")  →  i
 
 ## Three layers of work (different sizes)
 
-### Layer 1 — Deterministic simplification — ✅ SHIPPED (`48f637d3`; enable-in-modal `5aa064c8`)
-Remove the **API-access step from the Add-Integration flow entirely**, for every kind. Integrations
-add atomically. Required APIs still auto-subscribe at deploy (`ensureMeshApiSubscribed` /
-`subscribeRequiredApis`) — the user never picks them. Optional API access lives ONLY in the
-dashboard **Manage APIs** modal (which now does add + remove).
-- `flowStages.ts`: drop the `'api-access'` stage id, `FlowDraft.selectedApis`, its `CONTINUE_GATES`
-  entry, and the trailing `'api-access'` in `deriveStageOrder`. Last stage becomes the destination
-  summary → label stays "Add Integration" / "Save".
-- `AddIntegrationFlowModal.tsx`: remove the api-access stage render, the `useOrgConsoleApis`
-  prefetch, and the `required`/`suggested`/`selected`/`toggleApi` wiring.
-- `useIntegrationFlow.ts`: remove `selectedApis`/`toggleApi` and the on-finish optional-pick
-  union-subscribe.
-- **Delete** (add-flow-only): `stages/ApiAccessStage.tsx` + test, `useOrgConsoleApis.ts` + test.
-- **Keep**: the shared `ApiAccessPicker`, `buildApiAccessCatalog`, `apiAccessCatalog`, gating,
-  chips — all still used by Manage APIs. Not wasted.
-- **Drop** `suggestedApis` display (pick-and-choose contradicts determinism; dormant anyway) — the
-  catalog field can stay unread or be removed with its consumers.
+### Layer 1 — Deterministic api-access — ✅ SHIPPED (mesh/catalog `48f637d3`; enable-in-modal `5aa064c8`; custom/import picker + re-edit `feature/mcp-affordance-coverage`)
+The api-access step is **informational for deterministic kinds and interactive for custom kinds**.
+Required APIs still auto-subscribe at deploy (`ensureMeshApiSubscribed` / `subscribeRequiredApis`).
+- **API Mesh / Pre-built integration** — NO picker. The step *shows* the required APIs
+  (`stages/ApiAccessStage.tsx`): mesh enables them in-modal (the `5aa064c8` enable-in-modal flow),
+  catalog subscribes them at deploy. The user never picks.
+- **Build custom / Import a repo** — an **interactive picker** (`stages/ApiPickerStage.tsx` wrapping
+  the shared `ApiAccessPicker`): the user picks any entitled API up front, and can **re-edit** the
+  picks later from the result row (modal `api-edit` mode → `saveEditedPicks`, writing
+  `selectedConsoleApis[componentId]`, union-subscribed at deploy).
+- **Kept in the flow (NOT dropped):** the `'api-access'` stage id, `FlowDraft.selectedApis`, its
+  `CONTINUE_GATES` entry, and the trailing `'api-access'` in `deriveStageOrder` — they drive the
+  custom/import picker. `AddIntegrationFlowModal`/`useIntegrationFlow` keep `selectedApis`/`toggleApi`.
+- **Shared code serves both surfaces:** `ApiAccessPicker`, `buildApiAccessCatalog`, gating, chips
+  back both the custom/import picker AND dashboard **Manage APIs** (deployed integrations).
+- Locked (already-covered) APIs render as a quiet "Already provided by this project" footnote in the
+  picker, not as uninteractive checkbox rows.
 
 ### Layer 2 — Regroup the kind picker (UI/flow) — ✅ SHIPPED
-`KindStage` offers **4 flat cards**: API Mesh · Pre-built integration · Start from scratch · Import
+`KindStage` offers **4 flat cards**: API Mesh · Pre-built integration · Build custom · Import
 a repo (the user picked flat over a Custom-app sub-step). The catalog gallery lists only *finished*
 apps — `app-builder-shell` carries a `blank: true` marker, is excluded from the gallery, and is
-committed via the "Start from scratch" (`kind: 'blank'`) card. `IntegrationKind` gained `'blank'`
+committed via the "Build custom" (`kind: 'blank'`) card. `IntegrationKind` gained `'blank'`
 (no source stage); the modal threads a `blankComponent`; `commitSelection` toggles it.
 
 ### Layer 3 — Promote a custom app to a repo (new capability, larger)
@@ -67,16 +76,13 @@ pushes the app's local files (fresh history, secrets excluded), so it can later 
 secrets hygiene. Gated on the shell build-out maturing.
 
 ## Constraints
-- Required-API auto-subscribe at deploy is unchanged — determinism means the user never *picks*
-  APIs, not that integrations lose their APIs.
-- Manage APIs (dashboard) is the single API-management surface; don't reintroduce an API picker in
-  the add flow.
-- The shared picker/catalog/gating code stays (Manage APIs consumer) — Layer 1 only removes the
-  add-flow *wrapper*.
+- Required-API auto-subscribe at deploy is unchanged.
+- **Deterministic kinds (mesh, catalog) show APIs, never pick them.** Custom/import DO pick (any
+  entitled API) — a greenfield or imported app's needs aren't declared in a catalog.
+- **Manage APIs (dashboard)** owns API management for **deployed** integrations; the **add/edit
+  flow** owns pre-deploy picks for **custom/import**. Both go through the one shared `ApiAccessPicker`.
 
-## Kickoff prompt
-> Implement Layer 1 of `.rptc/backlog/2026-07-13-deterministic-integrations.md`: remove the
-> API-access step from the Add-Integration flow (flowStages, modal, useIntegrationFlow; delete
-> ApiAccessStage + useOrgConsoleApis + tests), keeping the shared picker for the dashboard Manage
-> APIs. TDD; required APIs still auto-subscribe at deploy. Then Layer 2 (regroup the kind picker,
-> move the shell into Custom app).
+## Status
+Layers 1 and 2 SHIPPED (see the ✅ headings — note Layer 1's custom/import picker + re-edit revision).
+Only **Layer 3 (promote a custom app to a repo)** remains, scoped out to
+[`2026-07-13-promote-app-to-repo.md`](2026-07-13-promote-app-to-repo.md).

@@ -58,13 +58,15 @@ function apiCountFor(state: WizardState, id: string): number {
  * @param state - Wizard state (selections, sources, destination, API picks)
  * @param meshComponent - The stack's mesh catalog entry (`meshComponentForStack`),
  *   or undefined when the architecture has no mesh
- * @param catalog - The App Builder component catalog entries
+ * @param components - The App Builder component entries — the FULL list including
+ *   the blank starter ("Build custom"), so a committed blank shell resolves to a
+ *   row (it has no source and isn't a pre-built catalog entry)
  * @returns One row per configured integration; unknown/mesh-kind ids excluded
  */
 export function resolveIntegrationRows(
     state: WizardState,
     meshComponent: AppBuilderComponentCatalogEntry | undefined,
-    catalog: AppBuilderComponentCatalogEntry[],
+    components: AppBuilderComponentCatalogEntry[],
 ): IntegrationRow[] {
     const needsSetup = !destinationCommitted(state);
     const meshRows: IntegrationRow[] = [];
@@ -98,8 +100,22 @@ export function resolveIntegrationRows(
             });
             continue;
         }
-        const entry = catalog.find((candidate) => candidate.id === id);
+        const entry = components.find((candidate) => candidate.id === id);
         if (!entry || entry.kind === 'mesh') continue;
+        if (entry.blank) {
+            // The blank starter ("Build custom") — a custom app (built out with AI),
+            // not a pre-built catalog integration. Unlike an imported repo it has no
+            // source, but it IS a real configured integration and gets its own row.
+            customRows.push({
+                id,
+                kind: 'blank',
+                name: entry.name,
+                sourceLine: entry.description || 'Custom App Builder app',
+                needsSetup,
+                apiCount: apiCountFor(state, id),
+            });
+            continue;
+        }
         catalogRows.push({
             id,
             kind: 'catalog',

@@ -1,0 +1,186 @@
+/**
+ * ApiPickerStage — the INTERACTIVE api-access step for a custom/import app.
+ *
+ * Unlike mesh/catalog (deterministic, fixed APIs), a custom "Build custom" or
+ * imported repo app can need ANY Adobe API the user is entitled to — and the user
+ * often knows which up front (e.g. building Commerce ↔ Firefly Services, you need
+ * the Firefly Services APIs). So this step fetches the org's subscribable services
+ * (`list-org-console-apis`, entitlement-filtered, with the baseline + APIs other
+ * integrations already cover flagged `locked`) and lets the user pick freely via
+ * the shared {@link ApiAccessPicker}. Picks are recorded on the flow draft and
+ * subscribed at deploy; nothing is forced (the baseline is always covered).
+ *
+ * @module features/project-creation/ui/components/integration-flow/stages/ApiPickerStage
+ */
+
+import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
+import React, { useEffect, useState } from 'react';
+import { LoadingDisplay } from '@/core/ui/components/feedback';
+import { ApiAccessPicker, type ApiAccessOption } from '@/core/ui/components/selection';
+import { webviewClient } from '@/core/ui/utils/vscode-api';
+
+/** The `list-org-console-apis` handler response (rows are already picker-shaped). */
+interface ListOrgApisResponse {
+    success: boolean;
+    error?: string;
+    data?: { apis: ApiAccessOption[] };
+}
+
+export interface ApiPickerStageProps {
+    /**
+     * The integrations ALREADY in the project — their required APIs (+ the
+     * baseline) come back flagged `locked` (already covered, not re-pickable).
+     */
+    componentIds: string[];
+    /** The user's free picks so far (from the flow draft). */
+    selected: string[];
+    /** Toggle a free pick by code. */
+    onToggle: (code: string) => void;
+    /**
+     * Terminal confirmation (footer → "Done"): the picks are locked in and the
+     * stage shows a ✓ summary of the chosen APIs instead of the interactive picker
+     * (parity with the mesh enable's ✓ hold). Back un-confirms → the picker returns.
+     */
+    confirmed?: boolean;
+}
+
+/** Stable empty default so an omitted `selected` never churns the picker. */
+const NO_SELECTED: string[] = [];
+
+const HELPER = 'Pick the Adobe APIs this app needs — change them anytime in Manage APIs.';
+
+/**
+ * The interactive API-access step for custom/import apps.
+ *
+ * @param props - the already-covered integration ids, current picks, and toggle
+ * @returns the fetched picker (with loading/error states)
+ */
+export function ApiPickerStage({
+    componentIds,
+    selected = NO_SELECTED,
+    onToggle,
+    confirmed = false,
+}: ApiPickerStageProps): React.ReactElement {
+    const [apis, setApis] = useState<ApiAccessOption[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | undefined>(undefined);
+
+    useEffect(() => {
+        let cancelled = false;
+        setLoading(true);
+        setError(undefined);
+        webviewClient
+            .request<ListOrgApisResponse>('list-org-console-apis', { componentIds })
+            .then((res) => {
+                if (cancelled) return;
+                if (res.success && res.data) setApis(res.data.apis);
+                else setError(res.error ?? 'Could not list Adobe APIs.');
+            })
+            .catch((err: unknown) => {
+                if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+            })
+            .finally(() => {
+                if (!cancelled) setLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [componentIds]);
+
+    return (
+        <div className="intflow-api-info" data-testid="api-picker-stage">
+            <div className="intflow-api-info-head">API access</div>
+            <PickerBody
+                loading={loading}
+                error={error}
+                confirmed={confirmed}
+                apis={apis}
+                selected={selected}
+                onToggle={onToggle}
+            />
+        </div>
+    );
+}
+
+interface PickerBodyProps {
+    loading: boolean;
+    error: string | undefined;
+    confirmed: boolean;
+    apis: ApiAccessOption[];
+    selected: string[];
+    onToggle: (code: string) => void;
+}
+
+/**
+ * The api-access body, resolved by state precedence: loading → error →
+ * confirmation summary (the Done hold) → the interactive picker. Early returns
+ * keep the JSX free of long `&&` guard chains.
+ */
+function PickerBody({
+    loading,
+    error,
+    confirmed,
+    apis,
+    selected,
+    onToggle,
+}: PickerBodyProps): React.ReactElement {
+    if (loading) {
+        return <LoadingDisplay size="M" message="Loading Adobe APIs…" />;
+    }
+    if (error) {
+        return (
+            <div className="intflow-api-info-error" role="alert">
+                {error}
+            </div>
+        );
+    }
+    if (confirmed) {
+        return <ConfirmedSummary apis={apis} selected={selected} />;
+    }
+    return (
+        <ApiAccessPicker apis={apis} selected={selected} onToggle={onToggle} helperText={HELPER} />
+    );
+}
+
+/**
+ * The confirmation hold: the chosen APIs (by display name) with a ✓ each, reusing
+ * the summary vocabulary of the mesh/catalog stage. Empty picks are valid — the
+ * baseline covers the app — so say that rather than showing an empty list.
+ */
+function ConfirmedSummary({
+    apis,
+    selected,
+}: {
+    apis: ApiAccessOption[];
+    selected: string[];
+}): React.ReactElement {
+    const chosen = apis.filter((api) => selected.includes(api.code)).sort(byDisplayName);
+    return (
+        <div data-testid="api-picker-confirmed">
+            <p className="intflow-api-info-sub">
+                {chosen.length > 0
+                    ? 'These Adobe APIs are added to this app — enabled on your workspace when it deploys.'
+                    : 'No extra APIs selected — the baseline Adobe I/O access covers this app.'}
+            </p>
+            {chosen.length > 0 && (
+                <div className="intflow-api-summary-section">
+                    {chosen.map((api) => (
+                        <div key={api.code} className="intflow-api-summary-item">
+                            <CheckmarkCircle
+                                size="S"
+                                UNSAFE_className="text-green-600"
+                                aria-label={`${api.name} added`}
+                            />
+                            <span className="intflow-api-summary-name">{api.name}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+/** Alphabetical by display name for the confirmation summary. */
+function byDisplayName(a: ApiAccessOption, b: ApiAccessOption): number {
+    return a.name.localeCompare(b.name);
+}

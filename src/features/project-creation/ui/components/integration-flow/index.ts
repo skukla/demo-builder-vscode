@@ -24,3 +24,4 @@ export type { EnsureResult } from './MeshApiEnableRow';
 export { resolveIntegrationRows } from './integrationRows';
 export type { IntegrationRow } from './integrationRows';
 export type { FlowMode, IntegrationKind } from './flowStages';
+export type { ApiEditTarget } from './useIntegrationFlow';

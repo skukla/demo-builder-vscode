@@ -7,7 +7,7 @@
  *     stack lacks it or it's already added — see {@link import('../flowStages').meshKindOffered}).
  *   - **Pre-built integration** — a finished catalog app (disabled with "None
  *     available yet" when the finished catalog is empty).
- *   - **Start from scratch** — a blank app you build out with AI (the shell).
+ *   - **Build custom** — a blank app you build out with AI (the shell).
  *   - **Import a repo** — bring your own App Builder app from a GitHub URL.
  *
  * The last two are the two "custom app" flavors, presented as flat sibling cards.
@@ -67,7 +67,7 @@ export function KindStage({
                 onSelect={() => onPickKind('catalog')}
             />
             <ChoiceCard
-                name="Start from scratch"
+                name="Build custom"
                 description="Begin with a blank App Builder app and build it out with AI."
                 selected={kind === 'blank'}
                 onSelect={() => onPickKind('blank')}

@@ -5,10 +5,12 @@
  * the wizard's Add-Integration api-access stage and the dashboard's Manage APIs
  * modal. It guides the user to the RIGHT APIs rather than dumping the entitlement
  * list:
- *   - groups, in order: "Required by this integration" (locked — checked + disabled)
- *     → "Suggested" (curated catalog suggestions, hidden when none) → "All available"
- *     (the rest, alphabetical) → "Requires Adobe review" / "Requires a product
- *     profile" (disabled, self-serve can't subscribe them);
+ *   - groups, in order: "Suggested" (curated catalog suggestions, hidden when none)
+ *     → "All available" (the rest, alphabetical) → "Requires Adobe review" /
+ *     "Requires a product profile" (disabled, self-serve can't subscribe them);
+ *   - APIs already covered by the reconcile union (locked) are NOT rendered as
+ *     uninteractive checkbox rows competing with the real choices — they collapse
+ *     to a quiet "Already provided by this project" footnote beneath the list;
  *   - product-family filter chips (Console's "Filter by product") narrow "All
  *     available" to one family; shown only when ≥2 families are present;
  *   - search across display name + code past the catalog threshold ({@link SearchHeader});
@@ -73,7 +75,7 @@ export interface ApiAccessPickerProps {
 }
 
 interface ApiGroup {
-    id: 'required' | 'suggested' | 'all' | 'review' | 'unavailable';
+    id: 'suggested' | 'all' | 'review' | 'unavailable';
     title: string;
     /** Explanatory line under the title (e.g. why a group is unavailable). */
     note?: string;
@@ -128,10 +130,12 @@ function familyChips(browse: ApiAccessOption[]): FamilyChip[] {
 }
 
 /**
- * Required (locked) → Suggested → All available (flat; filtered by the active
- * product-family chip) → Requires Adobe review (disabled) → Requires a product
- * profile (disabled). Review- and profile-gated APIs are pulled out of the
- * pickable groups so a pick can never fail at provisioning. Empty groups drop.
+ * Suggested → All available (flat; filtered by the active product-family chip) →
+ * Requires Adobe review (disabled) → Requires a product profile (disabled).
+ * Locked (already-covered) APIs are not grouped here — they render as a quiet
+ * footnote instead (see {@link ApiAccessPicker}). Review- and profile-gated APIs
+ * are pulled out of the pickable groups so a pick can never fail at provisioning.
+ * Empty groups drop.
  */
 function groupApis(
     apis: ApiAccessOption[],
@@ -142,11 +146,6 @@ function groupApis(
         .filter((api) => family === null || familyKey(api) === family)
         .sort(byDisplayName);
     const groups: ApiGroup[] = [
-        {
-            id: 'required',
-            title: 'Required by this integration',
-            apis: apis.filter((api) => api.locked).sort(byDisplayName),
-        },
         {
             id: 'suggested',
             title: 'Suggested',
@@ -270,6 +269,10 @@ export function ApiAccessPicker({
     // around while typing; the active chip then filters the "All available" group.
     const chips = familyChips(browseApis(apis, suggestedSet));
     const groups = groupApis(filtered, suggestedSet, family);
+    // Locked (already-covered) APIs are context, not choices — a quiet footnote
+    // beneath the list rather than uninteractive rows above it. Search-independent
+    // so it stays a stable reassurance while the user filters the real options.
+    const provided = apis.filter((api) => api.locked).sort(byDisplayName);
     return (
         <div className="intflow-api-picker">
             {helperText && <p className="intflow-api-helper">{helperText}</p>}
@@ -309,6 +312,14 @@ export function ApiAccessPicker({
                         <ApiRows apis={group.apis} selected={selected} onToggle={onToggle} />
                     </div>
                 ))
+            )}
+            {provided.length > 0 && (
+                <p className="intflow-api-provided" data-testid="api-provided-footnote">
+                    <span className="intflow-api-provided-label">
+                        Already provided by this project:
+                    </span>{' '}
+                    {provided.map((api) => api.name).join(' · ')}
+                </p>
             )}
         </div>
     );

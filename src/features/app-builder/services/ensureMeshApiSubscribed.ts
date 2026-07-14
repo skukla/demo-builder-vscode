@@ -17,7 +17,11 @@
  */
 
 import { deriveAllowedDomain } from './allowedDomain';
-import { subscribeRequiredApis, type SubscribedApi } from './apiSubscriber';
+import {
+    subscribeRequiredApis,
+    type SubscribedApi,
+    type SubscribeProgressListener,
+} from './apiSubscriber';
 import { createApiSubscriberClient } from './apiSubscriberClientAdapter';
 import { subscriberTarget } from './appBuilderComponentRunnerDeps';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
@@ -42,6 +46,8 @@ export interface EnsureMeshApiSubscribedParams {
     project: MeshSubscribeTarget;
     authService: AuthenticationService;
     logger: Logger;
+    /** Per-API subscribe ticks, so a caller can telegraph progress live. */
+    onProgress?: SubscribeProgressListener;
 }
 
 /**
@@ -56,7 +62,7 @@ export interface EnsureMeshApiSubscribedParams {
 export async function ensureMeshApiSubscribed(
     params: EnsureMeshApiSubscribedParams,
 ): Promise<SubscribedApi[]> {
-    const { project, authService, logger } = params;
+    const { project, authService, logger, onProgress } = params;
 
     const backendId = project.componentSelections?.backend ?? '';
     const frontendId = project.componentSelections?.frontend ?? '';
@@ -80,6 +86,7 @@ export async function ensureMeshApiSubscribed(
             client,
             deriveAllowedDomain(project),
             project.additionalConsoleApis ?? [],
+            onProgress,
         ),
     );
     logger.info('[Mesh Subscribe] Required APIs subscribed');

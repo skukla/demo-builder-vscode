@@ -222,6 +222,19 @@ export function ConnectStoreStepContent({
         );
     }
 
+    // Business Structure's store detection is the whole step's wait, so give it the
+    // SAME step-level loading treatment as the auth step (size L, centered) rather
+    // than StoreConfigFieldRow's inline row spinner — the wizard's loading states
+    // should look identical. (The dashboard Configure screen keeps the inline row
+    // loader, where detection is one field among several.)
+    if (section === 'business-structure' && !fetchError && (isFetching || !hasStoreData)) {
+        return (
+            <CenteredFeedbackContainer>
+                <LoadingDisplay size="L" message="Detecting store structure…" />
+            </CenteredFeedbackContainer>
+        );
+    }
+
     return (
         // padding 0: the surrounding .step-view already supplies the content padding —
         // a second 24px here pushed the first group heading well below the tab strip.

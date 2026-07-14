@@ -10,16 +10,15 @@
  *               Stage-named workspace / the single one / the first (the same
  *               policy AdobeWorkspacePicker's useSelectionStep applies), then
  *               commits `adobeWorkspace` + `workspacesCache`
- *   enabling  → `ensure-mesh-api-subscribed` with the MeshApiEnableRow payload;
+ *   enabling  → `ensure-mesh-api-subscribed` for the new project's workspace;
  *               the resolved {@link EnsureResult} (success OR failure) is exposed
- *               so the card can thread it into the row without a duplicate request
+ *               as `enableResult` for the creation UI
  *
  * Failures park the machine at 'failed' remembering WHICH phase failed
  * (`failedPhase`) — a create failure sends the user back to the form with the
  * inline error, while workspace/enabling failures render a centered Retry view;
  * `retry()` re-enters exactly the failed phase. A per-run cancellation token
- * (mirroring MeshApiEnableRow) makes a stale resolve after `reset()`/re-`start()`
- * a no-op. The hook runs NO effects — it is driven imperatively, and the latest
+ * makes a stale resolve after `reset()`/re-`start()` a no-op. The hook runs NO effects — it is driven imperatively, and the latest
  * org/stack inputs are read through a ref, so no dependency-array loops exist.
  *
  * @module features/project-creation/ui/hooks/useProjectCreationPhases
@@ -72,7 +71,7 @@ export interface UseProjectCreationPhasesResult {
     error?: string;
     /** Which phase failed (create failures return to the form; others get Retry). */
     failedPhase?: ProjectCreationActivePhase;
-    /** The resolved subscribe result — threaded into MeshApiEnableRow as `initialResult`. */
+    /** The creation-time subscribe result (success OR failure), exposed for the creation UI. */
     enableResult?: EnsureResult;
     /** The name passed to the current/last run — lets the form re-open prefilled after a create failure. */
     projectName: string;

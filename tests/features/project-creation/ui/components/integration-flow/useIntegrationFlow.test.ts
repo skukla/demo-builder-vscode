@@ -26,23 +26,29 @@ import type { AdobeProject, WizardState, Workspace } from '@/types/webview';
 
 /** The mesh enable (ensure-mesh-api-subscribed) runs on Add via webviewClient. */
 const mockMeshRequest = jest.fn();
+/** Captured extension→webview listeners, keyed by type (drive progress in tests). */
+const mockMessageHandlers: Record<string, (data: unknown) => void> = {};
 jest.mock('@/core/ui/utils/vscode-api', () => ({
     webviewClient: {
         request: (...args: unknown[]) => mockMeshRequest(...args),
         postMessage: jest.fn(),
-        onMessage: jest.fn(() => () => {}),
+        onMessage: (type: string, handler: (data: unknown) => void) => {
+            mockMessageHandlers[type] = handler;
+            return () => delete mockMessageHandlers[type];
+        },
     },
 }));
 
 beforeEach(() => {
     mockMeshRequest.mockReset();
     mockMeshRequest.mockResolvedValue({ success: true, data: { apis: [] } });
+    for (const key of Object.keys(mockMessageHandlers)) delete mockMessageHandlers[key];
 });
 
 /** Stable empty catalog (module-level — avoids new-reference hook churn). */
 const EMPTY_CATALOG: AppBuilderComponentCatalogEntry[] = [];
 
-/** The blank starter app the "Start from scratch" kind commits. */
+/** The blank starter app the "Build custom" kind commits. */
 const BLANK_COMPONENT: AppBuilderComponentCatalogEntry = {
     id: 'app-builder-shell',
     name: 'App Builder App',
@@ -52,8 +58,9 @@ const BLANK_COMPONENT: AppBuilderComponentCatalogEntry = {
     source: { owner: 'skukla', repo: 'app-builder-shell', branch: 'main' },
 };
 
+const MESH_ID = 'headless-commerce-mesh';
 const MESH_COMPONENT = {
-    id: 'headless-commerce-mesh',
+    id: MESH_ID,
     name: 'API Mesh',
     description: 'API Mesh for the headless stack',
     kind: 'mesh',
@@ -64,6 +71,8 @@ const MESH_COMPONENT = {
 const PROJECT: AdobeProject = { id: 'proj-1', name: 'proj-one', title: 'Project One' };
 const OTHER_PROJECT: AdobeProject = { id: 'proj-2', name: 'proj-two', title: 'Project Two' };
 const WORKSPACE: Workspace = { id: 'ws-1', name: 'Stage', title: 'Stage' };
+/** The baseline API sdk code the enable subscribes (for progress-tick tests). */
+const MGMT = 'AdobeIOManagementAPISDK';
 
 const SIGNED_IN: Partial<WizardState> = {
     adobeAuth: { isAuthenticated: true, isChecking: false },
@@ -234,7 +243,7 @@ describe('useIntegrationFlow — footer surfaces', () => {
         expect(s.result.current.continueLabel).toBe('Continue');
     });
 
-    it('labels the last add-mode stage (api-access — mesh included) Add Integration', () => {
+    it('labels the mesh api-access step "Add API Access" (its action enables the APIs)', () => {
         const s = setup();
         pickKindAndContinue(s, 'mesh');
         act(() => s.result.current.setPendingProject(PROJECT));
@@ -246,7 +255,8 @@ describe('useIntegrationFlow — footer surfaces', () => {
         act(() => s.result.current.onContinue());
         s.sync();
         expect(s.result.current.stage).toBe('api-access');
-        expect(s.result.current.continueLabel).toBe('Add Integration');
+        // The mesh press ENABLES the APIs in-modal — not just "Add Integration".
+        expect(s.result.current.continueLabel).toBe('Add API Access');
     });
 
     it('labels the last destination-mode stage Save', () => {
@@ -356,6 +366,19 @@ describe('useIntegrationFlow — dest-workspace Continue and mesh finish', () =>
         s.sync();
     }
 
+    /** Walk a mesh add all the way to the informational api-access step. */
+    function walkMeshToApiAccess(s: Setup): void {
+        walkMeshToDestWorkspace(s);
+        act(() => s.result.current.setPendingWorkspace(WORKSPACE));
+        act(() => s.result.current.onContinue());
+        s.sync();
+    }
+
+    /** Press the footer primary on the api-access step (Add → enable, then Done → close). */
+    async function finishMesh(s: Setup): Promise<void> {
+        await act(async () => s.result.current.onContinue());
+    }
+
     it('commits the pending workspace', () => {
         const s = setup();
         walkMeshToDestWorkspace(s);
@@ -364,44 +387,35 @@ describe('useIntegrationFlow — dest-workspace Continue and mesh finish', () =>
         expect(s.updateState).toHaveBeenCalledWith({ adobeWorkspace: WORKSPACE });
     });
 
-    it('finishes the mesh add: Add runs the enable, then toggle (meshId, true) + close', async () => {
+    it('Add runs the enable and HOLDS on Done (no commit/close); Done then commits + closes', async () => {
         const s = setup();
-        walkMeshToDestWorkspace(s);
-        act(() => s.result.current.setPendingWorkspace(WORKSPACE));
-        act(() => s.result.current.onContinue());
-        // The workspace Continue advances to the informational api-access step — no finish yet.
-        expect(s.builder.onAppBuilderComponentToggle).not.toHaveBeenCalled();
-        s.sync();
+        walkMeshToApiAccess(s);
         expect(s.result.current.stage).toBe('api-access');
-        // Add runs the mesh enable (async), then commits + closes on success.
-        await act(async () => {
-            s.result.current.onContinue();
-        });
-        expect(mockMeshRequest).toHaveBeenCalledWith(
-            'ensure-mesh-api-subscribed',
-            expect.anything()
-        );
-        expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith(
-            'headless-commerce-mesh',
-            true
-        );
+
+        // First press (Add): runs the enable (enableComplete implies the request
+        // resolved), then holds on the ✓ terminal state — footer becomes "Done",
+        // nothing committed yet (a premature close is caught by the final count).
+        await finishMesh(s);
+        expect(s.result.current.enableComplete).toBe(true);
+        expect(s.result.current.continueLabel).toBe('Done');
+        expect(s.builder.onAppBuilderComponentToggle).not.toHaveBeenCalled();
+
+        // Second press (Done): commit + close.
+        await finishMesh(s);
+        expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith(MESH_ID, true);
         expect(s.onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('a pick-less mesh finish writes no selectedConsoleApis', async () => {
-        const s = setup();
-        walkMeshToDestWorkspace(s);
-        act(() => s.result.current.setPendingWorkspace(WORKSPACE));
-        act(() => s.result.current.onContinue());
-        s.sync();
-        await act(async () => {
-            s.result.current.onContinue();
+    it('flips each API row done as its subscribe tick arrives during the enable', async () => {
+        // The real handler pushes per-API ticks mid-request; drive one.
+        mockMeshRequest.mockImplementation(async () => {
+            mockMessageHandlers['mesh-api-subscribe-progress']?.({ code: MGMT, done: true });
+            return { success: true, data: { apis: [] } };
         });
-        expect(s.onClose).toHaveBeenCalledTimes(1);
-        const wroteApis = s.updateState.mock.calls.some(
-            ([partial]) => 'selectedConsoleApis' in (partial as Partial<WizardState>)
-        );
-        expect(wroteApis).toBe(false);
+        const s = setup();
+        walkMeshToApiAccess(s);
+        await finishMesh(s);
+        expect(s.result.current.enableDone).toEqual({ [MGMT]: true });
     });
 
     it('a failed mesh enable keeps the modal open (no commit, no close)', async () => {
@@ -409,10 +423,10 @@ describe('useIntegrationFlow — dest-workspace Continue and mesh finish', () =>
         const s = setup({ initial: { adobeProject: PROJECT, adobeWorkspace: WORKSPACE } });
         pickKindAndContinue(s, 'mesh');
         act(() => s.result.current.onContinue()); // → api-access
-        await act(async () => {
-            s.result.current.onContinue();
-        });
+        await finishMesh(s);
         expect(s.result.current.enableError).toBe('nope');
+        // The footer becomes the retry affordance (no "press Add…" text needed).
+        expect(s.result.current.continueLabel).toBe('Retry');
         expect(s.builder.onAppBuilderComponentToggle).not.toHaveBeenCalled();
         expect(s.onClose).not.toHaveBeenCalled();
     });
@@ -423,13 +437,10 @@ describe('useIntegrationFlow — dest-workspace Continue and mesh finish', () =>
         expect(s.result.current.stage).toBe('dest-summary');
         act(() => s.result.current.onContinue());
         expect(s.result.current.stage).toBe('api-access');
-        await act(async () => {
-            s.result.current.onContinue();
-        });
-        expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith(
-            'headless-commerce-mesh',
-            true
-        );
+        await finishMesh(s); // Add → enable → holds on Done
+        expect(s.onClose).not.toHaveBeenCalled();
+        await finishMesh(s); // Done → commit + close
+        expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith(MESH_ID, true);
         expect(s.onClose).toHaveBeenCalledTimes(1);
     });
 });
@@ -457,37 +468,60 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
         expect(s.onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('finishes a "start from scratch" add: commits the blank shell component', () => {
+    it('build custom HOLDS on Done, Back un-confirms to revise, Done commits + closes', () => {
         const s = setup({ initial: COMMITTED_DEST });
-        // Blank has no source stage — kind pick goes straight to the destination.
-        pickKindAndContinue(s, 'blank');
+        pickKindAndContinue(s, 'blank'); // blank has no source stage → straight to dest
         expect(s.result.current.stage).toBe('dest-summary');
-        act(() => s.result.current.onContinue()); // dest-summary → api-access
+        act(() => s.result.current.onContinue()); // → api-access
+        act(() => s.result.current.toggleApi('FireflyServicesSDK'));
+        // First press ("Add API Access") confirms in-modal — footer → Done, no commit/close.
+        act(() => s.result.current.onContinue());
+        expect(s.result.current.picksConfirmed).toBe(true);
+        expect(s.result.current.continueLabel).toBe('Done');
+        expect(s.builder.onAppBuilderComponentToggle).not.toHaveBeenCalled();
+        expect(s.onClose).not.toHaveBeenCalled();
+        // Back un-confirms → the picker returns, picks preserved (nothing provisioned yet).
+        expect(s.result.current.canGoBack).toBe(true);
+        act(() => s.result.current.onBack());
+        expect(s.result.current.picksConfirmed).toBe(false);
         expect(s.result.current.stage).toBe('api-access');
-        act(() => s.result.current.onContinue()); // finish
-        expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith(
-            'app-builder-shell',
-            true
-        );
-        expect(s.builder.onAddCustomAppBuilderComponent).not.toHaveBeenCalled();
+        expect(s.result.current.draft.selectedApis).toEqual(['FireflyServicesSDK']);
+        // Re-confirm, then Done commits the shell + closes.
+        act(() => s.result.current.onContinue());
+        act(() => s.result.current.onContinue());
+        const toggle = s.builder.onAppBuilderComponentToggle;
+        expect(toggle).toHaveBeenCalledWith('app-builder-shell', true);
         expect(s.onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('finishes a custom add: onAddCustomAppBuilderComponent, no API write', () => {
+    it('a "build custom" finish writes the picked APIs to selectedConsoleApis[shellId]', () => {
+        const s = setup({ initial: COMMITTED_DEST });
+        pickKindAndContinue(s, 'blank');
+        act(() => s.result.current.onContinue()); // dest-summary → api-access
+        act(() => s.result.current.toggleApi('FireflyServicesSDK')); // the user knows this up front
+        act(() => s.result.current.onContinue()); // Add API Access → confirm
+        act(() => s.result.current.onContinue()); // Done → finish
+        expect(s.updateState).toHaveBeenCalledWith({
+            selectedConsoleApis: { 'app-builder-shell': ['FireflyServicesSDK'] },
+        });
+    });
+
+    it('a custom (import) finish commits the repo AND keys the picks under owner-repo', () => {
         const s = setup({ initial: COMMITTED_DEST });
         pickKindAndContinue(s, 'custom');
-        expect(s.result.current.stage).toBe('source-custom');
         act(() => s.result.current.setCustomSource({ owner: 'acme', repo: 'widget' }));
-        act(() => s.result.current.onContinue());
-        expect(s.result.current.stage).toBe('dest-summary');
-        act(() => s.result.current.onContinue());
-        expect(s.result.current.stage).toBe('api-access');
-        act(() => s.result.current.onContinue());
+        act(() => s.result.current.onContinue()); // → dest-summary
+        act(() => s.result.current.onContinue()); // → api-access
+        act(() => s.result.current.toggleApi('FireflyServicesSDK'));
+        act(() => s.result.current.onContinue()); // Add API Access → confirm
+        act(() => s.result.current.onContinue()); // Done → finish
         expect(s.builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith({
             owner: 'acme',
             repo: 'widget',
         });
-        expect(s.updateState).not.toHaveBeenCalled();
+        expect(s.updateState).toHaveBeenCalledWith({
+            selectedConsoleApis: { 'acme-widget': ['FireflyServicesSDK'] },
+        });
         expect(s.onClose).toHaveBeenCalledTimes(1);
     });
 
@@ -501,16 +535,6 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
 
         expect(s.result.current.draft.customSource).toBeUndefined();
         expect(s.result.current.canContinue).toBe(false);
-    });
-
-    it('finish commits then closes — draft reset is the shell mount seam, not the hook', () => {
-        // The modal shell mounts the journey only while open, so closing
-        // unmounts the hook; reopening mounts a fresh one (pinned by the
-        // AddIntegrationFlowModal reopen test). The hook itself only closes.
-        const s = setup({ initial: COMMITTED_DEST });
-        walkCatalogToApiAccess(s);
-        act(() => s.result.current.onContinue());
-        expect(s.onClose).toHaveBeenCalledTimes(1);
     });
 });
 

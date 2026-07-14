@@ -323,5 +323,101 @@ describe('apiSubscriber', () => {
             expect(other).toBeDefined();
             expect(other?.name).toBeUndefined();
         });
+
+        describe('onProgress (per-service subscribe ticks, for a live UI)', () => {
+            it('emits done:false then done:true for each subscribed code', async () => {
+                const events: Array<{ code: string; done: boolean }> = [];
+                await subscribeRequiredApis(
+                    [meshAppBuilderComponent()],
+                    orgTarget,
+                    client,
+                    undefined,
+                    [],
+                    (event) => events.push(event)
+                );
+
+                // Baseline (OAuth) and mesh (apiKey) each get a start + done tick.
+                expect(events).toContainEqual({ code: MGMT, done: false });
+                expect(events).toContainEqual({ code: MGMT, done: true });
+                expect(events).toContainEqual({ code: MESH, done: false });
+                expect(events).toContainEqual({ code: MESH, done: true });
+            });
+
+            it('runs the OAuth and apiKey groups CONCURRENTLY (apiKey does not wait for the OAuth PUT)', async () => {
+                // Gate the OAuth subscribe PUT so it stays pending.
+                let releaseOAuth!: () => void;
+                const oauthGate = new Promise<void>((resolve) => {
+                    releaseOAuth = resolve;
+                });
+                (
+                    client.subscribeOAuthServerToServerIntegrationToServices as jest.Mock
+                ).mockReturnValue(oauthGate);
+
+                const done = subscribeRequiredApis([meshAppBuilderComponent()], orgTarget, client);
+                // Flush microtasks: the OAuth PUT is still gated, but the apiKey group
+                // must have already reached its OWN subscribe PUT — serial code could not.
+                await new Promise((resolve) => setImmediate(resolve));
+                expect(client.subscribeAdobeIdIntegrationToServices).toHaveBeenCalled();
+
+                releaseOAuth();
+                await done;
+            });
+
+            it('AWAITS each tick before its group proceeds — async delivery is flushed first (race-proof)', async () => {
+                // A listener that ships the tick over a channel (async). If emitProgress
+                // fire-and-forgot the tick, the (sync) subscribe PUT would run before the
+                // async push; awaiting flushes the tick first. Asserted WITHIN the mesh
+                // group, so it holds regardless of cross-group concurrency.
+                const order: string[] = [];
+                const onProgress = async (e: { code: string; done: boolean }): Promise<void> => {
+                    await Promise.resolve();
+                    order.push(`${e.code}:${e.done}`);
+                };
+                (client.subscribeAdobeIdIntegrationToServices as jest.Mock).mockImplementation(
+                    async () => {
+                        order.push('mesh-subscribe');
+                    }
+                );
+
+                await subscribeRequiredApis(
+                    [meshAppBuilderComponent()],
+                    orgTarget,
+                    client,
+                    undefined,
+                    [],
+                    onProgress
+                );
+
+                // The mesh 'start' tick was delivered before the mesh subscribe PUT ran.
+                expect(order.indexOf(`${MESH}:false`)).toBeGreaterThanOrEqual(0);
+                expect(order.indexOf(`${MESH}:false`)).toBeLessThan(
+                    order.indexOf('mesh-subscribe')
+                );
+            });
+
+            it('still reports done:true for a code that was already subscribed', async () => {
+                (client.getSubscribedServiceCodes as jest.Mock).mockResolvedValue([MGMT, MESH]);
+                const events: Array<{ code: string; done: boolean }> = [];
+                await subscribeRequiredApis(
+                    [meshAppBuilderComponent()],
+                    orgTarget,
+                    client,
+                    undefined,
+                    [],
+                    (event) => events.push(event)
+                );
+
+                // No PUT runs, but the UI must still see each code land.
+                expect(client.subscribeAdobeIdIntegrationToServices).not.toHaveBeenCalled();
+                expect(events).toContainEqual({ code: MGMT, done: true });
+                expect(events).toContainEqual({ code: MESH, done: true });
+            });
+
+            it('is optional — omitting it subscribes exactly as before', async () => {
+                await expect(
+                    subscribeRequiredApis([meshAppBuilderComponent()], orgTarget, client)
+                ).resolves.toHaveLength(2);
+            });
+        });
     });
 });

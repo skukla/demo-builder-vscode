@@ -39,6 +39,16 @@ const ERP_ENTRY: AppBuilderComponentCatalogEntry = {
     source: { owner: 'skukla', repo: 'erp-sync' },
 };
 
+/** The blank starter ("Build custom") — kind 'integration', blank, NO source. */
+const BLANK_ENTRY: AppBuilderComponentCatalogEntry = {
+    id: 'app-builder-shell',
+    name: 'App Builder App',
+    description: 'A minimal App Builder app to build out with AI',
+    kind: 'integration',
+    blank: true,
+    source: { owner: 'skukla', repo: 'app-builder-shell' },
+};
+
 const CATALOG: AppBuilderComponentCatalogEntry[] = [MESH_ENTRY, ERP_ENTRY];
 
 /** Committed shared destination (project + workspace ids). */
@@ -202,6 +212,41 @@ describe('resolveIntegrationRows — custom rows', () => {
         );
 
         expect(rows).toEqual([expect.objectContaining({ kind: 'custom', name: 'erp-fork' })]);
+    });
+});
+
+describe('resolveIntegrationRows — blank starter ("Build custom") rows', () => {
+    const WITH_BLANK = [MESH_ENTRY, ERP_ENTRY, BLANK_ENTRY];
+
+    it('resolves a committed blank shell to a "blank" row (no source, not a gallery entry)', () => {
+        const rows = resolveIntegrationRows(
+            state({ selectedAppBuilderComponents: ['app-builder-shell'] }),
+            MESH_ENTRY,
+            WITH_BLANK
+        );
+
+        expect(rows).toEqual([
+            {
+                id: 'app-builder-shell',
+                kind: 'blank',
+                name: 'App Builder App',
+                sourceLine: 'A minimal App Builder app to build out with AI',
+                needsSetup: true,
+                apiCount: 0,
+            } satisfies IntegrationRow,
+        ]);
+    });
+
+    it('drops the blank shell when the component list omits it (the fixed IntegrationsStep bug)', () => {
+        // Passing the blank-FILTERED catalog (the old bug) leaves the committed
+        // shell with no matching entry → no row. The fix passes the FULL list.
+        const rows = resolveIntegrationRows(
+            state({ selectedAppBuilderComponents: ['app-builder-shell'] }),
+            MESH_ENTRY,
+            CATALOG
+        );
+
+        expect(rows).toEqual([]);
     });
 });
 

@@ -15,7 +15,7 @@ import type { AdobeProject, Workspace } from '@/types/webview';
 
 export type IntegrationKind = 'mesh' | 'catalog' | 'blank' | 'custom';
 
-export type FlowMode = 'add' | 'destination';
+export type FlowMode = 'add' | 'destination' | 'api-edit';
 
 export type FlowStageId =
     | 'kind'
@@ -32,6 +32,14 @@ export interface FlowDraft {
     kind?: IntegrationKind;
     catalogId?: string;
     customSource?: { owner: string; repo: string };
+    /**
+     * Free Console API picks for a custom/import app's api-access step (the user
+     * knows what APIs the app needs up front). Locked codes (baseline + APIs other
+     * integrations already cover) are derived, never stored here. Committed to
+     * `selectedConsoleApis[componentId]` and subscribed at deploy. Mesh/catalog
+     * have deterministic APIs and never populate this.
+     */
+    selectedApis?: string[];
     pendingProject?: AdobeProject;
     pendingWorkspace?: Workspace;
     changingDestination: boolean;
@@ -88,6 +96,9 @@ export function deriveStageOrder(
     slice: FlowStateSlice,
     mode: FlowMode,
 ): FlowStageId[] {
+    // Re-editing an existing integration's API picks is just the picker — no kind,
+    // source, or destination stages (those are already committed on the row).
+    if (mode === 'api-edit') return ['api-access'];
     if (mode === 'destination') return destinationStages(slice);
 
     const dest: FlowStageId[] =

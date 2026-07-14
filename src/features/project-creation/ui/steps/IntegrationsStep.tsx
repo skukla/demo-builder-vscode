@@ -14,11 +14,10 @@
  * ({@link useProjectBuilder.onAppBuilderComponentToggle}, clearing BOTH selection
  * keys); every other row routes through `onRemoveAppBuilderComponent` (selection +
  * source + API picks). Mesh API enablement runs INSIDE the modal journey (its
- * api-access stage); the outcome lands here via `onMeshEnableResult` and the mesh
- * row's embedded {@link MeshApiEnableRow} adopts it as `initialResult` (no
- * duplicate request). A mesh that never walked the modal enable — package-seeded
- * "Set up" or edit seeding — still auto-runs on the row once the destination
- * commits.
+ * api-access stage), which only commits the mesh on a successful enable — so this
+ * step is PURELY VISUAL: the mesh row's embedded {@link MeshApiEnableRow} just
+ * shows ✓ "API access enabled" and never triggers a subscribe (re-mounting the
+ * step — Continue to the summary and Back — must not re-enable).
  *
  * @module features/project-creation/ui/steps/IntegrationsStep
  */
@@ -31,7 +30,7 @@ import {
     IntegrationResultRow,
     MeshApiEnableRow,
     resolveIntegrationRows,
-    type EnsureResult,
+    type ApiEditTarget,
     type FlowMode,
     type IntegrationRow,
 } from '../components/integration-flow';
@@ -46,6 +45,8 @@ import type { BaseStepProps } from '@/types/wizard';
 /** Stable empty defaults for catalog props (avoids the infinite-re-render gotcha). */
 const EMPTY_PACKAGES: DemoPackage[] = [];
 const EMPTY_STACKS: Stack[] = [];
+/** Stable empty picks seed for an integration with no API selection yet. */
+const EMPTY_PICKS: string[] = [];
 
 export interface IntegrationsStepProps extends BaseStepProps {
     /** Available demo packages (catalog data; drives mesh availability). */
@@ -95,12 +96,13 @@ export function IntegrationsStep({
     const builder = useProjectBuilder(state, updateState, { packages, stacks });
     const { onAppBuilderComponentToggle, onRemoveAppBuilderComponent } = builder;
 
-    // The one modal, opened in 'add' (launchpad) or 'destination' (row Set up/Change) mode.
+    // The one modal, opened in 'add' (launchpad), 'destination' (row Set up/Change),
+    // or 'api-edit' (a custom/import row's APIs "Change" → re-open the picker).
     const [modalOpen, setModalOpen] = useState(false);
     const [mode, setMode] = useState<FlowMode>('add');
-    // The mesh enable runs on Add IN the modal; its outcome is adopted by the mesh
-    // result row (initialResult) so the row shows the finished ✓ instead of re-running.
-    const [meshEnableResult, setMeshEnableResult] = useState<EnsureResult | undefined>(undefined);
+    // The row being API-edited (mode 'api-edit' only) — seeds the picker with its
+    // current picks; passed to the modal only in that mode.
+    const [editTarget, setEditTarget] = useState<ApiEditTarget | undefined>(undefined);
     const openAdd = useCallback((): void => {
         setMode('add');
         setModalOpen(true);
@@ -109,6 +111,18 @@ export function IntegrationsStep({
         setMode('destination');
         setModalOpen(true);
     }, []);
+    const openEditApis = useCallback(
+        (row: IntegrationRow): void => {
+            setEditTarget({
+                componentId: row.id,
+                kind: row.kind,
+                picks: state.selectedConsoleApis?.[row.id] ?? EMPTY_PICKS,
+            });
+            setMode('api-edit');
+            setModalOpen(true);
+        },
+        [state.selectedConsoleApis],
+    );
     const closeModal = useCallback((): void => setModalOpen(false), []);
 
     const meshComponent = useMemo(
@@ -123,7 +137,7 @@ export function IntegrationsStep({
         [stacks, state.selectedStack],
     );
     // Integration-kind entries, split: the FINISHED catalog (the "Pre-built
-    // integration" gallery) vs. the blank starter app (the "Start from scratch"
+    // integration" gallery) vs. the blank starter app (the "Build custom"
     // card) — the blank is NOT a pre-built integration and never shows in the gallery.
     const integrationEntries = useMemo<AppBuilderComponentCatalogEntry[]>(
         () =>
@@ -141,9 +155,12 @@ export function IntegrationsStep({
         [integrationEntries],
     );
 
+    // Resolve rows against the FULL entry list (incl. the blank starter) so a
+    // committed "Build custom" app gets a row — `catalog` (blank-filtered) is only
+    // the modal's gallery, not the source of truth for configured integrations.
     const rows = useMemo(
-        () => resolveIntegrationRows(state, meshComponent, catalog),
-        [state, meshComponent, catalog],
+        () => resolveIntegrationRows(state, meshComponent, integrationEntries),
+        [state, meshComponent, integrationEntries],
     );
     const destinationLabel = destinationLabelFor(state);
 
@@ -182,16 +199,10 @@ export function IntegrationsStep({
                             onSetUpDestination={openDestination}
                             onChangeDestination={openDestination}
                             onRemove={() => onRemoveRow(row)}
+                            onChangeApis={() => openEditApis(row)}
                             meshEnableSlot={
                                 row.kind === 'mesh' ? (
-                                    <MeshApiEnableRow
-                                        orgId={state.adobeOrg?.id}
-                                        projectId={state.adobeProject?.id}
-                                        workspaceId={state.adobeWorkspace?.id}
-                                        backendId={stack?.backend}
-                                        frontendId={stack?.frontend}
-                                        initialResult={meshEnableResult}
-                                    />
+                                    <MeshApiEnableRow workspaceId={state.adobeWorkspace?.id} />
                                 ) : undefined
                             }
                         />
@@ -209,6 +220,7 @@ export function IntegrationsStep({
                 isOpen={modalOpen}
                 onClose={closeModal}
                 mode={mode}
+                editTarget={mode === 'api-edit' ? editTarget : undefined}
                 state={state}
                 updateState={updateState}
                 meshComponent={meshComponent}
@@ -217,7 +229,6 @@ export function IntegrationsStep({
                 backendId={stack?.backend}
                 frontendId={stack?.frontend}
                 builder={builder}
-                onMeshEnableResult={setMeshEnableResult}
             />
         </div>
     );

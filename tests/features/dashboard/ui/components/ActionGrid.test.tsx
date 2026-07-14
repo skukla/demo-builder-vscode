@@ -116,10 +116,8 @@ describe('ActionGrid', () => {
     };
 
     /** Resolve the zone container element for a given data-zone value. */
-    const getZone = (container: HTMLElement, zone: string): HTMLElement => {
-        const el = container.querySelector(`[data-zone="${zone}"]`);
-        return el as HTMLElement;
-    };
+    const getZone = (container: HTMLElement, zone: string): HTMLElement =>
+        container.querySelector(`[data-zone="${zone}"]`) as HTMLElement;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -632,10 +630,6 @@ describe('ActionGrid', () => {
     });
 
     describe('EDS-Specific Interactions', () => {
-        beforeEach(() => {
-            jest.clearAllMocks();
-        });
-
         it('should call handleOpenLiveSite when Open in Browser clicked (EDS)', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...edsProps} />);
