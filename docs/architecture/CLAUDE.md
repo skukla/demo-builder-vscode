@@ -80,7 +80,7 @@
 | [008](adr/008-derive-runtime-surface-inventory.md) | Derive the runtime-surface inventory from the boilerplate, not by hand | Accepted (producer built; consumer wiring pending) |
 | [009](adr/009-storefront-config-flag-injection.md) | Storefront `config.json` flag injection — the generator owns config, so template flags must be re-injected | Accepted |
 | [010](adr/010-content-copy-completeness.md) | Content-copy completeness — follow document references so unindexed fragments aren't dropped | Accepted |
-| [011](adr/011-app-builder-deployables.md) | App Builder deployables — a keyed set of deployable components in one App Builder project | Accepted (not yet implemented) |
+| [011](adr/011-app-builder-deployables.md) | App Builder deployables — a keyed set of deployable components in one App Builder project (shipped as `appBuilderComponents`) | Accepted; D1–D2 implemented, D3 pending |
 
 ## Quick Reference
 

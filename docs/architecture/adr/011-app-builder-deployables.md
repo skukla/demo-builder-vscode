@@ -7,6 +7,13 @@
 
 Related: [ADR-006 Thin-Layer Storefront Customization](006-thin-layer-storefront-customization.md) (canonical + code-patches; the same "components are cloned sources" model), [ADR-009 Storefront config.json Flag Injection](009-storefront-config-flag-injection.md) (the `MESH_ENDPOINT`→config edge this generalizes). Research: [`.rptc/research/appbuilder-deployable-model/research.md`](../../../.rptc/research/appbuilder-deployable-model/research.md) + [`.rptc/research/app-builder-app-structure/research.md`](../../../.rptc/research/app-builder-app-structure/research.md). **Supersedes** the singular App Builder model shipped as slice 1 (deploy spine).
 
+> **Naming + status note (2026-07-14):** the "Status: not yet implemented" above is now stale — D1 (keyed
+> state + catalog + kind-dispatch runner + two-path subscriber) and D2 (live mesh subscribe + selection UX)
+> have shipped; D3 (retire the singular `meshState`/`appState` write paths) is the remaining reconciliation.
+> The code renamed this ADR's **"deployable"** to **`appBuilderComponent`** throughout (`AppBuilderComponentState`,
+> `project.appBuilderComponents`, `appBuilderComponentRunner`, `app-builder-components.json`) — same concept,
+> different vocabulary.
+
 ---
 
 ## Context

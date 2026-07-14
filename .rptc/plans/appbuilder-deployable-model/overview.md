@@ -16,6 +16,13 @@ absent-API case with no remediation. Step 09's true prerequisite is the D2 live 
 **Supersedes:** the slice-1-as-shipped singular model and reshapes the slice specs
 `.rptc/backlog/2026-06-17-appbuilder-app-*.md` around a unified deployable.
 
+> **Naming note (plan/ADR vs. shipped code, 2026-07-14):** this plan and ADR-011 call the unit a
+> **"deployable"** (`DeployableState`, `deployables`, `deployableRunner`, `deployables.json`); the code
+> shipped it renamed to **`appBuilderComponent`** (`AppBuilderComponentState`, `project.appBuilderComponents`,
+> `appBuilderComponentRunner`, `app-builder-components.json`). The two terms are the SAME concept — read
+> every "deployable" below as "appBuilderComponent" in code. (ADR-011's filename is
+> `011-app-builder-deployables.md`.)
+
 ## The idea in one line
 
 A demo's workspace holds a **list of deployables** — a mesh, zero or more integrations — each picked
@@ -309,6 +316,19 @@ The deploy/build/structure mechanics are well-developed above; these are the und
 - Removal completeness: orphaned triggers/rules on `aio app undeploy`; leave APIs subscribed.
 - Reset reconstruction for ALL keyed deployables + one-time `meshState`/`appState` → `deployables`
   migration.
+- **State-coherence seam — TWO parallel write paths write DIFFERENT state (captured 2026-07-14; D3
+  reconciliation).** The keyed runner (`appBuilderComponentRunner` → the detail-dashboard integrations
+  list + the creation-flow integrations phase) writes `appBuilderComponents[id]`. The **singular** path
+  (`deployMeshHeadless`/`deployAppHeadless` → the **projects-dashboard card grid + the kebab's Redeploy
+  Mesh/App** actions) writes `meshState`/`appState` + `*StatusSummary` and NEVER `setAppBuilderComponent`.
+  The two surfaces read different state and don't cross-update, so a deploy via one is not reflected in
+  the other's status (a mesh is masked by read-through synthesis; an integration deployed via the keyed
+  runner leaves `appStatusSummary` untouched, and a mesh redeployed via the keyed runner shadows the
+  read-through without refreshing `meshStatusSummary`). Two sub-items D3 must settle: (1) a single writer
+  (or cross-update) so card-grid gating and the keyed list agree; (2) the projects-dashboard **Redeploy
+  App** is singular (`appState`, one app), while the keyed model supports N — per-integration redeploy is
+  the target. Also: the singular `deployAppHeadless` path does NOT apply `ow.package` isolation (only the
+  keyed runner does), so a legacy-path app deploy is un-isolated — fold into the same reconciliation.
 - Collision-free ID / package-prefix / managed-project-name generation.
 - Post-deploy verification (endpoint/actions actually respond, not just exit 0).
 

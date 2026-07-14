@@ -136,9 +136,10 @@ export interface Project {
     >;
     /**
      * Keyed appBuilderComponent state — the unified replacement for the singular
-     * `meshState`/`appState` (Model B). In D1 this is additive: the legacy
-     * singletons remain authoritative and accessors read through to them.
-     * See docs/architecture/adr/011-app-builder-appBuilderComponents.md.
+     * `meshState`/`appState` (Model B; the plan/ADR call this concept a
+     * "deployable" — `appBuilderComponent` is the shipped name). In D1 this is
+     * additive: the legacy singletons remain authoritative and accessors read
+     * through to them. See docs/architecture/adr/011-app-builder-deployables.md.
      */
     appBuilderComponents?: Record<string, AppBuilderComponentState>;
     /**
