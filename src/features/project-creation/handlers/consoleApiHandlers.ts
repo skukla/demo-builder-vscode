@@ -36,7 +36,13 @@ export const handleListOrgConsoleApis: MessageHandler<{ componentIds?: string[] 
     if (!(await authService.isAuthenticated())) {
         return { success: false, error: 'Adobe sign-in required to list Adobe APIs.' };
     }
-    const org = authService.getCachedOrganization();
+    // The in-memory org cache is only warm after a sign-in THIS session; editing a
+    // loaded project (Edit → Integrations → Change APIs) reaches this handler without
+    // one, leaving it cold. The token is org-bound, so fall back to the token's org —
+    // the canonical "token org is truth" resolution (mirrors testDeveloperPermissions /
+    // getOrganizationsSdkOnlyFirstId) — rather than dead-ending on an unrecoverable error.
+    const org =
+        authService.getCachedOrganization() ?? (await authService.getOrganizationsSdkOnly())[0];
     if (!org?.id) {
         return {
             success: false,

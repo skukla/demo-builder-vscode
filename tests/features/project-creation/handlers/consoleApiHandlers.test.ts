@@ -27,9 +27,11 @@ jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader
 
 const mockIsAuthenticated = jest.fn();
 const mockGetCachedOrganization = jest.fn();
+const mockGetOrganizationsSdkOnly = jest.fn();
 const mockAuthService = {
     isAuthenticated: mockIsAuthenticated,
     getCachedOrganization: mockGetCachedOrganization,
+    getOrganizationsSdkOnly: mockGetOrganizationsSdkOnly,
 };
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
@@ -99,6 +101,7 @@ describe('handleListOrgConsoleApis', () => {
             code: 'org1@AdobeOrg',
             name: 'Org One',
         });
+        mockGetOrganizationsSdkOnly.mockResolvedValue([]);
         mockGetServicesForOrg.mockResolvedValue(ORG_SERVICES);
         (getAppBuilderComponentEntry as jest.Mock).mockImplementation((id: string) => CATALOG[id]);
     });
@@ -324,14 +327,31 @@ describe('handleListOrgConsoleApis', () => {
             expect(mockGetServicesForOrg).not.toHaveBeenCalled();
         });
 
-        it('fails when no organization is cached', async () => {
+        it('fails only when neither the cache nor the token yields an org', async () => {
             mockGetCachedOrganization.mockReturnValue(undefined);
+            mockGetOrganizationsSdkOnly.mockResolvedValue([]);
 
             const result = await handleListOrgConsoleApis(makeContext(), { componentIds: [] });
 
             expect(result.success).toBe(false);
             expect(result.error).toMatch(/organization/i);
             expect(mockGetServicesForOrg).not.toHaveBeenCalled();
+        });
+
+        it('resolves the org from the token when the in-memory cache is cold', async () => {
+            // Editing a loaded project (Edit → Integrations → Change APIs) reaches this
+            // handler without a fresh sign-in warming the auth service's in-memory org
+            // cache. The token is org-bound, so fall back to the token's org rather than
+            // dead-ending on "No Adobe organization selected" (which Retry can't fix).
+            mockGetCachedOrganization.mockReturnValue(undefined);
+            mockGetOrganizationsSdkOnly.mockResolvedValue([
+                { id: 'org-tok', code: 'orgtok@AdobeOrg', name: 'Token Org' },
+            ]);
+
+            const result = await handleListOrgConsoleApis(makeContext(), { componentIds: [] });
+
+            expect(result.success).toBe(true);
+            expect(mockGetServicesForOrg).toHaveBeenCalledWith('org-tok');
         });
 
         it('returns a user-readable error when the service call fails', async () => {
