@@ -320,6 +320,40 @@ const ProjectsDashboardApp: React.FC = () => {
         [fetchProjects],
     );
 
+    // Handle redeploy mesh (projects with a mesh in a "Redeploy Mesh" state)
+    const handleRedeployMesh = useCallback(
+        async (project: Project) => {
+            try {
+                const response = await webviewClient.request<{ success: boolean }>('redeployMesh', {
+                    projectPath: project.path,
+                });
+                if (response?.success) {
+                    fetchProjects(true);
+                }
+            } catch (error) {
+                console.error('Failed to redeploy mesh:', error);
+            }
+        },
+        [fetchProjects],
+    );
+
+    // Handle redeploy app (projects with a deployed App Builder app)
+    const handleRedeployApp = useCallback(
+        async (project: Project) => {
+            try {
+                const response = await webviewClient.request<{ success: boolean }>('redeployApp', {
+                    projectPath: project.path,
+                });
+                if (response?.success) {
+                    fetchProjects(true);
+                }
+            } catch (error) {
+                console.error('Failed to redeploy app:', error);
+            }
+        },
+        [fetchProjects],
+    );
+
     // Handle edit project
     const handleEditProject = useCallback(async (project: Project) => {
         try {
@@ -422,6 +456,8 @@ const ProjectsDashboardApp: React.FC = () => {
             onOpenAdminPanel: handleOpenAdminPanel,
             onResetProject: handleResetProject,
             onRepublishContent: handleRepublishContent,
+            onRedeployMesh: handleRedeployMesh,
+            onRedeployApp: handleRedeployApp,
             onEdit: handleEditProject,
             onRenameSubmit: handleRenameSubmit,
             onCopyPath: handleCopyPath,
@@ -439,6 +475,8 @@ const ProjectsDashboardApp: React.FC = () => {
             handleOpenAdminPanel,
             handleResetProject,
             handleRepublishContent,
+            handleRedeployMesh,
+            handleRedeployApp,
             handleEditProject,
             handleRenameSubmit,
             handleCopyPath,

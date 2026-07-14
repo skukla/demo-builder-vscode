@@ -97,6 +97,11 @@ describe('projectsListHandlers', () => {
             expect(hasHandler(projectsListHandlers, 'republishContent')).toBe(true);
         });
 
+        it('should include the mesh/app redeploy handlers', () => {
+            expect(hasHandler(projectsListHandlers, 'redeployMesh')).toBe(true);
+            expect(hasHandler(projectsListHandlers, 'redeployApp')).toBe(true);
+        });
+
         it('should include copy path handler', () => {
             expect(hasHandler(projectsListHandlers, 'copy-project-path')).toBe(true);
         });
@@ -113,9 +118,9 @@ describe('projectsListHandlers', () => {
             expect(hasHandler(projectsListHandlers, 'setAuthoringExperience')).toBe(false);
         });
 
-        it('should have exactly 23 handlers', () => {
+        it('should have exactly 25 handlers', () => {
             const types = getRegisteredTypes(projectsListHandlers);
-            expect(types).toHaveLength(23);
+            expect(types).toHaveLength(25);
         });
 
         it('should have handlers as functions', () => {

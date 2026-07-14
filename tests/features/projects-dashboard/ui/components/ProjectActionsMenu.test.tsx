@@ -38,8 +38,10 @@ const edsProject = (name = 'EDS Project') =>
  * An EDS project (the resolved authoring experience no longer rides in the
  * view model — the Author label is static and the backend resolves the target).
  */
-const edsProjectWithExperience = (_experience: 'da-live-classic' | 'experience-workspace', name = 'EDS Project') =>
-    createMockProject({ name, selectedStack: 'eds-dalive' } as any);
+const edsProjectWithExperience = (
+    _experience: 'da-live-classic' | 'experience-workspace',
+    name = 'EDS Project'
+) => createMockProject({ name, selectedStack: 'eds-dalive' } as any);
 
 describe('ProjectActionsMenu', () => {
     describe('rendering and gating', () => {
@@ -190,6 +192,52 @@ describe('ProjectActionsMenu', () => {
             const inSubmenu = within(submenu());
             expect(inSubmenu.getByText('Copy Path')).toBeInTheDocument();
             expect(inSubmenu.getByText('Export')).toBeInTheDocument();
+        });
+
+        it('shows Redeploy Mesh only for a mesh in a "Redeploy Mesh" state, and fires the callback', () => {
+            const onRedeployMesh = jest.fn();
+            const project = createMockProject({ name: 'Test', meshStatusSummary: 'stale' });
+            renderWithProvider(
+                <ProjectActionsMenu project={project} actions={{ onRedeployMesh }} />
+            );
+            openMenu();
+
+            within(submenu()).getByText('Redeploy Mesh').click();
+            expect(onRedeployMesh).toHaveBeenCalledWith(project);
+        });
+
+        it('hides Redeploy Mesh when the mesh is deployed (not stale)', () => {
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test', meshStatusSummary: 'deployed' })}
+                    actions={{ onRedeployMesh: jest.fn(), onCopyPath: jest.fn() }}
+                />
+            );
+            openMenu();
+            expect(within(submenu()).queryByText('Redeploy Mesh')).not.toBeInTheDocument();
+        });
+
+        it('shows Redeploy App when the project has a deployed app, and fires the callback', () => {
+            const onRedeployApp = jest.fn();
+            const project = createMockProject({ name: 'Test', appStatusSummary: 'deployed' });
+            renderWithProvider(
+                <ProjectActionsMenu project={project} actions={{ onRedeployApp }} />
+            );
+            openMenu();
+
+            within(submenu()).getByText('Redeploy App').click();
+            expect(onRedeployApp).toHaveBeenCalledWith(project);
+        });
+
+        it('hides Redeploy App when the project has no deployed app', () => {
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={{ onRedeployApp: jest.fn(), onCopyPath: jest.fn() }}
+                />
+            );
+            openMenu();
+            expect(within(submenu()).queryByText('Redeploy App')).not.toBeInTheDocument();
         });
 
         it('offers NO Rename item anywhere — inline rename on the card owns it', () => {

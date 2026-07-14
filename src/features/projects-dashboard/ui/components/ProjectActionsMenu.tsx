@@ -8,9 +8,10 @@
  * - USE: open/run the demo (Start/Stop or Open in Browser, Author Content,
  *   Manage Commerce, Open AI).
  * - MANAGE: project-entry actions (Edit, Pin/Unpin, Reset).
- * - More…: a submenu for low-frequency actions (Copy Path, Export, and — for
- *   EDS — Republish Content). There is NO Rename item: renaming happens
- *   in place on the card name / dashboard title (InlineRenameField).
+ * - More…: a submenu for low-frequency actions (Copy Path, Export, — for EDS —
+ *   Republish Content, and the deploy-state-gated Redeploy Mesh / Redeploy App).
+ *   There is NO Rename item: renaming happens in place on the card name /
+ *   dashboard title (InlineRenameField).
  * - Delete sits alone in a trailing un-headed section, isolated from the rest.
  *
  * Empty groups render nothing (no orphaned heading). Gating is unchanged from
@@ -43,10 +44,15 @@ import MoreSmallListVert from '@spectrum-icons/workflow/MoreSmallListVert';
 import PinOff from '@spectrum-icons/workflow/PinOff';
 import PinOn from '@spectrum-icons/workflow/PinOn';
 import Play from '@spectrum-icons/workflow/Play';
+import Refresh from '@spectrum-icons/workflow/Refresh';
 import Revert from '@spectrum-icons/workflow/Revert';
 import Stop from '@spectrum-icons/workflow/Stop';
 import UserAdmin from '@spectrum-icons/workflow/UserAdmin';
 import React, { useCallback, useMemo } from 'react';
+import {
+    appIsDeployable,
+    meshNeedsRedeploy,
+} from '@/features/projects-dashboard/utils/projectStatusUtils';
 import type { Project } from '@/types/base';
 import { isEdsProject } from '@/types/typeGuards';
 
@@ -83,6 +89,10 @@ export interface ProjectActions {
     onOpenAdminPanel?: (project: Project) => void;
     onResetProject?: (project: Project) => void;
     onRepublishContent?: (project: Project) => void;
+    /** Redeploy the API Mesh (shown for a mesh in a "Redeploy Mesh" state). */
+    onRedeployMesh?: (project: Project) => void;
+    /** Redeploy the App Builder app (shown when the project has a deployed app). */
+    onRedeployApp?: (project: Project) => void;
     onEdit?: (project: Project) => void;
     /**
      * Commit an inline rename (consumed by the CARD's InlineRenameField, not
@@ -114,6 +124,7 @@ const ICON_MAP: Record<string, React.ReactElement> = {
     export: <Export size="S" />,
     ai: <MagicWand size="S" />,
     admin: <UserAdmin size="S" />,
+    redeploy: <Refresh size="S" />,
     more: <More size="S" />,
     pinOn: <PinOn size="S" />,
     pinOff: <PinOff size="S" />,
@@ -122,6 +133,38 @@ const ICON_MAP: Record<string, React.ReactElement> = {
 
 function renderMenuIcon(iconKey: string): React.ReactElement | null {
     return ICON_MAP[iconKey] ?? null;
+}
+
+/** Callbacks that decide which "More…" submenu items appear. */
+type MoreCallbacks = Pick<
+    ProjectActions,
+    'onCopyPath' | 'onExport' | 'onRepublishContent' | 'onRedeployMesh' | 'onRedeployApp'
+>;
+
+/**
+ * The "More…" submenu items, gated by callback presence AND project state:
+ * Republish is EDS-only, Redeploy Mesh needs a mesh in a "Redeploy Mesh" state,
+ * and Redeploy App needs a deployed app. Extracted to keep the grouping memo's
+ * complexity in check.
+ */
+function buildMoreItems(project: Project, isEds: boolean, cb: MoreCallbacks): MenuItem[] {
+    const more: MenuItem[] = [];
+    if (cb.onCopyPath) {
+        more.push({ key: 'copyPath', label: 'Copy Path', icon: 'copy' });
+    }
+    if (cb.onExport) {
+        more.push({ key: 'export', label: 'Export', icon: 'export' });
+    }
+    if (isEds && cb.onRepublishContent) {
+        more.push({ key: 'republishContent', label: 'Republish Content', icon: 'republish' });
+    }
+    if (cb.onRedeployMesh && meshNeedsRedeploy(project)) {
+        more.push({ key: 'redeployMesh', label: 'Redeploy Mesh', icon: 'redeploy' });
+    }
+    if (cb.onRedeployApp && appIsDeployable(project)) {
+        more.push({ key: 'redeployApp', label: 'Redeploy App', icon: 'redeploy' });
+    }
+    return more;
 }
 
 export interface ProjectActionsMenuProps {
@@ -156,6 +199,8 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         onOpenAdminPanel,
         onResetProject,
         onRepublishContent,
+        onRedeployMesh,
+        onRedeployApp,
         onEdit,
         onCopyPath,
         onExport,
@@ -179,6 +224,8 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             openAdminPanel: onOpenAdminPanel,
             resetProject: onResetProject,
             republishContent: onRepublishContent,
+            redeployMesh: onRedeployMesh,
+            redeployApp: onRedeployApp,
             edit: onEdit,
             copyPath: onCopyPath,
             export: onExport,
@@ -195,6 +242,8 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             onOpenAdminPanel,
             onResetProject,
             onRepublishContent,
+            onRedeployMesh,
+            onRedeployApp,
             onEdit,
             onCopyPath,
             onExport,
@@ -221,7 +270,6 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     const groups = useMemo<MenuGroups>(() => {
         const use: MenuItem[] = [];
         const manage: MenuItem[] = [];
-        const more: MenuItem[] = [];
 
         // USE — open / run the demo
         if (isEds) {
@@ -268,22 +316,20 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             manage.push({ key: 'resetProject', label: 'Reset', icon: 'reset' });
         }
 
-        // More… — low-frequency actions, tucked into a submenu.
-        if (onCopyPath) {
-            more.push({ key: 'copyPath', label: 'Copy Path', icon: 'copy' });
-        }
-        if (onExport) {
-            more.push({ key: 'export', label: 'Export', icon: 'export' });
-        }
-        if (isEds && onRepublishContent) {
-            more.push({ key: 'republishContent', label: 'Republish Content', icon: 'republish' });
-        }
+        // More… — low-frequency + deploy-state-gated actions, tucked into a submenu.
+        const more = buildMoreItems(project, isEds, {
+            onCopyPath,
+            onExport,
+            onRepublishContent,
+            onRedeployMesh,
+            onRedeployApp,
+        });
 
         return { use, manage, more };
     }, [
         isEds,
         isRunning,
-        project.pinned,
+        project,
         onStartDemo,
         onStopDemo,
         onOpenBrowser,
@@ -292,6 +338,8 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         onOpenAdminPanel,
         onResetProject,
         onRepublishContent,
+        onRedeployMesh,
+        onRedeployApp,
         onEdit,
         onCopyPath,
         onExport,

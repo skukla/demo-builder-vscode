@@ -17,6 +17,10 @@ import {
     getFrontendPort,
     getMeshStatusText,
     getMeshStatusVariant,
+    getAppStatusText,
+    getAppStatusVariant,
+    meshNeedsRedeploy,
+    appIsDeployable,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
 import { createMockProject, createRunningProject } from '../testUtils';
 
@@ -369,6 +373,45 @@ describe('projectStatusUtils', () => {
             expect(getStatusVariant('running', false)).toBe('success');
             expect(getStatusVariant('stopped', false)).toBe('neutral');
             expect(getStatusVariant('error', false)).toBe('error');
+        });
+    });
+
+    describe('app status display', () => {
+        it('maps appStatusSummary to text + variant, null when absent', () => {
+            expect(getAppStatusText(createMockProject({ appStatusSummary: 'deployed' }))).toBe(
+                'App Deployed'
+            );
+            expect(getAppStatusVariant(createMockProject({ appStatusSummary: 'deployed' }))).toBe(
+                'success'
+            );
+            expect(getAppStatusText(createMockProject({ appStatusSummary: 'error' }))).toBe(
+                'App Error'
+            );
+            expect(getAppStatusText(createMockProject({}))).toBeNull();
+        });
+    });
+
+    describe('meshNeedsRedeploy', () => {
+        it('is true only for the Redeploy-Mesh statuses', () => {
+            expect(meshNeedsRedeploy(createMockProject({ meshStatusSummary: 'stale' }))).toBe(true);
+            expect(
+                meshNeedsRedeploy(createMockProject({ meshStatusSummary: 'update-declined' }))
+            ).toBe(true);
+            expect(meshNeedsRedeploy(createMockProject({ meshStatusSummary: 'deployed' }))).toBe(
+                false
+            );
+            expect(meshNeedsRedeploy(createMockProject({}))).toBe(false);
+        });
+    });
+
+    describe('appIsDeployable', () => {
+        it('is true for a deployed or errored (retryable) app, false otherwise', () => {
+            expect(appIsDeployable(createMockProject({ appStatusSummary: 'deployed' }))).toBe(true);
+            expect(appIsDeployable(createMockProject({ appStatusSummary: 'error' }))).toBe(true);
+            expect(appIsDeployable(createMockProject({ appStatusSummary: 'not-deployed' }))).toBe(
+                false
+            );
+            expect(appIsDeployable(createMockProject({}))).toBe(false);
         });
     });
 });

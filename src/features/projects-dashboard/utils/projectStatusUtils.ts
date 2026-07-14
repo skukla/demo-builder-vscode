@@ -6,6 +6,7 @@
  * to eliminate code duplication.
  */
 
+import { getAppStatusDisplay } from '@/core/ui/utils/appStatusDisplay';
 import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
 import type { Project, ProjectStatus } from '@/types/base';
 import { getComponentInstanceValues } from '@/types/typeGuards';
@@ -108,6 +109,45 @@ export function getMeshStatusVariant(project: Project): StatusVariant | null {
 }
 
 /**
+ * Gets the App Builder app status display text for a project card.
+ *
+ * @returns Display text or null if no app status to show
+ */
+export function getAppStatusText(project: Project): string | null {
+    const display = getAppStatusDisplay(project.appStatusSummary);
+    return display?.text ?? null;
+}
+
+/**
+ * Gets the StatusDot variant for App Builder app status display.
+ *
+ * @returns StatusDot variant or null if no app status to show
+ */
+export function getAppStatusVariant(project: Project): StatusVariant | null {
+    const display = getAppStatusDisplay(project.appStatusSummary);
+    return (display?.variant as StatusVariant) ?? null;
+}
+
+/**
+ * Whether the project's API Mesh is in a "Redeploy Mesh" state — the config has
+ * drifted from what is deployed (`stale`) or the user declined an update
+ * (`update-declined`). Gates the kebab's "Redeploy Mesh" action.
+ */
+export function meshNeedsRedeploy(project: Project): boolean {
+    return project.meshStatusSummary === 'stale' || project.meshStatusSummary === 'update-declined';
+}
+
+/**
+ * Whether the project has a deployed App Builder app that can be redeployed — one
+ * that reached a deployed or errored state (an error is retryable). Gates the
+ * kebab's "Redeploy App" action. There is no app-staleness model, so this gates on
+ * "has a deployed app", not on drift.
+ */
+export function appIsDeployable(project: Project): boolean {
+    return project.appStatusSummary === 'deployed' || project.appStatusSummary === 'error';
+}
+
+/**
  * Gets the storefront status display text for EDS project cards
  *
  * @returns Display text based on edsStorefrontStatusSummary
@@ -135,14 +175,14 @@ export function getStorefrontStatusVariant(project: Project): StatusVariant {
     const status = project.edsStorefrontStatusSummary;
     switch (status) {
         case 'stale':
-            return 'warning';  // Yellow
+            return 'warning'; // Yellow
         case 'update-declined':
-            return 'warning';  // Orange (same variant, different context)
+            return 'warning'; // Orange (same variant, different context)
         case 'not-published':
-            return 'neutral';  // Gray
+            return 'neutral'; // Gray
         case 'published':
         default:
-            return 'success';  // Green
+            return 'success'; // Green
     }
 }
 

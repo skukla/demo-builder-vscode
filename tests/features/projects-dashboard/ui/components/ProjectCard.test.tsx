@@ -116,6 +116,20 @@ describe('ProjectCard', () => {
             expect(screen.queryByText('Mesh Deployed')).not.toBeInTheDocument();
             expect(screen.queryByText('Redeploy Mesh')).not.toBeInTheDocument();
         });
+    });
+
+    describe('app status', () => {
+        it('shows the app status dot when appStatusSummary is deployed', () => {
+            const project = createMockProject({ appStatusSummary: 'deployed' });
+            renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
+            expect(screen.getByText('App Deployed')).toBeInTheDocument();
+        });
+
+        it('shows no app status when appStatusSummary is unset', () => {
+            renderWithProvider(<ProjectCard project={createMockProject()} onSelect={jest.fn()} />);
+            expect(screen.queryByText('App Deployed')).not.toBeInTheDocument();
+            expect(screen.queryByText('App Error')).not.toBeInTheDocument();
+        });
 
         it('should show "Mesh Incomplete" when config-incomplete', () => {
             const project = createMockProject({ meshStatusSummary: 'config-incomplete' });

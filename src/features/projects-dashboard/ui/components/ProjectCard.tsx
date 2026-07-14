@@ -22,6 +22,8 @@ import {
     getFrontendPort,
     getMeshStatusText,
     getMeshStatusVariant,
+    getAppStatusText,
+    getAppStatusVariant,
     getStorefrontStatusText,
     getStorefrontStatusVariant,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
@@ -93,6 +95,8 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     const brandStackSummary = useMemo(() => getBrandStackSummary(project), [project]);
     const meshText = getMeshStatusText(project);
     const meshVariant = getMeshStatusVariant(project);
+    const appText = getAppStatusText(project);
+    const appVariant = getAppStatusVariant(project);
 
     const ariaLabel = `${project.name}, ${statusText}${brandStackSummary ? `, ${brandStackSummary}` : ''}`;
 
@@ -161,6 +165,14 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                 <Flex alignItems="center" gap="size-100">
                     <StatusDot variant={meshVariant} size={6} />
                     <Text UNSAFE_className="project-card-spectrum-status">{meshText}</Text>
+                </Flex>
+            )}
+
+            {/* App Builder Status Row */}
+            {appText && appVariant && (
+                <Flex alignItems="center" gap="size-100">
+                    <StatusDot variant={appVariant} size={6} />
+                    <Text UNSAFE_className="project-card-spectrum-status">{appText}</Text>
                 </Flex>
             )}
         </div>

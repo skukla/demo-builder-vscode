@@ -999,6 +999,114 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
     }
 };
 
+/** The subset of a headless deploy result the redeploy handlers act on. */
+interface RedeployOutcome {
+    success: boolean;
+    error?: string;
+    /** A dismissed auth/org prompt — not a failure to toast. */
+    cancelled?: boolean;
+}
+
+/**
+ * Shared spine for the kebab's Redeploy Mesh / Redeploy App actions: validate the
+ * path, load the project, run a headless (re)deploy under a progress notification,
+ * and toast the outcome. The caller supplies the artifact-specific deploy core.
+ */
+async function runProjectRedeploy(
+    context: HandlerContext,
+    projectPath: string | undefined,
+    label: string,
+    deploy: (project: Project, onProgress: (message: string) => void) => Promise<RedeployOutcome>,
+): Promise<HandlerResponse> {
+    if (!projectPath) {
+        vscode.window.showErrorMessage('Project path is required');
+        return { success: false, error: 'Project path is required' };
+    }
+    try {
+        validateProjectPath(projectPath);
+    } catch {
+        vscode.window.showErrorMessage('Invalid project path');
+        return { success: false, error: 'Invalid project path' };
+    }
+
+    const project = await context.stateManager.loadProjectFromPath(projectPath, undefined, {
+        persistAfterLoad: false,
+    });
+    if (!project) {
+        vscode.window.showErrorMessage('Project not found');
+        return { success: false, error: 'Project not found' };
+    }
+
+    const result = await vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Notification,
+            title: `${label} for ${project.name}`,
+            cancellable: false,
+        },
+        (progress) => deploy(project, (message) => progress.report({ message })),
+    );
+
+    if (result.success) {
+        vscode.window.showInformationMessage(`${label} complete for ${project.name}`);
+        return { success: true };
+    }
+    const message = result.error || `${label} failed`;
+    if (!result.cancelled) {
+        vscode.window.showErrorMessage(message);
+    }
+    return { success: false, error: message };
+}
+
+/**
+ * Handle 'redeployMesh' — redeploy the project's API Mesh from the projects kebab
+ * (shown when the mesh is in a "Redeploy Mesh" state). Reuses the shared
+ * {@link import('@/features/mesh/services/deployMeshHeadless').deployMeshHeadless} core.
+ */
+export const handleRedeployMesh: MessageHandler<{ projectPath: string }> = async (
+    context: HandlerContext,
+    payload?: { projectPath: string },
+): Promise<HandlerResponse> => {
+    const { deployMeshHeadless } = await import('@/features/mesh/services/deployMeshHeadless');
+    return runProjectRedeploy(
+        context,
+        payload?.projectPath,
+        'Redeploying mesh',
+        (project, onProgress) =>
+            deployMeshHeadless({
+                project,
+                stateManager: context.stateManager,
+                logger: context.logger,
+                extensionPath: context.context.extensionPath,
+                onProgress,
+            }),
+    );
+};
+
+/**
+ * Handle 'redeployApp' — redeploy the project's App Builder app from the projects
+ * kebab (shown when the project has a deployed app). Reuses the shared
+ * {@link import('@/features/app-builder/services/deployAppHeadless').deployAppHeadless} core.
+ */
+export const handleRedeployApp: MessageHandler<{ projectPath: string }> = async (
+    context: HandlerContext,
+    payload?: { projectPath: string },
+): Promise<HandlerResponse> => {
+    const { deployAppHeadless } = await import('@/features/app-builder/services/deployAppHeadless');
+    return runProjectRedeploy(
+        context,
+        payload?.projectPath,
+        'Redeploying app',
+        (project, onProgress) =>
+            deployAppHeadless({
+                project,
+                stateManager: context.stateManager,
+                logger: context.logger,
+                extensionPath: context.context.extensionPath,
+                onProgress,
+            }),
+    );
+};
+
 /**
  * Handle 'resetProject' message - Reset project to initial state
  *
