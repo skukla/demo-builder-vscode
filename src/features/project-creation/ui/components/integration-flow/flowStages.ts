@@ -101,8 +101,13 @@ export function deriveStageOrder(
     if (mode === 'api-edit') return ['api-access'];
     if (mode === 'destination') return destinationStages(slice);
 
+    // Collapse to just the summary only when the destination is committed AND we
+    // have a live Adobe session. A persisted project/workspace (Edit mode) makes
+    // destinationCommitted true even when signed out, but the api-access picker
+    // needs a live org — so when signed out we walk the destination stages
+    // (sign-in first) instead of skipping straight to the summary.
     const dest: FlowStageId[] =
-        slice.destinationCommitted && !draft.changingDestination
+        slice.destinationCommitted && slice.isSignedIn && !draft.changingDestination
             ? ['dest-summary']
             : destinationStages(slice);
     return ['kind', ...sourceStages(draft.kind), ...dest, 'api-access'];

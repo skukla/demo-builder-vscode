@@ -113,14 +113,25 @@ describe('deriveStageOrder — add mode', () => {
         ).toEqual(['kind', 'source-custom', 'dest-summary', 'api-access']);
     });
 
-    it('committed destination wins over signed-out (summary shown, no sign-in stage)', () => {
+    it('signed out → sign-in stage required even when the destination is committed', () => {
+        // Edit mode: the persisted project/workspace make destinationCommitted true, but
+        // without a live Adobe session the api-access picker can't list org APIs. The
+        // summary must NOT be shown; the flow walks the destination stages (sign-in first)
+        // so the user signs in before reaching api-access.
         expect(
             deriveStageOrder(
                 draft({ kind: 'custom' }),
                 slice({ isSignedIn: false, destinationCommitted: true }),
                 ADD
             )
-        ).toEqual(['kind', 'source-custom', 'dest-summary', 'api-access']);
+        ).toEqual([
+            'kind',
+            'source-custom',
+            'dest-signin',
+            'dest-project',
+            'dest-workspace',
+            'api-access',
+        ]);
     });
 
     it('no kind picked yet → kind + generic tail (no source stage)', () => {
@@ -235,6 +246,20 @@ describe('nextStage', () => {
 
     it('vanished dest-signin in destination mode clamps to the first stage', () => {
         expect(nextStage('dest-signin', draft(), slice(), DEST)).toBe('dest-project');
+    });
+
+    it('signing in mid-flow on a committed destination clamps dest-signin to dest-summary', () => {
+        // The signed-out edit flow starts at dest-signin (committed but no session). After
+        // sign-in the order collapses the committed destination to dest-summary, and the
+        // stored dest-signin stage clamps forward onto it.
+        expect(
+            nextStage(
+                'dest-signin',
+                draft({ kind: 'custom' }),
+                slice({ isSignedIn: true, destinationCommitted: true }),
+                ADD
+            )
+        ).toBe('dest-summary');
     });
 
     it('vanished dest-project (dest collapsed to summary) clamps to dest-summary', () => {
