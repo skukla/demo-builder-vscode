@@ -4,7 +4,8 @@
  * The presentational collapsed result row: name line, quiet sourceLine, the
  * destination line ("Deploys to {label}" + Change when committed vs
  * "Deploys to — Not set" + Set up when the row needs setup), the quiet Remove
- * button, the mesh-only `meshEnableSlot`, and the apiCount line gating.
+ * button, and the uniform "APIs in use" list (rendered for every kind; the
+ * Change action appears only on editable custom/import rows).
  *
  * @jest-environment jsdom
  */
@@ -16,6 +17,7 @@ import '@testing-library/jest-dom';
 
 import { IntegrationResultRow } from '@/features/project-creation/ui/components/integration-flow/IntegrationResultRow';
 import type { IntegrationRow } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
+import { BASELINE_CODE } from '@/features/project-creation/ui/components/integration-flow/apiAccessConstants';
 
 const MESH_ROW: IntegrationRow = {
     id: 'commerce-eds-mesh',
@@ -23,7 +25,7 @@ const MESH_ROW: IntegrationRow = {
     name: 'Commerce API Mesh',
     sourceLine: 'GraphQL bridge · deploys to Adobe I/O',
     needsSetup: false,
-    apiCount: 0,
+    apis: [BASELINE_CODE, 'GraphQLServiceSDK'],
 };
 
 const CATALOG_ROW: IntegrationRow = {
@@ -32,7 +34,7 @@ const CATALOG_ROW: IntegrationRow = {
     name: 'ERP Sync',
     sourceLine: 'Syncs orders into an ERP backend',
     needsSetup: true,
-    apiCount: 0,
+    apis: [BASELINE_CODE, 'CampaignSDK'],
 };
 
 const CUSTOM_ROW: IntegrationRow = {
@@ -41,7 +43,7 @@ const CUSTOM_ROW: IntegrationRow = {
     name: 'widget',
     sourceLine: 'App Builder app · acme/widget',
     needsSetup: false,
-    apiCount: 2,
+    apis: [BASELINE_CODE, 'FireflyServicesSDK'],
 };
 
 interface RenderOverrides {
@@ -51,7 +53,6 @@ interface RenderOverrides {
     onChangeDestination?: () => void;
     onRemove?: () => void;
     onChangeApis?: () => void;
-    meshEnableSlot?: React.ReactNode;
 }
 
 function renderRow(overrides: RenderOverrides = {}) {
@@ -131,58 +132,59 @@ describe('IntegrationResultRow — Remove', () => {
     });
 });
 
-describe('IntegrationResultRow — mesh enable slot', () => {
-    it('renders the meshEnableSlot below a mesh row', () => {
-        renderRow({
-            row: MESH_ROW,
-            destinationLabel: 'Kukla Mesh · Stage',
-            meshEnableSlot: <div data-testid="mesh-slot">API access</div>,
-        });
-
-        expect(screen.getByTestId('mesh-slot')).toBeInTheDocument();
-    });
-
-    it('does NOT render the meshEnableSlot for a non-mesh row even when provided', () => {
-        renderRow({
-            row: CATALOG_ROW,
-            meshEnableSlot: <div data-testid="mesh-slot">API access</div>,
-        });
-
-        expect(screen.queryByTestId('mesh-slot')).not.toBeInTheDocument();
-    });
-});
-
-describe('IntegrationResultRow — editable API line (custom/import rows)', () => {
-    it('shows "APIs: {n} selected" + Change for a custom row and fires onChangeApis', () => {
+describe('IntegrationResultRow — "APIs in use" list (uniform across kinds)', () => {
+    it('custom row: lists APIs by name — baseline label + sdk-code fallback — with a Change', () => {
         const onChangeApis = jest.fn();
         // Committed row → the destination line ALSO shows a Change; scope to the API line.
-        renderRow({ row: { ...CUSTOM_ROW, apiCount: 2 }, destinationLabel: 'X · Y', onChangeApis });
+        renderRow({ row: CUSTOM_ROW, destinationLabel: 'X · Y', onChangeApis });
 
-        const apiLine = screen
-            .getByText('APIs: 2 selected')
-            .closest('.int-row-apis') as HTMLElement;
+        const apiLine = screen.getByText('APIs in use').closest('.int-row-apis') as HTMLElement;
+        // Baseline resolves to its friendly label; the unmapped pick shows its raw sdk code.
+        expect(within(apiLine).getByText('I/O Management API')).toBeInTheDocument();
+        expect(within(apiLine).getByText('FireflyServicesSDK')).toBeInTheDocument();
         within(apiLine).getByRole('button', { name: 'Change' }).click();
         expect(onChangeApis).toHaveBeenCalledTimes(1);
     });
 
-    it('shows the line with "none selected" + Change even when apiCount is 0', () => {
+    it('custom row on needs-setup: API line renders and Change fires', () => {
         const onChangeApis = jest.fn();
-        renderRow({ row: { ...CUSTOM_ROW, apiCount: 0, needsSetup: true }, onChangeApis });
+        renderRow({ row: { ...CUSTOM_ROW, needsSetup: true }, onChangeApis });
 
-        expect(screen.getByText('APIs — none selected')).toBeInTheDocument();
-        // The row's destination Change is absent (needs setup shows Set up), so the
-        // only Change button is the API one.
+        expect(screen.getByText('APIs in use')).toBeInTheDocument();
+        expect(screen.getByText('I/O Management API')).toBeInTheDocument();
+        // needs setup shows Set up (not a destination Change), so the only Change is the API one.
         fireEvent.click(screen.getByRole('button', { name: 'Change' }));
         expect(onChangeApis).toHaveBeenCalledTimes(1);
     });
 
-    it('renders NO API line for a deterministic catalog/mesh row', () => {
-        renderRow({ row: { ...CATALOG_ROW, apiCount: 0 }, onChangeApis: jest.fn() });
-        expect(screen.queryByText(/APIs/)).not.toBeInTheDocument();
+    it('mesh row: lists baseline + API Mesh by name, with NO Change (deterministic)', () => {
+        renderRow({
+            row: MESH_ROW,
+            destinationLabel: 'Kukla Mesh · Stage',
+            onChangeApis: jest.fn(),
+        });
+
+        const apiLine = screen.getByText('APIs in use').closest('.int-row-apis') as HTMLElement;
+        expect(within(apiLine).getByText('I/O Management API')).toBeInTheDocument();
+        expect(within(apiLine).getByText('API Mesh')).toBeInTheDocument();
+        expect(within(apiLine).queryByRole('button', { name: 'Change' })).not.toBeInTheDocument();
     });
 
-    it('renders no API line when onChangeApis is not provided', () => {
-        renderRow({ row: { ...CUSTOM_ROW, apiCount: 2 } });
-        expect(screen.queryByText(/APIs:/)).not.toBeInTheDocument();
+    it('catalog row: lists its APIs by name, with NO Change (deterministic)', () => {
+        renderRow({ row: CATALOG_ROW, onChangeApis: jest.fn() });
+
+        const apiLine = screen.getByText('APIs in use').closest('.int-row-apis') as HTMLElement;
+        expect(within(apiLine).getByText('I/O Management API')).toBeInTheDocument();
+        expect(within(apiLine).getByText('CampaignSDK')).toBeInTheDocument();
+        expect(within(apiLine).queryByRole('button', { name: 'Change' })).not.toBeInTheDocument();
+    });
+
+    it('renders the API line even when onChangeApis is absent (feedback, not an action)', () => {
+        // needs-setup row → the destination line shows "Set up", not "Change", so any
+        // "Change" would be the API one (absent here because onChangeApis is not passed).
+        renderRow({ row: { ...CUSTOM_ROW, needsSetup: true } });
+
+        expect(screen.getByText('APIs in use')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Change' })).not.toBeInTheDocument();
     });
 });

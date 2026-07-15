@@ -55,6 +55,7 @@ jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader
         name: 'Recommendations',
         description: 'Personalized product recommendations',
         kind: 'integration',
+        requiredApis: ['AnalyticsSDK'],
         source: { owner: 'adobe', repo: 'reco', branch: 'main' },
     };
     return {
@@ -208,11 +209,13 @@ describe('IntegrationsStep — result rows from state', () => {
         ).toBeInTheDocument();
     });
 
-    it('renders a custom integration row with its source line and no API-access slot', () => {
+    it('renders a custom integration row with its source line and no legacy API-access slot', () => {
         renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST }));
         const custom = row('widget');
         expect(within(custom).getByText('App Builder app · acme/widget')).toBeInTheDocument();
-        expect(screen.queryByText('API access')).not.toBeInTheDocument();
+        // The old "API access enabled" status line is gone — the uniform "APIs in use"
+        // list replaces it on every kind.
+        expect(screen.queryByText('API access enabled')).not.toBeInTheDocument();
     });
 
     it('renders a catalog integration row from its catalog entry', () => {
@@ -231,28 +234,30 @@ describe('IntegrationsStep — result rows from state', () => {
         expect(within(blank).getByRole('button', { name: 'Remove' })).toBeInTheDocument();
     });
 
-    it('shows the API count line (baseline + picks) on a custom row', () => {
+    it('shows the "APIs in use" list (baseline named + picks) on a custom row', () => {
         renderStep(
             baseState({
                 ...CUSTOM_ADDED,
                 selectedConsoleApis: { 'acme-widget': ['AnalyticsSDK', 'CampaignSDK'] },
             })
         );
-        // Baseline (I/O Management) + 2 free picks.
-        expect(within(row('widget')).getByText('APIs: 3 selected')).toBeInTheDocument();
+        const card = row('widget');
+        expect(within(card).getByText('APIs in use')).toBeInTheDocument();
+        expect(within(card).getByText('I/O Management API')).toBeInTheDocument(); // baseline label
+        expect(within(card).getByText('AnalyticsSDK')).toBeInTheDocument(); // code fallback
     });
 
-    it('shows no API line on a deterministic catalog row (its APIs are fixed)', () => {
-        renderStep(
-            baseState({
-                selectedAppBuilderComponents: ['cat-reco'],
-                selectedConsoleApis: { 'cat-reco': ['AnalyticsSDK'] },
-            })
-        );
-        expect(within(row('Recommendations')).queryByText(/APIs/)).not.toBeInTheDocument();
+    it('shows the "APIs in use" list on a catalog row (baseline + requiredApis), with no Change', () => {
+        renderStep(baseState({ selectedAppBuilderComponents: ['cat-reco'] }));
+        const card = row('Recommendations');
+        expect(within(card).getByText('APIs in use')).toBeInTheDocument();
+        expect(within(card).getByText('I/O Management API')).toBeInTheDocument(); // baseline label
+        expect(within(card).getByText('AnalyticsSDK')).toBeInTheDocument(); // requiredApi code
+        // Catalog APIs are deterministic — no Change affordance on the API line.
+        expect(within(apiLineOf(card)).queryByRole('button', { name: 'Change' })).toBeNull();
     });
 
-    it('shows a static "API access enabled" for a committed mesh — never subscribes (purely visual)', () => {
+    it('shows the "APIs in use" list on a committed mesh (baseline + API Mesh) — never subscribes', () => {
         renderStep(
             baseState({
                 selectedAppBuilderComponents: [MESH_ID],
@@ -260,10 +265,14 @@ describe('IntegrationsStep — result rows from state', () => {
                 ...COMMITTED_DEST,
             })
         );
-        // The enable is owned by the Add modal (commits only on success); this step
-        // just displays ✓ and must NOT issue a subscribe — re-mounting (Continue to
-        // the summary and Back) would otherwise "re-enable".
-        expect(within(row(MESH_NAME)).getByText('API access enabled')).toBeInTheDocument();
+        const card = row(MESH_NAME);
+        // The mesh card reads like every other card: its provisioned APIs by name.
+        expect(within(card).getByText('APIs in use')).toBeInTheDocument();
+        expect(within(card).getByText('I/O Management API')).toBeInTheDocument();
+        expect(within(card).getByText('API Mesh')).toBeInTheDocument();
+        // Mesh APIs are deterministic — no Change; and the step must NOT issue a subscribe
+        // (re-mounting via Continue→Back would otherwise "re-enable").
+        expect(within(apiLineOf(card)).queryByRole('button', { name: 'Change' })).toBeNull();
         expect(mockRequest).not.toHaveBeenCalledWith(
             'ensure-mesh-api-subscribed',
             expect.anything()
@@ -428,14 +437,15 @@ describe('IntegrationsStep — in-modal mesh enable hand-off', () => {
             );
         });
         // Done → commit + close. The result row then ADOPTS the modal's outcome
-        // (no re-run) and shows the confirmation.
+        // (no re-run) and lists the mesh's provisioned APIs by name.
         await waitFor(() =>
             expect(within(dialog).getByRole('button', { name: 'Done' })).toBeInTheDocument()
         );
         fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
         await waitFor(() => {
-            expect(within(row(MESH_NAME)).getByText('API access enabled')).toBeInTheDocument();
+            expect(within(row(MESH_NAME)).getByText('APIs in use')).toBeInTheDocument();
         });
+        expect(within(row(MESH_NAME)).getByText('API Mesh')).toBeInTheDocument();
         const ensureCalls = mockRequest.mock.calls.filter(
             ([type]) => type === 'ensure-mesh-api-subscribed'
         );

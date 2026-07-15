@@ -4504,66 +4504,6 @@ div[class*="spectrum"] input[type="search"] {
     top: var(--spectrum-global-dimension-size-200);
     right: var(--spectrum-global-dimension-size-200);
 }
-/* Status badge glyphs (✓ / ⚠) for the mesh row's quiet API-access line. */
-.int-chosen-check {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 18px;
-    height: 18px;
-    flex: 0 0 auto;
-    border-radius: 50%;
-    background: var(--spectrum-global-color-green-500);
-    color: #fff;
-    font-size: 11px;
-    font-weight: 700;
-}
-/* The failed counterpart to .int-chosen-check: same badge shape, negative color. */
-.int-chosen-warn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 18px;
-    height: 18px;
-    flex: 0 0 auto;
-    border-radius: 50%;
-    background: var(--spectrum-global-color-red-600);
-    color: #fff;
-    font-size: 11px;
-    font-weight: 700;
-}
-/* The mesh row's API-access status: a QUIET line (icon + text, optional Retry),
-   NOT a boxed panel — access is deterministic, so this is a light confirmation
-   sitting at the same level as the row's source/destination lines. */
-.int-enable-status {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 10px;
-    padding: 0 12px;
-    font-size: 13px;
-    color: var(--spectrum-global-color-gray-800);
-}
-.int-enable-status-text {
-    flex: 1 1 auto;
-    min-width: 0;
-}
-.int-enable-status .spectrum-Button,
-.int-enable-status button {
-    flex: 0 0 auto;
-    margin-left: auto;
-}
-/* The error detail for a failed enablement — its own line BELOW the status line
-   (a sibling, not inline) so it never displaces the Retry button. */
-.int-enable-error {
-    display: block;
-    margin: 4px 0 0;
-    padding: 0 12px;
-    font-size: 12px;
-    line-height: 1.4;
-    color: var(--spectrum-global-color-red-600);
-    overflow-wrap: anywhere;
-}
 /* Catalog entries render as square tiles in the wrapping row (not full-width rows). */
 .choice-card--tile {
     flex: 0 0 auto !important;
@@ -4642,7 +4582,7 @@ div[class*="spectrum"] input[type="search"] {
     gap: 12px;
 }
 .int-row-name {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--spectrum-global-color-gray-900);
     line-height: 1.3;
@@ -4671,19 +4611,37 @@ div[class*="spectrum"] input[type="search"] {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-/* The API-picks line (custom/import rows): count left, the quiet Change right —
-   mirrors the destination line so the two editable lines read as a pair. */
+/* The "APIs in use" line (every kind): a label + the provisioned APIs as
+   read-only name chips (wrapping), with the quiet Change right on editable
+   custom/import rows only — mirrors the destination line's label-left/action-right. */
 .int-row-apis {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-top: 6px;
+    margin-top: 8px;
 }
 .int-row-apis-text {
     flex: 1 1 auto;
     min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+.int-row-apis-label {
     font-size: 12px;
     color: var(--spectrum-global-color-gray-600);
+    margin-right: 2px;
+}
+/* Static name tag (not the clickable filter chip) — the picker's pill token scale. */
+.int-row-api-chip {
+    font-size: 11.5px;
+    line-height: 1.2;
+    padding: 2px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    background: var(--spectrum-global-color-gray-50);
+    color: var(--spectrum-global-color-gray-700);
 }
 
 /* ---- Flow modal: stage body + per-stage layouts ---- */

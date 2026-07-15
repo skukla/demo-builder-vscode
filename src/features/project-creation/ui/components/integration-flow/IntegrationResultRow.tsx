@@ -4,13 +4,14 @@
  * Purely presentational over a resolved {@link IntegrationRow}: name line, quiet
  * sourceLine, the destination line (committed → "Deploys to {label}" + Change;
  * needs setup → "Deploys to — Not set" + Set up), a quiet Remove on the right,
- * and — for mesh rows only — the caller's `meshEnableSlot` (a
- * {@link MeshApiEnableRow}) below the destination line.
+ * and a uniform "APIs in use" list.
  *
- * Custom/import rows (which carry FREE API picks) also get an editable API line:
- * "APIs: {n} selected" + a quiet Change that re-opens the picker (`onChangeApis`).
- * Mesh/catalog APIs are deterministic (never stored as picks) so those rows show
- * no API line.
+ * The "APIs in use" list renders for EVERY kind — it names the integration's
+ * provisioned APIs (`row.apis`), so a card reads the same whether it's a mesh, a
+ * catalog integration, or a custom app. Only editable rows (custom/import, which
+ * carry FREE API picks) get the quiet Change that re-opens the picker
+ * (`onChangeApis`); mesh/catalog APIs are deterministic, so their list is
+ * read-only.
  *
  * Remove works identically in create and edit sessions (in edit, removal only
  * drops the integration from the rebuild — no remote undeploy; the dashboard
@@ -22,6 +23,7 @@
 
 import { ActionButton } from '@adobe/react-spectrum';
 import React from 'react';
+import { apiLabel } from './apiAccessConstants';
 import type { IntegrationRow } from './integrationRows';
 
 export interface IntegrationResultRowProps {
@@ -35,8 +37,6 @@ export interface IntegrationResultRowProps {
     onRemove: () => void;
     /** Re-open the picker for this integration's APIs (custom/import rows only). */
     onChangeApis?: () => void;
-    /** Rendered below the destination line for mesh rows only. */
-    meshEnableSlot?: React.ReactNode;
 }
 
 /** Whether a row carries editable free API picks (custom/import, not mesh/catalog). */
@@ -89,7 +89,6 @@ export function IntegrationResultRow({
     onChangeDestination,
     onRemove,
     onChangeApis,
-    meshEnableSlot,
 }: IntegrationResultRowProps): React.ReactElement {
     return (
         <div className="int-row">
@@ -106,19 +105,21 @@ export function IntegrationResultRow({
                 onSetUpDestination={onSetUpDestination}
                 onChangeDestination={onChangeDestination}
             />
-            {isApiEditable(row.kind) && onChangeApis && (
-                <div className="int-row-apis">
-                    <span className="int-row-apis-text">
-                        {row.apiCount > 0
-                            ? `APIs: ${row.apiCount} selected`
-                            : 'APIs — none selected'}
-                    </span>
+            <div className="int-row-apis">
+                <span className="int-row-apis-text">
+                    <span className="int-row-apis-label">APIs in use</span>
+                    {row.apis.map((code) => (
+                        <span key={code} className="int-row-api-chip">
+                            {apiLabel(code)}
+                        </span>
+                    ))}
+                </span>
+                {isApiEditable(row.kind) && onChangeApis && (
                     <ActionButton isQuiet onPress={onChangeApis}>
                         Change
                     </ActionButton>
-                </div>
-            )}
-            {row.kind === 'mesh' && meshEnableSlot}
+                )}
+            </div>
         </div>
     );
 }

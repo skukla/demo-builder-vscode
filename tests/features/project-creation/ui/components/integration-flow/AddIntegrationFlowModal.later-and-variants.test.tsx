@@ -524,17 +524,15 @@ describe('AddIntegrationFlowModal — phase-running bridge', () => {
 describe('integration-flow module index', () => {
     it('exposes exactly the public runtime API', () => {
         const index = require('@/features/project-creation/ui/components/integration-flow');
-        // MeshApiEnableRow is public since Step 9: IntegrationsStep mounts it in
-        // the mesh row's meshEnableSlot, and consumers import ONLY from index.ts.
+        // Every integration card lists its APIs uniformly (no per-kind mesh slot), so
+        // the former MeshApiEnableRow export is gone; EnsureResult is a type-only export.
         expect(Object.keys(index).sort()).toEqual([
             'AddIntegrationFlowModal',
             'IntegrationResultRow',
-            'MeshApiEnableRow',
             'resolveIntegrationRows',
         ]);
         expect(typeof index.AddIntegrationFlowModal).toBe('function');
         expect(typeof index.IntegrationResultRow).toBe('function');
-        expect(typeof index.MeshApiEnableRow).toBe('function');
         expect(typeof index.resolveIntegrationRows).toBe('function');
     });
 });

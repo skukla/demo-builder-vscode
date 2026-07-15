@@ -30,18 +30,7 @@ import { ProgressCircle } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Clock from '@spectrum-icons/workflow/Clock';
 import React from 'react';
-import { BASELINE_CODE } from '../apiAccessConstants';
-
-/**
- * Short, stable display names for the small set of APIs shown here. The org
- * list's real names are verbose ("API Mesh for Adobe Developer App Builder");
- * these are the friendly, instant labels. A code with no entry falls back to
- * itself (still readable — these are curated required/baseline codes).
- */
-const API_LABELS: Record<string, string> = {
-    GraphQLServiceSDK: 'API Mesh',
-    [BASELINE_CODE]: 'I/O Management API',
-};
+import { apiLabel, BASELINE_CODE } from '../apiAccessConstants';
 
 export interface ApiAccessStageProps {
     /** The integration's REQUIRED API sdk codes (catalog `requiredApis`). */
@@ -96,7 +85,6 @@ export function ApiAccessStage({
     enablesOnAdd = false,
     alreadyEnabled = NO_ENABLED,
 }: ApiAccessStageProps): React.ReactElement {
-    const labelFor = (code: string): string => API_LABELS[code] ?? code;
     // WHEN the not-yet-enabled APIs get enabled, stated honestly (never "adding
     // enables them"): mesh enables them right here in this step; catalog/custom
     // enable them later, at deploy. (Single ternary — not nested.)
@@ -117,7 +105,7 @@ export function ApiAccessStage({
     // granted from the start (project-level API access). `enableComplete` grants
     // EVERY row (the success result is authoritative). State lives in the icon.
     const rowIcon = (code: string): React.ReactElement => {
-        const label = labelFor(code);
+        const label = apiLabel(code);
         const granted = alreadyEnabled.includes(code) || enableComplete || enableDone[code];
         if (enabling && !granted) {
             return <ProgressCircle size="S" isIndeterminate aria-label={`Enabling ${label}`} />;
@@ -145,7 +133,7 @@ export function ApiAccessStage({
                 {codes.map((code) => (
                     <div key={code} className="intflow-api-summary-item">
                         {rowIcon(code)}
-                        <span className="intflow-api-summary-name">{labelFor(code)}</span>
+                        <span className="intflow-api-summary-name">{apiLabel(code)}</span>
                     </div>
                 ))}
             </div>

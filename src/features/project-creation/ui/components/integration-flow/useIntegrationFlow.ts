@@ -41,7 +41,7 @@ import {
     type FlowStateSlice,
     type IntegrationKind,
 } from './flowStages';
-import type { EnsureResult } from './MeshApiEnableRow';
+import type { EnsureResult } from './meshApiSubscription';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AdobeProject, WizardState, Workspace } from '@/types/webview';

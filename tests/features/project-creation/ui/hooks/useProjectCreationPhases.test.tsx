@@ -6,11 +6,11 @@
  * (auto-pick Stage/single/first) → ensure-mesh-api-subscribed. The hook owns that
  * state machine (idle | creating | workspace | enabling | failed | done), commits
  * the same wizard-state writes the standalone field/picker components make, and
- * exposes the resolved EnsureResult so the card can thread it into
- * MeshApiEnableRow without a duplicate subscribe.
+ * exposes the resolved EnsureResult so the flow commits the mesh only on a
+ * successful enable, without a duplicate subscribe.
  *
  * `webviewClient.request` is mocked with per-type deferreds so each phase's
- * message/payload/commit is observable mid-flight (mirrors MeshApiEnableRow tests).
+ * message/payload/commit is observable mid-flight.
  *
  * @jest-environment jsdom
  */
@@ -80,14 +80,9 @@ const BASE_STATE = {
     selectedStack: 'eds-paas',
 } as unknown as WizardState;
 
-function renderPhases(
-    state: WizardState = BASE_STATE,
-    options: { skipEnabling?: boolean } = {},
-) {
+function renderPhases(state: WizardState = BASE_STATE, options: { skipEnabling?: boolean } = {}) {
     const updateState = jest.fn();
-    const rendered = renderHook(() =>
-        useProjectCreationPhases({ state, updateState, ...options }),
-    );
+    const rendered = renderHook(() => useProjectCreationPhases({ state, updateState, ...options }));
     return { ...rendered, updateState };
 }
 
@@ -95,7 +90,7 @@ function renderPhases(
 async function startAndCreate(
     route: ReturnType<typeof routeDeferred>,
     hook: ReturnType<typeof renderPhases>,
-    name = 'My Demo',
+    name = 'My Demo'
 ) {
     await act(async () => {
         hook.result.current.start(name);
@@ -108,7 +103,7 @@ async function startAndCreate(
 /** Drives the flow through create + workspace pick (Stage among two). */
 async function startThroughWorkspace(
     route: ReturnType<typeof routeDeferred>,
-    hook: ReturnType<typeof renderPhases>,
+    hook: ReturnType<typeof renderPhases>
 ) {
     await startAndCreate(route, hook);
     await act(async () => {
@@ -144,7 +139,7 @@ describe('useProjectCreationPhases', () => {
             expect(hook.result.current.phase).toBe('creating');
             expect(hook.result.current.phaseMessage).toBe('Creating project "My Demo"…');
             expect(hook.result.current.phaseSubMessage).toBe(
-                'Registering the project and its Stage workspace in Adobe I/O',
+                'Registering the project and its Stage workspace in Adobe I/O'
             );
             expect(mockRequest).toHaveBeenCalledTimes(1);
             expect(mockRequest).toHaveBeenCalledWith('create-adobe-project', { name: 'My Demo' });
@@ -253,7 +248,7 @@ describe('useProjectCreationPhases', () => {
                 2,
                 expect.objectContaining({
                     adobeWorkspace: { id: 'w-2', name: 'ws2', title: 'STAGE AREA' },
-                }),
+                })
             );
         });
 
@@ -270,7 +265,7 @@ describe('useProjectCreationPhases', () => {
                 2,
                 expect.objectContaining({
                     adobeWorkspace: { id: 'w-prod', name: 'Production', title: 'Production' },
-                }),
+                })
             );
         });
 
@@ -288,7 +283,7 @@ describe('useProjectCreationPhases', () => {
                 2,
                 expect.objectContaining({
                     adobeWorkspace: { id: 'w-prod', name: 'Production', title: 'Production' },
-                }),
+                })
             );
         });
 
@@ -326,7 +321,7 @@ describe('useProjectCreationPhases', () => {
     });
 
     describe('enabling phase', () => {
-        it('enters "enabling" with the exact message and the MeshApiEnableRow payload shape', async () => {
+        it('enters "enabling" with the exact message and the ensure-mesh-api-subscribed payload shape', async () => {
             const route = routeDeferred();
             const hook = renderPhases();
 
@@ -335,7 +330,7 @@ describe('useProjectCreationPhases', () => {
             expect(hook.result.current.phase).toBe('enabling');
             expect(hook.result.current.phaseMessage).toBe('Enabling API access…');
             expect(hook.result.current.phaseSubMessage).toBe(
-                'Subscribing to API Mesh and the I/O Management API',
+                'Subscribing to API Mesh and the I/O Management API'
             );
             expect(mockRequest).toHaveBeenCalledWith('ensure-mesh-api-subscribed', {
                 orgId: 'org-1',
@@ -576,7 +571,7 @@ describe('useProjectCreationPhases', () => {
             expect(hook.result.current.failedPhase).toBeUndefined();
         });
 
-        it('start() clears a previous run\'s error and enableResult', async () => {
+        it("start() clears a previous run's error and enableResult", async () => {
             const route = routeDeferred();
             const hook = renderPhases();
 

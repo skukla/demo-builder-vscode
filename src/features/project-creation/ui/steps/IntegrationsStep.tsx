@@ -15,9 +15,9 @@
  * keys); every other row routes through `onRemoveAppBuilderComponent` (selection +
  * source + API picks). Mesh API enablement runs INSIDE the modal journey (its
  * api-access stage), which only commits the mesh on a successful enable — so this
- * step is PURELY VISUAL: the mesh row's embedded {@link MeshApiEnableRow} just
- * shows ✓ "API access enabled" and never triggers a subscribe (re-mounting the
- * step — Continue to the summary and Back — must not re-enable).
+ * step is PURELY VISUAL: every row (mesh included) just lists its provisioned APIs
+ * by name via the row's uniform "APIs in use" line, and never triggers a subscribe
+ * (re-mounting the step — Continue to the summary and Back — must not re-enable).
  *
  * @module features/project-creation/ui/steps/IntegrationsStep
  */
@@ -28,7 +28,6 @@ import { getAvailableAppBuilderComponents } from '../../services/appBuilderCompo
 import {
     AddIntegrationFlowModal,
     IntegrationResultRow,
-    MeshApiEnableRow,
     resolveIntegrationRows,
     type ApiEditTarget,
     type FlowMode,
@@ -200,11 +199,6 @@ export function IntegrationsStep({
                             onChangeDestination={openDestination}
                             onRemove={() => onRemoveRow(row)}
                             onChangeApis={() => openEditApis(row)}
-                            meshEnableSlot={
-                                row.kind === 'mesh' ? (
-                                    <MeshApiEnableRow workspaceId={state.adobeWorkspace?.id} />
-                                ) : undefined
-                            }
                         />
                     ))}
                     {rows.length > 0 && (

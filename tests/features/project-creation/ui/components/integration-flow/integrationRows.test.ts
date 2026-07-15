@@ -6,7 +6,7 @@
  * (catalog id in `selectedAppBuilderComponents` OR legacy dep ids in
  * `selectedOptionalDependencies` — the package-seeded case), catalog rows from
  * the provided catalog list, custom rows from `appBuilderComponentSources`,
- * shared `needsSetup` (destination not committed), per-row `apiCount`, and the
+ * shared `needsSetup` (destination not committed), per-row `apis`, and the
  * reserved `__existing__` key never surfacing. Pure — the catalog is an arg,
  * nothing is mocked.
  */
@@ -15,6 +15,7 @@ import {
     resolveIntegrationRows,
     type IntegrationRow,
 } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
+import { BASELINE_CODE } from '@/features/project-creation/ui/components/integration-flow/apiAccessConstants';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { WizardState } from '@/types/webview';
 
@@ -28,6 +29,7 @@ const MESH_ENTRY: AppBuilderComponentCatalogEntry = {
     name: 'Commerce API Mesh',
     description: 'Unified GraphQL endpoint over Commerce services',
     kind: 'mesh',
+    requiredApis: ['GraphQLServiceSDK'],
     source: { owner: 'skukla', repo: 'commerce-mesh' },
 };
 
@@ -137,7 +139,7 @@ describe('resolveIntegrationRows — catalog rows', () => {
                 name: 'ERP Sync',
                 sourceLine: 'Syncs orders into an ERP backend',
                 needsSetup: true,
-                apiCount: 1, // baseline only (no free picks)
+                apis: [BASELINE_CODE], // baseline only (no free picks)
             } satisfies IntegrationRow,
         ]);
     });
@@ -196,7 +198,7 @@ describe('resolveIntegrationRows — custom rows', () => {
                 name: 'widget',
                 sourceLine: 'App Builder app · acme/widget',
                 needsSetup: true,
-                apiCount: 1, // baseline only (no free picks)
+                apis: [BASELINE_CODE], // baseline only (no free picks)
             } satisfies IntegrationRow,
         ]);
     });
@@ -232,7 +234,7 @@ describe('resolveIntegrationRows — blank starter ("Build custom") rows', () =>
                 name: 'App Builder App',
                 sourceLine: 'A minimal App Builder app to build out with AI',
                 needsSetup: true,
-                apiCount: 1, // baseline only (no free picks)
+                apis: [BASELINE_CODE], // baseline only (no free picks)
             } satisfies IntegrationRow,
         ]);
     });
@@ -250,7 +252,7 @@ describe('resolveIntegrationRows — blank starter ("Build custom") rows', () =>
     });
 });
 
-describe('resolveIntegrationRows — ordering, apiCount, needsSetup, reserved key', () => {
+describe('resolveIntegrationRows — ordering, apis, needsSetup, reserved key', () => {
     it('orders a mixed set mesh first, then catalog, then custom (regardless of selection order)', () => {
         const rows = resolveIntegrationRows(
             state({
@@ -264,7 +266,7 @@ describe('resolveIntegrationRows — ordering, apiCount, needsSetup, reserved ke
         expect(rows.map((r) => r.kind)).toEqual(['mesh', 'catalog', 'custom']);
     });
 
-    it('counts the baseline + selectedConsoleApis picks per id (missing key → baseline only)', () => {
+    it('carries the baseline + selectedConsoleApis picks per id (missing key → baseline only)', () => {
         const rows = resolveIntegrationRows(
             state({
                 selectedAppBuilderComponents: ['erp-sync', 'commerce-eds-mesh'],
@@ -274,9 +276,55 @@ describe('resolveIntegrationRows — ordering, apiCount, needsSetup, reserved ke
             CATALOG
         );
 
-        const byId = Object.fromEntries(rows.map((r) => [r.id, r.apiCount]));
-        expect(byId['erp-sync']).toBe(3); // baseline + 2 picks
-        expect(byId['commerce-eds-mesh']).toBe(1); // baseline only
+        const byId = Object.fromEntries(rows.map((r) => [r.id, r.apis]));
+        expect(byId['erp-sync']).toEqual([BASELINE_CODE, 'AnalyticsSDK', 'TargetSDK']);
+        // The mesh row surfaces its deterministic requiredApis (baseline + API Mesh).
+        expect(byId['commerce-eds-mesh']).toEqual([BASELINE_CODE, 'GraphQLServiceSDK']);
+    });
+
+    it("surfaces a catalog entry's requiredApis (deterministic), baseline first then required", () => {
+        const withRequired: AppBuilderComponentCatalogEntry = {
+            ...ERP_ENTRY,
+            requiredApis: ['CampaignSDK'],
+        };
+        const rows = resolveIntegrationRows(
+            state({ selectedAppBuilderComponents: ['erp-sync'] }),
+            MESH_ENTRY,
+            [withRequired]
+        );
+
+        expect(rows[0].apis).toEqual([BASELINE_CODE, 'CampaignSDK']);
+    });
+
+    it('orders required APIs before free picks and dedups across baseline/required/picks', () => {
+        const withRequired: AppBuilderComponentCatalogEntry = {
+            ...ERP_ENTRY,
+            requiredApis: ['CampaignSDK'],
+        };
+        const rows = resolveIntegrationRows(
+            state({
+                selectedAppBuilderComponents: ['erp-sync'],
+                // A pick that repeats the baseline AND the required API must not duplicate.
+                selectedConsoleApis: { 'erp-sync': [BASELINE_CODE, 'CampaignSDK', 'TargetSDK'] },
+            }),
+            MESH_ENTRY,
+            [withRequired]
+        );
+
+        expect(rows[0].apis).toEqual([BASELINE_CODE, 'CampaignSDK', 'TargetSDK']);
+    });
+
+    it('dedups a pick that equals the baseline (no duplicate)', () => {
+        const rows = resolveIntegrationRows(
+            state({
+                selectedAppBuilderComponents: ['erp-sync'],
+                selectedConsoleApis: { 'erp-sync': [BASELINE_CODE, 'TargetSDK'] },
+            }),
+            MESH_ENTRY,
+            CATALOG
+        );
+
+        expect(rows[0].apis).toEqual([BASELINE_CODE, 'TargetSDK']);
     });
 
     it('never surfaces the reserved __existing__ key as a row or a count', () => {
@@ -293,7 +341,7 @@ describe('resolveIntegrationRows — ordering, apiCount, needsSetup, reserved ke
         );
 
         expect(rows).toHaveLength(1);
-        expect(rows[0]).toMatchObject({ id: 'erp-sync', apiCount: 2 }); // baseline + 1 pick
+        expect(rows[0]).toMatchObject({ id: 'erp-sync', apis: [BASELINE_CODE, 'TargetSDK'] });
     });
 
     it('needsSetup is false on every row once the shared destination is committed', () => {

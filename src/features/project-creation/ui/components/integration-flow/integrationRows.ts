@@ -19,8 +19,8 @@
  */
 
 import { isMeshSelected } from '../../steps/tileStatus';
+import { BASELINE_CODE } from './apiAccessConstants';
 import type { IntegrationKind } from './flowStages';
-import { BASELINE_API } from '@/features/app-builder/services/apiSubscriber';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { WizardState } from '@/types/webview';
 
@@ -34,11 +34,13 @@ export interface IntegrationRow {
     /** True until the shared Adobe project + workspace destination is committed. */
     needsSetup: boolean;
     /**
-     * Count of the integration's provisioned APIs: the always-provided baseline
-     * (I/O Management) plus the user's free picks, deduped — matching the picker's
-     * checked rows.
+     * The integration's provisioned API sdk codes, deduped in a stable order:
+     * the always-provided baseline (I/O Management), then the integration's
+     * deterministic `requiredApis` (e.g. a mesh's API Mesh SDK), then the user's
+     * free picks. Every row carries at least the baseline, so this is never empty —
+     * it is the card's uniform "APIs in use" list, rendered by name for every kind.
      */
-    apiCount: number;
+    apis: string[];
 }
 
 /** Serialization-only edit-mode bucket in `selectedConsoleApis` — never a row. */
@@ -53,14 +55,19 @@ function destinationCommitted(state: WizardState): boolean {
 }
 
 /**
- * The integration's provisioned API count: the always-provided baseline plus the
- * user's free picks, deduped (the reserved key is excluded by the caller). Every
- * App Builder app gets the baseline, so this is ≥ 1 — matching the picker, which
- * shows the baseline checked.
+ * The integration's provisioned API sdk codes, deduped: the always-provided
+ * baseline, then the integration's deterministic `requiredApis`, then the user's
+ * free picks. Every App Builder app gets the baseline, so this is never empty —
+ * matching the picker, which shows the baseline (and requiredApis) checked.
+ *
+ * @param state - wizard state (for the id's free picks)
+ * @param id - the integration id
+ * @param requiredApis - the integration's deterministic required APIs (mesh/catalog
+ *   entry `requiredApis`; empty for custom/import apps that carry only picks)
  */
-function apiCountFor(state: WizardState, id: string): number {
+function apiCodesFor(state: WizardState, id: string, requiredApis: string[] = []): string[] {
     const picks = state.selectedConsoleApis?.[id] ?? [];
-    return new Set<string>([BASELINE_API, ...picks]).size;
+    return [...new Set<string>([BASELINE_CODE, ...requiredApis, ...picks])];
 }
 
 /**
@@ -91,7 +98,7 @@ export function resolveIntegrationRows(
             name: meshComponent.name || MESH_FALLBACK_NAME,
             sourceLine: meshComponent.description || MESH_FALLBACK_SOURCE_LINE,
             needsSetup,
-            apiCount: apiCountFor(state, meshComponent.id),
+            apis: apiCodesFor(state, meshComponent.id, meshComponent.requiredApis),
         });
     }
 
@@ -107,7 +114,7 @@ export function resolveIntegrationRows(
                 name: source.repo,
                 sourceLine: `App Builder app · ${source.owner}/${source.repo}`,
                 needsSetup,
-                apiCount: apiCountFor(state, id),
+                apis: apiCodesFor(state, id),
             });
             continue;
         }
@@ -123,7 +130,7 @@ export function resolveIntegrationRows(
                 name: entry.name,
                 sourceLine: entry.description || 'Custom App Builder app',
                 needsSetup,
-                apiCount: apiCountFor(state, id),
+                apis: apiCodesFor(state, id, entry.requiredApis),
             });
             continue;
         }
@@ -133,7 +140,7 @@ export function resolveIntegrationRows(
             name: entry.name,
             sourceLine: entry.description || `Catalog · ${entry.name}`,
             needsSetup,
-            apiCount: apiCountFor(state, id),
+            apis: apiCodesFor(state, id, entry.requiredApis),
         });
     }
 
