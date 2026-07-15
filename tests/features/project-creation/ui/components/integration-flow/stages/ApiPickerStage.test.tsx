@@ -23,9 +23,7 @@ import { ApiPickerStage } from '@/features/project-creation/ui/components/integr
 const FFS = { code: 'FireflyServicesSDK', name: 'Firefly Services', locked: false };
 const BASELINE = { code: 'AdobeIOManagementAPISDK', name: 'I/O Management API', locked: true };
 
-function renderStage(
-    props: { componentIds?: string[]; selected?: string[]; confirmed?: boolean } = {}
-) {
+function renderStage(props: { componentIds?: string[]; selected?: string[] } = {}) {
     const onToggle = jest.fn();
     render(
         <Provider theme={defaultTheme} colorScheme="light">
@@ -33,7 +31,6 @@ function renderStage(
                 componentIds={props.componentIds ?? []}
                 selected={props.selected ?? []}
                 onToggle={onToggle}
-                confirmed={props.confirmed}
             />
         </Provider>
     );
@@ -80,12 +77,6 @@ describe('ApiPickerStage', () => {
         expect(screen.getByTestId('api-picker-stage')).toHaveClass('intflow-api-info--full');
     });
 
-    it('keeps the confirmation summary at the narrow (non-full-width) measure', async () => {
-        renderStage({ selected: ['FireflyServicesSDK'], confirmed: true });
-        await waitFor(() => expect(screen.getByTestId('api-picker-confirmed')).toBeInTheDocument());
-        expect(screen.getByTestId('api-picker-stage')).not.toHaveClass('intflow-api-info--full');
-    });
-
     it('surfaces a fetch error inline', async () => {
         mockRequest.mockResolvedValue({ success: false, error: 'Adobe sign-in required.' });
         renderStage();
@@ -118,19 +109,5 @@ describe('ApiPickerStage', () => {
         await waitFor(() => expect(screen.getByText('Firefly Services')).toBeInTheDocument());
         fireEvent.click(screen.getByRole('checkbox', { name: /Firefly Services/i }));
         expect(onToggle).toHaveBeenCalledWith('FireflyServicesSDK');
-    });
-
-    it('confirmed: shows the picked APIs as a ✓ summary, not the interactive picker', async () => {
-        renderStage({ selected: ['FireflyServicesSDK'], confirmed: true });
-        await waitFor(() => expect(screen.getByTestId('api-picker-confirmed')).toBeInTheDocument());
-        // The chosen API is listed by name; no pickable checkbox on the confirmation.
-        expect(screen.getByText('Firefly Services')).toBeInTheDocument();
-        expect(screen.queryByRole('checkbox', { name: /Firefly Services/i })).toBeNull();
-    });
-
-    it('confirmed with no picks: says the baseline covers the app', async () => {
-        renderStage({ selected: [], confirmed: true });
-        await waitFor(() => expect(screen.getByTestId('api-picker-confirmed')).toBeInTheDocument());
-        expect(screen.getByText(/baseline Adobe I\/O access covers this app/i)).toBeInTheDocument();
     });
 });

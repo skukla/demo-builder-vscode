@@ -699,6 +699,10 @@ export async function executeAppBuilderIntegrationsPhase(
     );
     const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project));
 
+    // The runner's first step per integration is the union API subscribe — surface
+    // it once up front so the user sees API access being provisioned at build time
+    // (the Add-Integration modal no longer subscribes anything itself).
+    progressTracker('Deploying Integrations', 69, 'Enabling API access…');
     for (const entry of entries) {
         progressTracker('Deploying Integrations', 70, `Deploying ${entry.name}…`);
         const result = await addAppBuilderComponent(project, entry, deps);

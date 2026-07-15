@@ -305,7 +305,7 @@ beforeEach(() => {
 
 // --- tests -----------------------------------------------------------------------
 describe('AddIntegrationFlowModal — later add (destination committed)', () => {
-    it('mesh later-add: informational step, then Add runs the enable in the modal → finish', async () => {
+    it('mesh later-add: informational step, then Add commits + closes (never subscribes)', async () => {
         const { builder, updateSpy, onClose } = renderModal({ initial: COMMITTED_DEST });
         click(/API Mesh/);
         click('Continue');
@@ -313,25 +313,13 @@ describe('AddIntegrationFlowModal — later add (destination committed)', () => 
         expect(screen.getByText('Stage')).toBeInTheDocument();
         click('Continue');
         await waitForApiAccessStep();
-        // Nothing provisioned until Add is pressed.
+        // The modal provisions nothing — Add commits + closes in one press.
+        expectEnabled('Add Integration');
+        click('Add Integration');
+        expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('commerce-mesh', true);
         expect(mockRequest).not.toHaveBeenCalledWith(
             'ensure-mesh-api-subscribed',
             expect.anything()
-        );
-        expectEnabled('Add API Access');
-        click('Add API Access');
-        // The enable runs in the modal, then holds on the ✓ terminal state (Done).
-        await waitFor(() =>
-            expect(mockRequest).toHaveBeenCalledWith(
-                'ensure-mesh-api-subscribed',
-                expect.anything()
-            )
-        );
-        await waitFor(() => expectEnabled('Done'));
-        // Done → commit + close.
-        click('Done');
-        await waitFor(() =>
-            expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('commerce-mesh', true)
         );
         expect(updateSpy).not.toHaveBeenCalled();
         expect(onClose).toHaveBeenCalledTimes(1);
@@ -435,7 +423,7 @@ describe('AddIntegrationFlowModal — custom integration', () => {
         expectDisabled('Continue');
     });
 
-    it('holds on a ✓ confirmation, then finishes a custom add on Done', async () => {
+    it('finishes a custom add on Add (interactive picker, no confirmation hold)', async () => {
         const { builder, onClose } = renderModal({ initial: COMMITTED_DEST });
         click(/Import a repo/);
         click('Continue');
@@ -448,14 +436,8 @@ describe('AddIntegrationFlowModal — custom integration', () => {
         // which fetches the org's list — not the informational deterministic panel.
         await waitFor(() => expect(screen.getByTestId('api-picker-stage')).toBeInTheDocument());
         expect(mockRequest).toHaveBeenCalledWith('list-org-console-apis', expect.anything());
-        // Add API Access HOLDS on an in-modal ✓ confirmation (parity with mesh) —
-        // no commit/close yet; the footer becomes Done.
-        click('Add API Access');
-        await waitFor(() => expect(screen.getByTestId('api-picker-confirmed')).toBeInTheDocument());
-        expect(builder.onAddCustomAppBuilderComponent).not.toHaveBeenCalled();
-        expect(onClose).not.toHaveBeenCalled();
-        // Done commits + closes.
-        click('Done');
+        // Add commits the repo + closes in a SINGLE press — no in-modal confirmation.
+        click('Add Integration');
         await waitFor(() =>
             expect(builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith({
                 owner: 'acme',
@@ -463,6 +445,27 @@ describe('AddIntegrationFlowModal — custom integration', () => {
             })
         );
         expect(onClose).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('AddIntegrationFlowModal — org-API prefetch (warm the cache)', () => {
+    it('fires exactly one list-org-console-apis warm request when opened signed in', () => {
+        renderModal();
+        const warmCalls = mockRequest.mock.calls.filter(
+            ([type]) => type === 'list-org-console-apis'
+        );
+        expect(warmCalls).toHaveLength(1);
+        expect(warmCalls[0]).toEqual(['list-org-console-apis', { componentIds: [] }]);
+    });
+
+    it('does not warm the cache while the modal is closed', () => {
+        renderModal({ isOpen: false });
+        expect(mockRequest).not.toHaveBeenCalledWith('list-org-console-apis', expect.anything());
+    });
+
+    it('does not warm the cache when signed out', () => {
+        renderModal({ initial: SIGNED_OUT });
+        expect(mockRequest).not.toHaveBeenCalledWith('list-org-console-apis', expect.anything());
     });
 });
 

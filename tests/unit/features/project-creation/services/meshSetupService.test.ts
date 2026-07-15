@@ -250,6 +250,12 @@ describe('meshSetupService', () => {
                 70,
                 'Generating mesh configuration...',
             );
+            // The pre-deploy API subscribe must be communicated to the user.
+            expect(mockProgressTracker).toHaveBeenCalledWith(
+                'Configuring API Mesh',
+                72,
+                'Enabling API access...',
+            );
             expect(mockProgressTracker).toHaveBeenCalledWith(
                 'Deploying API Mesh',
                 75,

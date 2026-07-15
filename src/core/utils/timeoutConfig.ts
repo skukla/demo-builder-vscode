@@ -321,9 +321,10 @@ export const CACHE_TTL = {
     LONG: 3600000,
 
     /**
-     * Org entitled-services catalog (`getServicesForOrg`) — 5 minutes.
-     * The catalog is identical for every workspace in an org and changes rarely,
-     * so a short session TTL avoids refetching the whole catalog on each commit.
+     * Org entitled-services catalog (`getServicesForOrg`) — 30 minutes.
+     * The catalog is identical for every workspace in an org and changes rarely.
+     * The Add Integration modal prefetches (warms) this cache on open, so a longer
+     * TTL keeps the picker's later fetch fast across a whole add session.
      */
-    ORG_SERVICES: 5 * 60 * 1000,
+    ORG_SERVICES: 30 * 60 * 1000,
 } as const;
