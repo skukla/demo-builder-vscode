@@ -24,9 +24,6 @@ silently if you don't know them. Learned the hard way shipping the blank shell
   (`citisignal`, `isle5`, …), never storefront/stack ids. The auto-include side is
   dormant — see `.rptc/backlog/2026-06-17-appbuilder-app-package-bound.md` before
   touching it.
-- `suggestedApis?: string[]` (optional): SDK codes the Add Integration flow's API-access
-  picker lists under a "Suggested" group. Curation only — unlike `requiredApis`, suggested
-  codes are NOT auto-subscribed; only user-selected picks join the union.
 
 ## The spine (what happens on add/deploy)
 

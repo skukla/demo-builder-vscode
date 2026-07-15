@@ -100,7 +100,6 @@ const ERP: AppBuilderComponentCatalogEntry = {
     description: 'Sync orders with your ERP',
     kind: 'integration',
     source: { owner: 'adobe', repo: 'erp-sync', branch: 'main' },
-    suggestedApis: ['CampaignSDK'],
 };
 const CRM: AppBuilderComponentCatalogEntry = {
     id: 'crm-connect',

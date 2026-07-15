@@ -20,6 +20,7 @@
 
 import { isMeshSelected } from '../../steps/tileStatus';
 import type { IntegrationKind } from './flowStages';
+import { BASELINE_API } from '@/features/app-builder/services/apiSubscriber';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { WizardState } from '@/types/webview';
 
@@ -32,7 +33,11 @@ export interface IntegrationRow {
     sourceLine: string;
     /** True until the shared Adobe project + workspace destination is committed. */
     needsSetup: boolean;
-    /** Free Console API picks for this integration (locked codes never stored). */
+    /**
+     * Count of the integration's provisioned APIs: the always-provided baseline
+     * (I/O Management) plus the user's free picks, deduped — matching the picker's
+     * checked rows.
+     */
     apiCount: number;
 }
 
@@ -47,9 +52,15 @@ function destinationCommitted(state: WizardState): boolean {
     return Boolean(state.adobeProject?.id) && Boolean(state.adobeWorkspace?.id);
 }
 
-/** Free API picks for one integration id (reserved key excluded by the caller). */
+/**
+ * The integration's provisioned API count: the always-provided baseline plus the
+ * user's free picks, deduped (the reserved key is excluded by the caller). Every
+ * App Builder app gets the baseline, so this is ≥ 1 — matching the picker, which
+ * shows the baseline checked.
+ */
 function apiCountFor(state: WizardState, id: string): number {
-    return state.selectedConsoleApis?.[id]?.length ?? 0;
+    const picks = state.selectedConsoleApis?.[id] ?? [];
+    return new Set<string>([BASELINE_API, ...picks]).size;
 }
 
 /**

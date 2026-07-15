@@ -49,7 +49,6 @@ function renderPicker(props: Partial<Props> = {}): {
         <Provider theme={defaultTheme} colorScheme="light">
             <ApiAccessPicker
                 apis={props.apis ?? APIS}
-                suggested={props.suggested}
                 selected={props.selected ?? []}
                 onToggle={onToggle}
                 helperText={props.helperText}
@@ -66,6 +65,11 @@ function checkboxFor(name: string): HTMLInputElement {
     return label.querySelector('input[type="checkbox"]') as HTMLInputElement;
 }
 
+/** Row display names in DOM (render) order — the flat list, checked-first. */
+function listNames(container: HTMLElement): (string | null)[] {
+    return Array.from(container.querySelectorAll('.intflow-api-name')).map((el) => el.textContent);
+}
+
 describe('ApiAccessPicker', () => {
     describe('helper copy', () => {
         it('renders the helper line at the top when provided', () => {
@@ -79,63 +83,39 @@ describe('ApiAccessPicker', () => {
         });
     });
 
-    describe('grouping', () => {
-        it('renders the groups in order: Suggested → All available (no locked group)', () => {
-            const { container } = renderPicker({ suggested: ['AnalyticsSDK'] });
-            const titles = Array.from(container.querySelectorAll('.intflow-api-group-title')).map(
-                (el) => el.textContent
-            );
-            expect(titles).toEqual(['Suggested', 'All available']);
-        });
-
-        it('locked APIs are a quiet footnote, not checkbox rows', () => {
+    describe('flat list', () => {
+        it('renders one flat list with no category headers', () => {
             const { container } = renderPicker();
-            // No checkbox for the locked API — it never renders as a pickable row.
-            expect(screen.queryByText('API Mesh')?.closest('label')).toBeFalsy();
-            const footnote = container.querySelector('[data-testid="api-provided-footnote"]');
-            expect(footnote?.textContent).toContain('Already provided by this project');
-            expect(footnote?.textContent).toContain('API Mesh');
-        });
-
-        it('omits the footnote entirely when nothing is locked', () => {
-            const unlockedOnly = APIS.map((api) => ({ ...api, locked: false }));
-            const { container } = renderPicker({ apis: unlockedOnly });
+            expect(container.querySelectorAll('.intflow-api-group-title')).toHaveLength(0);
+            expect(container.querySelector('[data-group]')).toBeNull();
             expect(container.querySelector('[data-testid="api-provided-footnote"]')).toBeNull();
+            // Every API is a row (locked included).
+            const names = listNames(container);
+            expect(names).toContain('API Mesh'); // locked
+            expect(names).toContain('Adobe Target'); // pickable
         });
 
-        it('hides the Suggested group when no suggestions are given', () => {
-            renderPicker();
-            expect(screen.queryByText('Suggested')).not.toBeInTheDocument();
-        });
-
-        it('the Suggested group holds exactly the suggested non-locked codes', () => {
-            const { container } = renderPicker({
-                // GraphQLServiceSDK is locked → footnote-only, never in Suggested.
-                suggested: ['AnalyticsSDK', 'TargetSDK', 'GraphQLServiceSDK'],
-            });
-            const suggestedGroup = container.querySelector('[data-group="suggested"]');
-            expect(suggestedGroup).not.toBeNull();
-            const names = Array.from(
-                suggestedGroup?.querySelectorAll('.intflow-api-name') ?? []
-            ).map((el) => el.textContent);
-            expect(names).toHaveLength(2);
-            expect(names).toContain('Adobe Analytics');
-            expect(names).toContain('Adobe Target');
-        });
-
-        it('the All-available group is alphabetical by display name', () => {
-            const { container } = renderPicker({ suggested: ['AnalyticsSDK'] });
-            const allGroup = container.querySelector('[data-group="all"]');
-            const names = Array.from(allGroup?.querySelectorAll('.intflow-api-name') ?? []).map(
-                (el) => el.textContent
-            );
-            expect(names).toEqual([
+        it('sorts checked rows (locked or picked) to the top, alphabetical within', () => {
+            const { container } = renderPicker({ selected: ['AnalyticsSDK'] });
+            const names = listNames(container);
+            // Checked first (API Mesh is locked, Adobe Analytics is picked), alphabetical;
+            // then the rest, alphabetical.
+            expect(names.slice(0, 2)).toEqual(['Adobe Analytics', 'API Mesh']);
+            expect(names.slice(2)).toEqual([
                 'Adobe Campaign',
                 'Adobe Target',
                 'AEM Assets',
                 'Audience Manager',
                 'Cloud Manager',
             ]);
+        });
+
+        it('renders locked APIs checked + disabled at the top', () => {
+            const { container } = renderPicker();
+            expect(listNames(container)[0]).toBe('API Mesh'); // locked → checked → top
+            const cb = checkboxFor('API Mesh');
+            expect(cb).toBeChecked();
+            expect(cb).toBeDisabled();
         });
     });
 
@@ -195,13 +175,9 @@ describe('ApiAccessPicker', () => {
             expect(screen.queryByText('Adobe Analytics')).not.toBeInTheDocument();
         });
 
-        it('keeps profile-bound APIs out of the pickable All-available group', () => {
+        it('keeps profile-bound APIs out of the list', () => {
             const { container } = renderPicker({ apis: WITH_PROFILE });
-            const allGroup = container.querySelector('[data-group="all"]');
-            const names = Array.from(allGroup?.querySelectorAll('.intflow-api-name') ?? []).map(
-                (el) => el.textContent
-            );
-            expect(names).not.toContain('Adobe Analytics');
+            expect(listNames(container)).not.toContain('Adobe Analytics');
         });
 
         it('excludes hidden APIs from the "N APIs" count', () => {
@@ -216,7 +192,7 @@ describe('ApiAccessPicker', () => {
         });
     });
 
-    describe('product-family filter chips (All available)', () => {
+    describe('product-family filter chips', () => {
         const EC = { code: 'marketing_cloud', name: 'Experience Cloud' };
         const AEP = { code: 'experience_platform', name: 'Adobe Experience Platform' };
         const WITH_FAMILY: ApiOption[] = [
@@ -244,22 +220,18 @@ describe('ApiAccessPicker', () => {
             ]);
         });
 
-        it('shows every family in All available by default (no chip active)', () => {
+        it('shows every family by default (no chip active)', () => {
             const { container } = renderPicker({ apis: WITH_FAMILY });
-            const names = Array.from(
-                container.querySelectorAll('[data-group="all"] .intflow-api-name')
-            ).map((el) => el.textContent);
+            const names = listNames(container);
             expect(names).toContain('API Mesh'); // AEP
             expect(names).toContain('Adobe Target'); // EC
             expect(names).toContain('Ungrouped Thing'); // Other
         });
 
-        it('clicking a family chip filters All available to that family', () => {
+        it('clicking a family chip filters the list to that family', () => {
             const { container } = renderPicker({ apis: WITH_FAMILY });
             fireEvent.click(screen.getByRole('button', { name: 'Adobe Experience Platform' }));
-            const names = Array.from(
-                container.querySelectorAll('[data-group="all"] .intflow-api-name')
-            ).map((el) => el.textContent);
+            const names = listNames(container);
             expect(names).toEqual(['AEP Query', 'API Mesh']); // AEP only, alphabetical
         });
 
@@ -326,13 +298,9 @@ describe('ApiAccessPicker', () => {
             expect(screen.queryByText('Commerce w/ Adobe ID')).not.toBeInTheDocument();
         });
 
-        it('keeps review-gated APIs out of the pickable All-available group', () => {
+        it('keeps review-gated APIs out of the list', () => {
             const { container } = renderPicker({ apis: WITH_REVIEW });
-            const allGroup = container.querySelector('[data-group="all"]');
-            const names = Array.from(allGroup?.querySelectorAll('.intflow-api-name') ?? []).map(
-                (el) => el.textContent
-            );
-            expect(names).not.toContain('Commerce w/ Adobe ID');
+            expect(listNames(container)).not.toContain('Commerce w/ Adobe ID');
         });
     });
 

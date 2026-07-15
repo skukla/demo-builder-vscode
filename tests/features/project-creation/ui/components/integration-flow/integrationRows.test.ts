@@ -137,7 +137,7 @@ describe('resolveIntegrationRows — catalog rows', () => {
                 name: 'ERP Sync',
                 sourceLine: 'Syncs orders into an ERP backend',
                 needsSetup: true,
-                apiCount: 0,
+                apiCount: 1, // baseline only (no free picks)
             } satisfies IntegrationRow,
         ]);
     });
@@ -196,7 +196,7 @@ describe('resolveIntegrationRows — custom rows', () => {
                 name: 'widget',
                 sourceLine: 'App Builder app · acme/widget',
                 needsSetup: true,
-                apiCount: 0,
+                apiCount: 1, // baseline only (no free picks)
             } satisfies IntegrationRow,
         ]);
     });
@@ -232,7 +232,7 @@ describe('resolveIntegrationRows — blank starter ("Build custom") rows', () =>
                 name: 'App Builder App',
                 sourceLine: 'A minimal App Builder app to build out with AI',
                 needsSetup: true,
-                apiCount: 0,
+                apiCount: 1, // baseline only (no free picks)
             } satisfies IntegrationRow,
         ]);
     });
@@ -264,7 +264,7 @@ describe('resolveIntegrationRows — ordering, apiCount, needsSetup, reserved ke
         expect(rows.map((r) => r.kind)).toEqual(['mesh', 'catalog', 'custom']);
     });
 
-    it('reads apiCount from selectedConsoleApis per integration id (missing key → 0)', () => {
+    it('counts the baseline + selectedConsoleApis picks per id (missing key → baseline only)', () => {
         const rows = resolveIntegrationRows(
             state({
                 selectedAppBuilderComponents: ['erp-sync', 'commerce-eds-mesh'],
@@ -275,8 +275,8 @@ describe('resolveIntegrationRows — ordering, apiCount, needsSetup, reserved ke
         );
 
         const byId = Object.fromEntries(rows.map((r) => [r.id, r.apiCount]));
-        expect(byId['erp-sync']).toBe(2);
-        expect(byId['commerce-eds-mesh']).toBe(0);
+        expect(byId['erp-sync']).toBe(3); // baseline + 2 picks
+        expect(byId['commerce-eds-mesh']).toBe(1); // baseline only
     });
 
     it('never surfaces the reserved __existing__ key as a row or a count', () => {
@@ -293,7 +293,7 @@ describe('resolveIntegrationRows — ordering, apiCount, needsSetup, reserved ke
         );
 
         expect(rows).toHaveLength(1);
-        expect(rows[0]).toMatchObject({ id: 'erp-sync', apiCount: 1 });
+        expect(rows[0]).toMatchObject({ id: 'erp-sync', apiCount: 2 }); // baseline + 1 pick
     });
 
     it('needsSetup is false on every row once the shared destination is committed', () => {

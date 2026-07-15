@@ -62,7 +62,7 @@ export interface ManageApisModalProps {
     onClose: () => void;
 }
 
-/** No suggested group here — the dashboard has no catalog context for the row. */
+/** Helper copy above the dashboard's Manage APIs list. */
 const HELPER_TEXT =
     'Check to add an API, uncheck to remove one. Locked entries are always-on and ' +
     'can’t be removed.';

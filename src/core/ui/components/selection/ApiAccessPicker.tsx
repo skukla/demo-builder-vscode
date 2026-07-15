@@ -1,19 +1,17 @@
 /**
- * ApiAccessPicker — the SHARED grouped Adobe-API checkbox list.
+ * ApiAccessPicker — the SHARED Adobe-API checkbox list.
  *
  * Presentational (pure props, no fetching, no feature imports) so it can serve BOTH
  * the wizard's Add-Integration api-access stage and the dashboard's Manage APIs
- * modal. It guides the user to the RIGHT APIs rather than dumping the entitlement
- * list:
- *   - groups, in order: "Suggested" (curated catalog suggestions, hidden when none)
- *     → "All available" (the rest, alphabetical). Review- and profile-gated APIs
- *     can't be subscribed in this self-serve flow, so they are hidden entirely
- *     (never listed, never counted);
- *   - APIs already covered by the reconcile union (locked) are NOT rendered as
- *     uninteractive checkbox rows competing with the real choices — they collapse
- *     to a quiet "Already provided by this project" footnote beneath the list;
- *   - product-family filter chips (Console's "Filter by product") narrow "All
- *     available" to one family; shown only when ≥2 families are present;
+ * modal. ONE flat list (no category headers):
+ *   - checked rows (locked/already-provided OR the user's picks) sort to the TOP,
+ *     the rest below, alphabetical within each partition;
+ *   - locked (already-covered) rows render checked + disabled — visible in context
+ *     at the top, but required and not removable here;
+ *   - review- and profile-gated APIs can't be subscribed in this self-serve flow,
+ *     so they are hidden entirely (never listed, never counted);
+ *   - product-family filter chips (Console's "Filter by product") narrow the list
+ *     to one family; shown only when ≥2 families are present;
  *   - search across display name + code past the catalog threshold ({@link SearchHeader});
  *   - display names primary, sdk codes secondary (hidden when the code is a GUID
  *     or just the name again);
@@ -29,9 +27,6 @@ import type { CloudGrouping } from '@/types/adobeApis';
 
 /** Show the filter only once the list is big enough to warrant it (catalog parity). */
 const API_SEARCH_THRESHOLD = 5;
-
-/** Stable default so an omitted `suggested` never churns identity. */
-const NO_SUGGESTIONS: string[] = [];
 
 /** One org Adobe service, as the wizard/dashboard API handlers report it. */
 export interface ApiAccessOption {
@@ -63,22 +58,14 @@ export interface ApiAccessOption {
 }
 
 export interface ApiAccessPickerProps {
-    /** The org's subscribable services (any order; the picker groups + sorts). */
+    /** The org's subscribable services (any order; the picker sorts checked-first). */
     apis: ApiAccessOption[];
-    /** Curated suggestion codes (catalog `suggestedApis`); omitted = no Suggested group. */
-    suggested?: string[];
     /** The user's free picks (locked codes are derived, never listed here). */
     selected: string[];
     /** Toggle a free pick by code (locked rows never fire this). */
     onToggle: (code: string) => void;
     /** Optional guidance line rendered above the list. */
     helperText?: string;
-}
-
-interface ApiGroup {
-    id: 'suggested' | 'all';
-    title: string;
-    apis: ApiAccessOption[];
 }
 
 /** A product-family filter chip. `code === null` is the "All" chip. */
@@ -104,19 +91,19 @@ function isPickable(api: ApiAccessOption): boolean {
     return !api.locked && !api.requiresProfile && !api.requiresReview;
 }
 
-/** The pickable, non-suggested rows — the "All available" browse set that chips filter. */
-function browseApis(apis: ApiAccessOption[], suggestedSet: Set<string>): ApiAccessOption[] {
-    return apis.filter((api) => isPickable(api) && !suggestedSet.has(api.code));
+/** The pickable rows — the set the product-family chips are built from. */
+function pickableApis(apis: ApiAccessOption[]): ApiAccessOption[] {
+    return apis.filter(isPickable);
 }
 
 /**
- * Product-family chips for the browse set: "All" first, then each present family
+ * Product-family chips for the pickable set: "All" first, then each present family
  * alphabetically, with the ungrouped "Other" bucket last. Returns [] when there
  * is nothing to filter by (0 or 1 family) so the chip row hides.
  */
-function familyChips(browse: ApiAccessOption[]): FamilyChip[] {
+function familyChips(pickable: ApiAccessOption[]): FamilyChip[] {
     const byCode = new Map<string, string>();
-    for (const api of browse) byCode.set(familyKey(api), api.group?.name ?? OTHER_FAMILY_LABEL);
+    for (const api of pickable) byCode.set(familyKey(api), api.group?.name ?? OTHER_FAMILY_LABEL);
     if (byCode.size < 2) return [];
     const chips = [...byCode.entries()]
         .map(([code, name]) => ({ code, name }))
@@ -126,33 +113,6 @@ function familyChips(browse: ApiAccessOption[]): FamilyChip[] {
             return a.name.localeCompare(b.name);
         });
     return [{ code: null, name: 'All' }, ...chips];
-}
-
-/**
- * Suggested → All available (flat; filtered by the active product-family chip).
- * Locked (already-covered) APIs are not grouped here — they render as a quiet
- * footnote instead (see {@link ApiAccessPicker}). Review- and profile-gated APIs
- * are excluded upstream (they can't be self-subscribed here). Empty groups drop.
- */
-function groupApis(
-    apis: ApiAccessOption[],
-    suggestedSet: Set<string>,
-    family: string | null,
-): ApiGroup[] {
-    const allAvailable = browseApis(apis, suggestedSet)
-        .filter((api) => family === null || familyKey(api) === family)
-        .sort(byDisplayName);
-    const groups: ApiGroup[] = [
-        {
-            id: 'suggested',
-            title: 'Suggested',
-            apis: apis
-                .filter((api) => isPickable(api) && suggestedSet.has(api.code))
-                .sort(byDisplayName),
-        },
-        { id: 'all', title: 'All available', apis: allAvailable },
-    ];
-    return groups.filter((group) => group.apis.length > 0);
 }
 
 /** Case-insensitive match across display name AND code. */
@@ -231,14 +191,13 @@ function ApiRows({
 }
 
 /**
- * The grouped, searchable Adobe-API access list.
+ * The searchable Adobe-API access list — one flat list, checked rows on top.
  *
- * @param props - services, curated suggestions, free picks, toggle, helper copy
- * @returns the grouped checkbox list
+ * @param props - services, free picks, toggle, helper copy
+ * @returns the flat checkbox list
  */
 export function ApiAccessPicker({
     apis,
-    suggested = NO_SUGGESTIONS,
     selected,
     onToggle,
     helperText,
@@ -246,20 +205,23 @@ export function ApiAccessPicker({
     const [query, setQuery] = useState('');
     const [family, setFamily] = useState<string | null>(null);
     const q = query.trim().toLowerCase();
-    const suggestedSet = new Set(suggested);
     // Review- and profile-gated APIs can't be subscribed in this self-serve flow, so
     // they are hidden entirely — dropped from the list, chips, search, and count.
-    // (Locked/already-provided APIs still surface as the footnote below.)
     const selectable = apis.filter((api) => !api.requiresReview && !api.requiresProfile);
-    const filtered = q ? selectable.filter((api) => matchesQuery(api, q)) : selectable;
-    // Chips come from the full (search-independent) browse set so they don't jump
-    // around while typing; the active chip then filters the "All available" group.
-    const chips = familyChips(browseApis(selectable, suggestedSet));
-    const groups = groupApis(filtered, suggestedSet, family);
-    // Locked (already-covered) APIs are context, not choices — a quiet footnote
-    // beneath the list rather than uninteractive rows above it. Search-independent
-    // so it stays a stable reassurance while the user filters the real options.
-    const provided = apis.filter((api) => api.locked).sort(byDisplayName);
+    const searched = q ? selectable.filter((api) => matchesQuery(api, q)) : selectable;
+    // Chips come from the full (search-independent) pickable set so they don't jump
+    // around while typing; the active chip then filters the list.
+    const chips = familyChips(pickableApis(selectable));
+    // One flat list (active family chip applied). Checked rows — locked/already-provided
+    // OR the user's picks — sort to the TOP so what's on is visible first; alphabetical
+    // within each partition. Locked rows render checked + disabled (required).
+    const isChecked = (api: ApiAccessOption): boolean => api.locked || selected.includes(api.code);
+    const list = searched
+        .filter((api) => family === null || familyKey(api) === family)
+        .sort((a, b) => {
+            const rank = Number(isChecked(b)) - Number(isChecked(a));
+            return rank !== 0 ? rank : byDisplayName(a, b);
+        });
     return (
         <div className="intflow-api-picker">
             {helperText && <p className="intflow-api-helper">{helperText}</p>}
@@ -267,7 +229,7 @@ export function ApiAccessPicker({
                 searchQuery={query}
                 onSearchQueryChange={setQuery}
                 totalCount={selectable.length}
-                filteredCount={filtered.length}
+                filteredCount={searched.length}
                 itemNoun="API"
                 hasLoadedOnce
                 searchThreshold={API_SEARCH_THRESHOLD}
@@ -289,23 +251,10 @@ export function ApiAccessPicker({
                     ))}
                 </div>
             )}
-            {filtered.length === 0 ? (
+            {list.length === 0 ? (
                 <div className="intflow-api-empty">No APIs match “{query}”.</div>
             ) : (
-                groups.map((group) => (
-                    <div key={group.id} className="intflow-api-group" data-group={group.id}>
-                        <div className="intflow-api-group-title">{group.title}</div>
-                        <ApiRows apis={group.apis} selected={selected} onToggle={onToggle} />
-                    </div>
-                ))
-            )}
-            {provided.length > 0 && (
-                <p className="intflow-api-provided" data-testid="api-provided-footnote">
-                    <span className="intflow-api-provided-label">
-                        Already provided by this project:
-                    </span>{' '}
-                    {provided.map((api) => api.name).join(' · ')}
-                </p>
+                <ApiRows apis={list} selected={selected} onToggle={onToggle} />
             )}
         </div>
     );

@@ -4967,19 +4967,6 @@ div[class*="spectrum"] input[type="search"] {
     color: var(--spectrum-global-color-gray-600);
     max-width: 80ch;
 }
-.intflow-api-group {
-    margin-top: 4px;
-}
-/* Quiet sentence-case group titles (the .ai-skills-group-header register):
-   hierarchy is stage > group > names, so groups stay small and muted. */
-.intflow-api-group-title {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--spectrum-global-color-gray-600);
-    padding: 2px 0;
-    margin-bottom: 2px;
-    border-bottom: 1px solid var(--spectrum-global-color-gray-200);
-}
 .intflow-api-group-list {
     display: flex;
     flex-direction: column;
@@ -5036,21 +5023,6 @@ div[class*="spectrum"] input[type="search"] {
     text-align: center;
     color: var(--spectrum-global-color-gray-600);
     font-size: 13px;
-}
-/* Quiet footnote: the already-covered (locked) APIs, demoted from checkbox rows
-   to a single reassuring line under the list so the real choices lead. Ruled off
-   the pickable groups; muted, wraps on a narrow modal. */
-.intflow-api-provided {
-    margin: 8px 0 0;
-    padding-top: 8px;
-    border-top: 1px solid var(--spectrum-global-color-gray-200);
-    font-size: 11.5px;
-    line-height: 1.5;
-    color: var(--spectrum-global-color-gray-600);
-}
-.intflow-api-provided-label {
-    font-weight: 600;
-    color: var(--spectrum-global-color-gray-700);
 }
 /* Non-blocking fetch failure: inline error + Retry (Continue never gates on it). */
 .intflow-api-error {

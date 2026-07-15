@@ -65,11 +65,6 @@
           "items": { "type": "string" },
           "description": "Adobe API sdkCodes/names to subscribe on the workspace (e.g. GraphQLServiceSDK)"
         },
-        "suggestedApis": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Adobe API sdkCodes to SUGGEST (unchecked, listed first) in the wizard's API-access stage — curated picks, distinct from requiredApis (auto-subscribed + locked). Omitted = no Suggested group."
-        },
         "providesEnvVars": {
           "type": "array",
           "items": { "type": "string" },

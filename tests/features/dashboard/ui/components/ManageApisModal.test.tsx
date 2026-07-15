@@ -166,16 +166,16 @@ describe('ManageApisModal', () => {
     });
 
     describe('picker semantics', () => {
-        it('lists managed entries as a footnote (not a row) and free entries toggleable', async () => {
+        it('lists managed entries as checked, disabled rows and free entries toggleable', async () => {
             mockRequest();
             renderModal();
             await flush();
 
-            // Managed/always-on APIs are context, not choices → footnote, no checkbox.
-            expect(screen.getByText('API Mesh').closest('label')).toBeFalsy();
-            const footnote = screen.getByTestId('api-provided-footnote');
-            expect(footnote.textContent).toContain('Already provided by this project');
-            expect(footnote.textContent).toContain('API Mesh');
+            // Managed/always-on APIs render checked + disabled in the top Provided group.
+            const managed = checkboxFor('API Mesh');
+            expect(managed).toBeChecked();
+            expect(managed).toBeDisabled();
+            expect(screen.queryByTestId('api-provided-footnote')).toBeNull();
 
             const free = checkboxFor('Firefly Services');
             expect(free).not.toBeChecked();
@@ -197,8 +197,10 @@ describe('ManageApisModal', () => {
             const added = checkboxFor('Firefly Services');
             expect(added).toBeChecked(); // seeded from `added`
             expect(added).not.toBeDisabled(); // removable (not managed/locked)
-            // Managed APIs stay out of the pickable rows — footnote only.
-            expect(screen.getByTestId('api-provided-footnote').textContent).toContain('API Mesh');
+            // Managed APIs render checked + disabled in the Provided group (never removable).
+            const managed = checkboxFor('API Mesh');
+            expect(managed).toBeChecked();
+            expect(managed).toBeDisabled();
             expect(screen.getByText(/uncheck to remove/i)).toBeInTheDocument();
         });
     });

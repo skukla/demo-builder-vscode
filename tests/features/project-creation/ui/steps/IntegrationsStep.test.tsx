@@ -231,14 +231,15 @@ describe('IntegrationsStep — result rows from state', () => {
         expect(within(blank).getByRole('button', { name: 'Remove' })).toBeInTheDocument();
     });
 
-    it('shows the API count line from selectedConsoleApis on a custom row', () => {
+    it('shows the API count line (baseline + picks) on a custom row', () => {
         renderStep(
             baseState({
                 ...CUSTOM_ADDED,
                 selectedConsoleApis: { 'acme-widget': ['AnalyticsSDK', 'CampaignSDK'] },
             })
         );
-        expect(within(row('widget')).getByText('APIs: 2 selected')).toBeInTheDocument();
+        // Baseline (I/O Management) + 2 free picks.
+        expect(within(row('widget')).getByText('APIs: 3 selected')).toBeInTheDocument();
     });
 
     it('shows no API line on a deterministic catalog row (its APIs are fixed)', () => {

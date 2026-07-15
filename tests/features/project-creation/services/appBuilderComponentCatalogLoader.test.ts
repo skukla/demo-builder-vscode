@@ -221,29 +221,6 @@ describe('appBuilderComponentCatalogLoader', () => {
             expect(byId['app-builder-shell'].kind).toBe('integration');
         });
 
-        it('documents the OPTIONAL suggestedApis field (wizard API-access stage suggestions)', () => {
-            const suggestedApis = schema.definitions.appBuilderComponent.properties.suggestedApis;
-            expect(suggestedApis).toBeDefined();
-            expect(suggestedApis.type).toBe('array');
-            expect(suggestedApis.items).toEqual({ type: 'string' });
-            // Optional — additive on entries, never required.
-            expect(schema.definitions.appBuilderComponent.required).not.toContain('suggestedApis');
-        });
-
-        it('any declared suggestedApis is a string array; the shell ships WITHOUT suggestions', () => {
-            for (const entry of catalog.appBuilderComponents) {
-                if (entry.suggestedApis !== undefined) {
-                    expect(Array.isArray(entry.suggestedApis)).toBe(true);
-                    for (const code of entry.suggestedApis) {
-                        expect(typeof code).toBe('string');
-                    }
-                }
-            }
-            // Mechanism only for now: the shell entry declares no suggestions.
-            // (Typed accessor pins the field on AppBuilderComponentCatalogEntry.)
-            expect(getAppBuilderComponentEntry('app-builder-shell')?.suggestedApis).toBeUndefined();
-        });
-
         it('the shell integration is unrestricted: no axis filters, no APIs, no env schema', () => {
             const shell = catalog.appBuilderComponents.find(
                 (d: { id: string }) => d.id === 'app-builder-shell'
