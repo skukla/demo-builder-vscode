@@ -217,7 +217,7 @@ describe('IntegrationsStep — result rows from state', () => {
     it('renders a custom integration row with its source line and no legacy API-access slot', () => {
         renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST }));
         const custom = row('widget');
-        expect(within(custom).getByText('App Builder app · acme/widget')).toBeInTheDocument();
+        expect(within(custom).getByText('Custom integration · acme/widget')).toBeInTheDocument();
         // The old "API access enabled" status line is gone — the uniform "APIs in use"
         // list replaces it on every kind.
         expect(screen.queryByText('API access enabled')).not.toBeInTheDocument();
@@ -234,7 +234,7 @@ describe('IntegrationsStep — result rows from state', () => {
         // Regression: the blank shell was resolved against the blank-FILTERED catalog,
         // so a committed "Build custom" app produced no row.
         renderStep(baseState({ selectedAppBuilderComponents: ['app-builder-shell'] }));
-        const blank = row('App Builder App');
+        const blank = row('Custom Integration');
         expect(blank).not.toBeNull();
         expect(within(blank).getByRole('button', { name: 'Remove' })).toBeInTheDocument();
     });

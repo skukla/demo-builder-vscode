@@ -44,9 +44,9 @@ function NoAppState() {
 
     return (
         <Flex direction="column" gap="size-150">
-            <Text>Add an App Builder app from a public GitHub repository.</Text>
+            <Text>Add a custom integration from a public GitHub repository.</Text>
             <TextField
-                label="App Builder app URL"
+                label="Custom integration URL"
                 placeholder="https://github.com/owner/repo"
                 value={gitUrl}
                 onChange={setGitUrl}
@@ -78,14 +78,18 @@ export function AppBuilderCard({ app }: AppBuilderCardProps) {
             {status === 'deploying' && <DeployingState message={app?.message} />}
             {status === 'deployed' && app && (
                 <DeployedState
-                    view={{ label: 'App Builder', url: app.url, deployedUrls: app.deployedUrls }}
+                    view={{
+                        label: 'Custom Integration',
+                        url: app.url,
+                        deployedUrls: app.deployedUrls,
+                    }}
                     onRedeploy={() => webviewClient.postMessage('redeployApp')}
                     onRemove={() => webviewClient.postMessage('removeApp')}
                 />
             )}
             {status === 'error' && (
                 <ErrorState
-                    label="App Builder"
+                    label="Custom Integration"
                     message={app?.message}
                     onRetry={() => webviewClient.postMessage('deployApp')}
                 />

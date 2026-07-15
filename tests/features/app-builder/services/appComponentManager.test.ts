@@ -226,7 +226,7 @@ describe('addAppComponent', () => {
         const result = await addAppComponent(project, VALID_URL, deps);
 
         expect(result.success).toBe(false);
-        expect(result.error).toMatch(/remove the existing app/i);
+        expect(result.error).toMatch(/remove the existing one/i);
         expect(deps.componentManager.installComponent).not.toHaveBeenCalled();
     });
 

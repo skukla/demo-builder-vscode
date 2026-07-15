@@ -42,7 +42,7 @@ const CUSTOM_ROW: IntegrationRow = {
     id: 'acme-widget',
     kind: 'custom',
     name: 'widget',
-    sourceLine: 'App Builder app · acme/widget',
+    sourceLine: 'Custom integration · acme/widget',
     needsSetup: false,
     apis: [BASELINE_CODE, 'FireflyServicesSDK'],
 };

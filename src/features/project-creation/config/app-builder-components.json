@@ -72,8 +72,8 @@
     },
     {
       "id": "app-builder-shell",
-      "name": "App Builder App",
-      "description": "A minimal App Builder app to build out with AI — starts from a working deploy, then grows into whatever your demo needs",
+      "name": "Custom Integration",
+      "description": "A minimal custom integration to build out with AI — starts from a working deploy, then grows into whatever your demo needs",
       "kind": "integration",
       "blank": true,
       "source": {

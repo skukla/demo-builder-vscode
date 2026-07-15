@@ -134,7 +134,7 @@ export async function addAppComponent(
     if (getAppBuilderInstance(project)) {
         return {
             success: false,
-            error: 'This demo already has an App Builder app. Remove the existing app first.',
+            error: 'This demo already has a custom integration. Remove the existing one first.',
         };
     }
 

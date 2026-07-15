@@ -54,7 +54,7 @@ export class DeployAppCommand extends BaseCommand {
         await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Deploying App Builder app',
+                title: 'Deploying custom integration',
                 cancellable: false,
             },
             async (progress) => {
@@ -80,7 +80,7 @@ export class DeployAppCommand extends BaseCommand {
         );
 
         if (result.success) {
-            this.showSuccessMessage('App Builder app deployed successfully');
+            this.showSuccessMessage('Custom integration deployed successfully');
             return;
         }
 
@@ -103,7 +103,9 @@ export class DeployAppCommand extends BaseCommand {
                 return;
             }
             if (result.blockedBy === 'no-app') {
-                vscode.window.showWarningMessage('This project does not have an App Builder app.');
+                vscode.window.showWarningMessage(
+                    'This project does not have a custom integration.',
+                );
                 return;
             }
             // permission

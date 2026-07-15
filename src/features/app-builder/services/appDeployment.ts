@@ -107,7 +107,7 @@ export async function deployAppComponent(
         // or it dies with "missing Adobe I/O Runtime namespace". Fetch them
         // from the targeted workspace and inject per-invocation (execa merges
         // env, so only the two vars are passed; the auth value is never logged).
-        onProgress?.('Deploying App Builder app...', 'Resolving Runtime credentials');
+        onProgress?.('Deploying custom integration...', 'Resolving Runtime credentials');
         const runtimeCreds = await fetchRuntimeCredentials(
             commandManager,
             logger,
@@ -118,7 +118,7 @@ export async function deployAppComponent(
             AIO_RUNTIME_AUTH: runtimeCreds.auth,
         };
 
-        onProgress?.('Deploying App Builder app...', 'Running aio app deploy');
+        onProgress?.('Deploying custom integration...', 'Running aio app deploy');
 
         const deployResult = await commandManager.execute('aio app deploy', {
             cwd: componentPath,

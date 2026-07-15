@@ -181,7 +181,7 @@ describe('resolveIntegrationRows — catalog rows', () => {
 });
 
 describe('resolveIntegrationRows — custom rows', () => {
-    it('resolves a sourced id to a custom row (name = repo, "App Builder app · owner/repo")', () => {
+    it('resolves a sourced id to a custom row (name = repo, "Custom integration · owner/repo")', () => {
         const rows = resolveIntegrationRows(
             state({
                 selectedAppBuilderComponents: ['acme-widget'],
@@ -196,7 +196,7 @@ describe('resolveIntegrationRows — custom rows', () => {
                 id: 'acme-widget',
                 kind: 'custom',
                 name: 'widget',
-                sourceLine: 'App Builder app · acme/widget',
+                sourceLine: 'Custom integration · acme/widget',
                 needsSetup: true,
                 apis: [BASELINE_CODE], // baseline only (no free picks)
             } satisfies IntegrationRow,

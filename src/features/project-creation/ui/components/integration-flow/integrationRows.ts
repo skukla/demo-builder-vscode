@@ -112,7 +112,7 @@ export function resolveIntegrationRows(
                 id,
                 kind: 'custom',
                 name: source.repo,
-                sourceLine: `App Builder app · ${source.owner}/${source.repo}`,
+                sourceLine: `Custom integration · ${source.owner}/${source.repo}`,
                 needsSetup,
                 apis: apiCodesFor(state, id),
             });
@@ -128,7 +128,7 @@ export function resolveIntegrationRows(
                 id,
                 kind: 'blank',
                 name: entry.name,
-                sourceLine: entry.description || 'Custom App Builder app',
+                sourceLine: entry.description || 'Custom integration',
                 needsSetup,
                 apis: apiCodesFor(state, id, entry.requiredApis),
             });

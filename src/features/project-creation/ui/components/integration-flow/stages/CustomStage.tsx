@@ -69,7 +69,7 @@ export function CustomStage({
     return (
         <div className="intflow-custom">
             <p className="intflow-stage-lead">
-                Add your own App Builder app from a public GitHub repository.
+                Add your own custom integration from a public GitHub repository.
             </p>
             <TextField
                 label="GitHub URL"

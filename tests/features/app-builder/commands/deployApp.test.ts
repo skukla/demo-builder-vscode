@@ -126,7 +126,7 @@ describe('DeployAppCommand', () => {
         await run();
         expect(mockRefreshStatus).toHaveBeenCalled();
         expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-            expect.stringContaining('does not have an App Builder app')
+            expect.stringContaining('does not have a custom integration')
         );
     });
 

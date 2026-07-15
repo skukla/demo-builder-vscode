@@ -76,7 +76,7 @@ export async function deployAppHeadless(
         project,
         logger,
         logPrefix: '[App Deployment]',
-        warningMessage: 'Adobe sign-in required to deploy the App Builder app.',
+        warningMessage: 'Adobe sign-in required to deploy the custom integration.',
     });
     if (!preflight.ready) {
         return {

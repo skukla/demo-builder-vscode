@@ -30,9 +30,15 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
 // Mock Spectrum primitives used by the card
 jest.mock('@adobe/react-spectrum', () => ({
     View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-    Flex: ({ children, ...props }: any) => <div style={{ display: 'flex' }} {...props}>{children}</div>,
+    Flex: ({ children, ...props }: any) => (
+        <div style={{ display: 'flex' }} {...props}>
+            {children}
+        </div>
+    ),
     Button: ({ children, onPress, isDisabled, variant, ...props }: any) => (
-        <button onClick={onPress} disabled={isDisabled} data-variant={variant} {...props}>{children}</button>
+        <button onClick={onPress} disabled={isDisabled} data-variant={variant} {...props}>
+            {children}
+        </button>
     ),
     TextField: ({ label, value, onChange, ...props }: any) => (
         <input
@@ -43,7 +49,9 @@ jest.mock('@adobe/react-spectrum', () => ({
         />
     ),
     Link: ({ children, onPress, href, ...props }: any) => (
-        <a onClick={onPress} href={href} {...props}>{children}</a>
+        <a onClick={onPress} href={href} {...props}>
+            {children}
+        </a>
     ),
     ProgressCircle: ({ ...props }: any) => <div data-testid="progress-circle" {...props} />,
     Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
@@ -51,7 +59,9 @@ jest.mock('@adobe/react-spectrum', () => ({
 
 jest.mock('@/core/ui/components/feedback', () => ({
     StatusCard: ({ label, status, color }: any) => (
-        <div data-testid={`status-card-${label}`} data-color={color}>{label}: {status}</div>
+        <div data-testid={`status-card-${label}`} data-color={color}>
+            {label}: {status}
+        </div>
     ),
 }));
 
@@ -69,7 +79,7 @@ describe('AppBuilderCard', () => {
         it('renders the URL input and an Add button', () => {
             render(<AppBuilderCard app={{ status: 'not-deployed' }} />);
 
-            expect(screen.getByLabelText(/app.*url|github/i)).toBeInTheDocument();
+            expect(screen.getByLabelText(/integration.*url|github/i)).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /add/i })).toBeInTheDocument();
         });
 
@@ -83,7 +93,7 @@ describe('AppBuilderCard', () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<AppBuilderCard app={{ status: 'not-deployed' }} />);
 
-            const input = screen.getByLabelText(/app.*url|github/i);
+            const input = screen.getByLabelText(/integration.*url|github/i);
             await user.type(input, 'https://github.com/acme/my-app');
 
             const addBtn = screen.getByRole('button', { name: /add/i });
@@ -98,7 +108,9 @@ describe('AppBuilderCard', () => {
 
     describe('Deploying state', () => {
         it('shows a spinner and the live status message', () => {
-            render(<AppBuilderCard app={{ status: 'deploying', message: 'Running aio app deploy' }} />);
+            render(
+                <AppBuilderCard app={{ status: 'deploying', message: 'Running aio app deploy' }} />
+            );
 
             expect(screen.getByTestId('progress-circle')).toBeInTheDocument();
             expect(screen.getByText(/running aio app deploy/i)).toBeInTheDocument();

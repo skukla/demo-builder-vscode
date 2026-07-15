@@ -60,7 +60,7 @@ export function KindStage({
             ) : null}
             <ChoiceCard
                 name="Pre-built integration"
-                description="Pick a finished App Builder integration from the catalog."
+                description="Pick a finished integration from the catalog."
                 selected={kind === 'catalog'}
                 disabled={catalogEmpty}
                 note={catalogEmpty ? 'None available yet' : undefined}
@@ -68,13 +68,13 @@ export function KindStage({
             />
             <ChoiceCard
                 name="Build custom"
-                description="Begin with a blank App Builder app and build it out with AI."
+                description="Begin with a blank custom integration and build it out with AI."
                 selected={kind === 'blank'}
                 onSelect={() => onPickKind('blank')}
             />
             <ChoiceCard
                 name="Import a repo"
-                description="Add your own App Builder app from a public GitHub repository."
+                description="Add your own custom integration from a public GitHub repository."
                 selected={kind === 'custom'}
                 onSelect={() => onPickKind('custom')}
             />
