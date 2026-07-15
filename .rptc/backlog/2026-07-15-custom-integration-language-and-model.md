@@ -91,17 +91,27 @@ to `adobeEntityFetcher` (org-guarded) + update `project.adobe.projectTitle`. One
 does the local demo rename ALSO rename the remote project, or is it a separate action? Independent
 of D3; own small `/rptc:fix`.
 
-### 6. Integrations management UX — first-class deployables in a grid (exploratory, gated on D3)
-User direction: rethink add/manage; treat integrations as first-class deployables in their own
-grid (the "project within a project" question). Research (Part 3 of the doc): the dashboard
-integration UI is **built but NOT wired** (`AppBuilderCard`/`AppBuilderComponentsList` never
-rendered; `showDashboard` passes the data, the screen drops it) — today's dashboard is one mesh
-badge + a Deploy Mesh tile. The keyed data, status maps, 4-state machine, action wiring, and the
-`.projects-grid` CSS are reusable; net-new is a card-shell component + grid composition + (#4) name.
-**Frame each integration as a co-tenant card in the ONE shared workspace, not a nested project with
-its own destination** (the shared-destination model is load-bearing). Gated on D3 (a grid of N
-cards collapses to 1 on reload without it). `ProjectCard`/`ProjectsGrid`/`ProjectActionsMenu` are
-Project-coupled — mirror, don't import; there is no generic `Card` primitive today.
+### 6. Integrations management UX — two surfaces, one language (prototyped + user-confirmed 2026-07-15)
+Direction confirmed via two interactive prototypes in
+[`../research/app-builder-integration-model/`](../research/app-builder-integration-model/):
+- **Wizard (primary, now)** — `prototype-integrations-wizard.html`. A **calm single-column list**
+  in the Build-Your-Project two-column frame (center column beside the "Your project" summary),
+  reused in edit mode. Pre-deploy → identity only (name · kind · APIs-it-will-provision ·
+  edit/remove); shared destination shown once; add/edit via the **existing** modal. NOT a grid — the
+  narrow column rules it out. This is the current `IntegrationResultRow` list, calmed + named.
+- **Dashboard (later, post-deploy)** — `prototype-integrations-grid.html`. The **live-management
+  grid + detail drawer** (calm cards: dot status, one attention action; detail-on-click for URL/APIs/
+  redeploy/verify/remove). **Built-but-unwired today** (`AppBuilderCard`/`AppBuilderComponentsList`
+  never rendered — `showDashboard` passes the data, the screen drops it). Reuses keyed data + status
+  maps + 4-state machine + `.projects-grid` CSS; net-new = a card-shell + grid composition + (#4)
+  name. **Gated on D3** (a grid of N cards collapses to 1 on reload without it).
+
+Both frame each integration as a **co-tenant card in the ONE shared workspace**, not a nested project
+with its own destination (load-bearing). `ProjectCard`/`ProjectsGrid`/`ProjectActionsMenu` are
+Project-coupled — mirror, don't import; there is no generic `Card` primitive today. The prototypes are
+the working spec: their card/row contract defines what D3 must persist and surface. **Build order:
+the wizard calm list can ship largely independently (it's the existing list, calmed + named); the
+dashboard grid follows D3.**
 
 ## Cross-references (do not fork these)
 - **Deep research (read first):**

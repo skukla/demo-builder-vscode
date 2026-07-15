@@ -1,0 +1,447 @@
+<title>Integrations Grid — Prototype</title>
+<style>
+  :root {
+    --bg: #eef0f3; --surface: #ffffff; --card: #fbfbfc; --card-hover: #ffffff;
+    --border: #e0e2e8; --border-strong: #cfd2da;
+    --ink: #1b1c1e; --ink-soft: #40434a; --muted: #6b6f79; --faint: #9aa0aa;
+    --accent: #2680eb; --accent-hover: #1473e6; --accent-soft: #e8f1fe;
+    --good: #2d9d78; --warn: #c08a12; --bad: #d7373f; --busy: #2680eb; --idle: #a4a9b2;
+    --idle-soft: #eceef2;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --radius: 10px; --shadow: 0 1px 2px rgba(18,20,24,.05), 0 1px 5px rgba(18,20,24,.04);
+    --shadow-lift: 0 6px 20px rgba(18,20,24,.13);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1b1e; --surface: #212327; --card: #26282c; --card-hover: #2c2f34;
+      --border: #34373d; --border-strong: #43474e;
+      --ink: #e7e9ed; --ink-soft: #c3c7cf; --muted: #969ba5; --faint: #6d727c;
+      --accent: #4b9bff; --accent-hover: #6aabff; --accent-soft: #16273c;
+      --good: #43b98c; --warn: #e0a92e; --bad: #ec5b62; --busy: #4b9bff; --idle: #6d727c;
+      --idle-soft: #24262b;
+      --shadow: 0 1px 2px rgba(0,0,0,.35); --shadow-lift: 0 8px 24px rgba(0,0,0,.55);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #eef0f3; --surface: #ffffff; --card: #fbfbfc; --card-hover: #ffffff;
+    --border: #e0e2e8; --border-strong: #cfd2da; --ink: #1b1c1e; --ink-soft: #40434a;
+    --muted: #6b6f79; --faint: #9aa0aa; --accent: #2680eb; --accent-hover: #1473e6;
+    --accent-soft: #e8f1fe; --good: #2d9d78; --warn: #c08a12; --bad: #d7373f; --busy: #2680eb;
+    --idle: #a4a9b2; --idle-soft: #eceef2;
+    --shadow: 0 1px 2px rgba(18,20,24,.05), 0 1px 5px rgba(18,20,24,.04);
+    --shadow-lift: 0 6px 20px rgba(18,20,24,.13);
+  }
+  :root[data-theme="dark"] {
+    --bg: #1a1b1e; --surface: #212327; --card: #26282c; --card-hover: #2c2f34;
+    --border: #34373d; --border-strong: #43474e; --ink: #e7e9ed; --ink-soft: #c3c7cf;
+    --muted: #969ba5; --faint: #6d727c; --accent: #4b9bff; --accent-hover: #6aabff;
+    --accent-soft: #16273c; --good: #43b98c; --warn: #e0a92e; --bad: #ec5b62; --busy: #4b9bff;
+    --idle: #6d727c; --idle-soft: #24262b;
+    --shadow: 0 1px 2px rgba(0,0,0,.35); --shadow-lift: 0 8px 24px rgba(0,0,0,.55);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans);
+    font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 30px 24px 72px; }
+
+  .mast { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+  .mast .dot { width: 26px; height: 26px; border-radius: 7px; background: var(--accent);
+    display: grid; place-items: center; color: #fff; font-size: 14px; flex: none; }
+  .mast .proj { font-size: 20px; font-weight: 680; letter-spacing: -.01em; }
+  .mast .crumb { color: var(--faint); font-size: 13px; }
+  .sub { color: var(--muted); margin: 0 0 24px; font-size: 13px; }
+
+  .dest { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 10px 14px; margin-bottom: 24px; box-shadow: var(--shadow); }
+  .dest .label { color: var(--muted); font-size: 11.5px; text-transform: uppercase;
+    letter-spacing: .05em; font-weight: 600; }
+  .dest .val .mono { font-family: var(--mono); font-weight: 600; font-size: 13px; }
+  .dest .note { color: var(--faint); font-size: 12px; margin-left: auto; }
+
+  .sec-head { display: flex; align-items: center; gap: 12px; margin: 0 0 16px; }
+  .sec-head h2 { font-size: 15px; font-weight: 680; margin: 0; letter-spacing: -.01em; }
+  .sec-head .count { color: var(--faint); font-weight: 600; font-size: 13px; }
+  .sec-head .spacer { flex: 1; }
+  .statepick { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12.5px; }
+  .statepick select { font: inherit; font-size: 12.5px; color: var(--ink); background: var(--surface);
+    border: 1px solid var(--border-strong); border-radius: 7px; padding: 4px 8px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: 16px; }
+
+  /* Calm summary card */
+  .card { position: relative; background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow); padding: 15px 16px; cursor: pointer;
+    display: flex; flex-direction: column; gap: 5px; min-height: 128px;
+    transition: box-shadow .15s, border-color .15s, transform .12s, background .15s; }
+  .card:hover { box-shadow: var(--shadow-lift); border-color: var(--border-strong);
+    background: var(--card-hover); transform: translateY(-1px); }
+  .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .card.mesh { border-left: 3px solid var(--accent); }
+
+  .c-name { font-size: 15px; font-weight: 660; letter-spacing: -.01em; color: var(--ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stat { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--muted); }
+  .stat .sd { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--idle); }
+  .stat.deployed .sd { background: var(--good); }
+  .stat.stale .sd { background: var(--warn); }
+  .stat.error .sd { background: var(--bad); }
+  .stat.error { color: var(--bad); }
+  .stat.deploying .sd { background: var(--busy); animation: pulse 1.1s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.35;transform:scale(.75);} }
+  @media (prefers-reduced-motion: reduce){ .stat.deploying .sd{animation:none;} }
+  .c-cap { font-size: 12px; color: var(--faint); white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; font-family: var(--mono); }
+  .c-cap.ai { font-family: var(--sans); font-style: italic; }
+
+  .c-foot { margin-top: auto; padding-top: 10px; display: flex; align-items: center; }
+  .c-open { font-size: 12.5px; color: var(--accent); text-decoration: none; font-weight: 600; }
+  .c-open:hover { text-decoration: underline; }
+
+  .btn { font: inherit; font-size: 12.5px; font-weight: 600; border-radius: 7px; padding: 6px 13px;
+    cursor: pointer; border: 1px solid var(--border-strong); background: var(--surface); color: var(--ink);
+    transition: background .12s, border-color .12s, transform .06s; }
+  .btn:hover { border-color: var(--faint); }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .btn.attention { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.attention:hover { background: var(--accent-hover); }
+  .btn.danger:hover { color: var(--bad); border-color: var(--bad); }
+  .btn.quiet { border-color: transparent; background: none; color: var(--muted); padding: 6px 8px; }
+  .btn.quiet:hover { color: var(--ink); background: var(--idle-soft); }
+  .btn.sm { padding: 5px 11px; font-size: 12px; }
+
+  .addtile { border: 1.5px dashed var(--border-strong); background: none; border-radius: var(--radius);
+    min-height: 128px; display: grid; place-items: center; cursor: pointer; color: var(--muted);
+    font-weight: 620; font-size: 13px; transition: border-color .15s, color .15s, background .15s; }
+  .addtile:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .addtile .plus { font-size: 24px; display: block; text-align: center; line-height: 1; margin-bottom: 5px; }
+
+  /* Detail drawer */
+  .scrim { position: fixed; inset: 0; background: rgba(15,17,21,.42); display: none; z-index: 40; }
+  .scrim.open { display: block; }
+  .drawer { position: fixed; top: 0; right: 0; height: 100%; width: 392px; max-width: 92vw;
+    background: var(--surface); border-left: 1px solid var(--border); box-shadow: var(--shadow-lift);
+    z-index: 50; transform: translateX(100%); transition: transform .22s cubic-bezier(.4,0,.2,1);
+    display: flex; flex-direction: column; }
+  .drawer.open { transform: translateX(0); }
+  .d-head { padding: 20px 20px 14px; border-bottom: 1px solid var(--border); }
+  .d-top { display: flex; align-items: flex-start; gap: 10px; }
+  .d-name { font-size: 18px; font-weight: 700; letter-spacing: -.01em; flex: 1; cursor: text;
+    border-radius: 6px; padding: 2px 5px; margin: -2px -5px; }
+  .d-name:hover { background: var(--accent-soft); }
+  .d-name-input { font: inherit; font-size: 18px; font-weight: 700; color: var(--ink);
+    background: var(--card); border: 1px solid var(--accent); border-radius: 6px; padding: 2px 6px; width: 100%; }
+  .d-close { flex: none; width: 30px; height: 30px; border-radius: 7px; border: 1px solid transparent;
+    background: none; color: var(--muted); cursor: pointer; font-size: 19px; line-height: 1; }
+  .d-close:hover { background: var(--idle-soft); color: var(--ink); }
+  .d-role { display: inline-block; margin-top: 8px; font-size: 10.5px; text-transform: uppercase;
+    letter-spacing: .06em; font-weight: 700; color: var(--accent); background: var(--accent-soft);
+    border-radius: 4px; padding: 2px 7px; }
+  .d-body { padding: 16px 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+  .d-row { display: flex; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .d-row .dk { color: var(--faint); width: 96px; flex: none; }
+  .d-row .dv { color: var(--ink-soft); min-width: 0; }
+  .d-row .dv a { color: var(--accent); text-decoration: none; font-family: var(--mono); font-size: 12px;
+    word-break: break-all; }
+  .d-row .dv a:hover { text-decoration: underline; }
+  .d-row .dv .mono { font-family: var(--mono); font-size: 12px; }
+  .d-apis { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+  .d-apis li { font-size: 12.5px; color: var(--ink-soft); }
+  .d-actions { padding: 14px 20px 18px; border-top: 1px solid var(--border); display: flex;
+    gap: 8px; flex-wrap: wrap; }
+
+  /* Add modal */
+  .mscrim { position: fixed; inset: 0; background: rgba(15,17,21,.5); display: none;
+    align-items: flex-start; justify-content: center; padding: 60px 20px; z-index: 60; }
+  .mscrim.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    width: 100%; max-width: 470px; box-shadow: var(--shadow-lift); overflow: hidden; }
+  .modal h3 { margin: 0; padding: 18px 20px 4px; font-size: 16px; font-weight: 680; }
+  .modal .msub { padding: 0 20px; color: var(--muted); font-size: 13px; margin: 0 0 14px; }
+  .mbody { padding: 0 20px 4px; }
+  .kinds { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .kind { text-align: left; border: 1px solid var(--border-strong); background: var(--card);
+    border-radius: 9px; padding: 10px 12px; cursor: pointer; transition: border-color .12s, background .12s; }
+  .kind:hover { border-color: var(--faint); }
+  .kind.sel { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+  .kind .kn { font-weight: 640; font-size: 13.5px; }
+  .kind .kd { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; font-weight: 640; color: var(--ink-soft); margin-bottom: 5px; }
+  .field input { width: 100%; font: inherit; font-size: 14px; color: var(--ink);
+    background: var(--card); border: 1px solid var(--border-strong); border-radius: 8px; padding: 8px 10px; }
+  .field input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
+  .field .hint { color: var(--faint); font-size: 11.5px; margin-top: 4px; }
+  .destmini { display: flex; align-items: center; gap: 8px; background: var(--idle-soft); border-radius: 8px;
+    padding: 8px 11px; font-size: 12.5px; color: var(--ink-soft); margin-bottom: 4px; }
+  .destmini .mono { font-family: var(--mono); font-weight: 600; }
+  .mfoot { display: flex; justify-content: flex-end; gap: 9px; padding: 16px 20px 18px; }
+
+  .notes { margin-top: 36px; border-top: 1px solid var(--border); padding-top: 20px; }
+  .notes h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 12px; }
+  .notes ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 9px; }
+  .notes li { color: var(--ink-soft); font-size: 13px; }
+  .notes b { color: var(--ink); }
+  .tag { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700;
+    color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    border-radius: 4px; padding: 0 5px; margin-right: 4px; }
+
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--ink); color: var(--bg); font-size: 13px; font-weight: 600; padding: 9px 16px;
+    border-radius: 8px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 70; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+
+<div class="wrap">
+  <div class="mast">
+    <span class="dot">◆</span>
+    <span class="proj">CitiSignal Demo</span>
+    <span class="crumb">Project dashboard · prototype</span>
+  </div>
+  <p class="sub">Calm grid, detail on demand. Cards show only identity + status; click a card to open its
+    detail panel with URLs, APIs, and every action. An inline button appears only when a card needs you.</p>
+
+  <div class="dest">
+    <span class="label">Destination</span>
+    <span class="val">All integrations deploy to <span class="mono">CitiSignal Prod · Stage</span></span>
+    <span class="note">one shared Adobe I/O workspace</span>
+  </div>
+
+  <div class="sec-head">
+    <h2>Integrations</h2>
+    <span class="count" id="count">5</span>
+    <span class="spacer"></span>
+    <div class="statepick">
+      <label for="demoState">Preview state</label>
+      <select id="demoState">
+        <option value="mixed">Realistic mix</option>
+        <option value="fresh">Freshly added (all not-deployed)</option>
+        <option value="allgood">All deployed</option>
+      </select>
+    </div>
+    <button class="btn primary" onclick="openAdd()">+ Add integration</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="notes">
+    <h3>What changed to calm the cards (react to these)</h3>
+    <ul>
+      <li><span class="tag">summary</span><b>The card is now a summary, not a detail view</b> — name, one
+        status line (a colored dot, not a filled pill), one faint source line. URLs, the API list, and the
+        secondary actions moved into the <b>detail panel</b> (click any card).</li>
+      <li><span class="tag">attention</span><b>Inline action only when the card needs you</b> — Deploy / Retry /
+        Update. A deployed card is calm with just a quiet "Open ↗". The button doubles as an at-a-glance
+        "needs attention" signal.</li>
+      <li><span class="tag">color</span><b>Color is a small dot, not a filled pill</b> — so a grid of many
+        cards reads calm instead of as a block of green/amber/red.</li>
+      <li><span class="tag">mesh</span>Mesh stays a card, marked by a subtle left accent + a "Data layer" tag in
+        its detail — no chip cluttering the face.</li>
+      <li><span class="tag">carried over</span>Naming (rename in the detail header), the shared-destination
+        banner, and the co-tenant framing are unchanged from v1. Still gated on ADR-011 D3 for durability.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Detail drawer -->
+<div class="scrim" id="scrim" onclick="closeDetail()"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-label="Integration detail"></aside>
+
+<!-- Add modal -->
+<div class="mscrim" id="mscrim" onclick="if(event.target===this)closeAdd()">
+  <div class="modal" role="dialog" aria-label="Add integration">
+    <h3>Add integration</h3>
+    <p class="msub">Pick what to add, give it a name, and it lands on the grid ready to deploy.</p>
+    <div class="mbody">
+      <div class="kinds" id="kinds">
+        <button class="kind" data-kind="mesh" data-role="Data layer" data-src="GraphQL bridge · deploys to Adobe I/O" onclick="pickKind(this)">
+          <div class="kn">API Mesh</div><div class="kd">One GraphQL endpoint over your APIs</div></button>
+        <button class="kind" data-kind="catalog" data-src="Catalog integration" onclick="pickKind(this)">
+          <div class="kn">Pre-built integration</div><div class="kd">A finished one from the catalog</div></button>
+        <button class="kind sel" data-kind="blank" data-src="Built with AI" onclick="pickKind(this)">
+          <div class="kn">Build custom</div><div class="kd">Blank, built out with AI</div></button>
+        <button class="kind" data-kind="custom" data-src="github" onclick="pickKind(this)">
+          <div class="kn">Import a repo</div><div class="kd">Your own from a GitHub URL</div></button>
+      </div>
+      <div class="field">
+        <label for="nameIn">Integration name</label>
+        <input id="nameIn" placeholder="e.g. Order Sync, Salesforce CRM, Firefly Image Gen" />
+        <div class="hint">A name you'll recognize on the grid — distinct from the API Mesh and other integrations.</div>
+      </div>
+      <div class="field" id="repoField" style="display:none">
+        <label for="repoIn">GitHub repository</label>
+        <input id="repoIn" placeholder="https://github.com/owner/repo" />
+      </div>
+      <div class="destmini">Deploys to <span class="mono">CitiSignal Prod · Stage</span> — the project's shared workspace</div>
+    </div>
+    <div class="mfoot">
+      <button class="btn quiet" onclick="closeAdd()">Cancel</button>
+      <button class="btn primary" id="addBtn" onclick="confirmAdd()">Add integration</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const MESH_APIS = ['I/O Management API', 'API Mesh'];
+  const seeds = () => ([
+    { id:'mesh', name:'API Mesh', role:'Data layer', kind:'mesh', src:'GraphQL bridge · deploys to Adobe I/O',
+      status:'deployed', url:'https://graph.adobe.io/api/citisignal/graphql', urlLabel:'Endpoint', apis:MESH_APIS, last:'Jul 15, 2:04 PM' },
+    { id:'order-sync', name:'Order Sync', kind:'custom', src:'acme/erp-order-sync', status:'deployed',
+      url:'https://245bce.adobeio-static.net', urlLabel:'App URL',
+      apis:['I/O Management API','Adobe Commerce','FireflyServicesSDK'], last:'Jul 15, 1:47 PM' },
+    { id:'sfdc', name:'Salesforce CRM', kind:'custom', src:'acme/sfdc-connector', status:'stale',
+      url:'https://245bce.adobeio-static.net', urlLabel:'App URL',
+      apis:['I/O Management API','Campaign'], last:'Jul 12, 9:30 AM' },
+    { id:'firefly', name:'Firefly Image Gen', kind:'blank', src:'Built with AI', status:'not-deployed',
+      apis:['I/O Management API','FireflyServicesSDK','Photoshop'], last:'—' },
+    { id:'inv', name:'Inventory Feed', kind:'custom', src:'acme/inv-feed', status:'error',
+      apis:['I/O Management API','Adobe Commerce'], last:'failed Jul 15, 2:10 PM' },
+  ]);
+  let cards = seeds();
+  let openId = null;
+
+  const STATUS = {
+    'deployed':    { cls:'deployed',  label:'Deployed' },
+    'stale':       { cls:'stale',     label:'Update available' },
+    'deploying':   { cls:'deploying', label:'Deploying…' },
+    'error':       { cls:'error',     label:'Deploy failed' },
+    'not-deployed':{ cls:'',          label:'Not deployed' },
+  };
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const KINDLABEL = { mesh:'API Mesh', custom:'Imported repo', blank:'Custom · built with AI', catalog:'Pre-built' };
+
+  // ---- Grid card: identity + status + at-most-one attention affordance ----
+  function faceAction(c){
+    if (c.status==='deploying') return '';
+    if (c.status==='not-deployed') return `<button class="btn attention sm" onclick="deploy(event,'${c.id}')">Deploy</button>`;
+    if (c.status==='error')        return `<button class="btn attention sm" onclick="deploy(event,'${c.id}')">Retry</button>`;
+    if (c.status==='stale')        return `<button class="btn attention sm" onclick="deploy(event,'${c.id}')">Update</button>`;
+    if (c.url)                     return `<a class="c-open" href="#" onclick="return openUrl(event)">Open ↗</a>`;
+    return '';
+  }
+  function cardHTML(c){
+    const st = STATUS[c.status];
+    const capCls = c.src==='Built with AI' ? 'c-cap ai' : 'c-cap';
+    return `<div class="card ${c.kind==='mesh'?'mesh':''}" id="card-${c.id}" tabindex="0" role="button"
+        onclick="openDetail('${c.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openDetail('${c.id}')}">
+      <div class="c-name">${esc(c.name)}</div>
+      <div class="stat ${st.cls}"><span class="sd"></span>${st.label}</div>
+      <div class="${capCls}">${esc(c.src)}</div>
+      <div class="c-foot">${faceAction(c)}</div>
+    </div>`;
+  }
+  function render(){
+    document.getElementById('grid').innerHTML = cards.map(cardHTML).join('') +
+      `<button class="addtile" onclick="openAdd()"><span class="plus">+</span>Add integration</button>`;
+    document.getElementById('count').textContent = cards.length;
+    if(openId && cards.find(c=>c.id===openId)) renderDrawer();
+  }
+
+  // ---- Detail drawer: everything the card no longer shows ----
+  function drawerHTML(c){
+    const st = STATUS[c.status];
+    const role = c.role ? `<div><span class="d-role">${esc(c.role)}</span></div>` : '';
+    const urlRow = c.url ? `<div class="d-row"><span class="dk">${esc(c.urlLabel||'URL')}</span>
+      <span class="dv"><a href="#" onclick="return openUrl(event)">${esc(c.url)}</a></span></div>` : '';
+    const actions = detailActions(c);
+    return `<div class="d-head">
+        <div class="d-top">
+          <div class="d-name" onclick="renameInline(this,'${c.id}')">${esc(c.name)}</div>
+          <button class="d-close" onclick="closeDetail()" aria-label="Close">✕</button>
+        </div>${role}
+      </div>
+      <div class="d-body">
+        <div class="d-row"><span class="dk">Status</span><span class="dv stat ${st.cls}"><span class="sd"></span>${st.label}</span></div>
+        <div class="d-row"><span class="dk">Kind</span><span class="dv">${esc(KINDLABEL[c.kind]||c.kind)}</span></div>
+        <div class="d-row"><span class="dk">Source</span><span class="dv"><span class="mono">${esc(c.src)}</span></span></div>
+        <div class="d-row"><span class="dk">Destination</span><span class="dv"><span class="mono">CitiSignal Prod · Stage</span></span></div>
+        ${urlRow}
+        <div class="d-row"><span class="dk">APIs in use</span><span class="dv"><ul class="d-apis">${c.apis.map(a=>`<li>${esc(a)}</li>`).join('')}</ul></span></div>
+        <div class="d-row"><span class="dk">Last deploy</span><span class="dv">${esc(c.last)}</span></div>
+      </div>
+      <div class="d-actions">${actions}</div>`;
+  }
+  function detailActions(c){
+    const mesh = c.kind==='mesh';
+    const manage = mesh ? '' : `<button class="btn" onclick="toast('Manage APIs — opens the picker')">Manage APIs</button>`;
+    if (c.status==='deploying') return `<button class="btn" disabled>Deploying…</button>`;
+    if (c.status==='not-deployed') return `<button class="btn primary" onclick="deploy(event,'${c.id}')">Deploy</button>${manage}
+      <button class="btn danger" onclick="remove('${c.id}')">Remove</button>`;
+    if (c.status==='error') return `<button class="btn primary" onclick="deploy(event,'${c.id}')">Retry</button>${manage}
+      <button class="btn danger" onclick="remove('${c.id}')">Remove</button>`;
+    const redeploy = c.status==='stale'
+      ? `<button class="btn primary" onclick="deploy(event,'${c.id}')">Update</button>`
+      : `<button class="btn" onclick="deploy(event,'${c.id}')">Redeploy</button>`;
+    return `${redeploy}<button class="btn" onclick="toast('Verifying…')">Verify</button>${manage}
+      <button class="btn danger" onclick="remove('${c.id}')">Remove</button>`;
+  }
+  function renderDrawer(){ const c=cards.find(x=>x.id===openId); if(c) document.getElementById('drawer').innerHTML = drawerHTML(c); }
+  function openDetail(id){ openId=id; renderDrawer();
+    document.getElementById('drawer').classList.add('open'); document.getElementById('scrim').classList.add('open'); }
+  function closeDetail(){ openId=null;
+    document.getElementById('drawer').classList.remove('open'); document.getElementById('scrim').classList.remove('open'); }
+
+  function renameInline(el, id){
+    const c = cards.find(x=>x.id===id); if(!c) return;
+    const input = document.createElement('input'); input.className='d-name-input'; input.value=c.name;
+    el.replaceWith(input); input.focus(); input.select();
+    const commit = ()=>{ c.name = input.value.trim()||c.name; render(); };
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', e=>{ if(e.key==='Enter') input.blur(); if(e.key==='Escape'){ input.value=c.name; input.blur(); } });
+  }
+
+  function deploy(ev, id){ if(ev) ev.stopPropagation();
+    const c = cards.find(x=>x.id===id); if(!c) return;
+    c.status='deploying'; render();
+    setTimeout(()=>{ c.status='deployed'; c.last='just now';
+      if(!c.url){ c.url='https://245bce.adobeio-static.net'; c.urlLabel='App URL'; }
+      render(); toast(`${c.name} deployed`); }, 1400);
+  }
+  function remove(id){ const c=cards.find(x=>x.id===id); cards=cards.filter(x=>x.id!==id);
+    if(openId===id) closeDetail(); render(); toast(`${c.name} removed`); }
+  function openUrl(ev){ ev.preventDefault(); ev.stopPropagation(); toast('Opens the deployed URL'); return false; }
+
+  // ---- Add flow ----
+  let pickedKind='blank', pickedRole=null, pickedSrc='Built with AI';
+  function openAdd(){ document.getElementById('mscrim').classList.add('open');
+    const n=document.getElementById('nameIn'); n.value=''; n.focus(); }
+  function closeAdd(){ document.getElementById('mscrim').classList.remove('open'); }
+  function pickKind(el){ document.querySelectorAll('.kind').forEach(k=>k.classList.remove('sel')); el.classList.add('sel');
+    pickedKind=el.dataset.kind; pickedRole=el.dataset.role||null; pickedSrc=el.dataset.src;
+    document.getElementById('repoField').style.display = (pickedKind==='custom') ? 'block' : 'none';
+    if(pickedKind==='mesh') document.getElementById('nameIn').value='API Mesh'; }
+  function confirmAdd(){
+    const name = document.getElementById('nameIn').value.trim() || 'New integration';
+    let src = pickedSrc;
+    if(pickedKind==='custom'){ const r=document.getElementById('repoIn').value.trim();
+      src = r ? r.replace(/^https?:\/\/github\.com\//,'').replace(/\.git$/,'') : 'owner/repo'; }
+    if(pickedKind==='catalog') src='Catalog integration';
+    const id='i'+Math.floor(performance.now());
+    cards.push({ id, name, role:pickedRole, kind:pickedKind, src, status:'not-deployed', apis:['I/O Management API'], last:'—' });
+    closeAdd(); render();
+    const card=document.getElementById('card-'+id);
+    if(card){ card.style.outline='2px solid var(--accent)'; card.style.outlineOffset='2px';
+      setTimeout(()=>{card.style.outline='';}, 1200); card.scrollIntoView({behavior:'smooth',block:'center'}); }
+    toast(`${name} added — ready to deploy`);
+  }
+
+  document.getElementById('demoState').addEventListener('change', e=>{
+    const v=e.target.value; cards=seeds();
+    if(v==='fresh') cards.forEach(c=>{ c.status='not-deployed'; });
+    if(v==='allgood') cards.forEach(c=>{ c.status='deployed'; if(!c.url){c.url='https://245bce.adobeio-static.net';c.urlLabel='App URL';} });
+    render();
+  });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeDetail(); closeAdd(); } });
+
+  let toastT;
+  function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+    clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),1900); }
+
+  render();
+</script>

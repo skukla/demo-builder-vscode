@@ -189,6 +189,25 @@ and the naming need (#2). But:
 - Sequence: **D3 + wire dashboard → card shell + grid → mesh-as-card unification.** Much of this is
   composition of existing parts, not new logic — the biggest single lift is D3 persistence.
 
+### 3.5 Direction — prototyped and user-confirmed 2026-07-15
+Two surfaces, one visual language (calm, name-first, color-as-a-dot, detail-on-demand), each doing a
+different job:
+- **Wizard (primary, now)** — the integrations surface lives in the Build-Your-Project step's center
+  column, in a **two-column [ area body · "Your project" summary ]** frame (`build-two-col`,
+  `BuildYourProjectStep.tsx`), reused in edit mode. It is **pre-deploy**, so the surface is a **calm
+  single-column list** of identity only: name · kind · APIs it will provision · edit/remove, with the
+  shared destination shown once and add/edit via the **existing** Add-Integration modal (no new
+  drawer). A wide grid is wrong here — the narrow column beside the summary collapses it to 1–2
+  columns. Prototype: `prototype-integrations-wizard.html`.
+- **Dashboard (later, post-deploy)** — the **live-management grid + detail drawer**: calm summary
+  cards (dot status, one attention action = Deploy/Retry/Update), detail-on-click for URL/APIs/
+  redeploy/verify/remove. This is where deploy status earns a grid. **Unwired today, gated on D3.**
+  Prototype: `prototype-integrations-grid.html`.
+
+Both prototypes are the working spec for the eventual D3 + UI plan — the card/row contract they show
+defines what the keyed state must persist and surface. Naming (#4), the shared-destination model, and
+mesh-as-a-first-class-card are baked into both.
+
 ---
 
 ## Sources (code, this repo)

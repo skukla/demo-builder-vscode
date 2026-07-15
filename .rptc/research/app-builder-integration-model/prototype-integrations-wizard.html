@@ -1,0 +1,386 @@
+<title>Integrations in the Wizard — Prototype</title>
+<style>
+  :root {
+    --bg: #e9ebef; --panel: #ffffff; --surface: #ffffff; --card: #fbfbfc;
+    --border: #e2e4ea; --border-strong: #cfd2da; --rail: #f4f5f7;
+    --ink: #1b1c1e; --ink-soft: #40434a; --muted: #6b6f79; --faint: #9aa0aa;
+    --accent: #2680eb; --accent-hover: #1473e6; --accent-soft: #e8f1fe;
+    --good: #2d9d78; --warn: #c08a12; --bad: #d7373f; --idle: #a4a9b2; --idle-soft: #eceef2;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --radius: 10px; --shadow: 0 1px 2px rgba(18,20,24,.05), 0 1px 4px rgba(18,20,24,.04);
+    --shadow-panel: 0 8px 40px rgba(18,20,24,.14); --shadow-lift: 0 6px 20px rgba(18,20,24,.13);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151619; --panel: #202226; --surface: #26282c; --card: #26282c;
+      --border: #34373d; --border-strong: #43474e; --rail: #1b1d20;
+      --ink: #e7e9ed; --ink-soft: #c3c7cf; --muted: #969ba5; --faint: #6d727c;
+      --accent: #4b9bff; --accent-hover: #6aabff; --accent-soft: #16273c;
+      --good: #43b98c; --warn: #e0a92e; --bad: #ec5b62; --idle: #6d727c; --idle-soft: #24262b;
+      --shadow: 0 1px 2px rgba(0,0,0,.35); --shadow-panel: 0 10px 44px rgba(0,0,0,.6);
+      --shadow-lift: 0 8px 24px rgba(0,0,0,.55);
+    }
+  }
+  :root[data-theme="light"] { --bg:#e9ebef; --panel:#fff; --surface:#fff; --card:#fbfbfc;
+    --border:#e2e4ea; --border-strong:#cfd2da; --rail:#f4f5f7; --ink:#1b1c1e; --ink-soft:#40434a;
+    --muted:#6b6f79; --faint:#9aa0aa; --accent:#2680eb; --accent-hover:#1473e6; --accent-soft:#e8f1fe;
+    --good:#2d9d78; --warn:#c08a12; --bad:#d7373f; --idle:#a4a9b2; --idle-soft:#eceef2;
+    --shadow:0 1px 2px rgba(18,20,24,.05),0 1px 4px rgba(18,20,24,.04); --shadow-panel:0 8px 40px rgba(18,20,24,.14);
+    --shadow-lift:0 6px 20px rgba(18,20,24,.13); }
+  :root[data-theme="dark"] { --bg:#151619; --panel:#202226; --surface:#26282c; --card:#26282c;
+    --border:#34373d; --border-strong:#43474e; --rail:#1b1d20; --ink:#e7e9ed; --ink-soft:#c3c7cf;
+    --muted:#969ba5; --faint:#6d727c; --accent:#4b9bff; --accent-hover:#6aabff; --accent-soft:#16273c;
+    --good:#43b98c; --warn:#e0a92e; --bad:#ec5b62; --idle:#6d727c; --idle-soft:#24262b;
+    --shadow:0 1px 2px rgba(0,0,0,.35); --shadow-panel:0 10px 44px rgba(0,0,0,.6); --shadow-lift:0 8px 24px rgba(0,0,0,.55); }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans);
+    font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; padding: 26px 20px 56px; }
+  .frame-note { max-width: 980px; margin: 0 auto 14px; color: var(--muted); font-size: 12.5px; }
+  .frame-note b { color: var(--ink-soft); }
+
+  /* Wizard panel */
+  .wizard { max-width: 980px; margin: 0 auto; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 14px; box-shadow: var(--shadow-panel); overflow: hidden; display: flex; flex-direction: column; }
+
+  /* Step rail */
+  .wz-steps { display: flex; align-items: center; gap: 6px; padding: 14px 22px; border-bottom: 1px solid var(--border);
+    background: var(--rail); }
+  .wz-steps .brand { font-weight: 700; font-size: 13.5px; margin-right: 14px; letter-spacing: -.01em;
+    display: inline-flex; align-items: center; gap: 8px; }
+  .wz-steps .brand .m { width: 20px; height: 20px; border-radius: 5px; background: var(--accent); color: #fff;
+    display: grid; place-items: center; font-size: 11px; }
+  .step { font-size: 12.5px; color: var(--faint); padding: 3px 4px; display: inline-flex; align-items: center; gap: 6px; }
+  .step .n { width: 17px; height: 17px; border-radius: 50%; border: 1.5px solid var(--border-strong); font-size: 10px;
+    display: grid; place-items: center; color: var(--faint); }
+  .step.done .n { background: var(--good); border-color: var(--good); color: #fff; }
+  .step.active { color: var(--ink); font-weight: 640; }
+  .step.active .n { border-color: var(--accent); color: var(--accent); }
+  .step .sep { color: var(--faint); margin: 0 2px; }
+
+  /* Area rail */
+  .wz-areas { display: flex; gap: 4px; padding: 12px 22px 0; }
+  .area { font-size: 13px; font-weight: 600; color: var(--muted); padding: 8px 14px; border-radius: 8px 8px 0 0;
+    border: 1px solid transparent; border-bottom: none; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+  .area:hover { color: var(--ink); }
+  .area.done .chk { color: var(--good); font-size: 12px; }
+  .area.active { color: var(--ink); background: var(--surface); border-color: var(--border);
+    position: relative; top: 1px; }
+
+  /* Two column body */
+  .build-two-col { display: flex; gap: 0; border-top: 1px solid var(--border); background: var(--surface); }
+  .area-body { flex: 1; min-width: 0; padding: 22px 24px; }
+  .summary { width: 258px; flex: none; border-left: 1px solid var(--border); background: var(--rail);
+    padding: 20px 20px; }
+
+  /* Integrations area */
+  .ab-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .ab-head h2 { font-size: 16px; font-weight: 680; margin: 0; letter-spacing: -.01em; }
+  .ab-head .count { color: var(--faint); font-weight: 600; font-size: 13px; }
+  .ab-head .spacer { flex: 1; }
+  .ab-lead { color: var(--muted); font-size: 13px; margin: 0 0 16px; }
+
+  .destline { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-soft);
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; margin-bottom: 14px; }
+  .destline .k { color: var(--muted); }
+  .destline .mono { font-family: var(--mono); font-weight: 600; }
+  .destline .change { margin-left: auto; }
+
+  .ilist { display: flex; flex-direction: column; gap: 8px; }
+  .irow { display: flex; align-items: center; gap: 12px; background: var(--card); border: 1px solid var(--border);
+    border-radius: 9px; padding: 12px 14px; transition: border-color .12s, box-shadow .12s; }
+  .irow:hover { border-color: var(--border-strong); box-shadow: var(--shadow); }
+  .irow.mesh { border-left: 3px solid var(--accent); }
+  .ir-main { min-width: 0; flex: 1; }
+  .ir-name { font-size: 14.5px; font-weight: 640; letter-spacing: -.005em; color: var(--ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: text; border-radius: 5px;
+    padding: 1px 4px; margin: -1px -4px; display: inline-block; max-width: 100%; }
+  .ir-name:hover { background: var(--accent-soft); }
+  .ir-name-input { font: inherit; font-size: 14.5px; font-weight: 640; color: var(--ink); background: var(--surface);
+    border: 1px solid var(--accent); border-radius: 6px; padding: 1px 6px; width: 240px; max-width: 100%; }
+  .ir-meta { font-size: 12px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; }
+  .ir-meta .role { color: var(--accent); font-weight: 640; }
+  .ir-meta .apis { cursor: pointer; border-bottom: 1px dotted var(--faint); }
+  .ir-meta .apis:hover { color: var(--ink-soft); }
+  .ir-actions { display: flex; gap: 2px; flex: none; }
+  .iconbtn { width: 28px; height: 28px; border-radius: 7px; border: 1px solid transparent; background: none;
+    color: var(--faint); cursor: pointer; font-size: 14px; display: grid; place-items: center; }
+  .iconbtn:hover { background: var(--idle-soft); color: var(--ink); border-color: var(--border); }
+  .iconbtn.rm:hover { color: var(--bad); }
+
+  .empty { border: 1.5px dashed var(--border-strong); border-radius: 9px; padding: 26px; text-align: center;
+    color: var(--muted); }
+  .empty .t { font-weight: 620; margin-bottom: 3px; color: var(--ink-soft); }
+  .empty .d { font-size: 12.5px; color: var(--faint); }
+
+  .apis-pop { margin: -2px 0 2px; padding: 8px 10px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 7px; display: none; }
+  .apis-pop.open { display: block; }
+  .apis-pop ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+  .apis-pop li { font-size: 12px; color: var(--ink-soft); }
+
+  /* Summary column */
+  .summary h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--faint);
+    margin: 0 0 12px; font-weight: 700; }
+  .sgroup { margin-bottom: 16px; }
+  .sgroup .gt { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
+    font-weight: 700; margin-bottom: 5px; display: flex; align-items: center; gap: 6px; }
+  .sgroup .gt .chk { color: var(--good); font-size: 11px; }
+  .sgroup .gi { font-size: 12.5px; color: var(--ink-soft); padding: 2px 0; display: flex; align-items: center; gap: 7px; }
+  .sgroup .gi .d { width: 5px; height: 5px; border-radius: 50%; background: var(--faint); flex: none; }
+  .sgroup .gi.mesh .d { background: var(--accent); }
+
+  /* Footer */
+  .wz-foot { display: flex; align-items: center; padding: 14px 22px; border-top: 1px solid var(--border);
+    background: var(--rail); }
+  .wz-foot .sp { flex: 1; }
+
+  .btn { font: inherit; font-size: 13px; font-weight: 600; border-radius: 8px; padding: 7px 15px; cursor: pointer;
+    border: 1px solid var(--border-strong); background: var(--surface); color: var(--ink);
+    transition: background .12s, border-color .12s, transform .06s; }
+  .btn:hover { border-color: var(--faint); }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .btn.quiet { border-color: transparent; background: none; color: var(--muted); }
+  .btn.quiet:hover { color: var(--ink); background: var(--idle-soft); }
+  .btn.sm { padding: 5px 11px; font-size: 12.5px; }
+  .btn.link { border: none; background: none; color: var(--accent); padding: 2px 4px; font-size: 12.5px; }
+  .btn.link:hover { text-decoration: underline; }
+
+  /* Add modal */
+  .mscrim { position: fixed; inset: 0; background: rgba(15,17,21,.5); display: none; align-items: flex-start;
+    justify-content: center; padding: 64px 20px; z-index: 60; }
+  .mscrim.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; width: 100%;
+    max-width: 470px; box-shadow: var(--shadow-lift); overflow: hidden; }
+  .modal h3 { margin: 0; padding: 18px 20px 4px; font-size: 16px; font-weight: 680; }
+  .modal .msub { padding: 0 20px; color: var(--muted); font-size: 13px; margin: 0 0 14px; }
+  .mbody { padding: 0 20px 4px; }
+  .kinds { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .kind { text-align: left; border: 1px solid var(--border-strong); background: var(--card); border-radius: 9px;
+    padding: 10px 12px; cursor: pointer; transition: border-color .12s, background .12s; }
+  .kind:hover { border-color: var(--faint); }
+  .kind.sel { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+  .kind .kn { font-weight: 640; font-size: 13.5px; }
+  .kind .kd { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; font-weight: 640; color: var(--ink-soft); margin-bottom: 5px; }
+  .field input { width: 100%; font: inherit; font-size: 14px; color: var(--ink); background: var(--card);
+    border: 1px solid var(--border-strong); border-radius: 8px; padding: 8px 10px; }
+  .field input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
+  .field .hint { color: var(--faint); font-size: 11.5px; margin-top: 4px; }
+  .destmini { display: flex; gap: 8px; background: var(--idle-soft); border-radius: 8px; padding: 8px 11px;
+    font-size: 12.5px; color: var(--ink-soft); margin-bottom: 4px; }
+  .destmini .mono { font-family: var(--mono); font-weight: 600; }
+  .mfoot { display: flex; justify-content: flex-end; gap: 9px; padding: 16px 20px 18px; }
+
+  .notes { max-width: 980px; margin: 22px auto 0; }
+  .notes h3 { font-size: 12.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 10px; }
+  .notes ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; }
+  .notes li { color: var(--ink-soft); font-size: 12.5px; }
+  .notes b { color: var(--ink); }
+  .tag { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; color: var(--accent);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); border-radius: 4px; padding: 0 5px; margin-right: 4px; }
+
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--ink);
+    color: var(--bg); font-size: 13px; font-weight: 600; padding: 9px 16px; border-radius: 8px; opacity: 0;
+    pointer-events: none; transition: opacity .2s, transform .2s; z-index: 70; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 720px) { .summary { display: none; } }
+</style>
+
+<p class="frame-note">Prototype — the integrations surface <b>where it actually lives</b>: the wizard's
+  Build-Your-Project step, center column of a two-column [ area body · "Your project" summary ] frame.
+  Pre-deploy, so this is about <b>what you're including and how it's named</b>, not live status. Interactive:
+  add, rename (click a name), remove, expand APIs.</p>
+
+<div class="wizard">
+  <!-- Step rail -->
+  <div class="wz-steps">
+    <span class="brand"><span class="m">◆</span>New Demo Project</span>
+    <span class="step done"><span class="n">✓</span>Welcome</span><span class="sep">›</span>
+    <span class="step active"><span class="n">2</span>Build Your Project</span><span class="sep">›</span>
+    <span class="step"><span class="n">3</span>Review</span><span class="sep">›</span>
+    <span class="step"><span class="n">4</span>Create</span>
+  </div>
+
+  <!-- Area rail -->
+  <div class="wz-areas">
+    <span class="area done"><span class="chk">✓</span>Commerce</span>
+    <span class="area done"><span class="chk">✓</span>Storefront</span>
+    <span class="area active">Integrations</span>
+  </div>
+
+  <!-- Two-column body -->
+  <div class="build-two-col">
+    <div class="area-body">
+      <div class="ab-head">
+        <h2>Integrations</h2>
+        <span class="count" id="count">5</span>
+        <span class="spacer"></span>
+        <button class="btn primary sm" onclick="openAdd()">+ Add integration</button>
+      </div>
+      <p class="ab-lead">Add an API Mesh, a pre-built integration, or your own custom integration.
+        They're created when you build the project.</p>
+
+      <div class="destline">
+        <span class="k">Deploys to</span><span class="mono">CitiSignal Prod · Stage</span>
+        <span class="k">· one shared Adobe I/O workspace</span>
+        <button class="btn link change" onclick="toast('Change destination — opens the picker')">Change</button>
+      </div>
+
+      <div class="ilist" id="ilist"></div>
+    </div>
+
+    <aside class="summary">
+      <h3>Your project</h3>
+      <div class="sgroup">
+        <div class="gt"><span class="chk">✓</span>Commerce</div>
+        <div class="gi"><span class="d"></span>Adobe Commerce · PaaS</div>
+      </div>
+      <div class="sgroup">
+        <div class="gt"><span class="chk">✓</span>Storefront</div>
+        <div class="gi"><span class="d"></span>Edge Delivery · CitiSignal</div>
+      </div>
+      <div class="sgroup">
+        <div class="gt">Integrations</div>
+        <div id="sumInts"></div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Footer -->
+  <div class="wz-foot">
+    <button class="btn quiet" onclick="toast('Back to Storefront')">‹ Back</button>
+    <span class="sp"></span>
+    <button class="btn primary" onclick="toast('Continue to Review')">Continue ›</button>
+  </div>
+</div>
+
+<div class="notes">
+  <h3>Why a calm list here, not a grid</h3>
+  <ul>
+    <li><span class="tag">context</span><b>This is mid-wizard, in a narrow column beside the summary</b> — a wide
+      card grid would collapse to 1–2 columns and read like a second dashboard. A single-column list fits the frame.</li>
+    <li><span class="tag">pre-deploy</span><b>Nothing is deployed yet</b>, so there's no live status / URL / redeploy to
+      show. Each row is just identity: name · kind · APIs it will provision · edit/remove. Deploy happens at build.</li>
+    <li><span class="tag">shared</span><b>Destination shown once</b> at the top (co-tenants of one workspace), not
+      repeated per row like the current design.</li>
+    <li><span class="tag">detail</span>Edit/detail opens the <b>existing Add-Integration modal</b> — no new drawer;
+      the wizard already has enough chrome.</li>
+    <li><span class="tag">later</span>The live status <b>grid + detail drawer</b> is a separate <b>dashboard</b>
+      surface (the other prototype) for the deployed project — downstream, gated on ADR-011 D3.</li>
+  </ul>
+</div>
+
+<!-- Add modal -->
+<div class="mscrim" id="mscrim" onclick="if(event.target===this)closeAdd()">
+  <div class="modal" role="dialog" aria-label="Add integration">
+    <h3>Add integration</h3>
+    <p class="msub">Pick what to add and give it a name. It's created when you build the project.</p>
+    <div class="mbody">
+      <div class="kinds" id="kinds">
+        <button class="kind" data-kind="mesh" data-role="Data layer" data-src="GraphQL bridge" onclick="pickKind(this)">
+          <div class="kn">API Mesh</div><div class="kd">One GraphQL endpoint over your APIs</div></button>
+        <button class="kind" data-kind="catalog" data-src="Catalog integration" onclick="pickKind(this)">
+          <div class="kn">Pre-built integration</div><div class="kd">A finished one from the catalog</div></button>
+        <button class="kind sel" data-kind="blank" data-src="Built with AI" onclick="pickKind(this)">
+          <div class="kn">Build custom</div><div class="kd">Blank, built out with AI</div></button>
+        <button class="kind" data-kind="custom" data-src="github" onclick="pickKind(this)">
+          <div class="kn">Import a repo</div><div class="kd">Your own from a GitHub URL</div></button>
+      </div>
+      <div class="field">
+        <label for="nameIn">Integration name</label>
+        <input id="nameIn" placeholder="e.g. Order Sync, Salesforce CRM, Firefly Image Gen" />
+        <div class="hint">A name you'll recognize — distinct from the API Mesh and other integrations.</div>
+      </div>
+      <div class="field" id="repoField" style="display:none">
+        <label for="repoIn">GitHub repository</label>
+        <input id="repoIn" placeholder="https://github.com/owner/repo" />
+      </div>
+      <div class="destmini">Deploys to <span class="mono">CitiSignal Prod · Stage</span> — the project's shared workspace</div>
+    </div>
+    <div class="mfoot">
+      <button class="btn quiet" onclick="closeAdd()">Cancel</button>
+      <button class="btn primary" onclick="confirmAdd()">Add integration</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const seeds = () => ([
+    { id:'mesh', name:'API Mesh', role:'Data layer', kind:'mesh', src:'GraphQL bridge', apis:['I/O Management API','API Mesh'] },
+    { id:'order', name:'Order Sync', kind:'custom', src:'acme/erp-order-sync', apis:['I/O Management API','Adobe Commerce','FireflyServicesSDK'] },
+    { id:'sfdc', name:'Salesforce CRM', kind:'custom', src:'acme/sfdc-connector', apis:['I/O Management API','Campaign'] },
+    { id:'firefly', name:'Firefly Image Gen', kind:'blank', src:'Built with AI', apis:['I/O Management API','FireflyServicesSDK','Photoshop'] },
+    { id:'inv', name:'Inventory Feed', kind:'custom', src:'acme/inv-feed', apis:['I/O Management API','Adobe Commerce'] },
+  ]);
+  let items = seeds();
+  const KIND = { mesh:'API Mesh', custom:'Imported repo', blank:'Custom · built with AI', catalog:'Pre-built' };
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  function metaFor(c){
+    if (c.kind==='mesh') return `<span class="role">Data layer</span> · <span class="apis" onclick="toggleApis(event,'${c.id}')">${c.apis.length} APIs</span>`;
+    if (c.kind==='blank') return `Custom · built with AI · <span class="apis" onclick="toggleApis(event,'${c.id}')">${c.apis.length} APIs</span>`;
+    if (c.kind==='catalog') return `Pre-built · <span class="apis" onclick="toggleApis(event,'${c.id}')">${c.apis.length} APIs</span>`;
+    return `Imported repo · ${esc(c.src)} · <span class="apis" onclick="toggleApis(event,'${c.id}')">${c.apis.length} APIs</span>`;
+  }
+  function rowHTML(c){
+    return `<div class="irow ${c.kind==='mesh'?'mesh':''}">
+      <div class="ir-main">
+        <span class="ir-name" onclick="rename(this,'${c.id}')">${esc(c.name)}</span>
+        <div class="ir-meta">${metaFor(c)}</div>
+        <div class="apis-pop" id="apis-${c.id}"><ul>${c.apis.map(a=>`<li>${esc(a)}</li>`).join('')}</ul></div>
+      </div>
+      <div class="ir-actions">
+        <button class="iconbtn" title="Edit" onclick="toast('Edit — opens the Add-Integration modal in edit mode')">✎</button>
+        <button class="iconbtn rm" title="Remove" onclick="remove('${c.id}')">✕</button>
+      </div>
+    </div>`;
+  }
+  function render(){
+    const list = document.getElementById('ilist');
+    list.innerHTML = items.length
+      ? items.map(rowHTML).join('')
+      : `<div class="empty"><div class="t">No integrations yet</div><div class="d">Add an API Mesh, a pre-built integration, or your own custom integration.</div></div>`;
+    document.getElementById('count').textContent = items.length;
+    document.getElementById('sumInts').innerHTML = items.length
+      ? items.map(c=>`<div class="gi ${c.kind==='mesh'?'mesh':''}"><span class="d"></span>${esc(c.name)}</div>`).join('')
+      : `<div class="gi" style="color:var(--faint)"><span class="d"></span>None yet</div>`;
+  }
+  function toggleApis(ev, id){ ev.stopPropagation(); document.getElementById('apis-'+id).classList.toggle('open'); }
+  function remove(id){ const c=items.find(x=>x.id===id); items=items.filter(x=>x.id!==id); render(); toast(`${c.name} removed`); }
+  function rename(el, id){
+    const c=items.find(x=>x.id===id); if(!c) return;
+    const input=document.createElement('input'); input.className='ir-name-input'; input.value=c.name;
+    el.replaceWith(input); input.focus(); input.select();
+    const commit=()=>{ c.name=input.value.trim()||c.name; render(); };
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', e=>{ if(e.key==='Enter') input.blur(); if(e.key==='Escape'){ input.value=c.name; input.blur(); } });
+  }
+
+  let pk='blank', prole=null, psrc='Built with AI';
+  function openAdd(){ document.getElementById('mscrim').classList.add('open'); const n=document.getElementById('nameIn'); n.value=''; n.focus(); }
+  function closeAdd(){ document.getElementById('mscrim').classList.remove('open'); }
+  function pickKind(el){ document.querySelectorAll('.kind').forEach(k=>k.classList.remove('sel')); el.classList.add('sel');
+    pk=el.dataset.kind; prole=el.dataset.role||null; psrc=el.dataset.src;
+    document.getElementById('repoField').style.display = pk==='custom'?'block':'none';
+    if(pk==='mesh') document.getElementById('nameIn').value='API Mesh'; }
+  function confirmAdd(){
+    const name=document.getElementById('nameIn').value.trim()||'New integration';
+    let src=psrc; if(pk==='custom'){ const r=document.getElementById('repoIn').value.trim();
+      src = r ? r.replace(/^https?:\/\/github\.com\//,'').replace(/\.git$/,'') : 'owner/repo'; }
+    if(pk==='catalog') src='Catalog integration';
+    items.push({ id:'i'+Math.floor(performance.now()), name, role:prole, kind:pk, src, apis:['I/O Management API'] });
+    closeAdd(); render(); toast(`${name} added`);
+  }
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeAdd(); });
+  let tt; function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(tt); tt=setTimeout(()=>t.classList.remove('show'),1900); }
+  render();
+</script>
