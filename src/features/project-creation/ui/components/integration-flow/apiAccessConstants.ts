@@ -1,7 +1,6 @@
 /**
  * Shared API-access constants for the integration flow (pure — no React/Spectrum,
- * so pure logic like {@link enabledApisFromSelection} can import them without
- * dragging in the component tree).
+ * so pure logic can import them without dragging in the component tree).
  *
  * @module features/project-creation/ui/components/integration-flow/apiAccessConstants
  */
@@ -10,8 +9,8 @@
 export const BASELINE_CODE = 'AdobeIOManagementAPISDK';
 
 /**
- * Short, stable display names for the APIs we surface (the informational stage's
- * required/baseline codes, plus the baseline shown on the result row). The org
+ * Short, stable display names for the APIs we surface (the result row's "APIs in
+ * use" codes and the interactive picker's required/baseline codes). The org
  * list's real names are verbose ("API Mesh for Adobe Developer App Builder"); these
  * are the friendly, instant labels. A code with no entry falls back to itself —
  * still readable, and picks come back with their sdk code as secondary text anyway.

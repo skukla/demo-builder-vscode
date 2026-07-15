@@ -45,67 +45,59 @@ function slice(overrides: Partial<FlowStateSlice> = {}): FlowStateSlice {
 
 const ADD: FlowMode = 'add';
 const DEST: FlowMode = 'destination';
+const API_EDIT: FlowMode = 'api-edit';
 
 describe('deriveStageOrder — add mode', () => {
-    it('mesh, signed in, destination uncommitted → kind + full dest + api-access (enable runs in-modal)', () => {
+    it('mesh, signed in, destination uncommitted → kind + full dest, NO api-access (deterministic APIs)', () => {
         expect(deriveStageOrder(draft({ kind: 'mesh' }), slice(), ADD)).toEqual([
             'kind',
             'dest-project',
             'dest-workspace',
-            'api-access',
         ]);
     });
 
-    it('mesh, signed out, uncommitted → inserts dest-signin before dest-project', () => {
+    it('mesh, signed out, uncommitted → inserts dest-signin, still no api-access', () => {
         expect(
             deriveStageOrder(draft({ kind: 'mesh' }), slice({ isSignedIn: false }), ADD)
-        ).toEqual(['kind', 'dest-signin', 'dest-project', 'dest-workspace', 'api-access']);
+        ).toEqual(['kind', 'dest-signin', 'dest-project', 'dest-workspace']);
     });
 
-    it('mesh, destination committed (later add) → dest collapses to dest-summary + api-access', () => {
+    it('mesh, destination committed (later add) → dest collapses to dest-summary, no api-access', () => {
         expect(
             deriveStageOrder(
                 draft({ kind: 'mesh' }),
                 slice({ destinationCommitted: true, selectedIds: ['existing-integration'] }),
                 ADD
             )
-        ).toEqual(['kind', 'dest-summary', 'api-access']);
+        ).toEqual(['kind', 'dest-summary']);
     });
 
-    it('catalog, signed in, uncommitted → source-catalog + full dest + api-access', () => {
+    it('catalog, signed in, uncommitted → source-catalog + full dest, NO api-access (deterministic APIs)', () => {
         expect(deriveStageOrder(draft({ kind: 'catalog' }), slice(), ADD)).toEqual([
             'kind',
             'source-catalog',
             'dest-project',
             'dest-workspace',
-            'api-access',
         ]);
     });
 
-    it('catalog, signed out, uncommitted → dest-signin included', () => {
+    it('catalog, signed out, uncommitted → dest-signin included, still no api-access', () => {
         expect(
             deriveStageOrder(draft({ kind: 'catalog' }), slice({ isSignedIn: false }), ADD)
-        ).toEqual([
-            'kind',
-            'source-catalog',
-            'dest-signin',
-            'dest-project',
-            'dest-workspace',
-            'api-access',
-        ]);
+        ).toEqual(['kind', 'source-catalog', 'dest-signin', 'dest-project', 'dest-workspace']);
     });
 
-    it('catalog, destination committed → dest-summary between source and apis', () => {
+    it('catalog, destination committed → dest-summary is terminal (no api-access)', () => {
         expect(
             deriveStageOrder(
                 draft({ kind: 'catalog' }),
                 slice({ destinationCommitted: true, selectedIds: ['existing-integration'] }),
                 ADD
             )
-        ).toEqual(['kind', 'source-catalog', 'dest-summary', 'api-access']);
+        ).toEqual(['kind', 'source-catalog', 'dest-summary']);
     });
 
-    it('custom, signed in, uncommitted → source-custom + full dest + api-access', () => {
+    it('custom, signed in, uncommitted → source-custom + full dest + api-access (interactive picker)', () => {
         expect(deriveStageOrder(draft({ kind: 'custom' }), slice(), ADD)).toEqual([
             'kind',
             'source-custom',
@@ -115,7 +107,16 @@ describe('deriveStageOrder — add mode', () => {
         ]);
     });
 
-    it('custom, destination committed (later add) → dest-summary', () => {
+    it('blank, signed in, uncommitted → full dest + api-access (interactive picker)', () => {
+        expect(deriveStageOrder(draft({ kind: 'blank' }), slice(), ADD)).toEqual([
+            'kind',
+            'dest-project',
+            'dest-workspace',
+            'api-access',
+        ]);
+    });
+
+    it('custom, destination committed (later add) → dest-summary + api-access', () => {
         expect(
             deriveStageOrder(
                 draft({ kind: 'custom' }),
@@ -173,38 +174,38 @@ describe('deriveStageOrder — add mode', () => {
         ]);
     });
 
-    it('no kind picked yet → kind + generic tail (no source stage)', () => {
+    it('no kind picked yet → kind + generic dest tail, NO api-access (only custom/blank get it)', () => {
         expect(deriveStageOrder(draft(), slice(), ADD)).toEqual([
             'kind',
             'dest-project',
             'dest-workspace',
-            'api-access',
         ]);
     });
 
-    it('changingDestination re-expands a committed destination to full dest stages', () => {
+    it('changingDestination re-expands a committed destination to full dest stages (catalog: no api-access)', () => {
         expect(
             deriveStageOrder(
                 draft({ kind: 'catalog', changingDestination: true }),
                 slice({ destinationCommitted: true }),
                 ADD
             )
-        ).toEqual(['kind', 'source-catalog', 'dest-project', 'dest-workspace', 'api-access']);
+        ).toEqual(['kind', 'source-catalog', 'dest-project', 'dest-workspace']);
     });
 
-    it('changingDestination while signed out also re-adds dest-signin', () => {
+    it('changingDestination while signed out also re-adds dest-signin (catalog: no api-access)', () => {
         expect(
             deriveStageOrder(
                 draft({ kind: 'catalog', changingDestination: true }),
                 slice({ destinationCommitted: true, isSignedIn: false }),
                 ADD
             )
-        ).toEqual([
-            'kind',
-            'source-catalog',
-            'dest-signin',
-            'dest-project',
-            'dest-workspace',
+        ).toEqual(['kind', 'source-catalog', 'dest-signin', 'dest-project', 'dest-workspace']);
+    });
+});
+
+describe('deriveStageOrder — api-edit mode', () => {
+    it('yields just the api-access picker (re-editing an existing integration)', () => {
+        expect(deriveStageOrder(draft({ kind: 'custom' }), slice(), API_EDIT)).toEqual([
             'api-access',
         ]);
     });
@@ -251,24 +252,22 @@ describe('nextStage', () => {
         );
     });
 
-    it('dest-workspace → api-access for catalog', () => {
-        expect(nextStage('dest-workspace', draft({ kind: 'catalog' }), slice(), ADD)).toBe(
+    it('catalog dest-workspace → null (terminal — deterministic kinds have no api-access)', () => {
+        expect(nextStage('dest-workspace', draft({ kind: 'catalog' }), slice(), ADD)).toBeNull();
+    });
+
+    it('mesh dest-workspace → null (terminal — no api-access)', () => {
+        expect(nextStage('dest-workspace', draft({ kind: 'mesh' }), slice(), ADD)).toBeNull();
+    });
+
+    it('custom dest-workspace → api-access (interactive picker kept)', () => {
+        expect(nextStage('dest-workspace', draft({ kind: 'custom' }), slice(), ADD)).toBe(
             'api-access'
         );
     });
 
-    it('last stage (api-access) → null (Finish)', () => {
-        expect(nextStage('api-access', draft({ kind: 'catalog' }), slice(), ADD)).toBeNull();
-    });
-
-    it('mesh dest-workspace → api-access (the in-modal enable stage)', () => {
-        expect(nextStage('dest-workspace', draft({ kind: 'mesh' }), slice(), ADD)).toBe(
-            'api-access'
-        );
-    });
-
-    it('mesh last stage (api-access) → null', () => {
-        expect(nextStage('api-access', draft({ kind: 'mesh' }), slice(), ADD)).toBeNull();
+    it('custom last stage (api-access) → null (Finish)', () => {
+        expect(nextStage('api-access', draft({ kind: 'custom' }), slice(), ADD)).toBeNull();
     });
 
     it('destination mode last stage → null', () => {
@@ -438,18 +437,28 @@ describe('continueLabel', () => {
         'source-catalog',
         'dest-project',
         'dest-workspace',
+    ];
+    const meshOrder: FlowStageId[] = ['kind', 'dest-project', 'dest-workspace'];
+    const customOrder: FlowStageId[] = [
+        'kind',
+        'source-custom',
+        'dest-project',
+        'dest-workspace',
         'api-access',
     ];
-    const meshOrder: FlowStageId[] = ['kind', 'dest-project', 'dest-workspace', 'api-access'];
     const destOrder: FlowStageId[] = ['dest-project', 'dest-workspace'];
 
-    it('last stage in add mode → "Add Integration"', () => {
-        expect(continueLabel('api-access', catalogOrder, ADD)).toBe('Add Integration');
+    it('catalog terminal (dest-workspace) in add mode → "Add Integration"', () => {
+        expect(continueLabel('dest-workspace', catalogOrder, ADD)).toBe('Add Integration');
     });
 
-    it('mesh last stage (api-access) in add mode → "Add Integration"; dest-workspace is now mid-walk', () => {
-        expect(continueLabel('api-access', meshOrder, ADD)).toBe('Add Integration');
-        expect(continueLabel('dest-workspace', meshOrder, ADD)).toBe('Continue');
+    it('mesh terminal (dest-workspace) in add mode → "Add Integration"', () => {
+        expect(continueLabel('dest-workspace', meshOrder, ADD)).toBe('Add Integration');
+    });
+
+    it('custom terminal (api-access) in add mode → "Add Integration"; earlier stages mid-walk', () => {
+        expect(continueLabel('api-access', customOrder, ADD)).toBe('Add Integration');
+        expect(continueLabel('dest-workspace', customOrder, ADD)).toBe('Continue');
     });
 
     it('last stage in destination mode → "Save"', () => {

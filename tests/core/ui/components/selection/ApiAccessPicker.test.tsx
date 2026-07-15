@@ -1,7 +1,7 @@
 /**
  * ApiAccessPicker Tests (core, presentational)
  *
- * The SHARED grouped Adobe-API list used by the wizard's ApiAccessStage and the
+ * The SHARED grouped Adobe-API list used by the wizard's ApiPickerStage and the
  * dashboard's Manage APIs modal. Pure props — no fetching, no feature imports:
  *   - groups, in order: "Suggested" (codes ∈ suggested, hidden when none) → "All
  *     available" (the rest, alphabetical by display name); locked (already-covered)

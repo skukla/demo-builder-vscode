@@ -407,14 +407,15 @@ describe('IntegrationsStep — mesh add commits without subscribing', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Add Integration' }));
         const dialog = screen.getByRole('dialog');
         fireEvent.click(within(dialog).getByRole('button', { name: /API Mesh/ }));
-        fireEvent.click(within(dialog).getByRole('button', { name: 'Continue' }));
-        // Committed destination → summary → api-access. Selection NEVER provisions.
+        // Committed destination collapses to the summary, which is the TERMINAL stage
+        // for the deterministic mesh (no api-access step). Selection NEVER provisions.
         fireEvent.click(within(dialog).getByRole('button', { name: 'Continue' }));
         await waitFor(() => {
-            // The final stage just commits the integration — plain "Add Integration".
-            expect(
-                within(dialog).getByRole('button', { name: 'Add Integration' })
-            ).toHaveAttribute('aria-disabled', 'false');
+            // The summary stage just commits the integration — plain "Add Integration".
+            expect(within(dialog).getByRole('button', { name: 'Add Integration' })).toHaveAttribute(
+                'aria-disabled',
+                'false'
+            );
         });
 
         // A single Add press commits + closes; the row appears listing its APIs.

@@ -9,10 +9,11 @@
  * reset-on-open seam: reopening mounts a fresh hook at the first stage. Cancel
  * discards the draft; a destination committed mid-flow survives by design.
  *
- * The api-access stage is INFORMATIONAL for mesh/catalog (see {@link ApiAccessStage}):
- * their APIs are deterministic, so it shows the API access an integration grants
- * (subscribed at the rebuild) from static data — no org fetch, no selection. The
- * modal PROVISIONS NOTHING; every kind commits + closes immediately on Add.
+ * The api-access stage is the INTERACTIVE picker ({@link ApiPickerStage}), reached
+ * ONLY by custom/import apps (which can need any entitled API the user picks up
+ * front). Mesh and catalog have deterministic APIs subscribed at the rebuild, so
+ * they have no api-access stage — their destination stage is terminal. The modal
+ * PROVISIONS NOTHING; every kind commits + closes immediately on Add.
  *
  * On open (signed in) the host fires ONE fire-and-forget `list-org-console-apis`
  * to warm the extension-side org-services cache, so the custom/import picker's
@@ -26,9 +27,7 @@ import React from 'react';
 import type { SelectableAppBuilderComponent } from '../../../services/appBuilderComponentSelection';
 import { isAdobeSignedIn, isMeshSelected } from '../../steps/tileStatus';
 import type { UseProjectBuilderReturn } from '../../steps/useProjectBuilder';
-import { enabledApisFromSelection } from './enabledApis';
 import { meshKindOffered, type FlowMode } from './flowStages';
-import { ApiAccessStage } from './stages/ApiAccessStage';
 import { ApiPickerStage } from './stages/ApiPickerStage';
 import { CatalogStage } from './stages/CatalogStage';
 import { CustomStage } from './stages/CustomStage';
@@ -80,9 +79,6 @@ export interface AddIntegrationFlowModalProps {
     catalog: AppBuilderComponentCatalogEntry[];
     /** The blank starter app (the "Build custom" kind seeds it), if any. */
     blankComponent?: AppBuilderComponentCatalogEntry;
-    /** Selected stack backend/frontend ids — resolve the project's already-enabled APIs. */
-    backendId?: string;
-    frontendId?: string;
     /** The unchanged useProjectBuilder handlers the finish commits route through. */
     builder: Pick<
         UseProjectBuilderReturn,
@@ -140,38 +136,18 @@ function StageBody({
         );
     }
     if (stage === 'api-access') {
-        // API access is PROJECT-LEVEL — the APIs the integrations ALREADY in this
-        // project cover show as ✓, not as something to add again. (The integration
-        // being added isn't in selectedIds yet, so this is exactly "the others".)
-        const alreadyEnabled = enabledApisFromSelection(
-            selectedIds,
-            props.backendId,
-            props.frontendId,
+        // Reached ONLY by custom/import apps (blank shell / imported repo): they can
+        // need ANY entitled API, and the user often knows which up front — so give
+        // them the INTERACTIVE picker (already-covered APIs come back locked). Mesh
+        // and catalog have deterministic APIs and never route here (their destination
+        // stage is terminal), so this is unconditionally the picker.
+        return (
+            <ApiPickerStage
+                componentIds={selectedIds}
+                selected={draft.selectedApis ?? EMPTY_IDS}
+                onToggle={flow.toggleApi}
+            />
         );
-        if (draft.kind === 'mesh') {
-            // Mesh APIs are deterministic — the same informational panel as catalog.
-            // The modal provisions nothing; they subscribe at the rebuild.
-            return (
-                <ApiAccessStage
-                    required={meshComponent?.requiredApis}
-                    alreadyEnabled={alreadyEnabled}
-                />
-            );
-        }
-        // Custom apps (blank shell / imported repo) can need ANY entitled API and
-        // the user often knows which up front — so give them the INTERACTIVE picker
-        // (already-covered APIs come back locked). Catalog stays deterministic.
-        if (draft.kind === 'blank' || draft.kind === 'custom') {
-            return (
-                <ApiPickerStage
-                    componentIds={selectedIds}
-                    selected={draft.selectedApis ?? EMPTY_IDS}
-                    onToggle={flow.toggleApi}
-                />
-            );
-        }
-        const entry = catalog.find((candidate) => candidate.id === draft.catalogId);
-        return <ApiAccessStage required={entry?.requiredApis} alreadyEnabled={alreadyEnabled} />;
     }
     return (
         <DestinationStage

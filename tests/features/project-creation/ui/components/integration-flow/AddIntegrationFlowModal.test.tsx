@@ -15,7 +15,7 @@
  */
 
 import React, { useCallback, useState } from 'react';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 
@@ -280,14 +280,6 @@ function walkMeshToProject(): void {
     click('Continue');
 }
 
-async function waitForApiAccessStep(): Promise<void> {
-    // The step is informational + static (no fetch), so it appears as soon as the
-    // walk reaches it.
-    await waitFor(() => {
-        expect(screen.getByTestId('api-access-included')).toBeInTheDocument();
-    });
-}
-
 beforeEach(() => {
     jest.clearAllMocks();
     setPhases();
@@ -351,7 +343,7 @@ describe('AddIntegrationFlowModal — kind stage', () => {
 });
 
 describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
-    it('walks kind → project → workspace → api-access (informational), then commits on Add', async () => {
+    it('walks kind → project → workspace (terminal), then commits on Add — no api-access step', async () => {
         const { builder, updateSpy, onClose } = renderModal();
         walkMeshToProject();
         expect(screen.getByTestId('project-field')).toBeInTheDocument();
@@ -362,22 +354,19 @@ describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
             adobeWorkspace: undefined,
             workspacesCache: undefined,
         });
+        // dest-workspace is the TERMINAL stage for the deterministic mesh (no
+        // api-access step): its footer button reads "Add Integration" and commits +
+        // closes in a single press, which also commits the pending workspace.
         expect(screen.getByTestId('workspace-field')).toBeInTheDocument();
         click('pick-ws');
-        click('Continue');
+        expect(screen.queryByTestId('api-access-included')).not.toBeInTheDocument();
+        expectEnabled('Add Integration');
+        click('Add Integration');
         expect(updateSpy).toHaveBeenCalledWith({
             adobeWorkspace: { id: 'w-picked', name: 'Stage', title: 'Stage' },
         });
-        // api-access: informational only — the mesh's required API + baseline are
-        // listed; nothing is provisioned or selected here.
-        await waitForApiAccessStep();
-        const included = screen.getByTestId('api-access-included');
-        expect(within(included).getByText('API Mesh')).toBeInTheDocument();
-        expect(within(included).getByText('I/O Management API')).toBeInTheDocument();
-        // Add commits the mesh and closes in a SINGLE press — no "Enabling…"/"Done"
-        // hold and no subscribe (the APIs are subscribed later, at the rebuild).
-        expectEnabled('Add Integration');
-        click('Add Integration');
+        // Add commits the mesh and closes in a SINGLE press — no subscribe (the APIs
+        // are subscribed later, at the rebuild).
         expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('commerce-mesh', true);
         expect(mockRequest).not.toHaveBeenCalledWith(
             'ensure-mesh-api-subscribed',
@@ -386,30 +375,26 @@ describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('the mesh api-access stage is informational: facts only, no picker, no fetch', async () => {
+    it('mesh later-add finishes on the destination summary: no api-access step, no fetch, no picker', () => {
         renderModal({ initial: COMMITTED_DEST });
         click(/API Mesh/);
-        click('Continue'); // kind → dest-summary
-        click('Continue'); // dest-summary → api-access
-        await waitForApiAccessStep();
-        // No org-API fetch, no checkboxes, no provisioning.
+        click('Continue'); // kind → dest-summary (terminal — no api-access)
+        // No api-access step for the deterministic mesh, so no org-API fetch, no
+        // checkboxes, no provisioning — the summary is terminal.
+        expect(screen.queryByTestId('api-access-included')).not.toBeInTheDocument();
         expect(mockRequest).not.toHaveBeenCalledWith(
             'list-org-console-apis',
             expect.anything(),
             expect.anything()
         );
         expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
-        const included = screen.getByTestId('api-access-included');
-        expect(within(included).getByText('API Mesh')).toBeInTheDocument();
-        expect(within(included).getByText('I/O Management API')).toBeInTheDocument();
+        expectEnabled('Add Integration');
     });
 
-    it('a mesh finish writes no selectedConsoleApis and never subscribes', async () => {
+    it('a mesh finish writes no selectedConsoleApis and never subscribes', () => {
         const { builder, updateSpy } = renderModal({ initial: COMMITTED_DEST });
         click(/API Mesh/);
-        click('Continue'); // kind → dest-summary
-        click('Continue'); // dest-summary → api-access
-        await waitForApiAccessStep();
+        click('Continue'); // kind → dest-summary (terminal)
         expectEnabled('Add Integration');
         click('Add Integration');
         expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('commerce-mesh', true);

@@ -291,12 +291,6 @@ function walkCatalogPastPick(): void {
     click('Continue');
 }
 
-async function waitForApiAccessStep(): Promise<void> {
-    await waitFor(() => {
-        expect(screen.getByTestId('api-access-included')).toBeInTheDocument();
-    });
-}
-
 beforeEach(() => {
     jest.clearAllMocks();
     setPhases();
@@ -305,15 +299,14 @@ beforeEach(() => {
 
 // --- tests -----------------------------------------------------------------------
 describe('AddIntegrationFlowModal — later add (destination committed)', () => {
-    it('mesh later-add: informational step, then Add commits + closes (never subscribes)', async () => {
+    it('mesh later-add: destination summary is terminal, then Add commits + closes (never subscribes)', () => {
         const { builder, updateSpy, onClose } = renderModal({ initial: COMMITTED_DEST });
         click(/API Mesh/);
-        click('Continue');
+        click('Continue'); // kind → dest-summary (terminal — no api-access)
         expect(screen.getByText('Demo Project')).toBeInTheDocument();
         expect(screen.getByText('Stage')).toBeInTheDocument();
-        click('Continue');
-        await waitForApiAccessStep();
         // The modal provisions nothing — Add commits + closes in one press.
+        expect(screen.queryByTestId('api-access-included')).not.toBeInTheDocument();
         expectEnabled('Add Integration');
         click('Add Integration');
         expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('commerce-mesh', true);
@@ -325,12 +318,11 @@ describe('AddIntegrationFlowModal — later add (destination committed)', () => 
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('catalog later-add walks summary → api-access → finish', async () => {
+    it('catalog later-add walks to the destination summary then finishes (no api-access)', () => {
         const { builder, onClose } = renderModal({ initial: COMMITTED_DEST });
-        walkCatalogPastPick();
+        walkCatalogPastPick(); // kind → source-catalog → pick → dest-summary (terminal)
         expect(screen.getByText('Demo Project')).toBeInTheDocument();
-        click('Continue');
-        await waitForApiAccessStep();
+        expect(screen.queryByTestId('api-access-included')).not.toBeInTheDocument();
         click('Add Integration');
         expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('erp-sync', true);
         expect(onClose).toHaveBeenCalledTimes(1);
@@ -357,27 +349,26 @@ describe('AddIntegrationFlowModal — catalog first-add walk', () => {
         expectEnabled('Continue');
     });
 
-    it('walks the dest stages then reaches the informational api-access step (no fetch)', async () => {
+    it('walks the dest stages to the terminal workspace step — no api-access, no fetch', () => {
         renderModal({ initial: { selectedAppBuilderComponents: ['other-app'] } });
         walkCatalogPastPick();
         click('pick-project');
         click('Continue');
         click('pick-ws');
-        click('Continue');
-        await waitForApiAccessStep();
-        // Deterministic — no org-API list is fetched anymore.
+        // dest-workspace is terminal for the deterministic catalog kind — no
+        // api-access step and no org-API list fetch.
+        expect(screen.queryByTestId('api-access-included')).not.toBeInTheDocument();
         expect(mockRequest).not.toHaveBeenCalledWith(
             'list-org-console-apis',
             expect.anything(),
             expect.anything()
         );
+        expectEnabled('Add Integration');
     });
 
-    it('a catalog finish writes no selectedConsoleApis (deterministic API access)', async () => {
+    it('a catalog finish writes no selectedConsoleApis (deterministic API access)', () => {
         const { builder, updateSpy } = renderModal({ initial: COMMITTED_DEST });
-        walkCatalogPastPick();
-        click('Continue');
-        await waitForApiAccessStep();
+        walkCatalogPastPick(); // → dest-summary (terminal)
         click('Add Integration');
         expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('erp-sync', true);
         expect(updateSpy).not.toHaveBeenCalledWith(

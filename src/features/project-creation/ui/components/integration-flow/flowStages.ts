@@ -120,7 +120,14 @@ export function deriveStageOrder(
         !draft.changingDestination
             ? ['dest-summary']
             : destinationStages(slice);
-    return ['kind', ...sourceStages(draft.kind), ...dest, 'api-access'];
+    // api-access is the INTERACTIVE picker — appended ONLY for custom/import apps
+    // (blank shell or imported repo), which can need any entitled API the user picks
+    // up front. Mesh and catalog have DETERMINISTIC APIs subscribed at the build, so
+    // their destination stage is terminal (no informational step). Undefined kind
+    // (kind not yet picked) also omits it.
+    const apiAccess: FlowStageId[] =
+        draft.kind === 'custom' || draft.kind === 'blank' ? ['api-access'] : [];
+    return ['kind', ...sourceStages(draft.kind), ...dest, ...apiAccess];
 }
 
 /** Nearest canonical predecessor of `stage` that survives in `order`, or null. */
@@ -179,8 +186,8 @@ const CONTINUE_GATES: Record<FlowStageId, (draft: FlowDraft, slice: FlowStateSli
     'dest-workspace': (draft, slice) =>
         (draft.pendingWorkspace !== undefined || slice.workspaceCommitted) && !slice.phaseRunning,
     'dest-summary': () => true,
-    // Informational only — shows the API access this integration grants (always
-    // on, subscribed at deploy). Nothing to select, so it never blocks.
+    // The interactive picker (custom/import only): free API picks are optional —
+    // locked codes are already covered — so it never blocks Continue.
     'api-access': () => true,
 };
 

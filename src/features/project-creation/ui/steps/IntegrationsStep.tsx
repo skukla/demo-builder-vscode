@@ -13,11 +13,11 @@
  * Remove routing: a mesh row routes through the mesh dual-flow toggle
  * ({@link useProjectBuilder.onAppBuilderComponentToggle}, clearing BOTH selection
  * keys); every other row routes through `onRemoveAppBuilderComponent` (selection +
- * source + API picks). Mesh API enablement runs INSIDE the modal journey (its
- * api-access stage), which only commits the mesh on a successful enable — so this
- * step is PURELY VISUAL: every row (mesh included) just lists its provisioned APIs
- * by name via the row's uniform "APIs in use" line, and never triggers a subscribe
- * (re-mounting the step — Continue to the summary and Back — must not re-enable).
+ * source + API picks). The modal provisions NOTHING — a mesh commits on the
+ * modal's destination step, and every integration's APIs (mesh included) are
+ * subscribed at the build, not in-modal — so this step is PURELY VISUAL: every row
+ * just lists its provisioned APIs by name via the row's uniform "APIs in use"
+ * line, and never triggers a subscribe.
  *
  * @module features/project-creation/ui/steps/IntegrationsStep
  */
@@ -220,8 +220,6 @@ export function IntegrationsStep({
                 meshComponent={meshComponent}
                 catalog={catalog}
                 blankComponent={blankComponent}
-                backendId={stack?.backend}
-                frontendId={stack?.frontend}
                 builder={builder}
             />
         </div>

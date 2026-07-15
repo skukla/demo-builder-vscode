@@ -249,19 +249,17 @@ describe('useIntegrationFlow — footer surfaces', () => {
         expect(s.result.current.continueLabel).toBe('Continue');
     });
 
-    it('labels the mesh api-access step with the plain add label (nothing provisioned here)', () => {
+    it('labels the mesh dest-workspace step (terminal) with the plain add label', () => {
         const s = setup();
         pickKindAndContinue(s, 'mesh');
+        expect(s.result.current.stage).toBe('dest-project');
+        expect(s.result.current.continueLabel).toBe('Continue');
         act(() => s.result.current.setPendingProject(PROJECT));
         act(() => s.result.current.onContinue());
         s.sync();
+        // dest-workspace is terminal for the deterministic mesh (no api-access step),
+        // so its footer already reads the finish label — nothing provisioned here.
         expect(s.result.current.stage).toBe('dest-workspace');
-        expect(s.result.current.continueLabel).toBe('Continue');
-        act(() => s.result.current.setPendingWorkspace(WORKSPACE));
-        act(() => s.result.current.onContinue());
-        s.sync();
-        expect(s.result.current.stage).toBe('api-access');
-        // The final stage just commits the integration — no in-modal enable.
         expect(s.result.current.continueLabel).toBe('Add Integration');
     });
 
@@ -372,15 +370,7 @@ describe('useIntegrationFlow — dest-workspace Continue and mesh finish', () =>
         s.sync();
     }
 
-    /** Walk a mesh add all the way to the informational api-access step. */
-    function walkMeshToApiAccess(s: Setup): void {
-        walkMeshToDestWorkspace(s);
-        act(() => s.result.current.setPendingWorkspace(WORKSPACE));
-        act(() => s.result.current.onContinue());
-        s.sync();
-    }
-
-    it('commits the pending workspace', () => {
+    it('commits the pending workspace and finishes (dest-workspace is terminal for mesh)', () => {
         const s = setup();
         walkMeshToDestWorkspace(s);
         act(() => s.result.current.setPendingWorkspace(WORKSPACE));
@@ -390,11 +380,15 @@ describe('useIntegrationFlow — dest-workspace Continue and mesh finish', () =>
 
     it('Add commits the mesh and closes immediately — no subscribe, no Done hold', () => {
         const s = setup();
-        walkMeshToApiAccess(s);
-        expect(s.result.current.stage).toBe('api-access');
+        walkMeshToDestWorkspace(s);
+        expect(s.result.current.stage).toBe('dest-workspace');
+        act(() => s.result.current.setPendingWorkspace(WORKSPACE));
 
-        // A single Add press commits + closes: no enable request, no "Done" hold.
+        // dest-workspace is terminal for the deterministic mesh (no api-access step):
+        // a single Add press commits the workspace, toggles the mesh, and closes —
+        // no enable request, no "Done" hold.
         act(() => s.result.current.onContinue());
+        expect(s.updateState).toHaveBeenCalledWith({ adobeWorkspace: WORKSPACE });
         expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith(MESH_ID, true);
         expect(s.onClose).toHaveBeenCalledTimes(1);
         // The modal provisions nothing — all APIs subscribe at the rebuild.
@@ -404,12 +398,11 @@ describe('useIntegrationFlow — dest-workspace Continue and mesh finish', () =>
         );
     });
 
-    it('finishes a later-add mesh from dest-summary → api-access in one Add press', () => {
+    it('finishes a later-add mesh from the dest-summary in one Add press', () => {
         const s = setup({ initial: LATER_ADD });
         pickKindAndContinue(s, 'mesh');
+        // Later-add collapses to the summary, which is terminal for the mesh.
         expect(s.result.current.stage).toBe('dest-summary');
-        act(() => s.result.current.onContinue());
-        expect(s.result.current.stage).toBe('api-access');
         act(() => s.result.current.onContinue()); // Add → commit + close
         expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith(MESH_ID, true);
         expect(s.onClose).toHaveBeenCalledTimes(1);
@@ -421,16 +414,17 @@ describe('useIntegrationFlow — dest-workspace Continue and mesh finish', () =>
 });
 
 describe('useIntegrationFlow — catalog/custom finish (deterministic, no API picks)', () => {
-    function walkCatalogToApiAccess(s: Setup, catalogId = 'erp-sync'): void {
+    /** Walk a signed-in later-add catalog to its terminal dest-summary stage. */
+    function walkCatalogToSummary(s: Setup, catalogId = 'erp-sync'): void {
         walkCatalogToDestProject(s, catalogId);
         expect(s.result.current.stage).toBe('dest-summary');
-        act(() => s.result.current.onContinue());
-        expect(s.result.current.stage).toBe('api-access');
     }
 
-    it('finishes a catalog add: adds the component and writes NO selectedConsoleApis', () => {
+    it('finishes a catalog add from the summary: adds the component and writes NO selectedConsoleApis', () => {
         const s = setup({ initial: LATER_ADD });
-        walkCatalogToApiAccess(s);
+        walkCatalogToSummary(s);
+        // dest-summary is terminal for the deterministic catalog — a single Add press
+        // commits the component and closes (no api-access step).
         act(() => s.result.current.onContinue());
         expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('erp-sync', true);
         // API access is deterministic — the add flow never merges per-integration APIs.
@@ -446,7 +440,10 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
         act(() => s.result.current.toggleApi('FireflyServicesSDK'));
         // A single Add press commits the shell + closes — no in-modal confirmation.
         act(() => s.result.current.onContinue());
-        expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('app-builder-shell', true);
+        expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith(
+            'app-builder-shell',
+            true
+        );
         expect(s.onClose).toHaveBeenCalledTimes(1);
     });
 
