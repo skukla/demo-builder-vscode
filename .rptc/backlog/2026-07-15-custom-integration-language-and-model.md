@@ -57,15 +57,56 @@ recomputed on load.
 neither into the project, so a writer-only change would not round-trip them. They need a
 **writer + loader** change and are folded into item 3 / §E below (edit-mode rehydration).
 
-### 3. Plural custom integrations as packages in one app — the real model work
-Today the **selection** layer is multi-valued (`selectedAppBuilderComponents[]` →
-`componentSelections.appBuilder[]`, one `components/<id>/` per entry) while the **deploy/state**
-layer is singular (`appState`, the `addAppComponent` one-app guard). The decided target is
-"multiple integration domains as packages inside one app." Realizing it is the existing
-**slice 3 (package-bound)** work, currently gated on the first real bound integration. This item
-does not duplicate that — it reframes it in the confirmed product language and links it.
+### 3. ADR-011 D3 — durable, independently-managed integrations (KEYSTONE)
+**Model correction (deep research 2026-07-15 →
+[`../research/app-builder-integration-model/research.md`](../research/app-builder-integration-model/research.md)):**
+the model is NOT "one app, many packages." Each integration is a **separate whole App Builder app**
+in its own `components/<id>/`, deployed by its own `aio app deploy`; they coexist in **one shared
+Adobe I/O workspace** via per-integration OpenWhisk **package renaming** (`deriveOwPackage` +
+`appConfigPackages`). N integrations are independently manageable **at runtime** (keyed
+`appBuilderComponents` runner + per-id MCP tools) but **not durable** — `writeManifest` serializes
+only the singular `meshState`/`appState`, so a reload collapses to 1 mesh + 1 integration. Two
+competing add/remove systems exist side by side (legacy singular guarded vs keyed unguarded).
+
+**D3 work (the real keystone):** (a) serialize `appBuilderComponents` in `writeManifest`; (b) have
+`projectFileLoader` prefer it over the singular migration; (c) retire the legacy singular/guarded
+`addApp`/`removeApp` path so there is ONE add/remove system; (d) unify the mesh treatment. The
+2026-07-15 `appState` fix (item 2) patched the singular layer D3 replaces — correct for today's
+authority, superseded by D3. Supersedes/absorbs the old "packages inside one app" framing and the
+slice-3 premise.
+
+### 4. Integration display name (was: item #2 "name a custom integration") — fold into D3
+No user-assignable name exists anywhere (`AppBuilderComponentState` has none; the dashboard row
+shows the raw id, the wizard shows the catalog `name` — two derivations). Add `name` to
+`AppBuilderComponentState`, default from repo/catalog, user-editable; unify the wizard + dashboard
+display to read it. Cosmetic — zero deploy impact. Pointless before D3 (a name would vanish on
+reload) and before the shell can be added under distinct ids, so **fold into D3**, don't ship alone.
+
+### 5. Rename the remote Adobe I/O project (was: item #1) — independent, small
+Local rename (`renameProjectCore`) never touches `project.adobe.*`; the remote App Builder project
+title is written once at creation and never updated. **The SDK primitive exists and is installed:**
+`@adobe/aio-lib-console` `editProject(orgId, projectId, { title })` (`index.js:355`), reachable via
+the same `getClient()` cast as `createFireflyProject` — just unwired. Add a `renameRemoteProject`
+to `adobeEntityFetcher` (org-guarded) + update `project.adobe.projectTitle`. One product decision:
+does the local demo rename ALSO rename the remote project, or is it a separate action? Independent
+of D3; own small `/rptc:fix`.
+
+### 6. Integrations management UX — first-class deployables in a grid (exploratory, gated on D3)
+User direction: rethink add/manage; treat integrations as first-class deployables in their own
+grid (the "project within a project" question). Research (Part 3 of the doc): the dashboard
+integration UI is **built but NOT wired** (`AppBuilderCard`/`AppBuilderComponentsList` never
+rendered; `showDashboard` passes the data, the screen drops it) — today's dashboard is one mesh
+badge + a Deploy Mesh tile. The keyed data, status maps, 4-state machine, action wiring, and the
+`.projects-grid` CSS are reusable; net-new is a card-shell component + grid composition + (#4) name.
+**Frame each integration as a co-tenant card in the ONE shared workspace, not a nested project with
+its own destination** (the shared-destination model is load-bearing). Gated on D3 (a grid of N
+cards collapses to 1 on reload without it). `ProjectCard`/`ProjectsGrid`/`ProjectActionsMenu` are
+Project-coupled — mirror, don't import; there is no generic `Card` primitive today.
 
 ## Cross-references (do not fork these)
+- **Deep research (read first):**
+  [`../research/app-builder-integration-model/research.md`](../research/app-builder-integration-model/research.md)
+  — the model as built (many apps, one workspace), all gap evidence, and the UX grid assessment.
 - Decided model + slices: backlog §A "App Builder app family"
   ([`2026-06-17-appbuilder-app-deploy-spine.md`](2026-06-17-appbuilder-app-deploy-spine.md)),
   slice 3 ([`2026-06-17-appbuilder-app-package-bound.md`](2026-06-17-appbuilder-app-package-bound.md)).
@@ -82,8 +123,12 @@ does not duplicate that — it reframes it in the confirmed product language and
 - Item 2 mirrors the existing `meshState` persistence exactly — no new abstraction.
 
 ## Kickoff prompt
-> Pick up the custom-integration follow-ups (`.rptc/backlog/2026-07-15-custom-integration-language-and-model.md`).
-> Item 2 (persist `appState`) shipped 2026-07-15 (`f91669cb`). Remaining: persist
-> `appBuilderComponentSources` + `additionalConsoleApis` through a save/reload cycle — this needs a
-> `writeManifest` **and** `projectFileLoader` change, so pursue it under §E (edit-mode rehydration),
-> not as a writer-only tweak. Then reassess item 3 against slice 3 (package-bound) before any model change.
+> Pick up the custom-integration model work
+> (`.rptc/backlog/2026-07-15-custom-integration-language-and-model.md`; read
+> `.rptc/research/app-builder-integration-model/research.md` first). Language (item 1) + `appState`
+> persistence (item 2) shipped. **Start with item 3 (ADR-011 D3)** — the keystone: serialize
+> `appBuilderComponents`, have the loader prefer it, retire the legacy singular/guarded add/remove
+> path, wire the dormant dashboard integration UI, unify the mesh. Fold item 4 (integration display
+> name) into it. Items 5 (remote Adobe I/O project rename) and 6 (integrations grid UX) are
+> separable — 5 is a small independent `/rptc:fix`; 6 is gated on D3. Also correct the stale
+> "one app, many packages / at most one custom app" docs (`base.ts:105`, `features/CLAUDE.md`).
