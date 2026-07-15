@@ -140,6 +140,11 @@ function apiLineOf(rowEl: HTMLElement): HTMLElement {
     return rowEl.querySelector('.int-row-apis') as HTMLElement;
 }
 
+/** Expand a row's collapsed "APIs in use" section so its stacked names render. */
+function expandApisIn(rowEl: HTMLElement): void {
+    fireEvent.click(within(rowEl).getByRole('button', { name: /APIs in use/i }));
+}
+
 beforeEach(() => {
     jest.clearAllMocks();
     mockRequest.mockResolvedValue({ success: true, data: { apis: [] } });
@@ -243,6 +248,7 @@ describe('IntegrationsStep — result rows from state', () => {
         );
         const card = row('widget');
         expect(within(card).getByText('APIs in use')).toBeInTheDocument();
+        expandApisIn(card);
         expect(within(card).getByText('I/O Management API')).toBeInTheDocument(); // baseline label
         expect(within(card).getByText('AnalyticsSDK')).toBeInTheDocument(); // code fallback
     });
@@ -251,6 +257,7 @@ describe('IntegrationsStep — result rows from state', () => {
         renderStep(baseState({ selectedAppBuilderComponents: ['cat-reco'] }));
         const card = row('Recommendations');
         expect(within(card).getByText('APIs in use')).toBeInTheDocument();
+        expandApisIn(card);
         expect(within(card).getByText('I/O Management API')).toBeInTheDocument(); // baseline label
         expect(within(card).getByText('AnalyticsSDK')).toBeInTheDocument(); // requiredApi code
         // Catalog APIs are deterministic — no Change affordance on the API line.
@@ -268,6 +275,7 @@ describe('IntegrationsStep — result rows from state', () => {
         const card = row(MESH_NAME);
         // The mesh card reads like every other card: its provisioned APIs by name.
         expect(within(card).getByText('APIs in use')).toBeInTheDocument();
+        expandApisIn(card);
         expect(within(card).getByText('I/O Management API')).toBeInTheDocument();
         expect(within(card).getByText('API Mesh')).toBeInTheDocument();
         // Mesh APIs are deterministic — no Change; and the step must NOT issue a subscribe
@@ -418,11 +426,12 @@ describe('IntegrationsStep — mesh add commits without subscribing', () => {
             );
         });
 
-        // A single Add press commits + closes; the row appears listing its APIs.
+        // A single Add press commits + closes; the row appears with its API header.
         fireEvent.click(within(dialog).getByRole('button', { name: 'Add Integration' }));
         await waitFor(() => {
             expect(within(row(MESH_NAME)).getByText('APIs in use')).toBeInTheDocument();
         });
+        expandApisIn(row(MESH_NAME));
         expect(within(row(MESH_NAME)).getByText('API Mesh')).toBeInTheDocument();
 
         // The modal provisions nothing — the APIs subscribe later, at the rebuild.

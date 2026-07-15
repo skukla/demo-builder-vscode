@@ -4611,36 +4611,61 @@ div[class*="spectrum"] input[type="search"] {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-/* The "APIs in use" line (every kind): a label + the provisioned APIs as
-   read-only name chips (wrapping), with the quiet Change right on editable
-   custom/import rows only — mirrors the destination line's label-left/action-right. */
+/* The "APIs in use" section (every kind): a collapsible header (caret + label +
+   count) over a read-only STACKED list of the provisioned API names. The quiet
+   Change sits right on editable custom/import rows only. Expanded by default;
+   collapsing hides the list so a long provisioned set stays compact. */
 .int-row-apis {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+}
+.int-row-apis-head {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-top: 8px;
 }
-.int-row-apis-text {
+/* The header IS the collapse toggle (caret + label + count) — a plain button so
+   the whole row is clickable; the Change action stays outside it, on the right. */
+.int-row-apis-toggle {
     flex: 1 1 auto;
     min-width: 0;
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
+    appearance: none;
+    border: none;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
+    color: var(--spectrum-global-color-gray-500);
 }
 .int-row-apis-label {
     font-size: 12px;
     color: var(--spectrum-global-color-gray-600);
-    margin-right: 2px;
 }
-/* Static name tag (not the clickable filter chip) — the picker's pill token scale. */
-.int-row-api-chip {
-    font-size: 11.5px;
-    line-height: 1.2;
-    padding: 2px 9px;
+.int-row-apis-count {
+    font-size: 11px;
+    line-height: 1.6;
+    padding: 0 7px;
     border-radius: 999px;
-    border: 1px solid var(--spectrum-global-color-gray-300);
-    background: var(--spectrum-global-color-gray-50);
+    background: var(--spectrum-global-color-gray-100);
+    color: var(--spectrum-global-color-gray-600);
+}
+/* The stacked API-name list (one per line), indented under the caret. */
+.int-row-apis-list {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.int-row-api-item {
+    font-size: 12.5px;
+    line-height: 1.35;
     color: var(--spectrum-global-color-gray-700);
 }
 

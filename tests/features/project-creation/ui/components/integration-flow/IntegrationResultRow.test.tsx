@@ -4,8 +4,9 @@
  * The presentational collapsed result row: name line, quiet sourceLine, the
  * destination line ("Deploys to {label}" + Change when committed vs
  * "Deploys to — Not set" + Set up when the row needs setup), the quiet Remove
- * button, and the uniform "APIs in use" list (rendered for every kind; the
- * Change action appears only on editable custom/import rows).
+ * button, and the uniform, collapsible "APIs in use" section (rendered for every
+ * kind; COLLAPSED by default — names appear only after expanding the header;
+ * the Change action appears only on editable custom/import rows).
  *
  * @jest-environment jsdom
  */
@@ -69,6 +70,11 @@ function renderRow(overrides: RenderOverrides = {}) {
         </Provider>
     );
     return props;
+}
+
+/** Expand the collapsed "APIs in use" section so its stacked list is rendered. */
+function expandApis() {
+    fireEvent.click(screen.getByRole('button', { name: /APIs in use/i }));
 }
 
 describe('IntegrationResultRow — anatomy', () => {
@@ -138,6 +144,7 @@ describe('IntegrationResultRow — "APIs in use" list (uniform across kinds)', (
         // Committed row → the destination line ALSO shows a Change; scope to the API line.
         renderRow({ row: CUSTOM_ROW, destinationLabel: 'X · Y', onChangeApis });
 
+        expandApis();
         const apiLine = screen.getByText('APIs in use').closest('.int-row-apis') as HTMLElement;
         // Baseline resolves to its friendly label; the unmapped pick shows its raw sdk code.
         expect(within(apiLine).getByText('I/O Management API')).toBeInTheDocument();
@@ -151,6 +158,7 @@ describe('IntegrationResultRow — "APIs in use" list (uniform across kinds)', (
         renderRow({ row: { ...CUSTOM_ROW, needsSetup: true }, onChangeApis });
 
         expect(screen.getByText('APIs in use')).toBeInTheDocument();
+        expandApis();
         expect(screen.getByText('I/O Management API')).toBeInTheDocument();
         // needs setup shows Set up (not a destination Change), so the only Change is the API one.
         fireEvent.click(screen.getByRole('button', { name: 'Change' }));
@@ -164,6 +172,7 @@ describe('IntegrationResultRow — "APIs in use" list (uniform across kinds)', (
             onChangeApis: jest.fn(),
         });
 
+        expandApis();
         const apiLine = screen.getByText('APIs in use').closest('.int-row-apis') as HTMLElement;
         expect(within(apiLine).getByText('I/O Management API')).toBeInTheDocument();
         expect(within(apiLine).getByText('API Mesh')).toBeInTheDocument();
@@ -173,18 +182,60 @@ describe('IntegrationResultRow — "APIs in use" list (uniform across kinds)', (
     it('catalog row: lists its APIs by name, with NO Change (deterministic)', () => {
         renderRow({ row: CATALOG_ROW, onChangeApis: jest.fn() });
 
+        expandApis();
         const apiLine = screen.getByText('APIs in use').closest('.int-row-apis') as HTMLElement;
         expect(within(apiLine).getByText('I/O Management API')).toBeInTheDocument();
         expect(within(apiLine).getByText('CampaignSDK')).toBeInTheDocument();
         expect(within(apiLine).queryByRole('button', { name: 'Change' })).not.toBeInTheDocument();
     });
 
-    it('renders the API line even when onChangeApis is absent (feedback, not an action)', () => {
+    it('renders the API header even when onChangeApis is absent (feedback, not an action)', () => {
         // needs-setup row → the destination line shows "Set up", not "Change", so any
         // "Change" would be the API one (absent here because onChangeApis is not passed).
         renderRow({ row: { ...CUSTOM_ROW, needsSetup: true } });
 
         expect(screen.getByText('APIs in use')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Change' })).not.toBeInTheDocument();
+    });
+
+    it('shows the API count in the header without expanding', () => {
+        renderRow({ row: CUSTOM_ROW, destinationLabel: 'X · Y', onChangeApis: jest.fn() });
+
+        // Collapsed by default: count visible, names hidden.
+        const toggle = screen.getByRole('button', { name: /APIs in use/i });
+        expect(toggle).toHaveAttribute('aria-expanded', 'false');
+        expect(within(toggle).getByText('2')).toBeInTheDocument();
+        expect(screen.queryByText('I/O Management API')).not.toBeInTheDocument();
+    });
+
+    it('renders the APIs as a stacked list — one item per API, not pills', () => {
+        renderRow({ row: CUSTOM_ROW, destinationLabel: 'X · Y', onChangeApis: jest.fn() });
+
+        expandApis();
+        const apiLine = screen.getByText('APIs in use').closest('.int-row-apis') as HTMLElement;
+        expect(apiLine.querySelector('.int-row-apis-list')).toBeInTheDocument();
+        // No pill chips anymore.
+        expect(apiLine.querySelector('.int-row-api-chip')).not.toBeInTheDocument();
+        const items = Array.from(apiLine.querySelectorAll('.int-row-api-item')).map(
+            (el) => el.textContent
+        );
+        expect(items).toEqual(['I/O Management API', 'FireflyServicesSDK']);
+    });
+
+    it('expands and collapses the API list via the "APIs in use" toggle', () => {
+        renderRow({ row: CUSTOM_ROW, destinationLabel: 'X · Y', onChangeApis: jest.fn() });
+
+        // Collapsed by default — the API names are hidden.
+        const toggle = screen.getByRole('button', { name: /APIs in use/i });
+        expect(screen.queryByText('I/O Management API')).not.toBeInTheDocument();
+        expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+        fireEvent.click(toggle);
+        // Expanded — the list is shown.
+        expect(screen.getByText('I/O Management API')).toBeInTheDocument();
+        expect(toggle).toHaveAttribute('aria-expanded', 'true');
+
+        fireEvent.click(toggle);
+        expect(screen.queryByText('I/O Management API')).not.toBeInTheDocument();
     });
 });
