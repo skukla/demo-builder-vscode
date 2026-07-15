@@ -75,6 +75,11 @@ competing add/remove systems exist side by side (legacy singular guarded vs keye
 authority, superseded by D3. Supersedes/absorbs the old "packages inside one app" framing and the
 slice-3 premise.
 
+**→ SCOPED as a TDD-ready 9-step plan (2026-07-15):**
+[`../plans/appbuilder-deployable-model/d3/overview.md`](../plans/appbuilder-deployable-model/d3/overview.md)
+— D3 is the documented remainder of ADR-011 (D1–D2 shipped). Item 4 (integration `name`) folds into
+its Step 01; the mesh→`config.json` edge stays byte-identical throughout (golden test, Step 06).
+
 ### 4. Integration display name (was: item #2 "name a custom integration") — fold into D3
 No user-assignable name exists anywhere (`AppBuilderComponentState` has none; the dashboard row
 shows the raw id, the wizard shows the catalog `name` — two derivations). Add `name` to

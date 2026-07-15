@@ -405,8 +405,11 @@ discarded (the deploy engine, URL validation, dashboard card, role gate all carr
 - **D2 — Selection UX.** Wizard: generalize the mesh toggle into a "pick your deployables" step
   (catalog filtered by stack) + the custom-URL front door. Dashboard: a deployables **list** surface
   (add / deploy / remove, plural) generalizing the mesh badge + `AppBuilderCard`.
-- **D3 — Mesh runtime migration.** Move mesh state/staleness/`providesEnvVars` fully onto the unified
-  model; retire the bespoke singular `meshState`/`appState` once parity is proven.
+- **D3 — Retire the singular write-paths; one durable keyed model.** Persist `appBuilderComponents`,
+  make one writer, isolate/per-integration all deploy paths, then move mesh state/staleness/
+  `providesEnvVars` onto the unified model and retire the singular `meshState`/`appState` write-side
+  once parity is proven. **TDD-ready step plan: [`d3/overview.md`](d3/overview.md)** (scoped 2026-07-15,
+  grounded in the state-coherence seam + `../../research/app-builder-integration-model/research.md`).
 - **D4 — AI shell (scaffold-and-author).** Third acquisition mode: `aio app init` an empty integration
   + AI authoring via project skills. *(old slice 4.)*
 - **D5 — Package binding.** `nativeForPackages` so a demo package pre-selects deployables. *(old slice 3.)*
