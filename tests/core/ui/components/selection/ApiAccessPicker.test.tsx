@@ -178,7 +178,7 @@ describe('ApiAccessPicker', () => {
         });
     });
 
-    describe('product-profile gating', () => {
+    describe('product-profile gating (hidden — not self-subscribable here)', () => {
         const WITH_PROFILE: ApiOption[] = [
             { code: 'TargetSDK', name: 'Adobe Target', locked: false },
             { code: 'AnalyticsSDK', name: 'Adobe Analytics', locked: false, requiresProfile: true },
@@ -188,31 +188,11 @@ describe('ApiAccessPicker', () => {
             { code: 'AudienceManagerSDK', name: 'Audience Manager', locked: false },
         ];
 
-        it('groups profile-bound APIs under a distinct "Requires a product profile" group', () => {
+        it('never renders profile-bound APIs — no group, no row, no section header', () => {
             const { container } = renderPicker({ apis: WITH_PROFILE });
-            const group = container.querySelector('[data-group="unavailable"]');
-            expect(group).not.toBeNull();
-            expect(group?.textContent).toContain('Adobe Analytics');
-        });
-
-        it('renders profile-bound rows disabled and unchecked', () => {
-            renderPicker({ apis: WITH_PROFILE });
-            const cb = checkboxFor('Adobe Analytics');
-            expect(cb).toBeDisabled();
-            expect(cb).not.toBeChecked();
-        });
-
-        it('shows the reason (product profile) for the unavailable group', () => {
-            const { container } = renderPicker({ apis: WITH_PROFILE });
-            const group = container.querySelector('[data-group="unavailable"]');
-            expect(group?.textContent).toMatch(/product profile/i);
-            expect(group?.querySelector('.intflow-api-group-note')).not.toBeNull();
-        });
-
-        it('clicking a profile-bound API never calls onToggle', () => {
-            const { onToggle } = renderPicker({ apis: WITH_PROFILE });
-            fireEvent.click(checkboxFor('Adobe Analytics'));
-            expect(onToggle).not.toHaveBeenCalled();
+            expect(container.querySelector('[data-group="unavailable"]')).toBeNull();
+            expect(screen.queryByText('Requires a product profile')).not.toBeInTheDocument();
+            expect(screen.queryByText('Adobe Analytics')).not.toBeInTheDocument();
         });
 
         it('keeps profile-bound APIs out of the pickable All-available group', () => {
@@ -222,6 +202,17 @@ describe('ApiAccessPicker', () => {
                 (el) => el.textContent
             );
             expect(names).not.toContain('Adobe Analytics');
+        });
+
+        it('excludes hidden APIs from the "N APIs" count', () => {
+            // APIS (7, none gated) + 1 profile-bound = 8 total; the count shows the 7 shown.
+            const apis: ApiOption[] = [
+                ...APIS,
+                { code: 'X-SDK', name: 'Gated Thing', locked: false, requiresProfile: true },
+            ];
+            renderPicker({ apis });
+            expect(screen.getByText('7 APIs')).toBeInTheDocument();
+            expect(screen.queryByText('8 APIs')).not.toBeInTheDocument();
         });
     });
 
@@ -328,20 +319,11 @@ describe('ApiAccessPicker', () => {
             { code: 'AudienceManagerSDK', name: 'Audience Manager', locked: false },
         ];
 
-        it('groups review-gated APIs under "Requires Adobe review"', () => {
+        it('never renders review-gated APIs — no group, no row, no section header', () => {
             const { container } = renderPicker({ apis: WITH_REVIEW });
-            const group = container.querySelector('[data-group="review"]');
-            expect(group).not.toBeNull();
-            expect(group?.textContent).toContain('Commerce w/ Adobe ID');
-            expect(group?.querySelector('.intflow-api-group-note')).not.toBeNull();
-        });
-
-        it('renders review-gated rows disabled and never toggles them', () => {
-            const { onToggle } = renderPicker({ apis: WITH_REVIEW });
-            const cb = checkboxFor('Commerce w/ Adobe ID');
-            expect(cb).toBeDisabled();
-            fireEvent.click(cb);
-            expect(onToggle).not.toHaveBeenCalled();
+            expect(container.querySelector('[data-group="review"]')).toBeNull();
+            expect(screen.queryByText('Requires Adobe review')).not.toBeInTheDocument();
+            expect(screen.queryByText('Commerce w/ Adobe ID')).not.toBeInTheDocument();
         });
 
         it('keeps review-gated APIs out of the pickable All-available group', () => {

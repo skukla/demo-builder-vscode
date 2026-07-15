@@ -74,6 +74,18 @@ describe('ApiPickerStage', () => {
         });
     });
 
+    it('gives the interactive picker the full-width modal container', async () => {
+        renderStage();
+        await waitFor(() => expect(screen.getByText('Firefly Services')).toBeInTheDocument());
+        expect(screen.getByTestId('api-picker-stage')).toHaveClass('intflow-api-info--full');
+    });
+
+    it('keeps the confirmation summary at the narrow (non-full-width) measure', async () => {
+        renderStage({ selected: ['FireflyServicesSDK'], confirmed: true });
+        await waitFor(() => expect(screen.getByTestId('api-picker-confirmed')).toBeInTheDocument());
+        expect(screen.getByTestId('api-picker-stage')).not.toHaveClass('intflow-api-info--full');
+    });
+
     it('surfaces a fetch error inline', async () => {
         mockRequest.mockResolvedValue({ success: false, error: 'Adobe sign-in required.' });
         renderStage();

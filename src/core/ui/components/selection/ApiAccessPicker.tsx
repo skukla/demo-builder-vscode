@@ -6,8 +6,9 @@
  * modal. It guides the user to the RIGHT APIs rather than dumping the entitlement
  * list:
  *   - groups, in order: "Suggested" (curated catalog suggestions, hidden when none)
- *     → "All available" (the rest, alphabetical) → "Requires Adobe review" /
- *     "Requires a product profile" (disabled, self-serve can't subscribe them);
+ *     → "All available" (the rest, alphabetical). Review- and profile-gated APIs
+ *     can't be subscribed in this self-serve flow, so they are hidden entirely
+ *     (never listed, never counted);
  *   - APIs already covered by the reconcile union (locked) are NOT rendered as
  *     uninteractive checkbox rows competing with the real choices — they collapse
  *     to a quiet "Already provided by this project" footnote beneath the list;
@@ -42,15 +43,15 @@ export interface ApiAccessOption {
     locked: boolean;
     /**
      * Profile-bound: entitled, but subscribing needs a product profile the
-     * self-serve flow can't supply. Grouped separately under "Requires a product
-     * profile" and rendered disabled — never pickable, so a pick can't fail at
-     * provisioning. Optional; absent ⇒ pickable (dashboard parity).
+     * self-serve flow can't supply. Hidden from this picker entirely (never
+     * pickable, so a pick can't fail at provisioning). Optional; absent ⇒
+     * pickable (dashboard parity).
      */
     requiresProfile?: boolean;
     /**
      * Access needs Adobe's review/approval first (Console's "Requires Adobe
-     * review"). Grouped under "Requires Adobe review" and rendered disabled — the
-     * self-serve flow can't subscribe it. Optional; absent ⇒ not review-gated.
+     * review"). Hidden from this picker entirely — the self-serve flow can't
+     * subscribe it. Optional; absent ⇒ not review-gated.
      */
     requiresReview?: boolean;
     /**
@@ -75,10 +76,8 @@ export interface ApiAccessPickerProps {
 }
 
 interface ApiGroup {
-    id: 'suggested' | 'all' | 'review' | 'unavailable';
+    id: 'suggested' | 'all';
     title: string;
-    /** Explanatory line under the title (e.g. why a group is unavailable). */
-    note?: string;
     apis: ApiAccessOption[];
 }
 
@@ -130,12 +129,10 @@ function familyChips(browse: ApiAccessOption[]): FamilyChip[] {
 }
 
 /**
- * Suggested → All available (flat; filtered by the active product-family chip) →
- * Requires Adobe review (disabled) → Requires a product profile (disabled).
+ * Suggested → All available (flat; filtered by the active product-family chip).
  * Locked (already-covered) APIs are not grouped here — they render as a quiet
  * footnote instead (see {@link ApiAccessPicker}). Review- and profile-gated APIs
- * are pulled out of the pickable groups so a pick can never fail at provisioning.
- * Empty groups drop.
+ * are excluded upstream (they can't be self-subscribed here). Empty groups drop.
  */
 function groupApis(
     apis: ApiAccessOption[],
@@ -154,20 +151,6 @@ function groupApis(
                 .sort(byDisplayName),
         },
         { id: 'all', title: 'All available', apis: allAvailable },
-        {
-            id: 'review',
-            title: 'Requires Adobe review',
-            note: 'Adobe must approve access to these first — request it in Adobe Console, then reload.',
-            apis: apis.filter((api) => !api.locked && api.requiresReview).sort(byDisplayName),
-        },
-        {
-            id: 'unavailable',
-            title: 'Requires a product profile',
-            note: 'Assign a product profile in Adobe Console, then reload.',
-            apis: apis
-                .filter((api) => !api.locked && api.requiresProfile && !api.requiresReview)
-                .sort(byDisplayName),
-        },
     ];
     return groups.filter((group) => group.apis.length > 0);
 }
@@ -264,10 +247,14 @@ export function ApiAccessPicker({
     const [family, setFamily] = useState<string | null>(null);
     const q = query.trim().toLowerCase();
     const suggestedSet = new Set(suggested);
-    const filtered = q ? apis.filter((api) => matchesQuery(api, q)) : apis;
+    // Review- and profile-gated APIs can't be subscribed in this self-serve flow, so
+    // they are hidden entirely — dropped from the list, chips, search, and count.
+    // (Locked/already-provided APIs still surface as the footnote below.)
+    const selectable = apis.filter((api) => !api.requiresReview && !api.requiresProfile);
+    const filtered = q ? selectable.filter((api) => matchesQuery(api, q)) : selectable;
     // Chips come from the full (search-independent) browse set so they don't jump
     // around while typing; the active chip then filters the "All available" group.
-    const chips = familyChips(browseApis(apis, suggestedSet));
+    const chips = familyChips(browseApis(selectable, suggestedSet));
     const groups = groupApis(filtered, suggestedSet, family);
     // Locked (already-covered) APIs are context, not choices — a quiet footnote
     // beneath the list rather than uninteractive rows above it. Search-independent
@@ -279,7 +266,7 @@ export function ApiAccessPicker({
             <SearchHeader
                 searchQuery={query}
                 onSearchQueryChange={setQuery}
-                totalCount={apis.length}
+                totalCount={selectable.length}
                 filteredCount={filtered.length}
                 itemNoun="API"
                 hasLoadedOnce
@@ -308,7 +295,6 @@ export function ApiAccessPicker({
                 groups.map((group) => (
                     <div key={group.id} className="intflow-api-group" data-group={group.id}>
                         <div className="intflow-api-group-title">{group.title}</div>
-                        {group.note && <div className="intflow-api-group-note">{group.note}</div>}
                         <ApiRows apis={group.apis} selected={selected} onToggle={onToggle} />
                     </div>
                 ))

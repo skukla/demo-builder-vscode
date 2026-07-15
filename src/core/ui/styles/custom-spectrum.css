@@ -4891,6 +4891,11 @@ div[class*="spectrum"] input[type="search"] {
     gap: 8px;
     max-width: 520px;
 }
+/* The interactive picker fills the full modal width (filter, chips, and the API
+   list use the room); read-only info/confirmation text keeps the narrow measure. */
+.intflow-api-info--full {
+    max-width: none;
+}
 /* API-access loading/error: fill the reserved stage body and center on both axes
    (full width — not the left-aligned .intflow-api-info band), so the spinner sits
    in the middle of the modal rather than a small band near the top. */
@@ -4974,14 +4979,6 @@ div[class*="spectrum"] input[type="search"] {
     padding: 2px 0;
     margin-bottom: 2px;
     border-bottom: 1px solid var(--spectrum-global-color-gray-200);
-}
-/* Reason line under a group title (e.g. the profile-bound "unavailable" group). */
-.intflow-api-group-note {
-    font-size: 11.5px;
-    line-height: 1.45;
-    color: var(--spectrum-global-color-gray-600);
-    margin: -2px 0 6px;
-    max-width: 60ch;
 }
 .intflow-api-group-list {
     display: flex;

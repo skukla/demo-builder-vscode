@@ -114,18 +114,24 @@ export function ApiPickerStage({
             </div>
         );
     }
-    return (
-        <div className="intflow-api-info" data-testid="api-picker-stage">
-            {confirmed ? (
+    // The confirmation summary is read-only text — keep it at the narrow measure.
+    if (confirmed) {
+        return (
+            <div className="intflow-api-info" data-testid="api-picker-stage">
                 <ConfirmedSummary apis={apis} selected={selected} />
-            ) : (
-                <ApiAccessPicker
-                    apis={apis}
-                    selected={selected}
-                    onToggle={onToggle}
-                    helperText={HELPER}
-                />
-            )}
+            </div>
+        );
+    }
+    // The interactive picker (filter, category chips, API list) uses the full modal
+    // width — the extra room lets more chips and the list breathe.
+    return (
+        <div className="intflow-api-info intflow-api-info--full" data-testid="api-picker-stage">
+            <ApiAccessPicker
+                apis={apis}
+                selected={selected}
+                onToggle={onToggle}
+                helperText={HELPER}
+            />
         </div>
     );
 }
