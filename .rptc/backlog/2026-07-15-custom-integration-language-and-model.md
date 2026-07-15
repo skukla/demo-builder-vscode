@@ -43,19 +43,19 @@ This item adds the language standard and the two concrete seams found on 2026-07
 - "Integration" is the umbrella (mesh, pre-built, custom) — already the modal's word.
 - "App Builder" may appear only in internal identifiers and genuinely technical diagnostics.
 
-### 2. Persist deployed custom-integration state — READY, small fix
-**Confirmed gap:** `deployAppHeadless.ts:137` sets `project.appState` then calls
-`saveProject`, but `ProjectConfigWriter.writeManifest` (`projectConfigWriter.ts:81-124`) never
-serializes `appState` — while `projectFileLoader.ts:117` *reads* `manifest.appState`. Net
-effect: a deployed custom integration's URL/status is dropped on write and returns `undefined`
-after an extension reload; the dashboard card loses the deployed record even though the app is
-live remotely. (`meshStatusSummary`/`appStatusSummary` are also unwritten — those appear
-designed to be recomputed on load, so confirm scope; `meshState` *is* written and is the model
-to mirror.)
-- **Fix:** add `appState` (and, for edit round-trip, `appBuilderComponentSources` +
-  `additionalConsoleApis`) to the `writeManifest` allowlist, mirroring `meshState`. Add a
-  round-trip test (deploy → save → load → `appState` survives).
-- Small and testable; can be picked up on its own as a `/rptc:fix`.
+### 2. Persist deployed custom-integration state — ✅ SHIPPED 2026-07-15 (`f91669cb`)
+**Was:** `deployAppHeadless.ts:137` set `project.appState` then called `saveProject`, but
+`ProjectConfigWriter.writeManifest` never serialized `appState` — while `projectFileLoader.ts:117`
+*reads* `manifest.appState`. A deployed custom integration's URL/status was dropped on write and
+returned `undefined` after a reload. **Fix:** added `appState` to the `writeManifest` allowlist,
+mirroring `meshState`, with a serialize/omit regression test. Status summaries
+(`meshStatusSummary`/`appStatusSummary`) stay omitted — the loader never reads them; they are
+recomputed on load.
+
+**Scope refinement (confirmed while fixing):** the extras `appBuilderComponentSources` and
+`additionalConsoleApis` do NOT belong here — the loader (`projectFileLoader.ts:104-128`) reads
+neither into the project, so a writer-only change would not round-trip them. They need a
+**writer + loader** change and are folded into item 3 / §E below (edit-mode rehydration).
 
 ### 3. Plural custom integrations as packages in one app — the real model work
 Today the **selection** layer is multi-valued (`selectedAppBuilderComponents[]` →
@@ -83,6 +83,7 @@ does not duplicate that — it reframes it in the confirmed product language and
 
 ## Kickoff prompt
 > Pick up the custom-integration follow-ups (`.rptc/backlog/2026-07-15-custom-integration-language-and-model.md`).
-> Start with item 2 (persist `appState` in `ProjectConfigWriter.writeManifest`, mirroring
-> `meshState`, with a deploy→save→load round-trip test) via `/rptc:fix` — it is a confirmed,
-> self-contained gap. Then reassess item 3 against slice 3 (package-bound) before any model change.
+> Item 2 (persist `appState`) shipped 2026-07-15 (`f91669cb`). Remaining: persist
+> `appBuilderComponentSources` + `additionalConsoleApis` through a save/reload cycle — this needs a
+> `writeManifest` **and** `projectFileLoader` change, so pursue it under §E (edit-mode rehydration),
+> not as a writer-only tweak. Then reassess item 3 against slice 3 (package-bound) before any model change.
