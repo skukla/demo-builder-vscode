@@ -28,6 +28,7 @@ export function buildStackChangeStateReset(): Partial<WizardState> {
         githubRepoSearchFilter: undefined,
         daLiveSiteSearchFilter: undefined,
         commerceConnectValid: false,
+        commerceStoreViewChosen: false,
         storefrontRepoValid: false,
         storefrontCodeSyncValid: false,
     };
@@ -46,7 +47,7 @@ export function getStackComponentIds(stack: Stack): string[] {
         stack.frontend,
         stack.backend,
         ...stack.dependencies,
-        ...(stack.optionalAddons || []).map(addon => addon.id),
+        ...(stack.optionalAddons || []).map((addon) => addon.id),
     ];
 }
 
@@ -84,7 +85,7 @@ export function filterComponentConfigsForStackChange<T extends Record<string, un
     const newComponentIds = new Set(getStackComponentIds(newStack));
 
     // Find components that exist in BOTH stacks
-    const retainedComponentIds = [...oldComponentIds].filter(id => newComponentIds.has(id));
+    const retainedComponentIds = [...oldComponentIds].filter((id) => newComponentIds.has(id));
 
     // Filter configs to only keep retained components
     const filteredConfigs: Record<string, unknown> = {};

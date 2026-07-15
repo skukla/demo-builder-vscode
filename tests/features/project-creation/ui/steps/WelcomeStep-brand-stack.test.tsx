@@ -295,6 +295,57 @@ describe('WelcomeStep - Package + Stack Selection', () => {
             );
         });
 
+        it('clears the backend, block libraries, and commerce verdicts on a package change', () => {
+            // Regression: a package change must reset ALL architecture-derived state —
+            // including selectedBackend. Leaving it set left the Commerce Backend
+            // sub-step "committed", so onStackSelect never re-fired and the stack +
+            // mesh deps + block libraries were never re-seeded (no API Mesh option, no
+            // block-library selection) after switching packages away and back.
+            const stateWithSelections = {
+                ...baseState,
+                projectName: 'valid-project',
+                selectedPackage: 'other-brand',
+                selectedStack: 'edge-delivery',
+                selectedBackend: 'adobe-commerce-accs',
+                selectedOptionalDependencies: ['commerce-mesh'],
+                selectedBlockLibraries: ['isle5'],
+                commerceConnectValid: true,
+                commerceStoreViewChosen: true,
+                committedCommerceSteps: ['backend'],
+            };
+
+            renderWithProvider(
+                <WelcomeStep
+                    state={stateWithSelections as WizardState}
+                    updateState={mockUpdateState}
+                    onNext={mockOnNext}
+                    onBack={mockOnBack}
+                    setCanProceed={mockSetCanProceed}
+                    packages={mockPackages}
+                    stacks={mockStacks}
+                />
+            );
+
+            const packageCards = screen.getAllByTestId('package-card');
+            const citisignalCard = packageCards.find((card) =>
+                card.textContent?.includes('CitiSignal')
+            );
+            citisignalCard?.click();
+
+            expect(mockUpdateState).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    selectedPackage: 'citisignal',
+                    selectedStack: undefined,
+                    selectedBackend: undefined,
+                    selectedOptionalDependencies: [],
+                    selectedBlockLibraries: undefined,
+                    commerceConnectValid: false,
+                    commerceStoreViewChosen: false,
+                    committedCommerceSteps: [],
+                })
+            );
+        });
+
         it('should NOT open a modal when a package card is clicked (mark-and-Continue)', () => {
             // Given: A WelcomeStep — clicking a package selects it; no architecture modal
             const stateWithNoSelection = {

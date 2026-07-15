@@ -87,16 +87,28 @@ export function WelcomeStep({
                 const pkg = packages?.find((p) => p.id === packageId);
                 updateState({
                     selectedPackage: packageId,
+                    // Clear ALL architecture-derived selections so a new package never
+                    // inherits the previous package's stack/backend/mesh deps/block
+                    // libraries. The backend MUST clear too: it is not auto-selected,
+                    // and the stack + mesh deps + block libraries are only re-seeded by
+                    // the Commerce Backend sub-step's onStackSelect. Leaving the backend
+                    // set left that sub-step "committed", so re-picking never fired and
+                    // the stack never re-seeded (no API Mesh option, no block-library
+                    // selection) after switching packages away and back.
                     selectedStack: undefined,
-                    // Clear architecture-derived selections so a new package
-                    // never inherits the previous package's mesh deps/components
-                    // (the Project Builder re-seeds them on stack select).
-                    // API picks are keyed by integration id — orphaned picks
-                    // would otherwise serialize into the new project's
-                    // subscribe union, so they clear together.
+                    selectedBackend: undefined,
                     selectedOptionalDependencies: [],
                     selectedAppBuilderComponents: [],
+                    // API picks are keyed by integration id — orphaned picks would
+                    // otherwise serialize into the new project's subscribe union.
                     selectedConsoleApis: undefined,
+                    // Block libraries are storefront-derived (re-seeded on stack select).
+                    selectedBlockLibraries: undefined,
+                    // Drop stale commerce verdicts + committed sub-steps for the old
+                    // stack so the Commerce area re-locks and re-derives cleanly.
+                    commerceConnectValid: false,
+                    commerceStoreViewChosen: false,
+                    committedCommerceSteps: [],
                     packageConfigDefaults: pkg?.configDefaults,
                 });
             }
