@@ -41,6 +41,30 @@ cases.** Confirmed 2026-07-15 (research doc + the "state-coherence seam", parent
 > correct for today's authority, and a stepping stone. D3 **supersedes** it: once the keyed map is
 > the persisted source, the singular `appState` write-side is retired (Step 07).
 
+## Component structure — what D3 guarantees (per `app-builder-integration-model` research)
+
+The researched structure is: **each integration is its own `components/<id>/` folder (own repo, build,
+deploy) → all deploy into ONE shared Adobe I/O workspace → coexisting because each carries a distinct
+OpenWhisk package (`deriveOwPackage(id)`), which is the `aio app deploy` prune boundary.** That
+structure already exists (D1 + shared `componentInstallation`); D3 must **preserve, consolidate, and
+prove** it, not re-establish it:
+
+- **Own folder:** produced by the shared `componentInstallation` install path. Step 05 collapses to a
+  single add path → a single install path → the folder structure holds by construction.
+- **Own isolated package:** `applyIsolatedPackages(componentPath, deriveOwPackage(id))`
+  (`appConfigPackages.ts`). Today it runs on the **keyed runner** path only; the **singular
+  `deployAppHeadless`** path is un-isolated (research gap). Step 03 closes this by routing every deploy
+  through the isolating runner — no un-isolated path survives.
+- **Own durable provenance:** each integration's `source {owner,repo,branch}` is a field on the keyed
+  `AppBuilderComponentState`, so persisting the keyed map (Step 01) makes per-integration provenance
+  durable — superseding the never-persisted `appBuilderComponentSources` map.
+- **Independent lifecycle:** per-integration deploy/redeploy/remove (Steps 04/05) — remove undeploys
+  only that integration's own package entities.
+
+**Structural invariant D3 must not break (asserted by the Step-03 test below):** N integrations ⇒ N
+folders `components/<id>/`, each deployed under a distinct `ow.package`, each removable without touching
+the others. Component count ≠ App Builder project count (always 1).
+
 ## Non-negotiable discipline (from the ADR)
 
 - **The `MESH_ENDPOINT` → `config.json` → CDN edge stays green throughout.** Migrate mesh runtime
@@ -56,7 +80,7 @@ cases.** Confirmed 2026-07-15 (research doc + the "state-coherence seam", parent
 | 00 | RPTC re-init | Re-invoke the originating `/rptc:feat`; confirm worktree + baseline GREEN | — |
 | 01 | **Persist the keyed map** | `writeManifest` serializes `appBuilderComponents`; `ProjectFileLoader` **prefers** it and falls back to the read-migration only when absent. + add `name?: string` to `AppBuilderComponentState` (the #4 integration-name home, persisted here) | Old projects with no keyed map must still load via migration (don't drop the fallback) |
 | 02 | **One writer** | Route `deployMeshHeadless`/`deployAppHeadless` through `setAppBuilderComponent` (keyed) as the source of truth; `meshStatusSummary`/`appStatusSummary` derive from the keyed entry so the card grid + keyed list agree | Card-grid gating reads must move to the keyed accessor without a status regression |
-| 03 | **Isolate all deploy paths** | Apply `applyIsolatedPackages`/`deriveOwPackage` on the singular `deployAppHeadless` path too (currently un-isolated) | Changing the package name of an already-deployed legacy app → prune/orphan; verify on a live workspace |
+| 03 | **One isolating deploy path** | Route every deploy (incl. the projects-dashboard singular `deployAppHeadless` path) through the isolating keyed runner so `applyIsolatedPackages(deriveOwPackage(id))` runs by construction — no un-isolated path survives. **Structural-invariant test:** N integrations ⇒ N `components/<id>/` folders, each under a distinct `ow.package`, remove undeploys only its own | Re-isolating an already-deployed legacy app changes its package → prune/orphan; live-workspace probe required (ADR load-bearing assumption) |
 | 04 | **Per-integration redeploy** | Projects-dashboard kebab "Redeploy App" (singular) → per-integration by id, matching the keyed model | Kebab currently assumes one app; needs the id in scope |
 | 05 | **One add/remove system** | Retire the guarded singular `addApp`/`removeApp`; consolidate onto keyed `addAppBuilderComponent`/`removeAppBuilderComponent`; drop the one-app guard (`getAppBuilderInstance` reject) | A caller still on the singular handler; remove-confirm + undeploy parity |
 | 06 | **Mesh onto the unified model** | Mesh status/staleness/`providesEnvVars` read/write through the keyed mesh entry; **`config.json` output byte-identical** (golden test) | THE load-bearing edge — regression here breaks every storefront |
@@ -72,7 +96,11 @@ cases.** Confirmed 2026-07-15 (research doc + the "state-coherence seam", parent
   `appBuilderComponents[id]` + status; card grid and keyed list read identical (Step 02).
 - **Golden `config.json`:** mesh-endpoint → `config.json` output byte-identical before/after Step 06
   (the load-bearing edge).
-- **Isolation:** every deploy path applies a distinct `ow.package` (Step 03).
+- **Structural invariant (Step 03):** after adding N integrations, each lives in its own
+  `components/<id>/`, each deploys under a distinct `ow.package` (no two share; none on
+  `application`/`dx-excshell-1`), and removing one undeploys only its own package entities — via
+  BOTH the projects-dashboard path and the keyed list (they now route through the same isolating
+  runner). This is the "proper component structure" guard.
 - **Per-integration lifecycle:** deploy/redeploy/remove one of N leaves the others untouched
   (Steps 04/05).
 - Coverage: 100% on the migration + `config.json` + one-writer paths.
