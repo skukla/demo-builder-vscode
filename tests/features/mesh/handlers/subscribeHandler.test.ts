@@ -142,26 +142,6 @@ describe('handleEnsureMeshApiSubscribed', () => {
         );
     });
 
-    it('forwards each subscribe tick to the webview as mesh-api-subscribe-progress', async () => {
-        // The handler passes an onProgress that pushes to the webview; drive it.
-        mockEnsureMeshApiSubscribed.mockImplementation(async (params: any) => {
-            params.onProgress({ code: 'GraphQLServiceSDK', done: false });
-            params.onProgress({ code: 'GraphQLServiceSDK', done: true });
-            return subscribedApis;
-        });
-
-        await handleEnsureMeshApiSubscribed(mockContext, validPayload);
-
-        expect(mockContext.sendMessage).toHaveBeenCalledWith('mesh-api-subscribe-progress', {
-            code: 'GraphQLServiceSDK',
-            done: false,
-        });
-        expect(mockContext.sendMessage).toHaveBeenCalledWith('mesh-api-subscribe-progress', {
-            code: 'GraphQLServiceSDK',
-            done: true,
-        });
-    });
-
     it('should return a shaped error when the service throws', async () => {
         mockEnsureMeshApiSubscribed.mockRejectedValue(new Error('subscribe boom'));
 

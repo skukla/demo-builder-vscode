@@ -8,12 +8,11 @@
  * (`list-org-console-apis`, entitlement-filtered, with the baseline + APIs other
  * integrations already cover flagged `locked`) and lets the user pick freely via
  * the shared {@link ApiAccessPicker}. Picks are recorded on the flow draft and
- * subscribed at deploy; nothing is forced (the baseline is always covered).
+ * subscribed at the rebuild; nothing is forced (the baseline is always covered).
  *
  * @module features/project-creation/ui/components/integration-flow/stages/ApiPickerStage
  */
 
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useCallback, useEffect, useState } from 'react';
 import { LoadingDisplay, StatusDisplay } from '@/core/ui/components/feedback';
 import { ApiAccessPicker, type ApiAccessOption } from '@/core/ui/components/selection';
@@ -36,12 +35,6 @@ export interface ApiPickerStageProps {
     selected: string[];
     /** Toggle a free pick by code. */
     onToggle: (code: string) => void;
-    /**
-     * Terminal confirmation (footer → "Done"): the picks are locked in and the
-     * stage shows a ✓ summary of the chosen APIs instead of the interactive picker
-     * (parity with the mesh enable's ✓ hold). Back un-confirms → the picker returns.
-     */
-    confirmed?: boolean;
 }
 
 /** Stable empty default so an omitted `selected` never churns the picker. */
@@ -59,7 +52,6 @@ export function ApiPickerStage({
     componentIds,
     selected = NO_SELECTED,
     onToggle,
-    confirmed = false,
 }: ApiPickerStageProps): React.ReactElement {
     const [apis, setApis] = useState<ApiAccessOption[]>([]);
     const [loading, setLoading] = useState(true);
@@ -114,14 +106,6 @@ export function ApiPickerStage({
             </div>
         );
     }
-    // The confirmation summary is read-only text — keep it at the narrow measure.
-    if (confirmed) {
-        return (
-            <div className="intflow-api-info" data-testid="api-picker-stage">
-                <ConfirmedSummary apis={apis} selected={selected} />
-            </div>
-        );
-    }
     // The interactive picker (filter, category chips, API list) uses the full modal
     // width — the extra room lets more chips and the list breathe.
     return (
@@ -134,47 +118,4 @@ export function ApiPickerStage({
             />
         </div>
     );
-}
-
-/**
- * The confirmation hold: the chosen APIs (by display name) with a ✓ each, reusing
- * the summary vocabulary of the mesh/catalog stage. Empty picks are valid — the
- * baseline covers the app — so say that rather than showing an empty list.
- */
-function ConfirmedSummary({
-    apis,
-    selected,
-}: {
-    apis: ApiAccessOption[];
-    selected: string[];
-}): React.ReactElement {
-    const chosen = apis.filter((api) => selected.includes(api.code)).sort(byDisplayName);
-    return (
-        <div data-testid="api-picker-confirmed">
-            <p className="intflow-api-info-sub">
-                {chosen.length > 0
-                    ? 'These Adobe APIs are added to this app — enabled on your workspace when it deploys.'
-                    : 'No extra APIs selected — the baseline Adobe I/O access covers this app.'}
-            </p>
-            {chosen.length > 0 && (
-                <div className="intflow-api-summary-section">
-                    {chosen.map((api) => (
-                        <div key={api.code} className="intflow-api-summary-item">
-                            <CheckmarkCircle
-                                size="S"
-                                UNSAFE_className="text-green-600"
-                                aria-label={`${api.name} added`}
-                            />
-                            <span className="intflow-api-summary-name">{api.name}</span>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-}
-
-/** Alphabetical by display name for the confirmation summary. */
-function byDisplayName(a: ApiAccessOption, b: ApiAccessOption): number {
-    return a.name.localeCompare(b.name);
 }

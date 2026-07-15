@@ -95,6 +95,12 @@ describe('executeAppBuilderIntegrationsPhase', () => {
         expect(mockAddAppBuilderComponent).toHaveBeenCalledWith(
             project, INTEGRATION_ENTRY, expect.anything(),
         );
+        // The API subscribe (union reconcile, inside the runner) is communicated.
+        expect(progressTracker).toHaveBeenCalledWith(
+            'Deploying Integrations',
+            expect.any(Number),
+            'Enabling API access…',
+        );
     });
 
     it('resolves a custom-source id via buildCustomIntegrationEntry and deploys it', async () => {

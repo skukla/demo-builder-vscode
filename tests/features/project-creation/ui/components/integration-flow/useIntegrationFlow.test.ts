@@ -5,9 +5,10 @@
  * stage order (flowStages), keeps a modal-local FlowDraft, commits the shared
  * Adobe I/O destination on the dest-stage Continues, and on the LAST stage
  * finishes through the UNCHANGED useProjectBuilder handlers (mesh/catalog
- * toggle, custom add). API access is deterministic — no per-integration API
- * picks are merged. Cancel is the modal closing without onContinue — draft
- * mutations never write wizard state.
+ * toggle, custom add). API access is deterministic and the modal provisions
+ * NOTHING — every kind commits + closes immediately on Add; the APIs subscribe
+ * later, at the rebuild/deploy. Cancel is the modal closing without onContinue —
+ * draft mutations never write wizard state.
  *
  * @jest-environment jsdom
  */
@@ -24,25 +25,22 @@ import type { SelectableAppBuilderComponent } from '@/features/project-creation/
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AdobeProject, WizardState, Workspace } from '@/types/webview';
 
-/** The mesh enable (ensure-mesh-api-subscribed) runs on Add via webviewClient. */
-const mockMeshRequest = jest.fn();
-/** Captured extension→webview listeners, keyed by type (drive progress in tests). */
-const mockMessageHandlers: Record<string, (data: unknown) => void> = {};
+/**
+ * The webview client is mocked so a test can assert the modal NEVER subscribes
+ * (no `ensure-mesh-api-subscribed` request) — all provisioning moved to the rebuild.
+ */
+const mockRequest = jest.fn();
 jest.mock('@/core/ui/utils/vscode-api', () => ({
     webviewClient: {
-        request: (...args: unknown[]) => mockMeshRequest(...args),
+        request: (...args: unknown[]) => mockRequest(...args),
         postMessage: jest.fn(),
-        onMessage: (type: string, handler: (data: unknown) => void) => {
-            mockMessageHandlers[type] = handler;
-            return () => delete mockMessageHandlers[type];
-        },
+        onMessage: jest.fn(() => () => {}),
     },
 }));
 
 beforeEach(() => {
-    mockMeshRequest.mockReset();
-    mockMeshRequest.mockResolvedValue({ success: true, data: { apis: [] } });
-    for (const key of Object.keys(mockMessageHandlers)) delete mockMessageHandlers[key];
+    mockRequest.mockReset();
+    mockRequest.mockResolvedValue({ success: true, data: { apis: [] } });
 });
 
 /** Stable empty catalog (module-level — avoids new-reference hook churn). */
@@ -81,8 +79,6 @@ const LATER_ADD: Partial<WizardState> = {
     adobeWorkspace: WORKSPACE,
     selectedAppBuilderComponents: ['existing-integration'],
 };
-/** The baseline API sdk code the enable subscribes (for progress-tick tests). */
-const MGMT = 'AdobeIOManagementAPISDK';
 
 const SIGNED_IN: Partial<WizardState> = {
     adobeAuth: { isAuthenticated: true, isChecking: false },
@@ -253,7 +249,7 @@ describe('useIntegrationFlow — footer surfaces', () => {
         expect(s.result.current.continueLabel).toBe('Continue');
     });
 
-    it('labels the mesh api-access step "Add API Access" (its action enables the APIs)', () => {
+    it('labels the mesh api-access step with the plain add label (nothing provisioned here)', () => {
         const s = setup();
         pickKindAndContinue(s, 'mesh');
         act(() => s.result.current.setPendingProject(PROJECT));
@@ -265,8 +261,8 @@ describe('useIntegrationFlow — footer surfaces', () => {
         act(() => s.result.current.onContinue());
         s.sync();
         expect(s.result.current.stage).toBe('api-access');
-        // The mesh press ENABLES the APIs in-modal — not just "Add Integration".
-        expect(s.result.current.continueLabel).toBe('Add API Access');
+        // The final stage just commits the integration — no in-modal enable.
+        expect(s.result.current.continueLabel).toBe('Add Integration');
     });
 
     it('labels the last destination-mode stage Save', () => {
@@ -384,11 +380,6 @@ describe('useIntegrationFlow — dest-workspace Continue and mesh finish', () =>
         s.sync();
     }
 
-    /** Press the footer primary on the api-access step (Add → enable, then Done → close). */
-    async function finishMesh(s: Setup): Promise<void> {
-        await act(async () => s.result.current.onContinue());
-    }
-
     it('commits the pending workspace', () => {
         const s = setup();
         walkMeshToDestWorkspace(s);
@@ -397,61 +388,35 @@ describe('useIntegrationFlow — dest-workspace Continue and mesh finish', () =>
         expect(s.updateState).toHaveBeenCalledWith({ adobeWorkspace: WORKSPACE });
     });
 
-    it('Add runs the enable and HOLDS on Done (no commit/close); Done then commits + closes', async () => {
+    it('Add commits the mesh and closes immediately — no subscribe, no Done hold', () => {
         const s = setup();
         walkMeshToApiAccess(s);
         expect(s.result.current.stage).toBe('api-access');
 
-        // First press (Add): runs the enable (enableComplete implies the request
-        // resolved), then holds on the ✓ terminal state — footer becomes "Done",
-        // nothing committed yet (a premature close is caught by the final count).
-        await finishMesh(s);
-        expect(s.result.current.enableComplete).toBe(true);
-        expect(s.result.current.continueLabel).toBe('Done');
-        expect(s.builder.onAppBuilderComponentToggle).not.toHaveBeenCalled();
-
-        // Second press (Done): commit + close.
-        await finishMesh(s);
+        // A single Add press commits + closes: no enable request, no "Done" hold.
+        act(() => s.result.current.onContinue());
         expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith(MESH_ID, true);
         expect(s.onClose).toHaveBeenCalledTimes(1);
+        // The modal provisions nothing — all APIs subscribe at the rebuild.
+        expect(mockRequest).not.toHaveBeenCalledWith(
+            'ensure-mesh-api-subscribed',
+            expect.anything()
+        );
     });
 
-    it('flips each API row done as its subscribe tick arrives during the enable', async () => {
-        // The real handler pushes per-API ticks mid-request; drive one.
-        mockMeshRequest.mockImplementation(async () => {
-            mockMessageHandlers['mesh-api-subscribe-progress']?.({ code: MGMT, done: true });
-            return { success: true, data: { apis: [] } };
-        });
-        const s = setup();
-        walkMeshToApiAccess(s);
-        await finishMesh(s);
-        expect(s.result.current.enableDone).toEqual({ [MGMT]: true });
-    });
-
-    it('a failed mesh enable keeps the modal open (no commit, no close)', async () => {
-        mockMeshRequest.mockResolvedValue({ success: false, error: 'nope' });
-        const s = setup({ initial: LATER_ADD });
-        pickKindAndContinue(s, 'mesh');
-        act(() => s.result.current.onContinue()); // → api-access
-        await finishMesh(s);
-        expect(s.result.current.enableError).toBe('nope');
-        // The footer becomes the retry affordance (no "press Add…" text needed).
-        expect(s.result.current.continueLabel).toBe('Retry');
-        expect(s.builder.onAppBuilderComponentToggle).not.toHaveBeenCalled();
-        expect(s.onClose).not.toHaveBeenCalled();
-    });
-
-    it('finishes a later-add mesh from dest-summary → api-access (destination already committed)', async () => {
+    it('finishes a later-add mesh from dest-summary → api-access in one Add press', () => {
         const s = setup({ initial: LATER_ADD });
         pickKindAndContinue(s, 'mesh');
         expect(s.result.current.stage).toBe('dest-summary');
         act(() => s.result.current.onContinue());
         expect(s.result.current.stage).toBe('api-access');
-        await finishMesh(s); // Add → enable → holds on Done
-        expect(s.onClose).not.toHaveBeenCalled();
-        await finishMesh(s); // Done → commit + close
+        act(() => s.result.current.onContinue()); // Add → commit + close
         expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith(MESH_ID, true);
         expect(s.onClose).toHaveBeenCalledTimes(1);
+        expect(mockRequest).not.toHaveBeenCalledWith(
+            'ensure-mesh-api-subscribed',
+            expect.anything()
+        );
     });
 });
 
@@ -473,29 +438,15 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
         expect(s.onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('build custom HOLDS on Done, Back un-confirms to revise, Done commits + closes', () => {
+    it('build custom Add commits the shell and closes immediately (no confirm hold)', () => {
         const s = setup({ initial: LATER_ADD });
         pickKindAndContinue(s, 'blank'); // blank has no source stage → straight to dest
         expect(s.result.current.stage).toBe('dest-summary');
         act(() => s.result.current.onContinue()); // → api-access
         act(() => s.result.current.toggleApi('FireflyServicesSDK'));
-        // First press ("Add API Access") confirms in-modal — footer → Done, no commit/close.
+        // A single Add press commits the shell + closes — no in-modal confirmation.
         act(() => s.result.current.onContinue());
-        expect(s.result.current.picksConfirmed).toBe(true);
-        expect(s.result.current.continueLabel).toBe('Done');
-        expect(s.builder.onAppBuilderComponentToggle).not.toHaveBeenCalled();
-        expect(s.onClose).not.toHaveBeenCalled();
-        // Back un-confirms → the picker returns, picks preserved (nothing provisioned yet).
-        expect(s.result.current.canGoBack).toBe(true);
-        act(() => s.result.current.onBack());
-        expect(s.result.current.picksConfirmed).toBe(false);
-        expect(s.result.current.stage).toBe('api-access');
-        expect(s.result.current.draft.selectedApis).toEqual(['FireflyServicesSDK']);
-        // Re-confirm, then Done commits the shell + closes.
-        act(() => s.result.current.onContinue());
-        act(() => s.result.current.onContinue());
-        const toggle = s.builder.onAppBuilderComponentToggle;
-        expect(toggle).toHaveBeenCalledWith('app-builder-shell', true);
+        expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('app-builder-shell', true);
         expect(s.onClose).toHaveBeenCalledTimes(1);
     });
 
@@ -504,8 +455,7 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
         pickKindAndContinue(s, 'blank');
         act(() => s.result.current.onContinue()); // dest-summary → api-access
         act(() => s.result.current.toggleApi('FireflyServicesSDK')); // the user knows this up front
-        act(() => s.result.current.onContinue()); // Add API Access → confirm
-        act(() => s.result.current.onContinue()); // Done → finish
+        act(() => s.result.current.onContinue()); // Add → commit + close
         expect(s.updateState).toHaveBeenCalledWith({
             selectedConsoleApis: { 'app-builder-shell': ['FireflyServicesSDK'] },
         });
@@ -518,8 +468,7 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
         act(() => s.result.current.onContinue()); // → dest-summary
         act(() => s.result.current.onContinue()); // → api-access
         act(() => s.result.current.toggleApi('FireflyServicesSDK'));
-        act(() => s.result.current.onContinue()); // Add API Access → confirm
-        act(() => s.result.current.onContinue()); // Done → finish
+        act(() => s.result.current.onContinue()); // Add → commit + close
         expect(s.builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith({
             owner: 'acme',
             repo: 'widget',

@@ -487,6 +487,12 @@ describe('Timeout Configuration', () => {
                 expect(CACHE_TTL.SHORT).toBeLessThan(CACHE_TTL.MEDIUM);
                 expect(CACHE_TTL.MEDIUM).toBeLessThan(CACHE_TTL.LONG);
             });
+
+            it('should cache the org services catalog for 30 minutes', () => {
+                // Bumped from 5m: the picker prefetch warms this cache on modal open, so a
+                // longer TTL keeps the later picker fetch fast across a whole add session.
+                expect(CACHE_TTL.ORG_SERVICES).toBe(30 * 60 * 1000);
+            });
         });
     });
 

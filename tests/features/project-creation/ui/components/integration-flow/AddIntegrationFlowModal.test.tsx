@@ -351,7 +351,7 @@ describe('AddIntegrationFlowModal — kind stage', () => {
 });
 
 describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
-    it('walks kind → project → workspace → api-access (informational), then finishes', async () => {
+    it('walks kind → project → workspace → api-access (informational), then commits on Add', async () => {
         const { builder, updateSpy, onClose } = renderModal();
         walkMeshToProject();
         expect(screen.getByTestId('project-field')).toBeInTheDocument();
@@ -368,34 +368,20 @@ describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
         expect(updateSpy).toHaveBeenCalledWith({
             adobeWorkspace: { id: 'w-picked', name: 'Stage', title: 'Stage' },
         });
-        // api-access: informational only — the mesh's required API + baseline show
-        // as "always on"; nothing is provisioned or selected here.
+        // api-access: informational only — the mesh's required API + baseline are
+        // listed; nothing is provisioned or selected here.
         await waitForApiAccessStep();
         const included = screen.getByTestId('api-access-included');
         expect(within(included).getByText('API Mesh')).toBeInTheDocument();
         expect(within(included).getByText('I/O Management API')).toBeInTheDocument();
+        // Add commits the mesh and closes in a SINGLE press — no "Enabling…"/"Done"
+        // hold and no subscribe (the APIs are subscribed later, at the rebuild).
+        expectEnabled('Add Integration');
+        click('Add Integration');
+        expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('commerce-mesh', true);
         expect(mockRequest).not.toHaveBeenCalledWith(
             'ensure-mesh-api-subscribed',
             expect.anything()
-        );
-        // Add is ready immediately (informational stage never gates the footer).
-        expectEnabled('Add API Access');
-        click('Add API Access');
-        // The mesh enable runs IN the modal on Add (not deferred to the result row).
-        await waitFor(() =>
-            expect(mockRequest).toHaveBeenCalledWith(
-                'ensure-mesh-api-subscribed',
-                expect.objectContaining({ workspaceId: 'w-picked' })
-            )
-        );
-        // Success HOLDS on the ✓ terminal state (footer → Done); nothing committed yet.
-        await waitFor(() => expectEnabled('Done'));
-        expect(builder.onAppBuilderComponentToggle).not.toHaveBeenCalled();
-        expect(onClose).not.toHaveBeenCalled();
-        // Done → commit + close.
-        click('Done');
-        await waitFor(() =>
-            expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('commerce-mesh', true)
         );
         expect(onClose).toHaveBeenCalledTimes(1);
     });
@@ -418,48 +404,22 @@ describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
         expect(within(included).getByText('I/O Management API')).toBeInTheDocument();
     });
 
-    it('a mesh finish writes no selectedConsoleApis (deterministic API access)', async () => {
+    it('a mesh finish writes no selectedConsoleApis and never subscribes', async () => {
         const { builder, updateSpy } = renderModal({ initial: COMMITTED_DEST });
         click(/API Mesh/);
         click('Continue'); // kind → dest-summary
         click('Continue'); // dest-summary → api-access
         await waitForApiAccessStep();
-        expectEnabled('Add API Access');
-        click('Add API Access');
-        await waitFor(() => expectEnabled('Done'));
-        click('Done');
-        await waitFor(() =>
-            expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('commerce-mesh', true)
+        expectEnabled('Add Integration');
+        click('Add Integration');
+        expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('commerce-mesh', true);
+        expect(mockRequest).not.toHaveBeenCalledWith(
+            'ensure-mesh-api-subscribed',
+            expect.anything()
         );
         expect(updateSpy).not.toHaveBeenCalledWith(
             expect.objectContaining({ selectedConsoleApis: expect.anything() })
         );
-    });
-
-    it('a failed mesh enable keeps the modal open; the footer becomes Retry (no text instruction)', async () => {
-        const { builder, onClose } = renderModal({ initial: COMMITTED_DEST });
-        mockRequest.mockResolvedValue({ success: false, error: 'needs Developer role' });
-        click(/API Mesh/);
-        click('Continue');
-        click('Continue');
-        await waitForApiAccessStep();
-        click('Add API Access');
-        // Error surfaces; nothing committed, modal stays open, footer becomes "Retry"
-        // (the button IS the retry affordance — no "press Add Integration…" instruction).
-        await waitFor(() => expect(screen.getByText(/needs Developer role/i)).toBeInTheDocument());
-        expect(screen.queryByText(/press Add Integration to try again/i)).not.toBeInTheDocument();
-        await waitFor(() => expectEnabled('Retry'));
-        expect(builder.onAppBuilderComponentToggle).not.toHaveBeenCalled();
-        expect(onClose).not.toHaveBeenCalled();
-        // Retry succeeds → holds on Done → commit + close.
-        mockRequest.mockResolvedValue({ success: true, data: { apis: [] } });
-        click('Retry');
-        await waitFor(() => expectEnabled('Done'));
-        click('Done');
-        await waitFor(() =>
-            expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('commerce-mesh', true)
-        );
-        expect(onClose).toHaveBeenCalledTimes(1);
     });
 
     it('Back from dest-project returns to the kind stage', () => {

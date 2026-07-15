@@ -374,7 +374,7 @@ describe('IntegrationsStep — Remove routing', () => {
     });
 });
 
-describe('IntegrationsStep — in-modal mesh enable hand-off', () => {
+describe('IntegrationsStep — mesh add commits without subscribing', () => {
     /** Hosts the step over REAL useState so the modal's finish commits re-render rows. */
     function StatefulStep(): React.ReactElement {
         const [state, setState] = React.useState<WizardState>(() =>
@@ -400,7 +400,7 @@ describe('IntegrationsStep — in-modal mesh enable hand-off', () => {
         );
     }
 
-    it('the mesh result row runs the enable AFTER add — never during selection', async () => {
+    it('Add commits the mesh row immediately and NEVER subscribes in the modal', async () => {
         mockRequest.mockResolvedValue({ success: true });
         render(<StatefulStep />);
 
@@ -411,44 +411,23 @@ describe('IntegrationsStep — in-modal mesh enable hand-off', () => {
         // Committed destination → summary → api-access. Selection NEVER provisions.
         fireEvent.click(within(dialog).getByRole('button', { name: 'Continue' }));
         await waitFor(() => {
-            // The mesh api-access footer reads "Add API Access" (its action enables the APIs).
-            expect(within(dialog).getByRole('button', { name: 'Add API Access' })).toHaveAttribute(
-                'aria-disabled',
-                'false'
-            );
+            // The final stage just commits the integration — plain "Add Integration".
+            expect(
+                within(dialog).getByRole('button', { name: 'Add Integration' })
+            ).toHaveAttribute('aria-disabled', 'false');
         });
-        expect(mockRequest).not.toHaveBeenCalledWith(
-            'ensure-mesh-api-subscribed',
-            expect.anything()
-        );
 
-        fireEvent.click(within(dialog).getByRole('button', { name: 'Add API Access' }));
-
-        // The enable runs IN the modal on Add (against the stack's mesh axes),
-        // then the modal holds on the ✓ terminal state (footer → Done).
-        await waitFor(() => {
-            expect(mockRequest).toHaveBeenCalledWith(
-                'ensure-mesh-api-subscribed',
-                expect.objectContaining({
-                    workspaceId: 'ws-1',
-                    backendId: 'adobe-commerce-paas',
-                    frontendId: 'eds-storefront',
-                })
-            );
-        });
-        // Done → commit + close. The result row then ADOPTS the modal's outcome
-        // (no re-run) and lists the mesh's provisioned APIs by name.
-        await waitFor(() =>
-            expect(within(dialog).getByRole('button', { name: 'Done' })).toBeInTheDocument()
-        );
-        fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+        // A single Add press commits + closes; the row appears listing its APIs.
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Add Integration' }));
         await waitFor(() => {
             expect(within(row(MESH_NAME)).getByText('APIs in use')).toBeInTheDocument();
         });
         expect(within(row(MESH_NAME)).getByText('API Mesh')).toBeInTheDocument();
+
+        // The modal provisions nothing — the APIs subscribe later, at the rebuild.
         const ensureCalls = mockRequest.mock.calls.filter(
             ([type]) => type === 'ensure-mesh-api-subscribed'
         );
-        expect(ensureCalls).toHaveLength(1);
+        expect(ensureCalls).toHaveLength(0);
     });
 });

@@ -9,9 +9,14 @@
  * reset-on-open seam: reopening mounts a fresh hook at the first stage. Cancel
  * discards the draft; a destination committed mid-flow survives by design.
  *
- * The api-access stage is INFORMATIONAL (see {@link ApiAccessStage}): integrations
- * are deterministic, so it shows the API access an integration grants (always on,
- * subscribed at deploy) from static data — no org fetch, no selection.
+ * The api-access stage is INFORMATIONAL for mesh/catalog (see {@link ApiAccessStage}):
+ * their APIs are deterministic, so it shows the API access an integration grants
+ * (subscribed at the rebuild) from static data — no org fetch, no selection. The
+ * modal PROVISIONS NOTHING; every kind commits + closes immediately on Add.
+ *
+ * On open (signed in) the host fires ONE fire-and-forget `list-org-console-apis`
+ * to warm the extension-side org-services cache, so the custom/import picker's
+ * later fetch is fast.
  *
  * @module features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal
  */
@@ -19,7 +24,7 @@
 import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
 import type { SelectableAppBuilderComponent } from '../../../services/appBuilderComponentSelection';
-import { isMeshSelected } from '../../steps/tileStatus';
+import { isAdobeSignedIn, isMeshSelected } from '../../steps/tileStatus';
 import type { UseProjectBuilderReturn } from '../../steps/useProjectBuilder';
 import { enabledApisFromSelection } from './enabledApis';
 import { meshKindOffered, type FlowMode } from './flowStages';
@@ -35,6 +40,7 @@ import {
     type UseIntegrationFlowReturn,
 } from './useIntegrationFlow';
 import { Modal } from '@/core/ui/components/ui/Modal';
+import { webviewClient } from '@/core/ui/utils/vscode-api';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { WizardState } from '@/types/webview';
 
@@ -74,7 +80,7 @@ export interface AddIntegrationFlowModalProps {
     catalog: AppBuilderComponentCatalogEntry[];
     /** The blank starter app (the "Build custom" kind seeds it), if any. */
     blankComponent?: AppBuilderComponentCatalogEntry;
-    /** Selected stack backend/frontend ids — the mesh-enable payload run on Add. */
+    /** Selected stack backend/frontend ids — resolve the project's already-enabled APIs. */
     backendId?: string;
     frontendId?: string;
     /** The unchanged useProjectBuilder handlers the finish commits route through. */
@@ -143,22 +149,13 @@ function StageBody({
             props.frontendId,
         );
         if (draft.kind === 'mesh') {
+            // Mesh APIs are deterministic — the same informational panel as catalog.
+            // The modal provisions nothing; they subscribe at the rebuild.
             return (
-                <>
-                    <ApiAccessStage
-                        required={meshComponent?.requiredApis}
-                        enabling={flow.enabling}
-                        enableDone={flow.enableDone}
-                        enableComplete={flow.enableComplete}
-                        enablesOnAdd
-                        alreadyEnabled={alreadyEnabled}
-                    />
-                    {flow.enableError && (
-                        <div className="intflow-api-info-error" role="alert">
-                            {flow.enableError}
-                        </div>
-                    )}
-                </>
+                <ApiAccessStage
+                    required={meshComponent?.requiredApis}
+                    alreadyEnabled={alreadyEnabled}
+                />
             );
         }
         // Custom apps (blank shell / imported repo) can need ANY entitled API and
@@ -170,7 +167,6 @@ function StageBody({
                     componentIds={selectedIds}
                     selected={draft.selectedApis ?? EMPTY_IDS}
                     onToggle={flow.toggleApi}
-                    confirmed={flow.picksConfirmed}
                 />
             );
         }
@@ -234,6 +230,19 @@ export function AddIntegrationFlowModal({
     isOpen,
     ...journey
 }: AddIntegrationFlowModalProps): React.ReactElement {
+    // Warm the extension-side org-services cache the moment the modal opens (once
+    // per open, only when signed in) so the interactive picker's later fetch is
+    // fast. Fire-and-forget — the result is ignored; the cache is the payoff.
+    const signedIn = isAdobeSignedIn(journey.state);
+    React.useEffect(() => {
+        if (!isOpen || !signedIn) return;
+        // Fire-and-forget warm-up: swallow any rejection (timeout/org error) — the
+        // picker will fetch on demand if this misses; an unhandled rejection must not escape.
+        void webviewClient.request('list-org-console-apis', { componentIds: [] }).catch(() => {});
+        // Keyed on the open transition only: fire once per open, never on every state
+        // change while open (which would refetch on each keystroke/selection).
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen]);
     return (
         <DialogContainer type="fullscreen" onDismiss={journey.onClose}>
             {isOpen && <FlowJourney {...journey} />}

@@ -199,6 +199,9 @@ export async function deployNewMesh(
     // Bounded pre-deploy subscribe: ensure the API Mesh API (+ baseline) is
     // subscribed on the shared App Builder project BEFORE the first mesh deploy
     // of this brand-new project. Runs once (idempotent), before the retry loop.
+    // Surfaced to the user: this is where the mesh's API access is provisioned
+    // now that the Add-Integration modal defers all subscription to the build.
+    progressTracker('Configuring API Mesh', 72, 'Enabling API access...');
     const { ensureMeshApiSubscribed } = await import(
         '@/features/app-builder/services/ensureMeshApiSubscribed'
     );
