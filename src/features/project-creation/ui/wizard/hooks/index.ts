@@ -12,3 +12,4 @@ export { useWizardState } from './useWizardState';
 export { useWizardNavigation } from './useWizardNavigation';
 export { useMessageListeners } from './useMessageListeners';
 export { useWizardEffects } from './useWizardEffects';
+export { useEditDraftAutosave } from './useEditDraftAutosave';

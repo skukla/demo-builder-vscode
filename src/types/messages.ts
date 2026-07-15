@@ -15,6 +15,9 @@ export type MessageType =
     | 'cancel-project-creation'
     | 'cancel-mesh-creation'
     | 'cancel-auth-polling'
+    // Edit-mode draft autosave (reversible per-project draft of in-progress edits)
+    | 'save-edit-draft'
+    | 'clear-edit-draft'
     | 'openProject'
     | 'browseFiles'
     | 'log'

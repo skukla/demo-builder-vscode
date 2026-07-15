@@ -6,6 +6,7 @@
  */
 
 import { handleListOrgConsoleApis } from './consoleApiHandlers';
+import { handleClearEditDraft, handleSaveEditDraft } from './editDraftHandlers';
 import * as creation from './';
 // Direct module import (NOT the './' barrel): the barrel re-exports this
 // registry first, so a barrel-first load would evaluate this map before the
@@ -115,4 +116,8 @@ export const projectCreationHandlers = defineHandlers({
 
     // Console API handlers (org entitlements for the Add Integration modal)
     'list-org-console-apis': handleListOrgConsoleApis,
+
+    // Edit-draft handlers (reversible per-project wizard edit persistence)
+    'save-edit-draft': handleSaveEditDraft,
+    'clear-edit-draft': handleClearEditDraft,
 });

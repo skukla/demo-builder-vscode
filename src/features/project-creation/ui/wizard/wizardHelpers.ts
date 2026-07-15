@@ -9,7 +9,13 @@ import { clearCompletedFrom } from '@/core/ui/utils/stepCompletion';
 import type { SettingsEdsConfig } from '@/features/projects-dashboard/types/settingsFile';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
-import type { WizardStep, WizardState, WizardMode, ComponentSelection } from '@/types/webview';
+import type {
+    WizardStep,
+    WizardState,
+    WizardMode,
+    ComponentSelection,
+    EditDraft,
+} from '@/types/webview';
 
 /**
  * Filters committed custom block library selections to remove any that
@@ -288,6 +294,12 @@ export interface EditProjectConfig {
     projectName: string;
     projectPath: string;
     settings: ImportedSettings;
+    /**
+     * The reversible draft of in-progress edits, restored silently when reopening
+     * the editor (undefined when no draft exists). Applied over the config-seeded
+     * wizard state so unsaved edits survive an exit. See `editDraft.ts`.
+     */
+    editDraft?: EditDraft;
 }
 
 /**

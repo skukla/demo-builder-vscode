@@ -25,6 +25,7 @@ import {
     deployMeshComponent as deployMeshHelper,
 } from '@/features/project-creation/helpers';
 import { parseCustomBlockLibrarySettings } from '@/features/project-creation/services/customBlockLibraryUtils';
+import { getEditDraft } from '@/features/project-creation/services/editDraftStore';
 import type { SettingsFile } from '@/features/projects-dashboard';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { parseJSON } from '@/types/typeGuards';
@@ -361,6 +362,15 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             this.logger.debug('[getInitialData] editProject exists but NO edsConfig');
         }
 
+        // Attach the reversible edit draft (if any) so the wizard restores unsaved
+        // edits silently on reopen. Read from globalState, keyed by the project path.
+        const editProjectWithDraft = this.editProject
+            ? {
+                  ...this.editProject,
+                  editDraft: getEditDraft(this.context.globalState, this.editProject.projectPath),
+              }
+            : this.editProject;
+
         return {
             theme:
                 vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark
@@ -371,7 +381,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             wizardSteps,
             existingProjectNames,
             importedSettings: this.importedSettings,
-            editProject: this.editProject,
+            editProject: editProjectWithDraft,
             projectsViewMode,
             blockLibraryDefaults,
             customBlockLibraryDefaults,

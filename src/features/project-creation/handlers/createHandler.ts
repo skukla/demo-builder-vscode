@@ -9,6 +9,7 @@ import { promises as fsPromises } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { clearEditDraft } from '../services/editDraftStore';
 import { executeProjectCreation } from './executor';
 import { OVERALL_TIMEOUT_MS } from './shared';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
@@ -354,6 +355,14 @@ export async function handleCreateProject(
                 'Please check your connection and try again.',
             signal: context.sharedState.projectCreationAbortController.signal,
         });
+
+        // A successful edit rebuild supersedes the reversible draft — clear it so the
+        // next edit session starts from the saved project, not stale in-progress edits.
+        // Only on success; a failed/cancelled rebuild (catch below) keeps the draft.
+        const editProjectPath = (config as { editProjectPath?: string }).editProjectPath;
+        if (editProjectPath) {
+            await clearEditDraft(context.context.globalState, editProjectPath);
+        }
 
         return { success: true };
     } catch (error) {

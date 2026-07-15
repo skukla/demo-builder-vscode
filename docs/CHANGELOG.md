@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Edits survive closing the editor.** When you edit a project and close the wizard
+  before finishing the rebuild, your in-progress changes (selections across
+  integrations, storefront, and components) are now saved as a reversible per-project
+  draft and restored the next time you open the editor, with an "unsaved changes
+  restored" indicator and a **Discard** action that reverts to the project's
+  last-saved state. The draft clears automatically once a rebuild succeeds; closing,
+  canceling, or a failed rebuild all keep it. Edit mode only. Secrets (component
+  passwords, API keys) are never written to the draft — those fields re-seed from the
+  saved project.
 - **More agent tools (MCP).** `get_project_urls` returns the project's useful URLs
   as data — local storefront, EDS live site + DA.live authoring, Commerce admin, and
   the Developer Console deep link — so an agent can answer "what's the URL" without a

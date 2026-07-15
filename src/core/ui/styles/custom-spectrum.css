@@ -5050,3 +5050,22 @@ div[class*="spectrum"] input[type="search"] {
     overflow-wrap: anywhere;
 }
 } /* End of second @layer theme block */
+
+/* Reversible edit-draft banner (WizardContainer): a quiet notice that unsaved
+   edits were restored on reopen, with a Discard action to revert to the saved
+   project. Sits under the header, above the step content. */
+.wizard-draft-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 24px 8px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    background: var(--spectrum-global-color-gray-100);
+    border: 1px solid var(--spectrum-global-color-gray-300);
+}
+.wizard-draft-banner-text {
+    font-size: 13px;
+    color: var(--spectrum-global-color-gray-700);
+}

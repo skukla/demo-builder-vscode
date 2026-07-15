@@ -11,6 +11,7 @@ import {
     useWizardNavigation,
     useMessageListeners,
     useWizardEffects,
+    useEditDraftAutosave,
 } from './hooks';
 import {
     getCompletedStepIndices,
@@ -136,6 +137,9 @@ export function WizardContainer({
         setIsConfirmingSelection,
         componentsData,
         setComponentsData,
+        hasRestoredDraft,
+        discardEditDraft,
+        editBaselineSerialized,
     } = useWizardState({
         componentDefaults,
         wizardSteps,
@@ -158,6 +162,15 @@ export function WizardContainer({
             updateState({ customBlockLibraries: filtered });
         }
     }, [customBlockLibraryDefaults, state.customBlockLibraries, updateState]);
+
+    // Autosave in-progress edits to a reversible per-project draft (edit mode only)
+    // so closing and reopening the editor restores unsaved changes. Persists only
+    // while the state diverges from the saved baseline.
+    useEditDraftAutosave({
+        state,
+        editProjectPath: state.editProjectPath,
+        baselineSerialized: editBaselineSerialized,
+    });
 
     // Navigation hook
     const { goNext, goBack, handleCancel, getCurrentStepIndex } = useWizardNavigation({
@@ -488,6 +501,19 @@ export function WizardContainer({
                         // The left timeline rail owns wayfinding on every step, so the
                         // header is just the title + step crumb — no restated description.
                     />
+
+                    {/* Reversible-draft banner: shown when unsaved edits were restored
+                        on reopen. Discard reverts to the project's saved state. */}
+                    {hasRestoredDraft && (
+                        <div className="wizard-draft-banner" role="status">
+                            <span className="wizard-draft-banner-text">
+                                Unsaved changes restored.
+                            </span>
+                            <Button variant="secondary" onPress={discardEditDraft}>
+                                Discard
+                            </Button>
+                        </div>
+                    )}
 
                     {/* Step Content */}
                     <div
