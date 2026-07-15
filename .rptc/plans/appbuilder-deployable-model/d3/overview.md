@@ -75,6 +75,9 @@ the others. Component count ≠ App Builder project count (always 1).
 
 ## Staged step plan (each RED-first; mesh edge green throughout)
 
+> Each row is expanded into a TDD-ready file: [`step-00`](step-00.md) … [`step-09`](step-09.md)
+> (verified anchors → RED tests → files → acceptance → risks), matching the D1 step-file convention.
+
 | Step | Title | One-line | Key risk |
 |---|---|---|---|
 | 00 | RPTC re-init | Re-invoke the originating `/rptc:feat`; confirm worktree + baseline GREEN | — |
