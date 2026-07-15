@@ -283,5 +283,50 @@ describe('ProjectConfigWriter atomic writes', () => {
             const parsed = JSON.parse(writeCall![1] as string);
             expect(parsed.aiContextVersion).toBe(3);
         });
+
+        // Regression: persisting appState — the deployed custom integration's state.
+        // deployAppHeadless sets project.appState after a successful deploy and calls
+        // saveProject, but writeManifest previously omitted it — so the deployed URL/
+        // status was dropped on write and read back as undefined after an extension
+        // reload (projectFileLoader reads manifest.appState). Mirrors meshState.
+        it('should include appState in manifest when the custom integration is deployed', async () => {
+            const project = createTestProject({
+                name: 'deployed-integration',
+                appState: {
+                    appId: 'acme-widget',
+                    url: 'https://acme.adobeio-static.net',
+                    status: 'deployed',
+                    deployedUrls: { main: 'https://acme.adobeio-static.net' },
+                    lastDeployed: '2026-07-15T00:00:00.000Z',
+                    sourceHash: null,
+                },
+            });
+
+            await writer.saveProjectConfig(project, project.path);
+
+            const writeCall = mockFs.writeFile.mock.calls.find((call) =>
+                call[0].toString().endsWith('.tmp')
+            );
+            const parsed = JSON.parse(writeCall![1] as string);
+            expect(parsed.appState).toEqual({
+                appId: 'acme-widget',
+                url: 'https://acme.adobeio-static.net',
+                status: 'deployed',
+                deployedUrls: { main: 'https://acme.adobeio-static.net' },
+                lastDeployed: '2026-07-15T00:00:00.000Z',
+                sourceHash: null,
+            });
+        });
+
+        it('should omit appState from manifest when the integration is not deployed', async () => {
+            const project = createTestProject({ name: 'no-app' });
+            await writer.saveProjectConfig(project, project.path);
+
+            const writeCall = mockFs.writeFile.mock.calls.find((call) =>
+                call[0].toString().endsWith('.tmp')
+            );
+            const parsed = JSON.parse(writeCall![1] as string);
+            expect(parsed.appState).toBeUndefined();
+        });
     });
 });

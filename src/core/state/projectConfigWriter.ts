@@ -95,6 +95,12 @@ export class ProjectConfigWriter {
                 componentVersions: project.componentVersions,
                 aiContextVersion: project.aiContextVersion,
                 meshState: project.meshState,
+                // Deployed custom-integration state (URL/status) — the App Builder
+                // sibling of meshState. deployAppHeadless sets this and saves; the
+                // loader reads manifest.appState, so it must be serialized here or a
+                // deployed integration loses its record on reload. Status *summaries*
+                // (mesh/app) stay omitted — they are recomputed on load, not persisted.
+                appState: project.appState,
                 edsStorefrontState: project.edsStorefrontState,
                 edsStorefrontStatusSummary: project.edsStorefrontStatusSummary,
                 components: getComponentIds(project.componentInstances),
