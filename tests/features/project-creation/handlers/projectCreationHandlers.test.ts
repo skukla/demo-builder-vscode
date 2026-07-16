@@ -67,11 +67,6 @@ describe('projectCreationHandlers', () => {
             expect(hasHandler(projectCreationHandlers, 'list-org-console-apis')).toBe(true);
         });
 
-        it('should register the edit-draft handlers', () => {
-            expect(hasHandler(projectCreationHandlers, 'save-edit-draft')).toBe(true);
-            expect(hasHandler(projectCreationHandlers, 'clear-edit-draft')).toBe(true);
-        });
-
         it('should export the console API handler from the barrel', async () => {
             const barrel = await import('@/features/project-creation/handlers');
             const exported = (barrel as Record<string, unknown>).handleListOrgConsoleApis;

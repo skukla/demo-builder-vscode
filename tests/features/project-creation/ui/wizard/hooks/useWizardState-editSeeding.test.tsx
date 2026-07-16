@@ -11,7 +11,7 @@
  * Written BEFORE the seeding exists (strict RED).
  */
 
-import { renderHook, act } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { resolveIntegrationRows } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
 import { isMeshSelected } from '@/features/project-creation/ui/steps/tileStatus';
 import { useWizardState } from '@/features/project-creation/ui/wizard/hooks/useWizardState';
@@ -19,8 +19,6 @@ import type {
     EditProjectConfig,
     ImportedSettings,
 } from '@/features/project-creation/ui/wizard/wizardHelpers';
-import { vscode } from '@/core/ui/utils/vscode-api';
-import type { EditDraft } from '@/types/webview';
 
 jest.mock('@/core/ui/utils/vscode-api', () => ({
     vscode: { postMessage: jest.fn(), request: jest.fn() },
@@ -198,55 +196,5 @@ describe('useWizardState - edit-mode backend seeding', () => {
         const state = renderWizardState(undefined);
 
         expect(state.selectedBackend).toBeUndefined();
-    });
-});
-
-describe('useWizardState - edit-mode reversible draft', () => {
-    /** A saved project with one integration, plus a draft that removed it. */
-    function editProjectWithDraft(): EditProjectConfig {
-        return {
-            ...makeEditProject({ selections: { appBuilder: ['erp-sync'] } }),
-            editDraft: { projectName: 'edit-me', selectedAppBuilderComponents: [] } as EditDraft,
-        };
-    }
-
-    it('applies the draft over the config-seeded state (draft wins) and flags the restore', () => {
-        const { result } = renderHook(() =>
-            useWizardState({ wizardSteps: WIZARD_STEPS, editProject: editProjectWithDraft() })
-        );
-
-        // The saved project had ['erp-sync']; the draft removed it.
-        expect(result.current.state.selectedAppBuilderComponents).toEqual([]);
-        expect(result.current.hasRestoredDraft).toBe(true);
-    });
-
-    it('does not flag a restore when no draft exists (seeds straight from saved state)', () => {
-        const { result } = renderHook(() =>
-            useWizardState({
-                wizardSteps: WIZARD_STEPS,
-                editProject: makeEditProject({ selections: { appBuilder: ['erp-sync'] } }),
-            })
-        );
-
-        expect(result.current.hasRestoredDraft).toBe(false);
-        expect(result.current.state.selectedAppBuilderComponents).toEqual(['erp-sync']);
-    });
-
-    it('discardEditDraft resets to the saved state, posts clear-edit-draft, and clears the flag', () => {
-        const { result } = renderHook(() =>
-            useWizardState({ wizardSteps: WIZARD_STEPS, editProject: editProjectWithDraft() })
-        );
-        expect(result.current.state.selectedAppBuilderComponents).toEqual([]); // draft applied
-
-        act(() => {
-            result.current.discardEditDraft();
-        });
-
-        // Reverted to the project's saved selection.
-        expect(result.current.state.selectedAppBuilderComponents).toEqual(['erp-sync']);
-        expect(result.current.hasRestoredDraft).toBe(false);
-        expect(vscode.postMessage).toHaveBeenCalledWith('clear-edit-draft', {
-            projectPath: '/projects/edit-me',
-        });
     });
 });

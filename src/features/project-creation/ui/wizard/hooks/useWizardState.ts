@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { applyEditDraft, pickEditDraft } from '../editDraft';
 import { filterStepsForStack, WizardStepWithCondition } from '../stepFiltering';
 import {
     getEnabledWizardSteps,
@@ -12,7 +11,6 @@ import {
     WizardStepConfigWithRequirements,
 } from '../wizardHelpers';
 import { isMeshComponentId } from '@/core/constants';
-import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import type { ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
 import type { Stack } from '@/types/stacks';
@@ -73,12 +71,6 @@ interface UseWizardStateReturn {
     setComponentsData: React.Dispatch<
         React.SetStateAction<{ success: boolean; type: string; data: ComponentsData } | null>
     >;
-    /** Edit mode: a reversible draft of unsaved edits was restored on reopen. */
-    hasRestoredDraft: boolean;
-    /** Discard the restored draft: clear it and reset to the project's saved state. */
-    discardEditDraft: () => void;
-    /** Serialized saved-state editable slice; the autosave's divergence baseline. */
-    editBaselineSerialized: string;
 }
 
 /**
@@ -309,9 +301,7 @@ function computeInitialState(
     const firstStep = getFirstEnabledStep(wizardSteps);
 
     if (editProject) {
-        // Apply the reversible draft (if any) over the config-seeded state so
-        // unsaved edits are restored silently when reopening the editor.
-        return applyEditDraft(buildEditModeState(firstStep, editProject), editProject.editDraft);
+        return buildEditModeState(firstStep, editProject);
     }
 
     // CREATE/IMPORT MODE
@@ -379,35 +369,6 @@ export function useWizardState({
             existingProjectNames || [],
         ),
     );
-
-    // The serialized editable slice of the project's SAVED (draft-less) state. The
-    // autosave writes a draft only while the live slice diverges from this, so
-    // opening the editor or discarding never persists a no-op draft.
-    const editBaselineSerialized = useMemo(() => {
-        if (!editProject) return '';
-        const base = buildEditModeState(getFirstEnabledStep(wizardSteps), editProject);
-        return JSON.stringify(pickEditDraft(base));
-    }, [editProject, wizardSteps]);
-
-    // Edit mode: whether a reversible draft was restored on reopen (drives the
-    // "unsaved changes restored" indicator + Discard affordance). True only when the
-    // draft actually changes the saved state — a draft equal to the baseline (or
-    // absent) is not a "restored change".
-    const [hasRestoredDraft, setHasRestoredDraft] = useState<boolean>(() => {
-        if (!editProject?.editDraft) return false;
-        const base = buildEditModeState(getFirstEnabledStep(wizardSteps), editProject);
-        const applied = applyEditDraft(base, editProject.editDraft);
-        return JSON.stringify(pickEditDraft(applied)) !== JSON.stringify(pickEditDraft(base));
-    });
-
-    // Discard the restored draft: clear it in the extension and reset the wizard to
-    // the project's saved (draft-less) state.
-    const discardEditDraft = useCallback(() => {
-        if (!editProject) return;
-        vscode.postMessage('clear-edit-draft', { projectPath: editProject.projectPath });
-        setState(buildEditModeState(getFirstEnabledStep(wizardSteps), editProject));
-        setHasRestoredDraft(false);
-    }, [editProject, wizardSteps]);
 
     // Filter steps based on enabled flag AND stack conditions
     // When a predefined stack is selected, hide steps with showWhenNoStack: true
@@ -556,8 +517,5 @@ export function useWizardState({
         setIsConfirmingSelection,
         componentsData,
         setComponentsData,
-        hasRestoredDraft,
-        discardEditDraft,
-        editBaselineSerialized,
     };
 }

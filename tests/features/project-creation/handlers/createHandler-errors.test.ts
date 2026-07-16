@@ -81,22 +81,6 @@ describe('Project Creation - Create Handler - Errors & Cleanup', () => {
         });
     });
 
-    describe('reversible edit-draft on failure', () => {
-        it('keeps the draft when an edit rebuild fails (no clear)', async () => {
-            mockExecutionFailure('rebuild failed');
-            const editConfig = { ...mockConfig, editProjectPath: '/projects/edit-me' };
-
-            await handleCreateProject(mockContext, editConfig);
-
-            const draftClears = (
-                mockContext.context.globalState.update as jest.Mock
-            ).mock.calls.filter(([key]) =>
-                String(key).startsWith('projectCreation.editDraft:')
-            );
-            expect(draftClears).toHaveLength(0);
-        });
-    });
-
     describe('error handling', () => {
         it('should handle general creation failure', async () => {
             mockExecutionFailure('npm install failed');

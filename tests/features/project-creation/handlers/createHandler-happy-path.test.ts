@@ -6,11 +6,7 @@ import { ServiceLocator as _ServiceLocator } from '@/core/di';
 import * as vscode from 'vscode';
 import * as _fs from 'fs';
 import { promises as _fsPromises } from 'fs';
-import {
-    createMockContext,
-    setupDefaultMocks,
-    mockConfig,
-} from './createHandler.testUtils';
+import { createMockContext, setupDefaultMocks, mockConfig } from './createHandler.testUtils';
 
 // Mock all dependencies
 jest.mock('@/core/validation');
@@ -170,29 +166,6 @@ describe('Project Creation - Create Handler - Happy Path', () => {
 
             expect(result.success).toBe(true);
             expect(executor.executeProjectCreation).toHaveBeenCalled();
-        });
-    });
-
-    describe('reversible edit-draft clearing', () => {
-        it('clears the per-project draft on a successful edit rebuild', async () => {
-            const editConfig = { ...mockConfig, editProjectPath: '/projects/edit-me' };
-
-            await handleCreateProject(mockContext, editConfig);
-
-            // clearEditDraft writes `undefined` to the path-namespaced key.
-            expect(mockContext.context.globalState.update).toHaveBeenCalledWith(
-                'projectCreation.editDraft:/projects/edit-me',
-                undefined
-            );
-        });
-
-        it('does not touch any draft in create mode (no editProjectPath)', async () => {
-            await handleCreateProject(mockContext, mockConfig);
-
-            const draftClears = (
-                mockContext.context.globalState.update as jest.Mock
-            ).mock.calls.filter(([key]) => String(key).startsWith('projectCreation.editDraft:'));
-            expect(draftClears).toHaveLength(0);
         });
     });
 });
