@@ -11,6 +11,7 @@ import {
     EditProjectConfig,
     WizardStepConfigWithRequirements,
 } from '../wizardHelpers';
+import { isMeshComponentId } from '@/core/constants';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import type { ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
@@ -204,14 +205,24 @@ function buildEditModeAdobeContext(adobe: ImportedSettings['adobe']) {
  * Seed the wizard's App Builder integration state from a project's extracted
  * settings so integration rows survive an edit rebuild:
  * - `selections.appBuilder` → `selectedAppBuilderComponents` (the row ids)
+ * - `selections.dependencies` (mesh ids ONLY) → `selectedOptionalDependencies`
+ *   — the mesh dual-flow: the executor deliberately excludes mesh-kind from
+ *   `appBuilder` and persists the mesh as a legacy dep id, so `isMeshSelected`
+ *   (which reads selectedAppBuilderComponents OR selectedOptionalDependencies)
+ *   needs this seed or the mesh row vanishes in edit mode AND an edit Finish
+ *   (which rebuilds dependencies from stack deps + selectedOptionalDependencies)
+ *   silently drops the mesh. Non-mesh base deps are filtered — seeding them
+ *   would falsely trip anyDeployableSelected and force the destination gate.
  * - `appBuilderComponentSources` → custom-URL sources (else custom rows vanish)
  * - flat `additionalConsoleApis` → `selectedConsoleApis['__existing__']`
  *   (reserved key: joins the serialization union, never shown per-row)
  */
 function buildEditModeIntegrationState(editSettings: ImportedSettings): Partial<WizardState> {
     const existingApis = editSettings.additionalConsoleApis;
+    const meshDeps = editSettings.selections?.dependencies?.filter(isMeshComponentId);
     return {
         selectedAppBuilderComponents: editSettings.selections?.appBuilder,
+        selectedOptionalDependencies: meshDeps?.length ? meshDeps : undefined,
         appBuilderComponentSources: editSettings.appBuilderComponentSources,
         selectedConsoleApis: existingApis?.length ? { __existing__: existingApis } : undefined,
     };
