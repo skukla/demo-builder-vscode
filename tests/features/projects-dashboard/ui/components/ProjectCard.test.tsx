@@ -119,13 +119,22 @@ describe('ProjectCard', () => {
     });
 
     describe('app status', () => {
-        it('shows the app status dot when appStatusSummary is deployed', () => {
-            const project = createMockProject({ appStatusSummary: 'deployed' });
+        it('shows the app status dot from a keyed deployed integration (reloaded project)', () => {
+            // Durable keyed entry only — no volatile appStatusSummary, as after a reload.
+            const project = createMockProject({
+                appBuilderComponents: {
+                    'acme-widget': {
+                        kind: 'integration',
+                        status: 'deployed',
+                        source: { owner: 'acme', repo: 'widget' },
+                    },
+                },
+            });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
             expect(screen.getByText('App Deployed')).toBeInTheDocument();
         });
 
-        it('shows no app status when appStatusSummary is unset', () => {
+        it('shows no app status when the project has no keyed integrations', () => {
             renderWithProvider(<ProjectCard project={createMockProject()} onSelect={jest.fn()} />);
             expect(screen.queryByText('App Deployed')).not.toBeInTheDocument();
             expect(screen.queryByText('App Error')).not.toBeInTheDocument();

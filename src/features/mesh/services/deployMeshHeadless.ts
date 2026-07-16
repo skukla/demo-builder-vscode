@@ -19,6 +19,7 @@ import { deployMeshComponent } from './meshDeployment';
 import { fetchMeshInfoFromAdobeIO } from './meshVerifier';
 import { updateMeshState } from './stalenessDetector';
 import { ServiceLocator } from '@/core/di';
+import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
 import { ensureMeshApiSubscribed } from '@/features/app-builder/services/ensureMeshApiSubscribed';
 import { ensureProjectAdobeContext } from '@/features/authentication/services/ensureProjectAdobeContext';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
@@ -145,7 +146,9 @@ export async function deployMeshHeadless(
         const deployedMeshId = result.data?.meshId;
         const deployedEndpoint = result.data?.endpoint;
 
-        // Persist deployed status (endpoint lives in meshState, not the instance).
+        // Persist deployed status (the endpoint + runtime baseline live on the
+        // keyed mesh appBuilderComponents entry, written by updateMeshState —
+        // the single writer chokepoint, ADR-011 D3 Steps 07+09).
         meshComponent.status = 'deployed';
         meshComponent.metadata = {
             ...meshComponent.metadata,
@@ -161,6 +164,7 @@ export async function deployMeshHeadless(
     } catch (error) {
         await onStatus?.('error', 'Deployment failed');
         meshComponent.status = 'error';
+        recordDeployOutcome(project, 'mesh', meshComponent.id, { status: 'error' });
         await stateManager.saveProject(project);
         return {
             success: false,

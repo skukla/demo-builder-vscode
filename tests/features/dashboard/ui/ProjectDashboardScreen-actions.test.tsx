@@ -108,12 +108,21 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
     });
 
     describe('Common Actions', () => {
-        it('should send deployMesh message when Deploy Mesh clicked', async () => {
+        // Since D3 Step 08 the mesh deploys from its integrations-list row
+        // (MeshComponentRow), not an ActionGrid tile — same deployMesh message.
+        it('should send deployMesh message when the mesh row Redeploy is clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            renderDashboard({ hasMesh: true });
+            renderDashboard({ hasMesh: true, hasAdobeContext: true });
 
-            const deployButton = screen.getByText('Deploy Mesh');
-            await user.click(deployButton);
+            ctx.triggerMessage('statusUpdate', {
+                name: 'Test Project',
+                path: '/test/path',
+                status: 'ready',
+                mesh: { status: 'deployed' },
+            });
+
+            const redeployButton = await screen.findByRole('button', { name: /^redeploy$/i });
+            await user.click(redeployButton);
 
             expect(ctx.mockPostMessage).toHaveBeenCalledWith('deployMesh');
         });

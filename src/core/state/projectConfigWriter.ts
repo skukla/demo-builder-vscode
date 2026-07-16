@@ -94,13 +94,13 @@ export class ProjectConfigWriter {
                 componentConfigs: project.componentConfigs,
                 componentVersions: project.componentVersions,
                 aiContextVersion: project.aiContextVersion,
-                meshState: project.meshState,
-                // Deployed custom-integration state (URL/status) — the App Builder
-                // sibling of meshState. deployAppHeadless sets this and saves; the
-                // loader reads manifest.appState, so it must be serialized here or a
-                // deployed integration loses its record on reload. Status *summaries*
-                // (mesh/app) stay omitted — they are recomputed on load, not persisted.
-                appState: project.appState,
+                // The singular meshState/appState are NOT serialized (ADR-011 D3
+                // Step 07): the keyed `appBuilderComponents` map below is the single
+                // persisted authority for mesh + integration deploy state. Legacy
+                // manifests carrying the singulars keep LOADING forever (the
+                // loader's migration fallback); their first save forward-migrates
+                // them to the keyed map. Status *summaries* (mesh/app) stay
+                // omitted — they are recomputed on load, not persisted.
                 edsStorefrontState: project.edsStorefrontState,
                 edsStorefrontStatusSummary: project.edsStorefrontStatusSummary,
                 components: getComponentIds(project.componentInstances),
@@ -124,6 +124,13 @@ export class ProjectConfigWriter {
             }
             if (project.aiPrompts?.length) {
                 manifest.aiPrompts = project.aiPrompts;
+            }
+            // Keyed App Builder component state (ADR-011 D3 Step 01) — the durable
+            // model that replaces the singular meshState/appState (retired in Step 07).
+            // Omitted when empty so legacy manifests keep loading via the read-side
+            // migration fallback instead of a persisted-but-empty map.
+            if (project.appBuilderComponents && Object.keys(project.appBuilderComponents).length) {
+                manifest.appBuilderComponents = project.appBuilderComponents;
             }
             if (project.pinned) {
                 manifest.pinned = true;

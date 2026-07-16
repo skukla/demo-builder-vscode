@@ -1,5 +1,10 @@
 # EDS Standard Pattern Refactoring
 
+> **Note (ADR-011 D3, 2026-07):** the mesh endpoint is now resolved from the keyed
+> `appBuilderComponents` mesh entry via `getMeshEndpointUrl`/`providesEnvVars`; the
+> `meshState` shown below is the legacy read-only form — see
+> `docs/architecture/state-ownership.md`.
+
 ## Overview
 
 Refactored EDS configuration to follow the same standard pattern as headless and other components, eliminating custom .env generation logic and leveraging existing infrastructure.

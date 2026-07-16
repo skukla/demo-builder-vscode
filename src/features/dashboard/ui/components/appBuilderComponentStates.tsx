@@ -1,12 +1,12 @@
 /**
  * Shared appBuilderComponent state pieces (D2 Track B — Step 05)
  *
- * The 4-state presentational machine first written for {@link AppBuilderCard}
- * (not-deployed / deploying / deployed / error), extracted so BOTH the singular
- * App Builder card and the keyed {@link AppBuilderComponentRow} render identical states
- * (Rule of Three: 2 concrete in-plan consumers → extract now). The pieces are
- * pure presentational: every action is an injected callback, so each consumer
- * supplies either id-less (card) or id-scoped (row) message dispatch.
+ * The 4-state presentational machine (not-deployed / deploying / deployed /
+ * error) consumed by the keyed {@link AppBuilderComponentRow} and the mesh's
+ * {@link MeshComponentRow} (its DeployingState). Originally extracted for the
+ * singular AppBuilderCard, which was deleted in ADR-011 D3 Step 08. The pieces
+ * are pure presentational: every action is an injected callback, so each
+ * consumer supplies its own message dispatch.
  *
  * Follows the dashboard UI conventions (reference_dashboard_ui_conventions):
  * subtle Spectrum primitives, quiet Links, the shared StatusCard, no saturated

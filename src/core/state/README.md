@@ -122,8 +122,9 @@ await updateFrontendState(project, logger);
 **Example**:
 ```typescript
 // After mesh deployment, update frontend .env
+// (gate on the keyed mesh entry via the accessor — ADR-011 D3)
 const project = await stateManager.getCurrentProject();
-if (project && project.meshState?.meshId) {
+if (project && getMeshEndpointUrl(project)) {
     await updateFrontendState(project, logger);
     // Frontend .env now has MESH_ID and MESH_ENDPOINT
 }

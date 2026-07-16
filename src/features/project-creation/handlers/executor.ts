@@ -57,6 +57,7 @@ import {
     isEdsStackId,
     getMeshComponentInstance,
     getMeshComponentId,
+    getMeshEndpointUrl,
 } from '@/types/typeGuards';
 import type { MeshPhaseState } from '@/types/webview';
 
@@ -81,9 +82,12 @@ function getComponentInstanceKeys(project: import('@/types').Project): string[] 
     return Object.keys(project.componentInstances || {});
 }
 
-/** A project's deployed mesh endpoint, if any. */
+/**
+ * A project's deployed mesh endpoint, if any — keyed-first via the shared
+ * accessor (legacy meshState fallback inside, ADR-011 D3 Steps 07+09).
+ */
 function getMeshEndpoint(project?: import('@/types').Project): string | undefined {
-    return project?.meshState?.endpoint;
+    return getMeshEndpointUrl(project);
 }
 
 /**
@@ -999,10 +1003,10 @@ async function executeMeshPhase(
         await linkExistingMesh(meshContext, importedApiMesh);
     } else if (shouldConfigureExistingMesh(typedConfig.apiMesh, getMeshEndpoint(project))) {
         await linkExistingMesh(meshContext, typedConfig.apiMesh as MeshApiConfig);
-    } else if (isEditMode && existingProject?.meshState?.endpoint) {
+    } else if (isEditMode && getMeshEndpoint(existingProject)) {
         context.logger.info('[Mesh Setup] Edit mode - reusing existing mesh from project');
         const existingMesh = {
-            endpoint: existingProject.meshState.endpoint,
+            endpoint: getMeshEndpoint(existingProject) as string,
             meshId: (getMeshComponentInstance(existingProject)?.metadata?.meshId as string) || '',
             meshStatus: 'deployed' as const,
             workspace: typedConfig.adobe?.workspace,
@@ -1029,7 +1033,7 @@ function logMeshDecisionContext(
     context.logger.debug(`[Mesh Setup] Decision context:`);
     context.logger.debug(`  - isEditMode: ${isEditMode}`);
     context.logger.debug(
-        `  - existingProject?.meshState?.endpoint: ${getMeshEndpoint(existingProject)}`,
+        `  - existing project mesh endpoint: ${getMeshEndpoint(existingProject)}`,
     );
     context.logger.debug(`  - typedConfig.apiMesh: ${JSON.stringify(typedConfig.apiMesh)}`);
     context.logger.debug(`  - meshComponent?.path: ${meshComponent?.path}`);

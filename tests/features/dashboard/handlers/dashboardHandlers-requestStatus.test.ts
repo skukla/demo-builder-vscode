@@ -104,6 +104,37 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         });
     });
 
+    // ADR-011 D3 Steps 07+09: a keyed-only project (no meshState — the post-Step-07
+    // shape) must report the same deployed status + endpoint from the keyed entry.
+    it('should report deployed status + endpoint for a keyed-only project (Steps 07+09)', async () => {
+        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        detectFrontendChanges.mockReturnValue(false);
+
+        const { mockContext } = setupMocks({
+            meshStatusSummary: 'deployed',
+            meshState: undefined,
+            appBuilderComponents: {
+                mesh: {
+                    kind: 'mesh',
+                    status: 'deployed',
+                    source: { owner: '', repo: '' },
+                    endpoint: 'https://keyed-mesh.adobe.io/graphql',
+                    envVars: { MESH_ID: 'mesh123' },
+                },
+            },
+        } as any);
+
+        const result = await handleRequestStatus(mockContext);
+
+        expect(result.success).toBe(true);
+        expect(result.data).toMatchObject({
+            mesh: {
+                status: 'deployed',
+                endpoint: 'https://keyed-mesh.adobe.io/graphql',
+            },
+        });
+    });
+
     it('should return mesh status as "not-deployed" when no mesh configured', async () => {
         const { mockContext } = setupMocks({
             componentInstances: {

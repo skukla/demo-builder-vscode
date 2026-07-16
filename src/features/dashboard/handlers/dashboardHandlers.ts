@@ -9,6 +9,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import {
     buildStatusPayload,
+    getMeshEndpoint,
     hasMeshDeploymentRecord,
     hasAdobeWorkspaceContext,
     hasAdobeProjectContext,
@@ -150,7 +151,9 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         }
     }
 
-    const meshEndpoint = project.meshState?.endpoint;
+    // Keyed-first (ADR-011 D3 Steps 07+09): the endpoint lives on the keyed
+    // mesh appBuilderComponents entry (legacy meshState fallback inside).
+    const meshEndpoint = getMeshEndpoint(project);
     const statusData = buildStatusPayload(
         project,
         frontendConfigChanged,
@@ -421,86 +424,6 @@ export const handleEditProject: MessageHandler = async (context) => {
 export const handleDeployMesh: MessageHandler = async () => {
     await vscode.commands.executeCommand('demoBuilder.deployMesh');
     return { success: true };
-};
-
-/**
- * Build the App Builder add/remove dependency bundle from the handler context.
- *
- * Reuses the canonical service plumbing: a fresh ComponentManager (Logger-only
- * ctor), the shared command executor, the context's saveProject, and the auth
- * service's getCachedOrganization for org-context enrichment.
- */
-async function buildAppDeps(context: HandlerContext) {
-    const { ComponentManager } = await import('@/features/components/services/componentManager');
-    const authManager = ServiceLocator.getAuthenticationService();
-    return {
-        componentManager: new ComponentManager(context.logger),
-        commandManager: ServiceLocator.getCommandExecutor(),
-        logger: context.logger,
-        saveProject: (project: Project) => context.stateManager.saveProject(project),
-        getCachedOrganization: () => authManager.getCachedOrganization(),
-    };
-}
-
-/**
- * Handle 'addApp' message - Add a public-git App Builder app, then deploy it.
- *
- * Validates the gitUrl, adds the component additively (clone+install), and on
- * success dispatches the deployApp command. Add failures surface directly and
- * do NOT trigger a deploy.
- */
-export const handleAddApp: MessageHandler<{ gitUrl?: string }> = async (context, data) => {
-    const gitUrl = data?.gitUrl;
-    if (!gitUrl) {
-        return {
-            success: false,
-            error: 'A public GitHub repository URL is required',
-            code: ErrorCode.CONFIG_INVALID,
-        };
-    }
-
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) {
-        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
-    }
-
-    const { addAppComponent } = await import('@/features/app-builder/services/appComponentManager');
-    const result = await addAppComponent(project, gitUrl, await buildAppDeps(context));
-    if (!result.success) {
-        return { success: false, error: result.error };
-    }
-
-    await vscode.commands.executeCommand('demoBuilder.deployApp');
-    return { success: true };
-};
-
-/**
- * Handle 'deployApp' / 'redeployApp' message - Deploy the project's App Builder app
- */
-export const handleDeployApp: MessageHandler = async () => {
-    await vscode.commands.executeCommand('demoBuilder.deployApp');
-    return { success: true };
-};
-
-/**
- * Redeploy is the same command as deploy (idempotent `aio app deploy`).
- */
-export const handleRedeployApp = handleDeployApp;
-
-/**
- * Handle 'removeApp' message - Remove the project's App Builder app (undeploy + cleanup)
- */
-export const handleRemoveApp: MessageHandler = async (context) => {
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) {
-        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
-    }
-
-    const { removeAppComponent } = await import(
-        '@/features/app-builder/services/appComponentManager'
-    );
-    const result = await removeAppComponent(project, await buildAppDeps(context));
-    return result.success ? { success: true } : { success: false, error: result.error };
 };
 
 /**
@@ -1077,13 +1000,9 @@ export const dashboardHandlers = defineHandlers({
     // Mesh handlers
     deployMesh: handleDeployMesh,
 
-    // App Builder app handlers
-    addApp: handleAddApp,
-    deployApp: handleDeployApp,
-    redeployApp: handleRedeployApp,
-    removeApp: handleRemoveApp,
-
-    // AppBuilderComponent (integrations list) handlers — live D1 runner wiring
+    // AppBuilderComponent (integrations list) handlers — live D1 runner wiring.
+    // The singular id-less addApp/deployApp/redeployApp/removeApp delegates
+    // retired with the dormant AppBuilderCard (ADR-011 D3 Step 08).
     addAppBuilderComponent: handleAddAppBuilderComponent,
     deployAppBuilderComponent: handleDeployAppBuilderComponent,
     redeployAppBuilderComponent: handleRedeployAppBuilderComponent,

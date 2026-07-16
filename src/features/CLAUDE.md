@@ -97,11 +97,12 @@ features/my-feature/
 
 ### app-builder
 
-**Purpose**: Attach and deploy ONE custom Adobe App Builder app to an existing demo project,
-dashboard-first. Sibling of the mesh deploy path (not a fork): a demo workspace holds the API
-Mesh (separate artifact) **+ at most one** custom app, so app state is **singular**
-(`project.appState`, mirroring `meshState`) — no keyed array. Multiple integration domains
-live as multiple packages *inside* that one app.
+**Purpose**: Attach, deploy, and remove **N custom Adobe App Builder integrations** on a demo
+project, dashboard-first. Sibling of the mesh deploy path (not a fork) — and since ADR-011 D3
+they share ONE state model: the keyed `project.appBuilderComponents` map
+(`kind: 'mesh' | 'integration'`) is the single persisted authority. The mesh is one component
+kind in that map; the legacy singular `meshState`/`appState` fields are legacy-read-only
+(manifests migrate on load, forward-migrate on first save).
 
 **Key Services:**
 - `deployAppComponent(path, cmdMgr, logger, onProgress?)` (`services/appDeployment.ts`) -
@@ -109,27 +110,36 @@ live as multiple packages *inside* that one app.
   once) → defensive parse of `aio app get-url --json` into `{ url, deployedUrls }`. Callers
   wrap it in `withOrgContext`, exactly like `deployMeshComponent`.
 - `addAppComponent` / `removeAppComponent` (`services/appComponentManager.ts`) - additive
-  add/remove on a LIVE project. Add validates a **public GitHub URL** (canonicalized to
-  `https://github.com/owner/repo.git`; owner/repo charset-validated to reject shell
-  metacharacters), enforces the singular guard, and clones+installs via
-  `componentManager.installComponent` (leaving siblings untouched). Remove undeploys remotely
-  (`aio app undeploy`, best-effort, org-context targeted) then cleans up local files + state.
-- `DeployAppCommand` (`commands/deployApp.ts`) - dashboard command mirroring `DeployMeshCommand`'s
-  guard order (lock → `ensureAdobeIOAuth` → `detectProjectOrgMismatch` →
-  `projectRequiresAppBuilder` + `testDeveloperPermissions` → `withOrgContext(deployAppComponent)`
-  → persist `appState` + `appStatusSummary`).
+  add / per-id remove on a LIVE project (N integrations coexist — ADR-011 D3 Step 05). Add
+  validates a **public GitHub URL** (canonicalized to `https://github.com/owner/repo.git`;
+  owner/repo charset-validated to reject shell metacharacters), clones+installs via
+  `componentManager.installComponent` (leaving siblings untouched), keys the entry in
+  `appBuilderComponents[appId]`, and APPENDS the selection. Remove takes an `appId`, undeploys
+  remotely (`aio app undeploy`, best-effort, org-context targeted) then cleans up ONLY that
+  integration's files + keyed state.
+- `appBuilderComponentState.ts` - the keyed-map accessors (`getMeshAppBuilderComponent`,
+  `getIntegrationAppBuilderComponents`, `listAppBuilderComponents`, `getProvidedEnvVars`);
+  legacy synthesis only for pre-migration in-memory projects. `appBuilderDeployOutcome.ts` -
+  `recordDeployOutcome`, the one keyed deploy-record writer every deploy path lands on.
+- `deployAppHeadless(deps)` (`services/deployAppHeadless.ts`) - UI-free per-integration deploy
+  core (guards: auth → org-mismatch → App Builder permission → id-matched instance;
+  `componentId` REQUIRED, no singular fallback), used by the projects-list `redeployApp`
+  handler. Dashboard-driven deploys go through the keyed runner
+  (`appBuilderComponentRunner.ts`) behind the per-id handlers.
 
 **Responsibilities:**
 - First-class `appBuilder` registry category + `componentSelections.appBuilder` round-trip
-- Singular app deploy/redeploy/remove from the dashboard `AppBuilderCard`
-  (No-app / Deploying / Deployed / Error states)
+- Per-id integration deploy/redeploy/remove from the dashboard integrations list
+  (`IntegrationsBlock` → `AppBuilderComponentsList`, mesh first row via `MeshComponentRow`)
 - Reuses (no fork): `withOrgContext` + `buildOrgTargetFromProjectAdobe`, `CommandExecutor`,
   `componentManager.installComponent`/`removeComponent`, `ensureAdobeIOAuth`,
   `detectProjectOrgMismatch`, the dashboard status channel. Only new abstraction is the shared
   `buildComponent` step (two callers, byte-identical).
 
-**Scope (slice 1 of 5):** deploy spine only. Deferred to later slices: curated catalog,
-package-binding, scaffolding, app-only projects, multi-workspace + API-subscription.
+**History:** slice 1 (2026-06) shipped a singular model (one app, `project.appState`, dashboard
+`AppBuilderCard`, `DeployAppCommand`); ADR-011 D1–D3 replaced it with the keyed model and
+deleted the singular surfaces. Deferred: package-binding, scaffolding, app-only projects,
+multi-workspace.
 
 **Path Alias**: `@/features/app-builder`
 

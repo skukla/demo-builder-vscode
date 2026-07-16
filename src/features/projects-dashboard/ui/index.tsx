@@ -337,12 +337,14 @@ const ProjectsDashboardApp: React.FC = () => {
         [fetchProjects],
     );
 
-    // Handle redeploy app (projects with a deployed App Builder app)
+    // Handle per-integration redeploy (one kebab item per redeployable keyed
+    // integration; the id targets that integration only — ADR-011 D3 Step 04).
     const handleRedeployApp = useCallback(
-        async (project: Project) => {
+        async (project: Project, integrationId: string) => {
             try {
                 const response = await webviewClient.request<{ success: boolean }>('redeployApp', {
                     projectPath: project.path,
+                    id: integrationId,
                 });
                 if (response?.success) {
                     fetchProjects(true);

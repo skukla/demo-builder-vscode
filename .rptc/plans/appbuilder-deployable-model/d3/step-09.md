@@ -16,11 +16,17 @@ half-migrated or unreconstructable state.
 
 ## Tests to write FIRST (RED)
 
-- [ ] A legacy project (`meshState` + `appState`, no keyed map) → load → keyed map with a mesh entry +
-      an integration entry (migration completeness).
-- [ ] Malformed/partial legacy state degrades safely (no throw; the good entries survive).
-- [ ] Reset reconstructs ALL keyed deployables present in `components/` (N integrations), not only one.
-- [ ] Round-trip: migrate → write → reload → identical keyed map.
+- [x] A legacy project (`meshState` + `appState`, no keyed map) → load → keyed map with a mesh entry +
+      an integration entry — INCLUDING the mesh runtime baseline (envVars + decline flags), which after
+      Step 07 has no other durable home. (`appBuilderComponentMigration.test.ts`, `projectFileLoader.test.ts`)
+- [x] Malformed/partial legacy state degrades safely (no throw; non-object legacy fields skipped, never
+      turned into fabricated entries; the good entries survive). (`isUsableLegacyState` guard)
+- [x] Reset preserves ALL keyed deployables: verified reset never touches `appBuilderComponents` (it
+      re-clones folders only) — "reconstruction" is preservation + the mesh entry refresh through the
+      `updateMeshState` writer chokepoint; integration siblings survive untouched.
+      (`projectResetService-meshContext.test.ts`)
+- [x] Round-trip: migrate → write → reload → identical keyed map, with `meshState`/`appState` absent
+      from the rewritten manifest. (`projectFileLoader.test.ts`)
 
 ## Files to create / modify
 

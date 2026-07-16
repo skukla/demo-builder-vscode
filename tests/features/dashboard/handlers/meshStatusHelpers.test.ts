@@ -334,6 +334,77 @@ ADOBE_CATALOG_API_KEY=api-key-123
             expect(result).toBe('config-changed');
         });
 
+        // ADR-011 D3 Step 06: decline + endpoint read keyed-first from the
+        // mesh appBuilderComponents entry (meshState fallback preserved).
+        it('returns update-declined when the decline flag lives only on the KEYED mesh entry', async () => {
+            mockFs.readFile.mockResolvedValue(`
+ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql
+ADOBE_CATALOG_SERVICE_ENDPOINT=https://catalog.example.com
+ADOBE_COMMERCE_URL=https://commerce.example.com
+ADOBE_COMMERCE_ENVIRONMENT_ID=env-123
+ADOBE_COMMERCE_STORE_VIEW_CODE=default
+ADOBE_COMMERCE_WEBSITE_CODE=base
+ADOBE_COMMERCE_STORE_CODE=main_store
+ADOBE_CATALOG_API_KEY=api-key-123
+`);
+
+            const project = {
+                ...mockProjectWithMeshEndpoint,
+                appBuilderComponents: {
+                    'commerce-mesh': {
+                        kind: 'mesh',
+                        status: 'stale',
+                        source: { owner: '', repo: '' },
+                        endpoint: mockMeshEndpoint,
+                        userDeclinedUpdate: true,
+                        declinedAt: '2026-07-01T00:00:00Z',
+                    },
+                },
+            } as unknown as Project;
+
+            const result = await determineMeshStatus(
+                { hasChanges: true },
+                mockMeshComponent,
+                project,
+            );
+
+            expect(result).toBe('update-declined');
+        });
+
+        it('treats config as complete when the endpoint lives only on the KEYED mesh entry (keyed-only project)', async () => {
+            mockFs.readFile.mockResolvedValue(`
+ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql
+ADOBE_CATALOG_SERVICE_ENDPOINT=https://catalog.example.com
+ADOBE_COMMERCE_URL=https://commerce.example.com
+ADOBE_COMMERCE_ENVIRONMENT_ID=env-123
+ADOBE_COMMERCE_STORE_VIEW_CODE=default
+ADOBE_COMMERCE_WEBSITE_CODE=base
+ADOBE_COMMERCE_STORE_CODE=main_store
+ADOBE_CATALOG_API_KEY=api-key-123
+`);
+
+            const project = {
+                ...mockProjectWithMeshEndpoint,
+                meshState: undefined, // post-Step-07 world: keyed entry only
+                appBuilderComponents: {
+                    'commerce-mesh': {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                        endpoint: mockMeshEndpoint,
+                    },
+                },
+            } as unknown as Project;
+
+            const result = await determineMeshStatus(
+                { hasChanges: false },
+                mockMeshComponent,
+                project,
+            );
+
+            expect(result).toBe('deployed');
+        });
+
         it('returns deployed for ACCS mesh when ACCS config is complete', async () => {
             mockFs.readFile.mockResolvedValue(`
 ACCS_GRAPHQL_ENDPOINT=https://na1-sandbox.api.commerce.adobe.com/abc123/graphql
@@ -448,6 +519,61 @@ ADOBE_CATALOG_API_KEY=api-key-123
             const result = parseEnvFile('');
 
             expect(result).toEqual({});
+        });
+    });
+
+    // ADR-011 D3 Steps 07+09: the quick status update reads the endpoint from the
+    // keyed mesh entry — a keyed-only project (post-Step-07, no meshState) must
+    // report the same deployed status + endpoint.
+    describe('sendDemoStatusUpdate (keyed-only project)', () => {
+        it('posts deployed status with the keyed endpoint when no meshState exists', async () => {
+            const { sendDemoStatusUpdate } = require('@/features/dashboard/handlers/meshStatusHelpers');
+
+            const project = {
+                name: 'demo',
+                path: '/projects/demo',
+                status: 'ready',
+                meshStatusSummary: 'deployed',
+                componentInstances: {
+                    'commerce-mesh': {
+                        id: 'commerce-mesh',
+                        name: 'API Mesh',
+                        subType: 'mesh',
+                        status: 'deployed',
+                        path: mockMeshPath,
+                    },
+                },
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                        endpoint: 'https://keyed-mesh.adobe.io/graphql',
+                        envVars: { MESH_ID: 'mesh123' },
+                    },
+                },
+            } as unknown as Project;
+
+            const postMessage = jest.fn();
+            const context = {
+                panel: { webview: { postMessage } },
+                stateManager: { getCurrentProject: jest.fn().mockResolvedValue(project) },
+                logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+            } as any;
+
+            await sendDemoStatusUpdate(context);
+
+            expect(postMessage).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    type: 'statusUpdate',
+                    payload: expect.objectContaining({
+                        mesh: expect.objectContaining({
+                            status: 'deployed',
+                            endpoint: 'https://keyed-mesh.adobe.io/graphql',
+                        }),
+                    }),
+                }),
+            );
         });
     });
 });

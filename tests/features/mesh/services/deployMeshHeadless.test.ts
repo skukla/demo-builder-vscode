@@ -34,10 +34,12 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
 
 import { ServiceLocator } from '@/core/di';
 import { ensureProjectAdobeContext } from '@/features/authentication/services/ensureProjectAdobeContext';
+import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
+import { listAppBuilderComponents } from '@/features/app-builder/services/appBuilderComponentState';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
 import { fetchMeshInfoFromAdobeIO } from '@/features/mesh/services/meshVerifier';
 import { deployMeshHeadless } from '@/features/mesh/services/deployMeshHeadless';
-import type { Project, ComponentInstance } from '@/types/base';
+import type { AppBuilderComponentState, Project, ComponentInstance } from '@/types/base';
 
 const mockPreflight = ensureProjectAdobeContext as jest.Mock;
 const mockDeploy = deployMeshComponent as jest.MockedFunction<typeof deployMeshComponent>;
@@ -92,6 +94,19 @@ describe('deployMeshHeadless', () => {
         mockDeploy.mockResolvedValue({
             success: true,
             data: { meshId: 'mesh-1', endpoint: 'https://new/graphql' },
+        });
+        // Mirror the REAL writer chokepoint (ADR-011 D3 Steps 07+09):
+        // updateMeshState lands the deploy outcome on the keyed mesh entry via
+        // the real (pure) recordDeployOutcome, so key resolution / source
+        // preservation / providesEnvVars refresh are exercised for real.
+        mockUpdateMeshState.mockImplementation(async (p: unknown, endpoint?: unknown) => {
+            recordDeployOutcome(p as Project, 'mesh', 'commerce-mesh', {
+                status: 'deployed',
+                endpoint: endpoint as string | undefined,
+                lastDeployed: new Date().toISOString(),
+                userDeclinedUpdate: undefined,
+                declinedAt: undefined,
+            });
         });
     });
 
@@ -175,5 +190,168 @@ describe('deployMeshHeadless', () => {
         expect(result.error).toBe('boom');
         expect(mockUpdateMeshState).not.toHaveBeenCalled();
         expect(onStatus).toHaveBeenLastCalledWith('error', expect.any(String));
+    });
+
+    // ADR-011 D3 Step 02 (one writer): the singular mesh path must ALSO write
+    // the keyed appBuilderComponents entry so both surfaces read the same state.
+    // The singular meshState/meshStatusSummary writes remain until Step 07.
+    describe('keyed appBuilderComponents write (ADR-011 D3 Step 02)', () => {
+        it('writes the keyed mesh entry on success', async () => {
+            const d = deps();
+            await deployMeshHeadless(d);
+
+            expect(d.project.meshStatusSummary).toBe('deployed');
+            expect(d.project.appBuilderComponents?.['commerce-mesh']).toEqual(
+                expect.objectContaining({
+                    kind: 'mesh',
+                    status: 'deployed',
+                    endpoint: 'https://new/graphql',
+                    lastDeployed: expect.any(String),
+                })
+            );
+        });
+
+        it('updates the migrated legacy entry (key "mesh") instead of forking a new key', async () => {
+            // A legacy project's meshState migrates to a keyed entry under the
+            // stable id 'mesh'. A redeploy must update THAT entry — otherwise the
+            // persisted map would carry a stale 'mesh' entry beside a fresh one.
+            const p = project();
+            p.appBuilderComponents = {
+                mesh: {
+                    kind: 'mesh',
+                    status: 'deployed',
+                    source: { owner: '', repo: '' },
+                    endpoint: 'https://old/graphql',
+                } as AppBuilderComponentState,
+            };
+            const d = deps({ project: p });
+            await deployMeshHeadless(d);
+
+            expect(p.appBuilderComponents['commerce-mesh']).toBeUndefined();
+            expect(p.appBuilderComponents.mesh).toEqual(
+                expect.objectContaining({ status: 'deployed', endpoint: 'https://new/graphql' })
+            );
+        });
+
+        it('preserves source and refreshes providesEnvVars.MESH_ENDPOINT on redeploy', async () => {
+            const p = project();
+            p.appBuilderComponents = {
+                'commerce-mesh': {
+                    kind: 'mesh',
+                    status: 'deployed',
+                    source: { owner: 'skukla', repo: 'commerce-eds-mesh', branch: 'main' },
+                    endpoint: 'https://old/graphql',
+                    providesEnvVars: { MESH_ENDPOINT: 'https://old/graphql' },
+                } as AppBuilderComponentState,
+            };
+            const d = deps({ project: p });
+            await deployMeshHeadless(d);
+
+            expect(p.appBuilderComponents['commerce-mesh']).toEqual(
+                expect.objectContaining({
+                    source: { owner: 'skukla', repo: 'commerce-eds-mesh', branch: 'main' },
+                    endpoint: 'https://new/graphql',
+                    providesEnvVars: { MESH_ENDPOINT: 'https://new/graphql' },
+                })
+            );
+        });
+
+        it('writes keyed status error when the deploy fails, preserving prior fields', async () => {
+            mockDeploy.mockResolvedValue({ success: false, error: 'boom' });
+            const p = project();
+            p.appBuilderComponents = {
+                'commerce-mesh': {
+                    kind: 'mesh',
+                    status: 'deployed',
+                    source: { owner: 'skukla', repo: 'commerce-eds-mesh' },
+                    endpoint: 'https://old/graphql',
+                } as AppBuilderComponentState,
+            };
+            const d = deps({ project: p });
+            await deployMeshHeadless(d);
+
+            expect(p.appBuilderComponents['commerce-mesh']).toEqual(
+                expect.objectContaining({
+                    kind: 'mesh',
+                    status: 'error',
+                    endpoint: 'https://old/graphql',
+                })
+            );
+        });
+
+        it('does not touch the keyed map when blocked before deploying', async () => {
+            mockPreflight.mockResolvedValue({ ready: false, blockedBy: 'auth' });
+            const d = deps();
+            await deployMeshHeadless(d);
+            expect(d.project.appBuilderComponents).toBeUndefined();
+        });
+
+        it('cross-surface agreement: listAppBuilderComponents sees the mesh entry', async () => {
+            const d = deps();
+            await deployMeshHeadless(d);
+
+            const listed = listAppBuilderComponents(d.project);
+            const entry = listed.find((c) => c.id === 'commerce-mesh');
+            expect(entry).toEqual(
+                expect.objectContaining({
+                    kind: 'mesh',
+                    status: 'deployed',
+                    endpoint: 'https://new/graphql',
+                })
+            );
+        });
+
+        // ADR-011 D3 Steps 06+07: the keyed entry carries the mesh runtime
+        // baseline (deployed envVars + sourceHash), written by the updateMeshState
+        // chokepoint — deployMeshHeadless must PRESERVE it (no clobbering write).
+        it('preserves the deployed envVars + sourceHash the chokepoint landed on the keyed entry', async () => {
+            mockUpdateMeshState.mockImplementationOnce(async (p: Project, endpoint?: string) => {
+                recordDeployOutcome(p, 'mesh', 'commerce-mesh', {
+                    status: 'deployed',
+                    endpoint,
+                    envVars: { ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://commerce/graphql' },
+                    sourceHash: 'fresh-hash',
+                    lastDeployed: '2026-07-15T00:00:00Z',
+                });
+            });
+
+            const d = deps();
+            await deployMeshHeadless(d);
+
+            expect(d.project.appBuilderComponents?.['commerce-mesh']).toEqual(
+                expect.objectContaining({
+                    kind: 'mesh',
+                    status: 'deployed',
+                    endpoint: 'https://new/graphql',
+                    envVars: { ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://commerce/graphql' },
+                    sourceHash: 'fresh-hash',
+                })
+            );
+        });
+
+        it('clears decline flags on the keyed entry on successful deploy (via the chokepoint)', async () => {
+            const p = project();
+            p.appBuilderComponents = {
+                'commerce-mesh': {
+                    kind: 'mesh',
+                    status: 'stale',
+                    source: { owner: '', repo: '' },
+                    endpoint: 'https://old/graphql',
+                    userDeclinedUpdate: true,
+                    declinedAt: '2026-07-01T00:00:00Z',
+                } as AppBuilderComponentState,
+            };
+            const d = deps({ project: p });
+            await deployMeshHeadless(d);
+
+            const entry = p.appBuilderComponents['commerce-mesh'] as {
+                userDeclinedUpdate?: boolean;
+                declinedAt?: string;
+                status?: string;
+            };
+            expect(entry.status).toBe('deployed');
+            expect(entry.userDeclinedUpdate).toBeUndefined();
+            expect(entry.declinedAt).toBeUndefined();
+        });
     });
 });

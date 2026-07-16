@@ -15,6 +15,8 @@ import * as path from 'path';
 import { COMPONENT_IDS } from '@/core/constants';
 import { getLogger } from '@/core/logging';
 import { getFrontendEnvVars } from '@/core/state';
+import { getKeyedMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
+import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
 import {
     PAAS_URL, PAAS_GRAPHQL_ENDPOINT, PAAS_ENVIRONMENT_ID,
     PAAS_WEBSITE_CODE, PAAS_STORE_VIEW_CODE, PAAS_STORE_CODE,
@@ -393,16 +395,30 @@ export async function calculateMeshSourceHash(meshComponentPath: string): Promis
  * Implementation: Get current mesh state from project
  */
 function getCurrentMeshStateImpl(project: Project): MeshState | null {
-    // Return the stored mesh state (from last deployment)
-    // This represents the DEPLOYED configuration, not the current config
-    if (!project.meshState) {
+    // Return the stored mesh state (from last deployment) — the DEPLOYED
+    // configuration, not the current config. Keyed-first (ADR-011 D3 Step 06):
+    // the keyed mesh appBuilderComponents entry carries the baseline; fall back
+    // per-field to the legacy meshState for entries written before the keyed
+    // model carried these fields (retired write-side in Step 07).
+    const keyed = getKeyedMeshAppBuilderComponent(project);
+    const legacy = project.meshState;
+
+    const envVars = keyed?.envVars ?? legacy?.envVars;
+    const sourceHash = keyed?.sourceHash ?? legacy?.sourceHash;
+    const lastDeployed = keyed?.lastDeployed ?? legacy?.lastDeployed;
+
+    // No legacy state and no deployment evidence on the keyed entry (e.g. an
+    // undeployed entry with no runtime fields) → null, preserving the
+    // "fresh deployment needed" path. Any legacy meshState keeps returning a
+    // state exactly as before.
+    if (!legacy && envVars === undefined && sourceHash == null && !lastDeployed) {
         return null;
     }
 
     return {
-        envVars: project.meshState.envVars || {},
-        sourceHash: project.meshState.sourceHash || null,
-        lastDeployed: project.meshState.lastDeployed ? new Date(project.meshState.lastDeployed) : null,
+        envVars: envVars || {},
+        sourceHash: sourceHash || null,
+        lastDeployed: lastDeployed ? new Date(lastDeployed) : null,
     };
 }
 
@@ -459,10 +475,14 @@ async function detectMeshChangesImpl(
 
         if (deployedConfig) {
             // Successfully fetched deployed config - use it as baseline
-            logger.debug('[Mesh Staleness] Successfully fetched deployed config, populating meshState.envVars');
+            logger.debug('[Mesh Staleness] Successfully fetched deployed config, populating the keyed baseline');
 
-            if (project.meshState) {
-                project.meshState.envVars = deployedConfig;
+            // The fetched baseline lands on the keyed mesh entry — the single
+            // durable model (ADR-011 D3 Step 07; the legacy meshState write-side
+            // is retired, readers are keyed-first).
+            const keyedMesh = getKeyedMeshAppBuilderComponent(project);
+            if (keyedMesh) {
+                keyedMesh.envVars = deployedConfig;
             }
             didPopulateFromDeployedConfig = true;
 
@@ -576,16 +596,29 @@ async function updateMeshStateImpl(project: Project, endpoint: string | undefine
     // This is the actual deployed state since .env file is used during mesh deployment
     const envVars = await readMeshEnvVarsFromFile(meshInstance.path);
     const sourceHash = await calculateMeshSourceHashImpl(meshInstance.path, logger);
+    const lastDeployed = new Date().toISOString();
 
-    project.meshState = {
+    // Writer chokepoint (ADR-011 D3 Steps 07+09): every mesh deploy path
+    // (creation, EDS reset, project reset, headless deploy) persists its state
+    // through this function — landing the outcome on the KEYED mesh entry here
+    // covers all of them at once. The keyed entry is the single durable model;
+    // the singular meshState write-side is retired (Step 07).
+    recordDeployOutcome(project, 'mesh', meshInstance.id, {
+        status: 'deployed',
+        endpoint,
         envVars,
         sourceHash,
-        lastDeployed: new Date().toISOString(),
-        endpoint, // AUTHORITATIVE location for mesh endpoint
-        // Clear any previous decline state since mesh is now deployed
+        lastDeployed,
+        // Clear any previous "Later" decline — the mesh is now deployed.
         userDeclinedUpdate: undefined,
         declinedAt: undefined,
-    };
+    });
+
+    // Clear the in-memory legacy singleton (a legacy-loaded project still
+    // carries it): the keyed entry above is authoritative, and a stale
+    // meshState left behind could resurface through the accessors' legacy
+    // fallbacks. Legacy manifests remain READABLE via the loader + migration.
+    project.meshState = undefined;
 }
 
 /**

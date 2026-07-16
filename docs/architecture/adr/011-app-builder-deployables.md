@@ -1,15 +1,18 @@
 # ADR-011: App Builder Deployables — A Keyed Set of Deployable Components in One App Builder Project (Mesh Is One Kind)
 
-**Status**: Accepted (decision) — not yet implemented; plan at [`.rptc/plans/appbuilder-deployable-model/`](../../../.rptc/plans/appbuilder-deployable-model/overview.md)
+**Status**: Accepted — implemented (D1–D3; D3 on branch `feature/appbuilder-deployables-d3`, 2026-07-15); plan at [`.rptc/plans/appbuilder-deployable-model/`](../../../.rptc/plans/appbuilder-deployable-model/overview.md)
 **Date**: 2026-06-19
 **Decision Maker**: Project Owner
-**Implementer**: Pending — D1 spike → D1–D3 (see plan)
+**Implementer**: Shipped — D1 spike → D1–D3 (see plan)
 
 Related: [ADR-006 Thin-Layer Storefront Customization](006-thin-layer-storefront-customization.md) (canonical + code-patches; the same "components are cloned sources" model), [ADR-009 Storefront config.json Flag Injection](009-storefront-config-flag-injection.md) (the `MESH_ENDPOINT`→config edge this generalizes). Research: [`.rptc/research/appbuilder-deployable-model/research.md`](../../../.rptc/research/appbuilder-deployable-model/research.md) + [`.rptc/research/app-builder-app-structure/research.md`](../../../.rptc/research/app-builder-app-structure/research.md). **Supersedes** the singular App Builder model shipped as slice 1 (deploy spine).
 
-> **Naming + status note (2026-07-14):** the "Status: not yet implemented" above is now stale — D1 (keyed
-> state + catalog + kind-dispatch runner + two-path subscriber) and D2 (live mesh subscribe + selection UX)
-> have shipped; D3 (retire the singular `meshState`/`appState` write paths) is the remaining reconciliation.
+> **Naming + status note (2026-07-14, updated 2026-07-15):** D1 (keyed state + catalog + kind-dispatch
+> runner + two-path subscriber) and D2 (live mesh subscribe + selection UX) shipped first; **D3 shipped
+> 2026-07-15**: the singular `meshState`/`appState` write paths are retired — `appBuilderComponents` is the
+> sole persisted model; legacy manifests migrate on load and forward-migrate on first save; the dashboard
+> renders one integrations list with the mesh as its first row (masthead mesh badge, Deploy Mesh tile, and
+> `AppBuilderCard` removed).
 > The code renamed this ADR's **"deployable"** to **`appBuilderComponent`** throughout (`AppBuilderComponentState`,
 > `project.appBuilderComponents`, `appBuilderComponentRunner`, `app-builder-components.json`) — same concept,
 > different vocabulary.
@@ -112,7 +115,7 @@ Introduce the catalog + keyed state + a `kind`-dispatching add/deploy/remove pat
 - **API subscription becomes critical path**: "add a mesh" needs the API Mesh API subscribed; today only the bare S2S credential is created (`subscribeCredentialToServices` is unbuilt). Generalizes to each deployable's `requiredApis`.
 - **Env-var inputs + secrets for arbitrary integrations is real new work**: catalog entries must bring their own env schema, with a generic collection surface; integration credentials need masked input + VS Code SecretStorage (never committed — the repo is public). The `.env`-generation plumbing (`generateComponentEnvFile`) is reusable.
 - **UI/UX is a genuine design pass**: the dashboard moves from two singular surfaces to a deployables *list*; the wizard gains a "pick your deployables" step.
-- `overview.md` continues to describe the singular model and is updated only when D1–D3 ship.
+- `overview.md` continues to describe the singular model and is updated only when D1–D3 ship. *(That trigger fired: D3 shipped 2026-07-15 and `docs/architecture/overview.md` now shows the keyed `appBuilderComponents` manifest.)*
 
 **Load-bearing assumption (the D1 spike must verify before building on it)**: an integration's `aio app deploy`/`undeploy` only touches its **own** managed-project entities — never the mesh or other integrations — and a per-integration package prefix prevents collisions. This is standard OpenWhisk managed-project behavior but was deferred as a live probe by slice 1.
 

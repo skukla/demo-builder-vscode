@@ -1,9 +1,11 @@
 /**
- * AppBuilderComponent State Accessors (Step 01)
+ * AppBuilderComponent State Accessors
  *
- * Pure read/write accessors over the keyed `project.appBuilderComponents` map. In D1
- * these READ THROUGH to the legacy singular `meshState`/`appState` so behavior
- * is unchanged — the legacy singletons stay authoritative. No I/O, no `vscode`.
+ * Pure read/write accessors over the keyed `project.appBuilderComponents` map —
+ * the SINGLE persisted authority for App Builder component state (ADR-011 D3:
+ * the singular `meshState`/`appState` write-side is retired; legacy manifests
+ * migrate on load). The `synthesize*FromLegacy` functions are the legacy READ
+ * fallback for pre-migration in-memory projects only. No I/O, no `vscode`.
  *
  * @module features/app-builder/services/appBuilderComponentState
  */
@@ -45,6 +47,12 @@ function synthesizeMeshFromLegacy(project: Project): AppBuilderComponentState | 
         endpoint: mesh.endpoint,
         sourceHash: mesh.sourceHash,
         lastDeployed: mesh.lastDeployed,
+        // Runtime fields (ADR-011 D3 Steps 07+09): readers of the staleness
+        // baseline / decline flags / deployment record go through this accessor,
+        // so the legacy synthesis must carry them for in-memory-legacy projects.
+        envVars: mesh.envVars,
+        userDeclinedUpdate: mesh.userDeclinedUpdate,
+        declinedAt: mesh.declinedAt,
     };
 }
 
@@ -64,13 +72,27 @@ function synthesizeAppFromLegacy(project: Project): AppBuilderComponentState | u
 }
 
 /**
- * Get the mesh appBuilderComponent. Prefers the keyed entry; falls back to a
- * read-through synthesis of the legacy `meshState`.
+ * Get the KEYED mesh entry only (no legacy synthesis) — the live map object,
+ * so runtime-field writes (decline flags, envVars back-fill) land on the
+ * persisted entry. Matches by KIND: the migrated key is 'mesh', but
+ * `recordDeployOutcome` keys never-migrated projects by the mesh component
+ * instance id (ADR-011 D3 Step 06).
+ */
+export function getKeyedMeshAppBuilderComponent(
+    project: Project,
+): AppBuilderComponentState | undefined {
+    const map = project.appBuilderComponents;
+    if (!map) return undefined;
+    if (map[MESH_ID]?.kind === 'mesh') return map[MESH_ID];
+    return Object.values(map).find(state => state.kind === 'mesh');
+}
+
+/**
+ * Get the mesh appBuilderComponent. Prefers the keyed entry (by kind); falls
+ * back to a read-through synthesis of the legacy `meshState`.
  */
 export function getMeshAppBuilderComponent(project: Project): AppBuilderComponentState | undefined {
-    const keyed = project.appBuilderComponents?.[MESH_ID];
-    if (keyed) return keyed;
-    return synthesizeMeshFromLegacy(project);
+    return getKeyedMeshAppBuilderComponent(project) ?? synthesizeMeshFromLegacy(project);
 }
 
 /**

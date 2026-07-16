@@ -144,6 +144,69 @@ describe('ProjectDashboardWebviewCommand - Bundle Loading', () => {
     });
 });
 
+// ADR-011 D3 Steps 07+09: getInitialData seeds hasMesh and the app card from
+// the KEYED appBuilderComponents entries — a keyed-only project (post-Step-07,
+// no meshState/appState) must produce the same dashboard seed.
+describe('ProjectDashboardWebviewCommand - getInitialData (keyed-only project)', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    function createCommandWithProject(project: unknown): ProjectDashboardWebviewCommand {
+        const mockStateManager = createMockStateManager();
+        (mockStateManager.getCurrentProject as jest.Mock).mockResolvedValue(project);
+        return new ProjectDashboardWebviewCommand(
+            createMockExtensionContext(),
+            mockStateManager,
+            createMockLogger(),
+        );
+    }
+
+    it('reports hasMesh from a keyed mesh entry when no meshState exists', async () => {
+        const command = createCommandWithProject({
+            name: 'demo',
+            path: '/tmp/demo',
+            componentInstances: {},
+            appBuilderComponents: {
+                mesh: {
+                    kind: 'mesh',
+                    status: 'deployed',
+                    source: { owner: '', repo: '' },
+                    endpoint: 'https://keyed-mesh/graphql',
+                },
+            },
+        });
+
+        const data = await (command as any).getInitialData();
+
+        expect(data.hasMesh).toBe(true);
+    });
+
+    it('exposes the keyed appBuilderComponents map (the integrations list seed) and no initialApp', async () => {
+        const keyed = {
+            'acme-widget': {
+                kind: 'integration',
+                status: 'deployed',
+                source: { owner: 'acme', repo: 'widget' },
+                url: 'https://acme.adobeio-static.net',
+                deployedUrls: { ping: 'https://acme.adobeio-static.net/ping' },
+            },
+        };
+        const command = createCommandWithProject({
+            name: 'demo',
+            path: '/tmp/demo',
+            componentInstances: {},
+            appBuilderComponents: keyed,
+        });
+
+        const data = await (command as any).getInitialData();
+
+        expect(data.appBuilderComponents).toEqual(keyed);
+        // The singular app-card seed retired with the AppBuilderCard (D3 Step 08).
+        expect(data.initialApp).toBeUndefined();
+    });
+});
+
 describe('ProjectDashboardWebviewCommand - sendAuthoringExperienceUpdate', () => {
     beforeEach(() => {
         jest.clearAllMocks();

@@ -127,10 +127,13 @@ export class ProjectFileLoader {
                 pinned: manifest.pinned,
             };
 
-            // One-time read-side migration of legacy meshState/appState into the
-            // keyed appBuilderComponents map (on-disk manifest untouched in D1). Idempotent
-            // when the manifest already carries a forward-state `appBuilderComponents` map.
-            project.appBuilderComponents = migrateLegacyToAppBuilderComponents(manifest);
+            // Keyed appBuilderComponents (ADR-011 D3 Step 01): prefer the persisted
+            // map — it is the durable model, written by ProjectConfigWriter. The
+            // read-side migration of legacy meshState/appState is the FALLBACK for
+            // old manifests that carry no keyed map (never dropped — projects of
+            // arbitrary age must keep loading).
+            project.appBuilderComponents =
+                manifest.appBuilderComponents ?? migrateLegacyToAppBuilderComponents(manifest);
 
             // Detect if demo is actually running
             this.detectDemoStatus(project, terminalProvider);

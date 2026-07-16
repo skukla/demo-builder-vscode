@@ -89,14 +89,12 @@ describe('ActionGrid', () => {
         isRunning: false,
         isStartDisabled: false,
         isStopDisabled: false,
-        hasMesh: true,
         isMeshActionDisabled: false,
         isOpeningBrowser: false,
         handleStartDemo: jest.fn(),
         handleStopDemo: jest.fn(),
         handleOpenBrowser: jest.fn(),
         handleOpenAdminPanel: jest.fn(),
-        handleDeployMesh: jest.fn(),
         handleConfigure: jest.fn(),
         handleOpenDevConsole: jest.fn(),
         handleDeleteProject: jest.fn(),
@@ -330,15 +328,8 @@ describe('ActionGrid', () => {
             expect(within(build).getByText('Configure')).toBeInTheDocument();
         });
 
-        it('should place Deploy Mesh in the build zone when hasMesh', () => {
-            const { container } = render(<ActionGrid {...defaultProps} hasMesh={true} />);
-
-            const build = getZone(container, 'build');
-            expect(within(build).getByText('Deploy Mesh')).toBeInTheDocument();
-        });
-
-        it('should not render Deploy Mesh when hasMesh is false', () => {
-            render(<ActionGrid {...defaultProps} hasMesh={false} />);
+        it('never renders a Deploy Mesh tile (mesh lives in the integrations list, D3 Step 08)', () => {
+            render(<ActionGrid {...defaultProps} />);
 
             expect(screen.queryByText('Deploy Mesh')).not.toBeInTheDocument();
         });
@@ -567,13 +558,6 @@ describe('ActionGrid', () => {
     });
 
     describe('Mesh Action Disabled State', () => {
-        it('should disable Deploy Mesh when isMeshActionDisabled is true', () => {
-            render(<ActionGrid {...defaultProps} isMeshActionDisabled={true} />);
-
-            const deployButton = screen.getByText('Deploy Mesh').closest('button');
-            expect(deployButton).toBeDisabled();
-        });
-
         it('should disable Configure when isMeshActionDisabled is true', () => {
             render(<ActionGrid {...defaultProps} isMeshActionDisabled={true} />);
 
@@ -608,15 +592,6 @@ describe('ActionGrid', () => {
             await user.click(screen.getByText('Open in Browser'));
 
             expect(defaultProps.handleOpenBrowser).toHaveBeenCalled();
-        });
-
-        it('should call handleDeployMesh when Deploy Mesh clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} />);
-
-            await user.click(screen.getByText('Deploy Mesh'));
-
-            expect(defaultProps.handleDeployMesh).toHaveBeenCalled();
         });
 
         it('should call handleConfigure when Configure clicked', async () => {

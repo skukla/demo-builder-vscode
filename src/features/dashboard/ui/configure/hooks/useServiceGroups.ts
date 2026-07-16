@@ -64,7 +64,7 @@ export function useServiceGroups({
             });
         });
 
-        // MESH_ENDPOINT is auto-populated from project.meshState.endpoint — it's never
+        // MESH_ENDPOINT is auto-populated from the keyed mesh entry — it's never
         // user-editable and is declared as an optional env var on the EDS/headless
         // frontends. When the project has no mesh component, rendering the field
         // creates a spurious "API Mesh" section with a single uneditable empty row.

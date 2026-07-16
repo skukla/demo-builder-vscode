@@ -2,29 +2,51 @@
 
 ## Purpose
 
-Attach and deploy **one** custom Adobe App Builder app to an existing demo project, from a
-public GitHub URL, dashboard-first. Built as a **sibling of the mesh deploy path**, not a fork.
-
-A demo workspace holds the API Mesh (a separate artifact, untouched here) **plus at most one**
-custom App Builder app. Multiple integration domains (ERP, OMS, …) live as multiple *packages*
-inside that one app, not as separate apps or workspaces. Because the app is singular, its state
-is a singular field on the project — `project.appState` (mirroring `meshState`) — with no keyed
-array.
-
-This is **slice 1 of 5** (the deploy spine) and gates the rest of the family.
+Attach, deploy, and remove **N custom Adobe App Builder integrations** on a demo project, from
+public GitHub URLs (or catalog entries), dashboard-first. Built as a **sibling of the mesh deploy
+path**, not a fork — and since ADR-011 D3, the mesh and the integrations share ONE state model:
+the keyed `project.appBuilderComponents` map (`kind: 'mesh' | 'integration'`) is the single
+persisted authority. The mesh is one component kind in that map; each integration is another
+entry keyed by its component-instance id. The legacy singular `meshState`/`appState` fields are
+legacy-read-only: old manifests migrate on load and forward-migrate on first save
+(see `docs/architecture/state-ownership.md` and ADR-011).
 
 ## Architecture
 
 ```
 features/app-builder/
-├── commands/
-│   └── deployApp.ts          # DeployAppCommand (dashboard deploy/redeploy entry)
 └── services/
-    ├── appDeployment.ts      # deployAppComponent — org-agnostic deploy helper
-    ├── appComponentManager.ts# addAppComponent / removeAppComponent (live add/remove)
-    ├── types.ts              # AppDeploymentResult
-    └── index.ts              # public API
+    ├── appBuilderComponentState.ts   # keyed-map accessors (single persisted authority)
+    ├── appBuilderDeployOutcome.ts    # recordDeployOutcome — the keyed deploy-record writer
+    ├── appBuilderComponentRunner.ts  # keyed runner: clone → install → subscribe → deploy per id
+    ├── appBuilderComponentRunnerDeps.ts # RunnerDepsContext factory (catalog, subscriber, secrets)
+    ├── appComponentManager.ts        # addAppComponent / removeAppComponent (live add/remove)
+    ├── deployAppHeadless.ts          # UI-free per-integration deploy core (componentId required)
+    ├── deployAppIsolated.ts          # package-isolated deploy (applyIsolatedPackages + deploy)
+    ├── appDeployment.ts              # deployAppComponent — org-agnostic deploy helper
+    ├── appConfigPackages.ts          # app.config.yaml package rewrite (isolation)
+    ├── owPackageName.ts              # deriveOwPackage(instanceId) — per-instance ow.package
+    ├── apiSubscriber.ts              # Console API subscription (full-union PUT)
+    ├── apiSubscriberClientAdapter.ts # runner-facing subscriber adapter
+    ├── ensureMeshApiSubscribed.ts    # bounded mesh API enablement
+    ├── runtimeCredentials.ts         # workspace runtime credentials fetch
+    ├── secretKey.ts / allowedDomain.ts # env-schema secret + domain helpers
+    ├── types.ts                      # AppDeploymentResult
+    └── index.ts                      # public API
 ```
+
+## State model (ADR-011 D3)
+
+- `project.appBuilderComponents` — keyed map, **the only persisted model**. Every deploy path
+  lands its outcome through `recordDeployOutcome` (identity fields `source`/`name`/
+  `providesEnvVars` are preserved; volatile fields `status`/`endpoint`/`url`/`envVars`/
+  `sourceHash`/`lastDeployed` are the deploy record).
+- Readers go through the accessors (`getMeshAppBuilderComponent`,
+  `getIntegrationAppBuilderComponents`, `listAppBuilderComponents`,
+  `getProvidedEnvVars`); the accessors synthesize from the in-memory legacy singletons only
+  for pre-migration projects.
+- A guard test (`tests/core/state/singularStateAccessGuard.test.ts`) pins the few files
+  allowed to touch `.meshState`/`.appState`, with per-file match counts.
 
 ## Key Exports
 
@@ -44,46 +66,55 @@ Org-agnostic deploy helper (callers wrap it in `withOrgContext`, exactly like
 Node version is `'auto'` — resolves to the Node version the Adobe `aio` CLI runs under (no
 hardcoded version).
 
-### `addAppComponent(project, gitUrl, deps)` / `removeAppComponent(project, deps)`
+### `addAppComponent(project, gitUrl, deps)` / `removeAppComponent(project, appId, deps)`
 
-Additive add/remove on a **live** project (no re-clone of the rest of the project, no edit-wipe,
-no reset `rm -rf`).
+Additive add / per-id remove on a **live** project (no re-clone of the rest of the project, no
+edit-wipe, no reset `rm -rf`). N custom integrations coexist — ADR-011 D3 Step 05 dropped the
+one-app guard.
 
 - **Add** — fail-fast validation of a **public GitHub URL**: `validateURL` (rejects
   SSH/`git@`/non-https/SSRF), then `parseGitHubUrl`, then an `owner`/`repo` charset gate
   (`^[A-Za-z0-9._-]+$`) that rejects shell metacharacters. The stored URL is the **canonical**
   `https://github.com/owner/repo.git` reconstructed from the validated parts — never the raw
-  input — so embedded credentials and stray path segments are dropped. Enforces the singular
-  guard (one app per workspace), clones+installs via `componentManager.installComponent`
-  (siblings untouched), records `componentSelections.appBuilder`, and persists.
-- **Remove** — `aio app undeploy` under org-context targeting (best-effort: a failed undeploy
-  surfaces a warning but never strands local state), then
-  `componentManager.removeComponent(deleteFiles=true)`, clears `appState`/`appStatusSummary`,
-  drops the app from the selection, and persists.
+  input — so embedded credentials and stray path segments are dropped. Rejects a duplicate id
+  fail-fast, clones+installs via `componentManager.installComponent` (siblings untouched), keys
+  the entry in `appBuilderComponents[appId]` (with its `source`), **appends** to
+  `componentSelections.appBuilder`, and persists.
+- **Remove (per-id)** — `aio app undeploy` from that integration's folder under org-context
+  targeting (best-effort: a failed undeploy surfaces a warning but never strands local state),
+  then `componentManager.removeComponent(deleteFiles=true)`, clears ONLY that keyed entry
+  (legacy twin resolved via `resolveKeyedComponentId`) + its selection id — siblings untouched.
+  The in-memory legacy singletons (`appState`/`appStatusSummary`) clear when the LAST
+  integration goes, so the accessors' legacy synthesis cannot resurrect a removed integration.
 
-### `DeployAppCommand` (`commands/deployApp.ts`)
+### `deployAppHeadless(deps)` (`services/deployAppHeadless.ts`)
 
-Dashboard command. Mirrors `DeployMeshCommand`'s guard order exactly:
+The UI-free per-integration deploy core. `componentId` is **required** — it targets exactly one
+integration by component-instance id (an unknown or missing id blocks with `no-app`; there is no
+singular fallback). Guard order:
 
 ```
-concurrency lock
-  → ensureAdobeIOAuth
-  → detectProjectOrgMismatch (reachability)
+ensureProjectAdobeContext (auth + org)
   → projectRequiresAppBuilder + testDeveloperPermissions
-  → withOrgContext(buildOrgTargetFromProjectAdobe(project.adobe, cachedOrg)) → deployAppComponent
-  → persist appState + appStatusSummary; push dashboard status
+  → resolve the id-matched instance
+  → withOrgContext(buildOrgTargetFromProjectAdobe(project.adobe, cachedOrg))
+      → deployAppComponentIsolated(path, deriveOwPackage(instance.id))
+  → recordDeployOutcome on the keyed entry; save project
 ```
 
-The deploy helper stays org-agnostic; the **command** supplies the org targeting.
+Caller: the projects-list `redeployApp` handler (one kebab item per redeployable keyed
+integration). Dashboard-driven deploys go through the keyed runner
+(`appBuilderComponentRunner`) instead, behind the per-id handlers.
 
 ## Dashboard surface
 
-The `AppBuilderCard` (`features/dashboard/ui/components/AppBuilderCard.tsx`) renders beside the
-mesh card whenever the project has Adobe context (so the "Add an App Builder app" affordance is
-reachable) or already carries an app. States: **No app** (URL input + Add) / **Deploying**
-(progress via the dashboard status channel) / **Deployed** (action URLs + Redeploy + Remove) /
-**Error** (inline + Retry). Dashboard handlers: `addApp`, `deployApp`, `redeployApp`, `removeApp`
-(see `features/dashboard/README.md`).
+The dashboard renders ONE integrations list: `IntegrationsBlock` →
+`AppBuilderComponentsList`, with the mesh as its first row (`MeshComponentRow`) and one
+`AppBuilderComponentRow` per keyed integration. Per-id handlers (`addAppBuilderComponent`,
+`deployAppBuilderComponent`, `redeployAppBuilderComponent`, `removeAppBuilderComponent`,
+`verifyAppBuilderComponent` — `features/dashboard/handlers/appBuilderComponentHandlers.ts`)
+drive the keyed runner and push per-row status via
+`sendAppBuilderComponentStatusUpdate` (see `features/dashboard/README.md`).
 
 ## Reuse
 
@@ -94,14 +125,21 @@ Reused **as-is** (no fork): `withOrgContext` + `buildOrgTargetFromProjectAdobe`,
 `@/core/shell/buildComponent` (two callers, byte-identical) — no generalized "App Builder
 component framework" until a third component kind appears (Rule of Three).
 
+## History
+
+Slice 1 (2026-06) shipped the deploy spine as a **singular** model: one custom app, singular
+`project.appState`, a dashboard `AppBuilderCard`, and a `DeployAppCommand`. ADR-011 D1–D3
+replaced that model: D1 introduced the keyed map with read-through accessors, D2 added the
+keyed runner + per-id handlers, and D3 retired the singular write-side entirely (the card,
+the singular command, and the singular handlers are deleted; legacy manifests migrate on load).
+
 ## Scope & deferrals
 
-Slice 1 ships the deploy spine: attach one app from a public URL and deploy/redeploy/remove it.
-Deferred to later slices: curated app catalog, package-binding, scaffolding/authoring,
-app-only projects, and multi-workspace + programmatic API-subscription.
+Deferred to later slices: package-binding, scaffolding/authoring, app-only projects, and
+multi-workspace.
 
 ## Testing
 
 `tests/features/app-builder/` mirrors this directory. Services mock `CommandExecutor.execute`
-and `componentManager`; never shell out. Card/screen tests use `@testing-library/react`. The
+and `componentManager`; never shell out. Component tests use `@testing-library/react`. The
 mesh `meshDeployment` tests are the regression gate for the `buildComponent` extraction.

@@ -13,17 +13,17 @@
  *  - Storefront zone (EDS only): Sync Storefront. Sits on row 1 next to
  *    Primary so storefront ops are visually adjacent to the storefront
  *    authoring surface.
- *  - Build zone: Deploy Mesh (when hasMesh), Configure, and a "More"
- *    overflow menu holding Edit (EDS always, non-EDS while stopped),
- *    Export, Refresh Block Library + Republish Content (EDS only),
- *    Dev Console, Reset, and Delete (destructive, last). (Logs moved to the
- *    sidebar Logs utility; Copy Path lives on the project-card kebab; Rename
- *    is inline on the dashboard title / project card name.)
+ *  - Build zone: Configure and a "More" overflow menu holding Edit (EDS
+ *    always, non-EDS while stopped), Export, Refresh Block Library +
+ *    Republish Content (EDS only), Dev Console, Reset, and Delete
+ *    (destructive, last). (Logs moved to the sidebar Logs utility; Copy Path
+ *    lives on the project-card kebab; Rename is inline on the dashboard
+ *    title / project card name. Deploy Mesh retired in ADR-011 D3 Step 08 —
+ *    the mesh deploys from its integrations-list row.)
  *  - Delete footer: isolated below the zones, destructive styling.
  *
  * Gating is behavioral, not displayed: Author Content and Sync Storefront
- * render only for EDS projects; Start/Stop only for non-EDS; Deploy Mesh only
- * when hasMesh.
+ * render only for EDS projects; Start/Stop only for non-EDS.
  *
  * AI access is provided globally via the sidebar (Chat + Prompts) — the MCP
  * is wired at the extension level, so a project-scoped AI tile here would be
@@ -41,7 +41,6 @@ import Globe from '@spectrum-icons/workflow/Globe';
 import More from '@spectrum-icons/workflow/More';
 import PlayCircle from '@spectrum-icons/workflow/PlayCircle';
 import PublishCheck from '@spectrum-icons/workflow/PublishCheck';
-import Refresh from '@spectrum-icons/workflow/Refresh';
 import Settings from '@spectrum-icons/workflow/Settings';
 import StopCircle from '@spectrum-icons/workflow/StopCircle';
 import UserAdmin from '@spectrum-icons/workflow/UserAdmin';
@@ -69,13 +68,7 @@ export interface ActionGridProps {
     isStartDisabled: boolean;
     /** Whether Stop button should be disabled (ignored for EDS projects) */
     isStopDisabled: boolean;
-    /**
-     * Whether the project includes an API Mesh to deploy. Required (no default)
-     * so every caller must decide explicitly — a forgotten prop should not
-     * silently show the Deploy Mesh tile (the original bug).
-     */
-    hasMesh: boolean;
-    /** Whether mesh-related actions should be disabled */
+    /** Whether mesh-related actions (Configure) should be disabled */
     isMeshActionDisabled: boolean;
     /** Whether browser is currently opening */
     isOpeningBrowser: boolean;
@@ -91,8 +84,6 @@ export interface ActionGridProps {
     handleOpenDaLive?: () => void;
     /** Handler for the Manage Commerce button (admin URL resolved backend-side) */
     handleOpenAdminPanel: () => void;
-    /** Handler for Deploy Mesh button */
-    handleDeployMesh: () => void;
     /** Handler for Sync Storefront button (EDS projects only) */
     handleSyncStorefront?: () => void;
     /** Handler for Refresh Block Library overflow item (EDS projects only) */
@@ -129,7 +120,6 @@ export function ActionGrid({
     isRunning,
     isStartDisabled,
     isStopDisabled,
-    hasMesh,
     isMeshActionDisabled,
     isOpeningBrowser,
     handleStartDemo,
@@ -138,7 +128,6 @@ export function ActionGrid({
     handleOpenLiveSite,
     handleOpenDaLive,
     handleOpenAdminPanel,
-    handleDeployMesh,
     handleSyncStorefront,
     handleRefreshBlockLibrary,
     handleRepublishContent,
@@ -289,19 +278,6 @@ export function ActionGrid({
                     bar; tiles pack left within the group. */}
                 <div className="dashboard-zone-section" data-zone="build">
                     <div className="dashboard-zone-grid">
-                        {hasMesh && (
-                            <ActionButton
-                                onPress={handleDeployMesh}
-                                isQuiet
-                                isDisabled={isMeshActionDisabled}
-                                UNSAFE_className="dashboard-action-button"
-                                data-action="deploy-mesh"
-                            >
-                                <Refresh size="L" />
-                                <Text UNSAFE_className="icon-label">Deploy Mesh</Text>
-                            </ActionButton>
-                        )}
-
                         <ActionButton
                             onPress={handleConfigure}
                             isQuiet

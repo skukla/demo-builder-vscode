@@ -2,10 +2,13 @@
  * DashboardStatusHeader Component
  *
  * The full-width status band at the top of the project dashboard: the project's
- * health badges (Frontend · API Mesh · AI · IMS Org) on the left, the "All
- * Projects" navigation on the right, and the "View AI Capabilities" link below
- * the badges. Each badge can surface a remediation action via the shared
- * StatusCard.action (re-auth, regenerate AI files).
+ * health badges (Frontend · AI · IMS Org) on the left, the "All Projects"
+ * navigation on the right, and the "View AI Capabilities" link below the
+ * badges. Each badge can surface a remediation action via the shared
+ * StatusCard.action (re-auth, regenerate AI files). The mesh's status is NOT a
+ * masthead badge anymore — since ADR-011 D3 Step 08 it renders as the mesh row
+ * of the integrations list (MeshComponentRow), which carries the same status
+ * vocabulary plus the deploy/sign-in remediations.
  *
  * Extracted from ProjectDashboardScreen: the status block was ~100 lines nested
  * eight levels deep, which both pushed the screen past its complexity budget and
@@ -21,7 +24,6 @@ import React from 'react';
 import type {
     StatusDisplay,
     AiReadyState,
-    MeshStatus,
     OrgCheckState,
 } from '../hooks/useDashboardStatus';
 import { StatusCard } from '@/core/ui/components/feedback';
@@ -29,10 +31,6 @@ import { StatusCard } from '@/core/ui/components/feedback';
 export interface DashboardStatusHeaderProps {
     /** Frontend/demo status badge. */
     demoStatusDisplay: StatusDisplay;
-    /** API Mesh status badge (null when the project has no mesh). */
-    meshStatusDisplay: StatusDisplay | null;
-    /** Raw mesh status — drives the `needs-auth` "Sign in" remediation. */
-    meshStatus: MeshStatus | undefined;
     /** AI Ready badge state. */
     aiReady: AiReadyState;
     /** "IMS Org" badge (null when N/A — non-Adobe project). */
@@ -56,8 +54,6 @@ export interface DashboardStatusHeaderProps {
  */
 export function DashboardStatusHeader({
     demoStatusDisplay,
-    meshStatusDisplay,
-    meshStatus,
     aiReady,
     imsOrgDisplay,
     orgCheckState,
@@ -87,22 +83,6 @@ export function DashboardStatusHeader({
                                         size="S"
                                         className="dashboard-status-badge"
                                     />
-
-                                    {/* Mesh Status — `needs-auth` surfaces a "Sign in"
-                                        remediation through the shared StatusCard.action
-                                        (user-initiated re-auth; allowed to open a browser). */}
-                                    {meshStatusDisplay && (
-                                        <StatusCard
-                                            label="API Mesh"
-                                            status={meshStatusDisplay.text}
-                                            color={meshStatusDisplay.color}
-                                            size="S"
-                                            className="dashboard-status-badge"
-                                            action={meshStatus === 'needs-auth'
-                                                ? { label: 'Sign in', onPress: onReAuthenticate }
-                                                : undefined}
-                                        />
-                                    )}
 
                                     {/* AI Ready Status — a failing/incomplete badge
                                         (red/yellow) surfaces the "Regenerate AI files"

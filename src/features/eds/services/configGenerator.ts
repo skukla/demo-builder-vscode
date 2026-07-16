@@ -12,7 +12,7 @@
  * direct backend endpoints instead.
  *
  * 1. **StorefrontSetupStep (preflight)**: Creates repo, fstab.yaml, content (no mesh needed)
- * 2. **executor Phase 3**: Deploys mesh (if included) → project.meshState.endpoint
+ * 2. **executor Phase 3**: Deploys mesh (if included) → the keyed mesh entry endpoint
  * 3. **executor Phase 4**: Generates config.json with mesh endpoint OR direct backend endpoints
  * 4. **executor Phase 5**: Syncs config.json to GitHub and publishes to CDN
  *

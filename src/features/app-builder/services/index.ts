@@ -34,6 +34,7 @@ export {
     listAppBuilderComponents,
     setAppBuilderComponent,
     getMeshAppBuilderComponent,
+    getKeyedMeshAppBuilderComponent,
     getIntegrationAppBuilderComponents,
     getProvidedEnvVars,
     isAppBuilderComponentState,

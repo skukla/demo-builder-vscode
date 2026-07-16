@@ -25,6 +25,7 @@ import {
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
 import { applyAuthoringExperienceFlip } from '@/features/eds/services/authoringExperienceFlip';
+import { markMeshUpdateDeclined } from '@/features/mesh/services/meshUpdateDecline';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers';
 import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
@@ -681,10 +682,8 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 'apply changes to mesh and storefront',
             );
         } else if (selection === 'Later') {
-            if (project.meshState) {
-                project.meshState.userDeclinedUpdate = true;
-                project.meshState.declinedAt = new Date().toISOString();
-            }
+            // Keyed-only write (ADR-011 D3 Step 07): the decline lands on the keyed mesh entry.
+            markMeshUpdateDeclined(project);
             if (project.edsStorefrontState) {
                 project.edsStorefrontState.userDeclinedUpdate = true;
                 project.edsStorefrontState.declinedAt = new Date().toISOString();
@@ -766,9 +765,8 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 'redeploy mesh',
             );
         } else if (selection === 'Later') {
-            if (project.meshState) {
-                project.meshState.userDeclinedUpdate = true;
-                project.meshState.declinedAt = new Date().toISOString();
+            // Keyed-only write (ADR-011 D3 Step 07): the decline lands on the keyed mesh entry.
+            if (markMeshUpdateDeclined(project)) {
                 await this.stateManager.saveProject(project);
                 await ProjectDashboardWebviewCommand.refreshStatus();
             }

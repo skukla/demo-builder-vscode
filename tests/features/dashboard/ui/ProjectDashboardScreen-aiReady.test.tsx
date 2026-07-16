@@ -44,11 +44,13 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
     }
 
     describe('Badge Presence', () => {
-        it('renders the AI Ready status badge alongside Frontend + API Mesh', () => {
+        // The masthead badges are Frontend + AI (+ IMS Org): the mesh badge
+        // retired in D3 Step 08 — mesh status lives in the integrations list.
+        it('renders the AI Ready status badge alongside Frontend', () => {
             renderDashboard({ hasMesh: true });
             expect(screen.getByTestId('status-card-Frontend')).toBeInTheDocument();
-            expect(screen.getByTestId('status-card-API Mesh')).toBeInTheDocument();
             expect(screen.getByTestId('status-card-AI')).toBeInTheDocument();
+            expect(screen.queryByTestId('status-card-API Mesh')).not.toBeInTheDocument();
         });
 
         it('renders the AI Ready badge even when project has no mesh', () => {

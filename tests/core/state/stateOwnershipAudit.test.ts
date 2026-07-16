@@ -103,13 +103,14 @@ describe('State Ownership Audit - Documentation Completeness', () => {
         });
 
         it('should document the mesh endpoint authoritative location', () => {
-            // Given: The state ownership document (after mesh endpoint fix)
+            // Given: The state ownership document (ADR-011 D3 Step 07)
             // When: We search for mesh endpoint ownership
-            // Then: Only one authoritative location should be documented
-            // This validates the fix from the mesh endpoint dual-storage bug
+            // Then: The keyed appBuilderComponents mesh entry is authoritative
             const meshEndpointMatches = sharedDocumentContent.match(/mesh.*endpoint|endpoint.*mesh/gi) || [];
             expect(meshEndpointMatches.length).toBeGreaterThan(0);
-            expect(sharedDocumentContent).toMatch(/meshState.*authoritative|authoritative.*meshState/is);
+            expect(sharedDocumentContent).toMatch(
+                /appBuilderComponents.*authoritative|authoritative.*appBuilderComponents/is,
+            );
         });
     });
 
@@ -168,11 +169,13 @@ describe('State Ownership Audit - Mesh Endpoint Single Source Verification', () 
      * source, as documented in the state ownership audit.
      */
 
-    it('should identify meshState as the authoritative source for mesh endpoint', () => {
-        // Given: The mesh endpoint fix uses meshState as single source
+    it('should identify the keyed appBuilderComponents mesh entry as the authoritative source', () => {
+        // Given: ADR-011 D3 Step 07 — the keyed map is the single persisted
+        // authority; meshState is documented as legacy-read-only.
         // When: We check the audit documentation
-        // Then: meshState should be identified as authoritative
-        expect(sharedDocumentContent).toMatch(/meshState/);
+        // Then: the keyed entry is authoritative and meshState is marked legacy
+        expect(sharedDocumentContent).toMatch(/appBuilderComponents/);
+        expect(sharedDocumentContent).toMatch(/meshState.*legacy|legacy.*meshState/is);
         expect(sharedDocumentContent).toMatch(/authoritative|single.*source|only.*location/i);
     });
 

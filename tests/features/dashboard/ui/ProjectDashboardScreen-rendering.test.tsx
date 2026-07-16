@@ -115,7 +115,9 @@ describe('ProjectDashboardScreen - Rendering and Status', () => {
         });
 
         it('should hide mesh status after status update confirms no mesh', async () => {
-            renderDashboard();
+            // The mesh row renders inside the integrations list, which is
+            // gated on hasAdobeContext (D3 Step 08).
+            renderDashboard({ hasAdobeContext: true });
 
             expect(screen.getByText(/Loading status/i)).toBeInTheDocument();
 

@@ -60,14 +60,16 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'deployMesh')).toBe(true);
         });
 
-        it('should include App Builder app handlers', () => {
-            // Given: dashboardHandlers object
-            // When: Checking for App Builder message types
-            // Then: add/deploy/redeploy/remove app handlers present
-            expect(hasHandler(dashboardHandlers, 'addApp')).toBe(true);
-            expect(hasHandler(dashboardHandlers, 'deployApp')).toBe(true);
-            expect(hasHandler(dashboardHandlers, 'redeployApp')).toBe(true);
-            expect(hasHandler(dashboardHandlers, 'removeApp')).toBe(true);
+        it('does NOT register the retired singular App Builder handlers (D3 Step 08)', () => {
+            // The dormant AppBuilderCard (the only poster of these id-less
+            // messages) is deleted; the keyed per-id appBuilderComponent
+            // handlers below are the one App Builder surface. NOTE: the
+            // projects-dashboard feature's 'redeployApp' is a DIFFERENT
+            // handler map (projectsListHandlers) and is unaffected.
+            expect(hasHandler(dashboardHandlers, 'addApp')).toBe(false);
+            expect(hasHandler(dashboardHandlers, 'deployApp')).toBe(false);
+            expect(hasHandler(dashboardHandlers, 'redeployApp')).toBe(false);
+            expect(hasHandler(dashboardHandlers, 'removeApp')).toBe(false);
         });
 
         it('should include authentication handlers', () => {
@@ -124,12 +126,12 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
         });
 
-        it('should have exactly 35 handlers', () => {
+        it('should have exactly 31 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers);
 
-            // Then: Exactly 35 handlers
+            // Then: Exactly 31 handlers
             // 1 init (requestStatus only; no 'ready') + 2 lifecycle + 8 navigation
             // (openBrowser, openLiveSite, openDaLive, openAdminPanel, configure,
             // openDevConsole, getProjectUrls, navigateBack) + 1 mesh + 1
@@ -137,15 +139,16 @@ describe('dashboardHandlers', () => {
             // switchOrg) + 1 project + 1 reset = 18, plus the 4 More-menu actions
             // (editProject, exportProject, republishContent, renameProject) = 22
             // (copyPath removed — Copy Path lives on the project-card kebab),
-            // plus the 4 App Builder actions (addApp, deployApp, redeployApp,
-            // removeApp) = 26, plus the 5 appBuilderComponent (integrations list)
-            // actions (addAppBuilderComponent, deployAppBuilderComponent,
+            // plus the 5 appBuilderComponent (integrations list) actions
+            // (addAppBuilderComponent, deployAppBuilderComponent,
             // redeployAppBuilderComponent, removeAppBuilderComponent,
-            // verifyAppBuilderComponent) = 31, plus the 3 console-API actions
-            // (listConsoleApis, addConsoleApis, setConsoleApis) = 34, plus the
-            // headless exportProjectSettings (export_project_settings MCP tool) = 35.
+            // verifyAppBuilderComponent) = 27, plus the 3 console-API actions
+            // (listConsoleApis, addConsoleApis, setConsoleApis) = 30, plus the
+            // headless exportProjectSettings (export_project_settings MCP tool) = 31.
+            // The 4 singular App Builder actions (addApp, deployApp, redeployApp,
+            // removeApp) retired with the dormant AppBuilderCard (D3 Step 08).
             // setAuthoringExperience lives in the Configure webview, not this map.
-            expect(types).toHaveLength(35);
+            expect(types).toHaveLength(31);
         });
 
         it('should have handlers as functions', () => {

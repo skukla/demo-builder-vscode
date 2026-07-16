@@ -20,7 +20,7 @@ import {
     getAppStatusText,
     getAppStatusVariant,
     meshNeedsRedeploy,
-    appIsDeployable,
+    listRedeployableIntegrations,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
 import { createMockProject, createRunningProject } from '../testUtils';
 
@@ -376,18 +376,69 @@ describe('projectStatusUtils', () => {
         });
     });
 
+    // The card's app line derives from the DURABLE keyed map (worst status across
+    // kind:'integration' entries), NOT the deploy-time-only appStatusSummary —
+    // a reloaded project carries only the keyed entries.
     describe('app status display', () => {
-        it('maps appStatusSummary to text + variant, null when absent', () => {
-            expect(getAppStatusText(createMockProject({ appStatusSummary: 'deployed' }))).toBe(
-                'App Deployed'
-            );
-            expect(getAppStatusVariant(createMockProject({ appStatusSummary: 'deployed' }))).toBe(
-                'success'
-            );
-            expect(getAppStatusText(createMockProject({ appStatusSummary: 'error' }))).toBe(
-                'App Error'
-            );
+        const integration = (
+            status: 'deployed' | 'stale' | 'error' | 'not-deployed'
+        ) => ({
+            kind: 'integration' as const,
+            status,
+            source: { owner: 'acme', repo: 'widget' },
+        });
+
+        it('derives text + variant from a reloaded project with keyed entries only (no appStatusSummary)', () => {
+            const project = createMockProject({
+                appBuilderComponents: { 'acme-widget': integration('deployed') },
+            });
+            expect(getAppStatusText(project)).toBe('App Deployed');
+            expect(getAppStatusVariant(project)).toBe('success');
+        });
+
+        it('shows the WORST status across integration entries', () => {
+            const errorProject = createMockProject({
+                appBuilderComponents: {
+                    a: integration('deployed'),
+                    b: integration('error'),
+                },
+            });
+            expect(getAppStatusText(errorProject)).toBe('App Error');
+            expect(getAppStatusVariant(errorProject)).toBe('error');
+
+            const staleProject = createMockProject({
+                appBuilderComponents: {
+                    a: integration('deployed'),
+                    b: integration('stale'),
+                },
+            });
+            expect(getAppStatusText(staleProject)).toBe('Redeploy App');
+            expect(getAppStatusVariant(staleProject)).toBe('warning');
+
+            const notDeployedProject = createMockProject({
+                appBuilderComponents: {
+                    a: integration('deployed'),
+                    b: integration('not-deployed'),
+                },
+            });
+            expect(getAppStatusText(notDeployedProject)).toBe('Not Deployed');
+            expect(getAppStatusVariant(notDeployedProject)).toBe('neutral');
+        });
+
+        it('ignores mesh entries and returns null with no integrations', () => {
+            const meshOnly = createMockProject({
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                    },
+                },
+            });
+            expect(getAppStatusText(meshOnly)).toBeNull();
+            expect(getAppStatusVariant(meshOnly)).toBeNull();
             expect(getAppStatusText(createMockProject({}))).toBeNull();
+            expect(getAppStatusVariant(createMockProject({}))).toBeNull();
         });
     });
 
@@ -404,14 +455,79 @@ describe('projectStatusUtils', () => {
         });
     });
 
-    describe('appIsDeployable', () => {
-        it('is true for a deployed or errored (retryable) app, false otherwise', () => {
-            expect(appIsDeployable(createMockProject({ appStatusSummary: 'deployed' }))).toBe(true);
-            expect(appIsDeployable(createMockProject({ appStatusSummary: 'error' }))).toBe(true);
-            expect(appIsDeployable(createMockProject({ appStatusSummary: 'not-deployed' }))).toBe(
-                false
-            );
-            expect(appIsDeployable(createMockProject({}))).toBe(false);
+    // ADR-011 D3 Step 04: the kebab's redeploy affordance is per-integration,
+    // enumerated from the durable keyed map (replaces the singular appIsDeployable
+    // read of appStatusSummary).
+    describe('listRedeployableIntegrations', () => {
+        it('lists deployed integrations with label = name ?? id', () => {
+            const project = createMockProject({
+                appBuilderComponents: {
+                    'int-a': {
+                        kind: 'integration',
+                        status: 'deployed',
+                        name: 'My Integration',
+                        source: { owner: 'acme', repo: 'a' },
+                    },
+                    'int-b': {
+                        kind: 'integration',
+                        status: 'deployed',
+                        source: { owner: 'acme', repo: 'b' },
+                    },
+                },
+            });
+
+            expect(listRedeployableIntegrations(project)).toEqual([
+                { id: 'int-a', label: 'My Integration' },
+                { id: 'int-b', label: 'int-b' },
+            ]);
+        });
+
+        it('includes stale and error (retryable) integrations, excludes not-deployed', () => {
+            const project = createMockProject({
+                appBuilderComponents: {
+                    stale: {
+                        kind: 'integration',
+                        status: 'stale',
+                        source: { owner: 'acme', repo: 's' },
+                    },
+                    errored: {
+                        kind: 'integration',
+                        status: 'error',
+                        source: { owner: 'acme', repo: 'e' },
+                    },
+                    fresh: {
+                        kind: 'integration',
+                        status: 'not-deployed',
+                        source: { owner: 'acme', repo: 'f' },
+                    },
+                },
+            });
+
+            expect(listRedeployableIntegrations(project).map((i) => i.id)).toEqual([
+                'stale',
+                'errored',
+            ]);
+        });
+
+        it('excludes mesh-kind entries (mesh has its own Redeploy Mesh gate)', () => {
+            const project = createMockProject({
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: 'adobe', repo: 'mesh' },
+                    },
+                },
+            });
+
+            expect(listRedeployableIntegrations(project)).toEqual([]);
+        });
+
+        it('returns [] when the keyed map is absent or empty', () => {
+            expect(listRedeployableIntegrations(createMockProject({}))).toEqual([]);
+            expect(
+                listRedeployableIntegrations(createMockProject({ appBuilderComponents: {} }))
+            ).toEqual([]);
         });
     });
 });

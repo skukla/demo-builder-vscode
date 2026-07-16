@@ -262,6 +262,32 @@ describe('ProjectSetupContext', () => {
             const endpoint = context.getMeshEndpoint();
             expect(endpoint).toBe('https://priority-mesh.adobe.io/graphql');
         });
+
+        // ADR-011 D3 Steps 07+09: keyed-only project (post-Step-07, no meshState)
+        // must resolve the endpoint from the keyed mesh entry.
+        it('should return the endpoint from the keyed mesh entry (keyed-only)', () => {
+            const keyedOnlyProject = {
+                ...mockProject,
+                meshState: undefined,
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                        endpoint: 'https://keyed-mesh.adobe.io/graphql',
+                    },
+                },
+            } as unknown as Project;
+
+            const context = new ProjectSetupContext(
+                mockHandlerContext,
+                mockRegistry,
+                keyedOnlyProject,
+                mockConfig,
+            );
+
+            expect(context.getMeshEndpoint()).toBe('https://keyed-mesh.adobe.io/graphql');
+        });
     });
 
     describe('getSelectedAddons()', () => {

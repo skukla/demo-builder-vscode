@@ -255,5 +255,57 @@ describe('typeGuards - Mesh Component Accessors', () => {
             } as unknown as Project;
             expect(getMeshEndpointUrl(project)).toBeUndefined();
         });
+
+        // ADR-011 D3 Step 06: the accessor reads the KEYED mesh entry first and
+        // falls back to the legacy meshState — every caller migrates in one place.
+        describe('keyed-first read (ADR-011 D3 Step 06)', () => {
+            const keyedEndpoint = 'https://edge-graph.adobe.io/api/keyed-1/graphql';
+
+            it('prefers the keyed mesh entry endpoint over meshState', () => {
+                const project = {
+                    ...createProjectWithMesh('eds-commerce-mesh'),
+                    appBuilderComponents: {
+                        'eds-commerce-mesh': {
+                            kind: 'mesh',
+                            status: 'deployed',
+                            source: { owner: '', repo: '' },
+                            endpoint: keyedEndpoint,
+                        },
+                    },
+                    meshState: { endpoint: meshEndpoint },
+                } as unknown as Project;
+                expect(getMeshEndpointUrl(project)).toBe(keyedEndpoint);
+            });
+
+            it('falls back to meshState when the keyed mesh entry has no endpoint', () => {
+                const project = {
+                    ...createProjectWithMesh('eds-commerce-mesh'),
+                    appBuilderComponents: {
+                        'eds-commerce-mesh': {
+                            kind: 'mesh',
+                            status: 'not-deployed',
+                            source: { owner: '', repo: '' },
+                        },
+                    },
+                    meshState: { endpoint: meshEndpoint },
+                } as unknown as Project;
+                expect(getMeshEndpointUrl(project)).toBe(meshEndpoint);
+            });
+
+            it('returns the keyed endpoint for a keyed-only project (no meshState)', () => {
+                const project = {
+                    ...createProjectWithMesh('eds-commerce-mesh'),
+                    appBuilderComponents: {
+                        mesh: {
+                            kind: 'mesh',
+                            status: 'deployed',
+                            source: { owner: '', repo: '' },
+                            endpoint: keyedEndpoint,
+                        },
+                    },
+                } as unknown as Project;
+                expect(getMeshEndpointUrl(project)).toBe(keyedEndpoint);
+            });
+        });
     });
 });

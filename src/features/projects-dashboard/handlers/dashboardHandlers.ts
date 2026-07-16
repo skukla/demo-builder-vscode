@@ -1083,18 +1083,26 @@ export const handleRedeployMesh: MessageHandler<{ projectPath: string }> = async
 };
 
 /**
- * Handle 'redeployApp' — redeploy the project's App Builder app from the projects
- * kebab (shown when the project has a deployed app). Reuses the shared
- * {@link import('@/features/app-builder/services/deployAppHeadless').deployAppHeadless} core.
+ * Handle 'redeployApp' — redeploy ONE App Builder integration from the projects
+ * kebab (one item per redeployable keyed integration; the payload carries its
+ * id — ADR-011 D3 Step 04). Reuses the shared
+ * {@link import('@/features/app-builder/services/deployAppHeadless').deployAppHeadless}
+ * core, which preserves the full guard chain (auth → org → permission → no-app)
+ * and targets the id-matched integration. The id is REQUIRED — a payload
+ * without one fails fast; there is no singular fallback to guess at.
  */
-export const handleRedeployApp: MessageHandler<{ projectPath: string }> = async (
+export const handleRedeployApp: MessageHandler<{ projectPath: string; id: string }> = async (
     context: HandlerContext,
-    payload?: { projectPath: string },
+    payload?: { projectPath: string; id: string },
 ): Promise<HandlerResponse> => {
+    if (!payload?.id) {
+        return { success: false, error: 'Integration id is required' };
+    }
+    const componentId = payload.id;
     const { deployAppHeadless } = await import('@/features/app-builder/services/deployAppHeadless');
     return runProjectRedeploy(
         context,
-        payload?.projectPath,
+        payload.projectPath,
         'Redeploying app',
         (project, onProgress) =>
             deployAppHeadless({
@@ -1103,6 +1111,7 @@ export const handleRedeployApp: MessageHandler<{ projectPath: string }> = async 
                 logger: context.logger,
                 extensionPath: context.context.extensionPath,
                 onProgress,
+                componentId,
             }),
     );
 };

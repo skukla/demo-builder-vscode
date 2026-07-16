@@ -15,6 +15,7 @@
 import type { Project } from '@/types';
 import type { ComponentRegistry, EnvVarDefinition, TransformedComponentDefinition } from '@/types/components';
 import type { HandlerContext } from '@/types/handlers';
+import { getMeshEndpointUrl } from '@/types/typeGuards';
 
 /**
  * Unified context for project setup operations
@@ -73,10 +74,12 @@ export class ProjectSetupContext {
     }
 
     /**
-     * Get mesh endpoint from project state (meshState is the single source of truth)
+     * Get mesh endpoint from project state — keyed-first via the shared accessor
+     * (the keyed mesh appBuilderComponents entry is the single source of truth;
+     * legacy meshState fallback inside, ADR-011 D3 Steps 07+09).
      */
     getMeshEndpoint(): string | undefined {
-        return this.project.meshState?.endpoint;
+        return getMeshEndpointUrl(this.project);
     }
 
     /**

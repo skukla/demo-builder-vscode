@@ -57,7 +57,7 @@ recomputed on load.
 neither into the project, so a writer-only change would not round-trip them. They need a
 **writer + loader** change and are folded into item 3 / §E below (edit-mode rehydration).
 
-### 3. ADR-011 D3 — durable, independently-managed integrations (KEYSTONE)
+### 3. ADR-011 D3 — durable, independently-managed integrations (KEYSTONE) — ✅ IMPLEMENTED 2026-07-15 (branch `feature/appbuilder-deployables-d3`, pending merge)
 **Model correction (deep research 2026-07-15 →
 [`../research/app-builder-integration-model/research.md`](../research/app-builder-integration-model/research.md)):**
 the model is NOT "one app, many packages." Each integration is a **separate whole App Builder app**
@@ -80,7 +80,7 @@ slice-3 premise.
 — D3 is the documented remainder of ADR-011 (D1–D2 shipped). Item 4 (integration `name`) folds into
 its Step 01; the mesh→`config.json` edge stays byte-identical throughout (golden test, Step 06).
 
-### 4. Integration display name (was: item #2 "name a custom integration") — fold into D3
+### 4. Integration display name (was: item #2 "name a custom integration") — folded into D3 (✅ shipped with it)
 No user-assignable name exists anywhere (`AppBuilderComponentState` has none; the dashboard row
 shows the raw id, the wizard shows the catalog `name` — two derivations). Add `name` to
 `AppBuilderComponentState`, default from repo/catalog, user-editable; unify the wizard + dashboard
@@ -140,10 +140,8 @@ dashboard grid follows D3.**
 ## Kickoff prompt
 > Pick up the custom-integration model work
 > (`.rptc/backlog/2026-07-15-custom-integration-language-and-model.md`; read
-> `.rptc/research/app-builder-integration-model/research.md` first). Language (item 1) + `appState`
-> persistence (item 2) shipped. **Start with item 3 (ADR-011 D3)** — the keystone: serialize
-> `appBuilderComponents`, have the loader prefer it, retire the legacy singular/guarded add/remove
-> path, wire the dormant dashboard integration UI, unify the mesh. Fold item 4 (integration display
-> name) into it. Items 5 (remote Adobe I/O project rename) and 6 (integrations grid UX) are
-> separable — 5 is a small independent `/rptc:fix`; 6 is gated on D3. Also correct the stale
-> "one app, many packages / at most one custom app" docs (`base.ts:105`, `features/CLAUDE.md`).
+> `.rptc/research/app-builder-integration-model/research.md` first). Language (item 1), `appState`
+> persistence (item 2), and **item 3 (ADR-011 D3, incl. item 4's display name)** shipped — D3 is
+> implemented on branch `feature/appbuilder-deployables-d3` (pending merge). Remaining: item 5
+> (remote Adobe I/O project rename) — a small independent `/rptc:fix` — and item 6 (integrations
+> grid UX), which was gated on D3 and is now unblocked once the branch merges.

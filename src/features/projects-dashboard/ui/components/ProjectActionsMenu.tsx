@@ -50,7 +50,7 @@ import Stop from '@spectrum-icons/workflow/Stop';
 import UserAdmin from '@spectrum-icons/workflow/UserAdmin';
 import React, { useCallback, useMemo } from 'react';
 import {
-    appIsDeployable,
+    listRedeployableIntegrations,
     meshNeedsRedeploy,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
 import type { Project } from '@/types/base';
@@ -91,8 +91,11 @@ export interface ProjectActions {
     onRepublishContent?: (project: Project) => void;
     /** Redeploy the API Mesh (shown for a mesh in a "Redeploy Mesh" state). */
     onRedeployMesh?: (project: Project) => void;
-    /** Redeploy the App Builder app (shown when the project has a deployed app). */
-    onRedeployApp?: (project: Project) => void;
+    /**
+     * Redeploy ONE App Builder integration by its keyed id (one submenu item
+     * per redeployable integration — ADR-011 D3 Step 04).
+     */
+    onRedeployApp?: (project: Project, integrationId: string) => void;
     onEdit?: (project: Project) => void;
     /**
      * Commit an inline rename (consumed by the CARD's InlineRenameField, not
@@ -141,10 +144,14 @@ type MoreCallbacks = Pick<
     'onCopyPath' | 'onExport' | 'onRepublishContent' | 'onRedeployMesh' | 'onRedeployApp'
 >;
 
+/** Key prefix carrying the integration id for per-integration redeploy items. */
+const REDEPLOY_APP_KEY_PREFIX = 'redeployApp:';
+
 /**
  * The "More…" submenu items, gated by callback presence AND project state:
  * Republish is EDS-only, Redeploy Mesh needs a mesh in a "Redeploy Mesh" state,
- * and Redeploy App needs a deployed app. Extracted to keep the grouping memo's
+ * and each redeployable keyed integration gets its own "Redeploy <label>" item
+ * (per-integration, ADR-011 D3 Step 04). Extracted to keep the grouping memo's
  * complexity in check.
  */
 function buildMoreItems(project: Project, isEds: boolean, cb: MoreCallbacks): MenuItem[] {
@@ -161,8 +168,14 @@ function buildMoreItems(project: Project, isEds: boolean, cb: MoreCallbacks): Me
     if (cb.onRedeployMesh && meshNeedsRedeploy(project)) {
         more.push({ key: 'redeployMesh', label: 'Redeploy Mesh', icon: 'redeploy' });
     }
-    if (cb.onRedeployApp && appIsDeployable(project)) {
-        more.push({ key: 'redeployApp', label: 'Redeploy App', icon: 'redeploy' });
+    if (cb.onRedeployApp) {
+        for (const { id, label } of listRedeployableIntegrations(project)) {
+            more.push({
+                key: `${REDEPLOY_APP_KEY_PREFIX}${id}`,
+                label: `Redeploy ${label}`,
+                icon: 'redeploy',
+            });
+        }
     }
     return more;
 }
@@ -212,7 +225,9 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     const isEds = isEdsProject(project);
 
     // Action dispatch map - avoids a large switch statement. Each key maps to
-    // the callback that handles it. The "more" submenu trigger has no entry
+    // the callback that handles it. Per-integration redeploy items carry their
+    // integration id in the key (redeployApp:<id>) and are dispatched in
+    // handleMenuAction instead. The "more" submenu trigger has no entry
     // (it only opens the submenu), so dispatching it is a harmless no-op.
     const actionMap = useMemo<Record<string, ((p: Project) => void) | undefined>>(
         () => ({
@@ -225,7 +240,6 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             resetProject: onResetProject,
             republishContent: onRepublishContent,
             redeployMesh: onRedeployMesh,
-            redeployApp: onRedeployApp,
             edit: onEdit,
             copyPath: onCopyPath,
             export: onExport,
@@ -243,7 +257,6 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             onResetProject,
             onRepublishContent,
             onRedeployMesh,
-            onRedeployApp,
             onEdit,
             onCopyPath,
             onExport,
@@ -255,9 +268,14 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
 
     const handleMenuAction = useCallback(
         (key: React.Key) => {
-            actionMap[String(key)]?.(project);
+            const actionKey = String(key);
+            if (actionKey.startsWith(REDEPLOY_APP_KEY_PREFIX)) {
+                onRedeployApp?.(project, actionKey.slice(REDEPLOY_APP_KEY_PREFIX.length));
+                return;
+            }
+            actionMap[actionKey]?.(project);
         },
-        [project, actionMap],
+        [project, actionMap, onRedeployApp],
     );
 
     // Stop click propagation to prevent triggering parent selection

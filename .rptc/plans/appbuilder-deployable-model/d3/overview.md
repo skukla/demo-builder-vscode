@@ -1,8 +1,10 @@
 # Plan: ADR-011 D3 — retire the singular write-paths; one durable keyed model
 
-**Status:** Scoped 2026-07-15 (TDD-ready step table; awaiting PM review). Parent plan:
+**Status:** ✅ IMPLEMENTED 2026-07-15 on branch `feature/appbuilder-deployables-d3` (pending merge) —
+Steps 00–09 all complete; full gate green (883 suites / 11,170 tests) + verification-agent findings applied
+(F1–F9 + docs batch). Parent plan:
 [`../overview.md`](../overview.md). ADR: [`011-app-builder-deployables`](../../../../docs/architecture/adr/011-app-builder-deployables.md)
-(Accepted; D1–D2 shipped, D3 pending). Grounding research:
+(Accepted; D1–D3 implemented). Grounding research:
 [`../../../research/app-builder-integration-model/research.md`](../../../research/app-builder-integration-model/research.md).
 
 > **Step 0 — RPTC re-init (ALWAYS FIRST on re-entry):** if context was cleared, re-invoke
@@ -77,6 +79,8 @@ the others. Component count ≠ App Builder project count (always 1).
 
 > Each row is expanded into a TDD-ready file: [`step-00`](step-00.md) … [`step-09`](step-09.md)
 > (verified anchors → RED tests → files → acceptance → risks), matching the D1 step-file convention.
+
+> **All steps 00–09 ✅ complete (2026-07-15, this branch).**
 
 | Step | Title | One-line | Key risk |
 |---|---|---|---|

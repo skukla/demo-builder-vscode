@@ -1,30 +1,30 @@
 /**
- * deployAppHeadless — the shared, UI-free App Builder app deploy core.
+ * deployAppHeadless — the UI-free App Builder integration deploy core.
  *
- * Runs the sequence {@link DeployAppCommand} orchestrates — preflight (auth + org
- * context) → App Builder permission gate → find app → deploy under org-context →
- * persist — but returns a plain result and emits status/progress through callbacks
- * instead of driving the dashboard and notification UI. Sibling of
+ * Runs preflight (auth + org context) → App Builder permission gate → find the
+ * id-targeted integration → deploy under org-context → persist, returning a
+ * plain result and emitting status/progress through callbacks instead of
+ * driving notification UI. Sibling of
  * {@link import('@/features/mesh/services/deployMeshHeadless').deployMeshHeadless}.
- * Two callers share it:
- *   - `DeployAppCommand` supplies `onStatus`/`onProgress` that bridge to the
- *     dashboard badge + progress notification and maps the result to its toasts;
- *   - the projects-list `redeployApp` handler runs it headlessly (progress only)
- *     and shapes the returned result.
+ * Caller: the projects-list `redeployApp` handler (headless, progress only),
+ * which always targets ONE keyed integration by component-instance id.
  *
  * @module features/app-builder/services/deployAppHeadless
  */
 
-import { deployAppComponent } from './appDeployment';
+import { recordDeployOutcome } from './appBuilderDeployOutcome';
+import { deployAppComponentIsolated } from './deployAppIsolated';
+import { deriveOwPackage } from './owPackageName';
+import type { AppDeploymentResult } from './types';
 import { ServiceLocator } from '@/core/di';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
 import { ensureProjectAdobeContext } from '@/features/authentication/services/ensureProjectAdobeContext';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { projectRequiresAppBuilder } from '@/features/components/services/projectAppBuilderPredicate';
-import type { Project } from '@/types/base';
+import type { ComponentInstance, Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
-import { getAppBuilderInstance } from '@/types/typeGuards';
+import { getComponentInstancesBySubType } from '@/types/typeGuards';
 
 /** Why a deploy could not proceed (maps to the command's per-branch UI). */
 export type AppDeployBlock = 'auth' | 'org' | 'permission' | 'no-app';
@@ -52,6 +52,43 @@ export interface DeployAppHeadlessDeps {
     onStatus?: (status: AppDeployStatus, message?: string, url?: string) => void | Promise<void>;
     /** Deploy progress (notification). No-op for headless callers. */
     onProgress?: (message: string) => void;
+    /**
+     * Target ONE of N integrations by component-instance id (ADR-011 D3 Step 04
+     * per-integration redeploy). REQUIRED — there is no singular default: an
+     * unknown or missing id blocks with `no-app`, never deploys a guess.
+     */
+    componentId: string;
+}
+
+/**
+ * Resolve the deploy target: the id-matched app instance ONLY (no singular
+ * fallback — an unknown id must block, never deploy a different integration).
+ */
+function resolveTargetApp(
+    project: Project,
+    componentId: string,
+): ComponentInstance | undefined {
+    return getComponentInstancesBySubType(project, 'app').find((app) => app.id === componentId);
+}
+
+/**
+ * Persist a successful deploy: the keyed `appBuilderComponents` entry is the
+ * single deploy record (ADR-011 D3 Step 07 — the singular `appState`
+ * write-side is retired), plus the recomputed `appStatusSummary` for the
+ * projects-dashboard card grid.
+ */
+function persistDeploySuccess(
+    project: Project,
+    appInstanceId: string,
+    data: AppDeploymentResult['data'],
+): void {
+    project.appStatusSummary = 'deployed';
+    recordDeployOutcome(project, 'integration', appInstanceId, {
+        status: 'deployed',
+        url: data?.url,
+        deployedUrls: data?.deployedUrls,
+        lastDeployed: new Date().toISOString(),
+    });
 }
 
 /**
@@ -63,7 +100,8 @@ export interface DeployAppHeadlessDeps {
 export async function deployAppHeadless(
     deps: DeployAppHeadlessDeps,
 ): Promise<DeployAppHeadlessResult> {
-    const { project, stateManager, logger, extensionPath, onStatus, onProgress } = deps;
+    const { project, stateManager, logger, extensionPath, onStatus, onProgress, componentId } =
+        deps;
     const authManager = ServiceLocator.getAuthenticationService();
 
     await onStatus?.('deploying', 'Checking requirements...');
@@ -104,7 +142,7 @@ export async function deployAppHeadless(
         }
     }
 
-    const app = getAppBuilderInstance(project);
+    const app = resolveTargetApp(project, componentId);
     if (!app?.path) {
         return { success: false, blockedBy: 'no-app' };
     }
@@ -119,36 +157,53 @@ export async function deployAppHeadless(
         authManager.getCachedOrganization(),
     );
 
+    // Package isolation (ADR-011 D3 Step 03): derive the distinct ow.package from
+    // the COMPONENT-INSTANCE id — the same id the keyed runner uses
+    // (deriveOwPackage(entry.id)). Package identity and state identity are
+    // DIFFERENT concerns: recordDeployOutcome may resolve the keyed-map write onto
+    // a legacy migrated key ('app'/appId), but the deployed package must stay
+    // stable per component instance across both surfaces.
+    //
+    // Migration caveat (untestable here — live-workspace behavior): an app already
+    // deployed via this path BEFORE isolation sits on the repo's declared package
+    // (e.g. `application`). Re-isolating renames the package in app.config.yaml,
+    // so the next deploy creates the derived package and may orphan the old
+    // package's entities (aio prunes only the app's own package). A live-workspace
+    // probe is required before trusting redeploys of legacy un-isolated apps
+    // (ADR-011 load-bearing assumption).
+    const owPackage = deriveOwPackage(app.id);
+
     try {
         const result = await withOrgContext(target, () =>
-            deployAppComponent(app.path as string, commandManager, logger, (message: string) => {
-                onProgress?.(message);
-                void onStatus?.('deploying', message);
-            }),
+            deployAppComponentIsolated(
+                app.path as string,
+                owPackage,
+                commandManager,
+                logger,
+                (message: string) => {
+                    onProgress?.(message);
+                    void onStatus?.('deploying', message);
+                },
+            ),
         );
 
         if (!result.success) {
             project.appStatusSummary = 'error';
+            recordDeployOutcome(project, 'integration', app.id, { status: 'error' });
             await stateManager.saveProject(project);
             await onStatus?.('error', result.error || 'Deployment failed');
             return { success: false, error: result.error || 'App Builder deployment failed' };
         }
 
-        project.appState = {
-            appId: result.data?.appId,
-            url: result.data?.url,
-            status: 'deployed',
-            deployedUrls: result.data?.deployedUrls,
-            lastDeployed: new Date().toISOString(),
-            sourceHash: null,
-        };
-        project.appStatusSummary = 'deployed';
+        const url = result.data?.url;
+        persistDeploySuccess(project, app.id, result.data);
         await stateManager.saveProject(project);
 
-        await onStatus?.('deployed', undefined, result.data?.url);
-        return { success: true, url: result.data?.url };
+        await onStatus?.('deployed', undefined, url);
+        return { success: true, url };
     } catch (error) {
         project.appStatusSummary = 'error';
+        recordDeployOutcome(project, 'integration', app.id, { status: 'error' });
         await stateManager.saveProject(project);
         await onStatus?.('error', 'Deployment failed');
         return {

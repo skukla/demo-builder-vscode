@@ -61,11 +61,14 @@ It does NOT overlap `/sop-scan` (God files, complexity, mixed patterns) — cros
 - Not a fork (rejected lead): addFoo vs addBar — different objects
 ```
 
-## Worked example (this repo)
-Two App Builder models coexist: the **slice-1 singular** model (`appState`,
-`addAppComponent`, `DeployAppCommand`) and **Model B keyed** (`appBuilderComponents`,
-`appBuilderComponentRunner`, the dashboard's component handlers). They solve the same job —
-managing App Builder components for the same dashboard/wizard caller — so it is a genuine
-fork. The keyed model superseded the singular one; the resolution is to migrate any singular
-callers onto the keyed model and delete the singular symbols and their tests (no soft
-deprecation), not keep both wired.
+## Worked example (this repo — resolved in ADR-011 D3, 2026-07)
+Two App Builder models coexisted: the **slice-1 singular** model (`appState`,
+`DeployAppCommand`, the singular `addApp`/`deployApp`/`redeployApp`/`removeApp` dashboard
+handlers, the `AppBuilderCard`) and **Model B keyed** (`appBuilderComponents`,
+`appBuilderComponentRunner`, the per-id `*AppBuilderComponent` handlers). They solved the
+same job — managing App Builder components for the same dashboard/wizard caller — a genuine
+fork. Resolved in ADR-011 D3: callers migrated onto the keyed model; `DeployAppCommand`,
+the singular handlers, and `AppBuilderCard` were deleted with their tests (no soft
+deprecation); `addAppComponent` survived by becoming the keyed per-id add; the singular
+`appState`/`meshState` fields remain legacy-read-only (manifests migrate on load), with a
+guard test pinning the few allowed accesses.
