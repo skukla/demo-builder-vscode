@@ -44,7 +44,9 @@ by design**. Knowing which is which is the whole skill.
 ## Failure signatures (signature → root cause → next step)
 | Signature | Root cause | Next step |
 |---|---|---|
-| `already has a mesh` in stdout + `No existing mesh, using create strategy` earlier | Create-vs-update keys off PROJECT state (`meshDeployment.ts:116` `existingMeshId`) — empty for a new project even when the reused workspace already carries a mesh | Immediate: fresh workspace. Fix: backlog `2026-07-15-mesh-create-vs-update-remote-probe.md` |
+| `already has a mesh` then `retrying as update` | Create-vs-update keyed off project state; the one-shot create→update fallback (shipped 2026-07-15) self-heals it | Benign when followed by a successful update; only a failure AFTER the retry is a real error |
+| `Unable to update. No mesh found for Org(...)` then `retrying as create` | Stored meshId pointed at a mesh deleted out-of-band (the inverse case); the one-shot update→create fallback (shipped 2026-07-16) self-heals it | Benign when followed by a successful create (note: the mesh ENDPOINT changes; config.json re-syncs in Phase 5). A failure after the retry is real |
+| Either mesh signature with NO `retrying as` line | Running a pre-fallback build | Update the extension / rebuild from develop |
 | `[error] Error:` with NOTHING after it | Error formatter dropped the CLI detail | Read the `[debug] {stdout,stderr}` block above it (Procedure 1); the formatter gap is part of the same backlog item |
 | `DA.live token expired or missing` / `Token validation failed: Token has expired` | DA.live tokens are short-lived; the token-first flow re-prompts | Expected once per session-ish; only a LOOP of these is a bug |
 | `Could not find numeric ID for project "X", using name as fallback` | Console project lacks/eludes numeric-id resolution | Works via fallback; note it, don't chase it unless an op then 403s |

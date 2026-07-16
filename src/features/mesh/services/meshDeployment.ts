@@ -83,6 +83,16 @@ function meshAlreadyExists(deployResult: { stdout?: string; stderr?: string }): 
     return /already has a mesh/i.test(`${deployResult.stdout ?? ''}${deployResult.stderr ?? ''}`);
 }
 
+/**
+ * Whether a failed deploy's output says the remote mesh no longer exists —
+ * the signature `aio api-mesh:update` emits ("Unable to update. No mesh found
+ * for Org(...)") when a stored meshId points at a mesh deleted out-of-band.
+ * Drives the one-shot update→create fallback (signature verified live 2026-07-16).
+ */
+function meshNotFound(deployResult: { stdout?: string; stderr?: string }): boolean {
+    return /no mesh found/i.test(`${deployResult.stdout ?? ''}${deployResult.stderr ?? ''}`);
+}
+
 async function handleDeployFailure(
     deployResult: { code: number | null; stdout?: string; stderr?: string },
     logger: Logger,
@@ -176,11 +186,12 @@ export async function deployMeshComponent(
 
         let deployResult = await runMeshCommand(meshCommand);
 
-        // The remote workspace may already hold a mesh even when project state
-        // says none (a NEW project pointed at a reused workspace) — Adobe allows
-        // ONE mesh per workspace, and `create` then fails with "already has a
-        // mesh". Local state is only a proxy for remote truth, so fall back to
-        // update ONCE, inside this same call (same withOrgContext targeting).
+        // Local state is only a proxy for remote truth, in BOTH directions:
+        // a NEW project pointed at a reused workspace runs `create` against a
+        // mesh that exists (Adobe allows ONE per workspace), and a stored
+        // meshId can point at a mesh deleted out-of-band so `update` finds
+        // nothing. Fall back ONCE, inside this same call (same withOrgContext
+        // targeting) — the if/else-if shape makes chaining impossible.
         if (
             deployResult.code !== 0 &&
             meshCommand === 'create' &&
@@ -190,6 +201,15 @@ export async function deployMeshComponent(
             onProgress?.('Deploying API Mesh...', 'Existing mesh found — updating instead');
             meshCommand = 'update';
             deployResult = await runMeshCommand('update');
+        } else if (
+            deployResult.code !== 0 &&
+            meshCommand === 'update' &&
+            meshNotFound(deployResult)
+        ) {
+            logger.info('[Mesh Deployment] Remote mesh no longer exists — retrying as create');
+            onProgress?.('Deploying API Mesh...', 'Mesh not found — creating instead');
+            meshCommand = 'create';
+            deployResult = await runMeshCommand('create');
         }
 
         if (deployResult.code !== 0) {

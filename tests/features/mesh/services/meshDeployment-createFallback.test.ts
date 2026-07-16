@@ -170,3 +170,121 @@ describe('MeshDeployment — create→update fallback', () => {
         expect(firstLine).toContain('Error: Invalid mesh configuration');
     });
 });
+
+// Signature verified LIVE 2026-07-16: a project edit reused a stored meshId
+// whose remote mesh had been deleted out-of-band → `aio api-mesh:update`
+// failed with "Unable to update. No mesh found for Org(...)". The inverse of
+// the create→update fallback above; same one-shot rule, opposite direction.
+const NO_MESH_FOUND_STDERR =
+    ' ›   Error: Unable to update. No mesh found for Org(285361) -> \n' +
+    ' ›   Project(4566206088345747129) -> Workspace(4566206088345747128)\n';
+
+describe('MeshDeployment — update→create fallback (remote mesh vanished)', () => {
+    let mockCommandManager: ReturnType<typeof createMockCommandManager>;
+    let mockLogger: ReturnType<typeof createMockLogger>;
+
+    function routeCommands(config: {
+        create?: { code: number; stdout?: string; stderr?: string };
+        update?: { code: number; stdout?: string; stderr?: string };
+    }): void {
+        mockCommandManager.execute.mockImplementation((command: string) => {
+            if (command.includes('api-mesh:create')) {
+                return Promise.resolve(config.create ?? { code: 0, stdout: 'created' });
+            }
+            if (command.includes('api-mesh:update')) {
+                return Promise.resolve(config.update ?? { code: 0, stdout: 'updated' });
+            }
+            return Promise.resolve({ code: 0, stdout: '' });
+        });
+    }
+
+    function commandsMatching(fragment: string): string[] {
+        return mockCommandManager.execute.mock.calls
+            .map((call: unknown[]) => call[0] as string)
+            .filter((cmd: string) => cmd.includes(fragment));
+    }
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockCommandManager = createMockCommandManager();
+        mockLogger = createMockLogger();
+        mockSuccessfulFileRead();
+        mockSuccessfulVerification();
+    });
+
+    it('retries as create when update fails with "No mesh found"', async () => {
+        routeCommands({
+            update: { code: 2, stdout: '', stderr: NO_MESH_FOUND_STDERR },
+            create: { code: 0, stdout: 'Successfully created mesh' },
+        });
+
+        const result = await deployMeshComponent(
+            '/test/mesh',
+            mockCommandManager as never,
+            mockLogger as never,
+            undefined,
+            'stale-mesh-id', // stored id → update strategy from the start
+        );
+
+        expect(commandsMatching('api-mesh:update')).toHaveLength(1);
+        expect(commandsMatching('api-mesh:create')).toHaveLength(1);
+        expect(result.success).toBe(true);
+    });
+
+    it('does NOT retry when update fails with an unrelated error', async () => {
+        routeCommands({
+            update: { code: 1, stdout: '', stderr: ' ›   Error: Invalid mesh configuration' },
+        });
+
+        const result = await deployMeshComponent(
+            '/test/mesh',
+            mockCommandManager as never,
+            mockLogger as never,
+            undefined,
+            'stale-mesh-id',
+        );
+
+        expect(commandsMatching('api-mesh:update')).toHaveLength(1);
+        expect(commandsMatching('api-mesh:create')).toHaveLength(0);
+        expect(result.success).toBe(false);
+    });
+
+    it('never chains fallbacks: create→update that then hits "No mesh found" stops', async () => {
+        // Pathological ping-pong guard: create fails "already has a mesh" →
+        // fallback runs update → update fails "no mesh found". EXACTLY one
+        // fallback per deploy — the second failure surfaces, no third call.
+        routeCommands({
+            create: { code: 2, stdout: ALREADY_HAS_MESH_STDOUT, stderr: ALREADY_HAS_MESH_STDERR },
+            update: { code: 2, stdout: '', stderr: NO_MESH_FOUND_STDERR },
+        });
+
+        const result = await deployMeshComponent(
+            '/test/mesh',
+            mockCommandManager as never,
+            mockLogger as never,
+        );
+
+        expect(commandsMatching('api-mesh:create')).toHaveLength(1);
+        expect(commandsMatching('api-mesh:update')).toHaveLength(1);
+        expect(result.success).toBe(false);
+    });
+
+    it('reports the fallback via progress so the user sees "creating instead"', async () => {
+        routeCommands({
+            update: { code: 2, stdout: '', stderr: NO_MESH_FOUND_STDERR },
+            create: { code: 0, stdout: 'Successfully created mesh' },
+        });
+        const onProgress = jest.fn();
+
+        await deployMeshComponent(
+            '/test/mesh',
+            mockCommandManager as never,
+            mockLogger as never,
+            onProgress,
+            'stale-mesh-id',
+        );
+
+        const progressText = onProgress.mock.calls.flat().filter(Boolean).join(' ');
+        expect(progressText.toLowerCase()).toContain('creating instead');
+    });
+});

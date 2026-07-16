@@ -6,6 +6,13 @@
 > now trims — a leading `›` no longer yields a blank first line); command-aware progress
 > strings; PLUS the review's inverse-gap find: `edsResetMeshHelper` now sources
 > `existingMeshId` from `fetchMeshInfoFromAdobeIO` (remote truth) like the other callers.
+>
+> **✅ SYMMETRIC fallback SHIPPED 2026-07-16:** the review's "unverified update-path error
+> string" was verified LIVE (`Unable to update. No mesh found for Org(...)` — edit mode hit a
+> stored meshId whose remote mesh was deleted out-of-band) → one-shot update→create fallback
+> added, if/else-if with the create→update one so fallbacks can never chain. Both live-log
+> validations of the first fallback (create run self-healed; CDN config re-sync worked) are in
+> the 2026-07-16 debug log.
 > Option (c) was investigated and deliberately NOT taken: the wizard's `apiMesh` seam exists
 > but re-adding a flow-time probe is a UX change the fallback makes unnecessary.
 > **Residual (recorded, not blocking):** `createHandler`'s bespoke create pipeline duplicates
