@@ -548,3 +548,29 @@ describe('useProjectBuilder — onRemoveAppBuilderComponent', () => {
         });
     });
 });
+
+// Regression (edit-mode defeat path): onStackSelect reset selectedOptionalDependencies on
+// EVERY select — a same-stack backend re-click wiped the edit-seeded mesh dep,
+// re-manifesting "No integrations yet." and the Finish-time mesh drop.
+describe('useProjectBuilder — same-stack re-select preserves the mesh selection', () => {
+    const reselectState = {
+        selectedPackage: 'withAddons',
+        selectedStack: 'headless-paas',
+        selectedOptionalDependencies: ['headless-commerce-mesh'],
+    };
+
+    it('preserves selectedOptionalDependencies on a same-stack re-select', () => {
+        const { result, updateState } = setup(reselectState);
+        act(() => result.current.onStackSelect('headless-paas'));
+        const call = updateState.mock.calls.at(-1)![0] as Partial<WizardState>;
+        expect(call.selectedOptionalDependencies).toEqual(['headless-commerce-mesh']);
+    });
+
+    it('still resets selectedOptionalDependencies on an ACTUAL stack change', () => {
+        const { result, updateState } = setup(reselectState);
+        act(() => result.current.onStackSelect('eds-paas'));
+        const call = updateState.mock.calls.at(-1)![0] as Partial<WizardState>;
+        // meshRequirement 'optional' → no auto-seed → reset to [] on the CHANGE.
+        expect(call.selectedOptionalDependencies).toEqual([]);
+    });
+});

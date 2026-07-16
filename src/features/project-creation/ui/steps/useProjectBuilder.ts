@@ -257,7 +257,15 @@ export function useProjectBuilder(
 
             updateState({
                 selectedStack: stackId,
-                selectedOptionalDependencies: meshDeps ?? [],
+                // Reset the mesh deps only on an ACTUAL stack change. A same-stack
+                // re-select (the edit walk-through invites re-clicking the already
+                // selected backend card) must preserve the current selection — the
+                // unconditional reset wiped the edit-seeded mesh dep and silently
+                // dropped the mesh on Finish.
+                selectedOptionalDependencies:
+                    selectedStack === stackId
+                        ? (state.selectedOptionalDependencies ?? [])
+                        : (meshDeps ?? []),
                 edsConfig,
                 selectedAddons: addons,
                 selectedBlockLibraries: blockLibraries,
@@ -269,6 +277,7 @@ export function useProjectBuilder(
             packages,
             selectedPackage,
             selectedStack,
+            state.selectedOptionalDependencies,
             state.edsConfig,
             stateCustomBlockLibraries,
             blockLibraryDefaults,
