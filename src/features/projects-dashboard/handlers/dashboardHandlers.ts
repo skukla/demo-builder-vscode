@@ -1083,13 +1083,17 @@ export const handleRedeployMesh: MessageHandler<{ projectPath: string }> = async
 };
 
 /**
- * Handle 'redeployApp' — redeploy the project's App Builder app from the projects
- * kebab (shown when the project has a deployed app). Reuses the shared
- * {@link import('@/features/app-builder/services/deployAppHeadless').deployAppHeadless} core.
+ * Handle 'redeployApp' — redeploy ONE App Builder integration from the projects
+ * kebab (one item per redeployable keyed integration; the payload carries its
+ * id — ADR-011 D3 Step 04). Reuses the shared
+ * {@link import('@/features/app-builder/services/deployAppHeadless').deployAppHeadless}
+ * core, which preserves the full guard chain (auth → org → permission → no-app)
+ * and targets the id-matched integration. An id-less payload keeps the singular
+ * default for backward compatibility.
  */
-export const handleRedeployApp: MessageHandler<{ projectPath: string }> = async (
+export const handleRedeployApp: MessageHandler<{ projectPath: string; id?: string }> = async (
     context: HandlerContext,
-    payload?: { projectPath: string },
+    payload?: { projectPath: string; id?: string },
 ): Promise<HandlerResponse> => {
     const { deployAppHeadless } = await import('@/features/app-builder/services/deployAppHeadless');
     return runProjectRedeploy(
@@ -1103,6 +1107,7 @@ export const handleRedeployApp: MessageHandler<{ projectPath: string }> = async 
                 logger: context.logger,
                 extensionPath: context.context.extensionPath,
                 onProgress,
+                componentId: payload?.id,
             }),
     );
 };

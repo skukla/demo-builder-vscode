@@ -20,7 +20,7 @@ import {
     getAppStatusText,
     getAppStatusVariant,
     meshNeedsRedeploy,
-    appIsDeployable,
+    listRedeployableIntegrations,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
 import { createMockProject, createRunningProject } from '../testUtils';
 
@@ -404,14 +404,79 @@ describe('projectStatusUtils', () => {
         });
     });
 
-    describe('appIsDeployable', () => {
-        it('is true for a deployed or errored (retryable) app, false otherwise', () => {
-            expect(appIsDeployable(createMockProject({ appStatusSummary: 'deployed' }))).toBe(true);
-            expect(appIsDeployable(createMockProject({ appStatusSummary: 'error' }))).toBe(true);
-            expect(appIsDeployable(createMockProject({ appStatusSummary: 'not-deployed' }))).toBe(
-                false
-            );
-            expect(appIsDeployable(createMockProject({}))).toBe(false);
+    // ADR-011 D3 Step 04: the kebab's redeploy affordance is per-integration,
+    // enumerated from the durable keyed map (replaces the singular appIsDeployable
+    // read of appStatusSummary).
+    describe('listRedeployableIntegrations', () => {
+        it('lists deployed integrations with label = name ?? id', () => {
+            const project = createMockProject({
+                appBuilderComponents: {
+                    'int-a': {
+                        kind: 'integration',
+                        status: 'deployed',
+                        name: 'My Integration',
+                        source: { owner: 'acme', repo: 'a' },
+                    },
+                    'int-b': {
+                        kind: 'integration',
+                        status: 'deployed',
+                        source: { owner: 'acme', repo: 'b' },
+                    },
+                },
+            });
+
+            expect(listRedeployableIntegrations(project)).toEqual([
+                { id: 'int-a', label: 'My Integration' },
+                { id: 'int-b', label: 'int-b' },
+            ]);
+        });
+
+        it('includes stale and error (retryable) integrations, excludes not-deployed', () => {
+            const project = createMockProject({
+                appBuilderComponents: {
+                    stale: {
+                        kind: 'integration',
+                        status: 'stale',
+                        source: { owner: 'acme', repo: 's' },
+                    },
+                    errored: {
+                        kind: 'integration',
+                        status: 'error',
+                        source: { owner: 'acme', repo: 'e' },
+                    },
+                    fresh: {
+                        kind: 'integration',
+                        status: 'not-deployed',
+                        source: { owner: 'acme', repo: 'f' },
+                    },
+                },
+            });
+
+            expect(listRedeployableIntegrations(project).map((i) => i.id)).toEqual([
+                'stale',
+                'errored',
+            ]);
+        });
+
+        it('excludes mesh-kind entries (mesh has its own Redeploy Mesh gate)', () => {
+            const project = createMockProject({
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: 'adobe', repo: 'mesh' },
+                    },
+                },
+            });
+
+            expect(listRedeployableIntegrations(project)).toEqual([]);
+        });
+
+        it('returns [] when the keyed map is absent or empty', () => {
+            expect(listRedeployableIntegrations(createMockProject({}))).toEqual([]);
+            expect(
+                listRedeployableIntegrations(createMockProject({ appBuilderComponents: {} }))
+            ).toEqual([]);
         });
     });
 });

@@ -17,8 +17,7 @@ import { deriveAllowedDomain } from './allowedDomain';
 import { subscribeRequiredApis, type ApiSubscriberClient, type OrgTarget } from './apiSubscriber';
 import { createApiSubscriberClient } from './apiSubscriberClientAdapter';
 import type { AppBuilderComponentRunnerDeps } from './appBuilderComponentRunner';
-import { applyIsolatedPackages } from './appConfigPackages';
-import { deployAppComponent } from './appDeployment';
+import { deployAppComponentIsolated } from './deployAppIsolated';
 import type { MeshSubscribeTarget } from './ensureMeshApiSubscribed';
 import { ServiceLocator } from '@/core/di';
 import type { CachedOrgRef, CommandExecutor } from '@/core/shell';
@@ -43,28 +42,6 @@ export interface RunnerDepsContext {
     secrets: vscode.SecretStorage;
 }
 
-/**
- * Apply the derived distinct `ow.package` to an integration's `app.config.yaml` —
- * the prune-isolation primitive (step 05). Renames each standalone runtime package
- * to a distinct derived name (single → `owPackage`; multi → `owPackage-<name>`) so
- * two integrations never share `application`/`dx-excshell-1`. Deterministic and
- * idempotent (see {@link applyIsolatedPackages}); standalone-ness is guaranteed at
- * the add door, so a no-standalone-packages config here means aio will fail with
- * its own error — nothing to rename.
- */
-async function applyOwPackage(
-    componentPath: string,
-    owPackage: string,
-    logger: Logger,
-): Promise<void> {
-    const applied = await applyIsolatedPackages(componentPath, owPackage);
-    logger.debug(
-        applied
-            ? `[AppBuilderComponent Runner] applied ow.package "${owPackage}"`
-            : `[AppBuilderComponent Runner] no standalone packages to isolate for "${owPackage}"`,
-    );
-}
-
 /** Build the {@link OrgTarget} the subscriber needs from the project's identity. */
 export function subscriberTarget(project: MeshSubscribeTarget): OrgTarget {
     return {
@@ -85,10 +62,9 @@ export function buildDefaultRunnerDeps(ctx: RunnerDepsContext): AppBuilderCompon
         catalog: ctx.catalog,
         secrets: ctx.secrets,
         deployMesh: deployMeshComponent,
-        deployApp: async (componentPath, owPackage, commandManager, logger, onProgress) => {
-            await applyOwPackage(componentPath, owPackage, logger);
-            return deployAppComponent(componentPath, commandManager, logger, onProgress);
-        },
+        // The ONE isolating deploy seam (ADR-011 D3 Step 03) — shared with the
+        // singular deployAppHeadless path so no un-isolated deploy survives.
+        deployApp: deployAppComponentIsolated,
         // The runner's dep contract is void — swallow the returned API list.
         subscribeRequiredApis: async (appBuilderComponents, project) => {
             await subscribeRequiredApis(

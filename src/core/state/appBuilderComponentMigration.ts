@@ -1,11 +1,13 @@
 /**
- * Legacy → appBuilderComponents read-migration (Step 02)
+ * Legacy → appBuilderComponents read-migration
  *
  * Maps the singular `meshState`/`appState` from a project manifest into the
- * keyed `appBuilderComponents` map. Runs at LOAD time only — on-disk manifests are NOT
- * rewritten in D1, so this must be idempotent (a forward-state manifest with
- * `appBuilderComponents` already present is returned unchanged) and defensive against
- * malformed/partial legacy state (no throw, no silent drop).
+ * keyed `appBuilderComponents` map. As of ADR-011 D3 Step 01 the keyed map is
+ * PERSISTED in the manifest and the loader prefers it — this migration is the
+ * LEGACY FALLBACK for old manifests that carry no keyed map. It runs at LOAD
+ * time only, is idempotent (a forward-state manifest with `appBuilderComponents`
+ * already present is returned unchanged) and defensive against malformed/partial
+ * legacy state (no throw, no silent drop).
  *
  * @module core/state/appBuilderComponentMigration
  */

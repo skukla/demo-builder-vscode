@@ -137,9 +137,10 @@ export interface Project {
     /**
      * Keyed appBuilderComponent state — the unified replacement for the singular
      * `meshState`/`appState` (Model B; the plan/ADR call this concept a
-     * "deployable" — `appBuilderComponent` is the shipped name). In D1 this is
-     * additive: the legacy singletons remain authoritative and accessors read
-     * through to them. See docs/architecture/adr/011-app-builder-deployables.md.
+     * "deployable" — `appBuilderComponent` is the shipped name). Persisted in the
+     * manifest as of D3 Step 01 (the durable model); the legacy singletons remain
+     * as a read-side migration fallback until D3 Step 07 retires their write-side.
+     * See docs/architecture/adr/011-app-builder-deployables.md.
      */
     appBuilderComponents?: Record<string, AppBuilderComponentState>;
     /**
@@ -188,6 +189,8 @@ export type AppBuilderComponentKind = 'mesh' | 'integration';
 export interface AppBuilderComponentState {
     kind: AppBuilderComponentKind;
     status: 'deployed' | 'stale' | 'error' | 'not-deployed';
+    /** Display name for the integration (durable home for the user-facing name). */
+    name?: string;
     source: { owner: string; repo: string; branch?: string };
     endpoint?: string; // mesh GraphQL endpoint
     url?: string; // integration primary URL
@@ -196,6 +199,15 @@ export interface AppBuilderComponentState {
     lastDeployed?: string; // ISO date string
     /** Resolved provided values another appBuilderComponent consumes (e.g. { MESH_ENDPOINT }). */
     providesEnvVars?: Record<string, string>;
+    // Mesh-kind runtime fields (ADR-011 D3 Step 06). These previously lived
+    // only on the singular `meshState` (same values, so no new data exposure);
+    // the keyed entry is their durable home so Step 07 can retire `meshState`.
+    /** Env vars at last deploy — the staleness baseline (mesh kind). */
+    envVars?: Record<string, string>;
+    /** User clicked "Later" on the redeploy prompt (mesh kind). */
+    userDeclinedUpdate?: boolean;
+    /** ISO date string when the user declined (mesh kind). */
+    declinedAt?: string;
 }
 
 export interface CustomIconPaths {

@@ -78,18 +78,24 @@ The dashboard is designed for at-a-glance status monitoring and one-click action
 
 ### App Builder app handlers (handleAddApp / handleDeployApp / handleRedeployApp / handleRemoveApp)
 
-**Purpose**: Manage the project's single App Builder app from the `AppBuilderCard` (sibling of
-the mesh deploy surface). See `@/features/app-builder` for the underlying services.
+**Purpose**: Manage App Builder integrations from the (dormant) singular `AppBuilderCard`.
+Since ADR-011 D3 Step 05 these id-less messages are THIN DELEGATES onto the keyed model (the
+keyed per-id handlers below are the primary surface); they retire with the card in D3 Step 08.
+See `@/features/app-builder` for the underlying services.
 
 **Operations**:
 - `addApp` (`handleAddApp`, payload `{ gitUrl }`) — validate + clone+install a public-GitHub app
-  via `addAppComponent`, then on success dispatch the `demoBuilder.deployApp` command. Add
-  failures surface directly (no deploy).
-- `deployApp` (`handleDeployApp`) — execute the `demoBuilder.deployApp` command (guards + deploy).
+  via `addAppComponent` (writes the keyed `appBuilderComponents[appId]` entry and APPENDS the
+  selection), then on success dispatch the `demoBuilder.deployApp` command. Add failures surface
+  directly (no deploy).
+- `deployApp` (`handleDeployApp`) — execute the `demoBuilder.deployApp` command (guards + the
+  isolating, keyed-writing `deployAppHeadless`).
 - `redeployApp` (`handleRedeployApp`) — alias of `handleDeployApp` (`aio app deploy` is idempotent,
   so deploy and redeploy are the same operation).
-- `removeApp` (`handleRemoveApp`) — `removeAppComponent`: remote undeploy (best-effort) + local
-  file/state cleanup.
+- `removeApp` (`handleRemoveApp`) — resolves WHICH integration the id-less message targets
+  (app instance first, keyed entry fallback) and delegates to the per-id
+  `removeAppComponent(project, id, deps)`: remote undeploy (best-effort) + per-id local cleanup,
+  siblings untouched.
 
 ### handleOpenDevConsole
 

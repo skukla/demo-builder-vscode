@@ -1,155 +1,26 @@
 /**
- * App Component Manager — additive add/remove on a LIVE project
+ * addAppComponent — additive add of a custom integration on a LIVE project
+ * (URL validation + clone/install + keyed entry + selection append). The
+ * per-id removeAppComponent suite lives in appComponentManager-remove.test.ts;
+ * shared factories in appComponentManager.testUtils.ts.
  *
- * Step 5 (Batch 4): add ONE app to an already-created project without re-cloning
- * everything, and remove it cleanly (remote undeploy + local cleanup).
- *
- * Strict TDD: these tests are written BEFORE the implementation.
- *
- * Org-context discipline mirrors the mesh reset/deploy callers: the undeploy is
- * wrapped in `withOrgContext(buildOrgTargetFromProjectAdobe(project.adobe, cachedOrg), …)`.
- * We mock the org-context boundary exactly like projectResetService-meshContext.test.ts.
+ * N integrations coexist (ADR-011 D3 Step 05 dropped the one-app guard).
  */
 
 import type { Project } from '@/types/base';
+import { addAppComponent } from '@/features/app-builder/services/appComponentManager';
+import {
+    createComponentManager,
+    createDeps,
+    createProject,
+} from './appComponentManager.testUtils';
 
 jest.setTimeout(5000);
 
-// =============================================================================
-// Mocks — defined before imports
-// =============================================================================
-
-// withOrgContext records the target then runs the callback (no global mutation),
-// exactly like projectResetService-meshContext.test.ts.
-const mockWithOrgContext = jest.fn((_target: unknown, fn: () => Promise<unknown>) => fn());
-jest.mock('@/core/shell', () => ({
-    ...jest.requireActual('@/core/shell'),
-    withOrgContext: (target: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(target, fn),
-}));
-
-// The undeploy fetches workspace Runtime credentials first (same contract as
-// the deploy); mock the fetch so these tests stay focused on remove semantics.
-jest.mock('@/features/app-builder/services/runtimeCredentials', () => ({
-    extractAioErrorDetail: jest.requireActual('@/features/app-builder/services/runtimeCredentials')
-        .extractAioErrorDetail,
-    fetchRuntimeCredentials: jest.fn().mockResolvedValue({
-        namespace: 'test-namespace',
-        auth: 'fake-test-pw-not-a-secret',
-    }),
-}));
-
-// =============================================================================
-// Imports (after mocks)
-// =============================================================================
-
-import {
-    addAppComponent,
-    removeAppComponent,
-} from '@/features/app-builder/services/appComponentManager';
-
-// =============================================================================
-// Helpers
-// =============================================================================
-
 const VALID_URL = 'https://github.com/acme/my-app';
-
-interface ComponentManagerLike {
-    installComponent: jest.Mock;
-    removeComponent: jest.Mock;
-}
-
-interface CommandManagerLike {
-    execute: jest.Mock;
-}
-
-function createComponentManager(): ComponentManagerLike {
-    return {
-        // installComponent ADDS exactly one instance to project.componentInstances,
-        // mirroring the real ComponentManager git path. It must NOT wipe siblings.
-        installComponent: jest.fn(async (project: Project, def: { id: string; name?: string }) => {
-            const instance = {
-                id: def.id,
-                name: def.name ?? def.id,
-                type: 'app-builder',
-                subType: 'app',
-                status: 'ready',
-                path: `/proj/components/${def.id}`,
-                lastUpdated: new Date(),
-            };
-            project.componentInstances = project.componentInstances ?? {};
-            project.componentInstances[def.id] = instance as never;
-            return { success: true, component: instance };
-        }),
-        removeComponent: jest.fn(async (project: Project, id: string) => {
-            if (project.componentInstances) {
-                delete project.componentInstances[id];
-            }
-        }),
-    };
-}
-
-function createCommandManager(): CommandManagerLike {
-    return {
-        execute: jest.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '' }),
-    };
-}
-
-function createLogger() {
-    return { info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn() };
-}
-
-function createDeps(
-    overrides: Partial<{
-        componentManager: ComponentManagerLike;
-        commandManager: CommandManagerLike;
-        saveProject: jest.Mock;
-        getCachedOrganization: jest.Mock;
-    }> = {}
-) {
-    return {
-        componentManager: overrides.componentManager ?? createComponentManager(),
-        commandManager: overrides.commandManager ?? createCommandManager(),
-        logger: createLogger(),
-        saveProject: overrides.saveProject ?? jest.fn().mockResolvedValue(undefined),
-        getCachedOrganization:
-            overrides.getCachedOrganization ?? jest.fn().mockReturnValue(undefined),
-    };
-}
-
-function createProject(overrides: Partial<Project> = {}): Project {
-    return {
-        name: 'test-project',
-        path: '/proj',
-        adobe: {
-            organization: 'org-123',
-            projectId: 'proj-456',
-            workspace: 'ws-789',
-        },
-        // Pre-seed a sibling mesh + frontend instance: add/remove MUST leave these alone.
-        componentInstances: {
-            'commerce-mesh': {
-                id: 'commerce-mesh',
-                name: 'Mesh',
-                type: 'dependency',
-                subType: 'mesh',
-                status: 'ready',
-                path: '/proj/components/commerce-mesh',
-            } as never,
-            citisignal: {
-                id: 'citisignal',
-                name: 'Frontend',
-                type: 'frontend',
-                status: 'ready',
-                path: '/proj/components/citisignal',
-            } as never,
-        },
-        ...overrides,
-    } as unknown as Project;
-}
 
 beforeEach(() => {
     jest.clearAllMocks();
-    mockWithOrgContext.mockImplementation((_target: unknown, fn: () => Promise<unknown>) => fn());
 });
 
 // =============================================================================
@@ -208,26 +79,113 @@ describe('addAppComponent', () => {
         expect(deps.componentManager.installComponent).not.toHaveBeenCalled();
     });
 
-    it('rejects when an app already exists (singular guard)', async () => {
-        const project = createProject({
-            componentInstances: {
-                'existing-app': {
-                    id: 'existing-app',
-                    name: 'Existing',
-                    type: 'app-builder',
-                    subType: 'app',
-                    status: 'ready',
-                    path: '/proj/components/existing-app',
-                } as never,
-            },
+    // ADR-011 D3 Step 05: the one-app guard is GONE — the keyed model supports N
+    // custom integrations side by side.
+    describe('N integrations (ADR-011 D3 Step 05 — one add system, keyed)', () => {
+        function projectWithExistingIntegration(): Project {
+            return createProject({
+                componentInstances: {
+                    'existing-app': {
+                        id: 'existing-app',
+                        name: 'Existing',
+                        type: 'app-builder',
+                        subType: 'app',
+                        status: 'ready',
+                        path: '/proj/components/existing-app',
+                    } as never,
+                },
+                componentSelections: { appBuilder: ['existing-app'] },
+                appBuilderComponents: {
+                    'existing-app': {
+                        kind: 'integration',
+                        status: 'deployed',
+                        source: { owner: 'acme', repo: 'existing-app' },
+                        url: 'https://existing.example',
+                    },
+                },
+            } as Partial<Project>);
+        }
+
+        it('adds a SECOND custom integration beside an existing one (no singular guard)', async () => {
+            const project = projectWithExistingIntegration();
+            const deps = createDeps();
+
+            const result = await addAppComponent(project, VALID_URL, deps);
+
+            expect(result.success).toBe(true);
+            expect(project.componentInstances?.['existing-app']).toBeDefined();
+            expect(project.componentInstances?.['my-app']).toBeDefined();
         });
-        const deps = createDeps();
 
-        const result = await addAppComponent(project, VALID_URL, deps);
+        it('APPENDS to componentSelections.appBuilder (never overwrites to one element)', async () => {
+            const project = projectWithExistingIntegration();
+            const deps = createDeps();
 
-        expect(result.success).toBe(false);
-        expect(result.error).toMatch(/remove the existing one/i);
-        expect(deps.componentManager.installComponent).not.toHaveBeenCalled();
+            await addAppComponent(project, VALID_URL, deps);
+
+            expect(project.componentSelections?.appBuilder).toEqual(['existing-app', 'my-app']);
+        });
+
+        it('writes the keyed appBuilderComponents entry with its source on add', async () => {
+            const project = projectWithExistingIntegration();
+            const deps = createDeps();
+
+            await addAppComponent(project, VALID_URL, deps);
+
+            expect(project.appBuilderComponents?.['my-app']).toEqual(
+                expect.objectContaining({
+                    kind: 'integration',
+                    status: 'not-deployed',
+                    source: { owner: 'acme', repo: 'my-app' },
+                })
+            );
+        });
+
+        it('leaves the existing keyed sibling entry untouched on add', async () => {
+            const project = projectWithExistingIntegration();
+            const deps = createDeps();
+
+            await addAppComponent(project, VALID_URL, deps);
+
+            expect(project.appBuilderComponents?.['existing-app']).toEqual(
+                expect.objectContaining({ status: 'deployed', url: 'https://existing.example' })
+            );
+        });
+
+        it('rejects adding the SAME integration twice (duplicate id, fail-fast)', async () => {
+            const project = createProject({
+                componentInstances: {
+                    'my-app': {
+                        id: 'my-app',
+                        name: 'My App',
+                        type: 'app-builder',
+                        subType: 'app',
+                        status: 'ready',
+                        path: '/proj/components/my-app',
+                    } as never,
+                },
+            });
+            const deps = createDeps();
+
+            const result = await addAppComponent(project, VALID_URL, deps);
+
+            expect(result.success).toBe(false);
+            expect(result.error).toMatch(/already/i);
+            expect(deps.componentManager.installComponent).not.toHaveBeenCalled();
+        });
+
+        it('does not duplicate an id already present in the selection', async () => {
+            const project = createProject({
+                componentSelections: { appBuilder: ['my-app'] },
+            } as Partial<Project>);
+            const deps = createDeps();
+
+            await addAppComponent(project, VALID_URL, deps);
+
+            expect(
+                project.componentSelections?.appBuilder?.filter((id) => id === 'my-app')
+            ).toHaveLength(1);
+        });
     });
 
     it('calls installComponent exactly once on success', async () => {
@@ -384,183 +342,3 @@ describe('addAppComponent', () => {
     });
 });
 
-// =============================================================================
-// removeAppComponent
-// =============================================================================
-
-describe('removeAppComponent', () => {
-    function projectWithApp(): Project {
-        return createProject({
-            componentInstances: {
-                'commerce-mesh': {
-                    id: 'commerce-mesh',
-                    name: 'Mesh',
-                    type: 'dependency',
-                    subType: 'mesh',
-                    status: 'ready',
-                    path: '/proj/components/commerce-mesh',
-                } as never,
-                'my-app': {
-                    id: 'my-app',
-                    name: 'My App',
-                    type: 'app-builder',
-                    subType: 'app',
-                    status: 'ready',
-                    path: '/proj/components/my-app',
-                } as never,
-            },
-            componentSelections: { appBuilder: ['my-app'] },
-            appState: { status: 'deployed', url: 'https://app.example.com' },
-            appStatusSummary: 'deployed',
-        });
-    }
-
-    it('is a no-op success when there is no app', async () => {
-        const project = createProject(); // no app-subType instance
-        const deps = createDeps();
-
-        const result = await removeAppComponent(project, deps);
-
-        expect(result.success).toBe(true);
-        expect(deps.commandManager.execute).not.toHaveBeenCalled();
-        expect(deps.componentManager.removeComponent).not.toHaveBeenCalled();
-    });
-
-    it('runs `aio app undeploy` wrapped in withOrgContext', async () => {
-        const project = projectWithApp();
-        const deps = createDeps();
-
-        await removeAppComponent(project, deps);
-
-        expect(mockWithOrgContext).toHaveBeenCalledTimes(1);
-        const undeployCall = deps.commandManager.execute.mock.calls.find((c) =>
-            String(c[0]).includes('app undeploy')
-        );
-        expect(undeployCall).toBeDefined();
-    });
-
-    it('targets the project org/project/workspace via the org-context wrapper', async () => {
-        const project = projectWithApp();
-        const deps = createDeps();
-
-        await removeAppComponent(project, deps);
-
-        expect(mockWithOrgContext).toHaveBeenCalledWith(
-            expect.objectContaining({
-                orgId: 'org-123',
-                projectId: 'proj-456',
-                workspaceId: 'ws-789',
-            }),
-            expect.any(Function)
-        );
-    });
-
-    it('resolves org code/name from the cached org when its id matches', async () => {
-        const project = projectWithApp();
-        const deps = createDeps({
-            getCachedOrganization: jest.fn().mockReturnValue({
-                id: 'org-123',
-                code: 'CODE@AdobeOrg',
-                name: 'Acme Inc',
-            }),
-        });
-
-        await removeAppComponent(project, deps);
-
-        expect(mockWithOrgContext).toHaveBeenCalledWith(
-            expect.objectContaining({
-                orgId: 'org-123',
-                orgCode: 'CODE@AdobeOrg',
-                orgName: 'Acme Inc',
-            }),
-            expect.any(Function)
-        );
-    });
-
-    it('runs undeploy from the app path with auto node + enhancePath', async () => {
-        const project = projectWithApp();
-        const deps = createDeps();
-
-        await removeAppComponent(project, deps);
-
-        const undeployCall = deps.commandManager.execute.mock.calls.find((c) =>
-            String(c[0]).includes('app undeploy')
-        );
-        expect(undeployCall?.[1]).toEqual(
-            expect.objectContaining({
-                cwd: '/proj/components/my-app',
-                useNodeVersion: 'auto',
-                enhancePath: true,
-            })
-        );
-    });
-
-    it('calls removeComponent with deleteFiles=true', async () => {
-        const project = projectWithApp();
-        const deps = createDeps();
-
-        await removeAppComponent(project, deps);
-
-        expect(deps.componentManager.removeComponent).toHaveBeenCalledWith(project, 'my-app', true);
-    });
-
-    it('clears appState, appStatusSummary and drops the app from the selection', async () => {
-        const project = projectWithApp();
-        const deps = createDeps();
-
-        const result = await removeAppComponent(project, deps);
-
-        expect(result.success).toBe(true);
-        expect(project.appState).toBeUndefined();
-        expect(project.appStatusSummary).toBeUndefined();
-        expect(project.componentSelections?.appBuilder).toEqual([]);
-    });
-
-    it('persists the project after removal', async () => {
-        const project = projectWithApp();
-        const deps = createDeps();
-
-        await removeAppComponent(project, deps);
-
-        expect(deps.saveProject).toHaveBeenCalledWith(project);
-    });
-
-    it('leaves sibling instances untouched on removal', async () => {
-        const project = projectWithApp();
-        const deps = createDeps();
-
-        await removeAppComponent(project, deps);
-
-        expect(project.componentInstances?.['commerce-mesh']).toBeDefined();
-    });
-
-    it('surfaces a warning but still clears local state when undeploy exits non-zero', async () => {
-        const commandManager = createCommandManager();
-        commandManager.execute.mockResolvedValue({ code: 1, stdout: '', stderr: 'undeploy boom' });
-        const deps = createDeps({ commandManager });
-        const project = projectWithApp();
-
-        const result = await removeAppComponent(project, deps);
-
-        expect(result.success).toBe(true);
-        expect(result.undeployWarning).toBeTruthy();
-        // Local cleanup still happened.
-        expect(deps.componentManager.removeComponent).toHaveBeenCalledWith(project, 'my-app', true);
-        expect(project.appState).toBeUndefined();
-        expect(project.componentSelections?.appBuilder).toEqual([]);
-    });
-
-    it('surfaces a warning but still clears local state when undeploy throws', async () => {
-        const commandManager = createCommandManager();
-        commandManager.execute.mockRejectedValue(new Error('network down'));
-        const deps = createDeps({ commandManager });
-        const project = projectWithApp();
-
-        const result = await removeAppComponent(project, deps);
-
-        expect(result.success).toBe(true);
-        expect(result.undeployWarning).toMatch(/network down/);
-        expect(deps.componentManager.removeComponent).toHaveBeenCalledWith(project, 'my-app', true);
-        expect(project.appState).toBeUndefined();
-    });
-});

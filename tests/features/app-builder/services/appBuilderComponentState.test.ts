@@ -11,6 +11,7 @@ import {
     listAppBuilderComponents,
     setAppBuilderComponent,
     getMeshAppBuilderComponent,
+    getKeyedMeshAppBuilderComponent,
     getIntegrationAppBuilderComponents,
     getProvidedEnvVars,
     isAppBuilderComponentState,
@@ -90,6 +91,68 @@ describe('appBuilderComponentState accessors', () => {
 
         it('should return undefined when neither appBuilderComponents nor meshState exist', () => {
             expect(getMeshAppBuilderComponent(makeProject())).toBeUndefined();
+        });
+
+        it('should find the keyed mesh entry by KIND under a component-instance key (Step 06)', () => {
+            // recordDeployOutcome keys never-migrated projects by the mesh
+            // component instance id — the accessor must match on kind, not
+            // only the literal 'mesh' key.
+            const keyed = makeAppBuilderComponent({ endpoint: 'https://keyed.example/graphql' });
+            const project = makeProject({
+                appBuilderComponents: { 'commerce-mesh': keyed },
+            });
+
+            expect(getMeshAppBuilderComponent(project)?.endpoint).toBe('https://keyed.example/graphql');
+        });
+    });
+
+    // ADR-011 D3 Step 06: keyed-only lookup (no legacy synthesis) returning the
+    // LIVE map object, so runtime-field writes (decline flags, envVars back-fill)
+    // land on the persisted entry.
+    describe('getKeyedMeshAppBuilderComponent', () => {
+        it('should return the entry under the migrated "mesh" key', () => {
+            const keyed = makeAppBuilderComponent();
+            const project = makeProject({ appBuilderComponents: { mesh: keyed } });
+
+            expect(getKeyedMeshAppBuilderComponent(project)).toBe(keyed);
+        });
+
+        it('should find a mesh-kind entry under any other key', () => {
+            const keyed = makeAppBuilderComponent();
+            const project = makeProject({
+                appBuilderComponents: {
+                    'acme-widget': makeAppBuilderComponent({ kind: 'integration' }),
+                    'commerce-mesh': keyed,
+                },
+            });
+
+            expect(getKeyedMeshAppBuilderComponent(project)).toBe(keyed);
+        });
+
+        it('should NOT synthesize from legacy meshState (keyed-only accessor)', () => {
+            const project = makeProject({
+                meshState: {
+                    envVars: {},
+                    sourceHash: 'abc',
+                    lastDeployed: '2026-06-20T00:00:00.000Z',
+                    endpoint: 'https://legacy.example/graphql',
+                },
+            });
+
+            expect(getKeyedMeshAppBuilderComponent(project)).toBeUndefined();
+        });
+
+        it('should return the live object (mutations land on the map entry)', () => {
+            const keyed = makeAppBuilderComponent();
+            const project = makeProject({ appBuilderComponents: { mesh: keyed } });
+
+            const entry = getKeyedMeshAppBuilderComponent(project);
+            (entry as { userDeclinedUpdate?: boolean }).userDeclinedUpdate = true;
+
+            expect(
+                (project.appBuilderComponents?.mesh as { userDeclinedUpdate?: boolean })
+                    .userDeclinedUpdate,
+            ).toBe(true);
         });
     });
 

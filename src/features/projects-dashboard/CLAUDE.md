@@ -175,7 +175,7 @@ Core messages (non-exhaustive — the handler map in `handlers/projectsListHandl
 | `createProject` | UI → Extension | - | `{ success }` |
 | `openAdminPanel` | UI → Extension | `{ projectPath }` | `{ success }` (opens the admin URL — derived for SaaS, `ADOBE_COMMERCE_ADMIN_URL` field for PaaS — or prompts "Open Configure") |
 | `redeployMesh` | UI → Extension | `{ projectPath }` | `{ success }` (kebab More item, shown when the mesh is in a "Redeploy Mesh" state; runs `deployMeshHeadless` under a progress notification) |
-| `redeployApp` | UI → Extension | `{ projectPath }` | `{ success }` (kebab More item, shown when the project has a deployed App Builder app; runs `deployAppHeadless`) |
+| `redeployApp` | UI → Extension | `{ projectPath, id? }` | `{ success }` (kebab More items — one per redeployable keyed integration, labeled from the entry's `name ?? id`; `id` targets that integration via `deployAppHeadless`'s `componentId`) |
 | `openHelp` | UI → Extension | - | `{ success }` |
 | `openSettings` | UI → Extension | - | `{ success }` |
 | `projectsUpdated` | Extension → UI | `{ projects }` | - |

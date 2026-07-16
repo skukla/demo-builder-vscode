@@ -125,6 +125,13 @@ export class ProjectConfigWriter {
             if (project.aiPrompts?.length) {
                 manifest.aiPrompts = project.aiPrompts;
             }
+            // Keyed App Builder component state (ADR-011 D3 Step 01) — the durable
+            // model that replaces the singular meshState/appState (retired in Step 07).
+            // Omitted when empty so legacy manifests keep loading via the read-side
+            // migration fallback instead of a persisted-but-empty map.
+            if (project.appBuilderComponents && Object.keys(project.appBuilderComponents).length) {
+                manifest.appBuilderComponents = project.appBuilderComponents;
+            }
             if (project.pinned) {
                 manifest.pinned = true;
             }

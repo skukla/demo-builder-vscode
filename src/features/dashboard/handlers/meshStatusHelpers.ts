@@ -24,6 +24,7 @@ import {
     CATALOG_SERVICE_ENDPOINT, CATALOG_API_KEY,
     ACCS_GRAPHQL_ENDPOINT, ACCS_WEBSITE_CODE, ACCS_STORE_CODE, ACCS_STORE_VIEW_CODE,
 } from '@/features/components/config/envVarKeys';
+import { isMeshUpdateDeclined } from '@/features/mesh/services/meshUpdateDecline';
 import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import { Project, ComponentInstance } from '@/types';
 import { HandlerContext } from '@/types/handlers';
@@ -198,7 +199,7 @@ export async function determineMeshStatus(
     if (meshChanges.hasChanges) {
         // User previously declined update → 'update-declined' (orange badge)
         // Otherwise → 'config-changed' (yellow badge)
-        return project.meshState?.userDeclinedUpdate ? 'update-declined' : 'config-changed';
+        return isMeshUpdateDeclined(project) ? 'update-declined' : 'config-changed';
     }
     // No config changes: show error if previous deployment failed, otherwise deployed
     return meshComponent.status === 'error' ? 'error' : 'deployed';

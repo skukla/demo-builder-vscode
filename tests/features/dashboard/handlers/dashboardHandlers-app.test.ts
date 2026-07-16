@@ -107,17 +107,61 @@ describe('dashboardHandlers - App Builder', () => {
     // removeApp
     // =========================================================================
 
+    // ADR-011 D3 Step 05: the singular handler is a THIN DELEGATE to the per-id
+    // keyed remove — it resolves WHICH integration and forwards the id.
     describe('handleRemoveApp', () => {
-        it('calls removeAppComponent with the project', async () => {
-            const { mockContext, mockProject } = setupMocks();
+        it('resolves the app instance id and delegates to the per-id removeAppComponent', async () => {
+            const { mockContext, mockProject } = setupMocks({
+                componentInstances: {
+                    'my-app': {
+                        id: 'my-app',
+                        name: 'My App',
+                        type: 'app-builder',
+                        subType: 'app',
+                        status: 'ready',
+                        path: '/proj/components/my-app',
+                    },
+                } as never,
+            });
 
             const result = await handleRemoveApp(mockContext);
 
             expect(result.success).toBe(true);
             expect(mockRemoveAppComponent).toHaveBeenCalledWith(
                 mockProject,
+                'my-app',
                 expect.objectContaining({ getCachedOrganization: expect.any(Function) }),
             );
+        });
+
+        it('falls back to the keyed integration id when no app instance exists', async () => {
+            const { mockContext, mockProject } = setupMocks({
+                appBuilderComponents: {
+                    'int-a': {
+                        kind: 'integration',
+                        status: 'deployed',
+                        source: { owner: 'acme', repo: 'a' },
+                    },
+                },
+            } as never);
+
+            const result = await handleRemoveApp(mockContext);
+
+            expect(result.success).toBe(true);
+            expect(mockRemoveAppComponent).toHaveBeenCalledWith(
+                mockProject,
+                'int-a',
+                expect.anything(),
+            );
+        });
+
+        it('is a no-op success when the project has no integration at all', async () => {
+            const { mockContext } = setupMocks();
+
+            const result = await handleRemoveApp(mockContext);
+
+            expect(result.success).toBe(true);
+            expect(mockRemoveAppComponent).not.toHaveBeenCalled();
         });
 
         it('returns failure when there is no project', async () => {

@@ -11,7 +11,7 @@
  */
 
 import { Project } from '@/types';
-import { hasEntries, getProjectFrontendPort } from '@/types/typeGuards';
+import { hasEntries, getProjectFrontendPort, getMeshEndpointUrl } from '@/types/typeGuards';
 
 /**
  * Mesh status info for UI updates
@@ -78,7 +78,8 @@ export function hasMeshDeploymentRecord(project: Project): boolean {
 }
 
 /**
- * Get mesh endpoint from meshState (single source of truth)
+ * Get the deployed mesh endpoint (keyed-first via getMeshEndpointUrl,
+ * ADR-011 D3 Step 06; legacy meshState fallback preserved).
  *
  * See docs/architecture/state-ownership.md for details.
  *
@@ -86,7 +87,7 @@ export function hasMeshDeploymentRecord(project: Project): boolean {
  * @returns The mesh endpoint value if found, undefined otherwise
  */
 export function getMeshEndpoint(project: Project): string | undefined {
-    const endpoint = project.meshState?.endpoint;
+    const endpoint = getMeshEndpointUrl(project);
     if (endpoint && typeof endpoint === 'string' && endpoint.trim() !== '') {
         return endpoint;
     }

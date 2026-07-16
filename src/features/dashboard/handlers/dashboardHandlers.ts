@@ -488,7 +488,28 @@ export const handleDeployApp: MessageHandler = async () => {
 export const handleRedeployApp = handleDeployApp;
 
 /**
- * Handle 'removeApp' message - Remove the project's App Builder app (undeploy + cleanup)
+ * Resolve WHICH integration an id-less singular app message targets: the app
+ * component instance when present (its id keys the folders and, via the
+ * legacy-twin resolution, the keyed entry), else the first keyed integration
+ * entry (folder already gone, state remains). Transitional — the dormant
+ * AppBuilderCard posts id-less messages until D3 Step 08 replaces it with the
+ * keyed per-id list UI.
+ */
+async function resolveSingularIntegrationId(project: Project): Promise<string | undefined> {
+    const { getAppBuilderInstance } = await import('@/types/typeGuards');
+    const instance = getAppBuilderInstance(project);
+    if (instance) {
+        return instance.id;
+    }
+    const keyed = Object.entries(project.appBuilderComponents ?? {}).find(
+        ([, state]) => state.kind === 'integration',
+    );
+    return keyed?.[0];
+}
+
+/**
+ * Handle 'removeApp' message — THIN DELEGATE to the per-id keyed remove
+ * (ADR-011 D3 Step 05): resolves the target integration id and removes ONLY it.
  */
 export const handleRemoveApp: MessageHandler = async (context) => {
     const project = await context.stateManager.getCurrentProject();
@@ -496,10 +517,15 @@ export const handleRemoveApp: MessageHandler = async (context) => {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
+    const id = await resolveSingularIntegrationId(project);
+    if (!id) {
+        return { success: true }; // nothing to remove — idempotent, matches the old no-op
+    }
+
     const { removeAppComponent } = await import(
         '@/features/app-builder/services/appComponentManager'
     );
-    const result = await removeAppComponent(project, await buildAppDeps(context));
+    const result = await removeAppComponent(project, id, await buildAppDeps(context));
     return result.success ? { success: true } : { success: false, error: result.error };
 };
 

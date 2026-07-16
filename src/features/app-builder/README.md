@@ -44,22 +44,26 @@ Org-agnostic deploy helper (callers wrap it in `withOrgContext`, exactly like
 Node version is `'auto'` — resolves to the Node version the Adobe `aio` CLI runs under (no
 hardcoded version).
 
-### `addAppComponent(project, gitUrl, deps)` / `removeAppComponent(project, deps)`
+### `addAppComponent(project, gitUrl, deps)` / `removeAppComponent(project, appId, deps)`
 
-Additive add/remove on a **live** project (no re-clone of the rest of the project, no edit-wipe,
-no reset `rm -rf`).
+Additive add / per-id remove on a **live** project (no re-clone of the rest of the project, no
+edit-wipe, no reset `rm -rf`). N custom integrations coexist — ADR-011 D3 Step 05 dropped the
+one-app guard.
 
 - **Add** — fail-fast validation of a **public GitHub URL**: `validateURL` (rejects
   SSH/`git@`/non-https/SSRF), then `parseGitHubUrl`, then an `owner`/`repo` charset gate
   (`^[A-Za-z0-9._-]+$`) that rejects shell metacharacters. The stored URL is the **canonical**
   `https://github.com/owner/repo.git` reconstructed from the validated parts — never the raw
-  input — so embedded credentials and stray path segments are dropped. Enforces the singular
-  guard (one app per workspace), clones+installs via `componentManager.installComponent`
-  (siblings untouched), records `componentSelections.appBuilder`, and persists.
-- **Remove** — `aio app undeploy` under org-context targeting (best-effort: a failed undeploy
-  surfaces a warning but never strands local state), then
-  `componentManager.removeComponent(deleteFiles=true)`, clears `appState`/`appStatusSummary`,
-  drops the app from the selection, and persists.
+  input — so embedded credentials and stray path segments are dropped. Rejects a duplicate id
+  fail-fast, clones+installs via `componentManager.installComponent` (siblings untouched), keys
+  the entry in `appBuilderComponents[appId]` (with its `source`), **appends** to
+  `componentSelections.appBuilder`, and persists.
+- **Remove (per-id)** — `aio app undeploy` from that integration's folder under org-context
+  targeting (best-effort: a failed undeploy surfaces a warning but never strands local state),
+  then `componentManager.removeComponent(deleteFiles=true)`, clears ONLY that keyed entry
+  (legacy twin resolved via `resolveKeyedComponentId`) + its selection id — siblings untouched.
+  The singular `appState`/`appStatusSummary` clear only when the LAST integration goes
+  (transitional until D3 Step 07).
 
 ### `DeployAppCommand` (`commands/deployApp.ts`)
 

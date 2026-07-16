@@ -23,6 +23,11 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
 jest.mock('@/features/app-builder/services/appDeployment', () => ({
     deployAppComponent: jest.fn(),
 }));
+// Package isolation (ADR-011 D3 Step 03): the headless path must rewrite the
+// app's app.config.yaml to a distinct derived ow.package before deploying.
+jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
+    applyIsolatedPackages: jest.fn(),
+}));
 // withOrgContext just runs the thunk; buildOrgTargetFromProjectAdobe returns a stub.
 jest.mock('@/core/shell', () => ({
     withOrgContext: (_t: unknown, fn: () => unknown) => fn(),
@@ -31,12 +36,18 @@ jest.mock('@/core/shell', () => ({
 
 import { ServiceLocator } from '@/core/di';
 import { ensureProjectAdobeContext } from '@/features/authentication/services/ensureProjectAdobeContext';
+import { listAppBuilderComponents } from '@/features/app-builder/services/appBuilderComponentState';
+import { applyIsolatedPackages } from '@/features/app-builder/services/appConfigPackages';
 import { deployAppComponent } from '@/features/app-builder/services/appDeployment';
 import { deployAppHeadless } from '@/features/app-builder/services/deployAppHeadless';
-import type { ComponentInstance, Project } from '@/types/base';
+import { deriveOwPackage } from '@/features/app-builder/services/owPackageName';
+import type { AppBuilderComponentState, ComponentInstance, Project } from '@/types/base';
 
 const mockPreflight = ensureProjectAdobeContext as jest.Mock;
 const mockDeploy = deployAppComponent as jest.MockedFunction<typeof deployAppComponent>;
+const mockApplyIsolated = applyIsolatedPackages as jest.MockedFunction<
+    typeof applyIsolatedPackages
+>;
 
 function project(withApp = true): Project {
     return {
@@ -82,6 +93,7 @@ describe('deployAppHeadless', () => {
         (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(authManager);
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue({ execute: jest.fn() });
         mockPreflight.mockResolvedValue({ ready: true });
+        mockApplyIsolated.mockResolvedValue(true);
         mockDeploy.mockResolvedValue({
             success: true,
             data: { url: 'https://app.example', deployedUrls: { web: 'https://app.example' } },
@@ -157,5 +169,295 @@ describe('deployAppHeadless', () => {
         const result = await deployAppHeadless(d);
         expect(d.project.appStatusSummary).toBe('error');
         expect(result).toEqual({ success: false, error: 'boom' });
+    });
+
+    // ADR-011 D3 Step 02 (one writer): the singular path must ALSO write the
+    // keyed appBuilderComponents entry so the projects-dashboard card grid and
+    // the keyed integrations list read the same state. The singular
+    // appState/appStatusSummary writes remain until Step 07 retires them.
+    describe('keyed appBuilderComponents write (ADR-011 D3 Step 02)', () => {
+        it('writes the keyed integration entry alongside appState on success', async () => {
+            const d = deps();
+            await deployAppHeadless(d);
+
+            // Both models agree: singular appState AND the keyed entry.
+            expect(d.project.appState?.status).toBe('deployed');
+            expect(d.project.appBuilderComponents?.['app-builder-shell']).toEqual(
+                expect.objectContaining({
+                    kind: 'integration',
+                    status: 'deployed',
+                    url: 'https://app.example',
+                    deployedUrls: { web: 'https://app.example' },
+                    lastDeployed: expect.any(String),
+                })
+            );
+        });
+
+        it('preserves the existing keyed entry source and name on redeploy', async () => {
+            const p = project();
+            p.appBuilderComponents = {
+                'app-builder-shell': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    name: 'My Integration',
+                    source: { owner: 'skukla', repo: 'app-builder-shell', branch: 'main' },
+                    url: 'https://old.example',
+                } as AppBuilderComponentState,
+            };
+            const d = deps({ project: p });
+            await deployAppHeadless(d);
+
+            expect(p.appBuilderComponents['app-builder-shell']).toEqual(
+                expect.objectContaining({
+                    name: 'My Integration',
+                    source: { owner: 'skukla', repo: 'app-builder-shell', branch: 'main' },
+                    url: 'https://app.example',
+                    status: 'deployed',
+                })
+            );
+        });
+
+        it('updates the single migrated legacy entry instead of forking a new key', async () => {
+            // A legacy project's appState migrates to a keyed entry under its
+            // appId (not the component-instance id). A redeploy must update THAT
+            // entry — not create a parallel second integration entry.
+            const p = project();
+            p.appBuilderComponents = {
+                app: {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: '', repo: '' },
+                    url: 'https://old.example',
+                } as AppBuilderComponentState,
+            };
+            const d = deps({ project: p });
+            await deployAppHeadless(d);
+
+            expect(p.appBuilderComponents['app-builder-shell']).toBeUndefined();
+            expect(p.appBuilderComponents.app).toEqual(
+                expect.objectContaining({ status: 'deployed', url: 'https://app.example' })
+            );
+        });
+
+        it('falls back to the instance id when multiple integration entries exist', async () => {
+            const otherEntry: AppBuilderComponentState = {
+                kind: 'integration',
+                status: 'deployed',
+                source: { owner: 'acme', repo: 'other' },
+                url: 'https://other.example',
+            };
+            const p = project();
+            p.appBuilderComponents = { 'int-a': otherEntry, 'int-b': { ...otherEntry } };
+            const d = deps({ project: p });
+            await deployAppHeadless(d);
+
+            expect(p.appBuilderComponents['app-builder-shell']?.status).toBe('deployed');
+            // Sibling integrations untouched.
+            expect(p.appBuilderComponents['int-a'].url).toBe('https://other.example');
+            expect(p.appBuilderComponents['int-b'].url).toBe('https://other.example');
+        });
+
+        it('writes keyed status error on a failed deploy, preserving prior fields', async () => {
+            mockDeploy.mockResolvedValue({ success: false, error: 'boom' });
+            const p = project();
+            p.appBuilderComponents = {
+                'app-builder-shell': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'skukla', repo: 'app-builder-shell' },
+                    url: 'https://old.example',
+                } as AppBuilderComponentState,
+            };
+            const d = deps({ project: p });
+            await deployAppHeadless(d);
+
+            expect(p.appBuilderComponents['app-builder-shell']).toEqual(
+                expect.objectContaining({
+                    status: 'error',
+                    url: 'https://old.example',
+                    source: { owner: 'skukla', repo: 'app-builder-shell' },
+                })
+            );
+        });
+
+        it('writes keyed status error when the deploy throws', async () => {
+            mockDeploy.mockRejectedValue(new Error('kaput'));
+            const d = deps();
+            const result = await deployAppHeadless(d);
+
+            expect(result.success).toBe(false);
+            expect(d.project.appBuilderComponents?.['app-builder-shell']).toEqual(
+                expect.objectContaining({ kind: 'integration', status: 'error' })
+            );
+        });
+
+        it('does not touch the keyed map when blocked before deploying', async () => {
+            mockPreflight.mockResolvedValue({ ready: false, blockedBy: 'auth' });
+            const d = deps();
+            await deployAppHeadless(d);
+            expect(d.project.appBuilderComponents).toBeUndefined();
+        });
+
+        it('cross-surface agreement: listAppBuilderComponents sees the deployed entry', async () => {
+            const d = deps();
+            await deployAppHeadless(d);
+
+            const listed = listAppBuilderComponents(d.project);
+            const entry = listed.find((c) => c.id === 'app-builder-shell');
+            expect(entry).toEqual(
+                expect.objectContaining({
+                    kind: 'integration',
+                    status: 'deployed',
+                    url: 'https://app.example',
+                })
+            );
+        });
+    });
+
+    // ADR-011 D3 Step 03 (one isolating deploy path): the singular headless path
+    // must apply the SAME package isolation the keyed runner applies — a distinct
+    // derived ow.package is the `aio app deploy` prune boundary in the shared
+    // workspace; an un-isolated deploy on the repo's declared package can prune
+    // sibling integrations.
+    describe('package isolation (ADR-011 D3 Step 03)', () => {
+        it('applies applyIsolatedPackages(app.path, deriveOwPackage(app.id)) before deploying', async () => {
+            await deployAppHeadless(deps());
+
+            expect(mockApplyIsolated).toHaveBeenCalledTimes(1);
+            expect(mockApplyIsolated).toHaveBeenCalledWith(
+                '/p/app',
+                deriveOwPackage('app-builder-shell')
+            );
+            expect(mockApplyIsolated.mock.invocationCallOrder[0]).toBeLessThan(
+                mockDeploy.mock.invocationCallOrder[0]
+            );
+        });
+
+        it('derives the package from the component-instance id, never a reserved shared package', async () => {
+            await deployAppHeadless(deps());
+
+            const owPackage = mockApplyIsolated.mock.calls[0]?.[1];
+            expect(owPackage).toBeTruthy();
+            expect(owPackage).not.toBe('application');
+            expect(owPackage).not.toBe('dx-excshell-1');
+        });
+
+        it('does not touch isolation when the project has no App Builder app', async () => {
+            await deployAppHeadless(deps({ project: project(false) }));
+
+            expect(mockApplyIsolated).not.toHaveBeenCalled();
+        });
+
+        it('does not touch isolation when preflight blocks the deploy', async () => {
+            mockPreflight.mockResolvedValue({ ready: false, blockedBy: 'auth' });
+            await deployAppHeadless(deps());
+
+            expect(mockApplyIsolated).not.toHaveBeenCalled();
+        });
+
+        it('surfaces an isolation failure as a deploy error with keyed error state', async () => {
+            mockApplyIsolated.mockRejectedValue(new Error('yaml write failed'));
+            const d = deps();
+            const result = await deployAppHeadless(d);
+
+            expect(result.success).toBe(false);
+            expect(result.error).toMatch(/yaml write failed/);
+            expect(mockDeploy).not.toHaveBeenCalled();
+            expect(d.project.appStatusSummary).toBe('error');
+            expect(d.project.appBuilderComponents?.['app-builder-shell']).toEqual(
+                expect.objectContaining({ kind: 'integration', status: 'error' })
+            );
+        });
+    });
+
+    // ADR-011 D3 Step 04 (per-integration redeploy): an optional componentId
+    // targets ONE of N integrations. The guard chain (auth → org → permission →
+    // no-app) is unchanged — only the target-resolution differs from the
+    // singular getAppBuilderInstance default.
+    describe('per-integration target via componentId (ADR-011 D3 Step 04)', () => {
+        /** Two app-subType instances — the singular default would pick [0]. */
+        function projectWithTwoApps(): Project {
+            const p = project();
+            (p.componentInstances as Record<string, ComponentInstance>)['int-b'] = {
+                id: 'int-b',
+                name: 'Integration B',
+                type: 'app-builder',
+                subType: 'app',
+                path: '/p/int-b',
+                status: 'ready',
+            } as ComponentInstance;
+            return p;
+        }
+
+        it('deploys the componentId-matched instance, isolated under ITS derived package', async () => {
+            const p = projectWithTwoApps();
+            const result = await deployAppHeadless(deps({ project: p, componentId: 'int-b' }));
+
+            expect(result.success).toBe(true);
+            expect(mockDeploy).toHaveBeenCalledWith(
+                '/p/int-b',
+                expect.anything(),
+                expect.anything(),
+                expect.any(Function)
+            );
+            expect(mockApplyIsolated).toHaveBeenCalledWith('/p/int-b', deriveOwPackage('int-b'));
+        });
+
+        it('blocks with no-app for an unknown componentId (no singular fallback)', async () => {
+            const p = projectWithTwoApps();
+            const result = await deployAppHeadless(deps({ project: p, componentId: 'nope' }));
+
+            expect(result.success).toBe(false);
+            expect(result.blockedBy).toBe('no-app');
+            expect(mockDeploy).not.toHaveBeenCalled();
+        });
+
+        it('runs the same preflight guard chain before an id-targeted deploy', async () => {
+            mockPreflight.mockResolvedValue({ ready: false, blockedBy: 'auth', cancelled: true });
+            const p = projectWithTwoApps();
+            const result = await deployAppHeadless(deps({ project: p, componentId: 'int-b' }));
+
+            expect(result.success).toBe(false);
+            expect(result.blockedBy).toBe('auth');
+            expect(mockDeploy).not.toHaveBeenCalled();
+            expect(mockApplyIsolated).not.toHaveBeenCalled();
+        });
+
+        it('redeploying one of N leaves sibling keyed entries untouched', async () => {
+            const p = projectWithTwoApps();
+            p.appBuilderComponents = {
+                'app-builder-shell': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'acme', repo: 'shell' },
+                    url: 'https://old-a.example',
+                } as AppBuilderComponentState,
+                'int-b': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'acme', repo: 'b' },
+                    url: 'https://old-b.example',
+                } as AppBuilderComponentState,
+            };
+            await deployAppHeadless(deps({ project: p, componentId: 'int-b' }));
+
+            expect(p.appBuilderComponents['int-b']).toEqual(
+                expect.objectContaining({ status: 'deployed', url: 'https://app.example' })
+            );
+            // Sibling untouched.
+            expect(p.appBuilderComponents['app-builder-shell'].url).toBe('https://old-a.example');
+        });
+
+        it('keeps the singular default when componentId is omitted', async () => {
+            const p = projectWithTwoApps();
+            await deployAppHeadless(deps({ project: p }));
+
+            expect(mockDeploy).toHaveBeenCalledWith(
+                '/p/app',
+                expect.anything(),
+                expect.anything(),
+                expect.any(Function)
+            );
+        });
     });
 });

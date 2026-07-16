@@ -109,11 +109,13 @@ live as multiple packages *inside* that one app.
   once) → defensive parse of `aio app get-url --json` into `{ url, deployedUrls }`. Callers
   wrap it in `withOrgContext`, exactly like `deployMeshComponent`.
 - `addAppComponent` / `removeAppComponent` (`services/appComponentManager.ts`) - additive
-  add/remove on a LIVE project. Add validates a **public GitHub URL** (canonicalized to
-  `https://github.com/owner/repo.git`; owner/repo charset-validated to reject shell
-  metacharacters), enforces the singular guard, and clones+installs via
-  `componentManager.installComponent` (leaving siblings untouched). Remove undeploys remotely
-  (`aio app undeploy`, best-effort, org-context targeted) then cleans up local files + state.
+  add / per-id remove on a LIVE project (N integrations coexist — ADR-011 D3 Step 05). Add
+  validates a **public GitHub URL** (canonicalized to `https://github.com/owner/repo.git`;
+  owner/repo charset-validated to reject shell metacharacters), clones+installs via
+  `componentManager.installComponent` (leaving siblings untouched), keys the entry in
+  `appBuilderComponents[appId]`, and APPENDS the selection. Remove takes an `appId`, undeploys
+  remotely (`aio app undeploy`, best-effort, org-context targeted) then cleans up ONLY that
+  integration's files + keyed state.
 - `DeployAppCommand` (`commands/deployApp.ts`) - dashboard command mirroring `DeployMeshCommand`'s
   guard order (lock → `ensureAdobeIOAuth` → `detectProjectOrgMismatch` →
   `projectRequiresAppBuilder` + `testDeveloperPermissions` → `withOrgContext(deployAppComponent)`

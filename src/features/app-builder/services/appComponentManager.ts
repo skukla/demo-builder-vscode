@@ -1,15 +1,18 @@
 /**
- * App Component Manager — additive add/remove of ONE App Builder app on a LIVE
- * project.
+ * App Component Manager — additive add / per-id remove of custom App Builder
+ * integrations on a LIVE project (URL-based add door).
  *
- * Adds a single custom app to an already-created project WITHOUT re-cloning the
- * rest of the project, and removes it cleanly (remote undeploy + local cleanup).
- * A demo workspace holds at most one custom app (singular — see
- * getAppBuilderInstance), so both operations guard on that.
+ * Adds a custom integration to an already-created project WITHOUT re-cloning the
+ * rest of the project, and removes ONE integration cleanly by id (remote
+ * undeploy + local cleanup) leaving siblings untouched. N integrations coexist
+ * (ADR-011 D3 Step 05 dropped the one-app guard): each is keyed in
+ * `project.appBuilderComponents` and appended to `componentSelections.appBuilder`.
  *
  * REUSE (no plumbing re-implemented here):
  * - ComponentManager.installComponent (git clone+install) / removeComponent (file
- *   delete + instance drop).
+ *   delete + instance drop) — the same install path the keyed runner uses.
+ * - resolveKeyedComponentId so remove clears the SAME keyed entry a deploy
+ *   outcome would have written (legacy-twin resolution).
  * - withOrgContext / buildOrgTargetFromProjectAdobe for per-invocation Adobe org
  *   targeting — exactly like the mesh reset/deploy callers (projectResetService,
  *   edsResetMeshHelper). The undeploy never mutates the shared `aio` global.
@@ -17,6 +20,7 @@
  * - normalizeRepositoryName to derive a safe component id from the repo name.
  */
 
+import { resolveKeyedComponentId } from './appBuilderDeployOutcome';
 import { extractAioErrorDetail, fetchRuntimeCredentials } from './runtimeCredentials';
 import {
     buildOrgTargetFromProjectAdobe,
@@ -30,7 +34,7 @@ import { normalizeRepositoryName, validateURL } from '@/core/validation';
 import type { ComponentManager } from '@/features/components/services/componentManager';
 import type { Project, TransformedComponentDefinition } from '@/types';
 import type { Logger } from '@/types/logger';
-import { getAppBuilderInstance, toError } from '@/types/typeGuards';
+import { toError } from '@/types/typeGuards';
 
 /** Dependencies for app add/remove. Mirrors the codebase's explicit-deps shape. */
 export interface AppComponentManagerDeps {
@@ -115,11 +119,33 @@ function buildAppDefinition(appId: string, cloneUrl: string): TransformedCompone
 }
 
 /**
- * Add ONE App Builder app to a live project.
+ * Key the newly added integration in `appBuilderComponents` (with its source —
+ * durable provenance) and APPEND its id to the appBuilder selection. Never
+ * overwrites siblings: N integrations coexist (ADR-011 D3 Step 05).
+ */
+function recordAddedIntegration(
+    project: Project,
+    appId: string,
+    source: { owner: string; repo: string },
+): void {
+    project.appBuilderComponents = {
+        ...(project.appBuilderComponents ?? {}),
+        [appId]: { kind: 'integration', status: 'not-deployed', source },
+    };
+    project.componentSelections = project.componentSelections ?? {};
+    const current = project.componentSelections.appBuilder ?? [];
+    project.componentSelections.appBuilder = current.includes(appId)
+        ? current
+        : [...current, appId];
+}
+
+/**
+ * Add a custom App Builder integration to a live project.
  *
- * Validates the URL, enforces the singular guard, clones+installs via
- * ComponentManager (additive — leaves siblings untouched), records the selection,
- * and persists.
+ * Validates the URL, rejects a duplicate id fail-fast (same repo added twice
+ * would silently overwrite the existing folder), clones+installs via
+ * ComponentManager (additive — leaves siblings untouched), keys the new entry,
+ * appends the selection, and persists.
  */
 export async function addAppComponent(
     project: Project,
@@ -131,14 +157,14 @@ export async function addAppComponent(
         return { success: false, error: resolved.error };
     }
 
-    if (getAppBuilderInstance(project)) {
+    const appId = normalizeRepositoryName(resolved.repo);
+    if (project.componentInstances?.[appId]) {
         return {
             success: false,
-            error: 'This demo already has a custom integration. Remove the existing one first.',
+            error: `This demo already has an integration named "${appId}".`,
         };
     }
 
-    const appId = normalizeRepositoryName(resolved.repo);
     const definition = buildAppDefinition(appId, resolved.cloneUrl);
 
     const installResult = await deps.componentManager.installComponent(project, definition);
@@ -146,11 +172,10 @@ export async function addAppComponent(
         return { success: false, error: installResult.error || 'App installation failed.' };
     }
 
-    project.componentSelections = project.componentSelections ?? {};
-    project.componentSelections.appBuilder = [appId];
+    recordAddedIntegration(project, appId, { owner: resolved.owner, repo: resolved.repo });
 
     await deps.saveProject(project);
-    deps.logger.info(`[App Builder] Added app "${appId}" from ${resolved.cloneUrl}`);
+    deps.logger.info(`[App Builder] Added integration "${appId}" from ${resolved.cloneUrl}`);
 
     return { success: true, appId };
 }
@@ -197,35 +222,65 @@ async function undeployApp(
 }
 
 /**
- * Remove the project's App Builder app: remote undeploy (best-effort, org-context
- * targeted), local file+instance cleanup, and state/selection clearing.
+ * Clear ONE integration's local state: its keyed entry (resolved so a legacy
+ * migrated twin under 'app'/appId is cleared, not stranded), its selection id,
+ * and — only when NO integration remains — the singular `appState`/
+ * `appStatusSummary` (transitional; the singular fields retire in D3 Step 07).
+ */
+function clearIntegrationState(project: Project, appId: string, keyedId: string): void {
+    if (project.appBuilderComponents) {
+        delete project.appBuilderComponents[keyedId];
+    }
+    if (project.componentSelections?.appBuilder) {
+        project.componentSelections.appBuilder = project.componentSelections.appBuilder.filter(
+            (id) => id !== appId,
+        );
+    }
+    const integrationsRemain = Object.values(project.appBuilderComponents ?? {}).some(
+        (state) => state.kind === 'integration',
+    );
+    if (!integrationsRemain) {
+        project.appState = undefined;
+        project.appStatusSummary = undefined;
+    }
+}
+
+/**
+ * Remove ONE App Builder integration by id: remote undeploy (best-effort,
+ * org-context targeted — prunes only its own isolated package), local
+ * file+instance cleanup, and per-id state/selection clearing. Siblings are
+ * untouched. Idempotent: an id with no instance and no keyed entry is a no-op
+ * success.
  */
 export async function removeAppComponent(
     project: Project,
+    appId: string,
     deps: AppComponentManagerDeps,
 ): Promise<RemoveAppResult> {
-    const app = getAppBuilderInstance(project);
-    if (!app) {
+    const instance = project.componentInstances?.[appId];
+    // The legacy-twin resolution (an entry migrated under 'app'/appId) applies
+    // only when the removed INSTANCE exists — an unknown id must never
+    // cross-delete a sibling's keyed entry.
+    const keyedId = instance ? resolveKeyedComponentId(project, 'integration', appId) : appId;
+    if (!instance && !project.appBuilderComponents?.[keyedId]) {
         return { success: true };
     }
 
-    const undeployWarning = app.path ? await undeployApp(project, app.path, deps) : undefined;
+    const undeployWarning = instance?.path
+        ? await undeployApp(project, instance.path, deps)
+        : undefined;
     if (undeployWarning) {
         deps.logger.warn(`[App Builder] ${undeployWarning}`);
     }
 
-    await deps.componentManager.removeComponent(project, app.id, true);
-
-    project.appState = undefined;
-    project.appStatusSummary = undefined;
-    if (project.componentSelections?.appBuilder) {
-        project.componentSelections.appBuilder = project.componentSelections.appBuilder.filter(
-            (id) => id !== app.id,
-        );
+    if (instance) {
+        await deps.componentManager.removeComponent(project, appId, true);
     }
 
+    clearIntegrationState(project, appId, keyedId);
+
     await deps.saveProject(project);
-    deps.logger.info(`[App Builder] Removed app "${app.id}"`);
+    deps.logger.info(`[App Builder] Removed integration "${appId}"`);
 
     return { success: true, undeployWarning };
 }

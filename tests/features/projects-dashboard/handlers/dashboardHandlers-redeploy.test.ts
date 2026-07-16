@@ -94,4 +94,27 @@ describe('handleRedeployMesh / handleRedeployApp', () => {
         expect(res.success).toBe(false);
         expect(mockMesh).not.toHaveBeenCalled();
     });
+
+    // ADR-011 D3 Step 04: redeploy is per-integration — the kebab item carries
+    // the keyed integration id and the handler forwards it as componentId.
+    it('redeployApp forwards the integration id to deployAppHeadless as componentId', async () => {
+        mockApp.mockResolvedValue({ success: true });
+        const { context, path } = ctx();
+
+        const res = await handleRedeployApp(context, { projectPath: path, id: 'int-b' });
+
+        expect(mockApp).toHaveBeenCalledWith(expect.objectContaining({ componentId: 'int-b' }));
+        expect(res).toEqual({ success: true });
+    });
+
+    it('redeployApp without an id keeps the singular default (componentId undefined)', async () => {
+        mockApp.mockResolvedValue({ success: true });
+        const { context, path } = ctx();
+
+        await handleRedeployApp(context, { projectPath: path });
+
+        expect(mockApp).toHaveBeenCalledWith(
+            expect.objectContaining({ componentId: undefined })
+        );
+    });
 });

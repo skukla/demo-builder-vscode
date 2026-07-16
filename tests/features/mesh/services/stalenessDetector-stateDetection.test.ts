@@ -82,6 +82,76 @@ describe('StalenessDetector - State Detection', () => {
                 lastDeployed: null,
             });
         });
+
+        // ADR-011 D3 Step 06: the deployed baseline reads keyed-first from the
+        // mesh appBuilderComponents entry, falling back per-field to meshState.
+        describe('keyed-first read (ADR-011 D3 Step 06)', () => {
+            it('should read envVars/sourceHash/lastDeployed from the keyed mesh entry (keyed-only)', () => {
+                const project = createMockProject({
+                    appBuilderComponents: {
+                        'commerce-mesh': {
+                            kind: 'mesh',
+                            status: 'deployed',
+                            source: { owner: '', repo: '' },
+                            endpoint: 'https://mesh/graphql',
+                            envVars: { VAR1: 'keyed-value' },
+                            sourceHash: 'keyed-hash',
+                            lastDeployed: '2026-07-01T00:00:00Z',
+                        },
+                    },
+                } as unknown as Partial<Project>);
+
+                const result = getCurrentMeshState(project);
+
+                expect(result).toEqual({
+                    envVars: { VAR1: 'keyed-value' },
+                    sourceHash: 'keyed-hash',
+                    lastDeployed: new Date('2026-07-01T00:00:00Z'),
+                });
+            });
+
+            it('should fall back per-field to meshState when the keyed entry lacks the fields', () => {
+                // A Step-02 keyed entry carries endpoint/lastDeployed but no
+                // envVars/sourceHash — those must still come from meshState.
+                const project = createMockProject({
+                    appBuilderComponents: {
+                        mesh: {
+                            kind: 'mesh',
+                            status: 'deployed',
+                            source: { owner: '', repo: '' },
+                            endpoint: 'https://mesh/graphql',
+                            lastDeployed: '2026-07-01T00:00:00Z',
+                        },
+                    },
+                    meshState: {
+                        envVars: { VAR1: 'legacy-value' },
+                        sourceHash: 'legacy-hash',
+                        lastDeployed: '2026-06-01T00:00:00Z',
+                    },
+                } as unknown as Partial<Project>);
+
+                const result = getCurrentMeshState(project);
+
+                expect(result?.envVars).toEqual({ VAR1: 'legacy-value' });
+                expect(result?.sourceHash).toBe('legacy-hash');
+                // lastDeployed is present on the keyed entry — keyed wins.
+                expect(result?.lastDeployed).toEqual(new Date('2026-07-01T00:00:00Z'));
+            });
+
+            it('should return null for an undeployed keyed entry with no runtime fields (fresh-deploy semantics)', () => {
+                const project = createMockProject({
+                    appBuilderComponents: {
+                        mesh: {
+                            kind: 'mesh',
+                            status: 'not-deployed',
+                            source: { owner: '', repo: '' },
+                        },
+                    },
+                } as unknown as Partial<Project>);
+
+                expect(getCurrentMeshState(project)).toBeNull();
+            });
+        });
     });
 
     describe('detectMeshChanges - unknownDeployedState handling', () => {
@@ -172,6 +242,75 @@ describe('StalenessDetector - State Detection', () => {
             expect(result.hasChanges).toBe(false);
             expect(result.unknownDeployedState).toBeUndefined();
             expect(project.meshState?.envVars).toEqual(deployedConfig);
+        });
+
+        it('should mirror the envVars back-fill onto the keyed mesh entry (both-writes, Step 06)', async () => {
+            // Same fetch-succeeds scenario, but the project also carries a keyed
+            // mesh entry (Step 02+). The fetched baseline must land on BOTH the
+            // legacy meshState and the keyed entry, or Step 07 would orphan it.
+            const project: Project = createMockProject({
+                componentInstances: {
+                    'commerce-mesh': {
+                        id: 'commerce-mesh',
+                        name: 'API Mesh',
+                        subType: 'mesh',
+                        path: '/test/mesh',
+                        status: 'deployed',
+                    },
+                },
+                meshState: {
+                    envVars: {},
+                    sourceHash: null,
+                    lastDeployed: '',
+                },
+                appBuilderComponents: {
+                    'commerce-mesh': {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                        endpoint: 'https://example.com/graphql',
+                        lastDeployed: '2026-07-01T00:00:00Z',
+                    },
+                },
+            } as unknown as Partial<Project>);
+
+            const deployedConfig = {
+                ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
+            };
+
+            setupMockCommandExecutor(
+                { code: 0, stdout: '{"org":"test"}' },
+                {
+                    code: 0,
+                    stdout: JSON.stringify({
+                        meshConfig: {
+                            sources: [
+                                {
+                                    name: 'magento',
+                                    handler: {
+                                        graphql: { endpoint: 'https://example.com/graphql' },
+                                    },
+                                },
+                            ],
+                        },
+                    }),
+                }
+            );
+
+            setupMockFileSystemWithHash('hash123');
+
+            const result = await detectMeshChanges(project, {
+                'commerce-mesh': {
+                    ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
+                },
+            });
+
+            expect(result.shouldSaveProject).toBe(true);
+            expect(project.meshState?.envVars).toEqual(deployedConfig);
+            const keyed = project.appBuilderComponents?.['commerce-mesh'] as {
+                envVars?: Record<string, string>;
+            };
+            expect(keyed.envVars).toEqual(deployedConfig);
         });
 
         it('should handle empty meshState with fetch returning null (no mesh deployed)', async () => {

@@ -8,7 +8,7 @@
 
 import { getAppStatusDisplay } from '@/core/ui/utils/appStatusDisplay';
 import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
-import type { Project, ProjectStatus } from '@/types/base';
+import type { AppBuilderComponentState, Project, ProjectStatus } from '@/types/base';
 import { getComponentInstanceValues } from '@/types/typeGuards';
 
 /**
@@ -137,14 +137,38 @@ export function meshNeedsRedeploy(project: Project): boolean {
     return project.meshStatusSummary === 'stale' || project.meshStatusSummary === 'update-declined';
 }
 
+/** A keyed integration the kebab can offer a per-integration Redeploy item for. */
+export interface RedeployableIntegration {
+    id: string;
+    /** Menu label — the keyed entry's display name, falling back to its id. */
+    label: string;
+}
+
 /**
- * Whether the project has a deployed App Builder app that can be redeployed — one
- * that reached a deployed or errored state (an error is retryable). Gates the
- * kebab's "Redeploy App" action. There is no app-staleness model, so this gates on
- * "has a deployed app", not on drift.
+ * Statuses that make an integration redeployable: reached a deploy (`deployed`),
+ * drifted (`stale`), or failed retryably (`error`). `not-deployed` entries have
+ * nothing to redeploy.
  */
-export function appIsDeployable(project: Project): boolean {
-    return project.appStatusSummary === 'deployed' || project.appStatusSummary === 'error';
+const REDEPLOYABLE_STATUSES: ReadonlyArray<AppBuilderComponentState['status']> = [
+    'deployed',
+    'stale',
+    'error',
+];
+
+/**
+ * The project's redeployable App Builder integrations, enumerated from the
+ * durable keyed `appBuilderComponents` map (ADR-011 D3 Step 04). Replaces the
+ * singular `appIsDeployable` read of `appStatusSummary`: the kebab renders one
+ * "Redeploy <label>" item per entry instead of one global "Redeploy App".
+ * Mesh entries are excluded — the mesh has its own staleness-gated item.
+ */
+export function listRedeployableIntegrations(project: Project): RedeployableIntegration[] {
+    return Object.entries(project.appBuilderComponents ?? {})
+        .filter(
+            ([, state]) =>
+                state.kind === 'integration' && REDEPLOYABLE_STATUSES.includes(state.status),
+        )
+        .map(([id, state]) => ({ id, label: state.name ?? id }));
 }
 
 /**

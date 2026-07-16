@@ -18,11 +18,22 @@ highest-risk step — do it behind accessors with a golden test, never big-bang.
 
 ## Tests to write FIRST (RED)
 
-- [ ] **Golden `config.json`:** for a project with a deployed mesh, the generated `config.json` is
+- [x] **Golden `config.json`:** for a project with a deployed mesh, the generated `config.json` is
       byte-identical whether the endpoint is read from `meshState` or the keyed mesh entry
       (`getProvidedEnvVars`). Snapshot before, assert equal after.
-- [ ] Mesh staleness reads the keyed mesh entry (`envVars`/`sourceHash`) via the accessor.
-- [ ] `meshState.endpoint` accessor returns the keyed mesh entry's endpoint (read-through preserved).
+      *(Done: 4 cases in `configGenerator-goldenMeshEndpoint.test.ts` — legacy baseline,
+      keyed+legacy, keyed-only under 'mesh', keyed-only under a component-instance key.)*
+- [x] Mesh staleness reads the keyed mesh entry (`envVars`/`sourceHash`) via the accessor
+      (per-field `meshState` fallback; envVars back-fill mirrors onto BOTH).
+- [x] `meshState.endpoint` accessor returns the keyed mesh entry's endpoint (read-through preserved)
+      — `getMeshEndpointUrl` keyed-first; `dashboardStatusService.getMeshEndpoint` delegates to it.
+
+**Status: COMPLETE (2026-07-15).** Also landed (per the one-writer discipline): the three
+mesh-runtime fields (`envVars`/`userDeclinedUpdate`/`declinedAt`) added to
+`AppBuilderComponentState`; `deployMeshHeadless` lands `envVars`+`sourceHash` on the keyed entry and
+clears decline; the configure "Later" flow both-writes via the new `meshUpdateDecline` module;
+`determineMeshStatus` reads decline keyed-first. NOTE: a live storefront render check is still
+required before this ships (cannot be done in the TDD sandbox).
 
 ## Files to create / modify
 

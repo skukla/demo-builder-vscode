@@ -15,6 +15,7 @@ import * as path from 'path';
 import { COMPONENT_IDS } from '@/core/constants';
 import { getLogger } from '@/core/logging';
 import { getFrontendEnvVars } from '@/core/state';
+import { getKeyedMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
 import {
     PAAS_URL, PAAS_GRAPHQL_ENDPOINT, PAAS_ENVIRONMENT_ID,
     PAAS_WEBSITE_CODE, PAAS_STORE_VIEW_CODE, PAAS_STORE_CODE,
@@ -393,16 +394,30 @@ export async function calculateMeshSourceHash(meshComponentPath: string): Promis
  * Implementation: Get current mesh state from project
  */
 function getCurrentMeshStateImpl(project: Project): MeshState | null {
-    // Return the stored mesh state (from last deployment)
-    // This represents the DEPLOYED configuration, not the current config
-    if (!project.meshState) {
+    // Return the stored mesh state (from last deployment) — the DEPLOYED
+    // configuration, not the current config. Keyed-first (ADR-011 D3 Step 06):
+    // the keyed mesh appBuilderComponents entry carries the baseline; fall back
+    // per-field to the legacy meshState for entries written before the keyed
+    // model carried these fields (retired write-side in Step 07).
+    const keyed = getKeyedMeshAppBuilderComponent(project);
+    const legacy = project.meshState;
+
+    const envVars = keyed?.envVars ?? legacy?.envVars;
+    const sourceHash = keyed?.sourceHash ?? legacy?.sourceHash;
+    const lastDeployed = keyed?.lastDeployed ?? legacy?.lastDeployed;
+
+    // No legacy state and no deployment evidence on the keyed entry (e.g. an
+    // undeployed entry with no runtime fields) → null, preserving the
+    // "fresh deployment needed" path. Any legacy meshState keeps returning a
+    // state exactly as before.
+    if (!legacy && envVars === undefined && sourceHash == null && !lastDeployed) {
         return null;
     }
 
     return {
-        envVars: project.meshState.envVars || {},
-        sourceHash: project.meshState.sourceHash || null,
-        lastDeployed: project.meshState.lastDeployed ? new Date(project.meshState.lastDeployed) : null,
+        envVars: envVars || {},
+        sourceHash: sourceHash || null,
+        lastDeployed: lastDeployed ? new Date(lastDeployed) : null,
     };
 }
 
@@ -463,6 +478,12 @@ async function detectMeshChangesImpl(
 
             if (project.meshState) {
                 project.meshState.envVars = deployedConfig;
+            }
+            // Both-writes (ADR-011 D3 Step 06): mirror the baseline onto the
+            // keyed mesh entry so it survives Step 07's meshState retirement.
+            const keyedMesh = getKeyedMeshAppBuilderComponent(project);
+            if (keyedMesh) {
+                keyedMesh.envVars = deployedConfig;
             }
             didPopulateFromDeployedConfig = true;
 

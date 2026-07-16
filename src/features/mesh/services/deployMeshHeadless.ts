@@ -19,6 +19,7 @@ import { deployMeshComponent } from './meshDeployment';
 import { fetchMeshInfoFromAdobeIO } from './meshVerifier';
 import { updateMeshState } from './stalenessDetector';
 import { ServiceLocator } from '@/core/di';
+import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
 import { ensureMeshApiSubscribed } from '@/features/app-builder/services/ensureMeshApiSubscribed';
 import { ensureProjectAdobeContext } from '@/features/authentication/services/ensureProjectAdobeContext';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
@@ -154,6 +155,20 @@ export async function deployMeshHeadless(
         };
         await updateMeshState(project, deployedEndpoint);
         project.meshStatusSummary = 'deployed';
+        // One writer (ADR-011 D3 Step 02): the keyed entry is written beside the
+        // singular meshState so both surfaces agree. Retired in Step 07.
+        // Step 06: the keyed entry also carries the mesh runtime baseline
+        // updateMeshState just computed (deployed envVars + sourceHash) and
+        // clears any "Later" decline — mirroring the meshState write.
+        recordDeployOutcome(project, 'mesh', meshComponent.id, {
+            status: 'deployed',
+            endpoint: deployedEndpoint,
+            lastDeployed: new Date().toISOString(),
+            envVars: project.meshState?.envVars,
+            sourceHash: project.meshState?.sourceHash,
+            userDeclinedUpdate: undefined,
+            declinedAt: undefined,
+        });
         await stateManager.saveProject(project);
 
         await onStatus?.('deployed', undefined, deployedEndpoint);
@@ -161,6 +176,7 @@ export async function deployMeshHeadless(
     } catch (error) {
         await onStatus?.('error', 'Deployment failed');
         meshComponent.status = 'error';
+        recordDeployOutcome(project, 'mesh', meshComponent.id, { status: 'error' });
         await stateManager.saveProject(project);
         return {
             success: false,
