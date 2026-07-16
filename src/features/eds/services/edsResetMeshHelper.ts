@@ -10,8 +10,13 @@
 
 import type { EdsResetResult } from './edsResetParams';
 import { ServiceLocator } from '@/core/di';
-import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell';
+import {
+    buildOrgTargetFromProjectAdobe,
+    withOrgContext,
+    type OrgContextTarget,
+} from '@/core/shell';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
+import { fetchMeshInfoFromAdobeIO } from '@/features/mesh/services/meshVerifier';
 import { updateMeshState } from '@/features/mesh/services/stalenessDetector';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -39,13 +44,22 @@ async function deployMeshAndPersist(
     context.logger.info(`[EdsReset] Redeploying mesh for ${repoOwner}/${repoName}`);
 
     try {
-        const existingMeshId = (meshComponent.metadata?.meshId as string) || '';
+        // Create-or-update: source the existing mesh id from Adobe I/O (remote
+        // truth), like deployMeshHeadless and projectResetService — local
+        // metadata can be stale in BOTH directions (mesh created or deleted
+        // out-of-band). Runs inside the caller's withOrgContext wrapper, so the
+        // probe targets the project's workspace.
+        const meshInfo = await fetchMeshInfoFromAdobeIO(context.logger);
+        const existingMeshId = meshInfo?.meshId || '';
         const commandManager = ServiceLocator.getCommandExecutor();
 
         // meshComponent.path is guaranteed non-null: redeployApiMesh checked before calling
         const meshDeployResult = await deployMeshComponent(
-            meshComponent.path as string, commandManager, context.logger,
-            (msg, sub) => report(12, sub || msg), existingMeshId,
+            meshComponent.path as string,
+            commandManager,
+            context.logger,
+            (msg, sub) => report(12, sub || msg),
+            existingMeshId,
         );
 
         if (meshDeployResult.success && meshDeployResult.data?.endpoint) {
@@ -59,7 +73,10 @@ async function deployMeshAndPersist(
     } catch (meshError) {
         context.logger.error('[EdsReset] Mesh redeployment error', meshError as Error);
         return {
-            success: true, filesReset, contentCopied, meshRedeployed: false,
+            success: true,
+            filesReset,
+            contentCopied,
+            meshRedeployed: false,
             error: `Reset completed but mesh redeployment failed: ${(meshError as Error).message}`,
             errorType: 'MESH_REDEPLOY_FAILED',
         };
@@ -102,13 +119,15 @@ export async function redeployApiMesh(
         project,
         logger: context.logger,
         logPrefix: '[EdsReset]',
-        warningMessage: 'Your Adobe I/O session has expired. Please sign in to continue the mesh redeployment.',
+        warningMessage:
+            'Your Adobe I/O session has expired. Please sign in to continue the mesh redeployment.',
     });
 
     if (!preflight.ready) {
-        const reason = preflight.blockedBy === 'org'
-            ? "the project's Adobe organization is not the one you're signed into"
-            : 'Adobe I/O authentication required';
+        const reason =
+            preflight.blockedBy === 'org'
+                ? "the project's Adobe organization is not the one you're signed into"
+                : 'Adobe I/O authentication required';
         context.logger.warn(`[EdsReset] Mesh redeployment skipped before deploy: ${reason}`);
         return {
             success: true,
@@ -130,6 +149,15 @@ export async function redeployApiMesh(
     );
 
     return withOrgContext(target, () =>
-        deployMeshAndPersist(meshComponent, project, repoOwner, repoName, context, report, filesReset, contentCopied),
+        deployMeshAndPersist(
+            meshComponent,
+            project,
+            repoOwner,
+            repoName,
+            context,
+            report,
+            filesReset,
+            contentCopied,
+        ),
     );
 }

@@ -1,5 +1,18 @@
 # Mesh deploy: create-vs-update must consult the remote (+ blank-error formatter fix)
 
+> **✅ SHIPPED 2026-07-15** (same-day pull-forward, `/rptc:fix` on develop). Landed: (b) the
+> "already has a mesh" → one-shot retry-as-update fallback in `deployMeshComponent` (same
+> withOrgContext; update-path failures never loop); the blank-error fix (`formatAdobeCliError`
+> now trims — a leading `›` no longer yields a blank first line); command-aware progress
+> strings; PLUS the review's inverse-gap find: `edsResetMeshHelper` now sources
+> `existingMeshId` from `fetchMeshInfoFromAdobeIO` (remote truth) like the other callers.
+> Option (c) was investigated and deliberately NOT taken: the wizard's `apiMesh` seam exists
+> but re-adding a flow-time probe is a UX change the fallback makes unnecessary.
+> **Residual (recorded, not blocking):** `createHandler`'s bespoke create pipeline duplicates
+> the already-has-a-mesh handling with a drifting detector (case-sensitive `.includes` vs the
+> new `/already has a mesh/i`) — an `architecture-duplication-scan` candidate; if both
+> pipelines survive, share one exported signature predicate.
+
 ## Provenance
 
 Found 2026-07-15 during ADR-011 D3 live-check testing (debug-log triage; the log is the seed

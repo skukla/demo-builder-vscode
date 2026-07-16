@@ -62,14 +62,17 @@ export function formatAdobeCliError(error: Error | string): string {
         }
     }
 
-    return errorMessage.replace(/\s*›\s*/g, '\n');
+    // Trim so a message that STARTS with an arrow (aio api-mesh stderr does)
+    // never yields a leading newline — single-line renderers (the error log,
+    // toasts) would otherwise display a blank first line as an empty error.
+    return errorMessage.replace(/\s*›\s*/g, '\n').trim();
 }
 
 /**
  * Format mesh deployment errors with context
- * 
+ *
  * Wraps mesh deployment errors with a clear header and formats the details.
- * 
+ *
  * @param error - The error from mesh deployment
  * @returns Formatted error message ready for display
  */
@@ -162,13 +165,17 @@ export function extractMeshErrorSummary(error: string): string {
     }
 
     // Try to extract connection errors
-    const connectionMatch = /(?:ECONNREFUSED|ENOTFOUND|ETIMEDOUT|connect ECONNREFUSED) ([^\s]+)/i.exec(error);
+    const connectionMatch =
+        /(?:ECONNREFUSED|ENOTFOUND|ETIMEDOUT|connect ECONNREFUSED) ([^\s]+)/i.exec(error);
     if (connectionMatch) {
         return `Could not connect to: ${connectionMatch[1]}\nCheck that the server is running and the URL is correct.`;
     }
 
     // mesh.json schema validation errors
-    const schemaMatch = /must NOT have additional properties|missing required property|should be (string|array|object|number|boolean)/i.exec(error);
+    const schemaMatch =
+        /must NOT have additional properties|missing required property|should be (string|array|object|number|boolean)/i.exec(
+            error,
+        );
     if (schemaMatch) {
         return `Invalid mesh.json configuration: ${schemaMatch[0]}\nCheck your mesh.json file for syntax errors.`;
     }
@@ -185,12 +192,17 @@ export function extractMeshErrorSummary(error: string): string {
 
     // Truncated "Building Mesh with config" error - Adobe returned incomplete error
     // This happens when mesh build fails but Adobe doesn't return the actual error details
-    if (/Building Mesh with config:.*\/$/.test(error) || /^Building Mesh with config:/.test(error)) {
-        return 'Mesh build failed. This is usually caused by:\n' +
+    if (
+        /Building Mesh with config:.*\/$/.test(error) ||
+        /^Building Mesh with config:/.test(error)
+    ) {
+        return (
+            'Mesh build failed. This is usually caused by:\n' +
             '• Invalid Commerce GraphQL endpoint URL\n' +
             '• Commerce instance not reachable from Adobe I/O\n' +
             '• Missing or invalid API credentials\n\n' +
-            'Check the Debug logs for more details.';
+            'Check the Debug logs for more details.'
+        );
     }
 
     // Try to extract the 💥 error line (the actual failure)

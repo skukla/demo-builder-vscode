@@ -76,7 +76,7 @@ User-confirmed 2026-07-15: the product noun for the custom, action-carrying inte
 
 #### Mesh create-vs-update remote probe + blank-error fix ([`2026-07-15-mesh-create-vs-update-remote-probe.md`](2026-07-15-mesh-create-vs-update-remote-probe.md))
 
-**READY — small `/rptc:fix`; found during (and blocks) the D3 live checks, but pre-existing on `develop`.** `deployMeshComponent` picks create-vs-update from project state only (`meshDeployment.ts:116`), so a NEW project pointed at a workspace that already carries a mesh runs `create` → *"already has a mesh"* → creation aborts. Fix: check the wizard's unpopulated `typedConfig.apiMesh` seam first, then the "already has a mesh" → retry-as-update fallback; also surface CLI stderr in the failure message (it currently logs a blank `Error:`). Workaround meanwhile: pick a fresh workspace.
+**✅ SHIPPED 2026-07-15** (same-day pull-forward — it blocked the D3 live checks). Landed the "already has a mesh" → one-shot retry-as-update fallback in `deployMeshComponent`, the blank-error fix (`formatAdobeCliError` trims the leading-arrow newline), and the review's inverse-gap find (`edsResetMeshHelper` sources `existingMeshId` from remote truth). Residual noted in the item: `createHandler`'s duplicate create pipeline + drifting signature detector (architecture-duplication candidate).
 
 #### Hybrid storefront — Tier 2 (B2B+B2C in one site) ([`hybrid-storefront-model/`](../plans/hybrid-storefront-model/overview.md) — still in `.rptc/plans/`)
 
