@@ -311,6 +311,93 @@ describe('AppBuilderComponentsList', () => {
 
             expect(screen.getByRole('button', { name: /redeploy/i })).toBeInTheDocument();
         });
+
+        it('applies an update-borne display name so a rename refreshes the row label live', () => {
+            // The rename handler rides the SAME per-row channel with the entry's
+            // current status plus the new name — the seeded map (init payload)
+            // never re-delivers, so the override must carry the label.
+            const handlers = captureMessageHandlers();
+            const project = projectWith({
+                'firefly-image-gen': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    name: 'Firefly Image Gen',
+                    source: { owner: 'skukla', repo: 'app-builder-shell' },
+                },
+            });
+
+            render(<AppBuilderComponentsList project={project} catalog={CATALOG} />);
+            expect(screen.getByTestId('status-card-Firefly Image Gen')).toBeInTheDocument();
+
+            act(() => {
+                handlers.get('appBuilderComponentStatusUpdate')?.({
+                    id: 'firefly-image-gen',
+                    status: 'deployed',
+                    name: 'Firefly Video Gen',
+                });
+            });
+
+            expect(screen.getByTestId('status-card-Firefly Video Gen')).toBeInTheDocument();
+            expect(screen.queryByTestId('status-card-Firefly Image Gen')).not.toBeInTheDocument();
+        });
+
+        it('keeps a RENAMED label when a later name-less push arrives (rename then redeploy)', () => {
+            // Deploy pushes omit `name` — the override merge must not wipe a
+            // prior rename's update-borne label back to the stale seeded one.
+            const handlers = captureMessageHandlers();
+            const project = projectWith({
+                'firefly-image-gen': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    name: 'Firefly Image Gen',
+                    source: { owner: 'skukla', repo: 'app-builder-shell' },
+                },
+            });
+
+            render(<AppBuilderComponentsList project={project} catalog={CATALOG} />);
+
+            act(() => {
+                handlers.get('appBuilderComponentStatusUpdate')?.({
+                    id: 'firefly-image-gen',
+                    status: 'deployed',
+                    name: 'Firefly Video Gen',
+                });
+            });
+            act(() => {
+                handlers.get('appBuilderComponentStatusUpdate')?.({
+                    id: 'firefly-image-gen',
+                    status: 'deployed',
+                });
+            });
+
+            expect(screen.getByTestId('status-card-Firefly Video Gen')).toBeInTheDocument();
+            expect(
+                screen.queryByTestId('status-card-Firefly Image Gen'),
+            ).not.toBeInTheDocument();
+        });
+
+        it('a name-less status update keeps the persisted display name (deploy pushes)', () => {
+            const handlers = captureMessageHandlers();
+            const project = projectWith({
+                'firefly-image-gen': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    name: 'Firefly Image Gen',
+                    source: { owner: 'skukla', repo: 'app-builder-shell' },
+                },
+            });
+
+            render(<AppBuilderComponentsList project={project} catalog={CATALOG} />);
+
+            act(() => {
+                handlers.get('appBuilderComponentStatusUpdate')?.({
+                    id: 'firefly-image-gen',
+                    status: 'deployed',
+                });
+            });
+
+            expect(screen.getByTestId('status-card-Firefly Image Gen')).toBeInTheDocument();
+        });
     });
 
     describe('remove confirmation guard', () => {

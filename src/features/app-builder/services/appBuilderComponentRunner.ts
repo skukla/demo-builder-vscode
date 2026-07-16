@@ -184,6 +184,7 @@ function meshState(
     return {
         kind: 'mesh',
         status: 'deployed',
+        name: entry.name,
         source: { owner: entry.source.owner, repo: entry.source.repo, branch: entry.source.branch },
         endpoint,
         lastDeployed: new Date().toISOString(),
@@ -201,6 +202,7 @@ function integrationState(
     return {
         kind: 'integration',
         status: 'deployed',
+        name: entry.name,
         source: { owner: entry.source.owner, repo: entry.source.repo, branch: entry.source.branch },
         url: data?.url,
         deployedUrls: data?.deployedUrls,
@@ -213,6 +215,7 @@ function errorState(entry: AppBuilderComponentCatalogEntry): AppBuilderComponent
     return {
         kind: entry.kind,
         status: 'error',
+        name: entry.name,
         source: { owner: entry.source.owner, repo: entry.source.repo, branch: entry.source.branch },
     };
 }
@@ -339,7 +342,9 @@ function entryFromState(
 ): AppBuilderComponentCatalogEntry {
     return {
         id,
-        name: id,
+        // Prefer the persisted display name (shell instances carry it) so a
+        // redeploy does not clobber it with the id.
+        name: state.name ?? id,
         description: '',
         kind: state.kind,
         source: {

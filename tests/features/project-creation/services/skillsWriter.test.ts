@@ -295,6 +295,49 @@ describe('skillsWriter', () => {
         });
     });
 
+    describe('extend-app-builder-app.md content (per-integration addressing)', () => {
+        // Shell instancing: a project can hold N AI-built integrations, each
+        // cloned into components/<id>/ with its own app.config.yaml and an
+        // isolated OpenWhisk package. The skill must address integrations
+        // per-instance, not assume a single custom app.
+        it('states that a project can hold multiple AI-built integrations', async () => {
+            await writeSkillFiles('/projects/test', makeEdsProject());
+
+            const content = writtenContent('extend-app-builder-app.md');
+            expect(content).toMatch(/multiple AI-built integrations/i);
+        });
+
+        it('addresses each integration by its components/<id>/ folder', async () => {
+            await writeSkillFiles('/projects/test', makeEdsProject());
+
+            const content = writtenContent('extend-app-builder-app.md');
+            expect(content).toContain('components/<id>/');
+            expect(content).toContain('app.config.yaml');
+        });
+
+        it('instructs the agent to confirm WHICH integration before editing', async () => {
+            await writeSkillFiles('/projects/test', makeEdsProject());
+
+            const content = writtenContent('extend-app-builder-app.md');
+            expect(content).toMatch(/which integration/i);
+        });
+
+        it('states that deploys are per-integration (own OpenWhisk package)', async () => {
+            await writeSkillFiles('/projects/test', makeEdsProject());
+
+            const content = writtenContent('extend-app-builder-app.md');
+            expect(content).toMatch(/per-integration/i);
+            expect(content).toMatch(/OpenWhisk|I\/O Runtime/i);
+        });
+
+        it('no longer frames the target as a single blank shell app', async () => {
+            await writeSkillFiles('/projects/test', makeEdsProject());
+
+            const content = writtenContent('extend-app-builder-app.md');
+            expect(content).not.toMatch(/the blank shell/i);
+        });
+    });
+
     describe('create-eds-project.md org-context guidance', () => {
         it('explains per-operation org targeting and that ORG_MISMATCH is non-retryable', async () => {
             await writeSkillFiles('/projects/test', makeEdsProject());

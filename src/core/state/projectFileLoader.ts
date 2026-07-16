@@ -51,6 +51,7 @@ export interface ProjectManifest {
     meshState?: Project['meshState'];
     appState?: Project['appState'];
     appBuilderComponents?: Project['appBuilderComponents'];
+    additionalConsoleApis?: string[];
     edsStorefrontState?: Project['edsStorefrontState'];
     edsStorefrontStatusSummary?: Project['edsStorefrontStatusSummary'];
     selectedPackage?: string;
@@ -123,6 +124,8 @@ export class ProjectFileLoader {
                 selectedBlockLibraries: manifest.selectedBlockLibraries,
                 customBlockLibraries: manifest.customBlockLibraries,
                 aiPrompts: manifest.aiPrompts,
+                // Absent on legacy manifests (pre-§E) — loads as undefined.
+                additionalConsoleApis: manifest.additionalConsoleApis,
                 aiContextVersion: manifest.aiContextVersion,
                 pinned: manifest.pinned,
             };

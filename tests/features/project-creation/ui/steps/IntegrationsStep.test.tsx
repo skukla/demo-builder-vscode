@@ -333,6 +333,117 @@ describe('IntegrationsStep — modal wiring', () => {
         ).toBeInTheDocument();
         expect(within(dialog).getByTestId('api-picker-stage')).toBeInTheDocument();
     });
+
+    it('threads the composed reserved ids to the blank naming stage (catalog blank + mesh ids)', () => {
+        renderStep(baseState());
+        fireEvent.click(screen.getByRole('button', { name: 'Add Integration' }));
+        const dialog = screen.getByRole('dialog');
+        fireEvent.click(within(dialog).getByRole('button', { name: /Build custom/ }));
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Continue' }));
+        const input = within(dialog).getByPlaceholderText(
+            'e.g. Order Sync, Salesforce CRM, Firefly Image Gen'
+        );
+        const DUPLICATE = 'That name is already used by another part of this project.';
+        // Slugs to 'app-builder-shell' — the blank catalog entry's own id.
+        fireEvent.change(input, { target: { value: 'App Builder Shell' } });
+        expect(within(dialog).getByText(DUPLICATE)).toBeInTheDocument();
+        // Slugs to 'commerce-paas-mesh' — the stack's mesh CATALOG id (wrong-repo guard).
+        fireEvent.change(input, { target: { value: 'Commerce PaaS Mesh' } });
+        expect(within(dialog).getByText(DUPLICATE)).toBeInTheDocument();
+        // A non-colliding name clears the error.
+        fireEvent.change(input, { target: { value: 'Order Sync' } });
+        expect(within(dialog).queryByText(DUPLICATE)).not.toBeInTheDocument();
+    });
+});
+
+describe('IntegrationsStep — Rename (AI-built instance rows only)', () => {
+    /** Two shell instances + an import + a mesh — the full affordance matrix. */
+    const INSTANCES_ADDED: Partial<WizardState> = {
+        selectedAppBuilderComponents: ['firefly-image-gen', 'order-sync', 'acme-widget'],
+        appBuilderComponentSources: {
+            'firefly-image-gen': {
+                owner: 'skukla',
+                repo: 'app-builder-shell',
+                branch: 'main',
+                name: 'Firefly Image Gen',
+            },
+            'order-sync': {
+                owner: 'skukla',
+                repo: 'app-builder-shell',
+                branch: 'main',
+                name: 'Order Sync',
+            },
+            'acme-widget': { owner: 'acme', repo: 'widget' },
+        },
+    };
+
+    it('shows Rename on instance rows only — never on import, catalog, or mesh rows', () => {
+        renderStep(
+            baseState({
+                ...INSTANCES_ADDED,
+                selectedAppBuilderComponents: [
+                    ...INSTANCES_ADDED.selectedAppBuilderComponents!,
+                    'cat-reco',
+                    MESH_ID,
+                ],
+            })
+        );
+        expect(
+            within(row('Firefly Image Gen')).getByRole('button', { name: 'Rename' })
+        ).toBeInTheDocument();
+        expect(within(row('widget')).queryByRole('button', { name: 'Rename' })).toBeNull();
+        expect(
+            within(row('Recommendations')).queryByRole('button', { name: 'Rename' })
+        ).toBeNull();
+        expect(within(row(MESH_NAME)).queryByRole('button', { name: 'Rename' })).toBeNull();
+    });
+
+    it('Rename opens the modal prefilled with the current name; Save writes sources[id].name ONLY', () => {
+        const { updateState } = renderStep(baseState(INSTANCES_ADDED));
+        fireEvent.click(within(row('Firefly Image Gen')).getByRole('button', { name: 'Rename' }));
+
+        const field = screen.getByRole('textbox');
+        expect(field).toHaveValue('Firefly Image Gen');
+
+        fireEvent.change(field, { target: { value: 'Firefly Video Gen' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+        // Display-name only: the id (source-map key), selection, and picks are untouched.
+        expect(updateState).toHaveBeenCalledWith({
+            appBuilderComponentSources: {
+                ...INSTANCES_ADDED.appBuilderComponentSources,
+                'firefly-image-gen': {
+                    owner: 'skukla',
+                    repo: 'app-builder-shell',
+                    branch: 'main',
+                    name: 'Firefly Video Gen',
+                },
+            },
+        });
+        // The modal closes after the commit.
+        expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    });
+
+    it("rejects another row's display name inline (Save stays disabled, nothing written)", () => {
+        const { updateState } = renderStep(baseState(INSTANCES_ADDED));
+        fireEvent.click(within(row('Firefly Image Gen')).getByRole('button', { name: 'Rename' }));
+
+        fireEvent.change(screen.getByRole('textbox'), { target: { value: 'order sync' } });
+        expect(screen.getByTestId('spectrum-textfield-error')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+        expect(updateState).not.toHaveBeenCalled();
+    });
+
+    it('Cancel discards the rename (no state write, modal closes)', () => {
+        const { updateState } = renderStep(baseState(INSTANCES_ADDED));
+        fireEvent.click(within(row('Order Sync')).getByRole('button', { name: 'Rename' }));
+
+        fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Something Else' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+        expect(updateState).not.toHaveBeenCalled();
+        expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    });
 });
 
 describe('IntegrationsStep — Remove routing', () => {

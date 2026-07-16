@@ -177,6 +177,117 @@ describe('appBuilderComponentCatalogLoader', () => {
         });
     });
 
+    describe('buildCustomIntegrationEntry (instance identity — shell instancing)', () => {
+        // The shell repo is a TEMPLATE: N named instances share one source but
+        // carry distinct instance ids (the sources-map key). The explicit id
+        // becomes a components/<id>/ folder and a deriveOwPackage input, so it
+        // is charset-gated like owner/repo.
+        const SHELL_SOURCE = {
+            owner: 'skukla',
+            repo: 'app-builder-shell',
+            name: 'Firefly Image Gen',
+        };
+
+        it('uses the explicit id (the sources-map key) instead of the owner-repo derivation', () => {
+            const entry = buildCustomIntegrationEntry(SHELL_SOURCE, 'firefly-image-gen');
+
+            expect(entry.id).toBe('firefly-image-gen');
+            expect(entry.kind).toBe('integration');
+            expect(entry.source).toEqual({
+                owner: 'skukla',
+                repo: 'app-builder-shell',
+                branch: 'main',
+            });
+        });
+
+        it('resolves the display name from source.name', () => {
+            const entry = buildCustomIntegrationEntry(SHELL_SOURCE, 'firefly-image-gen');
+
+            expect(entry.name).toBe('Firefly Image Gen');
+        });
+
+        it('falls back to the repo name when the source carries no name', () => {
+            const entry = buildCustomIntegrationEntry(
+                { owner: 'skukla', repo: 'app-builder-shell' },
+                'order-sync'
+            );
+
+            expect(entry.name).toBe('app-builder-shell');
+        });
+
+        it('uses source.name even without an explicit id (name resolution is unconditional)', () => {
+            const entry = buildCustomIntegrationEntry({
+                owner: 'acme',
+                repo: 'erp-bridge',
+                name: 'ERP Bridge',
+            });
+
+            expect(entry.id).toBe('acme-erp-bridge');
+            expect(entry.name).toBe('ERP Bridge');
+        });
+
+        it('produces two DISTINCT integration entries for two instances of the same shell source', () => {
+            const orderSync = buildCustomIntegrationEntry(
+                { owner: 'skukla', repo: 'app-builder-shell', name: 'Order Sync' },
+                'order-sync'
+            );
+            const firefly = buildCustomIntegrationEntry(SHELL_SOURCE, 'firefly-image-gen');
+
+            expect(orderSync.id).toBe('order-sync');
+            expect(firefly.id).toBe('firefly-image-gen');
+            expect(orderSync.id).not.toBe(firefly.id);
+            expect(orderSync.name).toBe('Order Sync');
+            expect(firefly.name).toBe('Firefly Image Gen');
+            expect(orderSync.kind).toBe('integration');
+            expect(firefly.kind).toBe('integration');
+        });
+
+        it('keeps the no-id call byte-identical to today (dashboard add-door pin)', () => {
+            const entry = buildCustomIntegrationEntry({ owner: 'acme-co', repo: 'my.app_2' });
+
+            expect(entry).toEqual({
+                id: 'acme-co-my.app_2',
+                name: 'my.app_2',
+                description: 'Custom App Builder component from acme-co/my.app_2',
+                kind: 'integration',
+                source: { owner: 'acme-co', repo: 'my.app_2', branch: 'main' },
+            });
+        });
+
+        it('accepts explicit ids within the GitHub-name charset', () => {
+            expect(
+                buildCustomIntegrationEntry({ owner: 'acme', repo: 'app' }, 'My.App_2-x').id
+            ).toBe('My.App_2-x');
+        });
+
+        it('rejects an explicit id with whitespace or shell metacharacters (folder + ow.package input)', () => {
+            expect(() => buildCustomIntegrationEntry({ owner: 'acme', repo: 'app' }, 'a b')).toThrow(
+                /invalid/i
+            );
+            expect(() =>
+                buildCustomIntegrationEntry({ owner: 'acme', repo: 'app' }, 'x;rm')
+            ).toThrow(/invalid/i);
+        });
+
+        it('rejects an explicit id carrying path traversal', () => {
+            expect(() =>
+                buildCustomIntegrationEntry({ owner: 'acme', repo: 'app' }, '../up')
+            ).toThrow(/invalid/i);
+            expect(() => buildCustomIntegrationEntry({ owner: 'acme', repo: 'app' }, '..')).toThrow(
+                /invalid/i
+            );
+            expect(() => buildCustomIntegrationEntry({ owner: 'acme', repo: 'app' }, '.')).toThrow(
+                /invalid/i
+            );
+        });
+
+        it('rejects an empty explicit id', () => {
+            expect(() => buildCustomIntegrationEntry({ owner: 'acme', repo: 'app' }, '')).toThrow(
+                /invalid/i
+            );
+        });
+    });
+
     describe('seed catalog ↔ schema validity', () => {
         const catalog = JSON.parse(
             fs.readFileSync(path.join(CONFIG_DIR, 'app-builder-components.json'), 'utf-8')

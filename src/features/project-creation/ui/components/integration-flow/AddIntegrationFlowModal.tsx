@@ -29,6 +29,7 @@ import { isAdobeSignedIn, isMeshSelected } from '../../steps/tileStatus';
 import type { UseProjectBuilderReturn } from '../../steps/useProjectBuilder';
 import { meshKindOffered, type FlowMode } from './flowStages';
 import { ApiPickerStage } from './stages/ApiPickerStage';
+import { BlankStage } from './stages/BlankStage';
 import { CatalogStage } from './stages/CatalogStage';
 import { CustomStage } from './stages/CustomStage';
 import { DestinationStage } from './stages/DestinationStage';
@@ -79,6 +80,11 @@ export interface AddIntegrationFlowModalProps {
     catalog: AppBuilderComponentCatalogEntry[];
     /** The blank starter app (the "Build custom" kind seeds it), if any. */
     blankComponent?: AppBuilderComponentCatalogEntry;
+    /**
+     * The composed collision domain for blank instance naming (buildReservedIds —
+     * the host assembles it from selections, sources, catalog ids, and addons).
+     */
+    reservedIds: Set<string>;
     /** The unchanged useProjectBuilder handlers the finish commits route through. */
     builder: Pick<
         UseProjectBuilderReturn,
@@ -132,6 +138,18 @@ function StageBody({
                 selectedIds={selectedIds}
                 source={draft.customSource}
                 onSourceChange={flow.setCustomSource}
+            />
+        );
+    }
+    if (stage === 'source-blank') {
+        // The instance-naming stage: a valid, non-colliding name emits the
+        // {id, name} instance into the draft (the stage gate); anything else
+        // clears it and re-disables Continue.
+        return (
+            <BlankStage
+                reservedIds={props.reservedIds}
+                instance={draft.instance}
+                onInstanceChange={flow.setInstance}
             />
         );
     }

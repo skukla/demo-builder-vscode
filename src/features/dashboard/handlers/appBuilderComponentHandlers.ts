@@ -37,6 +37,11 @@ import {
     buildRunnerDepsContext,
 } from '@/features/app-builder/services/appBuilderComponentRunnerDeps';
 import {
+    getAppBuilderComponent,
+    listAppBuilderComponents,
+    setAppBuilderComponent,
+} from '@/features/app-builder/services/appBuilderComponentState';
+import {
     buildCustomIntegrationEntry,
     getAppBuilderComponentEntry,
 } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
@@ -113,20 +118,41 @@ function needsUserInputs(entry: AppBuilderComponentCatalogEntry): boolean {
 }
 
 /**
+ * The live per-row status vocabulary pushed over the keyed
+ * `appBuilderComponentStatusUpdate` channel: the persisted union plus the
+ * transient 'deploying'. Shared with the channel's sender
+ * (showDashboard's sendAppBuilderComponentStatusUpdate).
+ */
+export type AppBuilderComponentRowStatus =
+    | 'deploying'
+    | 'deployed'
+    | 'stale'
+    | 'error'
+    | 'not-deployed';
+
+/**
  * Post a per-row status update via the dashboard command. Imported LAZILY so
  * this handler module never statically
  * pulls the webview-command class into the module-load graph (which would chain
  * BaseWebviewCommand into handler-only test contexts).
+ *
+ * `name` refreshes the row's display label on the same channel (rename path).
  */
 async function postRowStatus(
     id: string,
-    status: 'deploying' | 'deployed' | 'error' | 'not-deployed',
+    status: AppBuilderComponentRowStatus,
     message?: string,
+    name?: string,
 ): Promise<void> {
     const { ProjectDashboardWebviewCommand } = await import(
         '@/features/dashboard/commands/showDashboard'
     );
-    await ProjectDashboardWebviewCommand.sendAppBuilderComponentStatusUpdate(id, status, message);
+    await ProjectDashboardWebviewCommand.sendAppBuilderComponentStatusUpdate(
+        id,
+        status,
+        message,
+        name,
+    );
 }
 
 /**
@@ -242,6 +268,95 @@ export const handleRemoveAppBuilderComponent: MessageHandler<{ id?: string }> = 
     const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project));
     const result = await removeAppBuilderComponent(project, id, deps);
     return result.success ? { success: true } : { success: false, error: result.error };
+};
+
+/**
+ * validateInput for the rename input box: reject empty/whitespace-only names
+ * and (wizard-parity with RenameIntegrationModal) case-insensitive trimmed
+ * duplicates of the OTHER integration entries' display names (`name ?? id`).
+ * The entry's own current name stays allowed (a no-op rename).
+ */
+function validateRenameInput(value: string, takenNames: string[]): string | undefined {
+    const trimmed = value.trim();
+    if (trimmed === '') {
+        return 'Enter a name.';
+    }
+    const lowered = trimmed.toLowerCase();
+    if (takenNames.some((taken) => taken.trim().toLowerCase() === lowered)) {
+        return 'That name is already used by another integration.';
+    }
+    return undefined;
+}
+
+/** The OTHER integration entries' display names (`name ?? id`) — the rename collision domain. */
+function takenIntegrationNames(project: Project, id: string): string[] {
+    return listAppBuilderComponents(project)
+        .filter((entry) => entry.kind === 'integration' && entry.id !== id)
+        .map((entry) => entry.name ?? entry.id);
+}
+
+/**
+ * Handle 'renameAppBuilderComponent' — display-name rename for a deployed
+ * integration (shell instancing Step 10). The id (map key, folder, ow.package)
+ * is IMMUTABLE; only the keyed entry's `name` changes. Mesh entries keep their
+ * fixed "API Mesh" identity and are rejected. A LOCAL metadata write: no Adobe
+ * guards (rename works offline). The extension owns the input surface
+ * (showInputBox, prefilled with the current label); cancel writes nothing.
+ */
+export const handleRenameAppBuilderComponent: MessageHandler<{ id?: string }> = async (
+    context,
+    payload,
+) => {
+    const id = payload?.id;
+    if (!id) {
+        return {
+            success: false,
+            error: 'AppBuilderComponent id is required',
+            code: ErrorCode.CONFIG_INVALID,
+        };
+    }
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
+    }
+
+    const entry = getAppBuilderComponent(project, id);
+    if (!entry || entry.kind !== 'integration') {
+        return {
+            success: false,
+            error: 'Only integrations can be renamed',
+            code: ErrorCode.INVALID_OPERATION,
+        };
+    }
+
+    // Pre-built CATALOG integrations are excluded: the runner resolves
+    // catalog-first and rewrites `name: entry.name` on every redeploy, so a
+    // rename would be silently reverted. Same exclusion the settings
+    // serializer applies (deriveAppBuilderComponentSources).
+    if (getAppBuilderComponentEntry(id) !== undefined) {
+        return {
+            success: false,
+            error: 'Pre-built catalog integrations cannot be renamed',
+            code: ErrorCode.INVALID_OPERATION,
+        };
+    }
+
+    const takenNames = takenIntegrationNames(project, id);
+    const raw = await vscode.window.showInputBox({
+        prompt: 'New integration name',
+        value: entry.name ?? id,
+        validateInput: (value) => validateRenameInput(value, takenNames),
+    });
+    if (raw === undefined) {
+        return { success: true }; // cancelled — nothing written
+    }
+
+    const name = raw.trim();
+    await context.stateManager.saveProject(setAppBuilderComponent(project, id, { ...entry, name }));
+    // Same per-row channel the deploy path pushes — the status is unchanged
+    // (the entry's current one); the name rides along to refresh the row label.
+    await postRowStatus(id, entry.status, undefined, name);
+    return { success: true };
 };
 
 /**

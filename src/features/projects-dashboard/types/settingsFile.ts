@@ -106,9 +106,13 @@ export interface SettingsFile {
     /**
      * Custom GitHub sources for selected App Builder integrations, keyed by
      * integration id (custom-URL entries only). Carried so edit mode can
-     * round-trip custom integrations.
+     * round-trip custom integrations. `name` carries the user-facing display
+     * name for shell instances.
      */
-    appBuilderComponentSources?: Record<string, { owner: string; repo: string; branch?: string }>;
+    appBuilderComponentSources?: Record<
+        string,
+        { owner: string; repo: string; branch?: string; name?: string }
+    >;
     /**
      * Adobe Console API sdk codes subscribed beyond catalog `requiredApis`
      * (wizard free picks + runtime `add_console_apis` additions). Seeds the

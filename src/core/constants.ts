@@ -29,7 +29,11 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // mesh/headless projects need a regenerate to receive it.
 // v3: extend-app-builder-app skill + AGENTS.md "Adding Adobe API Access" section
 // (the list_console_apis / add_console_apis loop) for App Builder-adjacent projects.
-export const AI_CONTEXT_VERSION = 3;
+// v4: per-integration addressing (shell instancing) — a project can hold N AI-built
+// integrations, each under components/<id>/ with its own app.config.yaml + isolated
+// OpenWhisk package; extend-app-builder-app rewritten + AGENTS.md "App Builder
+// Integrations" section added (confirm WHICH integration before editing).
+export const AI_CONTEXT_VERSION = 4;
 
 /**
  * Component IDs for standardized component instance access

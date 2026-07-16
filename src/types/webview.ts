@@ -57,7 +57,10 @@ export interface WizardState {
     selectedBlockLibraries?: string[]; // Selected block library IDs (e.g., ['isle5', 'demo-team-blocks'])
     selectedOptionalDependencies?: string[]; // Selected optional dependency IDs (e.g., mesh component IDs from stack.optionalDependencies)
     selectedAppBuilderComponents?: string[]; // Selected catalog appBuilderComponent IDs (D2; intent the dashboard reads). Mesh dual-flows through selectedOptionalDependencies for step-filtering — see appBuilderComponentSelectionState.ts
-    appBuilderComponentSources?: Record<string, { owner: string; repo: string; branch?: string }>; // Maps a selected integration id → its custom GitHub source (for custom-URL entries; catalog entries resolve from config and need no source here)
+    appBuilderComponentSources?: Record<
+        string,
+        { owner: string; repo: string; branch?: string; name?: string }
+    >; // Maps a selected integration id → its custom GitHub source (for custom-URL entries; catalog entries resolve from config and need no source here). `name` = user-facing display name for shell instances.
     selectedConsoleApis?: Record<string, string[]>; // Free Console API picks (sdk codes) per integration id. Locked/required codes are derived at render time, never stored. Reserved key '__existing__' carries a project's pre-existing additionalConsoleApis in edit mode (joins the serialization union, never shown per-row).
     customBlockLibraries?: CustomBlockLibrary[]; // Custom block libraries added by URL
     packageConfigDefaults?: Record<string, string>; // Package-specific config defaults (e.g., store codes)

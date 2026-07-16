@@ -33,6 +33,7 @@ The `Project` type (`src/types/base.ts`) contains these key state containers:
 | `componentConfigs` | Configuration | Environment variables per component |
 | `componentSelections` | User choices | Which components were selected |
 | `appBuilderComponents` | App Builder deploy state (keyed) | Mesh endpoint + staleness baseline, per-integration URLs/status |
+| `additionalConsoleApis` | User-picked APIs | Extra Adobe Console APIs picked beyond the required sets |
 | `meshState` | LEGACY-READ-ONLY | Nothing — migration input for old manifests |
 | `appState` | LEGACY-READ-ONLY | Nothing — migration input for old manifests |
 | `frontendEnvState` | Config snapshot | Frontend env vars at demo start |
@@ -116,6 +117,26 @@ in Step 07).
 `getIntegrationAppBuilderComponents` / `listAppBuilderComponents`
 (appBuilderComponentState) — never the legacy singletons directly (enforced by
 `tests/core/state/singularStateAccessGuard.test.ts`).
+
+---
+
+### additionalConsoleApis
+
+**Purpose**: The extra Adobe Console APIs the user picked beyond each
+integration's required set. Unioned with the always-on set when the workspace
+credential's subscriptions are reconciled.
+
+**Write Authority**:
+- `src/features/project-creation/` wizard creation union (`unionConsoleApiPicks`
+  → `buildInitialProject`)
+- The `add_console_apis` MCP handler
+- The dashboard Manage-APIs reconcile
+
+**Persistence**: Manifest-persisted since the §E fix (2026-07-16); absent on
+legacy manifests (loads as empty). Unlike integration sources — which are
+DERIVED from the keyed `appBuilderComponents` map — the picked APIs are NOT
+derivable from anything else. Before the fix they lived only in memory, so a
+reload lost them and the next redeploy silently unsubscribed them.
 
 ---
 

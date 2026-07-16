@@ -27,9 +27,12 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { getAvailableAppBuilderComponents } from '../../services/appBuilderComponentCatalogLoader';
 import {
     AddIntegrationFlowModal,
+    buildReservedIds,
     IntegrationResultRow,
+    RenameIntegrationModal,
     resolveIntegrationRows,
     type ApiEditTarget,
+    type BlankInstance,
     type FlowMode,
     type IntegrationRow,
 } from '../components/integration-flow';
@@ -44,7 +47,7 @@ import type { BaseStepProps } from '@/types/wizard';
 /** Stable empty defaults for catalog props (avoids the infinite-re-render gotcha). */
 const EMPTY_PACKAGES: DemoPackage[] = [];
 const EMPTY_STACKS: Stack[] = [];
-/** Stable empty picks seed for an integration with no API selection yet. */
+/** Stable empty string-array default (API picks seed, reserved-id inputs). */
 const EMPTY_PICKS: string[] = [];
 
 export interface IntegrationsStepProps extends BaseStepProps {
@@ -93,7 +96,11 @@ export function IntegrationsStep({
     stacks = EMPTY_STACKS,
 }: IntegrationsStepProps): React.ReactElement {
     const builder = useProjectBuilder(state, updateState, { packages, stacks });
-    const { onAppBuilderComponentToggle, onRemoveAppBuilderComponent } = builder;
+    const {
+        onAppBuilderComponentToggle,
+        onRemoveAppBuilderComponent,
+        onRenameAppBuilderComponent,
+    } = builder;
 
     // The one modal, opened in 'add' (launchpad), 'destination' (row Set up/Change),
     // or 'api-edit' (a custom/import row's APIs "Change" → re-open the picker).
@@ -135,15 +142,19 @@ export function IntegrationsStep({
         () => stacks.find((candidate) => candidate.id === state.selectedStack),
         [stacks, state.selectedStack],
     );
+    // ALL stack-compatible catalog entries (mesh + integration + blank) — the
+    // reserved-id domain needs every catalog id (a blank-instance name slugging
+    // to one would clone the wrong repo via the executor's catalog-first lookup).
+    const availableEntries = useMemo<AppBuilderComponentCatalogEntry[]>(
+        () => getAvailableAppBuilderComponents(stack?.backend ?? '', stack?.frontend ?? ''),
+        [stack],
+    );
     // Integration-kind entries, split: the FINISHED catalog (the "Pre-built
     // integration" gallery) vs. the blank starter app (the "Build custom"
     // card) — the blank is NOT a pre-built integration and never shows in the gallery.
     const integrationEntries = useMemo<AppBuilderComponentCatalogEntry[]>(
-        () =>
-            getAvailableAppBuilderComponents(stack?.backend ?? '', stack?.frontend ?? '').filter(
-                (entry) => entry.kind === 'integration',
-            ),
-        [stack],
+        () => availableEntries.filter((entry) => entry.kind === 'integration'),
+        [availableEntries],
     );
     const catalog = useMemo(
         () => integrationEntries.filter((entry) => !entry.blank),
@@ -152,6 +163,32 @@ export function IntegrationsStep({
     const blankComponent = useMemo(
         () => integrationEntries.find((entry) => entry.blank),
         [integrationEntries],
+    );
+
+    // The blank-naming collision domain: current selections + custom sources +
+    // every stack-compatible catalog id (incl. blank + mesh) + selected addons +
+    // optional deps. Component ids and the '__existing__' key are baked into
+    // buildReservedIds itself.
+    const reservedIds = useMemo(
+        () =>
+            buildReservedIds({
+                selectedIntegrationIds: state.selectedAppBuilderComponents ?? EMPTY_PICKS,
+                sourceIds: Object.keys(state.appBuilderComponentSources ?? {}),
+                catalogIds: [
+                    ...availableEntries.map((entry) => entry.id),
+                    ...(meshComponent ? [meshComponent.id] : []),
+                ],
+                selectedAddons: state.selectedAddons ?? EMPTY_PICKS,
+                selectedOptionalDependencies: state.selectedOptionalDependencies ?? EMPTY_PICKS,
+            }),
+        [
+            state.selectedAppBuilderComponents,
+            state.appBuilderComponentSources,
+            state.selectedAddons,
+            state.selectedOptionalDependencies,
+            availableEntries,
+            meshComponent,
+        ],
     );
 
     // Resolve rows against the FULL entry list (incl. the blank starter) so a
@@ -174,6 +211,19 @@ export function IntegrationsStep({
             onRemoveAppBuilderComponent(row.id);
         },
         [meshComponent, onAppBuilderComponentToggle, onRemoveAppBuilderComponent],
+    );
+
+    // The row being renamed (AI-built instance rows only). The rename modal is
+    // display-name only: commit updates sources[id].name in place — id, picks,
+    // and selection are immutable.
+    const [renameTarget, setRenameTarget] = useState<BlankInstance | null>(null);
+    const closeRename = useCallback((): void => setRenameTarget(null), []);
+    const commitRename = useCallback(
+        (name: string): void => {
+            if (renameTarget) onRenameAppBuilderComponent(renameTarget.id, name);
+            setRenameTarget(null);
+        },
+        [renameTarget, onRenameAppBuilderComponent],
     );
 
     return (
@@ -199,6 +249,11 @@ export function IntegrationsStep({
                             onChangeDestination={openDestination}
                             onRemove={() => onRemoveRow(row)}
                             onChangeApis={() => openEditApis(row)}
+                            onRename={
+                                row.renamable
+                                    ? () => setRenameTarget({ id: row.id, name: row.name })
+                                    : undefined
+                            }
                         />
                     ))}
                     {rows.length > 0 && (
@@ -220,7 +275,18 @@ export function IntegrationsStep({
                 meshComponent={meshComponent}
                 catalog={catalog}
                 blankComponent={blankComponent}
+                reservedIds={reservedIds}
                 builder={builder}
+            />
+            <RenameIntegrationModal
+                isOpen={renameTarget !== null}
+                currentName={renameTarget?.name ?? ''}
+                // Every OTHER row's display name is taken (mesh/catalog names included).
+                takenNames={rows
+                    .filter((row) => row.id !== renameTarget?.id)
+                    .map((row) => row.name)}
+                onClose={closeRename}
+                onRename={commitRename}
             />
         </div>
     );

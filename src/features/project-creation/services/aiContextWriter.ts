@@ -76,6 +76,7 @@ export function generateAgentsMd(project: Project, stacksConfig: Stack[]): strin
     sections.push(buildComponentRepositories(project));
     sections.push(buildBlockLibraries(project));
     sections.push(buildAdobeIo(project));
+    sections.push(buildAppBuilderIntegrations(project));
     sections.push(buildConsoleApiAccess(project));
     sections.push(buildTryAskingClaude(project));
     sections.push(buildReportingStyle());
@@ -409,6 +410,30 @@ function buildAdobeIo(project: Project): string {
     lines.push('> re-login to switch account), then proceed.');
 
     return lines.join('\n');
+}
+
+/**
+ * Per-integration addressing for AI-built App Builder integrations — only for
+ * App Builder-adjacent projects (same gate as the Console-API section). A
+ * project can hold N integrations, each cloned into its own
+ * `components/<id>/` folder; agents must confirm the target before editing.
+ */
+function buildAppBuilderIntegrations(project: Project): string {
+    if (!projectNeedsAppBuilderTooling(project)) return '';
+
+    return [
+        '## App Builder Integrations',
+        'A project can hold multiple AI-built App Builder integrations. Each lives in its own',
+        '`components/<id>/` folder with its own `app.config.yaml`, and each deploys into its own',
+        'isolated OpenWhisk (I/O Runtime) package.',
+        '',
+        '- Before editing, confirm WHICH integration (`components/<id>/`) the user means — ask',
+        '  when more than one exists or the target is ambiguous.',
+        "- Deploys are per-integration: run them from that integration's own `components/<id>/`",
+        "  directory; deploying one integration never touches another's package.",
+        '',
+        'See the `extend-app-builder-app` skill for the full build loop.',
+    ].join('\n');
 }
 
 /**

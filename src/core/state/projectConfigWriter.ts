@@ -125,6 +125,12 @@ export class ProjectConfigWriter {
             if (project.aiPrompts?.length) {
                 manifest.aiPrompts = project.aiPrompts;
             }
+            // Ad-hoc Console API picks beyond requiredApis (§E) — NOT derivable,
+            // and the dashboard's full-union subscription PUT reads it: without
+            // persistence a post-reload redeploy silently drops the user's picks.
+            if (project.additionalConsoleApis?.length) {
+                manifest.additionalConsoleApis = project.additionalConsoleApis;
+            }
             // Keyed App Builder component state (ADR-011 D3 Step 01) — the durable
             // model that replaces the singular meshState/appState (retired in Step 07).
             // Omitted when empty so legacy manifests keep loading via the read-side

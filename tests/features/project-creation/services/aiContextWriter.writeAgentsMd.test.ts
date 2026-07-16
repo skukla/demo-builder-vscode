@@ -354,6 +354,33 @@ describe('aiContextWriter', () => {
 
                 expect(result).not.toContain('## Adding Adobe API Access');
             });
+
+            it('includes the App Builder Integrations section for App Builder-adjacent projects', () => {
+                // Shell instancing: N AI-built integrations, each under
+                // components/<id>/ with its own app.config.yaml + isolated
+                // OpenWhisk package. AGENTS.md must teach per-integration
+                // addressing (same gate as the Console-API section).
+                const result = generateAgentsMd(makeEdsProject(), STACKS);
+
+                expect(result).toContain('## App Builder Integrations');
+                expect(result).toMatch(/multiple AI-built/i);
+                expect(result).toContain('components/<id>/');
+                expect(result).toContain('app.config.yaml');
+            });
+
+            it('instructs the agent to confirm WHICH integration before editing, deploys per-integration', () => {
+                const result = generateAgentsMd(makeEdsProject(), STACKS);
+
+                expect(result).toMatch(/which integration/i);
+                expect(result).toMatch(/per-integration/i);
+            });
+
+            it('omits the App Builder Integrations section for bare projects', () => {
+                const result = generateAgentsMd(makeHeadlessProject(), STACKS);
+
+                expect(result).not.toContain('## App Builder Integrations');
+                expect(result).not.toContain('components/<id>/');
+            });
         });
     });
 

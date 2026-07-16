@@ -29,6 +29,14 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
     },
 }));
 
+// Catalog lookup (rename gate): undefined by default — instance/custom-import
+// ids never resolve in the catalog, so rows stay renamable unless a test
+// makes the id a pre-built catalog entry.
+const mockGetAppBuilderComponentEntry = jest.fn();
+jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader', () => ({
+    getAppBuilderComponentEntry: (...a: unknown[]) => mockGetAppBuilderComponentEntry(...a),
+}));
+
 jest.mock('@adobe/react-spectrum', () => ({
     View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
     Flex: ({ children, ...props }: any) => (
@@ -271,6 +279,174 @@ describe('AppBuilderComponentRow', () => {
 
             expect(onManageApis).toHaveBeenCalledTimes(1);
             expect(getClient().postMessage).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('display name (shell instancing — Step 7)', () => {
+        it('deployed label prefers the persisted display name', () => {
+            render(
+                <AppBuilderComponentRow
+                    appBuilderComponent={row({
+                        id: 'firefly-image-gen',
+                        name: 'Firefly Image Gen',
+                        status: 'deployed',
+                        url: 'https://firefly.example.com',
+                    })}
+                    onRemove={jest.fn()}
+                    onManageApis={jest.fn()}
+                />
+            );
+
+            expect(screen.getByTestId('status-card-Firefly Image Gen')).toBeInTheDocument();
+            expect(screen.queryByTestId('status-card-firefly-image-gen')).not.toBeInTheDocument();
+        });
+
+        it('deployed label falls back to the id when no name is persisted', () => {
+            render(
+                <AppBuilderComponentRow
+                    appBuilderComponent={row({
+                        id: 'erp-sync',
+                        status: 'deployed',
+                        url: 'https://erp.example.com',
+                    })}
+                    onRemove={jest.fn()}
+                    onManageApis={jest.fn()}
+                />
+            );
+
+            expect(screen.getByTestId('status-card-erp-sync')).toBeInTheDocument();
+        });
+
+        it('error label prefers the persisted display name', () => {
+            render(
+                <AppBuilderComponentRow
+                    appBuilderComponent={row({
+                        id: 'firefly-image-gen',
+                        name: 'Firefly Image Gen',
+                        status: 'error',
+                    })}
+                    message="boom"
+                    onRemove={jest.fn()}
+                    onManageApis={jest.fn()}
+                />
+            );
+
+            expect(screen.getByTestId('status-card-Firefly Image Gen')).toBeInTheDocument();
+        });
+
+        it('error label falls back to the id when no name is persisted', () => {
+            render(
+                <AppBuilderComponentRow
+                    appBuilderComponent={row({ id: 'erp-sync', status: 'error' })}
+                    message="boom"
+                    onRemove={jest.fn()}
+                    onManageApis={jest.fn()}
+                />
+            );
+
+            expect(screen.getByTestId('status-card-erp-sync')).toBeInTheDocument();
+        });
+
+        it('id-scoped messages keep dispatching the id (never the display name)', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(
+                <AppBuilderComponentRow
+                    appBuilderComponent={row({
+                        id: 'firefly-image-gen',
+                        name: 'Firefly Image Gen',
+                        status: 'deployed',
+                        url: 'https://firefly.example.com',
+                    })}
+                    onRemove={jest.fn()}
+                    onManageApis={jest.fn()}
+                />
+            );
+
+            await user.click(screen.getByRole('button', { name: /redeploy/i }));
+
+            expect(getClient().postMessage).toHaveBeenCalledWith('redeployAppBuilderComponent', {
+                id: 'firefly-image-gen',
+            });
+        });
+    });
+
+    describe('Rename action (shell instancing — Step 10, dashboard rename)', () => {
+        const deployed = row({
+            id: 'firefly-image-gen',
+            name: 'Firefly Image Gen',
+            status: 'deployed',
+            url: 'https://firefly.example.com',
+        });
+
+        it('renders a Rename action when deployed and posts renameAppBuilderComponent with the id', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(
+                <AppBuilderComponentRow
+                    appBuilderComponent={deployed}
+                    onRemove={jest.fn()}
+                    onManageApis={jest.fn()}
+                />
+            );
+
+            await user.click(screen.getByRole('button', { name: /rename/i }));
+
+            // The extension owns the input surface (showInputBox) — the row only
+            // dispatches the id-scoped message, never the display name.
+            expect(getClient().postMessage).toHaveBeenCalledWith('renameAppBuilderComponent', {
+                id: 'firefly-image-gen',
+            });
+        });
+
+        it('offers no Rename for a pre-built CATALOG integration (redeploy would revert it)', () => {
+            // The runner resolves catalog-first and rewrites `name: entry.name`
+            // on redeploy — a catalog-id rename would be silently reverted.
+            mockGetAppBuilderComponentEntry.mockReturnValue({
+                id: 'erp-sync',
+                name: 'ERP Sync',
+                kind: 'integration',
+            });
+            render(
+                <AppBuilderComponentRow
+                    appBuilderComponent={row({
+                        id: 'erp-sync',
+                        status: 'deployed',
+                        url: 'https://erp.example.com',
+                    })}
+                    onRemove={jest.fn()}
+                    onManageApis={jest.fn()}
+                />
+            );
+
+            expect(screen.queryByRole('button', { name: /rename/i })).not.toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /redeploy/i })).toBeInTheDocument();
+        });
+
+        it('offers no Rename for a mesh-kind entry (fixed "API Mesh" identity)', () => {
+            render(
+                <AppBuilderComponentRow
+                    appBuilderComponent={row({
+                        kind: 'mesh',
+                        status: 'deployed',
+                        url: 'https://mesh.example.com',
+                    })}
+                    onRemove={jest.fn()}
+                    onManageApis={jest.fn()}
+                />
+            );
+
+            expect(screen.queryByRole('button', { name: /rename/i })).not.toBeInTheDocument();
+        });
+
+        it('offers no Rename while not-deployed (deployed/stale rows only, like Manage APIs)', () => {
+            render(
+                <AppBuilderComponentRow
+                    appBuilderComponent={row({ status: 'not-deployed' })}
+                    onRemove={jest.fn()}
+                    onManageApis={jest.fn()}
+                />
+            );
+
+            expect(screen.queryByRole('button', { name: /rename/i })).not.toBeInTheDocument();
         });
     });
 
