@@ -75,7 +75,7 @@ the dashboard action first; add the MCP tool later (see the `mcp-tool-authoring`
   build artifacts.
 - Origin-gated: only blank-shell-built apps promote; imported/catalog apps don't.
 - Reuse the existing GitHub plumbing (auth, repo create, org picker) — don't re-derive.
-- Singular-app model: a workspace holds at most one custom app, so this acts on that one app.
+- Per-id model (superseded premise): ADR-011 D3 made integrations N-per-workspace and keyed by id — this action targets the ONE blank-shell-built integration by its component id, not "the" singular app.
 
 ## Kickoff prompt
 > Implement `promote_app` per `.rptc/backlog/2026-07-13-promote-app-to-repo.md`: a dashboard action

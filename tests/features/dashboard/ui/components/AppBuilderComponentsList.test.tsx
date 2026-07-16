@@ -12,7 +12,7 @@
  */
 
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AppBuilderComponentsList } from '@/features/dashboard/ui/components/AppBuilderComponentsList';
 import type { Project } from '@/types';
@@ -26,6 +26,19 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
         request: jest.fn(() => new Promise(() => {})),
     },
 }));
+
+/** Capture onMessage subscriptions so tests can push live row-status updates. */
+function captureMessageHandlers(): Map<string, (data: unknown) => void> {
+    const handlers = new Map<string, (data: unknown) => void>();
+    const { webviewClient } = require('@/core/ui/utils/WebviewClient');
+    (webviewClient.onMessage as jest.Mock).mockImplementation(
+        (type: string, handler: (data: unknown) => void) => {
+            handlers.set(type, handler);
+            return jest.fn();
+        },
+    );
+    return handlers;
+}
 
 jest.mock('@adobe/react-spectrum', () => ({
     View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
@@ -177,6 +190,127 @@ describe('AppBuilderComponentsList', () => {
             screen.getByRole('button', { name: /add an App Builder component/i })
         ).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /redeploy/i })).not.toBeInTheDocument();
+    });
+
+    describe('mesh row slot (D3 Step 08 — mesh folded into the list)', () => {
+        it('renders the supplied meshRow FIRST, before integration rows', () => {
+            const project = projectWith({
+                'erp-sync': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'acme', repo: 'erp-sync' },
+                },
+            });
+
+            render(
+                <AppBuilderComponentsList
+                    project={project}
+                    catalog={CATALOG}
+                    meshRow={<div data-testid="mesh-row" />}
+                />,
+            );
+
+            const meshRow = screen.getByTestId('mesh-row');
+            const integrationRedeploy = screen.getByRole('button', { name: /redeploy/i });
+            // The mesh row precedes the integration rows in document order.
+            expect(
+                meshRow.compareDocumentPosition(integrationRedeploy) &
+                    Node.DOCUMENT_POSITION_FOLLOWING,
+            ).toBeTruthy();
+        });
+
+        it('renders no mesh row when the slot is not supplied', () => {
+            render(<AppBuilderComponentsList project={projectWith({})} catalog={CATALOG} />);
+
+            expect(screen.queryByTestId('mesh-row')).not.toBeInTheDocument();
+        });
+    });
+
+    describe('empty state', () => {
+        it('shows the empty-state message when there are no rows at all', () => {
+            render(<AppBuilderComponentsList project={projectWith({})} catalog={CATALOG} />);
+
+            expect(screen.getByText(/no integrations yet/i)).toBeInTheDocument();
+        });
+
+        it('hides the empty-state message when a mesh row is present', () => {
+            render(
+                <AppBuilderComponentsList
+                    project={projectWith({})}
+                    catalog={CATALOG}
+                    meshRow={<div data-testid="mesh-row" />}
+                />,
+            );
+
+            expect(screen.queryByText(/no integrations yet/i)).not.toBeInTheDocument();
+        });
+
+        it('hides the empty-state message when an integration row is present', () => {
+            const project = projectWith({
+                'erp-sync': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'acme', repo: 'erp-sync' },
+                },
+            });
+
+            render(<AppBuilderComponentsList project={project} catalog={CATALOG} />);
+
+            expect(screen.queryByText(/no integrations yet/i)).not.toBeInTheDocument();
+        });
+    });
+
+    describe('live per-row status updates (appBuilderComponentStatusUpdate)', () => {
+        it('flips ONLY the addressed row to deploying with the live message', () => {
+            const handlers = captureMessageHandlers();
+            const project = projectWith({
+                'erp-sync': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'acme', repo: 'erp-sync' },
+                },
+                'firefly-shell': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'acme', repo: 'firefly-shell' },
+                },
+            });
+
+            render(<AppBuilderComponentsList project={project} catalog={CATALOG} />);
+            expect(screen.getAllByRole('button', { name: /redeploy/i })).toHaveLength(2);
+
+            act(() => {
+                handlers.get('appBuilderComponentStatusUpdate')?.({
+                    id: 'erp-sync',
+                    status: 'deploying',
+                    message: 'Deploying erp-sync…',
+                });
+            });
+
+            // The addressed row shows the spinner + message; the sibling keeps Redeploy.
+            expect(screen.getByText('Deploying erp-sync…')).toBeInTheDocument();
+            expect(screen.getAllByRole('button', { name: /redeploy/i })).toHaveLength(1);
+        });
+
+        it('ignores malformed updates (no id / no status)', () => {
+            const handlers = captureMessageHandlers();
+            const project = projectWith({
+                'erp-sync': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'acme', repo: 'erp-sync' },
+                },
+            });
+
+            render(<AppBuilderComponentsList project={project} catalog={CATALOG} />);
+
+            act(() => {
+                handlers.get('appBuilderComponentStatusUpdate')?.({ status: 'deploying' });
+                handlers.get('appBuilderComponentStatusUpdate')?.({ id: 'erp-sync' });
+            });
+
+            expect(screen.getByRole('button', { name: /redeploy/i })).toBeInTheDocument();
+        });
     });
 
     describe('remove confirmation guard', () => {

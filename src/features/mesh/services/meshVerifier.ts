@@ -10,8 +10,10 @@ import { getMeshNodeVersion } from './meshConfig';
 import { ServiceLocator } from '@/core/di';
 import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { getMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
 import type { MeshVerificationResult } from '@/features/mesh/services/types';
 import { Project, ComponentInstance } from '@/types';
+import type { AppBuilderComponentState } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { getMeshComponentInstance, parseJSON } from '@/types/typeGuards';
 
@@ -270,6 +272,20 @@ async function verifyMeshDeploymentImpl(project: Project, logger: Logger): Promi
 }
 
 /**
+ * Whether a mesh record evidences a past deployment. False only for the
+ * cleared `not-deployed` shell that syncMeshStatus leaves behind when the
+ * remote mesh is gone (identity fields kept, volatile fields cleared).
+ */
+function hasDeploymentEvidence(record: AppBuilderComponentState): boolean {
+    return (
+        record.status !== 'not-deployed' ||
+        record.lastDeployed !== undefined ||
+        record.sourceHash != null ||
+        record.envVars !== undefined
+    );
+}
+
+/**
  * Implementation: Update project with verified mesh status
  */
 function syncMeshStatusImpl(
@@ -287,7 +303,23 @@ function syncMeshStatusImpl(
     }
 
     if (!verificationResult.data.exists) {
-        // Mesh doesn't exist in Adobe I/O - clear meshState
+        // Mesh doesn't exist in Adobe I/O — clear the VOLATILE deploy record on
+        // the keyed mesh entry (status/endpoint/envVars/lastDeployed/sourceHash)
+        // while PRESERVING its identity fields (kind/source/name/providesEnvVars),
+        // so a later redeploy re-lands on the SAME entry via recordDeployOutcome
+        // (ADR-011 D3; integration siblings are untouched). Also clear the
+        // in-memory legacy meshState, so the accessors' legacy synthesis can't
+        // resurrect the cleared record.
+        const keyedComponents = project.appBuilderComponents ?? {};
+        for (const state of Object.values(keyedComponents)) {
+            if (state.kind === 'mesh') {
+                state.status = 'not-deployed';
+                state.endpoint = undefined;
+                state.envVars = undefined;
+                state.lastDeployed = undefined;
+                state.sourceHash = undefined;
+            }
+        }
         project.meshState = undefined;
         meshComponent.status = 'ready'; // Mesh component exists but not deployed
         // Note: Endpoint is NOT cleared here - that's managed by deployMesh.ts
@@ -297,8 +329,17 @@ function syncMeshStatusImpl(
         // Note: Endpoint is NOT updated here - that's managed by deployMesh.ts
         // The single source of truth for endpoint writes is the deployment command
 
-        // Ensure status reflects reality
-        if (meshComponent.status !== 'deployed' && project.meshState) {
+        // Ensure status reflects reality (keyed-first deployment record). A
+        // surviving cleared `not-deployed` shell (sync-gone above) is NOT a
+        // deployment record — entry existence alone must not promote the
+        // component. Legacy-synthesized records without an endpoint still
+        // count (they carry lastDeployed/sourceHash/envVars evidence).
+        const meshRecord = getMeshAppBuilderComponent(project);
+        if (
+            meshComponent.status !== 'deployed' &&
+            meshRecord &&
+            hasDeploymentEvidence(meshRecord)
+        ) {
             meshComponent.status = 'deployed';
         }
     }

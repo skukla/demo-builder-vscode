@@ -10,6 +10,7 @@
  * - Extracting mesh endpoint from configurations
  */
 
+import { getMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
 import { Project } from '@/types';
 import { hasEntries, getProjectFrontendPort, getMeshEndpointUrl } from '@/types/typeGuards';
 
@@ -70,11 +71,15 @@ export function buildStatusPayload(
 /**
  * Check if mesh has been deployed (has env vars recorded from previous deployment)
  *
+ * Keyed-first (ADR-011 D3 Steps 07+09): the deployment record lives on the keyed
+ * mesh `appBuilderComponents` entry; the accessor synthesizes from the legacy
+ * `meshState` for pre-migration projects.
+ *
  * @param project - The project to check
  * @returns True if project has mesh deployment record
  */
 export function hasMeshDeploymentRecord(project: Project): boolean {
-    return Boolean(project.meshState && hasEntries(project.meshState.envVars));
+    return hasEntries(getMeshAppBuilderComponent(project)?.envVars);
 }
 
 /**

@@ -224,8 +224,9 @@ async function undeployApp(
 /**
  * Clear ONE integration's local state: its keyed entry (resolved so a legacy
  * migrated twin under 'app'/appId is cleared, not stranded), its selection id,
- * and — only when NO integration remains — the singular `appState`/
- * `appStatusSummary` (transitional; the singular fields retire in D3 Step 07).
+ * and — only when NO integration remains — the in-memory legacy singletons
+ * (`appState`/`appStatusSummary`), so the accessors' legacy synthesis cannot
+ * resurrect a removed integration.
  */
 function clearIntegrationState(project: Project, appId: string, keyedId: string): void {
     if (project.appBuilderComponents) {

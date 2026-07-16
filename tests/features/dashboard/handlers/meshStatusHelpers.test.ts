@@ -521,4 +521,59 @@ ADOBE_CATALOG_API_KEY=api-key-123
             expect(result).toEqual({});
         });
     });
+
+    // ADR-011 D3 Steps 07+09: the quick status update reads the endpoint from the
+    // keyed mesh entry — a keyed-only project (post-Step-07, no meshState) must
+    // report the same deployed status + endpoint.
+    describe('sendDemoStatusUpdate (keyed-only project)', () => {
+        it('posts deployed status with the keyed endpoint when no meshState exists', async () => {
+            const { sendDemoStatusUpdate } = require('@/features/dashboard/handlers/meshStatusHelpers');
+
+            const project = {
+                name: 'demo',
+                path: '/projects/demo',
+                status: 'ready',
+                meshStatusSummary: 'deployed',
+                componentInstances: {
+                    'commerce-mesh': {
+                        id: 'commerce-mesh',
+                        name: 'API Mesh',
+                        subType: 'mesh',
+                        status: 'deployed',
+                        path: mockMeshPath,
+                    },
+                },
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                        endpoint: 'https://keyed-mesh.adobe.io/graphql',
+                        envVars: { MESH_ID: 'mesh123' },
+                    },
+                },
+            } as unknown as Project;
+
+            const postMessage = jest.fn();
+            const context = {
+                panel: { webview: { postMessage } },
+                stateManager: { getCurrentProject: jest.fn().mockResolvedValue(project) },
+                logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+            } as any;
+
+            await sendDemoStatusUpdate(context);
+
+            expect(postMessage).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    type: 'statusUpdate',
+                    payload: expect.objectContaining({
+                        mesh: expect.objectContaining({
+                            status: 'deployed',
+                            endpoint: 'https://keyed-mesh.adobe.io/graphql',
+                        }),
+                    }),
+                }),
+            );
+        });
+    });
 });

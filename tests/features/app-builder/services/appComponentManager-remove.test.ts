@@ -265,8 +265,9 @@ describe('removeAppComponent', () => {
 
             await removeAppComponent(project, 'my-app', deps);
 
-            // Transitional (until Step 07 retires the singular fields): the card
-            // badge still reflects that a deployed integration exists.
+            // The in-memory legacy singletons clear only with the LAST
+            // integration (so legacy synthesis cannot resurrect a removed
+            // integration); while one remains they are left untouched.
             expect(project.appStatusSummary).toBe('deployed');
         });
 

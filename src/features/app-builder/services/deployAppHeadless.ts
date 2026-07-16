@@ -1,16 +1,13 @@
 /**
- * deployAppHeadless — the shared, UI-free App Builder app deploy core.
+ * deployAppHeadless — the UI-free App Builder integration deploy core.
  *
- * Runs the sequence {@link DeployAppCommand} orchestrates — preflight (auth + org
- * context) → App Builder permission gate → find app → deploy under org-context →
- * persist — but returns a plain result and emits status/progress through callbacks
- * instead of driving the dashboard and notification UI. Sibling of
+ * Runs preflight (auth + org context) → App Builder permission gate → find the
+ * id-targeted integration → deploy under org-context → persist, returning a
+ * plain result and emitting status/progress through callbacks instead of
+ * driving notification UI. Sibling of
  * {@link import('@/features/mesh/services/deployMeshHeadless').deployMeshHeadless}.
- * Two callers share it:
- *   - `DeployAppCommand` supplies `onStatus`/`onProgress` that bridge to the
- *     dashboard badge + progress notification and maps the result to its toasts;
- *   - the projects-list `redeployApp` handler runs it headlessly (progress only)
- *     and shapes the returned result.
+ * Caller: the projects-list `redeployApp` handler (headless, progress only),
+ * which always targets ONE keyed integration by component-instance id.
  *
  * @module features/app-builder/services/deployAppHeadless
  */
@@ -27,7 +24,7 @@ import { projectRequiresAppBuilder } from '@/features/components/services/projec
 import type { ComponentInstance, Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
-import { getAppBuilderInstance, getComponentInstancesBySubType } from '@/types/typeGuards';
+import { getComponentInstancesBySubType } from '@/types/typeGuards';
 
 /** Why a deploy could not proceed (maps to the command's per-branch UI). */
 export type AppDeployBlock = 'auth' | 'org' | 'permission' | 'no-app';
@@ -57,54 +54,40 @@ export interface DeployAppHeadlessDeps {
     onProgress?: (message: string) => void;
     /**
      * Target ONE of N integrations by component-instance id (ADR-011 D3 Step 04
-     * per-integration redeploy). When omitted, falls back to the singular
-     * default (the first app instance) — retired with the singular readers in
-     * Step 07.
+     * per-integration redeploy). REQUIRED — there is no singular default: an
+     * unknown or missing id blocks with `no-app`, never deploys a guess.
      */
-    componentId?: string;
+    componentId: string;
 }
 
 /**
- * Resolve the deploy target: the id-matched app instance when a componentId is
- * given (no singular fallback — an unknown id must block, never deploy a
- * different integration), else the singular default.
+ * Resolve the deploy target: the id-matched app instance ONLY (no singular
+ * fallback — an unknown id must block, never deploy a different integration).
  */
 function resolveTargetApp(
     project: Project,
-    componentId?: string,
+    componentId: string,
 ): ComponentInstance | undefined {
-    if (componentId === undefined) {
-        return getAppBuilderInstance(project);
-    }
     return getComponentInstancesBySubType(project, 'app').find((app) => app.id === componentId);
 }
 
 /**
- * Persist a successful deploy to BOTH state models: the singular
- * `appState`/`appStatusSummary` (retired in ADR-011 D3 Step 07) and the keyed
- * `appBuilderComponents` entry (one writer, D3 Step 02) — so the projects-
- * dashboard card grid and the keyed integrations list read the same state.
+ * Persist a successful deploy: the keyed `appBuilderComponents` entry is the
+ * single deploy record (ADR-011 D3 Step 07 — the singular `appState`
+ * write-side is retired), plus the recomputed `appStatusSummary` for the
+ * projects-dashboard card grid.
  */
 function persistDeploySuccess(
     project: Project,
     appInstanceId: string,
     data: AppDeploymentResult['data'],
 ): void {
-    const lastDeployed = new Date().toISOString();
-    project.appState = {
-        appId: data?.appId,
-        url: data?.url,
-        status: 'deployed',
-        deployedUrls: data?.deployedUrls,
-        lastDeployed,
-        sourceHash: null,
-    };
     project.appStatusSummary = 'deployed';
     recordDeployOutcome(project, 'integration', appInstanceId, {
         status: 'deployed',
         url: data?.url,
         deployedUrls: data?.deployedUrls,
-        lastDeployed,
+        lastDeployed: new Date().toISOString(),
     });
 }
 

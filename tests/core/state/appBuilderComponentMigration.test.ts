@@ -139,4 +139,108 @@ describe('migrateLegacyToAppBuilderComponents', () => {
         expect(Object.keys(appBuilderComponents)).toHaveLength(1);
         expect(Object.values(appBuilderComponents)[0].kind).toBe('integration');
     });
+
+    // ADR-011 D3 Steps 07+09: once Step 07 stops persisting meshState, the
+    // migrated keyed entry is the ONLY carrier of the mesh runtime baseline.
+    // The migration must therefore carry envVars + the decline flags, or a
+    // legacy project's first save would silently drop its staleness baseline.
+    describe('mesh runtime-field carriage (D3 Steps 07+09)', () => {
+        it('carries envVars onto the migrated mesh entry', () => {
+            const manifest: ProjectManifest = {
+                meshState: {
+                    envVars: { ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://commerce/graphql' },
+                    sourceHash: 'abc123',
+                    lastDeployed: '2026-06-20T00:00:00.000Z',
+                    endpoint: 'https://mesh/graphql',
+                },
+            };
+
+            const appBuilderComponents = migrateLegacyToAppBuilderComponents(manifest);
+
+            expect(appBuilderComponents.mesh.envVars).toEqual({
+                ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://commerce/graphql',
+            });
+        });
+
+        it('defaults envVars to an empty object when the legacy state lacks them', () => {
+            const manifest = {
+                meshState: {
+                    sourceHash: 'abc123',
+                    lastDeployed: '2026-06-20T00:00:00.000Z',
+                    endpoint: 'https://mesh/graphql',
+                } as ProjectManifest['meshState'],
+            } as ProjectManifest;
+
+            const appBuilderComponents = migrateLegacyToAppBuilderComponents(manifest);
+
+            expect(appBuilderComponents.mesh.envVars).toEqual({});
+        });
+
+        it('carries the "Later" decline flags onto the migrated mesh entry', () => {
+            const manifest: ProjectManifest = {
+                meshState: {
+                    envVars: {},
+                    sourceHash: 'abc123',
+                    lastDeployed: '2026-06-20T00:00:00.000Z',
+                    endpoint: 'https://mesh/graphql',
+                    userDeclinedUpdate: true,
+                    declinedAt: '2026-07-14T00:00:00.000Z',
+                },
+            };
+
+            const appBuilderComponents = migrateLegacyToAppBuilderComponents(manifest);
+
+            expect(appBuilderComponents.mesh.userDeclinedUpdate).toBe(true);
+            expect(appBuilderComponents.mesh.declinedAt).toBe('2026-07-14T00:00:00.000Z');
+        });
+    });
+
+    // ADR-011 D3 Step 09: malformed/partial legacy state degrades safely — no
+    // throw, no fabricated garbage entries, and the GOOD entries survive. This
+    // is the last guard now that the singular write-side is gone (Step 07): a
+    // corrupt legacy field must never poison the keyed map a first save persists.
+    describe('malformed legacy state degradation (D3 Step 09)', () => {
+        it('skips a non-object meshState while migrating the valid appState (good entry survives)', () => {
+            const manifest = {
+                meshState: 'corrupt' as unknown as ProjectManifest['meshState'],
+                appState: {
+                    appId: 'erp',
+                    url: 'https://erp/api',
+                    status: 'deployed',
+                },
+            } as ProjectManifest;
+
+            const appBuilderComponents = migrateLegacyToAppBuilderComponents(manifest);
+
+            expect(Object.keys(appBuilderComponents)).toEqual(['erp']);
+            expect(appBuilderComponents.erp.url).toBe('https://erp/api');
+        });
+
+        it('skips a non-object appState while migrating the valid meshState (good entry survives)', () => {
+            const manifest = {
+                meshState: {
+                    envVars: {},
+                    sourceHash: 'abc123',
+                    lastDeployed: '2026-06-20T00:00:00.000Z',
+                    endpoint: 'https://mesh/graphql',
+                },
+                appState: 42 as unknown as ProjectManifest['appState'],
+            } as ProjectManifest;
+
+            const appBuilderComponents = migrateLegacyToAppBuilderComponents(manifest);
+
+            expect(Object.keys(appBuilderComponents)).toEqual(['mesh']);
+            expect(appBuilderComponents.mesh.endpoint).toBe('https://mesh/graphql');
+        });
+
+        it('returns an empty map without throwing when BOTH legacy fields are malformed', () => {
+            const manifest = {
+                meshState: [] as unknown as ProjectManifest['meshState'],
+                appState: 'nope' as unknown as ProjectManifest['appState'],
+            } as ProjectManifest;
+
+            expect(() => migrateLegacyToAppBuilderComponents(manifest)).not.toThrow();
+            expect(migrateLegacyToAppBuilderComponents(manifest)).toEqual({});
+        });
+    });
 });

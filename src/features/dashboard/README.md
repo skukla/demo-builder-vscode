@@ -11,7 +11,8 @@ The dashboard is designed for at-a-glance status monitoring and one-click action
 - **Real-Time Status Display**: Show demo status (ready, starting, running, stopping)
 - **Mesh Status Monitoring**: Async mesh status checking with auth-aware prompts
 - **Adobe Context Display**: Show organization, project, and workspace
-- **Quick Actions**: Start, Stop, Open Browser, Author Content (EDS only), Manage Commerce (always visible; opens the Commerce admin URL — derived from the ACCS tenant endpoint for SaaS, user-supplied `ADOBE_COMMERCE_ADMIN_URL` for PaaS — or routes to Configure), Deploy Mesh (shown conditionally when project includes a mesh component), Configure
+- **Quick Actions**: Start, Stop, Open Browser, Author Content (EDS only), Manage Commerce (always visible; opens the Commerce admin URL — derived from the ACCS tenant endpoint for SaaS, user-supplied `ADOBE_COMMERCE_ADMIN_URL` for PaaS — or routes to Configure), Configure
+- **Integrations list** (`IntegrationsBlock` → `AppBuilderComponentsList`, gated on `hasAdobeContext`): the App Builder surface. The mesh renders as the FIRST row (`MeshComponentRow` — live status + Deploy/Redeploy routed to the existing `deployMesh` path + a Sign-in remediation on `needs-auth`; since ADR-011 D3 Step 08 this row replaces the masthead "API Mesh" badge and the "Deploy Mesh" tile). Each keyed integration renders an `AppBuilderComponentRow` with per-id deploy/redeploy/remove/verify/Manage-APIs actions, kept live by `appBuilderComponentStatusUpdate`; an add affordance offers the stack-filtered catalog + a custom GitHub-URL door
 - **More Menu (overflow)**: Edit (non-EDS: stopped only), Export, Refresh Block Library (EDS), Republish Content (EDS), Dev Console, Reset (Copy Path lives on the project-card kebab; Rename is inline on the dashboard title)
 - **Focus Retention**: Maintain webview focus for in-place actions (Start/Stop)
 - **Change Detection**: Detect frontend config changes requiring restart
@@ -76,26 +77,27 @@ The dashboard is designed for at-a-glance status monitoring and one-click action
 **Operations**:
 1. Execute demoBuilder.deployMesh command
 
-### App Builder app handlers (handleAddApp / handleDeployApp / handleRedeployApp / handleRemoveApp)
+### AppBuilderComponent (integrations list) handlers
 
-**Purpose**: Manage App Builder integrations from the (dormant) singular `AppBuilderCard`.
-Since ADR-011 D3 Step 05 these id-less messages are THIN DELEGATES onto the keyed model (the
-keyed per-id handlers below are the primary surface); they retire with the card in D3 Step 08.
-See `@/features/app-builder` for the underlying services.
+**Purpose**: Drive the keyed App Builder model from the dashboard integrations list — one
+id-scoped message per row action. This is the ONE App Builder handler surface: the singular
+id-less `addApp`/`deployApp`/`redeployApp`/`removeApp` delegates (and the dormant
+`AppBuilderCard` that posted them) were deleted in ADR-011 D3 Step 08.
+See `appBuilderComponentHandlers.ts` and `@/features/app-builder` for the underlying runner.
 
 **Operations**:
-- `addApp` (`handleAddApp`, payload `{ gitUrl }`) — validate + clone+install a public-GitHub app
-  via `addAppComponent` (writes the keyed `appBuilderComponents[appId]` entry and APPENDS the
-  selection), then on success dispatch the `demoBuilder.deployApp` command. Add failures surface
-  directly (no deploy).
-- `deployApp` (`handleDeployApp`) — execute the `demoBuilder.deployApp` command (guards + the
-  isolating, keyed-writing `deployAppHeadless`).
-- `redeployApp` (`handleRedeployApp`) — alias of `handleDeployApp` (`aio app deploy` is idempotent,
-  so deploy and redeploy are the same operation).
-- `removeApp` (`handleRemoveApp`) — resolves WHICH integration the id-less message targets
-  (app instance first, keyed entry fallback) and delegates to the per-id
-  `removeAppComponent(project, id, deps)`: remote undeploy (best-effort) + per-id local cleanup,
-  siblings untouched.
+- `addAppBuilderComponent` (payload `{ id }` or `{ source: { owner, repo } }`) — guards →
+  bucket-3 env inputs route to Configure first → D1 runner add (clone + install + subscribe +
+  isolated deploy).
+- `deployAppBuilderComponent` / `redeployAppBuilderComponent` (payload `{ id }`) — guards →
+  the isolating keyed deploy tail for THAT component (idempotent, so both are the same path).
+- `removeAppBuilderComponent` (payload `{ id }`) — guards → per-id remote undeploy
+  (best-effort) + local cleanup; siblings untouched. The confirm dialog is UI-side.
+- `verifyAppBuilderComponent` (payload `{ id }`) — on-demand non-interactive org probe;
+  posts a typed row status (never a silent flip).
+
+Note: the mesh row does NOT use these — its Deploy/Redeploy posts the existing `deployMesh`
+message (the mesh deploy verb is `demoBuilder.deployMesh`, not `aio app deploy`).
 
 ### handleOpenDevConsole
 
@@ -470,7 +472,8 @@ if (!verification.exists) {
 - [ ] Auth prompt shows when not authenticated
 - [ ] Start/Stop buttons work
 - [ ] Open Browser works
-- [ ] Deploy Mesh button works
+- [ ] Integrations list renders (mesh row first; per-id integration rows)
+- [ ] Mesh row Deploy/Redeploy works (routes to deployMesh)
 - [ ] Configure button works
 - [ ] Developer Console link works
 - [ ] Title inline rename works (hover pencil → edit → folder renamed, title refreshes; pencil hidden while running)

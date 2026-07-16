@@ -32,7 +32,9 @@ The `Project` type (`src/types/base.ts`) contains these key state containers:
 | `componentInstances` | Runtime state | Component status, PID, port |
 | `componentConfigs` | Configuration | Environment variables per component |
 | `componentSelections` | User choices | Which components were selected |
-| `meshState` | Mesh deployment | Mesh endpoint, deployed config hash |
+| `appBuilderComponents` | App Builder deploy state (keyed) | Mesh endpoint + staleness baseline, per-integration URLs/status |
+| `meshState` | LEGACY-READ-ONLY | Nothing — migration input for old manifests |
+| `appState` | LEGACY-READ-ONLY | Nothing — migration input for old manifests |
 | `frontendEnvState` | Config snapshot | Frontend env vars at demo start |
 | `componentVersions` | Version tracking | Component versions for updates |
 
@@ -52,7 +54,7 @@ The `Project` type (`src/types/base.ts`) contains these key state containers:
 - `metadata` - Runtime metadata (NOT configuration)
 
 **NOT Authoritative For**:
-- `endpoint` - DEPRECATED: Use `meshState` for mesh endpoint
+- `endpoint` - DEPRECATED: resolve the mesh endpoint via `getMeshEndpointUrl(project)` (keyed `appBuilderComponents` mesh entry)
 - Configuration values - Use `componentConfigs`
 
 **Write Authority**:
@@ -80,27 +82,59 @@ The `Project` type (`src/types/base.ts`) contains these key state containers:
 
 ---
 
-### meshState
+### appBuilderComponents (keyed — the single source of truth)
 
-**Purpose**: Track API Mesh DEPLOYMENT state
+**Purpose**: Track App Builder DEPLOY state — one keyed entry per deployable
+(the mesh is one `kind: 'mesh'` entry; each custom integration is a
+`kind: 'integration'` entry). This is the **AUTHORITATIVE** and only persisted
+model (ADR-011 D3; the singular `meshState`/`appState` write-side was retired
+in Step 07).
 
-**Authoritative Fields**:
-- `envVars` - Environment variables at time of deployment
-- `sourceHash` - Hash of mesh source files at deployment
+**Authoritative Fields** (per entry):
+- `status` - deployed / stale / error / not-deployed
+- `endpoint` - **AUTHORITATIVE** mesh GraphQL endpoint URL (mesh kind)
+- `envVars` - Deployed env-var baseline for staleness detection (mesh kind)
+- `sourceHash` - Hash of source files at deployment
 - `lastDeployed` - ISO timestamp of last successful deployment
-- `endpoint` - **AUTHORITATIVE** mesh GraphQL endpoint URL
-- `userDeclinedUpdate` - User declined redeploy prompt
-- `declinedAt` - When user declined
+- `userDeclinedUpdate` / `declinedAt` - The "Later" decline flow (mesh kind)
+- `url` / `deployedUrls` - Deployed integration URLs (integration kind)
+- `source` / `name` - Per-integration provenance + display name
 
 **Write Authority**:
-- `src/features/mesh/services/stalenessDetector.ts` - After successful deployment
-- `src/features/mesh/services/meshVerifier.ts` - Clear on verification failure
+- `src/features/mesh/services/stalenessDetector.ts` (`updateMeshState`) - THE
+  mesh writer chokepoint (creation, EDS reset, project reset, headless deploy)
+- `src/features/app-builder/services/appBuilderDeployOutcome.ts`
+  (`recordDeployOutcome`) - the shared keyed-write seam
+- `src/features/app-builder/services/appBuilderComponentRunner.ts` - keyed runner
+- `src/features/mesh/services/meshVerifier.ts` - when the mesh is gone remotely,
+  mark the keyed mesh entry `not-deployed` (volatile deploy record cleared,
+  identity fields kept so a redeploy re-lands on the same entry)
+- `src/features/app-builder/services/appComponentManager.ts` - remove an entry
 
-**Read Locations**: Dashboard status, staleness detection, env file generation
+**Read Locations**: Everything reads through the accessors —
+`getMeshEndpointUrl` (typeGuards), `getMeshAppBuilderComponent` /
+`getIntegrationAppBuilderComponents` / `listAppBuilderComponents`
+(appBuilderComponentState) — never the legacy singletons directly (enforced by
+`tests/core/state/singularStateAccessGuard.test.ts`).
 
-**CRITICAL**: The mesh endpoint is ONLY authoritative in `meshState`. Any endpoint
-stored in `componentInstances['commerce-mesh'].endpoint` is DEPRECATED and will
-be removed in a future version.
+---
+
+### meshState / appState (LEGACY-READ-ONLY)
+
+**Purpose**: Load legacy manifests only. Old `.demo-builder.json` files (of
+arbitrary age) carry the singular `meshState`/`appState`; the loader reads them
+and `migrateLegacyToAppBuilderComponents` folds them into the keyed map. On the
+project's first save the manifest is forward-migrated: the keyed map is written
+and the legacy singulars are dropped.
+
+**Write Authority**: NONE. No production code writes these fields anymore
+(ADR-011 D3 Step 07). The only remaining assignments are *clearing* writes
+(`meshVerifier`, `stalenessDetector`, `appComponentManager`) that prevent the
+accessors' legacy-synthesis fallback from resurrecting stale in-memory state.
+
+**CRITICAL**: The legacy `meshState` is never authoritative — the mesh endpoint
+lives on the keyed mesh `appBuilderComponents` entry. Any endpoint stored in
+`componentInstances['commerce-mesh'].endpoint` is DEPRECATED as well.
 
 ---
 
@@ -153,7 +187,7 @@ The wizard-side `WizardState` (React, not persisted to disk) contains caches tha
 - Removed redundant writes in `meshVerifier.ts`
 - Consolidated to single write location in `deployMesh.ts`
 
-**Resolution** (Phase 2 - 2025-12-31 - CURRENT):
+**Resolution** (Phase 2 - 2025-12-31):
 - `meshState.endpoint` is now the AUTHORITATIVE location for mesh endpoint
 - Added `endpoint` field to `meshState` type definition
 - All writes go to `meshState.endpoint` via `updateMeshState()`
@@ -161,8 +195,22 @@ The wizard-side `WizardState` (React, not persisted to disk) contains caches tha
 - `componentInstances['commerce-mesh'].endpoint` marked as `@deprecated`
 - Backward compatibility: reads fall back to legacy location for old projects
 
-**Status**: COMPLETED. Single source of truth is `meshState.endpoint`.
-Files updated:
+**Resolution** (Phase 3 - 2026-07-15 - ADR-011 D3 Step 07 - CURRENT):
+- The keyed `appBuilderComponents` map is now the single persisted authority
+  for ALL App Builder deploy state (mesh endpoint + staleness baseline,
+  per-integration URLs/status)
+- `writeManifest` no longer serializes `meshState`/`appState`; legacy manifests
+  keep loading via the read-migration and forward-migrate on first save
+- `updateMeshState()` writes the keyed mesh entry (the writer chokepoint) and
+  clears the in-memory legacy singleton
+- All reads go through the keyed-first accessors (`getMeshEndpointUrl`,
+  `getMeshAppBuilderComponent`, …) — enforced by
+  `tests/core/state/singularStateAccessGuard.test.ts`
+
+**Status**: COMPLETED. Single source of truth is the keyed mesh
+`appBuilderComponents` entry (`meshState.endpoint` was the Phase-2 authority,
+now legacy-read-only).
+Files updated (Phase 2, historical):
 - `src/types/base.ts` - Added `endpoint` to `meshState`, deprecated on `ComponentInstance`
 - `src/features/mesh/services/stalenessDetector.ts` - `updateMeshState()` sets endpoint
 - `src/features/mesh/commands/deployMesh.ts` - Writes to `meshState.endpoint`
@@ -177,12 +225,12 @@ Files updated:
 
 **Observation**: Environment variables can appear in multiple locations:
 - `componentConfigs[componentId]` - Configuration UI values
-- `meshState.envVars` - Snapshot at deployment time
+- the keyed `appBuilderComponents` mesh entry's `envVars` - Snapshot at deployment time
 - `frontendEnvState.envVars` - Snapshot at demo start
 
 **Analysis**: These are NOT overlaps but intentional snapshots:
 - `componentConfigs` = Current user configuration (AUTHORITATIVE)
-- `meshState.envVars` = Config at last deployment (HISTORICAL for staleness)
+- keyed mesh entry `envVars` = Config at last deployment (HISTORICAL for staleness)
 - `frontendEnvState.envVars` = Config at demo start (HISTORICAL for restart)
 
 **Verdict**: Not a violation. Each serves a distinct purpose.
@@ -220,7 +268,7 @@ Files updated:
 ### Medium Priority
 
 4. **Document write authority in code comments**
-   - Add TSDoc comments on `componentInstances`, `componentConfigs`, `meshState`
+   - Add TSDoc comments on `componentInstances`, `componentConfigs`, `appBuilderComponents`
    - Link to this documentation
 
 5. **Add runtime validation**
@@ -251,7 +299,11 @@ Files updated:
 | `configure.ts` | 154 | (full) | Replace all configs |
 | `executor.ts` | 454-456 | commerce-mesh | Initial mesh config |
 
-### meshState Write Locations
+### meshState Write Locations (HISTORICAL — retired by ADR-011 D3)
+
+The singular `meshState` write-side is retired; the table below is the
+pre-D3 record. Current write authority is the keyed-writer table above
+("Write Authority" under the keyed `appBuilderComponents` section).
 
 | File | Line | Field | Operation |
 |------|------|-------|-----------|

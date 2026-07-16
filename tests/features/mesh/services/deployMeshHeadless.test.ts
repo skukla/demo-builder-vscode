@@ -34,6 +34,7 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
 
 import { ServiceLocator } from '@/core/di';
 import { ensureProjectAdobeContext } from '@/features/authentication/services/ensureProjectAdobeContext';
+import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
 import { listAppBuilderComponents } from '@/features/app-builder/services/appBuilderComponentState';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
 import { fetchMeshInfoFromAdobeIO } from '@/features/mesh/services/meshVerifier';
@@ -93,6 +94,19 @@ describe('deployMeshHeadless', () => {
         mockDeploy.mockResolvedValue({
             success: true,
             data: { meshId: 'mesh-1', endpoint: 'https://new/graphql' },
+        });
+        // Mirror the REAL writer chokepoint (ADR-011 D3 Steps 07+09):
+        // updateMeshState lands the deploy outcome on the keyed mesh entry via
+        // the real (pure) recordDeployOutcome, so key resolution / source
+        // preservation / providesEnvVars refresh are exercised for real.
+        mockUpdateMeshState.mockImplementation(async (p: unknown, endpoint?: unknown) => {
+            recordDeployOutcome(p as Project, 'mesh', 'commerce-mesh', {
+                status: 'deployed',
+                endpoint: endpoint as string | undefined,
+                lastDeployed: new Date().toISOString(),
+                userDeclinedUpdate: undefined,
+                declinedAt: undefined,
+            });
         });
     });
 
@@ -287,17 +301,18 @@ describe('deployMeshHeadless', () => {
             );
         });
 
-        // ADR-011 D3 Step 06: the keyed entry also carries the mesh runtime
-        // baseline (deployed envVars + sourceHash) so staleness detection can
-        // read keyed-first and Step 07 can retire meshState.
-        it('lands the deployed envVars + sourceHash from updateMeshState on the keyed entry', async () => {
+        // ADR-011 D3 Steps 06+07: the keyed entry carries the mesh runtime
+        // baseline (deployed envVars + sourceHash), written by the updateMeshState
+        // chokepoint — deployMeshHeadless must PRESERVE it (no clobbering write).
+        it('preserves the deployed envVars + sourceHash the chokepoint landed on the keyed entry', async () => {
             mockUpdateMeshState.mockImplementationOnce(async (p: Project, endpoint?: string) => {
-                p.meshState = {
+                recordDeployOutcome(p, 'mesh', 'commerce-mesh', {
+                    status: 'deployed',
+                    endpoint,
                     envVars: { ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://commerce/graphql' },
                     sourceHash: 'fresh-hash',
                     lastDeployed: '2026-07-15T00:00:00Z',
-                    endpoint,
-                };
+                });
             });
 
             const d = deps();
@@ -314,18 +329,7 @@ describe('deployMeshHeadless', () => {
             );
         });
 
-        it('clears decline flags on the keyed entry on successful deploy (mirrors meshState)', async () => {
-            mockUpdateMeshState.mockImplementationOnce(async (p: Project, endpoint?: string) => {
-                p.meshState = {
-                    envVars: {},
-                    sourceHash: 'fresh-hash',
-                    lastDeployed: '2026-07-15T00:00:00Z',
-                    endpoint,
-                    userDeclinedUpdate: undefined,
-                    declinedAt: undefined,
-                };
-            });
-
+        it('clears decline flags on the keyed entry on successful deploy (via the chokepoint)', async () => {
             const p = project();
             p.appBuilderComponents = {
                 'commerce-mesh': {

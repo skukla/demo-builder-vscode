@@ -408,7 +408,8 @@ discarded (the deploy engine, URL validation, dashboard card, role gate all carr
 - **D3 — Retire the singular write-paths; one durable keyed model.** Persist `appBuilderComponents`,
   make one writer, isolate/per-integration all deploy paths, then move mesh state/staleness/
   `providesEnvVars` onto the unified model and retire the singular `meshState`/`appState` write-side
-  once parity is proven. **TDD-ready step plan: [`d3/overview.md`](d3/overview.md)** (scoped 2026-07-15,
+  once parity is proven. **✅ IMPLEMENTED 2026-07-15 on branch `feature/appbuilder-deployables-d3`
+  (pending merge)** — step plan: [`d3/overview.md`](d3/overview.md) (scoped 2026-07-15,
   grounded in the state-coherence seam + `../../research/app-builder-integration-model/research.md`).
 - **D4 — AI shell (scaffold-and-author).** Third acquisition mode: `aio app init` an empty integration
   + AI authoring via project skills. *(old slice 4.)*

@@ -177,6 +177,43 @@ describe('dashboardStatusService', () => {
             // Then: Should return false
             expect(result).toBe(false);
         });
+
+        // ADR-011 D3 Steps 07+09: after Step 07 the manifest carries no meshState,
+        // so the deployment record must be read from the keyed mesh entry.
+        it('should return true when the record lives only on the keyed mesh entry (keyed-only)', () => {
+            const project = {
+                name: 'test-project',
+                path: '/path/to/project',
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                        endpoint: 'https://mesh.adobe.io/graphql',
+                        envVars: { MESH_ENDPOINT: 'https://mesh.adobe.io/graphql' },
+                    },
+                },
+            } as unknown as Project;
+
+            expect(hasMeshDeploymentRecord(project)).toBe(true);
+        });
+
+        it('should return false when the keyed mesh entry has empty envVars (keyed-only)', () => {
+            const project = {
+                name: 'test-project',
+                path: '/path/to/project',
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'not-deployed',
+                        source: { owner: '', repo: '' },
+                        envVars: {},
+                    },
+                },
+            } as unknown as Project;
+
+            expect(hasMeshDeploymentRecord(project)).toBe(false);
+        });
     });
 
     describe('getMeshEndpoint', () => {

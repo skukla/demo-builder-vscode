@@ -1,5 +1,10 @@
 # EDS Backend Configuration Architecture
 
+> **Note (ADR-011 D3, 2026-07):** the mesh endpoint is now resolved from the keyed
+> `appBuilderComponents` mesh entry via `getMeshEndpointUrl`/`providesEnvVars`; the
+> `meshState` shown below is the legacy read-only form — see
+> `docs/architecture/state-ownership.md`.
+
 ## Overview
 
 This document explains how EDS (Edge Delivery Services) projects are configured based on the selected backend component, addressing the design decisions and architecture.

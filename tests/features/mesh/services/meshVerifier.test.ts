@@ -1,5 +1,7 @@
+import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
 import { verifyMeshDeployment, syncMeshStatus } from '@/features/mesh/services/meshVerifier';
 import type { Project } from '@/types';
+import { getMeshEndpointUrl } from '@/types/typeGuards';
 
 /**
  * MeshVerifier Test Suite
@@ -369,6 +371,169 @@ describe('MeshVerifier', () => {
 
             // Should not throw
             expect(project.meshState).toBeUndefined();
+        });
+
+        // ADR-011 D3 Steps 07+09: the deployment record lives on the keyed mesh
+        // entry — sync must clear/read the keyed entry for keyed-only projects.
+        describe('keyed appBuilderComponents handling (Steps 07+09)', () => {
+            const meshInstances = {
+                'commerce-mesh': {
+                    id: 'commerce-mesh',
+                    name: 'API Mesh',
+                    subType: 'mesh' as const,
+                    path: '/test/mesh',
+                    status: 'deployed' as const,
+                    metadata: { meshId: 'mesh123' },
+                },
+            };
+
+            it('should mark the keyed mesh entry not-deployed and preserve identity fields when the mesh does not exist remotely', async () => {
+                const project = createMockProject({
+                    componentInstances: meshInstances,
+                    appBuilderComponents: {
+                        mesh: {
+                            kind: 'mesh',
+                            status: 'deployed',
+                            name: 'API Mesh',
+                            source: { owner: 'adobe', repo: 'commerce-mesh' },
+                            endpoint: 'https://keyed-mesh/graphql',
+                            envVars: { A: '1' },
+                            lastDeployed: '2024-01-01T00:00:00.000Z',
+                            sourceHash: 'abc123',
+                            providesEnvVars: { MESH_ENDPOINT: 'https://keyed-mesh/graphql' },
+                        },
+                    },
+                });
+
+                await syncMeshStatus(project, { success: true, data: { exists: false } });
+
+                const entry = project.appBuilderComponents?.mesh;
+                // Entry SURVIVES — identity fields intact
+                expect(entry).toBeDefined();
+                expect(entry?.kind).toBe('mesh');
+                expect(entry?.name).toBe('API Mesh');
+                expect(entry?.source).toEqual({ owner: 'adobe', repo: 'commerce-mesh' });
+                expect(entry?.providesEnvVars).toEqual({
+                    MESH_ENDPOINT: 'https://keyed-mesh/graphql',
+                });
+                // Volatile deploy record cleared
+                expect(entry?.status).toBe('not-deployed');
+                expect(entry?.endpoint).toBeUndefined();
+                expect(entry?.envVars).toBeUndefined();
+                expect(entry?.lastDeployed).toBeUndefined();
+                expect(entry?.sourceHash).toBeUndefined();
+                // Accessor consumers treat it as "no mesh endpoint"
+                expect(getMeshEndpointUrl(project)).toBeUndefined();
+                expect(project.componentInstances?.['commerce-mesh'].status).toBe('ready');
+            });
+
+            it('should re-land a redeploy on the SAME entry with providesEnvVars intact after sync-gone', async () => {
+                const project = createMockProject({
+                    componentInstances: meshInstances,
+                    appBuilderComponents: {
+                        mesh: {
+                            kind: 'mesh',
+                            status: 'deployed',
+                            source: { owner: 'adobe', repo: 'commerce-mesh' },
+                            endpoint: 'https://old-mesh/graphql',
+                            providesEnvVars: { MESH_ENDPOINT: 'https://old-mesh/graphql' },
+                        },
+                    },
+                });
+
+                await syncMeshStatus(project, { success: true, data: { exists: false } });
+
+                // Redeploy lands via the writer chokepoint (recordDeployOutcome,
+                // keyed by the mesh component-instance id — resolves to 'mesh').
+                recordDeployOutcome(project, 'mesh', 'commerce-mesh', {
+                    status: 'deployed',
+                    endpoint: 'https://new-mesh/graphql',
+                    envVars: { A: '2' },
+                });
+
+                const keys = Object.keys(project.appBuilderComponents ?? {}).filter(
+                    (id) => project.appBuilderComponents?.[id].kind === 'mesh',
+                );
+                expect(keys).toEqual(['mesh']);
+                const entry = project.appBuilderComponents?.mesh;
+                expect(entry?.status).toBe('deployed');
+                expect(entry?.endpoint).toBe('https://new-mesh/graphql');
+                expect(entry?.providesEnvVars).toEqual({
+                    MESH_ENDPOINT: 'https://new-mesh/graphql',
+                });
+            });
+
+            it('should not promote the component to deployed from a not-deployed keyed entry', async () => {
+                const project = createMockProject({
+                    componentInstances: {
+                        'commerce-mesh': { ...meshInstances['commerce-mesh'], status: 'ready' },
+                    },
+                    appBuilderComponents: {
+                        mesh: {
+                            kind: 'mesh',
+                            status: 'not-deployed',
+                            source: { owner: 'adobe', repo: 'commerce-mesh' },
+                            providesEnvVars: { MESH_ENDPOINT: 'https://old-mesh/graphql' },
+                        },
+                    },
+                });
+
+                await syncMeshStatus(project, {
+                    success: true,
+                    data: { exists: true, meshId: 'mesh123' },
+                });
+
+                // A surviving not-deployed entry is NOT a deployment record.
+                expect(project.componentInstances?.['commerce-mesh'].status).toBe('ready');
+            });
+
+            it('should mark the component deployed from a keyed-only deployment record', async () => {
+                const project = createMockProject({
+                    componentInstances: {
+                        'commerce-mesh': { ...meshInstances['commerce-mesh'], status: 'ready' },
+                    },
+                    appBuilderComponents: {
+                        mesh: {
+                            kind: 'mesh',
+                            status: 'deployed',
+                            source: { owner: '', repo: '' },
+                            endpoint: 'https://keyed-mesh/graphql',
+                        },
+                    },
+                });
+
+                await syncMeshStatus(project, {
+                    success: true,
+                    data: { exists: true, meshId: 'mesh123' },
+                });
+
+                expect(project.componentInstances?.['commerce-mesh'].status).toBe('deployed');
+            });
+
+            it('should not touch keyed integration siblings when clearing the mesh entry', async () => {
+                const project = createMockProject({
+                    componentInstances: meshInstances,
+                    appBuilderComponents: {
+                        mesh: {
+                            kind: 'mesh',
+                            status: 'deployed',
+                            source: { owner: '', repo: '' },
+                        },
+                        'acme-widget': {
+                            kind: 'integration',
+                            status: 'deployed',
+                            source: { owner: 'acme', repo: 'widget' },
+                            url: 'https://acme.example',
+                        },
+                    },
+                });
+
+                await syncMeshStatus(project, { success: true, data: { exists: false } });
+
+                expect(project.appBuilderComponents?.['acme-widget']?.url).toBe(
+                    'https://acme.example',
+                );
+            });
         });
 
         it('should do nothing on verification failure', async () => {

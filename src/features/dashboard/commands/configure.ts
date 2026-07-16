@@ -682,7 +682,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 'apply changes to mesh and storefront',
             );
         } else if (selection === 'Later') {
-            // Both-writes (ADR-011 D3 Step 06): meshState + keyed mesh entry.
+            // Keyed-only write (ADR-011 D3 Step 07): the decline lands on the keyed mesh entry.
             markMeshUpdateDeclined(project);
             if (project.edsStorefrontState) {
                 project.edsStorefrontState.userDeclinedUpdate = true;
@@ -765,7 +765,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 'redeploy mesh',
             );
         } else if (selection === 'Later') {
-            // Both-writes (ADR-011 D3 Step 06): meshState + keyed mesh entry.
+            // Keyed-only write (ADR-011 D3 Step 07): the decline lands on the keyed mesh entry.
             if (markMeshUpdateDeclined(project)) {
                 await this.stateManager.saveProject(project);
                 await ProjectDashboardWebviewCommand.refreshStatus();

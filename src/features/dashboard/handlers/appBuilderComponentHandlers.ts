@@ -6,7 +6,8 @@
  * (clone + install + subscribe + deploy), distinct from Track A's bounded mesh
  * subscribe.
  *
- * Guard order MIRRORS DeployAppCommand (auth → org-mismatch → App Builder
+ * Guard order: auth → org-mismatch → App Builder permission (inherited from
+ * the retired singular DeployAppCommand),
  * permission), then assembles a RunnerDepsContext via buildDefaultRunnerDeps —
  * supplying the Track A `subscriberClient` adapter, the stack-filtered `catalog`,
  * and the extension `secrets` — before invoking the runner. A failing guard
@@ -47,8 +48,8 @@ import { MessageHandler, HandlerContext } from '@/types/handlers';
 import { toError } from '@/types/typeGuards';
 
 /**
- * Run the DeployAppCommand guard order (auth → org-mismatch → App Builder
- * permission). Returns an error string on the first failure (caller aborts
+ * Run the deploy guard order (auth → org-mismatch → App Builder permission).
+ * Returns an error string on the first failure (caller aborts
  * WITHOUT calling the runner); undefined when all guards pass.
  *
  * Exported for the console-API handlers (consoleApiHandlers.ts), which need
@@ -112,8 +113,8 @@ function needsUserInputs(entry: AppBuilderComponentCatalogEntry): boolean {
 }
 
 /**
- * Post a per-row status update via the dashboard command. Imported LAZILY (like
- * DeployAppCommand's dashboard import) so this handler module never statically
+ * Post a per-row status update via the dashboard command. Imported LAZILY so
+ * this handler module never statically
  * pulls the webview-command class into the module-load graph (which would chain
  * BaseWebviewCommand into handler-only test contexts).
  */

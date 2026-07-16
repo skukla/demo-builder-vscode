@@ -1,12 +1,10 @@
 /**
- * meshUpdateDecline — the "Later" decline flow's state writes/reads
- * (ADR-011 D3 Step 06).
+ * meshUpdateDecline — the "Later" decline flow's state writes/reads.
  *
- * The configure command's decline branch historically wrote
- * `meshState.userDeclinedUpdate`/`declinedAt` only. Step 06 mirrors the write
- * onto the keyed mesh appBuilderComponents entry (both-writes during the
- * transition, like Step 02) and reads keyed-first, so the flags survive
- * Step 07's retirement of the singular meshState write-side.
+ * Keyed-only write (ADR-011 D3 Step 07): the decline lands on the keyed mesh
+ * appBuilderComponents entry (the singular meshState write-side is retired);
+ * reads are keyed-first with a legacy-synthesis fallback for pre-migration
+ * in-memory projects.
  */
 
 import {
@@ -45,8 +43,8 @@ function legacyMeshState(): NonNullable<Project['meshState']> {
     };
 }
 
-describe('markMeshUpdateDeclined (both-writes)', () => {
-    it('writes the decline flags to BOTH meshState and the keyed mesh entry', () => {
+describe('markMeshUpdateDeclined (keyed-only write, Step 07)', () => {
+    it('writes the decline flags to the keyed entry only — the legacy meshState write-side is retired', () => {
         const project = makeProject({
             meshState: legacyMeshState(),
             appBuilderComponents: { 'commerce-mesh': keyedMesh() },
@@ -55,15 +53,15 @@ describe('markMeshUpdateDeclined (both-writes)', () => {
         const marked = markMeshUpdateDeclined(project);
 
         expect(marked).toBe(true);
-        expect(project.meshState?.userDeclinedUpdate).toBe(true);
-        expect(project.meshState?.declinedAt).toEqual(expect.any(String));
         const keyed = project.appBuilderComponents?.['commerce-mesh'] as {
             userDeclinedUpdate?: boolean;
             declinedAt?: string;
         };
         expect(keyed.userDeclinedUpdate).toBe(true);
-        // The two writes carry the SAME timestamp (one decline event).
-        expect(keyed.declinedAt).toBe(project.meshState?.declinedAt);
+        expect(keyed.declinedAt).toEqual(expect.any(String));
+        // ADR-011 D3 Step 07: the singular meshState write-side is retired —
+        // the in-memory legacy stays untouched (readers are keyed-first).
+        expect(project.meshState?.userDeclinedUpdate).toBeUndefined();
     });
 
     it('writes only the keyed entry for a keyed-only project (post-Step-07 world)', () => {

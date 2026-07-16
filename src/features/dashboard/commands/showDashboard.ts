@@ -8,6 +8,7 @@ import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
+import { getMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
 import { dashboardHandlers } from '@/features/dashboard/handlers';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import { getEwCanvasBranch, resolveProjectAuthoringExperience } from '@/features/eds/handlers/edsHelpers';
@@ -20,7 +21,7 @@ import type { AppBuilderComponentState } from '@/types/base';
 import type { DemoPackage } from '@/types/demoPackages';
 import { HandlerContext, SharedState } from '@/types/handlers';
 import type { Stack, StacksConfig } from '@/types/stacks';
-import { getAppBuilderInstance, getComponentInstanceValues, isEdsProject, getEdsLiveUrl, getEdsDaLiveUrl } from '@/types/typeGuards';
+import { getComponentInstanceValues, isEdsProject, getEdsLiveUrl, getEdsDaLiveUrl } from '@/types/typeGuards';
 
 /** Absolute path to the Demo Builder projects directory (`~/.demo-builder/projects`). */
 const DEMO_BUILDER_PROJECTS_BASE = path.join(os.homedir(), '.demo-builder', 'projects');
@@ -129,22 +130,19 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         edsDaLiveUrl?: string;
         initialEdsStorefrontStatus?: string;
         hasAdobeContext: boolean;
-        initialApp?: {
-            status: 'not-deployed' | 'deploying' | 'deployed' | 'error';
-            url?: string;
-            deployedUrls?: Record<string, string>;
-        };
         appBuilderComponents?: Record<string, AppBuilderComponentState>;
         appBuilderComponentCatalog: AppBuilderComponentCatalogEntry[];
     }> {
         const project = await this.stateManager.getCurrentProject();
         const themeKind = vscode.window.activeColorTheme.kind;
         const theme = themeKind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
-        // Check if project has mesh: deployed instance, mesh state, or selected dependency
+        // Check if project has mesh: deployed instance, mesh state, or selected dependency.
+        // Keyed-first (ADR-011 D3 Steps 07+09): the mesh deployment record lives on
+        // the keyed appBuilderComponents entry (legacy meshState synthesis inside).
         const hasMeshInstance = Object.values(project?.componentInstances || {}).some(
             (instance) => instance.subType === 'mesh',
         );
-        const hasMeshState = !!project?.meshState;
+        const hasMeshState = !!(project && getMeshAppBuilderComponent(project));
         const hasMeshDependency = (project?.componentSelections?.dependencies || []).some(
             (dep: string) => dep.includes('mesh'),
         );
@@ -167,21 +165,10 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         // "Checking Adobe organization…" state before the result arrives.
         const hasAdobeContext = Boolean(project?.adobe?.organization);
 
-        // App Builder app card seed: present only when the project has an app
-        // instance. Status comes from appState (authoritative); a present-but-
-        // never-deployed app reads 'not-deployed' so the card offers Deploy.
-        const appInstance = getAppBuilderInstance(project);
-        const initialApp = appInstance
-            ? {
-                status: project?.appState?.status ?? 'not-deployed',
-                url: project?.appState?.url,
-                deployedUrls: project?.appState?.deployedUrls,
-            }
-            : undefined;
-
-        // Integrations list seed: the keyed appBuilderComponents map + the stack-filtered
-        // catalog for the add-a-appBuilderComponent picker (mesh is filtered to its own
-        // badge inside AppBuilderComponentsList, not here).
+        // Integrations list seed: the keyed appBuilderComponents map + the
+        // stack-filtered catalog for the add-a-appBuilderComponent picker (the
+        // mesh renders as the list's first row — MeshComponentRow — driven by
+        // the live mesh status channels, so no separate seed is needed here).
         const appBuilderComponentCatalog = this.resolveAppBuilderComponentCatalog(project ?? null);
 
         return {
@@ -198,7 +185,6 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
             edsDaLiveUrl,
             initialEdsStorefrontStatus,
             hasAdobeContext,
-            initialApp,
             appBuilderComponents: project?.appBuilderComponents,
             appBuilderComponentCatalog,
         };
@@ -329,31 +315,8 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
     }
 
     /**
-     * Public method to send App Builder app status updates (called by the
-     * deployApp command). Modeled on sendMeshStatusUpdate. No-op if no dashboard
-     * is open.
-     */
-    public static async sendAppStatusUpdate(
-        status: 'deploying' | 'deployed' | 'error' | 'not-deployed',
-        message?: string,
-        url?: string,
-    ): Promise<void> {
-        const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');
-        if (panel) {
-            await panel.webview.postMessage({
-                type: 'appStatusUpdate',
-                payload: {
-                    status,
-                    message,
-                    url,
-                },
-            });
-        }
-    }
-
-    /**
      * Public method to push a per-appBuilderComponent row status update (called by the
-     * appBuilderComponent handlers). Modeled on sendAppStatusUpdate but keyed by the
+     * appBuilderComponent handlers). Modeled on sendMeshStatusUpdate but keyed by the
      * appBuilderComponent `id` so the integrations list flips ONLY that row. No-op if no
      * dashboard is open.
      */

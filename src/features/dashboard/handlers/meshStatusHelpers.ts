@@ -227,7 +227,7 @@ export async function sendDemoStatusUpdate(context: HandlerContext): Promise<voi
         } else if (hasMeshDeploymentRecord(project)) {
             // Read persisted status instead of re-detecting changes
             // Only 'stale' needs translation — dashboard UI uses 'config-changed'
-            const endpoint = project.meshState?.endpoint;
+            const endpoint = getMeshEndpoint(project);
             const summary = project.meshStatusSummary;
             const status = summary === 'stale' ? 'config-changed'
                 : (summary === 'unknown' || !summary) ? 'deployed'

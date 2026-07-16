@@ -20,6 +20,15 @@ const MESH_ID = 'mesh';
 /** Fallback id for a migrated app with no appId. */
 const APP_ID_FALLBACK = 'app';
 
+/**
+ * A legacy field is usable only when it is a plain object (manifests are
+ * arbitrary user-editable JSON — a corrupt string/number/array must be
+ * skipped, never turned into a fabricated entry; D3 Step 09).
+ */
+function isUsableLegacyState(value: unknown): boolean {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 /** Map a legacy meshState into a mesh AppBuilderComponentState (defensive). */
 function meshToAppBuilderComponent(mesh: NonNullable<ProjectManifest['meshState']>): AppBuilderComponentState {
     return {
@@ -29,6 +38,13 @@ function meshToAppBuilderComponent(mesh: NonNullable<ProjectManifest['meshState'
         endpoint: mesh.endpoint,
         sourceHash: mesh.sourceHash,
         lastDeployed: mesh.lastDeployed,
+        // Mesh runtime baseline + decline flow (ADR-011 D3 Steps 07+09): once
+        // Step 07 stops persisting meshState, the migrated keyed entry is the
+        // ONLY durable carrier of these fields — dropping them here would lose
+        // the staleness baseline on a legacy project's first save.
+        envVars: mesh.envVars ?? {},
+        userDeclinedUpdate: mesh.userDeclinedUpdate,
+        declinedAt: mesh.declinedAt,
     };
 }
 
@@ -62,11 +78,11 @@ export function migrateLegacyToAppBuilderComponents(
 
     const appBuilderComponents: Record<string, AppBuilderComponentState> = {};
 
-    if (manifest.meshState) {
+    if (manifest.meshState && isUsableLegacyState(manifest.meshState)) {
         appBuilderComponents[MESH_ID] = meshToAppBuilderComponent(manifest.meshState);
     }
 
-    if (manifest.appState) {
+    if (manifest.appState && isUsableLegacyState(manifest.appState)) {
         const appId = manifest.appState.appId ?? APP_ID_FALLBACK;
         appBuilderComponents[appId] = appToAppBuilderComponent(manifest.appState);
     }

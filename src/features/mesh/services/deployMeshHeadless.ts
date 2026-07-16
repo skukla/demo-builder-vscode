@@ -146,7 +146,9 @@ export async function deployMeshHeadless(
         const deployedMeshId = result.data?.meshId;
         const deployedEndpoint = result.data?.endpoint;
 
-        // Persist deployed status (endpoint lives in meshState, not the instance).
+        // Persist deployed status (the endpoint + runtime baseline live on the
+        // keyed mesh appBuilderComponents entry, written by updateMeshState —
+        // the single writer chokepoint, ADR-011 D3 Steps 07+09).
         meshComponent.status = 'deployed';
         meshComponent.metadata = {
             ...meshComponent.metadata,
@@ -155,20 +157,6 @@ export async function deployMeshHeadless(
         };
         await updateMeshState(project, deployedEndpoint);
         project.meshStatusSummary = 'deployed';
-        // One writer (ADR-011 D3 Step 02): the keyed entry is written beside the
-        // singular meshState so both surfaces agree. Retired in Step 07.
-        // Step 06: the keyed entry also carries the mesh runtime baseline
-        // updateMeshState just computed (deployed envVars + sourceHash) and
-        // clears any "Later" decline — mirroring the meshState write.
-        recordDeployOutcome(project, 'mesh', meshComponent.id, {
-            status: 'deployed',
-            endpoint: deployedEndpoint,
-            lastDeployed: new Date().toISOString(),
-            envVars: project.meshState?.envVars,
-            sourceHash: project.meshState?.sourceHash,
-            userDeclinedUpdate: undefined,
-            declinedAt: undefined,
-        });
         await stateManager.saveProject(project);
 
         await onStatus?.('deployed', undefined, deployedEndpoint);

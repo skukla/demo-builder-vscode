@@ -1,9 +1,13 @@
 /**
- * AppBuilderComponentsList Component (D2 Track B — Step 05)
+ * AppBuilderComponentsList Component (D2 Track B — Step 05; mesh folded in by
+ * ADR-011 D3 Step 08)
  *
- * The SEPARATE "integrations" surface on the dashboard. Renders one
- * {@link AppBuilderComponentRow} per `kind:'integration'` entry in the project — the mesh
- * keeps its own badge and is EXCLUDED here (D3 owns mesh-UI unification). Adds an
+ * The "integrations" surface on the dashboard. Renders the mesh FIRST via the
+ * injected `meshRow` slot (a {@link MeshComponentRow} supplied by
+ * {@link IntegrationsBlock} — its status/actions ride the mesh channels, not
+ * the keyed messages), then one {@link AppBuilderComponentRow} per
+ * `kind:'integration'` entry. Integration rows stay live via the
+ * `appBuilderComponentStatusUpdate` per-id overrides. Adds an
  * "Add an App Builder component" affordance: the stack-filtered catalog picker plus a custom
  * GitHub-URL door (reusing the canonical {@link parseGitHubUrl} validator).
  *   - catalog choice → addAppBuilderComponent {id}
@@ -13,7 +17,7 @@
  */
 
 import { View, Flex, Heading, Button, TextField, Text } from '@adobe/react-spectrum';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AppBuilderComponentRemoveDialog } from './AppBuilderComponentRemoveDialog';
 import { AppBuilderComponentRow } from './AppBuilderComponentRow';
 import { ManageApisModal } from './ManageApisModal';
@@ -27,6 +31,39 @@ export interface AppBuilderComponentsListProps {
     project: Project;
     /** Stack-filtered catalog (getAvailableAppBuilderComponents) for the add picker. */
     catalog: AppBuilderComponentCatalogEntry[];
+    /**
+     * The mesh's row, rendered FIRST (D3 Step 08: mesh is one deployable in the
+     * list, not a masthead badge). Undefined when the project has no mesh.
+     */
+    meshRow?: React.ReactNode;
+}
+
+/** Live per-row status override pushed via `appBuilderComponentStatusUpdate`. */
+interface RowStatusOverride {
+    status: string;
+    message?: string;
+}
+
+/**
+ * Subscribe to the per-id `appBuilderComponentStatusUpdate` channel and merge
+ * each update into an id-keyed override map, so a deploy flips ONLY its own
+ * row (deploying spinner → deployed/error) without re-seeding the whole list.
+ */
+function useRowStatusOverrides(): Record<string, RowStatusOverride> {
+    const [overrides, setOverrides] = useState<Record<string, RowStatusOverride>>({});
+
+    useEffect(() => {
+        return webviewClient.onMessage('appBuilderComponentStatusUpdate', (data: unknown) => {
+            const payload = data as { id?: string; status?: string; message?: string };
+            if (!payload?.id || !payload?.status) {
+                return;
+            }
+            const { id, status, message } = payload;
+            setOverrides((prev) => ({ ...prev, [id]: { status, message } }));
+        });
+    }, []);
+
+    return overrides;
 }
 
 /** The add-a-appBuilderComponent picker: catalog integration entries + custom-URL door. */
@@ -78,8 +115,8 @@ function AddAppBuilderComponentPicker({ catalog }: { catalog: AppBuilderComponen
     );
 }
 
-/** The integrations list + add-a-appBuilderComponent affordance. */
-export function AppBuilderComponentsList({ project, catalog }: AppBuilderComponentsListProps) {
+/** The integrations list (mesh row first) + add-a-appBuilderComponent affordance. */
+export function AppBuilderComponentsList({ project, catalog, meshRow }: AppBuilderComponentsListProps) {
     const [showPicker, setShowPicker] = useState(false);
     // One dialog instance for the whole list; the pending id identifies the row
     // awaiting confirmation (avoids a per-row dialog + cross-row state leak).
@@ -87,8 +124,12 @@ export function AppBuilderComponentsList({ project, catalog }: AppBuilderCompone
     // Same single-shared-modal pattern for Manage APIs: one instance for the
     // whole list, keyed by the row id whose API access is being managed.
     const [manageApisId, setManageApisId] = useState<string | null>(null);
+    // Live per-id row statuses (deploying → deployed/error) — the mesh row is
+    // NOT in this map; it rides the mesh status channels via the meshRow slot.
+    const rowOverrides = useRowStatusOverrides();
 
     const integrations = listAppBuilderComponents(project).filter((d) => d.kind === 'integration');
+    const isEmpty = !meshRow && integrations.length === 0;
 
     const closeRemoveDialog = () => setPendingRemoveId(null);
     const confirmRemove = () => {
@@ -103,14 +144,29 @@ export function AppBuilderComponentsList({ project, catalog }: AppBuilderCompone
             <Heading level={3}>Integrations</Heading>
 
             <Flex direction="column" gap="size-200">
-                {integrations.map((appBuilderComponent) => (
-                    <AppBuilderComponentRow
-                        key={appBuilderComponent.id}
-                        appBuilderComponent={appBuilderComponent}
-                        onRemove={() => setPendingRemoveId(appBuilderComponent.id)}
-                        onManageApis={() => setManageApisId(appBuilderComponent.id)}
-                    />
-                ))}
+                {meshRow}
+                {integrations.map((appBuilderComponent) => {
+                    const override = rowOverrides[appBuilderComponent.id];
+                    // The widened live status ('deploying') is rendered by the
+                    // row's internal string switch; the cast bridges the
+                    // persisted union to the live vocabulary.
+                    const merged = override
+                        ? {
+                              ...appBuilderComponent,
+                              status: override.status as typeof appBuilderComponent.status,
+                          }
+                        : appBuilderComponent;
+                    return (
+                        <AppBuilderComponentRow
+                            key={appBuilderComponent.id}
+                            appBuilderComponent={merged}
+                            message={override?.message}
+                            onRemove={() => setPendingRemoveId(appBuilderComponent.id)}
+                            onManageApis={() => setManageApisId(appBuilderComponent.id)}
+                        />
+                    );
+                })}
+                {isEmpty && <Text>No integrations yet.</Text>}
             </Flex>
 
             <AppBuilderComponentRemoveDialog

@@ -1,11 +1,11 @@
 /**
  * Mesh update-decline state (the configure command's "Later" flow).
  *
- * ADR-011 D3 Step 06: the decline flags historically lived only on the
- * singular `meshState`. They now write to BOTH `meshState` and the keyed
- * mesh `appBuilderComponents` entry (the Step-02 both-writes pattern) and
- * read keyed-first, so the flags survive Step 07's retirement of the
- * singular write-side. Pure state helpers — no I/O, the caller saves.
+ * ADR-011 D3 Steps 06+07: the decline flags live on the keyed mesh
+ * `appBuilderComponents` entry (the single durable model — the singular
+ * `meshState` write-side is retired). Reads stay keyed-first with a legacy
+ * fallback for declines recorded by old builds before the keyed mirror.
+ * Pure state helpers — no I/O, the caller saves.
  *
  * @module features/mesh/services/meshUpdateDecline
  */
@@ -14,31 +14,23 @@ import { getKeyedMeshAppBuilderComponent } from '@/features/app-builder/services
 import type { Project } from '@/types/base';
 
 /**
- * Mark the mesh update as declined ("Later") on every mesh state the project
- * carries — the legacy `meshState` and the keyed mesh entry get the SAME
- * timestamp (one decline event). Fabricates nothing when neither exists.
+ * Mark the mesh update as declined ("Later") on the keyed mesh entry — the
+ * single durable model (ADR-011 D3 Step 07; the legacy `meshState` write-side
+ * is retired). Fabricates nothing when no keyed mesh entry exists (real flows
+ * always have one: the loader migrates legacy manifests on load).
  *
  * @param project - The project to mark (mutated in place; caller saves)
- * @returns true when a decline was recorded on at least one state
+ * @returns true when a decline was recorded
  */
 export function markMeshUpdateDeclined(project: Project): boolean {
-    const declinedAt = new Date().toISOString();
-    let marked = false;
-
-    if (project.meshState) {
-        project.meshState.userDeclinedUpdate = true;
-        project.meshState.declinedAt = declinedAt;
-        marked = true;
-    }
-
     const keyedMesh = getKeyedMeshAppBuilderComponent(project);
-    if (keyedMesh) {
-        keyedMesh.userDeclinedUpdate = true;
-        keyedMesh.declinedAt = declinedAt;
-        marked = true;
+    if (!keyedMesh) {
+        return false;
     }
 
-    return marked;
+    keyedMesh.userDeclinedUpdate = true;
+    keyedMesh.declinedAt = new Date().toISOString();
+    return true;
 }
 
 /**

@@ -61,7 +61,7 @@ describe('handleRedeployMesh / handleRedeployApp', () => {
         mockApp.mockResolvedValue({ success: true });
         const { context, path } = ctx();
 
-        const res = await handleRedeployApp(context, { projectPath: path });
+        const res = await handleRedeployApp(context, { projectPath: path, id: 'int-b' });
 
         expect(mockApp).toHaveBeenCalledWith(
             expect.objectContaining({ project: expect.objectContaining({ name: 'demo' }) })
@@ -107,14 +107,17 @@ describe('handleRedeployMesh / handleRedeployApp', () => {
         expect(res).toEqual({ success: true });
     });
 
-    it('redeployApp without an id keeps the singular default (componentId undefined)', async () => {
+    it('redeployApp rejects an id-less payload without deploying (no singular fallback)', async () => {
         mockApp.mockResolvedValue({ success: true });
         const { context, path } = ctx();
 
-        await handleRedeployApp(context, { projectPath: path });
-
-        expect(mockApp).toHaveBeenCalledWith(
-            expect.objectContaining({ componentId: undefined })
+        const res = await handleRedeployApp(
+            context,
+            { projectPath: path } as unknown as { projectPath: string; id: string }
         );
+
+        expect(res.success).toBe(false);
+        expect(res.error).toBe('Integration id is required');
+        expect(mockApp).not.toHaveBeenCalled();
     });
 });

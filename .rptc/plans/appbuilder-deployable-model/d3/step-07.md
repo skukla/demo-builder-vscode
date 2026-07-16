@@ -19,11 +19,16 @@ The keyed `appBuilderComponents` map becomes the single source of truth. Legacy 
 
 ## Tests to write FIRST (RED)
 
-- [ ] `writeManifest` no longer emits `meshState`/`appState` for a keyed-model project.
-- [ ] A legacy on-disk project (only `meshState`/`appState`) still loads (migration fallback) AND, on its
-      first save, is rewritten with the keyed map (one-time forward migration).
-- [ ] No production code reads `project.meshState`/`project.appState` directly (accessor-only) — a
-      grep-style guard in REFACTOR.
+- [x] `writeManifest` no longer emits `meshState`/`appState` for a keyed-model project.
+      (`projectConfigWriter-atomicWrite.test.ts`)
+- [x] A legacy on-disk project (only `meshState`/`appState`) still loads (migration fallback) AND, on its
+      first save, is rewritten with the keyed map (one-time forward migration + reload round-trip).
+      (`projectFileLoader.test.ts`)
+- [x] No production code reads `project.meshState`/`project.appState` directly (accessor-only) — enforced
+      permanently by `tests/core/state/singularStateAccessGuard.test.ts` (comment-stripping grep with a
+      documented 8-file allowlist: loader, migration, accessor synthesis, typeGuards fallback,
+      stalenessDetector per-field fallback + clearing write, meshUpdateDecline read fallback,
+      meshVerifier + appComponentManager clearing writes).
 
 ## Files to create / modify
 

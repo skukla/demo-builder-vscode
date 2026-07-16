@@ -104,6 +104,31 @@ describe('appBuilderComponentState accessors', () => {
 
             expect(getMeshAppBuilderComponent(project)?.endpoint).toBe('https://keyed.example/graphql');
         });
+
+        // ADR-011 D3 Steps 07+09: readers that previously consulted meshState
+        // directly (staleness baseline, decline flags, deployment record) now go
+        // through this accessor — the legacy synthesis must carry the runtime
+        // fields or an in-memory-legacy-only project would read empty state.
+        it('should carry envVars and decline flags on the legacy synthesis (Steps 07+09)', () => {
+            const project = makeProject({
+                meshState: {
+                    envVars: { ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://commerce/graphql' },
+                    sourceHash: 'abc123',
+                    lastDeployed: '2026-06-20T00:00:00.000Z',
+                    endpoint: 'https://mesh/graphql',
+                    userDeclinedUpdate: true,
+                    declinedAt: '2026-07-14T00:00:00.000Z',
+                },
+            });
+
+            const mesh = getMeshAppBuilderComponent(project);
+
+            expect(mesh?.envVars).toEqual({
+                ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://commerce/graphql',
+            });
+            expect(mesh?.userDeclinedUpdate).toBe(true);
+            expect(mesh?.declinedAt).toBe('2026-07-14T00:00:00.000Z');
+        });
     });
 
     // ADR-011 D3 Step 06: keyed-only lookup (no legacy synthesis) returning the

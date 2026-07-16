@@ -185,7 +185,7 @@ describe('StalenessDetector - State Detection', () => {
             expect(result.envVarsChanged).toBe(false);
         });
 
-        it('should populate meshState.envVars and set shouldSaveProject when fetch succeeds', async () => {
+        it('should populate the keyed entry envVars and set shouldSaveProject when fetch succeeds (keyed-only)', async () => {
             const project: Project = createMockProject({
                 componentInstances: {
                     'commerce-mesh': {
@@ -196,12 +196,19 @@ describe('StalenessDetector - State Detection', () => {
                         status: 'deployed',
                     },
                 },
-                meshState: {
-                    envVars: {},
-                    sourceHash: null,
-                    lastDeployed: '',
+                // Post-Step-07 shape: the deployment record lives on the keyed
+                // entry only (empty envVars = baseline never captured).
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                        endpoint: 'https://example.com/graphql',
+                        envVars: {},
+                        sourceHash: null,
+                    },
                 },
-            });
+            } as unknown as Partial<Project>);
 
             const deployedConfig = {
                 ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
@@ -241,13 +248,14 @@ describe('StalenessDetector - State Detection', () => {
             expect(result.shouldSaveProject).toBe(true);
             expect(result.hasChanges).toBe(false);
             expect(result.unknownDeployedState).toBeUndefined();
-            expect(project.meshState?.envVars).toEqual(deployedConfig);
+            expect(project.appBuilderComponents?.mesh?.envVars).toEqual(deployedConfig);
         });
 
-        it('should mirror the envVars back-fill onto the keyed mesh entry (both-writes, Step 06)', async () => {
-            // Same fetch-succeeds scenario, but the project also carries a keyed
-            // mesh entry (Step 02+). The fetched baseline must land on BOTH the
-            // legacy meshState and the keyed entry, or Step 07 would orphan it.
+        it('should back-fill the keyed entry only — the legacy meshState write-side is retired (Step 07)', async () => {
+            // Fetch-succeeds scenario on a project that carries BOTH an in-memory
+            // legacy meshState and a keyed mesh entry (a legacy-loaded project).
+            // The fetched baseline lands on the keyed entry; the legacy singleton
+            // is no longer written (readers are keyed-first).
             const project: Project = createMockProject({
                 componentInstances: {
                     'commerce-mesh': {
@@ -306,11 +314,12 @@ describe('StalenessDetector - State Detection', () => {
             });
 
             expect(result.shouldSaveProject).toBe(true);
-            expect(project.meshState?.envVars).toEqual(deployedConfig);
             const keyed = project.appBuilderComponents?.['commerce-mesh'] as {
                 envVars?: Record<string, string>;
             };
             expect(keyed.envVars).toEqual(deployedConfig);
+            // ADR-011 D3 Step 07: the legacy meshState is no longer written.
+            expect(project.meshState?.envVars).toEqual({});
         });
 
         it('should handle empty meshState with fetch returning null (no mesh deployed)', async () => {

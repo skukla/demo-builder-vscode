@@ -1,8 +1,9 @@
 /**
  * ProjectDashboardScreen Component
  *
- * Main dashboard screen for a demo project. Displays project status,
- * mesh status, and a grid of action buttons.
+ * Main dashboard screen for a demo project. Displays project status, a grid
+ * of action buttons, and the App Builder integrations list (mesh included as
+ * its first row — ADR-011 D3 Step 08).
  *
  * @module features/dashboard/ui/ProjectDashboardScreen
  */
@@ -11,8 +12,8 @@ import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useState, useEffect, useRef } from 'react';
 import { ActionGrid } from './components/ActionGrid';
 import { AiCapabilitiesModal } from './components/AiCapabilitiesModal';
-import type { AppCardState } from './components/AppBuilderCard';
 import { DashboardStatusHeader } from './components/DashboardStatusHeader';
+import { IntegrationsBlock } from './components/IntegrationsBlock';
 import { OrgContextNotice } from './components/OrgContextNotice';
 import { isStartActionDisabled } from './dashboardPredicates';
 import { useDashboardActions } from './hooks/useDashboardActions';
@@ -52,8 +53,6 @@ interface ProjectDashboardScreenProps {
     initialEdsStorefrontStatus?: 'published' | 'stale' | 'update-declined' | 'not-published';
     /** Whether the project has an Adobe org (drives the "Checking organization…" telegraph) */
     hasAdobeContext?: boolean;
-    /** Initial App Builder app state (from project.appState/appStatusSummary). Absent = no app. */
-    initialApp?: AppCardState;
     /** Keyed appBuilderComponents map (drives the integrations list rows). */
     appBuilderComponents?: Record<string, AppBuilderComponentState>;
     /** Stack-filtered catalog for the add-a-appBuilderComponent picker. */
@@ -66,8 +65,9 @@ interface ProjectDashboardScreenProps {
  * Displays the control panel for a demo project including:
  * - Project name header
  * - Demo status indicator
- * - API Mesh status indicator (if applicable)
- * - Action button grid (Start/Stop, Open, Deploy Mesh, etc.)
+ * - Action button grid (Start/Stop, Open, Configure, etc.)
+ * - The App Builder integrations list, with the mesh as its first row
+ *   (the one mesh surface — status + Deploy/Redeploy via the mesh path)
  *
  * @param props - Component props
  */
@@ -82,6 +82,8 @@ export function ProjectDashboardScreen({
     initialMeshStatus,
     initialEdsStorefrontStatus,
     hasAdobeContext,
+    appBuilderComponents,
+    appBuilderComponentCatalog,
 }: ProjectDashboardScreenProps) {
     // Capture isEds on first render and never change it (project type doesn't change)
     const isEdsRef = useRef(isEds);
@@ -285,8 +287,6 @@ export function ProjectDashboardScreen({
                         <>
                             <DashboardStatusHeader
                                 demoStatusDisplay={demoStatusDisplay}
-                                meshStatusDisplay={meshStatusDisplay}
-                                meshStatus={meshStatus}
                                 aiReady={aiReady}
                                 imsOrgDisplay={imsOrgDisplay}
                                 orgCheckState={orgCheckState}
@@ -311,37 +311,50 @@ export function ProjectDashboardScreen({
                         </>
                     }
                     primary={
-                        <div className="dashboard-grid-container">
-                            <ActionGrid
-                                isEds={isEdsStable}
-                                hasMesh={hasMesh}
-                                isRunning={isRunning}
-                                isStartDisabled={isStartDisabled}
-                                isStopDisabled={isStopDisabled}
+                        <>
+                            <div className="dashboard-grid-container">
+                                <ActionGrid
+                                    isEds={isEdsStable}
+                                    isRunning={isRunning}
+                                    isStartDisabled={isStartDisabled}
+                                    isStopDisabled={isStopDisabled}
+                                    isMeshActionDisabled={isMeshActionDisabled}
+                                    isOpeningBrowser={isOpeningBrowser}
+                                    handleStartDemo={handleStartDemo}
+                                    handleStopDemo={handleStopDemo}
+                                    handleOpenBrowser={handleOpenBrowser}
+                                    handleOpenLiveSite={handleOpenLiveSite}
+                                    handleOpenDaLive={handleOpenDaLive}
+                                    handleOpenAdminPanel={handleOpenAdminPanel}
+                                    handleSyncStorefront={handleSyncStorefront}
+                                    handleRefreshBlockLibrary={
+                                        isEdsStable ? handleRefreshBlockLibrary : undefined
+                                    }
+                                    handleRepublishContent={
+                                        isEdsStable ? handleRepublishContent : undefined
+                                    }
+                                    handleConfigure={handleConfigure}
+                                    handleOpenDevConsole={handleOpenDevConsole}
+                                    handleEditProject={handleEditProject}
+                                    handleExportProject={handleExportProject}
+                                    handleResetProject={handleResetProject}
+                                    handleDeleteProject={handleDeleteProject}
+                                />
+                            </div>
+
+                            {/* App Builder integrations list — the mesh renders as
+                                its FIRST row (the one mesh surface after Step 08). */}
+                            <IntegrationsBlock
+                                hasAdobeContext={hasAdobeContext}
+                                appBuilderComponents={appBuilderComponents}
+                                catalog={appBuilderComponentCatalog}
+                                meshStatusDisplay={meshStatusDisplay}
+                                meshStatus={meshStatus}
                                 isMeshActionDisabled={isMeshActionDisabled}
-                                isOpeningBrowser={isOpeningBrowser}
-                                handleStartDemo={handleStartDemo}
-                                handleStopDemo={handleStopDemo}
-                                handleOpenBrowser={handleOpenBrowser}
-                                handleOpenLiveSite={handleOpenLiveSite}
-                                handleOpenDaLive={handleOpenDaLive}
-                                handleOpenAdminPanel={handleOpenAdminPanel}
-                                handleDeployMesh={handleDeployMesh}
-                                handleSyncStorefront={handleSyncStorefront}
-                                handleRefreshBlockLibrary={
-                                    isEdsStable ? handleRefreshBlockLibrary : undefined
-                                }
-                                handleRepublishContent={
-                                    isEdsStable ? handleRepublishContent : undefined
-                                }
-                                handleConfigure={handleConfigure}
-                                handleOpenDevConsole={handleOpenDevConsole}
-                                handleEditProject={handleEditProject}
-                                handleExportProject={handleExportProject}
-                                handleResetProject={handleResetProject}
-                                handleDeleteProject={handleDeleteProject}
+                                onDeployMesh={handleDeployMesh}
+                                onReAuthenticate={handleReAuthenticate}
                             />
-                        </div>
+                        </>
                     }
                 />
             </PageLayout>

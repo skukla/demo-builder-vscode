@@ -28,7 +28,7 @@ import { useAutoStoreDetect } from '@/features/components/ui/hooks/useAutoStoreD
 import { useStoreDiscovery } from '@/features/components/ui/hooks/useStoreDiscovery';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AuthoringExperience, Project } from '@/types/base';
-import { hasEntries } from '@/types/typeGuards';
+import { getMeshEndpointUrl, hasEntries } from '@/types/typeGuards';
 import { ComponentEnvVar, ComponentConfigs } from '@/types/webview';
 
 /** Stable empty references for optional appBuilderComponent props (avoid hook churn). */
@@ -439,9 +439,11 @@ export function ConfigureScreen({
 
     const getFieldValue = useCallback(
         (field: UniqueField): string | boolean | undefined => {
-            // Special handling for MESH_ENDPOINT - read from meshState (authoritative)
-            if (field.key === 'MESH_ENDPOINT' && project.meshState?.endpoint) {
-                return project.meshState.endpoint;
+            // Special handling for MESH_ENDPOINT — read from the keyed mesh entry
+            // (authoritative; legacy meshState fallback inside the accessor).
+            const deployedMeshEndpoint = getMeshEndpointUrl(project);
+            if (field.key === 'MESH_ENDPOINT' && deployedMeshEndpoint) {
+                return deployedMeshEndpoint;
             }
 
             // If user explicitly touched this field, only look in the field's componentIds

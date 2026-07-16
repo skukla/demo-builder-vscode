@@ -284,14 +284,20 @@ describe('ProjectConfigWriter atomic writes', () => {
             expect(parsed.aiContextVersion).toBe(3);
         });
 
-        // Regression: persisting appState — the deployed custom integration's state.
-        // deployAppHeadless sets project.appState after a successful deploy and calls
-        // saveProject, but writeManifest previously omitted it — so the deployed URL/
-        // status was dropped on write and read back as undefined after an extension
-        // reload (projectFileLoader reads manifest.appState). Mirrors meshState.
-        it('should include appState in manifest when the custom integration is deployed', async () => {
+        // ADR-011 D3 Step 07: the singular meshState/appState write-side is
+        // retired — the keyed appBuilderComponents map is the single persisted
+        // authority. Legacy manifests stay READABLE (loader + migration), but
+        // the writer never emits the singular fields again, even when the
+        // in-memory legacy singletons are still populated.
+        it('should NOT write meshState/appState even when the in-memory legacy singletons exist (Step 07)', async () => {
             const project = createTestProject({
                 name: 'deployed-integration',
+                meshState: {
+                    envVars: { A: '1' },
+                    sourceHash: 'abc',
+                    lastDeployed: '2026-07-15T00:00:00.000Z',
+                    endpoint: 'https://mesh/graphql',
+                },
                 appState: {
                     appId: 'acme-widget',
                     url: 'https://acme.adobeio-static.net',
@@ -308,14 +314,8 @@ describe('ProjectConfigWriter atomic writes', () => {
                 call[0].toString().endsWith('.tmp')
             );
             const parsed = JSON.parse(writeCall![1] as string);
-            expect(parsed.appState).toEqual({
-                appId: 'acme-widget',
-                url: 'https://acme.adobeio-static.net',
-                status: 'deployed',
-                deployedUrls: { main: 'https://acme.adobeio-static.net' },
-                lastDeployed: '2026-07-15T00:00:00.000Z',
-                sourceHash: null,
-            });
+            expect(parsed.meshState).toBeUndefined();
+            expect(parsed.appState).toBeUndefined();
         });
 
         it('should omit appState from manifest when the integration is not deployed', async () => {

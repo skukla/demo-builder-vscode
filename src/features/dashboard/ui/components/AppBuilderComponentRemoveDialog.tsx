@@ -2,8 +2,8 @@
  * AppBuilderComponentRemoveDialog Component (D2 Track B — Step 06)
  *
  * The confirmation guard in front of `removeAppBuilderComponent` — a DESTRUCTIVE cloud
- * undeploy (D1's best-effort teardown + cleanup). The slice-1 AppBuilderCard
- * Remove fired straight away; this dialog adds the missing confirm so a cloud
+ * undeploy (D1's best-effort teardown + cleanup). The slice-1 card's Remove
+ * fired straight away; this dialog adds the missing confirm so a cloud
  * teardown is never one stray click away (research B-6).
  *
  * Controlled + presentational: the

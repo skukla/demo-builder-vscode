@@ -208,8 +208,10 @@ Dashboard Load / Configuration UI
     ↓
 detectMeshChanges(project, newConfig)
     ↓
-1. Get current mesh state (meshState.envVars, meshState.sourceHash)
-2. If meshState.envVars empty, fetchDeployedMeshConfig() from Adobe I/O
+1. Get current mesh state — the keyed appBuilderComponents mesh entry's
+   envVars/sourceHash via getKeyedMeshAppBuilderComponent (per-field legacy
+   meshState fallback for pre-migration in-memory projects)
+2. If the baseline envVars are empty, fetchDeployedMeshConfig() from Adobe I/O
 3. Compare env vars (ADOBE_COMMERCE_GRAPHQL_ENDPOINT, etc.)
 4. Compare source hash (resolvers, schemas, mesh.config.js)
     ↓
@@ -255,8 +257,10 @@ if (result.success) {
     // Update project state (use appropriate mesh component ID based on stack)
     const meshId = 'eds-commerce-mesh'; // or 'headless-commerce-mesh' for headless stacks
     project.componentInstances![meshId].status = 'deployed';
-    // meshState.endpoint is the single source of truth for the mesh endpoint
-    project.meshState = { ...project.meshState, endpoint: result.endpoint } as typeof project.meshState;
+    // The keyed appBuilderComponents mesh entry is the single deploy record —
+    // land it through the writer chokepoint (updateMeshState → recordDeployOutcome).
+    // Readers resolve the endpoint via getMeshEndpointUrl(project).
+    await updateMeshState(project, result.endpoint);
     await stateManager.saveProject(project);
 }
 ```
@@ -272,7 +276,9 @@ let meshStatus: 'deployed' | 'config-changed' | 'not-deployed' = 'not-deployed';
 
 if (changes.hasChanges) {
     meshStatus = 'config-changed';
-} else if (project.meshState && Object.keys(project.meshState.envVars).length > 0) {
+} else if (Object.keys(getMeshAppBuilderComponent(project)?.envVars ?? {}).length > 0) {
+    // The keyed mesh entry carries the deployment record (accessor synthesizes
+    // from legacy meshState only for pre-migration in-memory projects).
     meshStatus = 'deployed';
 
     // Verify mesh still exists in Adobe I/O (background check)
@@ -319,10 +325,11 @@ import { updateMeshState } from '@/features/mesh';
 // After successful deployment, capture baseline state
 await updateMeshState(project);
 
-// This sets:
-// - project.meshState.envVars = current mesh env vars
-// - project.meshState.sourceHash = hash of resolvers/schemas/config
-// - project.meshState.lastDeployed = current timestamp
+// This lands the deploy record on the keyed appBuilderComponents mesh entry
+// (updateMeshState is the mesh writer chokepoint → recordDeployOutcome):
+// - envVars = current mesh env vars (the staleness baseline)
+// - sourceHash = hash of resolvers/schemas/config
+// - lastDeployed = current timestamp
 
 await stateManager.saveProject(project);
 
@@ -478,8 +485,8 @@ if (!currentState || Object.keys(currentState.envVars).length === 0) {
     const deployedConfig = await fetchDeployedMeshConfig();
 
     if (deployedConfig) {
-        // Successfully fetched - use as baseline
-        project.meshState.envVars = deployedConfig;
+        // Successfully fetched - populate the baseline on the keyed mesh entry
+        getKeyedMeshAppBuilderComponent(project).envVars = deployedConfig;
         // Continue with comparison
     } else {
         // Failed to fetch - unknown deployed state

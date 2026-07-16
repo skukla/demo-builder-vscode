@@ -1088,17 +1088,21 @@ export const handleRedeployMesh: MessageHandler<{ projectPath: string }> = async
  * id — ADR-011 D3 Step 04). Reuses the shared
  * {@link import('@/features/app-builder/services/deployAppHeadless').deployAppHeadless}
  * core, which preserves the full guard chain (auth → org → permission → no-app)
- * and targets the id-matched integration. An id-less payload keeps the singular
- * default for backward compatibility.
+ * and targets the id-matched integration. The id is REQUIRED — a payload
+ * without one fails fast; there is no singular fallback to guess at.
  */
-export const handleRedeployApp: MessageHandler<{ projectPath: string; id?: string }> = async (
+export const handleRedeployApp: MessageHandler<{ projectPath: string; id: string }> = async (
     context: HandlerContext,
-    payload?: { projectPath: string; id?: string },
+    payload?: { projectPath: string; id: string },
 ): Promise<HandlerResponse> => {
+    if (!payload?.id) {
+        return { success: false, error: 'Integration id is required' };
+    }
+    const componentId = payload.id;
     const { deployAppHeadless } = await import('@/features/app-builder/services/deployAppHeadless');
     return runProjectRedeploy(
         context,
-        payload?.projectPath,
+        payload.projectPath,
         'Redeploying app',
         (project, onProgress) =>
             deployAppHeadless({
@@ -1107,7 +1111,7 @@ export const handleRedeployApp: MessageHandler<{ projectPath: string; id?: strin
                 logger: context.logger,
                 extensionPath: context.context.extensionPath,
                 onProgress,
-                componentId: payload?.id,
+                componentId,
             }),
     );
 };

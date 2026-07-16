@@ -13,6 +13,7 @@ import { generateConfigJson, extractConfigParamsFromConfigs, type ConfigGenerato
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 import type { Logger, Project } from '@/types';
 import { TransformedComponentDefinition, EnvVarDefinition, ConfigFileDefinition, ComponentRegistry } from '@/types/components';
+import { getMeshEndpointUrl } from '@/types/typeGuards';
 
 /**
  * Resolves all environment variable keys for a component, including backend-specific service env vars.
@@ -288,7 +289,9 @@ export async function regenerateProjectEnvFiles(
                 Record<string, string | number | boolean | undefined>
             > | undefined,
         getEnvVarDefinitions: () => registry.envVars || {},
-        getMeshEndpoint: () => project.meshState?.endpoint,
+        // Keyed-first (ADR-011 D3 Steps 07+09): the endpoint lives on the keyed
+        // mesh appBuilderComponents entry (legacy meshState fallback inside).
+        getMeshEndpoint: () => getMeshEndpointUrl(project),
         getSelectedPackage: () => project.selectedPackage,
     };
 

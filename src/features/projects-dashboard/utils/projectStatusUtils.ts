@@ -108,23 +108,48 @@ export function getMeshStatusVariant(project: Project): StatusVariant | null {
     return (display?.variant as StatusVariant) ?? null;
 }
 
+/** Worst-first precedence for collapsing N integration statuses into one card line. */
+const APP_STATUS_PRECEDENCE: ReadonlyArray<AppBuilderComponentState['status']> = [
+    'error',
+    'stale',
+    'not-deployed',
+    'deployed',
+];
+
 /**
- * Gets the App Builder app status display text for a project card.
+ * The worst status across the durable keyed `kind:'integration'` entries of
+ * `project.appBuilderComponents` (mesh entries have their own line). The
+ * deploy-time-only `appStatusSummary` is NOT read here: it is never persisted
+ * or recomputed, so a reloaded project only carries the keyed entries.
+ */
+function getWorstIntegrationStatus(
+    project: Project,
+): AppBuilderComponentState['status'] | undefined {
+    const statuses = Object.values(project.appBuilderComponents ?? {})
+        .filter((state) => state.kind === 'integration')
+        .map((state) => state.status);
+    return APP_STATUS_PRECEDENCE.find((status) => statuses.includes(status));
+}
+
+/**
+ * Gets the App Builder app status display text for a project card, derived
+ * from the keyed `appBuilderComponents` map (worst status across integrations).
  *
- * @returns Display text or null if no app status to show
+ * @returns Display text or null if the project has no integrations
  */
 export function getAppStatusText(project: Project): string | null {
-    const display = getAppStatusDisplay(project.appStatusSummary);
+    const display = getAppStatusDisplay(getWorstIntegrationStatus(project));
     return display?.text ?? null;
 }
 
 /**
- * Gets the StatusDot variant for App Builder app status display.
+ * Gets the StatusDot variant for App Builder app status display, derived
+ * from the keyed `appBuilderComponents` map (worst status across integrations).
  *
- * @returns StatusDot variant or null if no app status to show
+ * @returns StatusDot variant or null if the project has no integrations
  */
 export function getAppStatusVariant(project: Project): StatusVariant | null {
-    const display = getAppStatusDisplay(project.appStatusSummary);
+    const display = getAppStatusDisplay(getWorstIntegrationStatus(project));
     return (display?.variant as StatusVariant) ?? null;
 }
 

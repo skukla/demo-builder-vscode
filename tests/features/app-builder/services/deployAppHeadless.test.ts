@@ -1,11 +1,10 @@
 /**
- * deployAppHeadless — the shared, UI-free App Builder app deploy core.
+ * deployAppHeadless — the UI-free per-integration App Builder deploy core.
  *
- * Runs the same sequence DeployAppCommand orchestrates (preflight → App Builder
- * permission gate → find app → deploy under org-context → persist) but returns a
- * plain result and emits status/progress via callbacks instead of driving the
- * dashboard/notification UI. Both the command (with UI callbacks) and the
- * projects-list redeployApp handler (headless) call it.
+ * Runs preflight → App Builder permission gate → find the componentId-matched
+ * integration → deploy under org-context → persist, returning a plain result
+ * and emitting status/progress via callbacks. componentId is REQUIRED (no
+ * singular fallback). Caller: the projects-list redeployApp handler.
  */
 
 jest.mock('@/core/di/serviceLocator');
@@ -79,6 +78,8 @@ function deps(overrides: Record<string, unknown> = {}) {
         stateManager: { saveProject: jest.fn().mockResolvedValue(undefined) } as never,
         logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() } as never,
         extensionPath: '/ext',
+        // REQUIRED (F3): callers always target one integration by instance id.
+        componentId: 'app-builder-shell',
         ...overrides,
     };
 }
@@ -100,7 +101,7 @@ describe('deployAppHeadless', () => {
         });
     });
 
-    it('deploys the app and persists appState + appStatusSummary on success', async () => {
+    it('deploys the app and persists the keyed entry + appStatusSummary on success', async () => {
         const d = deps();
         const result = await deployAppHeadless(d);
 
@@ -111,7 +112,10 @@ describe('deployAppHeadless', () => {
             expect.any(Function)
         );
         expect(d.project.appStatusSummary).toBe('deployed');
-        expect(d.project.appState).toEqual(
+        // ADR-011 D3 Step 07: the singular appState write-side is retired —
+        // the keyed appBuilderComponents entry is the only deploy record.
+        expect(d.project.appState).toBeUndefined();
+        expect(d.project.appBuilderComponents?.['app-builder-shell']).toEqual(
             expect.objectContaining({ url: 'https://app.example', status: 'deployed' })
         );
         expect(d.stateManager.saveProject).toHaveBeenCalled();
@@ -171,17 +175,16 @@ describe('deployAppHeadless', () => {
         expect(result).toEqual({ success: false, error: 'boom' });
     });
 
-    // ADR-011 D3 Step 02 (one writer): the singular path must ALSO write the
-    // keyed appBuilderComponents entry so the projects-dashboard card grid and
-    // the keyed integrations list read the same state. The singular
-    // appState/appStatusSummary writes remain until Step 07 retires them.
-    describe('keyed appBuilderComponents write (ADR-011 D3 Step 02)', () => {
-        it('writes the keyed integration entry alongside appState on success', async () => {
+    // ADR-011 D3 Step 02 (one writer) → Step 07 (single writer): the keyed
+    // appBuilderComponents entry is the deploy record read by both the
+    // projects-dashboard card grid and the keyed integrations list. The
+    // singular appState write-side is retired.
+    describe('keyed appBuilderComponents write (ADR-011 D3 Steps 02+07)', () => {
+        it('writes the keyed integration entry (no singular appState) on success', async () => {
             const d = deps();
             await deployAppHeadless(d);
 
-            // Both models agree: singular appState AND the keyed entry.
-            expect(d.project.appState?.status).toBe('deployed');
+            expect(d.project.appState).toBeUndefined();
             expect(d.project.appBuilderComponents?.['app-builder-shell']).toEqual(
                 expect.objectContaining({
                     kind: 'integration',
@@ -370,10 +373,10 @@ describe('deployAppHeadless', () => {
         });
     });
 
-    // ADR-011 D3 Step 04 (per-integration redeploy): an optional componentId
+    // ADR-011 D3 Step 04 (per-integration redeploy): the REQUIRED componentId
     // targets ONE of N integrations. The guard chain (auth → org → permission →
-    // no-app) is unchanged — only the target-resolution differs from the
-    // singular getAppBuilderInstance default.
+    // no-app) is unchanged — there is no singular default; an unknown id
+    // blocks, never deploys a guess.
     describe('per-integration target via componentId (ADR-011 D3 Step 04)', () => {
         /** Two app-subType instances — the singular default would pick [0]. */
         function projectWithTwoApps(): Project {
@@ -448,16 +451,5 @@ describe('deployAppHeadless', () => {
             expect(p.appBuilderComponents['app-builder-shell'].url).toBe('https://old-a.example');
         });
 
-        it('keeps the singular default when componentId is omitted', async () => {
-            const p = projectWithTwoApps();
-            await deployAppHeadless(deps({ project: p }));
-
-            expect(mockDeploy).toHaveBeenCalledWith(
-                '/p/app',
-                expect.anything(),
-                expect.anything(),
-                expect.any(Function)
-            );
-        });
     });
 });

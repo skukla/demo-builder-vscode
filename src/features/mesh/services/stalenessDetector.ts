@@ -16,6 +16,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import { getLogger } from '@/core/logging';
 import { getFrontendEnvVars } from '@/core/state';
 import { getKeyedMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
+import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
 import {
     PAAS_URL, PAAS_GRAPHQL_ENDPOINT, PAAS_ENVIRONMENT_ID,
     PAAS_WEBSITE_CODE, PAAS_STORE_VIEW_CODE, PAAS_STORE_CODE,
@@ -474,13 +475,11 @@ async function detectMeshChangesImpl(
 
         if (deployedConfig) {
             // Successfully fetched deployed config - use it as baseline
-            logger.debug('[Mesh Staleness] Successfully fetched deployed config, populating meshState.envVars');
+            logger.debug('[Mesh Staleness] Successfully fetched deployed config, populating the keyed baseline');
 
-            if (project.meshState) {
-                project.meshState.envVars = deployedConfig;
-            }
-            // Both-writes (ADR-011 D3 Step 06): mirror the baseline onto the
-            // keyed mesh entry so it survives Step 07's meshState retirement.
+            // The fetched baseline lands on the keyed mesh entry — the single
+            // durable model (ADR-011 D3 Step 07; the legacy meshState write-side
+            // is retired, readers are keyed-first).
             const keyedMesh = getKeyedMeshAppBuilderComponent(project);
             if (keyedMesh) {
                 keyedMesh.envVars = deployedConfig;
@@ -597,16 +596,29 @@ async function updateMeshStateImpl(project: Project, endpoint: string | undefine
     // This is the actual deployed state since .env file is used during mesh deployment
     const envVars = await readMeshEnvVarsFromFile(meshInstance.path);
     const sourceHash = await calculateMeshSourceHashImpl(meshInstance.path, logger);
+    const lastDeployed = new Date().toISOString();
 
-    project.meshState = {
+    // Writer chokepoint (ADR-011 D3 Steps 07+09): every mesh deploy path
+    // (creation, EDS reset, project reset, headless deploy) persists its state
+    // through this function — landing the outcome on the KEYED mesh entry here
+    // covers all of them at once. The keyed entry is the single durable model;
+    // the singular meshState write-side is retired (Step 07).
+    recordDeployOutcome(project, 'mesh', meshInstance.id, {
+        status: 'deployed',
+        endpoint,
         envVars,
         sourceHash,
-        lastDeployed: new Date().toISOString(),
-        endpoint, // AUTHORITATIVE location for mesh endpoint
-        // Clear any previous decline state since mesh is now deployed
+        lastDeployed,
+        // Clear any previous "Later" decline — the mesh is now deployed.
         userDeclinedUpdate: undefined,
         declinedAt: undefined,
-    };
+    });
+
+    // Clear the in-memory legacy singleton (a legacy-loaded project still
+    // carries it): the keyed entry above is authoritative, and a stale
+    // meshState left behind could resurface through the accessors' legacy
+    // fallbacks. Legacy manifests remain READABLE via the loader + migration.
+    project.meshState = undefined;
 }
 
 /**

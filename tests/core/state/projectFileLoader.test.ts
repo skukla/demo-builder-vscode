@@ -221,4 +221,61 @@ describe('ProjectFileLoader — persisted appBuilderComponents (ADR-011 D3 Step 
 
         expect(reloaded!.appBuilderComponents).toEqual(persistedMap);
     });
+
+    // ADR-011 D3 Steps 07+09: forward migration on first save. A legacy on-disk
+    // project (only meshState/appState) loads via the migration fallback, and its
+    // FIRST save persists the keyed map — including the mesh runtime baseline
+    // (envVars), which after Step 07 has no other durable home.
+    it('persists the migrated keyed map (with the mesh baseline) on first save of a legacy project', async () => {
+        primeFsWithManifest({
+            name: 'legacy-demo',
+            meshState: {
+                envVars: { ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://commerce/graphql' },
+                sourceHash: 'abc123',
+                lastDeployed: '2026-06-20T00:00:00.000Z',
+                endpoint: 'https://legacy-mesh/graphql',
+            },
+            appState: {
+                appId: 'acme-widget',
+                url: 'https://acme.adobeio-static.net',
+                status: 'deployed',
+            },
+        });
+        mockedFs.mkdir.mockResolvedValue(undefined as never);
+        mockedFs.rename.mockResolvedValue(undefined);
+        mockedFs.unlink.mockResolvedValue(undefined);
+
+        const loader = new ProjectFileLoader(makeLogger());
+        const project = await loader.loadProject(PROJECT_PATH, () => []);
+
+        mockedFs.writeFile.mockClear();
+        const writer = new ProjectConfigWriter(makeLogger());
+        await writer.saveProjectConfig(project!, PROJECT_PATH);
+
+        const manifestWrite = mockedFs.writeFile.mock.calls.find((call) =>
+            call[0].toString().endsWith('.tmp'),
+        );
+        expect(manifestWrite).toBeDefined();
+        const written = JSON.parse(manifestWrite![1] as string);
+
+        expect(written.appBuilderComponents?.mesh?.endpoint).toBe('https://legacy-mesh/graphql');
+        expect(written.appBuilderComponents?.mesh?.envVars).toEqual({
+            ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://commerce/graphql',
+        });
+        expect(written.appBuilderComponents?.['acme-widget']?.url).toBe(
+            'https://acme.adobeio-static.net',
+        );
+
+        // ADR-011 D3 Step 07: the singular write-side is retired — the rewritten
+        // manifest carries the keyed map ONLY (one-time forward migration).
+        expect(written.meshState).toBeUndefined();
+        expect(written.appState).toBeUndefined();
+
+        // Round-trip: reloading the forward-migrated manifest yields the
+        // identical keyed map (nothing was lost by dropping the singulars).
+        mockedFs.readFile.mockResolvedValue(manifestWrite![1] as string);
+        mockedFs.readdir.mockRejectedValue(new Error('no components dir'));
+        const reloaded = await loader.loadProject(PROJECT_PATH, () => []);
+        expect(reloaded!.appBuilderComponents).toEqual(written.appBuilderComponents);
+    });
 });

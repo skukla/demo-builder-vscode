@@ -90,20 +90,27 @@ export interface Project {
         | 'not-deployed'
         | 'error'
         | 'unknown';
-    // API Mesh deployment state (tracks changes that require redeployment)
-    // AUTHORITATIVE location for mesh endpoint - see docs/architecture/state-ownership.md
+    // LEGACY-READ-ONLY mesh deployment state (ADR-011 D3 Step 07). The
+    // authoritative home for the mesh endpoint + staleness baseline is the
+    // keyed mesh `appBuilderComponents` entry; this singleton is never written
+    // or persisted anymore. It exists so legacy manifests (of arbitrary age)
+    // keep loading: the loader reads it and the read-migration folds it into
+    // the keyed map. See docs/architecture/state-ownership.md.
     meshState?: {
         envVars: Record<string, string>;
         sourceHash: string | null;
         lastDeployed: string; // ISO date string
-        endpoint?: string; // AUTHORITATIVE mesh GraphQL endpoint URL
+        endpoint?: string; // mesh GraphQL endpoint URL (legacy manifests only)
         userDeclinedUpdate?: boolean; // User clicked "Later" on redeploy prompt
         declinedAt?: string; // ISO date string when user declined
     };
     // App Builder app status summary for card grid display
     appStatusSummary?: 'deployed' | 'stale' | 'not-deployed' | 'error' | 'unknown';
-    // App Builder app deployment state (singular — one custom app per demo workspace)
-    // AUTHORITATIVE location for the deployed app URL(s)
+    // LEGACY-READ-ONLY App Builder app deployment state (ADR-011 D3 Step 07).
+    // The authoritative home for integration deploy state is the keyed
+    // `appBuilderComponents` entry per integration; this singleton is never
+    // written or persisted anymore — kept only so legacy manifests load and
+    // migrate. See docs/architecture/state-ownership.md.
     appState?: {
         appId?: string;
         url?: string; // Primary deployed app URL
@@ -135,12 +142,13 @@ export interface Project {
         }
     >;
     /**
-     * Keyed appBuilderComponent state — the unified replacement for the singular
-     * `meshState`/`appState` (Model B; the plan/ADR call this concept a
-     * "deployable" — `appBuilderComponent` is the shipped name). Persisted in the
-     * manifest as of D3 Step 01 (the durable model); the legacy singletons remain
-     * as a read-side migration fallback until D3 Step 07 retires their write-side.
-     * See docs/architecture/adr/011-app-builder-deployables.md.
+     * Keyed appBuilderComponent state — THE single source of truth for mesh +
+     * integration deploy state (Model B; the plan/ADR call this concept a
+     * "deployable" — `appBuilderComponent` is the shipped name). Persisted in
+     * the manifest (D3 Step 01) and, since D3 Step 07 retired the singular
+     * write-side, the only written model; the legacy singletons above are
+     * read-only migration inputs. See
+     * docs/architecture/adr/011-app-builder-deployables.md.
      */
     appBuilderComponents?: Record<string, AppBuilderComponentState>;
     /**

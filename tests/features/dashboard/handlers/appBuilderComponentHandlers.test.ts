@@ -10,8 +10,7 @@
  *   - handleRemoveAppBuilderComponent  — removeAppBuilderComponent {id}
  *   - handleVerifyAppBuilderComponent  — on-demand, non-interactive SDK-only probe
  *
- * The guard order MIRRORS DeployAppCommand (auth → org-mismatch → App Builder
- * permission); a failing guard surfaces the message and NEVER calls the runner.
+ * The guard order is auth → org-mismatch → App Builder permission; a failing guard surfaces the message and NEVER calls the runner.
  *
  * Strict TDD: written BEFORE the handlers exist. The runner, the subscriber
  * adapter, the SDK/auth service, and the guards are ALL mocked — no live
@@ -56,7 +55,7 @@ jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader
     buildCustomIntegrationEntry: (...a: unknown[]) => mockBuildCustomIntegrationEntry(...a),
 }));
 
-// ---- guards (mirror DeployAppCommand) --------------------------------------
+// ---- guards (auth → org-mismatch → permission) ------------------------------
 const mockEnsureAdobeIOAuth = jest.fn();
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: (...a: unknown[]) => mockEnsureAdobeIOAuth(...a),

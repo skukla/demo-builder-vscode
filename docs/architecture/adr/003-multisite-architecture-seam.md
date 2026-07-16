@@ -147,7 +147,7 @@ No code changes in this ADR. When multisite work happens, the implementing PR(s)
 
 - Wizard adds a per-env workspace selection step (or auto-picks based on workspace-name patterns like `*-dev`, `*-stage`, `*-prod`).
 - `deployMeshComponent` iterates over the environments list.
-- `meshState` becomes `Record<envName, MeshState>`.
+- `meshState` becomes `Record<envName, MeshState>`. *(Post-ADR-011 D3 note: `meshState` is retired — this sketch generalizes to per-env keyed `appBuilderComponents` mesh entries instead.)*
 
 ### Step 4 — Robots.txt + analytics template
 
