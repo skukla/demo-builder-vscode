@@ -615,3 +615,49 @@ describe('removeAppBuilderComponent (mesh)', () => {
         expect(result.success).toBe(false);
     });
 });
+
+// =============================================================================
+// Caller-reference sync (regression, found by an on-disk audit)
+// =============================================================================
+
+// The runner persisted IMMUTABLY: setAppBuilderComponent/`cleared` copies were
+// saved and returned, but the CALLER's project reference never carried the
+// change. Any later save from a reference-holder (the creation executor's
+// finalization saves at executor.ts:853/:1132/:1233) clobbered the runner's
+// write — a creation-deployed integration vanished from the manifest (and a
+// removed one could resurrect). The runner must sync the passed project's
+// keyed map in place, like recordDeployOutcome does.
+describe("runner keyed writes sync the CALLER's project reference", () => {
+    it('add: the passed project carries the new keyed entry (stale-save clobber pin)', async () => {
+        const project = createProject();
+
+        await addAppBuilderComponent(project, INTEGRATION_ENTRY, createDeps() as never);
+
+        expect(project.appBuilderComponents?.[INTEGRATION_ENTRY.id]).toMatchObject({
+            kind: 'integration',
+            status: 'deployed',
+        });
+    });
+
+    it('remove: the passed project drops the entry (stale-save resurrection pin)', async () => {
+        const project = createProject({
+            appBuilderComponents: {
+                [INTEGRATION_ENTRY.id]: {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'acme', repo: 'erp-bridge' },
+                },
+            },
+            componentInstances: {
+                [INTEGRATION_ENTRY.id]: {
+                    id: INTEGRATION_ENTRY.id,
+                    path: '/proj/components/erp-bridge',
+                },
+            },
+        } as never);
+
+        await removeAppBuilderComponent(project, INTEGRATION_ENTRY.id, createDeps() as never);
+
+        expect(project.appBuilderComponents?.[INTEGRATION_ENTRY.id]).toBeUndefined();
+    });
+});

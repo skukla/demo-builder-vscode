@@ -144,7 +144,14 @@ function findMissingProvider(
     return undefined;
 }
 
-/** Persist `appBuilderComponents[id]` and save; returns the updated project. */
+/**
+ * Persist `appBuilderComponents[id]` and save; returns the updated project.
+ *
+ * ALSO syncs the CALLER's project reference in place (like recordDeployOutcome):
+ * callers such as the creation executor keep saving their own reference after
+ * the runner returns — without the sync, those later saves clobbered the keyed
+ * write and a creation-deployed integration vanished from the manifest.
+ */
 async function persistResult(
     project: Project,
     id: string,
@@ -152,6 +159,7 @@ async function persistResult(
     deps: AppBuilderComponentRunnerDeps,
 ): Promise<Project> {
     const updated = setAppBuilderComponent(project, id, state);
+    project.appBuilderComponents = updated.appBuilderComponents;
     await deps.saveProject(updated);
     return updated;
 }
@@ -399,6 +407,9 @@ export async function removeAppBuilderComponent(
         appBuilderComponents: { ...(project.appBuilderComponents ?? {}) },
     };
     delete cleared.appBuilderComponents[id];
+    // Sync the caller's reference too — a later save from a stale reference
+    // would otherwise RESURRECT the removed integration (see persistResult).
+    project.appBuilderComponents = cleared.appBuilderComponents;
     await deps.saveProject(cleared);
 
     if (provided) {
