@@ -12,6 +12,7 @@ import {
 } from '../wizardHelpers';
 import { isMeshComponentId } from '@/core/constants';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
+import { RESERVED_EXISTING_KEY } from '@/features/project-creation/ui/components/integration-flow';
 import type { ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
 import type { Stack } from '@/types/stacks';
 import type { WizardState, WizardStep, ComponentSelection } from '@/types/webview';
@@ -216,7 +217,9 @@ function buildEditModeIntegrationState(editSettings: ImportedSettings): Partial<
         selectedAppBuilderComponents: editSettings.selections?.appBuilder,
         selectedOptionalDependencies: meshDeps?.length ? meshDeps : undefined,
         appBuilderComponentSources: editSettings.appBuilderComponentSources,
-        selectedConsoleApis: existingApis?.length ? { __existing__: existingApis } : undefined,
+        selectedConsoleApis: existingApis?.length
+            ? { [RESERVED_EXISTING_KEY]: existingApis }
+            : undefined,
     };
 }
 

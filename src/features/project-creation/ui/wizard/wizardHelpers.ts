@@ -275,8 +275,11 @@ export interface ImportedSettings {
     customBlockLibraries?: CustomBlockLibrary[];
     /** EDS configuration (for Edge Delivery Services stacks) */
     edsConfig?: SettingsEdsConfig;
-    /** Custom GitHub sources for App Builder integrations, keyed by integration id */
-    appBuilderComponentSources?: Record<string, { owner: string; repo: string; branch?: string }>;
+    /** Custom GitHub sources for App Builder integrations, keyed by integration id (`name` = shell-instance display name) */
+    appBuilderComponentSources?: Record<
+        string,
+        { owner: string; repo: string; branch?: string; name?: string }
+    >;
     /** Console API sdk codes subscribed beyond catalog requiredApis (seeds `selectedConsoleApis['__existing__']` in edit mode) */
     additionalConsoleApis?: string[];
 }

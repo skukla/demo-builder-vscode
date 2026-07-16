@@ -1,3 +1,11 @@
+/**
+ * settingsSerializer — core parse/validate/extract/export slice.
+ *
+ * The App Builder integration derivation tests (§E: appBuilderComponentSources
+ * derived from the keyed map + additionalConsoleApis) live in the sibling
+ * settingsSerializer-integrations.test.ts.
+ */
+
 import {
     parseSettingsFile,
     isValidSettingsFile,
@@ -355,102 +363,6 @@ describe('settingsSerializer', () => {
             const result = extractSettingsFromProject(project);
 
             expect(result.installedBlockLibraries).toBeUndefined();
-        });
-    });
-
-    describe('extractSettingsFromProject - App Builder integration round-trip', () => {
-        const createProject = (overrides?: Partial<Project>): Project => ({
-            name: 'integrations-project',
-            created: new Date(),
-            lastModified: new Date(),
-            path: '/path/to/project',
-            status: 'ready',
-            componentSelections: { appBuilder: ['erp-sync', 'owner-custom-app'] },
-            componentConfigs: {},
-            ...overrides,
-        });
-
-        it('should extract appBuilderComponentSources when present', () => {
-            const sources = {
-                'owner-custom-app': { owner: 'owner', repo: 'custom-app', branch: 'dev' },
-            };
-            const project = createProject({ appBuilderComponentSources: sources });
-
-            const result = extractSettingsFromProject(project);
-
-            expect(result.appBuilderComponentSources).toEqual(sources);
-        });
-
-        it('should omit appBuilderComponentSources when absent', () => {
-            const project = createProject();
-
-            const result = extractSettingsFromProject(project);
-
-            expect(result.appBuilderComponentSources).toBeUndefined();
-        });
-
-        it('should extract additionalConsoleApis when present', () => {
-            const project = createProject({
-                additionalConsoleApis: ['AssetComputeSDK', 'CCAPI'],
-            });
-
-            const result = extractSettingsFromProject(project);
-
-            expect(result.additionalConsoleApis).toEqual(['AssetComputeSDK', 'CCAPI']);
-        });
-
-        it('should omit additionalConsoleApis when absent', () => {
-            const project = createProject();
-
-            const result = extractSettingsFromProject(project);
-
-            expect(result.additionalConsoleApis).toBeUndefined();
-        });
-
-        it('should keep the existing shape stable alongside the new fields', () => {
-            const project = createProject({
-                appBuilderComponentSources: {
-                    'owner-custom-app': { owner: 'owner', repo: 'custom-app' },
-                },
-                additionalConsoleApis: ['CCAPI'],
-            });
-
-            const result = extractSettingsFromProject(project);
-
-            expect(result.selections).toEqual({ appBuilder: ['erp-sync', 'owner-custom-app'] });
-            expect(result.configs).toEqual({});
-            expect(result.version).toBe(SETTINGS_FILE_VERSION);
-            expect(result.source.project).toBe('integrations-project');
-        });
-
-        it('should leave includeSecrets behavior unchanged with the new fields present', () => {
-            const project = createProject({ additionalConsoleApis: ['CCAPI'] });
-
-            expect(extractSettingsFromProject(project, true).includesSecrets).toBe(true);
-            expect(extractSettingsFromProject(project, false).includesSecrets).toBe(false);
-        });
-
-        it('should round-trip: export then parse preserves both new fields', () => {
-            const project = createProject({
-                appBuilderComponentSources: {
-                    'owner-custom-app': { owner: 'owner', repo: 'custom-app' },
-                },
-                additionalConsoleApis: ['AssetComputeSDK', 'CCAPI'],
-            });
-
-            const exported = extractSettingsFromProject(project);
-            const parseResult = parseSettingsFile(JSON.stringify(exported));
-
-            expect(parseResult.success).toBe(true);
-            if (parseResult.success) {
-                expect(parseResult.settings.appBuilderComponentSources).toEqual({
-                    'owner-custom-app': { owner: 'owner', repo: 'custom-app' },
-                });
-                expect(parseResult.settings.additionalConsoleApis).toEqual([
-                    'AssetComputeSDK',
-                    'CCAPI',
-                ]);
-            }
         });
     });
 

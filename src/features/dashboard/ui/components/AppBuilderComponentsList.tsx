@@ -42,24 +42,38 @@ export interface AppBuilderComponentsListProps {
 interface RowStatusOverride {
     status: string;
     message?: string;
+    /** Update-borne display name (rename pushes it; deploy pushes omit it). */
+    name?: string;
 }
 
 /**
  * Subscribe to the per-id `appBuilderComponentStatusUpdate` channel and merge
  * each update into an id-keyed override map, so a deploy flips ONLY its own
  * row (deploying spinner → deployed/error) without re-seeding the whole list.
+ * A rename rides the same channel with the entry's current status plus the new
+ * `name`, refreshing the row label (the init-seeded map never re-delivers).
  */
 function useRowStatusOverrides(): Record<string, RowStatusOverride> {
     const [overrides, setOverrides] = useState<Record<string, RowStatusOverride>>({});
 
     useEffect(() => {
         return webviewClient.onMessage('appBuilderComponentStatusUpdate', (data: unknown) => {
-            const payload = data as { id?: string; status?: string; message?: string };
+            const payload = data as {
+                id?: string;
+                status?: string;
+                message?: string;
+                name?: string;
+            };
             if (!payload?.id || !payload?.status) {
                 return;
             }
-            const { id, status, message } = payload;
-            setOverrides((prev) => ({ ...prev, [id]: { status, message } }));
+            const { id, status, message, name } = payload;
+            // Merge, don't replace: deploy pushes omit `name`, and a wholesale
+            // replace would wipe a prior rename's update-borne label.
+            setOverrides((prev) => ({
+                ...prev,
+                [id]: { status, message, name: name ?? prev[id]?.name },
+            }));
         });
     }, []);
 
@@ -149,11 +163,14 @@ export function AppBuilderComponentsList({ project, catalog, meshRow }: AppBuild
                     const override = rowOverrides[appBuilderComponent.id];
                     // The widened live status ('deploying') is rendered by the
                     // row's internal string switch; the cast bridges the
-                    // persisted union to the live vocabulary.
+                    // persisted union to the live vocabulary. An update-borne
+                    // name (rename) replaces the seeded label; name-less pushes
+                    // (deploys) keep the persisted one.
                     const merged = override
                         ? {
                               ...appBuilderComponent,
                               status: override.status as typeof appBuilderComponent.status,
+                              ...(override.name !== undefined ? { name: override.name } : {}),
                           }
                         : appBuilderComponent;
                     return (

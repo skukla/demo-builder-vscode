@@ -135,8 +135,17 @@ Multi-step React-based wizard for guided project setup:
       "sourceHash": "abc123",
       "lastDeployed": "2025-01-15T10:35:00Z",
       "providesEnvVars": { "MESH_ENDPOINT": "https://edge-graph.adobe.io/api/.../graphql" }
+    },
+    "firefly-image-gen": {
+      "kind": "integration",
+      "name": "Firefly Image Gen",
+      "status": "deployed",
+      "source": { "owner": "skukla", "repo": "app-builder-shell" },
+      "url": "https://....adobeio-static.net",
+      "lastDeployed": "2025-01-15T10:40:00Z"
     }
-  }
+  },
+  "additionalConsoleApis": ["FireflyAPISDK"]
 }
 ```
 

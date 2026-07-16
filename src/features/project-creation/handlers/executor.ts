@@ -183,7 +183,10 @@ interface ProjectCreationConfig {
     selectedStack?: string;
     // Selected App Builder integration ids (Model B deploy) + custom GitHub sources
     selectedAppBuilderComponents?: string[];
-    appBuilderComponentSources?: Record<string, { owner: string; repo: string; branch?: string }>;
+    appBuilderComponentSources?: Record<
+        string,
+        { owner: string; repo: string; branch?: string; name?: string }
+    >;
     // Free Console API picks (union across integrations) — persisted on the Project
     // so Phase 3b's subscribe union covers them
     additionalConsoleApis?: string[];
@@ -260,11 +263,6 @@ interface ProjectCreationConfig {
 /**
  * Actual project creation logic (extracted for testability)
  */
-/** A defined record only when it has at least one entry (else undefined, so the manifest omits it). */
-function nonEmptyRecord<T>(record: Record<string, T> | undefined): Record<string, T> | undefined {
-    return record && Object.keys(record).length > 0 ? record : undefined;
-}
-
 /** A defined array only when it has at least one item (else undefined, so the manifest omits it). */
 function nonEmptyArray<T>(items: T[] | undefined): T[] | undefined {
     return items && items.length > 0 ? items : undefined;
@@ -295,8 +293,9 @@ function selectedAppBuilderIds(typedConfig: ProjectCreationConfig): string[] {
  * Assemble the initial Project persisted through creation. Runs BEFORE Phase 3b
  * (`executeAppBuilderIntegrationsPhase`), so everything Phase 3b reads off the
  * Project — notably `additionalConsoleApis` for the subscribe union — must be
- * written here. `appBuilderComponentSources` and `componentSelections.appBuilder`
- * persist the integration selections so edit mode can round-trip them.
+ * written here. `componentSelections.appBuilder` persists the selected ids;
+ * custom/instance SOURCES are NOT persisted (§E) — edit mode derives them from
+ * the keyed `appBuilderComponents` map via `extractSettingsFromProject`.
  */
 export function buildInitialProject(
     typedConfig: ProjectCreationConfig,
@@ -327,7 +326,6 @@ export function buildInitialProject(
         selectedAddons: typedConfig.selectedAddons,
         selectedBlockLibraries: typedConfig.selectedBlockLibraries,
         customBlockLibraries: typedConfig.customBlockLibraries,
-        appBuilderComponentSources: nonEmptyRecord(typedConfig.appBuilderComponentSources),
         additionalConsoleApis: nonEmptyArray(typedConfig.additionalConsoleApis),
         // Note: componentVersions, meshState, etc. are NOT preserved during edit
         // - componentVersions: Regenerated from fresh component installation
@@ -613,7 +611,9 @@ function deployableAppIntegrationEntries(
         .map(
             (id) =>
                 getAppBuilderComponentEntry(id) ??
-                (sources[id] ? buildCustomIntegrationEntry(sources[id]) : undefined),
+                // The sources-map key IS the instance id (shell instancing: N
+                // named instances may share one template repo).
+                (sources[id] ? buildCustomIntegrationEntry(sources[id], id) : undefined),
         )
         .filter((entry): entry is AppBuilderComponentCatalogEntry => entry?.kind === 'integration');
 }

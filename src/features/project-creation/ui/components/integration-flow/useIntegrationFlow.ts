@@ -35,6 +35,7 @@ import {
     deriveStageOrder,
     nextStage,
     prevStage,
+    type BlankInstance,
     type FlowDraft,
     type FlowMode,
     type FlowStageId,
@@ -93,6 +94,8 @@ export interface UseIntegrationFlowReturn {
     pickCatalog: (id: string) => void;
     /** Set the parsed custom source; undefined clears it (cleared/invalid URL re-disables Continue). */
     setCustomSource: (source: { owner: string; repo: string } | undefined) => void;
+    /** Set the blank instance identity; undefined clears it (invalid/empty name re-disables Continue). */
+    setInstance: (instance: BlankInstance | undefined) => void;
     /** Toggle a free API pick on the custom/import api-access step. */
     toggleApi: (code: string) => void;
     setPendingProject: (project: AdobeProject | undefined) => void;
@@ -233,11 +236,14 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
             builder.onAppBuilderComponentToggle(draft.catalogId, true);
             return;
         }
-        // "Build custom" adds the blank starter app (the shell) — a custom app that
-        // begins from a working deploy and grows via AI, with the APIs picked here.
-        if (draft.kind === 'blank' && blankComponent) {
-            builder.onAppBuilderComponentToggle(blankComponent.id, true);
-            writeApiPicks(blankComponent.id);
+        // "Build custom" commits a named INSTANCE of the blank starter app (the
+        // shell repo is a template, not an identity): the source-blank gate
+        // guarantees draft.instance, and the custom-add handler selects the
+        // instance id + records the shell source with the display name. Picks key
+        // under the instance id so N instances carry independent API picks.
+        if (draft.kind === 'blank' && blankComponent && draft.instance) {
+            builder.onAddCustomAppBuilderComponent(blankComponent.source, draft.instance);
+            writeApiPicks(draft.instance.id);
             return;
         }
         if (draft.kind === 'custom' && draft.customSource) {
@@ -299,6 +305,13 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
         [],
     );
 
+    const setInstance = useCallback(
+        (instance: BlankInstance | undefined): void => {
+            setDraft((current) => ({ ...current, instance }));
+        },
+        [],
+    );
+
     /** Toggle a free API pick on the custom/import api-access step (locked codes never call this). */
     const toggleApi = useCallback((code: string): void => {
         setDraft((current) => {
@@ -338,6 +351,7 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
         pickKind,
         pickCatalog,
         setCustomSource,
+        setInstance,
         toggleApi,
         setPendingProject,
         setPendingWorkspace,

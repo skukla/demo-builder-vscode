@@ -79,6 +79,7 @@ import {
     handleDeployAppBuilderComponent,
     handleRedeployAppBuilderComponent,
     handleRemoveAppBuilderComponent,
+    handleRenameAppBuilderComponent,
     handleVerifyAppBuilderComponent,
 } from '@/features/dashboard/handlers/appBuilderComponentHandlers';
 
@@ -216,8 +217,10 @@ describe('handleAddAppBuilderComponent', () => {
 
         expect(result.success).toBe(false);
         expect(result.error).toBe('clone failed');
+        // Trailing undefined = the optional display-name slot (rename channel);
+        // deploy-path pushes never carry a name.
         expect(mockSendAppBuilderComponentStatusUpdate).toHaveBeenCalledWith(
-            'erp-sync', 'error', expect.stringContaining('clone failed'),
+            'erp-sync', 'error', expect.stringContaining('clone failed'), undefined,
         );
     });
 });
@@ -278,6 +281,204 @@ describe('handleRemoveAppBuilderComponent', () => {
     });
 });
 
+describe('handleRenameAppBuilderComponent (display name only — shell instancing Step 10)', () => {
+    /** The keyed integration entry under rename (deployed, already named). */
+    const KEYED_ENTRY = {
+        kind: 'integration' as const,
+        status: 'deployed' as const,
+        name: 'Firefly Image Gen',
+        source: { owner: 'skukla', repo: 'app-builder-shell', branch: 'main' },
+        url: 'https://firefly.example.com',
+    };
+
+    function setupRename(entryOverrides: Partial<typeof KEYED_ENTRY> | null = {}) {
+        const mocks = setupMocks({
+            appBuilderComponents:
+                entryOverrides === null
+                    ? {}
+                    : { 'firefly-image-gen': { ...KEYED_ENTRY, ...entryOverrides } },
+        } as never);
+        // An AI-built instance id never resolves in the catalog (the beforeEach
+        // default returns ERP_ENTRY for the add path — rename must see undefined).
+        mockGetAppBuilderComponentEntry.mockReturnValue(undefined);
+        const vscode = require('vscode');
+        vscode.window.showInputBox = jest.fn().mockResolvedValue(undefined);
+        return { ...mocks, showInputBox: vscode.window.showInputBox as jest.Mock };
+    }
+
+    it('persists the trimmed new name on the keyed entry and saves the project', async () => {
+        const { mockContext, showInputBox } = setupRename();
+        showInputBox.mockResolvedValue('  Firefly Video Gen  ');
+
+        const result = await handleRenameAppBuilderComponent(mockContext, {
+            id: 'firefly-image-gen',
+        });
+
+        expect(result.success).toBe(true);
+        const saved = (mockContext.stateManager.saveProject as jest.Mock).mock.calls[0][0];
+        // The name changes IN PLACE on the keyed entry — id (map key), kind,
+        // status, source, and url are untouched.
+        expect(saved.appBuilderComponents['firefly-image-gen']).toEqual({
+            ...KEYED_ENTRY,
+            name: 'Firefly Video Gen',
+        });
+    });
+
+    it('pushes the row-status refresh with the CURRENT status and the new name (label update)', async () => {
+        const { mockContext, showInputBox } = setupRename();
+        showInputBox.mockResolvedValue('Firefly Video Gen');
+
+        await handleRenameAppBuilderComponent(mockContext, { id: 'firefly-image-gen' });
+
+        expect(mockSendAppBuilderComponentStatusUpdate).toHaveBeenCalledWith(
+            'firefly-image-gen',
+            'deployed',
+            undefined,
+            'Firefly Video Gen',
+        );
+    });
+
+    it('prefills the input with the current display name (falls back to the id when unnamed)', async () => {
+        const { mockContext, showInputBox } = setupRename();
+        await handleRenameAppBuilderComponent(mockContext, { id: 'firefly-image-gen' });
+        expect(showInputBox).toHaveBeenCalledWith(
+            expect.objectContaining({ value: 'Firefly Image Gen' }),
+        );
+
+        const unnamed = setupRename({ name: undefined });
+        await handleRenameAppBuilderComponent(unnamed.mockContext, { id: 'firefly-image-gen' });
+        expect(unnamed.showInputBox).toHaveBeenCalledWith(
+            expect.objectContaining({ value: 'firefly-image-gen' }),
+        );
+    });
+
+    it('rejects whitespace-only input via the validateInput fn (tested directly)', async () => {
+        const { mockContext, showInputBox } = setupRename();
+        await handleRenameAppBuilderComponent(mockContext, { id: 'firefly-image-gen' });
+
+        const { validateInput } = showInputBox.mock.calls[0][0];
+        expect(validateInput('   ')).toEqual(expect.any(String)); // rejected with a message
+        expect(validateInput('')).toEqual(expect.any(String));
+        expect(validateInput('Firefly Video Gen')).toBeUndefined(); // accepted
+    });
+
+    it('cancel (input box dismissed) writes NOTHING and pushes nothing', async () => {
+        const { mockContext, showInputBox } = setupRename();
+        showInputBox.mockResolvedValue(undefined);
+
+        const result = await handleRenameAppBuilderComponent(mockContext, {
+            id: 'firefly-image-gen',
+        });
+
+        expect(result.success).toBe(true); // cancel is not an error
+        expect(mockContext.stateManager.saveProject).not.toHaveBeenCalled();
+        expect(mockSendAppBuilderComponentStatusUpdate).not.toHaveBeenCalled();
+    });
+
+    it('rejects a rename when the id is a pre-built CATALOG integration (redeploy reverts it)', async () => {
+        // The runner resolves catalog-first and rewrites `name: entry.name` on
+        // every redeploy, so a catalog-id rename would be silently reverted.
+        // Same exclusion the settings serializer applies (deriveAppBuilderComponentSources).
+        const { mockContext, showInputBox } = setupRename();
+        mockGetAppBuilderComponentEntry.mockReturnValue({
+            ...ERP_ENTRY,
+            id: 'firefly-image-gen',
+        });
+
+        const result = await handleRenameAppBuilderComponent(mockContext, {
+            id: 'firefly-image-gen',
+        });
+
+        expect(result.success).toBe(false);
+        expect(showInputBox).not.toHaveBeenCalled();
+        expect(mockContext.stateManager.saveProject).not.toHaveBeenCalled();
+        expect(mockSendAppBuilderComponentStatusUpdate).not.toHaveBeenCalled();
+    });
+
+    it('still renames a custom-import entry (id not in the catalog)', async () => {
+        const { mockContext, showInputBox } = setupRename({
+            name: undefined,
+            source: { owner: 'acme', repo: 'erp-sync', branch: 'main' },
+        });
+        showInputBox.mockResolvedValue('Acme ERP');
+
+        const result = await handleRenameAppBuilderComponent(mockContext, {
+            id: 'firefly-image-gen',
+        });
+
+        expect(result.success).toBe(true);
+        expect(mockGetAppBuilderComponentEntry).toHaveBeenCalledWith('firefly-image-gen');
+        const saved = (mockContext.stateManager.saveProject as jest.Mock).mock.calls[0][0];
+        expect(saved.appBuilderComponents['firefly-image-gen'].name).toBe('Acme ERP');
+    });
+
+    it('rejects a duplicate of ANOTHER integration display name via validateInput (wizard parity)', async () => {
+        // Same case-insensitive, trimmed duplicate rule RenameIntegrationModal
+        // applies in the wizard — against the OTHER entries' `name ?? id`.
+        const mocks = setupMocks({
+            appBuilderComponents: {
+                'firefly-image-gen': { ...KEYED_ENTRY },
+                'order-sync': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    name: 'Order Sync',
+                    source: { owner: 'skukla', repo: 'app-builder-shell', branch: 'main' },
+                },
+                'unnamed-import': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'acme', repo: 'unnamed-import', branch: 'main' },
+                },
+            },
+        } as never);
+        mockGetAppBuilderComponentEntry.mockReturnValue(undefined);
+        const vscode = require('vscode');
+        vscode.window.showInputBox = jest.fn().mockResolvedValue(undefined);
+
+        await handleRenameAppBuilderComponent(mocks.mockContext, { id: 'firefly-image-gen' });
+
+        const { validateInput } = (vscode.window.showInputBox as jest.Mock).mock.calls[0][0];
+        expect(validateInput('Order Sync')).toEqual(expect.any(String)); // exact duplicate
+        expect(validateInput('  order sync  ')).toEqual(expect.any(String)); // case/trim variant
+        expect(validateInput('unnamed-import')).toEqual(expect.any(String)); // other row's id fallback
+        expect(validateInput('Firefly Image Gen')).toBeUndefined(); // own current name allowed
+        expect(validateInput('Fresh Name')).toBeUndefined(); // new unique name allowed
+    });
+
+    it('never prompts for a mesh-kind entry (fixed "API Mesh" identity)', async () => {
+        const { mockContext, showInputBox } = setupRename({ kind: 'mesh' as never });
+
+        const result = await handleRenameAppBuilderComponent(mockContext, {
+            id: 'firefly-image-gen',
+        });
+
+        expect(result.success).toBe(false);
+        expect(showInputBox).not.toHaveBeenCalled();
+        expect(mockContext.stateManager.saveProject).not.toHaveBeenCalled();
+    });
+
+    it('fails for an unknown id and for a missing id', async () => {
+        const { mockContext, showInputBox } = setupRename(null);
+
+        const unknown = await handleRenameAppBuilderComponent(mockContext, { id: 'nope' });
+        expect(unknown.success).toBe(false);
+
+        const missing = await handleRenameAppBuilderComponent(mockContext, {});
+        expect(missing.success).toBe(false);
+        expect(showInputBox).not.toHaveBeenCalled();
+    });
+
+    it('runs NO Adobe guards — rename is a local metadata write (works offline)', async () => {
+        const { mockContext, showInputBox } = setupRename();
+        showInputBox.mockResolvedValue('Renamed');
+
+        await handleRenameAppBuilderComponent(mockContext, { id: 'firefly-image-gen' });
+
+        expect(mockEnsureAdobeIOAuth).not.toHaveBeenCalled();
+        expect(mockDetectProjectOrgMismatch).not.toHaveBeenCalled();
+    });
+});
+
 describe('handleVerifyAppBuilderComponent (on-demand, non-interactive)', () => {
     it('posts a deployed outcome when the SDK-only probe reaches the org', async () => {
         const { mockContext } = setupMocks({
@@ -291,7 +492,10 @@ describe('handleVerifyAppBuilderComponent (on-demand, non-interactive)', () => {
         const result = await handleVerifyAppBuilderComponent(mockContext, { id: 'erp-sync' });
 
         expect(result.success).toBe(true);
-        expect(mockSendAppBuilderComponentStatusUpdate).toHaveBeenCalledWith('erp-sync', 'deployed', undefined);
+        // Trailing undefined = the optional display-name slot (rename channel).
+        expect(mockSendAppBuilderComponentStatusUpdate).toHaveBeenCalledWith(
+            'erp-sync', 'deployed', undefined, undefined,
+        );
     });
 
     it('never performs an aio/CLI write or a deploy on verify', async () => {
@@ -321,8 +525,9 @@ describe('handleVerifyAppBuilderComponent (on-demand, non-interactive)', () => {
         const result = await handleVerifyAppBuilderComponent(mockContext, { id: 'erp-sync' });
 
         expect(result.success).toBe(true); // handler resolved (P2: typed outcome, no throw)
+        // Trailing undefined = the optional display-name slot (rename channel).
         expect(mockSendAppBuilderComponentStatusUpdate).toHaveBeenCalledWith(
-            'erp-sync', 'error', expect.any(String),
+            'erp-sync', 'error', expect.any(String), undefined,
         );
     });
 });

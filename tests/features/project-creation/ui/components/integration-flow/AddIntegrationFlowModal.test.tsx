@@ -15,7 +15,7 @@
  */
 
 import React, { useCallback, useState } from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 
@@ -109,6 +109,26 @@ const CRM: AppBuilderComponentCatalogEntry = {
     source: { owner: 'adobe', repo: 'crm-connect', branch: 'main' },
 };
 const CATALOG = [ERP, CRM];
+
+/** The blank starter app the "Build custom" kind instances from. */
+const BLANK: AppBuilderComponentCatalogEntry = {
+    id: 'app-builder-shell',
+    name: 'Custom Integration',
+    description: 'A minimal custom integration to build out with AI',
+    kind: 'integration',
+    blank: true,
+    source: { owner: 'skukla', repo: 'app-builder-shell', branch: 'main' },
+};
+
+/** The composed collision domain IntegrationsStep threads in (catalog + selections). */
+const RESERVED_IDS = new Set([
+    'app-builder-shell',
+    'erp-sync',
+    'crm-connect',
+    'commerce-mesh',
+    'existing-integration',
+    'eds-storefront',
+]);
 
 const PROJECT: AdobeProject = { id: 'proj-1', name: 'proj-one', title: 'Demo Project' };
 const WORKSPACE: Workspace = { id: 'ws-1', name: 'Stage', title: 'Stage' };
@@ -206,6 +226,8 @@ function Harness({
             updateState={updateState}
             meshComponent={meshComponent}
             catalog={catalog}
+            blankComponent={BLANK}
+            reservedIds={RESERVED_IDS}
             builder={builder}
             meshBackendId="backend-1"
             meshFrontendId="frontend-1"
@@ -413,5 +435,68 @@ describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
         click('Back');
         expect(button(/API Mesh/)).toBeInTheDocument();
         expect(screen.queryByTestId('project-field')).not.toBeInTheDocument();
+    });
+});
+
+describe('AddIntegrationFlowModal — build custom (blank instance naming)', () => {
+    const NAME_PLACEHOLDER = 'e.g. Order Sync, Salesforce CRM, Firefly Image Gen';
+
+    /** kind → source-blank (the naming stage). */
+    function walkToBlankNaming(): HTMLElement {
+        click(/Build custom/);
+        click('Continue');
+        return screen.getByPlaceholderText(NAME_PLACEHOLDER);
+    }
+
+    it('gates Continue on the naming stage until a valid name is typed', () => {
+        renderModal({ initial: COMMITTED_DEST });
+        const input = walkToBlankNaming();
+        expectDisabled('Continue');
+        fireEvent.change(input, { target: { value: 'Firefly Image Gen' } });
+        expectEnabled('Continue');
+        fireEvent.change(input, { target: { value: '' } });
+        expectDisabled('Continue');
+    });
+
+    it('flags a name colliding with a reserved id inline and keeps Continue disabled', () => {
+        renderModal({ initial: COMMITTED_DEST });
+        const input = walkToBlankNaming();
+        // Slugs to 'app-builder-shell' — the blank catalog id itself is reserved
+        // (the executor's catalog-first lookup would clone the wrong repo).
+        fireEvent.change(input, { target: { value: 'App Builder Shell' } });
+        expect(
+            screen.getByText('That name is already used by another part of this project.')
+        ).toBeInTheDocument();
+        expectDisabled('Continue');
+        fireEvent.change(input, { target: { value: 'Firefly Image Gen' } });
+        expectEnabled('Continue');
+    });
+
+    it('walks kind → source-blank → destination → api-access and commits the named instance', async () => {
+        const { builder, updateSpy, onClose } = renderModal({ initial: COMMITTED_DEST });
+        const input = walkToBlankNaming();
+        fireEvent.change(input, { target: { value: 'Firefly Image Gen' } });
+        click('Continue'); // → dest-summary (destination committed, later add)
+        expect(screen.getByText('Demo Project')).toBeInTheDocument();
+        click('Continue'); // → api-access (interactive picker — blank picks APIs up front)
+        await waitFor(() => expect(screen.getByTestId('api-picker-stage')).toBeInTheDocument());
+        click('Add Integration');
+        // The commit routes through the custom add with the INSTANCE identity —
+        // never the fixed-id toggle (which capped a project at one shell).
+        await waitFor(() =>
+            expect(builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith(
+                { owner: 'skukla', repo: 'app-builder-shell', branch: 'main' },
+                { id: 'firefly-image-gen', name: 'Firefly Image Gen' }
+            )
+        );
+        expect(builder.onAppBuilderComponentToggle).not.toHaveBeenCalled();
+        expect(updateSpy).not.toHaveBeenCalledWith(
+            expect.objectContaining({
+                selectedConsoleApis: expect.objectContaining({
+                    'app-builder-shell': expect.anything(),
+                }),
+            })
+        );
+        expect(onClose).toHaveBeenCalledTimes(1);
     });
 });

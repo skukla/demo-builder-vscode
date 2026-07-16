@@ -20,6 +20,7 @@ import React from 'react';
 import { DeployingState, DeployedState, ErrorState } from './appBuilderComponentStates';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { IdentifiedAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
+import { getAppBuilderComponentEntry } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 
 export interface AppBuilderComponentRowProps {
     /** The appBuilderComponent to render (id + persisted state). */
@@ -47,10 +48,26 @@ function isDeployedView(status: string): boolean {
 }
 
 /**
- * Per-appBuilderComponent row. The label is the appBuilderComponent id (the handler resolves the
- * catalog name; the row stays presentational + id-dispatching). The persisted
- * `status` widens to a string here so the live `appBuilderComponentStatusUpdate`
- * 'deploying' transition (not part of the persisted union) renders too.
+ * Rename is offered for integration entries whose id is NOT a pre-built
+ * catalog id: the runner resolves catalog-first and rewrites `name: entry.name`
+ * on every redeploy, so a catalog-id rename would be silently reverted (same
+ * exclusion the rename handler and the settings serializer apply). The catalog
+ * loader is a pure bundled-JSON lookup, so it is webview-safe here.
+ */
+function isRenamable(appBuilderComponent: IdentifiedAppBuilderComponent): boolean {
+    return (
+        appBuilderComponent.kind === 'integration' &&
+        getAppBuilderComponentEntry(appBuilderComponent.id) === undefined
+    );
+}
+
+/**
+ * Per-appBuilderComponent row. The label prefers the persisted display `name`
+ * (AI-built instances) and falls back to the id (same convention as
+ * projectStatusUtils). Messages ALWAYS dispatch the id — the name is display
+ * only. The persisted `status` widens to a string here so the live
+ * `appBuilderComponentStatusUpdate` 'deploying' transition (not part of the
+ * persisted union) renders too.
  */
 export function AppBuilderComponentRow({
     appBuilderComponent,
@@ -59,6 +76,7 @@ export function AppBuilderComponentRow({
     onManageApis,
 }: AppBuilderComponentRowProps) {
     const { id } = appBuilderComponent;
+    const label = appBuilderComponent.name ?? id;
     const status: string = appBuilderComponent.status;
 
     return (
@@ -67,7 +85,7 @@ export function AppBuilderComponentRow({
             {isDeployedView(status) && (
                 <DeployedState
                     view={{
-                        label: id,
+                        label,
                         url: appBuilderComponent.url,
                         deployedUrls: appBuilderComponent.deployedUrls,
                     }}
@@ -76,6 +94,16 @@ export function AppBuilderComponentRow({
                     }
                     onRemove={onRemove}
                     onManageApis={onManageApis}
+                    // Display-name rename (non-catalog integration entries only;
+                    // a mesh keeps its fixed "API Mesh" identity and a catalog
+                    // entry's name is rewritten on redeploy). The extension owns
+                    // the input surface (showInputBox) — the row dispatches ONLY
+                    // the id.
+                    onRename={
+                        isRenamable(appBuilderComponent)
+                            ? () => webviewClient.postMessage('renameAppBuilderComponent', { id })
+                            : undefined
+                    }
                     verifyAction={{
                         label: 'Verify',
                         onPress: () =>
@@ -86,7 +114,7 @@ export function AppBuilderComponentRow({
             )}
             {status === 'error' && (
                 <ErrorState
-                    label={id}
+                    label={label}
                     message={message}
                     onRetry={() => webviewClient.postMessage('deployAppBuilderComponent', { id })}
                 />

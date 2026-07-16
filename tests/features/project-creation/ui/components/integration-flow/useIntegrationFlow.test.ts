@@ -432,30 +432,59 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
         expect(s.onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('build custom Add commits the shell and closes immediately (no confirm hold)', () => {
+    it('gates the source-blank stage until setInstance provides an identity', () => {
         const s = setup({ initial: LATER_ADD });
-        pickKindAndContinue(s, 'blank'); // blank has no source stage → straight to dest
-        expect(s.result.current.stage).toBe('dest-summary');
+        pickKindAndContinue(s, 'blank');
+        expect(s.result.current.stage).toBe('source-blank');
+        expect(s.result.current.canContinue).toBe(false);
+        act(() => s.result.current.onContinue());
+        expect(s.result.current.stage).toBe('source-blank');
+        act(() =>
+            s.result.current.setInstance({ id: 'firefly-image-gen', name: 'Firefly Image Gen' })
+        );
+        expect(s.result.current.canContinue).toBe(true);
+        // Clearing the instance (emptied/invalid name) re-disables Continue.
+        act(() => s.result.current.setInstance(undefined));
+        expect(s.result.current.draft.instance).toBeUndefined();
+        expect(s.result.current.canContinue).toBe(false);
+    });
+
+    it('a blank finish commits the INSTANCE id (not app-builder-shell) with picks keyed under it', () => {
+        const s = setup({ initial: LATER_ADD });
+        pickKindAndContinue(s, 'blank');
+        act(() =>
+            s.result.current.setInstance({ id: 'firefly-image-gen', name: 'Firefly Image Gen' })
+        );
+        act(() => s.result.current.onContinue()); // → dest-summary
         act(() => s.result.current.onContinue()); // → api-access
         act(() => s.result.current.toggleApi('FireflyServicesSDK'));
-        // A single Add press commits the shell + closes — no in-modal confirmation.
-        act(() => s.result.current.onContinue());
-        expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith(
-            'app-builder-shell',
-            true
+        act(() => s.result.current.onContinue()); // Add → commit + close
+        // The shell repo is a TEMPLATE: the commit routes through the custom add with
+        // the instance identity — never the fixed-id toggle (which capped at one).
+        expect(s.builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith(
+            BLANK_COMPONENT.source,
+            { id: 'firefly-image-gen', name: 'Firefly Image Gen' }
         );
+        expect(s.builder.onAppBuilderComponentToggle).not.toHaveBeenCalled();
+        expect(s.updateState).toHaveBeenCalledWith({
+            selectedConsoleApis: { 'firefly-image-gen': ['FireflyServicesSDK'] },
+        });
         expect(s.onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('a "build custom" finish writes the picked APIs to selectedConsoleApis[shellId]', () => {
+    it('a blank finish with no picks writes no selectedConsoleApis', () => {
         const s = setup({ initial: LATER_ADD });
         pickKindAndContinue(s, 'blank');
-        act(() => s.result.current.onContinue()); // dest-summary → api-access
-        act(() => s.result.current.toggleApi('FireflyServicesSDK')); // the user knows this up front
+        act(() => s.result.current.setInstance({ id: 'order-sync', name: 'Order Sync' }));
+        act(() => s.result.current.onContinue()); // → dest-summary
+        act(() => s.result.current.onContinue()); // → api-access
         act(() => s.result.current.onContinue()); // Add → commit + close
-        expect(s.updateState).toHaveBeenCalledWith({
-            selectedConsoleApis: { 'app-builder-shell': ['FireflyServicesSDK'] },
-        });
+        expect(s.builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith(
+            BLANK_COMPONENT.source,
+            { id: 'order-sync', name: 'Order Sync' }
+        );
+        expect(s.updateState).not.toHaveBeenCalled();
+        expect(s.onClose).toHaveBeenCalledTimes(1);
     });
 
     it('a custom (import) finish commits the repo AND keys the picks under owner-repo', () => {
@@ -542,6 +571,7 @@ describe('useIntegrationFlow — cancel path (draft-only, no commits)', () => {
         act(() => s.result.current.pickKind('catalog'));
         act(() => s.result.current.pickCatalog('erp-sync'));
         act(() => s.result.current.setCustomSource({ owner: 'acme', repo: 'widget' }));
+        act(() => s.result.current.setInstance({ id: 'order-sync', name: 'Order Sync' }));
         act(() => s.result.current.setPendingProject(PROJECT));
         act(() => s.result.current.setPendingWorkspace(WORKSPACE));
         expect(s.updateState).not.toHaveBeenCalled();

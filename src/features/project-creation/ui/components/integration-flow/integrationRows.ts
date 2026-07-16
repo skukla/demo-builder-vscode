@@ -20,7 +20,7 @@
 
 import { isMeshSelected } from '../../steps/tileStatus';
 import { BASELINE_CODE } from './apiAccessConstants';
-import type { IntegrationKind } from './flowStages';
+import { RESERVED_EXISTING_KEY, type IntegrationKind } from './flowStages';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { WizardState } from '@/types/webview';
 
@@ -41,13 +41,49 @@ export interface IntegrationRow {
      * it is the card's uniform "APIs in use" list, rendered by name for every kind.
      */
     apis: string[];
+    /**
+     * True only for AI-built instance rows (shell-template source with a source
+     * record to carry the display name) — enables the wizard Rename affordance.
+     * Absent on mesh/catalog/import rows and on the legacy fixed-id blank row
+     * (which has no source record to rename).
+     */
+    renamable?: boolean;
 }
-
-/** Serialization-only edit-mode bucket in `selectedConsoleApis` — never a row. */
-const RESERVED_EXISTING_KEY = '__existing__';
 
 const MESH_FALLBACK_NAME = 'API Mesh';
 const MESH_FALLBACK_SOURCE_LINE = 'GraphQL bridge · deploys to Adobe I/O';
+
+/**
+ * Source line for an AI-built instance (shell instancing). An instance is a
+ * shell-template clone with its own identity — the row must read as the
+ * user's integration, never as the template repo ("app-builder-shell").
+ */
+const AI_INSTANCE_SOURCE_LINE = 'Custom integration · built with AI';
+
+/**
+ * The shell TEMPLATE's {owner, repo} — the AI-built instance discriminator.
+ * Derived from the blank catalog entry ("Build custom") so the template
+ * coordinates are never hardcoded here. Undefined when the caller's list omits
+ * the blank entry (shell-sourced rows then degrade to plain imports).
+ */
+function shellTemplateSource(
+    components: AppBuilderComponentCatalogEntry[],
+): { owner: string; repo: string } | undefined {
+    return components.find((entry) => entry.blank)?.source;
+}
+
+/**
+ * Whether a source record clones the shell template (owner AND repo match).
+ * Name presence is NOT the discriminator: the keyed runner writes `name` for
+ * every integration (imports get name = repo), so after the edit-mode
+ * round-trip a plain import also carries a name.
+ */
+function isShellInstanceSource(
+    source: { owner: string; repo: string },
+    template: { owner: string; repo: string } | undefined,
+): boolean {
+    return template !== undefined && source.owner === template.owner && source.repo === template.repo;
+}
 
 /** Whether the shared Adobe I/O destination (project + workspace) is committed. */
 function destinationCommitted(state: WizardState): boolean {
@@ -104,17 +140,26 @@ export function resolveIntegrationRows(
 
     const ids = state.selectedAppBuilderComponents ?? [];
     const sources = state.appBuilderComponentSources ?? {};
+    const template = shellTemplateSource(components);
     for (const id of ids) {
         if (id === RESERVED_EXISTING_KEY || id === meshComponent?.id) continue;
         const source = sources[id];
         if (source) {
+            // A source cloning the shell TEMPLATE repo is an AI-built instance
+            // (its own identity): render the user's name, never the template
+            // repo. Any other source is an import; it may still carry a display
+            // name (edit round-trip writes name = repo) but keeps its repo line.
+            const isInstance = isShellInstanceSource(source, template);
             customRows.push({
                 id,
-                kind: 'custom',
-                name: source.repo,
-                sourceLine: `Custom integration · ${source.owner}/${source.repo}`,
+                kind: isInstance ? 'blank' : 'custom',
+                name: source.name ?? source.repo,
+                sourceLine: isInstance
+                    ? AI_INSTANCE_SOURCE_LINE
+                    : `Custom integration · ${source.owner}/${source.repo}`,
                 needsSetup,
                 apis: apiCodesFor(state, id),
+                ...(isInstance ? { renamable: true } : {}),
             });
             continue;
         }

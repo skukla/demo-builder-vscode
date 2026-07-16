@@ -117,6 +117,7 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'deployAppBuilderComponent')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'redeployAppBuilderComponent')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'removeAppBuilderComponent')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'renameAppBuilderComponent')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'verifyAppBuilderComponent')).toBe(true);
         });
 
@@ -126,12 +127,12 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
         });
 
-        it('should have exactly 31 handlers', () => {
+        it('should have exactly 32 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers);
 
-            // Then: Exactly 31 handlers
+            // Then: Exactly 32 handlers
             // 1 init (requestStatus only; no 'ready') + 2 lifecycle + 8 navigation
             // (openBrowser, openLiveSite, openDaLive, openAdminPanel, configure,
             // openDevConsole, getProjectUrls, navigateBack) + 1 mesh + 1
@@ -139,16 +140,17 @@ describe('dashboardHandlers', () => {
             // switchOrg) + 1 project + 1 reset = 18, plus the 4 More-menu actions
             // (editProject, exportProject, republishContent, renameProject) = 22
             // (copyPath removed — Copy Path lives on the project-card kebab),
-            // plus the 5 appBuilderComponent (integrations list) actions
+            // plus the 6 appBuilderComponent (integrations list) actions
             // (addAppBuilderComponent, deployAppBuilderComponent,
             // redeployAppBuilderComponent, removeAppBuilderComponent,
-            // verifyAppBuilderComponent) = 27, plus the 3 console-API actions
-            // (listConsoleApis, addConsoleApis, setConsoleApis) = 30, plus the
-            // headless exportProjectSettings (export_project_settings MCP tool) = 31.
+            // renameAppBuilderComponent — shell instancing Step 10 —
+            // verifyAppBuilderComponent) = 28, plus the 3 console-API actions
+            // (listConsoleApis, addConsoleApis, setConsoleApis) = 31, plus the
+            // headless exportProjectSettings (export_project_settings MCP tool) = 32.
             // The 4 singular App Builder actions (addApp, deployApp, redeployApp,
             // removeApp) retired with the dormant AppBuilderCard (D3 Step 08).
             // setAuthoringExperience lives in the Configure webview, not this map.
-            expect(types).toHaveLength(31);
+            expect(types).toHaveLength(32);
         });
 
         it('should have handlers as functions', () => {

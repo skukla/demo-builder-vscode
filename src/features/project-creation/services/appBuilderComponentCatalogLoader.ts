@@ -82,30 +82,55 @@ function assertGitRef(value: string): void {
 }
 
 /**
+ * An explicit instance id becomes a `components/<id>/` folder segment and a
+ * `deriveOwPackage` input, so it is gated on the same safe charset as
+ * owner/repo (GITHUB_NAME; dot-only names rejected as path traversal).
+ */
+function assertInstanceId(value: string): void {
+    if (!GITHUB_NAME.test(value) || value === '.' || value === '..') {
+        throw new Error(`Invalid integration instance id: "${value}"`);
+    }
+}
+
+/**
  * Build a custom-URL integration entry from a user-provided GitHub source.
  *
  * The custom-URL door: an integration acquired by owner/repo (optionally branch)
  * rather than from the pre-built catalog. Branch defaults to 'main'. Shared by the
  * dashboard add-handler and the wizard creation-flow integrations phase.
  *
- * @param source - The GitHub source ({owner, repo, branch?})
+ * Shell instancing: when the caller passes an explicit `id` (the
+ * `appBuilderComponentSources` map key), it becomes the entry id — letting N
+ * named instances share one template repo. Without it, the id derives from
+ * `${owner}-${repo}` (the dashboard add door, unchanged). The display name
+ * resolves from `source.name` when present, else the repo name.
+ *
+ * @param source - The GitHub source ({owner, repo, branch?, name?})
+ * @param id - Optional explicit instance id (the sources-map key)
  * @returns A synthesized `kind: 'integration'` catalog entry
- * @throws When owner/repo/branch fall outside the safe charsets (shell-injection
- *         and path-traversal gate — see GITHUB_NAME/GIT_REF above)
+ * @throws When owner/repo/branch/id fall outside the safe charsets
+ *         (shell-injection and path-traversal gate — see GITHUB_NAME/GIT_REF above)
  */
-export function buildCustomIntegrationEntry(source: {
-    owner: string;
-    repo: string;
-    branch?: string;
-}): AppBuilderComponentCatalogEntry {
+export function buildCustomIntegrationEntry(
+    source: {
+        owner: string;
+        repo: string;
+        branch?: string;
+        name?: string;
+    },
+    id?: string,
+): AppBuilderComponentCatalogEntry {
     assertGitHubName(source.owner, 'owner');
     assertGitHubName(source.repo, 'repo');
     if (source.branch !== undefined) {
         assertGitRef(source.branch);
     }
+    if (id !== undefined) {
+        assertInstanceId(id);
+    }
     return {
-        id: `${source.owner}-${source.repo}`,
-        name: source.repo,
+        id: id ?? `${source.owner}-${source.repo}`,
+        name: source.name ?? source.repo,
         description: `Custom App Builder component from ${source.owner}/${source.repo}`,
         kind: 'integration',
         source: { owner: source.owner, repo: source.repo, branch: source.branch ?? 'main' },

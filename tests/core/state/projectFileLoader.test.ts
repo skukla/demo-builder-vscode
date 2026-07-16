@@ -11,6 +11,7 @@ import * as fs from 'fs/promises';
 import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
 import { ProjectFileLoader } from '@/core/state/projectFileLoader';
 import { getMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
+import { extractSettingsFromProject } from '@/features/projects-dashboard/services/settingsSerializer';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 
@@ -277,5 +278,164 @@ describe('ProjectFileLoader — persisted appBuilderComponents (ADR-011 D3 Step 
         mockedFs.readdir.mockRejectedValue(new Error('no components dir'));
         const reloaded = await loader.loadProject(PROJECT_PATH, () => []);
         expect(reloaded!.appBuilderComponents).toEqual(written.appBuilderComponents);
+    });
+});
+
+// §E (shell instancing Step 8): `additionalConsoleApis` must persist through the
+// manifest — it is NOT derivable (user free picks beyond requiredApis), and the
+// dashboard's full-union subscription PUT reads it. Before this, a post-reload
+// redeploy silently dropped the user's picked APIs.
+describe('additionalConsoleApis — manifest persistence (§E)', () => {
+    function baseProject(overrides: Record<string, unknown> = {}): Project {
+        return {
+            name: 'apis-demo',
+            path: PROJECT_PATH,
+            created: new Date('2026-07-15T00:00:00Z'),
+            componentSelections: {},
+            componentInstances: {},
+            componentConfigs: {},
+            componentVersions: {},
+            ...overrides,
+        } as unknown as Project;
+    }
+
+    async function writeAndCaptureManifest(project: Project): Promise<Record<string, unknown>> {
+        mockedFs.access.mockResolvedValue(undefined);
+        mockedFs.mkdir.mockResolvedValue(undefined as never);
+        mockedFs.writeFile.mockResolvedValue(undefined);
+        mockedFs.rename.mockResolvedValue(undefined);
+        mockedFs.unlink.mockResolvedValue(undefined);
+        mockedFs.writeFile.mockClear();
+
+        const writer = new ProjectConfigWriter(makeLogger());
+        await writer.saveProjectConfig(project, PROJECT_PATH);
+
+        const manifestWrite = mockedFs.writeFile.mock.calls.find((call) =>
+            call[0].toString().endsWith('.tmp'),
+        );
+        expect(manifestWrite).toBeDefined();
+        return JSON.parse(manifestWrite![1] as string) as Record<string, unknown>;
+    }
+
+    it('persists additionalConsoleApis in the manifest when non-empty', async () => {
+        const written = await writeAndCaptureManifest(
+            baseProject({ additionalConsoleApis: ['AssetComputeSDK', 'CCAPI'] }),
+        );
+
+        expect(written.additionalConsoleApis).toEqual(['AssetComputeSDK', 'CCAPI']);
+    });
+
+    it('omits the field from the manifest for an empty picks list', async () => {
+        const written = await writeAndCaptureManifest(baseProject({ additionalConsoleApis: [] }));
+
+        expect('additionalConsoleApis' in written).toBe(false);
+    });
+
+    it('omits the field from the manifest when undefined', async () => {
+        const written = await writeAndCaptureManifest(baseProject());
+
+        expect('additionalConsoleApis' in written).toBe(false);
+    });
+
+    it('loads additionalConsoleApis from a manifest that carries it', async () => {
+        primeFsWithManifest({
+            name: 'apis-demo',
+            additionalConsoleApis: ['AssetComputeSDK', 'CCAPI'],
+        });
+
+        const loader = new ProjectFileLoader(makeLogger());
+        const project = await loader.loadProject(PROJECT_PATH, () => []);
+
+        expect(project!.additionalConsoleApis).toEqual(['AssetComputeSDK', 'CCAPI']);
+    });
+
+    it('tolerates legacy manifests without the field (loads with undefined)', async () => {
+        primeFsWithManifest({ name: 'legacy-demo' });
+
+        const loader = new ProjectFileLoader(makeLogger());
+        const project = await loader.loadProject(PROJECT_PATH, () => []);
+
+        expect(project).not.toBeNull();
+        expect(project!.additionalConsoleApis).toBeUndefined();
+    });
+
+    it('round-trips picks through the real writer and loader', async () => {
+        const written = await writeAndCaptureManifest(
+            baseProject({ additionalConsoleApis: ['CCAPI'] }),
+        );
+
+        mockedFs.readFile.mockResolvedValue(JSON.stringify(written));
+        mockedFs.readdir.mockRejectedValue(new Error('no components dir'));
+
+        const loader = new ProjectFileLoader(makeLogger());
+        const reloaded = await loader.loadProject(PROJECT_PATH, () => []);
+
+        expect(reloaded!.additionalConsoleApis).toEqual(['CCAPI']);
+    });
+});
+
+// §E end-to-end: a project holding keyed AI-built instances round-trips through
+// the REAL writer + loader into edit settings — derived sources (with names) +
+// persisted API picks both present after a reload.
+describe('§E edit-mode round-trip — keyed instances → manifest → edit settings', () => {
+    it('extractSettingsFromProject on a reloaded project yields sources + names + apis', async () => {
+        const keyedMap = {
+            'firefly-image-gen': {
+                kind: 'integration' as const,
+                status: 'deployed' as const,
+                name: 'Firefly Image Gen',
+                source: { owner: 'skukla', repo: 'app-builder-shell', branch: 'main' },
+                url: 'https://firefly.adobeio-static.net',
+            },
+            'commerce-eds-mesh': {
+                kind: 'mesh' as const,
+                status: 'deployed' as const,
+                source: { owner: 'skukla', repo: 'commerce-eds-mesh', branch: 'main' },
+                endpoint: 'https://mesh/graphql',
+            },
+        };
+
+        mockedFs.access.mockResolvedValue(undefined);
+        mockedFs.mkdir.mockResolvedValue(undefined as never);
+        mockedFs.writeFile.mockResolvedValue(undefined);
+        mockedFs.rename.mockResolvedValue(undefined);
+        mockedFs.unlink.mockResolvedValue(undefined);
+        mockedFs.writeFile.mockClear();
+
+        const project = {
+            name: 'round-trip-e2e',
+            path: PROJECT_PATH,
+            created: new Date('2026-07-15T00:00:00Z'),
+            componentSelections: { appBuilder: ['firefly-image-gen'] },
+            componentInstances: {},
+            componentConfigs: {},
+            componentVersions: {},
+            appBuilderComponents: keyedMap,
+            additionalConsoleApis: ['FireflySDK'],
+        } as unknown as Project;
+
+        const writer = new ProjectConfigWriter(makeLogger());
+        await writer.saveProjectConfig(project, PROJECT_PATH);
+
+        const manifestWrite = mockedFs.writeFile.mock.calls.find((call) =>
+            call[0].toString().endsWith('.tmp'),
+        );
+        mockedFs.readFile.mockResolvedValue(manifestWrite![1] as string);
+        mockedFs.readdir.mockRejectedValue(new Error('no components dir'));
+
+        const loader = new ProjectFileLoader(makeLogger());
+        const reloaded = await loader.loadProject(PROJECT_PATH, () => []);
+
+        const settings = extractSettingsFromProject(reloaded!);
+
+        expect(settings.appBuilderComponentSources).toEqual({
+            'firefly-image-gen': {
+                owner: 'skukla',
+                repo: 'app-builder-shell',
+                branch: 'main',
+                name: 'Firefly Image Gen',
+            },
+        });
+        expect(settings.additionalConsoleApis).toEqual(['FireflySDK']);
     });
 });

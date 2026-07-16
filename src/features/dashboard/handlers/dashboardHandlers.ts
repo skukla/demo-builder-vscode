@@ -37,6 +37,7 @@ import {
     handleDeployAppBuilderComponent,
     handleRedeployAppBuilderComponent,
     handleRemoveAppBuilderComponent,
+    handleRenameAppBuilderComponent,
     handleVerifyAppBuilderComponent,
 } from '@/features/dashboard/handlers/appBuilderComponentHandlers';
 import {
@@ -1007,6 +1008,7 @@ export const dashboardHandlers = defineHandlers({
     deployAppBuilderComponent: handleDeployAppBuilderComponent,
     redeployAppBuilderComponent: handleRedeployAppBuilderComponent,
     removeAppBuilderComponent: handleRemoveAppBuilderComponent,
+    renameAppBuilderComponent: handleRenameAppBuilderComponent,
     verifyAppBuilderComponent: handleVerifyAppBuilderComponent,
 
     // Console API access (runtime API subscription — list_console_apis / add_console_apis)

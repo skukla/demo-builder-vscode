@@ -1,7 +1,12 @@
 # App Builder app — scaffold-and-author (create new, design with AI)
 
-> **Status: BLOCKED on slice 1** ([spine](2026-06-17-appbuilder-app-deploy-spine.md)). Slice 4 of 5.
-> The only slice with substantial NEW surface (init + authoring + code home + repo decision).
+> **Status: RETIRED 2026-07-16 — subsumed by shell instancing**
+> ([`2026-07-16-shell-instancing-named-ai-integrations.md`](2026-07-16-shell-instancing-named-ai-integrations.md),
+> branch `feature/shell-instancing`). Create-new-and-author-with-AI now ships as named shell
+> instances: "Build custom" prompts for a name and clones the `app-builder-shell` template into
+> `components/<id>/` with its own OpenWhisk package, N per project. The `aio app init` scaffold
+> mode below is not being built. This file is kept as the historical record of the original design
+> (it was slice 4 of 5, blocked on the [spine](2026-06-17-appbuilder-app-deploy-spine.md)).
 
 ## Provenance
 

@@ -59,6 +59,7 @@ export function DeployedState({
     onRemove,
     verifyAction,
     onManageApis,
+    onRename,
 }: {
     view: DeployedView;
     onRedeploy: () => void;
@@ -66,6 +67,8 @@ export function DeployedState({
     verifyAction?: StatusCardAction;
     /** Opens the shared Manage-APIs modal (row consumer only; the card omits it). */
     onManageApis?: () => void;
+    /** Rename the integration's display name (integration rows only, never mesh). */
+    onRename?: () => void;
 }) {
     const urls = resolveUrls(view);
 
@@ -99,6 +102,11 @@ export function DeployedState({
                 {onManageApis && (
                     <Button variant="secondary" onPress={onManageApis}>
                         Manage APIs
+                    </Button>
+                )}
+                {onRename && (
+                    <Button variant="secondary" onPress={onRename}>
+                        Rename
                     </Button>
                 )}
                 <Button variant="secondary" onPress={onRemove}>

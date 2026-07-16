@@ -1,6 +1,6 @@
 # ADR-011: App Builder Deployables — A Keyed Set of Deployable Components in One App Builder Project (Mesh Is One Kind)
 
-**Status**: Accepted — implemented (D1–D3; D3 on branch `feature/appbuilder-deployables-d3`, 2026-07-15); plan at [`.rptc/plans/appbuilder-deployable-model/`](../../../.rptc/plans/appbuilder-deployable-model/overview.md)
+**Status**: Accepted — implemented (D1–D3; D3 merged to develop `5d6f4956`, 2026-07-16); plan at [`.rptc/plans/appbuilder-deployable-model/`](../../../.rptc/plans/appbuilder-deployable-model/overview.md)
 **Date**: 2026-06-19
 **Decision Maker**: Project Owner
 **Implementer**: Shipped — D1 spike → D1–D3 (see plan)

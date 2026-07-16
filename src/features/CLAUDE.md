@@ -1,4 +1,4 @@
-<!-- Last verified: 2026-07-03 -->
+<!-- Last verified: 2026-07-16 -->
 # Features Architecture
 
 ## Overview
@@ -129,8 +129,11 @@ kind in that map; the legacy singular `meshState`/`appState` fields are legacy-r
 
 **Responsibilities:**
 - First-class `appBuilder` registry category + `componentSelections.appBuilder` round-trip
-- Per-id integration deploy/redeploy/remove from the dashboard integrations list
-  (`IntegrationsBlock` → `AppBuilderComponentsList`, mesh first row via `MeshComponentRow`)
+- Per-id integration deploy/redeploy/remove/rename (rename is display name only —
+  `renameAppBuilderComponent` updates `appBuilderComponents[id].name`; the id/folder/ow.package
+  are immutable; pre-built catalog entries keep their catalog names) from the dashboard
+  integrations list (`IntegrationsBlock` → `AppBuilderComponentsList`, mesh first row via
+  `MeshComponentRow`)
 - Reuses (no fork): `withOrgContext` + `buildOrgTargetFromProjectAdobe`, `CommandExecutor`,
   `componentManager.installComponent`/`removeComponent`, `ensureAdobeIOAuth`,
   `detectProjectOrgMismatch`, the dashboard status channel. Only new abstraction is the shared

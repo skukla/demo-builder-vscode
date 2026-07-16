@@ -9,6 +9,10 @@
  * shared `needsSetup` (destination not committed), per-row `apis`, and the
  * reserved `__existing__` key never surfacing. Pure — the catalog is an arg,
  * nothing is mocked.
+ *
+ * The AI-built instance (shell-source discriminator) tests live in the sibling
+ * integrationRows.instances.test.ts; shared fixtures in
+ * integrationRows.testUtils.ts.
  */
 
 import {
@@ -18,40 +22,7 @@ import {
 import { BASELINE_CODE } from '@/features/project-creation/ui/components/integration-flow/apiAccessConstants';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { WizardState } from '@/types/webview';
-
-function state(overrides: Partial<WizardState> = {}): WizardState {
-    return overrides as WizardState;
-}
-
-/** The stack's mesh entry (as meshComponentForStack resolves it). */
-const MESH_ENTRY: AppBuilderComponentCatalogEntry = {
-    id: 'commerce-eds-mesh',
-    name: 'Commerce API Mesh',
-    description: 'Unified GraphQL endpoint over Commerce services',
-    kind: 'mesh',
-    requiredApis: ['GraphQLServiceSDK'],
-    source: { owner: 'skukla', repo: 'commerce-mesh' },
-};
-
-const ERP_ENTRY: AppBuilderComponentCatalogEntry = {
-    id: 'erp-sync',
-    name: 'ERP Sync',
-    description: 'Syncs orders into an ERP backend',
-    kind: 'integration',
-    source: { owner: 'skukla', repo: 'erp-sync' },
-};
-
-/** The blank starter ("Build custom") — kind 'integration', blank, NO source. */
-const BLANK_ENTRY: AppBuilderComponentCatalogEntry = {
-    id: 'app-builder-shell',
-    name: 'App Builder App',
-    description: 'A minimal App Builder app to build out with AI',
-    kind: 'integration',
-    blank: true,
-    source: { owner: 'skukla', repo: 'app-builder-shell' },
-};
-
-const CATALOG: AppBuilderComponentCatalogEntry[] = [MESH_ENTRY, ERP_ENTRY];
+import { state, MESH_ENTRY, ERP_ENTRY, BLANK_ENTRY, CATALOG } from './integrationRows.testUtils';
 
 /** Committed shared destination (project + workspace ids). */
 const DESTINATION = {

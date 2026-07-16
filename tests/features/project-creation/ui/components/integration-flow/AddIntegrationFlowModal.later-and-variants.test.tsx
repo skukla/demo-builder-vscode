@@ -110,6 +110,9 @@ const CRM: AppBuilderComponentCatalogEntry = {
 };
 const CATALOG = [ERP, CRM];
 
+/** The composed collision domain the host threads in (blank naming). */
+const RESERVED_IDS = new Set(['app-builder-shell', 'erp-sync', 'crm-connect', 'commerce-mesh']);
+
 const PROJECT: AdobeProject = { id: 'proj-1', name: 'proj-one', title: 'Demo Project' };
 const WORKSPACE: Workspace = { id: 'ws-1', name: 'Stage', title: 'Stage' };
 
@@ -209,6 +212,7 @@ function Harness({
             updateState={updateState}
             meshComponent={meshComponent}
             catalog={catalog}
+            reservedIds={RESERVED_IDS}
             builder={builder}
             meshBackendId="backend-1"
             meshFrontendId="frontend-1"
@@ -520,13 +524,26 @@ describe('integration-flow module index', () => {
         const index = require('@/features/project-creation/ui/components/integration-flow');
         // Every integration card lists its APIs uniformly (no per-kind mesh slot), so
         // the former MeshApiEnableRow export is gone; EnsureResult is a type-only export.
+        // buildReservedIds joined the surface for shell instancing: the HOST composes
+        // the blank-naming collision domain and threads it to the modal.
+        // RenameIntegrationModal joined for Step 10 (wizard rename): the host
+        // (IntegrationsStep) mounts the rename surface for AI-built instance rows.
+        // RESERVED_EXISTING_KEY joined when the '__existing__' literal was
+        // deduplicated into flowStages: useWizardState (an OUTSIDE consumer)
+        // seeds edit-mode selectedConsoleApis with it via this surface.
         expect(Object.keys(index).sort()).toEqual([
             'AddIntegrationFlowModal',
             'IntegrationResultRow',
+            'RESERVED_EXISTING_KEY',
+            'RenameIntegrationModal',
+            'buildReservedIds',
             'resolveIntegrationRows',
         ]);
         expect(typeof index.AddIntegrationFlowModal).toBe('function');
         expect(typeof index.IntegrationResultRow).toBe('function');
+        expect(typeof index.RenameIntegrationModal).toBe('function');
+        expect(typeof index.buildReservedIds).toBe('function');
         expect(typeof index.resolveIntegrationRows).toBe('function');
+        expect(index.RESERVED_EXISTING_KEY).toBe('__existing__');
     });
 });

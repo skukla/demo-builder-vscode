@@ -11,6 +11,7 @@ import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { getMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
 import { dashboardHandlers } from '@/features/dashboard/handlers';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
+import type { AppBuilderComponentRowStatus } from '@/features/dashboard/handlers/appBuilderComponentHandlers';
 import { getEwCanvasBranch, resolveProjectAuthoringExperience } from '@/features/eds/handlers/edsHelpers';
 import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 import { loadDemoPackages } from '@/features/project-creation/services/demoPackageLoader';
@@ -319,11 +320,16 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
      * appBuilderComponent handlers). Modeled on sendMeshStatusUpdate but keyed by the
      * appBuilderComponent `id` so the integrations list flips ONLY that row. No-op if no
      * dashboard is open.
+     *
+     * `name` (optional) refreshes the row's display label on the same channel —
+     * the rename handler pushes the entry's CURRENT status (incl. the persisted
+     * 'stale') plus the new name, since the init-seeded map never re-delivers.
      */
     public static async sendAppBuilderComponentStatusUpdate(
         id: string,
-        status: 'deploying' | 'deployed' | 'error' | 'not-deployed',
+        status: AppBuilderComponentRowStatus,
         message?: string,
+        name?: string,
     ): Promise<void> {
         const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');
         if (panel) {
@@ -333,6 +339,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
                     id,
                     status,
                     message,
+                    name,
                 },
             });
         }

@@ -7,8 +7,8 @@
  * spine of the Integrations redesign:
  *   - `additionalConsoleApis` (free Console API picks union) is written on the
  *     persisted Project so Phase 3b's subscribe union covers it
- *   - `appBuilderComponentSources` (custom-URL integration sources) persists so
- *     edit mode can round-trip custom integrations (pre-existing gap)
+ *   - `appBuilderComponentSources` is NOT written (§E, shell instancing Step 8):
+ *     edit mode derives sources from the keyed `appBuilderComponents` map
  *   - `componentSelections.appBuilder` records the selected integration ids
  *     (excluding mesh ids that dual-flow through dependencies)
  *
@@ -70,33 +70,22 @@ describe('buildInitialProject', () => {
         });
     });
 
-    describe('appBuilderComponentSources (edit round-trip for custom integrations)', () => {
-        it('persists custom integration sources on the Project', () => {
-            const sources = {
-                'owner-custom-app': { owner: 'owner', repo: 'custom-app', branch: 'dev' },
-            };
-
+    describe('appBuilderComponentSources (DELETED from Project — §E derives from the keyed map)', () => {
+        it('never writes appBuilderComponentSources onto the Project, even when the config carries sources', () => {
+            // §E (shell instancing Step 8): the field was removed from Project.
+            // Edit mode derives sources from the durable keyed
+            // `appBuilderComponents` map instead — a persisted parallel copy
+            // would drift (removed integrations would resurrect in edit mode).
             const project = buildInitialProject(
-                config({ appBuilderComponentSources: sources }),
+                config({
+                    appBuilderComponentSources: {
+                        'owner-custom-app': { owner: 'owner', repo: 'custom-app', branch: 'dev' },
+                    },
+                }),
                 PROJECT_PATH
             );
 
-            expect(project.appBuilderComponentSources).toEqual(sources);
-        });
-
-        it('leaves appBuilderComponentSources undefined for an empty map', () => {
-            const project = buildInitialProject(
-                config({ appBuilderComponentSources: {} }),
-                PROJECT_PATH
-            );
-
-            expect(project.appBuilderComponentSources).toBeUndefined();
-        });
-
-        it('leaves appBuilderComponentSources undefined when absent', () => {
-            const project = buildInitialProject(config(), PROJECT_PATH);
-
-            expect(project.appBuilderComponentSources).toBeUndefined();
+            expect('appBuilderComponentSources' in project).toBe(false);
         });
     });
 

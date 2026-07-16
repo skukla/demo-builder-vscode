@@ -73,3 +73,32 @@ Everything downstream is already id-generic post-D3 — REUSE, do not rebuild:
 > catalog entry under the instance id — reuse the install-by-{id, cloneUrl} path and the keyed
 > `name` field; do NOT build new state or isolation machinery (D3 provides it). Fold in the §E
 > source-persistence home for instance template records. Reassess D4 scope at the end.
+
+---
+
+## Implementation status (2026-07-16, branch `feature/shell-instancing`)
+
+**✅ Implemented** per `.rptc/plans/shell-instancing/overview.md` (D3 merged first: `5d6f4956`).
+Full suite green (885 suites / 11,303 tests). Delivered beyond the original scope:
+
+- **Rename-after-add (user-added mid-implementation):** display-name rename only — the instance
+  id (folder, ow.package, keyed key) is immutable (identity rename would orphan the old
+  OpenWhisk package and duplicate instances in edit mode). Wizard: "Rename" action on AI-built
+  instance rows (`RenameIntegrationModal`, evaluate-and-emit idiom). Dashboard:
+  `renameAppBuilderComponent` message → `showInputBox` → keyed `name` update + per-row status push.
+- **§E folded in:** edit-mode sources are DERIVED from the keyed `appBuilderComponents` map
+  (`settingsSerializer.deriveAppBuilderComponentSources`); `Project.appBuilderComponentSources`
+  DELETED (was write-once/read-once, never persisted); `additionalConsoleApis` now
+  manifest-persisted (fixes the silent post-reload API-unsubscribe on redeploy).
+- **AI-built row discriminator corrected:** shell-source `{owner, repo}` match against the blank
+  catalog entry — NOT `source.name` presence (the runner names every integration, so imports
+  would have misclassified after the §E round-trip).
+- **Per-integration AI addressing:** `extend-app-builder-app` skill rewritten (confirm the target
+  `components/<id>/` first), new `## App Builder Integrations` AGENTS.md section,
+  `AI_CONTEXT_VERSION` 3→4 (re-gates existing projects for a bundle refresh — intended).
+
+**D4 reassessment (kickoff rider):** shell instancing IS the lightweight scaffold path — a named,
+deploy-ready, AI-extendable codebase per instance. D4's `aio app init` scaffold mode is
+**subsumed and should be retired from the plan**; anything left of D4 is only "author actions via
+AI", which the per-instance MCP tools + skill already cover. Promote-to-repo rider stays open
+(N local-only instance codebases make it MORE relevant).

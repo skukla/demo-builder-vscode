@@ -33,6 +33,7 @@ import {
     meshAppBuilderComponentToComponentIds,
 } from '../wizard/appBuilderComponentSelectionState';
 import { vscode } from '@/core/ui/utils/vscode-api';
+import type { BlankInstance } from '@/features/project-creation/ui/components/integration-flow';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
@@ -75,13 +76,25 @@ export interface UseProjectBuilderReturn {
     onBlockLibrariesChange: (libraries: string[]) => void;
     onCustomBlockLibrariesChange: (libs: CustomBlockLibrary[]) => void;
     onAppBuilderComponentToggle: (id: string, isSelected: boolean) => void;
-    onAddCustomAppBuilderComponent: (source: {
-        owner: string;
-        repo: string;
-        branch?: string;
-    }) => void;
+    /**
+     * Add a custom-URL integration. With `instance` (a named AI-built shell
+     * instance) the selection commits under the INSTANCE id and the source record
+     * carries the display name; without it, the id is `${owner}-${repo}` (the
+     * import door, unchanged).
+     */
+    onAddCustomAppBuilderComponent: (
+        source: { owner: string; repo: string; branch?: string },
+        instance?: BlankInstance,
+    ) => void;
     /** Remove an added App Builder integration: clears its selection AND its source. */
     onRemoveAppBuilderComponent: (id: string) => void;
+    /**
+     * Rename an AI-built instance: updates `appBuilderComponentSources[id].name`
+     * IN PLACE. Display name only — the id (folder, ow.package, keyed key),
+     * selection, and API picks are immutable. No-op for ids without a source
+     * record (catalog / legacy fixed-id blank selections have no name home).
+     */
+    onRenameAppBuilderComponent: (id: string, name: string) => void;
     onOptionalDependenciesChange: (deps: string[]) => void;
 }
 
@@ -328,8 +341,12 @@ export function useProjectBuilder(
     );
 
     const onAddCustomAppBuilderComponent = useCallback(
-        (source: { owner: string; repo: string; branch?: string }) => {
-            const id = `${source.owner}-${source.repo}`;
+        (
+            source: { owner: string; repo: string; branch?: string },
+            instance?: BlankInstance,
+        ) => {
+            const id = instance?.id ?? `${source.owner}-${source.repo}`;
+            const record = { owner: source.owner, repo: source.repo, branch: source.branch };
             const nextComponents = withSelectedAppBuilderComponent(
                 selectedAppBuilderComponents,
                 id,
@@ -339,11 +356,24 @@ export function useProjectBuilder(
                 selectedAppBuilderComponents: nextComponents,
                 appBuilderComponentSources: {
                     ...(state.appBuilderComponentSources ?? {}),
-                    [id]: { owner: source.owner, repo: source.repo, branch: source.branch },
+                    [id]: instance ? { ...record, name: instance.name } : record,
                 },
             });
         },
         [selectedAppBuilderComponents, state.appBuilderComponentSources, updateState],
+    );
+
+    const onRenameAppBuilderComponent = useCallback(
+        (id: string, name: string) => {
+            const sources = state.appBuilderComponentSources ?? {};
+            const record = sources[id];
+            // Only sourced rows (AI-built instances) carry a renamable name.
+            if (!record) return;
+            updateState({
+                appBuilderComponentSources: { ...sources, [id]: { ...record, name } },
+            });
+        },
+        [state.appBuilderComponentSources, updateState],
     );
 
     const onRemoveAppBuilderComponent = useCallback(
@@ -407,6 +437,7 @@ export function useProjectBuilder(
         onAppBuilderComponentToggle,
         onAddCustomAppBuilderComponent,
         onRemoveAppBuilderComponent,
+        onRenameAppBuilderComponent,
         onOptionalDependenciesChange,
     };
 }

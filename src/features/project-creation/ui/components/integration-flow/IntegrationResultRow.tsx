@@ -41,6 +41,12 @@ export interface IntegrationResultRowProps {
     onRemove: () => void;
     /** Re-open the picker for this integration's APIs (custom/import rows only). */
     onChangeApis?: () => void;
+    /**
+     * Open the rename surface (AI-built instance rows only — the host passes
+     * this for `row.renamable` rows, same present-means-render idiom as
+     * onChangeApis). Display name only; the id is immutable.
+     */
+    onRename?: () => void;
 }
 
 /** Whether a row carries editable free API picks (custom/import, not mesh/catalog). */
@@ -93,6 +99,7 @@ export function IntegrationResultRow({
     onChangeDestination,
     onRemove,
     onChangeApis,
+    onRename,
 }: IntegrationResultRowProps): React.ReactElement {
     // The "APIs in use" list is read-only feedback, so it stays COLLAPSED by
     // default to keep the card uncluttered — the header keeps the count visible
@@ -102,6 +109,11 @@ export function IntegrationResultRow({
         <div className="int-row">
             <div className="int-row-header">
                 <span className="int-row-name">{row.name}</span>
+                {onRename && (
+                    <ActionButton isQuiet onPress={onRename}>
+                        Rename
+                    </ActionButton>
+                )}
                 <ActionButton isQuiet onPress={onRemove}>
                     Remove
                 </ActionButton>

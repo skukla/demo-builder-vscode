@@ -68,6 +68,9 @@ export type MessageType =
     // Dashboard messages
     | 'toggle-logs'
     | 'open-component-file'
+    // Rename a deployed integration's display name (shell instancing Step 10;
+    // extension-side showInputBox owns the input surface)
+    | 'renameAppBuilderComponent'
     // Unified on-open check result channel (org-context, mesh-verify, mcp-health, ai-verify)
     | 'checkResult'
 

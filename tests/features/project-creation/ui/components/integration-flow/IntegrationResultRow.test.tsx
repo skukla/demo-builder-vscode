@@ -54,6 +54,7 @@ interface RenderOverrides {
     onChangeDestination?: () => void;
     onRemove?: () => void;
     onChangeApis?: () => void;
+    onRename?: () => void;
 }
 
 function renderRow(overrides: RenderOverrides = {}) {
@@ -135,6 +136,34 @@ describe('IntegrationResultRow — Remove', () => {
 
         fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
         expect(props.onRemove).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('IntegrationResultRow — Rename (AI-built instance rows only)', () => {
+    // The row is presentational: the HOST gates the affordance on the resolver's
+    // `renamable` flag by passing onRename only for instance rows — same idiom
+    // as onChangeApis (present ⇒ the quiet action renders).
+    const INSTANCE_ROW: IntegrationRow = {
+        id: 'firefly-image-gen',
+        kind: 'blank',
+        name: 'Firefly Image Gen',
+        sourceLine: 'Custom integration · built with AI',
+        needsSetup: false,
+        apis: [BASELINE_CODE],
+        renamable: true,
+    };
+
+    it('renders a quiet Rename action when onRename is provided, and it fires onRename', () => {
+        const onRename = jest.fn();
+        renderRow({ row: INSTANCE_ROW, destinationLabel: 'X · Y', onRename });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
+        expect(onRename).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders no Rename action when onRename is absent (imports/mesh/catalog rows)', () => {
+        renderRow({ row: CUSTOM_ROW, destinationLabel: 'X · Y' });
+        expect(screen.queryByRole('button', { name: 'Rename' })).not.toBeInTheDocument();
     });
 });
 

@@ -15,11 +15,31 @@ import type { AdobeProject, Workspace } from '@/types/webview';
 
 export type IntegrationKind = 'mesh' | 'catalog' | 'blank' | 'custom';
 
+/**
+ * Reserved `selectedConsoleApis` key carrying a project's pre-existing
+ * `additionalConsoleApis` in edit mode. Serialization-only: it joins the
+ * subscription union, is never surfaced as a row, and blocks instance ids
+ * (buildReservedIds). The ONE definition — edit-mode seeding (useWizardState),
+ * the row resolver, and the instance-id collision domain all import it.
+ */
+export const RESERVED_EXISTING_KEY = '__existing__';
+
+/**
+ * A named blank (AI-built) integration instance: the user-entered display name
+ * and the collision-checked id derived from it (instanceId.ts). The FlowDraft
+ * is the canonical carrier; every producer/consumer of the pair reuses this type.
+ */
+export interface BlankInstance {
+    id: string;
+    name: string;
+}
+
 export type FlowMode = 'add' | 'destination' | 'api-edit';
 
 export type FlowStageId =
     | 'kind'
     | 'source-catalog'
+    | 'source-blank'
     | 'source-custom'
     | 'dest-signin'
     | 'dest-project'
@@ -32,6 +52,11 @@ export interface FlowDraft {
     kind?: IntegrationKind;
     catalogId?: string;
     customSource?: { owner: string; repo: string };
+    /**
+     * A blank (AI-built) integration's identity ({@link BlankInstance}). Set by
+     * the source-blank stage; committed as the selection id + source-map key.
+     */
+    instance?: BlankInstance;
     /**
      * Free Console API picks for a custom/import app's api-access step (the user
      * knows what APIs the app needs up front). Locked codes (baseline + APIs other
@@ -64,6 +89,7 @@ export interface FlowStateSlice {
 const CANONICAL_ORDER: FlowStageId[] = [
     'kind',
     'source-catalog',
+    'source-blank',
     'source-custom',
     'dest-signin',
     'dest-project',
@@ -81,6 +107,7 @@ export function meshKindOffered(
 
 function sourceStages(kind: IntegrationKind | undefined): FlowStageId[] {
     if (kind === 'catalog') return ['source-catalog'];
+    if (kind === 'blank') return ['source-blank'];
     if (kind === 'custom') return ['source-custom'];
     return [];
 }
@@ -179,6 +206,8 @@ function customSourceValid(draft: FlowDraft, slice: FlowStateSlice): boolean {
 const CONTINUE_GATES: Record<FlowStageId, (draft: FlowDraft, slice: FlowStateSlice) => boolean> = {
     kind: (draft) => draft.kind !== undefined,
     'source-catalog': (draft) => draft.catalogId !== undefined,
+    // The stage emits instance only for a valid, non-colliding name (instanceId.ts).
+    'source-blank': (draft) => draft.instance !== undefined,
     'source-custom': customSourceValid,
     'dest-signin': (_draft, slice) => slice.isSignedIn,
     'dest-project': (draft, slice) =>

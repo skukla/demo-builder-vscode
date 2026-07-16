@@ -120,8 +120,60 @@ describe('executeAppBuilderIntegrationsPhase', () => {
             progressTracker,
         );
 
-        expect(mockBuildCustomIntegrationEntry).toHaveBeenCalledWith({ owner: 'owner', repo: 'custom-app' });
+        // The sources-map key travels as the explicit instance id (shell instancing).
+        expect(mockBuildCustomIntegrationEntry).toHaveBeenCalledWith(
+            { owner: 'owner', repo: 'custom-app' },
+            'owner-custom-app',
+        );
         expect(mockAddAppBuilderComponent).toHaveBeenCalledWith(project, customEntry, expect.anything());
+    });
+
+    it('deploys TWO shell-sourced instances under distinct ids and names', async () => {
+        mockGetAppBuilderComponentEntry.mockReturnValue(undefined);
+        // Pass-through mirroring the real builder's instance-identity contract.
+        mockBuildCustomIntegrationEntry.mockImplementation((source, id) => ({
+            id,
+            name: (source as { name?: string; repo: string }).name ?? (source as { repo: string }).repo,
+            description: '',
+            kind: 'integration' as const,
+            source,
+        }));
+
+        await executeAppBuilderIntegrationsPhase(
+            context,
+            project,
+            config({
+                selectedAppBuilderComponents: ['order-sync', 'firefly-image-gen'],
+                appBuilderComponentSources: {
+                    'order-sync': {
+                        owner: 'skukla', repo: 'app-builder-shell', name: 'Order Sync',
+                    },
+                    'firefly-image-gen': {
+                        owner: 'skukla', repo: 'app-builder-shell', name: 'Firefly Image Gen',
+                    },
+                },
+            }),
+            progressTracker,
+        );
+
+        expect(mockBuildCustomIntegrationEntry).toHaveBeenCalledWith(
+            { owner: 'skukla', repo: 'app-builder-shell', name: 'Order Sync' },
+            'order-sync',
+        );
+        expect(mockBuildCustomIntegrationEntry).toHaveBeenCalledWith(
+            { owner: 'skukla', repo: 'app-builder-shell', name: 'Firefly Image Gen' },
+            'firefly-image-gen',
+        );
+        expect(mockAddAppBuilderComponent).toHaveBeenCalledTimes(2);
+        const deployedEntries = mockAddAppBuilderComponent.mock.calls.map(
+            (c) => c[1] as { id: string; name: string; kind: string },
+        );
+        expect(deployedEntries).toEqual([
+            expect.objectContaining({ id: 'order-sync', name: 'Order Sync', kind: 'integration' }),
+            expect.objectContaining({
+                id: 'firefly-image-gen', name: 'Firefly Image Gen', kind: 'integration',
+            }),
+        ]);
     });
 
     it('excludes a mesh-kind selection (deploys nothing)', async () => {

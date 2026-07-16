@@ -5,7 +5,18 @@
  * type-safe access to component identifiers matching templates/components.json.
  */
 
-import { COMPONENT_IDS, ComponentId } from '@/core/constants';
+import { AI_CONTEXT_VERSION, COMPONENT_IDS, ComponentId } from '@/core/constants';
+
+describe('AI_CONTEXT_VERSION', () => {
+    // Pin the current bundle version. Bump this pin ONLY together with a real
+    // generated-content change (see the ai-context-authoring discipline): the
+    // constant re-gates every existing project for a bundle refresh.
+    // v4: per-integration addressing (N AI-built integrations under
+    // components/<id>/) in extend-app-builder-app + AGENTS.md.
+    it('is 4 (per-integration AI addressing)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(4);
+    });
+});
 
 describe('COMPONENT_IDS', () => {
     describe('export', () => {

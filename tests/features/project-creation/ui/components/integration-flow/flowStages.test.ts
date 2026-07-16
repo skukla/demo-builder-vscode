@@ -107,13 +107,37 @@ describe('deriveStageOrder — add mode', () => {
         ]);
     });
 
-    it('blank, signed in, uncommitted → full dest + api-access (interactive picker)', () => {
+    it('blank, signed in, uncommitted → source-blank + full dest + api-access', () => {
         expect(deriveStageOrder(draft({ kind: 'blank' }), slice(), ADD)).toEqual([
             'kind',
+            'source-blank',
             'dest-project',
             'dest-workspace',
             'api-access',
         ]);
+    });
+
+    it('blank, signed out, uncommitted → source-blank + dest-signin + full dest + api-access', () => {
+        expect(
+            deriveStageOrder(draft({ kind: 'blank' }), slice({ isSignedIn: false }), ADD)
+        ).toEqual([
+            'kind',
+            'source-blank',
+            'dest-signin',
+            'dest-project',
+            'dest-workspace',
+            'api-access',
+        ]);
+    });
+
+    it('blank, destination committed (later add) → source-blank + dest-summary + api-access', () => {
+        expect(
+            deriveStageOrder(
+                draft({ kind: 'blank' }),
+                slice({ destinationCommitted: true, selectedIds: ['existing-integration'] }),
+                ADD
+            )
+        ).toEqual(['kind', 'source-blank', 'dest-summary', 'api-access']);
     });
 
     it('custom, destination committed (later add) → dest-summary + api-access', () => {
@@ -274,6 +298,35 @@ describe('nextStage', () => {
         expect(nextStage('dest-workspace', draft(), slice(), DEST)).toBeNull();
     });
 
+    it('kind → source-blank for a blank draft', () => {
+        expect(nextStage('kind', draft({ kind: 'blank' }), slice(), ADD)).toBe('source-blank');
+    });
+
+    it('source-blank → dest-project when signed in', () => {
+        expect(nextStage('source-blank', draft({ kind: 'blank' }), slice(), ADD)).toBe(
+            'dest-project'
+        );
+    });
+
+    it('vanished dest-signin (blank kind, signed in mid-flow) clamps across source-blank to dest-project', () => {
+        // Predecessor walk crosses the new canonical source-blank slot.
+        expect(nextStage('dest-signin', draft({ kind: 'blank' }), slice(), ADD)).toBe(
+            'dest-project'
+        );
+    });
+
+    it('vanished source-custom (kind switched to blank) clamps to dest-project via source-blank', () => {
+        expect(nextStage('source-custom', draft({ kind: 'blank' }), slice(), ADD)).toBe(
+            'dest-project'
+        );
+    });
+
+    it('vanished source-blank (kind switched to catalog) clamps via source-catalog', () => {
+        expect(
+            nextStage('source-blank', draft({ kind: 'catalog', catalogId: 'c1' }), slice(), ADD)
+        ).toBe('dest-project');
+    });
+
     it('vanished dest-signin (signed in mid-flow) clamps to dest-project (add mode)', () => {
         // Order no longer contains dest-signin; the nearest surviving canonical
         // predecessor is source-catalog, so next is the stage after it.
@@ -341,6 +394,22 @@ describe('prevStage', () => {
         expect(prevStage('dest-project', draft(), slice(), DEST)).toBeNull();
     });
 
+    it('source-blank → kind', () => {
+        expect(prevStage('source-blank', draft({ kind: 'blank' }), slice(), ADD)).toBe('kind');
+    });
+
+    it('dest-project → source-blank for a blank draft when signed in', () => {
+        expect(prevStage('dest-project', draft({ kind: 'blank' }), slice(), ADD)).toBe(
+            'source-blank'
+        );
+    });
+
+    it('vanished dest-signin (blank kind) → source-blank as the surviving predecessor', () => {
+        expect(prevStage('dest-signin', draft({ kind: 'blank' }), slice(), ADD)).toBe(
+            'source-blank'
+        );
+    });
+
     it('vanished dest-signin → the surviving canonical predecessor itself', () => {
         expect(prevStage('dest-signin', draft({ kind: 'catalog' }), slice(), ADD)).toBe(
             'source-catalog'
@@ -377,6 +446,15 @@ describe('canContinue', () => {
     it('source-custom dup guard: owner-repo already selected → blocked', () => {
         const d = draft({ kind: 'custom', customSource: { owner: 'acme', repo: 'app' } });
         expect(canContinue('source-custom', d, slice({ selectedIds: ['acme-app'] }))).toBe(false);
+    });
+
+    it('source-blank blocks until a valid instance is set', () => {
+        expect(canContinue('source-blank', draft({ kind: 'blank' }), slice())).toBe(false);
+    });
+
+    it('source-blank passes once the draft carries an instance', () => {
+        const d = draft({ kind: 'blank', instance: { id: 'order-sync', name: 'Order Sync' } });
+        expect(canContinue('source-blank', d, slice())).toBe(true);
     });
 
     it('dest-signin mirrors isSignedIn', () => {
