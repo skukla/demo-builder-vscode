@@ -121,3 +121,15 @@ wizard's initial data on reopen; a successful rebuild or Discard clears it.
    indicator (draft cleared on success).
 5. Repeat the removal, trigger a rebuild **failure** → reopen → the draft still restores (not lost).
 6. Jest: the suites above pass; `tsc --noEmit` 0; eslint 0.
+
+---
+
+## Removal note (2026-07-16)
+
+Shipped 2026-07-15 (`bb489a0e`); **removed 2026-07-16** — the feature lived one day in
+`develop`. Rationale and the reintroduction bar (staleness guard designed in: store the
+seeded baseline in the draft; drop the draft when the current baseline no longer matches)
+are recorded in `.rptc/research/edit-mode-removal-audit/research.md` Part 2. In short:
+the motivating "lost data" perception traced to since-fixed edit-seeding bugs; in its one
+week of history the stale-draft hazard fired (masking the dd4e202a mesh-seeding fix) while
+the restore benefit never did. Code lives in git history (`bb489a0e` in, removal commit out).

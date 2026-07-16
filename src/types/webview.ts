@@ -125,45 +125,6 @@ export interface WizardState {
 }
 
 /**
- * The editable slice of {@link WizardState} that the Edit wizard round-trips — the
- * user's selections and Continue-gating verdicts. Excludes transient caches, auth,
- * and loading flags (those re-derive on mount). Persisted as a reversible
- * per-project draft so reopening the editor restores in-progress edits. See
- * `ui/wizard/editDraft.ts` (`pickEditDraft` / `applyEditDraft`).
- *
- * SECURITY: this slice deliberately EXCLUDES `componentConfigs` and
- * `commerceConfig` — both can carry secrets (component env-var values such as the
- * Commerce admin password; Catalog/Search API keys). Secrets must never reach the
- * unencrypted globalState draft store, so those config areas re-seed from the
- * saved project rather than from the draft.
- */
-export type EditDraft = Pick<
-    WizardState,
-    | 'projectName'
-    | 'selectedPackage'
-    | 'selectedBackend'
-    | 'selectedStack'
-    | 'selectedAddons'
-    | 'selectedBlockLibraries'
-    | 'selectedOptionalDependencies'
-    | 'selectedAppBuilderComponents'
-    | 'appBuilderComponentSources'
-    | 'selectedConsoleApis'
-    | 'customBlockLibraries'
-    | 'packageConfigDefaults'
-    | 'components'
-    | 'edsConfig'
-    | 'adobeOrg'
-    | 'adobeProject'
-    | 'adobeWorkspace'
-    | 'commerceConnectValid'
-    | 'commerceStoreViewChosen'
-    | 'storefrontRepoValid'
-    | 'storefrontCodeSyncValid'
-    | 'committedCommerceSteps'
->;
-
-/**
  * Wizard mode determines the flow behavior and UI labels
  * - 'create': New project from scratch
  * - 'edit': Editing existing project in place
