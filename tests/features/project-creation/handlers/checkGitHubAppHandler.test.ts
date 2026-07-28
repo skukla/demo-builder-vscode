@@ -1,0 +1,142 @@
+/**
+ * check-github-app handler — HTTP 404 vs HTTP 401 classification
+ *
+ * The handler auto-triggers a Helix code sync when it believes Helix has not
+ * indexed the repo yet (HTTP 404). It inferred that condition from
+ * `codeStatus === undefined`, which is ALSO true when Helix rejects the
+ * credential with HTTP 401. Consequence in the field: on a 401 the handler
+ * logged "HTTP 404 detected - repo not indexed yet" and fired a code-sync
+ * trigger that could only 401 in turn — roughly forty times in one minute
+ * across two concurrent pollers. The log line was fiction, and it sent the
+ * subsequent diagnosis after a nonexistent 404.
+ *
+ * A code sync must be triggered only on a genuine HTTP 404.
+ */
+
+import { checkGitHubApp } from '@/features/project-creation/handlers/checkGitHubAppHandler';
+import type { HandlerContext } from '@/types/handlers';
+import type { Logger } from '@/types/logger';
+
+const mockIsAppInstalled = jest.fn();
+const mockPreviewCode = jest.fn();
+
+jest.mock('@/features/eds/handlers/edsHelpers', () => ({
+    getGitHubServices: jest.fn(() => ({ tokenService: { getToken: jest.fn() } })),
+}));
+
+jest.mock('@/features/eds/services/githubAppService', () => ({
+    GitHubAppService: jest.fn().mockImplementation(() => ({
+        isAppInstalled: mockIsAppInstalled,
+        getInstallUrl: jest
+            .fn()
+            .mockReturnValue('https://github.com/apps/aem-code-sync/installations/select_target'),
+    })),
+}));
+
+jest.mock('@/features/eds/services/helixService', () => ({
+    HelixService: jest.fn().mockImplementation(() => ({ previewCode: mockPreviewCode })),
+}));
+
+function makeContext(): HandlerContext {
+    return {
+        logger: {
+            info: jest.fn(),
+            debug: jest.fn(),
+            error: jest.fn(),
+            warn: jest.fn(),
+            trace: jest.fn(),
+        } as unknown as Logger,
+        context: { secrets: {} },
+    } as unknown as HandlerContext;
+}
+
+function allLogs(context: HandlerContext): string {
+    const l = context.logger as unknown as Record<string, jest.Mock>;
+    return ['info', 'debug', 'warn', 'error']
+        .flatMap((level) => l[level].mock.calls.map((c) => String(c[0])))
+        .join('\n');
+}
+
+const REQUEST = { owner: 'sayurihanki', repo: 'herberaircraftv3' };
+
+describe('checkGitHubApp handler', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockPreviewCode.mockResolvedValue(undefined);
+    });
+
+    it('reports installed when Helix answers with code.status 200', async () => {
+        mockIsAppInstalled.mockResolvedValue({ isInstalled: true, codeStatus: 200 });
+        const context = makeContext();
+
+        const result = await checkGitHubApp(context, REQUEST);
+
+        expect(result.success).toBe(true);
+        expect(result.isInstalled).toBe(true);
+        expect(mockPreviewCode).not.toHaveBeenCalled();
+    });
+
+    it('triggers a code sync on a genuine HTTP 404', async () => {
+        mockIsAppInstalled.mockResolvedValue({
+            isInstalled: false,
+            httpNotFound: true,
+            httpStatus: 404,
+        });
+        const context = makeContext();
+
+        await checkGitHubApp(context, REQUEST);
+
+        expect(mockPreviewCode).toHaveBeenCalled();
+    });
+
+    it('does NOT trigger a code sync when Helix rejects the credential (HTTP 401)', async () => {
+        mockIsAppInstalled.mockResolvedValue({
+            isInstalled: false,
+            transient: true,
+            httpStatus: 401,
+        });
+        const context = makeContext();
+
+        const result = await checkGitHubApp(context, REQUEST);
+
+        expect(mockPreviewCode).not.toHaveBeenCalled();
+        expect(result.codeSyncTriggered).toBe(false);
+    });
+
+    it('does NOT claim "HTTP 404" in the log when the response was 401', async () => {
+        mockIsAppInstalled.mockResolvedValue({
+            isInstalled: false,
+            transient: true,
+            httpStatus: 401,
+        });
+        const context = makeContext();
+
+        await checkGitHubApp(context, REQUEST);
+
+        expect(allLogs(context)).not.toContain('HTTP 404');
+    });
+
+    it('records the actual HTTP status in the log', async () => {
+        mockIsAppInstalled.mockResolvedValue({
+            isInstalled: false,
+            transient: true,
+            httpStatus: 401,
+        });
+        const context = makeContext();
+
+        await checkGitHubApp(context, REQUEST);
+
+        expect(allLogs(context)).toContain('401');
+    });
+
+    it('does NOT trigger a code sync on a definitive code.status 404', async () => {
+        // Helix answered authoritatively: the App is not installed. Triggering a
+        // sync cannot help — the webhook that would drive it does not exist.
+        mockIsAppInstalled.mockResolvedValue({ isInstalled: false, codeStatus: 404 });
+        const context = makeContext();
+
+        await checkGitHubApp(context, REQUEST);
+
+        expect(mockPreviewCode).not.toHaveBeenCalled();
+    });
+});

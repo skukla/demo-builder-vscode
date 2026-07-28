@@ -107,12 +107,30 @@ async function triggerAndWaitForCodeSync(
     }
 }
 
+/**
+ * Summarize what the AEM admin API actually returned, omitting anything absent.
+ *
+ * Placeholders ("n/a") pad the line with non-information; the reader is usually
+ * scanning a pasted log for the one value that explains the failure.
+ */
+function describeAdminResponse(result: {
+    httpStatus?: number;
+    codeStatus?: number;
+    helixError?: string;
+}): string {
+    const parts: string[] = [];
+    if (result.httpStatus !== undefined) parts.push(`HTTP ${result.httpStatus}`);
+    if (result.codeStatus !== undefined) parts.push(`code.status ${result.codeStatus}`);
+    if (result.helixError) parts.push(`x-error: ${result.helixError}`);
+    return parts.length > 0 ? parts.join(', ') : 'no response';
+}
+
 export async function checkGitHubApp(
     context: HandlerContext,
     data: unknown,
 ): Promise<HandlerResponse> {
     const request = data as CheckGitHubAppRequest;
-    
+
     context.logger.info(`[GitHub App Check] Checking ${request.owner}/${request.repo}`);
 
     try {
@@ -127,17 +145,34 @@ export async function checkGitHubApp(
         // - Strict mode (default): Requires code.status === 200
         // - Lenient mode: Accepts any status except 404 (for post-install verification)
         const lenient = request.lenient ?? false;
-        let result = await githubAppService.isAppInstalled(request.owner, request.repo, { lenient });
+        let result = await githubAppService.isAppInstalled(request.owner, request.repo, {
+            lenient,
+        });
 
         let codeSyncTriggered = false;
 
-        // Detect HTTP 404 (repo not indexed by Helix yet)
-        // This is indicated by isInstalled=false with undefined codeStatus
-        // (When code.status 404 is in the response body, codeStatus would be defined as 404)
-        const isHttpNotFound = !result.isInstalled && result.codeStatus === undefined;
+        // Detect HTTP 404 (repo not indexed by Helix yet).
+        //
+        // This MUST come from the service's explicit `httpNotFound` flag. It was
+        // previously inferred from `codeStatus === undefined`, which is equally
+        // true when Helix rejects the credential with HTTP 401 — so a 401 was
+        // logged as "HTTP 404 detected" and fired a code-sync trigger that could
+        // only 401 in turn. Two concurrent pollers did that ~40 times in a
+        // minute against a repo whose App was installed and syncing fine.
+        const isHttpNotFound = result.httpNotFound === true;
+
+        if (!result.isInstalled && !isHttpNotFound) {
+            context.logger.info(
+                `[GitHub App Check] ${request.owner}/${request.repo}: ` +
+                    `${result.transient ? 'undetermined' : 'not installed'} — ` +
+                    `admin.hlx.page returned ${describeAdminResponse(result)}`,
+            );
+        }
 
         if (isHttpNotFound) {
-            context.logger.info(`[GitHub App Check] HTTP 404 detected - repo not indexed yet, triggering code sync`);
+            context.logger.info(
+                `[GitHub App Check] HTTP 404 detected - repo not indexed yet, triggering code sync`,
+            );
 
             // Trigger code sync and wait for it to complete
             const syncSucceeded = await triggerAndWaitForCodeSync(
@@ -151,7 +186,9 @@ export async function checkGitHubApp(
             if (syncSucceeded) {
                 // Retry the status check after successful code sync
                 context.logger.debug(`[GitHub App Check] Retrying status check after code sync`);
-                result = await githubAppService.isAppInstalled(request.owner, request.repo, { lenient });
+                result = await githubAppService.isAppInstalled(request.owner, request.repo, {
+                    lenient,
+                });
             }
         }
 
@@ -166,7 +203,9 @@ export async function checkGitHubApp(
             response.installUrl = githubAppService.getInstallUrl(request.owner, request.repo);
         }
 
-        context.logger.debug(`[GitHub App Check] ${request.owner}/${request.repo}: installed=${result.isInstalled}, codeStatus=${result.codeStatus}, codeSyncTriggered=${codeSyncTriggered}`);
+        context.logger.debug(
+            `[GitHub App Check] ${request.owner}/${request.repo}: installed=${result.isInstalled}, codeStatus=${result.codeStatus}, codeSyncTriggered=${codeSyncTriggered}`,
+        );
 
         // Return response directly (not wrapped in { data }) so UI can access fields directly
         return response;
