@@ -30,7 +30,7 @@ const GITHUB_APP_INSTALL_URL = 'https://github.com/apps/aem-code-sync/installati
  * Only the prefix is ever returned — the secret must not reach a log file that
  * users paste into tickets.
  */
-function describeTokenType(token: string): string {
+export function describeTokenType(token: string): string {
     const match = /^(github_pat|gh[pousr])_/.exec(token);
     return match ? `${match[1]}_` : 'unrecognized';
 }
@@ -179,14 +179,14 @@ export class GitHubAppService {
 
             if (response.status === 404) {
                 this.logger.debug(
-                    `[GitHub App] Status endpoint returned HTTP 404 (Helix does not know this repo)`
-                    + `${helixError ? ` — ${helixError}` : ''}`,
+                    `[GitHub App] Status endpoint returned HTTP 404 (Helix does not know this repo)` +
+                        `${helixError ? ` — ${helixError}` : ''}`,
                 );
                 return { isInstalled: false, httpNotFound: true, httpStatus: 404, helixError };
             }
             this.logger.debug(
-                `[GitHub App] Status endpoint returned transient HTTP ${response.status}`
-                + `${helixError ? ` — ${helixError}` : ''}`,
+                `[GitHub App] Status endpoint returned transient HTTP ${response.status}` +
+                    `${helixError ? ` — ${helixError}` : ''}`,
             );
             return { isInstalled: false, transient: true, httpStatus: response.status, helixError };
         }

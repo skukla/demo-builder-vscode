@@ -6,7 +6,12 @@ import { ServiceLocator } from '@/core/di';
 import { getLogger, CommandResultWithContext } from '@/core/logging';
 import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
 import { probeInExtensionMcpTools } from '@/features/ai/server/mcpToolProbe';
-import { parseJSON } from '@/types/typeGuards';
+import {
+    probeGitHubCredential,
+    type CredentialProbeResult,
+} from '@/features/eds/services/githubCredentialProbe';
+import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
+import { getEdsGithubRepo, parseJSON } from '@/types/typeGuards';
 
 // Diagnostic Type Definitions
 interface SystemInfo {
@@ -125,10 +130,36 @@ interface DiagnosticsReport {
     environment: EnvironmentInfo;
     tests: TestResults;
     mcp: McpInfo;
+    githubCredential: CredentialProbeResult;
+}
+
+/** Describe GitHub's write-access answer, or why we don't have one. */
+function describeWriteAccess(repo: NonNullable<CredentialProbeResult['repo']>): string {
+    if (repo.canPush === true) return 'Yes';
+    if (repo.canPush === false) return 'No';
+    return repo.error ?? 'unknown';
+}
+
+/** Summarize the AEM admin response, omitting anything it did not return. */
+function describeAdminApi(admin: NonNullable<CredentialProbeResult['adminApi']>): string {
+    if (admin.error) return admin.error;
+
+    const parts: string[] = [];
+    if (admin.httpStatus !== undefined) parts.push(`HTTP ${admin.httpStatus}`);
+    if (admin.codeStatus !== undefined) parts.push(`code.status ${admin.codeStatus}`);
+    if (admin.xError) parts.push(`x-error: ${admin.xError}`);
+    return parts.length > 0 ? parts.join(', ') : 'no response';
 }
 
 export class DiagnosticsCommand {
     private logger = getLogger();
+
+    /**
+     * @param secrets - SecretStorage holding the GitHub credential. Supplied by
+     *   CommandManager, which owns the ExtensionContext; the credential probe
+     *   cannot read it any other way from a command.
+     */
+    constructor(private secrets: vscode.SecretStorage) {}
 
     public async execute(): Promise<void> {
         this.logger.info('Running Demo Builder diagnostics...');
@@ -136,7 +167,7 @@ export class DiagnosticsCommand {
 
         // Clear channel for fresh diagnostics
         this.logger.clear();
-        
+
         const report: DiagnosticsReport = {
             timestamp: new Date().toISOString(),
             system: {} as SystemInfo,
@@ -146,29 +177,30 @@ export class DiagnosticsCommand {
             environment: {} as EnvironmentInfo,
             tests: {} as TestResults,
             mcp: {} as McpInfo,
+            githubCredential: {} as CredentialProbeResult,
         };
 
         try {
             // System information
             this.logger.debug('Collecting system information...');
             report.system = await this.getSystemInfo();
-            
+
             // VS Code information
             this.logger.debug('Collecting VS Code information...');
             report.vscode = this.getVSCodeInfo();
-            
+
             // Tool versions
             this.logger.debug('Checking tool versions...');
             report.tools = await this.checkTools();
-            
+
             // Adobe CLI status
             this.logger.debug('Checking Adobe CLI...');
             report.adobe = await this.checkAdobeCLI();
-            
+
             // Environment variables
             this.logger.debug('Collecting environment variables...');
             report.environment = this.getEnvironment();
-            
+
             // Run diagnostic tests
             this.logger.debug('Running diagnostic tests...');
             report.tests = await this.runTests();
@@ -177,12 +209,16 @@ export class DiagnosticsCommand {
             this.logger.debug('Probing in-extension MCP server...');
             report.mcp = await this.checkMcp();
 
+            // GitHub <-> AEM credential triangulation
+            this.logger.debug('Probing GitHub and AEM credential access...');
+            report.githubCredential = await this.checkGitHubCredential();
+
             // Log the full report
             this.logger.debug('DIAGNOSTIC REPORT', report);
-            
+
             // Show summary in main output
             this.showSummary(report);
-            
+
             // Offer to export
             const action = await vscode.window.showInformationMessage(
                 'Diagnostics complete. Check the output for details.',
@@ -195,7 +231,6 @@ export class DiagnosticsCommand {
             } else if (action === 'Export Log') {
                 await this.logger.exportDebugLog();
             }
-            
         } catch (error) {
             this.logger.error('Diagnostics failed', error as Error);
             throw error;
@@ -270,8 +305,11 @@ export class DiagnosticsCommand {
     }
 
     private async checkAuthenticationStatus(adobe: AdobeCLIInfo): Promise<void> {
-        const authCheck = await this.checkCommand('aio config get ims.contexts.aio-cli-plugin-auth');
-        adobe.authConfigured = authCheck.installed && !!authCheck.output && authCheck.output.length > 0;
+        const authCheck = await this.checkCommand(
+            'aio config get ims.contexts.aio-cli-plugin-auth',
+        );
+        adobe.authConfigured =
+            authCheck.installed && !!authCheck.output && authCheck.output.length > 0;
 
         if (adobe.authConfigured && authCheck.output) {
             this.parseAuthConfig(adobe, authCheck.output);
@@ -280,7 +318,11 @@ export class DiagnosticsCommand {
 
     private parseAuthConfig(adobe: AdobeCLIInfo, output: string): void {
         try {
-            const authData = parseJSON<{ access_token?: string; refresh_token?: string; expires_in?: string }>(output);
+            const authData = parseJSON<{
+                access_token?: string;
+                refresh_token?: string;
+                expires_in?: string;
+            }>(output);
             if (!authData) {
                 throw new Error('Invalid auth data format');
             }
@@ -304,7 +346,11 @@ export class DiagnosticsCommand {
         const whereCheck = await this.checkCommand('aio console where --json');
         if (whereCheck.installed && whereCheck.output) {
             try {
-                const context = parseJSON<{ org?: { name?: string }; project?: { name?: string }; workspace?: { name?: string } }>(whereCheck.output);
+                const context = parseJSON<{
+                    org?: { name?: string };
+                    project?: { name?: string };
+                    workspace?: { name?: string };
+                }>(whereCheck.output);
                 if (!context) {
                     throw new Error('Invalid context format');
                 }
@@ -321,7 +367,10 @@ export class DiagnosticsCommand {
 
     private async checkOrganizations(adobe: AdobeCLIInfo): Promise<void> {
         const orgCheck = await this.checkCommand('aio console org list --json');
-        adobe.canListOrgs = orgCheck.installed && orgCheck.output !== undefined && !orgCheck.output.includes('Error');
+        adobe.canListOrgs =
+            orgCheck.installed &&
+            orgCheck.output !== undefined &&
+            !orgCheck.output.includes('Error');
 
         if (adobe.canListOrgs && orgCheck.output) {
             try {
@@ -395,7 +444,10 @@ export class DiagnosticsCommand {
                 // binary name → the command never runs and stdout comes back
                 // empty (the "✅ git: <blank>" symptom). enhancePath surfaces
                 // tools installed outside the GUI launchd PATH.
-                execResult = await commandManager.execute(command, { shell: true, enhancePath: true });
+                execResult = await commandManager.execute(command, {
+                    shell: true,
+                    enhancePath: true,
+                });
             }
             const { stdout, stderr, code } = execResult;
             const duration = Date.now() - startTime;
@@ -424,7 +476,12 @@ export class DiagnosticsCommand {
             };
         } catch (error: unknown) {
             const duration = Date.now() - startTime;
-            const err = error as { stdout?: string; stderr?: string; message: string; code?: number };
+            const err = error as {
+                stdout?: string;
+                stderr?: string;
+                message: string;
+                code?: number;
+            };
 
             const result: CommandResultWithContext = {
                 stdout: err.stdout || '',
@@ -483,7 +540,6 @@ export class DiagnosticsCommand {
         const testFile = path.join(tempDir, 'demo-builder-test.txt');
 
         try {
-
             // Test write
             await fs.writeFile(testFile, 'test');
 
@@ -517,7 +573,10 @@ export class DiagnosticsCommand {
     private async checkMcp(): Promise<McpInfo> {
         const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
         if (!workspacePath) {
-            return { running: false, error: 'No workspace folder open — the in-extension MCP server runs per project.' };
+            return {
+                running: false,
+                error: 'No workspace folder open — the in-extension MCP server runs per project.',
+            };
         }
 
         const socketPath = resolveMcpSocketPath(workspacePath);
@@ -533,6 +592,20 @@ export class DiagnosticsCommand {
             tools,
             hasSignIn: tools.includes('sign_in'),
         };
+    }
+
+    /**
+     * Probe whether the stored GitHub credential is accepted by GitHub AND by
+     * AEM, and whether GitHub grants write access to the current project's repo.
+     *
+     * Runs without a project too — identity and granted scopes are still worth
+     * having, and partial output beats none.
+     */
+    private async checkGitHubCredential(): Promise<CredentialProbeResult> {
+        const project = await ServiceLocator.getStateManager()?.getCurrentProject();
+        const repoFullName = getEdsGithubRepo(project);
+        const tokenService = new GitHubTokenService(this.secrets, this.logger);
+        return probeGitHubCredential(tokenService, repoFullName, this.logger);
     }
 
     private showSummary(report: DiagnosticsReport): void {
@@ -566,24 +639,67 @@ export class DiagnosticsCommand {
         // Test results
         this.logger.info('');
         this.logger.info('Diagnostic Tests:');
-        this.logger.info(`  Browser Launch: ${report.tests.browserLaunch.available ? 'Available' : 'Not available'}`);
-        this.logger.info(`  Adobe Login Command: ${report.tests.adobeLoginCommand.available ? 'Available' : 'Not available'}`);
-        this.logger.info(`  File System Access: ${report.tests.fileSystem.canWrite ? 'OK' : 'Failed'}`);
+        this.logger.info(
+            `  Browser Launch: ${report.tests.browserLaunch.available ? 'Available' : 'Not available'}`,
+        );
+        this.logger.info(
+            `  Adobe Login Command: ${report.tests.adobeLoginCommand.available ? 'Available' : 'Not available'}`,
+        );
+        this.logger.info(
+            `  File System Access: ${report.tests.fileSystem.canWrite ? 'OK' : 'Failed'}`,
+        );
 
         // In-extension MCP server
         this.logger.info('');
         this.logger.info('MCP Server (in-extension):');
         if (report.mcp.running) {
             const tools = report.mcp.tools ?? [];
-            this.logger.info(`  Reachable: Yes (${tools.length} tool${tools.length === 1 ? '' : 's'})`);
-            this.logger.info(`  sign_in tool: ${report.mcp.hasSignIn ? '✅ present' : '❌ missing'}`);
+            this.logger.info(
+                `  Reachable: Yes (${tools.length} tool${tools.length === 1 ? '' : 's'})`,
+            );
+            this.logger.info(
+                `  sign_in tool: ${report.mcp.hasSignIn ? '✅ present' : '❌ missing'}`,
+            );
             this.logger.info(`  Tools: ${tools.join(', ')}`);
         } else {
             this.logger.info(`  Reachable: No`);
             this.logger.info(`  Reason: ${report.mcp.error ?? 'unknown'}`);
         }
 
+        this.showCredentialSummary(report.githubCredential);
+
         this.logger.info('');
         this.logger.info('Use VS Code\'s "Set Log Level..." command to see debug/trace details');
     }
+
+    /**
+     * Render the GitHub/AEM credential section.
+     *
+     * Extracted from showSummary, which exceeded the complexity limit once this
+     * section landed. Verdict prints last because it is the conclusion the three
+     * findings above add up to.
+     */
+    private showCredentialSummary(cred: CredentialProbeResult): void {
+        this.logger.info('');
+        this.logger.info('GitHub / AEM credential:');
+        this.logger.info(`  Signed in as: ${cred.github?.login ?? 'not signed in'}`);
+
+        if (cred.github?.tokenType) {
+            this.logger.info(`  Credential type: ${cred.github.tokenType}`);
+        }
+        if (cred.github?.grantedScopes) {
+            this.logger.info(`  Granted scopes: ${cred.github.grantedScopes.join(', ')}`);
+        }
+        if (cred.repo) {
+            this.logger.info(
+                `  Write access to ${cred.repo.fullName}: ${describeWriteAccess(cred.repo)}`,
+            );
+        }
+        if (cred.adminApi) {
+            this.logger.info(`  AEM admin API: ${describeAdminApi(cred.adminApi)}`);
+        }
+
+        this.logger.info(`  → ${cred.verdict}`);
+    }
+
 }
