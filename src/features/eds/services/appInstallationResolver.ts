@@ -35,7 +35,7 @@ const APP_CHECK_RETRY_DELAY_MS = 2000;
 export type AppInstallationOutcome =
     | { kind: 'installed'; codeStatus?: number }
     | { kind: 'not-installed'; codeStatus?: number; httpStatus?: number; helixError?: string }
-    | { kind: 'undetermined'; httpStatus?: number; helixError?: string };
+    | { kind: 'undetermined'; httpStatus?: number; helixError?: string; noCredential?: boolean };
 
 /**
  * Render whatever the AEM admin API actually told us, omitting anything it
@@ -79,7 +79,9 @@ export async function resolveAppInstallation(
 
     // Only an undetermined answer is worth retrying. A definitive "not
     // installed" won't change, and retrying it just delays the install prompt.
-    if (!check.isInstalled && check.transient) {
+    // A missing credential is undetermined but NOT retryable — waiting cannot
+    // mint a token, so skip straight to the verdict.
+    if (!check.isInstalled && check.transient && !check.noCredential) {
         logger.info(
             `[Storefront Setup] AEM Code Sync check inconclusive ` +
                 `(${formatAdminDiagnostics(check)}) — retrying once`,
@@ -102,6 +104,7 @@ export async function resolveAppInstallation(
             kind: 'undetermined',
             httpStatus: check.httpStatus,
             helixError: check.helixError,
+            noCredential: check.noCredential,
         };
     }
 
@@ -124,8 +127,17 @@ export async function resolveAppInstallation(
  * this replaces sent a user through eleven reinstalls, and it is the last thing
  * read before acting.
  */
-export function buildUndeterminedAppCheckError(repoInfo: RepoInfo, httpStatus?: number): string {
+export function buildUndeterminedAppCheckError(
+    repoInfo: RepoInfo,
+    httpStatus?: number,
+    noCredential?: boolean,
+): string {
     const repo = `${repoInfo.repoOwner}/${repoInfo.repoName}`;
+
+    if (noCredential) {
+        return `Couldn't verify AEM Code Sync for ${repo} — you're not signed in to GitHub. `
+            + `Sign in on the Storefront step, then re-run setup.`;
+    }
 
     if (httpStatus === undefined) {
         return (

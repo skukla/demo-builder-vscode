@@ -296,3 +296,46 @@ describe('checkGitHubAppForExistingRepo', () => {
         });
     });
 });
+
+/**
+ * Missing GitHub credential.
+ *
+ * The gate asked the question with no token in hand and reported "App not
+ * installed" — the same defect this file exists to prevent, one input short of
+ * the 401 case. Signing out of GitHub should never produce an install prompt:
+ * installing the App cannot supply a credential.
+ */
+describe('checkGitHubAppForExistingRepo — no GitHub credential', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    it('does not claim the App is missing when we hold no credential', async () => {
+        const context = makeContext();
+        const services = makeServices({ isInstalled: false, noCredential: true, transient: true });
+
+        const result = await checkGitHubAppForExistingRepo(context, services, REPO_INFO);
+
+        expect(result?.error).not.toBe('GitHub App installation required');
+        expect(sentMessageTypes(context)).not.toContain('storefront-setup-github-app-required');
+    });
+
+    it('tells the user to sign in, not to check their connection', async () => {
+        const context = makeContext();
+        const services = makeServices({ isInstalled: false, noCredential: true, transient: true });
+
+        const result = await checkGitHubAppForExistingRepo(context, services, REPO_INFO);
+
+        expect(result?.error).toMatch(/sign(ed)? in/i);
+        expect(result?.error).not.toMatch(/connection/i);
+    });
+
+    it('does not burn a retry waiting for a credential to appear', async () => {
+        // A missing token is not transient in the retryable sense — waiting two
+        // seconds cannot mint one.
+        const context = makeContext();
+        const services = makeServices({ isInstalled: false, noCredential: true, transient: true });
+
+        await checkGitHubAppForExistingRepo(context, services, REPO_INFO);
+
+        expect(services.githubAppService.isAppInstalled).toHaveBeenCalledTimes(1);
+    });
+});

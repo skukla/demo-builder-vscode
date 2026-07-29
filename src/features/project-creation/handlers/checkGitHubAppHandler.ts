@@ -220,6 +220,7 @@ export async function checkGitHubApp(
             response.reason = buildUndeterminedAppCheckError(
                 { repoOwner: request.owner, repoName: request.repo, repoUrl: '' },
                 result.httpStatus,
+                result.noCredential,
             );
         } else if (!result.isInstalled) {
             response.installUrl = githubAppService.getInstallUrl(request.owner, request.repo);

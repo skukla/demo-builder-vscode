@@ -90,6 +90,7 @@ export class GitHubAppService {
         httpNotFound?: boolean;
         httpStatus?: number;
         helixError?: string;
+        noCredential?: boolean;
     }> {
         const lenient = options?.lenient ?? false;
         this.logger.debug(
@@ -99,7 +100,9 @@ export class GitHubAppService {
         const token = await this.tokenService.getToken();
         if (!token) {
             this.logger.warn('[GitHub App] No token available for app installation check');
-            return { isInstalled: false };
+            // NOT "not installed" — we never asked. Holding no credential is not
+            // evidence about the App, and the install flow cannot supply one.
+            return { isInstalled: false, transient: true, noCredential: true };
         }
 
         this.logger.debug(

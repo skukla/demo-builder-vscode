@@ -149,7 +149,7 @@ async function verifyCodeSync(
         if (outcome.kind === 'undetermined') {
             return {
                 success: false,
-                error: buildUndeterminedAppCheckError(repoInfo, outcome.httpStatus),
+                error: buildUndeterminedAppCheckError(repoInfo, outcome.httpStatus, outcome.noCredential),
                 ...repoInfo,
             };
         }

@@ -54,8 +54,12 @@ describe('GitHub App Service', () => {
             // When: Checking if app is installed
             const result = await service.isAppInstalled('owner', 'repo');
 
-            // Then: Should return isInstalled: false
-            expect(result).toEqual({ isInstalled: false });
+            // Then: not installed is NOT the right answer — we never asked.
+            // "We hold no credential" is not evidence about the App, and the
+            // install flow cannot fix a missing sign-in.
+            expect(result.isInstalled).toBe(false);
+            expect(result.noCredential).toBe(true);
+            expect(result.transient).toBe(true);
             expect(mockFetch).not.toHaveBeenCalled();
         });
 
