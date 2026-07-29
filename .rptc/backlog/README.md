@@ -92,6 +92,32 @@ Broad Jest sweeps emit "A worker process has failed to exit gracefully and has b
 
 Spun out of the thin-layer storefront evaluation (resolved 2026-06-10 — [ADR-006](../../docs/architecture/adr/006-thin-layer-storefront-customization.md) retired the two citisignal forks in favor of canonical + a code-patches layer). **Disposition decided 2026-06-10 (owner): complete rebuild** — no audit or migration of the existing `buildright-eds` codebase. Express BuildRight as a Demo Builder package on canonical (branded block library + brand CSS + DA content) using the ADR-006 mechanisms. Gated on the ADR-006 implementation existing first; the old repo archives when the rebuild ships.
 
+### Reset consent only when there is something to lose (`2026-07-29`)
+
+[`2026-07-29-reset-consent-only-when-there-is-something-to-lose.md`](2026-07-29-reset-consent-only-when-there-is-something-to-lose.md)
+— New repos already pin + patch unconditionally (ADR-006 Step 4b, both branches). Only
+the **existing-repo** path gates on the `resetToTemplate` checkbox, so an empty or
+non-storefront repo left unticked proceeds with no template, no LKG pin, and no
+canonical patches, then reports `Complete`. Replace one default-off checkbox with three
+states: auto-setup when empty, **refuse** when populated-but-not-a-storefront (the
+larger half — the repo that prompted this had 53 blocks and no `scripts/scripts.js`),
+prompt only when the user has something to lose. Pairs with the selection-time App
+check in `.rptc/research/github-app-installation-visibility/`.
+
+### PDP routing silently broken three ways — patches never fetched, smart-404 SHA race (`2026-07-29`)
+
+Two independent defects found in a live Extension Host run 2026-07-29, **both present in
+`v1.0.0-beta.121` verbatim** and neither a hotfix regression. (1)
+[`2026-07-29-code-patches-not-rehydrated-in-edit-mode.md`](2026-07-29-code-patches-not-rehydrated-in-edit-mode.md)
+— `edsConfig.codePatches`/`codePatchSource` are produced only by `WelcomeStep`, so every
+edit-mode republish trips a **silent** early return at `storefrontSetupPhase1.ts:115` and
+the ADR-007 SKU-encoding patches never apply. (2)
+[`2026-07-29-pdp404-stale-sha-conflict.md`](2026-07-29-pdp404-stale-sha-conflict.md) —
+Inspector Tagging writes `scripts/delayed.js` via the Git Tree API, PDP404 then reads it via
+the Contents API and commits with a stale SHA, skipping the smart-404 install. Together with
+the Configuration Service 403 (the only one that surfaces a message), a storefront can finish
+with no PDP support by any mechanism and still report `Complete`.
+
 ### PDP empty-data redirect to native /404 ([`2026-06-09-pdp-graceful-empty-state.md`](2026-06-09-pdp-graceful-empty-state.md))
 
 Deferred during BYOM PDP routing Phase 1. When an SC deletes a SKU, the cached PDP URL still serves the template and the drop-in queries Commerce, gets nothing back. **Originally framed as "custom Product not available message"; reframed same day** — the honest UX for a deleted SKU is the storefront's native `/404`: same chrome, same status semantics, browser URL bar updates to reflect reality. Detect empty Commerce data → `window.location.replace('/404')`. Cleanup tooling (Refresh PDPs action, action-side telemetry) was rejected as overkill; redirect handles the visible UX without that infrastructure. **Investigate first**: check if `@dropins/storefront-pdp` exposes an empty-state callback; building a DOM-polling wrapper without checking is the wrong order. Phase 0 investigation 15–30 min, implementation 0–2 h depending on what we find. Lives as a Demo Builder code patch (per ADR-006, 2026-06-10 — the thin-layer evaluation retired the forks, so storefront-side behavior changes ship via the code-patches layer).

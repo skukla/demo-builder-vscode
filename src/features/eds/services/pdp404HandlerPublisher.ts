@@ -316,6 +316,65 @@ export interface Pdp404InstallResult {
  *   - Snippet marker already present: idempotent skip (already installed).
  *   - GitHub commit fails (network, auth): log and skip.
  */
+/** GitHub's update-with-SHA rejection when the SHA no longer matches HEAD. */
+function isStaleShaFailure(error: unknown): boolean {
+    return /does not match/i.test((error as Error)?.message ?? '');
+}
+
+/**
+ * Write the snippet into `scripts/delayed.js`, re-reading once on a stale SHA.
+ *
+ * Inspector Tagging contributes `scripts/delayed.js` to the bulk **Git Tree**
+ * commit during block installation; this publisher reads it back through the
+ * **Contents** API, which serves from a different path and can lag behind a
+ * tree commit. A live run lost that race 18 seconds after the tree commit, and
+ * because the step is non-fatal the storefront finished with no smart-404
+ * handling and still reported Complete.
+ *
+ * Re-read and retry exactly once — enough for staleness and for a genuine
+ * interleaving, while a second rejection stays a real failure rather than
+ * becoming a poll loop inside storefront setup.
+ *
+ * Only SHA mismatches retry. Permission and missing-file failures are certain,
+ * and retrying them just doubles the latency of a known outcome.
+ *
+ * Safe to repeat: the caller's `SMART_404_MARKER_START` check makes the snippet
+ * idempotent, and the retry re-derives content from the freshly read file.
+ */
+async function writeDelayedJsWithStaleShaRetry(
+    githubFileOps: GitHubFileOperations,
+    repoOwner: string,
+    repoName: string,
+    sha: string | undefined,
+    initialContent: string,
+    snippet: string,
+    logger: Logger,
+): Promise<void> {
+    const commit = (content: string, withSha: string | undefined) =>
+        githubFileOps.createOrUpdateFile(
+            repoOwner,
+            repoName,
+            'scripts/delayed.js',
+            content,
+            'chore(demo-builder): vendor smart 404 PDP handler into delayed.js',
+            withSha,
+        );
+
+    try {
+        await commit(initialContent, sha);
+    } catch (error) {
+        if (!isStaleShaFailure(error)) throw error;
+
+        logger.info(
+            '[PDP404] delayed.js changed under us (stale SHA) — re-reading and retrying once',
+        );
+        const fresh = await githubFileOps.getFileContent(repoOwner, repoName, 'scripts/delayed.js');
+        if (!fresh?.content) throw error;
+        if (fresh.content.includes(SMART_404_MARKER_START)) return;
+        await commit(fresh.content + snippet, fresh.sha);
+    }
+}
+
 export async function installSmart404Handler(
     githubFileOps: GitHubFileOperations,
     repoOwner: string,
@@ -358,13 +417,8 @@ export async function installSmart404Handler(
     const newContent = existing.content + snippet;
 
     try {
-        await githubFileOps.createOrUpdateFile(
-            repoOwner,
-            repoName,
-            'scripts/delayed.js',
-            newContent,
-            'chore(demo-builder): vendor smart 404 PDP handler into delayed.js',
-            existing.sha,
+        await writeDelayedJsWithStaleShaRetry(
+            githubFileOps, repoOwner, repoName, existing.sha, newContent, snippet, logger,
         );
         logger.info(`[PDP404] Vendored smart 404 snippet into scripts/delayed.js (${repoOwner}/${repoName})`);
     } catch (error) {

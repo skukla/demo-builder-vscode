@@ -305,8 +305,13 @@ describe('applyContentPatches with external source', () => {
             expect(patches[0].id).toBe('test-patch');
         }
 
-        // Only ONE HTTP request should have been made
-        expect(fetchMock).toHaveBeenCalledTimes(1);
+        // Dedup is about the CONTENT fetch. The release-ref lookup is a separate
+        // call (and is itself cached per repo), so count content requests rather
+        // than total requests.
+        const contentCalls = fetchMock.mock.calls
+            .map((c: unknown[]) => String(c[0]))
+            .filter((u: string) => u.includes('raw.githubusercontent'));
+        expect(contentCalls).toHaveLength(1);
     });
 
     it('falls back to local patches when external fetch fails', async () => {

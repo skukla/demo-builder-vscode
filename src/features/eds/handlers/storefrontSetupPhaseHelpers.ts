@@ -9,6 +9,11 @@
  * @module features/eds/handlers/storefrontSetupPhaseHelpers
  */
 
+import {
+    buildUndeterminedAppCheckError,
+    formatAdminDiagnostics,
+    resolveAppInstallation,
+} from '../services/appInstallationResolver';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -24,24 +29,50 @@ export async function checkGitHubAppForExistingRepo(
     const { githubAppService } = services;
 
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'storefront-code', message: 'Verifying GitHub App installation...', progress: 28,
+        phase: 'storefront-code',
+        message: 'Verifying GitHub App installation...',
+        progress: 28,
     });
 
-    logger.info(`[Storefront Setup] Checking GitHub App for existing repo: ${repoInfo.repoOwner}/${repoInfo.repoName}`);
-    const { isInstalled, codeStatus } = await githubAppService.isAppInstalled(repoInfo.repoOwner, repoInfo.repoName);
+    logger.info(
+        `[Storefront Setup] Checking GitHub App for existing repo: ${repoInfo.repoOwner}/${repoInfo.repoName}`,
+    );
+    const outcome = await resolveAppInstallation(githubAppService, repoInfo, logger);
 
-    if (!isInstalled) {
+    if (outcome.kind === 'undetermined') {
+        return {
+            success: false,
+            error: buildUndeterminedAppCheckError(repoInfo, outcome.httpStatus, outcome.noCredential),
+            ...repoInfo,
+        };
+    }
+
+    if (outcome.kind === 'not-installed') {
         const installUrl = githubAppService.getInstallUrl(repoInfo.repoOwner, repoInfo.repoName);
-        logger.info(`[Storefront Setup] GitHub App not installed. Install URL: ${installUrl}`);
+        logger.info(
+            `[Storefront Setup] AEM Code Sync is not installed on ` +
+                `${repoInfo.repoOwner}/${repoInfo.repoName} (${formatAdminDiagnostics(outcome)}). ` +
+                `Install URL: ${installUrl}`,
+        );
 
         await context.sendMessage('storefront-setup-github-app-required', {
-            owner: repoInfo.repoOwner, repo: repoInfo.repoName, installUrl,
+            owner: repoInfo.repoOwner,
+            repo: repoInfo.repoName,
+            installUrl,
             message: 'The AEM Code Sync GitHub App must be installed to continue.',
         });
 
-        return { success: false, error: 'GitHub App installation required', ...repoInfo };
+        return {
+            success: false,
+            error: 'GitHub App installation required',
+            awaitingGitHubApp: true,
+            ...repoInfo,
+        };
     }
 
-    logger.info(`[Storefront Setup] GitHub App verified for existing repo (code.status: ${codeStatus})`);
+    logger.info(
+        `[Storefront Setup] AEM Code Sync verified on ${repoInfo.repoOwner}/${repoInfo.repoName} ` +
+            `(${formatAdminDiagnostics(outcome)})`,
+    );
     return null;
 }

@@ -8,6 +8,10 @@
  */
 
 import * as vscode from 'vscode';
+import {
+    buildUndeterminedAppCheckError,
+    resolveAppInstallation,
+} from '../services/appInstallationResolver';
 import { CONFIG_SERVICE_PROPAGATION_DELAYS_MS } from '../services/configServiceRetry';
 import { buildSiteConfigParams, ConfigurationService } from '../services/configurationService';
 import { DaLiveAuthError } from '../services/types';
@@ -32,14 +36,18 @@ export async function executePhaseCodeSync(
     const { helixService, daLiveAuthService, daLiveTokenProvider } = services;
 
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'code-sync', message: 'Verifying code synchronization...', progress: 40,
+        phase: 'code-sync',
+        message: 'Verifying code synchronization...',
+        progress: 40,
     });
 
     const codeSyncResult = await verifyCodeSync(context, services, repoInfo, signal);
     if (codeSyncResult) return codeSyncResult;
 
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'code-sync', message: 'Publishing code to CDN...', progress: 43,
+        phase: 'code-sync',
+        message: 'Publishing code to CDN...',
+        progress: 43,
     });
 
     try {
@@ -50,11 +58,15 @@ export async function executePhaseCodeSync(
     }
 
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'code-sync', message: 'Code synchronized', progress: 45,
+        phase: 'code-sync',
+        message: 'Code synchronized',
+        progress: 45,
     });
 
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'site-config', message: 'Configuring site permissions...', progress: 46,
+        phase: 'site-config',
+        message: 'Configuring site permissions...',
+        progress: 46,
     });
 
     const daLiveEmail = await daLiveAuthService.getUserEmail();
@@ -62,7 +74,11 @@ export async function executePhaseCodeSync(
 
     if (userEmail) {
         const adminResult = await configureDaLivePermissions(
-            daLiveTokenProvider, edsConfig.daLiveOrg, edsConfig.daLiveSite, userEmail, logger,
+            daLiveTokenProvider,
+            edsConfig.daLiveOrg,
+            edsConfig.daLiveSite,
+            userEmail,
+            logger,
         );
         if (!adminResult.success) {
             await context.sendMessage('storefront-setup-progress', {
@@ -78,7 +94,9 @@ export async function executePhaseCodeSync(
     await registerConfigurationService(context, services, repoInfo, edsConfig, logger);
 
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'site-config', message: 'Site configuration complete', progress: 49,
+        phase: 'site-config',
+        message: 'Site configuration complete',
+        progress: 49,
     });
 
     return null;
@@ -90,10 +108,6 @@ export async function executePhaseCodeSync(
 // latency without changing correctness now that the App check is the gate.
 const CODE_SYNC_MAX_ATTEMPTS = 10;
 const CODE_SYNC_POLL_INTERVAL_MS = 2000;
-
-// Delay before retrying isAppInstalled on a transient failure. Short enough
-// to feel snappy, long enough to ride out a momentary network blip.
-const APP_CHECK_RETRY_DELAY_MS = 2000;
 
 /**
  * Verify the AEM Code Sync GitHub App is installed, then wait for the code
@@ -127,13 +141,23 @@ async function verifyCodeSync(
         //    Since the dialog this gates is disruptive — it asks the user to leave
         //    the IDE and complete a GitHub install flow — give a flaky first check
         //    exactly one short retry before declaring the App missing.
-        let initialCheck = await githubAppService.isAppInstalled(repoInfo.repoOwner, repoInfo.repoName);
+        const outcome = await resolveAppInstallation(githubAppService, repoInfo, logger);
 
-        if (!initialCheck.isInstalled && initialCheck.transient) {
-            logger.info('[Storefront Setup] Code sync check failed transiently — retrying once');
-            await new Promise(resolve => setTimeout(resolve, APP_CHECK_RETRY_DELAY_MS));
-            initialCheck = await githubAppService.isAppInstalled(repoInfo.repoOwner, repoInfo.repoName);
+        // Helix declined to answer. Do NOT show the install dialog — a rejected
+        // credential says nothing about whether the App is installed, and the
+        // install flow cannot resolve it. Fail with the real reason instead.
+        if (outcome.kind === 'undetermined') {
+            return {
+                success: false,
+                error: buildUndeterminedAppCheckError(repoInfo, outcome.httpStatus, outcome.noCredential),
+                ...repoInfo,
+            };
         }
+
+        const initialCheck = {
+            isInstalled: outcome.kind === 'installed',
+            codeStatus: outcome.codeStatus,
+        };
 
         if (!initialCheck.isInstalled) {
             const installUrl = githubAppService.getInstallUrl(repoInfo.repoOwner, repoInfo.repoName);
@@ -144,7 +168,12 @@ async function verifyCodeSync(
                 message: 'The AEM Code Sync GitHub App must be installed to continue.',
             });
 
-            return { success: false, error: 'GitHub App installation required', ...repoInfo };
+            return {
+            success: false,
+            error: 'GitHub App installation required',
+            awaitingGitHubApp: true,
+            ...repoInfo,
+        };
         }
 
         // 2. App is installed — wait briefly for the bus to start serving the
@@ -160,7 +189,8 @@ async function verifyCodeSync(
 
             try {
                 const response = await fetch(codeUrl, {
-                    method: 'GET', signal: AbortSignal.timeout(TIMEOUTS.QUICK),
+                    method: 'GET',
+                    signal: AbortSignal.timeout(TIMEOUTS.QUICK),
                 });
                 if (response.ok) syncVerified = true;
             } catch {
@@ -169,7 +199,7 @@ async function verifyCodeSync(
 
             if (!syncVerified && attempt < CODE_SYNC_MAX_ATTEMPTS - 1) {
                 // 2s interval (faster than TIMEOUTS.EDS_CODE_SYNC_POLL=5s) — code sync typically settles quickly
-                await new Promise(resolve => setTimeout(resolve, CODE_SYNC_POLL_INTERVAL_MS));
+                await new Promise((resolve) => setTimeout(resolve, CODE_SYNC_POLL_INTERVAL_MS));
             }
         }
 
@@ -178,7 +208,9 @@ async function verifyCodeSync(
         } else if (initialCheck.codeStatus === 400) {
             logger.info('[Storefront Setup] Code sync in progress (initializing), continuing...');
         } else {
-            logger.warn(`[Storefront Setup] Code sync warm-up exhausted (code.status: ${initialCheck.codeStatus}), continuing...`);
+            logger.warn(
+                `[Storefront Setup] Code sync warm-up exhausted (code.status: ${initialCheck.codeStatus}), continuing...`,
+            );
         }
     } catch (error) {
         if (signal.aborted) throw error;
@@ -206,16 +238,25 @@ async function registerConfigurationService(
     const { configurationService } = services;
 
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'site-config', message: 'Registering site with Configuration Service...', progress: 46,
+        phase: 'site-config',
+        message: 'Registering site with Configuration Service...',
+        progress: 46,
     });
 
     try {
         const siteParams = buildSiteConfigParams(
-            repoInfo.repoOwner, repoInfo.repoName, edsConfig.daLiveOrg, edsConfig.daLiveSite,
+            repoInfo.repoOwner,
+            repoInfo.repoName,
+            edsConfig.daLiveOrg,
+            edsConfig.daLiveSite,
             edsConfig.byomOverlayUrl,
         );
         const registered = await performSiteConfigRegistration(
-            configurationService, siteParams, edsConfig, context, logger,
+            configurationService,
+            siteParams,
+            edsConfig,
+            context,
+            logger,
         );
         // When a BYOM overlay was configured but the registration did not land,
         // the storefront ships with smart-404 client code but no overlay to back
@@ -225,10 +266,13 @@ async function registerConfigurationService(
         }
     } catch (error) {
         if (error instanceof DaLiveAuthError) throw error;
-        logger.error(`[Storefront Setup] Configuration Service failed: ${(error as Error).message}`);
+        logger.error(
+            `[Storefront Setup] Configuration Service failed: ${(error as Error).message}`,
+        );
         await context.sendMessage('storefront-setup-progress', {
             phase: 'site-config',
-            message: '⚠️ Configuration Service setup incomplete — da.live preview may need manual configuration',
+            message:
+                '⚠️ Configuration Service setup incomplete — da.live preview may need manual configuration',
             progress: 49,
         });
         if (edsConfig.byomOverlayUrl) {
@@ -255,7 +299,12 @@ async function performSiteConfigRegistration(
         return true;
     }
 
-    const handled = await applyRegistrationResult(registerResult, configurationService, siteParams, logger);
+    const handled = await applyRegistrationResult(
+        registerResult,
+        configurationService,
+        siteParams,
+        logger,
+    );
     if (handled !== null) return handled;
 
     if (registerResult.statusCode === 403 && edsConfig.repoMode === 'new') {
@@ -318,13 +367,15 @@ async function retryRegistrationAfterDelay(
 
     for (let attempt = 0; attempt < RETRY_DELAYS_MS.length; attempt++) {
         const delayMs = RETRY_DELAYS_MS[attempt];
-        logger.info(`[Storefront Setup] Config Service 403 — retrying after ${delayMs / 1000}s (attempt ${attempt + 1}/${RETRY_DELAYS_MS.length}). Waiting for AEM Code Sync admin role propagation...`);
+        logger.info(
+            `[Storefront Setup] Config Service 403 — retrying after ${delayMs / 1000}s (attempt ${attempt + 1}/${RETRY_DELAYS_MS.length}). Waiting for AEM Code Sync admin role propagation...`,
+        );
         await context.sendMessage('storefront-setup-progress', {
             phase: 'site-config',
             message: `Waiting for Configuration Service access (${attempt + 1}/${RETRY_DELAYS_MS.length})...`,
             progress: 46,
         });
-        await new Promise(resolve => setTimeout(resolve, delayMs));
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
 
         const retryResult = await configurationService.registerSite(siteParams);
         if (retryResult.success) {
@@ -332,13 +383,20 @@ async function retryRegistrationAfterDelay(
             return true;
         }
 
-        const handled = await applyRegistrationResult(retryResult, configurationService, siteParams, logger);
+        const handled = await applyRegistrationResult(
+            retryResult,
+            configurationService,
+            siteParams,
+            logger,
+        );
         if (handled !== null) return handled;
 
         // Only keep retrying on continued 403 (admin role still propagating).
         // Other errors will not improve with more waiting.
         if (retryResult.statusCode !== 403) {
-            logger.warn(`[Storefront Setup] Config Service registration warning: ${retryResult.error}`);
+            logger.warn(
+                `[Storefront Setup] Config Service registration warning: ${retryResult.error}`,
+            );
             break;
         }
     }

@@ -6,15 +6,20 @@ The commands module contains all VS Code command implementations for the Demo Bu
 
 ## Command Structure
 
-```
-commands/
-├── createProject.ts         # Original quick-create command
-├── createProjectWebview.ts  # Main wizard implementation
-├── showCommands.ts          # Command palette helper
-├── showLogs.ts             # Log viewer command
-├── clearCache.ts           # Cache management
-└── index.ts                # Command registration
-```
+| File | Purpose |
+|------|---------|
+| `commandManager.ts` | Central registry — instantiates local and feature-owned commands and registers all `demoBuilder.*` command IDs |
+| `claudeSessionStore.ts` | Probe for Claude Code's per-cwd conversation store (`~/.claude/projects/<encoded-cwd>/`); decides whether `claude --continue` is safe at launch |
+| `configure.ts` | `demoBuilder.configure` — QuickPick to edit .env, redeploy mesh, and related project configuration actions |
+| `diagnostics.ts` | System diagnostics report (system/VS Code/tool info, Adobe CLI auth, MCP socket/tool probe, GitHub↔AEM credential probe) logged to the debug channel |
+| `migrateStorefrontNames.ts` | One-shot palette command migrating projects whose DA.live site name doesn't match the GitHub repo name (pre-`164fd251` builds) |
+| `openInClaude.ts` | Launches the single "home" Claude Code chat terminal (see below) |
+| `openModernizationAgent.ts` | Opens the AEM Experience Modernization Agent web console (`aemcoder.adobe.io`) with a tip about the current project's repo |
+| `refreshBlockLibrary.ts` | Dashboard kebab action (EDS-only) — destructive full re-sync of the DA.live block library from `component-definition.json` |
+| `showPromptsPicker.ts` | `demoBuilder.showPromptsPicker` — prompt QuickPick; dispatches to `openInClaude` (insert) or `openAi` (manage) |
+| `handlers/HandlerContext.ts` | Back-compat re-exports of handler types from `@/types/handlers` |
+
+Read the source — each file carries a substantial header comment.
 
 ## Command Registration Flow
 
@@ -214,170 +219,30 @@ With no prompt, spawn runs a bare `claude` (or `claude --continue` if a prior ro
 **Purpose**: Comprehensive system diagnostics
 - Collects system and tool information
 - Tests Adobe CLI authentication
-- Verifies browser launch capability
-- Exports debug logs for sharing
+- Probes the in-extension MCP server socket and tools
+- Triangulates the GitHub credential (see below)
+- Logs the full report to the debug channel, shows a summary in user logs
 
-**Implementation**:
-```typescript
-class DiagnosticsCommand {
-    async execute() {
-        // Collect system info
-        const system = await this.getSystemInfo();
-        
-        // Check tool versions
-        const tools = await this.checkTools();
-        
-        // Test Adobe CLI
-        const adobe = await this.checkAdobeCLI();
-        
-        // Run diagnostic tests
-        const tests = await this.runTests();
-        
-        // Log full report to debug channel
-        logger.debug('DIAGNOSTIC REPORT', report);
-        
-        // Show summary in main output
-        this.showSummary(report);
-    }
-}
-```
+**GitHub↔AEM credential triangulation**: asks three questions in one pass —
+who we're signed in as plus the scopes GitHub actually *granted* (`x-oauth-scopes`,
+not the set we requested), whether GitHub reports `permissions.push` on the
+project's repo, and what `admin.hlx.page` returns for the same credential (HTTP
+status + `x-error`). It prints a one-line verdict, because no single answer is
+decisive: `push: true` alongside an AEM 401 rules out scope and permission
+problems and leaves the credential itself, which is the branch that previously
+could not be distinguished from a missing AEM Code Sync install.
 
-**Output**:
-- System information (OS, architecture, VS Code version)
-- Tool versions (Node.js, npm, fnm, git, Adobe CLI)
-- Adobe authentication status and configuration
-- Environment variables (PATH, HOME, etc.)
-- Test results (browser launch, file system access)
+Probe logic lives in `@/features/eds/services/githubCredentialProbe` (mirroring
+the `checkMcp` → `probeInExtensionMcpTools` split) so it stays testable outside
+the command shell; `diagnostics.ts` only calls and renders it. The command takes
+`vscode.SecretStorage` in its constructor for this — `CommandManager` supplies it.
 
-### checkUpdates
+Never printed: the credential. The output is designed to be pasted into tickets,
+so only the login, granted scopes, `push` boolean, status codes, `x-error`, and
+the credential *type prefix* (`gho_`, `ghu_`, …) appear. A test enforces this.
 
-**Purpose**: Check for and apply extension/component updates
-
-**Key Features**:
-- Checks GitHub Releases for updates (extension and components)
-- Respects stable/beta channel preference (`demoBuilder.updateChannel`)
-- User confirmation required before applying updates
-- Demo running check before component updates
-- Automatic snapshot/rollback on failure
-- Smart .env merging preserves user configuration
-
-**Implementation**:
-```typescript
-class CheckUpdatesCommand extends BaseCommand {
-    async execute() {
-        // 1. Check for extension update
-        const extensionUpdate = await this.updateManager.checkExtensionUpdate();
-        
-        // 2. Check for component updates (if project loaded)
-        const project = this.stateManager.getCurrentProject();
-        const componentUpdates = project 
-            ? await this.updateManager.checkComponentUpdates(project)
-            : new Map();
-        
-        // 3. Show notification if updates available
-        if (extensionUpdate || componentUpdates.size > 0) {
-            const action = await vscode.window.showInformationMessage(
-                'Updates available',
-                'Update Now',
-                'Later'
-            );
-            
-            if (action === 'Update Now') {
-                await this.applyUpdates(extensionUpdate, componentUpdates);
-            }
-        } else {
-            vscode.window.showInformationMessage('No updates available');
-        }
-    }
-}
-```
-
-**Safety Features**:
-- Pre-flight check: Prevents updates while demo is running
-- Concurrent update lock: Prevents double-click accidents
-- Snapshot before update: Full component directory backup
-- Automatic rollback: Restore on ANY failure
-- Post-update verification: Validates package.json structure
-
-**User Experience**:
-- Auto-check on startup (if `demoBuilder.autoUpdate` enabled)
-- Manual check via command palette
-- Progress notifications during update process
-- Clear error messages on failure
-
-### deployMesh
-
-**Purpose**: Deploy API mesh configuration to Adobe I/O Runtime
-
-**Key Features**:
-- Pre-flight authentication check (prevents unexpected browser launch)
-- Builds mesh configuration from component settings
-- Deploys to Adobe I/O via `aio api-mesh:update`
-- Tracks deployment state for staleness detection
-- User-friendly error formatting
-
-**Implementation**:
-```typescript
-class DeployMeshCommand extends BaseCommand {
-    async execute() {
-        // 1. Pre-flight auth check
-        const isAuthenticated = await this.authManager.isAuthenticated();
-        if (!isAuthenticated) {
-            const action = await vscode.window.showWarningMessage(
-                'Authentication required to deploy mesh',
-                'Sign In',
-                'Cancel'
-            );
-            if (action !== 'Sign In') return;
-            
-            // Authenticate
-            await this.authManager.login();
-        }
-        
-        // 2. Build mesh configuration
-        const meshConfig = await this.buildMeshConfig();
-        
-        // 3. Deploy to Adobe I/O
-        const result = await this.externalCommandManager.execute(
-            'aio',
-            ['api-mesh:update', meshConfig],
-            { timeout: 60000 }
-        );
-        
-        // 4. Track deployment state
-        await this.updateMeshState(result);
-        
-        // 5. Show success notification (auto-dismiss)
-        vscode.window.showInformationMessage('Mesh deployed successfully');
-    }
-}
-```
-
-**Authentication Flow**:
-1. Quick token check (< 1 second)
-2. If not authenticated, show warning with "Sign In" option
-3. User confirms → Browser-based login via Adobe CLI
-4. After auth, retry mesh deployment
-
-**Error Handling**:
-- Network errors → "No internet connection. Please check your network."
-- Timeout errors → "Deployment timed out. Please try again."
-- HTTP errors → "Server error (status 500). Please try again later."
-- Config errors → "Invalid mesh configuration: [specific issue]"
-
-### showLogs
-
-**Purpose**: Display extension logs
-- Opens "Demo Builder: User Logs" output channel
-- Shows user-facing messages
-- Quick access to error/warning information
-
-### clearCache
-
-**Purpose**: Clear cached data
-- Resets component definitions
-- Clears prerequisite status
-- Useful for debugging
+This is the command's only outbound network call; every other check is local.
+Each leg has its own timeout and degrades independently.
 
 ## Command Patterns
 

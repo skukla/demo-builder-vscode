@@ -22,7 +22,7 @@ import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer';
-import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
+import { mcpSocketBindings } from '@/features/ai/server/mcpSocketPath';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
 import { registerStorefrontTools } from '@/features/ai/server/storefrontTools';
 import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
@@ -342,10 +342,12 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
         inExtensionMcpServer?.dispose();
         inExtensionMcpServer = undefined;
 
+        // No early return on a missing workspace. The window model is "homed at
+        // the projects root, project selected by pointer" — shouldReHomeToRoot
+        // explicitly declines to act on an undefined workspace, and openInClaude
+        // launches at the root. Refusing to start without a folder left anyone
+        // driving the extension from the sidebar with no MCP server at all.
         const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        if (!workspacePath) {
-            return;
-        }
         const projectsDir =
             process.env.DEMO_BUILDER_PROJECTS_DIR ?? path.join(os.homedir(), '.demo-builder', 'projects');
         // Handler-backed read/status tools dispatch through the existing handler
@@ -368,9 +370,11 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
         // mismatch. When workspace IS the projects root, the secondary path
         // collapses to the primary and the server transparently single-binds.
         // Goes away when the decouple-project-from-workspace backlog ships.
-        const projectsRootSocketPath = resolveMcpSocketPath(projectsDir);
+        // Root socket is primary and always bound; a distinct workspace is bound
+        // additionally. See mcpSocketBindings.
+        const { primary, secondary } = mcpSocketBindings(projectsDir, workspacePath);
         const server = new InExtensionMcpServer(
-            resolveMcpSocketPath(workspacePath),
+            primary,
             projectsDir,
             logger,
             (mcpServer) => {
@@ -388,7 +392,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerViewTools(mcpServer, (commandId) => Promise.resolve(vscode.commands.executeCommand(commandId)));
             },
             credentials,
-            projectsRootSocketPath,
+            secondary,
         );
         await server.start();
         inExtensionMcpServer = server;
