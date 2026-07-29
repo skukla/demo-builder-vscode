@@ -28,6 +28,7 @@ import {
     buildAppStatusFromResult,
     computeCodeSyncValid,
     computeRepoValid,
+    type RepoReadinessState,
     pollGitHubAppInstallation,
     type GitHubAppCheckResult,
     type GitHubAppStatus,
@@ -377,11 +378,60 @@ export function RepoSelectionInline({
         }
     }, [repoMode, edsConfig?.createdRepo, githubAppStatus.isInstalled, checkGitHubApp]);
 
+    // Classify the selected repo so the reset control can ask only when there
+    // is something to lose. Undefined while in flight — the gate treats that as
+    // "do not block", so the step never flickers to invalid mid-check.
+    const [readiness, setReadiness] = useState<RepoReadinessState | undefined>(undefined);
+
+    useEffect(() => {
+        if (repoMode !== 'existing' || !selectedRepo) {
+            setReadiness(undefined);
+            return;
+        }
+        const [owner, name] = selectedRepo.fullName.split('/');
+        if (!owner || !name) return;
+
+        let cancelled = false;
+        setReadiness(undefined);
+        webviewClient
+            .request<{ success: boolean; readiness?: RepoReadinessState }>(
+                'check-repo-readiness',
+                { owner, repo: name },
+            )
+            .then((result) => {
+                // A stale response must not overwrite a newer selection's answer.
+                if (!cancelled) setReadiness(result?.readiness);
+            })
+            .catch(() => {
+                if (!cancelled) setReadiness({ kind: 'undetermined' });
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [repoMode, selectedRepo]);
+
     // Report the repository-choice verdict (WITHOUT the app gate) — runs for both
     // phases so the `repository` sub-step gate stays live while showing `code-sync`.
     useEffect(() => {
-        onRepoValidChange(computeRepoValid(repoMode, repoCreationState, selectedRepo, isLoading));
-    }, [repoMode, repoCreationState, selectedRepo, isLoading, onRepoValidChange]);
+        onRepoValidChange(
+            computeRepoValid(
+                repoMode,
+                repoCreationState,
+                selectedRepo,
+                isLoading,
+                readiness,
+                resetToTemplate,
+            ),
+        );
+    }, [
+        repoMode,
+        repoCreationState,
+        selectedRepo,
+        isLoading,
+        readiness,
+        resetToTemplate,
+        onRepoValidChange,
+    ]);
 
     // Report the Code-Sync app-gate verdict — runs for both phases so the
     // `code-sync` sub-step gate stays live while showing `repository`.
@@ -418,6 +468,7 @@ export function RepoSelectionInline({
                             resetToTemplate={resetToTemplate}
                             onResetToTemplateChange={handleResetToTemplateChange}
                             disabled={!selectedRepo}
+                            readiness={readiness}
                         />
                         <SelectionStepContent
                             headerAction={

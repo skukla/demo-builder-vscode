@@ -82,6 +82,7 @@ export const projectCreationHandlers = defineHandlers({
     // EDS handlers - GitHub
     'check-github-auth': eds.handleCheckGitHubAuth,
     'check-github-app': creation.checkGitHubApp,
+    'check-repo-readiness': eds.handleCheckRepoReadiness,
     'create-github-repo': eds.handleCreateGitHubRepo,
     'github-oauth': eds.handleGitHubOAuth,
     'github-change-account': eds.handleGitHubChangeAccount,
