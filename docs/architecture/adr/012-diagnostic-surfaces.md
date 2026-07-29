@@ -1,6 +1,6 @@
 # ADR-012: Diagnostic Surfaces — Human-First, Agent-Reachable
 
-**Status**: Accepted — not yet implemented
+**Status**: Accepted — prerequisite landed (`fix/mcp-workspace-independence`); surfaces planned for beta.123
 **Date**: 2026-07-29
 **Decision Maker**: Project Owner
 **Implementer**: Planned for beta.123
@@ -56,10 +56,14 @@ This is not a preference for humans over agents. It is four practical constraint
 
 - **Not every colleague uses Claude.** A diagnostic only they can run is a
   diagnostic most of them cannot run.
-- **The agent channel is unreachable exactly when it is needed.** One of the two
-  reports above included `MCP Server (in-extension): Reachable: No`. If MCP were
-  the only path, the people most in need of diagnosis would be the ones locked
-  out of it.
+- **The agent channel was unreachable by default.** One of the two reports above
+  included `MCP Server (in-extension): Reachable: No`. That was not a flake: the
+  server refused to start without an open workspace folder, and the window model
+  never opens one (`shouldReHomeToRoot` explicitly declines to act on an
+  undefined workspace). Anyone driving the extension from the sidebar had no
+  agent channel at all. Fixed — see Prerequisite below — but the lesson stands:
+  the agent path is the one that silently disappears, so it cannot be the only
+  path.
 - **Human surfaces are verifiable.** A command can be exercised in the Extension
   Development Host and its output read. An agent-only path is materially harder
   to confirm, and both bugs above came from paths nobody had run end to end.
@@ -117,13 +121,32 @@ other cannot reach.
 - Adding a genuinely new endpoint still requires a release. That is accepted —
   new endpoints are rare, and a release carries review that a remote file does not.
 
+## Prerequisite (landed)
+
+An earlier draft of this ADR suspected `checkMcp` of probing the wrong socket.
+That was wrong — its message was accurate. The real defect sat upstream:
+`startInExtensionMcpServer` returned early when no workspace folder was open, so
+the server never started. That guard predates the current window model, in which
+the window is homed at the projects root and the project is selected by pointer.
+
+Fixed on the maintenance line (`fix/mcp-workspace-independence`, off
+`hotfix/beta.122`): `mcpSocketBindings` makes the projects-root socket primary and
+always bound — it derives from `projectsDir` with no workspace involved, and it is
+the socket per-project `.mcp.json` files already target. A distinct workspace is
+bound additionally. `checkMcp` now probes that same primary socket.
+
+The fix lives on the maintenance line rather than `develop` because the defect is
+identical on both and beta.123 also ships from there; a `develop`-only fix would
+have reached nobody.
+
+**The `decouple-project-from-workspace` backlog item is NOT a prerequisite.** It
+targets a different problem — a full window reload when switching projects from
+the home grid ("the extension resets"). The MCP-relevant coupling was the single
+early return above. This fix removes MCP's dependence on that item rather than
+depending on it; the "secondary socket" it describes as temporary is now the
+permanent primary.
+
 ## Open questions
 
-- `checkMcp` (in `commands/diagnostics.ts`) requires `workspaceFolders[0]` and
-  probes a per-workspace socket, while `inExtensionMcpServer` documents
-  per-project configs targeting the **projects-root** socket. If those are
-  different preconditions, our own check reports the server unreachable while an
-  agent connects fine — which would explain the `Reachable: No` above. Verify
-  before building on it.
 - Whether an agent filing issues should use the colleague's GitHub identity or a
   service identity. Unresolved; affects attribution and rate limits.
