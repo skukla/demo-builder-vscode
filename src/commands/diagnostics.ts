@@ -1,9 +1,39 @@
-import { promises as fs } from 'fs';
+/**
+ * Demo Builder diagnostics command.
+ *
+ * Collects the report — system, tools, Adobe CLI, environment, capability
+ * tests, MCP, and the two credential probes — then hands it to
+ * `./diagnosticsReport` to render. Collection lives here because it needs
+ * `vscode` and the service locator; rendering deliberately does not.
+ *
+ * Re-exports the rendering entry points so existing consumers and tests keep
+ * their import path.
+ */
+
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import {
+    checkAdobeCLI,
+    checkTools,
+    getEnvironment,
+    getSystemInfo,
+    getVSCodeInfo,
+    runTests,
+} from './diagnosticsChecks';
+import {
+    buildSummaryLines,
+    type AdobeCLIInfo,
+    type DiagnosticsReport,
+    type EnvironmentInfo,
+    type McpInfo,
+    type SystemInfo,
+    type TestResults,
+    type ToolsInfo,
+    type VSCodeInfo,
+} from './diagnosticsReport';
 import { ServiceLocator } from '@/core/di';
-import { getLogger, type CommandResultWithContext, type DebugLogger } from '@/core/logging';
+import { getLogger, type DebugLogger } from '@/core/logging';
 import { mcpSocketBindings } from '@/features/ai/server/mcpSocketPath';
 import { probeInExtensionMcpTools } from '@/features/ai/server/mcpToolProbe';
 import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
@@ -17,275 +47,10 @@ import {
     type CredentialProbeResult,
 } from '@/features/eds/services/githubCredentialProbe';
 import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
-import { getEdsDaLiveTarget, getEdsGithubRepo, parseJSON } from '@/types/typeGuards';
+import { getEdsDaLiveTarget, getEdsGithubRepo } from '@/types/typeGuards';
 
-// Diagnostic Type Definitions
-interface SystemInfo {
-    platform: string;
-    release: string;
-    arch: string;
-    cpus: number;
-    memory: string;
-    homedir: string;
-    tmpdir: string;
-    shell: string;
-}
-
-interface VSCodeInfo {
-    version: string;
-    appName: string;
-    language: string;
-    machineId: string;
-    sessionId: string;
-}
-
-interface CommandCheckResult {
-    installed: boolean;
-    output?: string;
-    error?: string;
-    duration: number;
-    code?: number;
-    versions?: string[];
-}
-
-interface ToolsInfo {
-    node: CommandCheckResult;
-    npm: CommandCheckResult;
-    fnm: CommandCheckResult;
-    git: CommandCheckResult;
-    aio: CommandCheckResult;
-}
-
-interface AdobeContextInfo {
-    org: string;
-    project: string;
-    workspace: string;
-}
-
-interface AdobeCLIInfo {
-    installed: boolean;
-    version?: string;
-    authConfigured?: boolean;
-    hasToken?: boolean;
-    hasRefreshToken?: boolean;
-    expiresIn?: string;
-    tokenExpired?: boolean;
-    expiryDate?: string;
-    authParseError?: string;
-    currentContext?: AdobeContextInfo | string;
-    canListOrgs?: boolean;
-    organizationCount?: number;
-}
-
-interface EnvironmentInfo {
-    PATH: string[];
-    HOME: string | undefined;
-    USER: string | undefined;
-    SHELL: string | undefined;
-    NODE_PATH: string | undefined;
-    npm_config_prefix: string | undefined;
-    FNM_DIR: string | undefined;
-    FNM_MULTISHELL_PATH: string | undefined;
-    FNM_NODE_DIST_MIRROR: string | undefined;
-    FNM_LOGLEVEL: string | undefined;
-}
-
-interface BrowserLaunchTest {
-    platform: string;
-    command: string;
-    available: boolean;
-}
-
-interface AdobeLoginTest {
-    available: boolean;
-    supportsForceFlag: boolean;
-}
-
-interface FileSystemTest {
-    canWrite: boolean;
-    canRead: boolean;
-    tempDir: string;
-    error?: string;
-}
-
-interface TestResults {
-    browserLaunch: BrowserLaunchTest;
-    adobeLoginCommand: AdobeLoginTest;
-    fileSystem: FileSystemTest;
-}
-
-interface McpInfo {
-    /** True when a workspace is open and the in-extension server was reachable. */
-    running: boolean;
-    /** Absolute socket path probed (when a workspace is open). */
-    socketPath?: string;
-    /** Tool names the in-extension server exposed (sorted). */
-    tools?: string[];
-    /** Whether the auth `sign_in` tool is present (the common "is it there?" check). */
-    hasSignIn?: boolean;
-    /** Why the probe did not run / failed (no workspace, socket missing, timeout). */
-    error?: string;
-}
-
-interface DiagnosticsReport {
-    timestamp: string;
-    system: SystemInfo;
-    vscode: VSCodeInfo;
-    tools: ToolsInfo;
-    adobe: AdobeCLIInfo;
-    environment: EnvironmentInfo;
-    tests: TestResults;
-    mcp: McpInfo;
-    githubCredential: CredentialProbeResult;
-    /** Absent when no EDS project is open — there is no site config to probe. */
-    configService?: ConfigServiceProbeResult;
-}
-
-/** Describe GitHub's write-access answer, or why we don't have one. */
-function describeWriteAccess(repo: NonNullable<CredentialProbeResult['repo']>): string {
-    if (repo.canPush === true) return 'Yes';
-    if (repo.canPush === false) return 'No';
-    return repo.error ?? 'unknown';
-}
-
-/** Summarize the AEM admin response, omitting anything it did not return. */
-function describeAdminApi(admin: NonNullable<CredentialProbeResult['adminApi']>): string {
-    if (admin.error) return admin.error;
-
-    const parts: string[] = [];
-    if (admin.httpStatus !== undefined) parts.push(`HTTP ${admin.httpStatus}`);
-    if (admin.codeStatus !== undefined) parts.push(`code.status ${admin.codeStatus}`);
-    if (admin.xError) parts.push(`x-error: ${admin.xError}`);
-    return parts.length > 0 ? parts.join(', ') : 'no response';
-}
-
-/** Render the GitHub/AEM credential section.
- *
- * Verdict last: it is the conclusion the findings above add up to. The
- * credential itself is never included — only its TYPE prefix — which is what
- * makes the summary safe to paste into a ticket.
- */
-function credentialLines(cred: CredentialProbeResult): string[] {
-    const lines = ['', 'GitHub / AEM credential:', `  Signed in as: ${cred.github?.login ?? 'not signed in'}`];
-
-    if (cred.github?.tokenType) lines.push(`  Credential type: ${cred.github.tokenType}`);
-    if (cred.github?.grantedScopes) lines.push(`  Granted scopes: ${cred.github.grantedScopes.join(', ')}`);
-    if (cred.repo) lines.push(`  Write access to ${cred.repo.fullName}: ${describeWriteAccess(cred.repo)}`);
-    if (cred.adminApi) lines.push(`  AEM admin API: ${describeAdminApi(cred.adminApi)}`);
-
-    lines.push(`  → ${cred.verdict}`);
-    return lines;
-}
-
-
-/**
- * Render the Configuration Service probe.
- *
- * Prints the invocation ID whenever Adobe returned one — it is the only handle
- * Adobe support can trace a specific refusal by, and it was being discarded.
- */
-function configServiceLines(probe: ConfigServiceProbeResult): string[] {
-    const lines = ['', 'Configuration Service (site config):'];
-
-    if (!probe.token.present) {
-        lines.push('  DA.live credential: none stored');
-        lines.push(`  \u2192 ${probe.verdict}`);
-        return lines;
-    }
-
-    const cfg = probe.configService;
-    if (cfg?.error) {
-        lines.push(`  Site config read: unreachable (${cfg.error})`);
-    } else if (cfg) {
-        lines.push(`  Site config read: HTTP ${cfg.httpStatus}`);
-        if (cfg.xError) lines.push(`  x-error: ${cfg.xError}`);
-        if (cfg.invocationId) lines.push(`  x-invocation-id: ${cfg.invocationId}`);
-    }
-
-    const da = probe.daLive;
-    if (da?.error) lines.push(`  Same credential vs DA.live: unreachable (${da.error})`);
-    else if (da) lines.push(`  Same credential vs DA.live: HTTP ${da.httpStatus}`);
-
-    lines.push(`  \u2192 ${probe.verdict}`);
-    return lines;
-}
-
-/**
- * Build the diagnostics summary as lines.
- *
- * Separated from logging so the same text can be both written to the channel
- * and copied to the clipboard — one source, so the copy can never drift from
- * what the user was shown.
- */
-/**
- * Choose how to probe browser-launch capability for a platform.
- *
- * `open --help` exits 1 on macOS by design — it prints usage to stderr — and
- * checkCommand treats a non-zero exit as "not installed". Every Mac therefore
- * reported "Browser Launch: Not available". Test that the binary EXISTS instead
- * of running a help flag whose exit code we assumed.
- *
- * Windows is left on its original probe: `start` is a cmd builtin, so an
- * existence check does not apply, and this is unverified there — swapping a
- * known-wrong macOS answer for an unknown Windows one is a bad trade.
- */
-export function browserProbeCommand(platform: string): { binary: string; probe: string } {
-    if (platform === 'win32') return { binary: 'start', probe: 'start /?' };
-    const binary = platform === 'darwin' ? 'open' : 'xdg-open';
-    return { binary, probe: `command -v ${binary}` };
-}
-
-export function buildSummaryLines(report: DiagnosticsReport): string[] {
-    const lines: string[] = [
-        '=== DIAGNOSTICS SUMMARY ===',
-        `System: ${report.system.platform} ${report.system.release}`,
-        `VS Code: ${report.vscode.version}`,
-        '',
-        'Tools Status:',
-    ];
-
-    // SOP §4: for...of instead of Object.entries().forEach()
-    for (const [tool, info] of Object.entries(report.tools)) {
-        const status = info.installed ? '✅' : '❌';
-        lines.push(`  ${status} ${tool}: ${info.installed ? info.output : 'Not installed'}`);
-    }
-
-    if (report.adobe.installed) {
-        lines.push('', 'Adobe CLI Status:', `  Version: ${report.adobe.version}`);
-        lines.push(`  Authenticated: ${report.adobe.authConfigured ? 'Yes' : 'No'}`);
-        if (report.adobe.authConfigured) {
-            lines.push(`  Token Valid: ${!report.adobe.tokenExpired ? 'Yes' : 'No'}`);
-            lines.push(`  Can List Orgs: ${report.adobe.canListOrgs ? 'Yes' : 'No'}`);
-        }
-    }
-
-    lines.push(
-        '',
-        'Diagnostic Tests:',
-        `  Browser Launch: ${report.tests.browserLaunch.available ? 'Available' : 'Not available'}`,
-        `  Adobe Login Command: ${report.tests.adobeLoginCommand.available ? 'Available' : 'Not available'}`,
-        `  File System Access: ${report.tests.fileSystem.canWrite ? 'OK' : 'Failed'}`,
-        '',
-        'MCP Server (in-extension):',
-    );
-
-    if (report.mcp.running) {
-        const tools = report.mcp.tools ?? [];
-        lines.push(`  Reachable: Yes (${tools.length} tool${tools.length === 1 ? '' : 's'})`);
-        lines.push(`  sign_in tool: ${report.mcp.hasSignIn ? '✅ present' : '❌ missing'}`);
-        // The full roster is ~680 characters on one line. Pasted into Slack or a
-        // terminal it is silently elided mid-string, which reads as a corrupted
-        // tool name rather than as truncation. The count above is the actionable
-        // part; the roster stays in the debug report dump.
-    } else {
-        lines.push('  Reachable: No', `  Reason: ${report.mcp.error ?? 'unknown'}`);
-    }
-
-    lines.push(...credentialLines(report.githubCredential));
-    if (report.configService) lines.push(...configServiceLines(report.configService));
-    lines.push('', 'Use VS Code\'s "Set Log Level..." command to see debug/trace details');
-    return lines;
-}
+export { browserProbeCommand, buildSummaryLines } from './diagnosticsReport';
+export type { DiagnosticsReport } from './diagnosticsReport';
 
 /** Actions offered on the completion notification. Copy is first: for a
  *  colleague reporting a problem it is the primary one. */
@@ -347,27 +112,27 @@ export class DiagnosticsCommand {
         try {
             // System information
             this.logger.debug('Collecting system information...');
-            report.system = await this.getSystemInfo();
+            report.system = await getSystemInfo();
 
             // VS Code information
             this.logger.debug('Collecting VS Code information...');
-            report.vscode = this.getVSCodeInfo();
+            report.vscode = getVSCodeInfo();
 
             // Tool versions
             this.logger.debug('Checking tool versions...');
-            report.tools = await this.checkTools();
+            report.tools = await checkTools();
 
             // Adobe CLI status
             this.logger.debug('Checking Adobe CLI...');
-            report.adobe = await this.checkAdobeCLI();
+            report.adobe = await checkAdobeCLI();
 
             // Environment variables
             this.logger.debug('Collecting environment variables...');
-            report.environment = this.getEnvironment();
+            report.environment = getEnvironment();
 
             // Run diagnostic tests
             this.logger.debug('Running diagnostic tests...');
-            report.tests = await this.runTests();
+            report.tests = await runTests();
 
             // In-extension MCP server tool surface
             this.logger.debug('Probing in-extension MCP server...');
@@ -394,319 +159,6 @@ export class DiagnosticsCommand {
         } catch (error) {
             this.logger.error('Diagnostics failed', error as Error);
             throw error;
-        }
-    }
-
-    private async getSystemInfo(): Promise<SystemInfo> {
-        return {
-            platform: os.platform(),
-            release: os.release(),
-            arch: os.arch(),
-            cpus: os.cpus().length,
-            memory: `${Math.round(os.totalmem() / (1024 * 1024 * 1024))}GB`,
-            homedir: os.homedir(),
-            tmpdir: os.tmpdir(),
-            shell: process.env.SHELL || 'unknown',
-        };
-    }
-
-    private getVSCodeInfo(): VSCodeInfo {
-        return {
-            version: vscode.version,
-            appName: vscode.env.appName,
-            language: vscode.env.language,
-            machineId: vscode.env.machineId.substring(0, 8) + '...',
-            sessionId: vscode.env.sessionId.substring(0, 8) + '...',
-        };
-    }
-
-    private async checkTools(): Promise<ToolsInfo> {
-        const node = await this.checkCommand('node --version');
-        const npm = await this.checkCommand('npm --version');
-        const fnm = await this.checkCommand('fnm --version');
-
-        if (fnm.installed) {
-            // List fnm installations
-            const fnmList = await this.checkCommand('fnm list');
-            if (fnmList.installed && fnmList.output) {
-                fnm.versions = fnmList.output.split('\n').filter((l: string) => l.trim());
-            }
-        }
-
-        const git = await this.checkCommand('git --version');
-        const aio = await this.checkCommand('aio --version');
-
-        return {
-            node,
-            npm,
-            fnm,
-            git,
-            aio,
-        };
-    }
-
-    private async checkAdobeCLI(): Promise<AdobeCLIInfo> {
-        const adobe: AdobeCLIInfo = {
-            installed: false,
-        };
-
-        // Check if Adobe CLI is installed
-        const aioVersion = await this.checkCommand('aio --version');
-        adobe.installed = aioVersion.installed;
-        adobe.version = aioVersion.output;
-
-        if (adobe.installed) {
-            await this.checkAuthenticationStatus(adobe);
-            await this.checkCurrentContext(adobe);
-            await this.checkOrganizations(adobe);
-        }
-
-        return adobe;
-    }
-
-    private async checkAuthenticationStatus(adobe: AdobeCLIInfo): Promise<void> {
-        const authCheck = await this.checkCommand(
-            'aio config get ims.contexts.aio-cli-plugin-auth',
-        );
-        adobe.authConfigured =
-            authCheck.installed && !!authCheck.output && authCheck.output.length > 0;
-
-        if (adobe.authConfigured && authCheck.output) {
-            this.parseAuthConfig(adobe, authCheck.output);
-        }
-    }
-
-    private parseAuthConfig(adobe: AdobeCLIInfo, output: string): void {
-        try {
-            const authData = parseJSON<{
-                access_token?: string;
-                refresh_token?: string;
-                expires_in?: string;
-            }>(output);
-            if (!authData) {
-                throw new Error('Invalid auth data format');
-            }
-            adobe.hasToken = !!authData.access_token;
-            adobe.hasRefreshToken = !!authData.refresh_token;
-            adobe.expiresIn = authData.expires_in;
-
-            if (adobe.expiresIn) {
-                const expiryTime = parseInt(adobe.expiresIn);
-                const now = Date.now();
-                adobe.tokenExpired = expiryTime < now;
-                adobe.expiryDate = new Date(expiryTime).toISOString();
-            }
-        } catch (e) {
-            adobe.authParseError = (e as Error).message;
-            this.logger.debug('Failed to parse auth config', output);
-        }
-    }
-
-    private async checkCurrentContext(adobe: AdobeCLIInfo): Promise<void> {
-        const whereCheck = await this.checkCommand('aio console where --json');
-        if (whereCheck.installed && whereCheck.output) {
-            try {
-                const context = parseJSON<{
-                    org?: { name?: string };
-                    project?: { name?: string };
-                    workspace?: { name?: string };
-                }>(whereCheck.output);
-                if (!context) {
-                    throw new Error('Invalid context format');
-                }
-                adobe.currentContext = {
-                    org: context.org?.name || 'Not selected',
-                    project: context.project?.name || 'Not selected',
-                    workspace: context.workspace?.name || 'Not selected',
-                };
-            } catch {
-                adobe.currentContext = whereCheck.output;
-            }
-        }
-    }
-
-    private async checkOrganizations(adobe: AdobeCLIInfo): Promise<void> {
-        const orgCheck = await this.checkCommand('aio console org list --json');
-        adobe.canListOrgs =
-            orgCheck.installed &&
-            orgCheck.output !== undefined &&
-            !orgCheck.output.includes('Error');
-
-        if (adobe.canListOrgs && orgCheck.output) {
-            try {
-                const orgs = parseJSON<{ id?: string; name?: string }[]>(orgCheck.output);
-                if (!orgs) {
-                    throw new Error('Invalid orgs format');
-                }
-                adobe.organizationCount = Array.isArray(orgs) ? orgs.length : 0;
-            } catch {
-                // Fallback to raw output
-            }
-        }
-    }
-
-    private getEnvironment(): EnvironmentInfo {
-        const env = process.env;
-        return {
-            PATH: env.PATH?.split(path.delimiter) || [],
-            HOME: env.HOME,
-            USER: env.USER,
-            SHELL: env.SHELL,
-            NODE_PATH: env.NODE_PATH,
-            npm_config_prefix: env.npm_config_prefix,
-            FNM_DIR: env.FNM_DIR,
-            FNM_MULTISHELL_PATH: env.FNM_MULTISHELL_PATH,
-            FNM_NODE_DIST_MIRROR: env.FNM_NODE_DIST_MIRROR,
-            FNM_LOGLEVEL: env.FNM_LOGLEVEL,
-        };
-    }
-
-    private async runTests(): Promise<TestResults> {
-        // Test browser launch capability
-        this.logger.debug('Testing browser launch...');
-        const browserLaunch = await this.testBrowserLaunch();
-
-        // Test Adobe login command
-        this.logger.debug('Testing Adobe login command...');
-        const adobeLoginCommand = await this.testAdobeLogin();
-
-        // Test file system access
-        this.logger.debug('Testing file system access...');
-        const fileSystem = await this.testFileSystem();
-
-        return {
-            browserLaunch,
-            adobeLoginCommand,
-            fileSystem,
-        };
-    }
-
-    private async checkCommand(command: string): Promise<CommandCheckResult> {
-        const startTime = Date.now();
-        const commandManager = ServiceLocator.getCommandExecutor();
-        try {
-            // Use appropriate options based on command type
-            let execResult;
-            if (command.includes('node') || command.includes('npm')) {
-                execResult = await commandManager.execute(command, {
-                    useNodeVersion: 'current',
-                });
-            } else if (command.includes('aio')) {
-                execResult = await commandManager.execute(command, {
-                    enhancePath: true,
-                    configureTelemetry: true,
-                    useNodeVersion: 'auto',
-                });
-            } else {
-                // Other tools (git, fnm): run through a shell so the multi-word
-                // "<tool> --version" string is parsed and executed. With execa's
-                // default shell:false the whole string is treated as a single
-                // binary name → the command never runs and stdout comes back
-                // empty (the "✅ git: <blank>" symptom). enhancePath surfaces
-                // tools installed outside the GUI launchd PATH.
-                execResult = await commandManager.execute(command, {
-                    shell: true,
-                    enhancePath: true,
-                });
-            }
-            const { stdout, stderr, code } = execResult;
-            const duration = Date.now() - startTime;
-            const trimmedStdout = stdout.trim();
-
-            const result: CommandResultWithContext = {
-                stdout: trimmedStdout,
-                stderr: stderr.trim(),
-                code: code ?? 0,
-                duration,
-                cwd: process.cwd(),
-            };
-
-            this.logger.logCommand(command, result);
-
-            // The command ran without throwing, but a non-zero exit means the
-            // tool isn't actually usable — e.g. a shell "command not found" (127)
-            // resolves rather than throws. Treat only a clean exit as installed so
-            // a failed probe reports "❌ Not installed" instead of "✅ <blank>".
-            return {
-                installed: code === 0,
-                output: trimmedStdout,
-                error: stderr.trim(),
-                code: code ?? undefined,
-                duration,
-            };
-        } catch (error: unknown) {
-            const duration = Date.now() - startTime;
-            const err = error as {
-                stdout?: string;
-                stderr?: string;
-                message: string;
-                code?: number;
-            };
-
-            const result: CommandResultWithContext = {
-                stdout: err.stdout || '',
-                stderr: err.stderr || err.message,
-                code: err.code || -1,
-                duration,
-                cwd: process.cwd(),
-            };
-
-            this.logger.logCommand(command, result);
-
-            return {
-                installed: false,
-                error: err.message,
-                code: err.code,
-                duration,
-            };
-        }
-    }
-
-    private async testBrowserLaunch(): Promise<BrowserLaunchTest> {
-        // Probes that the opener binary exists — see browserProbeCommand for why
-        // running its help flag was giving every Mac a false negative.
-        const platform = os.platform();
-        const { binary, probe } = browserProbeCommand(platform);
-        const result = await this.checkCommand(probe);
-
-        return { platform, command: binary, available: result.installed };
-    }
-
-    private async testAdobeLogin(): Promise<AdobeLoginTest> {
-        // Test if Adobe login command is available (without actually running it)
-        const result = await this.checkCommand('aio auth login --help');
-        return {
-            available: result.installed,
-            supportsForceFlag: result.installed && !!result.output && result.output.includes('-f'),
-        };
-    }
-
-    private async testFileSystem(): Promise<FileSystemTest> {
-        const tempDir = os.tmpdir();
-        const testFile = path.join(tempDir, 'demo-builder-test.txt');
-
-        try {
-            // Test write
-            await fs.writeFile(testFile, 'test');
-
-            // Test read
-            const content = await fs.readFile(testFile, 'utf8');
-
-            // Clean up
-            await fs.unlink(testFile);
-
-            return {
-                canWrite: true,
-                canRead: content === 'test',
-                tempDir,
-            };
-        } catch (error) {
-            return {
-                canWrite: false,
-                canRead: false,
-                error: (error as Error).message,
-                tempDir,
-            };
         }
     }
 
