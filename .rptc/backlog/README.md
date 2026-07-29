@@ -92,6 +92,18 @@ Broad Jest sweeps emit "A worker process has failed to exit gracefully and has b
 
 Spun out of the thin-layer storefront evaluation (resolved 2026-06-10 — [ADR-006](../../docs/architecture/adr/006-thin-layer-storefront-customization.md) retired the two citisignal forks in favor of canonical + a code-patches layer). **Disposition decided 2026-06-10 (owner): complete rebuild** — no audit or migration of the existing `buildright-eds` codebase. Express BuildRight as a Demo Builder package on canonical (branded block library + brand CSS + DA content) using the ADR-006 mechanisms. Gated on the ADR-006 implementation existing first; the old repo archives when the rebuild ships.
 
+### Reset consent only when there is something to lose (`2026-07-29`)
+
+[`2026-07-29-reset-consent-only-when-there-is-something-to-lose.md`](2026-07-29-reset-consent-only-when-there-is-something-to-lose.md)
+— New repos already pin + patch unconditionally (ADR-006 Step 4b, both branches). Only
+the **existing-repo** path gates on the `resetToTemplate` checkbox, so an empty or
+non-storefront repo left unticked proceeds with no template, no LKG pin, and no
+canonical patches, then reports `Complete`. Replace one default-off checkbox with three
+states: auto-setup when empty, **refuse** when populated-but-not-a-storefront (the
+larger half — the repo that prompted this had 53 blocks and no `scripts/scripts.js`),
+prompt only when the user has something to lose. Pairs with the selection-time App
+check in `.rptc/research/github-app-installation-visibility/`.
+
 ### PDP routing silently broken three ways — patches never fetched, smart-404 SHA race (`2026-07-29`)
 
 Two independent defects found in a live Extension Host run 2026-07-29, **both present in
