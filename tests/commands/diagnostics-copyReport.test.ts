@@ -17,7 +17,11 @@
  */
 
 import * as vscode from 'vscode';
-import { buildSummaryLines, runDiagnosticsAction } from '@/commands/diagnostics';
+import {
+    browserProbeCommand,
+    buildSummaryLines,
+    runDiagnosticsAction,
+} from '@/commands/diagnostics';
 import type { DiagnosticsReport } from '@/commands/diagnostics';
 
 const TOKEN = 'gho_SUPERSECRETVALUE0000000000000000000';
@@ -130,5 +134,55 @@ describe('runDiagnosticsAction', () => {
         expect(vscode.env.clipboard.writeText).not.toHaveBeenCalled();
         expect(logger.show).not.toHaveBeenCalled();
         expect(logger.exportDebugLog).not.toHaveBeenCalled();
+    });
+});
+
+/**
+ * Both of these were found by running Diagnostics in a real Extension Host for
+ * the first time — neither was visible from unit tests.
+ */
+describe('summary is fit to paste', () => {
+    it('reports the MCP tool count, not the full roster', () => {
+        // The roster is 682 characters on one line. Pasted into Slack or a
+        // terminal it gets silently elided mid-string, which reads as a
+        // corrupted tool name rather than as truncation. The count plus the
+        // sign_in check is the actionable part; the roster stays in the debug
+        // report dump for deep triage.
+        const lines = buildSummaryLines(makeReport());
+
+        expect(lines.some((l) => l.includes('Reachable: Yes'))).toBe(true);
+        expect(lines.some((l) => l.startsWith('  Tools: '))).toBe(false);
+    });
+
+    it('keeps every line short enough to survive a paste', () => {
+        const longest = Math.max(...buildSummaryLines(makeReport()).map((l) => l.length));
+        expect(longest).toBeLessThan(200);
+    });
+});
+
+describe('browserProbeCommand', () => {
+    it('tests for the binary rather than running its help flag on macOS', () => {
+        // `open --help` exits 1 on macOS by design — it prints usage to stderr.
+        // checkCommand treats non-zero as "not installed", so every Mac has been
+        // reporting "Browser Launch: Not available".
+        const { binary, probe } = browserProbeCommand('darwin');
+
+        expect(binary).toBe('open');
+        expect(probe).not.toContain('--help');
+        expect(probe).toContain('command -v open');
+    });
+
+    it('does the same on linux', () => {
+        const { binary, probe } = browserProbeCommand('linux');
+
+        expect(binary).toBe('xdg-open');
+        expect(probe).toContain('command -v xdg-open');
+    });
+
+    it('leaves the windows probe alone', () => {
+        // `start` is a cmd builtin, so an existence check does not apply. Left
+        // as-is deliberately: unverified on Windows, and guessing would trade a
+        // known-wrong answer on macOS for an unknown one there.
+        expect(browserProbeCommand('win32').probe).toBe('start /?');
     });
 });

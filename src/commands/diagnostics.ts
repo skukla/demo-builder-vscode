@@ -176,6 +176,24 @@ function credentialLines(cred: CredentialProbeResult): string[] {
  * and copied to the clipboard — one source, so the copy can never drift from
  * what the user was shown.
  */
+/**
+ * Choose how to probe browser-launch capability for a platform.
+ *
+ * `open --help` exits 1 on macOS by design — it prints usage to stderr — and
+ * checkCommand treats a non-zero exit as "not installed". Every Mac therefore
+ * reported "Browser Launch: Not available". Test that the binary EXISTS instead
+ * of running a help flag whose exit code we assumed.
+ *
+ * Windows is left on its original probe: `start` is a cmd builtin, so an
+ * existence check does not apply, and this is unverified there — swapping a
+ * known-wrong macOS answer for an unknown Windows one is a bad trade.
+ */
+export function browserProbeCommand(platform: string): { binary: string; probe: string } {
+    if (platform === 'win32') return { binary: 'start', probe: 'start /?' };
+    const binary = platform === 'darwin' ? 'open' : 'xdg-open';
+    return { binary, probe: `command -v ${binary}` };
+}
+
 export function buildSummaryLines(report: DiagnosticsReport): string[] {
     const lines: string[] = [
         '=== DIAGNOSTICS SUMMARY ===',
@@ -214,7 +232,10 @@ export function buildSummaryLines(report: DiagnosticsReport): string[] {
         const tools = report.mcp.tools ?? [];
         lines.push(`  Reachable: Yes (${tools.length} tool${tools.length === 1 ? '' : 's'})`);
         lines.push(`  sign_in tool: ${report.mcp.hasSignIn ? '✅ present' : '❌ missing'}`);
-        lines.push(`  Tools: ${tools.join(', ')}`);
+        // The full roster is ~680 characters on one line. Pasted into Slack or a
+        // terminal it is silently elided mid-string, which reads as a corrupted
+        // tool name rather than as truncation. The count above is the actionable
+        // part; the roster stays in the debug report dump.
     } else {
         lines.push('  Reachable: No', `  Reason: ${report.mcp.error ?? 'unknown'}`);
     }
@@ -598,27 +619,13 @@ export class DiagnosticsCommand {
     }
 
     private async testBrowserLaunch(): Promise<BrowserLaunchTest> {
-        // Test if we can open a URL (won't actually open, just test the command)
+        // Probes that the opener binary exists — see browserProbeCommand for why
+        // running its help flag was giving every Mac a false negative.
         const platform = os.platform();
-        let command: string;
+        const { binary, probe } = browserProbeCommand(platform);
+        const result = await this.checkCommand(probe);
 
-        switch (platform) {
-            case 'darwin':
-                command = 'open --help';
-                break;
-            case 'win32':
-                command = 'start /?';
-                break;
-            default:
-                command = 'xdg-open --help';
-        }
-
-        const result = await this.checkCommand(command);
-        return {
-            platform,
-            command: command.split(' ')[0],
-            available: result.installed,
-        };
+        return { platform, command: binary, available: result.installed };
     }
 
     private async testAdobeLogin(): Promise<AdobeLoginTest> {
