@@ -27,6 +27,11 @@ import * as path from 'path';
 jest.mock('fs/promises', () => ({
     readFile: jest.fn(),
     writeFile: jest.fn(),
+    // writeFileAtomic writes to a temp path then renames, cleaning up with
+    // unlink on failure. Both must exist here or every atomic write throws
+    // "rename is not a function" rather than exercising the code under test.
+    rename: jest.fn().mockResolvedValue(undefined),
+    unlink: jest.fn().mockResolvedValue(undefined),
     readdir: jest.fn(),
     mkdir: jest.fn(),
     stat: jest.fn().mockResolvedValue({ size: 0 }), // default: .git exists, size 0 (below MAX_FILE_BYTES)

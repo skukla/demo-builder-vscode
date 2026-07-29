@@ -123,14 +123,18 @@ describe('Manifest Error Investigation', () => {
             const project = createTestProject();
             const tempPath = path.join(project.path, '.demo-builder.json.tmp');
 
-            // Simulate: writeFile succeeds, but access fails (temp file gone)
+            // Simulate: writeFile succeeds, but the temp file is gone by the
+            // time we rename it. The write path is writeFile -> rename ->
+            // (on failure) unlink; it does not call access, so the loss has to
+            // be injected at the rename for this to exercise anything real.
             mockFs.writeFile.mockResolvedValue(undefined);
-            mockFs.access.mockImplementation(async (filePath) => {
-                if (filePath === tempPath) {
+            mockFs.rename.mockImplementation(async (from) => {
+                if (from === tempPath) {
                     throw new Error('ENOENT: no such file or directory');
                 }
                 return undefined;
             });
+            mockFs.unlink.mockResolvedValue(undefined);
 
             // When: Attempting to save
             await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow('ENOENT');
