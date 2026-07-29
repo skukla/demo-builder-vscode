@@ -297,7 +297,7 @@ export class CommandManager {
         }
 
         // Diagnostics
-        const diagnostics = new DiagnosticsCommand(this.context.secrets);
+        const diagnostics = new DiagnosticsCommand(this.context);
         this.registerCommand('demoBuilder.diagnostics', () => diagnostics.execute());
 
         // Global MCP registration (~/.claude.json) — explicit opt-in. The entry

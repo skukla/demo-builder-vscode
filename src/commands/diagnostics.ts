@@ -6,12 +6,18 @@ import { ServiceLocator } from '@/core/di';
 import { getLogger, type CommandResultWithContext, type DebugLogger } from '@/core/logging';
 import { mcpSocketBindings } from '@/features/ai/server/mcpSocketPath';
 import { probeInExtensionMcpTools } from '@/features/ai/server/mcpToolProbe';
+import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
+import {
+    probeConfigService,
+    type ConfigServiceProbeResult,
+} from '@/features/eds/services/configServiceProbe';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
 import {
     probeGitHubCredential,
     type CredentialProbeResult,
 } from '@/features/eds/services/githubCredentialProbe';
 import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
-import { getEdsGithubRepo, parseJSON } from '@/types/typeGuards';
+import { getEdsDaLiveTarget, getEdsGithubRepo, parseJSON } from '@/types/typeGuards';
 
 // Diagnostic Type Definitions
 interface SystemInfo {
@@ -131,6 +137,8 @@ interface DiagnosticsReport {
     tests: TestResults;
     mcp: McpInfo;
     githubCredential: CredentialProbeResult;
+    /** Absent when no EDS project is open — there is no site config to probe. */
+    configService?: ConfigServiceProbeResult;
 }
 
 /** Describe GitHub's write-access answer, or why we don't have one. */
@@ -166,6 +174,39 @@ function credentialLines(cred: CredentialProbeResult): string[] {
     if (cred.adminApi) lines.push(`  AEM admin API: ${describeAdminApi(cred.adminApi)}`);
 
     lines.push(`  → ${cred.verdict}`);
+    return lines;
+}
+
+
+/**
+ * Render the Configuration Service probe.
+ *
+ * Prints the invocation ID whenever Adobe returned one — it is the only handle
+ * Adobe support can trace a specific refusal by, and it was being discarded.
+ */
+function configServiceLines(probe: ConfigServiceProbeResult): string[] {
+    const lines = ['', 'Configuration Service (site config):'];
+
+    if (!probe.token.present) {
+        lines.push('  DA.live credential: none stored');
+        lines.push(`  \u2192 ${probe.verdict}`);
+        return lines;
+    }
+
+    const cfg = probe.configService;
+    if (cfg?.error) {
+        lines.push(`  Site config read: unreachable (${cfg.error})`);
+    } else if (cfg) {
+        lines.push(`  Site config read: HTTP ${cfg.httpStatus}`);
+        if (cfg.xError) lines.push(`  x-error: ${cfg.xError}`);
+        if (cfg.invocationId) lines.push(`  x-invocation-id: ${cfg.invocationId}`);
+    }
+
+    const da = probe.daLive;
+    if (da?.error) lines.push(`  Same credential vs DA.live: unreachable (${da.error})`);
+    else if (da) lines.push(`  Same credential vs DA.live: HTTP ${da.httpStatus}`);
+
+    lines.push(`  \u2192 ${probe.verdict}`);
     return lines;
 }
 
@@ -241,6 +282,7 @@ export function buildSummaryLines(report: DiagnosticsReport): string[] {
     }
 
     lines.push(...credentialLines(report.githubCredential));
+    if (report.configService) lines.push(...configServiceLines(report.configService));
     lines.push('', 'Use VS Code\'s "Set Log Level..." command to see debug/trace details');
     return lines;
 }
@@ -276,11 +318,12 @@ export class DiagnosticsCommand {
     private logger = getLogger();
 
     /**
-     * @param secrets - SecretStorage holding the GitHub credential. Supplied by
-     *   CommandManager, which owns the ExtensionContext; the credential probe
-     *   cannot read it any other way from a command.
+     * @param context - ExtensionContext, supplied by CommandManager which owns
+     *   it. Carries the SecretStorage the GitHub credential probe needs and the
+     *   context the DA.live auth service is keyed on. Taking the context rather
+     *   than just `secrets` avoids holding the same thing under two names.
      */
-    constructor(private secrets: vscode.SecretStorage) {}
+    constructor(private context: vscode.ExtensionContext) {}
 
     public async execute(): Promise<void> {
         this.logger.info('Running Demo Builder diagnostics...');
@@ -333,6 +376,7 @@ export class DiagnosticsCommand {
             // GitHub <-> AEM credential triangulation
             this.logger.debug('Probing GitHub and AEM credential access...');
             report.githubCredential = await this.checkGitHubCredential();
+            report.configService = await this.checkConfigService();
 
             // Log the full report
             this.logger.debug('DIAGNOSTIC REPORT', report);
@@ -707,8 +751,26 @@ export class DiagnosticsCommand {
     private async checkGitHubCredential(): Promise<CredentialProbeResult> {
         const project = await ServiceLocator.getStateManager()?.getCurrentProject();
         const repoFullName = getEdsGithubRepo(project);
-        const tokenService = new GitHubTokenService(this.secrets, this.logger);
+        const tokenService = new GitHubTokenService(this.context.secrets, this.logger);
         return probeGitHubCredential(tokenService, repoFullName, this.logger);
+    }
+
+
+    /**
+     * Probe whether the DA.live credential can read this storefront's site
+     * config, and whether the same credential is accepted by DA.live itself.
+     *
+     * Returns undefined without an EDS project: there is no site to address,
+     * and an invented one would produce a 404 that reads like a real finding.
+     */
+    private async checkConfigService(): Promise<ConfigServiceProbeResult | undefined> {
+        const project = await ServiceLocator.getStateManager()?.getCurrentProject();
+        const target = getEdsDaLiveTarget(project);
+        if (!target) return undefined;
+
+        const daLiveAuthService = getDaLiveAuthService(this.context);
+        const tokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
+        return probeConfigService(tokenProvider, target.org, target.site, this.logger);
     }
 
     /**
