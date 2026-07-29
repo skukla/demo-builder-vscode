@@ -3,7 +3,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di';
-import { getLogger, CommandResultWithContext } from '@/core/logging';
+import { getLogger, type CommandResultWithContext, type DebugLogger } from '@/core/logging';
 import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
 import { probeInExtensionMcpTools } from '@/features/ai/server/mcpToolProbe';
 import {
@@ -151,6 +151,106 @@ function describeAdminApi(admin: NonNullable<CredentialProbeResult['adminApi']>)
     return parts.length > 0 ? parts.join(', ') : 'no response';
 }
 
+/** Render the GitHub/AEM credential section.
+ *
+ * Verdict last: it is the conclusion the findings above add up to. The
+ * credential itself is never included — only its TYPE prefix — which is what
+ * makes the summary safe to paste into a ticket.
+ */
+function credentialLines(cred: CredentialProbeResult): string[] {
+    const lines = ['', 'GitHub / AEM credential:', `  Signed in as: ${cred.github?.login ?? 'not signed in'}`];
+
+    if (cred.github?.tokenType) lines.push(`  Credential type: ${cred.github.tokenType}`);
+    if (cred.github?.grantedScopes) lines.push(`  Granted scopes: ${cred.github.grantedScopes.join(', ')}`);
+    if (cred.repo) lines.push(`  Write access to ${cred.repo.fullName}: ${describeWriteAccess(cred.repo)}`);
+    if (cred.adminApi) lines.push(`  AEM admin API: ${describeAdminApi(cred.adminApi)}`);
+
+    lines.push(`  → ${cred.verdict}`);
+    return lines;
+}
+
+/**
+ * Build the diagnostics summary as lines.
+ *
+ * Separated from logging so the same text can be both written to the channel
+ * and copied to the clipboard — one source, so the copy can never drift from
+ * what the user was shown.
+ */
+export function buildSummaryLines(report: DiagnosticsReport): string[] {
+    const lines: string[] = [
+        '=== DIAGNOSTICS SUMMARY ===',
+        `System: ${report.system.platform} ${report.system.release}`,
+        `VS Code: ${report.vscode.version}`,
+        '',
+        'Tools Status:',
+    ];
+
+    // SOP §4: for...of instead of Object.entries().forEach()
+    for (const [tool, info] of Object.entries(report.tools)) {
+        const status = info.installed ? '✅' : '❌';
+        lines.push(`  ${status} ${tool}: ${info.installed ? info.output : 'Not installed'}`);
+    }
+
+    if (report.adobe.installed) {
+        lines.push('', 'Adobe CLI Status:', `  Version: ${report.adobe.version}`);
+        lines.push(`  Authenticated: ${report.adobe.authConfigured ? 'Yes' : 'No'}`);
+        if (report.adobe.authConfigured) {
+            lines.push(`  Token Valid: ${!report.adobe.tokenExpired ? 'Yes' : 'No'}`);
+            lines.push(`  Can List Orgs: ${report.adobe.canListOrgs ? 'Yes' : 'No'}`);
+        }
+    }
+
+    lines.push(
+        '',
+        'Diagnostic Tests:',
+        `  Browser Launch: ${report.tests.browserLaunch.available ? 'Available' : 'Not available'}`,
+        `  Adobe Login Command: ${report.tests.adobeLoginCommand.available ? 'Available' : 'Not available'}`,
+        `  File System Access: ${report.tests.fileSystem.canWrite ? 'OK' : 'Failed'}`,
+        '',
+        'MCP Server (in-extension):',
+    );
+
+    if (report.mcp.running) {
+        const tools = report.mcp.tools ?? [];
+        lines.push(`  Reachable: Yes (${tools.length} tool${tools.length === 1 ? '' : 's'})`);
+        lines.push(`  sign_in tool: ${report.mcp.hasSignIn ? '✅ present' : '❌ missing'}`);
+        lines.push(`  Tools: ${tools.join(', ')}`);
+    } else {
+        lines.push('  Reachable: No', `  Reason: ${report.mcp.error ?? 'unknown'}`);
+    }
+
+    lines.push(...credentialLines(report.githubCredential));
+    lines.push('', 'Use VS Code\'s "Set Log Level..." command to see debug/trace details');
+    return lines;
+}
+
+/** Actions offered on the completion notification. Copy is first: for a
+ *  colleague reporting a problem it is the primary one. */
+export const DIAGNOSTICS_ACTIONS = ['Copy Report', 'Show Logs', 'Export Log'] as const;
+
+/**
+ * Handle the chosen completion action.
+ *
+ * `undefined` means the notification was dismissed — do nothing.
+ */
+export async function runDiagnosticsAction(
+    action: string | undefined,
+    summary: string,
+    logger: DebugLogger,
+): Promise<void> {
+    if (action === 'Copy Report') {
+        await vscode.env.clipboard.writeText(summary);
+        // Confirm explicitly: a silent clipboard write is indistinguishable
+        // from a no-op, and the user is about to paste it somewhere.
+        await vscode.window.showInformationMessage('Diagnostic report copied to clipboard.');
+    } else if (action === 'Show Logs') {
+        logger.show(false);
+    } else if (action === 'Export Log') {
+        await logger.exportDebugLog();
+    }
+}
+
+
 export class DiagnosticsCommand {
     private logger = getLogger();
 
@@ -216,21 +316,16 @@ export class DiagnosticsCommand {
             // Log the full report
             this.logger.debug('DIAGNOSTIC REPORT', report);
 
-            // Show summary in main output
-            this.showSummary(report);
+            // Show summary in main output, keeping the text for the clipboard
+            // so a copy is exactly what the user was shown.
+            const summary = this.showSummary(report);
 
-            // Offer to export
             const action = await vscode.window.showInformationMessage(
                 'Diagnostics complete. Check the output for details.',
-                'Show Logs',
-                'Export Log',
+                ...DIAGNOSTICS_ACTIONS,
             );
 
-            if (action === 'Show Logs') {
-                this.logger.show(false);
-            } else if (action === 'Export Log') {
-                await this.logger.exportDebugLog();
-            }
+            await runDiagnosticsAction(action, summary, this.logger);
         } catch (error) {
             this.logger.error('Diagnostics failed', error as Error);
             throw error;
@@ -608,98 +703,16 @@ export class DiagnosticsCommand {
         return probeGitHubCredential(tokenService, repoFullName, this.logger);
     }
 
-    private showSummary(report: DiagnosticsReport): void {
-        this.logger.info('=== DIAGNOSTICS SUMMARY ===');
-        this.logger.info(`System: ${report.system.platform} ${report.system.release}`);
-        this.logger.info(`VS Code: ${report.vscode.version}`);
-
-        // Tools summary
-        this.logger.info('');
-        this.logger.info('Tools Status:');
-        // SOP §4: Using for...of instead of Object.entries().forEach()
-        const toolEntries = Object.entries(report.tools);
-        for (const [tool, info] of toolEntries) {
-            const status = info.installed ? '✅' : '❌';
-            const version = info.installed ? info.output : 'Not installed';
-            this.logger.info(`  ${status} ${tool}: ${version}`);
-        }
-
-        // Adobe CLI summary
-        if (report.adobe.installed) {
-            this.logger.info('');
-            this.logger.info('Adobe CLI Status:');
-            this.logger.info(`  Version: ${report.adobe.version}`);
-            this.logger.info(`  Authenticated: ${report.adobe.authConfigured ? 'Yes' : 'No'}`);
-            if (report.adobe.authConfigured) {
-                this.logger.info(`  Token Valid: ${!report.adobe.tokenExpired ? 'Yes' : 'No'}`);
-                this.logger.info(`  Can List Orgs: ${report.adobe.canListOrgs ? 'Yes' : 'No'}`);
-            }
-        }
-
-        // Test results
-        this.logger.info('');
-        this.logger.info('Diagnostic Tests:');
-        this.logger.info(
-            `  Browser Launch: ${report.tests.browserLaunch.available ? 'Available' : 'Not available'}`,
-        );
-        this.logger.info(
-            `  Adobe Login Command: ${report.tests.adobeLoginCommand.available ? 'Available' : 'Not available'}`,
-        );
-        this.logger.info(
-            `  File System Access: ${report.tests.fileSystem.canWrite ? 'OK' : 'Failed'}`,
-        );
-
-        // In-extension MCP server
-        this.logger.info('');
-        this.logger.info('MCP Server (in-extension):');
-        if (report.mcp.running) {
-            const tools = report.mcp.tools ?? [];
-            this.logger.info(
-                `  Reachable: Yes (${tools.length} tool${tools.length === 1 ? '' : 's'})`,
-            );
-            this.logger.info(
-                `  sign_in tool: ${report.mcp.hasSignIn ? '✅ present' : '❌ missing'}`,
-            );
-            this.logger.info(`  Tools: ${tools.join(', ')}`);
-        } else {
-            this.logger.info(`  Reachable: No`);
-            this.logger.info(`  Reason: ${report.mcp.error ?? 'unknown'}`);
-        }
-
-        this.showCredentialSummary(report.githubCredential);
-
-        this.logger.info('');
-        this.logger.info('Use VS Code\'s "Set Log Level..." command to see debug/trace details');
-    }
-
     /**
-     * Render the GitHub/AEM credential section.
+     * Write the summary to the user log and return it as text.
      *
-     * Extracted from showSummary, which exceeded the complexity limit once this
-     * section landed. Verdict prints last because it is the conclusion the three
-     * findings above add up to.
+     * Returns the same lines it logs so the "Copy Report" action can hand the
+     * user exactly what they just read, rather than the whole output channel.
      */
-    private showCredentialSummary(cred: CredentialProbeResult): void {
-        this.logger.info('');
-        this.logger.info('GitHub / AEM credential:');
-        this.logger.info(`  Signed in as: ${cred.github?.login ?? 'not signed in'}`);
-
-        if (cred.github?.tokenType) {
-            this.logger.info(`  Credential type: ${cred.github.tokenType}`);
-        }
-        if (cred.github?.grantedScopes) {
-            this.logger.info(`  Granted scopes: ${cred.github.grantedScopes.join(', ')}`);
-        }
-        if (cred.repo) {
-            this.logger.info(
-                `  Write access to ${cred.repo.fullName}: ${describeWriteAccess(cred.repo)}`,
-            );
-        }
-        if (cred.adminApi) {
-            this.logger.info(`  AEM admin API: ${describeAdminApi(cred.adminApi)}`);
-        }
-
-        this.logger.info(`  → ${cred.verdict}`);
+    private showSummary(report: DiagnosticsReport): string {
+        const lines = buildSummaryLines(report);
+        for (const line of lines) this.logger.info(line);
+        return lines.join('\n');
     }
 
 }
